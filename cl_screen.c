@@ -2131,7 +2131,7 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 	VID_Finish();
 }
 
-static float loadingscreen_lastupdate;
+static double loadingscreen_lastupdate;
 
 void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 {
@@ -2145,7 +2145,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	// limit update rate
 	if (scr_loadingscreen_maxfps.value)
 	{
-		float t = Sys_DirtyTime();
+		double t = Sys_DirtyTime();
 		if ((t - loadingscreen_lastupdate) < 1.0f/scr_loadingscreen_maxfps.value)
 			return;
 		loadingscreen_lastupdate = t;
