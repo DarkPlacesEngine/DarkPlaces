@@ -1409,7 +1409,7 @@ static void CL_StopDownload(int size, int crc)
 						{
 							if(cls.caughtcsprogsdata)
 								Mem_Free(cls.caughtcsprogsdata);
-							cls.caughtcsprogsdata = Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorycursize);
+							cls.caughtcsprogsdata = (unsigned char *) Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorycursize);
 							memcpy(cls.caughtcsprogsdata, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
 							cls.caughtcsprogsdatasize = cls.qw_downloadmemorycursize;
 							Con_DPrintf("Buffered \"%s\"\n", name);
