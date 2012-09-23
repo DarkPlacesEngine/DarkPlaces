@@ -2115,7 +2115,7 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	if(loadingscreentexture)
 	{
 		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
-		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1, true, true, true);
+		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1, false, true, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
