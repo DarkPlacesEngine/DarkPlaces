@@ -1474,10 +1474,16 @@ static void World_Physics_Init(void)
 	const char* dllnames [] =
 	{
 # if defined(WIN32)
+		"libode3.dll",
+		"libode2.dll",
 		"libode1.dll",
 # elif defined(MACOSX)
+		"libode.3.dylib",
+		"libode.2.dylib",
 		"libode.1.dylib",
 # else
+		"libode.so.3",
+		"libode.so.2",
 		"libode.so.1",
 # endif
 		NULL
