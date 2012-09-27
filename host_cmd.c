@@ -2463,6 +2463,12 @@ static void Host_PQRcon_f (void)
 	lhnetsocket_t *mysocket;
 	char peer_address[64];
 
+	if (Cmd_Argc() == 1)
+	{
+		Con_Printf("%s: Usage: %s command\n", Cmd_Argv(0), Cmd_Argv(0));
+		return;
+	}
+
 	if (!rcon_password.string || !rcon_password.string[0] || rcon_secure.integer > 0)
 	{
 		Con_Printf ("You must set rcon_password before issuing an pqrcon command, and rcon_secure must be 0.\n");
@@ -2523,6 +2529,12 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
 	char vabuf[1024];
+
+	if (Cmd_Argc() == 1)
+	{
+		Con_Printf("%s: Usage: %s command\n", Cmd_Argv(0), Cmd_Argv(0));
+		return;
+	}
 
 	if (!rcon_password.string || !rcon_password.string[0])
 	{
