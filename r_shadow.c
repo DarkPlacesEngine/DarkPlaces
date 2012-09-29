@@ -170,8 +170,8 @@ r_shadow_rendermode_t;
 
 typedef enum r_shadow_shadowmode_e
 {
-    R_SHADOW_SHADOWMODE_STENCIL,
-    R_SHADOW_SHADOWMODE_SHADOWMAP2D
+	R_SHADOW_SHADOWMODE_STENCIL,
+	R_SHADOW_SHADOWMODE_SHADOWMAP2D
 }
 r_shadow_shadowmode_t;
 
@@ -202,7 +202,7 @@ int r_shadow_shadowmapborder;
 matrix4x4_t r_shadow_shadowmapmatrix;
 int r_shadow_lightscissor[4];
 qboolean r_shadow_usingdeferredprepass;
-
+qboolean r_shadow_shadowmapdepthtexture;
 int maxshadowtriangles;
 int *shadowelements;
 
@@ -452,6 +452,7 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsize = 0;
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
+	r_shadow_shadowmapdepthtexture = r_fb.usedepthtextures;
 	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
 	if ((r_shadow_shadowmapping.integer || r_shadow_deferred.integer) && vid.support.ext_framebuffer_object)
 	{
@@ -467,8 +468,8 @@ static void R_Shadow_SetShadowMode(void)
 					r_shadow_shadowmapsampler = true;
 					r_shadow_shadowmappcf = 1;
 				}
-                else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
-                    r_shadow_shadowmappcf = 1;
+				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
+					r_shadow_shadowmappcf = 1;
 				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa")) 
 					r_shadow_shadowmappcf = 1;
 				else 
@@ -940,10 +941,10 @@ void R_Shadow_PrepareShadowMark(int numtris)
 
 void R_Shadow_PrepareShadowSides(int numtris)
 {
-    if (maxshadowsides < numtris)
-    {
-        maxshadowsides = numtris;
-        if (shadowsides)
+	if (maxshadowsides < numtris)
+	{
+		maxshadowsides = numtris;
+		if (shadowsides)
 			Mem_Free(shadowsides);
 		if (shadowsideslist)
 			Mem_Free(shadowsideslist);
@@ -1425,51 +1426,51 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias)
 {
-    // p1, p2, p3 are in the cubemap's local coordinate system
-    // bias = border/(size - border)
+	// p1, p2, p3 are in the cubemap's local coordinate system
+	// bias = border/(size - border)
 	int mask = 0x3F;
 
-    float dp1 = p1[0] + p1[1], dn1 = p1[0] - p1[1], ap1 = fabs(dp1), an1 = fabs(dn1),
-    	  dp2 = p2[0] + p2[1], dn2 = p2[0] - p2[1], ap2 = fabs(dp2), an2 = fabs(dn2),
-    	  dp3 = p3[0] + p3[1], dn3 = p3[0] - p3[1], ap3 = fabs(dp3), an3 = fabs(dn3);
+	float dp1 = p1[0] + p1[1], dn1 = p1[0] - p1[1], ap1 = fabs(dp1), an1 = fabs(dn1),
+		  dp2 = p2[0] + p2[1], dn2 = p2[0] - p2[1], ap2 = fabs(dp2), an2 = fabs(dn2),
+		  dp3 = p3[0] + p3[1], dn3 = p3[0] - p3[1], ap3 = fabs(dp3), an3 = fabs(dn3);
 	if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
-    	mask &= (3<<4)
+		mask &= (3<<4)
 			| (dp1 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
 			| (dp2 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
 			| (dp3 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
-        mask &= (3<<4)
-            | (dn1 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
-            | (dn2 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))            
-            | (dn3 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+	if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+		mask &= (3<<4)
+			| (dn1 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+			| (dn2 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))			
+			| (dn3 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
 
-    dp1 = p1[1] + p1[2], dn1 = p1[1] - p1[2], ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = p2[1] + p2[2], dn2 = p2[1] - p2[2], ap2 = fabs(dp2), an2 = fabs(dn2),
-    dp3 = p3[1] + p3[2], dn3 = p3[1] - p3[2], ap3 = fabs(dp3), an3 = fabs(dn3);
-    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
-        mask &= (3<<0)
-            | (dp1 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
-            | (dp2 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))            
-            | (dp3 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
-        mask &= (3<<0)
-            | (dn1 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
-            | (dn2 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
-            | (dn3 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+	dp1 = p1[1] + p1[2], dn1 = p1[1] - p1[2], ap1 = fabs(dp1), an1 = fabs(dn1),
+	dp2 = p2[1] + p2[2], dn2 = p2[1] - p2[2], ap2 = fabs(dp2), an2 = fabs(dn2),
+	dp3 = p3[1] + p3[2], dn3 = p3[1] - p3[2], ap3 = fabs(dp3), an3 = fabs(dn3);
+	if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+		mask &= (3<<0)
+			| (dp1 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+			| (dp2 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))			
+			| (dp3 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+	if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+		mask &= (3<<0)
+			| (dn1 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+			| (dn2 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+			| (dn3 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
 
-    dp1 = p1[2] + p1[0], dn1 = p1[2] - p1[0], ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = p2[2] + p2[0], dn2 = p2[2] - p2[0], ap2 = fabs(dp2), an2 = fabs(dn2),
-    dp3 = p3[2] + p3[0], dn3 = p3[2] - p3[0], ap3 = fabs(dp3), an3 = fabs(dn3);
-    if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
-        mask &= (3<<2)
-            | (dp1 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
-            | (dp2 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
-            | (dp3 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
-    if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
-        mask &= (3<<2)
-            | (dn1 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
-            | (dn2 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
-            | (dn3 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+	dp1 = p1[2] + p1[0], dn1 = p1[2] - p1[0], ap1 = fabs(dp1), an1 = fabs(dn1),
+	dp2 = p2[2] + p2[0], dn2 = p2[2] - p2[0], ap2 = fabs(dp2), an2 = fabs(dn2),
+	dp3 = p3[2] + p3[0], dn3 = p3[2] - p3[0], ap3 = fabs(dp3), an3 = fabs(dn3);
+	if(ap1 > bias*an1 && ap2 > bias*an2 && ap3 > bias*an3)
+		mask &= (3<<2)
+			| (dp1 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+			| (dp2 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+			| (dp3 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+	if(an1 > bias*ap1 && an2 > bias*ap2 && an3 > bias*ap3)
+		mask &= (3<<2)
+			| (dn1 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+			| (dn2 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+			| (dn3 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
 
 	return mask;
 }
@@ -1481,66 +1482,66 @@ static int R_Shadow_CalcBBoxSideMask(const vec3_t mins, const vec3_t maxs, const
 	int mask = 0x3F;
 
 	VectorSubtract(maxs, mins, radius);
-    VectorScale(radius, 0.5f, radius);
-    VectorAdd(mins, radius, center);
-    Matrix4x4_Transform(worldtolight, center, lightcenter);
+	VectorScale(radius, 0.5f, radius);
+	VectorAdd(mins, radius, center);
+	Matrix4x4_Transform(worldtolight, center, lightcenter);
 	Matrix4x4_Transform3x3(radiustolight, radius, lightradius);
 	VectorSubtract(lightcenter, lightradius, pmin);
 	VectorAdd(lightcenter, lightradius, pmax);
 
-    dp1 = pmax[0] + pmax[1], dn1 = pmax[0] - pmin[1], ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = pmin[0] + pmin[1], dn2 = pmin[0] - pmax[1], ap2 = fabs(dp2), an2 = fabs(dn2);
-    if(ap1 > bias*an1 && ap2 > bias*an2)
-        mask &= (3<<4)
-            | (dp1 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
-            | (dp2 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
-    if(an1 > bias*ap1 && an2 > bias*ap2)
-        mask &= (3<<4)
-            | (dn1 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
-            | (dn2 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+	dp1 = pmax[0] + pmax[1], dn1 = pmax[0] - pmin[1], ap1 = fabs(dp1), an1 = fabs(dn1),
+	dp2 = pmin[0] + pmin[1], dn2 = pmin[0] - pmax[1], ap2 = fabs(dp2), an2 = fabs(dn2);
+	if(ap1 > bias*an1 && ap2 > bias*an2)
+		mask &= (3<<4)
+			| (dp1 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2))
+			| (dp2 >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+	if(an1 > bias*ap1 && an2 > bias*ap2)
+		mask &= (3<<4)
+			| (dn1 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2))
+			| (dn2 >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
 
-    dp1 = pmax[1] + pmax[2], dn1 = pmax[1] - pmin[2], ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = pmin[1] + pmin[2], dn2 = pmin[1] - pmax[2], ap2 = fabs(dp2), an2 = fabs(dn2);
-    if(ap1 > bias*an1 && ap2 > bias*an2)
-        mask &= (3<<0)
-            | (dp1 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
-            | (dp2 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
-    if(an1 > bias*ap1 && an2 > bias*ap2)
-        mask &= (3<<0)
-            | (dn1 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
-            | (dn2 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+	dp1 = pmax[1] + pmax[2], dn1 = pmax[1] - pmin[2], ap1 = fabs(dp1), an1 = fabs(dn1),
+	dp2 = pmin[1] + pmin[2], dn2 = pmin[1] - pmax[2], ap2 = fabs(dp2), an2 = fabs(dn2);
+	if(ap1 > bias*an1 && ap2 > bias*an2)
+		mask &= (3<<0)
+			| (dp1 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4))
+			| (dp2 >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+	if(an1 > bias*ap1 && an2 > bias*ap2)
+		mask &= (3<<0)
+			| (dn1 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4))
+			| (dn2 >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
 
-    dp1 = pmax[2] + pmax[0], dn1 = pmax[2] - pmin[0], ap1 = fabs(dp1), an1 = fabs(dn1),
-    dp2 = pmin[2] + pmin[0], dn2 = pmin[2] - pmax[0], ap2 = fabs(dp2), an2 = fabs(dn2);
-    if(ap1 > bias*an1 && ap2 > bias*an2)
-        mask &= (3<<2)
-            | (dp1 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
-            | (dp2 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
-    if(an1 > bias*ap1 && an2 > bias*ap2)
-        mask &= (3<<2)
-            | (dn1 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
-            | (dn2 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+	dp1 = pmax[2] + pmax[0], dn1 = pmax[2] - pmin[0], ap1 = fabs(dp1), an1 = fabs(dn1),
+	dp2 = pmin[2] + pmin[0], dn2 = pmin[2] - pmax[0], ap2 = fabs(dp2), an2 = fabs(dn2);
+	if(ap1 > bias*an1 && ap2 > bias*an2)
+		mask &= (3<<2)
+			| (dp1 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0))
+			| (dp2 >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+	if(an1 > bias*ap1 && an2 > bias*ap2)
+		mask &= (3<<2)
+			| (dn1 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0))
+			| (dn2 >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
 
-    return mask;
+	return mask;
 }
 
 #define R_Shadow_CalcEntitySideMask(ent, worldtolight, radiustolight, bias) R_Shadow_CalcBBoxSideMask((ent)->mins, (ent)->maxs, worldtolight, radiustolight, bias)
 
 int R_Shadow_CalcSphereSideMask(const vec3_t p, float radius, float bias)
 {
-    // p is in the cubemap's local coordinate system
-    // bias = border/(size - border)
-    float dxyp = p[0] + p[1], dxyn = p[0] - p[1], axyp = fabs(dxyp), axyn = fabs(dxyn);
-    float dyzp = p[1] + p[2], dyzn = p[1] - p[2], ayzp = fabs(dyzp), ayzn = fabs(dyzn);
-    float dzxp = p[2] + p[0], dzxn = p[2] - p[0], azxp = fabs(dzxp), azxn = fabs(dzxn);
-    int mask = 0x3F;
-    if(axyp > bias*axyn + radius) mask &= dxyp < 0 ? ~((1<<0)|(1<<2)) : ~((2<<0)|(2<<2));
-    if(axyn > bias*axyp + radius) mask &= dxyn < 0 ? ~((1<<0)|(2<<2)) : ~((2<<0)|(1<<2));
-    if(ayzp > bias*ayzn + radius) mask &= dyzp < 0 ? ~((1<<2)|(1<<4)) : ~((2<<2)|(2<<4));
-    if(ayzn > bias*ayzp + radius) mask &= dyzn < 0 ? ~((1<<2)|(2<<4)) : ~((2<<2)|(1<<4));
-    if(azxp > bias*azxn + radius) mask &= dzxp < 0 ? ~((1<<4)|(1<<0)) : ~((2<<4)|(2<<0));
-    if(azxn > bias*azxp + radius) mask &= dzxn < 0 ? ~((1<<4)|(2<<0)) : ~((2<<4)|(1<<0));
-    return mask;
+	// p is in the cubemap's local coordinate system
+	// bias = border/(size - border)
+	float dxyp = p[0] + p[1], dxyn = p[0] - p[1], axyp = fabs(dxyp), axyn = fabs(dxyn);
+	float dyzp = p[1] + p[2], dyzn = p[1] - p[2], ayzp = fabs(dyzp), ayzn = fabs(dyzn);
+	float dzxp = p[2] + p[0], dzxn = p[2] - p[0], azxp = fabs(dzxp), azxn = fabs(dzxn);
+	int mask = 0x3F;
+	if(axyp > bias*axyn + radius) mask &= dxyp < 0 ? ~((1<<0)|(1<<2)) : ~((2<<0)|(2<<2));
+	if(axyn > bias*axyp + radius) mask &= dxyn < 0 ? ~((1<<0)|(2<<2)) : ~((2<<0)|(1<<2));
+	if(ayzp > bias*ayzn + radius) mask &= dyzp < 0 ? ~((1<<2)|(1<<4)) : ~((2<<2)|(2<<4));
+	if(ayzn > bias*ayzp + radius) mask &= dyzn < 0 ? ~((1<<2)|(2<<4)) : ~((2<<2)|(1<<4));
+	if(azxp > bias*azxn + radius) mask &= dzxp < 0 ? ~((1<<4)|(1<<0)) : ~((2<<4)|(2<<0));
+	if(azxn > bias*azxp + radius) mask &= dzxn < 0 ? ~((1<<4)|(2<<0)) : ~((2<<4)|(1<<0));
+	return mask;
 }
 
 static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float border)
@@ -1565,8 +1566,8 @@ static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float borde
 	}
 	if (PlaneDiff(o, &r_refdef.view.frustum[4]) >= r_refdef.farclip - r_refdef.nearclip + 0.03125)
 	{
-        Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, n);
-        len = scale*VectorLength2(n);
+		Matrix4x4_Transform3x3(&rtlight->matrix_worldtolight, r_refdef.view.frustum[4].normal, n);
+		len = scale*VectorLength2(n);
 		if(n[0]*n[0] > len) sides &= n[0] >= 0 ? ~(1<<0) : ~(2 << 0);
 		if(n[1]*n[1] > len) sides &= n[1] >= 0 ? ~(1<<2) : ~(2 << 2);
 		if(n[2]*n[2] > len) sides &= n[2] >= 0 ? ~(1<<4) : ~(2 << 4);
@@ -1574,33 +1575,33 @@ static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float borde
 	// this next test usually clips off more sides than the former, but occasionally clips fewer/different ones, so do both and combine results
 	// check if frustum corners/origin cross plane sides
 #if 1
-    // infinite version, assumes frustum corners merely give direction and extend to infinite distance
-    Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.origin, p);
-    dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn);
-    masks[0] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
-    masks[1] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
-    dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn);
-    masks[2] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
-    masks[3] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
-    dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn);
-    masks[4] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
-    masks[5] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
-    for (i = 0;i < 4;i++)
-    {
-        Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.frustumcorner[i], n);
-        VectorSubtract(n, p, n);
-        dp = n[0] + n[1], dn = n[0] - n[1], ap = fabs(dp), an = fabs(dn);
-        if(ap > 0) masks[0] |= dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2);
-        if(an > 0) masks[1] |= dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2);
-        dp = n[1] + n[2], dn = n[1] - n[2], ap = fabs(dp), an = fabs(dn);
-        if(ap > 0) masks[2] |= dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4);
-        if(an > 0) masks[3] |= dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4);
-        dp = n[2] + n[0], dn = n[2] - n[0], ap = fabs(dp), an = fabs(dn);
-        if(ap > 0) masks[4] |= dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0);
-        if(an > 0) masks[5] |= dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0);
-    }
+	// infinite version, assumes frustum corners merely give direction and extend to infinite distance
+	Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.origin, p);
+	dp = p[0] + p[1], dn = p[0] - p[1], ap = fabs(dp), an = fabs(dn);
+	masks[0] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2));
+	masks[1] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2));
+	dp = p[1] + p[2], dn = p[1] - p[2], ap = fabs(dp), an = fabs(dn);
+	masks[2] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4));
+	masks[3] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4));
+	dp = p[2] + p[0], dn = p[2] - p[0], ap = fabs(dp), an = fabs(dn);
+	masks[4] |= ap <= bias*an ? 0x3F : (dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0));
+	masks[5] |= an <= bias*ap ? 0x3F : (dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0));
+	for (i = 0;i < 4;i++)
+	{
+		Matrix4x4_Transform(&rtlight->matrix_worldtolight, r_refdef.view.frustumcorner[i], n);
+		VectorSubtract(n, p, n);
+		dp = n[0] + n[1], dn = n[0] - n[1], ap = fabs(dp), an = fabs(dn);
+		if(ap > 0) masks[0] |= dp >= 0 ? (1<<0)|(1<<2) : (2<<0)|(2<<2);
+		if(an > 0) masks[1] |= dn >= 0 ? (1<<0)|(2<<2) : (2<<0)|(1<<2);
+		dp = n[1] + n[2], dn = n[1] - n[2], ap = fabs(dp), an = fabs(dn);
+		if(ap > 0) masks[2] |= dp >= 0 ? (1<<2)|(1<<4) : (2<<2)|(2<<4);
+		if(an > 0) masks[3] |= dn >= 0 ? (1<<2)|(2<<4) : (2<<2)|(1<<4);
+		dp = n[2] + n[0], dn = n[2] - n[0], ap = fabs(dp), an = fabs(dn);
+		if(ap > 0) masks[4] |= dp >= 0 ? (1<<4)|(1<<0) : (2<<4)|(2<<0);
+		if(an > 0) masks[5] |= dn >= 0 ? (1<<4)|(2<<0) : (2<<4)|(1<<0);
+	}
 #else
-    // finite version, assumes corners are a finite distance from origin dependent on far plane
+	// finite version, assumes corners are a finite distance from origin dependent on far plane
 	for (i = 0;i < 5;i++)
 	{
 		Matrix4x4_Transform(&rtlight->matrix_worldtolight, !i ? r_refdef.view.origin : r_refdef.view.frustumcorner[i-1], p);
@@ -4533,7 +4534,8 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer || 
 		r_shadow_shadowmapshadowsampler != (vid.support.arb_shadow && r_shadow_shadowmapping_useshadowsampler.integer) || 
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer || 
-		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16))
+		r_shadow_shadowmapborder != bound(0, r_shadow_shadowmapping_bordersize.integer, 16) ||
+		r_shadow_shadowmapdepthtexture != r_fb.usedepthtextures)
 		R_Shadow_FreeShadowMaps();
 
 	r_shadow_fb_fbo = fbo;
