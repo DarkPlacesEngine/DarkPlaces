@@ -4157,7 +4157,7 @@ static void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, 
 	unsigned char buffer_texture_shirtbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
 	int x, startx = span->startx, endx = span->endx;
-	float Color_Ambient[4], Color_Diffuse[4], Color_Specular[4], Color_Glow[4], Color_Pants[4], Color_Shirt[4], LightColor[4];
+	float Color_Ambient[4], Color_Diffuse[4], Color_Specular[4], /*Color_Glow[4],*/ Color_Pants[4], Color_Shirt[4], LightColor[4];
 	float CubeVectordata[4];
 	float CubeVectorslope[4];
 	float LightVectordata[4];
@@ -4177,10 +4177,12 @@ static void DPSOFTRAST_PixelShader_LightSource(DPSOFTRAST_State_Thread *thread, 
 	float CubeVector[4];
 	float attenuation;
 	int d[4];
+#if 0
 	Color_Glow[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+0];
 	Color_Glow[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+1];
 	Color_Glow[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Glow*4+2];
 	Color_Glow[3] = 0.0f;
+#endif
 	Color_Ambient[2] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+0];
 	Color_Ambient[1] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+1];
 	Color_Ambient[0] = thread->uniform4f[DPSOFTRAST_UNIFORM_Color_Ambient*4+2];
@@ -4452,7 +4454,7 @@ static void DPSOFTRAST_VertexShader_Refraction(void)
 static void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
 {
 	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
-	float z;
+	//float z;
 	int x, startx = span->startx, endx = span->endx;
 
 	// texture reads
@@ -4500,7 +4502,7 @@ static void DPSOFTRAST_PixelShader_Refraction(DPSOFTRAST_State_Thread *thread, c
 		float iw;
 		unsigned char c[4];
 
-		z = buffer_z[x];
+		//z = buffer_z[x];
 
 		// "	vec2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
 		iw = 1.0f / (ModelViewProjectionPositiondata[3] + ModelViewProjectionPositionslope[3]*x); // / z
