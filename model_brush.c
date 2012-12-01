@@ -1231,7 +1231,8 @@ loc0:
 		// check for impact on this node
 		if (node->numsurfaces)
 		{
-			int i, dsi, dti, lmwidth, lmheight;
+			unsigned int i;
+			int dsi, dti, lmwidth, lmheight;
 			float ds, dt;
 			msurface_t *surface;
 			unsigned char *lightmap;
@@ -1316,7 +1317,7 @@ static void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambie
 
 static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
 {
-	int i;
+	unsigned int i;
 	int j;
 	int k;
 	const msurface_t *surface;
@@ -2228,7 +2229,7 @@ static void Mod_Q1BSP_LoadEdges(sizebuf_t *sb)
 			out->v[0] = (unsigned short)MSG_ReadLittleShort(sb);
 			out->v[1] = (unsigned short)MSG_ReadLittleShort(sb);
 		}
-		if (out->v[0] >= loadmodel->brushq1.numvertexes || out->v[1] >= loadmodel->brushq1.numvertexes)
+		if ((int)out->v[0] >= loadmodel->brushq1.numvertexes || (int)out->v[1] >= loadmodel->brushq1.numvertexes)
 		{
 			Con_Printf("Mod_Q1BSP_LoadEdges: %s has invalid vertex indices in edge %i (vertices %i %i >= numvertices %i)\n", loadmodel->name, i, out->v[0], out->v[1], loadmodel->brushq1.numvertexes);
 			if(!loadmodel->brushq1.numvertexes)
