@@ -885,7 +885,7 @@
 "#     ifdef USESHADOWMAPPCF\n"
 "#       define texval(off) dp_shadow2D(Texture_ShadowMap2D, vec3(off, shadowmaptc.z))  \n"
 "	vec2 offset = fract(shadowmaptc.xy - 0.5);\n"
-"	vec4 size = vec4(offset + 1.0, 2.0 - offset), weight = (vec4(2.0 - 1.0 / size.xy, 1.0 / size.zw - 1.0) + (shadowmaptc.xy - offset).xyxy)*ShadowMap_TextureScale.xyxy;\n"
+"	vec4 size = vec4(offset + 1.0, 2.0 - offset), weight = (vec4(1.0, 1.0, -0.5, -0.5) + (shadowmaptc.xy - 0.5*offset).xyxy)*ShadowMap_TextureScale.xyxy;\n"
 "	f = (1.0/9.0)*dot(size.zxzx*size.wwyy, vec4(texval(weight.zw), texval(weight.xw), texval(weight.zy), texval(weight.xy)));\n"
 "//#       define texval(x, y) dp_shadow2D(Texture_ShadowMap2D, vec3(center + vec2(x, y)*ShadowMap_TextureScale, shadowmaptc.z))  \n"
 "//	vec2 center = shadowmaptc.xy*ShadowMap_TextureScale;\n"
