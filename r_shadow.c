@@ -477,13 +477,12 @@ static void R_Shadow_SetShadowMode(void)
 			}
 			else 
 			{
+                r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 				switch (r_shadow_shadowmapfilterquality)
 				{
 				case 1:
-					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 					break;
 				case 2:
-					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 					r_shadow_shadowmappcf = 1;
 					break;
 				case 3:
