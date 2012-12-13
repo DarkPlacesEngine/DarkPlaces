@@ -3970,7 +3970,7 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	int blendindex;
 	framegroupblend_t framegroupblend[MAX_FRAMEGROUPBLENDS];
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
-	matrix4x4_t blendedmatrix;
+	matrix4x4_t bonematrix;
 	matrix4x4_t matrix;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 	if (skeletonindex < 0 || skeletonindex >= MAX_EDICTS || !(skeleton = prog->skeletons[skeletonindex]))
@@ -3982,17 +3982,18 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model, cl.time);
 	blendfrac = 1.0f - retainfrac;
 	for (numblends = 0;numblends < MAX_FRAMEBLENDS && frameblend[numblends].lerp;numblends++)
-		frameblend[numblends].lerp *= blendfrac;
+		;
 	for (bonenum = firstbone;bonenum <= lastbone;bonenum++)
 	{
-		memset(&blendedmatrix, 0, sizeof(blendedmatrix));
-		Matrix4x4_Accumulate(&blendedmatrix, &skeleton->relativetransforms[bonenum], retainfrac);
+		memset(&bonematrix, 0, sizeof(bonematrix));
 		for (blendindex = 0;blendindex < numblends;blendindex++)
 		{
 			Matrix4x4_FromBonePose7s(&matrix, model->num_posescale, model->data_poses7s + 7 * (frameblend[blendindex].subframe * model->num_bones + bonenum));
-			Matrix4x4_Accumulate(&blendedmatrix, &matrix, frameblend[blendindex].lerp);
+			Matrix4x4_Accumulate(&bonematrix, &matrix, frameblend[blendindex].lerp);
 		}
-		skeleton->relativetransforms[bonenum] = blendedmatrix;
+		Matrix4x4_Normalize3(&bonematrix, &bonematrix);
+		Matrix4x4_Scale(&skeleton->relativetransforms[bonenum], retainfrac, retainfrac);
+		Matrix4x4_Accumulate(&skeleton->relativetransforms[bonenum], &bonematrix, blendfrac);
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = skeletonindex + 1;
 }
