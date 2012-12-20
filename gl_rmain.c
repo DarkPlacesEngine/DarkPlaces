@@ -1536,8 +1536,6 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			{
 				if (debugshader)
 				{
-//					vsresult = qD3DXPreprocessShader(vertstring, strlen(vertstring), NULL, NULL, &vsbuffer, &vslog);
-//					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_vs.fx", cachename), vsbuffer->GetBufferPointer(), vsbuffer->GetBufferSize());
 					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_vs.fx", cachename), vertstring, strlen(vertstring));
 					vsresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				}
@@ -1545,24 +1543,22 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 					vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				if (vsbuffer)
 				{
-					vsbinsize = vsbuffer->GetBufferSize();
+					vsbinsize = ID3DXBuffer_GetBufferSize(vsbuffer);
 					vsbin = (DWORD *)Mem_Alloc(tempmempool, vsbinsize);
-					memcpy(vsbin, vsbuffer->GetBufferPointer(), vsbinsize);
-					vsbuffer->Release();
+					memcpy(vsbin, ID3DXBuffer_GetBufferPointer(vsbuffer), vsbinsize);
+					ID3DXBuffer_Release(vsbuffer);
 				}
 				if (vslog)
 				{
-					strlcpy(temp, (const char *)vslog->GetBufferPointer(), min(sizeof(temp), vslog->GetBufferSize()));
+					strlcpy(temp, (const char *)ID3DXBuffer_GetBufferPointer(vslog), min(sizeof(temp), ID3DXBuffer_GetBufferSize(vslog)));
 					Con_DPrintf("HLSL vertex shader compile output for %s follows:\n%s\n", cachename, temp);
-					vslog->Release();
+					ID3DXBuffer_Release(vslog);
 				}
 			}
 			if (fragstring && fragstring[0])
 			{
 				if (debugshader)
 				{
-//					psresult = qD3DXPreprocessShader(fragstring, strlen(fragstring), NULL, NULL, &psbuffer, &pslog);
-//					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_ps.fx", cachename), psbuffer->GetBufferPointer(), psbuffer->GetBufferSize());
 					FS_WriteFile(va(vabuf, sizeof(vabuf), "%s_ps.fx", cachename), fragstring, strlen(fragstring));
 					psresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				}
@@ -1570,16 +1566,16 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 					psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				if (psbuffer)
 				{
-					psbinsize = psbuffer->GetBufferSize();
+					psbinsize = ID3DXBuffer_GetBufferSize(psbuffer);
 					psbin = (DWORD *)Mem_Alloc(tempmempool, psbinsize);
-					memcpy(psbin, psbuffer->GetBufferPointer(), psbinsize);
-					psbuffer->Release();
+					memcpy(psbin, ID3DXBuffer_GetBufferPointer(psbuffer), psbinsize);
+					ID3DXBuffer_Release(psbuffer);
 				}
 				if (pslog)
 				{
-					strlcpy(temp, (const char *)pslog->GetBufferPointer(), min(sizeof(temp), pslog->GetBufferSize()));
+					strlcpy(temp, (const char *)ID3DXBuffer_GetBufferPointer(pslog), min(sizeof(temp), ID3DXBuffer_GetBufferSize(pslog)));
 					Con_DPrintf("HLSL pixel shader compile output for %s follows:\n%s\n", cachename, temp);
-					pslog->Release();
+					ID3DXBuffer_Release(pslog);
 				}
 			}
 			Sys_UnloadLibrary(&d3dx9_dll);
