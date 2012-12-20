@@ -224,7 +224,12 @@ void PRVM_StackTrace (prvm_prog_t *prog)
 		if (!f)
 			Con_Print("<NULL FUNCTION>\n");
 		else
-			Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+		{
+			if (prog->statement_linenums)
+				Con_Printf("%12s:%i : %s : statement %i\n", PRVM_GetString(prog, f->s_file), prog->statement_linenums[prog->stack[i].s], PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+			else
+				Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+		}
 	}
 }
 
