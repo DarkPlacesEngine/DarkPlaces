@@ -1457,7 +1457,6 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_BATTLEMECH,		GAME_BATTLEMECH,		"battlemech",		"-battlemech",		"Battlemech",			"base",		NULL,			"battlemech",	"battlemech"		}, // COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
 { GAME_ZYMOTIC,			GAME_ZYMOTIC,			"zymotic",			"-zymotic",			"Zymotic",				"basezym",	NULL,			"zymotic",		"zymotic"			}, // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
 { GAME_SETHERAL,		GAME_SETHERAL,			"setheral",			"-setheral",		"Setheral",				"data",		NULL,			"setheral",		"setheral"			}, // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
-{ GAME_SOM,				GAME_NORMAL,			"sonofman",			"-som",				"Son of Man",			"id1",		"sonofman",		"som",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man
 { GAME_TENEBRAE,		GAME_NORMAL,			"tenebrae",			"-tenebrae",		"DarkPlaces-Tenebrae",	"id1",		"tenebrae",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
 { GAME_NEOTERIC,		GAME_NORMAL,			"neoteric",			"-neoteric",		"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
 { GAME_OPENQUARTZ,		GAME_NORMAL,			"openquartz",		"-openquartz",		"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces"		}, // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
