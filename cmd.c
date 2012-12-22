@@ -503,7 +503,7 @@ static void Cmd_Exec(const char *filename)
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
 		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
 		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
-		if (gamemode == GAME_HIPNOTIC)
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 			Cbuf_InsertText("\nsv_gameplayfix_blowupfallenzombies 0\nsys_ticrate 0.02\nsv_gameplayfix_slidemoveprojectiles 0\n\n");
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
 		if (gamemode == GAME_ROGUE)
