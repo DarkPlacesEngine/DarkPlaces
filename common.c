@@ -1449,6 +1449,7 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_HIPNOTIC,		GAME_NORMAL,			"hipnotic",			"-hipnotic",		"Darkplaces-Hipnotic",	"id1",		"hipnotic",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
 { GAME_ROGUE,			GAME_NORMAL,			"rogue",			"-rogue",			"Darkplaces-Rogue",		"id1",		"rogue",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
 { GAME_NEHAHRA,			GAME_NORMAL,			"nehahra",			"-nehahra",			"DarkPlaces-Nehahra",	"id1",		"nehahra",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
+{ GAME_QUOTH,			GAME_NORMAL,			"quoth",			"-quoth",			"Darkplaces-Quoth",		"id1",		"quoth",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -quoth runs the Quoth mod for playing community maps made for it
 { GAME_NEXUIZ,			GAME_NEXUIZ,			"nexuiz",			"-nexuiz",			"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz"			}, // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
 { GAME_XONOTIC,			GAME_XONOTIC,			"xonotic",			"-xonotic",			"Xonotic",				"data",		NULL,			"xonotic",		"xonotic"			}, // COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
 { GAME_TRANSFUSION,		GAME_TRANSFUSION,		"transfusion",		"-transfusion",		"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion"		}, // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
