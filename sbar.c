@@ -70,11 +70,6 @@ int hipweapons[4] = {HIT_LASER_CANNON_BIT,HIT_MJOLNIR_BIT,4,HIT_PROXIMITY_GUN_BI
 //MED 01/04/97 added hipnotic items array
 cachepic_t *hsb_items[2];
 
-//GAME_SOM stuff:
-cachepic_t *somsb_health;
-cachepic_t *somsb_ammo[4];
-cachepic_t *somsb_armor[3];
-
 cachepic_t *zymsb_crosshair_center;
 cachepic_t *zymsb_crosshair_line;
 cachepic_t *zymsb_crosshair_health;
@@ -160,22 +155,6 @@ static void sbar_start(void)
 
 	if (gamemode == GAME_DELUXEQUAKE || gamemode == GAME_BLOODOMNICIDE)
 	{
-	}
-	else if (gamemode == GAME_SOM)
-	{
-		sb_disc = Draw_CachePic_Flags ("gfx/disc", CACHEPICFLAG_QUIET);
-
-		for (i = 0;i < 10;i++)
-			sb_nums[0][i] = Draw_CachePic_Flags (va(vabuf, sizeof(vabuf), "gfx/num_%i",i), CACHEPICFLAG_QUIET);
-
-		somsb_health = Draw_CachePic_Flags ("gfx/hud_health", CACHEPICFLAG_QUIET);
-		somsb_ammo[0] = Draw_CachePic_Flags ("gfx/sb_shells", CACHEPICFLAG_QUIET);
-		somsb_ammo[1] = Draw_CachePic_Flags ("gfx/sb_nails", CACHEPICFLAG_QUIET);
-		somsb_ammo[2] = Draw_CachePic_Flags ("gfx/sb_rocket", CACHEPICFLAG_QUIET);
-		somsb_ammo[3] = Draw_CachePic_Flags ("gfx/sb_cells", CACHEPICFLAG_QUIET);
-		somsb_armor[0] = Draw_CachePic_Flags ("gfx/sb_armor1", CACHEPICFLAG_QUIET);
-		somsb_armor[1] = Draw_CachePic_Flags ("gfx/sb_armor2", CACHEPICFLAG_QUIET);
-		somsb_armor[2] = Draw_CachePic_Flags ("gfx/sb_armor3", CACHEPICFLAG_QUIET);
 	}
 	else if (gamemode == GAME_NEXUIZ)
 	{
@@ -1364,46 +1343,6 @@ void Sbar_Draw (void)
 			Sbar_FinaleOverlay();
 		else if (gamemode == GAME_DELUXEQUAKE)
 		{
-		}
-		else if (gamemode == GAME_SOM)
-		{
-			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
-				Sbar_DrawScoreboard ();
-			else if (sb_lines)
-			{
-				// this is the top left of the sbar area
-				sbar_x = 0;
-				sbar_y = vid_conheight.integer - 24*3;
-
-				// armor
-				if (cl.stats[STAT_ARMOR])
-				{
-					if (cl.stats[STAT_ITEMS] & IT_ARMOR3)
-						Sbar_DrawPic(0, 0, somsb_armor[2]);
-					else if (cl.stats[STAT_ITEMS] & IT_ARMOR2)
-						Sbar_DrawPic(0, 0, somsb_armor[1]);
-					else if (cl.stats[STAT_ITEMS] & IT_ARMOR1)
-						Sbar_DrawPic(0, 0, somsb_armor[0]);
-					Sbar_DrawNum(24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-				}
-
-				// health
-				Sbar_DrawPic(0, 24, somsb_health);
-				Sbar_DrawNum(24, 24, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-
-				// ammo icon
-				if (cl.stats[STAT_ITEMS] & IT_SHELLS)
-					Sbar_DrawPic(0, 48, somsb_ammo[0]);
-				else if (cl.stats[STAT_ITEMS] & IT_NAILS)
-					Sbar_DrawPic(0, 48, somsb_ammo[1]);
-				else if (cl.stats[STAT_ITEMS] & IT_ROCKETS)
-					Sbar_DrawPic(0, 48, somsb_ammo[2]);
-				else if (cl.stats[STAT_ITEMS] & IT_CELLS)
-					Sbar_DrawPic(0, 48, somsb_ammo[3]);
-				Sbar_DrawNum(24, 48, cl.stats[STAT_AMMO], 3, false);
-				if (cl.stats[STAT_SHELLS])
-					Sbar_DrawNum(24 + 3*24, 48, cl.stats[STAT_SHELLS], 1, true);
-			}
 		}
 		else if (gamemode == GAME_NEXUIZ)
 		{
