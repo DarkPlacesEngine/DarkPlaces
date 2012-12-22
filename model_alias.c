@@ -824,6 +824,9 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	texture->supercontents = SUPERCONTENTS_SOLID;
 	if (!(texture->basematerialflags & MATERIALFLAG_BLENDED))
 		texture->supercontents |= SUPERCONTENTS_OPAQUE;
+	texture->transparentsort = TRANSPARENTSORT_DISTANCE;
+	// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
+	// JUST GREP FOR "specularscalemod = 1".
 }
 
 void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, const char *meshname, const char *shadername)

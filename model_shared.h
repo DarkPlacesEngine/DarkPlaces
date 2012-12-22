@@ -491,7 +491,7 @@ typedef struct q3shaderinfo_s
 	float specularscalemod;
 	float specularpowermod;
 
-	// rtlightning ambient addition
+	// rtlighting ambient addition
 	float rtlightambient;
 #define Q3SHADERINFO_COMPARE_END rtlightambient
 }
