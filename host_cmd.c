@@ -2075,7 +2075,7 @@ static void Host_Give_f (void)
 	case '8':
 	case '9':
 		// MED 01/04/97 added hipnotic give stuff
-		if (gamemode == GAME_HIPNOTIC)
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 		{
 			if (t[0] == '6')
 			{

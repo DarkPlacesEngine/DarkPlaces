@@ -291,7 +291,7 @@ static void sbar_start(void)
 		sb_scorebar = Draw_CachePic_Flags ("gfx/scorebar", CACHEPICFLAG_QUIET);
 
 	//MED 01/04/97 added new hipnotic weapons
-		if (gamemode == GAME_HIPNOTIC)
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 		{
 			hsb_weapons[0][0] = Draw_CachePic_Flags ("gfx/inv_laser", CACHEPICFLAG_QUIET);
 			hsb_weapons[0][1] = Draw_CachePic_Flags ("gfx/inv_mjolnir", CACHEPICFLAG_QUIET);
@@ -804,7 +804,7 @@ static void Sbar_DrawInventory (void)
 
 	// MED 01/04/97
 	// hipnotic weapons
-	if (gamemode == GAME_HIPNOTIC)
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 	{
 		int grenadeflashing=0;
 		for (i=0 ; i<4 ; i++)
@@ -879,13 +879,13 @@ static void Sbar_DrawInventory (void)
 		if (cl.stats[STAT_ITEMS] & (1<<(17+i)))
 		{
 			//MED 01/04/97 changed keys
-			if (gamemode != GAME_HIPNOTIC || (i>1))
+			if (!(gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH) || (i>1))
 				Sbar_DrawPic (192 + i*16, -16, sb_items[i]);
 		}
 
 	//MED 01/04/97 added hipnotic items
 	// hipnotic items
-	if (gamemode == GAME_HIPNOTIC)
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 	{
 		for (i=0 ; i<2 ; i++)
 			if (cl.stats[STAT_ITEMS] & (1<<(24+i)))
@@ -1636,7 +1636,7 @@ void Sbar_Draw (void)
 
 				// keys (hipnotic only)
 				//MED 01/04/97 moved keys here so they would not be overwritten
-				if (gamemode == GAME_HIPNOTIC)
+				if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 				{
 					if (cl.stats[STAT_ITEMS] & IT_KEY1)
 						Sbar_DrawPic (209, 3, sb_items[0]);

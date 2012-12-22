@@ -3201,6 +3201,7 @@ static int M_ChooseQuitMessage(int request)
 	case GAME_NORMAL:
 	case GAME_HIPNOTIC:
 	case GAME_ROGUE:
+	case GAME_QUOTH:
 	case GAME_NEHAHRA:
 	case GAME_DEFEATINDETAIL2:
 		if (request-- == 0) return M_QuitMessage("Are you gonna quit","this game just like","everything else?",NULL,NULL,NULL,NULL,NULL);
@@ -3936,6 +3937,7 @@ static gameinfo_t gamelist[] =
 	{GAME_NORMAL, &sharewarequakegame, &registeredquakegame},
 	{GAME_HIPNOTIC, &hipnoticgame, &hipnoticgame},
 	{GAME_ROGUE, &roguegame, &roguegame},
+	{GAME_QUOTH, &sharewarequakegame, &registeredquakegame},
 	{GAME_NEHAHRA, &nehahragame, &nehahragame},
 	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
 	{GAME_GOODVSBAD2, &goodvsbad2game, &goodvsbad2game},
