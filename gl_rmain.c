@@ -11867,6 +11867,9 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	texture.offsetscale = 1;
 	texture.specularscalemod = 1;
 	texture.specularpowermod = 1;
+	texture.transparentsort = TRANSPARENTSORT_DISTANCE;
+	// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
+	// JUST GREP FOR "specularscalemod = 1".
 
 	surface.texture = &texture;
 	surface.num_triangles = numtriangles;
