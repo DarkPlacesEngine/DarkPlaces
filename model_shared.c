@@ -1734,6 +1734,24 @@ void Mod_LoadQ3Shaders(void)
 		while (COM_ParseToken_QuakeC(&text, false))
 		{
 			memset (&shader, 0, sizeof(shader));
+			shader.name[0] = 0;
+			shader.surfaceparms = 0;
+			shader.surfaceflags = 0;
+			shader.textureflags = 0;
+			shader.numlayers = 0;
+			shader.lighting = false;
+			shader.vertexalpha = false;
+			shader.textureblendalpha = false;
+			shader.primarylayer = 0;
+			shader.backgroundlayer = 0;
+			shader.skyboxname[0] = 0;
+			shader.deforms[0].deform = Q3DEFORM_NONE;
+			shader.dpnortlight = false;
+			shader.dpshadow = false;
+			shader.dpnoshadow = false;
+			shader.dpmeshcollisions = false;
+			shader.dpshaderkill = false;
+			shader.dpreflectcube[0] = 0;
 			shader.reflectmin = 0;
 			shader.reflectmax = 1;
 			shader.refractfactor = 1;
@@ -1741,14 +1759,19 @@ void Mod_LoadQ3Shaders(void)
 			shader.reflectfactor = 1;
 			Vector4Set(shader.reflectcolor4f, 1, 1, 1, 1);
 			shader.r_water_wateralpha = 1;
+			shader.r_water_waterscroll[0] = 0;
+			shader.r_water_waterscroll[1] = 0;
 			shader.offsetmapping = (mod_q3shader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
 			shader.offsetscale = mod_q3shader_default_offsetmapping_scale.value;
 			shader.offsetbias = mod_q3shader_default_offsetmapping_bias.value;
-			shader.specularscalemod = 1;
-			shader.specularpowermod = 1;
 			shader.biaspolygonoffset = mod_q3shader_default_polygonoffset.value;
 			shader.biaspolygonfactor = mod_q3shader_default_polygonfactor.value;
 			shader.transparentsort = TRANSPARENTSORT_DISTANCE;
+			shader.specularscalemod = 1;
+			shader.specularpowermod = 1;
+			shader.rtlightambient = 0;
+			// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
+			// JUST GREP FOR "specularscalemod = 1".
 
 			strlcpy(shader.name, com_token, sizeof(shader.name));
 			if (!COM_ParseToken_QuakeC(&text, false) || strcasecmp(com_token, "{"))
@@ -2455,8 +2478,8 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1; 
 	texture->rtlightambient = 0;
-	// WHEN ADDING DEFAULTS HERE, REMEMBER TO SYNC TO SHADER LOADING ABOVE
-	// HERE, AND Q1BSP LOADING
+	texture->transparentsort = TRANSPARENTSORT_DISTANCE;
+	// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
 	// JUST GREP FOR "specularscalemod = 1".
 
 	if (shader)

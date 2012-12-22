@@ -80,6 +80,9 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 	texture->supercontents = SUPERCONTENTS_SOLID;
 	if (!(texture->basematerialflags & MATERIALFLAG_BLENDED))
 		texture->supercontents |= SUPERCONTENTS_OPAQUE;
+	texture->transparentsort = TRANSPARENTSORT_DISTANCE;
+	// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
+	// JUST GREP FOR "specularscalemod = 1".
 }
 
 extern cvar_t gl_texturecompression_sprites;
