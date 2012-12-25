@@ -5510,7 +5510,7 @@ static void R_Water_StartFrame(void)
 	int i;
 	int waterwidth, waterheight, texturewidth, textureheight, camerawidth, cameraheight;
 	r_waterstate_waterplane_t *p;
-	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.samples < 2;
+	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two && vid.samples < 2;
 
 	if (vid.width > (int)vid.maxtexturesize_2d || vid.height > (int)vid.maxtexturesize_2d)
 		return;
@@ -5724,7 +5724,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 	int planeindex, qualityreduction = 0, old_r_dynamic = 0, old_r_shadows = 0, old_r_worldrtlight = 0, old_r_dlight = 0, old_r_particles = 0, old_r_decals = 0;
 	r_waterstate_waterplane_t *p;
 	vec3_t visorigin;
-	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.samples < 2;
+	qboolean usewaterfbo = (r_viewfbo.integer >= 1 || r_water_fbo.integer >= 1) && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two && vid.samples < 2;
 	char vabuf[1024];
 
 	originalview = r_refdef.view;
@@ -5996,14 +5996,14 @@ static void R_Bloom_StartFrame(void)
 	int i;
 	int bloomtexturewidth, bloomtextureheight, screentexturewidth, screentextureheight;
 	int viewwidth, viewheight;
-	qboolean useviewfbo = r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object && vid.samples < 2;
+	qboolean useviewfbo = r_viewfbo.integer >= 1 && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two && vid.samples < 2;
 	textype_t textype = TEXTYPE_COLORBUFFER;
 
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 		r_fb.usedepthtextures = r_usedepthtextures.integer != 0;
-		if (vid.support.ext_framebuffer_object)
+		if (vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two)
 		{
 			if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
 			if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
