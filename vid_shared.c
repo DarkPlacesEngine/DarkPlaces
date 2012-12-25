@@ -1039,13 +1039,6 @@ void VID_CheckExtensions(void)
 	else
 		vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", extfbofuncs, "-nofbo", false);
 
-	// FIXME remove this workaround once FBO + npot texture mapping is fixed
-	if(!vid.support.arb_texture_non_power_of_two)
-	{
-		vid.support.arb_framebuffer_object = false;
-		vid.support.ext_framebuffer_object = false;
-	}
-
 	vid.support.ext_packed_depth_stencil = GL_CheckExtension("GL_EXT_packed_depth_stencil", NULL, "-nopackeddepthstencil", false);
 	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
@@ -1824,7 +1817,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 			(vid_sRGB_fallback.integer >= 3) // force fallback
 			||
 			(vid_sRGB_fallback.integer >= 2 && // fallback if framebuffer is 8bit
-				!(r_viewfbo.integer >= 2 && vid.support.ext_framebuffer_object && vid.samples < 2))
+				!(r_viewfbo.integer >= 2 && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two && vid.samples < 2))
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
@@ -2050,13 +2043,6 @@ void VID_Soft_SharedSetup(void)
 	vid.support.ext_blend_subtract = true;
 	vid.support.ext_draw_range_elements = true;
 	vid.support.ext_framebuffer_object = true;
-
-	// FIXME remove this workaround once FBO + npot texture mapping is fixed
-	if(!vid.support.arb_texture_non_power_of_two)
-	{
-		vid.support.arb_framebuffer_object = false;
-		vid.support.ext_framebuffer_object = false;
-	}
 
 	vid.support.ext_texture_3d = true;
 	//vid.support.ext_texture_compression_s3tc = true;
