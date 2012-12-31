@@ -909,18 +909,18 @@ void VID_Finish (void)
 				vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
 				DPSOFTRAST_SetRenderTargets(vid.width, vid.height, vid.softdepthpixels, vid.softpixels, NULL, NULL, NULL);
 
+				++vidx11_shmwait;
+				XShmPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height, True);
+
 				// save mouse motion so we can deal with it later
 				in_mouse_x = 0;
 				in_mouse_y = 0;
-				while(vidx11_shmwait)
+				while(vidx11_shmwait > 1)
 					HandleEvents();
 				in_mouse_x_save += in_mouse_x;
 				in_mouse_y_save += in_mouse_y;
 				in_mouse_x = 0;
 				in_mouse_y = 0;
-
-				++vidx11_shmwait;
-				XShmPutImage(vidx11_display, win, vidx11_gc, vidx11_ximage[!vidx11_ximage_pos], 0, 0, 0, 0, vid.width, vid.height, True);
 			} else {
 				// no buffer switching here, we just flush the renderer
 				DPSOFTRAST_Finish();
