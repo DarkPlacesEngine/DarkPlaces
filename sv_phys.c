@@ -2984,7 +2984,7 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
-	if (!host_client->spawned)
+	if (!host_client->begun)
 		return;
 
 	// make sure the velocity is sane (not a NaN)
@@ -3013,7 +3013,7 @@ static void SV_Physics_ClientEntity_PostThink(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
-	if (!host_client->spawned)
+	if (!host_client->begun)
 		return;
 
 	// make sure the velocity is sane (not a NaN)
@@ -3050,7 +3050,7 @@ static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	// don't do physics on disconnected clients, FrikBot relies on this
-	if (!host_client->spawned)
+	if (!host_client->begun)
 	{
 		memset(&host_client->cmd, 0, sizeof(host_client->cmd));
 		return;

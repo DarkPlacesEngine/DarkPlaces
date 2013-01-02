@@ -2950,7 +2950,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 							return true;
 						}
 					}
-					if (client->spawned)
+					if (client->begun)
 					{
 						// client crashed and is coming back,
 						// keep their stuff intact
@@ -3213,7 +3213,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 					// if client is already spawned, re-send the
 					// serverinfo message as they'll need it to play
-					if (client->spawned)
+					if (client->begun)
 						SV_SendServerinfo(client);
 					return true;
 				}
@@ -3398,7 +3398,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	}
 	if (host_client)
 	{
-		if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length, sv.protocol, host_client->spawned ? net_messagetimeout.value : net_connecttimeout.value)) == 2)
+		if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length, sv.protocol, host_client->begun ? net_messagetimeout.value : net_connecttimeout.value)) == 2)
 		{
 			SV_ReadClientMessage();
 			return ret;
