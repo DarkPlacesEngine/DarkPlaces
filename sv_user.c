@@ -586,7 +586,7 @@ static void SV_ExecuteClientMoves(void)
 	if (sv_numreadmoves < 1)
 		return;
 	// only start accepting input once the player is spawned
-	if (!host_client->spawned)
+	if (!host_client->begun)
 		return;
 #if DEBUGMOVES
 	Con_Printf("SV_ExecuteClientMoves: read %i moves at sv.time %f\n", sv_numreadmoves, (float)sv.time);
@@ -950,7 +950,7 @@ clc_stringcmd_invalid:
 			// if the client hasn't progressed through signons yet,
 			// ignore any clc_ackframes we get (they're probably from the
 			// previous level)
-			if (host_client->spawned && host_client->latestframenum < num)
+			if (host_client->begun && host_client->latestframenum < num)
 			{
 				int i;
 				for (i = host_client->latestframenum + 1;i < num;i++)

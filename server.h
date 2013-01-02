@@ -191,8 +191,12 @@ typedef struct client_s
 	qboolean active;
 	/// false = don't do ClientDisconnect on drop
 	qboolean clientconnectcalled;
-	/// false = don't send datagrams
+	/// false = don't allow spawn
+	qboolean prespawned;
+	/// false = don't allow begin
 	qboolean spawned;
+	/// false = don't send datagrams
+	qboolean begun;
 	/// 1 = send svc_serverinfo and advance to 2, 2 doesn't send, then advances to 0 (allowing unlimited sending) when prespawn is received
 	int sendsignon;
 
