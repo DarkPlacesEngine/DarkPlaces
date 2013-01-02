@@ -1030,7 +1030,9 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteByte (&client->netconnection->message, svc_signonnum);
 	MSG_WriteByte (&client->netconnection->message, 1);
 
+	client->prespawned = false;		// need prespawn, spawn, etc
 	client->spawned = false;		// need prespawn, spawn, etc
+	client->begun = false;			// need prespawn, spawn, etc
 	client->sendsignon = 1;			// send this message, and increment to 2, 2 will be set to 0 by the prespawn command
 
 	// clear movement info until client enters the new level properly
@@ -1094,7 +1096,9 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	strlcpy(client->name, "unconnected", sizeof(client->name));
 	strlcpy(client->old_name, "unconnected", sizeof(client->old_name));
+	client->prespawned = false;
 	client->spawned = false;
+	client->begun = false;
 	client->edict = PRVM_EDICT_NUM(clientnum+1);
 	if (client->netconnection)
 		client->netconnection->message.allowoverflow = true;		// we can catch it
@@ -1127,7 +1131,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	if (client->netconnection)
 		SV_SendServerinfo (client);
 	else
-		client->spawned = true;
+		client->prespawned = client->spawned = client->begun = true;
 }
 
 
@@ -2237,7 +2241,7 @@ void SV_FlushBroadcastMessages(void)
 		return;
 	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (!client->spawned || !client->netconnection || client->unreliablemsg.cursize + sv.datagram.cursize > client->unreliablemsg.maxsize || client->unreliablemsg_splitpoints >= (int)(sizeof(client->unreliablemsg_splitpoint)/sizeof(client->unreliablemsg_splitpoint[0])))
+		if (!client->begun || !client->netconnection || client->unreliablemsg.cursize + sv.datagram.cursize > client->unreliablemsg.maxsize || client->unreliablemsg_splitpoints >= (int)(sizeof(client->unreliablemsg_splitpoint)/sizeof(client->unreliablemsg_splitpoint[0])))
 			continue;
 		SZ_Write(&client->unreliablemsg, sv.datagram.data, sv.datagram.cursize);
 		client->unreliablemsg_splitpoint[client->unreliablemsg_splitpoints++] = client->unreliablemsg.cursize;
@@ -2365,7 +2369,7 @@ static void SV_SendClientDatagram (client_t *client)
 	msg.cursize = 0;
 	msg.allowoverflow = false;
 
-	if (host_client->spawned)
+	if (host_client->begun)
 	{
 		// the player is in the game
 		MSG_WriteByte (&msg, svc_time);
@@ -2460,7 +2464,7 @@ static void SV_UpdateToReliableMessages (void)
 		PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
-			if (host_client->spawned)
+			if (host_client->begun)
 				SV_BroadcastPrintf("%s ^7changed name to %s\n", host_client->old_name, host_client->name);
 			strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 			// send notification to all clients
@@ -2516,7 +2520,7 @@ static void SV_UpdateToReliableMessages (void)
 		// frags
 		host_client->frags = (int)PRVM_serveredictfloat(host_client->edict, frags);
 		if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
-			if(!host_client->spawned && host_client->netconnection)
+			if(!host_client->begun && host_client->netconnection)
 				host_client->frags = -666;
 		if (host_client->old_frags != host_client->frags)
 		{
@@ -2529,7 +2533,7 @@ static void SV_UpdateToReliableMessages (void)
 	}
 
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-		if (client->netconnection && (client->spawned || client->clientconnectcalled)) // also send MSG_ALL to people who are past ClientConnect, but not spawned yet
+		if (client->netconnection && (client->begun || client->clientconnectcalled)) // also send MSG_ALL to people who are past ClientConnect, but not spawned yet
 			SZ_Write (&client->netconnection->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
@@ -3436,7 +3440,7 @@ void SV_SpawnServer (const char *server)
 	// and we need to set the ->edict pointers to point into the progs edicts
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		host_client->spawned = false;
+		host_client->begun = false;
 		host_client->edict = PRVM_EDICT_NUM(i + 1);
 		PRVM_ED_ClearEdict(prog, host_client->edict);
 	}
@@ -3500,7 +3504,7 @@ void SV_SpawnServer (const char *server)
 			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 			prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
 			prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
-			host_client->spawned = true;
+			host_client->begun = true;
 		}
 	}
 
@@ -3896,7 +3900,7 @@ static int SV_ThreadFunc(void *voiddata)
 		playing = false;
 		if (sv.active)
 			for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-				if(host_client->spawned)
+				if(host_client->begun)
 					if(host_client->netconnection)
 						playing = true;
 		if(sv.time < 10)

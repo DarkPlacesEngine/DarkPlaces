@@ -709,7 +709,7 @@ void Host_Main(void)
 			// Look for clients who have spawned
 			playing = false;
 			for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-				if(host_client->spawned)
+				if(host_client->begun)
 					if(host_client->netconnection)
 						playing = true;
 			if(sv.time < 10)

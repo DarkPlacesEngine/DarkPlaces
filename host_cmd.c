@@ -1198,7 +1198,7 @@ static void Host_Name_f (void)
 	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
-		if (host_client->spawned)
+		if (host_client->begun)
 			SV_BroadcastPrintf("%s ^7changed name to %s\n", host_client->old_name, host_client->name);
 		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 		// send notification to all clients
@@ -1316,7 +1316,7 @@ static void Host_Playerskin_f (void)
 	PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
-		//if (host_client->spawned)
+		//if (host_client->begun)
 		//	SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
 		strlcpy(host_client->old_skin, host_client->playerskin, sizeof(host_client->old_skin));
 		/*// send notification to all clients
@@ -1774,11 +1774,12 @@ Host_PreSpawn_f
 */
 static void Host_PreSpawn_f (void)
 {
-	if (host_client->spawned)
+	if (host_client->prespawned)
 	{
-		Con_Print("prespawn not valid -- already spawned\n");
+		Con_Print("prespawn not valid -- already prespawned\n");
 		return;
 	}
+	host_client->prespawned = true;
 
 	if (host_client->netconnection)
 	{
@@ -1804,11 +1805,17 @@ static void Host_Spawn_f (void)
 	client_t *client;
 	int stats[MAX_CL_STATS];
 
+	if (!host_client->prespawned)
+	{
+		Con_Print("Spawn not valid -- not yet prespawned\n");
+		return;
+	}
 	if (host_client->spawned)
 	{
 		Con_Print("Spawn not valid -- already spawned\n");
 		return;
 	}
+	host_client->spawned = true;
 
 	// reset name change timer again because they might want to change name
 	// again in the first 5 seconds after connecting
@@ -1936,7 +1943,17 @@ Host_Begin_f
 */
 static void Host_Begin_f (void)
 {
-	host_client->spawned = true;
+	if (!host_client->spawned)
+	{
+		Con_Print("Begin not valid -- not yet spawned\n");
+		return;
+	}
+	if (host_client->begun)
+	{
+		Con_Print("Begin not valid -- already begun\n");
+		return;
+	}
+	host_client->begun = true;
 
 	// LordHavoc: note: this code also exists in SV_DropClient
 	if (sv.loadgame)
