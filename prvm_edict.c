@@ -39,6 +39,7 @@ cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print 
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
 cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
+cvar_t prvm_breakpointdump = {0, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
 cvar_t prvm_reuseedicts_startuptime = {0, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
 cvar_t prvm_reuseedicts_neverinsameframe = {0, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
 
@@ -1814,12 +1815,18 @@ static void PRVM_PO_Destroy(po_t *po)
 void PRVM_LeakTest(prvm_prog_t *prog);
 void PRVM_Prog_Reset(prvm_prog_t *prog)
 {
-	PRVM_LeakTest(prog);
-	prog->reset_cmd(prog);
-	Mem_FreePool(&prog->progs_mempool);
-	if(prog->po)
-		PRVM_PO_Destroy((po_t *) prog->po);
+	if (prog->loaded)
+	{
+		PRVM_LeakTest(prog);
+		prog->reset_cmd(prog);
+		Mem_FreePool(&prog->progs_mempool);
+		if(prog->po)
+			PRVM_PO_Destroy((po_t *) prog->po);
+	}
 	memset(prog,0,sizeof(prvm_prog_t));
+	prog->break_statement = -1;
+	prog->watch_global = -1;
+	prog->watch_edict = -1;
 }
 
 /*
@@ -1875,6 +1882,7 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 PRVM_LoadProgs
 ===============
 */
+static void PRVM_UpdateBreakpoints(prvm_prog_t *prog);
 void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global)
 {
 	int i;
@@ -2398,6 +2406,8 @@ fail:
 
 	prog->loaded = TRUE;
 
+	PRVM_UpdateBreakpoints(prog);
+
 	// set flags & ddef_ts in prog
 
 	prog->flag = 0;
@@ -2624,6 +2634,194 @@ static void PRVM_GlobalSet_f(void)
 }
 
 /*
+======================
+Break- and Watchpoints
+======================
+*/
+typedef struct
+{
+	char break_statement[256];
+	char watch_global[256];
+	int watch_edict;
+	char watch_field[256];
+}
+debug_data_t;
+static debug_data_t debug_data[PRVM_PROG_MAX];
+
+void PRVM_Breakpoint(prvm_prog_t *prog, int stack_index, const char *text)
+{
+	char vabuf[1024];
+	Con_Printf("PRVM_Breakpoint: %s\n", text);
+	PRVM_PrintState(prog, stack_index);
+	if (prvm_breakpointdump.integer)
+		Host_Savegame_to(prog, va(vabuf, sizeof(vabuf), "breakpoint-%s.dmp", prog->name));
+}
+
+static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
+{
+	debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+	if (!prog->loaded)
+		return;
+	if (debug->break_statement[0])
+	{
+		if (debug->break_statement[0] >= '0' && debug->break_statement[0] <= '9')
+		{
+			prog->break_statement = atoi(debug->break_statement);
+			prog->break_stack_index = 0;
+		}
+		else
+		{
+			mfunction_t *func;
+			func = PRVM_ED_FindFunction (prog, debug->break_statement);
+			if (!func)
+			{
+				Con_Printf("%s progs: no function or statement named %s to break on!\n", prog->name, debug->break_statement);
+				prog->break_statement = -1;
+			}
+			else
+			{
+				prog->break_statement = func->first_statement;
+				prog->break_stack_index = 1;
+			}
+		}
+		if (prog->break_statement >= -1)
+			Con_Printf("%s progs: breakpoint is at statement %d\n", prog->name, prog->break_statement);
+	}
+	else
+		prog->break_statement = -1;
+
+	if (debug->watch_global[0])
+	{
+		ddef_t *global = PRVM_ED_FindGlobal( prog, debug->watch_global );
+		if( !global )
+		{
+			Con_Printf( "%s progs: no global named '%s' to watch!\n", prog->name, debug->watch_global );
+			prog->watch_global = -1;
+		}
+		else
+		{
+			prog->watch_global = global->ofs;
+			prog->watch_global_value = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
+		}
+		if (prog->watch_global >= -1)
+			Con_Printf("%s progs: global watchpoint is at global index %d\n", prog->name, prog->watch_global);
+	}
+	else
+		prog->watch_global = -1;
+
+	if (debug->watch_field[0])
+	{
+		ddef_t *field = PRVM_ED_FindField( prog, debug->watch_field );
+		if( !field )
+		{
+			Con_Printf( "%s progs: no field named '%s' to watch!\n", prog->name, debug->watch_field );
+			prog->watch_edict = -1;
+		}
+		else
+		{
+			prog->watch_edict = debug->watch_edict;
+			prog->watch_field = field->ofs;
+			if (prog->watch_edict < prog->num_edicts)
+				prog->watch_edictfield_value = PRVM_EDICTFIELDFLOAT(PRVM_EDICT_NUM(prog->watch_edict), prog->watch_field);
+			else
+				prog->watch_edictfield_value = 0;
+		}
+		if (prog->watch_edict >= -1)
+			Con_Printf("%s progs: edict field watchpoint is at edict %d field index %d\n", prog->name, prog->watch_edict, prog->watch_field);
+	}
+	else
+		prog->watch_edict = -1;
+}
+
+static void PRVM_Breakpoint_f(void)
+{
+	prvm_prog_t *prog;
+
+	if( Cmd_Argc() == 2 ) {
+		if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+			return;
+		{
+			debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+			debug->break_statement[0] = 0;
+		}
+		PRVM_UpdateBreakpoints(prog);
+		return;
+	}
+	if( Cmd_Argc() != 3 ) {
+		Con_Printf( "prvm_breakpoint <program name> <function name | statement>\n" );
+		return;
+	}
+
+	if (!(prog = PRVM_ProgFromString(Cmd_Argv(1))))
+		return;
+
+	{
+		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+		strlcpy(debug->break_statement, Cmd_Argv(2), sizeof(debug->break_statement));
+	}
+	PRVM_UpdateBreakpoints(prog);
+}
+
+static void PRVM_GlobalWatchpoint_f(void)
+{
+	prvm_prog_t *prog;
+
+	if( Cmd_Argc() == 2 ) {
+		if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+			return;
+		{
+			debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+			debug->watch_global[0] = 0;
+		}
+		PRVM_UpdateBreakpoints(prog);
+		return;
+	}
+	if( Cmd_Argc() != 3 ) {
+		Con_Printf( "prvm_globalwatchpoint <program name> <global name>\n" );
+		return;
+	}
+
+	if (!(prog = PRVM_ProgFromString(Cmd_Argv(1))))
+		return;
+
+	{
+		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+		strlcpy(debug->watch_global, Cmd_Argv(2), sizeof(debug->watch_global));
+	}
+	PRVM_UpdateBreakpoints(prog);
+}
+
+static void PRVM_EdictWatchpoint_f(void)
+{
+	prvm_prog_t *prog;
+
+	if( Cmd_Argc() == 2 ) {
+		if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+			return;
+		{
+			debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+			debug->watch_field[0] = 0;
+		}
+		PRVM_UpdateBreakpoints(prog);
+		return;
+	}
+	if( Cmd_Argc() != 4 ) {
+		Con_Printf( "prvm_edictwatchpoint <program name> <edict number> <field name>\n" );
+		return;
+	}
+
+	if (!(prog = PRVM_ProgFromString(Cmd_Argv(1))))
+		return;
+
+	{
+		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
+		debug->watch_edict = atoi(Cmd_Argv(2));
+		strlcpy(debug->watch_field, Cmd_Argv(3), sizeof(debug->watch_field));
+	}
+	PRVM_UpdateBreakpoints(prog);
+}
+
+/*
 ===============
 PRVM_Init
 ===============
@@ -2648,6 +2846,10 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
 	Cmd_AddCommand ("sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
 
+	Cmd_AddCommand ("prvm_breakpoint", PRVM_Breakpoint_f, "marks a statement or function as breakpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear breakpoint");
+	Cmd_AddCommand ("prvm_globalwatchpoint", PRVM_GlobalWatchpoint_f, "marks a global as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
+	Cmd_AddCommand ("prvm_edictwatchpoint", PRVM_EdictWatchpoint_f, "marks an entity field as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
+
 	Cvar_RegisterVariable (&prvm_language);
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
@@ -2656,6 +2858,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);
 	Cvar_RegisterVariable (&prvm_errordump);
+	Cvar_RegisterVariable (&prvm_breakpointdump);
 	Cvar_RegisterVariable (&prvm_reuseedicts_startuptime);
 	Cvar_RegisterVariable (&prvm_reuseedicts_neverinsameframe);
 
@@ -2672,10 +2875,7 @@ PRVM_InitProg
 */
 void PRVM_Prog_Init(prvm_prog_t *prog)
 {
-	if (prog->loaded)
-		PRVM_Prog_Reset(prog);
-
-	memset(prog, 0, sizeof(prvm_prog_t));
+	PRVM_Prog_Reset(prog);
 	prog->leaktest_active = prvm_leaktest.integer != 0;
 }
 
