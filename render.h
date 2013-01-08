@@ -430,7 +430,7 @@ void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatri
 #define BATCHNEED_ARRAY_VERTEXCOLOR      (1<<10) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
 #define BATCHNEED_ARRAY_TEXCOORD         (1<<11) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
 #define BATCHNEED_ARRAY_LIGHTMAP         (1<<12) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_NOGAPS                 (1<<13) // force vertex copying (no gaps)
+#define BATCHNEED_NOGAPS                 (1<<13) // force vertex copying if firstvertex is not zero or there are gaps
 #define BATCHNEED_ALLOWMULTIDRAW         (1<<14) // allow multiple draws
 void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch(void);
