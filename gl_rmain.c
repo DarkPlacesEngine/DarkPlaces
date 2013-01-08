@@ -10460,7 +10460,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				R_SetupShader_DepthOrShadow(false, false);
 			}
 			RSurf_SetupDepthAndCulling();
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			if (rsurface.batchvertex3fbuffer)
 				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
 			else
@@ -10555,7 +10555,7 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 	if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
 		return;
 	RSurf_SetupDepthAndCulling();
-	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, texturenumsurfaces, texturesurfacelist);
+	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 	if (rsurface.batchvertex3fbuffer)
 		R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
 	else
