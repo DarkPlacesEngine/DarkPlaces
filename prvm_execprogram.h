@@ -12,6 +12,32 @@
 
 // This code isn't #ifdef/#define protectable, don't try.
 
+#if PRVMSLOWINTERPRETER
+		{
+			char vabuf[1024];
+			if (prog->watch_global >= 0)
+			{
+				prvm_vec_t f = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
+				if (memcmp(&f, &prog->watch_global_value, sizeof(f)))
+				{
+					prog->xstatement = st + 1 - prog->statements;
+					PRVM_Breakpoint(prog, 1, va(vabuf, sizeof(vabuf), "Global watchpoint hit by engine: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_global_value, f));
+					prog->watch_global_value = f;
+				}
+			}
+			if (prog->watch_edict >= 0 && prog->watch_edict < prog->max_edicts)
+			{
+				prvm_vec_t f = PRVM_EDICTFIELDFLOAT(prog->edicts + prog->watch_edict, prog->watch_field);
+				if (memcmp(&f, &prog->watch_edictfield_value, sizeof(f)))
+				{
+					prog->xstatement = st + 1 - prog->statements;
+					PRVM_Breakpoint(prog, 1, va(vabuf, sizeof(vabuf), "Entityfield watchpoint hit by engine: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_edictfield_value, f));
+					prog->watch_edictfield_value = f;
+				}
+			}
+		}
+#endif
+
 		while (1)
 		{
 			st++;
@@ -20,6 +46,12 @@
 			if (prog->trace)
 				PRVM_PrintStatement(prog, st);
 			prog->statement_profile[st - prog->statements]++;
+			if (prog->break_statement >= 0)
+				if ((st - prog->statements) == prog->break_statement)
+				{
+					prog->xstatement = st - prog->statements;
+					PRVM_Breakpoint(prog, prog->break_stack_index, "Breakpoint hit");
+				}
 #endif
 
 			switch (st->op)
@@ -360,6 +392,9 @@
 					}
 					else
 						prog->error_cmd("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, prog->name);
+
+					if (prog->trace != cachedpr_trace)
+						goto chooseexecprogram;
 				}
 				else
 					st = prog->statements + PRVM_EnterFunction(prog, newf);
@@ -384,8 +419,6 @@
 				startst = st;
 				if (prog->depth <= exitdepth)
 					goto cleanup; // all done
-				if (prog->trace != cachedpr_trace)
-					goto chooseexecprogram;
 				break;
 
 			case OP_STATE:
@@ -678,6 +711,31 @@
 				prog->error_cmd("Bad opcode %i in %s", st->op, prog->name);
 				goto cleanup;
 			}
+#if PRVMSLOWINTERPRETER
+			{
+				char vabuf[1024];
+				if (prog->watch_global >= 0)
+				{
+					prvm_vec_t f = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
+					if (memcmp(&f, &prog->watch_global_value, sizeof(f)))
+					{
+						prog->xstatement = st - prog->statements;
+						PRVM_Breakpoint(prog, 0, va(vabuf, sizeof(vabuf), "Global watchpoint hit: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_global_value, f));
+						prog->watch_global_value = f;
+					}
+				}
+				if (prog->watch_edict >= 0 && prog->watch_edict < prog->max_edicts)
+				{
+					prvm_vec_t f = PRVM_EDICTFIELDFLOAT(prog->edicts + prog->watch_edict, prog->watch_field);
+					if (memcmp(&f, &prog->watch_edictfield_value, sizeof(f)))
+					{
+						prog->xstatement = st - prog->statements;
+						PRVM_Breakpoint(prog, 0, va(vabuf, sizeof(vabuf), "Entityfield watchpoint hit: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_edictfield_value, f));
+						prog->watch_edictfield_value = f;
+					}
+				}
+			}
+#endif
 		}
 
 #undef PreError

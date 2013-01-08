@@ -36,7 +36,7 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 	if(prvm_backtraceforwarnings.integer && recursive != realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
 	{
 		recursive = realtime;
-		PRVM_PrintState(prog);
+		PRVM_PrintState(prog, 0);
 		recursive = -1;
 	}
 }
