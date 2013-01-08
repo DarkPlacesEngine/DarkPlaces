@@ -8625,7 +8625,6 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	if ((batchneed & (BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_ARRAY_VERTEXCOLOR)) && texturesurfacelist[0]->lightmapinfo)
 	{
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_NOGAPS;
 		needsupdate |= BATCHNEED_VERTEXMESH_VERTEXCOLOR;
 	}
 
@@ -8647,36 +8646,36 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			break;
 		case Q3DEFORM_AUTOSPRITE:
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_AUTOSPRITE2:
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_NORMAL:
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_WAVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_BULGE:
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_MOVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
 			dynamicvertex = true;
-			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS;
+			batchneed |= BATCHNEED_ARRAY_VERTEX;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX;
 			break;
 		}
@@ -8688,35 +8687,45 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		break;
 	case Q3TCGEN_LIGHTMAP:
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_LIGHTMAP | BATCHNEED_NOGAPS;
+		batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
 		needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
 		break;
 	case Q3TCGEN_VECTOR:
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS;
+		batchneed |= BATCHNEED_ARRAY_VERTEX;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		break;
 	case Q3TCGEN_ENVIRONMENT:
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_NOGAPS;
+		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		break;
 	}
 	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS;
+		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 	}
 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
 	{
 		dynamicvertex = true;
-		batchneed |= BATCHNEED_NOGAPS;
 		needsupdate |= (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP));
 	}
 
-	if (dynamicvertex || gaps || rsurface.batchfirstvertex)
+	// when the model data has no vertex buffer (dynamic mesh), we need to
+	// eliminate gaps
+	if (vid.useinterleavedarrays ? !rsurface.modelvertexmeshbuffer : !rsurface.modelvertex3f_vertexbuffer)
+		batchneed |= BATCHNEED_NOGAPS;
+
+	// the caller can specify BATCHNEED_NOGAPS to force a batch with
+	// firstvertex = 0 and endvertex = numvertices (no gaps, no firstvertex),
+	// we ensure this by treating the vertex batch as dynamic...
+	if ((batchneed & BATCHNEED_NOGAPS) && (gaps || firstvertex > 0))
+		dynamicvertex = true;
+
+	if (dynamicvertex)
 	{
 		// when copying, we need to consider the regeneration of vertexmesh, any dependencies it may have must be set...
 		if (batchneed & BATCHNEED_VERTEXMESH_VERTEX)      batchneed |= BATCHNEED_ARRAY_VERTEX;
@@ -8727,22 +8736,12 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		if (batchneed & BATCHNEED_VERTEXMESH_LIGHTMAP)    batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
 	}
 
-	// when the model data has no vertex buffer (dynamic mesh), we need to
-	// eliminate gaps
-	if (vid.useinterleavedarrays ? !rsurface.modelvertexmeshbuffer : !rsurface.modelvertex3f_vertexbuffer)
-		batchneed |= BATCHNEED_NOGAPS;
-
 	// if needsupdate, we have to do a dynamic vertex batch for sure
 	if (needsupdate & batchneed)
 		dynamicvertex = true;
 
 	// see if we need to build vertexmesh from arrays
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
-		dynamicvertex = true;
-
-	// if gaps are unacceptable, and there are gaps, it's a dynamic batch...
-	// also some drivers strongly dislike firstvertex
-	if ((batchneed & BATCHNEED_NOGAPS) && (gaps || firstvertex))
 		dynamicvertex = true;
 
 	rsurface.batchvertex3f = rsurface.modelvertex3f;
@@ -8843,7 +8842,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// now copy the vertex data into a combined array and make an index array
 	// (this is what Quake3 does all the time)
-	//if (gaps || rsurface.batchfirstvertex)
+	//if (dynamicvertex)
 	{
 		rsurface.batchvertex3fbuffer = NULL;
 		rsurface.batchvertexmesh = NULL;
@@ -9496,7 +9495,7 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 		d = 0;
 		if(!prepared)
 		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, 1, &surface);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX, 1, &surface);
 			prepared = true;
 			if(rsurface.batchnumvertices == 0)
 				break;
@@ -9843,7 +9842,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 			// just to make sure that braindead drivers don't draw
 			// anything despite that colormask...
 			GL_BlendFunc(GL_ZERO, GL_ONE);
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			if (rsurface.batchvertex3fbuffer)
 				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
 			else
@@ -10262,7 +10261,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	{
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(rsurface.batchnumvertices);
-		for (j = 0, vi = rsurface.batchfirstvertex;j < rsurface.batchnumvertices;j++, vi++)
+		for (j = 0, vi = 0;j < rsurface.batchnumvertices;j++, vi++)
 		{
 			VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
 			Vector4Set(batchvertex[vi].color4f, 0, 0, 0, 1);
@@ -10274,7 +10273,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	{
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(rsurface.batchnumvertices);
-		for (j = 0, vi = rsurface.batchfirstvertex;j < rsurface.batchnumvertices;j++, vi++)
+		for (j = 0, vi = 0;j < rsurface.batchnumvertices;j++, vi++)
 		{
 			unsigned char c = (vi << 3) * (1.0f / 256.0f);
 			VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
