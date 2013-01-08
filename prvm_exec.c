@@ -480,21 +480,26 @@ void PRVM_ChildProfile_f (void)
 	PRVM_Profile(prog, howmany, 0, 1);
 }
 
-void PRVM_PrintState(prvm_prog_t *prog)
+void PRVM_PrintState(prvm_prog_t *prog, int stack_index)
 {
 	int i;
+	mfunction_t *func = prog->xfunction;
+	int st = prog->xstatement;
+	if (stack_index > 0 && stack_index <= prog->depth)
+	{
+		func = prog->stack[prog->depth - stack_index].f;
+		st = prog->stack[prog->depth - stack_index].s;
+	}
 	if (prog->statestring)
 	{
 		Con_Printf("Caller-provided information: %s\n", prog->statestring);
 	}
-	if (prog->xfunction)
+	if (func)
 	{
 		for (i = -7; i <= 0;i++)
-			if (prog->xstatement + i >= prog->xfunction->first_statement)
-				PRVM_PrintStatement(prog, prog->statements + prog->xstatement + i);
+			if (st + i >= func->first_statement)
+				PRVM_PrintStatement(prog, prog->statements + st + i);
 	}
-	else
-		Con_Print("null function executing??\n");
 	PRVM_StackTrace(prog);
 }
 
@@ -512,7 +517,7 @@ void PRVM_Crash(prvm_prog_t *prog)
 	if( prog->depth > 0 )
 	{
 		Con_Printf("QuakeC crash report for %s:\n", prog->name);
-		PRVM_PrintState(prog);
+		PRVM_PrintState(prog, 0);
 	}
 
 	if(prvm_errordump.integer)
@@ -706,7 +711,7 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -797,7 +802,7 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -893,7 +898,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)

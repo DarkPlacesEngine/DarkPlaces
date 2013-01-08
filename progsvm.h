@@ -228,13 +228,13 @@ extern prvm_eval_t prvm_badvalue;
 #define PRVM_menufunction(funcname)           (prog->funcoffsets.funcname)
 
 #if 1
-#define PRVM_EDICTFIELDVALUE(ed, fieldoffset)    (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)(ed->fields.fp + fieldoffset))
+#define PRVM_EDICTFIELDVALUE(ed, fieldoffset)    ((fieldoffset) < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)((ed)->fields.fp + (fieldoffset)))
 #define PRVM_EDICTFIELDFLOAT(ed, fieldoffset)    (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->_float)
 #define PRVM_EDICTFIELDVECTOR(ed, fieldoffset)   (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->vector)
 #define PRVM_EDICTFIELDSTRING(ed, fieldoffset)   (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->string)
 #define PRVM_EDICTFIELDEDICT(ed, fieldoffset)    (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->edict)
 #define PRVM_EDICTFIELDFUNCTION(ed, fieldoffset) (PRVM_EDICTFIELDVALUE(ed, fieldoffset)->function)
-#define PRVM_GLOBALFIELDVALUE(fieldoffset)       (fieldoffset < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)(prog->globals.fp + fieldoffset))
+#define PRVM_GLOBALFIELDVALUE(fieldoffset)       ((fieldoffset) < 0 ? Con_Printf("Invalid fieldoffset at %s:%i\n", __FILE__, __LINE__), &prvm_badvalue : (prvm_eval_t *)(prog->globals.fp + (fieldoffset)))
 #define PRVM_GLOBALFIELDFLOAT(fieldoffset)       (PRVM_GLOBALFIELDVALUE(fieldoffset)->_float)
 #define PRVM_GLOBALFIELDVECTOR(fieldoffset)      (PRVM_GLOBALFIELDVALUE(fieldoffset)->vector)
 #define PRVM_GLOBALFIELDSTRING(fieldoffset)      (PRVM_GLOBALFIELDVALUE(fieldoffset)->string)
@@ -591,6 +591,14 @@ typedef struct prvm_prog_s
 	int					argc;
 
 	int					trace;
+	int					break_statement;
+	int					break_stack_index;
+	int					watch_global;
+	prvm_vec_t				watch_global_value;
+	int					watch_edict;
+	int					watch_field;
+	prvm_vec_t				watch_edictfield_value;
+
 	mfunction_t			*xfunction;
 	int					xstatement;
 
@@ -763,7 +771,7 @@ void PRVM_ChildProfile_f (void);
 void PRVM_CallProfile_f (void);
 void PRVM_PrintFunction_f (void);
 
-void PRVM_PrintState(prvm_prog_t *prog);
+void PRVM_PrintState(prvm_prog_t *prog, int stack_index);
 void PRVM_Crash(prvm_prog_t *prog);
 void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize);
 const char *PRVM_AllocationOrigin(prvm_prog_t *prog);
@@ -855,12 +863,13 @@ Call InitProg with the num
 Set up the fields marked with [INIT] in the prog struct
 Load a program with LoadProgs
 */
-// Load expects to be called right after Init
+// Load expects to be called right after Reset
 void PRVM_Prog_Init(prvm_prog_t *prog);
 void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
 void PRVM_Prog_Reset(prvm_prog_t *prog);
 
 void PRVM_StackTrace(prvm_prog_t *prog);
+void PRVM_Breakpoint(prvm_prog_t *prog, int stack_index, const char *text);
 
 void VM_Warning(prvm_prog_t *prog, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
