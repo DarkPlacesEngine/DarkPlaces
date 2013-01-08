@@ -225,6 +225,9 @@ cvar_t gl_lightmaps = {0, "gl_lightmaps", "0", "draws only lightmaps, no texture
 
 cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 
+cvar_t r_batch_multidraw = {CVAR_SAVE, "r_batch_multidraw", "1", "issue multiple glDrawElements calls when rendering a batch of surfaces with the same texture (otherwise the index data is copied to make it one draw)"};
+cvar_t r_batch_multidraw_mintriangles = {CVAR_SAVE, "r_batch_multidraw_mintriangles", "0", "minimum number of triangles to activate multidraw path (copying small groups of triangles may be faster)"};
+
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
 
@@ -2529,7 +2532,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	{
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
-		RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
+		RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 		R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		R_SetupShader_SetPermutationHLSL(mode, permutation);
 		Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);hlslPSSetParameter16f(D3DPSREGISTER_ModelToReflectCube, m16f);
@@ -2682,7 +2685,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	case RENDERPATH_GLES2:
 		if (!vid.useinterleavedarrays)
 		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_Mesh_VertexPointer(     3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 			R_Mesh_ColorPointer(      4, GL_FLOAT, sizeof(float[4]), rsurface.batchlightmapcolor4f, rsurface.batchlightmapcolor4f_vertexbuffer, rsurface.batchlightmapcolor4f_bufferoffset);
 			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordtexture2f_vertexbuffer, rsurface.batchtexcoordtexture2f_bufferoffset);
@@ -2693,7 +2696,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		}
 		else
 		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		}
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
@@ -2844,7 +2847,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	case RENDERPATH_GLES1:
 		break;
 	case RENDERPATH_SOFT:
-		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0), texturenumsurfaces, texturesurfacelist);
+		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 		R_Mesh_PrepareVertices_Mesh_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchsvector3f, rsurface.batchtvector3f, rsurface.batchnormal3f, rsurface.batchlightmapcolor4f, rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordlightmap2f);
 		R_SetupShader_SetPermutationSoft(mode, permutation);
 		{Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelToReflectCubeM1, 1, false, m16f);}
@@ -4311,6 +4314,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&developer_texturelogging);
 	Cvar_RegisterVariable(&gl_lightmaps);
 	Cvar_RegisterVariable(&r_test);
+	Cvar_RegisterVariable(&r_batch_multidraw);
+	Cvar_RegisterVariable(&r_batch_multidraw_mintriangles);
 	Cvar_RegisterVariable(&r_glsl_saturation);
 	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
 	Cvar_RegisterVariable(&r_glsl_vertextextureblend_usebothalphas);
@@ -8779,10 +8784,15 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// copy the surface list together to avoid wasting upload bandwidth on the
 	// vertices in the gaps.
 	//
-	// if gaps exist and we have a static vertex buffer, we still have to
-	// combine the index buffer ranges into one dynamic index buffer.
+	// if gaps exist and we have a static vertex buffer, we can choose whether
+	// to combine the index buffer ranges into one dynamic index buffer or
+	// simply issue multiple glDrawElements calls (BATCHNEED_ALLOWMULTIDRAW).
 	//
-	// in all cases we end up with data that can be drawn in one call.
+	// in many cases the batch is reduced to one draw call.
+
+	rsurface.batchmultidraw = false;
+	rsurface.batchmultidrawnumsurfaces = 0;
+	rsurface.batchmultidrawsurfacelist = NULL;
 
 	if (!dynamicvertex)
 	{
@@ -8792,6 +8802,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		// otherwise use the original static buffer with an appropriate offset
 		if (gaps)
 		{
+			if ((batchneed & BATCHNEED_ALLOWMULTIDRAW) && r_batch_multidraw.integer && batchnumtriangles >= r_batch_multidraw_mintriangles.integer)
+			{
+				rsurface.batchmultidraw = true;
+				rsurface.batchmultidrawnumsurfaces = texturenumsurfaces;
+				rsurface.batchmultidrawsurfacelist = texturesurfacelist;
+				return;
+			}
 			// build a new triangle elements array for this batch
 			rsurface.batchelement3i = (int *)R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
 			rsurface.batchfirsttriangle = 0;
@@ -9435,7 +9452,31 @@ void RSurf_DrawBatch(void)
 		}
 	}
 #endif
-	R_Mesh_Draw(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchfirsttriangle, rsurface.batchnumtriangles, rsurface.batchelement3i, rsurface.batchelement3i_indexbuffer, rsurface.batchelement3i_bufferoffset, rsurface.batchelement3s, rsurface.batchelement3s_indexbuffer, rsurface.batchelement3s_bufferoffset);
+	if (rsurface.batchmultidraw)
+	{
+		// issue multiple draws rather than copying index data
+		int numsurfaces = rsurface.batchmultidrawnumsurfaces;
+		const msurface_t **surfacelist = rsurface.batchmultidrawsurfacelist;
+		int i, j, k, firstvertex, endvertex, firsttriangle, endtriangle;
+		for (i = 0;i < numsurfaces;)
+		{
+			// combine consecutive surfaces as one draw
+			for (k = i, j = i + 1;j < numsurfaces;k = j, j++)
+				if (surfacelist[j] != surfacelist[k] + 1)
+					break;
+			firstvertex = surfacelist[i]->num_firstvertex;
+			endvertex = surfacelist[k]->num_firstvertex + surfacelist[k]->num_vertices;
+			firsttriangle = surfacelist[i]->num_firsttriangle;
+			endtriangle = surfacelist[k]->num_firsttriangle + surfacelist[k]->num_triangles;
+			R_Mesh_Draw(firstvertex, endvertex - firstvertex, firsttriangle, endtriangle - firsttriangle, rsurface.batchelement3i, rsurface.batchelement3i_indexbuffer, rsurface.batchelement3i_bufferoffset, rsurface.batchelement3s, rsurface.batchelement3s_indexbuffer, rsurface.batchelement3s_bufferoffset);
+			i = j;
+		}
+	}
+	else
+	{
+		// there is only one consecutive run of index data (may have been combined)
+		R_Mesh_Draw(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchfirsttriangle, rsurface.batchnumtriangles, rsurface.batchelement3i, rsurface.batchelement3i_indexbuffer, rsurface.batchelement3i_bufferoffset, rsurface.batchelement3s, rsurface.batchelement3s_indexbuffer, rsurface.batchelement3s_bufferoffset);
+	}
 }
 
 static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)

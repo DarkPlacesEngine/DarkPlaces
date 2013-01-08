@@ -287,6 +287,9 @@ typedef struct rsurfacestate_s
 	// deformvertexes is used in a q3 shader, and consequently these can
 	// change on a per-surface basis (according to rsurface.texture)
 	qboolean                    batchgeneratedvertex;
+	qboolean                    batchmultidraw;
+	int                         batchmultidrawnumsurfaces;
+	const msurface_t          **batchmultidrawsurfacelist;
 	int                         batchfirstvertex;
 	int                         batchnumvertices;
 	int                         batchfirsttriangle;
@@ -428,6 +431,7 @@ void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatri
 #define BATCHNEED_ARRAY_TEXCOORD         (1<<11) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
 #define BATCHNEED_ARRAY_LIGHTMAP         (1<<12) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
 #define BATCHNEED_NOGAPS                 (1<<13) // force vertex copying (no gaps)
+#define BATCHNEED_ALLOWMULTIDRAW         (1<<14) // allow multiple draws
 void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch(void);
 
