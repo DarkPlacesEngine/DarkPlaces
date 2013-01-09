@@ -1825,8 +1825,8 @@ void PRVM_Prog_Reset(prvm_prog_t *prog)
 	}
 	memset(prog,0,sizeof(prvm_prog_t));
 	prog->break_statement = -1;
-	prog->watch_global = -1;
-	prog->watch_edict = -1;
+	prog->watch_global_type = ev_void;
+	prog->watch_field_type = ev_void;
 }
 
 /*
@@ -2657,6 +2657,22 @@ void PRVM_Breakpoint(prvm_prog_t *prog, int stack_index, const char *text)
 		Host_Savegame_to(prog, va(vabuf, sizeof(vabuf), "breakpoint-%s.dmp", prog->name));
 }
 
+void PRVM_Watchpoint(prvm_prog_t *prog, int stack_index, const char *text, etype_t type, prvm_eval_t *o, prvm_eval_t *n)
+{
+	size_t sz = sizeof(prvm_vec_t) * ((type & ~DEF_SAVEGLOBAL) == ev_vector ? 3 : 1);
+	if (memcmp(o, n, sz))
+	{
+		char buf[1024];
+		char valuebuf_o[128];
+		char valuebuf_n[128];
+		PRVM_UglyValueString(prog, type, o, valuebuf_o, sizeof(valuebuf_o));
+		PRVM_UglyValueString(prog, type, n, valuebuf_n, sizeof(valuebuf_n));
+		dpsnprintf(buf, sizeof(buf), "%s: %s -> %s", text, valuebuf_o, valuebuf_n);
+		PRVM_Breakpoint(prog, stack_index, buf);
+		memcpy(o, n, sz);
+	}
+}
+
 static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 {
 	debug_data_t *debug = &debug_data[prog - prvm_prog_list];
@@ -2696,18 +2712,20 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 		if( !global )
 		{
 			Con_Printf( "%s progs: no global named '%s' to watch!\n", prog->name, debug->watch_global );
-			prog->watch_global = -1;
+			prog->watch_global_type = ev_void;
 		}
 		else
 		{
+			size_t sz = sizeof(prvm_vec_t) * ((global->type  & ~DEF_SAVEGLOBAL) == ev_vector ? 3 : 1);
 			prog->watch_global = global->ofs;
-			prog->watch_global_value = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
+			prog->watch_global_type = global->type;
+			memcpy(&prog->watch_global_value, PRVM_GLOBALFIELDVALUE(prog->watch_global), sz);
 		}
-		if (prog->watch_global >= -1)
+		if (prog->watch_global_type != ev_void)
 			Con_Printf("%s progs: global watchpoint is at global index %d\n", prog->name, prog->watch_global);
 	}
 	else
-		prog->watch_global = -1;
+		prog->watch_global_type = ev_void;
 
 	if (debug->watch_field[0])
 	{
@@ -2715,22 +2733,24 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 		if( !field )
 		{
 			Con_Printf( "%s progs: no field named '%s' to watch!\n", prog->name, debug->watch_field );
-			prog->watch_edict = -1;
+			prog->watch_field_type = ev_void;
 		}
 		else
 		{
+			size_t sz = sizeof(prvm_vec_t) * ((field->type & ~DEF_SAVEGLOBAL) == ev_vector ? 3 : 1);
 			prog->watch_edict = debug->watch_edict;
 			prog->watch_field = field->ofs;
+			prog->watch_field_type = field->type;
 			if (prog->watch_edict < prog->num_edicts)
-				prog->watch_edictfield_value = PRVM_EDICTFIELDFLOAT(PRVM_EDICT_NUM(prog->watch_edict), prog->watch_field);
+				memcpy(&prog->watch_edictfield_value, PRVM_EDICTFIELDVALUE(PRVM_EDICT_NUM(prog->watch_edict), prog->watch_field), sz);
 			else
-				prog->watch_edictfield_value = 0;
+				memset(&prog->watch_edictfield_value, 0, sz);
 		}
-		if (prog->watch_edict >= -1)
+		if (prog->watch_edict != ev_void)
 			Con_Printf("%s progs: edict field watchpoint is at edict %d field index %d\n", prog->name, prog->watch_edict, prog->watch_field);
 	}
 	else
-		prog->watch_edict = -1;
+		prog->watch_field_type = ev_void;
 }
 
 static void PRVM_Breakpoint_f(void)

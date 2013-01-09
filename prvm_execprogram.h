@@ -14,26 +14,17 @@
 
 #if PRVMSLOWINTERPRETER
 		{
-			char vabuf[1024];
-			if (prog->watch_global >= 0)
+			if (prog->watch_global_type != ev_void)
 			{
-				prvm_vec_t f = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
-				if (memcmp(&f, &prog->watch_global_value, sizeof(f)))
-				{
-					prog->xstatement = st + 1 - prog->statements;
-					PRVM_Breakpoint(prog, 1, va(vabuf, sizeof(vabuf), "Global watchpoint hit by engine: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_global_value, f));
-					prog->watch_global_value = f;
-				}
+				prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
+				prog->xstatement = st + 1 - prog->statements;
+				PRVM_Watchpoint(prog, 1, "Global watchpoint hit by engine", prog->watch_global_type, &prog->watch_global_value, f);
 			}
-			if (prog->watch_edict >= 0 && prog->watch_edict < prog->max_edicts)
+			if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 			{
-				prvm_vec_t f = PRVM_EDICTFIELDFLOAT(prog->edicts + prog->watch_edict, prog->watch_field);
-				if (memcmp(&f, &prog->watch_edictfield_value, sizeof(f)))
-				{
-					prog->xstatement = st + 1 - prog->statements;
-					PRVM_Breakpoint(prog, 1, va(vabuf, sizeof(vabuf), "Entityfield watchpoint hit by engine: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_edictfield_value, f));
-					prog->watch_edictfield_value = f;
-				}
+				prvm_vec_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+				prog->xstatement = st + 1 - prog->statements;
+				PRVM_Watchpoint(prog, 1, "Entityfield watchpoint hit by engine", prog->watch_field_type, &prog->watch_edictfield_value, f);
 			}
 		}
 #endif
@@ -713,26 +704,17 @@
 			}
 #if PRVMSLOWINTERPRETER
 			{
-				char vabuf[1024];
-				if (prog->watch_global >= 0)
+				if (prog->watch_global_type != ev_void)
 				{
-					prvm_vec_t f = PRVM_GLOBALFIELDFLOAT(prog->watch_global);
-					if (memcmp(&f, &prog->watch_global_value, sizeof(f)))
-					{
-						prog->xstatement = st - prog->statements;
-						PRVM_Breakpoint(prog, 0, va(vabuf, sizeof(vabuf), "Global watchpoint hit: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_global_value, f));
-						prog->watch_global_value = f;
-					}
+					prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
+					prog->xstatement = st - prog->statements;
+					PRVM_Watchpoint(prog, 0, "Global watchpoint hit", prog->watch_global_type, &prog->watch_global_value, f);
 				}
-				if (prog->watch_edict >= 0 && prog->watch_edict < prog->max_edicts)
+				if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 				{
-					prvm_vec_t f = PRVM_EDICTFIELDFLOAT(prog->edicts + prog->watch_edict, prog->watch_field);
-					if (memcmp(&f, &prog->watch_edictfield_value, sizeof(f)))
-					{
-						prog->xstatement = st - prog->statements;
-						PRVM_Breakpoint(prog, 0, va(vabuf, sizeof(vabuf), "Entityfield watchpoint hit: " FLOAT_LOSSLESS_FORMAT " -> " FLOAT_LOSSLESS_FORMAT, prog->watch_edictfield_value, f));
-						prog->watch_edictfield_value = f;
-					}
+					prvm_vec_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+					prog->xstatement = st - prog->statements;
+					PRVM_Watchpoint(prog, 0, "Entityfield watchpoint hit", prog->watch_field_type, &prog->watch_edictfield_value, f);
 				}
 			}
 #endif
