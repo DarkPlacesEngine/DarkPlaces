@@ -594,10 +594,12 @@ typedef struct prvm_prog_s
 	int					break_statement;
 	int					break_stack_index;
 	int					watch_global;
-	prvm_vec_t				watch_global_value;
+	etype_t					watch_global_type;
+	prvm_eval_t				watch_global_value;
 	int					watch_edict;
 	int					watch_field;
-	prvm_vec_t				watch_edictfield_value;
+	etype_t					watch_field_type;
+	prvm_eval_t				watch_edictfield_value;
 
 	mfunction_t			*xfunction;
 	int					xstatement;
@@ -870,6 +872,7 @@ void PRVM_Prog_Reset(prvm_prog_t *prog);
 
 void PRVM_StackTrace(prvm_prog_t *prog);
 void PRVM_Breakpoint(prvm_prog_t *prog, int stack_index, const char *text);
+void PRVM_Watchpoint(prvm_prog_t *prog, int stack_index, const char *text, etype_t type, prvm_eval_t *o, prvm_eval_t *n);
 
 void VM_Warning(prvm_prog_t *prog, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
