@@ -1568,8 +1568,8 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					VectorCopy(originmins, trailpos);
 					if (info->trailspacing > 0)
 					{
-						info->particleaccumulator += traillen / info->trailspacing * cl_particles_quality.value * pcount;
-						trailstep = info->trailspacing / cl_particles_quality.value / max(0.001, pcount);
+						info->particleaccumulator += traillen / info->trailspacing * cl_particles_quality.value;
+						trailstep = info->trailspacing / cl_particles_quality.value;
 						immediatebloodstain = false;
 
 						AnglesFromVectors(angles, traildir, NULL, false);
