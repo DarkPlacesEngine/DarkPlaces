@@ -57,6 +57,7 @@ cvar_t scr_screenshot_alpha = {CVAR_SAVE, "scr_screenshot_alpha","0", "try to wr
 cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
+cvar_t cl_capturevideo_demo_stop = {CVAR_SAVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
 cvar_t cl_capturevideo_width = {CVAR_SAVE, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_height = {CVAR_SAVE, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
@@ -940,6 +941,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_alpha);
 	Cvar_RegisterVariable (&scr_screenshot_timestamp);
 	Cvar_RegisterVariable (&cl_capturevideo);
+	Cvar_RegisterVariable (&cl_capturevideo_demo_stop);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
 	Cvar_RegisterVariable (&cl_capturevideo_width);
 	Cvar_RegisterVariable (&cl_capturevideo_height);
