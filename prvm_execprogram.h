@@ -22,7 +22,7 @@
 			}
 			if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 			{
-				prvm_vec_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+				prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
 				prog->xstatement = st + 1 - prog->statements;
 				PRVM_Watchpoint(prog, 1, "Entityfield watchpoint hit by engine", prog->watch_field_type, &prog->watch_edictfield_value, f);
 			}
@@ -712,7 +712,7 @@
 				}
 				if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 				{
-					prvm_vec_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+					prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
 					prog->xstatement = st - prog->statements;
 					PRVM_Watchpoint(prog, 0, "Entityfield watchpoint hit", prog->watch_field_type, &prog->watch_edictfield_value, f);
 				}
