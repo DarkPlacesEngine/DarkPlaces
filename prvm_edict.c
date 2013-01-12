@@ -2718,7 +2718,7 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 		{
 			size_t sz = sizeof(prvm_vec_t) * ((global->type  & ~DEF_SAVEGLOBAL) == ev_vector ? 3 : 1);
 			prog->watch_global = global->ofs;
-			prog->watch_global_type = global->type;
+			prog->watch_global_type = (etype_t)global->type;
 			memcpy(&prog->watch_global_value, PRVM_GLOBALFIELDVALUE(prog->watch_global), sz);
 		}
 		if (prog->watch_global_type != ev_void)
@@ -2740,7 +2740,7 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 			size_t sz = sizeof(prvm_vec_t) * ((field->type & ~DEF_SAVEGLOBAL) == ev_vector ? 3 : 1);
 			prog->watch_edict = debug->watch_edict;
 			prog->watch_field = field->ofs;
-			prog->watch_field_type = field->type;
+			prog->watch_field_type = (etype_t)field->type;
 			if (prog->watch_edict < prog->num_edicts)
 				memcpy(&prog->watch_edictfield_value, PRVM_EDICTFIELDVALUE(PRVM_EDICT_NUM(prog->watch_edict), prog->watch_field), sz);
 			else
