@@ -70,14 +70,16 @@
 				OPC->_float = OPA->vector[0]*OPB->vector[0] + OPA->vector[1]*OPB->vector[1] + OPA->vector[2]*OPB->vector[2];
 				break;
 			case OP_MUL_FV:
-				OPC->vector[0] = OPA->_float * OPB->vector[0];
-				OPC->vector[1] = OPA->_float * OPB->vector[1];
-				OPC->vector[2] = OPA->_float * OPB->vector[2];
+				tempfloat = OPA->_float;
+				OPC->vector[0] = tempfloat * OPB->vector[0];
+				OPC->vector[1] = tempfloat * OPB->vector[1];
+				OPC->vector[2] = tempfloat * OPB->vector[2];
 				break;
 			case OP_MUL_VF:
-				OPC->vector[0] = OPB->_float * OPA->vector[0];
-				OPC->vector[1] = OPB->_float * OPA->vector[1];
-				OPC->vector[2] = OPB->_float * OPA->vector[2];
+				tempfloat = OPB->_float;
+				OPC->vector[0] = tempfloat * OPA->vector[0];
+				OPC->vector[1] = tempfloat * OPA->vector[1];
+				OPC->vector[2] = tempfloat * OPA->vector[2];
 				break;
 			case OP_DIV_F:
 				if( OPB->_float != 0.0f )
@@ -277,9 +279,10 @@
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->ivector[0] = ((prvm_eval_t *)(ed->fields.ip + OPB->_int))->ivector[0];
-				OPC->ivector[1] = ((prvm_eval_t *)(ed->fields.ip + OPB->_int))->ivector[1];
-				OPC->ivector[2] = ((prvm_eval_t *)(ed->fields.ip + OPB->_int))->ivector[2];
+				ptr = (prvm_eval_t *)(ed->fields.ip + OPB->_int);
+				OPC->ivector[0] = ptr->ivector[0];
+				OPC->ivector[1] = ptr->ivector[1];
+				OPC->ivector[2] = ptr->ivector[2];
 				break;
 
 		//==================
