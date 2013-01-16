@@ -112,7 +112,7 @@ r_vertexgeneric_t;
 
 typedef struct r_vertexmesh_s
 {
-	// 80 bytes
+	// 88 bytes
 	float vertex3f[3];
 	float color4f[4];
 	float texcoordtexture2f[2];
@@ -120,6 +120,8 @@ typedef struct r_vertexmesh_s
 	float svector3f[3];
 	float tvector3f[3];
 	float normal3f[3];
+	unsigned char skeletalindex4ub[4];
+	unsigned char skeletalweight4ub[4];
 }
 r_vertexmesh_t;
 
@@ -157,6 +159,8 @@ typedef struct surfmesh_s
 	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
 	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
 	float *data_lightmapcolor4f;
+	unsigned char *data_skeletalindex4ub;
+	unsigned char *data_skeletalweight4ub;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
 	// vertex buffer object (stores geometry in video memory)
 	r_meshbuffer_t *vbo_vertexbuffer;
@@ -167,6 +171,8 @@ typedef struct surfmesh_s
 	size_t vbooffset_texcoordtexture2f;
 	size_t vbooffset_texcoordlightmap2f;
 	size_t vbooffset_lightmapcolor4f;
+	size_t vbooffset_skeletalindex4ub;
+	size_t vbooffset_skeletalweight4ub;
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	struct md3vertex_s *data_morphmd3vertex;
