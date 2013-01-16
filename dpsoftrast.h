@@ -196,7 +196,8 @@ typedef enum shaderpermutation_e
 	SHADERPERMUTATION_TRIPPY = 1<<27, ///< use trippy vertex shader effect
 	SHADERPERMUTATION_DEPTHRGB = 1<<28, ///< read/write depth values in RGB color coded format for older hardware without depth samplers
 	SHADERPERMUTATION_ALPHAGEN_VERTEX = 1<<29, ///< alphaGen vertex
-	SHADERPERMUTATION_COUNT = 30 ///< size of shaderpermutationinfo array
+	SHADERPERMUTATION_SKELETAL = 1<<30, ///< (skeletal models) use skeletal matrices to deform vertices (gpu-skinning)
+	SHADERPERMUTATION_COUNT = 31 ///< size of shaderpermutationinfo array
 }
 shaderpermutation_t;
 

@@ -2675,8 +2675,8 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD3, "Attrib_TexCoord3");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD4, "Attrib_TexCoord4");
 	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD5, "Attrib_TexCoord5");
-	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD6, "Attrib_TexCoord6");
-	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD7, "Attrib_TexCoord7");
+	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD6, "Attrib_SkeletalIndex");
+	qglBindAttribLocation(programobject, GLSLATTRIB_TEXCOORD7, "Attrib_SkeletalWeight");
 #ifndef USE_GLES2
 	if(vid.support.gl20shaders130)
 		qglBindFragDataLocation(programobject, 0, "dp_FragColor");
@@ -2912,7 +2912,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 									else
 										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, p[0]);
 								}
-								else if (gl_state.units[j].pointer_texcoord_gltype == GL_SHORT)
+								else if (gl_state.units[j].pointer_texcoord_gltype == (int)(GL_SHORT | 0x80000000))
 								{
 									const GLshort *s = (const GLshort *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
 									if (gl_state.units[j].pointer_texcoord_components == 4)
@@ -2927,6 +2927,30 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 								else if (gl_state.units[j].pointer_texcoord_gltype == GL_BYTE)
 								{
 									const GLbyte *sb = (const GLbyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 127.0f), sb[1] * (1.0f / 127.0f), sb[2] * (1.0f / 127.0f), sb[3] * (1.0f / 127.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglVertexAttrib3f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 127.0f), sb[1] * (1.0f / 127.0f), sb[2] * (1.0f / 127.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglVertexAttrib2f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 127.0f), sb[1] * (1.0f / 127.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 127.0f));
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == GL_UNSIGNED_BYTE)
+								{
+									const GLubyte *sb = (const GLubyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
+									if (gl_state.units[j].pointer_texcoord_components == 4)
+										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 255.0f), sb[1] * (1.0f / 255.0f), sb[2] * (1.0f / 255.0f), sb[3] * (1.0f / 255.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 3)
+										qglVertexAttrib3f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 255.0f), sb[1] * (1.0f / 255.0f), sb[2] * (1.0f / 255.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 2)
+										qglVertexAttrib2f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 255.0f), sb[1] * (1.0f / 255.0f));
+									else if (gl_state.units[j].pointer_texcoord_components == 1)
+										qglVertexAttrib1f(GLSLATTRIB_TEXCOORD0 + j, sb[0] * (1.0f / 255.0f));
+								}
+								else if (gl_state.units[j].pointer_texcoord_gltype == (int)(GL_UNSIGNED_BYTE | 0x80000000))
+								{
+									const GLubyte *sb = (const GLubyte *)((const unsigned char *)gl_state.units[j].pointer_texcoord_pointer + element * gl_state.units[j].pointer_texcoord_stride);
 									if (gl_state.units[j].pointer_texcoord_components == 4)
 										qglVertexAttrib4f(GLSLATTRIB_TEXCOORD0 + j, sb[0], sb[1], sb[2], sb[3]);
 									else if (gl_state.units[j].pointer_texcoord_components == 3)
@@ -3455,7 +3479,8 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 			gl_state.pointer_vertex_offset = bufferoffset;
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
-			qglVertexAttribPointer(GLSLATTRIB_POSITION, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			// LordHavoc: special flag added to gltype for unnormalized types
+			qglVertexAttribPointer(GLSLATTRIB_POSITION, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -3537,7 +3562,8 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 				gl_state.pointer_color_offset = bufferoffset;
 				CHECKGLERROR
 				GL_BindVBO(bufferobject);
-				qglVertexAttribPointer(GLSLATTRIB_COLOR, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				// LordHavoc: special flag added to gltype for unnormalized types
+				qglVertexAttribPointer(GLSLATTRIB_COLOR, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else
@@ -3632,7 +3658,8 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 				unit->pointer_texcoord_vertexbuffer = vertexbuffer;
 				unit->pointer_texcoord_offset = bufferoffset;
 				GL_BindVBO(bufferobject);
-				qglVertexAttribPointer(unitnum+GLSLATTRIB_TEXCOORD0, components, gltype, false, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				// LordHavoc: special flag added to gltype for unnormalized types
+				qglVertexAttribPointer(unitnum+GLSLATTRIB_TEXCOORD0, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else
@@ -4113,6 +4140,8 @@ D3DVERTEXELEMENT9 r_vertexmesh_d3d9elements[] =
 	{0, (int)((size_t)&((r_vertexmesh_t *)0)->tvector3f         ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 2},
 	{0, (int)((size_t)&((r_vertexmesh_t *)0)->normal3f          ), D3DDECLTYPE_FLOAT3, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 3},
 	{0, (int)((size_t)&((r_vertexmesh_t *)0)->texcoordlightmap2f), D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 4},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->skeletalindex4ub  ), D3DDECLTYPE_UBYTE4, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 6},
+	{0, (int)((size_t)&((r_vertexmesh_t *)0)->skeletalweight4ub ), D3DDECLTYPE_UBYTE4N, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 7},
 	D3DDECL_END()
 };
 
@@ -4193,6 +4222,9 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 		}
 		else
 		{
@@ -4203,6 +4235,9 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 		}
 		break;
 	case RENDERPATH_GL13:
@@ -4307,6 +4342,9 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 			return;
 		}
 		break;
@@ -4387,6 +4425,9 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 		}
 		else
 		{
@@ -4397,6 +4438,9 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 		}
 		break;
 	case RENDERPATH_GL13:
@@ -4501,6 +4545,9 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), tvector3f, NULL, 0);
 			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), normal3f, NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 			return;
 		}
 		break;
@@ -4592,6 +4639,9 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , vertexbuffer, (int)((unsigned char *)vertex->tvector3f          - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , vertexbuffer, (int)((unsigned char *)vertex->normal3f           - (unsigned char *)vertex));
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(*vertex), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE | 0x80000000, sizeof(*vertex), vertex->skeletalindex4ub  , vertexbuffer, (int)((unsigned char *)vertex->skeletalindex4ub   - (unsigned char *)vertex));
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->skeletalweight4ub , vertexbuffer, (int)((unsigned char *)vertex->skeletalweight4ub  - (unsigned char *)vertex));
 		}
 		else
 		{
@@ -4602,6 +4652,9 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , NULL, 0);
 			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , NULL, 0);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(*vertex), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE | 0x80000000, sizeof(*vertex), vertex->skeletalindex4ub  , NULL, 0);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->skeletalweight4ub , NULL, 0);
 		}
 		break;
 	case RENDERPATH_GL13:

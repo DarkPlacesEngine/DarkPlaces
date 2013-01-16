@@ -1891,7 +1891,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[14]) + meshvertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short) + sizeof(unsigned char[2][4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -1907,6 +1907,8 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
+	loadmodel->surfmesh.data_skeletalindex4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
+	loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->surfmesh.num_blends = 0;
 	loadmodel->surfmesh.blends = (unsigned short *)data;data += meshvertices * sizeof(unsigned short);
@@ -1994,6 +1996,14 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.data_vertex3f[j*3+2] = relativeorigin[0] * m[8] + relativeorigin[1] * m[9] + relativeorigin[2] * m[10] + m[11];
 		// store the weight as the primary weight on this vertex
 		loadmodel->surfmesh.blends[j] = boneindex;
+		loadmodel->surfmesh.data_skeletalindex4ub[j*4  ] = boneindex;
+		loadmodel->surfmesh.data_skeletalindex4ub[j*4+1] = 0;
+		loadmodel->surfmesh.data_skeletalindex4ub[j*4+2] = 0;
+		loadmodel->surfmesh.data_skeletalindex4ub[j*4+3] = 0;
+		loadmodel->surfmesh.data_skeletalweight4ub[j*4  ] = 255;
+		loadmodel->surfmesh.data_skeletalweight4ub[j*4+1] = 0;
+		loadmodel->surfmesh.data_skeletalweight4ub[j*4+2] = 0;
+		loadmodel->surfmesh.data_skeletalweight4ub[j*4+3] = 0;
 	}
 	Z_Free(bonepose);
 	// normals and tangents are calculated after elements are loaded
@@ -2212,7 +2222,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short)) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short) + sizeof(unsigned char[2][4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -2228,6 +2238,8 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
+	loadmodel->surfmesh.data_skeletalindex4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
+	loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
@@ -2424,6 +2436,14 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				data += sizeof(dpmbonevert_t);
 			}
 			loadmodel->surfmesh.blends[j] = Mod_Skeletal_CompressBlend(loadmodel, weightindex, weightinfluence);
+			loadmodel->surfmesh.data_skeletalindex4ub[j*4  ] = weightindex[0];
+			loadmodel->surfmesh.data_skeletalindex4ub[j*4+1] = weightindex[1];
+			loadmodel->surfmesh.data_skeletalindex4ub[j*4+2] = weightindex[2];
+			loadmodel->surfmesh.data_skeletalindex4ub[j*4+3] = weightindex[3];
+			loadmodel->surfmesh.data_skeletalweight4ub[j*4  ] = (unsigned char)(weightinfluence[0]*255.0f);
+			loadmodel->surfmesh.data_skeletalweight4ub[j*4+1] = (unsigned char)(weightinfluence[1]*255.0f);
+			loadmodel->surfmesh.data_skeletalweight4ub[j*4+2] = (unsigned char)(weightinfluence[2]*255.0f);
+			loadmodel->surfmesh.data_skeletalweight4ub[j*4+3] = (unsigned char)(weightinfluence[3]*255.0f);
 		}
 
 		// since dpm models do not have named sections, reuse their shader name as the section name
@@ -2869,7 +2889,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
-	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0)  + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
+	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0)  + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
@@ -2884,6 +2904,8 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_normal3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+	loadmodel->surfmesh.data_skeletalindex4ub = (unsigned char *)data;data += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
+	loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data;data += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
 	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
@@ -3009,6 +3031,14 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			}
 		}
 		loadmodel->surfmesh.blends[index] = Mod_Skeletal_CompressBlend(loadmodel, weightindex, weightinfluence);
+		loadmodel->surfmesh.data_skeletalindex4ub[index*4  ] = weightindex[0];
+		loadmodel->surfmesh.data_skeletalindex4ub[index*4+1] = weightindex[1];
+		loadmodel->surfmesh.data_skeletalindex4ub[index*4+2] = weightindex[2];
+		loadmodel->surfmesh.data_skeletalindex4ub[index*4+3] = weightindex[3];
+		loadmodel->surfmesh.data_skeletalweight4ub[index*4  ] = (unsigned char)(weightinfluence[0]*255.0f);
+		loadmodel->surfmesh.data_skeletalweight4ub[index*4+1] = (unsigned char)(weightinfluence[1]*255.0f);
+		loadmodel->surfmesh.data_skeletalweight4ub[index*4+2] = (unsigned char)(weightinfluence[2]*255.0f);
+		loadmodel->surfmesh.data_skeletalweight4ub[index*4+3] = (unsigned char)(weightinfluence[3]*255.0f);
 	}
 	if (loadmodel->surfmesh.num_blends < loadmodel->surfmesh.num_vertices)
 		loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Realloc(loadmodel->mempool, loadmodel->surfmesh.data_blendweights, loadmodel->surfmesh.num_blends * sizeof(blendweights_t));
@@ -3353,7 +3383,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	meshtriangles = header.num_triangles;
 
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * sizeof(unsigned short) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * (sizeof(unsigned short) + sizeof(unsigned char[2][4])) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
@@ -3372,6 +3402,11 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (vcolor4f || vcolor4ub)
 	{
 		loadmodel->surfmesh.data_lightmapcolor4f = (float *)data;data += meshvertices * sizeof(float[4]);
+	}
+	if (vblendindexes && vblendweights)
+	{
+		loadmodel->surfmesh.data_skeletalindex4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
+		loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
 	}
 	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
 	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
@@ -3797,6 +3832,14 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			memcpy(weights.index, vblendindexes + i*4, 4);
 			memcpy(weights.influence, vblendweights + i*4, 4);
 			loadmodel->surfmesh.blends[i] = Mod_Skeletal_AddBlend(loadmodel, &weights);
+			loadmodel->surfmesh.data_skeletalindex4ub[i*4  ] = weights.index[0];
+			loadmodel->surfmesh.data_skeletalindex4ub[i*4+1] = weights.index[1];
+			loadmodel->surfmesh.data_skeletalindex4ub[i*4+2] = weights.index[2];
+			loadmodel->surfmesh.data_skeletalindex4ub[i*4+3] = weights.index[3];
+			loadmodel->surfmesh.data_skeletalweight4ub[i*4  ] = weights.influence[0];
+			loadmodel->surfmesh.data_skeletalweight4ub[i*4+1] = weights.influence[1];
+			loadmodel->surfmesh.data_skeletalweight4ub[i*4+2] = weights.influence[2];
+			loadmodel->surfmesh.data_skeletalweight4ub[i*4+3] = weights.influence[3];
 		}
 	}
 

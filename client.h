@@ -377,6 +377,9 @@ typedef struct entity_render_s
 	r_meshbuffer_t *animcache_vertex3fbuffer;
 	r_vertexmesh_t *animcache_vertexmesh;
 	r_meshbuffer_t *animcache_vertexmeshbuffer;
+	// gpu-skinning shader needs transforms in a certain format
+	// if this is not NULL, the other animcache variables are NULL
+	float *animcache_skeletaltransform3x4;
 
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;

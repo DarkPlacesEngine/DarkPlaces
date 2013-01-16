@@ -162,6 +162,7 @@ cvar_t r_viewscale_fpsscaling_stepsize = {CVAR_SAVE, "r_viewscale_fpsscaling_ste
 cvar_t r_viewscale_fpsscaling_stepmax = {CVAR_SAVE, "r_viewscale_fpsscaling_stepmax", "1.00", "largest adjustment to hit the target framerate (this value prevents wild overshooting of the estimate)"};
 cvar_t r_viewscale_fpsscaling_target = {CVAR_SAVE, "r_viewscale_fpsscaling_target", "70", "desired framerate"};
 
+cvar_t r_glsl_skeletal = {CVAR_SAVE, "r_glsl_skeletal", "1", "render skeletal models faster using a gpu-skinning technique"};
 cvar_t r_glsl_deluxemapping = {CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
 cvar_t r_glsl_offsetmapping = {CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
 cvar_t r_glsl_offsetmapping_steps = {CVAR_SAVE, "r_glsl_offsetmapping_steps", "2", "offset mapping steps (note: too high values may be not supported by your GPU)"};
@@ -662,7 +663,8 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 	{"#define USEBOUNCEGRIDDIRECTIONAL\n", " bouncegriddirectional"}, // TODO make this a static parm
 	{"#define USETRIPPY\n", " trippy"},
 	{"#define USEDEPTHRGB\n", " depthrgb"},
-	{"#define USEALPHAGENVERTEX\n", "alphagenvertex"}
+	{"#define USEALPHAGENVERTEX\n", " alphagenvertex"},
+	{"#define USESKELETAL\n", " skeletal"}
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
@@ -821,6 +823,7 @@ typedef struct r_glsl_permutation_s
 	int loc_ShadowMap_Parameters;
 	int loc_ShadowMap_TextureScale;
 	int loc_SpecularPower;
+	int loc_Skeletal_Transform12;
 	int loc_UserVec1;
 	int loc_UserVec2;
 	int loc_UserVec3;
@@ -1168,6 +1171,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_ShadowMap_Parameters       = qglGetUniformLocation(p->program, "ShadowMap_Parameters");
 		p->loc_ShadowMap_TextureScale     = qglGetUniformLocation(p->program, "ShadowMap_TextureScale");
 		p->loc_SpecularPower              = qglGetUniformLocation(p->program, "SpecularPower");
+		p->loc_Skeletal_Transform12       = qglGetUniformLocation(p->program, "Skeletal_Transform12");
 		p->loc_UserVec1                   = qglGetUniformLocation(p->program, "UserVec1");
 		p->loc_UserVec2                   = qglGetUniformLocation(p->program, "UserVec2");
 		p->loc_UserVec3                   = qglGetUniformLocation(p->program, "UserVec3");
@@ -2145,6 +2149,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	float m16f[16];
 	matrix4x4_t tempmatrix;
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
+	if (rsurface.entityskeletaltransform3x4)
+		permutation |= SHADERPERMUTATION_SKELETAL;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
@@ -2693,10 +2699,13 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchtvector3f, rsurface.batchtvector3f_vertexbuffer, rsurface.batchtvector3f_bufferoffset);
 			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchnormal3f, rsurface.batchnormal3f_vertexbuffer, rsurface.batchnormal3f_bufferoffset);
 			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordlightmap2f, rsurface.batchtexcoordlightmap2f_vertexbuffer, rsurface.batchtexcoordlightmap2f_bufferoffset);
+			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE | 0x80000000, sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, rsurface.batchskeletalindex4ub_vertexbuffer, rsurface.batchskeletalindex4ub_bufferoffset);
+			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, rsurface.batchskeletalweight4ub_vertexbuffer, rsurface.batchskeletalweight4ub_bufferoffset);
 		}
 		else
 		{
-			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
+			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | (rsurface.entityskeletaltransform3x4 ? BATCHNEED_VERTEXMESH_SKELETAL : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		}
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
@@ -2840,6 +2849,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			}
 		}
 		if (r_glsl_permutation->tex_Texture_BounceGrid  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_BounceGrid, r_shadow_bouncegridtexture);
+		if (r_glsl_permutation->loc_Skeletal_Transform12 >= 0 && rsurface.entityskeletalnumtransforms > 0)
+			qglUniform4fv(r_glsl_permutation->loc_Skeletal_Transform12, rsurface.entityskeletalnumtransforms*3, rsurface.entityskeletaltransform3x4);
 		CHECKGLERROR
 		break;
 	case RENDERPATH_GL11:
@@ -4316,6 +4327,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_batch_multidraw);
 	Cvar_RegisterVariable(&r_batch_multidraw_mintriangles);
+	Cvar_RegisterVariable(&r_glsl_skeletal);
 	Cvar_RegisterVariable(&r_glsl_saturation);
 	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
 	Cvar_RegisterVariable(&r_glsl_vertextextureblend_usebothalphas);
@@ -4616,6 +4628,7 @@ void R_AnimCache_ClearCache(void)
 		ent->animcache_vertexmesh = NULL;
 		ent->animcache_vertex3fbuffer = NULL;
 		ent->animcache_vertexmeshbuffer = NULL;
+		ent->animcache_skeletaltransform3x4 = NULL;
 	}
 }
 
@@ -4652,6 +4665,106 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 {
 	dp_model_t *model = ent->model;
 	int numvertices;
+
+	// cache skeletal animation data first (primarily for gpu-skinning)
+	if (!ent->animcache_skeletaltransform3x4 && model->num_bones > 0)
+	{
+		int i;
+		int blends;
+		const skeleton_t *skeleton = ent->skeleton;
+		const frameblend_t *frameblend = ent->frameblend;
+		float *boneposerelative;
+		float m[12];
+		static float bonepose[256][12];
+		ent->animcache_skeletaltransform3x4 = R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
+		boneposerelative = ent->animcache_skeletaltransform3x4;
+		if (skeleton && !skeleton->relativetransforms)
+			skeleton = NULL;
+		// resolve hierarchy and make relative transforms (deforms) which the shader wants
+		if (skeleton)
+		{
+			for (i = 0;i < model->num_bones;i++)
+			{
+				Matrix4x4_ToArray12FloatD3D(&skeleton->relativetransforms[i], m);
+				if (model->data_bones[i].parent >= 0)
+					R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
+				else
+					memcpy(bonepose[i], m, sizeof(m));
+
+				// create a relative deformation matrix to describe displacement
+				// from the base mesh, which is used by the actual weighting
+				R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative + i * 12);
+			}
+		}
+		else
+		{
+			for (i = 0;i < model->num_bones;i++)
+			{
+				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
+				float lerp = frameblend[0].lerp,
+					tx = pose7s[0],	ty = pose7s[1],	tz = pose7s[2],
+					rx = pose7s[3] * lerp,
+					ry = pose7s[4] * lerp,
+					rz = pose7s[5] * lerp,
+					rw = pose7s[6] * lerp,
+					dx = tx*rw + ty*rz - tz*ry,
+					dy = -tx*rz + ty*rw + tz*rx,
+					dz = tx*ry - ty*rx + tz*rw,
+					dw = -tx*rx - ty*ry - tz*rz,
+					scale, sx, sy, sz, sw;
+				for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
+				{
+					const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
+					float lerp = frameblend[blends].lerp,
+						tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
+						qx = pose7s[3], qy = pose7s[4], qz = pose7s[5], qw = pose7s[6];
+					if(rx*qx + ry*qy + rz*qz + rw*qw < 0) lerp = -lerp;
+					qx *= lerp;
+					qy *= lerp;
+					qz *= lerp;
+					qw *= lerp;
+					rx += qx;
+					ry += qy;
+					rz += qz;
+					rw += qw;
+					dx += tx*qw + ty*qz - tz*qy;
+					dy += -tx*qz + ty*qw + tz*qx;
+					dz += tx*qy - ty*qx + tz*qw;
+					dw += -tx*qx - ty*qy - tz*qz;
+				}
+				scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
+				sx = rx * scale;
+				sy = ry * scale;
+				sz = rz * scale;
+				sw = rw * scale;
+				m[0] = sw*rw + sx*rx - sy*ry - sz*rz;
+				m[1] = 2*(sx*ry - sw*rz);
+				m[2] = 2*(sx*rz + sw*ry);
+				m[3] = model->num_posescale*(dx*sw - dy*sz + dz*sy - dw*sx);
+				m[4] = 2*(sx*ry + sw*rz);
+				m[5] = sw*rw + sy*ry - sx*rx - sz*rz;
+				m[6] = 2*(sy*rz - sw*rx);
+				m[7] = model->num_posescale*(dx*sz + dy*sw - dz*sx - dw*sy);
+				m[8] = 2*(sx*rz - sw*ry);
+				m[9] = 2*(sy*rz + sw*rx);
+				m[10] = sw*rw + sz*rz - sx*rx - sy*ry;
+				m[11] = model->num_posescale*(dy*sx + dz*sw - dx*sy - dw*sz);
+				if (i == r_skeletal_debugbone.integer)
+					m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
+				m[3] *= r_skeletal_debugtranslatex.value;
+				m[7] *= r_skeletal_debugtranslatey.value;
+				m[11] *= r_skeletal_debugtranslatez.value;
+				if (model->data_bones[i].parent >= 0)
+					R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
+				else
+					memcpy(bonepose[i], m, sizeof(m));
+				// create a relative deformation matrix to describe displacement
+				// from the base mesh, which is used by the actual weighting
+				R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative + i * 12);
+			}
+		}
+	}
+
 	// see if it's already cached this frame
 	if (ent->animcache_vertex3f)
 	{
@@ -4682,6 +4795,24 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		// see if this ent is worth caching
 		if (!model || !model->Draw || !model->surfmesh.isanimated || !model->AnimateVertices)
 			return false;
+		// skip entity if the shader backend has a cheaper way
+		if (model->surfmesh.data_skeletalindex4ub && r_glsl_skeletal.integer)
+		{
+			switch (vid.renderpath)
+			{
+			case RENDERPATH_GL20:
+				return false;
+			case RENDERPATH_GL11:
+			case RENDERPATH_GL13:
+			case RENDERPATH_GLES1:
+			case RENDERPATH_GLES2:
+			case RENDERPATH_D3D9:
+			case RENDERPATH_D3D10:
+			case RENDERPATH_D3D11:
+			case RENDERPATH_SOFT:
+				break;
+			}
+		}
 		// get some memory for this entity and generate mesh data
 		numvertices = model->surfmesh.num_vertices;
 		ent->animcache_vertex3f = (float *)R_FrameData_Alloc(sizeof(float[3])*numvertices);
@@ -8146,6 +8277,12 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.modeltexcoordlightmap2f  = model->surfmesh.data_texcoordlightmap2f;
 	rsurface.modeltexcoordlightmap2f_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
 	rsurface.modeltexcoordlightmap2f_bufferoffset = model->surfmesh.vbooffset_texcoordlightmap2f;
+	rsurface.modelskeletalindex4ub = model->surfmesh.data_skeletalindex4ub;
+	rsurface.modelskeletalindex4ub_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+	rsurface.modelskeletalindex4ub_bufferoffset = model->surfmesh.vbooffset_skeletalindex4ub;
+	rsurface.modelskeletalweight4ub = model->surfmesh.data_skeletalweight4ub;
+	rsurface.modelskeletalweight4ub_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+	rsurface.modelskeletalweight4ub_bufferoffset = model->surfmesh.vbooffset_skeletalweight4ub;
 	rsurface.modelelement3i = model->surfmesh.data_element3i;
 	rsurface.modelelement3i_indexbuffer = model->surfmesh.data_element3i_indexbuffer;
 	rsurface.modelelement3i_bufferoffset = model->surfmesh.data_element3i_bufferoffset;
@@ -8186,6 +8323,12 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.batchtexcoordlightmap2f = NULL;
 	rsurface.batchtexcoordlightmap2f_vertexbuffer = NULL;
 	rsurface.batchtexcoordlightmap2f_bufferoffset = 0;
+	rsurface.batchskeletalindex4ub = NULL;
+	rsurface.batchskeletalindex4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalindex4ub_bufferoffset = 0;
+	rsurface.batchskeletalweight4ub = NULL;
+	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
 	rsurface.batchvertexmeshbuffer = NULL;
 	rsurface.batchvertex3fbuffer = NULL;
@@ -8241,7 +8384,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		rsurface.basepolygonfactor += r_polygonoffset_submodel_factor.value;
 		rsurface.basepolygonoffset += r_polygonoffset_submodel_offset.value;
 	}
-	if (model->surfmesh.isanimated && model->AnimateVertices)
+	// if the animcache code decided it should use the shader path, skip the deform step
+	rsurface.entityskeletaltransform3x4 = ent->animcache_vertex3f ? NULL : ent->animcache_skeletaltransform3x4;
+	rsurface.entityskeletalnumtransforms = rsurface.entityskeletaltransform3x4 ? model->num_bones : 0;
+	if (model->surfmesh.isanimated && model->AnimateVertices && !rsurface.entityskeletaltransform3x4)
 	{
 		if (ent->animcache_vertex3f)
 		{
@@ -8324,6 +8470,12 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.modeltexcoordlightmap2f  = model->surfmesh.data_texcoordlightmap2f;
 	rsurface.modeltexcoordlightmap2f_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
 	rsurface.modeltexcoordlightmap2f_bufferoffset = model->surfmesh.vbooffset_texcoordlightmap2f;
+	rsurface.modelskeletalindex4ub = model->surfmesh.data_skeletalindex4ub;
+	rsurface.modelskeletalindex4ub_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+	rsurface.modelskeletalindex4ub_bufferoffset = model->surfmesh.vbooffset_skeletalindex4ub;
+	rsurface.modelskeletalweight4ub = model->surfmesh.data_skeletalweight4ub;
+	rsurface.modelskeletalweight4ub_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+	rsurface.modelskeletalweight4ub_bufferoffset = model->surfmesh.vbooffset_skeletalweight4ub;
 	rsurface.modelelement3i = model->surfmesh.data_element3i;
 	rsurface.modelelement3i_indexbuffer = model->surfmesh.data_element3i_indexbuffer;
 	rsurface.modelelement3i_bufferoffset = model->surfmesh.data_element3i_bufferoffset;
@@ -8360,6 +8512,12 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.batchtexcoordlightmap2f = NULL;
 	rsurface.batchtexcoordlightmap2f_vertexbuffer = NULL;
 	rsurface.batchtexcoordlightmap2f_bufferoffset = 0;
+	rsurface.batchskeletalindex4ub = NULL;
+	rsurface.batchskeletalindex4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalindex4ub_bufferoffset = 0;
+	rsurface.batchskeletalweight4ub = NULL;
+	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
 	rsurface.batchvertexmeshbuffer = NULL;
 	rsurface.batchvertex3fbuffer = NULL;
@@ -8450,6 +8608,12 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.modeltexcoordlightmap2f  = NULL;
 	rsurface.modeltexcoordlightmap2f_vertexbuffer = 0;
 	rsurface.modeltexcoordlightmap2f_bufferoffset = 0;
+	rsurface.modelskeletalindex4ub = NULL;
+	rsurface.modelskeletalindex4ub_vertexbuffer = NULL;
+	rsurface.modelskeletalindex4ub_bufferoffset = 0;
+	rsurface.modelskeletalweight4ub = NULL;
+	rsurface.modelskeletalweight4ub_vertexbuffer = NULL;
+	rsurface.modelskeletalweight4ub_bufferoffset = 0;
 	rsurface.modelelement3i = (int *)element3i;
 	rsurface.modelelement3i_indexbuffer = NULL;
 	rsurface.modelelement3i_bufferoffset = 0;
@@ -8484,6 +8648,12 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.batchtexcoordlightmap2f = NULL;
 	rsurface.batchtexcoordlightmap2f_vertexbuffer = NULL;
 	rsurface.batchtexcoordlightmap2f_bufferoffset = 0;
+	rsurface.batchskeletalindex4ub = NULL;
+	rsurface.batchskeletalindex4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalindex4ub_bufferoffset = 0;
+	rsurface.batchskeletalweight4ub = NULL;
+	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
+	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
 	rsurface.batchvertexmeshbuffer = NULL;
 	rsurface.batchvertex3fbuffer = NULL;
@@ -8579,6 +8749,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	float scale;
 	float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
 	float waveparms[4];
+	unsigned char *ub;
 	q3shaderinfo_deform_t *deform;
 	const msurface_t *surface, *firstsurface;
 	r_vertexmesh_t *vertexmesh;
@@ -8734,6 +8905,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		if (batchneed & BATCHNEED_VERTEXMESH_VERTEXCOLOR) batchneed |= BATCHNEED_ARRAY_VERTEXCOLOR;
 		if (batchneed & BATCHNEED_VERTEXMESH_TEXCOORD)    batchneed |= BATCHNEED_ARRAY_TEXCOORD;
 		if (batchneed & BATCHNEED_VERTEXMESH_LIGHTMAP)    batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
+		if (batchneed & BATCHNEED_VERTEXMESH_SKELETAL)    batchneed |= BATCHNEED_ARRAY_SKELETAL;
 	}
 
 	// if needsupdate, we have to do a dynamic vertex batch for sure
@@ -8765,6 +8937,12 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	rsurface.batchtexcoordlightmap2f = rsurface.modeltexcoordlightmap2f;
 	rsurface.batchtexcoordlightmap2f_vertexbuffer = rsurface.modeltexcoordlightmap2f_vertexbuffer;
 	rsurface.batchtexcoordlightmap2f_bufferoffset = rsurface.modeltexcoordlightmap2f_bufferoffset;
+	rsurface.batchskeletalindex4ub = rsurface.modelskeletalindex4ub;
+	rsurface.batchskeletalindex4ub_vertexbuffer = rsurface.modelskeletalindex4ub_vertexbuffer;
+	rsurface.batchskeletalindex4ub_bufferoffset = rsurface.modelskeletalindex4ub_bufferoffset;
+	rsurface.batchskeletalweight4ub = rsurface.modelskeletalweight4ub;
+	rsurface.batchskeletalweight4ub_vertexbuffer = rsurface.modelskeletalweight4ub_vertexbuffer;
+	rsurface.batchskeletalweight4ub_bufferoffset = rsurface.modelskeletalweight4ub_bufferoffset;
 	rsurface.batchvertex3fbuffer = rsurface.modelvertex3fbuffer;
 	rsurface.batchvertexmesh = rsurface.modelvertexmesh;
 	rsurface.batchvertexmeshbuffer = rsurface.modelvertexmeshbuffer;
@@ -8868,6 +9046,12 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		rsurface.batchtexcoordlightmap2f = NULL;
 		rsurface.batchtexcoordlightmap2f_vertexbuffer = NULL;
 		rsurface.batchtexcoordlightmap2f_bufferoffset = 0;
+		rsurface.batchskeletalindex4ub = NULL;
+		rsurface.batchskeletalindex4ub_vertexbuffer = NULL;
+		rsurface.batchskeletalindex4ub_bufferoffset = 0;
+		rsurface.batchskeletalweight4ub = NULL;
+		rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
+		rsurface.batchskeletalweight4ub_bufferoffset = 0;
 		rsurface.batchelement3i = (int *)R_FrameData_Alloc(batchnumtriangles * sizeof(int[3]));
 		rsurface.batchelement3i_indexbuffer = NULL;
 		rsurface.batchelement3i_bufferoffset = 0;
@@ -8892,6 +9076,11 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			rsurface.batchtexcoordtexture2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 		if (batchneed & BATCHNEED_ARRAY_LIGHTMAP)
 			rsurface.batchtexcoordlightmap2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+		if (batchneed & BATCHNEED_ARRAY_SKELETAL)
+		{
+			rsurface.batchskeletalindex4ub = (unsigned char *)R_FrameData_Alloc(batchnumvertices * sizeof(unsigned char[4]));
+			rsurface.batchskeletalweight4ub = (unsigned char *)R_FrameData_Alloc(batchnumvertices * sizeof(unsigned char[4]));
+		}
 		numvertices = 0;
 		numtriangles = 0;
 		for (i = 0;i < texturenumsurfaces;i++)
@@ -8952,6 +9141,22 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 						memcpy(rsurface.batchtexcoordlightmap2f + 2*numvertices, rsurface.modeltexcoordlightmap2f + 2*surfacefirstvertex, surfacenumvertices * sizeof(float[2]));
 					else
 						memset(rsurface.batchtexcoordlightmap2f + 2*numvertices, 0, surfacenumvertices * sizeof(float[2]));
+				}
+				if (batchneed & BATCHNEED_ARRAY_SKELETAL)
+				{
+					if (rsurface.modelskeletalindex4ub)
+					{
+						memcpy(rsurface.batchskeletalindex4ub + 4*numvertices, rsurface.modelskeletalindex4ub + 4*surfacefirstvertex, surfacenumvertices * sizeof(unsigned char[4]));
+						memcpy(rsurface.batchskeletalweight4ub + 4*numvertices, rsurface.modelskeletalweight4ub + 4*surfacefirstvertex, surfacenumvertices * sizeof(unsigned char[4]));
+					}
+					else
+					{
+						memset(rsurface.batchskeletalindex4ub + 4*numvertices, 0, surfacenumvertices * sizeof(unsigned char[4]));
+						memset(rsurface.batchskeletalweight4ub + 4*numvertices, 0, surfacenumvertices * sizeof(unsigned char[4]));
+						ub = rsurface.batchskeletalweight4ub + 4*numvertices;
+						for (j = 0;j < surfacenumvertices;j++)
+							ub[j*4] = 255;
+					}
 				}
 			}
 			RSurf_RenumberElements(rsurface.modelelement3i + 3*surfacefirsttriangle, rsurface.batchelement3i + 3*numtriangles, 3*surfacenumtriangles, numvertices - surfacefirstvertex);
@@ -9416,6 +9621,14 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		if ((batchneed & BATCHNEED_VERTEXMESH_LIGHTMAP) && rsurface.batchtexcoordlightmap2f)
 			for (j = 0, vertexmesh = rsurface.batchvertexmesh;j < batchnumvertices;j++, vertexmesh++)
 				Vector2Copy(rsurface.batchtexcoordlightmap2f + 2*j, vertexmesh->texcoordlightmap2f);
+		if ((batchneed & BATCHNEED_VERTEXMESH_SKELETAL) && rsurface.batchskeletalindex4ub)
+		{
+			for (j = 0, vertexmesh = rsurface.batchvertexmesh;j < batchnumvertices;j++, vertexmesh++)
+			{
+				Vector4Copy(rsurface.batchskeletalindex4ub + 4*j, vertexmesh->skeletalindex4ub);
+				Vector4Copy(rsurface.batchskeletalweight4ub + 4*j, vertexmesh->skeletalweight4ub);
+			}
+		}
 	}
 }
 
