@@ -246,6 +246,11 @@ typedef struct rsurfacestate_s
 	// (in other words, the model has been animated in software)
 	qboolean                    forcecurrenttextureupdate; // set for RSurf_ActiveCustomEntity to force R_GetCurrentTexture to recalculate the texture parameters (such as entity alpha)
 	qboolean                    modelgeneratedvertex;
+	// skeletal animation can be done by entity (animcache) or per batch,
+	// batch may be non-skeletal even if entity is skeletal, indicating that
+	// the dynamicvertex code path had to apply skeletal manually for a case
+	// where gpu-skinning is not possible, for this reason batch has its own
+	// variables
 	int                         entityskeletalnumtransforms; // how many transforms are used for this mesh
 	float                      *entityskeletaltransform3x4; // use gpu-skinning shader on this mesh
 	float                      *modelvertex3f;
@@ -338,6 +343,8 @@ typedef struct rsurfacestate_s
 	unsigned short             *batchelement3s;
 	const r_meshbuffer_t       *batchelement3s_indexbuffer;
 	size_t                      batchelement3s_bufferoffset;
+	int                         batchskeletalnumtransforms;
+	float                      *batchskeletaltransform3x4;
 	// rendering pass processing arrays in GL11 and GL13 paths
 	float                      *passcolor4f;
 	const r_meshbuffer_t       *passcolor4f_vertexbuffer;
