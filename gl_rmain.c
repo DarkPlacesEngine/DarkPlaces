@@ -228,6 +228,7 @@ cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alon
 
 cvar_t r_batch_multidraw = {CVAR_SAVE, "r_batch_multidraw", "1", "issue multiple glDrawElements calls when rendering a batch of surfaces with the same texture (otherwise the index data is copied to make it one draw)"};
 cvar_t r_batch_multidraw_mintriangles = {CVAR_SAVE, "r_batch_multidraw_mintriangles", "0", "minimum number of triangles to activate multidraw path (copying small groups of triangles may be faster)"};
+cvar_t r_batch_debugdynamicvertexpath = {CVAR_SAVE, "r_batch_debugdynamicvertexpath", "0", "force the dynamic batching code path for debugging purposes"};
 
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
@@ -2149,8 +2150,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	float m16f[16];
 	matrix4x4_t tempmatrix;
 	r_waterstate_waterplane_t *waterplane = (r_waterstate_waterplane_t *)surfacewaterplane;
-	if (rsurface.entityskeletaltransform3x4)
-		permutation |= SHADERPERMUTATION_SKELETAL;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST)
@@ -2708,6 +2707,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | (rsurface.entityskeletaltransform3x4 ? BATCHNEED_VERTEXMESH_SKELETAL : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		}
+		// this has to be after RSurf_PrepareVerticesForBatch
+		if (rsurface.batchskeletaltransform3x4)
+			permutation |= SHADERPERMUTATION_SKELETAL;
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
 		if (mode == SHADERMODE_LIGHTSOURCE)
@@ -2849,8 +2851,8 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			}
 		}
 		if (r_glsl_permutation->tex_Texture_BounceGrid  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_BounceGrid, r_shadow_bouncegridtexture);
-		if (r_glsl_permutation->loc_Skeletal_Transform12 >= 0 && rsurface.entityskeletalnumtransforms > 0)
-			qglUniform4fv(r_glsl_permutation->loc_Skeletal_Transform12, rsurface.entityskeletalnumtransforms*3, rsurface.entityskeletaltransform3x4);
+		if (r_glsl_permutation->loc_Skeletal_Transform12 >= 0 && rsurface.batchskeletalnumtransforms > 0)
+			qglUniform4fv(r_glsl_permutation->loc_Skeletal_Transform12, rsurface.batchskeletalnumtransforms*3, rsurface.batchskeletaltransform3x4);
 		CHECKGLERROR
 		break;
 	case RENDERPATH_GL11:
@@ -4327,6 +4329,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_test);
 	Cvar_RegisterVariable(&r_batch_multidraw);
 	Cvar_RegisterVariable(&r_batch_multidraw_mintriangles);
+	Cvar_RegisterVariable(&r_batch_debugdynamicvertexpath);
 	Cvar_RegisterVariable(&r_glsl_skeletal);
 	Cvar_RegisterVariable(&r_glsl_saturation);
 	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
@@ -4667,7 +4670,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 	int numvertices;
 
 	// cache skeletal animation data first (primarily for gpu-skinning)
-	if (!ent->animcache_skeletaltransform3x4 && model->num_bones > 0)
+	if (!ent->animcache_skeletaltransform3x4 && model->num_bones > 0 && model->surfmesh.data_skeletalindex4ub)
 	{
 		int i;
 		int blends;
@@ -8256,6 +8259,8 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.ent_alttextures = false;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
+	rsurface.entityskeletaltransform3x4 = NULL;
+	rsurface.entityskeletalnumtransforms = 0;
 	rsurface.modelvertex3f  = model->surfmesh.data_vertex3f;
 	rsurface.modelvertex3f_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
 	rsurface.modelvertex3f_bufferoffset = model->surfmesh.vbooffset_vertex3f;
@@ -8566,6 +8571,8 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.ent_alttextures = false;
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
+	rsurface.entityskeletaltransform3x4 = NULL;
+	rsurface.entityskeletalnumtransforms = 0;
 	if (wanttangents)
 	{
 		rsurface.modelvertex3f = (float *)vertex3f;
@@ -8792,6 +8799,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// check if any dynamic vertex processing must occur
 	dynamicvertex = false;
 
+	// a cvar to force the dynamic vertex path to be taken, for debugging
+	if (r_batch_debugdynamicvertexpath.integer)
+		dynamicvertex = true;
+
 	// if there is a chance of animated vertex colors, it's a dynamic batch
 	if ((batchneed & (BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_ARRAY_VERTEXCOLOR)) && texturesurfacelist[0]->lightmapinfo)
 	{
@@ -8916,6 +8927,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
 		dynamicvertex = true;
 
+	// if we're going to have to apply the skeletal transform manually, we need to batch the skeletal data
+	if (dynamicvertex && rsurface.entityskeletaltransform3x4)
+		batchneed |= BATCHNEED_ARRAY_SKELETAL;
+
 	rsurface.batchvertex3f = rsurface.modelvertex3f;
 	rsurface.batchvertex3f_vertexbuffer = rsurface.modelvertex3f_vertexbuffer;
 	rsurface.batchvertex3f_bufferoffset = rsurface.modelvertex3f_bufferoffset;
@@ -8952,6 +8967,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	rsurface.batchelement3s = rsurface.modelelement3s;
 	rsurface.batchelement3s_indexbuffer = rsurface.modelelement3s_indexbuffer;
 	rsurface.batchelement3s_bufferoffset = rsurface.modelelement3s_bufferoffset;
+	rsurface.batchskeletaltransform3x4 = rsurface.entityskeletaltransform3x4;
+	rsurface.batchskeletalnumtransforms = rsurface.entityskeletalnumtransforms;
 
 	// if any dynamic vertex processing has to occur in software, we copy the
 	// entire surface list together before processing to rebase the vertices
@@ -9020,6 +9037,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// now copy the vertex data into a combined array and make an index array
 	// (this is what Quake3 does all the time)
+	// we also apply any skeletal animation here that would have been done in
+	// the vertex shader, because most of the dynamic vertex animation cases
+	// need actual vertex positions and normals
 	//if (dynamicvertex)
 	{
 		rsurface.batchvertex3fbuffer = NULL;
@@ -9178,6 +9198,129 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		rsurface.batchnumvertices = batchnumvertices;
 		rsurface.batchfirsttriangle = 0;
 		rsurface.batchnumtriangles = batchnumtriangles;
+	}
+
+	// apply skeletal animation that would have been done in the vertex shader
+	if (rsurface.batchskeletaltransform3x4)
+	{
+		const unsigned char *si;
+		const unsigned char *sw;
+		const float *t[4];
+		const float *b = rsurface.batchskeletaltransform3x4;
+		float *vp, *vs, *vt, *vn;
+		float w[4];
+		float m[3][4], n[3][4];
+		float tp[3], ts[3], tt[3], tn[3];
+		si = rsurface.batchskeletalindex4ub;
+		sw = rsurface.batchskeletalweight4ub;
+		vp = rsurface.batchvertex3f;
+		vs = rsurface.batchsvector3f;
+		vt = rsurface.batchtvector3f;
+		vn = rsurface.batchnormal3f;
+		memset(m[0], 0, sizeof(m));
+		memset(n[0], 0, sizeof(n));
+		for (i = 0;i < batchnumvertices;i++)
+		{
+			t[0] = b + si[0]*12;
+			if (sw[0] == 255)
+			{
+				// common case - only one matrix
+				m[0][0] = t[0][ 0];
+				m[0][1] = t[0][ 1];
+				m[0][2] = t[0][ 2];
+				m[0][3] = t[0][ 3];
+				m[1][0] = t[0][ 4];
+				m[1][1] = t[0][ 5];
+				m[1][2] = t[0][ 6];
+				m[1][3] = t[0][ 7];
+				m[2][0] = t[0][ 8];
+				m[2][1] = t[0][ 9];
+				m[2][2] = t[0][10];
+				m[2][3] = t[0][11];
+			}
+			else if (sw[2] + sw[3])
+			{
+				// blend 4 matrices
+				t[1] = b + si[1]*12;
+				t[2] = b + si[2]*12;
+				t[3] = b + si[3]*12;
+				w[0] = sw[0] * (1.0f / 255.0f);
+				w[1] = sw[1] * (1.0f / 255.0f);
+				w[2] = sw[2] * (1.0f / 255.0f);
+				w[3] = sw[3] * (1.0f / 255.0f);
+				// blend the matrices
+				m[0][0] = t[0][ 0] * w[0] + t[1][ 0] * w[1] + t[2][ 0] * w[2] + t[3][ 0] * w[3];
+				m[0][1] = t[0][ 1] * w[0] + t[1][ 1] * w[1] + t[2][ 1] * w[2] + t[3][ 1] * w[3];
+				m[0][2] = t[0][ 2] * w[0] + t[1][ 2] * w[1] + t[2][ 2] * w[2] + t[3][ 2] * w[3];
+				m[0][3] = t[0][ 3] * w[0] + t[1][ 3] * w[1] + t[2][ 3] * w[2] + t[3][ 3] * w[3];
+				m[1][0] = t[0][ 4] * w[0] + t[1][ 4] * w[1] + t[2][ 4] * w[2] + t[3][ 4] * w[3];
+				m[1][1] = t[0][ 5] * w[0] + t[1][ 5] * w[1] + t[2][ 5] * w[2] + t[3][ 5] * w[3];
+				m[1][2] = t[0][ 6] * w[0] + t[1][ 6] * w[1] + t[2][ 6] * w[2] + t[3][ 6] * w[3];
+				m[1][3] = t[0][ 7] * w[0] + t[1][ 7] * w[1] + t[2][ 7] * w[2] + t[3][ 7] * w[3];
+				m[2][0] = t[0][ 8] * w[0] + t[1][ 8] * w[1] + t[2][ 8] * w[2] + t[3][ 8] * w[3];
+				m[2][1] = t[0][ 9] * w[0] + t[1][ 9] * w[1] + t[2][ 9] * w[2] + t[3][ 9] * w[3];
+				m[2][2] = t[0][10] * w[0] + t[1][10] * w[1] + t[2][10] * w[2] + t[3][10] * w[3];
+				m[2][3] = t[0][11] * w[0] + t[1][11] * w[1] + t[2][11] * w[2] + t[3][11] * w[3];
+			}
+			else
+			{
+				// blend 2 matrices
+				t[1] = b + si[1]*12;
+				w[0] = sw[0] * (1.0f / 255.0f);
+				w[1] = sw[1] * (1.0f / 255.0f);
+				// blend the matrices
+				m[0][0] = t[0][ 0] * w[0] + t[1][ 0] * w[1];
+				m[0][1] = t[0][ 1] * w[0] + t[1][ 1] * w[1];
+				m[0][2] = t[0][ 2] * w[0] + t[1][ 2] * w[1];
+				m[0][3] = t[0][ 3] * w[0] + t[1][ 3] * w[1];
+				m[1][0] = t[0][ 4] * w[0] + t[1][ 4] * w[1];
+				m[1][1] = t[0][ 5] * w[0] + t[1][ 5] * w[1];
+				m[1][2] = t[0][ 6] * w[0] + t[1][ 6] * w[1];
+				m[1][3] = t[0][ 7] * w[0] + t[1][ 7] * w[1];
+				m[2][0] = t[0][ 8] * w[0] + t[1][ 8] * w[1];
+				m[2][1] = t[0][ 9] * w[0] + t[1][ 9] * w[1];
+				m[2][2] = t[0][10] * w[0] + t[1][10] * w[1];
+				m[2][3] = t[0][11] * w[0] + t[1][11] * w[1];
+			}
+			si += 4;
+			sw += 4;
+			// modify the vertex
+			VectorCopy(vp, tp);
+			vp[0] = tp[0] * m[0][0] + tp[1] * m[0][1] + tp[2] * m[0][2] + m[0][3];
+			vp[1] = tp[0] * m[1][0] + tp[1] * m[1][1] + tp[2] * m[1][2] + m[1][3];
+			vp[2] = tp[0] * m[2][0] + tp[1] * m[2][1] + tp[2] * m[2][2] + m[2][3];
+			vp += 3;
+			if (vn)
+			{
+				// the normal transformation matrix is a set of cross products...
+				CrossProduct(m[1], m[0], n[0]);
+				CrossProduct(m[2], m[0], n[1]);
+				CrossProduct(m[0], m[1], n[2]);
+				VectorCopy(vn, tn);
+				vn[0] = tn[0] * n[0][0] + tn[1] * n[0][1] + tn[2] * n[0][2];
+				vn[1] = tn[0] * n[1][0] + tn[1] * n[1][1] + tn[2] * n[1][2];
+				vn[2] = tn[0] * n[2][0] + tn[1] * n[2][1] + tn[2] * n[2][2];
+				VectorNormalize(vn);
+				vn += 3;
+				if (vs)
+				{
+					VectorCopy(vs, ts);
+					vs[0] = ts[0] * n[0][0] + ts[1] * n[0][1] + ts[2] * n[0][2];
+					vs[1] = ts[0] * n[1][0] + ts[1] * n[1][1] + ts[2] * n[1][2];
+					vs[2] = ts[0] * n[2][0] + ts[1] * n[2][1] + ts[2] * n[2][2];
+					VectorNormalize(vs);
+					vs += 3;
+					VectorCopy(vt, tt);
+					vt[0] = tt[0] * n[0][0] + tt[1] * n[0][1] + tt[2] * n[0][2];
+					vt[1] = tt[0] * n[1][0] + tt[1] * n[1][1] + tt[2] * n[1][2];
+					vt[2] = tt[0] * n[2][0] + tt[1] * n[2][1] + tt[2] * n[2][2];
+					VectorNormalize(vt);
+					vt += 3;
+				}
+			}
+		}
+		rsurface.batchskeletaltransform3x4 = NULL;
+		rsurface.batchskeletalnumtransforms = 0;
 	}
 
 	// q1bsp surfaces rendered in vertex color mode have to have colors
