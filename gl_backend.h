@@ -95,7 +95,7 @@ void R_EntityMatrix(const matrix4x4_t *matrix);
 void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset);
 // sets the color array pointer (GL_Color only works when this is NULL)
 void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset);
-// sets the texcoord array pointer for an array unit
+// sets the texcoord array pointer for an array unit, if GL_UNSIGNED_BYTE | 0x80000000 is specified it will be an unnormalized type (integer values)
 void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset);
 // returns current texture bound to this identifier
 int R_Mesh_TexBound(unsigned int unitnum, int id);
