@@ -9293,9 +9293,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			if (vn)
 			{
 				// the normal transformation matrix is a set of cross products...
-				CrossProduct(m[1], m[0], n[0]);
+				CrossProduct(m[1], m[2], n[0]);
 				CrossProduct(m[2], m[0], n[1]);
-				CrossProduct(m[0], m[1], n[2]);
+				CrossProduct(m[0], m[1], n[2]); // is actually transpose(inverse(m)) * det(m)
 				VectorCopy(vn, tn);
 				vn[0] = tn[0] * n[0][0] + tn[1] * n[0][1] + tn[2] * n[0][2];
 				vn[1] = tn[0] * n[1][0] + tn[1] * n[1][1] + tn[2] * n[1][2];
