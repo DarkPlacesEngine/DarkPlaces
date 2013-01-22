@@ -2076,7 +2076,7 @@ void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
 	GL_ColorMask(0, 0, 0, 0);
 	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
 	GL_CullFace(GL_NONE);
-	R_SetupShader_DepthOrShadow(false, false);
+	R_SetupShader_DepthOrShadow(false, false, false); // FIXME test if we have a skeletal model?
 	r_shadow_rendermode = mode;
 	switch(mode)
 	{
@@ -2173,7 +2173,7 @@ static void R_Shadow_RenderMode_ShadowMap(int side, int clear, int size)
 		R_Mesh_SetRenderTargets(fbo2d, r_shadow_shadowmap2ddepthbuffer, r_shadow_shadowmap2ddepthtexture, NULL, NULL, NULL);
 	else
 		R_Mesh_SetRenderTargets(fbo2d, r_shadow_shadowmap2ddepthtexture, NULL, NULL, NULL, NULL);
-	R_SetupShader_DepthOrShadow(true, r_shadow_shadowmap2ddepthbuffer != NULL);
+	R_SetupShader_DepthOrShadow(true, r_shadow_shadowmap2ddepthbuffer != NULL, false); // FIXME test if we have a skeletal model?
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
@@ -4843,7 +4843,7 @@ void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colort
 		R_Mesh_SetRenderTargets(shadowfbo, r_shadow_shadowmap2ddepthbuffer, r_shadow_shadowmap2ddepthtexture, NULL, NULL, NULL);
 	else
 		R_Mesh_SetRenderTargets(shadowfbo, r_shadow_shadowmap2ddepthtexture, NULL, NULL, NULL, NULL);
-	R_SetupShader_DepthOrShadow(true, r_shadow_shadowmap2ddepthbuffer != NULL);
+	R_SetupShader_DepthOrShadow(true, r_shadow_shadowmap2ddepthbuffer != NULL, false); // FIXME test if we have a skeletal model?
 	GL_PolygonOffset(r_shadow_shadowmapping_polygonfactor.value, r_shadow_shadowmapping_polygonoffset.value);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
