@@ -3964,7 +3964,6 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	int firstbone = PRVM_G_FLOAT(OFS_PARM4) - 1;
 	int lastbone = PRVM_G_FLOAT(OFS_PARM5) - 1;
 	dp_model_t *model = CL_GetModelByIndex(modelindex);
-	float blendfrac;
 	int numblends;
 	int bonenum;
 	int blendindex;
@@ -3980,7 +3979,6 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	lastbone = min(lastbone, skeleton->model->num_bones - 1);
 	VM_GenerateFrameGroupBlend(prog, framegroupblend, ed);
 	VM_FrameBlendFromFrameGroupBlend(frameblend, framegroupblend, model, cl.time);
-	blendfrac = 1.0f - retainfrac;
 	for (numblends = 0;numblends < MAX_FRAMEBLENDS && frameblend[numblends].lerp;numblends++)
 		;
 	for (bonenum = firstbone;bonenum <= lastbone;bonenum++)
@@ -3992,8 +3990,7 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 			Matrix4x4_Accumulate(&bonematrix, &matrix, frameblend[blendindex].lerp);
 		}
 		Matrix4x4_Normalize3(&bonematrix, &bonematrix);
-		Matrix4x4_Scale(&skeleton->relativetransforms[bonenum], retainfrac, retainfrac);
-		Matrix4x4_Accumulate(&skeleton->relativetransforms[bonenum], &bonematrix, blendfrac);
+		Matrix4x4_Interpolate(&skeleton->relativetransforms[bonenum], &bonematrix, &skeleton->relativetransforms[bonenum], retainfrac);
 	}
 	PRVM_G_FLOAT(OFS_RETURN) = skeletonindex + 1;
 }
