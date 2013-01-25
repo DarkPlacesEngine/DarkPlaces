@@ -4802,7 +4802,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		if (!model || !model->Draw || !model->surfmesh.isanimated || !model->AnimateVertices)
 			return false;
 		// skip entity if the shader backend has a cheaper way
-		if (model->surfmesh.data_skeletalindex4ub && r_glsl_skeletal.integer)
+		if (model->surfmesh.data_skeletalindex4ub && r_glsl_skeletal.integer && !r_showsurfaces.integer) // FIXME add r_showsurfaces support to GLSL skeletal!
 		{
 			switch (vid.renderpath)
 			{
