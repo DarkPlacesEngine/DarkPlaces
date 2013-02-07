@@ -1725,14 +1725,6 @@ static void DPSOFTRAST_Vertex_Copy(float *out4f, const float *in4f, int numitems
 	out = _mm_shuffle_ps(p, p, _MM_SHUFFLE(0, 3, 2, 1)); \
 }
 
-#define DPSOFTRAST_PROJECTY(out, in, viewportcenter, viewportscale) \
-{ \
-	__m128 p = (in), w = _mm_shuffle_ps(p, p, _MM_SHUFFLE(3, 3, 3, 3)); \
-	p = _mm_move_ss(_mm_shuffle_ps(p, p, _MM_SHUFFLE(2, 1, 0, 3)), _mm_set_ss(1.0f)); \
-	p = _mm_add_ps(viewportcenter, _mm_div_ps(_mm_mul_ps(viewportscale, p), w)); \
-	out = _mm_shuffle_ps(p, p, _MM_SHUFFLE(0, 3, 2, 1)); \
-}
-
 #define DPSOFTRAST_TRANSFORMVERTEX(out, in, m0, m1, m2, m3) \
 { \
 	__m128 p = (in); \
