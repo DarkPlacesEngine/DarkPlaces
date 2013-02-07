@@ -602,13 +602,17 @@ static void R_BuildFogHeightTexture(void)
 
 //=======================================================================================================================================================
 
-static const char *builtinshaderstring =
+static const char *builtinshaderstrings[] =
+{
 #include "shader_glsl.h"
-;
+0
+};
 
-const char *builtinhlslshaderstring =
+const char *builtinhlslshaderstrings[] =
+{
 #include "shader_hlsl.h"
-;
+0
+};
 
 char *glslshaderstring = NULL;
 char *hlslshaderstring = NULL;
@@ -624,9 +628,7 @@ shaderpermutationinfo_t;
 
 typedef struct shadermodeinfo_s
 {
-	const char *vertexfilename;
-	const char *geometryfilename;
-	const char *fragmentfilename;
+	const char *filename;
 	const char *pretext;
 	const char *name;
 }
@@ -671,46 +673,44 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
 shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
 {
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_GENERIC\n", " generic"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_FAKELIGHT\n", " fakelight"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_REFRACTION\n", " refraction"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_WATER\n", " water"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
-	{"glsl/default.glsl", NULL, "glsl/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+	{"glsl/default.glsl", "#define MODE_GENERIC\n", " generic"},
+	{"glsl/default.glsl", "#define MODE_POSTPROCESS\n", " postprocess"},
+	{"glsl/default.glsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+	{"glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
+	{"glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
+	{"glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"glsl/default.glsl", "#define MODE_FAKELIGHT\n", " fakelight"},
+	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
+	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"glsl/default.glsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
+	{"glsl/default.glsl", "#define MODE_REFRACTION\n", " refraction"},
+	{"glsl/default.glsl", "#define MODE_WATER\n", " water"},
+	{"glsl/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
+	{"glsl/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
 };
 
 shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
 {
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_GENERIC\n", " generic"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTMAP\n", " lightmap"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_FAKELIGHT\n", " fakelight"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_REFRACTION\n", " refraction"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_WATER\n", " water"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_SHOWDEPTH\n", " showdepth"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
-	{"hlsl/default.hlsl", NULL, "hlsl/default.hlsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+	{"hlsl/default.hlsl", "#define MODE_GENERIC\n", " generic"},
+	{"hlsl/default.hlsl", "#define MODE_POSTPROCESS\n", " postprocess"},
+	{"hlsl/default.hlsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+	{"hlsl/default.hlsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
+	{"hlsl/default.hlsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTMAP\n", " lightmap"},
+	{"hlsl/default.hlsl", "#define MODE_FAKELIGHT\n", " fakelight"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+	{"hlsl/default.hlsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
+	{"hlsl/default.hlsl", "#define MODE_REFRACTION\n", " refraction"},
+	{"hlsl/default.hlsl", "#define MODE_WATER\n", " water"},
+	{"hlsl/default.hlsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
+	{"hlsl/default.hlsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
 };
 
 struct r_glsl_permutation_s;
@@ -975,25 +975,68 @@ static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, unsigned 
 	return p;
 }
 
-static char *R_GLSL_GetText(const char *filename, qboolean printfromdisknotice)
+static char *R_ShaderStrCat(const char **strings)
+{
+	char *string, *s;
+	const char **p = strings;
+	const char *t;
+	size_t len = 0;
+	for (p = strings;(t = *p);p++)
+		len += strlen(t);
+	len++;
+	s = string = Mem_Alloc(r_main_mempool, len);
+	len = 0;
+	for (p = strings;(t = *p);p++)
+	{
+		len = strlen(t);
+		memcpy(s, t, len);
+		s += len;
+	}
+	*s = 0;
+	return string;
+}
+
+static char *R_GetShaderText(const char *filename, qboolean printfromdisknotice, qboolean builtinonly)
 {
 	char *shaderstring;
 	if (!filename || !filename[0])
 		return NULL;
+	// LordHavoc: note that FS_LoadFile appends a 0 byte to make it a valid string, so does R_ShaderStrCat
 	if (!strcmp(filename, "glsl/default.glsl"))
 	{
+		if (builtinonly)
+			return R_ShaderStrCat(builtinshaderstrings);
 		if (!glslshaderstring)
 		{
 			glslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
 			if (glslshaderstring)
 				Con_DPrintf("Loading shaders from file %s...\n", filename);
 			else
-				glslshaderstring = (char *)builtinshaderstring;
+				glslshaderstring = R_ShaderStrCat(builtinshaderstrings);
 		}
 		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(glslshaderstring) + 1);
 		memcpy(shaderstring, glslshaderstring, strlen(glslshaderstring) + 1);
 		return shaderstring;
 	}
+	if (!strcmp(filename, "hlsl/default.hlsl"))
+	{
+		if (builtinonly)
+			return R_ShaderStrCat(builtinhlslshaderstrings);
+		if (!hlslshaderstring)
+		{
+			hlslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+			if (hlslshaderstring)
+				Con_DPrintf("Loading shaders from file %s...\n", filename);
+			else
+				hlslshaderstring = R_ShaderStrCat(builtinhlslshaderstrings);
+		}
+		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
+		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
+		return shaderstring;
+	}
+	// we don't have builtin strings for any other files
+	if (builtinonly)
+		return NULL;
 	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
@@ -1009,7 +1052,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	int i;
 	int sampler;
 	shadermodeinfo_t *modeinfo = glslshadermodeinfo + mode;
-	char *vertexstring, *geometrystring, *fragmentstring;
+	char *sourcestring;
 	char permutationname[256];
 	int vertstrings_count = 0;
 	int geomstrings_count = 0;
@@ -1024,11 +1067,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	p->program = 0;
 
 	permutationname[0] = 0;
-	vertexstring   = R_GLSL_GetText(modeinfo->vertexfilename, true);
-	geometrystring = R_GLSL_GetText(modeinfo->geometryfilename, false);
-	fragmentstring = R_GLSL_GetText(modeinfo->fragmentfilename, false);
+	sourcestring  = R_GetShaderText(modeinfo->filename, true, false);
 
-	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
+	strlcat(permutationname, modeinfo->filename, sizeof(permutationname));
 
 	// if we can do #version 130, we should (this improves quality of offset/reliefmapping thanks to textureGrad)
 	if(vid.support.gl20shaders130)
@@ -1082,17 +1123,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	fragstrings_count += shaderstaticparms_count;
 
 	// now append the shader text itself
-	vertstrings_list[vertstrings_count++] = vertexstring;
-	geomstrings_list[geomstrings_count++] = geometrystring;
-	fragstrings_list[fragstrings_count++] = fragmentstring;
-
-	// if any sources were NULL, clear the respective list
-	if (!vertexstring)
-		vertstrings_count = 0;
-	if (!geometrystring)
-		geomstrings_count = 0;
-	if (!fragmentstring)
-		fragstrings_count = 0;
+	vertstrings_list[vertstrings_count++] = sourcestring;
+	geomstrings_list[geomstrings_count++] = sourcestring;
+	fragstrings_list[fragstrings_count++] = sourcestring;
 
 	// compile the shader program
 	if (vertstrings_count + geomstrings_count + fragstrings_count)
@@ -1258,12 +1291,8 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		Con_Printf("^1GLSL shader %s failed!  some features may not work properly.\n", permutationname);
 
 	// free the strings
-	if (vertexstring)
-		Mem_Free(vertexstring);
-	if (geometrystring)
-		Mem_Free(geometrystring);
-	if (fragmentstring)
-		Mem_Free(fragmentstring);
+	if (sourcestring)
+		Mem_Free(sourcestring);
 }
 
 static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutation)
@@ -1295,7 +1324,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int per
 				}
 				if (i >= SHADERPERMUTATION_COUNT)
 				{
-					//Con_Printf("Could not find a working OpenGL 2.0 shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
+					//Con_Printf("Could not find a working OpenGL 2.0 shader for permutation %s %s\n", shadermodeinfo[mode].filename, shadermodeinfo[mode].pretext);
 					r_glsl_permutation = R_GLSL_FindPermutation(mode, permutation);
 					qglUseProgram(0);CHECKGLERROR
 					return; // no bit left to clear, entire mode is broken
@@ -1434,35 +1463,6 @@ static r_hlsl_permutation_t *R_HLSL_FindPermutation(unsigned int mode, unsigned 
 	//if (hashdepth > 10)
 	//	Con_Printf("R_HLSL_FindPermutation: Warning: %i:%i has hashdepth %i\n", mode, permutation, hashdepth);
 	return p;
-}
-
-static char *R_HLSL_GetText(const char *filename, qboolean printfromdisknotice)
-{
-	char *shaderstring;
-	if (!filename || !filename[0])
-		return NULL;
-	if (!strcmp(filename, "hlsl/default.hlsl"))
-	{
-		if (!hlslshaderstring)
-		{
-			hlslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-			if (hlslshaderstring)
-				Con_DPrintf("Loading shaders from file %s...\n", filename);
-			else
-				hlslshaderstring = (char *)builtinhlslshaderstring;
-		}
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
-		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
-		return shaderstring;
-	}
-	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-	if (shaderstring)
-	{
-		if (printfromdisknotice)
-			Con_DPrintf("from disk %s... ", filename);
-		return shaderstring;
-	}
-	return shaderstring;
 }
 
 #include <d3dx9.h>
@@ -1613,7 +1613,7 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 	int geomstring_length = 0;
 	int fragstring_length = 0;
 	char *t;
-	char *vertexstring, *geometrystring, *fragmentstring;
+	char *sourcestring;
 	char *vertstring, *geomstring, *fragstring;
 	char permutationname[256];
 	char cachename[256];
@@ -1632,11 +1632,9 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 
 	permutationname[0] = 0;
 	cachename[0] = 0;
-	vertexstring   = R_HLSL_GetText(modeinfo->vertexfilename, true);
-	geometrystring = R_HLSL_GetText(modeinfo->geometryfilename, false);
-	fragmentstring = R_HLSL_GetText(modeinfo->fragmentfilename, false);
+	sourcestring = R_GetShaderText(modeinfo->filename, true, false);
 
-	strlcat(permutationname, modeinfo->vertexfilename, sizeof(permutationname));
+	strlcat(permutationname, modeinfo->filename, sizeof(permutationname));
 	strlcat(cachename, "hlsl/", sizeof(cachename));
 
 	// define HLSL so that the shader can tell apart the HLSL compiler and the Cg compiler
@@ -1695,17 +1693,9 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 			cachename[i] = '_';
 
 	// now append the shader text itself
-	vertstrings_list[vertstrings_count++] = vertexstring;
-	geomstrings_list[geomstrings_count++] = geometrystring;
-	fragstrings_list[fragstrings_count++] = fragmentstring;
-
-	// if any sources were NULL, clear the respective list
-	if (!vertexstring)
-		vertstrings_count = 0;
-	if (!geometrystring)
-		geomstrings_count = 0;
-	if (!fragmentstring)
-		fragstrings_count = 0;
+	vertstrings_list[vertstrings_count++] = sourcestring;
+	geomstrings_list[geomstrings_count++] = sourcestring;
+	fragstrings_list[fragstrings_count++] = sourcestring;
 
 	vertstring_length = 0;
 	for (i = 0;i < vertstrings_count;i++)
@@ -1743,12 +1733,8 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 		Mem_Free(geomstring);
 	if (fragstring)
 		Mem_Free(fragstring);
-	if (vertexstring)
-		Mem_Free(vertexstring);
-	if (geometrystring)
-		Mem_Free(geometrystring);
-	if (fragmentstring)
-		Mem_Free(fragmentstring);
+	if (sourcestring)
+		Mem_Free(sourcestring);
 }
 
 static inline void hlslVSSetParameter16f(D3DVSREGISTER_t r, const float *a) {IDirect3DDevice9_SetVertexShaderConstantF(vid_d3d9dev, r, a, 4);}
@@ -1794,7 +1780,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 				}
 				if (i >= SHADERPERMUTATION_COUNT)
 				{
-					//Con_Printf("Could not find a working HLSL shader for permutation %s %s\n", shadermodeinfo[mode].vertexfilename, shadermodeinfo[mode].pretext);
+					//Con_Printf("Could not find a working HLSL shader for permutation %s %s\n", shadermodeinfo[mode].filename, shadermodeinfo[mode].pretext);
 					r_hlsl_permutation = R_HLSL_FindPermutation(mode, permutation);
 					return; // no bit left to clear, entire mode is broken
 				}
@@ -1820,10 +1806,10 @@ static void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int per
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
-	if (glslshaderstring && glslshaderstring != builtinshaderstring)
+	if (glslshaderstring)
 		Mem_Free(glslshaderstring);
 	glslshaderstring = NULL;
-	if (hlslshaderstring && hlslshaderstring != builtinhlslshaderstring)
+	if (hlslshaderstring)
 		Mem_Free(hlslshaderstring);
 	hlslshaderstring = NULL;
 	switch(vid.renderpath)
@@ -1883,42 +1869,44 @@ void R_GLSL_Restart_f(void)
 
 static void R_GLSL_DumpShader_f(void)
 {
-	int i;
+	int i, language, mode, dupe;
+	char *text;
+	shadermodeinfo_t *modeinfo;
 	qfile_t *file;
 
-	file = FS_OpenRealFile("glsl/default.glsl", "w", false);
-	if (file)
+	for (language = 0;language < 2;language++)
 	{
-		FS_Print(file, "/* The engine may define the following macros:\n");
-		FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
-		for (i = 0;i < SHADERMODE_COUNT;i++)
-			FS_Print(file, glslshadermodeinfo[i].pretext);
-		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-			FS_Print(file, shaderpermutationinfo[i].pretext);
-		FS_Print(file, "*/\n");
-		FS_Print(file, builtinshaderstring);
-		FS_Close(file);
-		Con_Printf("glsl/default.glsl written\n");
+		modeinfo = (language == 0 ? glslshadermodeinfo : hlslshadermodeinfo);
+		for (mode = 0;mode < SHADERMODE_COUNT;mode++)
+		{
+			// don't dump the same file multiple times (most or all shaders come from the same file)
+			for (dupe = mode - 1;dupe >= 0;dupe--)
+				if (!strcmp(modeinfo[mode].filename, modeinfo[dupe].filename))
+					break;
+			if (dupe >= 0)
+				continue;
+			text = R_GetShaderText(modeinfo[mode].filename, false, true);
+			if (!text)
+				continue;
+			file = FS_OpenRealFile(modeinfo[mode].filename, "w", false);
+			if (file)
+			{
+				FS_Print(file, "/* The engine may define the following macros:\n");
+				FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
+				for (i = 0;i < SHADERMODE_COUNT;i++)
+					FS_Print(file, modeinfo[i].pretext);
+				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+					FS_Print(file, shaderpermutationinfo[i].pretext);
+				FS_Print(file, "*/\n");
+				FS_Print(file, text);
+				FS_Close(file);
+				Con_Printf("%s written\n", modeinfo[mode].filename);
+			}
+			else
+				Con_Printf("failed to write to %s\n", modeinfo[mode].filename);
+			Mem_Free(text);
+		}
 	}
-	else
-		Con_Printf("failed to write to glsl/default.glsl\n");
-
-	file = FS_OpenRealFile("hlsl/default.hlsl", "w", false);
-	if (file)
-	{
-		FS_Print(file, "/* The engine may define the following macros:\n");
-		FS_Print(file, "#define VERTEX_SHADER\n#define GEOMETRY_SHADER\n#define FRAGMENT_SHADER\n");
-		for (i = 0;i < SHADERMODE_COUNT;i++)
-			FS_Print(file, hlslshadermodeinfo[i].pretext);
-		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
-			FS_Print(file, shaderpermutationinfo[i].pretext);
-		FS_Print(file, "*/\n");
-		FS_Print(file, builtinhlslshaderstring);
-		FS_Close(file);
-		Con_Printf("hlsl/default.hlsl written\n");
-	}
-	else
-		Con_Printf("failed to write to hlsl/default.hlsl\n");
 }
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
@@ -2033,41 +2021,6 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean 
 		break;
 	case RENDERPATH_SOFT:
 		R_SetupShader_SetPermutationSoft(SHADERMODE_DEPTH_OR_SHADOW, permutation);
-		break;
-	}
-}
-
-void R_SetupShader_ShowDepth(qboolean notrippy)
-{
-	int permutation = 0;
-	if (r_trippy.integer && !notrippy)
-		permutation |= SHADERPERMUTATION_TRIPPY;
-	if (vid.allowalphatocoverage)
-		GL_AlphaToCoverage(false);
-	switch (vid.renderpath)
-	{
-	case RENDERPATH_D3D9:
-#ifdef SUPPORTHLSL
-		R_SetupShader_SetPermutationHLSL(SHADERMODE_SHOWDEPTH, permutation);
-#endif
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		R_SetupShader_SetPermutationGLSL(SHADERMODE_SHOWDEPTH, permutation);
-		break;
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-		break;
-	case RENDERPATH_GL11:
-		break;
-	case RENDERPATH_SOFT:
-		R_SetupShader_SetPermutationSoft(SHADERMODE_SHOWDEPTH, permutation);
 		break;
 	}
 }
