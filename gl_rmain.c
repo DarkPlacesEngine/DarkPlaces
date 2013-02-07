@@ -984,7 +984,7 @@ static char *R_ShaderStrCat(const char **strings)
 	for (p = strings;(t = *p);p++)
 		len += strlen(t);
 	len++;
-	s = string = Mem_Alloc(r_main_mempool, len);
+	s = string = (char *)Mem_Alloc(r_main_mempool, len);
 	len = 0;
 	for (p = strings;(t = *p);p++)
 	{
