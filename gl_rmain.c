@@ -1533,6 +1533,18 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 			{"D3DXCompileShader",			(void **) &qD3DXCompileShader},
 			{NULL, NULL}
 		};
+		// LordHavoc: the June 2010 SDK lacks these macros to make ID3DXBuffer usable in C, and to make it work in both C and C++ the macros are needed...
+#ifndef ID3DXBuffer_GetBufferPointer
+#if !defined(__cplusplus) || defined(CINTERFACE)
+#define ID3DXBuffer_GetBufferPointer(p)   (p)->lpVtbl->GetBufferPointer(p)
+#define ID3DXBuffer_GetBufferSize(p)      (p)->lpVtbl->GetBufferSize(p)
+#define ID3DXBuffer_Release(p)            (p)->lpVtbl->Release(p)
+#else
+#define ID3DXBuffer_GetBufferPointer(p)   (p)->GetBufferPointer()
+#define ID3DXBuffer_GetBufferSize(p)      (p)->GetBufferSize()
+#define ID3DXBuffer_Release(p)            (p)->Release()
+#endif
+#endif
 		if (Sys_LoadLibrary(dllnames_d3dx9, &d3dx9_dll, d3dx9_dllfuncs))
 		{
 			DWORD shaderflags = 0;
