@@ -1,1593 +1,1559 @@
-"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
-"// written by Forest 'LordHavoc' Hale\n"
-"// shadowmapping enhancements by Lee 'eihrul' Salzman\n"
-"\n"
-"// FIXME: we need to get rid of ModelViewProjectionPosition to make room for the texcoord for this\n"
-"#if defined(USEREFLECTION)\n"
-"#undef USESHADOWMAPORTHO\n"
-"#endif\n"
-"\n"
-"#if defined(USEFOGINSIDE) || defined(USEFOGOUTSIDE) || defined(USEFOGHEIGHTTEXTURE)\n"
-"# define USEFOG\n"
-"#endif\n"
-"#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP)\n"
-"#define USELIGHTMAP\n"
-"#endif\n"
-"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE) || defined(MODE_FAKELIGHT)\n"
-"#define USEEYEVECTOR\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"#ifdef HLSL\n"
-"//#undef USESHADOWMAPPCF\n"
-"//#define texDepth2D(tex,texcoord) tex2D(tex,texcoord).r\n"
-"#define texDepth2D(tex,texcoord) dot(tex2D(tex,texcoord).rgb, float3(1.0, 255.0/65536.0, 255.0/16777216.0))\n"
-"#else\n"
-"#define texDepth2D(tex,texcoord) tex2D(tex,texcoord).r\n"
-"#endif\n"
-"#endif\n"
-"\n"
-"#ifdef VERTEX_SHADER\n"
-"#ifdef USETRIPPY\n"
-"// LordHavoc: based on shader code linked at: http://www.youtube.com/watch?v=JpksyojwqzE\n"
-"// tweaked scale\n"
-"float4 TrippyVertex(float4 position)\n"
-"(\n"
-"uniform float ClientTime : register(c2)\n"
-")\n"
-"{\n"
-"	float worldTime = ClientTime;\n"
-"	// tweaked for Quake\n"
-"	worldTime *= 10.0;\n"
-"	position *= 0.125;\n"
-"	//~tweaked for Quake\n"
-"	float distanceSquared = (position.x * position.x + position.z * position.z);\n"
-"	position.y += 5.0*sin(distanceSquared*sin(worldTime/143.0)/1000.0);\n"
-"	float y = position.y;\n"
-"	float x = position.x;\n"
-"	float om = sin(distanceSquared*sin(worldTime/256.0)/5000.0) * sin(worldTime/200.0);\n"
-"	position.y = x*sin(om)+y*cos(om);\n"
-"	position.x = x*cos(om)-y*sin(om);\n"
-"	return position;\n"
-"}\n"
-"#endif\n"
-"#endif\n"
-"\n"
-"#ifdef MODE_DEPTH_OR_SHADOW\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"out float4 gl_Position : POSITION,\n"
-"out float Depth : TEXCOORD0\n"
-")\n"
-"{\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"	Depth = gl_Position.z;\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"float Depth : TEXCOORD0,\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"//	float4 temp = float4(Depth,Depth*(65536.0/255.0),Depth*(16777216.0/255.0),0.0);\n"
-"	float4 temp = float4(Depth,Depth*256.0,Depth*65536.0,0.0);\n"
-"	temp.yz -= floor(temp.yz);\n"
-"	dp_FragColor = temp;\n"
-"//	dp_FragColor = float4(Depth,0,0,0);\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_DEPTH_OR_SHADOW\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_SHOWDEPTH\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"out float4 gl_Position : POSITION,\n"
-"out float4 gl_FrontColor : COLOR0\n"
-")\n"
-"{\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"	gl_FrontColor = float4(gl_Position.z, gl_Position.z, gl_Position.z, 1.0);\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_FrontColor : COLOR0,\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	dp_FragColor = gl_FrontColor;\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_SHOWDEPTH\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_POSTPROCESS\n"
-"\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"float4 gl_MultiTexCoord4 : TEXCOORD4,\n"
-"out float4 gl_Position : POSITION,\n"
-"out float2 TexCoord1 : TEXCOORD0,\n"
-"out float2 TexCoord2 : TEXCOORD1\n"
-")\n"
-"{\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"	TexCoord1 = gl_MultiTexCoord0.xy;\n"
-"#ifdef USEBLOOM\n"
-"	TexCoord2 = gl_MultiTexCoord4.xy;\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"float2 TexCoord1 : TEXCOORD0,\n"
-"float2 TexCoord2 : TEXCOORD1,\n"
-"uniform sampler Texture_First : register(s0),\n"
-"#ifdef USEBLOOM\n"
-"uniform sampler Texture_Second : register(s1),\n"
-"#endif\n"
-"#ifdef USEGAMMARAMPS\n"
-"uniform sampler Texture_GammaRamps : register(s2),\n"
-"#endif\n"
-"#ifdef USESATURATION\n"
-"uniform float Saturation : register(c30),\n"
-"#endif\n"
-"#ifdef USEVIEWTINT\n"
-"uniform float4 ViewTintColor : register(c41),\n"
-"#endif\n"
-"uniform float4 UserVec1 : register(c37),\n"
-"uniform float4 UserVec2 : register(c38),\n"
-"uniform float4 UserVec3 : register(c39),\n"
-"uniform float4 UserVec4 : register(c40),\n"
-"uniform float ClientTime : register(c2),\n"
-"uniform float2 PixelSize : register(c25),\n"
-"uniform float4 BloomColorSubtract : register(c43),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	dp_FragColor = tex2D(Texture_First, TexCoord1);\n"
-"#ifdef USEBLOOM\n"
-"	dp_FragColor += max(float4(0,0,0,0), tex2D(Texture_Second, TexCoord2) - BloomColorSubtract);\n"
-"#endif\n"
-"#ifdef USEVIEWTINT\n"
-"	dp_FragColor = lerp(dp_FragColor, ViewTintColor, ViewTintColor.a);\n"
-"#endif\n"
-"\n"
-"#ifdef USEPOSTPROCESSING\n"
-"// do r_glsl_dumpshader, edit glsl/default.glsl, and replace this by your own postprocessing if you want\n"
-"// this code does a blur with the radius specified in the first component of r_glsl_postprocess_uservec1 and blends it using the second component\n"
-"	float sobel = 1.0;\n"
-"	// float2 ts = textureSize(Texture_First, 0);\n"
-"	// float2 px = float2(1/ts.x, 1/ts.y);\n"
-"	float2 px = PixelSize;\n"
-"	float3 x1 = tex2D(Texture_First, TexCoord1 + float2(-px.x, px.y)).rgb;\n"
-"	float3 x2 = tex2D(Texture_First, TexCoord1 + float2(-px.x,  0.0)).rgb;\n"
-"	float3 x3 = tex2D(Texture_First, TexCoord1 + float2(-px.x,-px.y)).rgb;\n"
-"	float3 x4 = tex2D(Texture_First, TexCoord1 + float2( px.x, px.y)).rgb;\n"
-"	float3 x5 = tex2D(Texture_First, TexCoord1 + float2( px.x,  0.0)).rgb;\n"
-"	float3 x6 = tex2D(Texture_First, TexCoord1 + float2( px.x,-px.y)).rgb;\n"
-"	float3 y1 = tex2D(Texture_First, TexCoord1 + float2( px.x,-px.y)).rgb;\n"
-"	float3 y2 = tex2D(Texture_First, TexCoord1 + float2(  0.0,-px.y)).rgb;\n"
-"	float3 y3 = tex2D(Texture_First, TexCoord1 + float2(-px.x,-px.y)).rgb;\n"
-"	float3 y4 = tex2D(Texture_First, TexCoord1 + float2( px.x, px.y)).rgb;\n"
-"	float3 y5 = tex2D(Texture_First, TexCoord1 + float2(  0.0, px.y)).rgb;\n"
-"	float3 y6 = tex2D(Texture_First, TexCoord1 + float2(-px.x, px.y)).rgb;\n"
-"	float px1 = -1.0 * dot(float3(0.3, 0.59, 0.11), x1);\n"
-"	float px2 = -2.0 * dot(float3(0.3, 0.59, 0.11), x2);\n"
-"	float px3 = -1.0 * dot(float3(0.3, 0.59, 0.11), x3);\n"
-"	float px4 =  1.0 * dot(float3(0.3, 0.59, 0.11), x4);\n"
-"	float px5 =  2.0 * dot(float3(0.3, 0.59, 0.11), x5);\n"
-"	float px6 =  1.0 * dot(float3(0.3, 0.59, 0.11), x6);\n"
-"	float py1 = -1.0 * dot(float3(0.3, 0.59, 0.11), y1);\n"
-"	float py2 = -2.0 * dot(float3(0.3, 0.59, 0.11), y2);\n"
-"	float py3 = -1.0 * dot(float3(0.3, 0.59, 0.11), y3);\n"
-"	float py4 =  1.0 * dot(float3(0.3, 0.59, 0.11), y4);\n"
-"	float py5 =  2.0 * dot(float3(0.3, 0.59, 0.11), y5);\n"
-"	float py6 =  1.0 * dot(float3(0.3, 0.59, 0.11), y6);\n"
-"	sobel = 0.25 * abs(px1 + px2 + px3 + px4 + px5 + px6) + 0.25 * abs(py1 + py2 + py3 + py4 + py5 + py6);\n"
-"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.987688, -0.156434)) * UserVec1.y;\n"
-"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.156434, -0.891007)) * UserVec1.y;\n"
-"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2( 0.891007, -0.453990)) * UserVec1.y;\n"
-"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2( 0.707107,  0.707107)) * UserVec1.y;\n"
-"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.453990,  0.891007)) * UserVec1.y;\n"
-"	dp_FragColor /= (1.0 + 5.0 * UserVec1.y);\n"
-"	dp_FragColor.rgb = dp_FragColor.rgb * (1.0 + UserVec2.x) + float3(1,1,1)*max(0.0, sobel - UserVec2.z)*UserVec2.y;\n"
-"#endif\n"
-"\n"
-"#ifdef USESATURATION\n"
-"	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n"
-"	float y = dot(dp_FragColor.rgb, float3(0.299, 0.587, 0.114));\n"
-"	// 'vampire sight' effect, wheres red is compensated\n"
-"	#ifdef SATURATION_REDCOMPENSATE\n"
-"		float rboost = max(0.0, (dp_FragColor.r - max(dp_FragColor.g, dp_FragColor.b))*(1.0 - Saturation));\n"
-"		dp_FragColor.rgb = lerp(float3(y,y,y), dp_FragColor.rgb, Saturation);\n"
-"		dp_FragColor.r += r;\n"
-"	#else\n"
-"		// normal desaturation\n"
-"		//dp_FragColor = float3(y,y,y) + (dp_FragColor.rgb - float3(y)) * Saturation;\n"
-"		dp_FragColor.rgb = lerp(float3(y,y,y), dp_FragColor.rgb, Saturation);\n"
-"	#endif\n"
-"#endif\n"
-"\n"
-"#ifdef USEGAMMARAMPS\n"
-"	dp_FragColor.r = tex2D(Texture_GammaRamps, float2(dp_FragColor.r, 0)).r;\n"
-"	dp_FragColor.g = tex2D(Texture_GammaRamps, float2(dp_FragColor.g, 0)).g;\n"
-"	dp_FragColor.b = tex2D(Texture_GammaRamps, float2(dp_FragColor.b, 0)).b;\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_POSTPROCESS\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_GENERIC\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"float4 gl_Color : COLOR0,\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"float4 gl_MultiTexCoord1 : TEXCOORD1,\n"
-"out float4 gl_Position : POSITION,\n"
-"#ifdef USEDIFFUSE\n"
-"out float2 TexCoord1 : TEXCOORD0,\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"out float2 TexCoord2 : TEXCOORD1,\n"
-"#endif\n"
-"out float4 gl_FrontColor : COLOR\n"
-")\n"
-"{\n"
-"	gl_FrontColor = gl_Color;\n"
-"#ifdef USEDIFFUSE\n"
-"	TexCoord1 = gl_MultiTexCoord0.xy;\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"	TexCoord2 = gl_MultiTexCoord1.xy;\n"
-"#endif\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"\n"
-"void main\n"
-"(\n"
-"float4 gl_FrontColor : COLOR0,\n"
-"float2 TexCoord1 : TEXCOORD0,\n"
-"float2 TexCoord2 : TEXCOORD1,\n"
-"#ifdef USEDIFFUSE\n"
-"uniform sampler Texture_First : register(s0),\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"uniform sampler Texture_Second : register(s1),\n"
-"#endif\n"
-"#ifdef USEGAMMARAMPS\n"
-"uniform sampler Texture_GammaRamps : register(s2),\n"
-"#endif\n"
-"uniform half Alpha : register(c0),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"#ifdef USEVIEWTINT\n"
-"	dp_FragColor = gl_FrontColor;\n"
-"#else\n"
-"	dp_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n"
-"#endif\n"
-"#ifdef USEDIFFUSE\n"
-"# ifdef USEREFLECTCUBE\n"
-"	// suppress texture alpha\n"
-"	dp_FragColor.rgb *= tex2D(Texture_First, TexCoord1).rgb;\n"
-"# else\n"
-"	dp_FragColor *= tex2D(Texture_First, TexCoord1);\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USESPECULAR\n"
-"	float4 tex2 = tex2D(Texture_Second, TexCoord2);\n"
-"# ifdef USECOLORMAPPING\n"
-"	dp_FragColor *= tex2;\n"
-"# endif\n"
-"# ifdef USEGLOW\n"
-"	dp_FragColor += tex2;\n"
-"# endif\n"
-"# ifdef USEVERTEXTEXTUREBLEND\n"
-"	dp_FragColor = lerp(dp_FragColor, tex2, tex2.a);\n"
-"# endif\n"
-"#endif\n"
-"#ifdef USEGAMMARAMPS\n"
-"	dp_FragColor.r = tex2D(Texture_GammaRamps, vec2(dp_FragColor.r, 0)).r;\n"
-"	dp_FragColor.g = tex2D(Texture_GammaRamps, vec2(dp_FragColor.g, 0)).g;\n"
-"	dp_FragColor.b = tex2D(Texture_GammaRamps, vec2(dp_FragColor.b, 0)).b;\n"
-"#endif\n"
-"#ifdef USEALPHAKILL\n"
-"	dp_FragColor.a *= Alpha;\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_GENERIC\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_BLOOMBLUR\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"out float4 gl_Position : POSITION,\n"
-"out float2 TexCoord : TEXCOORD0\n"
-")\n"
-"{\n"
-"	TexCoord = gl_MultiTexCoord0.xy;\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"\n"
-"void main\n"
-"(\n"
-"float2 TexCoord : TEXCOORD0,\n"
-"uniform sampler Texture_First : register(s0),\n"
-"uniform float4 BloomBlur_Parameters : register(c1),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	int i;\n"
-"	float2 tc = TexCoord;\n"
-"	float3 color = tex2D(Texture_First, tc).rgb;\n"
-"	tc += BloomBlur_Parameters.xy;\n"
-"	for (i = 1;i < SAMPLES;i++)\n"
-"	{\n"
-"		color += tex2D(Texture_First, tc).rgb;\n"
-"		tc += BloomBlur_Parameters.xy;\n"
-"	}\n"
-"	dp_FragColor = float4(color * BloomBlur_Parameters.z + float3(BloomBlur_Parameters.w), 1);\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_BLOOMBLUR\n"
-"#ifdef MODE_REFRACTION\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"float4 gl_Color : COLOR0,\n"
-"#endif\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"uniform float4x4 TexMatrix : register(c0),\n"
-"uniform float3 EyePosition : register(c24),\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"out float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"out float4 gl_Position : POSITION,\n"
-"out float2 TexCoord : TEXCOORD0,\n"
-"out float3 EyeVector : TEXCOORD1,\n"
-"out float4 ModelViewProjectionPosition : TEXCOORD2\n"
-")\n"
-"{\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"	gl_FrontColor = gl_Color;\n"
-"#endif\n"
-"	TexCoord = mul(TexMatrix, gl_MultiTexCoord0).xy;\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"	ModelViewProjectionPosition = gl_Position;\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"float2 TexCoord : TEXCOORD0,\n"
-"float3 EyeVector : TEXCOORD1,\n"
-"float4 ModelViewProjectionPosition : TEXCOORD2,\n"
-"uniform sampler Texture_Normal : register(s0),\n"
-"uniform sampler Texture_Refraction : register(s3),\n"
-"uniform sampler Texture_Reflection : register(s7),\n"
-"uniform float4 DistortScaleRefractReflect : register(c14),\n"
-"uniform float4 ScreenScaleRefractReflect : register(c32),\n"
-"uniform float4 ScreenCenterRefractReflect : register(c31),\n"
-"uniform float4 RefractColor : register(c29),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	float2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//float2 ScreenTexCoord = (ModelViewProjectionPosition.xy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * DistortScaleRefractReflect.xy * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
-"	float2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"	float2 distort = DistortScaleRefractReflect.xy * gl_FrontColor.a;\n"
-"	float4 refractcolor = mix(RefractColor, vec4(1.0, 1.0, 1.0, 1.0), gl_FrontColor.a);\n"
-"#else\n"
-"	float2 distort = DistortScaleRefractReflect.xy;\n"
-"	float4 refractcolor = RefractColor;\n"
-"#endif\n"
-"	float2 ScreenTexCoord = SafeScreenTexCoord + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * distort;\n"
-"	// FIXME temporary hack to detect the case that the reflection\n"
-"	// gets blackened at edges due to leaving the area that contains actual\n"
-"	// content.\n"
-"	// Remove this 'ack once we have a better way to stop this thing from\n"
-"	// 'appening.\n"
-"	float f = min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n"
-"	dp_FragColor = float4(tex2D(Texture_Refraction, ScreenTexCoord).rgb, 1) * refractcolor;\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_REFRACTION\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_WATER\n"
-"#ifdef VERTEX_SHADER\n"
-"\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"float4 gl_Color : COLOR0,\n"
-"#endif\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"float4 gl_MultiTexCoord1 : TEXCOORD1,\n"
-"float4 gl_MultiTexCoord2 : TEXCOORD2,\n"
-"float4 gl_MultiTexCoord3 : TEXCOORD3,\n"
-"uniform float4x4 TexMatrix : register(c0),\n"
-"uniform float3 EyePosition : register(c24),\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"out float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"out float4 gl_Position : POSITION,\n"
-"out float2 TexCoord : TEXCOORD0,\n"
-"out float3 EyeVector : TEXCOORD1,\n"
-"out float4 ModelViewProjectionPosition : TEXCOORD2\n"
-")\n"
-"{\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"	gl_FrontColor = gl_Color;\n"
-"#endif\n"
-"	TexCoord = mul(TexMatrix, gl_MultiTexCoord0).xy;\n"
-"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"	ModelViewProjectionPosition = gl_Position;\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"float2 TexCoord : TEXCOORD0,\n"
-"float3 EyeVector : TEXCOORD1,\n"
-"float4 ModelViewProjectionPosition : TEXCOORD2,\n"
-"uniform sampler Texture_Normal : register(s0),\n"
-"uniform sampler Texture_Refraction : register(s3),\n"
-"uniform sampler Texture_Reflection : register(s7),\n"
-"uniform float4 DistortScaleRefractReflect : register(c14),\n"
-"uniform float4 ScreenScaleRefractReflect : register(c32),\n"
-"uniform float4 ScreenCenterRefractReflect : register(c31),\n"
-"uniform float4 RefractColor : register(c29),\n"
-"uniform float4 ReflectColor : register(c26),\n"
-"uniform float ReflectFactor : register(c27),\n"
-"uniform float ReflectOffset : register(c28),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	float4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//float4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	float4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	//SafeScreenTexCoord = gl_FragCoord.xyxy * float4(1.0 / 1920.0, 1.0 / 1200.0, 1.0 / 1920.0, 1.0 / 1200.0);\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"	float4 distort = DistortScaleRefractReflect * gl_FrontColor.a;\n"
-"	float reflectoffset = ReflectOffset * gl_FrontColor.a;\n"
-"	float reflectfactor = ReflectFactor * gl_FrontColor.a;\n"
-"	float4 refractcolor = mix(RefractColor, vec4(1.0, 1.0, 1.0, 1.0), gl_FrontColor.a);\n"
-"#else\n"
-"	float4 distort = DistortScaleRefractReflect;\n"
-"	float reflectoffset = ReflectOffset;\n"
-"	float reflectfactor = ReflectFactor;\n"
-"	float4 refractcolor = RefractColor;\n"
-"#endif\n"
-"	float4 ScreenTexCoord = SafeScreenTexCoord + float2(normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy).xyxy * distort;\n"
-"	// FIXME temporary hack to detect the case that the reflection\n"
-"	// gets blackened at edges due to leaving the area that contains actual\n"
-"	// content.\n"
-"	// Remove this 'ack once we have a better way to stop this thing from\n"
-"	// 'appening.\n"
-"	float f = min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(0.01, -0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord.xy = lerp(SafeScreenTexCoord.xy, ScreenTexCoord.xy, f);\n"
-"	f  = min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, 0.01)).rgb) / 0.05);\n"
-"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, -0.01)).rgb) / 0.05);\n"
-"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, 0.01)).rgb) / 0.05);\n"
-"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord.zw = lerp(SafeScreenTexCoord.zw, ScreenTexCoord.zw, f);\n"
-"	float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0) * reflectfactor + reflectoffset;\n"
-"	dp_FragColor = lerp(float4(tex2D(Texture_Refraction, ScreenTexCoord.xy).rgb, 1) * refractcolor, float4(tex2D(Texture_Reflection, ScreenTexCoord.zw).rgb, 1) * ReflectColor, Fresnel);\n"
-"}\n"
-"#endif\n"
-"#else // !MODE_WATER\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3), this would require sending a 4 component texcoord1 with W as 1 or -1 according to which side the texcoord2 should be on\n"
-"\n"
-"// fragment shader specific:\n"
-"#ifdef FRAGMENT_SHADER\n"
-"\n"
-"#ifdef USEFOG\n"
-"float3 FogVertex(float4 surfacecolor, float3 FogColor, float3 EyeVectorModelSpace, float FogPlaneVertexDist, float FogRangeRecip, float FogPlaneViewDist, float FogHeightFade, sampler Texture_FogMask, sampler Texture_FogHeightTexture)\n"
-"{\n"
-"	float fogfrac;\n"
-"	float3 fc = FogColor;\n"
-"#ifdef USEFOGALPHAHACK\n"
-"	fc *= surfacecolor.a;\n"
-"#endif\n"
-"#ifdef USEFOGHEIGHTTEXTURE\n"
-"	float4 fogheightpixel = tex2D(Texture_FogHeightTexture, float2(1,1) + float2(FogPlaneVertexDist, FogPlaneViewDist) * (-2.0 * FogHeightFade));\n"
-"	fogfrac = fogheightpixel.a;\n"
-"	return lerp(fogheightpixel.rgb * fc, surfacecolor.rgb, tex2D(Texture_FogMask, float2(length(EyeVectorModelSpace)*fogfrac*FogRangeRecip, 0.0)).r);\n"
-"#else\n"
-"# ifdef USEFOGOUTSIDE\n"
-"	fogfrac = min(0.0, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0, min(0.0, FogPlaneVertexDist) * FogHeightFade);\n"
-"# else\n"
-"	fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0, FogPlaneVertexDist)) * min(1.0, (min(0.0, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade);\n"
-"# endif\n"
-"	return lerp(fc, surfacecolor.rgb, tex2D(Texture_FogMask, float2(length(EyeVectorModelSpace)*fogfrac*FogRangeRecip, 0.0)).r);\n"
-"#endif\n"
-"}\n"
-"#endif\n"
-"\n"
-"#ifdef USEOFFSETMAPPING\n"
-"float2 OffsetMapping(float2 TexCoord, float4 OffsetMapping_ScaleSteps, float OffsetMapping_Bias, float OffsetMapping_LodDistance, float3 EyeVector, sampler Texture_Normal, float2 dPdx, float2 dPdy)\n"
-"{\n"
-"	float i;\n"
-"	// distance-based LOD\n"
-"#ifdef USEOFFSETMAPPING_LOD\n"
-"	//float LODFactor = min(1.0, OffsetMapping_LodDistance / EyeVectorFogDepth.z);\n"
-"	//float4 ScaleSteps = float4(OffsetMapping_ScaleSteps.x, OffsetMapping_ScaleSteps.y * LODFactor, OffsetMapping_ScaleSteps.z / LODFactor, OffsetMapping_ScaleSteps.w * LODFactor);\n"
-"	float GuessLODFactor = min(1.0, OffsetMapping_LodDistance / EyeVectorFogDepth.z);\n"
-"#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n"
-"	// stupid workaround because 1-step and 2-step reliefmapping is void\n"
-"	float LODSteps = max(3.0, ceil(GuessLODFactor * OffsetMapping_ScaleSteps.y));\n"
-"#else\n"
-"	float LODSteps = ceil(GuessLODFactor * OffsetMapping_ScaleSteps.y);\n"
-"#endif\n"
-"	float LODFactor = LODSteps / OffsetMapping_ScaleSteps.y;\n"
-"	float4 ScaleSteps = float4(OffsetMapping_ScaleSteps.x, LODSteps, 1.0 / LODSteps, OffsetMapping_ScaleSteps.w * LODFactor);\n"
-"#else\n"
-"	#define ScaleSteps OffsetMapping_ScaleSteps\n"
-"#endif\n"
-"#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n"
-"	// 14 sample relief mapping: linear search and then binary search\n"
-"	// this basically steps forward a small amount repeatedly until it finds\n"
-"	// itself inside solid, then jitters forward and back using decreasing\n"
-"	// amounts to find the impact\n"
-"	//float3 OffsetVector = float3(EyeVector.xy * ((1.0 / EyeVector.z) * ScaleSteps.x) * float2(-1, 1), -1);\n"
-"	//float3 OffsetVector = float3(normalize(EyeVector.xy) * ScaleSteps.x * float2(-1, 1), -1);\n"
-"	float3 OffsetVector = float3(normalize(EyeVector).xy * ScaleSteps.x * float2(-1, 1), -1);\n"
-"	float3 RT = float3(float2(TexCoord.xy - OffsetVector.xy*OffsetMapping_Bias), 1);\n"
-"	OffsetVector *= ScaleSteps.z;\n"
-"	for(i = 1.0; i < ScaleSteps.y; ++i)\n"
-"		RT += OffsetVector *  step(tex2Dgrad(Texture_Normal, RT.xy, dPdx, dPdy).a, RT.z);\n"
-"	for(i = 0.0, f = 1.0; i < ScaleSteps.w; ++i, f *= 0.5)\n"
-"		RT += OffsetVector * (step(tex2Dgrad(Texture_Normal, RT.xy, dPdx, dPdy).a, RT.z) * f - 0.5 * f);\n"
-"	return RT.xy;\n"
-"#else\n"
-"	// 2 sample offset mapping (only 2 samples because of ATI Radeon 9500-9800/X300 limits)\n"
-"	//float2 OffsetVector = float2(EyeVector.xy * ((1.0 / EyeVector.z) * ScaleSteps.x) * float2(-1, 1));\n"
-"	//float2 OffsetVector = float2(normalize(EyeVector.xy) * ScaleSteps.x * float2(-1, 1));\n"
-"	float2 OffsetVector = float2(normalize(EyeVector).xy * ScaleSteps.x * float2(-1, 1));\n"
-"	OffsetVector *= ScaleSteps.z;\n"
-"	for(i = 0.0; i < ScaleSteps.y; ++i)\n"
-"		TexCoord += OffsetVector * ((1.0 - OffsetMapping_Bias) - tex2Dgrad(Texture_Normal, TexCoord, dPdx, dPdy).a);\n"
-"	return TexCoord;\n"
-"#endif\n"
-"}\n"
-"#endif // USEOFFSETMAPPING\n"
-"\n"
-"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n"
-"#if defined(USESHADOWMAP2D)\n"
-"# ifdef USESHADOWMAPORTHO\n"
-"#  define GetShadowMapTC2D(dir, ShadowMap_Parameters) (min(dir, ShadowMap_Parameters.xyz))\n"
-"# else\n"
-"#  ifdef USESHADOWMAPVSDCT\n"
-"float3 GetShadowMapTC2D(float3 dir, float4 ShadowMap_Parameters, samplerCUBE Texture_CubeProjection)\n"
-"{\n"
-"	float3 adir = abs(dir);\n"
-"	float2 mparams = ShadowMap_Parameters.xy / max(max(adir.x, adir.y), adir.z);\n"
-"	float4 proj = texCUBE(Texture_CubeProjection, dir);\n"
-"	return float3(lerp(dir.xy, dir.zz, proj.xy) * mparams.x + proj.zw * ShadowMap_Parameters.z, mparams.y + ShadowMap_Parameters.w);\n"
-"}\n"
-"#  else\n"
-"float3 GetShadowMapTC2D(float3 dir, float4 ShadowMap_Parameters)\n"
-"{\n"
-"	float3 adir = abs(dir);\n"
-"	float m; float4 proj;\n"
-"	if (adir.x > adir.y) { m = adir.x; proj = float4(dir.zyx, 0.5); } else { m = adir.y; proj = float4(dir.xzy, 1.5); }\n"
-"	if (adir.z > m) { m = adir.z; proj = float4(dir, 2.5); }\n"
-"#ifdef HLSL\n"
-"	return float3(proj.xy * ShadowMap_Parameters.x / m + float2(0.5,0.5) + float2(proj.z < 0.0 ? 1.5 : 0.5, proj.w) * ShadowMap_Parameters.z, m + 64 * ShadowMap_Parameters.w);\n"
-"#else\n"
-"	float2 mparams = ShadowMap_Parameters.xy / m;\n"
-"	return float3(proj.xy * mparams.x + float2(proj.z < 0.0 ? 1.5 : 0.5, proj.w) * ShadowMap_Parameters.z, mparams.y + ShadowMap_Parameters.w);\n"
-"#endif\n"
-"}\n"
-"#  endif\n"
-"# endif\n"
-"#endif // defined(USESHADOWMAP2D)\n"
-"\n"
-"# ifdef USESHADOWMAP2D\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"float ShadowMapCompare(float3 dir, sampler Texture_ShadowMap2D, float4 ShadowMap_Parameters, float2 ShadowMap_TextureScale, samplerCUBE Texture_CubeProjection)\n"
-"#else\n"
-"float ShadowMapCompare(float3 dir, sampler Texture_ShadowMap2D, float4 ShadowMap_Parameters, float2 ShadowMap_TextureScale)\n"
-"#endif\n"
-"{\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters, Texture_CubeProjection);\n"
-"#else\n"
-"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters);\n"
-"#endif\n"
-"	float f;\n"
-"\n"
-"#  ifdef USESHADOWSAMPLER\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#      define texval(x, y) tex2Dproj(Texture_ShadowMap2D, float4(center + float2(x, y)*ShadowMap_TextureScale, shadowmaptc.z, 1.0)).r  \n"
-"	float2 center = shadowmaptc.xy*ShadowMap_TextureScale;\n"
-"	f = dot(float4(0.25,0.25,0.25,0.25), float4(texval(-0.4, 1.0), texval(-1.0, -0.4), texval(0.4, -1.0), texval(1.0, 0.4)));\n"
-"#    else\n"
-"	f = tex2Dproj(Texture_ShadowMap2D, float4(shadowmaptc.xy*ShadowMap_TextureScale, shadowmaptc.z, 1.0)).r;\n"
-"#    endif\n"
-"#  else\n"
-"#    ifdef USESHADOWMAPPCF\n"
-"#     if defined(GL_ARB_texture_gather) || defined(GL_AMD_texture_texture4)\n"
-"#      ifdef GL_ARB_texture_gather\n"
-"#        define texval(x, y) textureGatherOffset(Texture_ShadowMap2D, center, int2(x, y))\n"
-"#      else\n"
-"#        define texval(x, y) texture4(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale)\n"
-"#      endif\n"
-"	float2 offset = frac(shadowmaptc.xy - 0.5), center = (shadowmaptc.xy - offset)*ShadowMap_TextureScale;\n"
-"#      if USESHADOWMAPPCF > 1\n"
-"	float4 group1 = step(shadowmaptc.z, texval(-2.0, -2.0));\n"
-"	float4 group2 = step(shadowmaptc.z, texval( 0.0, -2.0));\n"
-"	float4 group3 = step(shadowmaptc.z, texval( 2.0, -2.0));\n"
-"	float4 group4 = step(shadowmaptc.z, texval(-2.0,  0.0));\n"
-"	float4 group5 = step(shadowmaptc.z, texval( 0.0,  0.0));\n"
-"	float4 group6 = step(shadowmaptc.z, texval( 2.0,  0.0));\n"
-"	float4 group7 = step(shadowmaptc.z, texval(-2.0,  2.0));\n"
-"	float4 group8 = step(shadowmaptc.z, texval( 0.0,  2.0));\n"
-"	float4 group9 = step(shadowmaptc.z, texval( 2.0,  2.0));\n"
-"	float4 locols = float4(group1.ab, group3.ab);\n"
-"	float4 hicols = float4(group7.rg, group9.rg);\n"
-"	locols.yz += group2.ab;\n"
-"	hicols.yz += group8.rg;\n"
-"	float4 midcols = float4(group1.rg, group3.rg) + float4(group7.ab, group9.ab) +\n"
-"				float4(group4.rg, group6.rg) + float4(group4.ab, group6.ab) +\n"
-"				lerp(locols, hicols, offset.y);\n"
-"	float4 cols = group5 + float4(group2.rg, group8.ab);\n"
-"	cols.xyz += lerp(midcols.xyz, midcols.yzw, offset.x);\n"
-"	f = dot(cols, float4(1.0/25.0));\n"
-"#      else\n"
-"	float4 group1 = step(shadowmaptc.z, texval(-1.0, -1.0));\n"
-"	float4 group2 = step(shadowmaptc.z, texval( 1.0, -1.0));\n"
-"	float4 group3 = step(shadowmaptc.z, texval(-1.0,  1.0));\n"
-"	float4 group4 = step(shadowmaptc.z, texval( 1.0,  1.0));\n"
-"	float4 cols = float4(group1.rg, group2.rg) + float4(group3.ab, group4.ab) +\n"
-"				lerp(float4(group1.ab, group2.ab), float4(group3.rg, group4.rg), offset.y);\n"
-"	f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
-"#      endif\n"
-"#     else\n"
-"#      ifdef GL_EXT_gpu_shader4\n"
-"#        define texval(x, y) tex2DOffset(Texture_ShadowMap2D, center, int2(x, y)).r\n"
-"#      else\n"
-"#        define texval(x, y) texDepth2D(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale).r  \n"
-"#      endif\n"
-"#      if USESHADOWMAPPCF > 1\n"
-"	float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n"
-"	center *= ShadowMap_TextureScale;\n"
-"	float4 row1 = step(shadowmaptc.z, float4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n"
-"	float4 row2 = step(shadowmaptc.z, float4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n"
-"	float4 row3 = step(shadowmaptc.z, float4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n"
-"	float4 row4 = step(shadowmaptc.z, float4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n"
-"	float4 cols = row2 + row3 + lerp(row1, row4, offset.y);\n"
-"	f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n"
-"#      else\n"
-"	float2 center = shadowmaptc.xy*ShadowMap_TextureScale, offset = frac(shadowmaptc.xy);\n"
-"	float3 row1 = step(shadowmaptc.z, float3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n"
-"	float3 row2 = step(shadowmaptc.z, float3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n"
-"	float3 row3 = step(shadowmaptc.z, float3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n"
-"	float3 cols = row2 + lerp(row1, row3, offset.y);\n"
-"	f = dot(lerp(cols.xy, cols.yz, offset.x), float2(0.25,0.25));\n"
-"#      endif\n"
-"#     endif\n"
-"#    else\n"
-"	f = step(shadowmaptc.z, tex2D(Texture_ShadowMap2D, shadowmaptc.xy*ShadowMap_TextureScale).r);\n"
-"#    endif\n"
-"#  endif\n"
-"#  ifdef USESHADOWMAPORTHO\n"
-"	return lerp(ShadowMap_Parameters.w, 1.0, f);\n"
-"#  else\n"
-"	return f;\n"
-"#  endif\n"
-"}\n"
-"# endif\n"
-"#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n"
-"#endif // FRAGMENT_SHADER\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_DEFERREDGEOMETRY\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"float4 gl_Color : COLOR0,\n"
-"#endif\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"float4 gl_MultiTexCoord1 : TEXCOORD1,\n"
-"float4 gl_MultiTexCoord2 : TEXCOORD2,\n"
-"float4 gl_MultiTexCoord3 : TEXCOORD3,\n"
-"uniform float4x4 TexMatrix : register(c0),\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform float4x4 BackgroundTexMatrix : register(c4),\n"
-"#endif\n"
-"uniform float4x4 ModelViewMatrix : register(c12),\n"
-"#ifdef USEOFFSETMAPPING\n"
-"uniform float3 EyePosition : register(c24),\n"
-"#endif\n"
-"out float4 gl_Position : POSITION,\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"out float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"out float4 TexCoordBoth : TEXCOORD0,\n"
-"#ifdef USEOFFSETMAPPING\n"
-"out float3 EyeVector : TEXCOORD2,\n"
-"#endif\n"
-"out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
-"out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"out float4 VectorR : TEXCOORD7 // direction of R texcoord (surface normal), Depth value\n"
-")\n"
-"{\n"
-"	TexCoordBoth = mul(TexMatrix, gl_MultiTexCoord0);\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	gl_FrontColor = gl_Color;\n"
-"	TexCoordBoth.zw = float2(Backgroundmul(TexMatrix, gl_MultiTexCoord0));\n"
-"#endif\n"
-"\n"
-"	// transform unnormalized eye direction into tangent space\n"
-"#ifdef USEOFFSETMAPPING\n"
-"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n"
-"#endif\n"
-"\n"
-"	VectorS = mul(ModelViewMatrix, float4(gl_MultiTexCoord1.xyz, 0)).xyz;\n"
-"	VectorT = mul(ModelViewMatrix, float4(gl_MultiTexCoord2.xyz, 0)).xyz;\n"
-"	VectorR.xyz = mul(ModelViewMatrix, float4(gl_MultiTexCoord3.xyz, 0)).xyz;\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"	VectorR.w = mul(ModelViewMatrix, gl_Vertex).z;\n"
-"}\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"float4 TexCoordBoth : TEXCOORD0,\n"
-"float3 EyeVector : TEXCOORD2,\n"
-"float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
-"float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"float4 VectorR : TEXCOORD7, // direction of R texcoord (surface normal), Depth value\n"
-"uniform sampler Texture_Normal : register(s0),\n"
-"#ifdef USEALPHAKILL\n"
-"uniform sampler Texture_Color : register(s1),\n"
-"#endif\n"
-"uniform sampler Texture_Gloss : register(s2),\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform sampler Texture_SecondaryNormal : register(s4),\n"
-"uniform sampler Texture_SecondaryGloss : register(s6),\n"
-"#endif\n"
-"#ifdef USEOFFSETMAPPING\n"
-"uniform float4 OffsetMapping_ScaleSteps : register(c24),\n"
-"uniform float4 OffsetMapping_LodDistance : register(c53),\n"
-"uniform float OffsetMapping_Bias : register(c54),\n"
-"#endif\n"
-"uniform half SpecularPower : register(c36),\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	float2 TexCoord = TexCoordBoth.xy;\n"
-"#ifdef USEOFFSETMAPPING\n"
-"	// apply offsetmapping\n"
-"	float2 dPdx = ddx(TexCoord);\n"
-"	float2 dPdy = ddy(TexCoord);\n"
-"	float2 TexCoordOffset = OffsetMapping(TexCoord, OffsetMapping_ScaleSteps, OffsetMapping_Bias, OffsetMapping_LodDistance, EyeVector, Texture_Normal, dPdx, dPdy);\n"
-"# define offsetMappedTexture2D(t) tex2Dgrad(t, TexCoordOffset, dPdx, dPdy)\n"
-"#else\n"
-"# define offsetMappedTexture2D(t) tex2D(t, TexCoord)\n"
-"#endif\n"
-"\n"
-"#ifdef USEALPHAKILL\n"
-"	if (offsetMappedTexture2D(Texture_Color).a < 0.5)\n"
-"		discard;\n"
-"#endif\n"
-"\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	float alpha = offsetMappedTexture2D(Texture_Color).a;\n"
-"	float terrainblend = clamp(float(gl_FrontColor.a) * alpha * 2.0 - 0.5, float(0.0), float(1.0));\n"
-"	//float terrainblend = min(float(gl_FrontColor.a) * alpha * 2.0, float(1.0));\n"
-"	//float terrainblend = float(gl_FrontColor.a) * alpha > 0.5;\n"
-"#endif\n"
-"\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	float3 surfacenormal = lerp(tex2D(Texture_SecondaryNormal, TexCoord2).rgb, offsetMappedTexture2D(Texture_Normal).rgb, terrainblend) - float3(0.5, 0.5, 0.5);\n"
-"	float a = lerp(tex2D(Texture_SecondaryGloss, TexCoord2).a, offsetMappedTexture2D(Texture_Gloss).a, terrainblend);\n"
-"#else\n"
-"	float3 surfacenormal = offsetMappedTexture2D(Texture_Normal).rgb - float3(0.5, 0.5, 0.5);\n"
-"	float a = offsetMappedTexture2D(Texture_Gloss).a;\n"
-"#endif\n"
-"\n"
-"	float3 pixelnormal = normalize(surfacenormal.x * VectorS.xyz + surfacenormal.y * VectorT.xyz + surfacenormal.z * VectorR.xyz);\n"
-"	dp_FragColor = float4(pixelnormal.x, pixelnormal.y, VectorR.w, a);\n"
-"}\n"
-"#endif // FRAGMENT_SHADER\n"
-"#else // !MODE_DEFERREDGEOMETRY\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"uniform float4x4 ModelViewMatrix : register(c12),\n"
-"out float4 gl_Position : POSITION,\n"
-"out float4 ModelViewPosition : TEXCOORD0\n"
-")\n"
-"{\n"
-"	ModelViewPosition = mul(ModelViewMatrix, gl_Vertex);\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"}\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"#ifdef HLSL\n"
-"float2 Pixel : VPOS,\n"
-"#else\n"
-"float2 Pixel : WPOS,\n"
-"#endif\n"
-"float4 ModelViewPosition : TEXCOORD0,\n"
-"uniform float4x4 ViewToLight : register(c44),\n"
-"uniform float2 ScreenToDepth : register(c33), // ScreenToDepth = float2(Far / (Far - Near), Far * Near / (Near - Far));\n"
-"uniform float3 LightPosition : register(c23),\n"
-"uniform half2 PixelToScreenTexCoord : register(c42),\n"
-"uniform half3 DeferredColor_Ambient : register(c9),\n"
-"uniform half3 DeferredColor_Diffuse : register(c10),\n"
-"#ifdef USESPECULAR\n"
-"uniform half3 DeferredColor_Specular : register(c11),\n"
-"uniform half SpecularPower : register(c36),\n"
-"#endif\n"
-"uniform sampler Texture_Attenuation : register(s9),\n"
-"uniform sampler Texture_ScreenDepth : register(s13),\n"
-"uniform sampler Texture_ScreenNormalMap : register(s14),\n"
-"\n"
-"#ifdef USECUBEFILTER\n"
-"uniform samplerCUBE Texture_Cube : register(s10),\n"
-"#endif\n"
-"\n"
-"#ifdef USESHADOWMAP2D\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
-"# else\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"uniform samplerCUBE Texture_CubeProjection : register(s12),\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAP2D)\n"
-"uniform float2 ShadowMap_TextureScale : register(c35),\n"
-"uniform float4 ShadowMap_Parameters : register(c34),\n"
-"#endif\n"
-"\n"
-"out float4 gl_FragData0 : COLOR0,\n"
-"out float4 gl_FragData1 : COLOR1\n"
-")\n"
-"{\n"
-"	// calculate viewspace pixel position\n"
-"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
-"	float3 position;\n"
-"	// get the geometry information (depth, normal, specular exponent)\n"
-"	half4 normalmap = half4(tex2D(Texture_ScreenNormalMap, ScreenTexCoord));\n"
-"	// decode viewspace pixel normal\n"
-"//	float3 surfacenormal = normalize(normalmap.rgb - cast_myhalf3(0.5,0.5,0.5));\n"
-"	float3 surfacenormal = half3(normalmap.rg, sqrt(1.0-dot(normalmap.rg, normalmap.rg)));\n"
-"	// decode viewspace pixel position\n"
-"//	position.z = decodedepthmacro(dp_texture2D(Texture_ScreenDepth, ScreenTexCoord));\n"
-"	position.z = normalmap.b;\n"
-"//	position.z = ScreenToDepth.y / (dp_texture2D(Texture_ScreenDepth, ScreenTexCoord).r + ScreenToDepth.x);\n"
-"	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n"
-"\n"
-"	// now do the actual shading\n"
-"	// surfacenormal = pixel normal in viewspace\n"
-"	// LightVector = pixel to light in viewspace\n"
-"	// CubeVector = position in lightspace\n"
-"	// eyevector = pixel to view in viewspace\n"
-"	float3 CubeVector = mul(ViewToLight, float4(position,1)).xyz;\n"
-"	half fade = half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)).r);\n"
-"#ifdef USEDIFFUSE\n"
-"	// calculate diffuse shading\n"
-"	half3 lightnormal = half3(normalize(LightPosition - position));\n"
-"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"	// calculate directional shading\n"
-"	float3 eyevector = position * -1.0;\n"
-"#  ifdef USEEXACTSPECULARMATH\n"
-"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(eyevector)))*-1.0, 0.0)), 1.0 + SpecularPower * normalmap.a));\n"
-"#  else\n"
-"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(eyevector))));\n"
-"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * normalmap.a));\n"
-"#  endif\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAP2D)\n"
-"	fade *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-", Texture_CubeProjection\n"
-"#endif\n"
-"	));\n"
-"#endif\n"
-"\n"
-"#ifdef USEDIFFUSE\n"
-"	gl_FragData0 = float4((DeferredColor_Ambient + DeferredColor_Diffuse * diffuse) * fade, 1.0);\n"
-"#else\n"
-"	gl_FragData0 = float4(DeferredColor_Ambient * fade, 1.0);\n"
-"#endif\n"
-"#ifdef USESPECULAR\n"
-"	gl_FragData1 = float4(DeferredColor_Specular * (specular * fade), 1.0);\n"
-"#else\n"
-"	gl_FragData1 = float4(0.0, 0.0, 0.0, 1.0);\n"
-"#endif\n"
-"\n"
-"# ifdef USECUBEFILTER\n"
-"	float3 cubecolor = texCUBE(Texture_Cube, CubeVector).rgb;\n"
-"	gl_FragData0.rgb *= cubecolor;\n"
-"	gl_FragData1.rgb *= cubecolor;\n"
-"# endif\n"
-"}\n"
-"#endif // FRAGMENT_SHADER\n"
-"#else // !MODE_DEFERREDLIGHTSOURCE\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef VERTEX_SHADER\n"
-"void main\n"
-"(\n"
-"float4 gl_Vertex : POSITION,\n"
-"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n"
-"#if defined(USEVERTEXTEXTUREBLEND) || defined(MODE_VERTEXCOLOR) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR)\n"
-"float4 gl_Color : COLOR0,\n"
-"#endif\n"
-"float4 gl_MultiTexCoord0 : TEXCOORD0,\n"
-"float4 gl_MultiTexCoord1 : TEXCOORD1,\n"
-"float4 gl_MultiTexCoord2 : TEXCOORD2,\n"
-"float4 gl_MultiTexCoord3 : TEXCOORD3,\n"
-"float4 gl_MultiTexCoord4 : TEXCOORD4,\n"
-"\n"
-"uniform float3 EyePosition : register(c24),\n"
-"uniform float4x4 TexMatrix : register(c0),\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform float4x4 BackgroundTexMatrix : register(c4),\n"
-"#endif\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"uniform float4x4 ModelToLight : register(c20),\n"
-"#endif\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"uniform float3 LightPosition : register(c27),\n"
-"#endif\n"
-"#ifdef MODE_LIGHTDIRECTION\n"
-"uniform float3 LightDir : register(c26),\n"
-"#endif\n"
-"uniform float4 FogPlane : register(c25),\n"
-"#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"uniform float3 LightPosition : register(c27),\n"
-"#endif\n"
-"#ifdef USESHADOWMAPORTHO\n"
-"uniform float4x4 ShadowMapMatrix : register(c16),\n"
-"#endif\n"
-"#if defined(MODE_VERTEXCOLOR) || defined(USEVERTEXTEXTUREBLEND) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR) || defined(USEALPHAGENVERTEX)\n"
-"out float4 gl_FrontColor : COLOR,\n"
-"#endif\n"
-"out float4 TexCoordBoth : TEXCOORD0,\n"
-"#ifdef USELIGHTMAP\n"
-"out float2 TexCoordLightmap : TEXCOORD1,\n"
-"#endif\n"
-"#ifdef USEEYEVECTOR\n"
-"out float3 EyeVector : TEXCOORD2,\n"
-"#endif\n"
-"#ifdef USEREFLECTION\n"
-"out float4 ModelViewProjectionPosition : TEXCOORD3,\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"out float4 EyeVectorModelSpaceFogPlaneVertexDist : TEXCOORD4,\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTION) && defined(USEDIFFUSE) || defined(USEDIFFUSE)\n"
-"out float3 LightVector : TEXCOORD1,\n"
-"#endif\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"out float3 CubeVector : TEXCOORD3,\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
-"out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
-"out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"out float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n"
-"#endif\n"
-"#ifdef USESHADOWMAPORTHO\n"
-"out float3 ShadowMapTC : TEXCOORD3, // CONFLICTS WITH USEREFLECTION!\n"
-"#endif\n"
-"out float4 gl_Position : POSITION\n"
-")\n"
-"{\n"
-"#if defined(MODE_VERTEXCOLOR) || defined(USEVERTEXTEXTUREBLEND) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR) || defined(USEALPHAGENVERTEX)\n"
-"	gl_FrontColor = gl_Color;\n"
-"#endif\n"
-"	// copy the surface texcoord\n"
-"	TexCoordBoth = mul(TexMatrix, gl_MultiTexCoord0);\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	TexCoordBoth.zw = mul(BackgroundTexMatrix, gl_MultiTexCoord0).xy;\n"
-"#endif\n"
-"#ifdef USELIGHTMAP\n"
-"	TexCoordLightmap = gl_MultiTexCoord4.xy;\n"
-"#endif\n"
-"\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"	// transform vertex position into light attenuation/cubemap space\n"
-"	// (-1 to +1 across the light box)\n"
-"	CubeVector = mul(ModelToLight, gl_Vertex).xyz;\n"
-"\n"
-"# ifdef USEDIFFUSE\n"
-"	// transform unnormalized light direction into tangent space\n"
-"	// (we use unnormalized to ensure that it interpolates correctly and then\n"
-"	//  normalize it per pixel)\n"
-"	float3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n"
-"	LightVector = float3(dot(lightminusvertex, gl_MultiTexCoord1.xyz), dot(lightminusvertex, gl_MultiTexCoord2.xyz), dot(lightminusvertex, gl_MultiTexCoord3.xyz));\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#if defined(MODE_LIGHTDIRECTION) && defined(USEDIFFUSE)\n"
-"	LightVector = float3(dot(LightDir, gl_MultiTexCoord1.xyz), dot(LightDir, gl_MultiTexCoord2.xyz), dot(LightDir, gl_MultiTexCoord3.xyz));\n"
-"#endif\n"
-"\n"
-"	// transform unnormalized eye direction into tangent space\n"
-"#ifdef USEEYEVECTOR\n"
-"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n"
-"#endif\n"
-"\n"
-"#ifdef USEFOG\n"
-"	EyeVectorModelSpaceFogPlaneVertexDist.xyz = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVectorModelSpaceFogPlaneVertexDist.w = dot(FogPlane, gl_Vertex);\n"
-"#endif\n"
-"\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
-"	VectorS = gl_MultiTexCoord1.xyz;\n"
-"	VectorT = gl_MultiTexCoord2.xyz;\n"
-"	VectorR = gl_MultiTexCoord3.xyz;\n"
-"#endif\n"
-"\n"
-"	// transform vertex to camera space, using ftransform to match non-VS rendering\n"
-"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n"
-"\n"
-"#ifdef USESHADOWMAPORTHO\n"
-"	ShadowMapTC = mul(ShadowMapMatrix, gl_Position).xyz;\n"
-"#endif\n"
-"\n"
-"#ifdef USEREFLECTION\n"
-"	ModelViewProjectionPosition = gl_Position;\n"
-"#endif\n"
-"#ifdef USETRIPPY\n"
-"	gl_Position = TrippyVertex(gl_Position);\n"
-"#endif\n"
-"}\n"
-"#endif // VERTEX_SHADER\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef FRAGMENT_SHADER\n"
-"void main\n"
-"(\n"
-"#ifdef USEDEFERREDLIGHTMAP\n"
-"#ifdef HLSL\n"
-"float2 Pixel : VPOS,\n"
-"#else\n"
-"float2 Pixel : WPOS,\n"
-"#endif\n"
-"#endif\n"
-"float4 gl_FrontColor : COLOR,\n"
-"float4 TexCoordBoth : TEXCOORD0,\n"
-"#ifdef USELIGHTMAP\n"
-"float2 TexCoordLightmap : TEXCOORD1,\n"
-"#endif\n"
-"#ifdef USEEYEVECTOR\n"
-"float3 EyeVector : TEXCOORD2,\n"
-"#endif\n"
-"#ifdef USEREFLECTION\n"
-"float4 ModelViewProjectionPosition : TEXCOORD3,\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"float4 EyeVectorModelSpaceFogPlaneVertexDist : TEXCOORD4,\n"
-"#endif\n"
-"#if defined(MODE_LIGHTSOURCE) || defined(MODE_LIGHTDIRECTION)\n"
-"float3 LightVector : TEXCOORD1,\n"
-"#endif\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"float3 CubeVector : TEXCOORD3,\n"
-"#endif\n"
-"#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"float4 ModelViewPosition : TEXCOORD0,\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n"
-"float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n"
-"float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n"
-"float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n"
-"#endif\n"
-"#ifdef USESHADOWMAPORTHO\n"
-"float3 ShadowMapTC : TEXCOORD3, // CONFLICTS WITH USEREFLECTION!\n"
-"#endif\n"
-"\n"
-"uniform sampler Texture_Normal : register(s0),\n"
-"uniform sampler Texture_Color : register(s1),\n"
-"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n"
-"uniform sampler Texture_Gloss : register(s2),\n"
-"#endif\n"
-"#ifdef USEGLOW\n"
-"uniform sampler Texture_Glow : register(s3),\n"
-"#endif\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"uniform sampler Texture_SecondaryNormal : register(s4),\n"
-"uniform sampler Texture_SecondaryColor : register(s5),\n"
-"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n"
-"uniform sampler Texture_SecondaryGloss : register(s6),\n"
-"#endif\n"
-"#ifdef USEGLOW\n"
-"uniform sampler Texture_SecondaryGlow : register(s7),\n"
-"#endif\n"
-"#endif\n"
-"#ifdef USECOLORMAPPING\n"
-"uniform sampler Texture_Pants : register(s4),\n"
-"uniform sampler Texture_Shirt : register(s7),\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"uniform sampler Texture_FogHeightTexture : register(s14),\n"
-"uniform sampler Texture_FogMask : register(s8),\n"
-"#endif\n"
-"#ifdef USELIGHTMAP\n"
-"uniform sampler Texture_Lightmap : register(s9),\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n"
-"uniform sampler Texture_Deluxemap : register(s10),\n"
-"#endif\n"
-"#ifdef USEREFLECTION\n"
-"uniform sampler Texture_Reflection : register(s7),\n"
-"#endif\n"
-"\n"
-"#ifdef MODE_DEFERREDLIGHTSOURCE\n"
-"uniform sampler Texture_ScreenDepth : register(s13),\n"
-"uniform sampler Texture_ScreenNormalMap : register(s14),\n"
-"#endif\n"
-"#ifdef USEDEFERREDLIGHTMAP\n"
-"uniform sampler Texture_ScreenDepth : register(s13),\n"
-"uniform sampler Texture_ScreenNormalMap : register(s14),\n"
-"uniform sampler Texture_ScreenDiffuse : register(s11),\n"
-"uniform sampler Texture_ScreenSpecular : register(s12),\n"
-"#endif\n"
-"\n"
-"#ifdef USECOLORMAPPING\n"
-"uniform half3 Color_Pants : register(c7),\n"
-"uniform half3 Color_Shirt : register(c8),\n"
-"#endif\n"
-"#ifdef USEFOG\n"
-"uniform float3 FogColor : register(c16),\n"
-"uniform float FogRangeRecip : register(c20),\n"
-"uniform float FogPlaneViewDist : register(c19),\n"
-"uniform float FogHeightFade : register(c17),\n"
-"#endif\n"
-"\n"
-"#ifdef USEOFFSETMAPPING\n"
-"uniform float4 OffsetMapping_ScaleSteps : register(c24),\n"
-"uniform float OffsetMapping_Bias : register(c54),\n"
-"#endif\n"
-"\n"
-"#ifdef USEDEFERREDLIGHTMAP\n"
-"uniform half2 PixelToScreenTexCoord : register(c42),\n"
-"uniform half3 DeferredMod_Diffuse : register(c12),\n"
-"uniform half3 DeferredMod_Specular : register(c13),\n"
-"#endif\n"
-"uniform half3 Color_Ambient : register(c3),\n"
-"uniform half3 Color_Diffuse : register(c4),\n"
-"uniform half3 Color_Specular : register(c5),\n"
-"uniform half SpecularPower : register(c36),\n"
-"#ifdef USEGLOW\n"
-"uniform half3 Color_Glow : register(c6),\n"
-"#endif\n"
-"uniform half Alpha : register(c0),\n"
-"#ifdef USEREFLECTION\n"
-"uniform float4 DistortScaleRefractReflect : register(c14),\n"
-"uniform float4 ScreenScaleRefractReflect : register(c32),\n"
-"uniform float4 ScreenCenterRefractReflect : register(c31),\n"
-"uniform half4 ReflectColor : register(c26),\n"
-"#endif\n"
-"#ifdef USEREFLECTCUBE\n"
-"uniform float4x4 ModelToReflectCube : register(c48),\n"
-"uniform sampler Texture_ReflectMask : register(s5),\n"
-"uniform samplerCUBE Texture_ReflectCube : register(s6),\n"
-"#endif\n"
-"#ifdef MODE_LIGHTDIRECTION\n"
-"uniform half3 LightColor : register(c21),\n"
-"#endif\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"uniform half3 LightColor : register(c21),\n"
-"#endif\n"
-"\n"
-"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE)\n"
-"uniform sampler Texture_Attenuation : register(s9),\n"
-"uniform samplerCUBE Texture_Cube : register(s10),\n"
-"#endif\n"
-"\n"
-"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n"
-"\n"
-"#ifdef USESHADOWMAP2D\n"
-"# ifdef USESHADOWSAMPLER\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
-"# else\n"
-"uniform sampler Texture_ShadowMap2D : register(s15),\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"uniform samplerCUBE Texture_CubeProjection : register(s12),\n"
-"#endif\n"
-"\n"
-"#if defined(USESHADOWMAP2D)\n"
-"uniform float2 ShadowMap_TextureScale : register(c35),\n"
-"uniform float4 ShadowMap_Parameters : register(c34),\n"
-"#endif\n"
-"#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n"
-"\n"
-"out float4 dp_FragColor : COLOR\n"
-")\n"
-"{\n"
-"	float2 TexCoord = TexCoordBoth.xy;\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	float2 TexCoord2 = TexCoordBoth.zw;\n"
-"#endif\n"
-"#ifdef USEOFFSETMAPPING\n"
-"	// apply offsetmapping\n"
-"	float2 dPdx = ddx(TexCoord);\n"
-"	float2 dPdy = ddy(TexCoord);\n"
-"	float2 TexCoordOffset = OffsetMapping(TexCoord, OffsetMapping_ScaleSteps, OffsetMapping_Bias, OffsetMapping_LodDistance, EyeVector, Texture_Normal, dPdx, dPdy);\n"
-"# define offsetMappedTexture2D(t) tex2Dgrad(t, TexCoordOffset, dPdx, dPdy)\n"
-"#else\n"
-"# define offsetMappedTexture2D(t) tex2D(t, TexCoord)\n"
-"#endif\n"
-"\n"
-"	// combine the diffuse textures (base, pants, shirt)\n"
-"	half4 color = half4(offsetMappedTexture2D(Texture_Color));\n"
-"#ifdef USEALPHAKILL\n"
-"	if (color.a < 0.5)\n"
-"		discard;\n"
-"#endif\n"
-"	color.a *= Alpha;\n"
-"#ifdef USECOLORMAPPING\n"
-"	color.rgb += half3(offsetMappedTexture2D(Texture_Pants).rgb) * Color_Pants + half3(offsetMappedTexture2D(Texture_Shirt).rgb) * Color_Shirt;\n"
-"#endif\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"#ifdef USEBOTHALPHAS\n"
-"	half4 color2 = half4(tex2D(Texture_SecondaryColor, TexCoord2));\n"
-"	half terrainblend = clamp(half(gl_FrontColor.a) * color.a, half(1.0 - color2.a), half(1.0));\n"
-"	color.rgb = lerp(color2.rgb, color.rgb, terrainblend);\n"
-"#else\n"
-"	half terrainblend = clamp(half(gl_FrontColor.a) * color.a * 2.0 - 0.5, half(0.0), half(1.0));\n"
-"	//half terrainblend = min(half(gl_FrontColor.a) * color.a * 2.0, half(1.0));\n"
-"	//half terrainblend = half(gl_FrontColor.a) * color.a > 0.5;\n"
-"	color.rgb = half3(lerp(tex2D(Texture_SecondaryColor, TexCoord2).rgb, float3(color.rgb), terrainblend));\n"
-"	color.a = 1.0;\n"
-"	//color = half4(lerp(float4(1, 0, 0, 1), color, terrainblend));\n"
-"#endif\n"
-"#endif\n"
-"#ifdef USEALPHAGENVERTEX\n"
-"	color.a *= gl_FrontColor.a;\n"
-"#endif\n"
-"\n"
-"	// get the surface normal\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	half3 surfacenormal = normalize(half3(lerp(tex2D(Texture_SecondaryNormal, TexCoord2).rgb, offsetMappedTexture2D(Texture_Normal).rgb, terrainblend)) - half3(0.5, 0.5, 0.5));\n"
-"#else\n"
-"	half3 surfacenormal = half3(normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5, 0.5, 0.5)));\n"
-"#endif\n"
-"\n"
-"	// get the material colors\n"
-"	half3 diffusetex = color.rgb;\n"
-"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n"
-"# ifdef USEVERTEXTEXTUREBLEND\n"
-"	half4 glosstex = half4(lerp(tex2D(Texture_SecondaryGloss, TexCoord2), offsetMappedTexture2D(Texture_Gloss), terrainblend));\n"
-"# else\n"
-"	half4 glosstex = half4(offsetMappedTexture2D(Texture_Gloss));\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USEREFLECTCUBE\n"
-"	float3 TangentReflectVector = reflect(-EyeVector, surfacenormal);\n"
-"	float3 ModelReflectVector = TangentReflectVector.x * VectorS + TangentReflectVector.y * VectorT + TangentReflectVector.z * VectorR;\n"
-"	float3 ReflectCubeTexCoord = mul(ModelToReflectCube, float4(ModelReflectVector, 0)).xyz;\n"
-"	diffusetex += half3(offsetMappedTexture2D(Texture_ReflectMask).rgb) * half3(texCUBE(Texture_ReflectCube, ReflectCubeTexCoord).rgb);\n"
-"#endif\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_LIGHTSOURCE\n"
-"	// light source\n"
-"#ifdef USEDIFFUSE\n"
-"	half3 lightnormal = half3(normalize(LightVector));\n"
-"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n"
-"	color.rgb = diffusetex * (Color_Ambient + diffuse * Color_Diffuse);\n"
-"#ifdef USESPECULAR\n"
-"#ifdef USEEXACTSPECULARMATH\n"
-"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), 1.0 + SpecularPower * glosstex.a));\n"
-"#else\n"
-"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(EyeVector))));\n"
-"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * glosstex.a));\n"
-"#endif\n"
-"	color.rgb += glosstex.rgb * (specular * Color_Specular);\n"
-"#endif\n"
-"#else\n"
-"	color.rgb = diffusetex * Color_Ambient;\n"
-"#endif\n"
-"	color.rgb *= LightColor;\n"
-"	color.rgb *= half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)).r);\n"
-"#if defined(USESHADOWMAP2D)\n"
-"	color.rgb *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-", Texture_CubeProjection\n"
-"#endif\n"
-"	));\n"
-"\n"
-"#endif\n"
-"# ifdef USECUBEFILTER\n"
-"	color.rgb *= half3(texCUBE(Texture_Cube, CubeVector).rgb);\n"
-"# endif\n"
-"\n"
-"#ifdef USESHADOWMAP2D\n"
-"#ifdef USESHADOWMAPVSDCT\n"
-"//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection);\n"
-"#else\n"
-"//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters);\n"
-"#endif\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n"
-"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n"
-"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n"
-"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n"
-"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n"
-"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.r = half(shadowmaptc.z - texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.r = half(shadowmaptc.z);\n"
-"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n"
-"//	color.r = half(shadowmaptc.z);\n"
-"//	color.r = 1;\n"
-"//	color.rgb = abs(CubeVector);\n"
-"#endif\n"
-"//	color.rgb = half3(1,1,1);\n"
-"#endif // MODE_LIGHTSOURCE\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_LIGHTDIRECTION\n"
-"	#define SHADING\n"
-"	#ifdef USEDIFFUSE\n"
-"		half3 lightnormal = half3(normalize(LightVector));\n"
-"	#endif\n"
-"	#define lightcolor LightColor\n"
-"#endif // MODE_LIGHTDIRECTION\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
-"	#define SHADING\n"
-"	// deluxemap lightmapping using light vectors in modelspace (q3map2 -light -deluxe)\n"
-"	half3 lightnormal_modelspace = half3(tex2D(Texture_Deluxemap, TexCoordLightmap).rgb) * 2.0 + half3(-1.0, -1.0, -1.0);\n"
-"	half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n"
-"	// convert modelspace light vector to tangentspace\n"
-"	half3 lightnormal = half3(dot(lightnormal_modelspace, half3(VectorS)), dot(lightnormal_modelspace, half3(VectorT)), dot(lightnormal_modelspace, half3(VectorR)));\n"
-"	// calculate directional shading (and undoing the existing angle attenuation on the lightmap by the division)\n"
-"	// note that q3map2 is too stupid to calculate proper surface normals when q3map_nonplanar\n"
-"	// is used (the lightmap and deluxemap coords correspond to virtually random coordinates\n"
-"	// on that luxel, and NOT to its center, because recursive triangle subdivision is used\n"
-"	// to map the luxels to coordinates on the draw surfaces), which also causes\n"
-"	// deluxemaps to be wrong because light contributions from the wrong side of the surface\n"
-"	// are added up. To prevent divisions by zero or strong exaggerations, a max()\n"
-"	// nudge is done here at expense of some additional fps. This is ONLY needed for\n"
-"	// deluxemaps, tangentspace deluxemap avoid this problem by design.\n"
-"	lightcolor *= 1.0 / max(0.25, lightnormal.z);\n"
-"#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n"
-"#ifdef MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n"
-"	#define SHADING\n"
-"	// deluxemap lightmapping using light vectors in tangentspace (hmap2 -light)\n"
-"	half3 lightnormal = half3(tex2D(Texture_Deluxemap, TexCoordLightmap).rgb) * 2.0 + half3(-1.0, -1.0, -1.0);\n"
-"	half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n"
-"#endif\n"
-"#if defined(MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR)\n"
-"	#define SHADING\n"
-"	// forced deluxemap on lightmapped/vertexlit surfaces\n"
-"	half3 lightnormal = half3(0.0, 0.0, 1.0);\n"
-"   #ifdef USELIGHTMAP\n"
-"		half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n"
-"   #else\n"
-"		half3 lightcolor = half3(gl_FrontColor.rgb);\n"
-"   #endif\n"
-"#endif\n"
-"#ifdef MODE_FAKELIGHT\n"
-"	#define SHADING\n"
-"	half3 lightnormal = half3(normalize(EyeVector));\n"
-"	half3 lightcolor = half3(1.0,1.0,1.0);\n"
-"#endif // MODE_FAKELIGHT\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef MODE_LIGHTMAP\n"
-"	color.rgb = diffusetex * (Color_Ambient + half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb) * Color_Diffuse);\n"
-"#endif // MODE_LIGHTMAP\n"
-"#ifdef MODE_VERTEXCOLOR\n"
-"	color.rgb = diffusetex * (Color_Ambient + half3(gl_FrontColor.rgb) * Color_Diffuse);\n"
-"#endif // MODE_VERTEXCOLOR\n"
-"#ifdef MODE_FLATCOLOR\n"
-"	color.rgb = diffusetex * Color_Ambient;\n"
-"#endif // MODE_FLATCOLOR\n"
-"\n"
-"\n"
-"\n"
-"\n"
-"#ifdef SHADING\n"
-"# ifdef USEDIFFUSE\n"
-"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n"
-"#  ifdef USESPECULAR\n"
-"#   ifdef USEEXACTSPECULARMATH\n"
-"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), 1.0 + SpecularPower * glosstex.a));\n"
-"#   else\n"
-"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(EyeVector))));\n"
-"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * glosstex.a));\n"
-"#   endif\n"
-"	color.rgb = diffusetex * Color_Ambient + (diffusetex * Color_Diffuse * diffuse + glosstex.rgb * Color_Specular * specular) * lightcolor;\n"
-"#  else\n"
-"	color.rgb = diffusetex * (Color_Ambient + Color_Diffuse * diffuse * lightcolor);\n"
-"#  endif\n"
-"# else\n"
-"	color.rgb = diffusetex * Color_Ambient;\n"
-"# endif\n"
-"#endif\n"
-"\n"
-"#ifdef USESHADOWMAPORTHO\n"
-"	color.rgb *= half(ShadowMapCompare(ShadowMapTC, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale));\n"
-"#endif\n"
-"\n"
-"#ifdef USEDEFERREDLIGHTMAP\n"
-"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n"
-"	color.rgb += diffusetex * half3(tex2D(Texture_ScreenDiffuse, ScreenTexCoord).rgb) * DeferredMod_Diffuse;\n"
-"	color.rgb += glosstex.rgb * half3(tex2D(Texture_ScreenSpecular, ScreenTexCoord).rgb) * DeferredMod_Specular;\n"
-"//	color.rgb = half3(tex2D(Texture_ScreenDepth, ScreenTexCoord).rgb);\n"
-"//	color.r = half(texDepth2D(Texture_ScreenDepth, ScreenTexCoord)) * 1.0;\n"
-"#endif\n"
-"\n"
-"#ifdef USEGLOW\n"
-"#ifdef USEVERTEXTEXTUREBLEND\n"
-"	color.rgb += half3(lerp(tex2D(Texture_SecondaryGlow, TexCoord2).rgb, offsetMappedTexture2D(Texture_Glow).rgb, terrainblend)) * Color_Glow;\n"
-"#else\n"
-"	color.rgb += half3(offsetMappedTexture2D(Texture_Glow).rgb) * Color_Glow;\n"
-"#endif\n"
-"#endif\n"
-"\n"
-"#ifdef USEFOG\n"
-"	color.rgb = half3(FogVertex(color, FogColor, EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask, Texture_FogHeightTexture));\n"
-"#endif\n"
-"\n"
-"	// reflection must come last because it already contains exactly the correct fog (the reflection render preserves camera distance from the plane, it only flips the side) and ContrastBoost/SceneBrightness\n"
-"#ifdef USEREFLECTION\n"
-"	float4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n"
-"	//float4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5,0.5,0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n"
-"	float2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW.zw + ScreenCenterRefractReflect.zw;\n"
-"	float2 ScreenTexCoord = SafeScreenTexCoord + float3(normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5,0.5,0.5))).xy * DistortScaleRefractReflect.zw;\n"
-"	// FIXME temporary hack to detect the case that the reflection\n"
-"	// gets blackened at edges due to leaving the area that contains actual\n"
-"	// content.\n"
-"	// Remove this 'ack once we have a better way to stop this thing from\n"
-"	// 'appening.\n"
-"	float f = min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n"
-"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n"
-"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n"
-"	color.rgb = lerp(color.rgb, half3(tex2D(Texture_Reflection, ScreenTexCoord).rgb) * ReflectColor.rgb, ReflectColor.a);\n"
-"#endif\n"
-"\n"
-"	dp_FragColor = float4(color);\n"
-"}\n"
-"#endif // FRAGMENT_SHADER\n"
-"\n"
-"#endif // !MODE_DEFERREDLIGHTSOURCE\n"
-"#endif // !MODE_DEFERREDGEOMETRY\n"
-"#endif // !MODE_WATER\n"
-"#endif // !MODE_REFRACTION\n"
-"#endif // !MODE_BLOOMBLUR\n"
-"#endif // !MODE_GENERIC\n"
-"#endif // !MODE_POSTPROCESS\n"
-"#endif // !MODE_SHOWDEPTH\n"
-"#endif // !MODE_DEPTH_OR_SHADOW\n"
+"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n",
+"// written by Forest 'LordHavoc' Hale\n",
+"// shadowmapping enhancements by Lee 'eihrul' Salzman\n",
+"\n",
+"// FIXME: we need to get rid of ModelViewProjectionPosition to make room for the texcoord for this\n",
+"#if defined(USEREFLECTION)\n",
+"#undef USESHADOWMAPORTHO\n",
+"#endif\n",
+"\n",
+"#if defined(USEFOGINSIDE) || defined(USEFOGOUTSIDE) || defined(USEFOGHEIGHTTEXTURE)\n",
+"# define USEFOG\n",
+"#endif\n",
+"#if defined(MODE_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP)\n",
+"#define USELIGHTMAP\n",
+"#endif\n",
+"#if defined(USESPECULAR) || defined(USEOFFSETMAPPING) || defined(USEREFLECTCUBE) || defined(MODE_FAKELIGHT)\n",
+"#define USEEYEVECTOR\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"#ifdef HLSL\n",
+"//#undef USESHADOWMAPPCF\n",
+"//#define texDepth2D(tex,texcoord) tex2D(tex,texcoord).r\n",
+"#define texDepth2D(tex,texcoord) dot(tex2D(tex,texcoord).rgb, float3(1.0, 255.0/65536.0, 255.0/16777216.0))\n",
+"#else\n",
+"#define texDepth2D(tex,texcoord) tex2D(tex,texcoord).r\n",
+"#endif\n",
+"#endif\n",
+"\n",
+"#ifdef VERTEX_SHADER\n",
+"#ifdef USETRIPPY\n",
+"// LordHavoc: based on shader code linked at: http://www.youtube.com/watch?v=JpksyojwqzE\n",
+"// tweaked scale\n",
+"float4 TrippyVertex(float4 position)\n",
+"(\n",
+"uniform float ClientTime : register(c2)\n",
+")\n",
+"{\n",
+"	float worldTime = ClientTime;\n",
+"	// tweaked for Quake\n",
+"	worldTime *= 10.0;\n",
+"	position *= 0.125;\n",
+"	//~tweaked for Quake\n",
+"	float distanceSquared = (position.x * position.x + position.z * position.z);\n",
+"	position.y += 5.0*sin(distanceSquared*sin(worldTime/143.0)/1000.0);\n",
+"	float y = position.y;\n",
+"	float x = position.x;\n",
+"	float om = sin(distanceSquared*sin(worldTime/256.0)/5000.0) * sin(worldTime/200.0);\n",
+"	position.y = x*sin(om)+y*cos(om);\n",
+"	position.x = x*cos(om)-y*sin(om);\n",
+"	return position;\n",
+"}\n",
+"#endif\n",
+"#endif\n",
+"\n",
+"#ifdef MODE_DEPTH_OR_SHADOW\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"out float4 gl_Position : POSITION,\n",
+"out float Depth : TEXCOORD0\n",
+")\n",
+"{\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"	Depth = gl_Position.z;\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"float Depth : TEXCOORD0,\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"//	float4 temp = float4(Depth,Depth*(65536.0/255.0),Depth*(16777216.0/255.0),0.0);\n",
+"	float4 temp = float4(Depth,Depth*256.0,Depth*65536.0,0.0);\n",
+"	temp.yz -= floor(temp.yz);\n",
+"	dp_FragColor = temp;\n",
+"//	dp_FragColor = float4(Depth,0,0,0);\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_DEPTH_OR_SHADOW\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_POSTPROCESS\n",
+"\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"float4 gl_MultiTexCoord4 : TEXCOORD4,\n",
+"out float4 gl_Position : POSITION,\n",
+"out float2 TexCoord1 : TEXCOORD0,\n",
+"out float2 TexCoord2 : TEXCOORD1\n",
+")\n",
+"{\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"	TexCoord1 = gl_MultiTexCoord0.xy;\n",
+"#ifdef USEBLOOM\n",
+"	TexCoord2 = gl_MultiTexCoord4.xy;\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"float2 TexCoord1 : TEXCOORD0,\n",
+"float2 TexCoord2 : TEXCOORD1,\n",
+"uniform sampler Texture_First : register(s0),\n",
+"#ifdef USEBLOOM\n",
+"uniform sampler Texture_Second : register(s1),\n",
+"#endif\n",
+"#ifdef USEGAMMARAMPS\n",
+"uniform sampler Texture_GammaRamps : register(s2),\n",
+"#endif\n",
+"#ifdef USESATURATION\n",
+"uniform float Saturation : register(c30),\n",
+"#endif\n",
+"#ifdef USEVIEWTINT\n",
+"uniform float4 ViewTintColor : register(c41),\n",
+"#endif\n",
+"uniform float4 UserVec1 : register(c37),\n",
+"uniform float4 UserVec2 : register(c38),\n",
+"uniform float4 UserVec3 : register(c39),\n",
+"uniform float4 UserVec4 : register(c40),\n",
+"uniform float ClientTime : register(c2),\n",
+"uniform float2 PixelSize : register(c25),\n",
+"uniform float4 BloomColorSubtract : register(c43),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	dp_FragColor = tex2D(Texture_First, TexCoord1);\n",
+"#ifdef USEBLOOM\n",
+"	dp_FragColor += max(float4(0,0,0,0), tex2D(Texture_Second, TexCoord2) - BloomColorSubtract);\n",
+"#endif\n",
+"#ifdef USEVIEWTINT\n",
+"	dp_FragColor = lerp(dp_FragColor, ViewTintColor, ViewTintColor.a);\n",
+"#endif\n",
+"\n",
+"#ifdef USEPOSTPROCESSING\n",
+"// do r_glsl_dumpshader, edit glsl/default.glsl, and replace this by your own postprocessing if you want\n",
+"// this code does a blur with the radius specified in the first component of r_glsl_postprocess_uservec1 and blends it using the second component\n",
+"	float sobel = 1.0;\n",
+"	// float2 ts = textureSize(Texture_First, 0);\n",
+"	// float2 px = float2(1/ts.x, 1/ts.y);\n",
+"	float2 px = PixelSize;\n",
+"	float3 x1 = tex2D(Texture_First, TexCoord1 + float2(-px.x, px.y)).rgb;\n",
+"	float3 x2 = tex2D(Texture_First, TexCoord1 + float2(-px.x,  0.0)).rgb;\n",
+"	float3 x3 = tex2D(Texture_First, TexCoord1 + float2(-px.x,-px.y)).rgb;\n",
+"	float3 x4 = tex2D(Texture_First, TexCoord1 + float2( px.x, px.y)).rgb;\n",
+"	float3 x5 = tex2D(Texture_First, TexCoord1 + float2( px.x,  0.0)).rgb;\n",
+"	float3 x6 = tex2D(Texture_First, TexCoord1 + float2( px.x,-px.y)).rgb;\n",
+"	float3 y1 = tex2D(Texture_First, TexCoord1 + float2( px.x,-px.y)).rgb;\n",
+"	float3 y2 = tex2D(Texture_First, TexCoord1 + float2(  0.0,-px.y)).rgb;\n",
+"	float3 y3 = tex2D(Texture_First, TexCoord1 + float2(-px.x,-px.y)).rgb;\n",
+"	float3 y4 = tex2D(Texture_First, TexCoord1 + float2( px.x, px.y)).rgb;\n",
+"	float3 y5 = tex2D(Texture_First, TexCoord1 + float2(  0.0, px.y)).rgb;\n",
+"	float3 y6 = tex2D(Texture_First, TexCoord1 + float2(-px.x, px.y)).rgb;\n",
+"	float px1 = -1.0 * dot(float3(0.3, 0.59, 0.11), x1);\n",
+"	float px2 = -2.0 * dot(float3(0.3, 0.59, 0.11), x2);\n",
+"	float px3 = -1.0 * dot(float3(0.3, 0.59, 0.11), x3);\n",
+"	float px4 =  1.0 * dot(float3(0.3, 0.59, 0.11), x4);\n",
+"	float px5 =  2.0 * dot(float3(0.3, 0.59, 0.11), x5);\n",
+"	float px6 =  1.0 * dot(float3(0.3, 0.59, 0.11), x6);\n",
+"	float py1 = -1.0 * dot(float3(0.3, 0.59, 0.11), y1);\n",
+"	float py2 = -2.0 * dot(float3(0.3, 0.59, 0.11), y2);\n",
+"	float py3 = -1.0 * dot(float3(0.3, 0.59, 0.11), y3);\n",
+"	float py4 =  1.0 * dot(float3(0.3, 0.59, 0.11), y4);\n",
+"	float py5 =  2.0 * dot(float3(0.3, 0.59, 0.11), y5);\n",
+"	float py6 =  1.0 * dot(float3(0.3, 0.59, 0.11), y6);\n",
+"	sobel = 0.25 * abs(px1 + px2 + px3 + px4 + px5 + px6) + 0.25 * abs(py1 + py2 + py3 + py4 + py5 + py6);\n",
+"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.987688, -0.156434)) * UserVec1.y;\n",
+"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.156434, -0.891007)) * UserVec1.y;\n",
+"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2( 0.891007, -0.453990)) * UserVec1.y;\n",
+"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2( 0.707107,  0.707107)) * UserVec1.y;\n",
+"	dp_FragColor += tex2D(Texture_First, TexCoord1 + PixelSize*UserVec1.x*float2(-0.453990,  0.891007)) * UserVec1.y;\n",
+"	dp_FragColor /= (1.0 + 5.0 * UserVec1.y);\n",
+"	dp_FragColor.rgb = dp_FragColor.rgb * (1.0 + UserVec2.x) + float3(1,1,1)*max(0.0, sobel - UserVec2.z)*UserVec2.y;\n",
+"#endif\n",
+"\n",
+"#ifdef USESATURATION\n",
+"	//apply saturation BEFORE gamma ramps, so v_glslgamma value does not matter\n",
+"	float y = dot(dp_FragColor.rgb, float3(0.299, 0.587, 0.114));\n",
+"	// 'vampire sight' effect, wheres red is compensated\n",
+"	#ifdef SATURATION_REDCOMPENSATE\n",
+"		float rboost = max(0.0, (dp_FragColor.r - max(dp_FragColor.g, dp_FragColor.b))*(1.0 - Saturation));\n",
+"		dp_FragColor.rgb = lerp(float3(y,y,y), dp_FragColor.rgb, Saturation);\n",
+"		dp_FragColor.r += r;\n",
+"	#else\n",
+"		// normal desaturation\n",
+"		//dp_FragColor = float3(y,y,y) + (dp_FragColor.rgb - float3(y)) * Saturation;\n",
+"		dp_FragColor.rgb = lerp(float3(y,y,y), dp_FragColor.rgb, Saturation);\n",
+"	#endif\n",
+"#endif\n",
+"\n",
+"#ifdef USEGAMMARAMPS\n",
+"	dp_FragColor.r = tex2D(Texture_GammaRamps, float2(dp_FragColor.r, 0)).r;\n",
+"	dp_FragColor.g = tex2D(Texture_GammaRamps, float2(dp_FragColor.g, 0)).g;\n",
+"	dp_FragColor.b = tex2D(Texture_GammaRamps, float2(dp_FragColor.b, 0)).b;\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_POSTPROCESS\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_GENERIC\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"float4 gl_Color : COLOR0,\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"float4 gl_MultiTexCoord1 : TEXCOORD1,\n",
+"out float4 gl_Position : POSITION,\n",
+"#ifdef USEDIFFUSE\n",
+"out float2 TexCoord1 : TEXCOORD0,\n",
+"#endif\n",
+"#ifdef USESPECULAR\n",
+"out float2 TexCoord2 : TEXCOORD1,\n",
+"#endif\n",
+"out float4 gl_FrontColor : COLOR\n",
+")\n",
+"{\n",
+"	gl_FrontColor = gl_Color;\n",
+"#ifdef USEDIFFUSE\n",
+"	TexCoord1 = gl_MultiTexCoord0.xy;\n",
+"#endif\n",
+"#ifdef USESPECULAR\n",
+"	TexCoord2 = gl_MultiTexCoord1.xy;\n",
+"#endif\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"\n",
+"void main\n",
+"(\n",
+"float4 gl_FrontColor : COLOR0,\n",
+"float2 TexCoord1 : TEXCOORD0,\n",
+"float2 TexCoord2 : TEXCOORD1,\n",
+"#ifdef USEDIFFUSE\n",
+"uniform sampler Texture_First : register(s0),\n",
+"#endif\n",
+"#ifdef USESPECULAR\n",
+"uniform sampler Texture_Second : register(s1),\n",
+"#endif\n",
+"#ifdef USEGAMMARAMPS\n",
+"uniform sampler Texture_GammaRamps : register(s2),\n",
+"#endif\n",
+"uniform half Alpha : register(c0),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"#ifdef USEVIEWTINT\n",
+"	dp_FragColor = gl_FrontColor;\n",
+"#else\n",
+"	dp_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n",
+"#endif\n",
+"#ifdef USEDIFFUSE\n",
+"# ifdef USEREFLECTCUBE\n",
+"	// suppress texture alpha\n",
+"	dp_FragColor.rgb *= tex2D(Texture_First, TexCoord1).rgb;\n",
+"# else\n",
+"	dp_FragColor *= tex2D(Texture_First, TexCoord1);\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#ifdef USESPECULAR\n",
+"	float4 tex2 = tex2D(Texture_Second, TexCoord2);\n",
+"# ifdef USECOLORMAPPING\n",
+"	dp_FragColor *= tex2;\n",
+"# endif\n",
+"# ifdef USEGLOW\n",
+"	dp_FragColor += tex2;\n",
+"# endif\n",
+"# ifdef USEVERTEXTEXTUREBLEND\n",
+"	dp_FragColor = lerp(dp_FragColor, tex2, tex2.a);\n",
+"# endif\n",
+"#endif\n",
+"#ifdef USEGAMMARAMPS\n",
+"	dp_FragColor.r = tex2D(Texture_GammaRamps, vec2(dp_FragColor.r, 0)).r;\n",
+"	dp_FragColor.g = tex2D(Texture_GammaRamps, vec2(dp_FragColor.g, 0)).g;\n",
+"	dp_FragColor.b = tex2D(Texture_GammaRamps, vec2(dp_FragColor.b, 0)).b;\n",
+"#endif\n",
+"#ifdef USEALPHAKILL\n",
+"	dp_FragColor.a *= Alpha;\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_GENERIC\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_BLOOMBLUR\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"out float4 gl_Position : POSITION,\n",
+"out float2 TexCoord : TEXCOORD0\n",
+")\n",
+"{\n",
+"	TexCoord = gl_MultiTexCoord0.xy;\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"\n",
+"void main\n",
+"(\n",
+"float2 TexCoord : TEXCOORD0,\n",
+"uniform sampler Texture_First : register(s0),\n",
+"uniform float4 BloomBlur_Parameters : register(c1),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	int i;\n",
+"	float2 tc = TexCoord;\n",
+"	float3 color = tex2D(Texture_First, tc).rgb;\n",
+"	tc += BloomBlur_Parameters.xy;\n",
+"	for (i = 1;i < SAMPLES;i++)\n",
+"	{\n",
+"		color += tex2D(Texture_First, tc).rgb;\n",
+"		tc += BloomBlur_Parameters.xy;\n",
+"	}\n",
+"	dp_FragColor = float4(color * BloomBlur_Parameters.z + float3(BloomBlur_Parameters.w), 1);\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_BLOOMBLUR\n",
+"#ifdef MODE_REFRACTION\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"float4 gl_Color : COLOR0,\n",
+"#endif\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"uniform float4x4 TexMatrix : register(c0),\n",
+"uniform float3 EyePosition : register(c24),\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"out float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"out float4 gl_Position : POSITION,\n",
+"out float2 TexCoord : TEXCOORD0,\n",
+"out float3 EyeVector : TEXCOORD1,\n",
+"out float4 ModelViewProjectionPosition : TEXCOORD2\n",
+")\n",
+"{\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"	gl_FrontColor = gl_Color;\n",
+"#endif\n",
+"	TexCoord = mul(TexMatrix, gl_MultiTexCoord0).xy;\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"	ModelViewProjectionPosition = gl_Position;\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"float2 TexCoord : TEXCOORD0,\n",
+"float3 EyeVector : TEXCOORD1,\n",
+"float4 ModelViewProjectionPosition : TEXCOORD2,\n",
+"uniform sampler Texture_Normal : register(s0),\n",
+"uniform sampler Texture_Refraction : register(s3),\n",
+"uniform sampler Texture_Reflection : register(s7),\n",
+"uniform float4 DistortScaleRefractReflect : register(c14),\n",
+"uniform float4 ScreenScaleRefractReflect : register(c32),\n",
+"uniform float4 ScreenCenterRefractReflect : register(c31),\n",
+"uniform float4 RefractColor : register(c29),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	float2 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect.xy * (1.0 / ModelViewProjectionPosition.w);\n",
+"	//float2 ScreenTexCoord = (ModelViewProjectionPosition.xy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * DistortScaleRefractReflect.xy * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n",
+"	float2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect.xy;\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"	float2 distort = DistortScaleRefractReflect.xy * gl_FrontColor.a;\n",
+"	float4 refractcolor = mix(RefractColor, vec4(1.0, 1.0, 1.0, 1.0), gl_FrontColor.a);\n",
+"#else\n",
+"	float2 distort = DistortScaleRefractReflect.xy;\n",
+"	float4 refractcolor = RefractColor;\n",
+"#endif\n",
+"	float2 ScreenTexCoord = SafeScreenTexCoord + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy * distort;\n",
+"	// FIXME temporary hack to detect the case that the reflection\n",
+"	// gets blackened at edges due to leaving the area that contains actual\n",
+"	// content.\n",
+"	// Remove this 'ack once we have a better way to stop this thing from\n",
+"	// 'appening.\n",
+"	float f = min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n",
+"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n",
+"	dp_FragColor = float4(tex2D(Texture_Refraction, ScreenTexCoord).rgb, 1) * refractcolor;\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_REFRACTION\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_WATER\n",
+"#ifdef VERTEX_SHADER\n",
+"\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"float4 gl_Color : COLOR0,\n",
+"#endif\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"float4 gl_MultiTexCoord1 : TEXCOORD1,\n",
+"float4 gl_MultiTexCoord2 : TEXCOORD2,\n",
+"float4 gl_MultiTexCoord3 : TEXCOORD3,\n",
+"uniform float4x4 TexMatrix : register(c0),\n",
+"uniform float3 EyePosition : register(c24),\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"out float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"out float4 gl_Position : POSITION,\n",
+"out float2 TexCoord : TEXCOORD0,\n",
+"out float3 EyeVector : TEXCOORD1,\n",
+"out float4 ModelViewProjectionPosition : TEXCOORD2\n",
+")\n",
+"{\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"	gl_FrontColor = gl_Color;\n",
+"#endif\n",
+"	TexCoord = mul(TexMatrix, gl_MultiTexCoord0).xy;\n",
+"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n",
+"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"	ModelViewProjectionPosition = gl_Position;\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"float2 TexCoord : TEXCOORD0,\n",
+"float3 EyeVector : TEXCOORD1,\n",
+"float4 ModelViewProjectionPosition : TEXCOORD2,\n",
+"uniform sampler Texture_Normal : register(s0),\n",
+"uniform sampler Texture_Refraction : register(s3),\n",
+"uniform sampler Texture_Reflection : register(s7),\n",
+"uniform float4 DistortScaleRefractReflect : register(c14),\n",
+"uniform float4 ScreenScaleRefractReflect : register(c32),\n",
+"uniform float4 ScreenCenterRefractReflect : register(c31),\n",
+"uniform float4 RefractColor : register(c29),\n",
+"uniform float4 ReflectColor : register(c26),\n",
+"uniform float ReflectFactor : register(c27),\n",
+"uniform float ReflectOffset : register(c28),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	float4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n",
+"	//float4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n",
+"	float4 SafeScreenTexCoord = ModelViewProjectionPosition.xyxy * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n",
+"	//SafeScreenTexCoord = gl_FragCoord.xyxy * float4(1.0 / 1920.0, 1.0 / 1200.0, 1.0 / 1920.0, 1.0 / 1200.0);\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"	float4 distort = DistortScaleRefractReflect * gl_FrontColor.a;\n",
+"	float reflectoffset = ReflectOffset * gl_FrontColor.a;\n",
+"	float reflectfactor = ReflectFactor * gl_FrontColor.a;\n",
+"	float4 refractcolor = mix(RefractColor, vec4(1.0, 1.0, 1.0, 1.0), gl_FrontColor.a);\n",
+"#else\n",
+"	float4 distort = DistortScaleRefractReflect;\n",
+"	float reflectoffset = ReflectOffset;\n",
+"	float reflectfactor = ReflectFactor;\n",
+"	float4 refractcolor = RefractColor;\n",
+"#endif\n",
+"	float4 ScreenTexCoord = SafeScreenTexCoord + float2(normalize(tex2D(Texture_Normal, TexCoord).rgb - float3(0.5,0.5,0.5)).xy).xyxy * distort;\n",
+"	// FIXME temporary hack to detect the case that the reflection\n",
+"	// gets blackened at edges due to leaving the area that contains actual\n",
+"	// content.\n",
+"	// Remove this 'ack once we have a better way to stop this thing from\n",
+"	// 'appening.\n",
+"	float f = min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(0.01, -0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Refraction, ScreenTexCoord.xy + float2(-0.01, -0.01)).rgb) / 0.05);\n",
+"	ScreenTexCoord.xy = lerp(SafeScreenTexCoord.xy, ScreenTexCoord.xy, f);\n",
+"	f  = min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, 0.01)).rgb) / 0.05);\n",
+"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(0.01, -0.01)).rgb) / 0.05);\n",
+"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, 0.01)).rgb) / 0.05);\n",
+"	f *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord.zw + float2(-0.01, -0.01)).rgb) / 0.05);\n",
+"	ScreenTexCoord.zw = lerp(SafeScreenTexCoord.zw, ScreenTexCoord.zw, f);\n",
+"	float Fresnel = pow(min(1.0, 1.0 - float(normalize(EyeVector).z)), 2.0) * reflectfactor + reflectoffset;\n",
+"	dp_FragColor = lerp(float4(tex2D(Texture_Refraction, ScreenTexCoord.xy).rgb, 1) * refractcolor, float4(tex2D(Texture_Reflection, ScreenTexCoord.zw).rgb, 1) * ReflectColor, Fresnel);\n",
+"}\n",
+"#endif\n",
+"#else // !MODE_WATER\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3), this would require sending a 4 component texcoord1 with W as 1 or -1 according to which side the texcoord2 should be on\n",
+"\n",
+"// fragment shader specific:\n",
+"#ifdef FRAGMENT_SHADER\n",
+"\n",
+"#ifdef USEFOG\n",
+"float3 FogVertex(float4 surfacecolor, float3 FogColor, float3 EyeVectorModelSpace, float FogPlaneVertexDist, float FogRangeRecip, float FogPlaneViewDist, float FogHeightFade, sampler Texture_FogMask, sampler Texture_FogHeightTexture)\n",
+"{\n",
+"	float fogfrac;\n",
+"	float3 fc = FogColor;\n",
+"#ifdef USEFOGALPHAHACK\n",
+"	fc *= surfacecolor.a;\n",
+"#endif\n",
+"#ifdef USEFOGHEIGHTTEXTURE\n",
+"	float4 fogheightpixel = tex2D(Texture_FogHeightTexture, float2(1,1) + float2(FogPlaneVertexDist, FogPlaneViewDist) * (-2.0 * FogHeightFade));\n",
+"	fogfrac = fogheightpixel.a;\n",
+"	return lerp(fogheightpixel.rgb * fc, surfacecolor.rgb, tex2D(Texture_FogMask, float2(length(EyeVectorModelSpace)*fogfrac*FogRangeRecip, 0.0)).r);\n",
+"#else\n",
+"# ifdef USEFOGOUTSIDE\n",
+"	fogfrac = min(0.0, FogPlaneVertexDist) / (FogPlaneVertexDist - FogPlaneViewDist) * min(1.0, min(0.0, FogPlaneVertexDist) * FogHeightFade);\n",
+"# else\n",
+"	fogfrac = FogPlaneViewDist / (FogPlaneViewDist - max(0.0, FogPlaneVertexDist)) * min(1.0, (min(0.0, FogPlaneVertexDist) + FogPlaneViewDist) * FogHeightFade);\n",
+"# endif\n",
+"	return lerp(fc, surfacecolor.rgb, tex2D(Texture_FogMask, float2(length(EyeVectorModelSpace)*fogfrac*FogRangeRecip, 0.0)).r);\n",
+"#endif\n",
+"}\n",
+"#endif\n",
+"\n",
+"#ifdef USEOFFSETMAPPING\n",
+"float2 OffsetMapping(float2 TexCoord, float4 OffsetMapping_ScaleSteps, float OffsetMapping_Bias, float OffsetMapping_LodDistance, float3 EyeVector, sampler Texture_Normal, float2 dPdx, float2 dPdy)\n",
+"{\n",
+"	float i;\n",
+"	// distance-based LOD\n",
+"#ifdef USEOFFSETMAPPING_LOD\n",
+"	//float LODFactor = min(1.0, OffsetMapping_LodDistance / EyeVectorFogDepth.z);\n",
+"	//float4 ScaleSteps = float4(OffsetMapping_ScaleSteps.x, OffsetMapping_ScaleSteps.y * LODFactor, OffsetMapping_ScaleSteps.z / LODFactor, OffsetMapping_ScaleSteps.w * LODFactor);\n",
+"	float GuessLODFactor = min(1.0, OffsetMapping_LodDistance / EyeVectorFogDepth.z);\n",
+"#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n",
+"	// stupid workaround because 1-step and 2-step reliefmapping is void\n",
+"	float LODSteps = max(3.0, ceil(GuessLODFactor * OffsetMapping_ScaleSteps.y));\n",
+"#else\n",
+"	float LODSteps = ceil(GuessLODFactor * OffsetMapping_ScaleSteps.y);\n",
+"#endif\n",
+"	float LODFactor = LODSteps / OffsetMapping_ScaleSteps.y;\n",
+"	float4 ScaleSteps = float4(OffsetMapping_ScaleSteps.x, LODSteps, 1.0 / LODSteps, OffsetMapping_ScaleSteps.w * LODFactor);\n",
+"#else\n",
+"	#define ScaleSteps OffsetMapping_ScaleSteps\n",
+"#endif\n",
+"#ifdef USEOFFSETMAPPING_RELIEFMAPPING\n",
+"	// 14 sample relief mapping: linear search and then binary search\n",
+"	// this basically steps forward a small amount repeatedly until it finds\n",
+"	// itself inside solid, then jitters forward and back using decreasing\n",
+"	// amounts to find the impact\n",
+"	//float3 OffsetVector = float3(EyeVector.xy * ((1.0 / EyeVector.z) * ScaleSteps.x) * float2(-1, 1), -1);\n",
+"	//float3 OffsetVector = float3(normalize(EyeVector.xy) * ScaleSteps.x * float2(-1, 1), -1);\n",
+"	float3 OffsetVector = float3(normalize(EyeVector).xy * ScaleSteps.x * float2(-1, 1), -1);\n",
+"	float3 RT = float3(float2(TexCoord.xy - OffsetVector.xy*OffsetMapping_Bias), 1);\n",
+"	OffsetVector *= ScaleSteps.z;\n",
+"	for(i = 1.0; i < ScaleSteps.y; ++i)\n",
+"		RT += OffsetVector *  step(tex2Dgrad(Texture_Normal, RT.xy, dPdx, dPdy).a, RT.z);\n",
+"	for(i = 0.0, f = 1.0; i < ScaleSteps.w; ++i, f *= 0.5)\n",
+"		RT += OffsetVector * (step(tex2Dgrad(Texture_Normal, RT.xy, dPdx, dPdy).a, RT.z) * f - 0.5 * f);\n",
+"	return RT.xy;\n",
+"#else\n",
+"	// 2 sample offset mapping (only 2 samples because of ATI Radeon 9500-9800/X300 limits)\n",
+"	//float2 OffsetVector = float2(EyeVector.xy * ((1.0 / EyeVector.z) * ScaleSteps.x) * float2(-1, 1));\n",
+"	//float2 OffsetVector = float2(normalize(EyeVector.xy) * ScaleSteps.x * float2(-1, 1));\n",
+"	float2 OffsetVector = float2(normalize(EyeVector).xy * ScaleSteps.x * float2(-1, 1));\n",
+"	OffsetVector *= ScaleSteps.z;\n",
+"	for(i = 0.0; i < ScaleSteps.y; ++i)\n",
+"		TexCoord += OffsetVector * ((1.0 - OffsetMapping_Bias) - tex2Dgrad(Texture_Normal, TexCoord, dPdx, dPdy).a);\n",
+"	return TexCoord;\n",
+"#endif\n",
+"}\n",
+"#endif // USEOFFSETMAPPING\n",
+"\n",
+"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n",
+"#if defined(USESHADOWMAP2D)\n",
+"# ifdef USESHADOWMAPORTHO\n",
+"#  define GetShadowMapTC2D(dir, ShadowMap_Parameters) (min(dir, ShadowMap_Parameters.xyz))\n",
+"# else\n",
+"#  ifdef USESHADOWMAPVSDCT\n",
+"float3 GetShadowMapTC2D(float3 dir, float4 ShadowMap_Parameters, samplerCUBE Texture_CubeProjection)\n",
+"{\n",
+"	float3 adir = abs(dir);\n",
+"	float2 mparams = ShadowMap_Parameters.xy / max(max(adir.x, adir.y), adir.z);\n",
+"	float4 proj = texCUBE(Texture_CubeProjection, dir);\n",
+"	return float3(lerp(dir.xy, dir.zz, proj.xy) * mparams.x + proj.zw * ShadowMap_Parameters.z, mparams.y + ShadowMap_Parameters.w);\n",
+"}\n",
+"#  else\n",
+"float3 GetShadowMapTC2D(float3 dir, float4 ShadowMap_Parameters)\n",
+"{\n",
+"	float3 adir = abs(dir);\n",
+"	float m; float4 proj;\n",
+"	if (adir.x > adir.y) { m = adir.x; proj = float4(dir.zyx, 0.5); } else { m = adir.y; proj = float4(dir.xzy, 1.5); }\n",
+"	if (adir.z > m) { m = adir.z; proj = float4(dir, 2.5); }\n",
+"#ifdef HLSL\n",
+"	return float3(proj.xy * ShadowMap_Parameters.x / m + float2(0.5,0.5) + float2(proj.z < 0.0 ? 1.5 : 0.5, proj.w) * ShadowMap_Parameters.z, m + 64 * ShadowMap_Parameters.w);\n",
+"#else\n",
+"	float2 mparams = ShadowMap_Parameters.xy / m;\n",
+"	return float3(proj.xy * mparams.x + float2(proj.z < 0.0 ? 1.5 : 0.5, proj.w) * ShadowMap_Parameters.z, mparams.y + ShadowMap_Parameters.w);\n",
+"#endif\n",
+"}\n",
+"#  endif\n",
+"# endif\n",
+"#endif // defined(USESHADOWMAP2D)\n",
+"\n",
+"# ifdef USESHADOWMAP2D\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+"float ShadowMapCompare(float3 dir, sampler Texture_ShadowMap2D, float4 ShadowMap_Parameters, float2 ShadowMap_TextureScale, samplerCUBE Texture_CubeProjection)\n",
+"#else\n",
+"float ShadowMapCompare(float3 dir, sampler Texture_ShadowMap2D, float4 ShadowMap_Parameters, float2 ShadowMap_TextureScale)\n",
+"#endif\n",
+"{\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters, Texture_CubeProjection);\n",
+"#else\n",
+"	float3 shadowmaptc = GetShadowMapTC2D(dir, ShadowMap_Parameters);\n",
+"#endif\n",
+"	float f;\n",
+"\n",
+"#  ifdef USESHADOWSAMPLER\n",
+"#    ifdef USESHADOWMAPPCF\n",
+"#      define texval(x, y) tex2Dproj(Texture_ShadowMap2D, float4(center + float2(x, y)*ShadowMap_TextureScale, shadowmaptc.z, 1.0)).r  \n",
+"	float2 center = shadowmaptc.xy*ShadowMap_TextureScale;\n",
+"	f = dot(float4(0.25,0.25,0.25,0.25), float4(texval(-0.4, 1.0), texval(-1.0, -0.4), texval(0.4, -1.0), texval(1.0, 0.4)));\n",
+"#    else\n",
+"	f = tex2Dproj(Texture_ShadowMap2D, float4(shadowmaptc.xy*ShadowMap_TextureScale, shadowmaptc.z, 1.0)).r;\n",
+"#    endif\n",
+"#  else\n",
+"#    ifdef USESHADOWMAPPCF\n",
+"#     if defined(GL_ARB_texture_gather) || defined(GL_AMD_texture_texture4)\n",
+"#      ifdef GL_ARB_texture_gather\n",
+"#        define texval(x, y) textureGatherOffset(Texture_ShadowMap2D, center, int2(x, y))\n",
+"#      else\n",
+"#        define texval(x, y) texture4(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale)\n",
+"#      endif\n",
+"	float2 offset = frac(shadowmaptc.xy - 0.5), center = (shadowmaptc.xy - offset)*ShadowMap_TextureScale;\n",
+"#      if USESHADOWMAPPCF > 1\n",
+"	float4 group1 = step(shadowmaptc.z, texval(-2.0, -2.0));\n",
+"	float4 group2 = step(shadowmaptc.z, texval( 0.0, -2.0));\n",
+"	float4 group3 = step(shadowmaptc.z, texval( 2.0, -2.0));\n",
+"	float4 group4 = step(shadowmaptc.z, texval(-2.0,  0.0));\n",
+"	float4 group5 = step(shadowmaptc.z, texval( 0.0,  0.0));\n",
+"	float4 group6 = step(shadowmaptc.z, texval( 2.0,  0.0));\n",
+"	float4 group7 = step(shadowmaptc.z, texval(-2.0,  2.0));\n",
+"	float4 group8 = step(shadowmaptc.z, texval( 0.0,  2.0));\n",
+"	float4 group9 = step(shadowmaptc.z, texval( 2.0,  2.0));\n",
+"	float4 locols = float4(group1.ab, group3.ab);\n",
+"	float4 hicols = float4(group7.rg, group9.rg);\n",
+"	locols.yz += group2.ab;\n",
+"	hicols.yz += group8.rg;\n",
+"	float4 midcols = float4(group1.rg, group3.rg) + float4(group7.ab, group9.ab) +\n",
+"				float4(group4.rg, group6.rg) + float4(group4.ab, group6.ab) +\n",
+"				lerp(locols, hicols, offset.y);\n",
+"	float4 cols = group5 + float4(group2.rg, group8.ab);\n",
+"	cols.xyz += lerp(midcols.xyz, midcols.yzw, offset.x);\n",
+"	f = dot(cols, float4(1.0/25.0));\n",
+"#      else\n",
+"	float4 group1 = step(shadowmaptc.z, texval(-1.0, -1.0));\n",
+"	float4 group2 = step(shadowmaptc.z, texval( 1.0, -1.0));\n",
+"	float4 group3 = step(shadowmaptc.z, texval(-1.0,  1.0));\n",
+"	float4 group4 = step(shadowmaptc.z, texval( 1.0,  1.0));\n",
+"	float4 cols = float4(group1.rg, group2.rg) + float4(group3.ab, group4.ab) +\n",
+"				lerp(float4(group1.ab, group2.ab), float4(group3.rg, group4.rg), offset.y);\n",
+"	f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n",
+"#      endif\n",
+"#     else\n",
+"#      ifdef GL_EXT_gpu_shader4\n",
+"#        define texval(x, y) tex2DOffset(Texture_ShadowMap2D, center, int2(x, y)).r\n",
+"#      else\n",
+"#        define texval(x, y) texDepth2D(Texture_ShadowMap2D, center + float2(x, y)*ShadowMap_TextureScale).r  \n",
+"#      endif\n",
+"#      if USESHADOWMAPPCF > 1\n",
+"	float2 center = shadowmaptc.xy - 0.5, offset = frac(center);\n",
+"	center *= ShadowMap_TextureScale;\n",
+"	float4 row1 = step(shadowmaptc.z, float4(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0), texval( 2.0, -1.0)));\n",
+"	float4 row2 = step(shadowmaptc.z, float4(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0), texval( 2.0,  0.0)));\n",
+"	float4 row3 = step(shadowmaptc.z, float4(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0), texval( 2.0,  1.0)));\n",
+"	float4 row4 = step(shadowmaptc.z, float4(texval(-1.0,  2.0), texval( 0.0,  2.0), texval( 1.0,  2.0), texval( 2.0,  2.0)));\n",
+"	float4 cols = row2 + row3 + lerp(row1, row4, offset.y);\n",
+"	f = dot(lerp(cols.xyz, cols.yzw, offset.x), float3(1.0/9.0));\n",
+"#      else\n",
+"	float2 center = shadowmaptc.xy*ShadowMap_TextureScale, offset = frac(shadowmaptc.xy);\n",
+"	float3 row1 = step(shadowmaptc.z, float3(texval(-1.0, -1.0), texval( 0.0, -1.0), texval( 1.0, -1.0)));\n",
+"	float3 row2 = step(shadowmaptc.z, float3(texval(-1.0,  0.0), texval( 0.0,  0.0), texval( 1.0,  0.0)));\n",
+"	float3 row3 = step(shadowmaptc.z, float3(texval(-1.0,  1.0), texval( 0.0,  1.0), texval( 1.0,  1.0)));\n",
+"	float3 cols = row2 + lerp(row1, row3, offset.y);\n",
+"	f = dot(lerp(cols.xy, cols.yz, offset.x), float2(0.25,0.25));\n",
+"#      endif\n",
+"#     endif\n",
+"#    else\n",
+"	f = step(shadowmaptc.z, tex2D(Texture_ShadowMap2D, shadowmaptc.xy*ShadowMap_TextureScale).r);\n",
+"#    endif\n",
+"#  endif\n",
+"#  ifdef USESHADOWMAPORTHO\n",
+"	return lerp(ShadowMap_Parameters.w, 1.0, f);\n",
+"#  else\n",
+"	return f;\n",
+"#  endif\n",
+"}\n",
+"# endif\n",
+"#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n",
+"#endif // FRAGMENT_SHADER\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_DEFERREDGEOMETRY\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"float4 gl_Color : COLOR0,\n",
+"#endif\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"float4 gl_MultiTexCoord1 : TEXCOORD1,\n",
+"float4 gl_MultiTexCoord2 : TEXCOORD2,\n",
+"float4 gl_MultiTexCoord3 : TEXCOORD3,\n",
+"uniform float4x4 TexMatrix : register(c0),\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"uniform float4x4 BackgroundTexMatrix : register(c4),\n",
+"#endif\n",
+"uniform float4x4 ModelViewMatrix : register(c12),\n",
+"#ifdef USEOFFSETMAPPING\n",
+"uniform float3 EyePosition : register(c24),\n",
+"#endif\n",
+"out float4 gl_Position : POSITION,\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"out float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"out float4 TexCoordBoth : TEXCOORD0,\n",
+"#ifdef USEOFFSETMAPPING\n",
+"out float3 EyeVector : TEXCOORD2,\n",
+"#endif\n",
+"out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n",
+"out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n",
+"out float4 VectorR : TEXCOORD7 // direction of R texcoord (surface normal), Depth value\n",
+")\n",
+"{\n",
+"	TexCoordBoth = mul(TexMatrix, gl_MultiTexCoord0);\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	gl_FrontColor = gl_Color;\n",
+"	TexCoordBoth.zw = float2(Backgroundmul(TexMatrix, gl_MultiTexCoord0));\n",
+"#endif\n",
+"\n",
+"	// transform unnormalized eye direction into tangent space\n",
+"#ifdef USEOFFSETMAPPING\n",
+"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n",
+"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n",
+"#endif\n",
+"\n",
+"	VectorS = mul(ModelViewMatrix, float4(gl_MultiTexCoord1.xyz, 0)).xyz;\n",
+"	VectorT = mul(ModelViewMatrix, float4(gl_MultiTexCoord2.xyz, 0)).xyz;\n",
+"	VectorR.xyz = mul(ModelViewMatrix, float4(gl_MultiTexCoord3.xyz, 0)).xyz;\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"	VectorR.w = mul(ModelViewMatrix, gl_Vertex).z;\n",
+"}\n",
+"#endif // VERTEX_SHADER\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"float4 TexCoordBoth : TEXCOORD0,\n",
+"float3 EyeVector : TEXCOORD2,\n",
+"float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n",
+"float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n",
+"float4 VectorR : TEXCOORD7, // direction of R texcoord (surface normal), Depth value\n",
+"uniform sampler Texture_Normal : register(s0),\n",
+"#ifdef USEALPHAKILL\n",
+"uniform sampler Texture_Color : register(s1),\n",
+"#endif\n",
+"uniform sampler Texture_Gloss : register(s2),\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"uniform sampler Texture_SecondaryNormal : register(s4),\n",
+"uniform sampler Texture_SecondaryGloss : register(s6),\n",
+"#endif\n",
+"#ifdef USEOFFSETMAPPING\n",
+"uniform float4 OffsetMapping_ScaleSteps : register(c24),\n",
+"uniform float4 OffsetMapping_LodDistance : register(c53),\n",
+"uniform float OffsetMapping_Bias : register(c54),\n",
+"#endif\n",
+"uniform half SpecularPower : register(c36),\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	float2 TexCoord = TexCoordBoth.xy;\n",
+"#ifdef USEOFFSETMAPPING\n",
+"	// apply offsetmapping\n",
+"	float2 dPdx = ddx(TexCoord);\n",
+"	float2 dPdy = ddy(TexCoord);\n",
+"	float2 TexCoordOffset = OffsetMapping(TexCoord, OffsetMapping_ScaleSteps, OffsetMapping_Bias, OffsetMapping_LodDistance, EyeVector, Texture_Normal, dPdx, dPdy);\n",
+"# define offsetMappedTexture2D(t) tex2Dgrad(t, TexCoordOffset, dPdx, dPdy)\n",
+"#else\n",
+"# define offsetMappedTexture2D(t) tex2D(t, TexCoord)\n",
+"#endif\n",
+"\n",
+"#ifdef USEALPHAKILL\n",
+"	if (offsetMappedTexture2D(Texture_Color).a < 0.5)\n",
+"		discard;\n",
+"#endif\n",
+"\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	float alpha = offsetMappedTexture2D(Texture_Color).a;\n",
+"	float terrainblend = clamp(float(gl_FrontColor.a) * alpha * 2.0 - 0.5, float(0.0), float(1.0));\n",
+"	//float terrainblend = min(float(gl_FrontColor.a) * alpha * 2.0, float(1.0));\n",
+"	//float terrainblend = float(gl_FrontColor.a) * alpha > 0.5;\n",
+"#endif\n",
+"\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	float3 surfacenormal = lerp(tex2D(Texture_SecondaryNormal, TexCoord2).rgb, offsetMappedTexture2D(Texture_Normal).rgb, terrainblend) - float3(0.5, 0.5, 0.5);\n",
+"	float a = lerp(tex2D(Texture_SecondaryGloss, TexCoord2).a, offsetMappedTexture2D(Texture_Gloss).a, terrainblend);\n",
+"#else\n",
+"	float3 surfacenormal = offsetMappedTexture2D(Texture_Normal).rgb - float3(0.5, 0.5, 0.5);\n",
+"	float a = offsetMappedTexture2D(Texture_Gloss).a;\n",
+"#endif\n",
+"\n",
+"	float3 pixelnormal = normalize(surfacenormal.x * VectorS.xyz + surfacenormal.y * VectorT.xyz + surfacenormal.z * VectorR.xyz);\n",
+"	dp_FragColor = float4(pixelnormal.x, pixelnormal.y, VectorR.w, a);\n",
+"}\n",
+"#endif // FRAGMENT_SHADER\n",
+"#else // !MODE_DEFERREDGEOMETRY\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_DEFERREDLIGHTSOURCE\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"uniform float4x4 ModelViewMatrix : register(c12),\n",
+"out float4 gl_Position : POSITION,\n",
+"out float4 ModelViewPosition : TEXCOORD0\n",
+")\n",
+"{\n",
+"	ModelViewPosition = mul(ModelViewMatrix, gl_Vertex);\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"}\n",
+"#endif // VERTEX_SHADER\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"#ifdef HLSL\n",
+"float2 Pixel : VPOS,\n",
+"#else\n",
+"float2 Pixel : WPOS,\n",
+"#endif\n",
+"float4 ModelViewPosition : TEXCOORD0,\n",
+"uniform float4x4 ViewToLight : register(c44),\n",
+"uniform float2 ScreenToDepth : register(c33), // ScreenToDepth = float2(Far / (Far - Near), Far * Near / (Near - Far));\n",
+"uniform float3 LightPosition : register(c23),\n",
+"uniform half2 PixelToScreenTexCoord : register(c42),\n",
+"uniform half3 DeferredColor_Ambient : register(c9),\n",
+"uniform half3 DeferredColor_Diffuse : register(c10),\n",
+"#ifdef USESPECULAR\n",
+"uniform half3 DeferredColor_Specular : register(c11),\n",
+"uniform half SpecularPower : register(c36),\n",
+"#endif\n",
+"uniform sampler Texture_Attenuation : register(s9),\n",
+"uniform sampler Texture_ScreenDepth : register(s13),\n",
+"uniform sampler Texture_ScreenNormalMap : register(s14),\n",
+"\n",
+"#ifdef USECUBEFILTER\n",
+"uniform samplerCUBE Texture_Cube : register(s10),\n",
+"#endif\n",
+"\n",
+"#ifdef USESHADOWMAP2D\n",
+"# ifdef USESHADOWSAMPLER\n",
+"uniform sampler Texture_ShadowMap2D : register(s15),\n",
+"# else\n",
+"uniform sampler Texture_ShadowMap2D : register(s15),\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+"uniform samplerCUBE Texture_CubeProjection : register(s12),\n",
+"#endif\n",
+"\n",
+"#if defined(USESHADOWMAP2D)\n",
+"uniform float2 ShadowMap_TextureScale : register(c35),\n",
+"uniform float4 ShadowMap_Parameters : register(c34),\n",
+"#endif\n",
+"\n",
+"out float4 gl_FragData0 : COLOR0,\n",
+"out float4 gl_FragData1 : COLOR1\n",
+")\n",
+"{\n",
+"	// calculate viewspace pixel position\n",
+"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n",
+"	float3 position;\n",
+"	// get the geometry information (depth, normal, specular exponent)\n",
+"	half4 normalmap = half4(tex2D(Texture_ScreenNormalMap, ScreenTexCoord));\n",
+"	// decode viewspace pixel normal\n",
+"//	float3 surfacenormal = normalize(normalmap.rgb - cast_myhalf3(0.5,0.5,0.5));\n",
+"	float3 surfacenormal = half3(normalmap.rg, sqrt(1.0-dot(normalmap.rg, normalmap.rg)));\n",
+"	// decode viewspace pixel position\n",
+"//	position.z = decodedepthmacro(dp_texture2D(Texture_ScreenDepth, ScreenTexCoord));\n",
+"	position.z = normalmap.b;\n",
+"//	position.z = ScreenToDepth.y / (dp_texture2D(Texture_ScreenDepth, ScreenTexCoord).r + ScreenToDepth.x);\n",
+"	position.xy = ModelViewPosition.xy * (position.z / ModelViewPosition.z);\n",
+"\n",
+"	// now do the actual shading\n",
+"	// surfacenormal = pixel normal in viewspace\n",
+"	// LightVector = pixel to light in viewspace\n",
+"	// CubeVector = position in lightspace\n",
+"	// eyevector = pixel to view in viewspace\n",
+"	float3 CubeVector = mul(ViewToLight, float4(position,1)).xyz;\n",
+"	half fade = half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)).r);\n",
+"#ifdef USEDIFFUSE\n",
+"	// calculate diffuse shading\n",
+"	half3 lightnormal = half3(normalize(LightPosition - position));\n",
+"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n",
+"#endif\n",
+"#ifdef USESPECULAR\n",
+"	// calculate directional shading\n",
+"	float3 eyevector = position * -1.0;\n",
+"#  ifdef USEEXACTSPECULARMATH\n",
+"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(eyevector)))*-1.0, 0.0)), 1.0 + SpecularPower * normalmap.a));\n",
+"#  else\n",
+"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(eyevector))));\n",
+"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * normalmap.a));\n",
+"#  endif\n",
+"#endif\n",
+"\n",
+"#if defined(USESHADOWMAP2D)\n",
+"	fade *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+", Texture_CubeProjection\n",
+"#endif\n",
+"	));\n",
+"#endif\n",
+"\n",
+"#ifdef USEDIFFUSE\n",
+"	gl_FragData0 = float4((DeferredColor_Ambient + DeferredColor_Diffuse * diffuse) * fade, 1.0);\n",
+"#else\n",
+"	gl_FragData0 = float4(DeferredColor_Ambient * fade, 1.0);\n",
+"#endif\n",
+"#ifdef USESPECULAR\n",
+"	gl_FragData1 = float4(DeferredColor_Specular * (specular * fade), 1.0);\n",
+"#else\n",
+"	gl_FragData1 = float4(0.0, 0.0, 0.0, 1.0);\n",
+"#endif\n",
+"\n",
+"# ifdef USECUBEFILTER\n",
+"	float3 cubecolor = texCUBE(Texture_Cube, CubeVector).rgb;\n",
+"	gl_FragData0.rgb *= cubecolor;\n",
+"	gl_FragData1.rgb *= cubecolor;\n",
+"# endif\n",
+"}\n",
+"#endif // FRAGMENT_SHADER\n",
+"#else // !MODE_DEFERREDLIGHTSOURCE\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef VERTEX_SHADER\n",
+"void main\n",
+"(\n",
+"float4 gl_Vertex : POSITION,\n",
+"uniform float4x4 ModelViewProjectionMatrix : register(c8),\n",
+"#if defined(USEVERTEXTEXTUREBLEND) || defined(MODE_VERTEXCOLOR) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR)\n",
+"float4 gl_Color : COLOR0,\n",
+"#endif\n",
+"float4 gl_MultiTexCoord0 : TEXCOORD0,\n",
+"float4 gl_MultiTexCoord1 : TEXCOORD1,\n",
+"float4 gl_MultiTexCoord2 : TEXCOORD2,\n",
+"float4 gl_MultiTexCoord3 : TEXCOORD3,\n",
+"float4 gl_MultiTexCoord4 : TEXCOORD4,\n",
+"\n",
+"uniform float3 EyePosition : register(c24),\n",
+"uniform float4x4 TexMatrix : register(c0),\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"uniform float4x4 BackgroundTexMatrix : register(c4),\n",
+"#endif\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"uniform float4x4 ModelToLight : register(c20),\n",
+"#endif\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"uniform float3 LightPosition : register(c27),\n",
+"#endif\n",
+"#ifdef MODE_LIGHTDIRECTION\n",
+"uniform float3 LightDir : register(c26),\n",
+"#endif\n",
+"uniform float4 FogPlane : register(c25),\n",
+"#ifdef MODE_DEFERREDLIGHTSOURCE\n",
+"uniform float3 LightPosition : register(c27),\n",
+"#endif\n",
+"#ifdef USESHADOWMAPORTHO\n",
+"uniform float4x4 ShadowMapMatrix : register(c16),\n",
+"#endif\n",
+"#if defined(MODE_VERTEXCOLOR) || defined(USEVERTEXTEXTUREBLEND) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR) || defined(USEALPHAGENVERTEX)\n",
+"out float4 gl_FrontColor : COLOR,\n",
+"#endif\n",
+"out float4 TexCoordBoth : TEXCOORD0,\n",
+"#ifdef USELIGHTMAP\n",
+"out float2 TexCoordLightmap : TEXCOORD1,\n",
+"#endif\n",
+"#ifdef USEEYEVECTOR\n",
+"out float3 EyeVector : TEXCOORD2,\n",
+"#endif\n",
+"#ifdef USEREFLECTION\n",
+"out float4 ModelViewProjectionPosition : TEXCOORD3,\n",
+"#endif\n",
+"#ifdef USEFOG\n",
+"out float4 EyeVectorModelSpaceFogPlaneVertexDist : TEXCOORD4,\n",
+"#endif\n",
+"#if defined(MODE_LIGHTDIRECTION) && defined(USEDIFFUSE) || defined(USEDIFFUSE)\n",
+"out float3 LightVector : TEXCOORD1,\n",
+"#endif\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"out float3 CubeVector : TEXCOORD3,\n",
+"#endif\n",
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n",
+"out float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n",
+"out float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n",
+"out float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n",
+"#endif\n",
+"#ifdef USESHADOWMAPORTHO\n",
+"out float3 ShadowMapTC : TEXCOORD3, // CONFLICTS WITH USEREFLECTION!\n",
+"#endif\n",
+"out float4 gl_Position : POSITION\n",
+")\n",
+"{\n",
+"#if defined(MODE_VERTEXCOLOR) || defined(USEVERTEXTEXTUREBLEND) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR) || defined(USEALPHAGENVERTEX)\n",
+"	gl_FrontColor = gl_Color;\n",
+"#endif\n",
+"	// copy the surface texcoord\n",
+"	TexCoordBoth = mul(TexMatrix, gl_MultiTexCoord0);\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	TexCoordBoth.zw = mul(BackgroundTexMatrix, gl_MultiTexCoord0).xy;\n",
+"#endif\n",
+"#ifdef USELIGHTMAP\n",
+"	TexCoordLightmap = gl_MultiTexCoord4.xy;\n",
+"#endif\n",
+"\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"	// transform vertex position into light attenuation/cubemap space\n",
+"	// (-1 to +1 across the light box)\n",
+"	CubeVector = mul(ModelToLight, gl_Vertex).xyz;\n",
+"\n",
+"# ifdef USEDIFFUSE\n",
+"	// transform unnormalized light direction into tangent space\n",
+"	// (we use unnormalized to ensure that it interpolates correctly and then\n",
+"	//  normalize it per pixel)\n",
+"	float3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n",
+"	LightVector = float3(dot(lightminusvertex, gl_MultiTexCoord1.xyz), dot(lightminusvertex, gl_MultiTexCoord2.xyz), dot(lightminusvertex, gl_MultiTexCoord3.xyz));\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#if defined(MODE_LIGHTDIRECTION) && defined(USEDIFFUSE)\n",
+"	LightVector = float3(dot(LightDir, gl_MultiTexCoord1.xyz), dot(LightDir, gl_MultiTexCoord2.xyz), dot(LightDir, gl_MultiTexCoord3.xyz));\n",
+"#endif\n",
+"\n",
+"	// transform unnormalized eye direction into tangent space\n",
+"#ifdef USEEYEVECTOR\n",
+"	float3 EyeVectorModelSpace = EyePosition - gl_Vertex.xyz;\n",
+"	EyeVector = float3(dot(EyeVectorModelSpace, gl_MultiTexCoord1.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord2.xyz), dot(EyeVectorModelSpace, gl_MultiTexCoord3.xyz));\n",
+"#endif\n",
+"\n",
+"#ifdef USEFOG\n",
+"	EyeVectorModelSpaceFogPlaneVertexDist.xyz = EyePosition - gl_Vertex.xyz;\n",
+"	EyeVectorModelSpaceFogPlaneVertexDist.w = dot(FogPlane, gl_Vertex);\n",
+"#endif\n",
+"\n",
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n",
+"	VectorS = gl_MultiTexCoord1.xyz;\n",
+"	VectorT = gl_MultiTexCoord2.xyz;\n",
+"	VectorR = gl_MultiTexCoord3.xyz;\n",
+"#endif\n",
+"\n",
+"	// transform vertex to camera space, using ftransform to match non-VS rendering\n",
+"	gl_Position = mul(ModelViewProjectionMatrix, gl_Vertex);\n",
+"\n",
+"#ifdef USESHADOWMAPORTHO\n",
+"	ShadowMapTC = mul(ShadowMapMatrix, gl_Position).xyz;\n",
+"#endif\n",
+"\n",
+"#ifdef USEREFLECTION\n",
+"	ModelViewProjectionPosition = gl_Position;\n",
+"#endif\n",
+"#ifdef USETRIPPY\n",
+"	gl_Position = TrippyVertex(gl_Position);\n",
+"#endif\n",
+"}\n",
+"#endif // VERTEX_SHADER\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef FRAGMENT_SHADER\n",
+"void main\n",
+"(\n",
+"#ifdef USEDEFERREDLIGHTMAP\n",
+"#ifdef HLSL\n",
+"float2 Pixel : VPOS,\n",
+"#else\n",
+"float2 Pixel : WPOS,\n",
+"#endif\n",
+"#endif\n",
+"float4 gl_FrontColor : COLOR,\n",
+"float4 TexCoordBoth : TEXCOORD0,\n",
+"#ifdef USELIGHTMAP\n",
+"float2 TexCoordLightmap : TEXCOORD1,\n",
+"#endif\n",
+"#ifdef USEEYEVECTOR\n",
+"float3 EyeVector : TEXCOORD2,\n",
+"#endif\n",
+"#ifdef USEREFLECTION\n",
+"float4 ModelViewProjectionPosition : TEXCOORD3,\n",
+"#endif\n",
+"#ifdef USEFOG\n",
+"float4 EyeVectorModelSpaceFogPlaneVertexDist : TEXCOORD4,\n",
+"#endif\n",
+"#if defined(MODE_LIGHTSOURCE) || defined(MODE_LIGHTDIRECTION)\n",
+"float3 LightVector : TEXCOORD1,\n",
+"#endif\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"float3 CubeVector : TEXCOORD3,\n",
+"#endif\n",
+"#ifdef MODE_DEFERREDLIGHTSOURCE\n",
+"float4 ModelViewPosition : TEXCOORD0,\n",
+"#endif\n",
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_DEFERREDGEOMETRY) || defined(USEREFLECTCUBE)\n",
+"float3 VectorS : TEXCOORD5, // direction of S texcoord (sometimes crudely called tangent)\n",
+"float3 VectorT : TEXCOORD6, // direction of T texcoord (sometimes crudely called binormal)\n",
+"float3 VectorR : TEXCOORD7, // direction of R texcoord (surface normal)\n",
+"#endif\n",
+"#ifdef USESHADOWMAPORTHO\n",
+"float3 ShadowMapTC : TEXCOORD3, // CONFLICTS WITH USEREFLECTION!\n",
+"#endif\n",
+"\n",
+"uniform sampler Texture_Normal : register(s0),\n",
+"uniform sampler Texture_Color : register(s1),\n",
+"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n",
+"uniform sampler Texture_Gloss : register(s2),\n",
+"#endif\n",
+"#ifdef USEGLOW\n",
+"uniform sampler Texture_Glow : register(s3),\n",
+"#endif\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"uniform sampler Texture_SecondaryNormal : register(s4),\n",
+"uniform sampler Texture_SecondaryColor : register(s5),\n",
+"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n",
+"uniform sampler Texture_SecondaryGloss : register(s6),\n",
+"#endif\n",
+"#ifdef USEGLOW\n",
+"uniform sampler Texture_SecondaryGlow : register(s7),\n",
+"#endif\n",
+"#endif\n",
+"#ifdef USECOLORMAPPING\n",
+"uniform sampler Texture_Pants : register(s4),\n",
+"uniform sampler Texture_Shirt : register(s7),\n",
+"#endif\n",
+"#ifdef USEFOG\n",
+"uniform sampler Texture_FogHeightTexture : register(s14),\n",
+"uniform sampler Texture_FogMask : register(s8),\n",
+"#endif\n",
+"#ifdef USELIGHTMAP\n",
+"uniform sampler Texture_Lightmap : register(s9),\n",
+"#endif\n",
+"#if defined(MODE_LIGHTDIRECTIONMAP_MODELSPACE) || defined(MODE_LIGHTDIRECTIONMAP_TANGENTSPACE)\n",
+"uniform sampler Texture_Deluxemap : register(s10),\n",
+"#endif\n",
+"#ifdef USEREFLECTION\n",
+"uniform sampler Texture_Reflection : register(s7),\n",
+"#endif\n",
+"\n",
+"#ifdef MODE_DEFERREDLIGHTSOURCE\n",
+"uniform sampler Texture_ScreenDepth : register(s13),\n",
+"uniform sampler Texture_ScreenNormalMap : register(s14),\n",
+"#endif\n",
+"#ifdef USEDEFERREDLIGHTMAP\n",
+"uniform sampler Texture_ScreenDepth : register(s13),\n",
+"uniform sampler Texture_ScreenNormalMap : register(s14),\n",
+"uniform sampler Texture_ScreenDiffuse : register(s11),\n",
+"uniform sampler Texture_ScreenSpecular : register(s12),\n",
+"#endif\n",
+"\n",
+"#ifdef USECOLORMAPPING\n",
+"uniform half3 Color_Pants : register(c7),\n",
+"uniform half3 Color_Shirt : register(c8),\n",
+"#endif\n",
+"#ifdef USEFOG\n",
+"uniform float3 FogColor : register(c16),\n",
+"uniform float FogRangeRecip : register(c20),\n",
+"uniform float FogPlaneViewDist : register(c19),\n",
+"uniform float FogHeightFade : register(c17),\n",
+"#endif\n",
+"\n",
+"#ifdef USEOFFSETMAPPING\n",
+"uniform float4 OffsetMapping_ScaleSteps : register(c24),\n",
+"uniform float OffsetMapping_Bias : register(c54),\n",
+"#endif\n",
+"\n",
+"#ifdef USEDEFERREDLIGHTMAP\n",
+"uniform half2 PixelToScreenTexCoord : register(c42),\n",
+"uniform half3 DeferredMod_Diffuse : register(c12),\n",
+"uniform half3 DeferredMod_Specular : register(c13),\n",
+"#endif\n",
+"uniform half3 Color_Ambient : register(c3),\n",
+"uniform half3 Color_Diffuse : register(c4),\n",
+"uniform half3 Color_Specular : register(c5),\n",
+"uniform half SpecularPower : register(c36),\n",
+"#ifdef USEGLOW\n",
+"uniform half3 Color_Glow : register(c6),\n",
+"#endif\n",
+"uniform half Alpha : register(c0),\n",
+"#ifdef USEREFLECTION\n",
+"uniform float4 DistortScaleRefractReflect : register(c14),\n",
+"uniform float4 ScreenScaleRefractReflect : register(c32),\n",
+"uniform float4 ScreenCenterRefractReflect : register(c31),\n",
+"uniform half4 ReflectColor : register(c26),\n",
+"#endif\n",
+"#ifdef USEREFLECTCUBE\n",
+"uniform float4x4 ModelToReflectCube : register(c48),\n",
+"uniform sampler Texture_ReflectMask : register(s5),\n",
+"uniform samplerCUBE Texture_ReflectCube : register(s6),\n",
+"#endif\n",
+"#ifdef MODE_LIGHTDIRECTION\n",
+"uniform half3 LightColor : register(c21),\n",
+"#endif\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"uniform half3 LightColor : register(c21),\n",
+"#endif\n",
+"\n",
+"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE)\n",
+"uniform sampler Texture_Attenuation : register(s9),\n",
+"uniform samplerCUBE Texture_Cube : register(s10),\n",
+"#endif\n",
+"\n",
+"#if defined(MODE_LIGHTSOURCE) || defined(MODE_DEFERREDLIGHTSOURCE) || defined(USESHADOWMAPORTHO)\n",
+"\n",
+"#ifdef USESHADOWMAP2D\n",
+"# ifdef USESHADOWSAMPLER\n",
+"uniform sampler Texture_ShadowMap2D : register(s15),\n",
+"# else\n",
+"uniform sampler Texture_ShadowMap2D : register(s15),\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+"uniform samplerCUBE Texture_CubeProjection : register(s12),\n",
+"#endif\n",
+"\n",
+"#if defined(USESHADOWMAP2D)\n",
+"uniform float2 ShadowMap_TextureScale : register(c35),\n",
+"uniform float4 ShadowMap_Parameters : register(c34),\n",
+"#endif\n",
+"#endif // !defined(MODE_LIGHTSOURCE) && !defined(MODE_DEFERREDLIGHTSOURCE) && !defined(USESHADOWMAPORTHO)\n",
+"\n",
+"out float4 dp_FragColor : COLOR\n",
+")\n",
+"{\n",
+"	float2 TexCoord = TexCoordBoth.xy;\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	float2 TexCoord2 = TexCoordBoth.zw;\n",
+"#endif\n",
+"#ifdef USEOFFSETMAPPING\n",
+"	// apply offsetmapping\n",
+"	float2 dPdx = ddx(TexCoord);\n",
+"	float2 dPdy = ddy(TexCoord);\n",
+"	float2 TexCoordOffset = OffsetMapping(TexCoord, OffsetMapping_ScaleSteps, OffsetMapping_Bias, OffsetMapping_LodDistance, EyeVector, Texture_Normal, dPdx, dPdy);\n",
+"# define offsetMappedTexture2D(t) tex2Dgrad(t, TexCoordOffset, dPdx, dPdy)\n",
+"#else\n",
+"# define offsetMappedTexture2D(t) tex2D(t, TexCoord)\n",
+"#endif\n",
+"\n",
+"	// combine the diffuse textures (base, pants, shirt)\n",
+"	half4 color = half4(offsetMappedTexture2D(Texture_Color));\n",
+"#ifdef USEALPHAKILL\n",
+"	if (color.a < 0.5)\n",
+"		discard;\n",
+"#endif\n",
+"	color.a *= Alpha;\n",
+"#ifdef USECOLORMAPPING\n",
+"	color.rgb += half3(offsetMappedTexture2D(Texture_Pants).rgb) * Color_Pants + half3(offsetMappedTexture2D(Texture_Shirt).rgb) * Color_Shirt;\n",
+"#endif\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"#ifdef USEBOTHALPHAS\n",
+"	half4 color2 = half4(tex2D(Texture_SecondaryColor, TexCoord2));\n",
+"	half terrainblend = clamp(half(gl_FrontColor.a) * color.a, half(1.0 - color2.a), half(1.0));\n",
+"	color.rgb = lerp(color2.rgb, color.rgb, terrainblend);\n",
+"#else\n",
+"	half terrainblend = clamp(half(gl_FrontColor.a) * color.a * 2.0 - 0.5, half(0.0), half(1.0));\n",
+"	//half terrainblend = min(half(gl_FrontColor.a) * color.a * 2.0, half(1.0));\n",
+"	//half terrainblend = half(gl_FrontColor.a) * color.a > 0.5;\n",
+"	color.rgb = half3(lerp(tex2D(Texture_SecondaryColor, TexCoord2).rgb, float3(color.rgb), terrainblend));\n",
+"	color.a = 1.0;\n",
+"	//color = half4(lerp(float4(1, 0, 0, 1), color, terrainblend));\n",
+"#endif\n",
+"#endif\n",
+"#ifdef USEALPHAGENVERTEX\n",
+"	color.a *= gl_FrontColor.a;\n",
+"#endif\n",
+"\n",
+"	// get the surface normal\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	half3 surfacenormal = normalize(half3(lerp(tex2D(Texture_SecondaryNormal, TexCoord2).rgb, offsetMappedTexture2D(Texture_Normal).rgb, terrainblend)) - half3(0.5, 0.5, 0.5));\n",
+"#else\n",
+"	half3 surfacenormal = half3(normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5, 0.5, 0.5)));\n",
+"#endif\n",
+"\n",
+"	// get the material colors\n",
+"	half3 diffusetex = color.rgb;\n",
+"#if defined(USESPECULAR) || defined(USEDEFERREDLIGHTMAP)\n",
+"# ifdef USEVERTEXTEXTUREBLEND\n",
+"	half4 glosstex = half4(lerp(tex2D(Texture_SecondaryGloss, TexCoord2), offsetMappedTexture2D(Texture_Gloss), terrainblend));\n",
+"# else\n",
+"	half4 glosstex = half4(offsetMappedTexture2D(Texture_Gloss));\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#ifdef USEREFLECTCUBE\n",
+"	float3 TangentReflectVector = reflect(-EyeVector, surfacenormal);\n",
+"	float3 ModelReflectVector = TangentReflectVector.x * VectorS + TangentReflectVector.y * VectorT + TangentReflectVector.z * VectorR;\n",
+"	float3 ReflectCubeTexCoord = mul(ModelToReflectCube, float4(ModelReflectVector, 0)).xyz;\n",
+"	diffusetex += half3(offsetMappedTexture2D(Texture_ReflectMask).rgb) * half3(texCUBE(Texture_ReflectCube, ReflectCubeTexCoord).rgb);\n",
+"#endif\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_LIGHTSOURCE\n",
+"	// light source\n",
+"#ifdef USEDIFFUSE\n",
+"	half3 lightnormal = half3(normalize(LightVector));\n",
+"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n",
+"	color.rgb = diffusetex * (Color_Ambient + diffuse * Color_Diffuse);\n",
+"#ifdef USESPECULAR\n",
+"#ifdef USEEXACTSPECULARMATH\n",
+"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), 1.0 + SpecularPower * glosstex.a));\n",
+"#else\n",
+"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(EyeVector))));\n",
+"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * glosstex.a));\n",
+"#endif\n",
+"	color.rgb += glosstex.rgb * (specular * Color_Specular);\n",
+"#endif\n",
+"#else\n",
+"	color.rgb = diffusetex * Color_Ambient;\n",
+"#endif\n",
+"	color.rgb *= LightColor;\n",
+"	color.rgb *= half(tex2D(Texture_Attenuation, float2(length(CubeVector), 0.0)).r);\n",
+"#if defined(USESHADOWMAP2D)\n",
+"	color.rgb *= half(ShadowMapCompare(CubeVector, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+", Texture_CubeProjection\n",
+"#endif\n",
+"	));\n",
+"\n",
+"#endif\n",
+"# ifdef USECUBEFILTER\n",
+"	color.rgb *= half3(texCUBE(Texture_Cube, CubeVector).rgb);\n",
+"# endif\n",
+"\n",
+"#ifdef USESHADOWMAP2D\n",
+"#ifdef USESHADOWMAPVSDCT\n",
+"//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters, Texture_CubeProjection);\n",
+"#else\n",
+"//	float3 shadowmaptc = GetShadowMapTC2D(CubeVector, ShadowMap_Parameters);\n",
+"#endif\n",
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n",
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n",
+"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n",
+"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n",
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, float2(0.1,0.1)).rgb);\n",
+"//	color.rgb = half3(tex2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale).rgb);\n",
+"//	color.rgb = half3(shadowmaptc.xyz * float3(ShadowMap_TextureScale,1.0));\n",
+"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n",
+"//	color.r = half(shadowmaptc.z - texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n",
+"//	color.r = half(shadowmaptc.z);\n",
+"//	color.r = half(texDepth2D(Texture_ShadowMap2D, shadowmaptc.xy * ShadowMap_TextureScale));\n",
+"//	color.r = half(shadowmaptc.z);\n",
+"//	color.r = 1;\n",
+"//	color.rgb = abs(CubeVector);\n",
+"#endif\n",
+"//	color.rgb = half3(1,1,1);\n",
+"#endif // MODE_LIGHTSOURCE\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_LIGHTDIRECTION\n",
+"	#define SHADING\n",
+"	#ifdef USEDIFFUSE\n",
+"		half3 lightnormal = half3(normalize(LightVector));\n",
+"	#endif\n",
+"	#define lightcolor LightColor\n",
+"#endif // MODE_LIGHTDIRECTION\n",
+"#ifdef MODE_LIGHTDIRECTIONMAP_MODELSPACE\n",
+"	#define SHADING\n",
+"	// deluxemap lightmapping using light vectors in modelspace (q3map2 -light -deluxe)\n",
+"	half3 lightnormal_modelspace = half3(tex2D(Texture_Deluxemap, TexCoordLightmap).rgb) * 2.0 + half3(-1.0, -1.0, -1.0);\n",
+"	half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n",
+"	// convert modelspace light vector to tangentspace\n",
+"	half3 lightnormal = half3(dot(lightnormal_modelspace, half3(VectorS)), dot(lightnormal_modelspace, half3(VectorT)), dot(lightnormal_modelspace, half3(VectorR)));\n",
+"	// calculate directional shading (and undoing the existing angle attenuation on the lightmap by the division)\n",
+"	// note that q3map2 is too stupid to calculate proper surface normals when q3map_nonplanar\n",
+"	// is used (the lightmap and deluxemap coords correspond to virtually random coordinates\n",
+"	// on that luxel, and NOT to its center, because recursive triangle subdivision is used\n",
+"	// to map the luxels to coordinates on the draw surfaces), which also causes\n",
+"	// deluxemaps to be wrong because light contributions from the wrong side of the surface\n",
+"	// are added up. To prevent divisions by zero or strong exaggerations, a max()\n",
+"	// nudge is done here at expense of some additional fps. This is ONLY needed for\n",
+"	// deluxemaps, tangentspace deluxemap avoid this problem by design.\n",
+"	lightcolor *= 1.0 / max(0.25, lightnormal.z);\n",
+"#endif // MODE_LIGHTDIRECTIONMAP_MODELSPACE\n",
+"#ifdef MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n",
+"	#define SHADING\n",
+"	// deluxemap lightmapping using light vectors in tangentspace (hmap2 -light)\n",
+"	half3 lightnormal = half3(tex2D(Texture_Deluxemap, TexCoordLightmap).rgb) * 2.0 + half3(-1.0, -1.0, -1.0);\n",
+"	half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n",
+"#endif\n",
+"#if defined(MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP) || defined(MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR)\n",
+"	#define SHADING\n",
+"	// forced deluxemap on lightmapped/vertexlit surfaces\n",
+"	half3 lightnormal = half3(0.0, 0.0, 1.0);\n",
+"   #ifdef USELIGHTMAP\n",
+"		half3 lightcolor = half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb);\n",
+"   #else\n",
+"		half3 lightcolor = half3(gl_FrontColor.rgb);\n",
+"   #endif\n",
+"#endif\n",
+"#ifdef MODE_FAKELIGHT\n",
+"	#define SHADING\n",
+"	half3 lightnormal = half3(normalize(EyeVector));\n",
+"	half3 lightcolor = half3(1.0,1.0,1.0);\n",
+"#endif // MODE_FAKELIGHT\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef MODE_LIGHTMAP\n",
+"	color.rgb = diffusetex * (Color_Ambient + half3(tex2D(Texture_Lightmap, TexCoordLightmap).rgb) * Color_Diffuse);\n",
+"#endif // MODE_LIGHTMAP\n",
+"#ifdef MODE_VERTEXCOLOR\n",
+"	color.rgb = diffusetex * (Color_Ambient + half3(gl_FrontColor.rgb) * Color_Diffuse);\n",
+"#endif // MODE_VERTEXCOLOR\n",
+"#ifdef MODE_FLATCOLOR\n",
+"	color.rgb = diffusetex * Color_Ambient;\n",
+"#endif // MODE_FLATCOLOR\n",
+"\n",
+"\n",
+"\n",
+"\n",
+"#ifdef SHADING\n",
+"# ifdef USEDIFFUSE\n",
+"	half diffuse = half(max(float(dot(surfacenormal, lightnormal)), 0.0));\n",
+"#  ifdef USESPECULAR\n",
+"#   ifdef USEEXACTSPECULARMATH\n",
+"	half specular = half(pow(half(max(float(dot(reflect(lightnormal, surfacenormal), normalize(EyeVector)))*-1.0, 0.0)), 1.0 + SpecularPower * glosstex.a));\n",
+"#   else\n",
+"	half3 specularnormal = half3(normalize(lightnormal + half3(normalize(EyeVector))));\n",
+"	half specular = half(pow(half(max(float(dot(surfacenormal, specularnormal)), 0.0)), 1.0 + SpecularPower * glosstex.a));\n",
+"#   endif\n",
+"	color.rgb = diffusetex * Color_Ambient + (diffusetex * Color_Diffuse * diffuse + glosstex.rgb * Color_Specular * specular) * lightcolor;\n",
+"#  else\n",
+"	color.rgb = diffusetex * (Color_Ambient + Color_Diffuse * diffuse * lightcolor);\n",
+"#  endif\n",
+"# else\n",
+"	color.rgb = diffusetex * Color_Ambient;\n",
+"# endif\n",
+"#endif\n",
+"\n",
+"#ifdef USESHADOWMAPORTHO\n",
+"	color.rgb *= half(ShadowMapCompare(ShadowMapTC, Texture_ShadowMap2D, ShadowMap_Parameters, ShadowMap_TextureScale));\n",
+"#endif\n",
+"\n",
+"#ifdef USEDEFERREDLIGHTMAP\n",
+"	float2 ScreenTexCoord = Pixel * PixelToScreenTexCoord;\n",
+"	color.rgb += diffusetex * half3(tex2D(Texture_ScreenDiffuse, ScreenTexCoord).rgb) * DeferredMod_Diffuse;\n",
+"	color.rgb += glosstex.rgb * half3(tex2D(Texture_ScreenSpecular, ScreenTexCoord).rgb) * DeferredMod_Specular;\n",
+"//	color.rgb = half3(tex2D(Texture_ScreenDepth, ScreenTexCoord).rgb);\n",
+"//	color.r = half(texDepth2D(Texture_ScreenDepth, ScreenTexCoord)) * 1.0;\n",
+"#endif\n",
+"\n",
+"#ifdef USEGLOW\n",
+"#ifdef USEVERTEXTEXTUREBLEND\n",
+"	color.rgb += half3(lerp(tex2D(Texture_SecondaryGlow, TexCoord2).rgb, offsetMappedTexture2D(Texture_Glow).rgb, terrainblend)) * Color_Glow;\n",
+"#else\n",
+"	color.rgb += half3(offsetMappedTexture2D(Texture_Glow).rgb) * Color_Glow;\n",
+"#endif\n",
+"#endif\n",
+"\n",
+"#ifdef USEFOG\n",
+"	color.rgb = half3(FogVertex(color, FogColor, EyeVectorModelSpaceFogPlaneVertexDist.xyz, EyeVectorModelSpaceFogPlaneVertexDist.w, FogRangeRecip, FogPlaneViewDist, FogHeightFade, Texture_FogMask, Texture_FogHeightTexture));\n",
+"#endif\n",
+"\n",
+"	// reflection must come last because it already contains exactly the correct fog (the reflection render preserves camera distance from the plane, it only flips the side) and ContrastBoost/SceneBrightness\n",
+"#ifdef USEREFLECTION\n",
+"	float4 ScreenScaleRefractReflectIW = ScreenScaleRefractReflect * (1.0 / ModelViewProjectionPosition.w);\n",
+"	//float4 ScreenTexCoord = (ModelViewProjectionPosition.xyxy + normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5,0.5,0.5)).xyxy * DistortScaleRefractReflect * 100) * ScreenScaleRefractReflectIW + ScreenCenterRefractReflect;\n",
+"	float2 SafeScreenTexCoord = ModelViewProjectionPosition.xy * ScreenScaleRefractReflectIW.zw + ScreenCenterRefractReflect.zw;\n",
+"	float2 ScreenTexCoord = SafeScreenTexCoord + float3(normalize(half3(offsetMappedTexture2D(Texture_Normal).rgb) - half3(0.5,0.5,0.5))).xy * DistortScaleRefractReflect.zw;\n",
+"	// FIXME temporary hack to detect the case that the reflection\n",
+"	// gets blackened at edges due to leaving the area that contains actual\n",
+"	// content.\n",
+"	// Remove this 'ack once we have a better way to stop this thing from\n",
+"	// 'appening.\n",
+"	float f = min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(0.01, -0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, 0.01)).rgb) / 0.05);\n",
+"	f      *= min(1.0, length(tex2D(Texture_Reflection, ScreenTexCoord + float2(-0.01, -0.01)).rgb) / 0.05);\n",
+"	ScreenTexCoord = lerp(SafeScreenTexCoord, ScreenTexCoord, f);\n",
+"	color.rgb = lerp(color.rgb, half3(tex2D(Texture_Reflection, ScreenTexCoord).rgb) * ReflectColor.rgb, ReflectColor.a);\n",
+"#endif\n",
+"\n",
+"	dp_FragColor = float4(color);\n",
+"}\n",
+"#endif // FRAGMENT_SHADER\n",
+"\n",
+"#endif // !MODE_DEFERREDLIGHTSOURCE\n",
+"#endif // !MODE_DEFERREDGEOMETRY\n",
+"#endif // !MODE_WATER\n",
+"#endif // !MODE_REFRACTION\n",
+"#endif // !MODE_BLOOMBLUR\n",
+"#endif // !MODE_GENERIC\n",
+"#endif // !MODE_POSTPROCESS\n",
+"#endif // !MODE_DEPTH_OR_SHADOW\n",
