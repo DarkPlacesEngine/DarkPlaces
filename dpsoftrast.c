@@ -4693,23 +4693,6 @@ static void DPSOFTRAST_PixelShader_Water(DPSOFTRAST_State_Thread *thread, const 
 
 
 
-static void DPSOFTRAST_VertexShader_ShowDepth(void)
-{
-	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
-}
-
-static void DPSOFTRAST_PixelShader_ShowDepth(DPSOFTRAST_State_Thread *thread, const DPSOFTRAST_State_Triangle * RESTRICT triangle, const DPSOFTRAST_State_Span * RESTRICT span)
-{
-	// TODO: IMPLEMENT
-	float buffer_z[DPSOFTRAST_DRAW_MAXSPANLENGTH];
-	unsigned char buffer_FragColorbgra8[DPSOFTRAST_DRAW_MAXSPANLENGTH*4];
-	DPSOFTRAST_Draw_Span_Begin(thread, triangle, span, buffer_z);
-	memset(buffer_FragColorbgra8 + span->startx*4, 0, (span->endx - span->startx)*4);
-	DPSOFTRAST_Draw_Span_FinishBGRA8(thread, triangle, span, buffer_FragColorbgra8);
-}
-
-
-
 static void DPSOFTRAST_VertexShader_DeferredGeometry(void)
 {
 	DPSOFTRAST_Array_TransformProject(DPSOFTRAST_ARRAY_POSITION, DPSOFTRAST_ARRAY_POSITION, dpsoftrast.uniform4f + 4*DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1);
@@ -4771,7 +4754,6 @@ static const DPSOFTRAST_ShaderModeInfo DPSOFTRAST_ShaderModeTable[SHADERMODE_COU
 	{2, DPSOFTRAST_VertexShader_LightSource,                    DPSOFTRAST_PixelShader_LightSource,                    {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_COLOR, GL20TU_PANTS, GL20TU_SHIRT, GL20TU_GLOW, GL20TU_NORMAL, GL20TU_GLOSS, GL20TU_CUBE, ~0}},
 	{2, DPSOFTRAST_VertexShader_Refraction,                     DPSOFTRAST_PixelShader_Refraction,                     {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD4, ~0}, {GL20TU_NORMAL, GL20TU_REFRACTION, ~0}},
 	{2, DPSOFTRAST_VertexShader_Water,                          DPSOFTRAST_PixelShader_Water,                          {DPSOFTRAST_ARRAY_TEXCOORD0, DPSOFTRAST_ARRAY_TEXCOORD1, DPSOFTRAST_ARRAY_TEXCOORD2, DPSOFTRAST_ARRAY_TEXCOORD3, DPSOFTRAST_ARRAY_TEXCOORD4, DPSOFTRAST_ARRAY_TEXCOORD6, ~0}, {GL20TU_NORMAL, GL20TU_REFLECTION, GL20TU_REFRACTION, ~0}},
-	{2, DPSOFTRAST_VertexShader_ShowDepth,                      DPSOFTRAST_PixelShader_ShowDepth,                      {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredGeometry,               DPSOFTRAST_PixelShader_DeferredGeometry,               {~0}},
 	{2, DPSOFTRAST_VertexShader_DeferredLightSource,            DPSOFTRAST_PixelShader_DeferredLightSource,            {~0}},
 };
