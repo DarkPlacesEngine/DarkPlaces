@@ -1632,7 +1632,7 @@ const char *FS_CheckGameDir(const char *gamedir)
 static void FS_ListGameDirs(void)
 {
 	stringlist_t list, list2;
-	int i, j;
+	int i;
 	const char *info;
 	char vabuf[1024];
 
@@ -1673,8 +1673,8 @@ static void FS_ListGameDirs(void)
 			continue;
 		if(!*info)
 			continue;
-		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].name, list2.strings[i], sizeof(fs_all_gamedirs[j].name));
-		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].description, info, sizeof(fs_all_gamedirs[j].description));
+		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].name, list2.strings[i], sizeof(fs_all_gamedirs[fs_all_gamedirs_count].name));
+		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].description, info, sizeof(fs_all_gamedirs[fs_all_gamedirs_count].description));
 		++fs_all_gamedirs_count;
 	}
 }
