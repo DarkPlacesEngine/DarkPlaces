@@ -4635,7 +4635,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		float *boneposerelative;
 		float m[12];
 		static float bonepose[256][12];
-		ent->animcache_skeletaltransform3x4 = R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
+		ent->animcache_skeletaltransform3x4 = (float *)R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
 		boneposerelative = ent->animcache_skeletaltransform3x4;
 		if (skeleton && !skeleton->relativetransforms)
 			skeleton = NULL;
