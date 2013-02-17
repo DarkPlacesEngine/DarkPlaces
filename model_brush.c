@@ -903,6 +903,8 @@ static void Mod_Q1BSP_TracePoint(struct model_s *model, const frameblend_t *fram
 	Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
 }
 
+static void Mod_Q1BSP_TraceLineAgainstSurfaces(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
+
 static void Mod_Q1BSP_TraceLine(struct model_s *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
 {
 	RecursiveHullCheckTraceInfo_t rhc;
@@ -910,6 +912,13 @@ static void Mod_Q1BSP_TraceLine(struct model_s *model, const frameblend_t *frame
 	if (VectorCompare(start, end))
 	{
 		Mod_Q1BSP_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
+		return;
+	}
+
+	// sometimes we want to traceline against polygons so we can report the texture that was hit rather than merely a contents, but using this method breaks one of negke's maps so it must be a cvar check...
+	if (sv_gameplayfix_q1bsptracelinereportstexture.integer)
+	{
+		Mod_Q1BSP_TraceLineAgainstSurfaces(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 		return;
 	}
 
@@ -1783,7 +1792,8 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		{
 			tx->supercontents = mod_q1bsp_texture_sky.supercontents;
 			tx->surfaceflags = mod_q1bsp_texture_sky.surfaceflags;
-			tx->supercontents |= SUPERCONTENTS_SOLID; // for the surface traceline we need to hit this surface as a solid...
+			// for the surface traceline we need to hit this surface as a solid...
+			tx->supercontents |= SUPERCONTENTS_SOLID;
 		}
 		else
 		{
@@ -3791,10 +3801,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->soundfromcenter = true;
 	mod->TraceBox = Mod_Q1BSP_TraceBox;
-	if (sv_gameplayfix_q1bsptracelinereportstexture.integer)
-		mod->TraceLine = Mod_Q1BSP_TraceLineAgainstSurfaces; // LordHavoc: use the surface-hitting version of TraceLine in all cases
-	else
-		mod->TraceLine = Mod_Q1BSP_TraceLine;
+	mod->TraceLine = Mod_Q1BSP_TraceLine;
 	mod->TracePoint = Mod_Q1BSP_TracePoint;
 	mod->PointSuperContents = Mod_Q1BSP_PointSuperContents;
 	mod->TraceLineAgainstSurfaces = Mod_Q1BSP_TraceLineAgainstSurfaces;
