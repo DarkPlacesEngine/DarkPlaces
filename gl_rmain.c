@@ -4543,8 +4543,8 @@ void *R_FrameData_Alloc(size_t size)
 	r_framedata_mem->current += size;
 
 	// count the usage for stats
-	r_refdef.stats.framedatacurrent = max(r_refdef.stats.framedatacurrent, (int)r_framedata_mem->current);
-	r_refdef.stats.framedatasize = max(r_refdef.stats.framedatasize, (int)r_framedata_mem->size);
+	r_refdef.stats[r_stat_framedatacurrent] = max(r_refdef.stats[r_stat_framedatacurrent], (int)r_framedata_mem->current);
+	r_refdef.stats[r_stat_framedatasize] = max(r_refdef.stats[r_stat_framedatasize], (int)r_framedata_mem->size);
 
 	return (void *)data;
 }
@@ -4616,6 +4616,9 @@ static void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numver
 	// TODO: upload vertex3f buffer?
 	if (ent->animcache_vertexmesh)
 	{
+		r_refdef.stats[r_stat_animcache_vertexmesh_count] += 1;
+		r_refdef.stats[r_stat_animcache_vertexmesh_vertices] += numvertices;
+		r_refdef.stats[r_stat_animcache_vertexmesh_maxvertices] = max(r_refdef.stats[r_stat_animcache_vertexmesh_maxvertices], numvertices);
 		memcpy(ent->animcache_vertexmesh, ent->model->surfmesh.vertexmesh, sizeof(r_vertexmesh_t)*numvertices);
 		for (i = 0;i < numvertices;i++)
 			memcpy(ent->animcache_vertexmesh[i].vertex3f, ent->animcache_vertex3f + 3*i, sizeof(float[3]));
@@ -4647,6 +4650,9 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		float *boneposerelative;
 		float m[12];
 		static float bonepose[256][12];
+		r_refdef.stats[r_stat_animcache_skeletal_count] += 1;
+		r_refdef.stats[r_stat_animcache_skeletal_bones] += model->num_bones;
+		r_refdef.stats[r_stat_animcache_skeletal_maxbones] = max(r_refdef.stats[r_stat_animcache_skeletal_maxbones], model->num_bones);
 		ent->animcache_skeletaltransform3x4 = (float *)R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
 		boneposerelative = ent->animcache_skeletaltransform3x4;
 		if (skeleton && !skeleton->relativetransforms)
@@ -4758,6 +4764,9 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 				}
 				model->AnimateVertices(model, ent->frameblend, ent->skeleton, NULL, wantnormals ? ent->animcache_normal3f : NULL, wanttangents ? ent->animcache_svector3f : NULL, wanttangents ? ent->animcache_tvector3f : NULL);
 				R_AnimCache_UpdateEntityMeshBuffers(ent, model->surfmesh.num_vertices);
+				r_refdef.stats[r_stat_animcache_shade_count] += 1;
+				r_refdef.stats[r_stat_animcache_shade_vertices] += numvertices;
+				r_refdef.stats[r_stat_animcache_shade_maxvertices] = max(r_refdef.stats[r_stat_animcache_shade_maxvertices], numvertices);
 			}
 		}
 	}
@@ -4796,6 +4805,15 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		}
 		model->AnimateVertices(model, ent->frameblend, ent->skeleton, ent->animcache_vertex3f, ent->animcache_normal3f, ent->animcache_svector3f, ent->animcache_tvector3f);
 		R_AnimCache_UpdateEntityMeshBuffers(ent, model->surfmesh.num_vertices);
+		if (wantnormals || wanttangents)
+		{
+			r_refdef.stats[r_stat_animcache_shade_count] += 1;
+			r_refdef.stats[r_stat_animcache_shade_vertices] += numvertices;
+			r_refdef.stats[r_stat_animcache_shade_maxvertices] = max(r_refdef.stats[r_stat_animcache_shade_maxvertices], numvertices);
+		}
+		r_refdef.stats[r_stat_animcache_shape_count] += 1;
+		r_refdef.stats[r_stat_animcache_shape_vertices] += numvertices;
+		r_refdef.stats[r_stat_animcache_shape_maxvertices] = max(r_refdef.stats[r_stat_animcache_shape_maxvertices], numvertices);
 	}
 	return true;
 }
@@ -5082,7 +5100,7 @@ static void R_DrawModels(void)
 		if (!r_refdef.viewcache.entityvisible[i])
 			continue;
 		ent = r_refdef.scene.entities[i];
-		r_refdef.stats.entities++;
+		r_refdef.stats[r_stat_entities]++;
 		/*
 		if (ent->model && !strncmp(ent->model->name, "models/proto_", 13))
 		{
@@ -6343,14 +6361,14 @@ static void R_Bloom_MakeTexture(void)
 	rtexture_t *intex;
 	float colorscale = r_bloom_colorscale.value;
 
-	r_refdef.stats.bloom++;
+	r_refdef.stats[r_stat_bloom]++;
     
 #if 0
     // this copy is unnecessary since it happens in R_BlendView already
 	if (!r_fb.fbo)
 	{
 		R_Mesh_CopyToTexture(r_fb.colortexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-		r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+		r_refdef.stats[r_stat_bloom_copypixels] += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 	}
 #endif
 
@@ -6382,14 +6400,14 @@ static void R_Bloom_MakeTexture(void)
 	// TODO: do boxfilter scale-down in shader?
 	R_SetupShader_Generic(r_fb.colortexture, NULL, GL_MODULATE, 1, false, true, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-	r_refdef.stats.bloom_drawpixels += r_fb.bloomwidth * r_fb.bloomheight;
+	r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 
 	// we now have a properly scaled bloom image
 	if (!r_fb.bloomfbo[r_fb.bloomindex])
 	{
 		// copy it into the bloom texture
 		R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
-		r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+		r_refdef.stats[r_stat_bloom_copypixels] += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
 	}
 
 	// multiply bloom image by itself as many times as desired
@@ -6415,13 +6433,13 @@ static void R_Bloom_MakeTexture(void)
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.bloomtexcoord2f);
 		R_SetupShader_Generic(intex, NULL, GL_MODULATE, 1, false, true, false);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-		r_refdef.stats.bloom_drawpixels += r_fb.bloomwidth * r_fb.bloomheight;
+		r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 
 		if (!r_fb.bloomfbo[r_fb.bloomindex])
 		{
 			// copy the darkened image to a texture
 			R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
-			r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+			r_refdef.stats[r_stat_bloom_copypixels] += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
 		}
 	}
 
@@ -6467,7 +6485,7 @@ static void R_Bloom_MakeTexture(void)
 			GL_Color(r, r, r, 1);
 			R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.offsettexcoord2f);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			r_refdef.stats.bloom_drawpixels += r_fb.bloomwidth * r_fb.bloomheight;
+			r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 			GL_BlendFunc(GL_ONE, GL_ONE);
 		}
 
@@ -6475,7 +6493,7 @@ static void R_Bloom_MakeTexture(void)
 		{
 			// copy the vertically or horizontally blurred bloom view to a texture
 			R_Mesh_CopyToTexture(r_fb.bloomtexture[r_fb.bloomindex], 0, 0, r_fb.bloomviewport.x, r_fb.bloomviewport.y, r_fb.bloomviewport.width, r_fb.bloomviewport.height);
-			r_refdef.stats.bloom_copypixels += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
+			r_refdef.stats[r_stat_bloom_copypixels] += r_fb.bloomviewport.width * r_fb.bloomviewport.height;
 		}
 	}
 }
@@ -6507,7 +6525,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 			if (!r_fb.fbo)
 			{
 				R_Mesh_CopyToTexture(r_fb.colortexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-				r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+				r_refdef.stats[r_stat_bloom_copypixels] += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 			}
 
 			if(!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0) && r_fb.ghosttexture)
@@ -6573,7 +6591,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 					}
 					R_SetupShader_Generic(r_fb.ghosttexture, NULL, GL_MODULATE, 1, false, true, true);
 					R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-					r_refdef.stats.bloom_drawpixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+					r_refdef.stats[r_stat_bloom_drawpixels] += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 				}
 
 				// updates old view angles for next pass
@@ -6581,7 +6599,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 
 				// copy view into the ghost texture
 				R_Mesh_CopyToTexture(r_fb.ghosttexture, 0, 0, r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-				r_refdef.stats.bloom_copypixels += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
+				r_refdef.stats[r_stat_bloom_copypixels] += r_refdef.view.viewport.width * r_refdef.view.viewport.height;
 				r_fb.ghosttexture_valid = true;
 			}
 		}
@@ -6689,7 +6707,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 			break;
 		}
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-		r_refdef.stats.bloom_drawpixels += r_refdef.view.width * r_refdef.view.height;
+		r_refdef.stats[r_stat_bloom_drawpixels] += r_refdef.view.width * r_refdef.view.height;
 		break;
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
@@ -7124,7 +7142,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if (r_timereport_active)
 		R_TimeReport("beginscene");
 
-	r_refdef.stats.renders++;
+	r_refdef.stats[r_stat_renders]++;
 
 	R_UpdateFog();
 
@@ -8713,6 +8731,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	int surfacefirstvertex;
 	int surfaceendvertex;
 	int surfacenumvertices;
+	int batchnumsurfaces = texturenumsurfaces;
 	int batchnumvertices;
 	int batchnumtriangles;
 	int needsupdate;
@@ -8754,6 +8773,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		batchnumtriangles += surfacenumtriangles;
 	}
 
+	r_refdef.stats[r_stat_batch_batches]++;
+	if (gaps)
+		r_refdef.stats[r_stat_batch_withgaps]++;
+	r_refdef.stats[r_stat_batch_surfaces] += batchnumsurfaces;
+	r_refdef.stats[r_stat_batch_vertices] += batchnumvertices;
+	r_refdef.stats[r_stat_batch_triangles] += batchnumtriangles;
+
 	// we now know the vertex range used, and if there are any gaps in it
 	rsurface.batchfirstvertex = firstvertex;
 	rsurface.batchnumvertices = endvertex - firstvertex;
@@ -8769,11 +8795,27 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// a cvar to force the dynamic vertex path to be taken, for debugging
 	if (r_batch_debugdynamicvertexpath.integer)
+	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_cvar] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_cvar] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_cvar] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_cvar] += batchnumtriangles;
+		}
 		dynamicvertex = true;
+	}
 
 	// if there is a chance of animated vertex colors, it's a dynamic batch
 	if ((batchneed & (BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_ARRAY_VERTEXCOLOR)) && texturesurfacelist[0]->lightmapinfo)
 	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_lightmapvertex] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_lightmapvertex] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_lightmapvertex] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_lightmapvertex] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		needsupdate |= BATCHNEED_VERTEXMESH_VERTEXCOLOR;
 	}
@@ -8795,16 +8837,37 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		case Q3DEFORM_NONE:
 			break;
 		case Q3DEFORM_AUTOSPRITE:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_autosprite] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_autosprite] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_autosprite] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_autosprite] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_AUTOSPRITE2:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_autosprite2] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_autosprite2] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_autosprite2] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_autosprite2] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_NORMAL:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_normal] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_normal] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_normal] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_normal] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
@@ -8812,11 +8875,25 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		case Q3DEFORM_WAVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_wave] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_wave] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_wave] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_wave] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
 			break;
 		case Q3DEFORM_BULGE:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_bulge] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_bulge] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_bulge] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_bulge] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_TEXCOORD;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR;
@@ -8824,6 +8901,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		case Q3DEFORM_MOVE:
 			if(!R_TestQ3WaveFunc(deform->wavefunc, deform->waveparms))
 				break; // if wavefunc is a nop, ignore this transform
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_deformvertexes_move] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_deformvertexes_move] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_deformvertexes_move] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_deformvertexes_move] += batchnumtriangles;
+			}
 			dynamicvertex = true;
 			batchneed |= BATCHNEED_ARRAY_VERTEX;
 			needsupdate |= BATCHNEED_VERTEXMESH_VERTEX;
@@ -8836,16 +8920,37 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	case Q3TCGEN_TEXTURE:
 		break;
 	case Q3TCGEN_LIGHTMAP:
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_lightmap] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_lightmap] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_lightmap] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_lightmap] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
 		needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
 		break;
 	case Q3TCGEN_VECTOR:
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_vector] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_vector] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_vector] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_vector] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		break;
 	case Q3TCGEN_ENVIRONMENT:
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_environment] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_environment] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_environment] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_environment] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
@@ -8853,6 +8958,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	}
 	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcmod_turbulent] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcmod_turbulent] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcmod_turbulent] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcmod_turbulent] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
 		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
@@ -8860,6 +8972,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
 	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_interleavedarrays] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_interleavedarrays] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_interleavedarrays] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_interleavedarrays] += batchnumtriangles;
+		}
 		dynamicvertex = true;
 		needsupdate |= (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP));
 	}
@@ -8873,7 +8992,16 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// firstvertex = 0 and endvertex = numvertices (no gaps, no firstvertex),
 	// we ensure this by treating the vertex batch as dynamic...
 	if ((batchneed & BATCHNEED_NOGAPS) && (gaps || firstvertex > 0))
+	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_nogaps] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_nogaps] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_nogaps] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_nogaps] += batchnumtriangles;
+		}
 		dynamicvertex = true;
+	}
 
 	if (dynamicvertex)
 	{
@@ -8889,11 +9017,29 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// if needsupdate, we have to do a dynamic vertex batch for sure
 	if (needsupdate & batchneed)
+	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_derived] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_derived] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_derived] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_derived] += batchnumtriangles;
+		}
 		dynamicvertex = true;
+	}
 
 	// see if we need to build vertexmesh from arrays
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
+	{
+		if (!dynamicvertex)
+		{
+			r_refdef.stats[r_stat_batch_dynamic_batches_because_interleavedarrays] += 1;
+			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_interleavedarrays] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_dynamic_vertices_because_interleavedarrays] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_dynamic_triangles_because_interleavedarrays] += batchnumtriangles;
+		}
 		dynamicvertex = true;
+	}
 
 	// if we're going to have to apply the skeletal transform manually, we need to batch the skeletal data
 	if (dynamicvertex && rsurface.entityskeletaltransform3x4)
@@ -8964,6 +9110,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		// otherwise use the original static buffer with an appropriate offset
 		if (gaps)
 		{
+			r_refdef.stats[r_stat_batch_copytriangles_batches] += 1;
+			r_refdef.stats[r_stat_batch_copytriangles_surfaces] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_copytriangles_vertices] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_copytriangles_triangles] += batchnumtriangles;
 			if ((batchneed & BATCHNEED_ALLOWMULTIDRAW) && r_batch_multidraw.integer && batchnumtriangles >= r_batch_multidraw_mintriangles.integer)
 			{
 				rsurface.batchmultidraw = true;
@@ -8995,6 +9145,13 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 					rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 			}
 		}
+		else
+		{
+			r_refdef.stats[r_stat_batch_fast_batches] += 1;
+			r_refdef.stats[r_stat_batch_fast_surfaces] += batchnumsurfaces;
+			r_refdef.stats[r_stat_batch_fast_vertices] += batchnumvertices;
+			r_refdef.stats[r_stat_batch_fast_triangles] += batchnumtriangles;
+		}
 		return;
 	}
 
@@ -9002,6 +9159,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// we only directly handle separate array data in this case and then
 	// generate interleaved data if needed...
 	rsurface.batchgeneratedvertex = true;
+	r_refdef.stats[r_stat_batch_dynamic_batches] += 1;
+	r_refdef.stats[r_stat_batch_dynamic_surfaces] += batchnumsurfaces;
+	r_refdef.stats[r_stat_batch_dynamic_vertices] += batchnumvertices;
+	r_refdef.stats[r_stat_batch_dynamic_triangles] += batchnumtriangles;
 
 	// now copy the vertex data into a combined array and make an index array
 	// (this is what Quake3 does all the time)
@@ -9179,6 +9340,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		float w[4];
 		float m[3][4], n[3][4];
 		float tp[3], ts[3], tt[3], tn[3];
+		r_refdef.stats[r_stat_batch_dynamicskeletal_batches] += 1;
+		r_refdef.stats[r_stat_batch_dynamicskeletal_surfaces] += batchnumsurfaces;
+		r_refdef.stats[r_stat_batch_dynamicskeletal_vertices] += batchnumvertices;
+		r_refdef.stats[r_stat_batch_dynamicskeletal_triangles] += batchnumtriangles;
 		si = rsurface.batchskeletalindex4ub;
 		sw = rsurface.batchskeletalweight4ub;
 		vp = rsurface.batchvertex3f;
@@ -11714,7 +11879,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 
 	if (numtris > 0)
 	{
-		r_refdef.stats.drawndecals += numtris;
+		r_refdef.stats[r_stat_drawndecals] += numtris;
 
 		// now render the decals all at once
 		// (this assumes they all use one particle font texture!)
@@ -11752,7 +11917,7 @@ static void R_DrawModelDecals(void)
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 		numdecals += r_refdef.scene.entities[i]->decalsystem.numdecals;
 
-	r_refdef.stats.totaldecals += numdecals;
+	r_refdef.stats[r_stat_totaldecals] += numdecals;
 
 	if (r_showsurfaces.integer)
 		return;
@@ -12072,9 +12237,9 @@ void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean dep
 	// add to stats if desired
 	if (r_speeds.integer && !skysurfaces && !depthonly)
 	{
-		r_refdef.stats.world_surfaces += numsurfacelist;
+		r_refdef.stats[r_stat_world_surfaces] += numsurfacelist;
 		for (j = 0;j < numsurfacelist;j++)
-			r_refdef.stats.world_triangles += r_surfacelist[j]->num_triangles;
+			r_refdef.stats[r_stat_world_triangles] += r_surfacelist[j]->num_triangles;
 	}
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
@@ -12208,9 +12373,9 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	// add to stats if desired
 	if (r_speeds.integer && !skysurfaces && !depthonly)
 	{
-		r_refdef.stats.entities_surfaces += numsurfacelist;
+		r_refdef.stats[r_stat_entities_surfaces] += numsurfacelist;
 		for (j = 0;j < numsurfacelist;j++)
-			r_refdef.stats.entities_triangles += r_surfacelist[j]->num_triangles;
+			r_refdef.stats[r_stat_entities_triangles] += r_surfacelist[j]->num_triangles;
 	}
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity

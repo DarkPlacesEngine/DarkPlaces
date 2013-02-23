@@ -925,7 +925,7 @@ void Host_Main(void)
 		{
 			R_TimeReport("---");
 			Collision_Cache_NewFrame();
-			R_TimeReport("collisioncache");
+			R_TimeReport("photoncache");
 			// decide the simulation time
 			if (cls.capturevideo.active)
 			{

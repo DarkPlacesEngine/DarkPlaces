@@ -1396,8 +1396,8 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 			tris = R_Shadow_ConstructShadowVolume_ZPass(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
 		else
 			tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		r_refdef.stats.lights_dynamicshadowtriangles += tris;
-		r_refdef.stats.lights_shadowtriangles += tris;
+		r_refdef.stats[r_stat_lights_dynamicshadowtriangles] += tris;
+		r_refdef.stats[r_stat_lights_shadowtriangles] += tris;
 		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
 		{
 			// increment stencil if frontface is infront of depthbuffer
@@ -2063,7 +2063,7 @@ void R_Shadow_RenderMode_Reset(void)
 void R_Shadow_ClearStencil(void)
 {
 	GL_Clear(GL_STENCIL_BUFFER_BIT, NULL, 1.0f, 128);
-	r_refdef.stats.lights_clears++;
+	r_refdef.stats[r_stat_lights_clears]++;
 }
 
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
@@ -2694,8 +2694,8 @@ void R_Shadow_UpdateBounceGridTexture(void)
 		radius = rtlight->radius * settings.lightradiusscale;
 		s = settings.particleintensity / shootparticles;
 		VectorScale(rtlight->photoncolor, s, baseshotcolor);
-		r_refdef.stats.bouncegrid_lights++;
-		r_refdef.stats.bouncegrid_particles += shootparticles;
+		r_refdef.stats[r_stat_bouncegrid_lights]++;
+		r_refdef.stats[r_stat_bouncegrid_particles] += shootparticles;
 		for (shotparticles = 0;shotparticles < shootparticles;shotparticles++)
 		{
 			if (settings.stablerandom > 0)
@@ -2709,7 +2709,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 			VectorMA(clipstart, radius, clipend, clipend);
 			for (bouncecount = 0;;bouncecount++)
 			{
-				r_refdef.stats.bouncegrid_traces++;
+				r_refdef.stats[r_stat_bouncegrid_traces]++;
 				//r_refdef.scene.worldmodel->TraceLineAgainstSurfaces(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace, clipstart, clipend, hitsupercontentsmask);
 				//r_refdef.scene.worldmodel->TraceLine(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace2, clipstart, clipend, hitsupercontentsmask);
 				if (settings.staticmode)
@@ -2775,7 +2775,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 					VectorMA(clipstart, 0.5f, stepdelta, steppos);
 					for (step = 0;step < numsteps;step++)
 					{
-						r_refdef.stats.bouncegrid_splats++;
+						r_refdef.stats[r_stat_bouncegrid_splats]++;
 						// figure out which texture pixel this is in
 						texlerp[1][0] = ((steppos[0] - mins[0]) * ispacing[0]) - 0.5f;
 						texlerp[1][1] = ((steppos[1] - mins[1]) * ispacing[1]) - 0.5f;
@@ -2829,7 +2829,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 				}
 				if (cliptrace.fraction >= 1.0f)
 					break;
-				r_refdef.stats.bouncegrid_hits++;
+				r_refdef.stats[r_stat_bouncegrid_hits]++;
 				if (bouncecount >= maxbounce)
 					break;
 				// scale down shot color by bounce intensity and texture color (or 50% if no texture reported)
@@ -2845,7 +2845,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 				VectorMultiply(shotcolor, surfcolor, shotcolor);
 				if (VectorLength2(baseshotcolor) == 0.0f)
 					break;
-				r_refdef.stats.bouncegrid_bounces++;
+				r_refdef.stats[r_stat_bouncegrid_bounces]++;
 				if (settings.bounceanglediffuse)
 				{
 					// random direction, primarily along plane normal
@@ -2991,7 +2991,7 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	|| r_shadow_lightscissor[1] != r_refdef.view.viewport.y
 	|| r_shadow_lightscissor[2] != r_refdef.view.viewport.width
 	|| r_shadow_lightscissor[3] != r_refdef.view.viewport.height)
-		r_refdef.stats.lights_scissored++;
+		r_refdef.stats[r_stat_lights_scissored]++;
 	return false;
 }
 
@@ -3764,7 +3764,7 @@ static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist
 		{
 			if (!mesh->sidetotals[r_shadow_shadowmapside])
 				continue;
-			r_refdef.stats.lights_shadowtriangles += mesh->sidetotals[r_shadow_shadowmapside];
+			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->sidetotals[r_shadow_shadowmapside];
 			if (mesh->vertex3fbuffer)
 				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vertex3fbuffer);
 			else
@@ -3804,7 +3804,7 @@ static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacel
 		mesh = zpass ? rsurface.rtlight->static_meshchain_shadow_zpass : rsurface.rtlight->static_meshchain_shadow_zfail;
 		for (;mesh;mesh = mesh->next)
 		{
-			r_refdef.stats.lights_shadowtriangles += mesh->numtriangles;
+			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->numtriangles;
 			if (mesh->vertex3fbuffer)
 				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vertex3fbuffer);
 			else
@@ -4129,7 +4129,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 		return;
 
 	// count this light in the r_speeds
-	r_refdef.stats.lights++;
+	r_refdef.stats[r_stat_lights]++;
 
 	// flag it as worth drawing later
 	rtlight->draw = true;
