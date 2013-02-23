@@ -525,26 +525,39 @@ static void Mod_BuildBaseBonePoses(void)
 	Mem_Free(basebonepose);
 }
 
-static void Mod_Alias_CalculateBoundingBox(void)
+static qboolean Mod_Alias_CalculateBoundingBox(void)
 {
 	int vnum;
 	qboolean firstvertex = true;
 	float dist, yawradius, radius;
 	float *v;
+	qboolean isanimated = false;
 	VectorClear(loadmodel->normalmins);
 	VectorClear(loadmodel->normalmaxs);
 	yawradius = 0;
 	radius = 0;
 	if (loadmodel->AnimateVertices)
 	{
-		float *vertex3f;
+		float *vertex3f, *refvertex3f;
 		frameblend_t frameblend[MAX_FRAMEBLENDS];
 		memset(frameblend, 0, sizeof(frameblend));
 		frameblend[0].lerp = 1;
-		vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		vertex3f = (float *) Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_vertices * sizeof(float[3]) * 2);
+		refvertex3f = NULL;
 		for (frameblend[0].subframe = 0;frameblend[0].subframe < loadmodel->num_poses;frameblend[0].subframe++)
 		{
 			loadmodel->AnimateVertices(loadmodel, frameblend, NULL, vertex3f, NULL, NULL, NULL);
+			if (!refvertex3f)
+			{
+				// make a copy of the first frame for comparing all others
+				refvertex3f = vertex3f + loadmodel->surfmesh.num_vertices * 3;
+				memcpy(refvertex3f, vertex3f, loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+			}
+			else
+			{
+				if (!isanimated && memcmp(refvertex3f, vertex3f, loadmodel->surfmesh.num_vertices * sizeof(float[3])))
+					isanimated = true;
+			}
 			for (vnum = 0, v = vertex3f;vnum < loadmodel->surfmesh.num_vertices;vnum++, v += 3)
 			{
 				if (firstvertex)
@@ -610,6 +623,7 @@ static void Mod_Alias_CalculateBoundingBox(void)
 	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] = radius;
 	loadmodel->radius = radius;
 	loadmodel->radius2 = radius * radius;
+	return isanimated;
 }
 
 static void Mod_Alias_MorphMesh_CompileFrames(void)
@@ -927,6 +941,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	// FIXME add TraceBrush!
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices;
 
 	loadmodel->num_surfaces = 1;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
@@ -1092,10 +1107,9 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->surfmesh.data_neighbor3i = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	}
 	Mod_MDL_LoadFrames (startframes, numverts, vertremap);
-	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_CalculateBoundingBox();
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_MorphMesh_CompileFrames();
 
 	Mem_Free(vertst);
@@ -1215,10 +1229,8 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -1286,6 +1298,7 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices;
 
 	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > 65536)
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
@@ -1476,15 +1489,12 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	Mem_Free(vertremap);
 
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	if(mod_alias_force_animated.string[0])
-		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_CalculateBoundingBox();
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
 	Mod_Alias_MorphMesh_CompileFrames();
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MDL_AnimateVertices : NULL;
+	if(mod_alias_force_animated.string[0])
+		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
 	surface = loadmodel->data_surfaces;
 	surface->texture = loadmodel->data_textures;
@@ -1554,6 +1564,7 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_MD3_AnimateVertices;
 	loadmodel->synctype = ST_RAND;
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
@@ -1678,17 +1689,14 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (loadmodel->surfmesh.data_element3s)
 		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
-	loadmodel->surfmesh.isanimated = loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	if(mod_alias_force_animated.string[0])
-		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = Mod_MD3_AnimateVertices; // needed during loading, may be cleared by code later in this function
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 	Mod_Alias_MorphMesh_CompileFrames();
-	Mod_Alias_CalculateBoundingBox();
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);
 	Mod_MakeSortedSurfaces(loadmodel);
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_MD3_AnimateVertices : NULL;
+	if(mod_alias_force_animated.string[0])
+		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -1796,6 +1804,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
 
 	loadmodel->numframes = pheader->numscenes;
 	loadmodel->num_surfaces = pheader->numshaders;
@@ -1815,6 +1824,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// model bbox
+	// LordHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
 	modelradius = pheader->radius;
 	for (i = 0;i < 3;i++)
 	{
@@ -1884,10 +1894,6 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	meshvertices = pheader->numverts;
 	meshtriangles = pheader->numtris;
 
-	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	if(mod_alias_force_animated.string[0])
-		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
@@ -2088,6 +2094,9 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
+	if(mod_alias_force_animated.string[0])
+		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -2179,8 +2188,10 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
 
 	// model bbox
+	// LordHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
 	for (i = 0;i < 3;i++)
 	{
 		loadmodel->normalmins[i] = pheader->mins[i];
@@ -2217,10 +2228,6 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	if(mod_alias_force_animated.string[0])
-		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? meshtriangles * sizeof(int[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short) + sizeof(unsigned char[2][4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
@@ -2465,6 +2472,9 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
+	if(mod_alias_force_animated.string[0])
+		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -2531,6 +2541,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
 	loadmodel->synctype = ST_RAND;
 
 	FS_StripExtension(loadmodel->name, animname, sizeof(animname));
@@ -2884,10 +2895,6 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
-	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
-	if(mod_alias_force_animated.string[0])
-		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 	// do most allocations as one merged chunk
 	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + (r_enableshadowvolumes.integer ? loadmodel->surfmesh.num_triangles * sizeof(int[3]) : 0)  + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
@@ -3143,7 +3150,9 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 	if (loadmodel->surfmesh.data_neighbor3i)
 		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
-	Mod_Alias_CalculateBoundingBox();
+	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
+	if(mod_alias_force_animated.string[0])
+		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
 	if (!loadmodel->surfmesh.isanimated)
 	{
@@ -3365,6 +3374,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
+	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
 
 	// load external .skin files if present
 	skinfiles = Mod_LoadSkinFiles();
@@ -3377,7 +3387,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header.num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices; // updated later
 
 	meshvertices = header.num_vertexes;
 	meshtriangles = header.num_triangles;
@@ -3528,7 +3537,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->surfmesh.isanimated = loadmodel->num_bones > 1 || loadmodel->numframes > 1 || (loadmodel->animscenes && loadmodel->animscenes[0].framecount > 1);
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
-	loadmodel->AnimateVertices = loadmodel->surfmesh.isanimated ? Mod_Skeletal_AnimateVertices : NULL;
 
 	biggestorigin = 0;
 	if (header.version == 1)
