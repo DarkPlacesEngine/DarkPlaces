@@ -303,6 +303,7 @@ cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long dec
 cvar_t cl_decals_newsystem = {CVAR_SAVE, "cl_decals_newsystem", "1", "enables new advanced decal system"};
 cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
 cvar_t cl_decals_newsystem_immediatebloodstain = {CVAR_SAVE, "cl_decals_newsystem_immediatebloodstain", "2", "0: no on-spawn blood stains; 1: on-spawn blood stains for pt_blood; 2: always use on-spawn blood stains"};
+cvar_t cl_decals_newsystem_bloodsmears = {CVAR_SAVE, "cl_decals_newsystem_bloodsmears", "1", "enable use of particle velocity as decal projection direction rather than surface normal"};
 cvar_t cl_decals_models = {CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
 cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
 cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
@@ -601,6 +602,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_decals_newsystem);
 	Cvar_RegisterVariable (&cl_decals_newsystem_intensitymultiplier);
 	Cvar_RegisterVariable (&cl_decals_newsystem_immediatebloodstain);
+	Cvar_RegisterVariable (&cl_decals_newsystem_bloodsmears);
 	Cvar_RegisterVariable (&cl_decals_models);
 	Cvar_RegisterVariable (&cl_decals_bias);
 	Cvar_RegisterVariable (&cl_decals_max);
@@ -2942,7 +2944,14 @@ void R_DrawParticles (void)
 								{
 									// create a decal for the blood splat
 									a = 0xFFFFFF ^ (p->staincolor[0]*65536+p->staincolor[1]*256+p->staincolor[2]);
-									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, a, a, p->staintexnum, p->stainsize, p->stainalpha); // staincolor needs to be inverted for decals!
+									if (cl_decals_newsystem_bloodsmears.integer)
+									{
+										VectorCopy(p->vel, decaldir);
+										VectorNormalize(decaldir);
+									}
+									else
+										VectorCopy(trace.plane.normal, decaldir);
+									CL_SpawnDecalParticleForSurface(hitent, p->org, decaldir, a, a, p->staintexnum, p->stainsize, p->stainalpha); // staincolor needs to be inverted for decals!
 								}
 							}
 						}
@@ -2958,7 +2967,14 @@ void R_DrawParticles (void)
 								if (cl_decals.integer)
 								{
 									// create a decal for the blood splat
-									CL_SpawnDecalParticleForSurface(hitent, p->org, trace.plane.normal, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * lhrandom(cl_particles_blood_decal_scalemin.value, cl_particles_blood_decal_scalemax.value), cl_particles_blood_decal_alpha.value * 768);
+									if (cl_decals_newsystem_bloodsmears.integer)
+									{
+										VectorCopy(p->vel, decaldir);
+										VectorNormalize(decaldir);
+									}
+									else
+										VectorCopy(trace.plane.normal, decaldir);
+									CL_SpawnDecalParticleForSurface(hitent, p->org, decaldir, p->color[0] * 65536 + p->color[1] * 256 + p->color[2], p->color[0] * 65536 + p->color[1] * 256 + p->color[2], tex_blooddecal[rand()&7], p->size * lhrandom(cl_particles_blood_decal_scalemin.value, cl_particles_blood_decal_scalemax.value), cl_particles_blood_decal_alpha.value * 768);
 								}
 							}
 							goto killparticle;
