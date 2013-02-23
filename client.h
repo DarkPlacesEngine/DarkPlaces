@@ -25,6 +25,148 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "matrixlib.h"
 #include "snd_main.h"
 
+// NOTE: r_stat_name[] must match this indexing
+typedef enum r_stat_e
+{
+	r_stat_timedelta,
+	r_stat_quality,
+	r_stat_renders,
+	r_stat_entities,
+	r_stat_entities_surfaces,
+	r_stat_entities_triangles,
+	r_stat_world_leafs,
+	r_stat_world_portals,
+	r_stat_world_surfaces,
+	r_stat_world_triangles,
+	r_stat_lightmapupdates,
+	r_stat_lightmapupdatepixels,
+	r_stat_particles,
+	r_stat_drawndecals,
+	r_stat_totaldecals,
+	r_stat_draws,
+	r_stat_draws_vertices,
+	r_stat_draws_elements,
+	r_stat_lights,
+	r_stat_lights_clears,
+	r_stat_lights_scissored,
+	r_stat_lights_lighttriangles,
+	r_stat_lights_shadowtriangles,
+	r_stat_lights_dynamicshadowtriangles,
+	r_stat_bouncegrid_lights,
+	r_stat_bouncegrid_particles,
+	r_stat_bouncegrid_traces,
+	r_stat_bouncegrid_hits,
+	r_stat_bouncegrid_splats,
+	r_stat_bouncegrid_bounces,
+	r_stat_photoncache_animated,
+	r_stat_photoncache_cached,
+	r_stat_photoncache_traced,
+	r_stat_bloom,
+	r_stat_bloom_copypixels,
+	r_stat_bloom_drawpixels,
+	r_stat_indexbufferuploadcount,
+	r_stat_indexbufferuploadsize,
+	r_stat_vertexbufferuploadcount,
+	r_stat_vertexbufferuploadsize,
+	r_stat_framedatacurrent,
+	r_stat_framedatasize,
+	r_stat_animcache_vertexmesh_count,
+	r_stat_animcache_vertexmesh_vertices,
+	r_stat_animcache_vertexmesh_maxvertices,
+	r_stat_animcache_skeletal_count,
+	r_stat_animcache_skeletal_bones,
+	r_stat_animcache_skeletal_maxbones,
+	r_stat_animcache_shade_count,
+	r_stat_animcache_shade_vertices,
+	r_stat_animcache_shade_maxvertices,
+	r_stat_animcache_shape_count,
+	r_stat_animcache_shape_vertices,
+	r_stat_animcache_shape_maxvertices,
+	r_stat_batch_batches,
+	r_stat_batch_withgaps,
+	r_stat_batch_surfaces,
+	r_stat_batch_vertices,
+	r_stat_batch_triangles,
+	r_stat_batch_fast_batches,
+	r_stat_batch_fast_surfaces,
+	r_stat_batch_fast_vertices,
+	r_stat_batch_fast_triangles,
+	r_stat_batch_copytriangles_batches,
+	r_stat_batch_copytriangles_surfaces,
+	r_stat_batch_copytriangles_vertices,
+	r_stat_batch_copytriangles_triangles,
+	r_stat_batch_dynamic_batches,
+	r_stat_batch_dynamic_surfaces,
+	r_stat_batch_dynamic_vertices,
+	r_stat_batch_dynamic_triangles,
+	r_stat_batch_dynamicskeletal_batches,
+	r_stat_batch_dynamicskeletal_surfaces,
+	r_stat_batch_dynamicskeletal_vertices,
+	r_stat_batch_dynamicskeletal_triangles,
+	r_stat_batch_dynamic_batches_because_cvar,
+	r_stat_batch_dynamic_surfaces_because_cvar,
+	r_stat_batch_dynamic_vertices_because_cvar,
+	r_stat_batch_dynamic_triangles_because_cvar,
+	r_stat_batch_dynamic_batches_because_lightmapvertex,
+	r_stat_batch_dynamic_surfaces_because_lightmapvertex,
+	r_stat_batch_dynamic_vertices_because_lightmapvertex,
+	r_stat_batch_dynamic_triangles_because_lightmapvertex,
+	r_stat_batch_dynamic_batches_because_deformvertexes_autosprite,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_autosprite,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_autosprite,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_autosprite,
+	r_stat_batch_dynamic_batches_because_deformvertexes_autosprite2,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_autosprite2,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_autosprite2,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_autosprite2,
+	r_stat_batch_dynamic_batches_because_deformvertexes_normal,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_normal,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_normal,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_normal,
+	r_stat_batch_dynamic_batches_because_deformvertexes_wave,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_wave,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_wave,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_wave,
+	r_stat_batch_dynamic_batches_because_deformvertexes_bulge,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_bulge,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_bulge,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_bulge,
+	r_stat_batch_dynamic_batches_because_deformvertexes_move,
+	r_stat_batch_dynamic_surfaces_because_deformvertexes_move,
+	r_stat_batch_dynamic_vertices_because_deformvertexes_move,
+	r_stat_batch_dynamic_triangles_because_deformvertexes_move,
+	r_stat_batch_dynamic_batches_because_tcgen_lightmap,
+	r_stat_batch_dynamic_surfaces_because_tcgen_lightmap,
+	r_stat_batch_dynamic_vertices_because_tcgen_lightmap,
+	r_stat_batch_dynamic_triangles_because_tcgen_lightmap,
+	r_stat_batch_dynamic_batches_because_tcgen_vector,
+	r_stat_batch_dynamic_surfaces_because_tcgen_vector,
+	r_stat_batch_dynamic_vertices_because_tcgen_vector,
+	r_stat_batch_dynamic_triangles_because_tcgen_vector,
+	r_stat_batch_dynamic_batches_because_tcgen_environment,
+	r_stat_batch_dynamic_surfaces_because_tcgen_environment,
+	r_stat_batch_dynamic_vertices_because_tcgen_environment,
+	r_stat_batch_dynamic_triangles_because_tcgen_environment,
+	r_stat_batch_dynamic_batches_because_tcmod_turbulent,
+	r_stat_batch_dynamic_surfaces_because_tcmod_turbulent,
+	r_stat_batch_dynamic_vertices_because_tcmod_turbulent,
+	r_stat_batch_dynamic_triangles_because_tcmod_turbulent,
+	r_stat_batch_dynamic_batches_because_interleavedarrays,
+	r_stat_batch_dynamic_surfaces_because_interleavedarrays,
+	r_stat_batch_dynamic_vertices_because_interleavedarrays,
+	r_stat_batch_dynamic_triangles_because_interleavedarrays,
+	r_stat_batch_dynamic_batches_because_nogaps,
+	r_stat_batch_dynamic_surfaces_because_nogaps,
+	r_stat_batch_dynamic_vertices_because_nogaps,
+	r_stat_batch_dynamic_triangles_because_nogaps,
+	r_stat_batch_dynamic_batches_because_derived,
+	r_stat_batch_dynamic_surfaces_because_derived,
+	r_stat_batch_dynamic_vertices_because_derived,
+	r_stat_batch_dynamic_triangles_because_derived,
+	r_stat_count // size of array
+}
+r_stat_t;
+
 // flags for rtlight rendering
 #define LIGHTFLAG_NORMALMODE 1
 #define LIGHTFLAG_REALTIMEMODE 2
@@ -725,6 +867,14 @@ typedef struct client_static_s
 	// don't write-then-read csprogs.dat (useful for demo playback)
 	unsigned char *caughtcsprogsdata;
 	fs_offset_t caughtcsprogsdatasize;
+
+	int r_speeds_graph_length;
+	int r_speeds_graph_current;
+	int *r_speeds_graph_data;
+
+	// graph scales
+	int r_speeds_graph_datamin[r_stat_count];
+	int r_speeds_graph_datamax[r_stat_count];
 }
 client_static_t;
 
@@ -1548,51 +1698,6 @@ extern qboolean sb_showscores;
 float RSurf_FogVertex(const vec3_t p);
 float RSurf_FogPoint(const vec3_t p);
 
-typedef struct r_refdef_stats_s
-{
-	int renders;
-	int entities;
-	int entities_surfaces;
-	int entities_triangles;
-	int world_leafs;
-	int world_portals;
-	int world_surfaces;
-	int world_triangles;
-	int lightmapupdates;
-	int lightmapupdatepixels;
-	int particles;
-	int drawndecals;
-	int totaldecals;
-	int draws;
-	int draws_vertices;
-	int draws_elements;
-	int lights;
-	int lights_clears;
-	int lights_scissored;
-	int lights_lighttriangles;
-	int lights_shadowtriangles;
-	int lights_dynamicshadowtriangles;
-	int bouncegrid_lights;
-	int bouncegrid_particles;
-	int bouncegrid_traces;
-	int bouncegrid_hits;
-	int bouncegrid_splats;
-	int bouncegrid_bounces;
-	int collisioncache_animated;
-	int collisioncache_cached;
-	int collisioncache_traced;
-	int bloom;
-	int bloom_copypixels;
-	int bloom_drawpixels;
-	int indexbufferuploadcount;
-	int indexbufferuploadsize;
-	int vertexbufferuploadcount;
-	int vertexbufferuploadsize;
-	int framedatacurrent;
-	int framedatasize;
-}
-r_refdef_stats_t;
-
 typedef enum r_viewport_type_e
 {
 	R_VIEWPORTTYPE_ORTHO,
@@ -1830,7 +1935,7 @@ typedef struct r_refdef_s
 
 	// rendering stats for r_speeds display
 	// (these are incremented in many places)
-	r_refdef_stats_t stats;
+	int stats[r_stat_count];
 }
 r_refdef_t;
 

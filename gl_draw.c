@@ -2062,14 +2062,8 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	}
 }
 
-void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float *color4f, int flags)
+void DrawQ_Lines (float width, int numlines, int flags, qboolean hasalpha)
 {
-	int i;
-	qboolean hasalpha = false;
-	for (i = 0;i < numlines*2;i++)
-		if (color4f[i*4+3] < 1.0f)
-			hasalpha = true;
-
 	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, hasalpha ? 0.5f : 1.0f);
 
 	if(!r_draw2d.integer && !r_draw2d_force)
@@ -2087,7 +2081,6 @@ void DrawQ_Lines (float width, int numlines, const float *vertex3f, const float 
 		//qglLineWidth(width);CHECKGLERROR
 
 		CHECKGLERROR
-		R_Mesh_PrepareVertices_Generic_Arrays(numlines*2, vertex3f, color4f, NULL);
 		qglDrawArrays(GL_LINES, 0, numlines*2);
 		CHECKGLERROR
 		break;

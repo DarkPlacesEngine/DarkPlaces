@@ -1683,7 +1683,7 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	collision_cachedtrace_parameters_t params;
 	// all non-cached traces use the same index
 	if (!collision_cache.integer)
-		r_refdef.stats.collisioncache_traced++;
+		r_refdef.stats[r_stat_photoncache_traced]++;
 	else
 	{
 		// cached trace lookup
@@ -1728,12 +1728,12 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 			)
 				continue;
 			// found a matching trace in the cache
-			r_refdef.stats.collisioncache_cached++;
+			r_refdef.stats[r_stat_photoncache_cached]++;
 			cached->valid = true;
 			collision_cachedtrace_arrayused[index] = collision_cachedtrace_sequence;
 			return cached;
 		}
-		r_refdef.stats.collisioncache_traced++;
+		r_refdef.stats[r_stat_photoncache_traced]++;
 		// find an unused cache entry
 		for (index = collision_cachedtrace_firstfree, range = collision_cachedtrace_max;index < range;index++)
 			if (collision_cachedtrace_arrayused[index] == 0)
