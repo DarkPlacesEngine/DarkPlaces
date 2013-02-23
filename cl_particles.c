@@ -2437,7 +2437,7 @@ static void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rt
 
 	RSurf_ActiveWorldEntity();
 
-	r_refdef.stats.drawndecals += numsurfaces;
+	r_refdef.stats[r_stat_drawndecals] += numsurfaces;
 //	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
@@ -2574,7 +2574,7 @@ killdecal:
 		Mem_Free(olddecals);
 	}
 
-	r_refdef.stats.totaldecals = cl.num_decals;
+	r_refdef.stats[r_stat_totaldecals] = cl.num_decals;
 }
 
 static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -2598,7 +2598,7 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
-	r_refdef.stats.particles += numsurfaces;
+	r_refdef.stats[r_stat_particles] += numsurfaces;
 //	R_Mesh_ResetTextureState();
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
@@ -2855,7 +2855,7 @@ void R_DrawParticles (void)
 	int drawparticles = r_drawparticles.integer;
 	float minparticledist_start;
 	particle_t *p;
-	float gravity, frametime, f, dist, oldorg[3];
+	float gravity, frametime, f, dist, oldorg[3], decaldir[3];
 	float drawdist2;
 	int hitent;
 	trace_t trace;

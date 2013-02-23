@@ -2805,9 +2805,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	bufferoffset3i = element3i_bufferoffset;
 	bufferobject3s = element3s_indexbuffer ? element3s_indexbuffer->bufferobject : 0;
 	bufferoffset3s = element3s_bufferoffset;
-	r_refdef.stats.draws++;
-	r_refdef.stats.draws_vertices += numvertices;
-	r_refdef.stats.draws_elements += numelements;
+	r_refdef.stats[r_stat_draws]++;
+	r_refdef.stats[r_stat_draws_vertices] += numvertices;
+	r_refdef.stats[r_stat_draws_elements] += numelements;
 	if (gl_paranoid.integer)
 	{
 		unsigned int i;
@@ -3300,13 +3300,13 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 		return;
 	if (buffer->isindexbuffer)
 	{
-		r_refdef.stats.indexbufferuploadcount++;
-		r_refdef.stats.indexbufferuploadsize += size;
+		r_refdef.stats[r_stat_indexbufferuploadcount]++;
+		r_refdef.stats[r_stat_indexbufferuploadsize] += size;
 	}
 	else
 	{
-		r_refdef.stats.vertexbufferuploadcount++;
-		r_refdef.stats.vertexbufferuploadsize += size;
+		r_refdef.stats[r_stat_vertexbufferuploadcount]++;
+		r_refdef.stats[r_stat_vertexbufferuploadsize] += size;
 	}
 	switch(vid.renderpath)
 	{

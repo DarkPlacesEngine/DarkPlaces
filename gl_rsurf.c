@@ -53,8 +53,8 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	size = smax*tmax;
 	size3 = size*3;
 
-	r_refdef.stats.lightmapupdatepixels += size;
-	r_refdef.stats.lightmapupdates++;
+	r_refdef.stats[r_stat_lightmapupdatepixels] += size;
+	r_refdef.stats[r_stat_lightmapupdates]++;
 
 	if (cl.buildlightmapmemorysize < size*sizeof(int[3]))
 	{
@@ -446,7 +446,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			// if leaf is in current pvs and on the screen, mark its surfaces
 			if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
-				r_refdef.stats.world_leafs++;
+				r_refdef.stats[r_stat_world_leafs]++;
 				r_refdef.viewcache.world_leafvisible[j] = true;
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
@@ -486,7 +486,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (!R_CullBox(leaf->mins, leaf->maxs))
 				{
-					r_refdef.stats.world_leafs++;
+					r_refdef.stats[r_stat_world_leafs]++;
 					r_refdef.viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
@@ -509,7 +509,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				// if leaf is in current pvs and on the screen, mark its surfaces
 				if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 				{
-					r_refdef.stats.world_leafs++;
+					r_refdef.stats[r_stat_world_leafs]++;
 					r_refdef.viewcache.world_leafvisible[j] = true;
 					if (leaf->numleafsurfaces)
 						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
@@ -540,7 +540,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 					continue;
 				if (leaf->clusterindex < 0)
 					continue;
-				r_refdef.stats.world_leafs++;
+				r_refdef.stats[r_stat_world_leafs]++;
 				r_refdef.viewcache.world_leafvisible[leaf - model->brush.data_leafs] = true;
 				// mark any surfaces bounding this leaf
 				if (leaf->numleafsurfaces)
@@ -555,7 +555,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				// (the first two checks won't cause as many cache misses as the leaf checks)
 				for (p = leaf->portals;p;p = p->next)
 				{
-					r_refdef.stats.world_portals++;
+					r_refdef.stats[r_stat_world_portals]++;
 					if (DotProduct(r_refdef.view.origin, p->plane.normal) < (p->plane.dist + 1)
 					 && !r_refdef.viewcache.world_leafvisible[p->past - model->brush.data_leafs]
 					 && CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, p->past->clusterindex)
@@ -1403,8 +1403,8 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 			continue;
 		if (!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 			continue;
-		r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
-		r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
+		r_refdef.stats[r_stat_lights_dynamicshadowtriangles] += surface->num_triangles;
+		r_refdef.stats[r_stat_lights_shadowtriangles] += surface->num_triangles;
 		batchsurfacelist[0] = surface;
 		batchnumsurfaces = 1;
 		while(++modelsurfacelistindex < modelnumsurfaces && batchnumsurfaces < RSURF_MAX_BATCHSURFACES)
@@ -1416,8 +1416,8 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 				break;
 			if (!BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 				continue;
-			r_refdef.stats.lights_dynamicshadowtriangles += surface->num_triangles;
-			r_refdef.stats.lights_shadowtriangles += surface->num_triangles;
+			r_refdef.stats[r_stat_lights_dynamicshadowtriangles] += surface->num_triangles;
+			r_refdef.stats[r_stat_lights_shadowtriangles] += surface->num_triangles;
 			batchsurfacelist[batchnumsurfaces++] = surface;
 		}
 		--modelsurfacelistindex;
