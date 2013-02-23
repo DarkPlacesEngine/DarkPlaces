@@ -1090,7 +1090,6 @@ static void R_TimeReport_EndFrame(void)
 		int color, stat, stats, index, range_min, range_max;
 		int graph_current, graph_length, *graph_data;
 		int statindex[R_SPEEDS_GRAPH_COLORS];
-		int frameslastsecond;
 		int sum;
 
 		// add current stats to the graph_data
@@ -1121,21 +1120,6 @@ static void R_TimeReport_EndFrame(void)
 		height = r_speeds_graph_height.value;
 		x = bound(0, r_speeds_graph_x.value, vid_conwidth.value - width);
 		y = bound(0, r_speeds_graph_y.value, vid_conheight.value - height);
-
-		// count how many frames were in the last second
-		data = graph_data + r_stat_timedelta * graph_length;
-		index = graph_current;
-		sum = 0;
-		for (i = 0;i < graph_length;i++)
-		{
-			sum += data[index];
-			if (sum >= 1000000)
-				break;
-			index--;
-			if (index < 0)
-				index = graph_length - 1;
-		}
-		frameslastsecond = i;
 
 		// fill background with a pattern of gray and black at one second intervals
 		scalex = (float)width / (float)r_speeds_graph_seconds.value;
@@ -1173,8 +1157,6 @@ static void R_TimeReport_EndFrame(void)
 			// count how many stats we need to graph in vertex buffer
 			stats++;
 		}
-		dpsnprintf(legend, sizeof(legend), "%10i  frames last second", frameslastsecond);
-		DrawQ_String(x, y + stats * 8, legend, 0, 8, 8, 0.5f, 0.5f, 0.5f, 0.5f, 0, NULL, true, FONT_DEFAULT);
 
 		if (stats)
 		{
