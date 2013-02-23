@@ -1966,8 +1966,10 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, permutation);
-		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
-		R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
+		if (r_glsl_permutation->tex_Texture_First >= 0)
+			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
+		if (r_glsl_permutation->tex_Texture_Second >= 0)
+			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
 		if (r_glsl_permutation->tex_Texture_GammaRamps >= 0)
 			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps);
 		break;
@@ -1975,12 +1977,18 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 	case RENDERPATH_GLES1:
 		R_Mesh_TexBind(0, first );
 		R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+		R_Mesh_TexMatrix(0, NULL);
 		R_Mesh_TexBind(1, second);
 		if (second)
+		{
 			R_Mesh_TexCombine(1, texturemode, texturemode, rgbscale, 1);
+			R_Mesh_TexMatrix(1, NULL);
+		}
 		break;
 	case RENDERPATH_GL11:
 		R_Mesh_TexBind(0, first );
+		R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+		R_Mesh_TexMatrix(0, NULL);
 		break;
 	case RENDERPATH_SOFT:
 		R_SetupShader_SetPermutationSoft(SHADERMODE_GENERIC, permutation);
@@ -10160,6 +10168,8 @@ static void RSurf_DrawBatch_GL11_Lightmap(float r, float g, float b, float a, qb
 	R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), rsurface.passcolor4f, rsurface.passcolor4f_vertexbuffer, rsurface.passcolor4f_bufferoffset);
 	GL_Color(r, g, b, a);
 	R_Mesh_TexBind(0, rsurface.lightmaptexture);
+	R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
+	R_Mesh_TexMatrix(0, NULL);
 	RSurf_DrawBatch();
 }
 
