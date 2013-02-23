@@ -1074,7 +1074,7 @@ static void R_TimeReport_EndFrame(void)
 			cls.r_speeds_graph_current = 0;
 			if (cls.r_speeds_graph_data)
 				Mem_Free(cls.r_speeds_graph_data);
-			cls.r_speeds_graph_data = Mem_Alloc(cls.permanentmempool, cls.r_speeds_graph_length * sizeof(r_refdef.stats));
+			cls.r_speeds_graph_data = (int *)Mem_Alloc(cls.permanentmempool, cls.r_speeds_graph_length * sizeof(r_refdef.stats));
 			// initialize the graph to have the current values throughout history
 			graph_data = cls.r_speeds_graph_data;
 			graph_length = cls.r_speeds_graph_length;
