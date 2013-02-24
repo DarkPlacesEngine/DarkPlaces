@@ -1744,7 +1744,7 @@ static void CL_ParseServerInfo (void)
 		cl.movevars_airaccel_sideways_friction = 0;
 
 		// seperate the printfs so the server message can have a color
-		Con_Printf("\n\n<===================================>\n\n\2%s\n", str);
+		Con_Printf("\n\n<===================================>\n\n%s\n", str);
 
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
@@ -1800,7 +1800,7 @@ static void CL_ParseServerInfo (void)
 
 	// seperate the printfs so the server message can have a color
 		if (cls.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
-			Con_Printf("\n<===================================>\n\n\2%s\n", str);
+			Con_Printf("\n<===================================>\n\n%s\n", str);
 
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
