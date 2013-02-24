@@ -1063,7 +1063,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 			line[index++] = STRING_COLOR_DEFAULT + '0';
 			// special color codes for chat messages must always come first
 			// for Con_PrintToHistory to work properly
-			if (*msg == 1 || *msg == 2)
+			if (*msg == 1 || *msg == 2 || *msg == 3) // Adding 3 for now since I don't know if 2 is used for anything. Can be fixed later if 2 isn't used.
 			{
 				// play talk wav
 				if (*msg == 1)
@@ -1072,7 +1072,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 					{
 						if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
 						{
-							if(msg[1] == '\r' && cl.foundtalk2wav)
+							if(msg[1] == '\r' && cl.foundtalk2wav) // if carriage return is in the string, it is a tell message
 								S_LocalSound ("sound/misc/talk2.wav");
 							else
 								S_LocalSound ("sound/misc/talk.wav");
@@ -1085,8 +1085,13 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 								S_LocalSound ("sound/misc/talk.wav");
 						}
 					}
-					mask = CON_MASK_CHAT;
 				}
+				
+				// Send to chatbox for say/tell (1) and messages (3)
+				// 3 is just so that a message can be sent to the chatbox without a sound.
+				if (*msg == 1 || *msg == 3)
+					mask = CON_MASK_CHAT;
+					
 				line[index++] = STRING_COLOR_TAG;
 				line[index++] = '3';
 				msg++;
