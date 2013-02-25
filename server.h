@@ -462,7 +462,6 @@ extern cvar_t sv_gameplayfix_nogravityonground;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
 extern cvar_t sv_gameplayfix_slidemoveprojectiles;
 extern cvar_t sv_gameplayfix_stepdown;
-extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_stepmultipletimes;
 extern cvar_t sv_gameplayfix_nostepmoveonsteepslopes;
 extern cvar_t sv_gameplayfix_swiminbmodels;
