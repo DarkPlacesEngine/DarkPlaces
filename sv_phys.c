@@ -2420,7 +2420,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 				return;
 
 			// only step up while jumping if that is enabled
-			if (!(sv_jumpstep.integer && sv_gameplayfix_stepwhilejumping.integer))
+			if (sv_jumpstep.integer)
 				if (!oldonground && PRVM_serveredictfloat(ent, waterlevel) == 0)
 					return;
 		}
