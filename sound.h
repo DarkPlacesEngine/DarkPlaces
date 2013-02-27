@@ -75,7 +75,7 @@ qboolean S_IsSoundPrecached (const sfx_t *sfx);
 sfx_t *S_FindName(const char *name);
 
 // for sound() builtins
-#define CHANFLAG_RELIABLE 1
+#define SOUNDFLAG_RELIABLE 1
 
 // these define the "engine" channel namespace
 #define CHAN_MIN_AUTO       -128

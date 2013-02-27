@@ -549,7 +549,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 		flags = 0;
 		if(channel >= 8 && channel <= 15) // weird QW feature
 		{
-			flags |= CHANFLAG_RELIABLE;
+			flags |= SOUNDFLAG_RELIABLE;
 			channel -= 8;
 		}
 	}
@@ -576,7 +576,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 		return;
 	}
 
-	SV_StartSound (entity, channel, sample, volume, attenuation, flags & CHANFLAG_RELIABLE, pitchchange);
+	SV_StartSound (entity, channel, sample, volume, attenuation, flags & SOUNDFLAG_RELIABLE, pitchchange);
 }
 
 /*
