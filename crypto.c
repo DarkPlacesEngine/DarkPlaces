@@ -1040,7 +1040,7 @@ void Crypto_Init(void)
 		return;
 	}
 
-	Crypto_Rijndael_OpenLibrary(); // if this fails, it's uncritical
+	(void) Crypto_Rijndael_OpenLibrary(); // if this fails, it's uncritical
 
 	Crypto_InitHostKeys();
 }
