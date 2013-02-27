@@ -174,7 +174,9 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	float 				volume;
 	float				attenuation;
 	float pitchchange;
+	/*
 	int flags;
+	*/
 	vec3_t				org;
 
 	VM_SAFEPARMCOUNTRANGE(5, 7, VM_CL_sound);
@@ -203,10 +205,12 @@ static void VM_CL_sound (prvm_prog_t *prog)
 		pitchchange = PRVM_G_FLOAT(OFS_PARM5);
 	// ignoring prog->argc < 7 for now (no flags supported yet)
 
+	/*
 	if (prog->argc < 7)
 		flags = 0;
 	else
 		flags = PRVM_G_FLOAT(OFS_PARM6);
+	*/
 
 	channel = CHAN_USER2ENGINE(channel);
 
