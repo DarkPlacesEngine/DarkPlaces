@@ -1677,7 +1677,7 @@ static void S_PlaySfxOnChannel (sfx_t *sfx, channel_t *target_chan, unsigned int
 int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed)
 {
 	channel_t *target_chan, *check, *ch;
-	int		ch_idx, startpos;
+	int		ch_idx, startpos, i;
 
 	if (snd_renderbuffer == NULL || sfx == NULL || nosound.integer)
 		return -1;
@@ -1693,6 +1693,9 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 			{
 				S_SetChannelVolume(ch_idx, fvol);
 				S_SetChannelSpeed(ch_idx, fspeed);
+				for(i = 1; i > 0 && (i <= flags || i <= (int) channels[ch_idx].flags); i <<= 1)
+					if((flags ^ channels[ch_idx].flags) & i)
+						S_SetChannelFlag(ch_idx, i, flags & i);
 				ch->distfade = attenuation / snd_soundradius.value;
 				SND_Spatialize(ch, false);
 				return ch_idx;
