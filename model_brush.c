@@ -2769,7 +2769,7 @@ static void Mod_Q1BSP_LoadNodes(sizebuf_t *sb)
 {
 	int			i, j, count, p, child[2];
 	mnode_t 	*out;
-	size_t structsize = loadmodel->brush.isbsp2 ? 44 : 24;
+	size_t structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 24);
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadNodes: funny lump size in %s",loadmodel->name);
@@ -2786,7 +2786,20 @@ static void Mod_Q1BSP_LoadNodes(sizebuf_t *sb)
 		p = MSG_ReadLittleLong(sb);
 		out->plane = loadmodel->brush.data_planes + p;
 
-		if (loadmodel->brush.isbsp2)
+		if (loadmodel->brush.isbsp2rmqe)
+		{
+			child[0] = MSG_ReadLittleLong(sb);
+			child[1] = MSG_ReadLittleLong(sb);
+			out->mins[0] = MSG_ReadLittleShort(sb);
+			out->mins[1] = MSG_ReadLittleShort(sb);
+			out->mins[2] = MSG_ReadLittleShort(sb);
+			out->maxs[0] = MSG_ReadLittleShort(sb);
+			out->maxs[1] = MSG_ReadLittleShort(sb);
+			out->maxs[2] = MSG_ReadLittleShort(sb);
+			out->firstsurface = MSG_ReadLittleLong(sb);
+			out->numsurfaces = MSG_ReadLittleLong(sb);
+		}
+		else if (loadmodel->brush.isbsp2)
 		{
 			child[0] = MSG_ReadLittleLong(sb);
 			child[1] = MSG_ReadLittleLong(sb);
@@ -2860,7 +2873,7 @@ static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
 {
 	mleaf_t *out;
 	int i, j, count, p, firstmarksurface, nummarksurfaces;
-	size_t structsize = loadmodel->brush.isbsp2 ? 44 : 28;
+	size_t structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 28);
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
@@ -2894,7 +2907,19 @@ static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
 				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
 		}
 
-		if (loadmodel->brush.isbsp2)
+		if (loadmodel->brush.isbsp2rmqe)
+		{
+			out->mins[0] = MSG_ReadLittleShort(sb);
+			out->mins[1] = MSG_ReadLittleShort(sb);
+			out->mins[2] = MSG_ReadLittleShort(sb);
+			out->maxs[0] = MSG_ReadLittleShort(sb);
+			out->maxs[1] = MSG_ReadLittleShort(sb);
+			out->maxs[2] = MSG_ReadLittleShort(sb);
+	
+			firstmarksurface = MSG_ReadLittleLong(sb);
+			nummarksurfaces = MSG_ReadLittleLong(sb);
+		}
+		else if (loadmodel->brush.isbsp2)
 		{
 			out->mins[0] = MSG_ReadLittleFloat(sb);
 			out->mins[1] = MSG_ReadLittleFloat(sb);
@@ -3757,13 +3782,18 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->brush.ishlbsp = true;
 		mod->modeldatatypestring = "HLBSP";
 		break;
+	case ('2' + 'P' * 256 + 'S' * 65536 + 'B' * 16777216):
+		mod->brush.isbsp2 = true;
+		mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
+		mod->modeldatatypestring = "Q1BSP2rmqe";
+		break;
 	case ('B' + 'S' * 256 + 'P' * 65536 + '2' * 16777216):
 		mod->brush.isbsp2 = true;
 		mod->modeldatatypestring = "Q1BSP2";
 		break;
 	default:
 		mod->modeldatatypestring = "Unknown BSP";
-		Host_Error("Mod_Q1BSP_Load: %s has wrong version number %i: supported versions are 29 (Quake), 30 (Half-Life), \"BSP2\"", mod->name, i);
+		Host_Error("Mod_Q1BSP_Load: %s has wrong version number %i: supported versions are 29 (Quake), 30 (Half-Life), \"BSP2\" or \"2PSB\" (rmqe)", mod->name, i);
 		return;
 	}
 
