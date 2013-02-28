@@ -1423,10 +1423,7 @@ void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relative
 		--modelsurfacelistindex;
 		GL_CullFace(rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE ? GL_NONE : r_refdef.view.cullface_back);
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, batchnumsurfaces, batchsurfacelist);
-		if (rsurface.batchvertex3fbuffer)
-			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
-		else
-			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer);
+		R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 		RSurf_DrawBatch();
 	}
 	R_FrameData_ReturnToMark();
