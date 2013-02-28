@@ -175,9 +175,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	float				attenuation;
 	float pitchchange;
 	float				startposition;
-	/*
 	int flags;
-	*/
 	vec3_t				org;
 
 	VM_SAFEPARMCOUNTRANGE(5, 7, VM_CL_sound);
@@ -204,14 +202,11 @@ static void VM_CL_sound (prvm_prog_t *prog)
 		pitchchange = 0;
 	else
 		pitchchange = PRVM_G_FLOAT(OFS_PARM5);
-	// ignoring prog->argc < 7 for now (no flags supported yet)
 
-	/*
 	if (prog->argc < 7)
 		flags = 0;
 	else
 		flags = PRVM_G_FLOAT(OFS_PARM6);
-	*/
 
 	// sound_starttime exists instead of sound_startposition because in a
 	// networking sense you might not know when something is being received,
@@ -235,7 +230,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	// We want to, in a later extension, expose more flags.
 
 	CL_VM_GetEntitySoundOrigin(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), org);
-	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, startposition, 0, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
+	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, startposition, flags, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
 }
 
 // #483 void(vector origin, string sample, float volume, float attenuation) pointsound
