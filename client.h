@@ -539,14 +539,22 @@ typedef struct entity_render_s
 
 	// animation cache (pointers allocated using R_FrameData_Alloc)
 	// ONLY valid during R_RenderView!  may be NULL (not cached)
-	float *animcache_vertex3f;
-	float *animcache_normal3f;
-	float *animcache_svector3f;
-	float *animcache_tvector3f;
+	float          *animcache_vertex3f;
+	r_meshbuffer_t *animcache_vertex3f_vertexbuffer;
+	int             animcache_vertex3f_bufferoffset;
+	float          *animcache_normal3f;
+	r_meshbuffer_t *animcache_normal3f_vertexbuffer;
+	int             animcache_normal3f_bufferoffset;
+	float          *animcache_svector3f;
+	r_meshbuffer_t *animcache_svector3f_vertexbuffer;
+	int             animcache_svector3f_bufferoffset;
+	float          *animcache_tvector3f;
+	r_meshbuffer_t *animcache_tvector3f_vertexbuffer;
+	int             animcache_tvector3f_bufferoffset;
 	// interleaved arrays for rendering and dynamic vertex buffers for them
-	r_meshbuffer_t *animcache_vertex3fbuffer;
 	r_vertexmesh_t *animcache_vertexmesh;
-	r_meshbuffer_t *animcache_vertexmeshbuffer;
+	r_meshbuffer_t *animcache_vertexmesh_vertexbuffer;
+	int             animcache_vertexmesh_bufferoffset;
 	// gpu-skinning shader needs transforms in a certain format, we have to
 	// upload this to a uniform buffer for the shader to use, and also keep a
 	// backup copy in system memory for the dynamic batch fallback code

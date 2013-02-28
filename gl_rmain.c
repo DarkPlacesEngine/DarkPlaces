@@ -230,6 +230,7 @@ cvar_t r_test = {0, "r_test", "0", "internal development use only, leave it alon
 cvar_t r_batch_multidraw = {CVAR_SAVE, "r_batch_multidraw", "1", "issue multiple glDrawElements calls when rendering a batch of surfaces with the same texture (otherwise the index data is copied to make it one draw)"};
 cvar_t r_batch_multidraw_mintriangles = {CVAR_SAVE, "r_batch_multidraw_mintriangles", "0", "minimum number of triangles to activate multidraw path (copying small groups of triangles may be faster)"};
 cvar_t r_batch_debugdynamicvertexpath = {CVAR_SAVE, "r_batch_debugdynamicvertexpath", "0", "force the dynamic batching code path for debugging purposes"};
+cvar_t r_batch_dynamicbuffer = {CVAR_SAVE, "r_batch_dynamicbuffer", "0", "use vertex/index buffers for drawing dynamic and copytriangles batches"};
 
 cvar_t r_glsl_saturation = {CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
 cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
@@ -2548,7 +2549,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
 		RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
-		R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
+		R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmesh_vertexbuffer, rsurface.batchvertexmesh_bufferoffset);
 		R_SetupShader_SetPermutationHLSL(mode, permutation);
 		Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);hlslPSSetParameter16f(D3DPSREGISTER_ModelToReflectCube, m16f);
 		if (mode == SHADERMODE_LIGHTSOURCE)
@@ -2715,7 +2716,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		else
 		{
 			RSurf_PrepareVerticesForBatch(BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_VERTEXMESH_VERTEXCOLOR : 0) | BATCHNEED_VERTEXMESH_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_VERTEXMESH_LIGHTMAP : 0) | (rsurface.entityskeletaltransform3x4 ? BATCHNEED_VERTEXMESH_SKELETAL : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
-			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
+			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmesh_vertexbuffer, rsurface.batchvertexmesh_bufferoffset);
 		}
 		// this has to be after RSurf_PrepareVerticesForBatch
 		if (rsurface.batchskeletaltransform3x4buffer)
@@ -4353,6 +4354,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_framedatasize);
 	for (i = 0;i < R_BUFFERDATA_COUNT;i++)
 		Cvar_RegisterVariable(&r_bufferdatasize[i]);
+	Cvar_RegisterVariable(&r_batch_dynamicbuffer);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
@@ -4785,15 +4787,23 @@ void R_AnimCache_ClearCache(void)
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		ent = r_refdef.scene.entities[i];
-		ent->animcache_vertex3f = NULL; // for shadow geometry
-		ent->animcache_normal3f = NULL; // for lit geometry
-		ent->animcache_svector3f = NULL; // for lit geometry
-		ent->animcache_tvector3f = NULL; // for lit geometry
-		ent->animcache_vertexmesh = NULL; // interleaved vertex arrays for D3D
-		ent->animcache_vertex3fbuffer = NULL; // vertex buffer for D3D
-		ent->animcache_vertexmeshbuffer = NULL; // vertex buffer for D3D
-		ent->animcache_skeletaltransform3x4 = NULL; // for dynamic batch fallback with r_glsl_skeletal
-		ent->animcache_skeletaltransform3x4buffer = NULL; // for r_glsl_skeletal
+		ent->animcache_vertex3f = NULL;
+		ent->animcache_vertex3f_vertexbuffer = NULL;
+		ent->animcache_vertex3f_bufferoffset = 0;
+		ent->animcache_normal3f = NULL;
+		ent->animcache_normal3f_vertexbuffer = NULL;
+		ent->animcache_normal3f_bufferoffset = 0;
+		ent->animcache_svector3f = NULL;
+		ent->animcache_svector3f_vertexbuffer = NULL;
+		ent->animcache_svector3f_bufferoffset = 0;
+		ent->animcache_tvector3f = NULL;
+		ent->animcache_tvector3f_vertexbuffer = NULL;
+		ent->animcache_tvector3f_bufferoffset = 0;
+		ent->animcache_vertexmesh = NULL;
+		ent->animcache_vertexmesh_vertexbuffer = NULL;
+		ent->animcache_vertexmesh_bufferoffset = 0;
+		ent->animcache_skeletaltransform3x4 = NULL;
+		ent->animcache_skeletaltransform3x4buffer = NULL;
 		ent->animcache_skeletaltransform3x4offset = 0;
 		ent->animcache_skeletaltransform3x4size = 0;
 	}
@@ -4809,13 +4819,13 @@ static void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numver
 
 	if (!ent->animcache_vertexmesh && ent->animcache_normal3f)
 		ent->animcache_vertexmesh = (r_vertexmesh_t *)R_FrameData_Alloc(sizeof(r_vertexmesh_t)*numvertices);
-	// TODO: upload vertex3f buffer?
+	// TODO: upload vertexbuffer?
 	if (ent->animcache_vertexmesh)
 	{
 		r_refdef.stats[r_stat_animcache_vertexmesh_count] += 1;
 		r_refdef.stats[r_stat_animcache_vertexmesh_vertices] += numvertices;
 		r_refdef.stats[r_stat_animcache_vertexmesh_maxvertices] = max(r_refdef.stats[r_stat_animcache_vertexmesh_maxvertices], numvertices);
-		memcpy(ent->animcache_vertexmesh, ent->model->surfmesh.vertexmesh, sizeof(r_vertexmesh_t)*numvertices);
+		memcpy(ent->animcache_vertexmesh, ent->model->surfmesh.data_vertexmesh, sizeof(r_vertexmesh_t)*numvertices);
 		for (i = 0;i < numvertices;i++)
 			memcpy(ent->animcache_vertexmesh[i].vertex3f, ent->animcache_vertex3f + 3*i, sizeof(float[3]));
 		if (ent->animcache_svector3f)
@@ -4827,7 +4837,6 @@ static void R_AnimCache_UpdateEntityMeshBuffers(entity_render_t *ent, int numver
 		if (ent->animcache_normal3f)
 			for (i = 0;i < numvertices;i++)
 				memcpy(ent->animcache_vertexmesh[i].normal3f, ent->animcache_normal3f + 3*i, sizeof(float[3]));
-		// TODO: upload vertexmeshbuffer?
 	}
 }
 
@@ -8482,9 +8491,9 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.modelnumvertices = model->surfmesh.num_vertices;
 	rsurface.modelnumtriangles = model->surfmesh.num_triangles;
 	rsurface.modelsurfaces = model->data_surfaces;
-	rsurface.modelvertexmesh = model->surfmesh.vertexmesh;
-	rsurface.modelvertexmeshbuffer = model->surfmesh.vertexmeshbuffer;
-	rsurface.modelvertex3fbuffer = model->surfmesh.vertex3fbuffer;
+	rsurface.modelvertexmesh = model->surfmesh.data_vertexmesh;
+	rsurface.modelvertexmesh_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+	rsurface.modelvertexmesh_bufferoffset = model->surfmesh.vbooffset_vertex3f;
 	rsurface.modelgeneratedvertex = false;
 	rsurface.batchgeneratedvertex = false;
 	rsurface.batchfirstvertex = 0;
@@ -8519,8 +8528,8 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
 	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
-	rsurface.batchvertexmeshbuffer = NULL;
-	rsurface.batchvertex3fbuffer = NULL;
+	rsurface.batchvertexmesh_vertexbuffer = NULL;
+	rsurface.batchvertexmesh_bufferoffset = 0;
 	rsurface.batchelement3i = NULL;
 	rsurface.batchelement3i_indexbuffer = NULL;
 	rsurface.batchelement3i_bufferoffset = 0;
@@ -8588,12 +8597,20 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			r_refdef.stats[r_stat_batch_entitycache_vertices] += model->surfmesh.num_vertices;
 			r_refdef.stats[r_stat_batch_entitycache_triangles] += model->surfmesh.num_triangles;
 			rsurface.modelvertex3f = ent->animcache_vertex3f;
+			rsurface.modelvertex3f_vertexbuffer = ent->animcache_vertex3f_vertexbuffer;
+			rsurface.modelvertex3f_bufferoffset = ent->animcache_vertex3f_bufferoffset;
 			rsurface.modelsvector3f = wanttangents ? ent->animcache_svector3f : NULL;
+			rsurface.modelsvector3f_vertexbuffer = wanttangents ? ent->animcache_svector3f_vertexbuffer : NULL;
+			rsurface.modelsvector3f_bufferoffset = wanttangents ? ent->animcache_svector3f_bufferoffset : 0;
 			rsurface.modeltvector3f = wanttangents ? ent->animcache_tvector3f : NULL;
+			rsurface.modeltvector3f_vertexbuffer = wanttangents ? ent->animcache_tvector3f_vertexbuffer : NULL;
+			rsurface.modeltvector3f_bufferoffset = wanttangents ? ent->animcache_tvector3f_bufferoffset : 0;
 			rsurface.modelnormal3f = wantnormals ? ent->animcache_normal3f : NULL;
+			rsurface.modelnormal3f_vertexbuffer = wantnormals ? ent->animcache_normal3f_vertexbuffer : NULL;
+			rsurface.modelnormal3f_bufferoffset = wantnormals ? ent->animcache_normal3f_bufferoffset : 0;
 			rsurface.modelvertexmesh = ent->animcache_vertexmesh;
-			rsurface.modelvertexmeshbuffer = ent->animcache_vertexmeshbuffer;
-			rsurface.modelvertex3fbuffer = ent->animcache_vertex3fbuffer;
+			rsurface.modelvertexmesh_vertexbuffer = ent->animcache_vertexmesh_vertexbuffer;
+			rsurface.modelvertexmesh_bufferoffset = ent->animcache_vertexmesh_bufferoffset;
 		}
 		else if (wanttangents)
 		{
@@ -8607,8 +8624,18 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelnormal3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.modelvertex3f, rsurface.modelnormal3f, rsurface.modelsvector3f, rsurface.modeltvector3f);
 			rsurface.modelvertexmesh = NULL;
-			rsurface.modelvertexmeshbuffer = NULL;
-			rsurface.modelvertex3fbuffer = NULL;
+			rsurface.modelvertexmesh_vertexbuffer = NULL;
+			rsurface.modelvertexmesh_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = NULL;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = 0;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelsvector3f_vertexbuffer = 0;
+			rsurface.modelsvector3f_bufferoffset = 0;
+			rsurface.modeltvector3f_vertexbuffer = 0;
+			rsurface.modeltvector3f_bufferoffset = 0;
+			rsurface.modelnormal3f_vertexbuffer = 0;
+			rsurface.modelnormal3f_bufferoffset = 0;
 		}
 		else if (wantnormals)
 		{
@@ -8622,8 +8649,18 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelnormal3f = (float *)R_FrameData_Alloc(model->surfmesh.num_vertices * sizeof(float[3]));
 			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.modelvertex3f, rsurface.modelnormal3f, NULL, NULL);
 			rsurface.modelvertexmesh = NULL;
-			rsurface.modelvertexmeshbuffer = NULL;
-			rsurface.modelvertex3fbuffer = NULL;
+			rsurface.modelvertexmesh_vertexbuffer = NULL;
+			rsurface.modelvertexmesh_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = NULL;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = 0;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelsvector3f_vertexbuffer = 0;
+			rsurface.modelsvector3f_bufferoffset = 0;
+			rsurface.modeltvector3f_vertexbuffer = 0;
+			rsurface.modeltvector3f_bufferoffset = 0;
+			rsurface.modelnormal3f_vertexbuffer = 0;
+			rsurface.modelnormal3f_bufferoffset = 0;
 		}
 		else
 		{
@@ -8637,17 +8674,19 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 			rsurface.modelnormal3f = NULL;
 			model->AnimateVertices(model, rsurface.frameblend, rsurface.skeleton, rsurface.modelvertex3f, NULL, NULL, NULL);
 			rsurface.modelvertexmesh = NULL;
-			rsurface.modelvertexmeshbuffer = NULL;
-			rsurface.modelvertex3fbuffer = NULL;
+			rsurface.modelvertexmesh_vertexbuffer = NULL;
+			rsurface.modelvertexmesh_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = NULL;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelvertex3f_vertexbuffer = 0;
+			rsurface.modelvertex3f_bufferoffset = 0;
+			rsurface.modelsvector3f_vertexbuffer = 0;
+			rsurface.modelsvector3f_bufferoffset = 0;
+			rsurface.modeltvector3f_vertexbuffer = 0;
+			rsurface.modeltvector3f_bufferoffset = 0;
+			rsurface.modelnormal3f_vertexbuffer = 0;
+			rsurface.modelnormal3f_bufferoffset = 0;
 		}
-		rsurface.modelvertex3f_vertexbuffer = 0;
-		rsurface.modelvertex3f_bufferoffset = 0;
-		rsurface.modelsvector3f_vertexbuffer = 0;
-		rsurface.modelsvector3f_bufferoffset = 0;
-		rsurface.modeltvector3f_vertexbuffer = 0;
-		rsurface.modeltvector3f_bufferoffset = 0;
-		rsurface.modelnormal3f_vertexbuffer = 0;
-		rsurface.modelnormal3f_bufferoffset = 0;
 		rsurface.modelgeneratedvertex = true;
 	}
 	else
@@ -8678,9 +8717,9 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		rsurface.modelnormal3f  = model->surfmesh.data_normal3f;
 		rsurface.modelnormal3f_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
 		rsurface.modelnormal3f_bufferoffset = model->surfmesh.vbooffset_normal3f;
-		rsurface.modelvertexmesh = model->surfmesh.vertexmesh;
-		rsurface.modelvertexmeshbuffer = model->surfmesh.vertexmeshbuffer;
-		rsurface.modelvertex3fbuffer = model->surfmesh.vertex3fbuffer;
+		rsurface.modelvertexmesh = model->surfmesh.data_vertexmesh;
+		rsurface.modelvertexmesh_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
+		rsurface.modelvertexmesh_bufferoffset = model->surfmesh.vbooffset_vertex3f;
 		rsurface.modelgeneratedvertex = false;
 	}
 	rsurface.modellightmapcolor4f  = model->surfmesh.data_lightmapcolor4f;
@@ -8741,8 +8780,8 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
 	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
-	rsurface.batchvertexmeshbuffer = NULL;
-	rsurface.batchvertex3fbuffer = NULL;
+	rsurface.batchvertexmesh_vertexbuffer = NULL;
+	rsurface.batchvertexmesh_bufferoffset = 0;
 	rsurface.batchelement3i = NULL;
 	rsurface.batchelement3i_indexbuffer = NULL;
 	rsurface.batchelement3i_bufferoffset = 0;
@@ -8819,8 +8858,8 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 		rsurface.modelnormal3f = NULL;
 	}
 	rsurface.modelvertexmesh = NULL;
-	rsurface.modelvertexmeshbuffer = NULL;
-	rsurface.modelvertex3fbuffer = NULL;
+	rsurface.modelvertexmesh_vertexbuffer = NULL;
+	rsurface.modelvertexmesh_bufferoffset = 0;
 	rsurface.modelvertex3f_vertexbuffer = 0;
 	rsurface.modelvertex3f_bufferoffset = 0;
 	rsurface.modelsvector3f_vertexbuffer = 0;
@@ -8886,8 +8925,8 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.batchskeletalweight4ub_vertexbuffer = NULL;
 	rsurface.batchskeletalweight4ub_bufferoffset = 0;
 	rsurface.batchvertexmesh = NULL;
-	rsurface.batchvertexmeshbuffer = NULL;
-	rsurface.batchvertex3fbuffer = NULL;
+	rsurface.batchvertexmesh_vertexbuffer = NULL;
+	rsurface.batchvertexmesh_bufferoffset = 0;
 	rsurface.batchelement3i = NULL;
 	rsurface.batchelement3i_indexbuffer = NULL;
 	rsurface.batchelement3i_bufferoffset = 0;
@@ -9223,7 +9262,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// when the model data has no vertex buffer (dynamic mesh), we need to
 	// eliminate gaps
-	if (vid.useinterleavedarrays && !rsurface.modelvertexmeshbuffer)
+	if (vid.useinterleavedarrays && !rsurface.modelvertexmesh_vertexbuffer)
 		batchneed |= BATCHNEED_NOGAPS;
 
 	// the caller can specify BATCHNEED_NOGAPS to force a batch with
@@ -9310,9 +9349,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	rsurface.batchskeletalweight4ub = rsurface.modelskeletalweight4ub;
 	rsurface.batchskeletalweight4ub_vertexbuffer = rsurface.modelskeletalweight4ub_vertexbuffer;
 	rsurface.batchskeletalweight4ub_bufferoffset = rsurface.modelskeletalweight4ub_bufferoffset;
-	rsurface.batchvertex3fbuffer = rsurface.modelvertex3fbuffer;
 	rsurface.batchvertexmesh = rsurface.modelvertexmesh;
-	rsurface.batchvertexmeshbuffer = rsurface.modelvertexmeshbuffer;
+	rsurface.batchvertexmesh_vertexbuffer = rsurface.modelvertexmesh_vertexbuffer;
+	rsurface.batchvertexmesh_bufferoffset = rsurface.modelvertexmesh_bufferoffset;
 	rsurface.batchelement3i = rsurface.modelelement3i;
 	rsurface.batchelement3i_indexbuffer = rsurface.modelelement3i_indexbuffer;
 	rsurface.batchelement3i_bufferoffset = rsurface.modelelement3i_bufferoffset;
@@ -9385,6 +9424,14 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				for (i = 0;i < numtriangles*3;i++)
 					rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 			}
+			// upload buffer data for the copytriangles batch
+			if (vid.forcevbo || (r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object))
+			{
+				if (rsurface.batchelement3s)
+					rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset, !vid.forcevbo);
+				else if (rsurface.batchelement3i)
+					rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset, !vid.forcevbo);
+			}
 		}
 		else
 		{
@@ -9412,9 +9459,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// need actual vertex positions and normals
 	//if (dynamicvertex)
 	{
-		rsurface.batchvertex3fbuffer = NULL;
 		rsurface.batchvertexmesh = NULL;
-		rsurface.batchvertexmeshbuffer = NULL;
+		rsurface.batchvertexmesh_vertexbuffer = NULL;
+		rsurface.batchvertexmesh_bufferoffset = 0;
 		rsurface.batchvertex3f = NULL;
 		rsurface.batchvertex3f_vertexbuffer = NULL;
 		rsurface.batchvertex3f_bufferoffset = 0;
@@ -10117,7 +10164,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	{
 		// convert the modified arrays to vertex structs
 //		rsurface.batchvertexmesh = R_FrameData_Alloc(batchnumvertices * sizeof(r_vertexmesh_t));
-//		rsurface.batchvertexmeshbuffer = NULL;
+//		rsurface.batchvertexmesh_vertexbuffer = NULL;
+//		rsurface.batchvertexmesh_bufferoffset = 0;
 		if (batchneed & BATCHNEED_VERTEXMESH_VERTEX)
 			for (j = 0, vertexmesh = rsurface.batchvertexmesh;j < batchnumvertices;j++, vertexmesh++)
 				VectorCopy(rsurface.batchvertex3f + 3*j, vertexmesh->vertex3f);
@@ -10149,6 +10197,38 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 				Vector4Copy(rsurface.batchskeletalweight4ub + 4*j, vertexmesh->skeletalweight4ub);
 			}
 		}
+	}
+
+	// upload buffer data for the dynamic batch
+	if (vid.forcevbo || (r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object))
+	{
+		if (rsurface.batchvertexmesh)
+			rsurface.batchvertexmesh_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(r_vertexmesh_t), rsurface.batchvertexmesh, R_BUFFERDATA_VERTEX, &rsurface.batchvertexmesh_bufferoffset, !vid.forcevbo);
+		else
+		{
+			if (rsurface.batchvertex3f)
+				rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchsvector3f)
+				rsurface.batchsvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchsvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchsvector3f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchtvector3f)
+				rsurface.batchtvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchtvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchtvector3f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchnormal3f)
+				rsurface.batchnormal3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f, R_BUFFERDATA_VERTEX, &rsurface.batchnormal3f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchlightmapcolor4f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
+				rsurface.batchlightmapcolor4f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[4]), rsurface.batchlightmapcolor4f, R_BUFFERDATA_VERTEX, &rsurface.batchlightmapcolor4f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchtexcoordtexture2f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
+				rsurface.batchtexcoordtexture2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordtexture2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordtexture2f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchtexcoordlightmap2f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
+				rsurface.batchtexcoordlightmap2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordlightmap2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordlightmap2f_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchskeletalindex4ub)
+				rsurface.batchskeletalindex4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalindex4ub_bufferoffset, !vid.forcevbo);
+			if (rsurface.batchskeletalweight4ub)
+				rsurface.batchskeletalweight4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalweight4ub_bufferoffset, !vid.forcevbo);
+		}
+		if (rsurface.batchelement3s)
+			rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset, !vid.forcevbo);
+		else if (rsurface.batchelement3i)
+			rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset, !vid.forcevbo);
 	}
 }
 
@@ -10578,10 +10658,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 			// anything despite that colormask...
 			GL_BlendFunc(GL_ZERO, GL_ONE);
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
-			if (rsurface.batchvertex3fbuffer)
-				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
-			else
-				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer);
+			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 		}
 		else
 		{
@@ -11195,10 +11272,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 			RSurf_SetupDepthAndCulling();
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_SetupShader_DepthOrShadow(false, false, !!rsurface.batchskeletaltransform3x4);
-			if (rsurface.batchvertex3fbuffer)
-				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
-			else
-				R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer);
+			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 			RSurf_DrawBatch();
 		}
 		if (setup)
@@ -11290,10 +11364,7 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 		return;
 	RSurf_SetupDepthAndCulling();
 	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
-	if (rsurface.batchvertex3fbuffer)
-		R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3fbuffer);
-	else
-		R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer);
+	R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 	R_SetupShader_DepthOrShadow(false, false, !!rsurface.batchskeletaltransform3x4);
 	RSurf_DrawBatch();
 }

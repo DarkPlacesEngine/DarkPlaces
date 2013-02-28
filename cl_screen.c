@@ -314,7 +314,7 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 	}
 	if (numlines > 0)
 	{
-		R_Mesh_PrepareVertices_Generic(numlines*2, vertex, NULL);
+		R_Mesh_PrepareVertices_Generic(numlines*2, vertex, NULL, 0);
 		DrawQ_Lines(0.0f, numlines, 0, false);
 	}
 	x = graphx;
