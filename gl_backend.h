@@ -77,17 +77,17 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer);
 void GL_Mesh_ListVBOs(qboolean printeach);
 
-void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *buffer);
+void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *buffer, int bufferoffset);
 
 r_vertexgeneric_t *R_Mesh_PrepareVertices_Generic_Lock(int numvertices);
 qboolean R_Mesh_PrepareVertices_Generic_Unlock(void);
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f);
-void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *vertex, const r_meshbuffer_t *vertexbuffer);
+void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *vertex, const r_meshbuffer_t *vertexbuffer, int bufferoffset);
 
 r_vertexmesh_t *R_Mesh_PrepareVertices_Mesh_Lock(int numvertices);
 qboolean R_Mesh_PrepareVertices_Mesh_Unlock(void); // if this returns false, you need to prepare the mesh again!
 void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f);
-void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, const r_meshbuffer_t *buffer);
+void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, const r_meshbuffer_t *buffer, int bufferoffset);
 
 // sets up the requested vertex transform matrix
 void R_EntityMatrix(const matrix4x4_t *matrix);

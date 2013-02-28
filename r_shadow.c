@@ -1384,7 +1384,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_VISIBLEVOLUMES)
 	{
 		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL);
+		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL, 0);
 		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
 	}
 	else
@@ -1418,7 +1418,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 			GL_CullFace(r_refdef.view.cullface_back);
 			R_SetStencil(true, 255, GL_KEEP, GL_INCR, GL_KEEP, GL_ALWAYS, 128, 255);
 		}
-		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL);
+		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL, 0);
 		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
 	}
 }
@@ -2321,7 +2321,7 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	GL_DepthTest(true);
 	GL_DepthFunc(GL_GREATER);
 	GL_CullFace(r_refdef.view.cullface_back);
-	R_Mesh_PrepareVertices_Vertex3f(8, vertex3f, NULL);
+	R_Mesh_PrepareVertices_Vertex3f(8, vertex3f, NULL, 0);
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
 }
 
@@ -3765,10 +3765,7 @@ static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist
 			if (!mesh->sidetotals[r_shadow_shadowmapside])
 				continue;
 			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->sidetotals[r_shadow_shadowmapside];
-			if (mesh->vertex3fbuffer)
-				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vertex3fbuffer);
-			else
-				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer);
+			R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer, mesh->vbooffset_vertex3f);
 			R_Mesh_Draw(0, mesh->numverts, mesh->sideoffsets[r_shadow_shadowmapside], mesh->sidetotals[r_shadow_shadowmapside], mesh->element3i, mesh->element3i_indexbuffer, mesh->element3i_bufferoffset, mesh->element3s, mesh->element3s_indexbuffer, mesh->element3s_bufferoffset);
 		}
 		CHECKGLERROR
@@ -3805,10 +3802,7 @@ static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacel
 		for (;mesh;mesh = mesh->next)
 		{
 			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->numtriangles;
-			if (mesh->vertex3fbuffer)
-				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vertex3fbuffer);
-			else
-				R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer);
+			R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer, mesh->vbooffset_vertex3f);
 			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
 			{
 				// increment stencil if frontface is infront of depthbuffer
@@ -5111,13 +5105,13 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
 			GL_DepthFunc(GL_ALWAYS);
 			R_CalcSprite_Vertex3f(vertex3f, centerorigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
-			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL);
+			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL, 0);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 			GL_DepthFunc(GL_LEQUAL);
 			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
 			R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
-			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL);
+			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL, 0);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 			CHECKGLERROR
