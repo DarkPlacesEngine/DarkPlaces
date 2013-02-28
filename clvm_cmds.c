@@ -225,10 +225,6 @@ static void VM_CL_sound (prvm_prog_t *prog)
 		return;
 	}
 
-	// TODO currently the only flag defined in the interface is
-	// SOUNDFLAG_RELIABLE. This one makes no sense at all from CSQC.
-	// We want to, in a later extension, expose more flags.
-
 	CL_VM_GetEntitySoundOrigin(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), org);
 	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, startposition, flags, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
 }
