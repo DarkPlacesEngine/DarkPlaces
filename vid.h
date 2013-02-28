@@ -45,7 +45,8 @@ renderpath_t;
 typedef struct viddef_support_s
 {
 	qboolean gl20shaders;
-	qboolean gl20shaders130;
+	qboolean gl20shaders130; // indicates glBindFragDataLocation is available
+	qboolean glshaderversion; // typical values: 100 110 120 130 140 ...
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
@@ -59,6 +60,7 @@ typedef struct viddef_support_s
 	qboolean arb_texture_gather;
 	qboolean arb_texture_non_power_of_two;
 	qboolean arb_vertex_buffer_object;
+	qboolean arb_uniform_buffer_object;
 	qboolean ati_separate_stencil;
 	qboolean ext_blend_minmax;
 	qboolean ext_blend_subtract;

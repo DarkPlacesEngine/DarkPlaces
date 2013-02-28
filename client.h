@@ -70,6 +70,14 @@ typedef enum r_stat_e
 	r_stat_vertexbufferuploadsize,
 	r_stat_framedatacurrent,
 	r_stat_framedatasize,
+	r_stat_bufferdatacurrent_vertex, // R_BUFFERDATA_ types are added to this index
+	r_stat_bufferdatacurrent_index16,
+	r_stat_bufferdatacurrent_index32,
+	r_stat_bufferdatacurrent_uniform,
+	r_stat_bufferdatasize_vertex, // R_BUFFERDATA_ types are added to this index
+	r_stat_bufferdatasize_index16,
+	r_stat_bufferdatasize_index32,
+	r_stat_bufferdatasize_uniform,
 	r_stat_animcache_vertexmesh_count,
 	r_stat_animcache_vertexmesh_vertices,
 	r_stat_animcache_vertexmesh_maxvertices,
@@ -539,9 +547,14 @@ typedef struct entity_render_s
 	r_meshbuffer_t *animcache_vertex3fbuffer;
 	r_vertexmesh_t *animcache_vertexmesh;
 	r_meshbuffer_t *animcache_vertexmeshbuffer;
-	// gpu-skinning shader needs transforms in a certain format
+	// gpu-skinning shader needs transforms in a certain format, we have to
+	// upload this to a uniform buffer for the shader to use, and also keep a
+	// backup copy in system memory for the dynamic batch fallback code
 	// if this is not NULL, the other animcache variables are NULL
 	float *animcache_skeletaltransform3x4;
+	r_meshbuffer_t *animcache_skeletaltransform3x4buffer;
+	int animcache_skeletaltransform3x4offset;
+	int animcache_skeletaltransform3x4size;
 
 	// current lighting from map (updated ONLY by client code, not renderer)
 	vec3_t modellight_ambient;

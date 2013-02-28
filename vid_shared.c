@@ -507,6 +507,17 @@ void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *param
 void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
 
 void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
+
+void (GLAPIENTRY *qglGetUniformIndices)(GLuint program, GLsizei uniformCount, const GLchar** uniformNames, GLuint* uniformIndices);
+void (GLAPIENTRY *qglGetActiveUniformsiv)(GLuint program, GLsizei uniformCount, const GLuint* uniformIndices, GLenum pname, GLint* params);
+void (GLAPIENTRY *qglGetActiveUniformName)(GLuint program, GLuint uniformIndex, GLsizei bufSize, GLsizei* length, GLchar* uniformName);
+GLuint (GLAPIENTRY *qglGetUniformBlockIndex)(GLuint program, const GLchar* uniformBlockName);
+void (GLAPIENTRY *qglGetActiveUniformBlockiv)(GLuint program, GLuint uniformBlockIndex, GLenum pname,  GLint* params);
+void (GLAPIENTRY *qglGetActiveUniformBlockName)(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei* length, GLchar* uniformBlockName);
+void (GLAPIENTRY *qglBindBufferRange)(GLenum target, GLuint index, GLuint buffer, GLintptrARB offset, GLsizeiptrARB size);
+void (GLAPIENTRY *qglBindBufferBase)(GLenum target, GLuint index, GLuint buffer);
+void (GLAPIENTRY *qglGetIntegeri_v)(GLenum target, GLuint index, GLint* data);
+void (GLAPIENTRY *qglUniformBlockBinding)(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
 #endif
 
 #if _MSC_VER >= 1400
@@ -865,6 +876,21 @@ static dllfunction_t vbofuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t ubofuncs[] =
+{
+	{"glGetUniformIndices"        , (void **) &qglGetUniformIndices},
+	{"glGetActiveUniformsiv"      , (void **) &qglGetActiveUniformsiv},
+	{"glGetActiveUniformName"     , (void **) &qglGetActiveUniformName},
+	{"glGetUniformBlockIndex"     , (void **) &qglGetUniformBlockIndex},
+	{"glGetActiveUniformBlockiv"  , (void **) &qglGetActiveUniformBlockiv},
+	{"glGetActiveUniformBlockName", (void **) &qglGetActiveUniformBlockName},
+	{"glBindBufferRange"          , (void **) &qglBindBufferRange},
+	{"glBindBufferBase"           , (void **) &qglBindBufferBase},
+	{"glGetIntegeri_v"            , (void **) &qglGetIntegeri_v},
+	{"glUniformBlockBinding"      , (void **) &qglUniformBlockBinding},
+	{NULL, NULL}
+};
+
 static dllfunction_t arbfbofuncs[] =
 {
 	{"glIsRenderbuffer"                      , (void **) &qglIsRenderbuffer},
@@ -997,18 +1023,18 @@ void VID_CheckExtensions(void)
 
 	if (vid.support.gl20shaders)
 	{
-		// this one is purely optional, needed for GLSL 1.3 support (#version 130), so we don't even check the return value of GL_CheckExtension
-		vid.support.gl20shaders130 = GL_CheckExtension("glshaders130", glsl130funcs, "-noglsl130", true);
-		if(vid.support.gl20shaders130)
-		{
-			char *s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
-			if(!s || atof(s) < 1.30 - 0.00001)
-				vid.support.gl20shaders130 = 0;
-		}
-		if(vid.support.gl20shaders130)
-			Con_DPrintf("Using GLSL 1.30\n");
-		else
-			Con_DPrintf("Using GLSL 1.00\n");
+		char *s;
+		// detect what GLSL version is available, to enable features like r_glsl_skeletal and higher quality reliefmapping
+		vid.support.glshaderversion = 100;
+		s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
+		if (s)
+			vid.support.glshaderversion = (int)(atof(s) * 100.0f + 0.5f);
+		if (vid.support.glshaderversion < 100)
+			vid.support.glshaderversion = 100;
+		Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
+		// get the glBindFragDataLocation function
+		if (vid.support.glshaderversion >= 130)
+			vid.support.gl20shaders130 = GL_CheckExtension("glshaders130", glsl130funcs, "-noglsl130", true);
 	}
 
 	// GL drivers generally prefer GL_BGRA
@@ -1029,6 +1055,7 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 #endif
 	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
+	vid.support.arb_uniform_buffer_object = GL_CheckExtension("GL_ARB_uniform_buffer_object", ubofuncs, "-noubo", false);
 	vid.support.ati_separate_stencil = GL_CheckExtension("separatestencil", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);

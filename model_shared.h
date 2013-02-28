@@ -131,6 +131,7 @@ typedef struct r_meshbuffer_s
 	void *devicebuffer; // Direct3D
 	size_t size;
 	qboolean isindexbuffer;
+	qboolean isuniformbuffer;
 	qboolean isdynamic;
 	qboolean isindex16;
 	char name[MAX_QPATH];
