@@ -743,7 +743,9 @@ typedef struct model_brush_s
 {
 	// true if this model is a HalfLife .bsp file
 	qboolean ishlbsp;
-	// true if this model is a BSP2 .bsp file (expanded 32bit bsp format for DarkPlaces, RMQ, others?)
+	// true if this model is a BSP2rmqe .bsp file (expanded 32bit bsp format for rmqe)
+	qboolean isbsp2rmqe;
+	// true if this model is a BSP2 .bsp file (expanded 32bit bsp format for DarkPlaces, others?)
 	qboolean isbsp2;
 	// string of entity definitions (.map format)
 	char *entities;
