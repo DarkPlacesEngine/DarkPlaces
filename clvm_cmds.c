@@ -165,7 +165,7 @@ static void VM_CL_setsize (prvm_prog_t *prog)
 	CL_LinkEdict(e);
 }
 
-// #8 void(entity e, float chan, string samp, float volume, float atten) sound
+// #8 void(entity e, float chan, string samp, float volume, float atten[, float pitchchange[, float flags]]) sound
 static void VM_CL_sound (prvm_prog_t *prog)
 {
 	const char			*sample;
@@ -174,6 +174,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	float 				volume;
 	float				attenuation;
 	float pitchchange;
+	float				startposition;
 	/*
 	int flags;
 	*/
@@ -212,6 +213,15 @@ static void VM_CL_sound (prvm_prog_t *prog)
 		flags = PRVM_G_FLOAT(OFS_PARM6);
 	*/
 
+	// sound_starttime exists instead of sound_startposition because in a
+	// networking sense you might not know when something is being received,
+	// so making sounds match up in sync would be impossible if relative
+	// position was sent
+	if (PRVM_clientglobalfloat(sound_starttime))
+		startposition = cl.time - PRVM_clientglobalfloat(sound_starttime);
+	else
+		startposition = 0;
+
 	channel = CHAN_USER2ENGINE(channel);
 
 	if (!IS_CHAN(channel))
@@ -225,7 +235,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	// We want to, in a later extension, expose more flags.
 
 	CL_VM_GetEntitySoundOrigin(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), org);
-	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, 0, 0, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
+	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, startposition, 0, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
 }
 
 // #483 void(vector origin, string sample, float volume, float attenuation) pointsound
