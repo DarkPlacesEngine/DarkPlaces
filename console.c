@@ -2039,11 +2039,14 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		const char *data = NULL;
 		char keyname[64];
 		char entfilename[MAX_QPATH];
-		strlcpy(message, "^1**ERROR**^7", sizeof(message));
+		char desc[64];
+		desc[0] = 0;
+		strlcpy(message, "^1ERROR: open failed^7", sizeof(message));
 		p = 0;
 		f = FS_OpenVirtualFile(t->filenames[i], true);
 		if(f)
 		{
+			strlcpy(message, "^1ERROR: not a known map format^7", sizeof(message));
 			memset(buf, 0, 1024);
 			FS_Read(f, buf, 1024);
 			if (!memcmp(buf, "IBSP", 4))
@@ -2054,21 +2057,46 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 					q3dheader_t *header = (q3dheader_t *)buf;
 					lumpofs = LittleLong(header->lumps[Q3LUMP_ENTITIES].fileofs);
 					lumplen = LittleLong(header->lumps[Q3LUMP_ENTITIES].filelen);
+					dpsnprintf(desc, sizeof(desc), "Q3BSP%i", p);
 				}
 				else if (p == Q2BSPVERSION)
 				{
 					q2dheader_t *header = (q2dheader_t *)buf;
 					lumpofs = LittleLong(header->lumps[Q2LUMP_ENTITIES].fileofs);
 					lumplen = LittleLong(header->lumps[Q2LUMP_ENTITIES].filelen);
+					dpsnprintf(desc, sizeof(desc), "Q2BSP%i", p);
 				}
+				else
+					dpsnprintf(desc, sizeof(desc), "IBSP%i", p);
 			}
-			else if((p = BuffLittleLong(buf)) == BSPVERSION || p == 30 || !memcmp(buf, "BSP2", 4))
+			else if (BuffLittleLong(buf) == BSPVERSION)
 			{
 				lumpofs = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES);
 				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
+				dpsnprintf(desc, sizeof(desc), "BSP29");
+			}
+			else if (BuffLittleLong(buf) == 30)
+			{
+				lumpofs = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES);
+				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
+				dpsnprintf(desc, sizeof(desc), "BSPHL");
+			}
+			else if (!memcmp(buf, "BSP2", 4))
+			{
+				lumpofs = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES);
+				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
+				dpsnprintf(desc, sizeof(desc), "BSP2");
+			}
+			else if (!memcmp(buf, "2PSB", 4))
+			{
+				lumpofs = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES);
+				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
+				dpsnprintf(desc, sizeof(desc), "BSP2RMQe");
 			}
 			else
-				p = 0;
+			{
+				dpsnprintf(desc, sizeof(desc), "unknown%i", BuffLittleLong(buf));
+			}
 			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
 			memcpy(entfilename + strlen(entfilename) - 4, ".ent", 5);
 			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);
@@ -2116,15 +2144,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 		if(f)
 			FS_Close(f);
 		*(t->filenames[i]+len[i]+5) = 0;
-		switch(p)
-		{
-		case Q3BSPVERSION:	strlcpy((char *)buf, "Q3", sizeof(buf));break;
-		case Q2BSPVERSION:	strlcpy((char *)buf, "Q2", sizeof(buf));break;
-		case BSPVERSION:	strlcpy((char *)buf, "Q1", sizeof(buf));break;
-		case 30:			strlcpy((char *)buf, "HL", sizeof(buf));break;
-		default:			strlcpy((char *)buf, "??", sizeof(buf));break;
-		}
-		Con_Printf("%16s (%s) %s\n", t->filenames[i]+5, buf, message);
+		Con_Printf("%16s (%-8s) %s\n", t->filenames[i]+5, desc, message);
 	}
 	Con_Print("\n");
 	for(p=o;p<min;p++)
