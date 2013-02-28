@@ -235,6 +235,7 @@ typedef struct gl_state_s
 	int lockrange_count;
 	int vertexbufferobject;
 	int elementbufferobject;
+	int uniformbufferobject;
 	int framebufferobject;
 	int defaultframebufferobject; // deal with platforms that use a non-zero default fbo
 	qboolean pointer_color_enabled;
@@ -1244,6 +1245,16 @@ static void GL_BindEBO(int bufferobject)
 		gl_state.elementbufferobject = bufferobject;
 		CHECKGLERROR
 		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, bufferobject);CHECKGLERROR
+	}
+}
+
+static void GL_BindUBO(int bufferobject)
+{
+	if (gl_state.uniformbufferobject != bufferobject)
+	{
+		gl_state.uniformbufferobject = bufferobject;
+		CHECKGLERROR
+		qglBindBufferARB(GL_UNIFORM_BUFFER, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -2782,9 +2793,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		if (!element3s_indexbuffer && gl_state.usevbo_dynamicindex)
 		{
 			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3s, numelements * sizeof(*element3s));
+				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3s, numelements * sizeof(*element3s), false, 0);
 			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, true, true);
+				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, false, true, true);
 			element3s_indexbuffer = gl_state.draw_dynamicindexbuffer;
 			element3s_bufferoffset = 0;
 		}
@@ -2794,9 +2805,9 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		if (!element3i_indexbuffer && gl_state.usevbo_dynamicindex)
 		{
 			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3i, numelements * sizeof(*element3i));
+				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3i, numelements * sizeof(*element3i), false, 0);
 			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, true, false);
+				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, false, true, false);
 			element3i_indexbuffer = gl_state.draw_dynamicindexbuffer;
 			element3i_bufferoffset = 0;
 		}
@@ -3276,25 +3287,36 @@ void R_Mesh_Finish(void)
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 }
 
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16)
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isuniformbuffer, qboolean isdynamic, qboolean isindex16)
 {
 	r_meshbuffer_t *buffer;
-	if (!(isdynamic ? (isindexbuffer ? gl_state.usevbo_dynamicindex : gl_state.usevbo_dynamicvertex) : (isindexbuffer ? gl_state.usevbo_staticindex : gl_state.usevbo_staticvertex)))
-		return NULL;
+	if (isuniformbuffer)
+	{
+		if (!vid.support.arb_uniform_buffer_object)
+			return NULL;
+	}
+	else
+	{
+		if (!vid.support.arb_vertex_buffer_object)
+			return NULL;
+		if (!isdynamic && !(isindexbuffer ? gl_state.usevbo_staticindex : gl_state.usevbo_staticvertex))
+			return NULL;
+	}
 	buffer = (r_meshbuffer_t *)Mem_ExpandableArray_AllocRecord(&gl_state.meshbufferarray);
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->bufferobject = 0;
 	buffer->devicebuffer = NULL;
 	buffer->size = 0;
 	buffer->isindexbuffer = isindexbuffer;
+	buffer->isuniformbuffer = isuniformbuffer;
 	buffer->isdynamic = isdynamic;
 	buffer->isindex16 = isindex16;
 	strlcpy(buffer->name, name, sizeof(buffer->name));
-	R_Mesh_UpdateMeshBuffer(buffer, data, size);
+	R_Mesh_UpdateMeshBuffer(buffer, data, size, false, 0);
 	return buffer;
 }
 
-void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size)
+void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qboolean subdata, size_t offset)
 {
 	if (!buffer)
 		return;
@@ -3317,11 +3339,18 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_GLES2:
 		if (!buffer->bufferobject)
 			qglGenBuffersARB(1, (GLuint *)&buffer->bufferobject);
-		if (buffer->isindexbuffer)
+		if (buffer->isuniformbuffer)
+			GL_BindUBO(buffer->bufferobject);
+		else if (buffer->isindexbuffer)
 			GL_BindEBO(buffer->bufferobject);
 		else
 			GL_BindVBO(buffer->bufferobject);
-		qglBufferDataARB(buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER, size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+		if (subdata)
+			qglBufferSubDataARB(buffer->isuniformbuffer ? GL_UNIFORM_BUFFER : (buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER), offset, size, data);
+		else
+			qglBufferDataARB(buffer->isuniformbuffer ? GL_UNIFORM_BUFFER : (buffer->isindexbuffer ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER), size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+		if (buffer->isuniformbuffer)
+			GL_BindUBO(0);
 		break;
 	case RENDERPATH_D3D9:
 #ifdef SUPPORTD3D
@@ -3331,17 +3360,17 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			if (buffer->isindexbuffer)
 			{
 				IDirect3DIndexBuffer9 *d3d9indexbuffer = (IDirect3DIndexBuffer9 *)buffer->devicebuffer;
-				if (size > buffer->size || !buffer->devicebuffer)
+				if (offset+size > buffer->size || !buffer->devicebuffer)
 				{
 					if (buffer->devicebuffer)
 						IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9*)buffer->devicebuffer);
 					buffer->devicebuffer = NULL;
-					if (FAILED(result = IDirect3DDevice9_CreateIndexBuffer(vid_d3d9dev, size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, NULL)))
+					if (FAILED(result = IDirect3DDevice9_CreateIndexBuffer(vid_d3d9dev, offset+size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, NULL)))
 						Sys_Error("IDirect3DDevice9_CreateIndexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? (int)D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? (int)D3DFMT_INDEX16 : (int)D3DFMT_INDEX32, buffer->isdynamic ? (int)D3DPOOL_DEFAULT : (int)D3DPOOL_MANAGED, &d3d9indexbuffer, (int)result);
 					buffer->devicebuffer = (void *)d3d9indexbuffer;
-					buffer->size = size;
+					buffer->size = offset+size;
 				}
-				if (!FAILED(IDirect3DIndexBuffer9_Lock(d3d9indexbuffer, 0, 0, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
+				if (!FAILED(IDirect3DIndexBuffer9_Lock(d3d9indexbuffer, (unsigned int)offset, (unsigned int)size, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
 				{
 					if (data)
 						memcpy(datapointer, data, size);
@@ -3353,17 +3382,17 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			else
 			{
 				IDirect3DVertexBuffer9 *d3d9vertexbuffer = (IDirect3DVertexBuffer9 *)buffer->devicebuffer;
-				if (size > buffer->size || !buffer->devicebuffer)
+				if (offset+size > buffer->size || !buffer->devicebuffer)
 				{
 					if (buffer->devicebuffer)
 						IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9*)buffer->devicebuffer);
 					buffer->devicebuffer = NULL;
-					if (FAILED(result = IDirect3DDevice9_CreateVertexBuffer(vid_d3d9dev, size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, NULL)))
+					if (FAILED(result = IDirect3DDevice9_CreateVertexBuffer(vid_d3d9dev, offset+size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, NULL)))
 						Sys_Error("IDirect3DDevice9_CreateVertexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? (int)D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? (int)D3DPOOL_DEFAULT : (int)D3DPOOL_MANAGED, &d3d9vertexbuffer, (int)result);
 					buffer->devicebuffer = (void *)d3d9vertexbuffer;
-					buffer->size = size;
+					buffer->size = offset+size;
 				}
-				if (!FAILED(IDirect3DVertexBuffer9_Lock(d3d9vertexbuffer, 0, 0, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
+				if (!FAILED(IDirect3DVertexBuffer9_Lock(d3d9vertexbuffer, (unsigned int)offset, (unsigned int)size, &datapointer, buffer->isdynamic ? D3DLOCK_DISCARD : 0)))
 				{
 					if (data)
 						memcpy(datapointer, data, size);
@@ -4204,9 +4233,9 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
 	{
 		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex3f, numvertices * sizeof(float[3]));
+			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex3f, numvertices * sizeof(float[3]), false, 0);
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex3f, numvertices * sizeof(float[3]), "temporary", false, true, false);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex3f, numvertices * sizeof(float[3]), "temporary", false, false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	switch(vid.renderpath)
@@ -4407,9 +4436,9 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
 	{
 		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
+			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex), false, 0);
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	switch(vid.renderpath)
@@ -4621,9 +4650,9 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
 	{
 		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex));
+			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex), false, 0);
 		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, true, false);
+			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, false, true, false);
 		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
 	}
 	switch(vid.renderpath)

@@ -237,6 +237,13 @@ cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompe
 cvar_t r_glsl_vertextextureblend_usebothalphas = {CVAR_SAVE, "r_glsl_vertextextureblend_usebothalphas", "0", "use both alpha layers on vertex blended surfaces, each alpha layer sets amount of 'blend leak' on another layer, requires mod_q3shader_force_terrain_alphaflag on."};
 
 cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "0.5", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
+cvar_t r_bufferdatasize[R_BUFFERDATA_COUNT] =
+{
+	{CVAR_SAVE, "r_bufferdatasize_vertex", "4", "vertex buffer size for one frame"},
+	{CVAR_SAVE, "r_bufferdatasize_index16", "1", "index buffer size for one frame (16bit indices)"},
+	{CVAR_SAVE, "r_bufferdatasize_index32", "1", "index buffer size for one frame (32bit indices)"},
+	{CVAR_SAVE, "r_bufferdatasize_uniform", "0.25", "uniform buffer size for one frame"},
+};
 
 extern cvar_t v_glslgamma;
 extern cvar_t v_glslgamma_2d;
@@ -247,6 +254,8 @@ r_framebufferstate_t r_fb;
 
 /// shadow volume bsp struct with automatically growing nodes buffer
 svbsp_t r_svbsp;
+
+int r_uniformbufferalignment = 32; // dynamically updated to match GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT
 
 rtexture_t *r_texture_blanknormalmap;
 rtexture_t *r_texture_white;
@@ -844,6 +853,10 @@ typedef struct r_glsl_permutation_s
 	int loc_NormalmapScrollBlend;
 	int loc_BounceGridMatrix;
 	int loc_BounceGridIntensity;
+	/// uniform block bindings
+	int ubibind_Skeletal_Transform12_UniformBlock;
+	/// uniform block indices
+	int ubiloc_Skeletal_Transform12_UniformBlock;
 }
 r_glsl_permutation_t;
 
@@ -1051,6 +1064,7 @@ static char *R_GetShaderText(const char *filename, qboolean printfromdisknotice,
 static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, unsigned int permutation)
 {
 	int i;
+	int ubibind;
 	int sampler;
 	shadermodeinfo_t *modeinfo = glslshadermodeinfo + mode;
 	char *sourcestring;
@@ -1072,8 +1086,18 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 
 	strlcat(permutationname, modeinfo->filename, sizeof(permutationname));
 
+	// we need 140 for r_glsl_skeletal (GL_ARB_uniform_buffer_object)
+	if(vid.support.glshaderversion >= 140)
+	{
+		vertstrings_list[vertstrings_count++] = "#version 140\n";
+		geomstrings_list[geomstrings_count++] = "#version 140\n";
+		fragstrings_list[fragstrings_count++] = "#version 140\n";
+		vertstrings_list[vertstrings_count++] = "#define GLSL140\n";
+		geomstrings_list[geomstrings_count++] = "#define GLSL140\n";
+		fragstrings_list[fragstrings_count++] = "#define GLSL140\n";
+	}
 	// if we can do #version 130, we should (this improves quality of offset/reliefmapping thanks to textureGrad)
-	if(vid.support.gl20shaders130)
+	else if(vid.support.glshaderversion >= 130)
 	{
 		vertstrings_list[vertstrings_count++] = "#version 130\n";
 		geomstrings_list[geomstrings_count++] = "#version 130\n";
@@ -1206,7 +1230,6 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_ShadowMap_Parameters       = qglGetUniformLocation(p->program, "ShadowMap_Parameters");
 		p->loc_ShadowMap_TextureScale     = qglGetUniformLocation(p->program, "ShadowMap_TextureScale");
 		p->loc_SpecularPower              = qglGetUniformLocation(p->program, "SpecularPower");
-		p->loc_Skeletal_Transform12       = qglGetUniformLocation(p->program, "Skeletal_Transform12");
 		p->loc_UserVec1                   = qglGetUniformLocation(p->program, "UserVec1");
 		p->loc_UserVec2                   = qglGetUniformLocation(p->program, "UserVec2");
 		p->loc_UserVec3                   = qglGetUniformLocation(p->program, "UserVec3");
@@ -1255,6 +1278,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->tex_Texture_ReflectMask = -1;
 		p->tex_Texture_ReflectCube = -1;
 		p->tex_Texture_BounceGrid = -1;
+		// bind the texture samplers in use
 		sampler = 0;
 		if (p->loc_Texture_First           >= 0) {p->tex_Texture_First            = sampler;qglUniform1i(p->loc_Texture_First           , sampler);sampler++;}
 		if (p->loc_Texture_Second          >= 0) {p->tex_Texture_Second           = sampler;qglUniform1i(p->loc_Texture_Second          , sampler);sampler++;}
@@ -1285,6 +1309,14 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ReflectMask     >= 0) {p->tex_Texture_ReflectMask      = sampler;qglUniform1i(p->loc_Texture_ReflectMask     , sampler);sampler++;}
 		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
 		if (p->loc_Texture_BounceGrid      >= 0) {p->tex_Texture_BounceGrid       = sampler;qglUniform1i(p->loc_Texture_BounceGrid      , sampler);sampler++;}
+		// get the uniform block indices so we can bind them
+		p->ubiloc_Skeletal_Transform12_UniformBlock = qglGetUniformBlockIndex(p->program, "Skeletal_Transform12_UniformBlock");
+		// clear the uniform block bindings
+		p->ubibind_Skeletal_Transform12_UniformBlock = -1;
+		// bind the uniform blocks in use
+		ubibind = 0;
+		if (p->ubiloc_Skeletal_Transform12_UniformBlock >= 0) {p->ubibind_Skeletal_Transform12_UniformBlock = ubibind;qglUniformBlockBinding(p->program, p->ubiloc_Skeletal_Transform12_UniformBlock, ubibind);ubibind++;}
+		// we're done compiling and setting up the shader, at least until it is used
 		CHECKGLERROR
 		Con_DPrintf("^5GLSL shader %s compiled (%i textures).\n", permutationname, sampler);
 	}
@@ -2031,6 +2063,7 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean 
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, permutation);
+		if (r_glsl_permutation->ubiloc_Skeletal_Transform12_UniformBlock >= 0 && rsurface.batchskeletaltransform3x4buffer) qglBindBufferRange(GL_UNIFORM_BUFFER, r_glsl_permutation->ubibind_Skeletal_Transform12_UniformBlock, rsurface.batchskeletaltransform3x4buffer->bufferobject, rsurface.batchskeletaltransform3x4offset, rsurface.batchskeletaltransform3x4size);
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
@@ -2685,9 +2718,10 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			R_Mesh_PrepareVertices_Mesh(rsurface.batchnumvertices, rsurface.batchvertexmesh, rsurface.batchvertexmeshbuffer);
 		}
 		// this has to be after RSurf_PrepareVerticesForBatch
-		if (rsurface.batchskeletaltransform3x4)
+		if (rsurface.batchskeletaltransform3x4buffer)
 			permutation |= SHADERPERMUTATION_SKELETAL;
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
+		if (r_glsl_permutation->ubiloc_Skeletal_Transform12_UniformBlock >= 0 && rsurface.batchskeletaltransform3x4buffer) qglBindBufferRange(GL_UNIFORM_BUFFER, r_glsl_permutation->ubibind_Skeletal_Transform12_UniformBlock, rsurface.batchskeletaltransform3x4buffer->bufferobject, rsurface.batchskeletaltransform3x4offset, rsurface.batchskeletaltransform3x4size);
 		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
@@ -2828,8 +2862,6 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			}
 		}
 		if (r_glsl_permutation->tex_Texture_BounceGrid  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_BounceGrid, r_shadow_bouncegridtexture);
-		if (r_glsl_permutation->loc_Skeletal_Transform12 >= 0 && rsurface.batchskeletalnumtransforms > 0)
-			qglUniform4fv(r_glsl_permutation->loc_Skeletal_Transform12, rsurface.batchskeletalnumtransforms*3, rsurface.batchskeletaltransform3x4);
 		CHECKGLERROR
 		break;
 	case RENDERPATH_GL11:
@@ -3952,6 +3984,7 @@ static void gl_main_start(void)
 	r_texture_fogheighttexture = NULL;
 	r_texture_gammaramps = NULL;
 	r_texture_numcubemaps = 0;
+	r_uniformbufferalignment = 32;
 
 	r_loaddds = r_texture_dds_load.integer != 0;
 	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
@@ -3970,6 +4003,8 @@ static void gl_main_start(void)
 		r_loadnormalmap = true;
 		r_loadgloss = true;
 		r_loadfog = false;
+		if (vid.support.arb_uniform_buffer_object)
+			qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &r_uniformbufferalignment);
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
@@ -3992,6 +4027,7 @@ static void gl_main_start(void)
 
 	R_AnimCache_Free();
 	R_FrameData_Reset();
+	R_BufferData_Reset();
 
 	r_numqueries = 0;
 	r_maxqueries = 0;
@@ -4043,6 +4079,7 @@ static void gl_main_shutdown(void)
 {
 	R_AnimCache_Free();
 	R_FrameData_Reset();
+	R_BufferData_Reset();
 
 	R_Main_FreeViewCache();
 
@@ -4136,10 +4173,12 @@ static void gl_main_newmap(void)
 	R_Main_FreeViewCache();
 
 	R_FrameData_Reset();
+	R_BufferData_Reset();
 }
 
 void GL_Main_Init(void)
 {
+	int i;
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 
 	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
@@ -4312,6 +4351,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_saturation_redcompensate);
 	Cvar_RegisterVariable(&r_glsl_vertextextureblend_usebothalphas);
 	Cvar_RegisterVariable(&r_framedatasize);
+	for (i = 0;i < R_BUFFERDATA_COUNT;i++)
+		Cvar_RegisterVariable(&r_bufferdatasize[i]);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
@@ -4497,12 +4538,12 @@ void R_FrameData_Reset(void)
 	}
 }
 
-static void R_FrameData_Resize(void)
+static void R_FrameData_Resize(qboolean mustgrow)
 {
 	size_t wantedsize;
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
 	wantedsize = bound(65536, wantedsize, 1000*1024*1024);
-	if (!r_framedata_mem || r_framedata_mem->wantedsize != wantedsize)
+	if (!r_framedata_mem || r_framedata_mem->wantedsize != wantedsize || mustgrow)
 	{
 		r_framedata_mem_t *newmem = (r_framedata_mem_t *)Mem_Alloc(r_main_mempool, wantedsize);
 		newmem->wantedsize = wantedsize;
@@ -4517,7 +4558,7 @@ static void R_FrameData_Resize(void)
 
 void R_FrameData_NewFrame(void)
 {
-	R_FrameData_Resize();
+	R_FrameData_Resize(false);
 	if (!r_framedata_mem)
 		return;
 	// if we ran out of space on the last frame, free the old memory now
@@ -4536,6 +4577,7 @@ void R_FrameData_NewFrame(void)
 void *R_FrameData_Alloc(size_t size)
 {
 	void *data;
+	float newvalue;
 
 	// align to 16 byte boundary - the data pointer is already aligned, so we
 	// only need to ensure the size of every allocation is also aligned
@@ -4544,8 +4586,10 @@ void *R_FrameData_Alloc(size_t size)
 	while (!r_framedata_mem || r_framedata_mem->current + size > r_framedata_mem->size)
 	{
 		// emergency - we ran out of space, allocate more memory
-		Cvar_SetValueQuick(&r_framedatasize, bound(0.25f, r_framedatasize.value * 2.0f, 128.0f));
-		R_FrameData_Resize();
+		newvalue = bound(0.25f, r_framedatasize.value * 2.0f, 256.0f);
+		// this might not be a growing it, but we'll allocate another buffer every time
+		Cvar_SetValueQuick(&r_framedatasize, newvalue);
+		R_FrameData_Resize(true);
 	}
 
 	data = r_framedata_mem->data + r_framedata_mem->current;
@@ -4582,6 +4626,146 @@ void R_FrameData_ReturnToMark(void)
 
 //==================================================================================
 
+// avoid reusing the same buffer objects on consecutive buffers
+#define R_BUFFERDATA_CYCLE 2
+
+typedef struct r_bufferdata_buffer_s
+{
+	struct r_bufferdata_buffer_s *purge; // older buffer to free on next frame
+	size_t size; // how much usable space
+	size_t current; // how much space in use
+	r_meshbuffer_t *buffer; // the buffer itself
+}
+r_bufferdata_buffer_t;
+
+static int r_bufferdata_cycle = 0; // incremented and wrapped each frame
+static r_bufferdata_buffer_t *r_bufferdata_buffer[R_BUFFERDATA_CYCLE][R_BUFFERDATA_COUNT];
+
+/// frees all dynamic buffers
+void R_BufferData_Reset(void)
+{
+	int cycle, type;
+	r_bufferdata_buffer_t **p, *mem;
+	for (cycle = 0;cycle < R_BUFFERDATA_CYCLE;cycle++)
+	{
+		for (type = 0;type < R_BUFFERDATA_COUNT;type++)
+		{
+			// free all buffers
+			p = &r_bufferdata_buffer[r_bufferdata_cycle][type];
+			while (*p)
+			{
+				mem = *p;
+				*p = (*p)->purge;
+				if (mem->buffer)
+					R_Mesh_DestroyMeshBuffer(mem->buffer);
+				Mem_Free(mem);
+			}
+		}
+	}
+}
+
+// resize buffer as needed (this actually makes a new one, the old one will be recycled next frame)
+static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow)
+{
+	r_bufferdata_buffer_t *mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
+	size_t size;
+	size = (size_t)(r_bufferdatasize[type].value * 1024*1024);
+	size = bound(65536, size, 512*1024*1024);
+	if (!mem || mem->size != size || mustgrow)
+	{
+		mem = (r_bufferdata_buffer_t *)Mem_Alloc(r_main_mempool, sizeof(*mem));
+		mem->size = size;
+		mem->current = 0;
+		if (type == R_BUFFERDATA_VERTEX)
+			mem->buffer = R_Mesh_CreateMeshBuffer(NULL, mem->size, "dynamicbuffervertex", false, false, true, false);
+		else if (type == R_BUFFERDATA_INDEX16)
+			mem->buffer = R_Mesh_CreateMeshBuffer(NULL, mem->size, "dynamicbufferindex16", true, false, true, true);
+		else if (type == R_BUFFERDATA_INDEX32)
+			mem->buffer = R_Mesh_CreateMeshBuffer(NULL, mem->size, "dynamicbufferindex32", true, false, true, false);
+		else if (type == R_BUFFERDATA_UNIFORM)
+			mem->buffer = R_Mesh_CreateMeshBuffer(NULL, mem->size, "dynamicbufferuniform", false, true, true, false);
+		mem->purge = r_bufferdata_buffer[r_bufferdata_cycle][type];
+		r_bufferdata_buffer[r_bufferdata_cycle][type] = mem;
+	}
+}
+
+void R_BufferData_NewFrame(void)
+{
+	int type;
+	r_bufferdata_buffer_t **p, *mem;
+	// cycle to the next frame's buffers
+	r_bufferdata_cycle = (r_bufferdata_cycle + 1) % R_BUFFERDATA_CYCLE;
+	// if we ran out of space on the last time we used these buffers, free the old memory now
+	for (type = 0;type < R_BUFFERDATA_COUNT;type++)
+	{
+		if (r_bufferdata_buffer[r_bufferdata_cycle][type])
+		{
+			R_BufferData_Resize(type, false);
+			// free all but the head buffer, this is how we recycle obsolete
+			// buffers after they are no longer in use
+			p = &r_bufferdata_buffer[r_bufferdata_cycle][type]->purge;
+			while (*p)
+			{
+				mem = *p;
+				*p = (*p)->purge;
+				if (mem->buffer)
+					R_Mesh_DestroyMeshBuffer(mem->buffer);
+				Mem_Free(mem);
+			}
+			// reset the current offset
+			r_bufferdata_buffer[r_bufferdata_cycle][type]->current = 0;
+		}
+	}
+}
+
+r_meshbuffer_t *R_BufferData_Store(size_t datasize, void *data, r_bufferdata_type_t type, int *returnbufferoffset, qboolean allowfail)
+{
+	r_bufferdata_buffer_t *mem;
+	int offset = 0;
+	int padsize;
+	float newvalue;
+
+	*returnbufferoffset = 0;
+
+	// align size to a byte boundary appropriate for the buffer type, this
+	// makes all allocations have aligned start offsets
+	if (type == R_BUFFERDATA_UNIFORM)
+		padsize = (datasize + r_uniformbufferalignment - 1) & ~(r_uniformbufferalignment - 1);
+	else
+		padsize = (datasize + 15) & ~15;
+
+	while (!r_bufferdata_buffer[r_bufferdata_cycle][type] || r_bufferdata_buffer[r_bufferdata_cycle][type]->current + padsize > r_bufferdata_buffer[r_bufferdata_cycle][type]->size)
+	{
+		// emergency - we ran out of space, allocate more memory
+		newvalue = bound(0.25f, r_bufferdatasize[type].value * 2.0f, 256.0f);
+		// if we're already at the limit, just fail (if allowfail is false we might run out of video ram)
+		if (newvalue == r_bufferdatasize[type].value && allowfail)
+			return NULL;
+		Cvar_SetValueQuick(&r_bufferdatasize[type], newvalue);
+		R_BufferData_Resize(type, true);
+	}
+
+	mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
+	offset = mem->current;
+	mem->current += padsize;
+
+	// upload the data to the buffer at the chosen offset
+	if (offset == 0)
+		R_Mesh_UpdateMeshBuffer(mem->buffer, NULL, mem->size, false, 0);
+	R_Mesh_UpdateMeshBuffer(mem->buffer, data, datasize, true, offset);
+
+	// count the usage for stats
+	r_refdef.stats[r_stat_bufferdatacurrent_vertex + type] = max(r_refdef.stats[r_stat_bufferdatacurrent_vertex + type], (int)mem->current);
+	r_refdef.stats[r_stat_bufferdatasize_vertex + type] = max(r_refdef.stats[r_stat_bufferdatasize_vertex + type], (int)mem->size);
+
+	// return the buffer offset
+	*returnbufferoffset = offset;
+
+	return mem->buffer;
+}
+
+//==================================================================================
+
 // LordHavoc: animcache originally written by Echon, rewritten since then
 
 /**
@@ -4601,14 +4785,17 @@ void R_AnimCache_ClearCache(void)
 	for (i = 0;i < r_refdef.scene.numentities;i++)
 	{
 		ent = r_refdef.scene.entities[i];
-		ent->animcache_vertex3f = NULL;
-		ent->animcache_normal3f = NULL;
-		ent->animcache_svector3f = NULL;
-		ent->animcache_tvector3f = NULL;
-		ent->animcache_vertexmesh = NULL;
-		ent->animcache_vertex3fbuffer = NULL;
-		ent->animcache_vertexmeshbuffer = NULL;
-		ent->animcache_skeletaltransform3x4 = NULL;
+		ent->animcache_vertex3f = NULL; // for shadow geometry
+		ent->animcache_normal3f = NULL; // for lit geometry
+		ent->animcache_svector3f = NULL; // for lit geometry
+		ent->animcache_tvector3f = NULL; // for lit geometry
+		ent->animcache_vertexmesh = NULL; // interleaved vertex arrays for D3D
+		ent->animcache_vertex3fbuffer = NULL; // vertex buffer for D3D
+		ent->animcache_vertexmeshbuffer = NULL; // vertex buffer for D3D
+		ent->animcache_skeletaltransform3x4 = NULL; // for dynamic batch fallback with r_glsl_skeletal
+		ent->animcache_skeletaltransform3x4buffer = NULL; // for r_glsl_skeletal
+		ent->animcache_skeletaltransform3x4offset = 0;
+		ent->animcache_skeletaltransform3x4size = 0;
 	}
 }
 
@@ -4771,6 +4958,9 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 				R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative + i * 12);
 			}
 		}
+		// note: this can fail if the buffer is at the grow limit
+		ent->animcache_skeletaltransform3x4size = sizeof(float[3][4]) * model->num_bones;
+		ent->animcache_skeletaltransform3x4buffer = R_BufferData_Store(ent->animcache_skeletaltransform3x4size, ent->animcache_skeletaltransform3x4, R_BUFFERDATA_UNIFORM, &ent->animcache_skeletaltransform3x4offset, true);
 	}
 	else if (ent->animcache_vertex3f)
 	{
@@ -6861,7 +7051,7 @@ void R_UpdateVariables(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-		r_gpuskeletal = r_glsl_skeletal.integer && !r_showsurfaces.integer; // FIXME add r_showsurfaces support to GLSL skeletal!
+		r_gpuskeletal = vid.support.arb_uniform_buffer_object && r_glsl_skeletal.integer && !r_showsurfaces.integer; // FIXME add r_showsurfaces support to GLSL skeletal!
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
@@ -7003,6 +7193,7 @@ void R_RenderView(void)
 
 	R_AnimCache_ClearCache();
 	R_FrameData_NewFrame();
+	R_BufferData_NewFrame();
 
 	/* adjust for stereo display */
 	if(R_Stereo_Active())
@@ -8250,6 +8441,9 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	rsurface.entityskeletaltransform3x4 = NULL;
+	rsurface.entityskeletaltransform3x4buffer = NULL;
+	rsurface.entityskeletaltransform3x4offset = 0;
+	rsurface.entityskeletaltransform3x4size = 0;;
 	rsurface.entityskeletalnumtransforms = 0;
 	rsurface.modelvertex3f  = model->surfmesh.data_vertex3f;
 	rsurface.modelvertex3f_vertexbuffer = model->surfmesh.vbo_vertexbuffer;
@@ -8380,7 +8574,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 		rsurface.basepolygonoffset += r_polygonoffset_submodel_offset.value;
 	}
 	// if the animcache code decided it should use the shader path, skip the deform step
-	rsurface.entityskeletaltransform3x4 = ent->animcache_vertex3f ? NULL : ent->animcache_skeletaltransform3x4;
+	rsurface.entityskeletaltransform3x4 = ent->animcache_skeletaltransform3x4;
+	rsurface.entityskeletaltransform3x4buffer = ent->animcache_skeletaltransform3x4buffer;
+	rsurface.entityskeletaltransform3x4offset = ent->animcache_skeletaltransform3x4offset;
+	rsurface.entityskeletaltransform3x4size = ent->animcache_skeletaltransform3x4size;
 	rsurface.entityskeletalnumtransforms = rsurface.entityskeletaltransform3x4 ? model->num_bones : 0;
 	if (model->surfmesh.isanimated && model->AnimateVertices && !rsurface.entityskeletaltransform3x4)
 	{
@@ -8592,6 +8789,9 @@ void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inve
 	rsurface.basepolygonfactor = r_refdef.polygonfactor;
 	rsurface.basepolygonoffset = r_refdef.polygonoffset;
 	rsurface.entityskeletaltransform3x4 = NULL;
+	rsurface.entityskeletaltransform3x4buffer = NULL;
+	rsurface.entityskeletaltransform3x4offset = 0;
+	rsurface.entityskeletaltransform3x4size = 0;
 	rsurface.entityskeletalnumtransforms = 0;
 	r_refdef.stats[r_stat_batch_entitycustom_count]++;
 	r_refdef.stats[r_stat_batch_entitycustom_surfaces] += 1;
@@ -9120,6 +9320,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	rsurface.batchelement3s_indexbuffer = rsurface.modelelement3s_indexbuffer;
 	rsurface.batchelement3s_bufferoffset = rsurface.modelelement3s_bufferoffset;
 	rsurface.batchskeletaltransform3x4 = rsurface.entityskeletaltransform3x4;
+	rsurface.batchskeletaltransform3x4buffer = rsurface.entityskeletaltransform3x4buffer;
+	rsurface.batchskeletaltransform3x4offset = rsurface.entityskeletaltransform3x4offset;
+	rsurface.batchskeletaltransform3x4size = rsurface.entityskeletaltransform3x4size;
 	rsurface.batchskeletalnumtransforms = rsurface.entityskeletalnumtransforms;
 
 	// if any dynamic vertex processing has to occur in software, we copy the
@@ -9245,6 +9448,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		rsurface.batchelement3s = NULL;
 		rsurface.batchelement3s_indexbuffer = NULL;
 		rsurface.batchelement3s_bufferoffset = 0;
+		rsurface.batchskeletaltransform3x4buffer = NULL;
+		rsurface.batchskeletaltransform3x4offset = 0;
+		rsurface.batchskeletaltransform3x4size = 0;
 		// we'll only be setting up certain arrays as needed
 		if (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP))
 			rsurface.batchvertexmesh = (r_vertexmesh_t *)R_FrameData_Alloc(batchnumvertices * sizeof(r_vertexmesh_t));

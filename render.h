@@ -166,16 +166,45 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 #include "meshqueue.h"
 
+/// free all R_FrameData memory
 void R_FrameData_Reset(void);
+/// prepare for a new frame, recycles old buffers if a resize occurred previously
 void R_FrameData_NewFrame(void);
+/// allocate some temporary memory for your purposes
 void *R_FrameData_Alloc(size_t size);
+/// allocate some temporary memory and copy this data into it
 void *R_FrameData_Store(size_t size, void *data);
+/// set a marker that allows you to discard the following temporary memory allocations
 void R_FrameData_SetMark(void);
+/// discard recent memory allocations (rewind to marker)
 void R_FrameData_ReturnToMark(void);
 
+/// enum of the various types of hardware buffer object used in rendering
+/// note that the r_bufferdatasize[] array must be maintained to match this
+typedef enum r_bufferdata_type_e
+{
+	R_BUFFERDATA_VERTEX, /// vertex buffer
+	R_BUFFERDATA_INDEX16, /// index buffer - 16bit (because D3D cares)
+	R_BUFFERDATA_INDEX32, /// index buffer - 32bit (because D3D cares)
+	R_BUFFERDATA_UNIFORM, /// uniform buffer
+	R_BUFFERDATA_COUNT /// how many kinds of buffer we have
+}
+r_bufferdata_type_t;
+
+/// free all dynamic vertex/index/uniform buffers
+void R_BufferData_Reset(void);
+/// begin a new frame (recycle old buffers)
+void R_BufferData_NewFrame(void);
+/// request space in a vertex/index/uniform buffer for the chosen data, returns the buffer pointer and offset, if allowfail is true it may return NULL if the growth limit has been reached, false will cause it to allocate additional memory despite this (warning: may run out of memory)
+r_meshbuffer_t *R_BufferData_Store(size_t size, void *data, r_bufferdata_type_t type, int *returnbufferoffset, qboolean allowfail);
+
+/// free all R_AnimCache memory
 void R_AnimCache_Free(void);
+/// clear the animcache pointers on all known render entities
 void R_AnimCache_ClearCache(void);
+/// get the skeletal data or cached animated mesh data for an entity (optionally with normals and tangents)
 qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qboolean wanttangents);
+/// generate animcache data for all entities marked visible
 void R_AnimCache_CacheVisibleEntities(void);
 
 #include "r_lerpanim.h"
@@ -253,6 +282,9 @@ typedef struct rsurfacestate_s
 	// variables
 	int                         entityskeletalnumtransforms; // how many transforms are used for this mesh
 	float                      *entityskeletaltransform3x4; // use gpu-skinning shader on this mesh
+	const r_meshbuffer_t       *entityskeletaltransform3x4buffer; // uniform buffer
+	int                         entityskeletaltransform3x4offset;
+	int                         entityskeletaltransform3x4size;
 	float                      *modelvertex3f;
 	const r_meshbuffer_t       *modelvertex3f_vertexbuffer;
 	size_t                      modelvertex3f_bufferoffset;
@@ -345,6 +377,9 @@ typedef struct rsurfacestate_s
 	size_t                      batchelement3s_bufferoffset;
 	int                         batchskeletalnumtransforms;
 	float                      *batchskeletaltransform3x4;
+	const r_meshbuffer_t       *batchskeletaltransform3x4buffer; // uniform buffer
+	int                         batchskeletaltransform3x4offset;
+	int                         batchskeletaltransform3x4size;
 	// rendering pass processing arrays in GL11 and GL13 paths
 	float                      *passcolor4f;
 	const r_meshbuffer_t       *passcolor4f_vertexbuffer;

@@ -72,8 +72,8 @@ void R_Mesh_Finish(void);
 
 
 // vertex buffer and index buffer creation/updating/freeing
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isdynamic, qboolean isindex16);
-void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size);
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isuniformbuffer, qboolean isdynamic, qboolean isindex16);
+void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qboolean subdata, size_t offset);
 void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer);
 void GL_Mesh_ListVBOs(qboolean printeach);
 
