@@ -32,12 +32,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DEFAULT_SOUND_PACKET_ATTENUATION 1.0
 
 // Channel flags
-#define CHANNELFLAG_NONE		0
-#define CHANNELFLAG_FORCELOOP	(1 << 0) // force looping even if the sound is not looped
-#define CHANNELFLAG_LOCALSOUND	(1 << 1) // INTERNAL USE. Not settable by S_SetChannelFlag
-#define CHANNELFLAG_PAUSED		(1 << 2)
-#define CHANNELFLAG_FULLVOLUME	(1 << 3) // isn't affected by the general volume
-
+// These channel flags can be used for sound() builtins, with SOUNDFLAG_* names
+#define CHANNELFLAG_NONE	0
+#define CHANNELFLAG_RELIABLE	(1 << 0) // send as reliable message (only used on server)
+#define CHANNELFLAG_FORCELOOP	(1 << 1) // force looping even if the sound is not looped
+#define CHANNELFLAG_LOCALSOUND	(1 << 2) // INTERNAL USE. Not settable by S_SetChannelFlag
+#define CHANNELFLAG_PAUSED	(1 << 3) // pause status
+#define CHANNELFLAG_FULLVOLUME	(1 << 4) // isn't affected by the general volume
 
 // ====================================================================
 // Types and variables
@@ -73,9 +74,6 @@ void S_ClearUsed (void);
 void S_PurgeUnused (void);
 qboolean S_IsSoundPrecached (const sfx_t *sfx);
 sfx_t *S_FindName(const char *name);
-
-// for sound() builtins
-#define SOUNDFLAG_RELIABLE 1
 
 // these define the "engine" channel namespace
 #define CHAN_MIN_AUTO       -128
