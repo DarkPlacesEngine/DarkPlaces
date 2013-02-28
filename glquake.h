@@ -676,6 +676,53 @@ extern void (GLAPIENTRY *qglDrawBuffersARB)(GLsizei n, const GLenum *bufs);
 #define GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT               0x8C4F
 #endif
 
+// GL_ARB_uniform_buffer_object
+#ifndef GL_UNIFORM_BUFFER
+#define GL_UNIFORM_BUFFER                                    0x8A11
+#define GL_UNIFORM_BUFFER_BINDING                            0x8A28
+#define GL_UNIFORM_BUFFER_START                              0x8A29
+#define GL_UNIFORM_BUFFER_SIZE                               0x8A2A
+#define GL_MAX_VERTEX_UNIFORM_BLOCKS                         0x8A2B
+#define GL_MAX_GEOMETRY_UNIFORM_BLOCKS                       0x8A2C
+#define GL_MAX_FRAGMENT_UNIFORM_BLOCKS                       0x8A2D
+#define GL_MAX_COMBINED_UNIFORM_BLOCKS                       0x8A2E
+#define GL_MAX_UNIFORM_BUFFER_BINDINGS                       0x8A2F
+#define GL_MAX_UNIFORM_BLOCK_SIZE                            0x8A30
+#define GL_MAX_COMBINED_VERTEX_UNIFORM_COMPONENTS            0x8A31
+#define GL_MAX_COMBINED_GEOMETRY_UNIFORM_COMPONENTS          0x8A32
+#define GL_MAX_COMBINED_FRAGMENT_UNIFORM_COMPONENTS          0x8A33
+#define GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT                   0x8A34
+#define GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH              0x8A35
+#define GL_ACTIVE_UNIFORM_BLOCKS                             0x8A36
+#define GL_UNIFORM_TYPE                                      0x8A37
+#define GL_UNIFORM_SIZE                                      0x8A38
+#define GL_UNIFORM_NAME_LENGTH                               0x8A39
+#define GL_UNIFORM_BLOCK_INDEX                               0x8A3A
+#define GL_UNIFORM_OFFSET                                    0x8A3B
+#define GL_UNIFORM_ARRAY_STRIDE                              0x8A3C
+#define GL_UNIFORM_MATRIX_STRIDE                             0x8A3D
+#define GL_UNIFORM_IS_ROW_MAJOR                              0x8A3E
+#define GL_UNIFORM_BLOCK_BINDING                             0x8A3F
+#define GL_UNIFORM_BLOCK_DATA_SIZE                           0x8A40
+#define GL_UNIFORM_BLOCK_NAME_LENGTH                         0x8A41
+#define GL_UNIFORM_BLOCK_ACTIVE_UNIFORMS                     0x8A42
+#define GL_UNIFORM_BLOCK_ACTIVE_UNIFORM_INDICES              0x8A43
+#define GL_UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER         0x8A44
+#define GL_UNIFORM_BLOCK_REFERENCED_BY_GEOMETRY_SHADER       0x8A45
+#define GL_UNIFORM_BLOCK_REFERENCED_BY_FRAGMENT_SHADER       0x8A46
+#define GL_INVALID_INDEX                                     0xFFFFFFFFu
+#endif
+extern void (GLAPIENTRY *qglGetUniformIndices)(GLuint program, GLsizei uniformCount, const char** uniformNames, GLuint* uniformIndices);
+extern void (GLAPIENTRY *qglGetActiveUniformsiv)(GLuint program, GLsizei uniformCount, const GLuint* uniformIndices, GLenum pname, GLint* params);
+extern void (GLAPIENTRY *qglGetActiveUniformName)(GLuint program, GLuint uniformIndex, GLsizei bufSize, GLsizei* length, char* uniformName);
+extern GLuint (GLAPIENTRY *qglGetUniformBlockIndex)(GLuint program, const char* uniformBlockName);
+extern void (GLAPIENTRY *qglGetActiveUniformBlockiv)(GLuint program, GLuint uniformBlockIndex, GLenum pname,  GLint* params);
+extern void (GLAPIENTRY *qglGetActiveUniformBlockName)(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei* length, char* uniformBlockName);
+extern void (GLAPIENTRY *qglBindBufferRange)(GLenum target, GLuint index, GLuint buffer, GLintptrARB offset, GLsizeiptrARB size);
+extern void (GLAPIENTRY *qglBindBufferBase)(GLenum target, GLuint index, GLuint buffer);
+extern void (GLAPIENTRY *qglGetIntegeri_v)(GLenum target, GLuint index, GLint* data);
+extern void (GLAPIENTRY *qglUniformBlockBinding)(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
+
 extern void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);

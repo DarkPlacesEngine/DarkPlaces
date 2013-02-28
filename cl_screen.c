@@ -785,6 +785,14 @@ const char *r_stat_name[r_stat_count] =
 	"vertexbufferuploadsize",
 	"framedatacurrent",
 	"framedatasize",
+	"bufferdatacurrent_vertex", // R_BUFFERDATA_ types are added to this index
+	"bufferdatacurrent_index16",
+	"bufferdatacurrent_index32",
+	"bufferdatacurrent_uniform",
+	"bufferdatasize_vertex", // R_BUFFERDATA_ types are added to this index
+	"bufferdatasize_index16",
+	"bufferdatasize_index32",
+	"bufferdatasize_uniform",
 	"animcache_vertexmesh_count",
 	"animcache_vertexmesh_vertices",
 	"animcache_vertexmesh_maxvertices",
