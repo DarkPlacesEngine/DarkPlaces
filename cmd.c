@@ -498,23 +498,204 @@ static void Cmd_Exec(const char *filename)
 		// special defaults for specific games go here, these execute before default.cfg
 		// Nehahra pushable crates malfunction in some levels if this is on
 		// Nehahra NPC AI is confused by blowupfallenzombies
-		if (gamemode == GAME_NEHAHRA)
-			Cbuf_InsertText("\nsv_gameplayfix_upwardvelocityclearsongroundflag 0\nsv_gameplayfix_blowupfallenzombies 0\n\n");
+		switch(gamemode)
+		{
+		case GAME_NORMAL:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 0\n"
+"sv_gameplayfix_findradiusdistancetobox 0\n"
+"sv_gameplayfix_grenadebouncedownslopes 0\n"
+"sv_gameplayfix_slidemoveprojectiles 0\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 0\n"
+"sv_gameplayfix_setmodelrealbox 0\n"
+"sv_gameplayfix_droptofloorstartsolid 0\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 0\n"
+"sv_gameplayfix_noairborncorpse 0\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 0\n"
+"sv_gameplayfix_delayprojectiles 0\n"
+"sv_gameplayfix_multiplethinksperframe 0\n"
+"sv_gameplayfix_fixedcheckwatertransition 0\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 0\n"
+"sv_gameplayfix_swiminbmodels 0\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sys_ticrate 0.01388889\n"
+"r_shadow_gloss 1\n"
+"r_shadow_bumpscale_basetexture 0\n"
+				);
+			break;
+		case GAME_NEHAHRA:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 0\n"
+"sv_gameplayfix_findradiusdistancetobox 0\n"
+"sv_gameplayfix_grenadebouncedownslopes 0\n"
+"sv_gameplayfix_slidemoveprojectiles 0\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 0\n"
+"sv_gameplayfix_setmodelrealbox 0\n"
+"sv_gameplayfix_droptofloorstartsolid 0\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 0\n"
+"sv_gameplayfix_noairborncorpse 0\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 0\n"
+"sv_gameplayfix_delayprojectiles 0\n"
+"sv_gameplayfix_multiplethinksperframe 0\n"
+"sv_gameplayfix_fixedcheckwatertransition 0\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 0\n"
+"sv_gameplayfix_swiminbmodels 0\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sys_ticrate 0.01388889\n"
+"r_shadow_gloss 1\n"
+"r_shadow_bumpscale_basetexture 0\n"
+				);
+			break;
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
 		// hipnotic mission pack has issues with bobbing water entities 'jittering' between different heights on alternate frames at the default 0.0138889 ticrate, 0.02 avoids this issue
 		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
-		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
-			Cbuf_InsertText("\nsv_gameplayfix_blowupfallenzombies 0\nsys_ticrate 0.02\nsv_gameplayfix_slidemoveprojectiles 0\n\n");
+		case GAME_HIPNOTIC:
+		case GAME_QUOTH:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 0\n"
+"sv_gameplayfix_findradiusdistancetobox 0\n"
+"sv_gameplayfix_grenadebouncedownslopes 0\n"
+"sv_gameplayfix_slidemoveprojectiles 0\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 0\n"
+"sv_gameplayfix_setmodelrealbox 0\n"
+"sv_gameplayfix_droptofloorstartsolid 0\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 0\n"
+"sv_gameplayfix_noairborncorpse 0\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 0\n"
+"sv_gameplayfix_delayprojectiles 0\n"
+"sv_gameplayfix_multiplethinksperframe 0\n"
+"sv_gameplayfix_fixedcheckwatertransition 0\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 0\n"
+"sv_gameplayfix_swiminbmodels 0\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sys_ticrate 0.02\n"
+"r_shadow_gloss 1\n"
+"r_shadow_bumpscale_basetexture 0\n"
+				);
+			break;
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
-		if (gamemode == GAME_ROGUE)
-			Cbuf_InsertText("\nsv_gameplayfix_findradiusdistancetobox 0\n\n");
-		if (gamemode == GAME_NEXUIZ)
-			Cbuf_InsertText("\nsv_gameplayfix_q2airaccelerate 1\nsv_gameplayfix_stepmultipletimes 1\n\n");
-		if (gamemode == GAME_TENEBRAE)
-			Cbuf_InsertText("\nr_shadow_gloss 2\nr_shadow_bumpscale_basetexture 4\n\n");
+		case GAME_ROGUE:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 0\n"
+"sv_gameplayfix_findradiusdistancetobox 0\n"
+"sv_gameplayfix_grenadebouncedownslopes 0\n"
+"sv_gameplayfix_slidemoveprojectiles 0\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 0\n"
+"sv_gameplayfix_setmodelrealbox 0\n"
+"sv_gameplayfix_droptofloorstartsolid 0\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 0\n"
+"sv_gameplayfix_noairborncorpse 0\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 0\n"
+"sv_gameplayfix_delayprojectiles 0\n"
+"sv_gameplayfix_multiplethinksperframe 0\n"
+"sv_gameplayfix_fixedcheckwatertransition 0\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 0\n"
+"sv_gameplayfix_swiminbmodels 0\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sys_ticrate 0.01388889\n"
+"r_shadow_gloss 1\n"
+"r_shadow_bumpscale_basetexture 0\n"
+				);
+			break;
+		case GAME_TENEBRAE:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 0\n"
+"sv_gameplayfix_findradiusdistancetobox 0\n"
+"sv_gameplayfix_grenadebouncedownslopes 0\n"
+"sv_gameplayfix_slidemoveprojectiles 0\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 0\n"
+"sv_gameplayfix_setmodelrealbox 0\n"
+"sv_gameplayfix_droptofloorstartsolid 0\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 0\n"
+"sv_gameplayfix_noairborncorpse 0\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 0\n"
+"sv_gameplayfix_delayprojectiles 0\n"
+"sv_gameplayfix_multiplethinksperframe 0\n"
+"sv_gameplayfix_fixedcheckwatertransition 0\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 0\n"
+"sv_gameplayfix_swiminbmodels 0\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sys_ticrate 0.01388889\n"
+"r_shadow_gloss 2\n"
+"r_shadow_bumpscale_basetexture 4\n"
+				);
+			break;
+		case GAME_NEXUIZ:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 1\n"
+"sv_gameplayfix_findradiusdistancetobox 1\n"
+"sv_gameplayfix_grenadebouncedownslopes 1\n"
+"sv_gameplayfix_slidemoveprojectiles 1\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 1\n"
+"sv_gameplayfix_setmodelrealbox 1\n"
+"sv_gameplayfix_droptofloorstartsolid 1\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 1\n"
+"sv_gameplayfix_noairborncorpse 1\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 1\n"
+"sv_gameplayfix_easierwaterjump 1\n"
+"sv_gameplayfix_delayprojectiles 1\n"
+"sv_gameplayfix_multiplethinksperframe 1\n"
+"sv_gameplayfix_fixedcheckwatertransition 1\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 1\n"
+"sv_gameplayfix_swiminbmodels 1\n"
+"sv_gameplayfix_downtracesupportsongroundflag 1\n"
+"sys_ticrate 0.01388889\n"
+"sv_gameplayfix_q2airaccelerate 1\n"
+"sv_gameplayfix_stepmultipletimes 1\n"
+				);
+			break;
 		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
-		if (gamemode == GAME_STEELSTORM)
-			Cbuf_InsertText("\ncl_csqc_generatemousemoveevents 0\n\n");
+		case GAME_STEELSTORM:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 1\n"
+"sv_gameplayfix_findradiusdistancetobox 1\n"
+"sv_gameplayfix_grenadebouncedownslopes 1\n"
+"sv_gameplayfix_slidemoveprojectiles 1\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 1\n"
+"sv_gameplayfix_setmodelrealbox 1\n"
+"sv_gameplayfix_droptofloorstartsolid 1\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 1\n"
+"sv_gameplayfix_noairborncorpse 1\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 1\n"
+"sv_gameplayfix_easierwaterjump 1\n"
+"sv_gameplayfix_delayprojectiles 1\n"
+"sv_gameplayfix_multiplethinksperframe 1\n"
+"sv_gameplayfix_fixedcheckwatertransition 1\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 1\n"
+"sv_gameplayfix_swiminbmodels 1\n"
+"sv_gameplayfix_downtracesupportsongroundflag 1\n"
+"sys_ticrate 0.01388889\n"
+"cl_csqc_generatemousemoveevents 0\n"
+				);
+			break;
+		default:
+			Cbuf_InsertText("\n"
+"sv_gameplayfix_blowupfallenzombies 1\n"
+"sv_gameplayfix_findradiusdistancetobox 1\n"
+"sv_gameplayfix_grenadebouncedownslopes 1\n"
+"sv_gameplayfix_slidemoveprojectiles 1\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 1\n"
+"sv_gameplayfix_setmodelrealbox 1\n"
+"sv_gameplayfix_droptofloorstartsolid 1\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 1\n"
+"sv_gameplayfix_noairborncorpse 1\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 1\n"
+"sv_gameplayfix_easierwaterjump 1\n"
+"sv_gameplayfix_delayprojectiles 1\n"
+"sv_gameplayfix_multiplethinksperframe 1\n"
+"sv_gameplayfix_fixedcheckwatertransition 1\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 1\n"
+"sv_gameplayfix_swiminbmodels 1\n"
+"sv_gameplayfix_downtracesupportsongroundflag 1\n"
+"sys_ticrate 0.01388889\n"
+				);
+			break;
+		}
 	}
 }
 
