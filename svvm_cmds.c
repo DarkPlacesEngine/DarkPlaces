@@ -1151,8 +1151,7 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 	end[2] -= 256;
 
 	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
-		if (sv_gameplayfix_unstickentities.integer)
-			SV_UnstickEntity(ent);
+		SV_NudgeOutOfSolid(ent);
 
 	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
 	VectorCopy(PRVM_serveredictvector(ent, mins), entmins);
@@ -1168,8 +1167,6 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		if (trace.startsolid)
 		{
 			Con_DPrintf("droptofloor at %f %f %f - COULD NOT FIX BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
-			if (sv_gameplayfix_unstickentities.integer)
-				SV_UnstickEntity(ent);
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = 0;
@@ -1179,8 +1176,8 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		{
 			Con_DPrintf("droptofloor at %f %f %f - FIXED BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
 			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
-			if (sv_gameplayfix_unstickentities.integer)
-				SV_UnstickEntity(ent);
+			if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
+				SV_NudgeOutOfSolid(ent);
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
@@ -1191,10 +1188,9 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 	}
 	else
 	{
-		if (trace.fraction != 1)
+		if (!trace.allsolid && trace.fraction < 1)
 		{
-			if (trace.fraction < 1)
-				VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
+			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
