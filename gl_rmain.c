@@ -4702,7 +4702,7 @@ void R_BufferData_NewFrame(void)
 	{
 		if (r_bufferdata_buffer[r_bufferdata_cycle][type])
 		{
-			R_BufferData_Resize(type, false);
+			R_BufferData_Resize((r_bufferdata_type_t)type, false);
 			// free all but the head buffer, this is how we recycle obsolete
 			// buffers after they are no longer in use
 			p = &r_bufferdata_buffer[r_bufferdata_cycle][type]->purge;
