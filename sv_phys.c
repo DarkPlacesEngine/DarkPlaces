@@ -1248,7 +1248,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	int i, j, numplanes;
 	float d, time_left, gravity;
 	vec3_t dir, push, planes[MAX_CLIP_PLANES];
-	prvm_vec3_t primal_velocity, original_velocity, new_velocity;
+	prvm_vec3_t primal_velocity, original_velocity, new_velocity, restore_velocity;
 #if 0
 	vec3_t end;
 #endif
@@ -1256,6 +1256,8 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	if (time <= 0)
 		return 0;
 	gravity = 0;
+
+	VectorCopy(PRVM_serveredictvector(ent, velocity), restore_velocity);
 
 	if(applygravity)
 	{
@@ -1281,12 +1283,21 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 			break;
 
 		VectorScale(PRVM_serveredictvector(ent, velocity), time_left, push);
-		if(!SV_PushEntity(&trace, ent, push, false, false))
+		if(!SV_PushEntity(&trace, ent, push, true, false))
 		{
 			// we got teleported by a touch function
 			// let's abort the move
 			blocked |= 8;
 			break;
+		}
+
+		// this code is used by MOVETYPE_WALK and MOVETYPE_STEP and SV_UnstickEntity
+		// abort move if it started in SUPERCONTENTS_SOLID (not SUPERCONTENTS_BODY used by SOLID_BBOX)
+		// note the SV_PushEntity call above must pass true for failonbmodelstartsolid
+		if (trace.allsolid && (trace.startsupercontents & SUPERCONTENTS_SOLID))
+		{
+			VectorCopy(restore_velocity, PRVM_serveredictvector(ent, velocity));
+			return 3;
 		}
 
 		if (trace.fraction == 1)
@@ -1575,7 +1586,7 @@ static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pi
 	return true;
 }
 
-static qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
+qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int bump;
