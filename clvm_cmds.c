@@ -206,7 +206,10 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	if (prog->argc < 7)
 		flags = 0;
 	else
-		flags = PRVM_G_FLOAT(OFS_PARM6);
+	{
+		// LordHavoc: we only let the qc set certain flags, others are off-limits
+		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED);
+	}
 
 	// sound_starttime exists instead of sound_startposition because in a
 	// networking sense you might not know when something is being received,
