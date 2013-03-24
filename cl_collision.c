@@ -265,7 +265,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 
 	// clip to world
 	Collision_ClipPointToWorld(&cliptrace, cl.worldmodel, clipstart, hitsupercontentsmask);
-	cliptrace.bmodelstartsolid = cliptrace.startsolid;
+	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
 	if (type == MOVE_WORLDONLY)
@@ -503,7 +503,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 
 	// clip to world
 	Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
-	cliptrace.bmodelstartsolid = cliptrace.startsolid;
+	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
 	if (type == MOVE_WORLDONLY)
@@ -771,7 +771,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 	// clip to world
 	Collision_ClipToWorld(&cliptrace, cl.worldmodel, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
-	cliptrace.bmodelstartsolid = cliptrace.startsolid;
+	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
 	if (type == MOVE_WORLDONLY)
@@ -1008,7 +1008,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 
 	// clip to world
 	Collision_Cache_ClipLineToWorldSurfaces(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask);
-	cliptrace.bmodelstartsolid = cliptrace.startsolid;
+	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
 	if (type == MOVE_WORLDONLY)
