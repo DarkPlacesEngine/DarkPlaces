@@ -242,7 +242,11 @@ extern cvar_t r_skeletal_debugtranslatex;
 extern cvar_t r_skeletal_debugtranslatey;
 extern cvar_t r_skeletal_debugtranslatez;
 
+struct model_s;
+struct frameblend_s;
+
 void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes);
+void Mod_Skeletal_BuildTransforms(const struct model_s * RESTRICT model, const struct frameblend_s * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT bonepose, float * RESTRICT boneposerelative);
 
 #endif
 
