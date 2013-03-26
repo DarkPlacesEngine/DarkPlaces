@@ -4873,103 +4873,11 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 	if (r_gpuskeletal && model->num_bones > 0 && model->surfmesh.data_skeletalindex4ub)
 	{
 		// cache the skeleton so the vertex shader can use it
-		int i;
-		int blends;
-		const skeleton_t *skeleton = ent->skeleton;
-		const frameblend_t *frameblend = ent->frameblend;
-		float *boneposerelative;
-		float m[12];
-		static float bonepose[256][12];
 		r_refdef.stats[r_stat_animcache_skeletal_count] += 1;
 		r_refdef.stats[r_stat_animcache_skeletal_bones] += model->num_bones;
 		r_refdef.stats[r_stat_animcache_skeletal_maxbones] = max(r_refdef.stats[r_stat_animcache_skeletal_maxbones], model->num_bones);
 		ent->animcache_skeletaltransform3x4 = (float *)R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
-		boneposerelative = ent->animcache_skeletaltransform3x4;
-		if (skeleton && !skeleton->relativetransforms)
-			skeleton = NULL;
-		// resolve hierarchy and make relative transforms (deforms) which the shader wants
-		if (skeleton)
-		{
-			for (i = 0;i < model->num_bones;i++)
-			{
-				Matrix4x4_ToArray12FloatD3D(&skeleton->relativetransforms[i], m);
-				if (model->data_bones[i].parent >= 0)
-					R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
-				else
-					memcpy(bonepose[i], m, sizeof(m));
-
-				// create a relative deformation matrix to describe displacement
-				// from the base mesh, which is used by the actual weighting
-				R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative + i * 12);
-			}
-		}
-		else
-		{
-			for (i = 0;i < model->num_bones;i++)
-			{
-				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
-				float lerp = frameblend[0].lerp,
-					tx = pose7s[0],	ty = pose7s[1],	tz = pose7s[2],
-					rx = pose7s[3] * lerp,
-					ry = pose7s[4] * lerp,
-					rz = pose7s[5] * lerp,
-					rw = pose7s[6] * lerp,
-					dx = tx*rw + ty*rz - tz*ry,
-					dy = -tx*rz + ty*rw + tz*rx,
-					dz = tx*ry - ty*rx + tz*rw,
-					dw = -tx*rx - ty*ry - tz*rz,
-					scale, sx, sy, sz, sw;
-				for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
-				{
-					const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
-					float lerp = frameblend[blends].lerp,
-						tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
-						qx = pose7s[3], qy = pose7s[4], qz = pose7s[5], qw = pose7s[6];
-					if(rx*qx + ry*qy + rz*qz + rw*qw < 0) lerp = -lerp;
-					qx *= lerp;
-					qy *= lerp;
-					qz *= lerp;
-					qw *= lerp;
-					rx += qx;
-					ry += qy;
-					rz += qz;
-					rw += qw;
-					dx += tx*qw + ty*qz - tz*qy;
-					dy += -tx*qz + ty*qw + tz*qx;
-					dz += tx*qy - ty*qx + tz*qw;
-					dw += -tx*qx - ty*qy - tz*qz;
-				}
-				scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
-				sx = rx * scale;
-				sy = ry * scale;
-				sz = rz * scale;
-				sw = rw * scale;
-				m[0] = sw*rw + sx*rx - sy*ry - sz*rz;
-				m[1] = 2*(sx*ry - sw*rz);
-				m[2] = 2*(sx*rz + sw*ry);
-				m[3] = model->num_posescale*(dx*sw - dy*sz + dz*sy - dw*sx);
-				m[4] = 2*(sx*ry + sw*rz);
-				m[5] = sw*rw + sy*ry - sx*rx - sz*rz;
-				m[6] = 2*(sy*rz - sw*rx);
-				m[7] = model->num_posescale*(dx*sz + dy*sw - dz*sx - dw*sy);
-				m[8] = 2*(sx*rz - sw*ry);
-				m[9] = 2*(sy*rz + sw*rx);
-				m[10] = sw*rw + sz*rz - sx*rx - sy*ry;
-				m[11] = model->num_posescale*(dy*sx + dz*sw - dx*sy - dw*sz);
-				if (i == r_skeletal_debugbone.integer)
-					m[r_skeletal_debugbonecomponent.integer % 12] += r_skeletal_debugbonevalue.value;
-				m[3] *= r_skeletal_debugtranslatex.value;
-				m[7] *= r_skeletal_debugtranslatey.value;
-				m[11] *= r_skeletal_debugtranslatez.value;
-				if (model->data_bones[i].parent >= 0)
-					R_ConcatTransforms(bonepose[model->data_bones[i].parent], m, bonepose[i]);
-				else
-					memcpy(bonepose[i], m, sizeof(m));
-				// create a relative deformation matrix to describe displacement
-				// from the base mesh, which is used by the actual weighting
-				R_ConcatTransforms(bonepose[i], model->data_baseboneposeinverse + i * 12, boneposerelative + i * 12);
-			}
-		}
+		Mod_Skeletal_BuildTransforms(model, ent->frameblend, ent->skeleton, NULL, ent->animcache_skeletaltransform3x4); 
 		// note: this can fail if the buffer is at the grow limit
 		ent->animcache_skeletaltransform3x4size = sizeof(float[3][4]) * model->num_bones;
 		ent->animcache_skeletaltransform3x4buffer = R_BufferData_Store(ent->animcache_skeletaltransform3x4size, ent->animcache_skeletaltransform3x4, R_BUFFERDATA_UNIFORM, &ent->animcache_skeletaltransform3x4offset, true);
