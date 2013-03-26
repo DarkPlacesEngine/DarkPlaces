@@ -10,7 +10,7 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 
 	//unsigned long long ts = rdtsc();
 	bonepose = (float *) Mod_Skeletal_AnimateVertices_AllocBuffers(sizeof(float[12]) * (model->num_bones*2 + model->surfmesh.num_blends));
-	boneposerelative = bonepose + model->num_bones;
+	boneposerelative = bonepose + model->num_bones * 12;
 
 	Mod_Skeletal_BuildTransforms(model, frameblend, skeleton, bonepose, boneposerelative);
 
