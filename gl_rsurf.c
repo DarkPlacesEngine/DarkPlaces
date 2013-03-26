@@ -637,7 +637,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
-	if (model == NULL)
+	if (model == NULL || model->surfmesh.isanimated)
 		return;
 	GL_ColorMask(0,0,0,0);
 	GL_Color(1,1,1,1);
