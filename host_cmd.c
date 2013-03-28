@@ -551,7 +551,7 @@ LOAD / SAVE GAME
 void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 {
 	qfile_t	*f;
-	int		i, k, l, lightstyles = 64;
+	int		i, k, l, numbuffers, lightstyles = 64;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 	char	line[MAX_INPUTLINE];
 	qboolean isserver;
@@ -641,11 +641,13 @@ void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 			FS_Printf(f,"sv.sound_precache %i %s\n", i, sv.sound_precache[i]);
 
 	// darkplaces extension - save buffers
-	for (i = 0; i < (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray); i++)
+	numbuffers = Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
+	for (i = 0; i < numbuffers; i++)
 	{
 		prvm_stringbuffer_t *stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
 		if(stringbuffer && (stringbuffer->flags & STRINGBUFFER_SAVED))
 		{
+			FS_Printf(f,"sv.buffer %i %i \"string\"\n", i, stringbuffer->flags & STRINGBUFFER_QCFLAGS);
 			for(k = 0; k < stringbuffer->num_strings; k++)
 			{
 				if (!stringbuffer->strings[k])
@@ -753,6 +755,11 @@ Host_Loadgame_f
 ===============
 */
 
+prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, char *format);
+void BufStr_Set(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer, int strindex, const char *str);
+void BufStr_Del(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer);
+void BufStr_Flush(prvm_prog_t *prog);
+
 static void Host_Loadgame_f (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -764,12 +771,11 @@ static void Host_Loadgame_f (void)
 	const char *t;
 	char *text;
 	prvm_edict_t *ent;
-	int i, k;
+	int i, k, numbuffers;
 	int entnum;
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
 	prvm_stringbuffer_t *stringbuffer;
-	size_t alloclen;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -988,6 +994,8 @@ static void Host_Loadgame_f (void)
 			memset(sv.lightstyles[0], 0, sizeof(sv.lightstyles));
 			memset(sv.model_precache[0], 0, sizeof(sv.model_precache));
 			memset(sv.sound_precache[0], 0, sizeof(sv.sound_precache));
+			BufStr_Flush(prog);
+
 			while (COM_ParseToken_Simple(&t, false, false, true))
 			{
 				if (!strcmp(com_token, "sv.lightstyles"))
@@ -1023,44 +1031,48 @@ static void Host_Loadgame_f (void)
 					else
 						Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
 				}
+				else if (!strcmp(com_token, "sv.buffer"))
+				{
+					if (COM_ParseToken_Simple(&t, false, false, true))
+					{
+						i = atoi(com_token);
+						if (i >= 0)
+						{
+							k = STRINGBUFFER_SAVED;
+							if (COM_ParseToken_Simple(&t, false, false, true))
+								k |= atoi(com_token);
+							if (!BufStr_FindCreateReplace(prog, i, k, "string"))
+								Con_Printf("failed to create stringbuffer %i\n", i);
+						}
+						else
+							Con_Printf("unsupported stringbuffer index %i \"%s\"\n", i, com_token);
+					}
+					else
+						Con_Printf("unexpected end of line when parsing sv.buffer (expected buffer index)\n");
+				}
 				else if (!strcmp(com_token, "sv.bufstr"))
 				{
-					COM_ParseToken_Simple(&t, false, false, true);
-					i = atoi(com_token);
-					COM_ParseToken_Simple(&t, false, false, true);
-					k = atoi(com_token);
-					COM_ParseToken_Simple(&t, false, false, true);
-					stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
-					// VorteX: nasty code, cleanup required
-					// create buffer at this index
-					if(!stringbuffer) 
-						stringbuffer = (prvm_stringbuffer_t *) Mem_ExpandableArray_AllocRecordAtIndex(&prog->stringbuffersarray, i);
-					if (!stringbuffer)
-						Con_Printf("cant write string %i into buffer %i\n", k, i);
+					if (!COM_ParseToken_Simple(&t, false, false, true))
+						Con_Printf("unexpected end of line when parsing sv.bufstr\n");
 					else
 					{
-						// code copied from VM_bufstr_set
-						// expand buffer
-						if (stringbuffer->max_strings <= i)
+						i = atoi(com_token);
+						stringbuffer = BufStr_FindCreateReplace(prog, i, STRINGBUFFER_SAVED, "string");
+						if (stringbuffer)
 						{
-							char **oldstrings = stringbuffer->strings;
-							stringbuffer->max_strings = max(stringbuffer->max_strings * 2, 128);
-							while (stringbuffer->max_strings <= i)
-								stringbuffer->max_strings *= 2;
-							stringbuffer->strings = (char **) Mem_Alloc(prog->progs_mempool, stringbuffer->max_strings * sizeof(stringbuffer->strings[0]));
-							if (stringbuffer->num_strings > 0)
-								memcpy(stringbuffer->strings, oldstrings, stringbuffer->num_strings * sizeof(stringbuffer->strings[0]));
-							if (oldstrings)
-								Mem_Free(oldstrings);
+							if (COM_ParseToken_Simple(&t, false, false, true))
+							{
+								k = atoi(com_token);
+								if (COM_ParseToken_Simple(&t, false, false, true))
+									BufStr_Set(prog, stringbuffer, k, com_token);
+								else
+									Con_Printf("unexpected end of line when parsing sv.bufstr (expected string)\n");
+							}
+							else
+								Con_Printf("unexpected end of line when parsing sv.bufstr (expected strindex)\n");
 						}
-						// allocate string
-						stringbuffer->num_strings = max(stringbuffer->num_strings, k + 1);
-						if(stringbuffer->strings[k])
-							Mem_Free(stringbuffer->strings[k]);
-						stringbuffer->strings[k] = NULL;
-						alloclen = strlen(com_token) + 1;
-						stringbuffer->strings[k] = (char *)Mem_Alloc(prog->progs_mempool, alloclen);
-						memcpy(stringbuffer->strings[k], com_token, alloclen);
+						else
+							Con_Printf("failed to create stringbuffer %i \"%s\"\n", i, com_token);
 					}
 				}	
 				// skip any trailing text or unrecognized commands
@@ -1070,6 +1082,15 @@ static void Host_Loadgame_f (void)
 		}
 	}
 	Mem_Free(text);
+
+	// remove all temporary flagged string buffers (ones created with BufStr_FindCreateReplace)
+	numbuffers = Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
+	for (i = 0; i < numbuffers; i++)
+	{
+		if ( (stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i)) )
+			if (stringbuffer->flags & STRINGBUFFER_TEMP)
+				BufStr_Del(prog, stringbuffer);
+	}
 
 	if(developer_entityparsing.integer)
 		Con_Printf("Host_Loadgame_f: finished\n");
