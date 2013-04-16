@@ -5784,10 +5784,10 @@ static void R_Water_StartFrame(void)
 	}
 	else
 	{
-		for (texturewidth   = 1;texturewidth   < waterwidth ;texturewidth   *= 2);
-		for (textureheight  = 1;textureheight  < waterheight;textureheight  *= 2);
-		for (camerawidth    = 1;camerawidth   <= waterwidth; camerawidth    *= 2); camerawidth  /= 2;
-		for (cameraheight   = 1;cameraheight  <= waterheight;cameraheight   *= 2); cameraheight /= 2;
+		for (texturewidth   = 1;texturewidth     <  waterwidth ;texturewidth   *= 2);
+		for (textureheight  = 1;textureheight    <  waterheight;textureheight  *= 2);
+		for (camerawidth    = 1;camerawidth  * 2 <= waterwidth ;camerawidth    *= 2);
+		for (cameraheight   = 1;cameraheight * 2 <= waterheight;cameraheight   *= 2);
 	}
 
 	// allocate textures as needed
