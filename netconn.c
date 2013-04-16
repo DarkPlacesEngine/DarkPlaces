@@ -48,7 +48,7 @@ static cvar_t sv_masters [] =
 	{0, "sv_masterextra2", "64.22.107.125", "dpmaster.deathmask.net - default master server 2 (admin: Willis)"}, // admin: Willis
 	{0, "sv_masterextra3", "92.62.40.73", "dpmaster.tchr.no - default master server 3 (admin: tChr)"}, // admin: tChr
 #ifdef SUPPORTIPV6
-	{0, "sv_masterextra4", "[2a03:4000:1::2e26:f351:3]:27950", "dpmaster.sudo.rm-f.org - default master server 4 (admin: divVerent)"}, // admin: divVerent
+	{0, "sv_masterextra4", "[2a03:4000:2:225::51:334d]:27950", "dpmaster.sudo.rm-f.org - default master server 4 (admin: divVerent)"}, // admin: divVerent
 #endif
 	{0, NULL, NULL, NULL}
 };
