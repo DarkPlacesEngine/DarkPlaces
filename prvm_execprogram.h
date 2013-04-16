@@ -187,31 +187,37 @@
 			case OP_STOREP_FLD:		// integers
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
-				if ((unsigned int)OPB->_int >= (unsigned int)prog->entityfieldsarea)
+				if ((prvm_uint_t)OPB->_int - prog->entityfields >= (prvm_uint_t)prog->entityfieldsarea - prog->entityfields)
 				{
-					PreError();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
-					goto cleanup;
-				}
-				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
-				{
-					prog->xstatement = st - prog->statements;
-					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+					if (OPB->_int < 0 || OPB->_int >= prog->entityfieldsarea)
+					{
+						PreError();
+						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+						goto cleanup;
+					}
+					if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
+					{
+						prog->xstatement = st - prog->statements;
+						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+					}
 				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
-				if (OPB->_int < 0 || OPB->_int + 3 > prog->entityfieldsarea)
+				if ((prvm_uint_t)OPB->_int - prog->entityfields > (prvm_uint_t)prog->entityfieldsarea - prog->entityfields - 3)
 				{
-					PreError();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
-					goto cleanup;
-				}
-				if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
-				{
-					prog->xstatement = st - prog->statements;
-					VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+					if (OPB->_int < 0 || OPB->_int > prog->entityfieldsarea - 3)
+					{
+						PreError();
+						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+						goto cleanup;
+					}
+					if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
+					{
+						prog->xstatement = st - prog->statements;
+						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+					}
 				}
 				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
@@ -220,13 +226,13 @@
 				break;
 
 			case OP_ADDRESS:
-				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to address an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
+				if ((prvm_uint_t)(OPB->_int) >= (prvm_uint_t)(prog->entityfields))
 				{
 					PreError();
 					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
@@ -249,13 +255,13 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
-				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((unsigned int)(OPB->_int) >= (unsigned int)(prog->entityfields))
+				if ((prvm_uint_t)(OPB->_int) >= (prvm_uint_t)(prog->entityfields))
 				{
 					PreError();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -266,13 +272,13 @@
 				break;
 
 			case OP_LOAD_V:
-				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if (OPB->_int < 0 || OPB->_int + 2 >= prog->entityfields)
+				if ((prvm_uint_t)OPB->_int > (prvm_uint_t)prog->entityfields - 3)
 				{
 					PreError();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
