@@ -678,6 +678,19 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
+	// these may become out of date when a builtin is called, and are updated accordingly
+	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	unsigned int cached_entityfields = prog->entityfields;
+	unsigned int cached_entityfields_3 = prog->entityfields - 3;
+	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
+	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
+	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
+	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
+	unsigned int cached_max_edicts = prog->max_edicts;
+	// these do not change
+	mstatement_t *cached_statements = prog->statements;
+	qboolean cached_allowworldwrites = prog->allowworldwrites;
+	unsigned int cached_flag = prog->flag;
 
 	calltime = Sys_DirtyTime();
 
@@ -770,6 +783,19 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
+	// these may become out of date when a builtin is called, and are updated accordingly
+	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	unsigned int cached_entityfields = prog->entityfields;
+	unsigned int cached_entityfields_3 = prog->entityfields - 3;
+	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
+	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
+	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
+	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
+	unsigned int cached_max_edicts = prog->max_edicts;
+	// these do not change
+	mstatement_t *cached_statements = prog->statements;
+	qboolean cached_allowworldwrites = prog->allowworldwrites;
+	unsigned int cached_flag = prog->flag;
 
 	calltime = Sys_DirtyTime();
 
@@ -867,6 +893,19 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
+	// these may become out of date when a builtin is called, and are updated accordingly
+	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	unsigned int cached_entityfields = prog->entityfields;
+	unsigned int cached_entityfields_3 = prog->entityfields - 3;
+	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
+	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
+	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
+	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
+	unsigned int cached_max_edicts = prog->max_edicts;
+	// these do not change
+	mstatement_t *cached_statements = prog->statements;
+	qboolean cached_allowworldwrites = prog->allowworldwrites;
+	unsigned int cached_flag = prog->flag;
 
 	calltime = Sys_DirtyTime();
 
