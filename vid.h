@@ -46,7 +46,7 @@ typedef struct viddef_support_s
 {
 	qboolean gl20shaders;
 	qboolean gl20shaders130; // indicates glBindFragDataLocation is available
-	qboolean glshaderversion; // typical values: 100 110 120 130 140 ...
+	int glshaderversion; // typical values: 100 110 120 130 140 ...
 	qboolean amd_texture_texture4;
 	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
