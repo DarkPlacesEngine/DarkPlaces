@@ -187,7 +187,7 @@
 			case OP_STOREP_FLD:		// integers
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
-				if (OPB->_int < 0 || OPB->_int + 1 > prog->entityfieldsarea)
+				if ((unsigned int)OPB->_int >= (unsigned int)prog->entityfieldsarea)
 				{
 					PreError();
 					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
@@ -220,7 +220,7 @@
 				break;
 
 			case OP_ADDRESS:
-				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
+				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to address an out of bounds edict number", prog->name);
@@ -249,7 +249,7 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
-				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
+				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
@@ -266,7 +266,7 @@
 				break;
 
 			case OP_LOAD_V:
-				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
+				if ((unsigned int)OPA->edict >= (unsigned int)prog->max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
