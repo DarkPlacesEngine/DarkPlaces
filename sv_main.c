@@ -3056,7 +3056,7 @@ static void SV_CreateBaseline (void)
 	int i, entnum, large;
 	prvm_edict_t *svent;
 
-	// LordHavoc: clear *all* states (note just active ones)
+	// LordHavoc: clear *all* baselines (not just active ones)
 	for (entnum = 0;entnum < prog->max_edicts;entnum++)
 	{
 		// get the current server version
