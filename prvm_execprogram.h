@@ -1,12 +1,12 @@
 #ifdef PRVMTIMEPROFILING 
 #define PreError() \
-	prog->xstatement = st - prog->statements; \
+	prog->xstatement = st - cached_statements; \
 	tm = Sys_DirtyTime(); \
 	prog->xfunction->profile += (st - startst); \
 	prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 #else
 #define PreError() \
-	prog->xstatement = st - prog->statements; \
+	prog->xstatement = st - cached_statements; \
 	prog->xfunction->profile += (st - startst);
 #endif
 
@@ -17,13 +17,13 @@
 			if (prog->watch_global_type != ev_void)
 			{
 				prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
-				prog->xstatement = st + 1 - prog->statements;
+				prog->xstatement = st + 1 - cached_statements;
 				PRVM_Watchpoint(prog, 1, "Global watchpoint hit by engine", prog->watch_global_type, &prog->watch_global_value, f);
 			}
 			if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 			{
 				prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
-				prog->xstatement = st + 1 - prog->statements;
+				prog->xstatement = st + 1 - cached_statements;
 				PRVM_Watchpoint(prog, 1, "Entityfield watchpoint hit by engine", prog->watch_field_type, &prog->watch_edictfield_value, f);
 			}
 		}
@@ -36,11 +36,11 @@
 #if PRVMSLOWINTERPRETER
 			if (prog->trace)
 				PRVM_PrintStatement(prog, st);
-			prog->statement_profile[st - prog->statements]++;
+			prog->statement_profile[st - cached_statements]++;
 			if (prog->break_statement >= 0)
-				if ((st - prog->statements) == prog->break_statement)
+				if ((st - cached_statements) == prog->break_statement)
 				{
-					prog->xstatement = st - prog->statements;
+					prog->xstatement = st - cached_statements;
 					PRVM_Breakpoint(prog, prog->break_stack_index, "Breakpoint hit");
 				}
 #endif
@@ -92,7 +92,7 @@
 					{
 						prog->xfunction->profile += (st - startst);
 						startst = st;
-						prog->xstatement = st - prog->statements;
+						prog->xstatement = st - cached_statements;
 						VM_Warning(prog, "Attempted division by zero in %s\n", prog->name );
 					}
 					OPC->_float = 0.0f;
@@ -187,67 +187,66 @@
 			case OP_STOREP_FLD:		// integers
 			case OP_STOREP_S:
 			case OP_STOREP_FNC:		// pointers
-				if ((prvm_uint_t)OPB->_int - prog->entityfields >= (prvm_uint_t)prog->entityfieldsarea - prog->entityfields)
+				if ((prvm_uint_t)OPB->_int - cached_entityfields >= cached_entityfieldsarea_entityfields)
 				{
-					if (OPB->_int < 0 || OPB->_int >= prog->entityfieldsarea)
+					if ((prvm_uint_t)OPB->_int >= cached_entityfieldsarea)
 					{
 						PreError();
 						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 						goto cleanup;
 					}
-					if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
+					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						prog->xstatement = st - prog->statements;
+						prog->xstatement = st - cached_statements;
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
-				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				break;
 			case OP_STOREP_V:
-				if ((prvm_uint_t)OPB->_int - prog->entityfields > (prvm_uint_t)prog->entityfieldsarea - prog->entityfields - 3)
+				if ((prvm_uint_t)OPB->_int - cached_entityfields > (prvm_uint_t)cached_entityfieldsarea_entityfields_3)
 				{
-					if (OPB->_int < 0 || OPB->_int > prog->entityfieldsarea - 3)
+					if ((prvm_uint_t)OPB->_int > cached_entityfieldsarea_3)
 					{
 						PreError();
 						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 						goto cleanup;
 					}
-					if (OPB->_int < prog->entityfields && !prog->allowworldwrites)
+					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						prog->xstatement = st - prog->statements;
+						prog->xstatement = st - cached_statements;
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
-				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
 				ptr->ivector[2] = OPA->ivector[2];
 				break;
 
 			case OP_ADDRESS:
-				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to address an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)(OPB->_int) >= (prvm_uint_t)(prog->entityfields))
+				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
 				{
 					PreError();
 					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 #if 0
-				if (OPA->edict == 0 && !prog->allowworldwrites)
+				if (OPA->edict == 0 && !cached_allowworldwrites)
 				{
 					PreError();
 					prog->error_cmd("forbidden assignment to null/world entity in %s", prog->name);
 					goto cleanup;
 				}
 #endif
-				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ed->fields.fp - prog->edictsfields + OPB->_int;
+				OPC->_int = OPA->edict * cached_entityfields + OPB->_int;
 				break;
 
 			case OP_LOAD_F:
@@ -255,13 +254,13 @@
 			case OP_LOAD_ENT:
 			case OP_LOAD_S:
 			case OP_LOAD_FNC:
-				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)(OPB->_int) >= (prvm_uint_t)(prog->entityfields))
+				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
 				{
 					PreError();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -272,13 +271,13 @@
 				break;
 
 			case OP_LOAD_V:
-				if ((prvm_uint_t)OPA->edict >= (prvm_uint_t)prog->max_edicts)
+				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PreError();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int > (prvm_uint_t)prog->entityfields - 3)
+				if ((prvm_uint_t)OPB->_int > cached_entityfields_3)
 				{
 					PreError();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -300,12 +299,12 @@
 				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
-					st = prog->statements + st->jumpabsolute - 1;	// offset the st++
+					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
 					{
-						prog->xstatement = st - prog->statements;
+						prog->xstatement = st - cached_statements;
 						PRVM_Profile(prog, 1<<30, 1000000, 0);
 						prog->error_cmd("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", prog->name, jumpcount);
 					}
@@ -319,12 +318,12 @@
 				// and entity, string, field values can never have that value
 				{
 					prog->xfunction->profile += (st - startst);
-					st = prog->statements + st->jumpabsolute - 1;	// offset the st++
+					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
 					{
-						prog->xstatement = st - prog->statements;
+						prog->xstatement = st - cached_statements;
 						PRVM_Profile(prog, 1<<30, 0.01, 0);
 						prog->error_cmd("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", prog->name, jumpcount);
 					}
@@ -333,12 +332,12 @@
 
 			case OP_GOTO:
 				prog->xfunction->profile += (st - startst);
-				st = prog->statements + st->jumpabsolute - 1;	// offset the st++
+				st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 				startst = st;
 				// no bounds check needed, it is done when loading progs
 				if (++jumpcount == 10000000 && prvm_runawaycheck)
 				{
-					prog->xstatement = st - prog->statements;
+					prog->xstatement = st - cached_statements;
 					PRVM_Profile(prog, 1<<30, 0.01, 0);
 					prog->error_cmd("%s runaway loop counter hit limit of %d jumps\ntip: read above for list of most-executed functions", prog->name, jumpcount);
 				}
@@ -360,7 +359,7 @@
 #endif
 				prog->xfunction->profile += (st - startst);
 				startst = st;
-				prog->xstatement = st - prog->statements;
+				prog->xstatement = st - cached_statements;
 				prog->argc = st->op - OP_CALL0;
 				if (!OPA->function)
 					prog->error_cmd("NULL function in %s", prog->name);
@@ -377,7 +376,7 @@
 
 				if (newf->first_statement < 0)
 				{
-					// negative statements are built in functions
+					// negative first_statement values are built in functions
 					int builtinnumber = -newf->first_statement;
 					prog->xfunction->builtinsprofile++;
 					if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
@@ -389,15 +388,28 @@
 						prog->xfunction->tbprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 						starttm = tm;
 #endif
+						// builtins may cause ED_Alloc() to be called, update cached variables
+						cached_edictsfields = prog->edictsfields;
+						cached_entityfields = prog->entityfields;
+						cached_entityfields_3 = prog->entityfields - 3;
+						cached_entityfieldsarea = prog->entityfieldsarea;
+						cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
+						cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
+						cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
+						cached_max_edicts = prog->max_edicts;
+						// these do not change
+						//cached_statements = prog->statements;
+						//cached_allowworldwrites = prog->allowworldwrites;
+						//cached_flag = prog->flag;
+						// if prog->trace changed we need to change interpreter path
+						if (prog->trace != cachedpr_trace)
+							goto chooseexecprogram;
 					}
 					else
 						prog->error_cmd("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, prog->name);
-
-					if (prog->trace != cachedpr_trace)
-						goto chooseexecprogram;
 				}
 				else
-					st = prog->statements + PRVM_EnterFunction(prog, newf);
+					st = cached_statements + PRVM_EnterFunction(prog, newf);
 				startst = st;
 				break;
 
@@ -409,20 +421,20 @@
 				starttm = tm;
 #endif
 				prog->xfunction->profile += (st - startst);
-				prog->xstatement = st - prog->statements;
+				prog->xstatement = st - cached_statements;
 
 				prog->globals.ip[OFS_RETURN  ] = prog->globals.ip[st->operand[0]  ];
 				prog->globals.ip[OFS_RETURN+1] = prog->globals.ip[st->operand[0]+1];
 				prog->globals.ip[OFS_RETURN+2] = prog->globals.ip[st->operand[0]+2];
 
-				st = prog->statements + PRVM_LeaveFunction(prog);
+				st = cached_statements + PRVM_LeaveFunction(prog);
 				startst = st;
 				if (prog->depth <= exitdepth)
 					goto cleanup; // all done
 				break;
 
 			case OP_STATE:
-				if(prog->flag & PRVM_OP_STATE)
+				if(cached_flag & PRVM_OP_STATE)
 				{
 					ed = PRVM_PROG_TO_EDICT(PRVM_gameglobaledict(self));
 					PRVM_gameedictfloat(ed,nextthink) = PRVM_gameglobalfloat(time) + 0.1;
@@ -432,7 +444,7 @@
 				else
 				{
 					PreError();
-					prog->xstatement = st - prog->statements;
+					prog->xstatement = st - cached_statements;
 					prog->error_cmd("OP_STATE not supported by %s", prog->name);
 				}
 				break;
@@ -716,13 +728,13 @@
 				if (prog->watch_global_type != ev_void)
 				{
 					prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
-					prog->xstatement = st - prog->statements;
+					prog->xstatement = st - cached_statements;
 					PRVM_Watchpoint(prog, 0, "Global watchpoint hit", prog->watch_global_type, &prog->watch_global_value, f);
 				}
 				if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 				{
 					prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
-					prog->xstatement = st - prog->statements;
+					prog->xstatement = st - cached_statements;
 					PRVM_Watchpoint(prog, 0, "Entityfield watchpoint hit", prog->watch_field_type, &prog->watch_edictfield_value, f);
 				}
 			}
