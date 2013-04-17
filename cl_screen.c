@@ -2597,7 +2597,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	if (qglDrawBuffer)
 		qglDrawBuffer(GL_BACK);
 	SCR_DrawLoadingScreen_SharedSetup(clear);
-	if (vid.stereobuffer)
+	if (vid.stereobuffer && qglDrawBuffer)
 	{
 		qglDrawBuffer(GL_BACK_LEFT);
 		SCR_DrawLoadingScreen(clear);
