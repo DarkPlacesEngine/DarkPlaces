@@ -1695,7 +1695,7 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 				S_SetChannelSpeed(ch_idx, fspeed);
 				for(i = 1; i > 0 && (i <= flags || i <= (int) channels[ch_idx].flags); i <<= 1)
 					if((flags ^ channels[ch_idx].flags) & i)
-						S_SetChannelFlag(ch_idx, i, flags & i);
+						S_SetChannelFlag(ch_idx, i, (flags & i) != 0);
 				ch->distfade = attenuation / snd_soundradius.value;
 				SND_Spatialize(ch, false);
 				return ch_idx;
