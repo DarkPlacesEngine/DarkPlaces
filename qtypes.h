@@ -41,9 +41,11 @@ typedef bool qboolean;
 #ifdef PRVM_64
 typedef double prvm_vec_t;
 typedef long long prvm_int_t;
+typedef unsigned long long prvm_uint_t;
 #else
 typedef float prvm_vec_t;
 typedef int prvm_int_t;
+typedef unsigned int prvm_uint_t;
 #endif
 typedef prvm_vec_t prvm_vec3_t[3];
 
