@@ -99,6 +99,8 @@ typedef ptrdiff_t GLintptrARB;
 // int whose size is the same as a pointer (?)
 typedef ptrdiff_t GLsizeiptrARB;
 
+#define GL_STEREO					0x0C33
+
 #define GL_MODELVIEW				0x1700
 #define GL_PROJECTION				0x1701
 #define GL_TEXTURE				0x1702

@@ -1840,6 +1840,22 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
 		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
 
+		switch(vid.renderpath)
+		{
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+		case RENDERPATH_GL20:
+			{
+				GLboolean stereo;
+				qglGetBooleanv(GL_STEREO, &stereo);
+				vid.stereobuffer = stereo != 0;
+			}
+			break;
+		default:
+			vid.stereobuffer = false;
+			break;
+		}
+
 		if(
 			(vid_sRGB_fallback.integer >= 3) // force fallback
 			||
@@ -1860,7 +1876,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
 		if(vid_userefreshrate.integer)
 			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
-		Cvar_SetValueQuick(&vid_stereobuffer, vid.mode.stereobuffer);
+		Cvar_SetValueQuick(&vid_stereobuffer, vid.stereobuffer ? 1 : 0);
 
 		return true;
 	}
