@@ -4923,7 +4923,7 @@ void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colort
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
-#ifdef OPENGL_ORIENTATION
+#ifdef MATRIX4x4_OPENGLORIENTATION
 		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
 		r_shadow_shadowmapmatrix.m[0][1]	*= -1.0f;
 		r_shadow_shadowmapmatrix.m[0][2]	*= -1.0f;
