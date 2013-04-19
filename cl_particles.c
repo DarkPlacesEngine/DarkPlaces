@@ -1648,7 +1648,7 @@ CL_EntityParticles
 */
 void CL_EntityParticles (const entity_t *ent)
 {
-	int i;
+	int i, j;
 	vec_t pitch, yaw, dist = 64, beamlength = 16;
 	vec3_t org, v;
 	static vec3_t avelocities[NUMVERTEXNORMALS];
@@ -1658,8 +1658,9 @@ void CL_EntityParticles (const entity_t *ent)
 	Matrix4x4_OriginFromMatrix(&ent->render.matrix, org);
 
 	if (!avelocities[0][0])
-		for (i = 0;i < NUMVERTEXNORMALS * 3;i++)
-			avelocities[0][i] = lhrandom(0, 2.55);
+		for (i = 0;i < NUMVERTEXNORMALS;i++)
+			for (j = 0;j < 3;j++)
+				avelocities[i][j] = lhrandom(0, 2.55);
 
 	for (i = 0;i < NUMVERTEXNORMALS;i++)
 	{
