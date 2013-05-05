@@ -455,22 +455,6 @@ static void VM_CL_precache_model (prvm_prog_t *prog)
 	VM_Warning(prog, "VM_CL_precache_model: model \"%s\" not found\n", name);
 }
 
-static int CSQC_EntitiesInBox (prvm_prog_t *prog, vec3_t mins, vec3_t maxs, int maxlist, prvm_edict_t **list)
-{
-	prvm_edict_t	*ent;
-	int				i, k;
-
-	ent = PRVM_NEXT_EDICT(prog->edicts);
-	for(k=0,i=1; i<prog->num_edicts ;i++, ent = PRVM_NEXT_EDICT(ent))
-	{
-		if (ent->priv.required->free)
-			continue;
-		if(BoxesOverlap(mins, maxs, PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
-			list[k++] = ent;
-	}
-	return k;
-}
-
 // #22 entity(vector org, float rad) findradius
 static void VM_CL_findradius (prvm_prog_t *prog)
 {
@@ -502,7 +486,7 @@ static void VM_CL_findradius (prvm_prog_t *prog)
 	maxs[0] = org[0] + (radius + 1);
 	maxs[1] = org[1] + (radius + 1);
 	maxs[2] = org[2] + (radius + 1);
-	numtouchedicts = CSQC_EntitiesInBox(prog, mins, maxs, MAX_EDICTS, touchedicts);
+	numtouchedicts = World_EntitiesInBox(&cl.world, mins, maxs, MAX_EDICTS, touchedicts);
 	if (numtouchedicts > MAX_EDICTS)
 	{
 		// this never happens	//[515]: for what then ?
