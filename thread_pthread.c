@@ -31,6 +31,7 @@ void *_Thread_CreateMutex(const char *filename, int fileline)
 	Sys_PrintfToTerminal("%p mutex create %s:%i\n" , mutexp, filename, fileline);
 #endif
 #ifdef THREADRECURSIVE
+	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 	pthread_mutex_init(mutexp, &attr);
 #else
