@@ -2753,9 +2753,10 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	if (!gl_mesh_prefer_short_elements.integer)
 	{
 		if (element3i)
+		{
 			element3s = NULL;
-		if (element3i_indexbuffer)
-			element3i_indexbuffer = NULL;
+			element3s_indexbuffer = NULL;
+		}
 	}
 	// adjust the pointers for firsttriangle
 	if (element3i)
