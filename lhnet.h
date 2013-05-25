@@ -40,6 +40,7 @@ lhnetsocket_t;
 
 void LHNET_Init(void);
 void LHNET_Shutdown(void);
+int LHNET_DefaultDSCP(int dscp); // < 0: query; >= 0: set (returns previous value)
 void LHNET_SleepUntilPacket_Microseconds(int microseconds);
 lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address);
 void LHNET_CloseSocket(lhnetsocket_t *lhnetsocket);
