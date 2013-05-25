@@ -723,6 +723,7 @@ lhnetpacket_t;
 static int lhnet_active;
 static lhnetsocket_t lhnet_socketlist;
 static lhnetpacket_t lhnet_packetlist;
+static int lhnet_default_dscp = 0;
 #ifdef WIN32
 static int lhnet_didWSAStartup = 0;
 static WSADATA lhnet_winsockdata;
@@ -739,6 +740,18 @@ void LHNET_Init(void)
 	lhnet_didWSAStartup = !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata);
 	if (!lhnet_didWSAStartup)
 		Con_Print("LHNET_Init: WSAStartup failed, networking disabled\n");
+#endif
+}
+
+int LHNET_DefaultDSCP(int dscp)
+{
+#ifdef IP_TOS
+	int prev = lhnet_default_dscp;
+	if(dscp >= 0)
+		lhnet_default_dscp = dscp;
+	return prev;
+#else
+	return -1;
 #endif
 }
 
@@ -980,6 +993,13 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 								int i = 1;
 								// enable broadcast on this socket
 								setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
+#ifdef IP_TOS
+								{
+									// enable DSCP for ToS support
+									int tos = lhnet_default_dscp << 2;
+									setsockopt(lhnetsocket->inetsocket, IPPROTO_IP, IP_TOS, (char *) &tos, sizeof(tos));
+								}
+#endif
 								lhnetsocket->next = &lhnet_socketlist;
 								lhnetsocket->prev = lhnetsocket->next->prev;
 								lhnetsocket->next->prev = lhnetsocket;
