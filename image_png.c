@@ -145,16 +145,20 @@ qboolean PNG_OpenLibrary (void)
 	const char* dllnames [] =
 	{
 #if WIN32
+		"libpng16.dll",
+		"libpng16-16.dll",
 		"libpng15-15.dll",
 		"libpng15.dll",
 		"libpng14-14.dll",
 		"libpng14.dll",
 		"libpng12.dll",
 #elif defined(MACOSX)
+		"libpng16.16.dylib",
 		"libpng15.15.dylib",
 		"libpng14.14.dylib",
 		"libpng12.0.dylib",
 #else
+		"libpng16.so.16",
 		"libpng15.so.15", // WTF libtool guidelines anyone?
 		"libpng14.so.14", // WTF libtool guidelines anyone?
 		"libpng12.so.0",
@@ -204,6 +208,7 @@ void PNG_CloseLibrary (void)
 #define PNG_LIBPNG_VER_STRING_12 "1.2.4"
 #define PNG_LIBPNG_VER_STRING_14 "1.4.0"
 #define PNG_LIBPNG_VER_STRING_15 "1.5.0"
+#define PNG_LIBPNG_VER_STRING_16 "1.6.0"
 
 #define PNG_COLOR_MASK_PALETTE    1
 #define PNG_COLOR_MASK_COLOR      2
@@ -286,9 +291,6 @@ static void PNG_warning_fn(void *png, const char *message)
 	Con_Printf("PNG_LoadImage: warning: %s\n", message);
 }
 
-extern int	image_width;
-extern int	image_height;
-
 unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *miplevel)
 {
 	unsigned int c;
@@ -308,7 +310,8 @@ unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *
 	png = (void *)qpng_create_read_struct(
 		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 :
 		(qpng_access_version_number() / 100 == 104) ? PNG_LIBPNG_VER_STRING_14 :
-		PNG_LIBPNG_VER_STRING_15, // nasty hack... whatever
+		(qpng_access_version_number() / 100 == 105) ? PNG_LIBPNG_VER_STRING_15 :
+		PNG_LIBPNG_VER_STRING_16, // nasty hack... whatever
 		0, PNG_error_fn, PNG_warning_fn
 	);
 	if(!png)
@@ -489,7 +492,8 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 	png = (void *)qpng_create_write_struct( 
 		(qpng_access_version_number() / 100 == 102) ? PNG_LIBPNG_VER_STRING_12 :
 		(qpng_access_version_number() / 100 == 104) ? PNG_LIBPNG_VER_STRING_14 :
-		PNG_LIBPNG_VER_STRING_15, // nasty hack... whatever
+		(qpng_access_version_number() / 100 == 105) ? PNG_LIBPNG_VER_STRING_15 :
+		PNG_LIBPNG_VER_STRING_16, // nasty hack... whatever
 		0, PNG_error_fn, PNG_warning_fn
 	);
 	if(!png)
