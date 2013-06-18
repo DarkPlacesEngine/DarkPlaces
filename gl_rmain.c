@@ -4656,7 +4656,7 @@ void R_BufferData_Reset(void)
 		for (type = 0;type < R_BUFFERDATA_COUNT;type++)
 		{
 			// free all buffers
-			p = &r_bufferdata_buffer[r_bufferdata_cycle][type];
+			p = &r_bufferdata_buffer[cycle][type];
 			while (*p)
 			{
 				mem = *p;
