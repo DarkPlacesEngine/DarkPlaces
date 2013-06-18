@@ -195,8 +195,8 @@ r_bufferdata_type_t;
 void R_BufferData_Reset(void);
 /// begin a new frame (recycle old buffers)
 void R_BufferData_NewFrame(void);
-/// request space in a vertex/index/uniform buffer for the chosen data, returns the buffer pointer and offset, if allowfail is true it may return NULL if the growth limit has been reached, false will cause it to allocate additional memory despite this (warning: may run out of memory)
-r_meshbuffer_t *R_BufferData_Store(size_t size, void *data, r_bufferdata_type_t type, int *returnbufferoffset, qboolean allowfail);
+/// request space in a vertex/index/uniform buffer for the chosen data, returns the buffer pointer and offset, always successful
+r_meshbuffer_t *R_BufferData_Store(size_t size, void *data, r_bufferdata_type_t type, int *returnbufferoffset);
 
 /// free all R_AnimCache memory
 void R_AnimCache_Free(void);
