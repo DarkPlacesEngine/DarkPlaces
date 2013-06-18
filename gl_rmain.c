@@ -4631,8 +4631,8 @@ void R_FrameData_ReturnToMark(void)
 
 //==================================================================================
 
-// avoid reusing the same buffer objects on consecutive buffers
-#define R_BUFFERDATA_CYCLE 2
+// avoid reusing the same buffer objects on consecutive frames
+#define R_BUFFERDATA_CYCLE 3
 
 typedef struct r_bufferdata_buffer_s
 {
@@ -4670,12 +4670,30 @@ void R_BufferData_Reset(void)
 }
 
 // resize buffer as needed (this actually makes a new one, the old one will be recycled next frame)
-static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow)
+static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow, size_t minsize)
 {
 	r_bufferdata_buffer_t *mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
 	size_t size;
-	size = (size_t)(r_bufferdatasize[type].value * 1024*1024);
-	size = bound(65536, size, 512*1024*1024);
+	float newvalue = r_bufferdatasize[type].value;
+
+	// increase the cvar if we have to (but only if we already have a mem)
+	if (mustgrow && mem)
+		newvalue *= 2.0f;
+	newvalue = bound(0.25f, newvalue, 256.0f);
+	while (newvalue * 1024*1024 < minsize)
+		newvalue *= 2.0f;
+
+	// clamp the cvar to valid range
+	newvalue = bound(0.25f, newvalue, 256.0f);
+	if (r_bufferdatasize[type].value != newvalue)
+		Cvar_SetValueQuick(&r_bufferdatasize[type], newvalue);
+
+	// calculate size in bytes
+	size = (size_t)(newvalue * 1024*1024);
+	size = bound(131072, size, 256*1024*1024);
+
+	// allocate a new buffer if the size is different (purge old one later)
+	// or if we were told we must grow the buffer
 	if (!mem || mem->size != size || mustgrow)
 	{
 		mem = (r_bufferdata_buffer_t *)Mem_Alloc(r_main_mempool, sizeof(*mem));
@@ -4705,7 +4723,7 @@ void R_BufferData_NewFrame(void)
 	{
 		if (r_bufferdata_buffer[r_bufferdata_cycle][type])
 		{
-			R_BufferData_Resize((r_bufferdata_type_t)type, false);
+			R_BufferData_Resize((r_bufferdata_type_t)type, false, 131072);
 			// free all but the head buffer, this is how we recycle obsolete
 			// buffers after they are no longer in use
 			p = &r_bufferdata_buffer[r_bufferdata_cycle][type]->purge;
@@ -4723,12 +4741,11 @@ void R_BufferData_NewFrame(void)
 	}
 }
 
-r_meshbuffer_t *R_BufferData_Store(size_t datasize, void *data, r_bufferdata_type_t type, int *returnbufferoffset, qboolean allowfail)
+r_meshbuffer_t *R_BufferData_Store(size_t datasize, void *data, r_bufferdata_type_t type, int *returnbufferoffset)
 {
 	r_bufferdata_buffer_t *mem;
 	int offset = 0;
 	int padsize;
-	float newvalue;
 
 	*returnbufferoffset = 0;
 
@@ -4739,16 +4756,13 @@ r_meshbuffer_t *R_BufferData_Store(size_t datasize, void *data, r_bufferdata_typ
 	else
 		padsize = (datasize + 15) & ~15;
 
-	while (!r_bufferdata_buffer[r_bufferdata_cycle][type] || r_bufferdata_buffer[r_bufferdata_cycle][type]->current + padsize > r_bufferdata_buffer[r_bufferdata_cycle][type]->size)
-	{
-		// emergency - we ran out of space, allocate more memory
-		newvalue = bound(0.25f, r_bufferdatasize[type].value * 2.0f, 256.0f);
-		// if we're already at the limit, just fail (if allowfail is false we might run out of video ram)
-		if (newvalue == r_bufferdatasize[type].value && allowfail)
-			return NULL;
-		Cvar_SetValueQuick(&r_bufferdatasize[type], newvalue);
-		R_BufferData_Resize(type, true);
-	}
+	// if we ran out of space in this buffer we must allocate a new one
+	if (!r_bufferdata_buffer[r_bufferdata_cycle][type] || r_bufferdata_buffer[r_bufferdata_cycle][type]->current + padsize > r_bufferdata_buffer[r_bufferdata_cycle][type]->size)
+		R_BufferData_Resize(type, true, padsize);
+
+	// if the resize did not give us enough memory, fail
+	if (!r_bufferdata_buffer[r_bufferdata_cycle][type] || r_bufferdata_buffer[r_bufferdata_cycle][type]->current + padsize > r_bufferdata_buffer[r_bufferdata_cycle][type]->size)
+		Sys_Error("R_BufferData_Store: failed to create a new buffer of sufficient size\n");
 
 	mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
 	offset = mem->current;
@@ -4880,7 +4894,7 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 		Mod_Skeletal_BuildTransforms(model, ent->frameblend, ent->skeleton, NULL, ent->animcache_skeletaltransform3x4); 
 		// note: this can fail if the buffer is at the grow limit
 		ent->animcache_skeletaltransform3x4size = sizeof(float[3][4]) * model->num_bones;
-		ent->animcache_skeletaltransform3x4buffer = R_BufferData_Store(ent->animcache_skeletaltransform3x4size, ent->animcache_skeletaltransform3x4, R_BUFFERDATA_UNIFORM, &ent->animcache_skeletaltransform3x4offset, true);
+		ent->animcache_skeletaltransform3x4buffer = R_BufferData_Store(ent->animcache_skeletaltransform3x4size, ent->animcache_skeletaltransform3x4, R_BUFFERDATA_UNIFORM, &ent->animcache_skeletaltransform3x4offset);
 	}
 	else if (ent->animcache_vertex3f)
 	{
@@ -9339,9 +9353,9 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			if (vid.forcevbo || (r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object))
 			{
 				if (rsurface.batchelement3s)
-					rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset, !vid.forcevbo);
+					rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
 				else if (rsurface.batchelement3i)
-					rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset, !vid.forcevbo);
+					rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
 			}
 		}
 		else
@@ -10114,32 +10128,32 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	if (vid.forcevbo || (r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object))
 	{
 		if (rsurface.batchvertexmesh)
-			rsurface.batchvertexmesh_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(r_vertexmesh_t), rsurface.batchvertexmesh, R_BUFFERDATA_VERTEX, &rsurface.batchvertexmesh_bufferoffset, !vid.forcevbo);
+			rsurface.batchvertexmesh_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(r_vertexmesh_t), rsurface.batchvertexmesh, R_BUFFERDATA_VERTEX, &rsurface.batchvertexmesh_bufferoffset);
 		else
 		{
 			if (rsurface.batchvertex3f)
-				rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset, !vid.forcevbo);
+				rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset);
 			if (rsurface.batchsvector3f)
-				rsurface.batchsvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchsvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchsvector3f_bufferoffset, !vid.forcevbo);
+				rsurface.batchsvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchsvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchsvector3f_bufferoffset);
 			if (rsurface.batchtvector3f)
-				rsurface.batchtvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchtvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchtvector3f_bufferoffset, !vid.forcevbo);
+				rsurface.batchtvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchtvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchtvector3f_bufferoffset);
 			if (rsurface.batchnormal3f)
-				rsurface.batchnormal3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f, R_BUFFERDATA_VERTEX, &rsurface.batchnormal3f_bufferoffset, !vid.forcevbo);
+				rsurface.batchnormal3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f, R_BUFFERDATA_VERTEX, &rsurface.batchnormal3f_bufferoffset);
 			if (rsurface.batchlightmapcolor4f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
-				rsurface.batchlightmapcolor4f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[4]), rsurface.batchlightmapcolor4f, R_BUFFERDATA_VERTEX, &rsurface.batchlightmapcolor4f_bufferoffset, !vid.forcevbo);
+				rsurface.batchlightmapcolor4f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[4]), rsurface.batchlightmapcolor4f, R_BUFFERDATA_VERTEX, &rsurface.batchlightmapcolor4f_bufferoffset);
 			if (rsurface.batchtexcoordtexture2f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
-				rsurface.batchtexcoordtexture2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordtexture2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordtexture2f_bufferoffset, !vid.forcevbo);
+				rsurface.batchtexcoordtexture2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordtexture2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordtexture2f_bufferoffset);
 			if (rsurface.batchtexcoordlightmap2f && r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object)
-				rsurface.batchtexcoordlightmap2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordlightmap2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordlightmap2f_bufferoffset, !vid.forcevbo);
+				rsurface.batchtexcoordlightmap2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordlightmap2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordlightmap2f_bufferoffset);
 			if (rsurface.batchskeletalindex4ub)
-				rsurface.batchskeletalindex4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalindex4ub_bufferoffset, !vid.forcevbo);
+				rsurface.batchskeletalindex4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalindex4ub_bufferoffset);
 			if (rsurface.batchskeletalweight4ub)
-				rsurface.batchskeletalweight4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalweight4ub_bufferoffset, !vid.forcevbo);
+				rsurface.batchskeletalweight4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalweight4ub_bufferoffset);
 		}
 		if (rsurface.batchelement3s)
-			rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset, !vid.forcevbo);
+			rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
 		else if (rsurface.batchelement3i)
-			rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset, !vid.forcevbo);
+			rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
 	}
 }
 
