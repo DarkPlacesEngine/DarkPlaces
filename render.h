@@ -180,7 +180,7 @@ void R_FrameData_SetMark(void);
 void R_FrameData_ReturnToMark(void);
 
 /// enum of the various types of hardware buffer object used in rendering
-/// note that the r_bufferdatasize[] array must be maintained to match this
+/// note that the r_buffermegs[] array must be maintained to match this
 typedef enum r_bufferdata_type_e
 {
 	R_BUFFERDATA_VERTEX, /// vertex buffer

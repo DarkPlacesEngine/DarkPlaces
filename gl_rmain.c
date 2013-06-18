@@ -238,12 +238,12 @@ cvar_t r_glsl_saturation_redcompensate = {CVAR_SAVE, "r_glsl_saturation_redcompe
 cvar_t r_glsl_vertextextureblend_usebothalphas = {CVAR_SAVE, "r_glsl_vertextextureblend_usebothalphas", "0", "use both alpha layers on vertex blended surfaces, each alpha layer sets amount of 'blend leak' on another layer, requires mod_q3shader_force_terrain_alphaflag on."};
 
 cvar_t r_framedatasize = {CVAR_SAVE, "r_framedatasize", "0.5", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
-cvar_t r_bufferdatasize[R_BUFFERDATA_COUNT] =
+cvar_t r_buffermegs[R_BUFFERDATA_COUNT] =
 {
-	{CVAR_SAVE, "r_bufferdatasize_vertex", "4", "vertex buffer size for one frame"},
-	{CVAR_SAVE, "r_bufferdatasize_index16", "1", "index buffer size for one frame (16bit indices)"},
-	{CVAR_SAVE, "r_bufferdatasize_index32", "1", "index buffer size for one frame (32bit indices)"},
-	{CVAR_SAVE, "r_bufferdatasize_uniform", "0.25", "uniform buffer size for one frame"},
+	{CVAR_SAVE, "r_buffermegs_vertex", "4", "vertex buffer size for one frame"},
+	{CVAR_SAVE, "r_buffermegs_index16", "1", "index buffer size for one frame (16bit indices)"},
+	{CVAR_SAVE, "r_buffermegs_index32", "1", "index buffer size for one frame (32bit indices)"},
+	{CVAR_SAVE, "r_buffermegs_uniform", "0.25", "uniform buffer size for one frame"},
 };
 
 extern cvar_t v_glslgamma;
@@ -4356,7 +4356,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_vertextextureblend_usebothalphas);
 	Cvar_RegisterVariable(&r_framedatasize);
 	for (i = 0;i < R_BUFFERDATA_COUNT;i++)
-		Cvar_RegisterVariable(&r_bufferdatasize[i]);
+		Cvar_RegisterVariable(&r_buffermegs[i]);
 	Cvar_RegisterVariable(&r_batch_dynamicbuffer);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
@@ -4674,7 +4674,7 @@ static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow, siz
 {
 	r_bufferdata_buffer_t *mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
 	size_t size;
-	float newvalue = r_bufferdatasize[type].value;
+	float newvalue = r_buffermegs[type].value;
 
 	// increase the cvar if we have to (but only if we already have a mem)
 	if (mustgrow && mem)
@@ -4685,8 +4685,8 @@ static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow, siz
 
 	// clamp the cvar to valid range
 	newvalue = bound(0.25f, newvalue, 256.0f);
-	if (r_bufferdatasize[type].value != newvalue)
-		Cvar_SetValueQuick(&r_bufferdatasize[type], newvalue);
+	if (r_buffermegs[type].value != newvalue)
+		Cvar_SetValueQuick(&r_buffermegs[type], newvalue);
 
 	// calculate size in bytes
 	size = (size_t)(newvalue * 1024*1024);
