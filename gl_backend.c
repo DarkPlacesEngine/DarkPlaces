@@ -256,12 +256,9 @@ typedef struct gl_state_s
 
 	void *preparevertices_tempdata;
 	size_t preparevertices_tempdatamaxsize;
-	r_meshbuffer_t *preparevertices_dynamicvertexbuffer;
 	r_vertexgeneric_t *preparevertices_vertexgeneric;
 	r_vertexmesh_t *preparevertices_vertexmesh;
 	int preparevertices_numvertices;
-
-	r_meshbuffer_t *draw_dynamicindexbuffer;
 
 	qboolean usevbo_staticvertex;
 	qboolean usevbo_staticindex;
@@ -2742,7 +2739,7 @@ void GL_Backend_FreeProgram(unsigned int prog)
 
 // renders triangles using vertices from the active arrays
 int paranoidblah = 0;
-void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, size_t element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, size_t element3s_bufferoffset)
+void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, int element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, int element3s_bufferoffset)
 {
 	unsigned int numelements = numtriangles * 3;
 	int bufferobject3i;
@@ -2797,26 +2794,12 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	if (element3s)
 	{
 		if (!element3s_indexbuffer && gl_state.usevbo_dynamicindex)
-		{
-			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3s, numelements * sizeof(*element3s), false, 0);
-			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3s, numelements * sizeof(*element3s), "temporary", true, false, true, true);
-			element3s_indexbuffer = gl_state.draw_dynamicindexbuffer;
-			element3s_bufferoffset = 0;
-		}
+			element3s_indexbuffer = R_BufferData_Store(numelements * sizeof(*element3s), (void *)element3s, R_BUFFERDATA_INDEX16, &element3s_bufferoffset);
 	}
 	else if (element3i)
 	{
 		if (!element3i_indexbuffer && gl_state.usevbo_dynamicindex)
-		{
-			if (gl_state.draw_dynamicindexbuffer)
-				R_Mesh_UpdateMeshBuffer(gl_state.draw_dynamicindexbuffer, (void *)element3i, numelements * sizeof(*element3i), false, 0);
-			else
-				gl_state.draw_dynamicindexbuffer = R_Mesh_CreateMeshBuffer((void *)element3i, numelements * sizeof(*element3i), "temporary", true, false, true, false);
-			element3i_indexbuffer = gl_state.draw_dynamicindexbuffer;
-			element3i_bufferoffset = 0;
-		}
+			element3i_indexbuffer = R_BufferData_Store(numelements * sizeof(*element3i), (void *)element3i, R_BUFFERDATA_INDEX32, &element3i_bufferoffset);
 	}
 	bufferobject3i = element3i_indexbuffer ? element3i_indexbuffer->bufferobject : 0;
 	bufferoffset3i = element3i_bufferoffset;
@@ -4275,13 +4258,7 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 	if (!gl_state.usevbo_staticvertex)
 		vertexbuffer = NULL;
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex3f, numvertices * sizeof(float[3]), false, 0);
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex3f, numvertices * sizeof(float[3]), "temporary", false, false, true, false);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
+		vertexbuffer = R_BufferData_Store(numvertices * sizeof(float[3]), (void *)vertex3f, R_BUFFERDATA_VERTEX, &bufferoffset);
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -4406,7 +4383,7 @@ void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		if (!vid.useinterleavedarrays)
+		if (!vid.useinterleavedarrays && !gl_state.usevbo_dynamicvertex)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
@@ -4478,13 +4455,7 @@ void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *ve
 	if (!gl_state.usevbo_staticvertex)
 		vertexbuffer = NULL;
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex), false, 0);
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, false, true, false);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
+		vertexbuffer = R_BufferData_Store(numvertices * sizeof(*vertex), (void *)vertex, R_BUFFERDATA_VERTEX, &bufferoffset);
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -4609,7 +4580,7 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		if (!vid.useinterleavedarrays)
+		if (!vid.useinterleavedarrays && !gl_state.usevbo_dynamicvertex)
 		{
 			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
 			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
@@ -4692,13 +4663,7 @@ void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, 
 	if (!gl_state.usevbo_staticvertex)
 		vertexbuffer = NULL;
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-	{
-		if (gl_state.preparevertices_dynamicvertexbuffer)
-			R_Mesh_UpdateMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer, vertex, numvertices * sizeof(*vertex), false, 0);
-		else
-			gl_state.preparevertices_dynamicvertexbuffer = R_Mesh_CreateMeshBuffer(vertex, numvertices * sizeof(*vertex), "temporary", false, false, true, false);
-		vertexbuffer = gl_state.preparevertices_dynamicvertexbuffer;
-	}
+		vertexbuffer = R_BufferData_Store(numvertices * sizeof(*vertex), (void *)vertex, R_BUFFERDATA_VERTEX, &bufferoffset);
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
