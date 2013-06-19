@@ -4741,7 +4741,7 @@ void R_BufferData_NewFrame(void)
 	}
 }
 
-r_meshbuffer_t *R_BufferData_Store(size_t datasize, void *data, r_bufferdata_type_t type, int *returnbufferoffset)
+r_meshbuffer_t *R_BufferData_Store(size_t datasize, const void *data, r_bufferdata_type_t type, int *returnbufferoffset)
 {
 	r_bufferdata_buffer_t *mem;
 	int offset = 0;
@@ -9348,7 +9348,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 					rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 			}
 			// upload buffer data for the copytriangles batch
-			if ((r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
+			if (((r_batch_dynamicbuffer.integer || gl_vbo_dynamicindex.integer) && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
 			{
 				if (rsurface.batchelement3s)
 					rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
@@ -10123,7 +10123,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	}
 
 	// upload buffer data for the dynamic batch
-	if ((r_batch_dynamicbuffer.integer && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
+	if (((r_batch_dynamicbuffer.integer || gl_vbo_dynamicvertex.integer || gl_vbo_dynamicindex.integer) && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
 	{
 		if (rsurface.batchvertexmesh)
 			rsurface.batchvertexmesh_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(r_vertexmesh_t), rsurface.batchvertexmesh, R_BUFFERDATA_VERTEX, &rsurface.batchvertexmesh_bufferoffset);
