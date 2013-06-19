@@ -12,6 +12,9 @@ extern float gl_modelview16f[16];
 extern float gl_modelviewprojection16f[16];
 extern qboolean gl_modelmatrixchanged;
 
+extern cvar_t gl_vbo_dynamicvertex;
+extern cvar_t gl_vbo_dynamicindex;
+
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelement3i[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 extern unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
