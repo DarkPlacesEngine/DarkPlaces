@@ -468,8 +468,6 @@ static void gl_backend_shutdown(void)
 
 	if (gl_state.preparevertices_tempdata)
 		Mem_Free(gl_state.preparevertices_tempdata);
-	if (gl_state.preparevertices_dynamicvertexbuffer)
-		R_Mesh_DestroyMeshBuffer(gl_state.preparevertices_dynamicvertexbuffer);
 
 	Mem_ExpandableArray_FreeArray(&gl_state.meshbufferarray);
 
@@ -1322,6 +1320,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			if (status != GL_FRAMEBUFFER_COMPLETE)
 			{
 				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+				gl_state.framebufferobject = 0; // GL unbinds it for us
 				qglDeleteFramebuffers(1, (GLuint*)&temp);
 				temp = 0;
 			}
@@ -1376,6 +1375,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			if (status != GL_FRAMEBUFFER_COMPLETE)
 			{
 				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+				gl_state.framebufferobject = 0; // GL unbinds it for us
 				qglDeleteFramebuffers(1, (GLuint*)&temp);
 				temp = 0;
 			}
@@ -1402,7 +1402,12 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		if (fbo)
+		{
+			// GL clears the binding if we delete something bound
+			if (gl_state.framebufferobject == fbo)
+				gl_state.framebufferobject = 0;
 			qglDeleteFramebuffers(1, (GLuint*)&fbo);
+		}
 		break;
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -3307,7 +3312,7 @@ r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const cha
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->bufferobject = 0;
 	buffer->devicebuffer = NULL;
-	buffer->size = 0;
+	buffer->size = size;
 	buffer->isindexbuffer = isindexbuffer;
 	buffer->isuniformbuffer = isuniformbuffer;
 	buffer->isdynamic = isdynamic;
@@ -3331,6 +3336,8 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 		r_refdef.stats[r_stat_vertexbufferuploadcount]++;
 		r_refdef.stats[r_stat_vertexbufferuploadsize] += size;
 	}
+	if (!subdata)
+		buffer->size = size;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL11:
@@ -3427,6 +3434,13 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
+		// GL clears the binding if we delete something bound
+		if (gl_state.uniformbufferobject == buffer->bufferobject)
+			gl_state.uniformbufferobject = 0;
+		if (gl_state.vertexbufferobject == buffer->bufferobject)
+			gl_state.vertexbufferobject = 0;
+		if (gl_state.elementbufferobject == buffer->bufferobject)
+			gl_state.elementbufferobject = 0;
 		qglDeleteBuffersARB(1, (GLuint *)&buffer->bufferobject);
 		break;
 	case RENDERPATH_D3D9:
@@ -3455,22 +3469,51 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
 }
 
+static const char *buffertypename[R_BUFFERDATA_COUNT] = {"vertex", "index16", "index32", "uniform"};
 void GL_Mesh_ListVBOs(qboolean printeach)
 {
 	int i, endindex;
-	size_t ebocount = 0, ebomemory = 0;
-	size_t vbocount = 0, vbomemory = 0;
+	int type;
+	int isdynamic;
+	int index16count, index16mem;
+	int index32count, index32mem;
+	int vertexcount, vertexmem;
+	int uniformcount, uniformmem;
+	int totalcount, totalmem;
+	size_t bufferstat[R_BUFFERDATA_COUNT][2][2];
 	r_meshbuffer_t *buffer;
+	memset(bufferstat, 0, sizeof(bufferstat));
 	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
 	{
 		buffer = (r_meshbuffer_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.meshbufferarray, i);
 		if (!buffer)
 			continue;
-		if (buffer->isindexbuffer) {ebocount++;ebomemory += buffer->size;if (printeach) Con_Printf("indexbuffer #%i %s = %i bytes%s\n", i, buffer->name, (int)buffer->size, buffer->isdynamic ? " (dynamic)" : " (static)");}
-		else                       {vbocount++;vbomemory += buffer->size;if (printeach) Con_Printf("vertexbuffer #%i %s = %i bytes%s\n", i, buffer->name, (int)buffer->size, buffer->isdynamic ? " (dynamic)" : " (static)");}
+		if (buffer->isuniformbuffer)
+			type = R_BUFFERDATA_UNIFORM;
+		else if (buffer->isindexbuffer && buffer->isindex16)
+			type = R_BUFFERDATA_INDEX16;
+		else if (buffer->isindexbuffer)
+			type = R_BUFFERDATA_INDEX32;
+		else
+			type = R_BUFFERDATA_VERTEX;
+		isdynamic = buffer->isdynamic;
+		bufferstat[type][isdynamic][0]++;
+		bufferstat[type][isdynamic][1] += buffer->size;
+		if (printeach)
+			Con_Printf("buffer #%i %s = %i bytes (%s %s)\n", i, buffer->name, (int)buffer->size, isdynamic ? "dynamic" : "static", buffertypename[type]);
 	}
-	Con_Printf("vertex buffers: %i indexbuffers totalling %i bytes (%.3f MB), %i vertexbuffers totalling %i bytes (%.3f MB), combined %i bytes (%.3fMB)\n", (int)ebocount, (int)ebomemory, ebomemory / 1048576.0, (int)vbocount, (int)vbomemory, vbomemory / 1048576.0, (int)(ebomemory + vbomemory), (ebomemory + vbomemory) / 1048576.0);
+	index16count   = (int)(bufferstat[R_BUFFERDATA_INDEX16][0][0] + bufferstat[R_BUFFERDATA_INDEX16][1][0]);
+	index16mem     = (int)(bufferstat[R_BUFFERDATA_INDEX16][0][1] + bufferstat[R_BUFFERDATA_INDEX16][1][1]);
+	index32count   = (int)(bufferstat[R_BUFFERDATA_INDEX32][0][0] + bufferstat[R_BUFFERDATA_INDEX32][1][0]);
+	index32mem     = (int)(bufferstat[R_BUFFERDATA_INDEX32][0][1] + bufferstat[R_BUFFERDATA_INDEX32][1][1]);
+	vertexcount  = (int)(bufferstat[R_BUFFERDATA_VERTEX ][0][0] + bufferstat[R_BUFFERDATA_VERTEX ][1][0]);
+	vertexmem    = (int)(bufferstat[R_BUFFERDATA_VERTEX ][0][1] + bufferstat[R_BUFFERDATA_VERTEX ][1][1]);
+	uniformcount = (int)(bufferstat[R_BUFFERDATA_UNIFORM][0][0] + bufferstat[R_BUFFERDATA_UNIFORM][1][0]);
+	uniformmem   = (int)(bufferstat[R_BUFFERDATA_UNIFORM][0][1] + bufferstat[R_BUFFERDATA_UNIFORM][1][1]);
+	totalcount = index16count + index32count + vertexcount + uniformcount;
+	totalmem = index16mem + index32mem + vertexmem + uniformmem;
+	Con_Printf("%i 16bit indexbuffers totalling %i bytes (%.3f MB)\n%i 32bit indexbuffers totalling %i bytes (%.3f MB)\n%i vertexbuffers totalling %i bytes (%.3f MB)\n%i uniformbuffers totalling %i bytes (%.3f MB)\ncombined %i buffers totalling %i bytes (%.3fMB)\n", index16count, index16mem, index16mem / 10248576.0, index32count, index32mem, index32mem / 10248576.0, vertexcount, vertexmem, vertexmem / 10248576.0, uniformcount, uniformmem, uniformmem / 10248576.0, totalcount, totalmem, totalmem / 10248576.0);
 }
 
 

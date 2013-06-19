@@ -2779,6 +2779,9 @@ void CL_UpdateScreen(void)
 			sb_lines = 24+16+8;
 	}
 
+	R_FrameData_NewFrame();
+	R_BufferData_NewFrame();
+
 	Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, vieworigin);
 	R_HDR_UpdateIrisAdaptation(vieworigin);
 
