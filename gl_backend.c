@@ -3209,44 +3209,28 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			break;
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
-			// GLES does not have glDrawRangeElements, and generally
-			// underperforms with index buffers, so this code path is
-			// relatively straightforward...
-#if 0
-			if (gl_paranoid.integer)
+			// GLES does not have glDrawRangeElements so this is a bit shorter than the GL20 path
+			if (bufferobject3s)
 			{
-				int r, prog, enabled, i;
-				GLsizei 	attriblength;
-				GLint 		attribsize;
-				GLenum		attribtype;
-				GLchar		attribname[1024];
-				r = qglCheckFramebufferStatusEXT(GL_FRAMEBUFFER);CHECKGLERROR
-				if (r != GL_FRAMEBUFFER_COMPLETE)
-					Con_DPrintf("fbo %i not complete (default %i)\n", gl_state.framebufferobject, gl_state.defaultframebufferobject);
-#ifndef GL_CURRENT_PROGRAM
-#define GL_CURRENT_PROGRAM 0x8B8D
-#endif
-				qglGetIntegerv(GL_CURRENT_PROGRAM, &r);CHECKGLERROR
-				if (r < 0 || r > 10000)
-					Con_DPrintf("GL_CURRENT_PROGRAM = %i\n", r);
-				prog = r;
-				for (i = 0;i < 8;i++)
-				{
-					qglGetVertexAttribiv(i, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &r);CHECKGLERROR
-					if (!r)
-						continue;
-					qglGetActiveAttrib(prog, i, sizeof(attribname), &attriblength, &attribsize, &attribtype, attribname);CHECKGLERROR
-					Con_DPrintf("prog %i position %i length %i size %04X type %i name \"%s\"\n", prog, i, (int)attriblength, (int)attribsize, (int)attribtype, (char *)attribname);
-				}
+				GL_BindEBO(bufferobject3s);
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
+				CHECKGLERROR
 			}
-#endif
-			if (element3s)
+			else if (bufferobject3i)
 			{
+				GL_BindEBO(bufferobject3i);
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
+				CHECKGLERROR
+			}
+			else if (element3s)
+			{
+				GL_BindEBO(0);
 				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
 				CHECKGLERROR
 			}
 			else if (element3i)
 			{
+				GL_BindEBO(0);
 				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
 				CHECKGLERROR
 			}
