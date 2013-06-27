@@ -100,7 +100,6 @@ extern D3DCAPS9 vid_d3d9caps;
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0", "use glBegin(GL_TRIANGLES);glTexCoord2f();glVertex3f();glEnd(); primitives instead of glDrawElements (useful to test for driver bugs with glDrawElements)"};
-cvar_t gl_mesh_prefer_short_elements = {CVAR_SAVE, "gl_mesh_prefer_short_elements", "1", "use GL_UNSIGNED_SHORT element arrays instead of GL_UNSIGNED_INT"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -609,7 +608,6 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
-	Cvar_RegisterVariable(&gl_mesh_prefer_short_elements);
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -2751,14 +2749,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		if (numvertices < 0 || numtriangles < 0 || developer_extra.integer)
 			Con_DPrintf("R_Mesh_Draw(%d, %d, %d, %d, %8p, %8p, %8x, %8p, %8p, %8x);\n", firstvertex, numvertices, firsttriangle, numtriangles, (void *)element3i, (void *)element3i_indexbuffer, (int)element3i_bufferoffset, (void *)element3s, (void *)element3s_indexbuffer, (int)element3s_bufferoffset);
 		return;
-	}
-	if (!gl_mesh_prefer_short_elements.integer)
-	{
-		if (element3i)
-		{
-			element3s = NULL;
-			element3s_indexbuffer = NULL;
-		}
 	}
 	// adjust the pointers for firsttriangle
 	if (element3i)
