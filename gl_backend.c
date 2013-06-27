@@ -386,9 +386,9 @@ static void R_Mesh_SetUseVBO(void)
 		break;
 	case RENDERPATH_GLES2:
 		gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-		gl_state.usevbo_staticindex = false;
+		gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
 		gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer) || vid.forcevbo;
-		gl_state.usevbo_dynamicindex = false;
+		gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer) || vid.forcevbo;
 		break;
 	}
 }
