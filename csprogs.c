@@ -221,13 +221,13 @@ void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 }
 
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
-static void CSQC_SetGlobals (void)
+static void CSQC_SetGlobals (double frametime)
 {
 	vec3_t pmove_org;
 	prvm_prog_t *prog = CLVM_prog;
 	CSQC_BEGIN
 		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobalfloat(frametime) = max(0, cl.time - cl.oldtime);
+		PRVM_clientglobalfloat(frametime) = frametime;
 		PRVM_clientglobalfloat(servercommandframe) = cls.servermovesequence;
 		PRVM_clientglobalfloat(clientcommandframe) = cl.movecmd[0].sequence;
 		VectorCopy(cl.viewangles, PRVM_clientglobalvector(input_angles));
@@ -460,7 +460,7 @@ qboolean CL_VM_InputEvent (int eventtype, int x, int y)
 
 extern r_refdef_view_t csqc_original_r_refdef_view;
 extern r_refdef_view_t csqc_main_r_refdef_view;
-qboolean CL_VM_UpdateView (void)
+qboolean CL_VM_UpdateView (double frametime)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	vec3_t emptyvector;
@@ -478,7 +478,7 @@ qboolean CL_VM_UpdateView (void)
 		//VectorCopy(cl.viewangles, oldangles);
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
-		CSQC_SetGlobals();
+		CSQC_SetGlobals(frametime);
 		// clear renderable entity and light lists to prevent crashes if the
 		// CSQC_UpdateView function does not call R_ClearScene as it should
 		r_refdef.scene.numentities = 0;
