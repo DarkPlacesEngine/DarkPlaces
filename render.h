@@ -607,7 +607,7 @@ void R_Model_Sprite_Draw(entity_render_t *ent);
 
 struct prvm_prog_s;
 void R_UpdateFog(void);
-qboolean CL_VM_UpdateView(void);
+qboolean CL_VM_UpdateView(double frametime);
 void SCR_DrawConsole(void);
 void R_Shadow_EditLights_DrawSelectedLightProperties(void);
 void R_DecalSystem_Reset(decalsystem_t *decalsystem);
