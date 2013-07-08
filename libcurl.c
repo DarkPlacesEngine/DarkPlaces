@@ -3,6 +3,10 @@
 #include "libcurl.h"
 #include "thread.h"
 
+#include "image.h"
+#include "jpeg.h"
+#include "image_png.h"
+
 static cvar_t cl_curl_maxdownloads = {CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
 static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
 static cvar_t sv_curl_defaulturl = {CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
@@ -185,6 +189,11 @@ static dllfunction_t curlfuncs[] =
 static dllhandle_t curl_dll = NULL;
 // will be checked at many places to find out if qcurl calls are allowed
 
+#define LOADTYPE_NONE 0
+#define LOADTYPE_PAK 1
+#define LOADTYPE_CACHEPIC 2
+#define LOADTYPE_SKINFRAME 3
+
 void *curl_mutex = NULL;
 
 typedef struct downloadinfo_s
@@ -196,7 +205,7 @@ typedef struct downloadinfo_s
 	fs_offset_t startpos;
 	CURL *curle;
 	qboolean started;
-	qboolean ispak;
+	int loadtype;
 	unsigned long bytes_received; // for buffer
 	double bytes_received_curl; // for throttling
 	double bytes_sent_curl; // for throttling
@@ -459,6 +468,35 @@ static void curl_default_callback(int status, size_t length_received, unsigned c
 	}
 }
 
+static void curl_quiet_callback(int status, size_t length_received, unsigned char *buffer, void *cbdata)
+{
+	curl_default_callback(status, length_received, buffer, cbdata);
+}
+
+static unsigned char *decode_image(downloadinfo *di, const char *content_type)
+{
+	unsigned char *pixels = NULL;
+	fs_offset_t filesize = 0;
+	unsigned char *data = FS_LoadFile(di->filename, tempmempool, true, &filesize);
+	if(data)
+	{
+		int mip = 0;
+		if(!strcmp(content_type, "image/jpeg"))
+			pixels = JPEG_LoadImage_BGRA(data, filesize, &mip);
+		else if(!strcmp(content_type, "image/png"))
+			pixels = PNG_LoadImage_BGRA(data, filesize, &mip);
+		else if(filesize >= 7 && !strncmp((char *) data, "\xFF\xD8", 7))
+			pixels = JPEG_LoadImage_BGRA(data, filesize, &mip);
+		else if(filesize >= 7 && !strncmp((char *) data, "\x89PNG\x0D\x0A\x1A\x0A", 7))
+			pixels = PNG_LoadImage_BGRA(data, filesize, &mip);
+		else
+			Con_Printf("Did not detect content type: %s\n", content_type);
+		Mem_Free(data);
+	}
+	// do we call Image_MakeLinearColorsFromsRGB or not?
+	return pixels;
+}
+
 /*
 ====================
 Curl_EndDownload
@@ -468,9 +506,10 @@ CURL_DOWNLOAD_FAILED or CURL_DOWNLOAD_ABORTED) and in the second case the error
 code from libcurl, or 0, if another error has occurred.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
-static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error)
+static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error, const char *content_type_)
 {
+	char content_type[64];
 	qboolean ok = false;
 	if(!curl_dll)
 		return;
@@ -502,6 +541,10 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 				di->callback(CURLCBSTATUS_UNKNOWN, di->bytes_received, di->buffer, di->callback_data);
 			break;
 	}
+	if(content_type_)
+		strlcpy(content_type, content_type_, sizeof(content_type));
+	else
+		*content_type = 0;
 
 	if(di->curle)
 	{
@@ -520,25 +563,58 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 	if(di->stream)
 		FS_Close(di->stream);
 
-	if(ok && di->ispak)
+#define CLEAR_AND_RETRY() \
+	do \
+	{ \
+		di->stream = FS_OpenRealFile(di->filename, "wb", false); \
+		FS_Close(di->stream); \
+		if(di->startpos && !di->callback) \
+		{ \
+			Curl_Begin(di->url, di->extraheaders, di->maxspeed, di->filename, di->loadtype, di->forthismap, di->post_content_type, di->postbuf, di->postbufsize, NULL, 0, NULL, NULL); \
+			di->forthismap = false; \
+		} \
+	} \
+	while(0)
+
+	if(ok && di->loadtype == LOADTYPE_PAK)
 	{
 		ok = FS_AddPack(di->filename, NULL, true);
 		if(!ok)
-		{
-			// pack loading failed?
-			// this is critical
-			// better clear the file again...
-			di->stream = FS_OpenRealFile(di->filename, "wb", false);
-			FS_Close(di->stream);
+			CLEAR_AND_RETRY();
+	}
+	else if(ok && di->loadtype == LOADTYPE_CACHEPIC)
+	{
+		const char *p;
+		unsigned char *pixels = NULL;
 
-			if(di->startpos && !di->callback)
-			{
-				// this was a resume?
-				// then try to redownload it without reporting the error
-				Curl_Begin(di->url, di->extraheaders, di->maxspeed, di->filename, di->ispak, di->forthismap, di->post_content_type, di->postbuf, di->postbufsize, NULL, 0, NULL, NULL);
-				di->forthismap = false; // don't count the error
-			}
-		}
+		p = di->filename;
+#ifdef WE_ARE_EVIL
+		if(!strncmp(p, "dlcache/", 8))
+			p += 8;
+#endif
+
+		pixels = decode_image(di, content_type);
+		if(pixels)
+			Draw_NewPic(p, image_width, image_height, true, pixels);
+		else
+			CLEAR_AND_RETRY();
+	}
+	else if(ok && di->loadtype == LOADTYPE_SKINFRAME)
+	{
+		const char *p;
+		unsigned char *pixels = NULL;
+
+		p = di->filename;
+#ifdef WE_ARE_EVIL
+		if(!strncmp(p, "dlcache/", 8))
+			p += 8;
+#endif
+
+		pixels = decode_image(di, content_type);
+		if(pixels)
+			R_SkinFrame_LoadInternalBGRA(p, TEXF_FORCE_RELOAD | TEXF_MIPMAP | TEXF_ALPHA, pixels, image_width, image_height, false); // TODO what sRGB argument to put here?
+		else
+			CLEAR_AND_RETRY();
 	}
 
 	if(di->prev)
@@ -620,7 +696,7 @@ static void CheckPendingDownloads(void)
 					if(!di->stream)
 					{
 						Con_Printf("\nFAILED: Could not open output file %s\n", di->filename);
-						Curl_EndDownload(di, CURL_DOWNLOAD_FAILED, CURLE_OK);
+						Curl_EndDownload(di, CURL_DOWNLOAD_FAILED, CURLE_OK, NULL);
 						return;
 					}
 					FS_Seek(di->stream, 0, SEEK_END);
@@ -770,6 +846,24 @@ static downloadinfo *Curl_Find(const char *filename)
 	return NULL;
 }
 
+void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata)
+{
+	downloadinfo *di;
+	if(!curl_dll)
+		return;
+	for(di = downloads; di; )
+	{
+		if(di->callback == callback && di->callback_data == cbdata)
+		{
+			di->callback = curl_quiet_callback; // do NOT call the callback
+			Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
+			di = downloads;
+		}
+		else
+			di = di->next;
+	}
+}
+
 /*
 ====================
 Curl_Begin
@@ -778,8 +872,12 @@ Starts a download of a given URL to the file name portion of this URL (or name
 if given) in the "dlcache/" folder.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, qboolean ispak, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
+	if(buf)
+		if(loadtype != LOADTYPE_NONE)
+			Host_Error("Curl_Begin: loadtype and buffer are both set");
+
 	if(!curl_dll)
 	{
 		return false;
@@ -838,18 +936,28 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		//
 		//   141.2.16.3 - - [17/Mar/2006:22:32:43 +0100] "GET /maps/tznex07.pk3 HTTP/1.1" 200 1077455 "dp://141.2.16.7:26000/" "Nexuiz Linux 22:07:43 Mar 17 2006"
 
-		if(!name)
-			name = CleanURL(URL, urlbuf, sizeof(urlbuf));
-
 		if (curl_mutex) Thread_LockMutex(curl_mutex);
 
-		if(!buf)
+		if(buf)
 		{
-			p = strrchr(name, '/');
-			p = p ? (p+1) : name;
-			q = strchr(p, '?');
-			length = q ? (size_t)(q - p) : strlen(p);
-			dpsnprintf(fn, sizeof(fn), "dlcache/%.*s", (int)length, p);
+			if(!name)
+				name = CleanURL(URL, urlbuf, sizeof(urlbuf));
+		}
+		else
+		{
+			if(!name)
+			{
+				name = CleanURL(URL, urlbuf, sizeof(urlbuf));
+				p = strrchr(name, '/');
+				p = p ? (p+1) : name;
+				q = strchr(p, '?');
+				length = q ? (size_t)(q - p) : strlen(p);
+				dpsnprintf(fn, sizeof(fn), "dlcache/%.*s", (int)length, p);
+			}
+			else
+			{
+				dpsnprintf(fn, sizeof(fn), "dlcache/%s", name);
+			}
 
 			name = fn; // make it point back
 
@@ -873,47 +981,57 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 				}
 			}
 
-			if(ispak && FS_FileExists(fn))
+			if(FS_FileExists(fn))
 			{
-				qboolean already_loaded;
-				if(FS_AddPack(fn, &already_loaded, true))
+				if(loadtype == LOADTYPE_PAK)
 				{
-					Con_DPrintf("%s already exists, not downloading!\n", fn);
-					if(already_loaded)
-						Con_DPrintf("(pak was already loaded)\n");
+					qboolean already_loaded;
+					if(FS_AddPack(fn, &already_loaded, true))
+					{
+						Con_DPrintf("%s already exists, not downloading!\n", fn);
+						if(already_loaded)
+							Con_DPrintf("(pak was already loaded)\n");
+						else
+						{
+							if(forthismap)
+							{
+								++numdownloads_added;
+								++numdownloads_success;
+							}
+						}
+
+						return false;
+					}
 					else
 					{
-						if(forthismap)
+						qfile_t *f = FS_OpenRealFile(fn, "rb", false);
+						if(f)
 						{
-							++numdownloads_added;
-							++numdownloads_success;
+							char buf[4] = {0};
+							FS_Read(f, buf, sizeof(buf)); // no "-1", I will use memcmp
+
+							if(memcmp(buf, "PK\x03\x04", 4) && memcmp(buf, "PACK", 4))
+							{
+								Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
+								FS_Close(f);
+								f = FS_OpenRealFile(fn, "wb", false);
+								if(f)
+									FS_Close(f);
+							}
+							else
+							{
+								// OK
+								FS_Close(f);
+							}
 						}
 					}
-
-					return false;
 				}
 				else
 				{
-					qfile_t *f = FS_OpenRealFile(fn, "rb", false);
+					// never resume these
+					qfile_t *f = FS_OpenRealFile(fn, "wb", false);
 					if(f)
-					{
-						char buf[4] = {0};
-						FS_Read(f, buf, sizeof(buf)); // no "-1", I will use memcmp
-
-						if(memcmp(buf, "PK\x03\x04", 4) && memcmp(buf, "PACK", 4))
-						{
-							Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
-							FS_Close(f);
-							f = FS_OpenRealFile(fn, "wb", false);
-							if(f)
-								FS_Close(f);
-						}
-						else
-						{
-							// OK
-							FS_Close(f);
-						}
-					}
+						FS_Close(f);
 				}
 			}
 		}
@@ -938,7 +1056,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		di->startpos = 0;
 		di->curle = NULL;
 		di->started = false;
-		di->ispak = (ispak && !buf);
+		di->loadtype = loadtype;
 		di->maxspeed = maxspeed;
 		di->bytes_received = 0;
 		di->bytes_received_curl = 0;
@@ -981,9 +1099,9 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 	}
 }
 
-qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, qboolean ispak, qboolean forthismap)
+qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, int loadtype, qboolean forthismap)
 {
-	return Curl_Begin(URL, NULL, maxspeed, name, ispak, forthismap, NULL, NULL, 0, NULL, 0, NULL, NULL);
+	return Curl_Begin(URL, NULL, maxspeed, name, loadtype, forthismap, NULL, NULL, 0, NULL, 0, NULL, NULL);
 }
 qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
@@ -1062,6 +1180,7 @@ void Curl_Run(void)
 				break;
 			if(msg->msg == CURLMSG_DONE)
 			{
+				const char *ct = NULL;
 				CurlStatus failed = CURL_DOWNLOAD_SUCCESS;
 				CURLcode result;
 				qcurl_easy_getinfo(msg->easy_handle, CURLINFO_PRIVATE, &di);
@@ -1082,9 +1201,10 @@ void Curl_Run(void)
 							result = (CURLcode) code;
 							break;
 					}
+					qcurl_easy_getinfo(msg->easy_handle, CURLINFO_CONTENT_TYPE, &ct);
 				}
 
-				Curl_EndDownload(di, failed, result);
+				Curl_EndDownload(di, failed, result, ct);
 			}
 		}
 	}
@@ -1132,7 +1252,7 @@ void Curl_CancelAll(void)
 
 	while(downloads)
 	{
-		Curl_EndDownload(downloads, CURL_DOWNLOAD_ABORTED, CURLE_OK);
+		Curl_EndDownload(downloads, CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
 		// INVARIANT: downloads will point to the next download after that!
 	}
 
@@ -1268,7 +1388,7 @@ static void Curl_Curl_f(void)
 	double maxspeed = 0;
 	int i;
 	int end;
-	qboolean pak = false;
+	int loadtype = LOADTYPE_NONE;
 	qboolean forthismap = false;
 	const char *url;
 	const char *name = 0;
@@ -1310,7 +1430,7 @@ static void Curl_Curl_f(void)
 			{
 				downloadinfo *di = Curl_Find(url);
 				if(di)
-					Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK);
+					Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
 				else
 					Con_Print("download not found\n");
 			}
@@ -1318,7 +1438,15 @@ static void Curl_Curl_f(void)
 		}
 		else if(!strcmp(a, "--pak"))
 		{
-			pak = true;
+			loadtype = LOADTYPE_PAK;
+		}
+		else if(!strcmp(a, "--cachepic"))
+		{
+			loadtype = LOADTYPE_CACHEPIC;
+		}
+		else if(!strcmp(a, "--skinframe"))
+		{
+			loadtype = LOADTYPE_SKINFRAME;
 		}
 		else if(!strcmp(a, "--for")) // must be last option
 		{
@@ -1383,7 +1511,7 @@ static void Curl_Curl_f(void)
 	}
 
 needthefile:
-	Curl_Begin_ToFile(url, maxspeed, name, pak, forthismap);
+	Curl_Begin_ToFile(url, maxspeed, name, loadtype, forthismap);
 }
 
 /*
