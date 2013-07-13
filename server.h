@@ -203,6 +203,9 @@ typedef struct client_s
 	/// requested rate in bytes per second
 	int rate;
 
+	/// temporarily exceed rate by this amount of bytes
+	int rate_burstsize;
+
 	/// realtime this client connected
 	double connecttime;
 

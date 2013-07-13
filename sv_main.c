@@ -1105,9 +1105,6 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	client->unreliablemsg.maxsize = sizeof(client->unreliablemsg_data);
 	// updated by receiving "rate" command from client, this is also the default if not using a DP client
 	client->rate = 1000000000;
-	// no limits for local player
-	if (client->netconnection && LHNETADDRESS_GetAddressType(&client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
-		client->rate = 1000000000;
 	client->connecttime = realtime;
 
 	if (!sv.loadgame)
@@ -2291,6 +2288,7 @@ static void SV_SendClientDatagram (client_t *client)
 	sizebuf_t msg;
 	int stats[MAX_CL_STATS];
 	static unsigned char sv_sendclientdatagram_buf[NET_MAXMESSAGE];
+	double timedelta;
 
 	// obey rate limit by limiting packet frequency if the packet size
 	// limiting fails
@@ -2338,13 +2336,31 @@ static void SV_SendClientDatagram (client_t *client)
 		//
 		// at very low rates (or very small sys_ticrate) the packet size is
 		// not reduced below 128, but packets may be sent less often
-		maxsize = (int)(clientrate * sys_ticrate.value);
+
+		// how long are bursts?
+		timedelta = host_client->rate_burstsize / (double)client->rate;
+
+		// how much of the burst do we keep reserved?
+		timedelta *= 1 - net_burstreserve.value;
+
+		// only try to use excess time
+		timedelta = bound(0, realtime - host_client->netconnection->cleartime, timedelta);
+
+		// but we know next packet will be in sys_ticrate, so we can use up THAT bandwidth
+		timedelta += sys_ticrate.value;
+
+		// note: packet overhead (not counted in maxsize) is 28 bytes
+		maxsize = (int)(clientrate * timedelta) - 28;
+
+		// put it in sound bounds
 		maxsize = bound(128, maxsize, 1400);
 		maxsize2 = 1400;
+
 		// csqc entities can easily exceed 128 bytes, so disable throttling in
 		// mods that use csqc (they are likely to use less bandwidth anyway)
-		if (sv.csqc_progsize > 0)
+		if((net_usesizelimit.integer == 1) ? (sv.csqc_progsize > 0) : (net_usesizelimit.integer < 1))
 			maxsize = maxsize2;
+
 		break;
 	}
 
@@ -2427,7 +2443,7 @@ static void SV_SendClientDatagram (client_t *client)
 	SV_WriteDemoMessage(client, &msg, false);
 
 // send the datagram
-	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, client->sendsignon == 2);
+	NetConn_SendUnreliableMessage (client->netconnection, &msg, sv.protocol, clientrate, client->rate_burstsize, client->sendsignon == 2);
 	if (client->sendsignon == 1 && !client->netconnection->message.cursize)
 		client->sendsignon = 2; // prevent reliable until client sends prespawn (this is the keepalive phase)
 }
