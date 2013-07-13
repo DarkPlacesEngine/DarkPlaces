@@ -244,16 +244,16 @@ static void SCR_CheckDrawCenterString (void)
 	SCR_DrawCenterString ();
 }
 
-static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
+static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, int graphlimit, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
 {
 	netgraphitem_t *graph;
 	int j, x, y, numlines;
 	int totalbytes = 0;
 	char bytesstring[128];
-	float g[NETGRAPH_PACKETS][6];
+	float g[NETGRAPH_PACKETS][7];
 	float *a;
 	float *b;
-	r_vertexgeneric_t vertex[(NETGRAPH_PACKETS+2)*5*2];
+	r_vertexgeneric_t vertex[(NETGRAPH_PACKETS+2)*6*2];
 	r_vertexgeneric_t *v;
 	DrawQ_Fill(graphx, graphy, graphwidth, graphheight + textsize * 2, 0, 0, 0, 0.5, 0);
 	// draw the bar graph itself
@@ -267,12 +267,16 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 		g[j][3] = 1.0f;
 		g[j][4] = 1.0f;
 		g[j][5] = 1.0f;
+		g[j][6] = 1.0f;
 		if (graph->unreliablebytes == NETGRAPH_LOSTPACKET)
 			g[j][1] = 0.00f;
 		else if (graph->unreliablebytes == NETGRAPH_CHOKEDPACKET)
-			g[j][2] = 0.96f;
+			g[j][2] = 0.90f;
 		else
 		{
+			if(netgraph[j].time >= netgraph[(j+NETGRAPH_PACKETS-1)%NETGRAPH_PACKETS].time)
+				if(graph->unreliablebytes + graph->reliablebytes + graph->ackbytes >= graphlimit * (netgraph[j].time - netgraph[(j+NETGRAPH_PACKETS-1)%NETGRAPH_PACKETS].time))
+					g[j][2] = 0.98f;
 			g[j][3] = 1.0f    - graph->unreliablebytes * graphscale;
 			g[j][4] = g[j][3] - graph->reliablebytes   * graphscale;
 			g[j][5] = g[j][4] - graph->ackbytes        * graphscale;
@@ -280,11 +284,14 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 			if (realtime - graph->time < 1.0f)
 				totalbytes += graph->unreliablebytes + graph->reliablebytes + graph->ackbytes;
 		}
+		if(graph->cleartime >= 0)
+			g[j][6] = 0.5f + 0.5f * (2.0 / M_PI) * atan((M_PI / 2.0) * (graph->cleartime - graph->time));
 		g[j][1] = bound(0.0f, g[j][1], 1.0f);
 		g[j][2] = bound(0.0f, g[j][2], 1.0f);
 		g[j][3] = bound(0.0f, g[j][3], 1.0f);
 		g[j][4] = bound(0.0f, g[j][4], 1.0f);
 		g[j][5] = bound(0.0f, g[j][5], 1.0f);
+		g[j][6] = bound(0.0f, g[j][6], 1.0f);
 	}
 	// render the lines for the graph
 	numlines = 0;
@@ -310,7 +317,10 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[3], 0.0f);Vector4Set(v->color4f, 1.0f, 0.5f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
 		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[3], 0.0f);Vector4Set(v->color4f, 1.0f, 0.5f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
 
-		numlines += 5;
+		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[6], 0.0f);Vector4Set(v->color4f, 0.0f, 0.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
+		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[6], 0.0f);Vector4Set(v->color4f, 0.0f, 0.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
+
+		numlines += 6;
 	}
 	if (numlines > 0)
 	{
@@ -331,7 +341,7 @@ SCR_DrawNetGraph
 */
 static void SCR_DrawNetGraph (void)
 {
-	int i, separator1, separator2, graphwidth, graphheight, netgraph_x, netgraph_y, textsize, index, netgraphsperrow;
+	int i, separator1, separator2, graphwidth, graphheight, netgraph_x, netgraph_y, textsize, index, netgraphsperrow, graphlimit;
 	float graphscale;
 	netconn_t *c;
 	char vabuf[1024];
@@ -349,6 +359,7 @@ static void SCR_DrawNetGraph (void)
 	graphwidth = 120;
 	graphheight = 70;
 	graphscale = 1.0f / 1500.0f;
+	graphlimit = cl_rate.integer;
 
 	netgraphsperrow = (vid_conwidth.integer + separator2) / (graphwidth * 2 + separator1 + separator2);
 	netgraphsperrow = max(netgraphsperrow, 1);
@@ -357,8 +368,8 @@ static void SCR_DrawNetGraph (void)
 	netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (graphwidth * 2 + separator1 + separator2);
 	netgraph_y = (vid_conheight.integer - 48 - sbar_info_pos.integer + separator2) - (1 + (index / netgraphsperrow)) * (graphheight + textsize + separator2);
 	c = cls.netcon;
-	SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, "incoming", textsize, c->incoming_packetcounter, c->incoming_netgraph);
-	SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, "outgoing", textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
+	SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, graphlimit, "incoming", textsize, c->incoming_packetcounter, c->incoming_netgraph);
+	SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, graphlimit, "outgoing", textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
 	index++;
 
 	if (sv.active && shownetgraph.integer >= 2)
@@ -370,8 +381,8 @@ static void SCR_DrawNetGraph (void)
 				continue;
 			netgraph_x = (vid_conwidth.integer + separator2) - (1 + (index % netgraphsperrow)) * (graphwidth * 2 + separator1 + separator2);
 			netgraph_y = (vid_conheight.integer - 48 + separator2) - (1 + (index / netgraphsperrow)) * (graphheight + textsize + separator2);
-			SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, va(vabuf, sizeof(vabuf), "%s", svs.clients[i].name), textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
-			SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, ""                           , textsize, c->incoming_packetcounter, c->incoming_netgraph);
+			SCR_DrawNetGraph_DrawGraph(netgraph_x                          , netgraph_y, graphwidth, graphheight, graphscale, graphlimit, va(vabuf, sizeof(vabuf), "%s", svs.clients[i].name), textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
+			SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, graphlimit, ""                           , textsize, c->incoming_packetcounter, c->incoming_netgraph);
 			index++;
 		}
 	}
