@@ -1472,6 +1472,7 @@ client_state_t;
 extern cvar_t cl_name;
 extern cvar_t cl_color;
 extern cvar_t cl_rate;
+extern cvar_t cl_rate_burstsize;
 extern cvar_t cl_pmodel;
 extern cvar_t cl_playermodel;
 extern cvar_t cl_playerskin;

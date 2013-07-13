@@ -1670,6 +1670,7 @@ static void Host_BottomColor_f(void)
 }
 
 cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
+cvar_t cl_rate_burstsize = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
 static void Host_Rate_f(void)
 {
 	int rate;
@@ -1690,6 +1691,27 @@ static void Host_Rate_f(void)
 	}
 
 	host_client->rate = rate;
+}
+static void Host_Rate_BurstSize_f(void)
+{
+	int rate_burstsize;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf("\"rate_burstsize\" is \"%i\"\n", cl_rate_burstsize.integer);
+		Con_Print("rate_burstsize <bytes>\n");
+		return;
+	}
+
+	rate_burstsize = atoi(Cmd_Argv(1));
+
+	if (cmd_source == src_command)
+	{
+		Cvar_SetValue ("_cl_rate_burstsize", rate_burstsize);
+		return;
+	}
+
+	host_client->rate_burstsize = rate_burstsize;
 }
 
 /*
@@ -2997,6 +3019,8 @@ void Host_InitCommands (void)
 	Cmd_AddCommand_WithClientCommand ("color", Host_Color_f, Host_Color_f, "change your player shirt and pants colors");
 	Cvar_RegisterVariable (&cl_rate);
 	Cmd_AddCommand_WithClientCommand ("rate", Host_Rate_f, Host_Rate_f, "change your network connection speed");
+	Cvar_RegisterVariable (&cl_rate_burstsize);
+	Cmd_AddCommand_WithClientCommand ("rate_burstsize", Host_Rate_BurstSize_f, Host_Rate_BurstSize_f, "change your network connection speed");
 	Cvar_RegisterVariable (&cl_pmodel);
 	Cmd_AddCommand_WithClientCommand ("pmodel", Host_PModel_f, Host_PModel_f, "(Nehahra-only) change your player model choice");
 

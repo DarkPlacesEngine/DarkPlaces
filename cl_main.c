@@ -268,6 +268,11 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate \"%s\"", value));
 		}
+		else if (!strcasecmp(key, "rate_burstsize"))
+		{
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate_burstsize \"%s\"", value));
+		}
 	}
 }
 
@@ -383,9 +388,9 @@ void CL_Disconnect(void)
 			Con_DPrint("Sending clc_disconnect\n");
 			MSG_WriteByte(&buf, clc_disconnect);
 		}
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, false);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
 	}

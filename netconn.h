@@ -128,6 +128,7 @@ typedef struct netgraphitem_s
 	int reliablebytes;
 	int unreliablebytes;
 	int ackbytes;
+	double cleartime;
 }
 netgraphitem_t;
 
@@ -207,6 +208,7 @@ typedef struct netconn_s
 
 	// bandwidth estimator
 	double		cleartime;			// if realtime > nc->cleartime, free to go
+	double		incoming_cleartime;		// if realtime > nc->cleartime, free to go (netgraph cleartime simulation only)
 
 	// this tracks packet loss and packet sizes on the most recent packets
 	// used by shownetgraph feature
@@ -413,9 +415,11 @@ extern cvar_t cl_netport;
 extern cvar_t sv_netport;
 extern cvar_t net_address;
 extern cvar_t net_address_ipv6;
+extern cvar_t net_usesizelimit;
+extern cvar_t net_burstreserve;
 
 qboolean NetConn_CanSend(netconn_t *conn);
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, qboolean quakesignon_suppressreliables);
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qboolean quakesignon_suppressreliables);
 qboolean NetConn_HaveClientPorts(void);
 qboolean NetConn_HaveServerPorts(void);
 void NetConn_CloseClientPorts(void);
