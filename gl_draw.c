@@ -1971,8 +1971,6 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags, qboolean hasalpha)
 
 void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 {
-	int num;
-
 	_DrawQ_SetupAndProcessDrawFlag(flags, NULL, 1);
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
@@ -1984,16 +1982,19 @@ void DrawQ_LineLoop (drawqueuemesh_t *mesh, int flags)
 	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
 #ifndef USE_GLES2
-		CHECKGLERROR
-		qglBegin(GL_LINE_LOOP);
-		for (num = 0;num < mesh->num_vertices;num++)
 		{
-			if (mesh->data_color4f)
-				GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
-			qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+			int num;
+			CHECKGLERROR
+			qglBegin(GL_LINE_LOOP);
+			for (num = 0;num < mesh->num_vertices;num++)
+			{
+				if (mesh->data_color4f)
+					GL_Color(mesh->data_color4f[num*4+0], mesh->data_color4f[num*4+1], mesh->data_color4f[num*4+2], mesh->data_color4f[num*4+3]);
+				qglVertex2f(mesh->data_vertex3f[num*3+0], mesh->data_vertex3f[num*3+1]);
+			}
+			qglEnd();
+			CHECKGLERROR
 		}
-		qglEnd();
-		CHECKGLERROR
 #endif
 		break;
 	case RENDERPATH_D3D9:
