@@ -5,6 +5,7 @@
 #endif
 
 #include "quakedef.h"
+#include "thread.h"
 
 #define SUPPORTDLL
 
@@ -43,6 +44,10 @@ char *Sys_TimeString(const char *timeformat)
 extern qboolean host_shuttingdown;
 void Sys_Quit (int returnvalue)
 {
+	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
+	Cbuf_UnlockThreadMutex();
+	SV_UnlockThreadMutex();
+
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 	host_shuttingdown = true;
@@ -50,16 +55,22 @@ void Sys_Quit (int returnvalue)
 	exit(returnvalue);
 }
 
-#if defined(__linux__) || defined(__FreeBSD__)
 #ifdef __cplusplus
 extern "C"
 #endif
-int moncontrol(int);
-#endif
-
 void Sys_AllowProfiling(qboolean enable)
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#ifdef __ANDROID__
+#ifdef USE_PROFILER
+	extern void monstartup(const char *libname);
+	extern void moncleanup(void);
+	if (enable)
+		monstartup("libmain.so");
+	else
+		moncleanup();
+#endif
+#elif defined(__linux__) || defined(__FreeBSD__)
+	extern int moncontrol(int);
 	moncontrol(enable);
 #endif
 }

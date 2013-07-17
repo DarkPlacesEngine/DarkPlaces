@@ -1073,6 +1073,8 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 		pak = FS_LoadPackPAK (pakfile);
 	else if(!strcasecmp(ext, "pk3"))
 		pak = FS_LoadPackPK3 (pakfile);
+	else if(!strcasecmp(ext, "obb")) // android apk expansion
+		pak = FS_LoadPackPK3 (pakfile);
 	else
 		Con_Printf("\"%s\" does not have a pack extension\n", pakfile);
 
@@ -1214,7 +1216,7 @@ static void FS_AddGameDirectory (const char *dir)
 	// add any PK3 package in the directory
 	for (i = 0;i < list.numstrings;i++)
 	{
-		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir"))
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "obb") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir"))
 		{
 			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
 		}
@@ -1746,7 +1748,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	{
 		// fs_basedir is "" by default, to utilize this you can simply add your gamedir to the Resources in xcode
 		// fs_userdir stores configurations to the Documents folder of the app
-		strlcpy(userdir, maxlength, "../Documents/");
+		strlcpy(userdir, "../Documents/", MAX_OSPATH);
 		return 1;
 	}
 	return -1;
@@ -1875,6 +1877,8 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 #endif
 
 
+#if !defined(__IPHONEOS__)
+
 #ifdef WIN32
 	// historical behavior...
 	if (userdirmode == USERDIRMODE_NOHOME && strcmp(gamedirname1, "id1"))
@@ -1905,6 +1909,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		else
 			return 0; // probably good - failed to write but maybe we need to create path
 	}
+#endif
 }
 
 /*
@@ -1937,6 +1942,8 @@ void FS_Init (void)
 // If the base directory is explicitly defined by the compilation process
 #ifdef DP_FS_BASEDIR
 		strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
+#elif defined(__ANDROID__)
+		dpsnprintf(fs_basedir, sizeof(fs_basedir), "/sdcard/%s/", gameuserdirname);
 #elif defined(MACOSX)
 		// FIXME: is there a better way to find the directory outside the .app, without using Objective-C?
 		if (strstr(com_argv[0], ".app/"))
@@ -2355,17 +2362,9 @@ int FS_CheckNastyPath (const char *path, qboolean isgamedir)
 	if (path[0] == '/')
 		return 2; // attempt to go outside the game directory
 
-	// all: don't allow . characters before the last slash (it should only be used in filenames, not path elements), this catches all imaginable cases of ./, ../, .../, etc
-	if (strchr(path, '.'))
-	{
-		if (isgamedir)
-		{
-			// gamedir is entirely path elements, so simply forbid . entirely
-			return 2;
-		}
-		if (strchr(path, '.') < strrchr(path, '/'))
-			return 2; // possible attempt to go outside the game directory
-	}
+	// all: don't allow . character immediately before a slash, this catches all imaginable cases of ./, ../, .../, etc
+	if (strstr(path, "./"))
+		return 2; // possible attempt to go outside the game directory
 
 	// all: forbid trailing slash on gamedir
 	if (isgamedir && path[strlen(path)-1] == '/')

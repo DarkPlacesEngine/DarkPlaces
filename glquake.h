@@ -1100,6 +1100,15 @@ extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
 #define GL_UNSIGNED_INT_24_8_EXT        0x84FA
 #define GL_DEPTH24_STENCIL8_EXT         0x88F0
 
+//GL_EXT_blend_func_separate
+#ifndef GL_BLEND_DST_RGB
+#define GL_BLEND_DST_RGB                  0x80C8
+#define GL_BLEND_SRC_RGB                  0x80C9
+#define GL_BLEND_DST_ALPHA                0x80CA
+#define GL_BLEND_SRC_ALPHA                0x80CB
+#endif
+extern void (GLAPIENTRY *qglBlendFuncSeparate)(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
+
 #endif
 
 #define DEBUGGL
@@ -1123,7 +1132,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 //#define qglIsQueryARB glIsQuery
 #define qglIsRenderbufferEXT glIsRenderbuffer
 //#define qglUnmapBufferARB glUnmapBuffer
-#define qglCheckFramebufferStatusEXT glCheckFramebufferStatus
+#define qglCheckFramebufferStatus glCheckFramebufferStatus
 #define qglGetError glGetError
 #define qglCreateProgram glCreateProgram
 #define qglCreateShader glCreateShader
@@ -1142,11 +1151,12 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglBindAttribLocation glBindAttribLocation
 //#define qglBindFragDataLocation glBindFragDataLocation
 #define qglBindBufferARB glBindBuffer
-#define qglBindFramebufferEXT glBindFramebuffer
-#define qglBindRenderbufferEXT glBindRenderbuffer
+#define qglBindFramebuffer glBindFramebuffer
+#define qglBindRenderbuffer glBindRenderbuffer
 #define qglBindTexture glBindTexture
 #define qglBlendEquationEXT glBlendEquation
 #define qglBlendFunc glBlendFunc
+#define qglBlendFuncSeparate glBlendFuncSeparate
 #define qglBufferDataARB glBufferData
 #define qglBufferSubDataARB glBufferSubData
 #define qglClear glClear
@@ -1168,11 +1178,11 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglCopyTexSubImage3D glCopyTexSubImage3D
 #define qglCullFace glCullFace
 #define qglDeleteBuffersARB glDeleteBuffers
-#define qglDeleteFramebuffersEXT glDeleteFramebuffers
+#define qglDeleteFramebuffers glDeleteFramebuffers
 #define qglDeleteProgram glDeleteProgram
 #define qglDeleteShader glDeleteShader
 //#define qglDeleteQueriesARB glDeleteQueries
-#define qglDeleteRenderbuffersEXT glDeleteRenderbuffers
+#define qglDeleteRenderbuffers glDeleteRenderbuffers
 #define qglDeleteTextures glDeleteTextures
 #define qglDepthFunc glDepthFunc
 #define qglDepthMask glDepthMask
@@ -1197,9 +1207,9 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglFramebufferTexture2D glFramebufferTexture2D
 #define qglFramebufferTexture3DEXT glFramebufferTexture3D
 #define qglGenBuffersARB glGenBuffers
-#define qglGenFramebuffersEXT glGenFramebuffers
+#define qglGenFramebuffers glGenFramebuffers
 //#define qglGenQueriesARB glGenQueries
-#define qglGenRenderbuffersEXT glGenRenderbuffers
+#define qglGenRenderbuffers glGenRenderbuffers
 #define qglGenTextures glGenTextures
 #define qglGenerateMipmapEXT glGenerateMipmap
 #define qglGetActiveAttrib glGetActiveAttrib
@@ -1245,7 +1255,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 //#define qglPolygonStipple glPolygonStipple
 #define qglReadBuffer glReadBuffer
 #define qglReadPixels glReadPixels
-#define qglRenderbufferStorageEXT glRenderbufferStorage
+#define qglRenderbufferStorage glRenderbufferStorage
 #define qglScissor glScissor
 #define qglShaderSource glShaderSource
 #define qglStencilFunc glStencilFunc
@@ -1338,4 +1348,3 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #endif
 
 #endif
-

@@ -417,7 +417,23 @@ extern cvar_t sessionid;
     DP_OS_STR	- "identifier" of the OS, more suited for code to use
     DP_ARCH_STR	- "identifier" of the processor architecture
  */
-#if defined(__linux__)
+#if defined(__ANDROID__) /* must come first because it also defines linux */
+# define DP_OS_NAME		"Android"
+# define DP_OS_STR		"android"
+# define USE_GLES2		1
+# define LINK_TO_ZLIB	1
+# define LINK_TO_LIBVORBIS 1
+# define DP_MOBILETOUCH	1
+# define DP_FREETYPE_STATIC 1
+#elif defined(TARGET_OS_IPHONE) /* must come first because it also defines MACOSX */
+# define DP_OS_NAME		"iPhoneOS"
+# define DP_OS_STR		"iphoneos"
+# define USE_GLES2		1
+# define LINK_TO_ZLIB	1
+# define LINK_TO_LIBVORBIS 1
+# define DP_MOBILETOUCH	1
+# define DP_FREETYPE_STATIC 1
+#elif defined(__linux__)
 # define DP_OS_NAME		"Linux"
 # define DP_OS_STR		"linux"
 #elif defined(_WIN64)
@@ -435,10 +451,6 @@ extern cvar_t sessionid;
 #elif defined(__OpenBSD__)
 # define DP_OS_NAME		"OpenBSD"
 # define DP_OS_STR		"openbsd"
-#elif defined(TARGET_OS_IPHONE)
-# define DP_OS_NAME		"iPhoneOS"
-# define DP_OS_STR		"iphoneos"
-# define USE_GLES2		1
 #elif defined(MACOSX)
 # define DP_OS_NAME		"Mac OS X"
 # define DP_OS_STR		"osx"
