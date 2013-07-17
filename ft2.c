@@ -42,6 +42,8 @@ cvar_t r_font_compress = {CVAR_SAVE, "r_font_compress", "0", "use texture compre
 cvar_t r_font_nonpoweroftwo = {CVAR_SAVE, "r_font_nonpoweroftwo", "1", "use nonpoweroftwo textures for font (saves memory, potentially slower)"};
 cvar_t developer_font = {CVAR_SAVE, "developer_font", "0", "prints debug messages about fonts"};
 
+#ifndef DP_FREETYPE_STATIC
+
 /*
 ================================================================================
 Function definitions. Taken from the freetype2 headers.
@@ -135,6 +137,85 @@ static dllfunction_t ft2funcs[] =
 
 /// Handle for FreeType2 DLL
 static dllhandle_t ft2_dll = NULL;
+
+#else
+
+FT_EXPORT( FT_Error )
+(FT_Init_FreeType)( FT_Library  *alibrary );
+FT_EXPORT( FT_Error )
+(FT_Done_FreeType)( FT_Library  library );
+/*
+FT_EXPORT( FT_Error )
+(FT_New_Face)( FT_Library   library,
+		 const char*  filepathname,
+		 FT_Long      face_index,
+		 FT_Face     *aface );
+*/
+FT_EXPORT( FT_Error )
+(FT_New_Memory_Face)( FT_Library      library,
+			const FT_Byte*  file_base,
+			FT_Long         file_size,
+			FT_Long         face_index,
+			FT_Face        *aface );
+FT_EXPORT( FT_Error )
+(FT_Done_Face)( FT_Face  face );
+FT_EXPORT( FT_Error )
+(FT_Select_Size)( FT_Face  face,
+		    FT_Int   strike_index );
+FT_EXPORT( FT_Error )
+(FT_Request_Size)( FT_Face          face,
+		     FT_Size_Request  req );
+FT_EXPORT( FT_Error )
+(FT_Set_Char_Size)( FT_Face     face,
+		      FT_F26Dot6  char_width,
+		      FT_F26Dot6  char_height,
+		      FT_UInt     horz_resolution,
+		      FT_UInt     vert_resolution );
+FT_EXPORT( FT_Error )
+(FT_Set_Pixel_Sizes)( FT_Face  face,
+			FT_UInt  pixel_width,
+			FT_UInt  pixel_height );
+FT_EXPORT( FT_Error )
+(FT_Load_Glyph)( FT_Face   face,
+		   FT_UInt   glyph_index,
+		   FT_Int32  load_flags );
+FT_EXPORT( FT_Error )
+(FT_Load_Char)( FT_Face   face,
+		  FT_ULong  char_code,
+		  FT_Int32  load_flags );
+FT_EXPORT( FT_UInt )
+(FT_Get_Char_Index)( FT_Face   face,
+		       FT_ULong  charcode );
+FT_EXPORT( FT_Error )
+(FT_Render_Glyph)( FT_GlyphSlot    slot,
+		     FT_Render_Mode  render_mode );
+FT_EXPORT( FT_Error )
+(FT_Get_Kerning)( FT_Face     face,
+		    FT_UInt     left_glyph,
+		    FT_UInt     right_glyph,
+		    FT_UInt     kern_mode,
+		    FT_Vector  *akerning );
+FT_EXPORT( FT_Error )
+(FT_Attach_Stream)( FT_Face        face,
+		      FT_Open_Args*  parameters );
+
+#define qFT_Init_FreeType		FT_Init_FreeType
+#define qFT_Done_FreeType		FT_Done_FreeType
+//#define qFT_New_Face			FT_New_Face
+#define qFT_New_Memory_Face		FT_New_Memory_Face
+#define qFT_Done_Face			FT_Done_Face
+#define qFT_Select_Size			FT_Select_Size
+#define qFT_Request_Size		FT_Request_Size
+#define qFT_Set_Char_Size		FT_Set_Char_Size
+#define qFT_Set_Pixel_Sizes		FT_Set_Pixel_Sizes
+#define qFT_Load_Glyph			FT_Load_Glyph
+#define qFT_Load_Char			FT_Load_Char
+#define qFT_Get_Char_Index		FT_Get_Char_Index
+#define qFT_Render_Glyph		FT_Render_Glyph
+#define qFT_Get_Kerning			FT_Get_Kerning
+#define qFT_Attach_Stream		FT_Attach_Stream
+
+#endif
 
 /// Memory pool for fonts
 static mempool_t *font_mempool= NULL;
@@ -245,7 +326,9 @@ void Font_CloseLibrary (void)
 		qFT_Done_FreeType(font_ft2lib);
 		font_ft2lib = NULL;
 	}
+#ifndef DP_FREETYPE_STATIC
 	Sys_UnloadLibrary (&ft2_dll);
+#endif
 	pp.buf = NULL;
 }
 
@@ -258,6 +341,7 @@ Try to load the FreeType2 DLL
 */
 qboolean Font_OpenLibrary (void)
 {
+#ifndef DP_FREETYPE_STATIC
 	const char* dllnames [] =
 	{
 #if defined(WIN32)
@@ -272,10 +356,12 @@ qboolean Font_OpenLibrary (void)
 #endif
 		NULL
 	};
+#endif
 
 	if (r_font_disable_freetype.integer)
 		return false;
 
+#ifndef DP_FREETYPE_STATIC
 	// Already loaded?
 	if (ft2_dll)
 		return true;
@@ -283,6 +369,7 @@ qboolean Font_OpenLibrary (void)
 	// Load the DLL
 	if (!Sys_LoadLibrary (dllnames, &ft2_dll, ft2funcs))
 		return false;
+#endif
 	return true;
 }
 
@@ -358,7 +445,11 @@ Implementation of a more or less lazy font loading and rendering code.
 
 ft2_font_t *Font_Alloc(void)
 {
+#ifndef DP_FREETYPE_STATIC
 	if (!ft2_dll)
+#else
+	if (r_font_disable_freetype.integer)
+#endif
 		return NULL;
 	return (ft2_font_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_t));
 }
@@ -1065,7 +1156,11 @@ void Font_UnloadFont(ft2_font_t *font)
 			font->font_maps[i] = NULL;
 		}
 	}
+#ifndef DP_FREETYPE_STATIC
 	if (ft2_dll)
+#else
+	if (!r_font_disable_freetype.integer)
+#endif
 	{
 		if (font->face)
 		{
