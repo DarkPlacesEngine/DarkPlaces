@@ -37,6 +37,10 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 #ifndef CMD_H
 #define CMD_H
 
+extern void *cmd_text_mutex;
+#define Cbuf_LockThreadMutex() (void)(cmd_text_mutex ? Thread_LockMutex(cmd_text_mutex) : 0)
+#define Cbuf_UnlockThreadMutex() (void)(cmd_text_mutex ? Thread_UnlockMutex(cmd_text_mutex) : 0)
+
 /// allocates an initial text buffer that will grow as needed
 void Cbuf_Init (void);
 

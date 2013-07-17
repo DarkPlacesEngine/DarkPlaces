@@ -177,9 +177,6 @@ static sizebuf_t	cmd_text;
 static unsigned char		cmd_text_buf[CMDBUFSIZE];
 void *cmd_text_mutex = NULL;
 
-#define Cbuf_LockThreadMutex() (void)(cmd_text_mutex ? Thread_LockMutex(cmd_text_mutex) : 0)
-#define Cbuf_UnlockThreadMutex() (void)(cmd_text_mutex ? Thread_UnlockMutex(cmd_text_mutex) : 0)
-
 /*
 ============
 Cbuf_AddText
@@ -1913,7 +1910,8 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex)
 	int found;
 	cmd_function_t *cmd;
 	cmdalias_t *a;
-
+	if (lockmutex)
+		Cbuf_LockThreadMutex();
 	oldpos = cmd_tokenizebufferpos;
 	cmd_source = src;
 	found = false;
@@ -1989,6 +1987,8 @@ command_found:
 
 done:
 	cmd_tokenizebufferpos = oldpos;
+	if (lockmutex)
+		Cbuf_UnlockThreadMutex();
 }
 
 
