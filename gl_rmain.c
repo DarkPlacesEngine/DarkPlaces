@@ -1163,6 +1163,26 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		// look up all the uniform variable names we care about, so we don't
 		// have to look them up every time we set them
 
+#if 0
+		// debugging aid
+		{
+			GLint activeuniformindex = 0;
+			GLint numactiveuniforms = 0;
+			char uniformname[128];
+			GLsizei uniformnamelength = 0;
+			GLint uniformsize = 0;
+			GLenum uniformtype = 0;
+			memset(uniformname, 0, sizeof(uniformname));
+			qglGetProgramiv(p->program, GL_ACTIVE_UNIFORMS, &numactiveuniforms);
+			Con_Printf("Shader has %i uniforms\n", numactiveuniforms);
+			for (activeuniformindex = 0;activeuniformindex < numactiveuniforms;activeuniformindex++)
+			{
+				qglGetActiveUniform(p->program, activeuniformindex, sizeof(uniformname) - 1, &uniformnamelength, &uniformsize, &uniformtype, uniformname);
+				Con_Printf("Uniform %i name \"%s\" size %i type %i\n", (int)activeuniformindex, uniformname, (int)uniformsize, (int)uniformtype);
+			}
+		}
+#endif
+
 		p->loc_Texture_First              = qglGetUniformLocation(p->program, "Texture_First");
 		p->loc_Texture_Second             = qglGetUniformLocation(p->program, "Texture_Second");
 		p->loc_Texture_GammaRamps         = qglGetUniformLocation(p->program, "Texture_GammaRamps");
@@ -1311,15 +1331,19 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
 		if (p->loc_Texture_BounceGrid      >= 0) {p->tex_Texture_BounceGrid       = sampler;qglUniform1i(p->loc_Texture_BounceGrid      , sampler);sampler++;}
 		// get the uniform block indices so we can bind them
+#ifndef USE_GLES2 /* FIXME: GLES3 only */
 		if (vid.support.arb_uniform_buffer_object)
 			p->ubiloc_Skeletal_Transform12_UniformBlock = qglGetUniformBlockIndex(p->program, "Skeletal_Transform12_UniformBlock");
 		else
+#endif
 			p->ubiloc_Skeletal_Transform12_UniformBlock = -1;
 		// clear the uniform block bindings
 		p->ubibind_Skeletal_Transform12_UniformBlock = -1;
 		// bind the uniform blocks in use
 		ubibind = 0;
+#ifndef USE_GLES2 /* FIXME: GLES3 only */
 		if (p->ubiloc_Skeletal_Transform12_UniformBlock >= 0) {p->ubibind_Skeletal_Transform12_UniformBlock = ubibind;qglUniformBlockBinding(p->program, p->ubiloc_Skeletal_Transform12_UniformBlock, ubibind);ubibind++;}
+#endif
 		// we're done compiling and setting up the shader, at least until it is used
 		CHECKGLERROR
 		Con_DPrintf("^5GLSL shader %s compiled (%i textures).\n", permutationname, sampler);
@@ -1341,7 +1365,10 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int per
 		if (!r_glsl_permutation->program)
 		{
 			if (!r_glsl_permutation->compiled)
+			{
+				Con_DPrintf("Compiling shader mode %u permutation %u\n", mode, permutation);
 				R_GLSL_CompilePermutation(perm, mode, permutation);
+			}
 			if (!r_glsl_permutation->program)
 			{
 				// remove features until we find a valid permutation
@@ -2068,7 +2095,9 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean 
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, permutation);
+#ifndef USE_GLES2 /* FIXME: GLES3 only */
 		if (r_glsl_permutation->ubiloc_Skeletal_Transform12_UniformBlock >= 0 && rsurface.batchskeletaltransform3x4buffer) qglBindBufferRange(GL_UNIFORM_BUFFER, r_glsl_permutation->ubibind_Skeletal_Transform12_UniformBlock, rsurface.batchskeletaltransform3x4buffer->bufferobject, rsurface.batchskeletaltransform3x4offset, rsurface.batchskeletaltransform3x4size);
+#endif
 		break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
@@ -2726,7 +2755,9 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (rsurface.batchskeletaltransform3x4buffer)
 			permutation |= SHADERPERMUTATION_SKELETAL;
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
+#ifndef USE_GLES2 /* FIXME: GLES3 only */
 		if (r_glsl_permutation->ubiloc_Skeletal_Transform12_UniformBlock >= 0 && rsurface.batchskeletaltransform3x4buffer) qglBindBufferRange(GL_UNIFORM_BUFFER, r_glsl_permutation->ubibind_Skeletal_Transform12_UniformBlock, rsurface.batchskeletaltransform3x4buffer->bufferobject, rsurface.batchskeletaltransform3x4offset, rsurface.batchskeletaltransform3x4size);
+#endif
 		if (r_glsl_permutation->loc_ModelToReflectCube >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.matrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ModelToReflectCube, 1, false, m16f);}
 		if (mode == SHADERMODE_LIGHTSOURCE)
 		{
@@ -4008,9 +4039,11 @@ static void gl_main_start(void)
 		r_loadnormalmap = true;
 		r_loadgloss = true;
 		r_loadfog = false;
+#ifdef GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT
 		if (vid.support.arb_uniform_buffer_object)
 			qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &r_uniformbufferalignment);
-		break;
+#endif
+			break;
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
 		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
@@ -4078,6 +4111,27 @@ static void gl_main_start(void)
 	r_texture_numcubemaps = 0;
 
 	r_refdef.fogmasktable_density = 0;
+
+#ifdef __ANDROID__
+	// For Steelstorm Android
+	// FIXME CACHE the program and reload
+	// FIXME see possible combinations for SS:BR android
+	Con_DPrintf("Compiling most used shaders for SS:BR android... START\n");
+	R_SetupShader_SetPermutationGLSL(0, 12);
+	R_SetupShader_SetPermutationGLSL(0, 13);
+	R_SetupShader_SetPermutationGLSL(0, 8388621);
+	R_SetupShader_SetPermutationGLSL(3, 0);
+	R_SetupShader_SetPermutationGLSL(3, 2048);
+	R_SetupShader_SetPermutationGLSL(5, 0);
+	R_SetupShader_SetPermutationGLSL(5, 2);
+	R_SetupShader_SetPermutationGLSL(5, 2048);
+	R_SetupShader_SetPermutationGLSL(5, 8388608);
+	R_SetupShader_SetPermutationGLSL(11, 1);
+	R_SetupShader_SetPermutationGLSL(11, 2049);
+	R_SetupShader_SetPermutationGLSL(11, 8193);
+	R_SetupShader_SetPermutationGLSL(11, 10241);
+	Con_DPrintf("Compiling most used shaders for SS:BR android... END\n");
+#endif
 }
 
 static void gl_main_shutdown(void)
@@ -4095,7 +4149,7 @@ static void gl_main_shutdown(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
-#ifdef GL_SAMPLES_PASSED_ARB
+#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 		if (r_maxqueries)
 			qglDeleteQueriesARB(r_maxqueries, r_queries);
 #endif
@@ -4361,6 +4415,13 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_batch_dynamicbuffer);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
+#ifdef DP_MOBILETOUCH
+	// GLES devices have terrible depth precision in general, so...
+	Cvar_SetValueQuick(&r_nearclip, 4);
+	Cvar_SetValueQuick(&r_farclip_base, 4096);
+	Cvar_SetValueQuick(&r_farclip_world, 0);
+	Cvar_SetValueQuick(&r_useinfinitefarclip, 0);
+#endif
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap, NULL, NULL);
 }
 
@@ -5637,7 +5698,9 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 		case RENDERPATH_GL11:
 		case RENDERPATH_GL13:
 		case RENDERPATH_GLES1:
+#ifndef USE_GLES2
 			qglLoadMatrixf(gl_modelview16f);CHECKGLERROR
+#endif
 			break;
 		case RENDERPATH_SOFT:
 			DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
@@ -12178,10 +12241,9 @@ extern cvar_t mod_collision_bih;
 static void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
-	int i, j, k, l, flagsmask;
+	int i, j, flagsmask;
 	const msurface_t *surface;
 	dp_model_t *model = ent->model;
-	vec3_t v;
 
 	if (!sv.active  && !cls.demoplayback && ent != r_refdef.scene.worldentity)
 		return;
@@ -12313,6 +12375,8 @@ static void R_DrawDebugModel(void)
 
 	if (r_shownormals.value != 0 && qglBegin)
 	{
+		int l, k;
+		vec3_t v;
 		if (r_showdisabledepthtest.integer)
 		{
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

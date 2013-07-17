@@ -163,6 +163,11 @@ qboolean ModPlug_OpenLibrary (void)
 	if (COM_CheckParm("-nomodplug"))
 		return false;
 
+#ifdef __ANDROID__
+	Con_Print("Warning: no modplug support in Android yet.\n");
+	return false;
+#endif
+
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the modplug DLL automatically when loading the modplugFile DLL

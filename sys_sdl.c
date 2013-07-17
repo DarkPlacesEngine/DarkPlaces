@@ -12,6 +12,14 @@
 #include <sys/time.h>
 #endif
 
+#ifdef __ANDROID__
+#include <android/log.h>
+
+#ifndef FNDELAY
+#define FNDELAY		O_NDELAY
+#endif
+#endif
+
 #include <signal.h>
 
 #include <SDL.h>
@@ -24,6 +32,9 @@
 
 void Sys_Shutdown (void)
 {
+#ifdef __ANDROID__
+	Sys_AllowProfiling(false);
+#endif
 #ifndef WIN32
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #endif
@@ -55,6 +66,12 @@ void Sys_Error (const char *error, ...)
 static int outfd = 1;
 void Sys_PrintToTerminal(const char *text)
 {
+#ifdef __ANDROID__
+	if (developer.integer > 0)
+	{
+		__android_log_write(ANDROID_LOG_DEBUG, com_argv[0], text);
+	}
+#else
 	if(outfd < 0)
 		return;
 #ifdef FNDELAY
@@ -79,6 +96,7 @@ void Sys_PrintToTerminal(const char *text)
 	}
 #endif
 	//fprintf(stdout, "%s", text);
+#endif
 }
 
 char *Sys_ConsoleInput(void)
@@ -177,6 +195,10 @@ void Sys_InitConsole (void)
 int main (int argc, char *argv[])
 {
 	signal(SIGFPE, SIG_IGN);
+
+#ifdef __ANDROID__
+	Sys_AllowProfiling(true);
+#endif
 
 	com_argc = argc;
 	com_argv = (const char **)argv;

@@ -56,6 +56,9 @@ typedef enum textype_e
 	// 4x4 block compressed 15bit color plus 8bit alpha (8 bits per pixel)
 	TEXTYPE_DXT5,
 
+	// default compressed type for GLES2
+	TEXTYPE_ETC1,
+
 	// 8bit paletted in sRGB colorspace
 	TEXTYPE_SRGB_PALETTE,
 	// 32bit RGBA in sRGB colorspace

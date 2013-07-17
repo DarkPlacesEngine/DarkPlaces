@@ -515,6 +515,12 @@ qboolean JPEG_OpenLibrary (void)
 
 	jpeg_tried_loading = true;
 
+#ifdef __ANDROID__
+	// loading the native Android libjpeg.so causes crashes
+	Con_Printf("Not opening libjpeg.so dynamically on Android - use LINK_TO_LIBJPEG instead if it is needed.\n");
+	return false;
+#endif
+
 	// Load the DLL
 	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
 #endif
