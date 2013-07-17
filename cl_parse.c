@@ -3006,9 +3006,12 @@ static void CL_IPLog_Add(const char *address, const char *name, qboolean checkex
 		// add it to the iplog.txt file
 		// TODO: this ought to open the one in the userpath version of the base
 		// gamedir, not the current gamedir
+// not necessary for mobile
+#ifndef DP_MOBILETOUCH
 		Log_Printf(cl_iplog_name.string, "%s %s\n", address, name);
 		if (developer_extra.integer)
 			Con_DPrintf("CL_IPLog_Add: appending this line to %s: %s %s\n", cl_iplog_name.string, address, name);
+#endif
 	}
 }
 
@@ -3023,7 +3026,12 @@ static void CL_IPLog_Load(void)
 	cl_iplog_loaded = true;
 	// TODO: this ought to open the one in the userpath version of the base
 	// gamedir, not the current gamedir
+// not necessary for mobile
+#ifndef DP_MOBILETOUCH
 	filedata = FS_LoadFile(cl_iplog_name.string, tempmempool, true, &filesize);
+#else
+	filedata = NULL;
+#endif
 	if (!filedata)
 		return;
 	text = (char *)filedata;
