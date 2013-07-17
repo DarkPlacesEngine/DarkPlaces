@@ -74,13 +74,18 @@ extern int r_stereo_side;
 typedef struct scr_touchscreenarea_s
 {
 	const char *pic;
+	const char *text;
 	float rect[4];
+	float textheight;
 	float active;
+	float activealpha;
+	float inactivealpha;
 }
 scr_touchscreenarea_t;
 
+// FIXME: should resize dynamically?
 extern int scr_numtouchscreenareas;
-extern scr_touchscreenarea_t scr_touchscreenareas[16];
+extern scr_touchscreenarea_t scr_touchscreenareas[128];
 
 #endif
 
