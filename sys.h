@@ -83,6 +83,9 @@ void Sys_Quit (int returnvalue);
  * profiling to certain areas of the code, such as ingame performance without
  * regard for loading/shutdown performance (-profilegameonly on commandline)
  */
+#ifdef __cplusplus
+extern "C"
+#endif
 void Sys_AllowProfiling (qboolean enable);
 
 typedef struct sys_cleantime_s

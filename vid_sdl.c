@@ -769,7 +769,7 @@ void VID_BuildJoyState(vid_joystate_t *joystate)
 	if (skip != 11) \
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[11], (keynum_t)'b', NULL, 0, 0, 0, false); \
 	if (skip != 12) \
-		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[12], 'q', NULL, 0, 0, 0, false); \
+		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[12], (keynum_t)'q', NULL, 0, 0, 0, false); \
 	if (skip != 13) \
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[13], (keynum_t)'`', NULL, 0, 0, 0, false); \
 	if (skip != 14) \
@@ -852,10 +852,10 @@ static void IN_Move_TouchScreen_SteelStorm(void)
 		{
 			VID_TouchscreenCursor(0, 0, 0, 0, &buttons[0], K_MOUSE1);
 
-			VID_TouchscreenArea( 2,16*xscale,-240*yscale, 224*xscale, 224*yscale, "gfx/gui/touch_l_thumb_dpad.tga", 0.0f, NULL, move, &buttons[1], 0, NULL, 0.15, 112*xscale, 112*yscale, false);
+			VID_TouchscreenArea( 2,16*xscale,-240*yscale, 224*xscale, 224*yscale, "gfx/gui/touch_l_thumb_dpad.tga", 0.0f, NULL, move, &buttons[1], (keynum_t)0, NULL, 0.15, 112*xscale, 112*yscale, false);
 
-			VID_TouchscreenArea( 3,-240*xscale,-160*yscale, 224*xscale, 128*yscale, "gfx/gui/touch_r_thumb_turn_n_shoot.tga"    , 0.0f, NULL, NULL,  0, 0, NULL, 0, 56*xscale, 0, false);
-			VID_TouchscreenArea( 3,-240*xscale,-256*yscale, 224*xscale, 224*yscale, NULL    , 0.0f, NULL, aim,  &buttons[2], 0, NULL, 0.2, 56*xscale, 0, false);
+			VID_TouchscreenArea( 3,-240*xscale,-160*yscale, 224*xscale, 128*yscale, "gfx/gui/touch_r_thumb_turn_n_shoot.tga"    , 0.0f, NULL, NULL,  0, (keynum_t)0, NULL, 0, 56*xscale, 0, false);
+			VID_TouchscreenArea( 3,-240*xscale,-256*yscale, 224*xscale, 224*yscale, NULL    , 0.0f, NULL, aim,  &buttons[2], (keynum_t)0, NULL, 0.2, 56*xscale, 0, false);
 
 			VID_TouchscreenArea( 2, (vid_conwidth.value / 2) - 128,-80,  256,  80, NULL, 0.0f, NULL, NULL, &buttons[3], K_SHIFT, NULL, 0, 0, 0, true);
 
@@ -864,7 +864,7 @@ static void IN_Move_TouchScreen_SteelStorm(void)
 
 			VID_TouchscreenArea( 1,-100,   0, 100, 100, NULL                         , 0.0f, NULL, NULL, &buttons[10], (keynum_t)'m', NULL, 0, 0, 0, true);
 			VID_TouchscreenArea( 1,-100, 120, 100, 100, NULL                         , 0.0f, NULL, NULL, &buttons[11], (keynum_t)'b', NULL, 0, 0, 0, true);
-			VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , 0.0f, NULL, NULL, &buttons[12], 'q', NULL, 0, 0, 0, true);
+			VID_TouchscreenArea( 0,   0,   0,  64,  64, NULL                         , 0.0f, NULL, NULL, &buttons[12], (keynum_t)'q', NULL, 0, 0, 0, true);
 			if (developer.integer)
 				VID_TouchscreenArea( 0,   0,  96,  64,  64, NULL                         , 0.0f, NULL, NULL, &buttons[13], (keynum_t)'`', NULL, 0, 0, 0, true);
 			else
