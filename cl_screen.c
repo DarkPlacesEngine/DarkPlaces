@@ -53,7 +53,7 @@ cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","
 cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
 cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
-cvar_t scr_screenshot_alpha = {CVAR_SAVE, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
+cvar_t scr_screenshot_alpha = {0, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
 cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
@@ -2071,8 +2071,12 @@ static void SCR_DrawTouchscreenOverlay(void)
 void R_ClearScreen(qboolean fogcolor)
 {
 	float clearcolor[4];
-	// clear to opaque black (if we're being composited it might otherwise render as transparent)
-	Vector4Set(clearcolor, 0.0f, 0.0f, 0.0f, 1.0f);
+	if (scr_screenshot_alpha.integer)
+		// clear to transparency (so png screenshots can contain alpha channel, useful for building model pictures)
+		Vector4Set(clearcolor, 0.0f, 0.0f, 0.0f, 0.0f);
+	else
+		// clear to opaque black (if we're being composited it might otherwise render as transparent)
+		Vector4Set(clearcolor, 0.0f, 0.0f, 0.0f, 1.0f);
 	if (fogcolor && r_fog_clear.integer)
 	{
 		R_UpdateFog();
