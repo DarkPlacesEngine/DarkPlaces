@@ -491,7 +491,7 @@ snd_modplug.o: snd_modplug.c
 	$(DO_CC) $(CFLAGS_SND_MODPLUG)
 
 #this checks ODE_DYNAMIC and ODE_STATIC when compiling so it needs the ODE flags as well
-prvm_cmd.o: prvm_cmd.c
+prvm_cmds.o: prvm_cmds.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
 
