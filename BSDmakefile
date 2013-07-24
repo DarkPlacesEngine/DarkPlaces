@@ -50,9 +50,37 @@ EXE_CLNEXUIZ=$(EXE_UNIXCLNEXUIZ)
 EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+# set these to "" if you want to use dynamic loading instead
+# zlib
+CFLAGS_LIBZ=-DLINK_TO_ZLIB
+LIB_Z=-lz
+
+# jpeg
 CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
 LIB_JPEG=-ljpeg
+
+# ode
+ODE_CONFIG?=ode-config
+LIB_ODE=`$(ODE_CONFIG) --libs`
+CFLAGS_ODE=`$(ODE_CONFIG) --cflags` -DUSEODE -DLINK_TO_LIBODE
+
+# d0_blind_id
+# most distros do not have d0_blind_id package, dlopen will used by default
+# LIB_CRYPTO=-ld0_blind_id
+# CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
+# LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
+# CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+LIB_CRYPTO=
+CFLAGS_CRYPTO=
+LIB_CRYPTO_RIJNDAEL=
+CFLAGS_CRYPTO_RIJNDAEL=
+
+# modplug
+# now ogg is mostly used, modplug is required rarely, keep it dlopen by default
+# LIB_SND_MODPLUG=-lmodplug
+# CFLAGS_SND_MODPLUG=-DLINK_TO_LIBMODPLUG
+LIB_SND_MODPLUG=
+CFLAGS_SND_MODPLUG=
 
 .endif
 
