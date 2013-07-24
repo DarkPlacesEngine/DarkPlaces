@@ -78,9 +78,7 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
-	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
-	LIB_JPEG=-ljpeg
+	DP_LINK_LIBS=shared
 endif
 
 # Mac OS X configuration
@@ -111,10 +109,7 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 		CFLAGS_MAKEDEP=
 	endif
 
-	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
-	# we don't currently link to libjpeg on Mac because the OS does not have an easy way to load libjpeg and we provide our own in the .app
-	CFLAGS_LIBJPEG=
-	LIB_JPEG=
+	DP_LINK_LIBS=dlopen
 
 	# on OS X, we don't build the CL by default because it uses deprecated
 	# and not-implemented-in-64bit Carbon
@@ -151,9 +146,7 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
-	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
-	LIB_JPEG=-ljpeg
+	DP_LINK_LIBS=shared
 endif
 
 # BSD configuration
@@ -184,9 +177,7 @@ endif
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
-	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
-	LIB_JPEG=-ljpeg
+	DP_LINK_LIBS=shared
 endif
 
 # Win32 configuration
@@ -241,10 +232,58 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
 
-	# libjpeg dependency (set these to "" if you want to use dynamic loading instead)
+	DP_LINK_LIBS=shared
+endif
+
+# set these to "" if you want to use dynamic loading instead
+# zlib
+ifeq ($(DP_LINK_LIBS), shared)
+	CFLAGS_LIBZ=-DLINK_TO_ZLIB
+	LIB_Z=-lz
+endif
+ifeq ($(DP_LINK_LIBS), dlopen)
+	CFLAGS_LIBZ=
+	LIB_Z=
+endif
+
+# jpeg
+ifeq ($(DP_LINK_LIBS), shared)
 	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
 	LIB_JPEG=-ljpeg
 endif
+ifeq ($(DP_LINK_LIBS), dlopen)
+	CFLAGS_LIBJPEG=
+	LIB_JPEG=
+endif
+
+# ode
+ifeq ($(DP_LINK_LIBS), shared)
+	ODE_CONFIG?=ode-config
+	LIB_ODE=`$(ODE_CONFIG) --libs`
+	CFLAGS_ODE=`$(ODE_CONFIG) --cflags` -DUSEODE -DLINK_TO_LIBODE
+endif
+ifeq ($(DP_LINK_LIBS), dlopen)
+	LIB_ODE=
+	CFLAGS_ODE=-DUSEODE
+endif
+
+# d0_blind_id
+# most distros do not have d0_blind_id package, dlopen will used by default
+# LIB_CRYPTO=-ld0_blind_id
+# CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
+# LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
+# CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+LIB_CRYPTO=
+CFLAGS_CRYPTO=
+LIB_CRYPTO_RIJNDAEL=
+CFLAGS_CRYPTO_RIJNDAEL=
+
+# modplug
+# now ogg is mostly used, modplug is required rarely, keep it dlopen by default
+# LIB_SND_MODPLUG=-lmodplug
+# CFLAGS_SND_MODPLUG=-DLINK_TO_LIBMODPLUG
+LIB_SND_MODPLUG=
+CFLAGS_SND_MODPLUG=
 
 ##### Sound configuration #####
 

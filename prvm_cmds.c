@@ -17,7 +17,9 @@
 #include "mdfour.h"
 
 extern cvar_t prvm_backtraceforwarnings;
+#ifdef USEODE
 extern dllhandle_t ode_dll;
+#endif
 
 // LordHavoc: changed this to NOT use a return statement, so that it can be used in functions that must return a value
 void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
@@ -275,19 +277,21 @@ static qboolean checkextension(prvm_prog_t *prog, const char *name)
 			e++;
 		if ((e - start) == len && !strncasecmp(start, name, len))
 		{
+#ifdef USEODE
 			// special sheck for ODE
 			if (!strncasecmp("DP_PHYSICS_ODE", name, 14))
 			{
-#ifdef ODE_DYNAMIC
+#ifndef LINK_TO_LIBODE
 				return ode_dll ? true : false;
 #else
-#ifdef ODE_STATIC
+#ifdef LINK_TO_LIBODE
 				return true;
 #else
 				return false;
 #endif
 #endif
 			}
+#endif
 
 			// special sheck for d0_blind_id
 			if (!strcasecmp("DP_CRYPTO", name))

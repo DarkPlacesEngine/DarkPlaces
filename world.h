@@ -119,15 +119,6 @@ int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, in
 void World_Start(world_t *world);
 void World_End(world_t *world);
 
-// physics macros
-#ifndef ODE_STATIC
-# define ODE_DYNAMIC 1
-#endif
-
-#if defined(ODE_STATIC) || defined(ODE_DYNAMIC)
-# define USEODE 1
-#endif
-
 // update physics
 // this is called by SV_Physics
 void World_Physics_Frame(world_t *world, double frametime, double gravity);

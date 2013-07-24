@@ -25,11 +25,6 @@ CC?=gcc
 CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
 
-# Additional stuff for libode
-LIB_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --libs` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -lstdc++`
-CFLAGS_ODE=`[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && "$(DP_ODE_STATIC_LIBDIR)/../bin/ode-config" --cflags || { [ -n "$(DP_ODE_DYNAMIC)" ] && echo \ -DODE_DYNAMIC; }` `[ -n "$(DP_ODE_STATIC_LIBDIR)" ] && echo -DODE_STATIC`
-
-
 SDL_CONFIG?=sdl-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
 SDLCONFIG_UNIXCFLAGS_X11?=
@@ -46,17 +41,6 @@ STRIP?=strip
 ###### Sound and audio CD #####
 
 OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o snd_modplug.o
-
-# statically loading d0_blind_id
-LIB_CRYPTO=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && echo \ $(DP_CRYPTO_STATIC_LIBDIR)/libd0_blind_id.a`
-LIB_GMP=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && { [ -n "$(DP_GMP_STATIC_LIBDIR)" ] && echo \ $(DP_GMP_STATIC_LIBDIR)/libgmp.a || echo \ -lgmp; }`
-CFLAGS_CRYPTO=`[ -n "$(DP_CRYPTO_STATIC_LIBDIR)" ] && echo \ -I$(DP_CRYPTO_STATIC_LIBDIR)/../include\ -DCRYPTO_STATIC`
-LIB_CRYPTO_RIJNDAEL=`[ -n "$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)" ] && echo \ $(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)/libd0_rijndael.a`
-CFLAGS_CRYPTO_RIJNDAEL=`[ -n "$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)" ] && echo \ -I$(DP_CRYPTO_RIJNDAEL_STATIC_LIBDIR)/../include\ -DCRYPTO_RIJNDAEL_STATIC`
-
-# Additional stuff for libmodplug
-LIB_SND_MODPLUG=`[ -n "$(DP_MODPLUG_STATIC_LIBDIR)" ] && echo \ $(DP_MODPLUG_STATIC_LIBDIR)/libmodplug.a\ -lstdc++`
-CFLAGS_SND_MODPLUG=`[ -n "$(DP_MODPLUG_STATIC_LIBDIR)" ] && echo \ -I$(DP_MODPLUG_STATIC_LIBDIR)/../include\ -DSND_MODPLUG_STATIC`
 
 # No sound
 OBJ_SND_NULL=snd_null.o
@@ -187,7 +171,7 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_SND_COMMON) snd_sdl.
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -218,7 +202,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_pthread.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm -pthread $(LIB_SOUND)
 LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lmodplug
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
@@ -303,9 +287,9 @@ OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_SND_WIN) $(OBJ_WINC
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
-LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LDFLAGS_D3D) $(LIB_JPEG)
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_GMP) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32 $(LIB_JPEG)
+LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LDFLAGS_D3D) $(LIB_Z) $(LIB_JPEG)
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) $(LIB_SND_MODPLUG) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
 EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
@@ -490,7 +474,7 @@ snd_modplug.o: snd_modplug.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SND_MODPLUG)
 
-#this checks ODE_DYNAMIC and ODE_STATIC when compiling so it needs the ODE flags as well
+#this checks USEODE when compiling so it needs the ODE flags as well
 prvm_cmds.o: prvm_cmds.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
