@@ -98,7 +98,9 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	DP_LINK_LIBS=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=dlopen
 endif
 
 # Mac OS X configuration
@@ -129,7 +131,9 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 		CFLAGS_MAKEDEP=
 	endif
 
-	DP_LINK_LIBS=dlopen
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=dlopen
 
 	# on OS X, we don't build the CL by default because it uses deprecated
 	# and not-implemented-in-64bit Carbon
@@ -166,7 +170,9 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	DP_LINK_LIBS=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=dlopen
 endif
 
 # BSD configuration
@@ -197,7 +203,9 @@ endif
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
-	DP_LINK_LIBS=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=dlopen
 endif
 
 # Win32 configuration
@@ -252,37 +260,39 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
 
-	DP_LINK_LIBS=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=dlopen
 endif
 
 # set these to "" if you want to use dynamic loading instead
 # zlib
-ifeq ($(DP_LINK_LIBS), shared)
+ifeq ($(DP_LINK_ZLIB), shared)
 	CFLAGS_LIBZ=-DLINK_TO_ZLIB
 	LIB_Z=-lz
 endif
-ifeq ($(DP_LINK_LIBS), dlopen)
+ifeq ($(DP_LINK_ZLIB), dlopen)
 	CFLAGS_LIBZ=
 	LIB_Z=
 endif
 
 # jpeg
-ifeq ($(DP_LINK_LIBS), shared)
+ifeq ($(DP_LINK_JPEG), shared)
 	CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
 	LIB_JPEG=-ljpeg
 endif
-ifeq ($(DP_LINK_LIBS), dlopen)
+ifeq ($(DP_LINK_JPEG), dlopen)
 	CFLAGS_LIBJPEG=
 	LIB_JPEG=
 endif
 
 # ode
-ifeq ($(DP_LINK_LIBS), shared)
+ifeq ($(DP_LINK_ODE), shared)
 	ODE_CONFIG?=ode-config
 	LIB_ODE=`$(ODE_CONFIG) --libs`
 	CFLAGS_ODE=`$(ODE_CONFIG) --cflags` -DUSEODE -DLINK_TO_LIBODE
 endif
-ifeq ($(DP_LINK_LIBS), dlopen)
+ifeq ($(DP_LINK_ODE), dlopen)
 	LIB_ODE=
 	CFLAGS_ODE=-DUSEODE
 endif
@@ -297,13 +307,6 @@ LIB_CRYPTO=
 CFLAGS_CRYPTO=
 LIB_CRYPTO_RIJNDAEL=
 CFLAGS_CRYPTO_RIJNDAEL=
-
-# modplug
-# now ogg is mostly used, modplug is required rarely, keep it dlopen by default
-# LIB_SND_MODPLUG=-lmodplug
-# CFLAGS_SND_MODPLUG=-DLINK_TO_LIBMODPLUG
-LIB_SND_MODPLUG=
-CFLAGS_SND_MODPLUG=
 
 ##### Sound configuration #####
 

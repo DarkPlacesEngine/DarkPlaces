@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_main.h"
 #include "snd_ogg.h"
-#include "snd_modplug.h"
 #include "csprogs.h"
 #include "cl_collision.h"
 #ifdef CONFIG_CD
@@ -917,7 +916,6 @@ void S_Init(void)
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
 	OGG_OpenLibrary ();
-	ModPlug_OpenLibrary ();
 }
 
 
@@ -931,7 +929,6 @@ Shutdown and free all resources
 void S_Terminate (void)
 {
 	S_Shutdown ();
-	ModPlug_CloseLibrary ();
 	OGG_CloseLibrary ();
 
 	// Free all SFXs
