@@ -90,13 +90,6 @@ CFLAGS_CRYPTO=
 LIB_CRYPTO_RIJNDAEL=
 CFLAGS_CRYPTO_RIJNDAEL=
 
-# modplug
-# now ogg is mostly used, modplug is required rarely, keep it dlopen by default
-# LIB_SND_MODPLUG=-lmodplug
-# CFLAGS_SND_MODPLUG=-DLINK_TO_LIBMODPLUG
-LIB_SND_MODPLUG=
-CFLAGS_SND_MODPLUG=
-
 .endif
 
 

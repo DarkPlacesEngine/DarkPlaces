@@ -166,7 +166,6 @@
     <ClCompile Include="snd_main.c" />
     <ClCompile Include="snd_mem.c" />
     <ClCompile Include="snd_mix.c" />
-    <ClCompile Include="snd_modplug.c" />
     <ClCompile Include="snd_ogg.c" />
     <ClCompile Include="snd_sdl.c" />
     <ClCompile Include="snd_wav.c" />
@@ -272,7 +271,6 @@
     <ClInclude Include="shader_glsl.h" />
     <ClInclude Include="shader_hlsl.h" />
     <ClInclude Include="snd_main.h" />
-    <ClInclude Include="snd_modplug.h" />
     <ClInclude Include="snd_ogg.h" />
     <ClInclude Include="snd_wav.h" />
     <ClInclude Include="sound.h" />

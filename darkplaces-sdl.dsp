@@ -362,10 +362,6 @@ SOURCE=.\snd_mix.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\snd_modplug.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\snd_ogg.c
 # End Source File
 # Begin Source File
@@ -707,10 +703,6 @@ SOURCE=.\server.h
 # Begin Source File
 
 SOURCE=.\snd_main.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\snd_modplug.h
 # End Source File
 # Begin Source File
 

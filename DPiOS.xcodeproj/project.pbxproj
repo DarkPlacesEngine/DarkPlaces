@@ -87,7 +87,6 @@
 		7463B7BD12F9CE6B00983F6A /* snd_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75212F9CE6B00983F6A /* snd_main.c */; };
 		7463B7BE12F9CE6B00983F6A /* snd_mem.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75412F9CE6B00983F6A /* snd_mem.c */; };
 		7463B7BF12F9CE6B00983F6A /* snd_mix.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75512F9CE6B00983F6A /* snd_mix.c */; };
-		7463B7C012F9CE6B00983F6A /* snd_modplug.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75612F9CE6B00983F6A /* snd_modplug.c */; };
 		7463B7C112F9CE6B00983F6A /* snd_ogg.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75812F9CE6B00983F6A /* snd_ogg.c */; };
 		7463B7C212F9CE6B00983F6A /* snd_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75A12F9CE6B00983F6A /* snd_sdl.c */; };
 		7463B7C312F9CE6B00983F6A /* snd_wav.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75B12F9CE6B00983F6A /* snd_wav.c */; };
@@ -275,8 +274,6 @@
 		7463B75312F9CE6B00983F6A /* snd_main.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_main.h; sourceTree = "<group>"; };
 		7463B75412F9CE6B00983F6A /* snd_mem.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_mem.c; sourceTree = "<group>"; };
 		7463B75512F9CE6B00983F6A /* snd_mix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_mix.c; sourceTree = "<group>"; };
-		7463B75612F9CE6B00983F6A /* snd_modplug.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_modplug.c; sourceTree = "<group>"; };
-		7463B75712F9CE6B00983F6A /* snd_modplug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_modplug.h; sourceTree = "<group>"; };
 		7463B75812F9CE6B00983F6A /* snd_ogg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_ogg.c; sourceTree = "<group>"; };
 		7463B75912F9CE6B00983F6A /* snd_ogg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_ogg.h; sourceTree = "<group>"; };
 		7463B75A12F9CE6B00983F6A /* snd_sdl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_sdl.c; sourceTree = "<group>"; };
@@ -512,8 +509,6 @@
 				7463B75312F9CE6B00983F6A /* snd_main.h */,
 				7463B75412F9CE6B00983F6A /* snd_mem.c */,
 				7463B75512F9CE6B00983F6A /* snd_mix.c */,
-				7463B75612F9CE6B00983F6A /* snd_modplug.c */,
-				7463B75712F9CE6B00983F6A /* snd_modplug.h */,
 				7463B75812F9CE6B00983F6A /* snd_ogg.c */,
 				7463B75912F9CE6B00983F6A /* snd_ogg.h */,
 				7463B75A12F9CE6B00983F6A /* snd_sdl.c */,
@@ -718,7 +713,6 @@
 				7463B7BD12F9CE6B00983F6A /* snd_main.c in Sources */,
 				7463B7BE12F9CE6B00983F6A /* snd_mem.c in Sources */,
 				7463B7BF12F9CE6B00983F6A /* snd_mix.c in Sources */,
-				7463B7C012F9CE6B00983F6A /* snd_modplug.c in Sources */,
 				7463B7C112F9CE6B00983F6A /* snd_ogg.c in Sources */,
 				7463B7C212F9CE6B00983F6A /* snd_sdl.c in Sources */,
 				7463B7C312F9CE6B00983F6A /* snd_wav.c in Sources */,
