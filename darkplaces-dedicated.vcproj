@@ -1019,10 +1019,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\snd_modplug.h"
-				>
-			</File>
-			<File
 				RelativePath=".\snd_ogg.h"
 				>
 			</File>
