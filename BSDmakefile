@@ -7,7 +7,6 @@ DP_MAKE_TARGET=bsd
 .endif
 DP_ARCH != uname
 
-
 # Makefile name
 MAKEFILE=BSDmakefile
 
@@ -22,6 +21,16 @@ TARGETS_PROFILE=sv-profile cl-profile sdl-profile
 TARGETS_RELEASE=sv-release cl-release sdl-release
 TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
 TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
+
+###### Optional features #####
+DP_CDDA?=enabled
+.if $(DP_CDDA) == "enabled"
+	OBJ_SDLCD=$(OBJ_CD_COMMON) cd_sdl.o
+	OBJ_BSDCD=$(OBJ_CD_COMMON) cd_bsd.o
+.else
+	OBJ_SDLCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+	OBJ_BSDCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+.endif
 
 # X11 libs
 UNIX_X11LIBPATH=/usr/X11R6/lib
