@@ -18,9 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "quakedef.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 #include "image.h"
 #include "progsvm.h"
 
@@ -1701,9 +1699,7 @@ static void M_Options_Draw (void)
 	M_Options_PrintSlider(  "            Brightness", true, v_contrast.value, 1, 2);
 	M_Options_PrintSlider(  "                 Gamma", true, v_gamma.value, 0.5, 3);
 	M_Options_PrintSlider(  "          Sound Volume", snd_initialized.integer, volume.value, 0, 1);
-#ifdef CONFIG_CD
 	M_Options_PrintSlider(  "          Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
-#endif
 	M_Options_PrintCommand( "     Customize Effects", true);
 	M_Options_PrintCommand( "       Effects:  Quake", true);
 	M_Options_PrintCommand( "       Effects: Normal", true);

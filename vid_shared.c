@@ -1,8 +1,6 @@
 
 #include "quakedef.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 #include "image.h"
 
 #ifdef SUPPORTD3D
