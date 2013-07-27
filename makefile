@@ -260,7 +260,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
 
-	DP_LINK_ZLIB?=shared
+	DP_LINK_ZLIB?=dlopen
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 endif
