@@ -1442,7 +1442,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 // spawnparticles = true
 // it is called CL_ParticleTrail because most code does not want to supply
 // these parameters, only trail handling does
-void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4])
+static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean istrail)
 {
 	qboolean found = false;
 	char vabuf[1024];
@@ -1497,11 +1497,15 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 				if ((info->flags & PARTICLEEFFECT_NOTUNDERWATER) && underwater)
 					continue;
 
+				// if trailspacing is set, only ever use this effect as trail
+				if (info->trailspacing > 0 && !istrail)
+					continue;
+
 				// spawn a dlight if requested
 				if (info->lightradiusstart > 0 && spawndlight)
 				{
 					matrix4x4_t tempmatrix;
-					if (info->trailspacing > 0)
+					if (istrail)
 						Matrix4x4_CreateTranslate(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2]);
 					else
 						Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
@@ -1573,20 +1577,25 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 					default: break;
 					}
 					VectorCopy(originmins, trailpos);
-					if (info->trailspacing > 0)
+					if (istrail)
 					{
-						info->particleaccumulator += traillen / info->trailspacing * cl_particles_quality.value;
-						trailstep = info->trailspacing / cl_particles_quality.value;
+						float cnt = info->countabsolute;
+						cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
+						if (info->trailspacing > 0)
+							cnt += (traillen / info->trailspacing) * cl_particles_quality.value;
+						cnt *= fade;
+						info->particleaccumulator += cnt;
+						trailstep = traillen / cnt;
 						immediatebloodstain = false;
 
 						AnglesFromVectors(angles, traildir, NULL, false);
-						AngleVectors(angles, forward, right, up);
-						VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
-						VectorMAMAM(info->relativevelocityoffset[0], forward, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
 					}
 					else
 					{
-						info->particleaccumulator += info->countabsolute + pcount * info->countmultiplier * cl_particles_quality.value;
+						float cnt = info->countabsolute;
+						cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
+						cnt *= fade;
+						info->particleaccumulator += cnt;
 						trailstep = 0;
 						immediatebloodstain =
 							((cl_decals_newsystem_immediatebloodstain.integer >= 1) && (info->particletype == pt_blood))
@@ -1595,10 +1604,10 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 
 						VectorMAM(0.5f, velocitymins, 0.5f, velocitymaxs, velocity);
 						AnglesFromVectors(angles, velocity, NULL, false);
-						AngleVectors(angles, forward, right, up);
-						VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], traildir, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
-						VectorMAMAM(info->relativevelocityoffset[0], traildir, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
 					}
+					AngleVectors(angles, forward, right, up);
+					VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
+					VectorMAMAM(info->relativevelocityoffset[0], forward, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
 					info->particleaccumulator = bound(0, info->particleaccumulator, 16384);
 					for (;info->particleaccumulator >= 1;info->particleaccumulator--)
 					{
@@ -1636,9 +1645,19 @@ void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins
 		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles);
 }
 
+void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
+{
+	CL_NewParticlesFromEffectinfo(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, tintmins, tintmaxs, fade, true);
+}
+
+void CL_ParticleBox(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
+{
+	CL_NewParticlesFromEffectinfo(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, tintmins, tintmaxs, fade, false);
+}
+
 void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
 {
-	CL_ParticleTrail(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, true, true, NULL, NULL);
+	CL_ParticleBox(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, true, true, NULL, NULL, 1);
 }
 
 /*
