@@ -10,10 +10,8 @@ DP_ARCH != uname
 # Makefile name
 MAKEFILE=BSDmakefile
 
-# Commands
+# Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
-CMD_CP=$(CMD_UNIXCP)
-CMD_MKDIR=$(CMD_UNIXMKDIR)
 
 # default targets
 TARGETS_DEBUG=sv-debug cl-debug sdl-debug
@@ -140,7 +138,7 @@ CFLAGS_PRELOAD=$(CFLAGS_UNIX_PRELOAD)
 
 MAKE:=$(MAKE) -f BSDmakefile
 
-DO_LD=$(CC) -o ../../../$@ $> $(LDFLAGS)
+DO_LD=$(CC) -o $@ $> $(LDFLAGS)
 
 
 ##### Definitions shared by all makefiles #####
