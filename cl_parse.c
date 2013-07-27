@@ -20,9 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cl_parse.c  -- parse a message received from the server
 
 #include "quakedef.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 #include "cl_collision.h"
 #include "csprogs.h"
 #include "libcurl.h"
@@ -3610,12 +3608,10 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_cdtrack:
 				cl.cdtrack = cl.looptrack = MSG_ReadByte(&cl_message);
-#ifdef CONFIG_CD
 				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
 					CDAudio_Play ((unsigned char)cls.forcetrack, true);
 				else
 					CDAudio_Play ((unsigned char)cl.cdtrack, true);
-#endif
 				break;
 
 			case qw_svc_intermission:
@@ -3734,12 +3730,10 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_setpause:
 				cl.paused = MSG_ReadByte(&cl_message) != 0;
-#ifdef CONFIG_CD
 				if (cl.paused)
 					CDAudio_Pause ();
 				else
 					CDAudio_Resume ();
-#endif
 				S_PauseGameSounds (cl.paused);
 				break;
 			}
@@ -4063,12 +4057,10 @@ void CL_ParseServerMessage(void)
 
 			case svc_setpause:
 				cl.paused = MSG_ReadByte(&cl_message) != 0;
-#ifdef CONFIG_CD
 				if (cl.paused)
 					CDAudio_Pause ();
 				else
 					CDAudio_Resume ();
-#endif
 				S_PauseGameSounds (cl.paused);
 				break;
 
@@ -4115,12 +4107,10 @@ void CL_ParseServerMessage(void)
 			case svc_cdtrack:
 				cl.cdtrack = MSG_ReadByte(&cl_message);
 				cl.looptrack = MSG_ReadByte(&cl_message);
-#ifdef CONFIG_CD
 				if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
 					CDAudio_Play ((unsigned char)cls.forcetrack, true);
 				else
 					CDAudio_Play ((unsigned char)cl.cdtrack, true);
-#endif
 				break;
 
 			case svc_intermission:

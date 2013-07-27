@@ -54,20 +54,6 @@ TARGETS_RELEASE=sv-release cl-release sdl-release
 TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
 TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
 
-###### Optional features #####
-DP_CDDA?=enabled
-ifeq ($(DP_CDDA), enabled)
-	OBJ_SDLCD=$(OBJ_CD_COMMON) cd_sdl.o
-	OBJ_LINUXCD=$(OBJ_CD_COMMON) cd_linux.o
-	OBJ_BSDCD=$(OBJ_CD_COMMON) cd_bsd.o
-	OBJ_WINCD=$(OBJ_CD_COMMON) cd_win.o
-else
-	OBJ_SDLCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
-	OBJ_LINUXCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
-	OBJ_BSDCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
-	OBJ_WINCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
-endif
-
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
 	DEFAULT_SNDAPI=ALSA
