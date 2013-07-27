@@ -23,9 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <time.h>
 #include "libcurl.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 #include "cl_video.h"
 #include "progsvm.h"
 #include "csprogs.h"
@@ -1026,10 +1024,8 @@ void Host_Main(void)
 			else
 				S_Update(&r_refdef.view.matrix);
 
-#ifdef CONFIG_CD
 			CDAudio_Update();
 			R_TimeReport("audio");
-#endif
 
 			// reset gathering of mouse input
 			in_mouse_x = in_mouse_y = 0;
@@ -1077,9 +1073,7 @@ void Host_StartVideo(void)
 		// make sure we open sockets before opening video because the Windows Firewall "unblock?" dialog can screw up the graphics context on some graphics drivers
 		NetConn_UpdateSockets();
 		VID_Start();
-#ifdef CONFIG_CD
 		CDAudio_Startup();
-#endif
 	}
 }
 
@@ -1280,9 +1274,7 @@ static void Host_Init (void)
 		VID_Init();
 		Render_Init();
 		S_Init();
-#ifdef CONFIG_CD
 		CDAudio_Init();
-#endif
 		Key_Init();
 		CL_Init();
 	}
@@ -1418,9 +1410,7 @@ void Host_Shutdown(void)
 
 	Host_SaveConfig();
 
-#ifdef CONFIG_CD
 	CDAudio_Shutdown ();
-#endif
 	S_Terminate ();
 	Curl_Shutdown ();
 	NetConn_Shutdown ();
