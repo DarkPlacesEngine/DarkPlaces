@@ -3012,8 +3012,8 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 
 void World_Physics_Frame(world_t *world, double frametime, double gravity)
 {
-	prvm_prog_t *prog = world->prog;
 #ifdef USEODE
+	prvm_prog_t *prog = world->prog;
 	double tdelta, tdelta2, tdelta3, simulationtime, collisiontime;
 
 	tdelta = Sys_DirtyTime();
