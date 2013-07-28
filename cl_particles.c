@@ -296,6 +296,7 @@ cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sp
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
 cvar_t cl_particles_visculling = {CVAR_SAVE, "cl_particles_visculling", "0", "perform a costly check if each particle is visible before drawing"};
 cvar_t cl_particles_collisions = {CVAR_SAVE, "cl_particles_collisions", "1", "allow costly collision detection on particles (sparks that bounce, particles not going through walls, blood hitting surfaces, etc)"};
+cvar_t cl_particles_forcetraileffects = {0, "cl_particles_forcetraileffects", "0", "force trails to be displayed even if a non-trail draw primitive was used (debug/compat feature)"};
 cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
 cvar_t cl_decals_visculling = {CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
@@ -595,6 +596,7 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_bubbles);
 	Cvar_RegisterVariable (&cl_particles_visculling);
 	Cvar_RegisterVariable (&cl_particles_collisions);
+	Cvar_RegisterVariable (&cl_particles_forcetraileffects);
 	Cvar_RegisterVariable (&cl_decals);
 	Cvar_RegisterVariable (&cl_decals_visculling);
 	Cvar_RegisterVariable (&cl_decals_time);
@@ -1442,7 +1444,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 // spawnparticles = true
 // it is called CL_ParticleTrail because most code does not want to supply
 // these parameters, only trail handling does
-static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean istrail)
+static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail)
 {
 	qboolean found = false;
 	char vabuf[1024];
@@ -1491,21 +1493,27 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		{
 			if (info->effectnameindex == effectnameindex)
 			{
+				qboolean definedastrail = info->trailspacing > 0;
+
+				qboolean drawastrail = wanttrail;
+				if (cl_particles_forcetraileffects.integer)
+					drawastrail = drawastrail || definedastrail;
+
 				found = true;
 				if ((info->flags & PARTICLEEFFECT_UNDERWATER) && !underwater)
 					continue;
 				if ((info->flags & PARTICLEEFFECT_NOTUNDERWATER) && underwater)
 					continue;
 
-				// if trailspacing is set, only ever use this effect as trail
-				if (info->trailspacing > 0 && !istrail)
+				// trail effects may only ever be drawn as trail
+				if (!drawastrail && definedastrail)
 					continue;
 
 				// spawn a dlight if requested
 				if (info->lightradiusstart > 0 && spawndlight)
 				{
 					matrix4x4_t tempmatrix;
-					if (istrail)
+					if (drawastrail)
 						Matrix4x4_CreateTranslate(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2]);
 					else
 						Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
@@ -1577,7 +1585,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 					default: break;
 					}
 					VectorCopy(originmins, trailpos);
-					if (istrail)
+					if (drawastrail)
 					{
 						float cnt = info->countabsolute;
 						cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
