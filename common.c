@@ -1484,9 +1484,13 @@ void COM_InitGameType (void)
 	int i;
 	int index = 0;
 
+#ifdef FORCEGAME
+	COM_ToLowerString(FORCEGAME, name, sizeof (name));
+#else
 	// check executable filename for keywords, but do it SMARTLY - only check the last path element
 	FS_StripExtension(FS_FileWithoutPath(com_argv[0]), name, sizeof (name));
 	COM_ToLowerString(name, name, sizeof (name));
+#endif
 	for (i = 1;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
 		if (gamemode_info[i].prog_name && gamemode_info[i].prog_name[0] && strstr (name, gamemode_info[i].prog_name))
 			index = i;
