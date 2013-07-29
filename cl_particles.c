@@ -1505,10 +1505,6 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 				if ((info->flags & PARTICLEEFFECT_NOTUNDERWATER) && underwater)
 					continue;
 
-				// trail effects may only ever be drawn as trail
-				if (!drawastrail && definedastrail)
-					continue;
-
 				// spawn a dlight if requested
 				if (info->lightradiusstart > 0 && spawndlight)
 				{
@@ -1564,6 +1560,9 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 				}
 				else if (info->orientation == PARTICLE_HBEAM)
 				{
+					if (!drawastrail)
+						continue;
+
 					AnglesFromVectors(angles, traildir, NULL, false);
 					AngleVectors(angles, forward, right, up);
 					VectorMAMAM(info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
@@ -1572,6 +1571,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 				}
 				else
 				{
+					float cnt;
 					if (!cl_particles.integer)
 						continue;
 					switch (info->particletype)
@@ -1584,35 +1584,42 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 					case pt_snow: if (!cl_particles_snow.integer) continue;break;
 					default: break;
 					}
-					VectorCopy(originmins, trailpos);
-					if (drawastrail)
-					{
-						float cnt = info->countabsolute;
-						cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
-						if (info->trailspacing > 0)
-							cnt += (traillen / info->trailspacing) * cl_particles_quality.value;
-						cnt *= fade;
-						info->particleaccumulator += cnt;
-						trailstep = traillen / cnt;
-						immediatebloodstain = false;
 
-						AnglesFromVectors(angles, traildir, NULL, false);
-					}
+					cnt = info->countabsolute;
+					cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
+					// if drawastrail is not set, we will
+					// use the regular cnt-based random
+					// particle spawning at the center; so
+					// do NOT apply trailspacing then!
+					if (drawastrail && definedastrail)
+						cnt += (traillen / info->trailspacing) * cl_particles_quality.value;
+					cnt *= fade;
+					if (cnt == 0)
+						continue;  // nothing to draw
+					info->particleaccumulator += cnt;
+
+					if (drawastrail || definedastrail)
+						immediatebloodstain = false;
 					else
-					{
-						float cnt = info->countabsolute;
-						cnt += (pcount * info->countmultiplier) * cl_particles_quality.value;
-						cnt *= fade;
-						info->particleaccumulator += cnt;
-						trailstep = 0;
 						immediatebloodstain =
 							((cl_decals_newsystem_immediatebloodstain.integer >= 1) && (info->particletype == pt_blood))
 							||
 							((cl_decals_newsystem_immediatebloodstain.integer >= 2) && staintex);
 
+					if (drawastrail)
+					{
+						VectorCopy(originmins, trailpos);
+						trailstep = traillen / cnt;
+						AnglesFromVectors(angles, traildir, NULL, false);
+					}
+					else
+					{
+						VectorCopy(center, trailpos);
+						trailstep = 0;
 						VectorMAM(0.5f, velocitymins, 0.5f, velocitymaxs, velocity);
 						AnglesFromVectors(angles, velocity, NULL, false);
 					}
+
 					AngleVectors(angles, forward, right, up);
 					VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
 					VectorMAMAM(info->relativevelocityoffset[0], forward, info->relativevelocityoffset[1], right, info->relativevelocityoffset[2], up, velocity);
@@ -1624,7 +1631,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 							tex = (int)lhrandom(info->tex[0], info->tex[1]);
 							tex = min(tex, info->tex[1] - 1);
 						}
-						if (!trailstep)
+						if (!(drawastrail || definedastrail))
 						{
 							trailpos[0] = lhrandom(originmins[0], originmaxs[0]);
 							trailpos[1] = lhrandom(originmins[1], originmaxs[1]);
