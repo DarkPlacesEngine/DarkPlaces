@@ -1337,7 +1337,7 @@ static void VM_CL_trailparticles (prvm_prog_t *prog)
 
 	if (i < 0)
 		return;
-	CL_ParticleEffect(i, 1, start, end, velocity, velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0);
+	CL_ParticleTrail(i, 1, start, end, velocity, velocity, NULL, prog->argc >= 5 ? (int)PRVM_G_FLOAT(OFS_PARM4) : 0, true, true, NULL, NULL, 1);
 }
 
 //#337 void(float effectnum, vector origin, vector dir, float count[, float color]) pointparticles (EXT_CSQC)

@@ -2875,7 +2875,7 @@ static void CL_ParseTempEntity(void)
 			MSG_ReadVector(&cl_message, pos, cls.protocol);
 			MSG_ReadVector(&cl_message, pos2, cls.protocol);
 			MSG_ReadVector(&cl_message, dir, cls.protocol);
-			CL_ParticleEffect(EFFECT_TE_TEI_G3, 1, pos, pos2, dir, dir, NULL, 0);
+			CL_ParticleTrail(EFFECT_TE_TEI_G3, 1, pos, pos2, dir, dir, NULL, 0, true, true, NULL, NULL, 1);
 			break;
 
 		case TE_TEI_SMOKE:
@@ -2920,7 +2920,7 @@ static void CL_ParseTrailParticles(void)
 	effectindex = (unsigned short)MSG_ReadShort(&cl_message);
 	MSG_ReadVector(&cl_message, start, cls.protocol);
 	MSG_ReadVector(&cl_message, end, cls.protocol);
-	CL_ParticleEffect(effectindex, 1, start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0);
+	CL_ParticleTrail(effectindex, 1, start, end, vec3_origin, vec3_origin, entityindex > 0 ? cl.entities + entityindex : NULL, 0, true, true, NULL, NULL, 1);
 }
 
 static void CL_ParsePointParticles(void)
