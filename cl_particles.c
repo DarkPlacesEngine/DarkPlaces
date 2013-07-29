@@ -916,7 +916,8 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 
 static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount);
 static void CL_Smoke(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float smokecount);
-static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles)
+static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail);
+static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, qboolean wanttrail)
 {
 	vec3_t center;
 	matrix4x4_t tempmatrix;
@@ -930,9 +931,9 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		{
 			// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
 			if (count == 1024)
-				CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+				CL_NewParticlesFromEffectinfo(EFFECT_TE_EXPLOSION, 1, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
-				CL_ParticleEffect(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+				CL_NewParticlesFromEffectinfo(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			else
 			{
 				count *= cl_particles_quality.value;
@@ -945,9 +946,9 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		}
 	}
 	else if (effectnameindex == EFFECT_TE_WIZSPIKE)
-		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 30*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 20);
+		CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 30*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 20, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 	else if (effectnameindex == EFFECT_TE_KNIGHTSPIKE)
-		CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 226);
+		CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 226, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 	else if (effectnameindex == EFFECT_TE_SPIKE)
 	{
 		if (cl_particles_bulletimpacts.integer)
@@ -955,7 +956,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 			if (cl_particles_quake.integer)
 			{
 				if (cl_particles_smoke.integer)
-					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+					CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			}
 			else
 			{
@@ -975,7 +976,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 			if (cl_particles_quake.integer)
 			{
 				if (cl_particles_smoke.integer)
-					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+					CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 10*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			}
 			else
 			{
@@ -996,7 +997,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 			if (cl_particles_quake.integer)
 			{
 				if (cl_particles_smoke.integer)
-					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+					CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			}
 			else
 			{
@@ -1016,7 +1017,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 			if (cl_particles_quake.integer)
 			{
 				if (cl_particles_smoke.integer)
-					CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+					CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			}
 			else
 			{
@@ -1035,7 +1036,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		if (!cl_particles_blood.integer)
 			return;
 		if (cl_particles_quake.integer)
-			CL_ParticleEffect(EFFECT_SVC_PARTICLE, 2*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 73);
+			CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 2*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 73, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 		else
 		{
 			static double bloodaccumulator = 0;
@@ -1067,7 +1068,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		if (cl_particles_bulletimpacts.integer)
 		{
 			if (cl_particles_quake.integer)
-				CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+				CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			else
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
@@ -1084,7 +1085,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		if (cl_particles_bulletimpacts.integer)
 		{
 			if (cl_particles_quake.integer)
-				CL_ParticleEffect(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0);
+				CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 20*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
 			else
 			{
 				CL_Smoke(originmins, originmaxs, velocitymins, velocitymaxs, 4*count);
@@ -1442,8 +1443,6 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 
 // this is also called on point effects with spawndlight = true and
 // spawnparticles = true
-// it is called CL_ParticleTrail because most code does not want to supply
-// these parameters, only trail handling does
 static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail)
 {
 	qboolean found = false;
@@ -1610,15 +1609,20 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 					{
 						VectorCopy(originmins, trailpos);
 						trailstep = traillen / cnt;
-						AnglesFromVectors(angles, traildir, NULL, false);
 					}
 					else
 					{
 						VectorCopy(center, trailpos);
 						trailstep = 0;
+					}
+
+					if (trailstep == 0)
+					{
 						VectorMAM(0.5f, velocitymins, 0.5f, velocitymaxs, velocity);
 						AnglesFromVectors(angles, velocity, NULL, false);
 					}
+					else
+						AnglesFromVectors(angles, traildir, NULL, false);
 
 					AngleVectors(angles, forward, right, up);
 					VectorMAMAMAM(1.0f, trailpos, info->relativeoriginoffset[0], forward, info->relativeoriginoffset[1], right, info->relativeoriginoffset[2], up, trailpos);
@@ -1657,7 +1661,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		}
 	}
 	if (!found)
-		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles);
+		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, wanttrail);
 }
 
 void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
@@ -1670,6 +1674,7 @@ void CL_ParticleBox(int effectnameindex, float pcount, const vec3_t originmins, 
 	CL_NewParticlesFromEffectinfo(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, tintmins, tintmaxs, fade, false);
 }
 
+// note: this one ONLY does boxes!
 void CL_ParticleEffect(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor)
 {
 	CL_ParticleBox(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, true, true, NULL, NULL, 1);
