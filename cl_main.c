@@ -428,7 +428,9 @@ void CL_EstablishConnection(const char *host, int firstarg)
 		return;
 
 	// clear menu's connect error message
+#ifdef CONFIG_MENU
 	M_Update_Return_Reason("");
+#endif
 	cls.demonum = -1;
 
 	// stop demo loop in case this fails
@@ -462,12 +464,16 @@ void CL_EstablishConnection(const char *host, int firstarg)
 			*cls.connect_userinfo = 0;
 		}
 
+#ifdef CONFIG_MENU
 		M_Update_Return_Reason("Trying to connect...");
+#endif
 	}
 	else
 	{
 		Con_Print("Unable to find a suitable network socket to connect to server.\n");
+#ifdef CONFIG_MENU
 		M_Update_Return_Reason("No network");
+#endif
 	}
 }
 

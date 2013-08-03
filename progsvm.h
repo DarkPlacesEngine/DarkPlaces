@@ -724,7 +724,9 @@ prvm_prog_t *PRVM_FriendlyProgFromString(const char *str); // for console comman
 #define PRVM_ProgLoaded(n) (PRVM_GetProg(n)->loaded)
 #define SVVM_prog (&prvm_prog_list[PRVM_PROG_SERVER])
 #define CLVM_prog (&prvm_prog_list[PRVM_PROG_CLIENT])
+#ifdef CONFIG_MENU
 #define MVM_prog (&prvm_prog_list[PRVM_PROG_MENU])
+#endif
 
 //============================================================================
 // prvm_cmds part
@@ -746,8 +748,10 @@ void SVVM_reset_cmd(prvm_prog_t *prog);
 void CLVM_init_cmd(prvm_prog_t *prog);
 void CLVM_reset_cmd(prvm_prog_t *prog);
 
+#ifdef CONFIG_MENU
 void MVM_init_cmd(prvm_prog_t *prog);
 void MVM_reset_cmd(prvm_prog_t *prog);
+#endif
 
 void VM_Cmd_Init(prvm_prog_t *prog);
 void VM_Cmd_Reset(prvm_prog_t *prog);
@@ -758,11 +762,15 @@ void PRVM_Init (void);
 #ifdef PROFILING
 void SVVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
 void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
+#ifdef CONFIG_MENU
 void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
+#endif
 #else
 #define SVVM_ExecuteProgram PRVM_ExecuteProgram
 #define CLVM_ExecuteProgram PRVM_ExecuteProgram
+#ifdef CONFIG_MENU
 #define MVM_ExecuteProgram PRVM_ExecuteProgram
+#endif
 void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage);
 #endif
 

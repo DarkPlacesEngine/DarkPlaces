@@ -662,6 +662,7 @@ extern cvar_t prvm_statementprofiling;
 extern qboolean prvm_runawaycheck;
 
 #ifdef PROFILING
+#ifdef CONFIG_MENU
 /*
 ====================
 MVM_ExecuteProgram
@@ -766,6 +767,7 @@ cleanup:
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();
 }
+#endif
 
 /*
 ====================
