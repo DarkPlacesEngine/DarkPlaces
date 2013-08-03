@@ -28,7 +28,7 @@ static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
 
 extern speakerlayout_t snd_speakerlayout; // for querying the listeners
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 static void S_CaptureAVISound(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	size_t i;
@@ -522,7 +522,7 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 
 		S_SoftClipPaintBuffer(paintbuffer, totalmixframes, snd_renderbuffer->format.width, snd_renderbuffer->format.channels);
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 		if (!snd_usethreadedmixing)
 			S_CaptureAVISound(paintbuffer, totalmixframes);
 #endif
