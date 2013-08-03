@@ -7,7 +7,7 @@
 #include "cl_collision.h"
 #include "libcurl.h"
 #include "csprogs.h"
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 #include "cap_avi.h"
 #include "cap_ogg.h"
 #endif
@@ -60,7 +60,7 @@ cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply
 cvar_t scr_screenshot_alpha = {0, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
 cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_demo_stop = {CVAR_SAVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
@@ -1304,12 +1304,12 @@ static void SCR_SizeDown_f (void)
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
 }
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 void SCR_CaptureVideo_EndVideo(void);
 #endif
 void CL_Screen_Shutdown(void)
 {
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 	SCR_CaptureVideo_EndVideo();
 #endif
 }
@@ -1362,7 +1362,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
 	Cvar_RegisterVariable (&scr_screenshot_alpha);
 	Cvar_RegisterVariable (&scr_screenshot_timestamp);
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_demo_stop);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
@@ -1411,7 +1411,7 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
 	Cmd_AddCommand ("infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 	SCR_CaptureVideo_Ogg_Init();
 #endif
 
@@ -1541,7 +1541,7 @@ void SCR_ScreenShot_f (void)
 	Mem_Free (buffer2);
 }
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 static void SCR_CaptureVideo_BeginVideo(void)
 {
 	double r, g, b;
@@ -2933,7 +2933,7 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 	}
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 	SCR_CaptureVideo();
 #endif
 

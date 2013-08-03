@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 extern cvar_t cl_capturevideo;
 extern cvar_t cl_capturevideo_demo_stop;
 #endif
@@ -81,7 +81,7 @@ Called when a demo file runs out, or the user starts a game
 // LordHavoc: now called only by CL_Disconnect
 void CL_StopPlayback (void)
 {
-#ifdef CONFIG_CAPTURE_VIDEO
+#ifdef CONFIG_VIDEO_CAPTURE
 	if (cl_capturevideo_demo_stop.integer)
 		Cvar_Set("cl_capturevideo", "0");
 #endif
