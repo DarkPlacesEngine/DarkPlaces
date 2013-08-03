@@ -156,8 +156,10 @@ prvm_prog_t *PRVM_ProgFromString(const char *str)
 		return SVVM_prog;
 	if (!strcmp(str, "client"))
 		return CLVM_prog;
+#ifdef CONFIG_MENU
 	if (!strcmp(str, "menu"))
 		return MVM_prog;
+#endif
 	return NULL;
 }
 

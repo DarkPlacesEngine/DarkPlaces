@@ -7,8 +7,10 @@
 #include "cl_collision.h"
 #include "libcurl.h"
 #include "csprogs.h"
+#ifdef CONFIG_CAPTURE_VIDEO
 #include "cap_avi.h"
 #include "cap_ogg.h"
+#endif
 
 // we have to include snd_main.h here only to get access to snd_renderbuffer->format.speed when writing the AVI headers
 #include "snd_main.h"
@@ -27,7 +29,9 @@ cvar_t scr_conscroll2_x = {CVAR_SAVE, "scr_conscroll2_x", "0", "scroll speed of 
 cvar_t scr_conscroll2_y = {CVAR_SAVE, "scr_conscroll2_y", "0", "scroll speed of gfx/conback2 in y direction"};
 cvar_t scr_conscroll3_x = {CVAR_SAVE, "scr_conscroll3_x", "0", "scroll speed of gfx/conback3 in x direction"};
 cvar_t scr_conscroll3_y = {CVAR_SAVE, "scr_conscroll3_y", "0", "scroll speed of gfx/conback3 in y direction"};
+#ifdef CONFIG_MENU
 cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "0", "forces menu while disconnected"};
+#endif
 cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
 cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low"};
@@ -56,6 +60,7 @@ cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply
 cvar_t scr_screenshot_alpha = {0, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
 cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
+#ifdef CONFIG_CAPTURE_VIDEO
 cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_demo_stop = {CVAR_SAVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
 cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
@@ -67,6 +72,7 @@ cvar_t cl_capturevideo_nameformat = {CVAR_SAVE, "cl_capturevideo_nameformat", "d
 cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
 cvar_t cl_capturevideo_ogg = {CVAR_SAVE, "cl_capturevideo_ogg", "1", "save captured video data as Ogg/Vorbis/Theora streams"};
 cvar_t cl_capturevideo_framestep = {CVAR_SAVE, "cl_capturevideo_framestep", "1", "when set to n >= 1, render n frames to capture one (useful for motion blur like effects)"};
+#endif
 cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
 cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
 cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
@@ -692,6 +698,7 @@ static void SCR_SetUpToDrawConsole (void)
 
 	Con_CheckResize ();
 
+#ifdef CONFIG_MENU
 	if (scr_menuforcewhiledisconnected.integer && key_dest == key_game && cls.state == ca_disconnected)
 	{
 		if (framecounter >= 2)
@@ -700,6 +707,7 @@ static void SCR_SetUpToDrawConsole (void)
 			framecounter++;
 	}
 	else
+#endif
 		framecounter = 0;
 
 	if (scr_conforcewhiledisconnected.integer && key_dest == key_game && cls.signon != SIGNONS)
@@ -1296,10 +1304,14 @@ static void SCR_SizeDown_f (void)
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
 }
 
+#ifdef CONFIG_CAPTURE_VIDEO
 void SCR_CaptureVideo_EndVideo(void);
+#endif
 void CL_Screen_Shutdown(void)
 {
+#ifdef CONFIG_CAPTURE_VIDEO
 	SCR_CaptureVideo_EndVideo();
+#endif
 }
 
 void CL_Screen_Init(void)
@@ -1319,7 +1331,9 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conscroll3_y);
 	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
+#ifdef CONFIG_MENU
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
+#endif
 	Cvar_RegisterVariable (&scr_loadingscreen_background);
 	Cvar_RegisterVariable (&scr_loadingscreen_scale);
 	Cvar_RegisterVariable (&scr_loadingscreen_scale_base);
@@ -1348,6 +1362,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
 	Cvar_RegisterVariable (&scr_screenshot_alpha);
 	Cvar_RegisterVariable (&scr_screenshot_timestamp);
+#ifdef CONFIG_CAPTURE_VIDEO
 	Cvar_RegisterVariable (&cl_capturevideo);
 	Cvar_RegisterVariable (&cl_capturevideo_demo_stop);
 	Cvar_RegisterVariable (&cl_capturevideo_printfps);
@@ -1359,6 +1374,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&cl_capturevideo_number);
 	Cvar_RegisterVariable (&cl_capturevideo_ogg);
 	Cvar_RegisterVariable (&cl_capturevideo_framestep);
+#endif
 	Cvar_RegisterVariable (&r_letterbox);
 	Cvar_RegisterVariable(&r_stereo_separation);
 	Cvar_RegisterVariable(&r_stereo_sidebyside);
@@ -1395,7 +1411,9 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
 	Cmd_AddCommand ("infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
 
+#ifdef CONFIG_CAPTURE_VIDEO
 	SCR_CaptureVideo_Ogg_Init();
+#endif
 
 	scr_initialized = true;
 }
@@ -1523,6 +1541,7 @@ void SCR_ScreenShot_f (void)
 	Mem_Free (buffer2);
 }
 
+#ifdef CONFIG_CAPTURE_VIDEO
 static void SCR_CaptureVideo_BeginVideo(void)
 {
 	double r, g, b;
@@ -1799,6 +1818,7 @@ static void SCR_CaptureVideo(void)
 	else if (cls.capturevideo.active)
 		SCR_CaptureVideo_EndVideo();
 }
+#endif
 
 /*
 ===============
@@ -2232,7 +2252,9 @@ static void SCR_DrawScreen (void)
 		SCR_CheckDrawCenterString();
 	}
 	SCR_DrawNetGraph ();
+#ifdef CONFIG_MENU
 	MR_Draw();
+#endif
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
@@ -2911,7 +2933,9 @@ void CL_UpdateScreen(void)
 		SCR_DrawScreen();
 	}
 
+#ifdef CONFIG_CAPTURE_VIDEO
 	SCR_CaptureVideo();
+#endif
 
 	if (qglFlush)
 		qglFlush(); // FIXME: should we really be using qglFlush here?

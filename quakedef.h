@@ -396,7 +396,9 @@ extern char engineversion[128];
 #include "input.h"
 #include "keys.h"
 #include "console.h"
+#ifdef CONFIG_MENU
 #include "menu.h"
+#endif
 #include "csprogs.h"
 
 extern qboolean noclip_anglehack;

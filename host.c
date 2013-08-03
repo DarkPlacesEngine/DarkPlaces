@@ -23,7 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <time.h>
 #include "libcurl.h"
+#ifdef CONFIG_CD
 #include "cdaudio.h"
+#endif
 #include "cl_video.h"
 #include "progsvm.h"
 #include "csprogs.h"
@@ -150,7 +152,9 @@ void Host_Error (const char *error, ...)
 	// print out where the crash happened, if it was caused by QC (and do a cleanup)
 	PRVM_Crash(SVVM_prog);
 	PRVM_Crash(CLVM_prog);
+#ifdef CONFIG_MENU
 	PRVM_Crash(MVM_prog);
+#endif
 
 	cl.csqc_loaded = false;
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
@@ -336,8 +340,10 @@ void Host_LoadConfig_f(void)
 {
 	// reset all cvars, commands and aliases to init values
 	Cmd_RestoreInitState();
+#ifdef CONFIG_MENU
 	// prepend a menu restart command to execute after the config
 	Cbuf_InsertText("\nmenu_restart\n");
+#endif
 	// reset cvars to their defaults, and then exec startup scripts again
 	Host_AddConfigText();
 }
@@ -1024,8 +1030,10 @@ void Host_Main(void)
 			else
 				S_Update(&r_refdef.view.matrix);
 
+#ifdef CONFIG_CD
 			CDAudio_Update();
 			R_TimeReport("audio");
+#endif
 
 			// reset gathering of mouse input
 			in_mouse_x = in_mouse_y = 0;
@@ -1073,7 +1081,9 @@ void Host_StartVideo(void)
 		// make sure we open sockets before opening video because the Windows Firewall "unblock?" dialog can screw up the graphics context on some graphics drivers
 		NetConn_UpdateSockets();
 		VID_Start();
+#ifdef CONFIG_CD
 		CDAudio_Startup();
+#endif
 	}
 }
 
@@ -1269,12 +1279,16 @@ static void Host_Init (void)
 
 		R_Modules_Init();
 		Palette_Init();
+#ifdef CONFIG_MENU
 		MR_Init_Commands();
+#endif
 		VID_Shared_Init();
 		VID_Init();
 		Render_Init();
 		S_Init();
+#ifdef CONFIG_CD
 		CDAudio_Init();
+#endif
 		Key_Init();
 		CL_Init();
 	}
@@ -1304,10 +1318,12 @@ static void Host_Init (void)
 	// put up the loading image so the user doesn't stare at a black screen...
 	SCR_BeginLoadingPlaque(true);
 
+#ifdef CONFIG_MENU
 	if (cls.state != ca_dedicated)
 	{
 		MR_Init();
 	}
+#endif
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
@@ -1347,7 +1363,9 @@ static void Host_Init (void)
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
+#ifdef CONFIG_MENU
 		Cbuf_AddText("togglemenu 1\n");
+#endif
 		Cbuf_Execute();
 	}
 
@@ -1399,9 +1417,11 @@ void Host_Shutdown(void)
 	Host_ShutdownServer ();
 	SV_UnlockThreadMutex();
 
+#ifdef CONFIG_MENU
 	// Shutdown menu
 	if(MR_Shutdown)
 		MR_Shutdown();
+#endif
 
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
@@ -1410,7 +1430,9 @@ void Host_Shutdown(void)
 
 	Host_SaveConfig();
 
+#ifdef CONFIG_CD
 	CDAudio_Shutdown ();
+#endif
 	S_Terminate ();
 	Curl_Shutdown ();
 	NetConn_Shutdown ();

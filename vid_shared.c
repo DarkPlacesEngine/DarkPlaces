@@ -1,6 +1,8 @@
 
 #include "quakedef.h"
+#ifdef CONFIG_CD
 #include "cdaudio.h"
+#endif
 #include "image.h"
 
 #ifdef SUPPORTD3D
@@ -2158,7 +2160,11 @@ void VID_Soft_SharedSetup(void)
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 
 	// LordHavoc: report supported extensions
+#ifdef CONFIG_MENU
 	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
+#else
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\n", vm_sv_extensions );
+#endif
 
 	// clear to black (loading plaque will be seen over this)
 	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);

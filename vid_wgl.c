@@ -511,7 +511,9 @@ void Sys_SendKeyEvents (void)
 	}
 }
 
+#ifdef CONFIG_CD
 LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+#endif
 
 static keynum_t buttonremap[16] =
 {
@@ -688,7 +690,9 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		//	break;
 
 		case MM_MCINOTIFY:
+#ifdef CONFIG_CD
 			lRet = CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
+#endif
 			break;
 
 		default:
