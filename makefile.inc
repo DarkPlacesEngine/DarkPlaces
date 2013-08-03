@@ -71,6 +71,7 @@ OBJ_SND_3DRAS=snd_3dras.o
 LIB_SND_3DRAS=
 
 # CD objects
+OBJ_CD_COMMON=cd_shared.o
 OBJ_NOCD=cd_null.o
 
 
@@ -79,9 +80,6 @@ OBJ_NOCD=cd_null.o
 # Common objects
 OBJ_COMMON= \
 	bih.o \
-	cap_avi.o \
-	cap_ogg.o \
-	cd_shared.o \
 	crypto.o \
 	cl_collision.o \
 	cl_demo.o \
@@ -124,7 +122,6 @@ OBJ_COMMON= \
 	mathlib.o \
 	matrixlib.o \
 	mdfour.o \
-	menu.o \
 	meshqueue.o \
 	mod_skeletal_animatevertices_sse.o \
 	mod_skeletal_animatevertices_generic.o \
@@ -132,7 +129,6 @@ OBJ_COMMON= \
 	model_brush.o \
 	model_shared.o \
 	model_sprite.o \
-	mvm_cmds.o \
 	netconn.o \
 	palette.o \
 	polygon.o \
@@ -163,15 +159,21 @@ OBJ_COMMON= \
 	world.o \
 	zone.o
 
+OBJ_MENU= \
+	menu.o \
+	mvm_cmds.o
+
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_NOCD) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_SND_COMMON) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
+OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) snd_sdl.o $(OBJ_SDLCD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
+CFLAGS_CLIENT=-DCONFIG_MENU -DCONFIG_CD $(CFLAGS_VIDEO_CAPTURE)
+CFLAGS_SERVER=
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -200,7 +202,7 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 ##### UNIX specific variables #####
 
-OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_pthread.o keysym2ucs.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_pthread.o keysym2ucs.o $(OBJ_MENU) $(OBJ_SOUND) $(OBJ_CD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
 LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm -pthread $(LIB_SOUND)
@@ -218,14 +220,11 @@ EXE_UNIXSVNEXUIZ=nexuiz-dedicated
 EXE_UNIXSDLNEXUIZ=nexuiz-sdl
 
 CMD_UNIXRM=rm -rf
+CMD_UNIXCP=cp -f
+CMD_UNIXMKDIR=mkdir -p
 
 
 ##### Linux specific variables #####
-
-# If you want CD sound in Linux
-OBJ_LINUXCD=cd_linux.o
-# If you want no CD audio
-#OBJ_LINUXCD=$(OBJ_NOCD)
 
 # Link
 LDFLAGS_LINUXCL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl $(LDFLAGS_UNIXCL)
@@ -241,9 +240,9 @@ OBJ_MACOSXCD=$(OBJ_NOCD)
 # Link
 LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $(LIB_SOUND)
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
-LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) SDLMain.m
+LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) ../../../SDLMain.m
 
-OBJ_AGL= builddate.c sys_linux.o vid_agl.o thread_null.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
+OBJ_AGL= builddate.c sys_linux.o vid_agl.o thread_null.o $(OBJ_MENU) $(OBJ_SOUND) $(OBJ_CD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 EXE_MACOSXCL=darkplaces-agl
 EXE_MACOSXCLNEXUIZ=nexuiz-agl
@@ -264,11 +263,6 @@ LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -lsocket -lnsl $(LDFLAGS_UNIXSD
 
 ##### BSD specific variables #####
 
-#if you want CD sound in BSD
-OBJ_BSDCD=cd_bsd.o
-#if you want no CD audio
-#OBJ_BSDCD=$(OBJ_NOCD)
-
 # Link
 LDFLAGS_BSDCL=$(LDFLAGS_UNIXCOMMON) -lutil $(LDFLAGS_UNIXCL)
 LDFLAGS_BSDSV=$(LDFLAGS_UNIXCOMMON) 
@@ -278,12 +272,8 @@ LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 ##### Win32 specific variables #####
 
 WINDRES ?= windres
-#if you want CD sound in Win32
-OBJ_WINCD=cd_win.o
-#if you want no CD audio
-#OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_MENU) $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
@@ -297,6 +287,7 @@ EXE_WINCLNEXUIZ=nexuiz.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
 EXE_WINSDLNEXUIZ=nexuiz-sdl.exe
 
+VPATH := ../../../
 
 ##### Commands #####
 
@@ -359,116 +350,123 @@ nexuiz :
 cl-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
 
 cl-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
 
 cl-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
 
 cl-release-profile :
 	$(MAKE) bin-release-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CL)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
 
 cl-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_CLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_CL)" LEVEL=1
+		EXE='$(EXE_CLNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
 
 sv-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-release-profile :
 	$(MAKE) bin-release-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SV)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SVNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SV)" LEVEL=1
+		EXE='$(EXE_SVNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sdl-debug :
 	$(MAKE) bin-debug \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-profile :
 	$(MAKE) bin-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-release :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-release-profile :
 	$(MAKE) bin-release-profile \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDL)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE="$(EXE_SDLNEXUIZ)" LDFLAGS_COMMON="$(LDFLAGS_SDL)" LEVEL=1
+		EXE='$(EXE_SDLNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 bin-debug :
 	$(CHECKLEVEL1)
 	@echo
-	@echo "========== $(EXE) (debug) =========="
-	$(MAKE) $(EXE) \
+	@echo '========== $(EXE) (debug) =========='
+	$(MAKE) prepare BUILD_DIR=obj/debug/$(EXE)
+	$(MAKE) -C obj/debug/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
-		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)" LEVEL=2
+		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)'\
+		LDFLAGS='$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)' LEVEL=2
 
 bin-profile :
 	$(CHECKLEVEL1)
 	@echo
-	@echo "========== $(EXE) (profile) =========="
-	$(MAKE) $(EXE) \
+	@echo '========== $(EXE) (profile) =========='
+	$(MAKE) prepare BUILD_DIR=obj/profile/$(EXE)
+	$(MAKE) -C obj/profile/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)" LEVEL=2
+		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)'\
+		LDFLAGS='$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)' LEVEL=2
 
 bin-release :
 	$(CHECKLEVEL1)
 	@echo
-	@echo "========== $(EXE) (release) =========="
-	$(MAKE) $(EXE) \
+	@echo '========== $(EXE) (release) =========='
+	$(MAKE) prepare BUILD_DIR=obj/release/$(EXE)
+	$(MAKE) -C obj/release/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)" LEVEL=2
+		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)'\
+		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
 
 bin-release-profile :
 	$(CHECKLEVEL1)
 	@echo
-	@echo "========== $(EXE) (release) =========="
-	$(MAKE) $(EXE) \
+	@echo '========== $(EXE) (release) =========='
+	$(MAKE) prepare BUILD_DIR=obj/release-profile/$(EXE)
+	$(MAKE) -C obj/release-profile/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)" LEVEL=2
+		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
+		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
 
+prepare :
+	$(CMD_MKDIR) $(BUILD_DIR)
+	$(CMD_CP) makefile.inc $(BUILD_DIR)/
 
 #this checks USEODE when compiling so it needs the ODE flags as well
 prvm_cmds.o: prvm_cmds.c
@@ -568,6 +566,7 @@ clean:
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
+	-$(CMD_RM) obj/
 
 clean-profile: clean
 	-$(CMD_RM) *.gcda

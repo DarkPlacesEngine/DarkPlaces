@@ -32,12 +32,18 @@ ifneq ($(DP_MAKE_TARGET), mingw)
 	DP_MACHINE:=$(shell uname -m)
 endif
 
+# Makefile name
+MAKEFILE=makefile
 
-# Command used to delete files
+# Commands
 ifdef windir
 	CMD_RM=del
+	CMD_CP=copy /y
+	CMD_MKDIR=mkdir
 else
 	CMD_RM=$(CMD_UNIXRM)
+	CMD_CP=$(CMD_UNIXCP)
+	CMD_MKDIR=$(CMD_UNIXMKDIR)
 endif
 
 # 64bits AMD CPUs use another lib directory
@@ -53,6 +59,29 @@ TARGETS_PROFILE=sv-profile cl-profile sdl-profile
 TARGETS_RELEASE=sv-release cl-release sdl-release
 TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
 TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
+
+###### Optional features #####
+DP_CDDA?=enabled
+ifeq ($(DP_CDDA), enabled)
+	OBJ_SDLCD=$(OBJ_CD_COMMON) cd_sdl.o
+	OBJ_LINUXCD=$(OBJ_CD_COMMON) cd_linux.o
+	OBJ_BSDCD=$(OBJ_CD_COMMON) cd_bsd.o
+	OBJ_WINCD=$(OBJ_CD_COMMON) cd_win.o
+else
+	OBJ_SDLCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+	OBJ_LINUXCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+	OBJ_BSDCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+	OBJ_WINCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+endif
+
+DP_VIDEO_CAPTURE?=enabled
+ifeq ($(DP_VIDEO_CAPTURE), enabled)
+	CFLAGS_VIDEO_CAPTURE=-DCONFIG_VIDEO_CAPTURE
+	OBJ_VIDEO_CAPTURE= cap_avi.o cap_ogg.o
+else
+	CFLAGS_VIDEO_CAPTURE=
+	OBJ_VIDEO_CAPTURE=
+endif
 
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
@@ -81,6 +110,7 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
+	DP_LINK_CRYPTO?=dlopen
 endif
 
 # Mac OS X configuration
@@ -114,6 +144,7 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
+	DP_LINK_CRYPTO?=dlopen
 
 	# on OS X, we don't build the CL by default because it uses deprecated
 	# and not-implemented-in-64bit Carbon
@@ -153,6 +184,7 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
+	DP_LINK_CRYPTO?=dlopen
 endif
 
 # BSD configuration
@@ -186,6 +218,7 @@ endif
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
+	DP_LINK_CRYPTO?=dlopen
 endif
 
 # Win32 configuration
@@ -243,6 +276,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	DP_LINK_ZLIB?=dlopen
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
+	DP_LINK_CRYPTO?=dlopen
 endif
 
 # set these to "" if you want to use dynamic loading instead
@@ -278,15 +312,18 @@ ifeq ($(DP_LINK_ODE), dlopen)
 endif
 
 # d0_blind_id
-# most distros do not have d0_blind_id package, dlopen will used by default
-# LIB_CRYPTO=-ld0_blind_id
-# CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
-# LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
-# CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
-LIB_CRYPTO=
-CFLAGS_CRYPTO=
-LIB_CRYPTO_RIJNDAEL=
-CFLAGS_CRYPTO_RIJNDAEL=
+ifeq ($(DP_LINK_CRYPTO), shared)
+	LIB_CRYPTO=-ld0_blind_id
+	CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
+	LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
+	CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+endif
+ifeq ($(DP_LINK_CRYPTO), dlopen)
+	LIB_CRYPTO=
+	CFLAGS_CRYPTO=
+	LIB_CRYPTO_RIJNDAEL=
+	CFLAGS_CRYPTO_RIJNDAEL=
+endif
 
 ##### Sound configuration #####
 
@@ -358,7 +395,7 @@ endif
 
 ##### GNU Make specific definitions #####
 
-DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
+DO_LD=$(CC) -o ../../../$@ $^ $(LDFLAGS)
 
 
 ##### Definitions shared by all makefiles #####

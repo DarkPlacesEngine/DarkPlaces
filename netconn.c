@@ -1460,7 +1460,9 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 {
 	crypto_t *crypto;
 	cls.connect_trying = false;
+#ifdef CONFIG_MENU
 	M_Update_Return_Reason("");
+#endif
 	// the connection request succeeded, stop current connection and set up a new connection
 	CL_Disconnect();
 	// if we're connecting to a remote server, shut down any local server
@@ -1487,7 +1489,9 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	}
 	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
 	key_dest = key_game;
+#ifdef CONFIG_MENU
 	m_state = m_none;
+#endif
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
@@ -1845,7 +1849,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			char protocolnames[1400];
 			Protocol_Names(protocolnames, sizeof(protocolnames));
 			Con_DPrintf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason("Got challenge response");
+#endif
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 			// TODO: add userinfo stuff here instead of using NQ commands?
@@ -1855,7 +1861,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
 			// darkplaces or quake3
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason("Accepted");
+#endif
 			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_DARKPLACES3);
 			return true;
 		}
@@ -1867,7 +1875,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			length = min(length - 7, (int)sizeof(rejectreason) - 1);
 			memcpy(rejectreason, string, length);
 			rejectreason[length] = 0;
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason(rejectreason);
+#endif
 			return true;
 		}
 		if (length >= 15 && !memcmp(string, "statusResponse\x0A", 15))
@@ -2029,7 +2039,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// challenge message
 			Con_Printf("challenge %s received, sending QuakeWorld connect request back to %s\n", string + 1, addressstring2);
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason("Got QuakeWorld challenge response");
+#endif
 			cls.qw_qport = qport.integer;
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
@@ -2039,7 +2051,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
 		{
 			// accept message
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason("QuakeWorld Accepted");
+#endif
 			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
 			return true;
 		}
@@ -2146,7 +2160,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					Con_Printf("Connected to ProQuake %.1f server, enabling precise aim\n", cls.proquake_serverversion / 10.0f);
 				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
+#ifdef CONFIG_MENU
 				M_Update_Return_Reason("Accepted");
+#endif
 				NetConn_ConnectionEstablished(mysocket, &clientportaddress, PROTOCOL_QUAKE);
 			}
 			break;
@@ -2154,7 +2170,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
 			cls.connect_trying = false;
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason((char *)MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
+#endif
 			break;
 		case CCREP_SERVER_INFO:
 			if (developer_extra.integer)
@@ -2306,14 +2324,18 @@ void NetConn_ClientFrame(void)
 	NetConn_UpdateSockets();
 	if (cls.connect_trying && cls.connect_nextsendtime < realtime)
 	{
+#ifdef CONFIG_MENU
 		if (cls.connect_remainingtries == 0)
 			M_Update_Return_Reason("Connect: Waiting 10 seconds for reply");
+#endif
 		cls.connect_nextsendtime = realtime + 1;
 		cls.connect_remainingtries--;
 		if (cls.connect_remainingtries <= -10)
 		{
 			cls.connect_trying = false;
+#ifdef CONFIG_MENU
 			M_Update_Return_Reason("Connect: Failed");
+#endif
 			return;
 		}
 		// try challenge first (newer DP server or QW)
@@ -3575,12 +3597,16 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				{
 					if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
 					{
+#ifdef CONFIG_MENU
 						if (m_state != m_slist)
 						{
+#endif
 							char lookupstring[128];
 							LHNETADDRESS_ToString(&masteraddress, lookupstring, sizeof(lookupstring), true);
 							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
+#ifdef CONFIG_MENU
 						}
+#endif
 						masterquerycount++;
 						NetConn_Write(cl_sockets[i], request, (int)strlen(request) + 1, &masteraddress);
 					}
@@ -3604,7 +3630,9 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	if (!masterquerycount)
 	{
 		Con_Print("Unable to query master servers, no suitable network sockets active.\n");
+#ifdef CONFIG_MENU
 		M_Update_Return_Reason("No network");
+#endif
 	}
 }
 
@@ -3674,12 +3702,16 @@ void Net_Stats_f(void)
 
 void Net_Refresh_f(void)
 {
+#ifdef CONFIG_MENU
 	if (m_state != m_slist) {
+#endif
 		Con_Print("Sending new requests to master servers\n");
 		ServerList_QueryList(false, true, false, true);
 		Con_Print("Listening for replies...\n");
+#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(false, true, false, false);
+#endif
 }
 
 void Net_Slist_f(void)
@@ -3687,12 +3719,16 @@ void Net_Slist_f(void)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
+#ifdef CONFIG_MENU
     if (m_state != m_slist) {
+#endif
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, true, false, true);
 		Con_Print("Listening for replies...\n");
+#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(true, true, false, false);
+#endif
 }
 
 void Net_SlistQW_f(void)
@@ -3700,13 +3736,17 @@ void Net_SlistQW_f(void)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
+#ifdef CONFIG_MENU
     if (m_state != m_slist) {
+#endif
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, false, true, true);
 		serverlist_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
+#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(true, false, true, false);
+#endif
 }
 
 void NetConn_Init(void)
