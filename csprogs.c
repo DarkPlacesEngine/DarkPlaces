@@ -1160,10 +1160,13 @@ void CL_VM_ShutDown (void)
 	if(!cl.csqc_loaded)
 		return;
 	CSQC_BEGIN
-		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobaledict(self) = 0;
-		if (PRVM_clientfunction(CSQC_Shutdown))
-			prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
+		if (prog->loaded)
+		{
+			PRVM_clientglobalfloat(time) = cl.time;
+			PRVM_clientglobaledict(self) = 0;
+			if (PRVM_clientfunction(CSQC_Shutdown))
+				prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
+		}
 		PRVM_Prog_Reset(prog);
 	CSQC_END
 	Con_DPrint("CSQC ^1unloaded\n");

@@ -3835,7 +3835,8 @@ void SVVM_init_cmd(prvm_prog_t *prog)
 void SVVM_reset_cmd(prvm_prog_t *prog)
 {
 	World_End(&sv.world);
-	if(PRVM_serverfunction(SV_Shutdown))
+
+	if(prog->loaded && PRVM_serverfunction(SV_Shutdown))
 	{
 		func_t s = PRVM_serverfunction(SV_Shutdown);
 		PRVM_serverglobalfloat(time) = sv.time;
