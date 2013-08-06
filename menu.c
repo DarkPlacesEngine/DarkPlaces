@@ -5333,8 +5333,8 @@ static void MP_NewMap(void)
 static void MP_Shutdown (void)
 {
 	prvm_prog_t *prog = MVM_prog;
-
-	prog->ExecuteProgram(prog, PRVM_menufunction(m_shutdown),"m_shutdown() required");
+	if (prog->loaded)
+		prog->ExecuteProgram(prog, PRVM_menufunction(m_shutdown),"m_shutdown() required");
 
 	// reset key_dest
 	key_dest = key_game;
