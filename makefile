@@ -111,6 +111,7 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 endif
 
 # Mac OS X configuration
@@ -145,6 +146,7 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 
 	# on OS X, we don't build the CL by default because it uses deprecated
 	# and not-implemented-in-64bit Carbon
@@ -185,6 +187,7 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 endif
 
 # BSD configuration
@@ -219,6 +222,7 @@ endif
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 endif
 
 # Win32 configuration
@@ -277,6 +281,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 endif
 
 # set these to "" if you want to use dynamic loading instead
@@ -315,12 +320,16 @@ endif
 ifeq ($(DP_LINK_CRYPTO), shared)
 	LIB_CRYPTO=-ld0_blind_id
 	CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
-	LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
-	CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
 endif
 ifeq ($(DP_LINK_CRYPTO), dlopen)
 	LIB_CRYPTO=
 	CFLAGS_CRYPTO=
+endif
+ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), shared)
+	LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
+	CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+endif
+ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), shared)
 	LIB_CRYPTO_RIJNDAEL=
 	CFLAGS_CRYPTO_RIJNDAEL=
 endif
