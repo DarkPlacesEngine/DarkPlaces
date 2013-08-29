@@ -96,7 +96,7 @@ float ERR_BADFILENAME 			= -4; // fopen
 float ERR_NULLSTRING			= -1;
 float ERR_BADDRAWFLAG			= -2;
 float ERR_BADSCALE				= -3;
-float ERR_BADSIZE				= ERR_BADSCALE;
+float ERR_BADSIZE				= -3; // same as ERR_BADSCALE
 float ERR_NOTCACHED				= -4;
 
 // server list stuff
@@ -253,7 +253,7 @@ vector	stov(string s)  = #55;
 string	strzone(string s)  = #56;
 void	strunzone(string s) = #57;
 
-float	tokenize(string s)  = #58
+float	tokenize(string s)  = #58;
 string	argv(float n)  = #59;
 
 float	isserver(void)  = #60;
