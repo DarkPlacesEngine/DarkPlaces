@@ -335,7 +335,7 @@ void(entity e, vector o) setorigin = #2;
 void(entity e, string m) setmodel = #3;
 void(entity e, vector min, vector max) setsize = #4;
 
-void() break = #6;
+void() break_to_debugger = #6;
 float() random = #7;
 void(entity e, float chan, string samp) sound = #8;
 vector(vector v) normalize = #9;
@@ -1447,6 +1447,9 @@ float PARTICLES_USEALPHA = 1;
 float particles_alphamin, particles_alphamax;
 float PARTICLES_USECOLOR = 2;
 vector particles_colormin, particles_colormax;
+float PARTICLES_USEFADE = 4;  // fades the COUNT (fade alpha using alphamin/alphamax)
+float particles_fade;
+float PARTICLES_DRAWASTRAIL = 128;
 void(float effectindex, entity own, vector org_from, vector org_to, vector dir_from, vector dir_to, float countmultiplier, float flags) boxparticles = #502;
 float trace_networkentity;
 const float RF_FULLBRIGHT	= 256;
