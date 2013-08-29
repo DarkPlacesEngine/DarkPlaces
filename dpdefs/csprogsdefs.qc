@@ -1069,14 +1069,6 @@ float SOUNDFLAG_RELIABLE = 1;
 //- NOTE: to check for this, ALSO OR a check with DP_SND_SOUND7 to also support
 //  the finished extension once done
 
-//DP_MOVETYPEFLYWORLDONLY
-//idea: Samual
-//darkplaces implementation: Samual
-//movetype definitions:
-float MOVETYPE_FLY_WORLDONLY = 33;
-//description:
-//like MOVETYPE_FLY, but does all traces with MOVE_WORLDONLY, and is ignored by MOVETYPE_PUSH. Should only be combined with SOLID_NOT and SOLID_TRIGGER.
-
 //DP_PRECACHE_PIC_FLAGS
 //idea: divVerent
 //darkplaces implementation: divVerent
