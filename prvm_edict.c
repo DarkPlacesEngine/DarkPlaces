@@ -29,7 +29,7 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 
 prvm_eval_t prvm_badvalue; // used only for error returns
 
-cvar_t prvm_language = {CVAR_SAVE, "prvm_language", "", "when set, loads progs.dat.LANGUAGENAME.po for string translations; when set to dump, progs.dat.pot is written from the strings in the progs"};
+cvar_t prvm_language = {CVAR_SAVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
 // LordHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LordHavoc: counts usage of each QuakeC statement
@@ -1685,7 +1685,7 @@ static void PRVM_PO_ParseString(char *out, const char *in, size_t outsize)
 		++in;
 	}
 }
-static po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
+static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t *pool)
 {
 	po_t *po;
 	const char *p, *q;
@@ -1695,93 +1695,106 @@ static po_t *PRVM_PO_Load(const char *filename, mempool_t *pool)
 	size_t decodedpos;
 	int hashindex;
 	po_string_t thisstr;
-	const char *buf = (const char *) FS_LoadFile(filename, pool, true, NULL);
+	int i;
 
-	if(!buf)
-		return NULL;
-
-	memset(&thisstr, 0, sizeof(thisstr)); // hush compiler warning
-
-	po = (po_t *)Mem_Alloc(pool, sizeof(*po));
-	memset(po, 0, sizeof(*po));
-
-	p = buf;
-	while(*p)
+	for (i = 0; i < 2; ++i)
 	{
-		if(*p == '#')
-		{
-			// skip to newline
-			p = strchr(p, '\n');
-			if(!p)
-				break;
-			++p;
+		const char *buf = (const char *)
+			FS_LoadFile((i > 0 ? filename : filename2), pool, true, NULL);
+		// first read filename2, then read filename
+		// so that progs.dat.de.po wins over common.de.po
+		// and within file, last item wins
+
+		if(!buf)
 			continue;
-		}
-		if(*p == '\r' || *p == '\n')
+
+		if (!po)
 		{
-			++p;
-			continue;
+			po = (po_t *)Mem_Alloc(pool, sizeof(*po));
+			memset(po, 0, sizeof(*po));
 		}
-		if(!strncmp(p, "msgid \"", 7))
+
+		memset(&thisstr, 0, sizeof(thisstr)); // hush compiler warning
+
+		p = buf;
+		while(*p)
 		{
-			mode = 0;
-			p += 6;
+			if(*p == '#')
+			{
+				// skip to newline
+				p = strchr(p, '\n');
+				if(!p)
+					break;
+				++p;
+				continue;
+			}
+			if(*p == '\r' || *p == '\n')
+			{
+				++p;
+				continue;
+			}
+			if(!strncmp(p, "msgid \"", 7))
+			{
+				mode = 0;
+				p += 6;
+			}
+			else if(!strncmp(p, "msgstr \"", 8))
+			{
+				mode = 1;
+				p += 7;
+			}
+			else
+			{
+				p = strchr(p, '\n');
+				if(!p)
+					break;
+				++p;
+				continue;
+			}
+			decodedpos = 0;
+			while(*p == '"')
+			{
+				++p;
+				q = strchr(p, '\n');
+				if(!q)
+					break;
+				if(*(q-1) == '\r')
+					--q;
+				if(*(q-1) != '"')
+					break;
+				if((size_t)(q - p) >= (size_t) sizeof(inbuf))
+					break;
+				strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
+				PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
+				decodedpos += strlen(decodedbuf + decodedpos);
+				if(*q == '\r')
+					++q;
+				if(*q == '\n')
+					++q;
+				p = q;
+			}
+			if(mode == 0)
+			{
+				if(thisstr.key)
+					Mem_Free(thisstr.key);
+				thisstr.key = (char *)Mem_Alloc(pool, decodedpos + 1);
+				memcpy(thisstr.key, decodedbuf, decodedpos + 1);
+			}
+			else if(decodedpos > 0 && thisstr.key) // skip empty translation results
+			{
+				thisstr.value = (char *)Mem_Alloc(pool, decodedpos + 1);
+				memcpy(thisstr.value, decodedbuf, decodedpos + 1);
+				hashindex = CRC_Block((const unsigned char *) thisstr.key, strlen(thisstr.key)) % PO_HASHSIZE;
+				thisstr.nextonhashchain = po->hashtable[hashindex];
+				po->hashtable[hashindex] = (po_string_t *)Mem_Alloc(pool, sizeof(thisstr));
+				memcpy(po->hashtable[hashindex], &thisstr, sizeof(thisstr));
+				memset(&thisstr, 0, sizeof(thisstr));
+			}
 		}
-		else if(!strncmp(p, "msgstr \"", 8))
-		{
-			mode = 1;
-			p += 7;
-		}
-		else
-		{
-			p = strchr(p, '\n');
-			if(!p)
-				break;
-			++p;
-			continue;
-		}
-		decodedpos = 0;
-		while(*p == '"')
-		{
-			++p;
-			q = strchr(p, '\n');
-			if(!q)
-				break;
-			if(*(q-1) == '\r')
-				--q;
-			if(*(q-1) != '"')
-				break;
-			if((size_t)(q - p) >= (size_t) sizeof(inbuf))
-				break;
-			strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
-			PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
-			decodedpos += strlen(decodedbuf + decodedpos);
-			if(*q == '\r')
-				++q;
-			if(*q == '\n')
-				++q;
-			p = q;
-		}
-		if(mode == 0)
-		{
-			if(thisstr.key)
-				Mem_Free(thisstr.key);
-			thisstr.key = (char *)Mem_Alloc(pool, decodedpos + 1);
-			memcpy(thisstr.key, decodedbuf, decodedpos + 1);
-		}
-		else if(decodedpos > 0 && thisstr.key) // skip empty translation results
-		{
-			thisstr.value = (char *)Mem_Alloc(pool, decodedpos + 1);
-			memcpy(thisstr.value, decodedbuf, decodedpos + 1);
-			hashindex = CRC_Block((const unsigned char *) thisstr.key, strlen(thisstr.key)) % PO_HASHSIZE;
-			thisstr.nextonhashchain = po->hashtable[hashindex];
-			po->hashtable[hashindex] = (po_string_t *)Mem_Alloc(pool, sizeof(thisstr));
-			memcpy(po->hashtable[hashindex], &thisstr, sizeof(thisstr));
-			memset(&thisstr, 0, sizeof(thisstr));
-		}
+		
+		Mem_Free((char *) buf);
 	}
-	
-	Mem_Free((char *) buf);
+
 	return po;
 }
 static const char *PRVM_PO_Lookup(po_t *po, const char *str)
@@ -2290,7 +2303,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 		else
 		{
-			po_t *po = PRVM_PO_Load(va(vabuf, sizeof(vabuf), "%s.%s.po", realfilename, prvm_language.string), prog->progs_mempool);
+			po_t *po = PRVM_PO_Load(va(vabuf, sizeof(vabuf), "%s.%s.po", realfilename, prvm_language.string), "common.po", prog->progs_mempool);
 			if(po)
 			{
 				for (i=0 ; i<prog->numglobaldefs ; i++)
