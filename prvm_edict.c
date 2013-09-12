@@ -1687,7 +1687,7 @@ static void PRVM_PO_ParseString(char *out, const char *in, size_t outsize)
 }
 static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t *pool)
 {
-	po_t *po;
+	po_t *po = NULL;
 	const char *p, *q;
 	int mode;
 	char inbuf[MAX_INPUTLINE];
@@ -1922,6 +1922,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	u;
 	unsigned int d;
 	char vabuf[1024];
+	char vabuf2[1024];
 
 	if (prog->loaded)
 		prog->error_cmd("PRVM_LoadProgs: there is already a %s program loaded!", prog->name );
@@ -2303,7 +2304,10 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 		else
 		{
-			po_t *po = PRVM_PO_Load(va(vabuf, sizeof(vabuf), "%s.%s.po", realfilename, prvm_language.string), "common.po", prog->progs_mempool);
+			po_t *po = PRVM_PO_Load(
+					va(vabuf, sizeof(vabuf), "%s.%s.po", realfilename, prvm_language.string),
+					va(vabuf2, sizeof(vabuf2), "common.%s.po", prvm_language.string),
+					prog->progs_mempool);
 			if(po)
 			{
 				for (i=0 ; i<prog->numglobaldefs ; i++)
