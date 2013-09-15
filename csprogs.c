@@ -1138,6 +1138,8 @@ void CL_VM_Init (void)
 	PRVM_clientedictstring(prog->edicts, message) = PRVM_SetEngineString(prog, cl.worldmessage);
 	VectorCopy(cl.world.mins, PRVM_clientedictvector(prog->edicts, mins));
 	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, maxs));
+	VectorCopy(cl.world.mins, PRVM_clientedictvector(prog->edicts, absmin));
+	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, absmax));
 
 	// call the prog init
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
