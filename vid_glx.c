@@ -129,7 +129,6 @@ static int vid_x11_gammarampsize = 0;
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
 static qboolean vid_usingdgamouse = false;
 #endif
-cvar_t vid_netwmfullscreen = {CVAR_SAVE, "vid_netwmfullscreen", "0", "make use _NET_WM_STATE_FULLSCREEN; turn this off if fullscreen does not work for you"};
 
 qboolean vidmode_ext = false;
 
@@ -138,7 +137,7 @@ static int win_x, win_y;
 static XF86VidModeModeInfo init_vidmode, game_vidmode;
 static qboolean vid_isfullscreen = false;
 static qboolean vid_isvidmodefullscreen = false;
-static qboolean vid_isnetwmfullscreen = false;
+static qboolean vid_isdesktopfullscreen = false;
 static qboolean vid_isoverrideredirect = false;
 
 static Visual *vidx11_visual;
@@ -654,11 +653,11 @@ static void HandleEvents(void)
 			// window changed size/location
 			win_x = event.xconfigure.x;
 			win_y = event.xconfigure.y;
-			if((vid_resizable.integer < 2 || vid_isnetwmfullscreen) && (vid.width != event.xconfigure.width || vid.height != event.xconfigure.height))
+			if((vid_resizable.integer < 2 || vid_isdesktopfullscreen) && (vid.width != event.xconfigure.width || vid.height != event.xconfigure.height))
 			{
 				vid.width = event.xconfigure.width;
 				vid.height = event.xconfigure.height;
-				if(vid_isnetwmfullscreen)
+				if(vid_isdesktopfullscreen)
 					Con_Printf("NetWM fullscreen: actually using resolution %dx%d\n", vid.width, vid.height);
 				else
 					Con_DPrintf("Updating to ConfigureNotify resolution %dx%d\n", vid.width, vid.height);
@@ -703,7 +702,7 @@ static void HandleEvents(void)
 				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 			}
 
-			if(vid_isnetwmfullscreen)
+			if(vid_isdesktopfullscreen)
 			{
 				// make sure it's fullscreen
 				XEvent event;
@@ -745,7 +744,7 @@ static void HandleEvents(void)
 			if (vid_isoverrideredirect)
 				break;
 
-			if(vid_isnetwmfullscreen && event.xfocus.mode == NotifyNormal)
+			if(vid_isdesktopfullscreen && event.xfocus.mode == NotifyNormal)
 			{
 				// iconify netwm fullscreen window when it loses focus
 				// when the user selects it in the taskbar, the window manager will map it again and send MapNotify
@@ -866,7 +865,7 @@ void VID_Shutdown(void)
 
 	vid_hidden = true;
 	vid_isfullscreen = false;
-	vid_isnetwmfullscreen = false;
+	vid_isdesktopfullscreen = false;
 	vid_isvidmodefullscreen = false;
 	vid_isoverrideredirect = false;
 	vidx11_display = NULL;
@@ -974,7 +973,7 @@ void VID_Init(void)
 #ifdef USEDGA
 	Cvar_RegisterVariable (&vid_dgamouse);
 #endif
-	Cvar_RegisterVariable (&vid_netwmfullscreen);
+	Cvar_RegisterVariable (&vid_desktopfullscreen);
 	InitSig(); // trap evil signals
 // COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse"))
@@ -1026,7 +1025,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	char vabuf[1024];
 
 	vid_isfullscreen = false;
-	vid_isnetwmfullscreen = false;
+	vid_isdesktopfullscreen = false;
 	vid_isvidmodefullscreen = false;
 	vid_isoverrideredirect = false;
 
@@ -1064,10 +1063,10 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	if (mode->fullscreen)
 	{
-		if(vid_netwmfullscreen.integer)
+		if(vid_desktopfullscreen.integer)
 		{
 			// TODO detect WM support
-			vid_isnetwmfullscreen = true;
+			vid_isdesktopfullscreen = true;
 			vid_isfullscreen = true;
 			// width and height will be filled in later
 			Con_DPrintf("Using NetWM fullscreen mode\n");
@@ -1151,7 +1150,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 
 	if (mode->fullscreen)
 	{
-		if(vid_isnetwmfullscreen)
+		if(vid_isdesktopfullscreen)
 		{
 			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
@@ -1224,7 +1223,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	clshints->res_class = strdup("DarkPlaces");
 
 	szhints = XAllocSizeHints();
-	if(vid_resizable.integer == 0 && !vid_isnetwmfullscreen)
+	if(vid_resizable.integer == 0 && !vid_isdesktopfullscreen)
 	{
 		szhints->min_width = szhints->max_width = mode->width;
 		szhints->min_height = szhints->max_height = mode->height;
@@ -1326,7 +1325,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	char vabuf[1024];
 
 	vid_isfullscreen = false;
-	vid_isnetwmfullscreen = false;
+	vid_isdesktopfullscreen = false;
 	vid_isvidmodefullscreen = false;
 	vid_isoverrideredirect = false;
 
@@ -1399,10 +1398,10 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	if (mode->fullscreen)
 	{
-		if(vid_netwmfullscreen.integer)
+		if(vid_desktopfullscreen.integer)
 		{
 			// TODO detect WM support
-			vid_isnetwmfullscreen = true;
+			vid_isdesktopfullscreen = true;
 			vid_isfullscreen = true;
 			// width and height will be filled in later
 			Con_DPrintf("Using NetWM fullscreen mode\n");
@@ -1486,7 +1485,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	if (mode->fullscreen)
 	{
-		if(vid_isnetwmfullscreen)
+		if(vid_isdesktopfullscreen)
 		{
 			mask = CWBackPixel | CWColormap | CWSaveUnder | CWBackingStore | CWEventMask;
 			attr.backing_store = NotUseful;
@@ -1559,7 +1558,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	clshints->res_class = strdup("DarkPlaces");
 
 	szhints = XAllocSizeHints();
-	if(vid_resizable.integer == 0 && !vid_isnetwmfullscreen)
+	if(vid_resizable.integer == 0 && !vid_isdesktopfullscreen)
 	{
 		szhints->min_width = szhints->max_width = mode->width;
 		szhints->min_height = szhints->max_height = mode->height;
