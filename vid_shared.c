@@ -189,6 +189,7 @@ cvar_t vid_touchscreen_showkeyboard = {0, "vid_touchscreen_showkeyboard", "0", "
 cvar_t vid_touchscreen_supportshowkeyboard = {CVAR_READONLY, "vid_touchscreen_supportshowkeyboard", "0", "indicates if the platform supports a virtual keyboard"};
 cvar_t vid_stick_mouse = {CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CVAR_SAVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
+cvar_t vid_desktopfullscreen = {CVAR_SAVE, "vid_desktopfullscreen", "0", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
@@ -1770,6 +1771,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_touchscreen_supportshowkeyboard);
 	Cvar_RegisterVariable(&vid_stick_mouse);
 	Cvar_RegisterVariable(&vid_resizable);
+	Cvar_RegisterVariable(&vid_desktopfullscreen);
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&vid_gl13);
