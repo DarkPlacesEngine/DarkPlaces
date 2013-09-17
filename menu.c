@@ -5307,6 +5307,8 @@ static void MP_Draw (void)
 
 	// FIXME: this really shouldnt error out lest we have a very broken refdef state...?
 	// or does it kill the server too?
+	PRVM_G_FLOAT(OFS_PARM0) = vid.width;
+	PRVM_G_FLOAT(OFS_PARM1) = vid.height;
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_draw),"m_draw() required");
 
 	// TODO: imo this should be moved into scene, too [1/27/2008 Andreas]

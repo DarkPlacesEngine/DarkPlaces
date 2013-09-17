@@ -199,6 +199,7 @@ extern cvar_t vid_touchscreen_showkeyboard;
 extern cvar_t vid_touchscreen_supportshowkeyboard;
 extern cvar_t vid_stick_mouse;
 extern cvar_t vid_resizable;
+extern cvar_t vid_desktopfullscreen;
 extern cvar_t vid_minwidth;
 extern cvar_t vid_minheight;
 extern cvar_t vid_sRGB;

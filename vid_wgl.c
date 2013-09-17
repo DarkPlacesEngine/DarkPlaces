@@ -1012,7 +1012,15 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_isfullscreen = false;
 	if (fullscreen)
 	{
-		if(vid_forcerefreshrate.integer)
+		if(vid_desktopfullscreen.integer)
+		{
+			foundmode = true;
+			gdevmode = initialdevmode;
+			width = mode->width = gdevmode.dmPelsWidth;
+			height = mode->height = gdevmode.dmPelsHeight;
+			bpp = mode->bitsperpixel = gdevmode.dmBitsPerPel;
+		}
+		else if(vid_forcerefreshrate.integer)
 		{
 			foundmode = true;
 			gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
