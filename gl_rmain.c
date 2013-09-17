@@ -8001,10 +8001,21 @@ static float R_EvaluateQ3WaveFunc(q3wavefunc_t func, const float *parms)
 static void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcmod_t *tcmod, int currentmaterialflags)
 {
 	int w, h, idx;
-	double f;
-	double offsetd[2];
+	float shadertime;
+	float f;
 	float tcmat[12];
 	matrix4x4_t matrix, temp;
+	// if shadertime exceeds about 9 hours (32768 seconds), just wrap it,
+	// it's better to have one huge fixup every 9 hours than gradual
+	// degradation over time which looks consistently bad after many hours.
+	//
+	// tcmod scroll in particular suffers from this degradation which can't be
+	// effectively worked around even with floor() tricks because we don't
+	// know if tcmod scroll is the last tcmod being applied, and for clampmap
+	// a workaround involving floor() would be incorrect anyway...
+	shadertime = rsurface.shadertime;
+	if (shadertime >= 32768.0f)
+		shadertime -= floor(rsurface.shadertime * (1.0f / 32768.0f)) * 32768.0f;
 	switch(tcmod->tcmod)
 	{
 		case Q3TCMOD_COUNT:
@@ -8020,19 +8031,18 @@ static void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcm
 			Matrix4x4_CreateTranslate(&matrix, 0, 0, 0);
 			break;
 		case Q3TCMOD_ROTATE:
-			f = tcmod->parms[0] * rsurface.shadertime;
 			Matrix4x4_CreateTranslate(&matrix, 0.5, 0.5, 0);
-			Matrix4x4_ConcatRotate(&matrix, (f / 360 - floor(f / 360)) * 360, 0, 0, 1);
+			Matrix4x4_ConcatRotate(&matrix, tcmod->parms[0] * rsurface.shadertime, 0, 0, 1);
 			Matrix4x4_ConcatTranslate(&matrix, -0.5, -0.5, 0);
 			break;
 		case Q3TCMOD_SCALE:
 			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
 			break;
 		case Q3TCMOD_SCROLL:
-			// extra care is needed because of precision breakdown with large values of time
-			offsetd[0] = tcmod->parms[0] * rsurface.shadertime;
-			offsetd[1] = tcmod->parms[1] * rsurface.shadertime;
-			Matrix4x4_CreateTranslate(&matrix, offsetd[0] - floor(offsetd[0]), offsetd[1] - floor(offsetd[1]), 0);
+			// this particular tcmod is the most prone to precision breakdown
+			// at large values, but as we wrap shadertime it won't be obvious
+			// in practice.
+			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * rsurface.shadertime, tcmod->parms[1] * rsurface.shadertime, 0);
 			break;
 		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
 			w = (int) tcmod->parms[0];
