@@ -96,6 +96,11 @@ void IN_Move(void)
 {
 }
 
+vid_mode_t *VID_GetDesktopMode(void)
+{
+	return NULL;
+}
+
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	return 0;
