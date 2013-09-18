@@ -140,6 +140,7 @@ static qboolean vid_isvidmodefullscreen = false;
 static qboolean vid_isdesktopfullscreen = false;
 static qboolean vid_isoverrideredirect = false;
 
+static vid_mode_t desktop_mode;
 static Visual *vidx11_visual;
 static Colormap vidx11_colormap;
 
@@ -1051,6 +1052,13 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vidx11_screen = DefaultScreen(vidx11_display);
 	root = RootWindow(vidx11_display, vidx11_screen);
 
+	desktop_mode.width = DisplayWidth(vidx11_display, vidx11_screen);
+	desktop_mode.height = DisplayHeight(vidx11_display, vidx11_screen);
+	desktop_mode.bpp = DefaultDepth(vidx11_display, vidx11_screen);
+	desktop_mode.refreshrate = 60; // FIXME
+	desktop_mode.pixelheight_num = 1; // FIXME
+	desktop_mode.pixelheight_denom = 1; // FIXME
+
 	// Get video mode list
 	MajorVersion = MinorVersion = 0;
 	if (!XF86VidModeQueryVersion(vidx11_display, &MajorVersion, &MinorVersion))
@@ -1366,6 +1374,13 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 	vidx11_screen = DefaultScreen(vidx11_display);
 	root = RootWindow(vidx11_display, vidx11_screen);
+
+	desktop_mode.width = DisplayWidth(vidx11_display, vidx11_screen);
+	desktop_mode.height = DisplayHeight(vidx11_display, vidx11_screen);
+	desktop_mode.bpp = DefaultDepth(vidx11_display, vidx11_screen);
+	desktop_mode.refreshrate = 60; // FIXME
+	desktop_mode.pixelheight_num = 1; // FIXME
+	desktop_mode.pixelheight_denom = 1; // FIXME
 
 	// Get video mode list
 	MajorVersion = MinorVersion = 0;
@@ -1709,6 +1724,11 @@ void IN_Move (void)
 	VID_EnableJoystick(true);
 	VID_BuildJoyState(&joystate);
 	VID_ApplyJoyState(&joystate);
+}
+
+vid_mode_t *VID_GetDesktopMode(void)
+{
+	return &desktop_mode;
 }
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)

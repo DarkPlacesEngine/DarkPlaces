@@ -176,11 +176,27 @@ static void VM_M_getresolution(prvm_prog_t *prog)
 
 	fs = ((prog->argc <= 1) || ((int)PRVM_G_FLOAT(OFS_PARM1)));
 
-	if(nr < 0 || nr >= (fs ? video_resolutions_count : video_resolutions_hardcoded_count))
+	if(nr < -1 || nr >= (fs ? video_resolutions_count : video_resolutions_hardcoded_count))
 	{
 		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
 		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
 		PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+	}
+	else if(nr == -1)
+	{
+		vid_mode_t *m = VID_GetDesktopMode();
+		if (m)
+		{
+			PRVM_G_VECTOR(OFS_RETURN)[0] = m->width;
+			PRVM_G_VECTOR(OFS_RETURN)[1] = m->height;
+			PRVM_G_VECTOR(OFS_RETURN)[2] = m->pixelheight_num / (prvm_vec_t) m->pixelheight_denom;
+		}
+		else
+		{
+			PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+			PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
+			PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+		}
 	}
 	else
 	{
