@@ -1158,6 +1158,11 @@ long GetDictionaryLong(CFDictionaryRef d, const void *key)
     return value;
 }
 
+vid_mode_t *VID_GetDesktopMode(void)
+{
+	return NULL; // FIXME add desktopfullscreen
+}
+
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	CGDirectDisplayID mainDisplay = CGMainDisplayID();

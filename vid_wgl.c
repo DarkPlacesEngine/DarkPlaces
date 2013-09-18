@@ -126,6 +126,7 @@ static dllfunction_t wglpixelformatfuncs[] =
 };
 
 static DEVMODE gdevmode, initialdevmode;
+static vid_mode_t desktop_mode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
 static qboolean vid_usingmouse = false;
@@ -865,6 +866,13 @@ void VID_Init(void)
 
 	memset(&initialdevmode, 0, sizeof(initialdevmode));
 	EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &initialdevmode);
+
+	desktop_mode.width = initialdevmode.dmPelsWidth;
+	desktop_mode.height = initialdevmode.dmPelsHeight;
+	desktop_mode.bpp = initialdevmode.dmBitsPerPel;
+	desktop_mode.refreshrate = initialdevmode.dmDisplayFrequency;
+	desktop_mode.pixelheight_num = 1;
+	desktop_mode.pixelheight_denom = 1; // Win32 apparently does not provide this (FIXME)
 
 	IN_Init();
 }
@@ -2291,6 +2299,11 @@ static void IN_Shutdown(void)
 		IDirectInput_Release(g_pdi);
 	g_pdi = NULL;
 #endif
+}
+
+Vid_mode_t *VID_GetDesktopMode(void)
+{
+	return &desktop_mode;
 }
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)

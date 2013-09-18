@@ -91,6 +91,7 @@ static SDL_Window *window;
 static int window_flags;
 #endif
 static SDL_Surface *vid_softsurface;
+static vid_mode_t desktop_mode;
 
 /////////////////////////
 // Input handling
@@ -2474,21 +2475,36 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
-	if (mode->fullscreen) {
 #if SDL_MAJOR_VERSION == 1
+	{
 		SDL_VideoInfo *vi = SDL_GetVideoInfo();
-		mode->width = vi->current_w;
-		mode->height = vi->current_h;
-		mode->bitsperpixel = vi->vfmt->BitsPerPixel;
-		flags |= SDL_FULLSCREEN;
-#else
-		if (vid_desktopfullscreen.integer)
-			windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-		else
-			windowflags |= SDL_WINDOW_FULLSCREEN;
-#endif
-		vid_isfullscreen = true;
+		desktop_mode.width = vi->current_w;
+		desktop_mode.height = vi->current_h;
+		desktop_mode.bpp = vi->vfmt->BitsPerPixel;
+		desktop_mode.pixelheight_num = 1;
+		desktop_mode.pixelheight_denom = 1; // SDL does not provide this
+		if (mode->fullscreen) {
+			if (vid_desktopfullscreen.integer)
+			{
+				mode->width = vi->current_w;
+				mode->height = vi->current_h;
+				mode->bitsperpixel = vi->vfmt->BitsPerPixel;
+			}
+			flags |= SDL_FULLSCREEN;
+			vid_isfullscreen = true;
+		}
 	}
+#else
+	{
+		if (mode->fullscreen) {
+			if (vid_desktopfullscreen.integer)
+				windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+			else
+				windowflags |= SDL_WINDOW_FULLSCREEN;
+			vid_isfullscreen = true;
+		}
+	}
+#endif
 	//flags |= SDL_HWSURFACE;
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
@@ -2855,6 +2871,24 @@ void VID_Finish (void)
 	}
 }
 
+vid_mode_t *VID_GetDesktopMode(void)
+{
+#if SDL_MAJOR_VERSION != 1
+	SDL_DisplayMode mode;
+	int bpp;
+	Uint32 rmask, gmask, bmask, amask;
+	SDL_GetDesktopDisplayMode(0, &mode);
+	SDL_PixelFormatEnumToMasks(mode.format, &bpp, &rmask, &gmask, &bmask, &amask);
+	modes[k].width = mode.w;
+	modes[k].height = mode.h;
+	modes[k].bpp = bpp;
+	modes[k].refreshrate = mode.refreshrate;
+	modes[k].pixelheight_num = 1;
+	modes[k].pixelheight_denom = 1; // SDL does not provide this
+#endif
+	return &desktop_mode;
+}
+
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	size_t k = 0;
@@ -2886,8 +2920,8 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 			continue;
 		modes[k].width = mode.w;
 		modes[k].height = mode.h;
+		// FIXME bpp?
 		modes[k].refreshrate = mode.refresh_rate;
-		modes[k].pixelheight_num = 1;
 		modes[k].pixelheight_num = 1;
 		modes[k].pixelheight_denom = 1; // SDL does not provide this
 		k++;
