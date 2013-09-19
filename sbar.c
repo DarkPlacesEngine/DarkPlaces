@@ -156,7 +156,7 @@ static void sbar_start(void)
 	if (gamemode == GAME_DELUXEQUAKE || gamemode == GAME_BLOODOMNICIDE)
 	{
 	}
-	else if (gamemode == GAME_NEXUIZ)
+	else if (IS_OLDNEXUIZ_DERIVED(gamemode))
 	{
 		for (i = 0;i < 10;i++)
 			sb_nums[0][i] = Draw_CachePic_Flags (va(vabuf, sizeof(vabuf), "gfx/num_%i",i), CACHEPICFLAG_QUIET);
@@ -515,7 +515,7 @@ static void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, fl
 static int Sbar_IsTeammatch(void)
 {
 	// currently only nexuiz uses the team score board
-	return ((gamemode == GAME_NEXUIZ)
+	return (IS_OLDNEXUIZ_DERIVED(gamemode)
 		&& (teamplay.integer > 0));
 }
 
@@ -692,7 +692,7 @@ static void Sbar_SoloScoreboard (void)
 	int		minutes, seconds, tens, units;
 	int		l;
 
-	if (gamemode != GAME_NEXUIZ) {
+	if (IS_OLDNEXUIZ_DERIVED(gamemode)) {
 		dpsnprintf (str, sizeof(str), "Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
 		Sbar_DrawString (8, 4, str);
 
@@ -709,7 +709,7 @@ static void Sbar_SoloScoreboard (void)
 	Sbar_DrawString (184, 4, str);
 
 // draw level name
-	if (gamemode == GAME_NEXUIZ) {
+	if (IS_OLDNEXUIZ_DERIVED(gamemode)) {
 		l = (int) strlen (cl.worldname);
 		Sbar_DrawString (232 - l*4, 12, cl.worldname);
 	} else {
@@ -1037,7 +1037,7 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 	{
 		default:
 		case 1:
-			if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+			if(IS_NEXUIZ_DERIVED(gamemode))
 				*unit = "in/s";
 			else
 				*unit = "qu/s";
@@ -1046,23 +1046,27 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 		case 2:
 			*unit = "m/s";
 			*conversion_factor = 0.0254;
-			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
+			if(!IS_NEXUIZ_DERIVED(gamemode))
+				*conversion_factor *= 1.5;
 			// 1qu=1.5in is for non-Nexuiz/Xonotic only - Nexuiz/Xonotic players are overly large, but 1qu=1in fixes that
 			break;
 		case 3:
 			*unit = "km/h";
 			*conversion_factor = 0.0254 * 3.6;
-			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
+			if(!IS_NEXUIZ_DERIVED(gamemode))
+				*conversion_factor *= 1.5;
 			break;
 		case 4:
 			*unit = "mph";
 			*conversion_factor = 0.0254 * 3.6 * 0.6213711922;
-			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
+			if(!IS_NEXUIZ_DERIVED(gamemode))
+				*conversion_factor *= 1.5;
 			break;
 		case 5:
 			*unit = "knots";
 			*conversion_factor = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
-			if(gamemode != GAME_NEXUIZ && gamemode != GAME_XONOTIC) *conversion_factor *= 1.5;
+			if(!IS_NEXUIZ_DERIVED(gamemode))
+				*conversion_factor *= 1.5;
 			break;
 	}
 }
@@ -1332,7 +1336,7 @@ void Sbar_Draw (void)
 			Sbar_DrawScoreboard ();
 		else if (cl.intermission == 1)
 		{
-			if(gamemode == GAME_NEXUIZ) // display full scoreboard (that is, show scores + map name)
+			if(IS_OLDNEXUIZ_DERIVED(gamemode)) // display full scoreboard (that is, show scores + map name)
 			{
 				Sbar_DrawScoreboard();
 				return;
@@ -1344,7 +1348,7 @@ void Sbar_Draw (void)
 		else if (gamemode == GAME_DELUXEQUAKE)
 		{
 		}
-		else if (gamemode == GAME_NEXUIZ)
+		else if (IS_OLDNEXUIZ_DERIVED(gamemode))
 		{
 			if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
 			{
@@ -1867,7 +1871,7 @@ void Sbar_DeathmatchOverlay (void)
 		xmin = (int) (vid_conwidth.integer - (16 + 25) * 8 * FONT_SBAR->maxwidth) / 2; // 16 characters until name, then we assume 25 character names (they can be longer but usually aren't)
 	xmax = vid_conwidth.integer - xmin;
 
-	if(gamemode == GAME_NEXUIZ)
+	if(IS_OLDNEXUIZ_DERIVED(gamemode))
 		DrawQ_Pic (xmin - 8, ymin - 8, 0, xmax-xmin+1 + 2*8, ymax-ymin+1 + 2*8, 0, 0, 0, sbar_alpha_bg.value, 0);
 
 	DrawQ_Pic ((vid_conwidth.integer - sb_ranking->width)/2, 8, sb_ranking, 0, 0, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
@@ -2183,7 +2187,7 @@ void Sbar_IntermissionOverlay (void)
 	if(cl.stats[STAT_TOTALSECRETS])
 	{
 		Sbar_DrawNum (160, 104, cl.stats[STAT_SECRETS], 3, 0);
-		if (gamemode != GAME_NEXUIZ)
+		if (!IS_OLDNEXUIZ_DERIVED(gamemode))
 			Sbar_DrawPic (232, 104, sb_slash);
 		Sbar_DrawNum (240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
 	}
@@ -2195,7 +2199,7 @@ void Sbar_IntermissionOverlay (void)
 	if(cl.stats[STAT_TOTALMONSTERS])
 	{
 		Sbar_DrawNum (160, 144, cl.stats[STAT_MONSTERS], 3, 0);
-		if (gamemode != GAME_NEXUIZ)
+		if (!IS_OLDNEXUIZ_DERIVED(gamemode))
 			Sbar_DrawPic (232, 144, sb_slash);
 		Sbar_DrawNum (240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
 	}

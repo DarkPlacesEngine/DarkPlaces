@@ -326,7 +326,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 
-		if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+		if(IS_OLDNEXUIZ_DERIVED(gamemode))
 		{
 			// don't hit network players, if we are a nonsolid player
 			if(cl.scores[cl.playerentity-1].frags == -666 || cl.scores[cl.playerentity-1].frags == -616)
@@ -345,7 +345,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			if (!cl.scores[i-1].name[0])
 				continue;
 
-			if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+			if(IS_OLDNEXUIZ_DERIVED(gamemode))
 			{
 				// don't hit spectators or nonsolid players
 				if(cl.scores[i-1].frags == -666 || cl.scores[i-1].frags == -616)
@@ -564,7 +564,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 
-		if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+		if(IS_OLDNEXUIZ_DERIVED(gamemode))
 		{
 			// don't hit network players, if we are a nonsolid player
 			if(cl.scores[cl.playerentity-1].frags == -666 || cl.scores[cl.playerentity-1].frags == -616)
@@ -583,7 +583,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			if (!cl.scores[i-1].name[0])
 				continue;
 
-			if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+			if(IS_OLDNEXUIZ_DERIVED(gamemode))
 			{
 				// don't hit spectators or nonsolid players
 				if(cl.scores[i-1].frags == -666 || cl.scores[i-1].frags == -616)
@@ -843,7 +843,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 
-		if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+		if(IS_OLDNEXUIZ_DERIVED(gamemode))
 		{
 			// don't hit network players, if we are a nonsolid player
 			if(cl.scores[cl.playerentity-1].frags == -666 || cl.scores[cl.playerentity-1].frags == -616)
@@ -862,7 +862,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			if (!cl.scores[i-1].name[0])
 				continue;
 
-			if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+			if(IS_OLDNEXUIZ_DERIVED(gamemode))
 			{
 				// don't hit spectators or nonsolid players
 				if(cl.scores[i-1].frags == -666 || cl.scores[i-1].frags == -616)
