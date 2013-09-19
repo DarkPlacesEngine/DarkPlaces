@@ -1604,20 +1604,6 @@ static void VM_CL_getplayerkey (prvm_prog_t *prog)
 	else
 		if(!strcasecmp(c, "viewentity"))
 			dpsnprintf(t, sizeof(t), "%i", i+1);
-	else
-		if(gamemode == GAME_XONOTIC && !strcasecmp(c, "TEMPHACK_origin"))
-		{
-			// PLEASE REMOVE THIS once deltalisten() of EXT_CSQC_1
-			// is implemented, or Xonotic uses CSQC-networked
-			// players, whichever comes first
-			entity_t *e = cl.entities + (i+1);
-			if(e->state_current.active)
-			{
-				vec3_t origin;
-				Matrix4x4_OriginFromMatrix(&e->render.matrix, origin);
-				dpsnprintf(t, sizeof(t), VECTOR_LOSSLESS_FORMAT, origin[0], origin[1], origin[2]);
-			}
-		}
 	if(!t[0])
 		return;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t);
