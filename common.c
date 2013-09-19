@@ -1475,6 +1475,7 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_TOMESOFMEPHISTOPHELES,		GAME_TOMESOFMEPHISTOPHELES,		"tomesofmephistopheles",		"-tomesofmephistopheles",		"Tomes of Mephistopheles",			"gamedata",	NULL,			"tom",			"tomesofmephistopheles"		}, // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
 { GAME_STRAPBOMB,		GAME_STRAPBOMB,			"strapbomb",		"-strapbomb",		"Strap-on-bomb Car",	"id1",		NULL,			"strap",		"strapbomb"			}, // COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
 { GAME_MOONHELM,		GAME_MOONHELM,			"moonhelm",			"-moonhelm",		"MoonHelm",				"data",		NULL,			"mh",			"moonhelm"			}, // COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
+{ GAME_VORETOURNAMENT,	GAME_NORMAL,			"voretournament",	"-voretournament",	"Vore Tournament",		"data",		NULL,			"voretournament","voretournament"	}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
 };
 
 static void COM_SetGameType(int index);
