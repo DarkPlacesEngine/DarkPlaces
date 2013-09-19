@@ -295,6 +295,7 @@ typedef enum gamemode_e
 	GAME_TOMESOFMEPHISTOPHELES, // added by motorsep
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
+	GAME_VORETOURNAMENT,
 	GAME_COUNT
 }
 gamemode_t;
