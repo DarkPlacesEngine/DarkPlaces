@@ -1070,7 +1070,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 				{
 					if (con_chatsound.value)
 					{
-						if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+						if(IS_NEXUIZ_DERIVED(gamemode))
 						{
 							if(msg[1] == '\r' && cl.foundtalk2wav)
 								S_LocalSound ("sound/misc/talk2.wav");
@@ -1688,7 +1688,7 @@ void Con_DrawNotify (void)
 	align = con_notifyalign.value;
 	if(!*con_notifyalign.string) // empty string, evaluated to 0 above
 	{
-		if(gamemode == GAME_NEXUIZ)
+		if(IS_OLDNEXUIZ_DERIVED(gamemode))
 			align = 0.5;
 	}
 

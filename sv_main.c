@@ -2209,7 +2209,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		MSG_WriteByte (msg, stats[STAT_NAILS]);
 		MSG_WriteByte (msg, stats[STAT_ROCKETS]);
 		MSG_WriteByte (msg, stats[STAT_CELLS]);
-		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_QUOTH || gamemode == GAME_NEXUIZ)
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_QUOTH || IS_OLDNEXUIZ_DERIVED(gamemode))
 		{
 			for (i = 0;i < 32;i++)
 				if (stats[STAT_ACTIVEWEAPON] & (1<<i))
@@ -2533,7 +2533,7 @@ static void SV_UpdateToReliableMessages (void)
 
 		// frags
 		host_client->frags = (int)PRVM_serveredictfloat(host_client->edict, frags);
-		if(gamemode == GAME_NEXUIZ || gamemode == GAME_XONOTIC)
+		if(IS_OLDNEXUIZ_DERIVED(gamemode))
 			if(!host_client->begun && host_client->netconnection)
 				host_client->frags = -666;
 		if (host_client->old_frags != host_client->frags)

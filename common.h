@@ -300,6 +300,11 @@ typedef enum gamemode_e
 }
 gamemode_t;
 
+// Master switch for some hacks/changes that eventually should become cvars.
+#define IS_NEXUIZ_DERIVED(g) ((g) == GAME_NEXUIZ || (g) == GAME_XONOTIC || (g) == GAME_VORETOURNAMENT)
+// Pre-csqcmodels era.
+#define IS_OLDNEXUIZ_DERIVED(g) ((g) == GAME_NEXUIZ || (g) == GAME_VORETOURNAMENT)
+
 extern gamemode_t gamemode;
 extern const char *gamename;
 extern const char *gamedirname1;
