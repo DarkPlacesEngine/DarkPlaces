@@ -2301,7 +2301,7 @@ static void IN_Shutdown(void)
 #endif
 }
 
-Vid_mode_t *VID_GetDesktopMode(void)
+vid_mode_t *VID_GetDesktopMode(void)
 {
 	return &desktop_mode;
 }
