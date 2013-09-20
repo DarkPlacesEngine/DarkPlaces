@@ -2885,6 +2885,9 @@ vid_mode_t *VID_GetDesktopMode(void)
 	modes[k].refreshrate = mode.refreshrate;
 	modes[k].pixelheight_num = 1;
 	modes[k].pixelheight_denom = 1; // SDL does not provide this
+	// TODO check whether this actually works, or whether we do still need
+	// a read-window-size-after-entering-desktop-fullscreen hack for
+	// multiscreen setups.
 #endif
 	return &desktop_mode;
 }

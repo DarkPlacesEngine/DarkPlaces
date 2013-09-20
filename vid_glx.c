@@ -654,6 +654,15 @@ static void HandleEvents(void)
 			// window changed size/location
 			win_x = event.xconfigure.x;
 			win_y = event.xconfigure.y;
+			// HACK on X11, we just request fullscreen mode, but
+			// cannot guess what the window manager will do for us
+			// exactly. That is why we read back the resolution we
+			// actually got here.
+			if(vid_isdesktopfullscreen)
+			{
+				desktop_mode.width = event.xconfigure.width;
+				desktop_mode.height = event.xconfigure.height;
+			}
 			if((vid_resizable.integer < 2 || vid_isdesktopfullscreen) && (vid.width != event.xconfigure.width || vid.height != event.xconfigure.height))
 			{
 				vid.width = event.xconfigure.width;
@@ -663,19 +672,19 @@ static void HandleEvents(void)
 				else
 					Con_DPrintf("Updating to ConfigureNotify resolution %dx%d\n", vid.width, vid.height);
 
-				DPSOFTRAST_Flush();
-
-				if(vid.softdepthpixels)
-					free(vid.softdepthpixels);
-
-				DestroyXImages();
-				XSync(vidx11_display, False);
-				if(!BuildXImages(vid.width, vid.height))
-					return;
-				XSync(vidx11_display, False);
-
-				vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
-				vid.softdepthpixels = (unsigned int *)calloc(4, vid.width * vid.height);
+				if(vid.renderpath == RENDERPATH_SOFT)
+				{
+					DPSOFTRAST_Flush();
+					if(vid.softdepthpixels)
+						free(vid.softdepthpixels);
+					DestroyXImages();
+					XSync(vidx11_display, False);
+					if(!BuildXImages(vid.width, vid.height))
+						return;
+					XSync(vidx11_display, False);
+					vid.softpixels = (unsigned int *) vidx11_ximage[vidx11_ximage_pos]->data;
+					vid.softdepthpixels = (unsigned int *)calloc(4, vid.width * vid.height);
+				}
 			}
 			break;
 		case DestroyNotify:
