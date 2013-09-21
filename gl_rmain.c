@@ -8003,6 +8003,7 @@ static void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcm
 	int w, h, idx;
 	float shadertime;
 	float f;
+	float offsetd[2];
 	float tcmat[12];
 	matrix4x4_t matrix, temp;
 	// if shadertime exceeds about 9 hours (32768 seconds), just wrap it,
@@ -8039,10 +8040,12 @@ static void R_tcMod_ApplyToMatrix(matrix4x4_t *texmatrix, q3shaderinfo_layer_tcm
 			Matrix4x4_CreateScale3(&matrix, tcmod->parms[0], tcmod->parms[1], 1);
 			break;
 		case Q3TCMOD_SCROLL:
-			// this particular tcmod is the most prone to precision breakdown
-			// at large values, but as we wrap shadertime it won't be obvious
-			// in practice.
-			Matrix4x4_CreateTranslate(&matrix, tcmod->parms[0] * rsurface.shadertime, tcmod->parms[1] * rsurface.shadertime, 0);
+			// this particular tcmod is a "bug for bug" compatible one with regards to
+			// Quake3, the wrapping is unnecessary with our shadetime fix but quake3
+			// specifically did the wrapping and so we must mimic that...
+			offsetd[0] = tcmod->parms[0] * rsurface.shadertime;
+			offsetd[1] = tcmod->parms[1] * rsurface.shadertime;
+			Matrix4x4_CreateTranslate(&matrix, offsetd[0] - floor(offsetd[0]), offsetd[1] - floor(offsetd[1]), 0);
 			break;
 		case Q3TCMOD_PAGE: // poor man's animmap (to store animations into a single file, useful for HTTP downloaded textures)
 			w = (int) tcmod->parms[0];
