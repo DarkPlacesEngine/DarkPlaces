@@ -38,6 +38,7 @@ int com_selffd = -1;
 
 gamemode_t gamemode;
 const char *gamename;
+const char *gamenetworkfiltername; // same as gamename currently but with _ in place of spaces so that "getservers" packets parse correctly (this also means the 
 const char *gamedirname1;
 const char *gamedirname2;
 const char *gamescreenshotname;
@@ -1437,6 +1438,7 @@ typedef struct gamemode_info_s
 	const char* prog_name; // not null
 	const char* cmdline; // not null
 	const char* gamename; // not null
+	const char*	gamenetworkfiltername; // not null
 	const char* gamedirname1; // not null
 	const char* gamedirname2; // null
 	const char* gamescreenshotname; // not nul
@@ -1444,38 +1446,39 @@ typedef struct gamemode_info_s
 } gamemode_info_t;
 
 static const gamemode_info_t gamemode_info [GAME_COUNT] =
-{// game				basegame				prog_name			cmdline				gamename				basegame	modgame			screenshot		userdir				   // commandline option
-{ GAME_NORMAL,			GAME_NORMAL,			"",					"-quake",			"DarkPlaces-Quake",		"id1",		NULL,			"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
-{ GAME_HIPNOTIC,		GAME_NORMAL,			"hipnotic",			"-hipnotic",		"Darkplaces-Hipnotic",	"id1",		"hipnotic",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
-{ GAME_ROGUE,			GAME_NORMAL,			"rogue",			"-rogue",			"Darkplaces-Rogue",		"id1",		"rogue",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
-{ GAME_NEHAHRA,			GAME_NORMAL,			"nehahra",			"-nehahra",			"DarkPlaces-Nehahra",	"id1",		"nehahra",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
-{ GAME_QUOTH,			GAME_NORMAL,			"quoth",			"-quoth",			"Darkplaces-Quoth",		"id1",		"quoth",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -quoth runs the Quoth mod for playing community maps made for it
-{ GAME_NEXUIZ,			GAME_NEXUIZ,			"nexuiz",			"-nexuiz",			"Nexuiz",				"data",		NULL,			"nexuiz",		"nexuiz"			}, // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
-{ GAME_XONOTIC,			GAME_XONOTIC,			"xonotic",			"-xonotic",			"Xonotic",				"data",		NULL,			"xonotic",		"xonotic"			}, // COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
-{ GAME_TRANSFUSION,		GAME_TRANSFUSION,		"transfusion",		"-transfusion",		"Transfusion",			"basetf",	NULL,			"transfusion",	"transfusion"		}, // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
-{ GAME_GOODVSBAD2,		GAME_GOODVSBAD2,		"gvb2",				"-goodvsbad2",		"GoodVs.Bad2",			"rts",		NULL,			"gvb2",			"gvb2"				}, // COMMANDLINEOPTION: Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
-{ GAME_TEU,				GAME_TEU,				"teu",				"-teu",				"TheEvilUnleashed",		"baseteu",	NULL,			"teu",			"teu"				}, // COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
-{ GAME_BATTLEMECH,		GAME_BATTLEMECH,		"battlemech",		"-battlemech",		"Battlemech",			"base",		NULL,			"battlemech",	"battlemech"		}, // COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
-{ GAME_ZYMOTIC,			GAME_ZYMOTIC,			"zymotic",			"-zymotic",			"Zymotic",				"basezym",	NULL,			"zymotic",		"zymotic"			}, // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
-{ GAME_SETHERAL,		GAME_SETHERAL,			"setheral",			"-setheral",		"Setheral",				"data",		NULL,			"setheral",		"setheral"			}, // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
-{ GAME_TENEBRAE,		GAME_NORMAL,			"tenebrae",			"-tenebrae",		"DarkPlaces-Tenebrae",	"id1",		"tenebrae",		"dp",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
-{ GAME_NEOTERIC,		GAME_NORMAL,			"neoteric",			"-neoteric",		"Neoteric",				"id1",		"neobase",		"neo",			"darkplaces"		}, // COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
-{ GAME_OPENQUARTZ,		GAME_NORMAL,			"openquartz",		"-openquartz",		"OpenQuartz",			"id1",		NULL,			"openquartz",	"darkplaces"		}, // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
-{ GAME_PRYDON,			GAME_NORMAL,			"prydon",			"-prydon",			"PrydonGate",			"id1",		"prydon",		"prydon",		"darkplaces"		}, // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
-{ GAME_DELUXEQUAKE,		GAME_DELUXEQUAKE,		"dq",				"-dq",				"Deluxe Quake",			"basedq",	"extradq",		"basedq",		"dq"				}, // COMMANDLINEOPTION: Game: -dq runs the game Deluxe Quake
-{ GAME_THEHUNTED,		GAME_THEHUNTED,			"thehunted",		"-thehunted",		"The Hunted",			"thdata",	NULL, 			"th",			"thehunted"			}, // COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
-{ GAME_DEFEATINDETAIL2,	GAME_DEFEATINDETAIL2,	"did2",				"-did2",			"Defeat In Detail 2",	"data",		NULL, 			"did2_",		"did2"				}, // COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
-{ GAME_DARSANA,			GAME_DARSANA,			"darsana",			"-darsana",			"Darsana",				"ddata",	NULL, 			"darsana",		"darsana"			}, // COMMANDLINEOPTION: Game: -darsana runs the game Darsana
-{ GAME_CONTAGIONTHEORY,	GAME_CONTAGIONTHEORY,	"contagiontheory",	"-contagiontheory",	"Contagion Theory",		"ctdata",	NULL, 			"ct",			"contagiontheory"	}, // COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
-{ GAME_EDU2P,			GAME_EDU2P,				"edu2p",			"-edu2p",			"EDU2 Prototype",		"id1",		"edu2",			"edu2_p",		"edu2prototype"		}, // COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
-{ GAME_PROPHECY,		GAME_PROPHECY,			"prophecy",		"-prophecy",		"Prophecy",			"gamedata",		NULL,			"phcy",		"prophecy"			}, // COMMANDLINEOPTION: Game: -prophecy runs the game Prophecy
-{ GAME_BLOODOMNICIDE,	GAME_BLOODOMNICIDE,		"omnicide",			"-omnicide",		"Blood Omnicide",		"kain",		NULL,			"omnicide",		"omnicide"			}, // COMMANDLINEOPTION: Game: -omnicide runs the game Blood Omnicide
-{ GAME_STEELSTORM,		GAME_STEELSTORM,		"steelstorm",		"-steelstorm",		"Steel-Storm",			"gamedata",	NULL,			"ss",			"steelstorm"		}, // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
-{ GAME_STEELSTORM2,		GAME_STEELSTORM2,		"steelstorm2",		"-steelstorm2",		"Steel Storm 2",			"gamedata",	NULL,			"ss2",			"steelstorm2"		}, // COMMANDLINEOPTION: Game: -steelstorm2 runs the game Steel Storm 2
-{ GAME_TOMESOFMEPHISTOPHELES,		GAME_TOMESOFMEPHISTOPHELES,		"tomesofmephistopheles",		"-tomesofmephistopheles",		"Tomes of Mephistopheles",			"gamedata",	NULL,			"tom",			"tomesofmephistopheles"		}, // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
-{ GAME_STRAPBOMB,		GAME_STRAPBOMB,			"strapbomb",		"-strapbomb",		"Strap-on-bomb Car",	"id1",		NULL,			"strap",		"strapbomb"			}, // COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
-{ GAME_MOONHELM,		GAME_MOONHELM,			"moonhelm",			"-moonhelm",		"MoonHelm",				"data",		NULL,			"mh",			"moonhelm"			}, // COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
-{ GAME_VORETOURNAMENT,		GAME_VORETOURNAMENT,		"voretournament",		"-voretournament",	"Vore Tournament",			"data",		NULL,			"voretournament",	"voretournament"	}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
+{// game						basegame					prog_name				cmdline						gamename					gamenetworkfilername		basegame	modgame			screenshot			userdir					   // commandline option
+{ GAME_NORMAL,					GAME_NORMAL,				"",						"-quake",					"DarkPlaces-Quake",			"DarkPlaces-Quake",			"id1",		NULL,			"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -quake runs the game Quake (default)
+{ GAME_HIPNOTIC,				GAME_NORMAL,				"hipnotic",				"-hipnotic",				"Darkplaces-Hipnotic",		"Darkplaces-Hipnotic",		"id1",		"hipnotic",		"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
+{ GAME_ROGUE,					GAME_NORMAL,				"rogue",				"-rogue",					"Darkplaces-Rogue",			"Darkplaces-Rogue",			"id1",		"rogue",		"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
+{ GAME_NEHAHRA,					GAME_NORMAL,				"nehahra",				"-nehahra",					"DarkPlaces-Nehahra",		"DarkPlaces-Nehahra",		"id1",		"nehahra",		"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -nehahra runs The Seal of Nehahra movie and game
+{ GAME_QUOTH,					GAME_NORMAL,				"quoth",				"-quoth",					"Darkplaces-Quoth",			"Darkplaces-Quoth",			"id1",		"quoth",		"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -quoth runs the Quoth mod for playing community maps made for it
+{ GAME_NEXUIZ,					GAME_NEXUIZ,				"nexuiz",				"-nexuiz",					"Nexuiz",					"Nexuiz",					"data",		NULL,			"nexuiz",			"nexuiz"				}, // COMMANDLINEOPTION: Game: -nexuiz runs the multiplayer game Nexuiz
+{ GAME_XONOTIC,					GAME_XONOTIC,				"xonotic",				"-xonotic",					"Xonotic",					"Xonotic",					"data",		NULL,			"xonotic",			"xonotic"				}, // COMMANDLINEOPTION: Game: -xonotic runs the multiplayer game Xonotic
+{ GAME_TRANSFUSION,				GAME_TRANSFUSION,			"transfusion",			"-transfusion",				"Transfusion",				"Transfusion",				"basetf",	NULL,			"transfusion",		"transfusion"			}, // COMMANDLINEOPTION: Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
+{ GAME_GOODVSBAD2,				GAME_GOODVSBAD2,			"gvb2",					"-goodvsbad2",				"GoodVs.Bad2",				"GoodVs.Bad2",				"rts",		NULL,			"gvb2",				"gvb2"					}, // COMMANDLINEOPTION: Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
+{ GAME_TEU,						GAME_TEU,					"teu",					"-teu",						"TheEvilUnleashed",			"TheEvilUnleashed",			"baseteu",	NULL,			"teu",				"teu"					}, // COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
+{ GAME_BATTLEMECH,				GAME_BATTLEMECH,			"battlemech",			"-battlemech",				"Battlemech",				"Battlemech",				"base",		NULL,			"battlemech",		"battlemech"			}, // COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
+{ GAME_ZYMOTIC,					GAME_ZYMOTIC,				"zymotic",				"-zymotic",					"Zymotic",					"Zymotic",					"basezym",	NULL,			"zymotic",			"zymotic"				}, // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
+{ GAME_SETHERAL,				GAME_SETHERAL,				"setheral",				"-setheral",				"Setheral",					"Setheral",					"data",		NULL,			"setheral",			"setheral"				}, // COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
+{ GAME_TENEBRAE,				GAME_NORMAL,				"tenebrae",				"-tenebrae",				"DarkPlaces-Tenebrae",		"DarkPlaces-Tenebrae",		"id1",		"tenebrae",		"dp",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
+{ GAME_NEOTERIC,				GAME_NORMAL,				"neoteric",				"-neoteric",				"Neoteric",					"Neoteric",					"id1",		"neobase",		"neo",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -neoteric runs the game Neoteric
+{ GAME_OPENQUARTZ,				GAME_NORMAL,				"openquartz",			"-openquartz",				"OpenQuartz",				"OpenQuartz",				"id1",		NULL,			"openquartz",		"darkplaces"			}, // COMMANDLINEOPTION: Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
+{ GAME_PRYDON,					GAME_NORMAL,				"prydon",				"-prydon",					"PrydonGate",				"PrydonGate",				"id1",		"prydon",		"prydon",			"darkplaces"			}, // COMMANDLINEOPTION: Game: -prydon runs the topdown point and click action-RPG Prydon Gate
+{ GAME_DELUXEQUAKE,				GAME_DELUXEQUAKE,			"dq",					"-dq",						"Deluxe Quake",				"Deluxe_Quake",				"basedq",	"extradq",		"basedq",			"dq"					}, // COMMANDLINEOPTION: Game: -dq runs the game Deluxe Quake
+{ GAME_THEHUNTED,				GAME_THEHUNTED,				"thehunted",			"-thehunted",				"The Hunted",				"The_Hunted",				"thdata",	NULL, 			"th",				"thehunted"				}, // COMMANDLINEOPTION: Game: -thehunted runs the game The Hunted
+{ GAME_DEFEATINDETAIL2,			GAME_DEFEATINDETAIL2,		"did2",					"-did2",					"Defeat In Detail 2",		"Defeat_In_Detail_2",		"data",		NULL, 			"did2_",			"did2"					}, // COMMANDLINEOPTION: Game: -did2 runs the game Defeat In Detail 2
+{ GAME_DARSANA,					GAME_DARSANA,				"darsana",				"-darsana",					"Darsana",					"Darsana",					"ddata",	NULL, 			"darsana",			"darsana"				}, // COMMANDLINEOPTION: Game: -darsana runs the game Darsana
+{ GAME_CONTAGIONTHEORY,			GAME_CONTAGIONTHEORY,		"contagiontheory",		"-contagiontheory",			"Contagion Theory",			"Contagion_Theory",			"ctdata",	NULL, 			"ct",				"contagiontheory"		}, // COMMANDLINEOPTION: Game: -contagiontheory runs the game Contagion Theory
+{ GAME_EDU2P,					GAME_EDU2P,					"edu2p",				"-edu2p",					"EDU2 Prototype",			"EDU2_Prototype",			"id1",		"edu2",			"edu2_p",			"edu2prototype"			}, // COMMANDLINEOPTION: Game: -edu2p runs the game Edu2 prototype
+{ GAME_PROPHECY,				GAME_PROPHECY,				"prophecy",				"-prophecy",				"Prophecy",					"Prophecy",					"gamedata",	NULL,			"phcy",				"prophecy"				}, // COMMANDLINEOPTION: Game: -prophecy runs the game Prophecy
+{ GAME_BLOODOMNICIDE,			GAME_BLOODOMNICIDE,			"omnicide",				"-omnicide",				"Blood Omnicide",			"Blood_Omnicide",			"kain",		NULL,			"omnicide",			"omnicide"				}, // COMMANDLINEOPTION: Game: -omnicide runs the game Blood Omnicide
+{ GAME_STEELSTORM,				GAME_STEELSTORM,			"steelstorm",			"-steelstorm",				"Steel-Storm",				"Steel-Storm",				"gamedata",	NULL,			"ss",				"steelstorm"			}, // COMMANDLINEOPTION: Game: -steelstorm runs the game Steel Storm
+{ GAME_STEELSTORM2,				GAME_STEELSTORM2,			"steelstorm2",			"-steelstorm2",				"Steel Storm 2",			"Steel_Storm_2",			"gamedata",	NULL,			"ss2",				"steelstorm2"			}, // COMMANDLINEOPTION: Game: -steelstorm2 runs the game Steel Storm 2
+{ GAME_SSAMMO,					GAME_SSAMMO,				"steelstorm-ammo",		"-steelstormammo",			"Steel Storm A.M.M.O.",		"Steel_Storm_A.M.M.O.",		"gamedata", NULL,			"ssammo",			"steelstorm-ammo"		}, // COMMANDLINEOPTION: Game: -steelstormammo runs the game Steel Storm A.M.M.O.
+{ GAME_TOMESOFMEPHISTOPHELES,	GAME_TOMESOFMEPHISTOPHELES,	"tomesofmephistopheles","-tomesofmephistopheles",	"Tomes of Mephistopheles",	"Tomes_of_Mephistopheles",	"gamedata",	NULL,			"tom",				"tomesofmephistopheles"	}, // COMMANDLINEOPTION: Game: -tomesofmephistopheles runs the game Tomes of Mephistopheles
+{ GAME_STRAPBOMB,				GAME_STRAPBOMB,				"strapbomb",			"-strapbomb",				"Strap-on-bomb Car",		"Strap-on-bomb_Car",		"id1",		NULL,			"strap",			"strapbomb"				}, // COMMANDLINEOPTION: Game: -strapbomb runs the game Strap-on-bomb Car
+{ GAME_MOONHELM,				GAME_MOONHELM,				"moonhelm",				"-moonhelm",				"MoonHelm",					"MoonHelm",					"data",		NULL,			"mh",				"moonhelm"				}, // COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
+{ GAME_VORETOURNAMENT,			GAME_VORETOURNAMENT,		"voretournament",		"-voretournament",			"Vore Tournament",			"Vore_Tournament",			"data",		NULL,			"voretournament",	"voretournament"		}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
 };
 
 static void COM_SetGameType(int index);
@@ -1539,11 +1542,13 @@ void COM_ChangeGameTypeForGameDirs(void)
 
 static void COM_SetGameType(int index)
 {
+	static char gamenetworkfilternamebuffer[64];
 	int i, t;
 	if (index < 0 || index >= (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0])))
 		index = 0;
 	gamemode = gamemode_info[index].mode;
 	gamename = gamemode_info[index].gamename;
+	gamenetworkfiltername = gamemode_info[index].gamenetworkfiltername;
 	gamedirname1 = gamemode_info[index].gamedirname1;
 	gamedirname2 = gamemode_info[index].gamedirname2;
 	gamescreenshotname = gamemode_info[index].gamescreenshotname;
@@ -1552,7 +1557,9 @@ static void COM_SetGameType(int index)
 	if (gamemode == com_startupgamemode)
 	{
 		if((t = COM_CheckParm("-customgamename")) && t + 1 < com_argc)
-			gamename = com_argv[t+1];
+			gamename = gamenetworkfiltername = com_argv[t+1];
+		if((t = COM_CheckParm("-customgamenetworkfiltername")) && t + 1 < com_argc)
+			gamenetworkfiltername = com_argv[t+1];
 		if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < com_argc)
 			gamedirname1 = com_argv[t+1];
 		if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < com_argc)
@@ -1574,6 +1581,20 @@ static void COM_SetGameType(int index)
 		Con_Printf(" %s", fs_gamedirs[i]);
 	}
 	Con_Printf("\n");
+
+	if (strchr(gamenetworkfiltername, ' '))
+	{
+		char *s;
+		// if there are spaces in the game's network filter name it would
+		// cause parse errors in getservers in dpmaster, so we need to replace
+		// them with _ characters
+		strlcpy(gamenetworkfilternamebuffer, gamenetworkfiltername, sizeof(gamenetworkfiltername));
+		while ((s = strchr(gamenetworkfilternamebuffer, ' ')) != NULL)
+			*s = '_';
+		gamenetworkfiltername = gamenetworkfilternamebuffer;
+	}
+
+	Con_Printf("gamename for server filtering: %s\n", gamenetworkfiltername);
 }
 
 

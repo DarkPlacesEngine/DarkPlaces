@@ -292,6 +292,7 @@ typedef enum gamemode_e
 	GAME_BLOODOMNICIDE,
 	GAME_STEELSTORM, // added by motorsep
 	GAME_STEELSTORM2, // added by motorsep
+	GAME_SSAMMO, // added by motorsep
 	GAME_TOMESOFMEPHISTOPHELES, // added by motorsep
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
@@ -307,6 +308,7 @@ gamemode_t;
 
 extern gamemode_t gamemode;
 extern const char *gamename;
+extern const char *gamenetworkfiltername;
 extern const char *gamedirname1;
 extern const char *gamedirname2;
 extern const char *gamescreenshotname;
