@@ -107,7 +107,7 @@ static void Host_Status_f (void)
 		if (svs.clients[i].active)
 			players++;
 	print ("host:     %s\n", Cvar_VariableString ("hostname"));
-	print ("version:  %s build %s\n", gamename, buildstring);
+	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
 	print ("timing:   %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
