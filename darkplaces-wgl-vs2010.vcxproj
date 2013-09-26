@@ -51,7 +51,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;SUPPORTDIRECTX;SUPPORTD3D;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MENU;WIN32;_DEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;SUPPORTDIRECTX;SUPPORTD3D;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -73,7 +73,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;SUPPORTDIRECTX;SUPPORTD3D;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_MENU;WIN32;NDEBUG;_WINDOWS;WIN32_LEAN_AND_MEAN;SUPPORTDIRECTX;SUPPORTD3D;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>

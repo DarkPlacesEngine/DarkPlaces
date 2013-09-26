@@ -2477,7 +2477,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_isfullscreen = false;
 #if SDL_MAJOR_VERSION == 1
 	{
-		SDL_VideoInfo *vi = SDL_GetVideoInfo();
+		const SDL_VideoInfo *vi = SDL_GetVideoInfo();
 		desktop_mode.width = vi->current_w;
 		desktop_mode.height = vi->current_h;
 		desktop_mode.bpp = vi->vfmt->BitsPerPixel;
@@ -2643,7 +2643,7 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid_isfullscreen = false;
 	if (mode->fullscreen) {
 #if SDL_MAJOR_VERSION == 1
-		SDL_VideoInfo *vi = SDL_GetVideoInfo();
+		const SDL_VideoInfo *vi = SDL_GetVideoInfo();
 		mode->width = vi->current_w;
 		mode->height = vi->current_h;
 		mode->bitsperpixel = vi->vfmt->BitsPerPixel;
