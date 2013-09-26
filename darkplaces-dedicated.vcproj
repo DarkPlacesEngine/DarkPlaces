@@ -44,7 +44,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES"
+				PreprocessorDefinitions="CONFIG_MENU;WIN32;_DEBUG;_WINDOWS;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -193,7 +193,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES"
+				PreprocessorDefinitions="CONFIG_MENU;WIN32;NDEBUG;_WINDOWS;_FILE_OFFSET_BITS=64;__KERNEL_STRICT_NAMES"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
