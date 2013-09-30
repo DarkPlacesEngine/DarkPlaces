@@ -44,6 +44,7 @@ particletype_t particletype[pt_total] =
 
 #define PARTICLEEFFECT_UNDERWATER 1
 #define PARTICLEEFFECT_NOTUNDERWATER 2
+#define PARTICLEEFFECT_DEFINED 2147483648U
 
 typedef struct particleeffectinfo_s
 {
@@ -314,6 +315,7 @@ static void CL_Particles_ParseEffectInfo(const char *textstart, const char *text
 {
 	int arrayindex;
 	int argc;
+	int i;
 	int linenumber;
 	particleeffectinfo_t *info = NULL;
 	const char *text = textstart;
@@ -371,17 +373,29 @@ static void CL_Particles_ParseEffectInfo(const char *textstart, const char *text
 				Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 				break;
 			}
+			for(i = 0; i < numparticleeffectinfo; ++i)
+			{
+				info = particleeffectinfo + i;
+				if(!(info->flags & PARTICLEEFFECT_DEFINED))
+					if(info->effectnameindex == effectnameindex)
+						break;
+			}
+			if(i < numparticleeffectinfo)
+				continue;
 			info = particleeffectinfo + numparticleeffectinfo++;
 			// copy entire info from baseline, then fix up the nameindex
 			*info = baselineparticleeffectinfo;
 			info->effectnameindex = effectnameindex;
+			continue;
 		}
 		else if (info == NULL)
 		{
 			Con_Printf("%s:%i: command %s encountered before effect\n", filename, linenumber, argv[0]);
 			break;
 		}
-		else if (!strcmp(argv[0], "countabsolute")) {readfloat(info->countabsolute);}
+
+		info->flags |= PARTICLEEFFECT_DEFINED;
+		if (!strcmp(argv[0], "countabsolute")) {readfloat(info->countabsolute);}
 		else if (!strcmp(argv[0], "count")) {readfloat(info->countmultiplier);}
 		else if (!strcmp(argv[0], "type"))
 		{
@@ -1490,7 +1504,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		}
 		for (effectinfoindex = 0, info = particleeffectinfo;effectinfoindex < MAX_PARTICLEEFFECTINFO && info->effectnameindex;effectinfoindex++, info++)
 		{
-			if (info->effectnameindex == effectnameindex)
+			if ((info->effectnameindex == effectnameindex) && (info->flags & PARTICLEEFFECT_DEFINED))
 			{
 				qboolean definedastrail = info->trailspacing > 0;
 
