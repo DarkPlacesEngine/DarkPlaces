@@ -878,7 +878,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 		if(loadtype != LOADTYPE_NONE)
 			Host_Error("Curl_Begin: loadtype and buffer are both set");
 
-	if(!curl_dll)
+	if(!curl_dll || !cl_curl_enabled.integer)
 	{
 		return false;
 	}
