@@ -804,8 +804,12 @@ void Host_Main(void)
 				wait = 1; // because we cast to int
 
 			time0 = Sys_DirtyTime();
-			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded)
+			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
 				NetConn_SleepMicroseconds((int)wait);
+				if (cls.state != ca_dedicated)
+					NetConn_ClientFrame(); // helps server browser get good ping values
+				// TODO can we do the same for ServerFrame? Probably not.
+			}
 			else
 				Sys_Sleep((int)wait);
 			delta = Sys_DirtyTime() - time0;
