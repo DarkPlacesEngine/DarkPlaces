@@ -414,6 +414,9 @@ static void VM_M_setserverlistmasknumber(prvm_prog_t *prog)
 		case SLIF_FREESLOTS:
 			mask->info.freeslots = number;
 			break;
+		case SLIF_CATEGORY:
+			mask->info.category = number;
+			break;
 		case SLIF_ISFAVORITE:
 			mask->info.isfavorite = number != 0;
 			break;
@@ -449,7 +452,7 @@ string	getserverliststring(float field, float hostnr)
 */
 static void VM_M_getserverliststring(prvm_prog_t *prog)
 {
-	serverlist_entry_t *cache;
+	const serverlist_entry_t *cache;
 	int hostnr;
 
 	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
@@ -458,12 +461,19 @@ static void VM_M_getserverliststring(prvm_prog_t *prog)
 
 	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	if(hostnr < 0 || hostnr >= serverlist_viewcount)
+	if(hostnr == -1 && serverlist_callbackentry)
 	{
-		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
-		return;
+		cache = serverlist_callbackentry;
 	}
-	cache = ServerList_GetViewEntry(hostnr);
+	else
+	{
+		if(hostnr < 0 || hostnr >= serverlist_viewcount)
+		{
+			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
+			return;
+		}
+		cache = ServerList_GetViewEntry(hostnr);
+	}
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_CNAME:
 			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.cname );
@@ -507,7 +517,7 @@ float	getserverlistnumber(float field, float hostnr)
 */
 static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 {
-	serverlist_entry_t *cache;
+	const serverlist_entry_t *cache;
 	int hostnr;
 
 	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
@@ -516,12 +526,19 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 
 	hostnr = (int)PRVM_G_FLOAT(OFS_PARM1);
 
-	if(hostnr < 0 || hostnr >= serverlist_viewcount)
+	if(hostnr == -1 && serverlist_callbackentry)
 	{
-		Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
-		return;
+		cache = serverlist_callbackentry;
 	}
-	cache = ServerList_GetViewEntry(hostnr);
+	else
+	{
+		if(hostnr < 0 || hostnr >= serverlist_viewcount)
+		{
+			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
+			return;
+		}
+		cache = ServerList_GetViewEntry(hostnr);
+	}
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_MAXPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
@@ -543,6 +560,9 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 			break;
 		case SLIF_PROTOCOL:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
+			break;
+		case SLIF_CATEGORY:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.category;
 			break;
 		case SLIF_ISFAVORITE:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.isfavorite;
@@ -626,6 +646,8 @@ static void VM_M_getserverlistindexforkey(prvm_prog_t *prog)
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_FREESLOTS;
 	else if( !strcmp( key, "protocol" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_PROTOCOL;
+	else if( !strcmp( key, "category" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_CATEGORY;
 	else if( !strcmp( key, "isfavorite" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = SLIF_ISFAVORITE;
 	else
