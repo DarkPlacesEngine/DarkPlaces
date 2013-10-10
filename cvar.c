@@ -397,8 +397,10 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 			if(var->integer <= 0)
 				Cvar_Set("rcon_password", "");
 		}
+#ifdef CONFIG_MENU
 		else if (!strcmp(var->name, "net_slist_favorites"))
 			NetConn_UpdateFavorites();
+#endif
 	}
 
 	Cvar_UpdateAutoCvar(var);

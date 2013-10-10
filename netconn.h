@@ -242,6 +242,7 @@ extern mempool_t *netconn_mempool;
 extern cvar_t hostname;
 extern cvar_t developer_networking;
 
+#ifdef CONFIG_MENU
 #define SERVERLIST_VIEWLISTSIZE		SERVERLIST_TOTALSIZE
 
 typedef enum serverlist_maskop_e
@@ -296,6 +297,9 @@ typedef struct serverlist_info_s
 	/// (an integer that is used for filtering incompatible servers,
 	///  not filterable by QC)
 	int gameversion;
+
+	// categorized sorting
+	int category;
 	/// favorite server flag
 	qboolean isfavorite;
 } serverlist_info_t;
@@ -316,6 +320,7 @@ typedef enum
 	SLIF_FREESLOTS,
 	SLIF_QCSTATUS,
 	SLIF_PLAYERS,
+	SLIF_CATEGORY,
 	SLIF_ISFAVORITE,
 	SLIF_COUNT
 } serverlist_infofield_t;
@@ -323,7 +328,8 @@ typedef enum
 typedef enum
 {
 	SLSF_DESCENDING = 1,
-	SLSF_FAVORITESFIRST = 2
+	SLSF_FAVORITES = 2,
+	SLSF_CATEGORIES = 4
 } serverlist_sortflags_t;
 
 typedef enum
@@ -377,10 +383,12 @@ extern unsigned short serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
 extern int serverlist_cachecount;
 extern serverlist_entry_t *serverlist_cache;
+extern const serverlist_entry_t *serverlist_callbackentry;
 
 extern qboolean serverlist_consoleoutput;
 
 void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer);
+#endif
 
 //============================================================================
 //
@@ -396,11 +404,13 @@ extern char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
 extern int sv_net_extresponse_count;
 extern int sv_net_extresponse_last;
 
+#ifdef CONFIG_MENU
 extern double masterquerytime;
 extern int masterquerycount;
 extern int masterreplycount;
 extern int serverquerycount;
 extern int serverreplycount;
+#endif
 
 extern sizebuf_t cl_message;
 extern sizebuf_t sv_message;
@@ -441,10 +451,12 @@ int NetConn_IsLocalGame(void);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_SleepMicroseconds(int microseconds);
-void NetConn_QueryMasters(qboolean querydp, qboolean queryqw);
 void NetConn_Heartbeat(int priority);
-void NetConn_QueryQueueFrame(void);
 void Net_Stats_f(void);
+
+#ifdef CONFIG_MENU
+void NetConn_QueryMasters(qboolean querydp, qboolean queryqw);
+void NetConn_QueryQueueFrame(void);
 void Net_Slist_f(void);
 void Net_SlistQW_f(void);
 void Net_Refresh_f(void);
@@ -457,6 +469,7 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 
 /// called whenever net_slist_favorites changes
 void NetConn_UpdateFavorites(void);
+#endif
 
 #define MAX_CHALLENGES 128
 typedef struct challenge_s
