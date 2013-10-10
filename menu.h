@@ -81,6 +81,7 @@ extern void (*MR_Draw) (void);
 extern void (*MR_ToggleMenu) (int mode);
 extern void (*MR_Shutdown) (void);
 extern void (*MR_NewMap) (void);
+extern int (*MR_GetServerListEntryCategory) (const serverlist_entry_t *entry);
 
 typedef struct video_resolution_s
 {

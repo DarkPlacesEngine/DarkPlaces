@@ -53,6 +53,7 @@ static cvar_t sv_masters [] =
 	{0, NULL, NULL, NULL}
 };
 
+#ifdef CONFIG_MENU
 static cvar_t sv_qwmasters [] =
 {
 	{CVAR_SAVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
@@ -66,6 +67,7 @@ static cvar_t sv_qwmasters [] =
 	{0, "sv_qwmasterextra5", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
+#endif
 
 static double nextheartbeattime = 0;
 
@@ -114,6 +116,7 @@ int serverreplycount = 0;
 
 challenge_t challenge[MAX_CHALLENGES];
 
+#ifdef CONFIG_MENU
 /// this is only false if there are still servers left to query
 static qboolean serverlist_querysleep = true;
 static qboolean serverlist_paused = false;
@@ -121,6 +124,7 @@ static qboolean serverlist_paused = false;
 /// reply is received, to avoid issuing queries while master replies are still
 /// flooding in (which would make a mess of the ping times)
 static double serverlist_querywaittime = 0;
+#endif
 
 static int cl_numsockets;
 static lhnetsocket_t *cl_sockets[16];
@@ -144,6 +148,7 @@ char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int sv_net_extresponse_count = 0;
 int sv_net_extresponse_last = 0;
 
+#ifdef CONFIG_MENU
 // ServerList interface
 serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
@@ -218,12 +223,19 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 {
 	int result = 0; // > 0 if for numbers A > B and for text if A < B
 
-	if( serverlist_sortflags & SLSF_FAVORITESFIRST )
+	if( serverlist_sortflags & SLSF_CATEGORIES )
+	{
+		result = A->info.category - B->info.category;
+		if (result != 0)
+			return result < 0;
+	}
+
+	if( serverlist_sortflags & SLSF_FAVORITES )
 	{
 		if(A->info.isfavorite != B->info.isfavorite)
 			return A->info.isfavorite;
 	}
-
+	
 	switch( serverlist_sortbyfield ) {
 		case SLIF_PING:
 			result = A->info.ping - B->info.ping;
@@ -263,6 +275,9 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 			break;
 		case SLIF_QCSTATUS:
 			result = strcasecmp( B->info.qcstatus, A->info.qcstatus ); // not really THAT useful, though
+			break;
+		case SLIF_CATEGORY:
+			result = A->info.category - B->info.category;
 			break;
 		case SLIF_ISFAVORITE:
 			result = !!B->info.isfavorite - !!A->info.isfavorite;
@@ -391,6 +406,8 @@ static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info
 	if( *mask->info.players
 		&& !_ServerList_CompareStr( info->players, mask->tests[SLIF_PLAYERS], mask->info.players ) )
 		return false;
+	if( !_ServerList_CompareInt( info->category, mask->tests[SLIF_CATEGORY], mask->info.category ) )
+		return false;
 	if( !_ServerList_CompareInt( info->isfavorite, mask->tests[SLIF_ISFAVORITE], mask->info.isfavorite ))
 		return false;
 	return true;
@@ -439,6 +456,9 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 			}
 		}
 	}
+
+	// refresh the "category"
+	entry->info.category = MR_GetServerListEntryCategory(entry);
 
 	// FIXME: change this to be more readable (...)
 	// now check whether it passes through the masks
@@ -587,6 +607,7 @@ void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryq
 
 	NetConn_QueryMasters(querydp, queryqw);
 }
+#endif
 
 // rest
 
@@ -1521,6 +1542,7 @@ int NetConn_IsLocalGame(void)
 	return false;
 }
 
+#ifdef CONFIG_MENU
 static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *addressstring)
 {
 	int n;
@@ -1729,17 +1751,21 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 	serverlist_querysleep = false;
 	serverlist_querywaittime = realtime + 3;
 }
+#endif
 
 static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
 	qboolean fromserver;
 	int ret, c;
-	const char *s;
-	char *string, addressstring2[128], ipstring[32];
+	char *string, addressstring2[128];
 	char stringbuf[16384];
 	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
 	size_t sendlength;
+#ifdef CONFIG_MENU
 	char infostringvalue[MAX_INPUTLINE];
+	char ipstring[32];
+	const char *s;
+#endif
 	char vabuf[1024];
 
 	// quakeworld ingame packet
@@ -1880,6 +1906,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 #endif
 			return true;
 		}
+#ifdef CONFIG_MENU
 		if (length >= 15 && !memcmp(string, "statusResponse\x0A", 15))
 		{
 			serverlist_info_t *info;
@@ -2016,6 +2043,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			serverlist_querywaittime = realtime + 3;
 			return true;
 		}
+#endif
 		if (!strncmp(string, "extResponse ", 12))
 		{
 			++cl_net_extresponse_count;
@@ -2059,6 +2087,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (length > 2 && !memcmp(string, "n\\", 2))
 		{
+#ifdef CONFIG_MENU
 			serverlist_info_t *info;
 			int n;
 
@@ -2102,7 +2131,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
-
+#endif
 			return true;
 		}
 		if (string[0] == 'n')
@@ -2124,8 +2153,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	// netquake control packets, supported for compatibility only
 	if (length >= 5 && BuffBigLong(data) == ((int)NETFLAG_CTL | length) && !ENCRYPTION_REQUIRED)
 	{
+#ifdef CONFIG_MENU
 		int n;
 		serverlist_info_t *info;
+#endif
 
 		data += 4;
 		length -= 4;
@@ -2177,6 +2208,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		case CCREP_SERVER_INFO:
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREP_SERVER_INFO from %s.\n", addressstring2);
+#ifdef CONFIG_MENU
 			// LordHavoc: because the quake server may report weird addresses
 			// we just ignore it and keep the real address
 			MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
@@ -2195,7 +2227,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			info->protocol = MSG_ReadByte(&cl_message);
 
 			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
-
+#endif
 			break;
 		case CCREP_RCON: // RocketGuy: ProQuake rcon support
 			if (developer_extra.integer)
@@ -2227,6 +2259,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	return ret;
 }
 
+#ifdef CONFIG_MENU
 void NetConn_QueryQueueFrame(void)
 {
 	int index;
@@ -2315,6 +2348,7 @@ void NetConn_QueryQueueFrame(void)
 		}
 	}
 }
+#endif
 
 void NetConn_ClientFrame(void)
 {
@@ -2369,7 +2403,9 @@ void NetConn_ClientFrame(void)
 //			R_TimeReport("clientparsepacket");
 		}
 	}
+#ifdef CONFIG_MENU
 	NetConn_QueryQueueFrame();
+#endif
 	if (cls.netcon && realtime > cls.netcon->timeout && !sv.active)
 	{
 		Con_Print("Connection timed out\n");
@@ -3495,6 +3531,7 @@ void NetConn_SleepMicroseconds(int microseconds)
 	LHNET_SleepUntilPacket_Microseconds(microseconds);
 }
 
+#ifdef CONFIG_MENU
 void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 {
 	int i, j;
@@ -3597,16 +3634,12 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 				{
 					if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
 					{
-#ifdef CONFIG_MENU
 						if (m_state != m_slist)
 						{
-#endif
 							char lookupstring[128];
 							LHNETADDRESS_ToString(&masteraddress, lookupstring, sizeof(lookupstring), true);
 							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
-#ifdef CONFIG_MENU
 						}
-#endif
 						masterquerycount++;
 						NetConn_Write(cl_sockets[i], request, (int)strlen(request) + 1, &masteraddress);
 					}
@@ -3630,11 +3663,10 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	if (!masterquerycount)
 	{
 		Con_Print("Unable to query master servers, no suitable network sockets active.\n");
-#ifdef CONFIG_MENU
 		M_Update_Return_Reason("No network");
-#endif
 	}
 }
+#endif
 
 void NetConn_Heartbeat(int priority)
 {
@@ -3700,18 +3732,15 @@ void Net_Stats_f(void)
 		PrintStats(conn);
 }
 
+#ifdef CONFIG_MENU
 void Net_Refresh_f(void)
 {
-#ifdef CONFIG_MENU
 	if (m_state != m_slist) {
-#endif
 		Con_Print("Sending new requests to master servers\n");
 		ServerList_QueryList(false, true, false, true);
 		Con_Print("Listening for replies...\n");
-#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(false, true, false, false);
-#endif
 }
 
 void Net_Slist_f(void)
@@ -3719,16 +3748,12 @@ void Net_Slist_f(void)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
-#ifdef CONFIG_MENU
     if (m_state != m_slist) {
-#endif
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, true, false, true);
 		Con_Print("Listening for replies...\n");
-#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(true, true, false, false);
-#endif
 }
 
 void Net_SlistQW_f(void)
@@ -3736,18 +3761,15 @@ void Net_SlistQW_f(void)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
-#ifdef CONFIG_MENU
     if (m_state != m_slist) {
-#endif
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, false, true, true);
 		serverlist_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
-#ifdef CONFIG_MENU
 	} else
 		ServerList_QueryList(true, false, true, false);
-#endif
 }
+#endif
 
 void NetConn_Init(void)
 {
@@ -3755,9 +3777,11 @@ void NetConn_Init(void)
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
 	Cmd_AddCommand("net_stats", Net_Stats_f, "print network statistics");
+#ifdef CONFIG_MENU
 	Cmd_AddCommand("net_slist", Net_Slist_f, "query dp master servers and print all server information");
 	Cmd_AddCommand("net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
 	Cmd_AddCommand("net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
+#endif
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_test);
 	Cvar_RegisterVariable(&net_usesizelimit);
