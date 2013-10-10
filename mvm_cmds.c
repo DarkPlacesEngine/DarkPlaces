@@ -576,8 +576,11 @@ refreshserverlist()
 */
 static void VM_M_refreshserverlist(prvm_prog_t *prog)
 {
-	VM_SAFEPARMCOUNT( 0, VM_M_refreshserverlist );
-	ServerList_QueryList(false, true, false, false);
+	qboolean do_reset = false;
+	VM_SAFEPARMCOUNTRANGE( 0, 1, VM_M_refreshserverlist );
+	if (prog->argc >= 1 && PRVM_G_FLOAT(OFS_PARM0))
+		do_reset = true;
+	ServerList_QueryList(do_reset, true, false, false);
 }
 
 /*
