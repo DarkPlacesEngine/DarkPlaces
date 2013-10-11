@@ -706,6 +706,27 @@ void NetConn_UpdateCleartime(double *cleartime, int rate, int burstsize, int len
 	}
 }
 
+static int NetConn_AddCryptoFlag(crypto_t *crypto)
+{
+	// HACK: if an encrypted connection is used, randomly set some unused
+	// flags. When AES encryption is enabled, that will make resends differ
+	// from the original, so that e.g. substring filters in a router/IPS
+	// are unlikely to match a second time. See also "startkeylogger".
+	int flag = 0;
+	if (crypto->authenticated)
+	{
+		// Let's always set at least one of the bits.
+		int r = rand() % 7 + 1;
+		if (r & 1)
+			flag |= NETFLAG_CRYPTO0;
+		if (r & 2)
+			flag |= NETFLAG_CRYPTO1;
+		if (r & 4)
+			flag |= NETFLAG_CRYPTO2;
+	}
+	return flag;
+}
+
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qboolean quakesignon_suppressreliables)
 {
 	int totallen = 0;
@@ -811,7 +832,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			packetLen = NET_HEADERSIZE + dataLen;
 
-			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom | NetConn_AddCryptoFlag(&conn->crypto)));
 			StoreBigLong(sendbuffer + 4, conn->nq.sendSequence - 1);
 			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
@@ -860,7 +881,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			packetLen = NET_HEADERSIZE + dataLen;
 
-			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+			StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom | NetConn_AddCryptoFlag(&conn->crypto)));
 			StoreBigLong(sendbuffer + 4, conn->nq.sendSequence);
 			memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
@@ -890,7 +911,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 				return -1;
 			}
 
-			StoreBigLong(sendbuffer, packetLen | NETFLAG_UNRELIABLE);
+			StoreBigLong(sendbuffer, packetLen | NETFLAG_UNRELIABLE | NetConn_AddCryptoFlag(&conn->crypto));
 			StoreBigLong(sendbuffer + 4, conn->outgoing_unreliable_sequence);
 			memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
 
@@ -1395,7 +1416,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 
 							packetLen = NET_HEADERSIZE + dataLen;
 
-							StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom));
+							StoreBigLong(sendbuffer, packetLen | (NETFLAG_DATA | eom | NetConn_AddCryptoFlag(&conn->crypto)));
 							StoreBigLong(sendbuffer + 4, conn->nq.sendSequence);
 							memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
@@ -1426,7 +1447,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 
 				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
 
-				StoreBigLong(temppacket, 8 | NETFLAG_ACK);
+				StoreBigLong(temppacket, 8 | NETFLAG_ACK | NetConn_AddCryptoFlag(&conn->crypto));
 				StoreBigLong(temppacket + 4, sequence);
 				sendme = Crypto_EncryptPacket(&conn->crypto, temppacket, 8, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 				if(sendme)
