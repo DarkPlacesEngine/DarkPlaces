@@ -10090,77 +10090,80 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		}
 	}
 
+	if (rsurface.batchtexcoordtexture2f)
+	{
 	// generate texcoords based on the chosen texcoord source
-	switch(rsurface.texture->tcgen.tcgen)
-	{
-	default:
-	case Q3TCGEN_TEXTURE:
-		break;
-	case Q3TCGEN_LIGHTMAP:
-//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
-//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
-//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
-		if (rsurface.batchtexcoordlightmap2f)
-			memcpy(rsurface.batchtexcoordlightmap2f, rsurface.batchtexcoordtexture2f, batchnumvertices * sizeof(float[2]));
-		break;
-	case Q3TCGEN_VECTOR:
-//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
-//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
-//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
-		for (j = 0;j < batchnumvertices;j++)
+		switch(rsurface.texture->tcgen.tcgen)
 		{
-			rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms);
-			rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms + 3);
+		default:
+		case Q3TCGEN_TEXTURE:
+			break;
+		case Q3TCGEN_LIGHTMAP:
+	//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+	//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
+	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
+			if (rsurface.batchtexcoordlightmap2f)
+				memcpy(rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordlightmap2f, batchnumvertices * sizeof(float[2]));
+			break;
+		case Q3TCGEN_VECTOR:
+	//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+	//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
+	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
+			for (j = 0;j < batchnumvertices;j++)
+			{
+				rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms);
+				rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms + 3);
+			}
+			break;
+		case Q3TCGEN_ENVIRONMENT:
+			// make environment reflections using a spheremap
+			rsurface.batchtexcoordtexture2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+			rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
+			rsurface.batchtexcoordtexture2f_bufferoffset = 0;
+			for (j = 0;j < batchnumvertices;j++)
+			{
+				// identical to Q3A's method, but executed in worldspace so
+				// carried models can be shiny too
+
+				float viewer[3], d, reflected[3], worldreflected[3];
+
+				VectorSubtract(rsurface.localvieworigin, rsurface.batchvertex3f + 3*j, viewer);
+				// VectorNormalize(viewer);
+
+				d = DotProduct(rsurface.batchnormal3f + 3*j, viewer);
+
+				reflected[0] = rsurface.batchnormal3f[j*3+0]*2*d - viewer[0];
+				reflected[1] = rsurface.batchnormal3f[j*3+1]*2*d - viewer[1];
+				reflected[2] = rsurface.batchnormal3f[j*3+2]*2*d - viewer[2];
+				// note: this is proportinal to viewer, so we can normalize later
+
+				Matrix4x4_Transform3x3(&rsurface.matrix, reflected, worldreflected);
+				VectorNormalize(worldreflected);
+
+				// note: this sphere map only uses world x and z!
+				// so positive and negative y will LOOK THE SAME.
+				rsurface.batchtexcoordtexture2f[j*2+0] = 0.5 + 0.5 * worldreflected[1];
+				rsurface.batchtexcoordtexture2f[j*2+1] = 0.5 - 0.5 * worldreflected[2];
+			}
+			break;
 		}
-		break;
-	case Q3TCGEN_ENVIRONMENT:
-		// make environment reflections using a spheremap
-		rsurface.batchtexcoordtexture2f = (float *)R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
-		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
-		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
-		for (j = 0;j < batchnumvertices;j++)
+		// the only tcmod that needs software vertex processing is turbulent, so
+		// check for it here and apply the changes if needed
+		// and we only support that as the first one
+		// (handling a mixture of turbulent and other tcmods would be problematic
+		//  without punting it entirely to a software path)
+		if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 		{
-			// identical to Q3A's method, but executed in worldspace so
-			// carried models can be shiny too
-
-			float viewer[3], d, reflected[3], worldreflected[3];
-
-			VectorSubtract(rsurface.localvieworigin, rsurface.batchvertex3f + 3*j, viewer);
-			// VectorNormalize(viewer);
-
-			d = DotProduct(rsurface.batchnormal3f + 3*j, viewer);
-
-			reflected[0] = rsurface.batchnormal3f[j*3+0]*2*d - viewer[0];
-			reflected[1] = rsurface.batchnormal3f[j*3+1]*2*d - viewer[1];
-			reflected[2] = rsurface.batchnormal3f[j*3+2]*2*d - viewer[2];
-			// note: this is proportinal to viewer, so we can normalize later
-
-			Matrix4x4_Transform3x3(&rsurface.matrix, reflected, worldreflected);
-			VectorNormalize(worldreflected);
-
-			// note: this sphere map only uses world x and z!
-			// so positive and negative y will LOOK THE SAME.
-			rsurface.batchtexcoordtexture2f[j*2+0] = 0.5 + 0.5 * worldreflected[1];
-			rsurface.batchtexcoordtexture2f[j*2+1] = 0.5 - 0.5 * worldreflected[2];
-		}
-		break;
-	}
-	// the only tcmod that needs software vertex processing is turbulent, so
-	// check for it here and apply the changes if needed
-	// and we only support that as the first one
-	// (handling a mixture of turbulent and other tcmods would be problematic
-	//  without punting it entirely to a software path)
-	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
-	{
-		amplitude = rsurface.texture->tcmods[0].parms[1];
-		animpos = rsurface.texture->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->tcmods[0].parms[3];
-//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
-//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
-//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
-		for (j = 0;j < batchnumvertices;j++)
-		{
-			rsurface.batchtexcoordtexture2f[j*2+0] += amplitude * sin(((rsurface.batchvertex3f[j*3+0] + rsurface.batchvertex3f[j*3+2]) * 1.0 / 1024.0f + animpos) * M_PI * 2);
-			rsurface.batchtexcoordtexture2f[j*2+1] += amplitude * sin(((rsurface.batchvertex3f[j*3+1]                                ) * 1.0 / 1024.0f + animpos) * M_PI * 2);
+			amplitude = rsurface.texture->tcmods[0].parms[1];
+			animpos = rsurface.texture->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->tcmods[0].parms[3];
+	//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
+	//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
+	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
+			for (j = 0;j < batchnumvertices;j++)
+			{
+				rsurface.batchtexcoordtexture2f[j*2+0] += amplitude * sin(((rsurface.batchvertex3f[j*3+0] + rsurface.batchvertex3f[j*3+2]) * 1.0 / 1024.0f + animpos) * M_PI * 2);
+				rsurface.batchtexcoordtexture2f[j*2+1] += amplitude * sin(((rsurface.batchvertex3f[j*3+1]                                ) * 1.0 / 1024.0f + animpos) * M_PI * 2);
+			}
 		}
 	}
 
