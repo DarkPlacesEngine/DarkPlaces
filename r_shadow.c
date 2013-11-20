@@ -3933,6 +3933,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	static entity_render_t *shadowentities[MAX_EDICTS];
 	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
 	qboolean nolight;
+	qboolean castshadows;
 
 	rtlight->draw = false;
 	rtlight->cached_numlightentities               = 0;
@@ -4127,6 +4128,11 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 
 	// flag it as worth drawing later
 	rtlight->draw = true;
+
+	// if we have shadows disabled, don't count the shadow entities, this way we don't do the R_AnimCache_GetEntity on each one
+	castshadows = numsurfaces + numshadowentities + numshadowentities_noselfshadow > 0 && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows);
+	if (!castshadows)
+		numshadowentities = numshadowentities_noselfshadow = 0;
 
 	// cache all the animated entities that cast a shadow but are not visible
 	for (i = 0;i < numshadowentities;i++)
