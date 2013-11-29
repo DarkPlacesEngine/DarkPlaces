@@ -426,8 +426,8 @@ bin-debug :
 	$(CHECKLEVEL1)
 	@echo
 	@echo '========== $(EXE) (debug) =========='
-	$(MAKE) prepare BUILD_DIR=obj/debug/$(EXE)
-	$(MAKE) -C obj/debug/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
+	$(MAKE) prepare BUILD_DIR=build-obj/debug/$(EXE)
+	$(MAKE) -C build-obj/debug/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)'\
 		LDFLAGS='$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)' LEVEL=2
@@ -436,8 +436,8 @@ bin-profile :
 	$(CHECKLEVEL1)
 	@echo
 	@echo '========== $(EXE) (profile) =========='
-	$(MAKE) prepare BUILD_DIR=obj/profile/$(EXE)
-	$(MAKE) -C obj/profile/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
+	$(MAKE) prepare BUILD_DIR=build-obj/profile/$(EXE)
+	$(MAKE) -C build-obj/profile/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)' LEVEL=2
@@ -446,8 +446,8 @@ bin-release :
 	$(CHECKLEVEL1)
 	@echo
 	@echo '========== $(EXE) (release) =========='
-	$(MAKE) prepare BUILD_DIR=obj/release/$(EXE)
-	$(MAKE) -C obj/release/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
+	$(MAKE) prepare BUILD_DIR=build-obj/release/$(EXE)
+	$(MAKE) -C build-obj/release/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
@@ -457,8 +457,8 @@ bin-release-profile :
 	$(CHECKLEVEL1)
 	@echo
 	@echo '========== $(EXE) (release) =========='
-	$(MAKE) prepare BUILD_DIR=obj/release-profile/$(EXE)
-	$(MAKE) -C obj/release-profile/$(EXE) -f ../../../$(MAKEFILE) $(EXE) \
+	$(MAKE) prepare BUILD_DIR=build-obj/release-profile/$(EXE)
+	$(MAKE) -C build-obj/release-profile/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
@@ -467,6 +467,7 @@ bin-release-profile :
 prepare :
 	$(CMD_MKDIR) $(BUILD_DIR)
 	$(CMD_CP) makefile.inc $(BUILD_DIR)/
+	$(CMD_CP) $(MAKEFILE) $(BUILD_DIR)/
 
 #this checks USEODE when compiling so it needs the ODE flags as well
 prvm_cmds.o: prvm_cmds.c
@@ -566,7 +567,7 @@ clean:
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
-	-$(CMD_RM) obj/
+	-$(CMD_RM) build-obj/
 
 clean-profile: clean
 	-$(CMD_RM) *.gcda
