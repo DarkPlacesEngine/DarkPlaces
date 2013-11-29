@@ -22,23 +22,30 @@ TARGETS_RELEASE=sv-release cl-release sdl-release
 TARGETS_RELEASE_PROFILE=sv-release-profile cl-release-profile sdl-release-profile
 TARGETS_NEXUIZ=sv-nexuiz cl-nexuiz sdl-nexuiz
 
+# Link options
+DP_LINK_ZLIB?=shared
+DP_LINK_JPEG?=shared
+DP_LINK_ODE?=dlopen
+DP_LINK_CRYPTO?=dlopen
+DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+
 ###### Optional features #####
 DP_CDDA?=enabled
 .if $(DP_CDDA) == "enabled"
-	OBJ_SDLCD=$(OBJ_CD_COMMON) cd_sdl.o
-	OBJ_BSDCD=$(OBJ_CD_COMMON) cd_bsd.o
+  OBJ_SDLCD=$(OBJ_CD_COMMON) cd_sdl.o
+  OBJ_BSDCD=$(OBJ_CD_COMMON) cd_bsd.o
 .else
-	OBJ_SDLCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
-	OBJ_BSDCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+  OBJ_SDLCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
+  OBJ_BSDCD=$(OBJ_CD_COMMON) $(OBJ_NOCD)
 .endif
 
 DP_VIDEO_CAPTURE?=enabled
-.if $(DP_VIDEO_CAPTURE == "enabled"
-	CFLAGS_VIDEO_CAPTURE=-DCONFIG_VIDEO_CAPTURE
-	OBJ_VIDEO_CAPTURE= cap_avi.o cap_ogg.o
+.if $(DP_VIDEO_CAPTURE) == "enabled"
+  CFLAGS_VIDEO_CAPTURE=-DCONFIG_VIDEO_CAPTURE
+  OBJ_VIDEO_CAPTURE = cap_avi.o cap_ogg.o
 .else
-	CFLAGS_VIDEO_CAPTURE=
-	OBJ_VIDEO_CAPTURE=
+  CFLAGS_VIDEO_CAPTURE=
+  OBJ_VIDEO_CAPTURE =
 .endif
 
 # X11 libs
@@ -76,28 +83,48 @@ EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
 # set these to "" if you want to use dynamic loading instead
 # zlib
+.if $(DP_LINK_ZLIB) == "shared"
 CFLAGS_LIBZ=-DLINK_TO_ZLIB
 LIB_Z=-lz
+.else
+CFLAGS_LIBZ=
+LIB_Z=
+.endif
 
 # jpeg
+.if $(DP_LINK_JPEG) == "shared"
 CFLAGS_LIBJPEG=-DLINK_TO_LIBJPEG
 LIB_JPEG=-ljpeg
+.else
+CFLAGS_LIBJPEG=
+LIB_JPEG=
+.endif
 
 # ode
+.if $(DP_LINK_ODE) == "shared"
 ODE_CONFIG?=ode-config
 LIB_ODE=`$(ODE_CONFIG) --libs`
 CFLAGS_ODE=`$(ODE_CONFIG) --cflags` -DUSEODE -DLINK_TO_LIBODE
+.else
+LIB_ODE=
+CFLAGS_ODE=-DUSEODE
+.endif
 
 # d0_blind_id
-# most distros do not have d0_blind_id package, dlopen will used by default
-# LIB_CRYPTO=-ld0_blind_id
-# CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
-# LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
-# CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+.if $(DP_LINK_CRYPTO) == "shared"
+LIB_CRYPTO=-ld0_blind_id
+CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
+.else
 LIB_CRYPTO=
 CFLAGS_CRYPTO=
+.endif
+.if $(DP_LINK_CRYPTO_RIJNDAEL) == "shared"
+LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
+CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
+.else
 LIB_CRYPTO_RIJNDAEL=
 CFLAGS_CRYPTO_RIJNDAEL=
+.endif
 
 .endif
 
