@@ -2126,6 +2126,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			break;
 		default:
 			Con_DPrintf("PRVM_LoadProgs: unknown opcode %d at statement %d in %s\n", (int)op, i, prog->name);
+			break;
 		// global global global
 		case OP_ADD_F:
 		case OP_ADD_V:
