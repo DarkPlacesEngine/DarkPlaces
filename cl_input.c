@@ -574,7 +574,7 @@ void CL_Input (void)
 			static int oldwindowmouse[2];
 			if (oldwindowmouse[0] != in_windowmouse_x || oldwindowmouse[1] != in_windowmouse_y)
 			{
-				CL_VM_InputEvent(3, in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height);
+				CL_VM_InputEvent(3, in_windowmouse_x * vid_conwidth.value / vid.width, in_windowmouse_y * vid_conheight.value / vid.height);
 				oldwindowmouse[0] = in_windowmouse_x;
 				oldwindowmouse[1] = in_windowmouse_y;
 			}
@@ -582,7 +582,7 @@ void CL_Input (void)
 		else
 		{
 			if (in_mouse_x || in_mouse_y)
-				CL_VM_InputEvent(2, in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height);
+				CL_VM_InputEvent(2, in_mouse_x, in_mouse_y);
 		}
 	}
 
