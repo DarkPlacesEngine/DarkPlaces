@@ -1,13 +1,13 @@
 #include "quakedef.h"
 
-#define ENTITYSIZEPROFILING_START(msg, num) \
+#define ENTITYSIZEPROFILING_START(msg, num, flags) \
 	int entityprofiling_startsize = msg->cursize
 
-#define ENTITYSIZEPROFILING_END(msg, num) \
+#define ENTITYSIZEPROFILING_END(msg, num, flags) \
 	if(developer_networkentities.integer >= 2) \
 	{ \
 		prvm_edict_t *ed = prog->edicts + num; \
-		Con_Printf("sent entity update of size %d for a %s\n", (msg->cursize - entityprofiling_startsize), PRVM_serveredictstring(ed, classname) ? PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)) : "(no classname)"); \
+		Con_Printf("sent entity update of size %u for %d classname %s flags %d\n", (msg->cursize - entityprofiling_startsize), num, PRVM_serveredictstring(ed, classname) ? PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)) : "(no classname)", flags); \
 	}
 
 // this is 88 bytes (must match entity_state_t in protocol.h)
@@ -527,7 +527,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 			}
 			// write the remove message
 			{
-				ENTITYSIZEPROFILING_START(msg, number);
+				ENTITYSIZEPROFILING_START(msg, number, 0);
 				MSG_WriteShort(msg, (unsigned short)number | 0x8000);
 				client->csqcentityscope[number] = 0;
 				client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
@@ -535,7 +535,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 				db->sendflags[db->num] = -1;
 				db->num += 1;
 				client->csqcentityglobalhistory[number] = 1;
-				ENTITYSIZEPROFILING_END(msg, number);
+				ENTITYSIZEPROFILING_END(msg, number, 0);
 			}
 			if (msg->cursize + 17 >= maxsize)
 				break;
@@ -551,7 +551,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 				if(!sectionstarted)
 					MSG_WriteByte(msg, svc_csqcentities);
 				{
-					ENTITYSIZEPROFILING_START(msg, number);
+					ENTITYSIZEPROFILING_START(msg, number, sendflags);
 					MSG_WriteShort(msg, number);
 					msg->allowoverflow = true;
 					PRVM_G_INT(OFS_PARM0) = sv.writeentitiestoclient_cliententitynumber;
@@ -570,7 +570,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 						// and take note that we have begun the svc_csqcentities
 						// section of the packet
 						sectionstarted = 1;
-						ENTITYSIZEPROFILING_END(msg, number);
+						ENTITYSIZEPROFILING_END(msg, number, sendflags);
 						if (msg->cursize + 17 >= maxsize)
 							break;
 						continue;
@@ -694,7 +694,6 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 
 	for (i = 0;i < numstates;i++)
 	{
-		ENTITYSIZEPROFILING_START(msg, states[i]->number);
 		s = states[i];
 		if(PRVM_serveredictfunction((&prog->edicts[s->number]), SendEntity))
 			continue;
@@ -778,68 +777,72 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 			bits |= U_MOREBITS;
 		bits |= U_SIGNAL;
 
-		MSG_WriteByte (&buf, bits);
-		if (bits & U_MOREBITS)		MSG_WriteByte(&buf, bits>>8);
-		if (sv.protocol != PROTOCOL_NEHAHRAMOVIE)
 		{
-			if (bits & U_EXTEND1)	MSG_WriteByte(&buf, bits>>16);
-			if (bits & U_EXTEND2)	MSG_WriteByte(&buf, bits>>24);
-		}
-		if (bits & U_LONGENTITY)	MSG_WriteShort(&buf, s->number);
-		else						MSG_WriteByte(&buf, s->number);
+			ENTITYSIZEPROFILING_START(msg, states[i]->number, bits);
 
-		if (bits & U_MODEL)
-		{
-			if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
-				MSG_WriteShort(&buf, s->modelindex);
-			else
-				MSG_WriteByte(&buf, s->modelindex);
-		}
-		if (bits & U_FRAME)			MSG_WriteByte(&buf, s->frame);
-		if (bits & U_COLORMAP)		MSG_WriteByte(&buf, s->colormap);
-		if (bits & U_SKIN)			MSG_WriteByte(&buf, s->skin);
-		if (bits & U_EFFECTS)		MSG_WriteByte(&buf, s->effects);
-		if (bits & U_ORIGIN1)		MSG_WriteCoord(&buf, s->origin[0], sv.protocol);
-		if (bits & U_ANGLE1)		MSG_WriteAngle(&buf, s->angles[0], sv.protocol);
-		if (bits & U_ORIGIN2)		MSG_WriteCoord(&buf, s->origin[1], sv.protocol);
-		if (bits & U_ANGLE2)		MSG_WriteAngle(&buf, s->angles[1], sv.protocol);
-		if (bits & U_ORIGIN3)		MSG_WriteCoord(&buf, s->origin[2], sv.protocol);
-		if (bits & U_ANGLE3)		MSG_WriteAngle(&buf, s->angles[2], sv.protocol);
-		if (bits & U_ALPHA)			MSG_WriteByte(&buf, s->alpha);
-		if (bits & U_SCALE)			MSG_WriteByte(&buf, s->scale);
-		if (bits & U_EFFECTS2)		MSG_WriteByte(&buf, s->effects >> 8);
-		if (bits & U_GLOWSIZE)		MSG_WriteByte(&buf, s->glowsize);
-		if (bits & U_GLOWCOLOR)		MSG_WriteByte(&buf, s->glowcolor);
-		if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[1] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[2] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
-		if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
-		if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
-
-		// the nasty protocol
-		if ((bits & U_EXTEND1) && sv.protocol == PROTOCOL_NEHAHRAMOVIE)
-		{
-			if (s->effects & EF_FULLBRIGHT)
+			MSG_WriteByte (&buf, bits);
+			if (bits & U_MOREBITS)		MSG_WriteByte(&buf, bits>>8);
+			if (sv.protocol != PROTOCOL_NEHAHRAMOVIE)
 			{
-				MSG_WriteFloat(&buf, 2); // QSG protocol version
-				MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
-				MSG_WriteFloat(&buf, 1); // fullbright
+				if (bits & U_EXTEND1)	MSG_WriteByte(&buf, bits>>16);
+				if (bits & U_EXTEND2)	MSG_WriteByte(&buf, bits>>24);
 			}
-			else
-			{
-				MSG_WriteFloat(&buf, 1); // QSG protocol version
-				MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
-			}
-		}
+			if (bits & U_LONGENTITY)	MSG_WriteShort(&buf, s->number);
+			else						MSG_WriteByte(&buf, s->number);
 
-		// if the commit is full, we're done this frame
-		if (msg->cursize + buf.cursize > maxsize)
-		{
-			// next frame we will continue where we left off
-			break;
+			if (bits & U_MODEL)
+			{
+				if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
+					MSG_WriteShort(&buf, s->modelindex);
+				else
+					MSG_WriteByte(&buf, s->modelindex);
+			}
+			if (bits & U_FRAME)			MSG_WriteByte(&buf, s->frame);
+			if (bits & U_COLORMAP)		MSG_WriteByte(&buf, s->colormap);
+			if (bits & U_SKIN)			MSG_WriteByte(&buf, s->skin);
+			if (bits & U_EFFECTS)		MSG_WriteByte(&buf, s->effects);
+			if (bits & U_ORIGIN1)		MSG_WriteCoord(&buf, s->origin[0], sv.protocol);
+			if (bits & U_ANGLE1)		MSG_WriteAngle(&buf, s->angles[0], sv.protocol);
+			if (bits & U_ORIGIN2)		MSG_WriteCoord(&buf, s->origin[1], sv.protocol);
+			if (bits & U_ANGLE2)		MSG_WriteAngle(&buf, s->angles[1], sv.protocol);
+			if (bits & U_ORIGIN3)		MSG_WriteCoord(&buf, s->origin[2], sv.protocol);
+			if (bits & U_ANGLE3)		MSG_WriteAngle(&buf, s->angles[2], sv.protocol);
+			if (bits & U_ALPHA)			MSG_WriteByte(&buf, s->alpha);
+			if (bits & U_SCALE)			MSG_WriteByte(&buf, s->scale);
+			if (bits & U_EFFECTS2)		MSG_WriteByte(&buf, s->effects >> 8);
+			if (bits & U_GLOWSIZE)		MSG_WriteByte(&buf, s->glowsize);
+			if (bits & U_GLOWCOLOR)		MSG_WriteByte(&buf, s->glowcolor);
+			if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[1] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[2] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
+			if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
+			if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
+
+			// the nasty protocol
+			if ((bits & U_EXTEND1) && sv.protocol == PROTOCOL_NEHAHRAMOVIE)
+			{
+				if (s->effects & EF_FULLBRIGHT)
+				{
+					MSG_WriteFloat(&buf, 2); // QSG protocol version
+					MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
+					MSG_WriteFloat(&buf, 1); // fullbright
+				}
+				else
+				{
+					MSG_WriteFloat(&buf, 1); // QSG protocol version
+					MSG_WriteFloat(&buf, s->alpha <= 0 ? 0 : (s->alpha >= 255 ? 1 : s->alpha * (1.0f / 255.0f))); // alpha
+				}
+			}
+
+			// if the commit is full, we're done this frame
+			if (msg->cursize + buf.cursize > maxsize)
+			{
+				// next frame we will continue where we left off
+				break;
+			}
+			// write the message to the packet
+			SZ_Write(msg, buf.data, buf.cursize);
+			success = true;
+			ENTITYSIZEPROFILING_END(msg, s->number, bits);
 		}
-		// write the message to the packet
-		SZ_Write(msg, buf.data, buf.cursize);
-		success = true;
-		ENTITYSIZEPROFILING_END(msg, s->number);
 	}
 	return success;
 }
@@ -1027,16 +1030,17 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 {
 	prvm_prog_t *prog = SVVM_prog;
 	unsigned int bits;
-	ENTITYSIZEPROFILING_START(msg, ent->number);
 	if (ent->active == ACTIVE_NETWORK)
 	{
 		// entity is active, check for changes from the delta
 		if ((bits = EntityState_DeltaBits(delta, ent)))
 		{
 			// write the update number, bits, and fields
+			ENTITYSIZEPROFILING_START(msg, ent->number, bits);
 			MSG_WriteShort(msg, ent->number);
 			EntityState_WriteExtendBits(msg, bits);
 			EntityState_WriteFields(ent, msg, bits);
+			ENTITYSIZEPROFILING_END(msg, ent->number, bits);
 		}
 	}
 	else
@@ -1045,10 +1049,11 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 		if (delta->active == ACTIVE_NETWORK)
 		{
 			// write the remove number
+			ENTITYSIZEPROFILING_START(msg, ent->number, 0);
 			MSG_WriteShort(msg, ent->number | 0x8000);
+			ENTITYSIZEPROFILING_END(msg, ent->number, 0);
 		}
 	}
-	ENTITYSIZEPROFILING_END(msg, ent->number);
 }
 
 int EntityState_ReadExtendBits(void)
@@ -2092,10 +2097,13 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	prvm_prog_t *prog = SVVM_prog;
 	unsigned int bits = 0;
 	//dp_model_t *model;
-	ENTITYSIZEPROFILING_START(msg, s->number);
 
 	if (s->active != ACTIVE_NETWORK)
+	{
+		ENTITYSIZEPROFILING_START(msg, s->number, 0);
 		MSG_WriteShort(msg, number | 0x8000);
+		ENTITYSIZEPROFILING_END(msg, s->number, 0);
+	}
 	else
 	{
 		if (PRVM_serveredictfunction((&prog->edicts[s->number]), SendEntity))
@@ -2133,185 +2141,187 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			bits |= E5_EXTEND2;
 		if (bits >= 16777216)
 			bits |= E5_EXTEND3;
-		MSG_WriteShort(msg, number);
-		MSG_WriteByte(msg, bits & 0xFF);
-		if (bits & E5_EXTEND1)
-			MSG_WriteByte(msg, (bits >> 8) & 0xFF);
-		if (bits & E5_EXTEND2)
-			MSG_WriteByte(msg, (bits >> 16) & 0xFF);
-		if (bits & E5_EXTEND3)
-			MSG_WriteByte(msg, (bits >> 24) & 0xFF);
-		if (bits & E5_FLAGS)
-			MSG_WriteByte(msg, s->flags);
-		if (bits & E5_ORIGIN)
 		{
-			if (bits & E5_ORIGIN32)
+			ENTITYSIZEPROFILING_START(msg, s->number, bits);
+			MSG_WriteShort(msg, number);
+			MSG_WriteByte(msg, bits & 0xFF);
+			if (bits & E5_EXTEND1)
+				MSG_WriteByte(msg, (bits >> 8) & 0xFF);
+			if (bits & E5_EXTEND2)
+				MSG_WriteByte(msg, (bits >> 16) & 0xFF);
+			if (bits & E5_EXTEND3)
+				MSG_WriteByte(msg, (bits >> 24) & 0xFF);
+			if (bits & E5_FLAGS)
+				MSG_WriteByte(msg, s->flags);
+			if (bits & E5_ORIGIN)
 			{
-				MSG_WriteCoord32f(msg, s->origin[0]);
-				MSG_WriteCoord32f(msg, s->origin[1]);
-				MSG_WriteCoord32f(msg, s->origin[2]);
-			}
-			else
-			{
-				MSG_WriteCoord13i(msg, s->origin[0]);
-				MSG_WriteCoord13i(msg, s->origin[1]);
-				MSG_WriteCoord13i(msg, s->origin[2]);
-			}
-		}
-		if (bits & E5_ANGLES)
-		{
-			if (bits & E5_ANGLES16)
-			{
-				MSG_WriteAngle16i(msg, s->angles[0]);
-				MSG_WriteAngle16i(msg, s->angles[1]);
-				MSG_WriteAngle16i(msg, s->angles[2]);
-			}
-			else
-			{
-				MSG_WriteAngle8i(msg, s->angles[0]);
-				MSG_WriteAngle8i(msg, s->angles[1]);
-				MSG_WriteAngle8i(msg, s->angles[2]);
-			}
-		}
-		if (bits & E5_MODEL)
-		{
-			if (bits & E5_MODEL16)
-				MSG_WriteShort(msg, s->modelindex);
-			else
-				MSG_WriteByte(msg, s->modelindex);
-		}
-		if (bits & E5_FRAME)
-		{
-			if (bits & E5_FRAME16)
-				MSG_WriteShort(msg, s->frame);
-			else
-				MSG_WriteByte(msg, s->frame);
-		}
-		if (bits & E5_SKIN)
-			MSG_WriteByte(msg, s->skin);
-		if (bits & E5_EFFECTS)
-		{
-			if (bits & E5_EFFECTS32)
-				MSG_WriteLong(msg, s->effects);
-			else if (bits & E5_EFFECTS16)
-				MSG_WriteShort(msg, s->effects);
-			else
-				MSG_WriteByte(msg, s->effects);
-		}
-		if (bits & E5_ALPHA)
-			MSG_WriteByte(msg, s->alpha);
-		if (bits & E5_SCALE)
-			MSG_WriteByte(msg, s->scale);
-		if (bits & E5_COLORMAP)
-			MSG_WriteByte(msg, s->colormap);
-		if (bits & E5_ATTACHMENT)
-		{
-			MSG_WriteShort(msg, s->tagentity);
-			MSG_WriteByte(msg, s->tagindex);
-		}
-		if (bits & E5_LIGHT)
-		{
-			MSG_WriteShort(msg, s->light[0]);
-			MSG_WriteShort(msg, s->light[1]);
-			MSG_WriteShort(msg, s->light[2]);
-			MSG_WriteShort(msg, s->light[3]);
-			MSG_WriteByte(msg, s->lightstyle);
-			MSG_WriteByte(msg, s->lightpflags);
-		}
-		if (bits & E5_GLOW)
-		{
-			MSG_WriteByte(msg, s->glowsize);
-			MSG_WriteByte(msg, s->glowcolor);
-		}
-		if (bits & E5_COLORMOD)
-		{
-			MSG_WriteByte(msg, s->colormod[0]);
-			MSG_WriteByte(msg, s->colormod[1]);
-			MSG_WriteByte(msg, s->colormod[2]);
-		}
-		if (bits & E5_GLOWMOD)
-		{
-			MSG_WriteByte(msg, s->glowmod[0]);
-			MSG_WriteByte(msg, s->glowmod[1]);
-			MSG_WriteByte(msg, s->glowmod[2]);
-		}
-		if (bits & E5_COMPLEXANIMATION)
-		{
-			if (s->skeletonobject.model && s->skeletonobject.relativetransforms)
-			{
-				int numbones = s->skeletonobject.model->num_bones;
-				int bonenum;
-				short pose7s[7];
-				MSG_WriteByte(msg, 4);
-				MSG_WriteShort(msg, s->modelindex);
-				MSG_WriteByte(msg, numbones);
-				for (bonenum = 0;bonenum < numbones;bonenum++)
+				if (bits & E5_ORIGIN32)
 				{
-					Matrix4x4_ToBonePose7s(s->skeletonobject.relativetransforms + bonenum, 64, pose7s);
-					MSG_WriteShort(msg, pose7s[0]);
-					MSG_WriteShort(msg, pose7s[1]);
-					MSG_WriteShort(msg, pose7s[2]);
-					MSG_WriteShort(msg, pose7s[3]);
-					MSG_WriteShort(msg, pose7s[4]);
-					MSG_WriteShort(msg, pose7s[5]);
-					MSG_WriteShort(msg, pose7s[6]);
-				}
-			}
-			else
-			{
-				dp_model_t *model = SV_GetModelByIndex(s->modelindex);
-				if (s->framegroupblend[3].lerp > 0)
-				{
-					MSG_WriteByte(msg, 3);
-					MSG_WriteShort(msg, s->framegroupblend[0].frame);
-					MSG_WriteShort(msg, s->framegroupblend[1].frame);
-					MSG_WriteShort(msg, s->framegroupblend[2].frame);
-					MSG_WriteShort(msg, s->framegroupblend[3].frame);
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[3].start, anim_frameduration(model, s->framegroupblend[3].frame), 65.535) * 1000.0));
-					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[3].lerp * 255.0f);
-				}
-				else if (s->framegroupblend[2].lerp > 0)
-				{
-					MSG_WriteByte(msg, 2);
-					MSG_WriteShort(msg, s->framegroupblend[0].frame);
-					MSG_WriteShort(msg, s->framegroupblend[1].frame);
-					MSG_WriteShort(msg, s->framegroupblend[2].frame);
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
-					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
-				}
-				else if (s->framegroupblend[1].lerp > 0)
-				{
-					MSG_WriteByte(msg, 1);
-					MSG_WriteShort(msg, s->framegroupblend[0].frame);
-					MSG_WriteShort(msg, s->framegroupblend[1].frame);
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
-					MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
-					MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+					MSG_WriteCoord32f(msg, s->origin[0]);
+					MSG_WriteCoord32f(msg, s->origin[1]);
+					MSG_WriteCoord32f(msg, s->origin[2]);
 				}
 				else
 				{
-					MSG_WriteByte(msg, 0);
-					MSG_WriteShort(msg, s->framegroupblend[0].frame);
-					MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+					MSG_WriteCoord13i(msg, s->origin[0]);
+					MSG_WriteCoord13i(msg, s->origin[1]);
+					MSG_WriteCoord13i(msg, s->origin[2]);
 				}
 			}
+			if (bits & E5_ANGLES)
+			{
+				if (bits & E5_ANGLES16)
+				{
+					MSG_WriteAngle16i(msg, s->angles[0]);
+					MSG_WriteAngle16i(msg, s->angles[1]);
+					MSG_WriteAngle16i(msg, s->angles[2]);
+				}
+				else
+				{
+					MSG_WriteAngle8i(msg, s->angles[0]);
+					MSG_WriteAngle8i(msg, s->angles[1]);
+					MSG_WriteAngle8i(msg, s->angles[2]);
+				}
+			}
+			if (bits & E5_MODEL)
+			{
+				if (bits & E5_MODEL16)
+					MSG_WriteShort(msg, s->modelindex);
+				else
+					MSG_WriteByte(msg, s->modelindex);
+			}
+			if (bits & E5_FRAME)
+			{
+				if (bits & E5_FRAME16)
+					MSG_WriteShort(msg, s->frame);
+				else
+					MSG_WriteByte(msg, s->frame);
+			}
+			if (bits & E5_SKIN)
+				MSG_WriteByte(msg, s->skin);
+			if (bits & E5_EFFECTS)
+			{
+				if (bits & E5_EFFECTS32)
+					MSG_WriteLong(msg, s->effects);
+				else if (bits & E5_EFFECTS16)
+					MSG_WriteShort(msg, s->effects);
+				else
+					MSG_WriteByte(msg, s->effects);
+			}
+			if (bits & E5_ALPHA)
+				MSG_WriteByte(msg, s->alpha);
+			if (bits & E5_SCALE)
+				MSG_WriteByte(msg, s->scale);
+			if (bits & E5_COLORMAP)
+				MSG_WriteByte(msg, s->colormap);
+			if (bits & E5_ATTACHMENT)
+			{
+				MSG_WriteShort(msg, s->tagentity);
+				MSG_WriteByte(msg, s->tagindex);
+			}
+			if (bits & E5_LIGHT)
+			{
+				MSG_WriteShort(msg, s->light[0]);
+				MSG_WriteShort(msg, s->light[1]);
+				MSG_WriteShort(msg, s->light[2]);
+				MSG_WriteShort(msg, s->light[3]);
+				MSG_WriteByte(msg, s->lightstyle);
+				MSG_WriteByte(msg, s->lightpflags);
+			}
+			if (bits & E5_GLOW)
+			{
+				MSG_WriteByte(msg, s->glowsize);
+				MSG_WriteByte(msg, s->glowcolor);
+			}
+			if (bits & E5_COLORMOD)
+			{
+				MSG_WriteByte(msg, s->colormod[0]);
+				MSG_WriteByte(msg, s->colormod[1]);
+				MSG_WriteByte(msg, s->colormod[2]);
+			}
+			if (bits & E5_GLOWMOD)
+			{
+				MSG_WriteByte(msg, s->glowmod[0]);
+				MSG_WriteByte(msg, s->glowmod[1]);
+				MSG_WriteByte(msg, s->glowmod[2]);
+			}
+			if (bits & E5_COMPLEXANIMATION)
+			{
+				if (s->skeletonobject.model && s->skeletonobject.relativetransforms)
+				{
+					int numbones = s->skeletonobject.model->num_bones;
+					int bonenum;
+					short pose7s[7];
+					MSG_WriteByte(msg, 4);
+					MSG_WriteShort(msg, s->modelindex);
+					MSG_WriteByte(msg, numbones);
+					for (bonenum = 0;bonenum < numbones;bonenum++)
+					{
+						Matrix4x4_ToBonePose7s(s->skeletonobject.relativetransforms + bonenum, 64, pose7s);
+						MSG_WriteShort(msg, pose7s[0]);
+						MSG_WriteShort(msg, pose7s[1]);
+						MSG_WriteShort(msg, pose7s[2]);
+						MSG_WriteShort(msg, pose7s[3]);
+						MSG_WriteShort(msg, pose7s[4]);
+						MSG_WriteShort(msg, pose7s[5]);
+						MSG_WriteShort(msg, pose7s[6]);
+					}
+				}
+				else
+				{
+					dp_model_t *model = SV_GetModelByIndex(s->modelindex);
+					if (s->framegroupblend[3].lerp > 0)
+					{
+						MSG_WriteByte(msg, 3);
+						MSG_WriteShort(msg, s->framegroupblend[0].frame);
+						MSG_WriteShort(msg, s->framegroupblend[1].frame);
+						MSG_WriteShort(msg, s->framegroupblend[2].frame);
+						MSG_WriteShort(msg, s->framegroupblend[3].frame);
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[3].start, anim_frameduration(model, s->framegroupblend[3].frame), 65.535) * 1000.0));
+						MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[3].lerp * 255.0f);
+					}
+					else if (s->framegroupblend[2].lerp > 0)
+					{
+						MSG_WriteByte(msg, 2);
+						MSG_WriteShort(msg, s->framegroupblend[0].frame);
+						MSG_WriteShort(msg, s->framegroupblend[1].frame);
+						MSG_WriteShort(msg, s->framegroupblend[2].frame);
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[2].start, anim_frameduration(model, s->framegroupblend[2].frame), 65.535) * 1000.0));
+						MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[2].lerp * 255.0f);
+					}
+					else if (s->framegroupblend[1].lerp > 0)
+					{
+						MSG_WriteByte(msg, 1);
+						MSG_WriteShort(msg, s->framegroupblend[0].frame);
+						MSG_WriteShort(msg, s->framegroupblend[1].frame);
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[1].start, anim_frameduration(model, s->framegroupblend[1].frame), 65.535) * 1000.0));
+						MSG_WriteByte(msg, s->framegroupblend[0].lerp * 255.0f);
+						MSG_WriteByte(msg, s->framegroupblend[1].lerp * 255.0f);
+					}
+					else
+					{
+						MSG_WriteByte(msg, 0);
+						MSG_WriteShort(msg, s->framegroupblend[0].frame);
+						MSG_WriteShort(msg, (int)(anim_reducetime(sv.time - s->framegroupblend[0].start, anim_frameduration(model, s->framegroupblend[0].frame), 65.535) * 1000.0));
+					}
+				}
+			}
+			if (bits & E5_TRAILEFFECTNUM)
+				MSG_WriteShort(msg, s->traileffectnum);
+			ENTITYSIZEPROFILING_END(msg, s->number, bits);
 		}
-		if (bits & E5_TRAILEFFECTNUM)
-			MSG_WriteShort(msg, s->traileffectnum);
 	}
-
-	ENTITYSIZEPROFILING_END(msg, s->number);
 }
 
 static void EntityState5_ReadUpdate(entity_state_t *s, int number)
