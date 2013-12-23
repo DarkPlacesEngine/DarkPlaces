@@ -85,6 +85,8 @@ cvar_t con_completion_playdemo = {CVAR_SAVE, "con_completion_playdemo", "*.dem",
 cvar_t con_completion_timedemo = {CVAR_SAVE, "con_completion_timedemo", "*.dem", "completion pattern for the timedemo command"};
 cvar_t con_completion_exec = {CVAR_SAVE, "con_completion_exec", "*.cfg", "completion pattern for the exec command"};
 
+cvar_t condump_stripcolors = {CVAR_SAVE, "condump_stripcolors", "0", "strip color codes from console dumps"};
+
 int con_linewidth;
 int con_vislines;
 
@@ -108,6 +110,94 @@ void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mem
 	buf->lines = (con_lineinfo_t *) Mem_Alloc(mempool, maxlines * sizeof(*buf->lines));
 	buf->lines_first = 0;
 	buf->lines_count = 0;
+}
+
+/*! The translation table between the graphical font and plain ASCII  --KB */
+static char qfont_table[256] = {
+	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
+	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
+
+	'<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
+	'#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
+};
+
+/*
+	SanitizeString strips color tags from the string in
+	and writes the result on string out
+*/
+static void SanitizeString(char *in, char *out)
+{
+	while(*in)
+	{
+		if(*in == STRING_COLOR_TAG)
+		{
+			++in;
+			if(!*in)
+			{
+				out[0] = STRING_COLOR_TAG;
+				out[1] = 0;
+				return;
+			}
+			else if (*in >= '0' && *in <= '9') // ^[0-9] found
+			{
+				++in;
+				if(!*in)
+				{
+					*out = 0;
+					return;
+				} else if (*in == STRING_COLOR_TAG) // ^[0-9]^ found, don't print ^[0-9]
+					continue;
+			}
+			else if (*in == STRING_COLOR_RGB_TAG_CHAR) // ^x found
+			{
+				if ( isxdigit(in[1]) && isxdigit(in[2]) && isxdigit(in[3]) )
+				{
+					in+=4;
+					if (!*in)
+					{
+						*out = 0;
+						return;
+					} else if (*in == STRING_COLOR_TAG) // ^xrgb^ found, don't print ^xrgb
+						continue;
+				}
+				else in--;
+			}
+			else if (*in != STRING_COLOR_TAG)
+				--in;
+		}
+		*out = qfont_table[*(unsigned char*)in];
+		++in;
+		++out;
+	}
+	*out = 0;
 }
 
 /*
@@ -308,8 +398,9 @@ LOGGING
 
 /// \name Logging
 //@{
-cvar_t log_file = {0, "log_file","", "filename to log messages to"};
-cvar_t log_dest_udp = {0, "log_dest_udp","", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
+cvar_t log_file = {0, "log_file", "", "filename to log messages to"};
+cvar_t log_file_stripcolors = {0, "log_file_stripcolors", "0", "strip color codes from log messages"};
+cvar_t log_dest_udp = {0, "log_dest_udp", "", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
 char log_dest_buffer[1400]; // UDP packet
 size_t log_dest_buffer_pos;
 unsigned int log_dest_buffer_appending;
@@ -478,6 +569,7 @@ void Log_Start (void)
 }
 
 
+
 /*
 ================
 Log_ConPrint
@@ -528,7 +620,22 @@ void Log_ConPrint (const char *msg)
 
 	// If a log file is available
 	if (logfile != NULL)
-		FS_Print (logfile, msg);
+	{
+		if (log_file_stripcolors.integer)
+		{
+			// sanitize msg
+			size_t len = strlen(msg);
+			char* sanitizedmsg = (char*)Mem_Alloc(tempmempool, len + 1);
+			memcpy (sanitizedmsg, msg, len);
+			SanitizeString(sanitizedmsg, sanitizedmsg); // SanitizeString's in pointer is always ahead of the out pointer, so this should work.
+			FS_Print (logfile, sanitizedmsg);
+			Mem_Free(sanitizedmsg);
+		}
+		else 
+		{
+			FS_Print (logfile, msg);
+		}
+	}
 
 	inprogress = false;
 }
@@ -706,7 +813,20 @@ static void Con_ConDump_f (void)
 	if (con_mutex) Thread_LockMutex(con_mutex);
 	for(i = 0; i < CON_LINES_COUNT; ++i)
 	{
-		FS_Write(file, CON_LINES(i).start, CON_LINES(i).len);
+		if (condump_stripcolors.integer)
+		{
+			// sanitize msg
+			size_t len = CON_LINES(i).len;
+			char* sanitizedmsg = (char*)Mem_Alloc(tempmempool, len + 1);
+			memcpy (sanitizedmsg, CON_LINES(i).start, len);
+			SanitizeString(sanitizedmsg, sanitizedmsg); // SanitizeString's in pointer is always ahead of the out pointer, so this should work.
+			FS_Write(file, sanitizedmsg, strlen(sanitizedmsg));
+			Mem_Free(sanitizedmsg);
+		}
+		else 
+		{
+			FS_Write(file, CON_LINES(i).start, CON_LINES(i).len);
+		}
 		FS_Write(file, "\n", 1);
 	}
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
@@ -741,6 +861,7 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&sys_specialcharactertranslation);
 
 	Cvar_RegisterVariable (&log_file);
+	Cvar_RegisterVariable (&log_file_stripcolors);
 	Cvar_RegisterVariable (&log_dest_udp);
 
 	// support for the classic Quake option
@@ -771,6 +892,8 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&con_completion_playdemo); // *.dem
 	Cvar_RegisterVariable (&con_completion_timedemo); // *.dem
 	Cvar_RegisterVariable (&con_completion_exec); // *.cfg
+
+	Cvar_RegisterVariable (&condump_stripcolors);
 
 	// register our commands
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
@@ -846,43 +969,6 @@ static void Con_PrintToHistory(const char *txt, int mask)
 		}
 	}
 }
-
-/*! The translation table between the graphical font and plain ASCII  --KB */
-static char qfont_table[256] = {
-	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
-	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
-	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
-
-	'<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
-	'#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
-	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
-	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
-	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
-	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
-	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
-	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
-	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
-	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
-	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
-	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
-	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
-	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
-	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
-};
 
 void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean proquakeprotocol)
 {
@@ -2207,56 +2293,6 @@ void Con_DisplayList(const char **list)
 		Con_Print("\n\n");
 }
 
-/*
-	SanitizeString strips color tags from the string in
-	and writes the result on string out
-*/
-static void SanitizeString(char *in, char *out)
-{
-	while(*in)
-	{
-		if(*in == STRING_COLOR_TAG)
-		{
-			++in;
-			if(!*in)
-			{
-				out[0] = STRING_COLOR_TAG;
-				out[1] = 0;
-				return;
-			}
-			else if (*in >= '0' && *in <= '9') // ^[0-9] found
-			{
-				++in;
-				if(!*in)
-				{
-					*out = 0;
-					return;
-				} else if (*in == STRING_COLOR_TAG) // ^[0-9]^ found, don't print ^[0-9]
-					continue;
-			}
-			else if (*in == STRING_COLOR_RGB_TAG_CHAR) // ^x found
-			{
-				if ( isxdigit(in[1]) && isxdigit(in[2]) && isxdigit(in[3]) )
-				{
-					in+=4;
-					if (!*in)
-					{
-						*out = 0;
-						return;
-					} else if (*in == STRING_COLOR_TAG) // ^xrgb^ found, don't print ^xrgb
-						continue;
-				}
-				else in--;
-			}
-			else if (*in != STRING_COLOR_TAG)
-				--in;
-		}
-		*out = qfont_table[*(unsigned char*)in];
-		++in;
-		++out;
-	}
-	*out = 0;
-}
 
 // Now it becomes TRICKY :D --blub
 static char Nicks_list[MAX_SCOREBOARD][MAX_SCOREBOARDNAME];	// contains the nicks with colors and all that
