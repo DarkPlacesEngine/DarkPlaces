@@ -930,7 +930,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		}
 	}
 
-	NetConn_UpdateCleartime(&conn->cleartime, cl_rate.integer, cl_rate_burstsize.integer, totallen);
+	NetConn_UpdateCleartime(&conn->cleartime, rate, burstsize, totallen);
 
 	return 0;
 }
