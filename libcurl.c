@@ -1226,7 +1226,7 @@ void Curl_Run(void)
 	if(maxspeed > 0)
 	{
 		double bytes = bytes_sent + bytes_received; // maybe smoothen a bit?
-		curltime = realtime + bytes / (cl_curl_maxspeed.value * 1024.0);
+		curltime = realtime + bytes / (maxspeed * 1024.0);
 		bytes_sent = 0;
 		bytes_received = 0;
 	}
