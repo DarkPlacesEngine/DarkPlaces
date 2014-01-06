@@ -6161,7 +6161,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 					memset(r_refdef.viewcache.world_pvsbits, 0xFF, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
 			}
 
-			r_fb.water.hideplayer = r_water_hideplayer.integer >= 2;
+			r_fb.water.hideplayer = ((r_water_hideplayer.integer >= 2) && !chase_active.integer);
 			R_ResetViewRendering3D(p->fbo_reflection, r_fb.water.depthtexture, p->texture_reflection);
 			R_ClearScreen(r_refdef.fogenabled);
 			if(r_water_scissormode.integer & 2)
@@ -6190,7 +6190,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 					continue; // FIXME the plane then still may get rendered but with broken texture, but it sure won't be visible
 			}
 
-			r_fb.water.hideplayer = r_water_hideplayer.integer >= 1;
+			r_fb.water.hideplayer = ((r_water_hideplayer.integer >= 1) && !chase_active.integer);
 
 			r_refdef.view.clipplane = p->plane;
 			VectorNegate(r_refdef.view.clipplane.normal, r_refdef.view.clipplane.normal);
