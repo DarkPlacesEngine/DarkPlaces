@@ -562,6 +562,7 @@ typedef struct prvm_prog_s
 	int					numglobals;
 
 	int					*statement_linenums; // NULL if not available
+	int					*statement_columnnums; // NULL if not available
 
 	double				*statement_profile; // only incremented if prvm_statementprofiling is on
 
