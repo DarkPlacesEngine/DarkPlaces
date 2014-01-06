@@ -129,7 +129,12 @@ static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
 
 	Con_Printf("s%i: ", opnum);
 	if( prog->statement_linenums )
-		Con_Printf( "%s:%i: ", PRVM_GetString( prog, prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
+	{
+		if ( prog->statement_columnnums )
+			Con_Printf( "%s:%i:%i: ", PRVM_GetString( prog, prog->xfunction->s_file ), prog->statement_linenums[ opnum ], prog->statement_columnnums[ opnum ] );
+		else
+			Con_Printf( "%s:%i: ", PRVM_GetString( prog, prog->xfunction->s_file ), prog->statement_linenums[ opnum ] );
+	}
 
 	if (prvm_statementprofiling.integer)
 		Con_Printf("%7.0f ", prog->statement_profile[s - prog->statements]);
@@ -226,7 +231,12 @@ void PRVM_StackTrace (prvm_prog_t *prog)
 		else
 		{
 			if (prog->statement_linenums)
-				Con_Printf("%12s:%i : %s : statement %i\n", PRVM_GetString(prog, f->s_file), prog->statement_linenums[prog->stack[i].s], PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+			{
+				if (prog->statement_columnnums)
+					Con_Printf("%12s:%i:%i : %s : statement %i\n", PRVM_GetString(prog, f->s_file), prog->statement_linenums[prog->stack[i].s], prog->statement_columnnums[prog->stack[i].s], PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+				else
+					Con_Printf("%12s:%i : %s : statement %i\n", PRVM_GetString(prog, f->s_file), prog->statement_linenums[prog->stack[i].s], PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
+			}
 			else
 				Con_Printf("%12s : %s : statement %i\n", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement);
 		}
