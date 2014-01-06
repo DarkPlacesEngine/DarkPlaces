@@ -914,7 +914,6 @@ void SV_SendServerinfo (client_t *client)
 	{
 		client->csqcentityscope[i] = 0;
 		client->csqcentitysendflags[i] = 0xFFFFFF;
-		client->csqcentityglobalhistory[i] = 0;
 	}
 	for (i = 0;i < NUM_CSQCENTITYDB_FRAMES;i++)
 	{
