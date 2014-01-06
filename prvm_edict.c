@@ -1887,7 +1887,14 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 		(unsigned int)LittleLong( header[ 5 ] ) == (unsigned int)prog->progs_numstatements )
 	{
 		prog->statement_linenums = (int *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof( int ) );
-		memcpy( prog->statement_linenums, (int *) lno + 6, prog->progs_numstatements * sizeof( int ) );
+		memcpy( prog->statement_linenums, header + 6, prog->progs_numstatements * sizeof( int ) );
+
+		/* gmqcc suports columnums */
+		if ((unsigned int)filesize > ((6 + 2 * prog->progs_numstatements) * sizeof( int )))
+		{
+			prog->statement_columnnums = (int *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof( int ) );
+			memcpy( prog->statement_columnnums, header + 6 + prog->progs_numstatements, prog->progs_numstatements * sizeof( int ) );
+		}
 	}
 	Mem_Free( lno );
 }
