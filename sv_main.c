@@ -3632,11 +3632,7 @@ static void SVVM_free_edict(prvm_prog_t *prog, prvm_edict_t *ed)
 	e = PRVM_NUM_FOR_EDICT(ed);
 	sv.csqcentityversion[e] = 0;
 	for (i = 0;i < svs.maxclients;i++)
-	{
-		if (svs.clients[i].csqcentityscope[e])
-			svs.clients[i].csqcentityscope[e] = 1; // removed, awaiting send
 		svs.clients[i].csqcentitysendflags[e] = 0xFFFFFF;
-	}
 }
 
 static void SVVM_count_edicts(prvm_prog_t *prog)
