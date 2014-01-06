@@ -10,10 +10,11 @@
 		Con_Printf("sent entity update of size %u for %d classname %s flags %d\n", (msg->cursize - entityprofiling_startsize), num, PRVM_serveredictstring(ed, classname) ? PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)) : "(no classname)", flags); \
 	}
 
-// CSQC entity scope values.
-#define SCOPE_IGNORE 0
-#define SCOPE_REMOVE 1
-#define SCOPE_UPDATE 2
+// CSQC entity scope values. Bitflags!
+#define SCOPE_WANTREMOVE 1  // Set if a remove has been scheduled. Has priority over WANTUPDATE.
+#define SCOPE_WANTUPDATE 2  // Set if an update has been scheduled.
+#define SCOPE_WANTSEND (SCOPE_WANTREMOVE | SCOPE_WANTUPDATE)
+#define SCOPE_EXISTED_ONCE 4
 
 // this is 88 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
@@ -284,14 +285,14 @@ static void EntityFrameCSQC_LostAllFrames(client_t *client)
 	n = client->csqcnumedicts;
 	for(i = 0; i < n; ++i)
 	{
-		if(client->csqcentityglobalhistory[i])
+		if(client->csqcentityscope[i] & SCOPE_EXISTED_ONCE)
 		{
 			ed = prog->edicts + i;
 			if (PRVM_serveredictfunction(ed, SendEntity))
 				client->csqcentitysendflags[i] |= 0xFFFFFF; // FULL RESEND
 			else // if it was ever sent to that client as a CSQC entity
 			{
-				client->csqcentityscope[i] = SCOPE_REMOVE;
+				client->csqcentityscope[i] |= SCOPE_WANTREMOVE;
 				client->csqcentitysendflags[i] |= 0xFFFFFF;
 			}
 		}
@@ -403,7 +404,7 @@ void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
 		{
 			// a remove got lost, then either send a remove or - if it was
 			// recreated later - a FULL update to make totally sure
-			client->csqcentityscope[i] = SCOPE_REMOVE;
+			client->csqcentityscope[i] |= SCOPE_WANTREMOVE;
 			client->csqcentitysendflags[i] = 0xFFFFFF;
 		}
 		else
@@ -466,18 +467,21 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 		end = *n;
 		for (;number < end;number++)
 		{
-			if (client->csqcentityscope[number] != SCOPE_IGNORE)
+			if (client->csqcentityscope[number] & SCOPE_WANTSEND)
 			{
-				client->csqcentityscope[number] = SCOPE_REMOVE;
+				client->csqcentityscope[number] |= SCOPE_WANTREMOVE;
 				client->csqcentitysendflags[number] = 0xFFFFFF;
 			}
 		}
 		ed = prog->edicts + number;
 		if (PRVM_serveredictfunction(ed, SendEntity))
-			client->csqcentityscope[number] = SCOPE_UPDATE;
-		else if (client->csqcentityscope[number] != SCOPE_IGNORE)
 		{
-			client->csqcentityscope[number] = SCOPE_REMOVE;
+			client->csqcentityscope[number] &= ~SCOPE_WANTREMOVE;
+			client->csqcentityscope[number] |= SCOPE_WANTUPDATE;
+		}
+		else if (client->csqcentityscope[number] & SCOPE_WANTSEND)
+		{
+			client->csqcentityscope[number] |= SCOPE_WANTREMOVE;
 			client->csqcentitysendflags[number] = 0xFFFFFF;
 		}
 		number++;
@@ -485,9 +489,9 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 	end = client->csqcnumedicts;
 	for (;number < end;number++)
 	{
-		if (client->csqcentityscope[number] != SCOPE_IGNORE)
+		if (client->csqcentityscope[number] & SCOPE_WANTSEND)
 		{
-			client->csqcentityscope[number] = SCOPE_REMOVE;
+			client->csqcentityscope[number] |= SCOPE_WANTREMOVE;
 			client->csqcentitysendflags[number] = 0xFFFFFF;
 		}
 	}
@@ -497,7 +501,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 	end = client->csqcnumedicts;
 	for (number = 1;number < end;number++)
 	{
-		if (client->csqcentityscope[number] == SCOPE_IGNORE)
+		if (!(client->csqcentityscope[number] & SCOPE_WANTSEND))
 			continue;
 		sendflags = client->csqcentitysendflags[number];
 		if (!sendflags)
@@ -505,8 +509,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 		if(db->num >= NUM_CSQCENTITIES_PER_FRAME)
 			break;
 		ed = prog->edicts + number;
-		// entity scope is either update (2) or remove (1)
-		if (client->csqcentityscope[number] == SCOPE_REMOVE)
+		if (client->csqcentityscope[number] & SCOPE_WANTREMOVE)
 		{
 			// write a remove message
 			// first write the message identifier if needed
@@ -520,12 +523,12 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 			{
 				ENTITYSIZEPROFILING_START(msg, number, 0);
 				MSG_WriteShort(msg, (unsigned short)number | 0x8000);
-				client->csqcentityscope[number] = SCOPE_IGNORE;
+				client->csqcentityscope[number] &= ~SCOPE_WANTSEND;
 				client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
 				db->entno[db->num] = number;
 				db->sendflags[db->num] = -1;
 				db->num += 1;
-				client->csqcentityglobalhistory[number] = 1;
+				client->csqcentityscope[number] |= SCOPE_EXISTED_ONCE;
 				ENTITYSIZEPROFILING_END(msg, number, 0);
 			}
 			if (msg->cursize + 17 >= maxsize)
@@ -536,7 +539,6 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 			// write an update
 			// save the cursize value in case we overflow and have to rollback
 			int oldcursize = msg->cursize;
-			client->csqcentityscope[number] = SCOPE_REMOVE;
 			if (PRVM_serveredictfunction(ed, SendEntity))
 			{
 				if(!sectionstarted)
@@ -561,12 +563,12 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 							if(!sectionstarted)
 								MSG_WriteByte(msg, svc_csqcentities);
 							MSG_WriteShort(msg, (unsigned short)number | 0x8000);
-							client->csqcentityscope[number] = SCOPE_IGNORE;
+							client->csqcentityscope[number] &= ~SCOPE_WANTSEND;
 							client->csqcentitysendflags[number] = 0xFFFFFF; // resend completely if it becomes active again
 							db->entno[db->num] = number;
 							db->sendflags[db->num] = -1;
 							db->num += 1;
-							client->csqcentityglobalhistory[number] = 1;
+							client->csqcentityscope[number] |= SCOPE_EXISTED_ONCE;
 							// and take note that we have begun the svc_csqcentities
 							// section of the packet
 							sectionstarted = 1;
@@ -584,7 +586,7 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 						db->entno[db->num] = number;
 						db->sendflags[db->num] = sendflags;
 						db->num += 1;
-						client->csqcentityglobalhistory[number] = 1;
+						client->csqcentityscope[number] |= SCOPE_EXISTED_ONCE;
 						// and take note that we have begun the svc_csqcentities
 						// section of the packet
 						sectionstarted = 1;
