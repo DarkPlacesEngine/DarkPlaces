@@ -521,6 +521,9 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 		}
 		else
 		{
+			// save the cursize value in case we overflow and have to rollback
+			int oldcursize = msg->cursize;
+
 			// An update.
 			sendflags = client->csqcentitysendflags[number];
 			// Nothing to send? FINE.
@@ -531,8 +534,6 @@ qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers
 				sendflags = 0xFFFFFF;
 
 			// write an update
-			// save the cursize value in case we overflow and have to rollback
-			int oldcursize = msg->cursize;
 			if (PRVM_serveredictfunction(ed, SendEntity))
 			{
 				if(!sectionstarted)
