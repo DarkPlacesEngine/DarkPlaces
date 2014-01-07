@@ -694,7 +694,9 @@ static void SCR_SetUpToDrawConsole (void)
 {
 	// lines of console to display
 	float conlines;
+#ifdef CONFIG_MENU
 	static int framecounter = 0;
+#endif
 
 	Con_CheckResize ();
 
@@ -707,8 +709,8 @@ static void SCR_SetUpToDrawConsole (void)
 			framecounter++;
 	}
 	else
-#endif
 		framecounter = 0;
+#endif
 
 	if (scr_conforcewhiledisconnected.integer && key_dest == key_game && cls.signon != SIGNONS)
 		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
