@@ -19,6 +19,7 @@ const char *vm_sv_extensions =
 "DP_CON_SET "
 "DP_CON_SETA "
 "DP_CON_STARTMAP "
+"DP_COVERAGE "
 "DP_CRYPTO "
 "DP_CSQC_BINDMAPS "
 "DP_CSQC_ENTITYWORLDOBJECT "
@@ -3823,6 +3824,9 @@ NULL,							// #637
 NULL,							// #638
 VM_digest_hex,						// #639
 NULL,							// #640
+NULL,							// #641
+VM_coverage,						// #642
+NULL,							// #643
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

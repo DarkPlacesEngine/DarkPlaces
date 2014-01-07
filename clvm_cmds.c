@@ -4980,6 +4980,8 @@ VM_CL_RotateMoves,					// #638
 VM_digest_hex,						// #639
 VM_CL_V_CalcRefdef,					// #640 void(entity e) V_CalcRefdef (DP_CSQC_V_CALCREFDEF)
 NULL,							// #641
+VM_coverage,						// #642
+NULL
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);

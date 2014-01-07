@@ -1428,6 +1428,12 @@ void(float fh, entity e) writetofile = #606;
 float(string s) isfunction = #607;
 void(entity e, string s) parseentitydata = #608;
 
+//DP_COVERAGE
+//idea: divVerent
+//darkplaces implementation: divVerent
+//function definitions:
+void coverage() = #642;  // Reports a coverage event. The engine counts for each of the calls to this builtin whether it has been called.
+
 // assorted builtins
 const float		STAT_MOVEVARS_TICRATE           = 240;
 const float		STAT_MOVEVARS_TIMESCALE         = 241;

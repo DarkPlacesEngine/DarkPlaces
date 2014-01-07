@@ -7340,3 +7340,11 @@ void VM_physics_addtorque(prvm_prog_t *prog)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VM_physics_ApplyCmd(ed, &f);
 }
+
+extern cvar_t prvm_coverage;
+void VM_coverage(prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(0, VM_coverage);
+	if (prog->explicit_profile[prog->xstatement]++ == 0 && (prvm_coverage.integer & 2))
+		PRVM_ExplicitCoverageEvent(prog, prog->xstatement);
+}
