@@ -7346,5 +7346,5 @@ void VM_coverage(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_coverage);
 	if (prog->explicit_profile[prog->xstatement]++ == 0 && (prvm_coverage.integer & 2))
-		PRVM_ExplicitCoverageEvent(prog, prog->xstatement);
+		PRVM_ExplicitCoverageEvent(prog, prog->xfunction, prog->xstatement);
 }
