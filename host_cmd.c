@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 #include "image.h"
 
+#include "prvm_cmds.h"
 #include "utf8lib.h"
 
 // for secure rcon authentication
@@ -760,11 +761,6 @@ static void Host_Savegame_f (void)
 Host_Loadgame_f
 ===============
 */
-
-prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, char *format);
-void BufStr_Set(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer, int strindex, const char *str);
-void BufStr_Del(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer);
-void BufStr_Flush(prvm_prog_t *prog);
 
 static void Host_Loadgame_f (void)
 {
