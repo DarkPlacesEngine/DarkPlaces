@@ -685,20 +685,35 @@ void PRVM_Init_Exec(prvm_prog_t *prog)
 Coverage
 ==================
 */
+// Note: in these two calls, prog->xfunction is assumed to be sane.
+static const char *PRVM_WhereAmI(char *buf, size_t bufsize, prvm_prog_t *prog, mfunction_t *func, int statement)
+{
+	if (prog->statement_linenums)
+	{
+		if (prog->statement_columnnums)
+			return va(buf, bufsize, "%s:%i:%i(%s, %i)", PRVM_GetString(prog, func->s_file), prog->statement_linenums[statement], prog->statement_columnnums[statement], PRVM_GetString(prog, func->s_name), statement - func->first_statement);
+		else
+			return va(buf, bufsize, "%s:%i(%s, %i)", PRVM_GetString(prog, func->s_file), prog->statement_linenums[statement], PRVM_GetString(prog, func->s_name), statement - func->first_statement);
+	}
+	else
+		return va(buf, bufsize, "%s(%s, %i)", PRVM_GetString(prog, func->s_file), PRVM_GetString(prog, func->s_name), statement - func->first_statement);
+}
 static void PRVM_FunctionCoverageEvent(prvm_prog_t *prog, mfunction_t *func)
 {
 	++prog->functions_covered;
 	Con_Printf("prvm_coverage: %s just called %s for the first time. Coverage: %.2f%%.\n", prog->name, PRVM_GetString(prog, func->s_name), prog->functions_covered * 100.0 / prog->numfunctions);
 }
-void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, int statement)
+void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, mfunction_t *func, int statement)
 {
+	char vabuf[128];
 	++prog->explicit_covered;
-	Con_Printf("prvm_coverage: %s just executed a coverage() statement for the first time. Coverage: %.2f%%.\n", prog->name, prog->explicit_covered * 100.0 / prog->numexplicitcoveragestatements);
+	Con_Printf("prvm_coverage: %s just executed a coverage() statement at %s for the first time. Coverage: %.2f%%.\n", prog->name, PRVM_WhereAmI(vabuf, sizeof(vabuf), prog, func, statement), prog->explicit_covered * 100.0 / prog->numexplicitcoveragestatements);
 }
-static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, int statement)
+static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, mfunction_t *func, int statement)
 {
+	char vabuf[128];
 	++prog->statements_covered;
-	Con_Printf("prvm_coverage: %s just executed a statement for the first time. Coverage: %.2f%%.\n", prog->name, prog->statements_covered * 100.0 / prog->numstatements);
+	Con_Printf("prvm_coverage: %s just executed a statement at %s for the first time. Coverage: %.2f%%.\n", prog->name, PRVM_WhereAmI(vabuf, sizeof(vabuf), prog, func, statement), prog->statements_covered * 100.0 / prog->numstatements);
 }
 
 

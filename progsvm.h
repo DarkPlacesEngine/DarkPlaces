@@ -897,6 +897,6 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
 void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed);
 
-void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, int statement);
+void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, mfunction_t *func, int statement);
 
 #endif

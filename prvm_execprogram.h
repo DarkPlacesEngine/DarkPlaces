@@ -37,7 +37,7 @@
 			if (prog->trace)
 				PRVM_PrintStatement(prog, st);
 			if (prog->statement_profile[st - cached_statements]++ == 0 && (prvm_coverage.integer & 4))
-				PRVM_StatementCoverageEvent(prog, st - cached_statements);
+				PRVM_StatementCoverageEvent(prog, prog->xfunction, st - cached_statements);
 			if (prog->break_statement >= 0)
 				if ((st - cached_statements) == prog->break_statement)
 				{
