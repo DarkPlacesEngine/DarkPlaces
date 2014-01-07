@@ -35,6 +35,7 @@ cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as
 // LordHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
 cvar_t prvm_timeprofiling = {0, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
+cvar_t prvm_coverage = {0, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
 cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
 cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
 cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
@@ -2010,6 +2011,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	prog->statements = (mstatement_t *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(mstatement_t));
 	// allocate space for profiling statement usage
 	prog->statement_profile = (double *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(*prog->statement_profile));
+	prog->explicit_profile = (double *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(*prog->statement_profile));
 	// functions need to be converted to the memory format
 	prog->functions = (mfunction_t *)Mem_Alloc(prog->progs_mempool, sizeof(mfunction_t) * prog->progs_numfunctions);
 
@@ -2215,6 +2217,11 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			break;
 		// 1 global
 		case OP_CALL0:
+			if ( a < prog->progs_numglobals)
+				if ( prog->globals.ip[remapglobal(a)] >= 0 )
+					if ( prog->globals.ip[remapglobal(a)] < prog->progs_numfunctions )
+						if ( !prog->functions[prog->globals.ip[remapglobal(a)]].first_statement == -642 )
+							++prog->numexplicitcoveragestatements;
 		case OP_CALL1:
 		case OP_CALL2:
 		case OP_CALL3:
@@ -2901,6 +2908,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_traceqc);
 	Cvar_RegisterVariable (&prvm_statementprofiling);
 	Cvar_RegisterVariable (&prvm_timeprofiling);
+	Cvar_RegisterVariable (&prvm_coverage);
 	Cvar_RegisterVariable (&prvm_backtraceforwarnings);
 	Cvar_RegisterVariable (&prvm_leaktest);
 	Cvar_RegisterVariable (&prvm_leaktest_ignore_classnames);

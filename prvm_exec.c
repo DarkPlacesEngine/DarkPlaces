@@ -119,6 +119,7 @@ const char *prvm_opnames[] =
 PRVM_PrintStatement
 =================
 */
+extern cvar_t prvm_coverage;
 extern cvar_t prvm_statementprofiling;
 extern cvar_t prvm_timeprofiling;
 static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
@@ -185,8 +186,11 @@ void PRVM_PrintFunctionStatements (prvm_prog_t *prog, const char *name)
 	for (i = firststatement;i < endstatement;i++)
 	{
 		PRVM_PrintStatement(prog, prog->statements + i);
-		prog->statement_profile[i] = 0;
+		if (!(prvm_coverage.integer & 4))
+			prog->statement_profile[i] = 0;
 	}
+	if (prvm_coverage.integer & 4)
+		Con_Printf("Collecting statement coverage, not flushing statement profile.\n");
 }
 
 /*
@@ -455,6 +459,12 @@ void PRVM_Profile_f (void)
 	prvm_prog_t *prog;
 	int howmany;
 
+	if (prvm_coverage.integer & 1)
+	{
+		Con_Printf("Collecting function coverage, cannot profile - sorry!\n");
+		return;
+	}
+
 	howmany = 1<<30;
 	if (Cmd_Argc() == 3)
 		howmany = atoi(Cmd_Argv(2));
@@ -474,6 +484,12 @@ void PRVM_ChildProfile_f (void)
 {
 	prvm_prog_t *prog;
 	int howmany;
+
+	if (prvm_coverage.integer & 1)
+	{
+		Con_Printf("Collecting function coverage, cannot profile - sorry!\n");
+		return;
+	}
 
 	howmany = 1<<30;
 	if (Cmd_Argc() == 3)
@@ -664,6 +680,28 @@ void PRVM_Init_Exec(prvm_prog_t *prog)
 	// nothing here yet
 }
 
+/*
+==================
+Coverage
+==================
+*/
+static void PRVM_FunctionCoverageEvent(prvm_prog_t *prog, mfunction_t *func)
+{
+	++prog->functions_covered;
+	Con_Printf("prvm_coverage: %s just called %s for the first time. Coverage: %.2f%%.\n", prog->name, PRVM_GetString(prog, func->s_name), prog->functions_covered * 100.0 / prog->numfunctions);
+}
+void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, int statement)
+{
+	++prog->explicit_covered;
+	Con_Printf("prvm_coverage: %s just executed a coverage() statement for the first time. Coverage: %.2f%%.\n", prog->name, prog->explicit_covered * 100.0 / prog->numexplicitcoveragestatements);
+}
+static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, int statement)
+{
+	++prog->statements_covered;
+	Con_Printf("prvm_coverage: %s just executed a statement for the first time. Coverage: %.2f%%.\n", prog->name, prog->statements_covered * 100.0 / prog->numstatements);
+}
+
+
 #define OPA ((prvm_eval_t *)&prog->globals.fp[st->operand[0]])
 #define OPB ((prvm_eval_t *)&prog->globals.fp[st->operand[1]])
 #define OPC ((prvm_eval_t *)&prog->globals.fp[st->operand[2]])
@@ -732,11 +770,12 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
-	prog->xfunction->callcount++;
+	if (prog->xfunction->callcount++ == 0 && (prvm_coverage.integer & 1))
+		PRVM_FunctionCoverageEvent(prog, prog->xfunction);
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -838,11 +877,12 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
-	prog->xfunction->callcount++;
+	if (prog->xfunction->callcount++ == 0 && (prvm_coverage.integer & 1))
+		PRVM_FunctionCoverageEvent(prog, prog->xfunction);
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -948,11 +988,12 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	// instead of counting instructions, we count jumps
 	jumpcount = 0;
 	// add one to the callcount of this function because otherwise engine-called functions aren't counted
-	prog->xfunction->callcount++;
+	if (prog->xfunction->callcount++ == 0 && (prvm_coverage.integer & 1))
+		PRVM_FunctionCoverageEvent(prog, prog->xfunction);
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global >= 0 || prog->watch_edict >= 0 || prog->break_statement >= 0)
+	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)

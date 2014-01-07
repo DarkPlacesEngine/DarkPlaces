@@ -13,8 +13,9 @@
 const char *vm_m_extensions =
 "BX_WAL_SUPPORT "
 "DP_CINEMATIC_DPV "
-"DP_CSQC_BINDMAPS "
+"DP_COVERAGE "
 "DP_CRYPTO "
+"DP_CSQC_BINDMAPS "
 "DP_GFX_FONTS "
 "DP_GFX_FONTS_FREETYPE "
 "DP_UTF8 "
@@ -1583,6 +1584,7 @@ NULL,							// #638
 VM_digest_hex,						// #639
 NULL,							// #640
 VM_M_crypto_getmyidstatus,				// #641 float(float i) crypto_getmyidstatus
+VM_coverage,						// #642
 NULL
 };
 

@@ -36,7 +36,8 @@
 #if PRVMSLOWINTERPRETER
 			if (prog->trace)
 				PRVM_PrintStatement(prog, st);
-			prog->statement_profile[st - cached_statements]++;
+			if (prog->statement_profile[st - cached_statements]++ == 0 && (prvm_coverage.integer & 4))
+				PRVM_StatementCoverageEvent(prog, st - cached_statements);
 			if (prog->break_statement >= 0)
 				if ((st - cached_statements) == prog->break_statement)
 				{
@@ -372,7 +373,8 @@
 				}
 
 				newf = &prog->functions[OPA->function];
-				newf->callcount++;
+				if (newf->callcount++ == 0 && (prvm_coverage.integer & 1))
+					PRVM_FunctionCoverageEvent(prog, newf);
 
 				if (newf->first_statement < 0)
 				{
