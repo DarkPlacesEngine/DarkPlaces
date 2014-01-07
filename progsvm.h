@@ -534,6 +534,7 @@ typedef struct prvm_prog_s
 	double				profiletime; // system time when last PRVM_CallProfile was called (or PRVM_Prog_Load initially)
 	unsigned int		id; // increasing unique id of progs instance
 	mfunction_t			*functions;
+	int				functions_covered;
 	char				*strings;
 	int					stringssize;
 	ddef_t				*fielddefs;
@@ -565,6 +566,10 @@ typedef struct prvm_prog_s
 	int					*statement_columnnums; // NULL if not available
 
 	double				*statement_profile; // only incremented if prvm_statementprofiling is on
+	int				statements_covered;
+	double				*explicit_profile; // only incremented if prvm_statementprofiling is on
+	int				explicit_covered;
+	int				numexplicitcoveragestatements;
 
 	union {
 		prvm_vec_t *fp;
@@ -891,5 +896,7 @@ void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroup
 void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model, double curtime);
 void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
 void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed);
+
+void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, int statement);
 
 #endif
