@@ -1,6 +1,14 @@
-// NEED to reset startst after calling this!
+// NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
-	prog->xfunction->profile += (st - startst)
+	prog->xfunction->profile += (st - startst); \
+	if (prvm_statementprofiling.integer || (prvm_coverage.integer & 4)) { \
+		/* All statements from startst+1 to st have been hit. */ \
+		while (++startst <= st) { \
+			if (prog->statement_profile[startst - cached_statements]++ == 0 && (prvm_coverage.integer & 4)) \
+				PRVM_StatementCoverageEvent(prog, prog->xfunction, startst - cached_statements); \
+		} \
+		/* Observe: startst now is clobbered (now at st+1)! */ \
+	}
 
 #ifdef PRVMTIMEPROFILING
 #define PRE_ERROR() \
@@ -140,8 +148,6 @@
 #if PRVMSLOWINTERPRETER
 			if (prog->trace)
 				PRVM_PrintStatement(prog, st);
-			if (prog->statement_profile[st - cached_statements]++ == 0 && (prvm_coverage.integer & 4))
-				PRVM_StatementCoverageEvent(prog, prog->xfunction, st - cached_statements);
 			if (prog->break_statement >= 0)
 				if ((st - cached_statements) == prog->break_statement)
 				{
