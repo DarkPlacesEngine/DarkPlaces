@@ -3,11 +3,14 @@
 	prog->xstatement = st - cached_statements; \
 	tm = Sys_DirtyTime(); \
 	prog->xfunction->profile += (st - startst); \
-	prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
+	prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0; \
+	startst = st; \
+	starttm = tm
 #else
 #define PreError() \
 	prog->xstatement = st - cached_statements; \
-	prog->xfunction->profile += (st - startst);
+	prog->xfunction->profile += (st - startst); \
+	startst = st
 #endif
 
 // This code isn't #ifdef/#define protectable, don't try.
@@ -188,9 +191,7 @@
 				{
 					if (developer.integer)
 					{
-						prog->xfunction->profile += (st - startst);
-						startst = st;
-						prog->xstatement = st - cached_statements;
+						PreError();
 						VM_Warning(prog, "Attempted division by zero in %s\n", prog->name );
 					}
 					OPC->_float = 0.0f;
@@ -295,7 +296,7 @@
 					}
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						prog->xstatement = st - cached_statements;
+						PreError();
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
@@ -313,7 +314,7 @@
 					}
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						prog->xstatement = st - cached_statements;
+						PreError();
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
