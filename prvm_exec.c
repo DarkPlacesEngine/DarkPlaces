@@ -793,7 +793,7 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
+	if (prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -900,7 +900,7 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
+	if (prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
@@ -1011,7 +1011,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 
 chooseexecprogram:
 	cachedpr_trace = prog->trace;
-	if (prvm_statementprofiling.integer || prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0 || (prvm_coverage.integer & 4))
+	if (prog->trace || prog->watch_global_type != ev_void || prog->watch_field_type != ev_void || prog->break_statement >= 0)
 	{
 #define PRVMSLOWINTERPRETER 1
 		if (prvm_timeprofiling.integer)
