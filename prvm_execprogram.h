@@ -1,15 +1,19 @@
-#ifdef PRVMTIMEPROFILING 
-#define PreError() \
+// NEED to reset startst after calling this!
+#define ADVANCE_PROFILE_BEFORE_JUMP() \
+	prog->xfunction->profile += (st - startst)
+
+#ifdef PRVMTIMEPROFILING
+#define PRE_ERROR() \
+	ADVANCE_PROFILE_BEFORE_JUMP(); \
 	prog->xstatement = st - cached_statements; \
 	tm = Sys_DirtyTime(); \
-	prog->xfunction->profile += (st - startst); \
 	prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0; \
 	startst = st; \
 	starttm = tm
 #else
-#define PreError() \
+#define PRE_ERROR() \
+	ADVANCE_PROFILE_BEFORE_JUMP(); \
 	prog->xstatement = st - cached_statements; \
-	prog->xfunction->profile += (st - startst); \
 	startst = st
 #endif
 
@@ -191,7 +195,7 @@
 				{
 					if (developer.integer)
 					{
-						PreError();
+						PRE_ERROR();
 						VM_Warning(prog, "Attempted division by zero in %s\n", prog->name );
 					}
 					OPC->_float = 0.0f;
@@ -290,13 +294,13 @@
 				{
 					if ((prvm_uint_t)OPB->_int >= cached_entityfieldsarea)
 					{
-						PreError();
+						PRE_ERROR();
 						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 						goto cleanup;
 					}
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						PreError();
+						PRE_ERROR();
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
@@ -308,13 +312,13 @@
 				{
 					if ((prvm_uint_t)OPB->_int > cached_entityfieldsarea_3)
 					{
-						PreError();
+						PRE_ERROR();
 						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
 						goto cleanup;
 					}
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
-						PreError();
+						PRE_ERROR();
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
@@ -327,20 +331,20 @@
 			HANDLE_OPCODE(OP_ADDRESS):
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to address an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
 #if 0
 				if (OPA->edict == 0 && !cached_allowworldwrites)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("forbidden assignment to null/world entity in %s", prog->name);
 					goto cleanup;
 				}
@@ -355,13 +359,13 @@
 			HANDLE_OPCODE(OP_LOAD_FNC):
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
@@ -372,13 +376,13 @@
 			HANDLE_OPCODE(OP_LOAD_V):
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int > cached_entityfields_3)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
 					goto cleanup;
 				}
@@ -397,7 +401,7 @@
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
 				// and entity, string, field values can never have that value
 				{
-					prog->xfunction->profile += (st - startst);
+					ADVANCE_PROFILE_BEFORE_JUMP();
 					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
@@ -416,7 +420,7 @@
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
 				// and entity, string, field values can never have that value
 				{
-					prog->xfunction->profile += (st - startst);
+					ADVANCE_PROFILE_BEFORE_JUMP();
 					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
@@ -430,7 +434,7 @@
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GOTO):
-				prog->xfunction->profile += (st - startst);
+				ADVANCE_PROFILE_BEFORE_JUMP();
 				st = cached_statements + st->jumpabsolute - 1;	// offset the st++
 				startst = st;
 				// no bounds check needed, it is done when loading progs
@@ -456,16 +460,18 @@
 				prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 				starttm = tm;
 #endif
-				prog->xfunction->profile += (st - startst);
+				ADVANCE_PROFILE_BEFORE_JUMP();
 				startst = st;
 				prog->xstatement = st - cached_statements;
 				prog->argc = st->op - OP_CALL0;
 				if (!OPA->function)
+				{
 					prog->error_cmd("NULL function in %s", prog->name);
+				}
 
 				if(!OPA->function || OPA->function < 0 || OPA->function >= prog->numfunctions)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s CALL outside the program", prog->name);
 					goto cleanup;
 				}
@@ -520,7 +526,7 @@
 				prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 				starttm = tm;
 #endif
-				prog->xfunction->profile += (st - startst);
+				ADVANCE_PROFILE_BEFORE_JUMP();
 				prog->xstatement = st - cached_statements;
 
 				prog->globals.ip[OFS_RETURN  ] = prog->globals.ip[st->operand[0]  ];
@@ -543,7 +549,7 @@
 				}
 				else
 				{
-					PreError();
+					PRE_ERROR();
 					prog->xstatement = st - cached_statements;
 					prog->error_cmd("OP_STATE not supported by %s", prog->name);
 				}
@@ -706,7 +712,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an out of bounds edict", prog->name);
 					goto cleanup;
 				}
@@ -718,13 +724,13 @@
 #if PRBOUNDSCHECK
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid field in an edict", prog->name);
 					goto cleanup;
 				}
@@ -742,7 +748,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int >= pr_globaldefs)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
@@ -753,7 +759,7 @@
 #if PRBOUNDSCHECK
 				if (OPB->_int < 0 || OPB->_int + 2 >= pr_globaldefs)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
@@ -768,7 +774,7 @@
 #if PRBOUNDSCHECK
 				if (i < 0 || i >= pr_globaldefs)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to address an out of bounds global", prog->name);
 					goto cleanup;
 				}
@@ -785,7 +791,7 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int >= pr_globaldefs)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
@@ -797,7 +803,7 @@
 #if PRBOUNDSCHECK
 				if (OPA->_int < 0 || OPA->_int + 2 >= pr_globaldefs)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
@@ -810,7 +816,7 @@
 			HANDLE_OPCODE(OP_BOUNDCHECK):
 				if (OPA->_int < 0 || OPA->_int >= st->b)
 				{
-					PreError();
+					PRE_ERROR();
 					prog->error_cmd("%s Progs boundcheck failed at line number %d, value is < 0 or >= %d", prog->name, st->b, st->c);
 					goto cleanup;
 				}
@@ -820,7 +826,7 @@
 
 #if !USE_COMPUTED_GOTOS
 			default:
-				PreError();
+				PRE_ERROR();
 				prog->error_cmd("Bad opcode %i in %s", st->op, prog->name);
 				goto cleanup;
 			}
@@ -846,6 +852,5 @@
 #undef DISPATCH_OPCODE
 #undef HANDLE_OPCODE
 #undef USE_COMPUTED_GOTOS
-
-
-#undef PreError
+#undef PRE_ERROR
+#undef ADVANCE_PROFILE_BEFORE_JUMP
