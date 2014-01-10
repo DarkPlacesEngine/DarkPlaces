@@ -1066,13 +1066,19 @@ static void sdl_newmap(void)
 }
 #endif
 
-static keynum_t buttonremap[18] =
+static keynum_t buttonremap[] =
 {
 	K_MOUSE1,
 	K_MOUSE3,
 	K_MOUSE2,
+#if SDL_MAJOR_VERSION == 1
+	// TODO Find out how SDL maps these buttons. It looks like we should
+	// still include these for sdl2? At least the button indexes don't
+	// differ between SDL1 and SDL2 for me, thus this array should stay the
+	// same (in X11 button order).
 	K_MWHEELUP,
 	K_MWHEELDOWN,
+#endif
 	K_MOUSE4,
 	K_MOUSE5,
 	K_MOUSE6,
@@ -1121,7 +1127,7 @@ void Sys_SendKeyEvents( void )
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
 				if (!vid_touchscreen.integer)
-				if (event.button.button <= 18)
+				if (event.button.button > 0 && event.button.button <= ARRAY_SIZE(buttonremap))
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
 				break;
 			case SDL_JOYBUTTONDOWN:
@@ -1237,8 +1243,22 @@ void Sys_SendKeyEvents( void )
 					Con_DPrintf("SDL_Event: SDL_MOUSEBUTTONUP\n");
 #endif
 				if (!vid_touchscreen.integer)
-				if (event.button.button <= 18)
+				if (event.button.button > 0 && event.button.button <= ARRAY_SIZE(buttonremap))
 					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
+				break;
+			case SDL_MOUSEWHEEL:
+				// TODO support wheel x direction.
+				i = event.wheel.y;
+				while (i > 0) {
+					--i;
+					Key_Event( K_MWHEELUP, 0, true );
+					Key_Event( K_MWHEELUP, 0, false );
+				}
+				while (i < 0) {
+					++i;
+					Key_Event( K_MWHEELDOWN, 0, true );
+					Key_Event( K_MWHEELDOWN, 0, false );
+				}
 				break;
 			case SDL_JOYBUTTONDOWN:
 			case SDL_JOYBUTTONUP:
