@@ -383,5 +383,7 @@ char **XPM_DecodeString(const char *in);
 
 size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen);
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #endif
 
