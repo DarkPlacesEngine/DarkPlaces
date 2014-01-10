@@ -2879,12 +2879,12 @@ vid_mode_t *VID_GetDesktopMode(void)
 	Uint32 rmask, gmask, bmask, amask;
 	SDL_GetDesktopDisplayMode(0, &mode);
 	SDL_PixelFormatEnumToMasks(mode.format, &bpp, &rmask, &gmask, &bmask, &amask);
-	modes[k].width = mode.w;
-	modes[k].height = mode.h;
-	modes[k].bpp = bpp;
-	modes[k].refreshrate = mode.refreshrate;
-	modes[k].pixelheight_num = 1;
-	modes[k].pixelheight_denom = 1; // SDL does not provide this
+	desktop_mode.width = mode.w;
+	desktop_mode.height = mode.h;
+	desktop_mode.bpp = bpp;
+	desktop_mode.refreshrate = mode.refresh_rate;
+	desktop_mode.pixelheight_num = 1;
+	desktop_mode.pixelheight_denom = 1; // SDL does not provide this
 	// TODO check whether this actually works, or whether we do still need
 	// a read-window-size-after-entering-desktop-fullscreen hack for
 	// multiscreen setups.
