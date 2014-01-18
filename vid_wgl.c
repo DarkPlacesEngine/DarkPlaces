@@ -490,7 +490,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 		if (vid_isfullscreen)
 		{
 			if (gldll)
-				ChangeDisplaySettings (NULL, 0);
+				ChangeDisplaySettings (NULL, CDS_FULLSCREEN);
 			vid_wassuspended = true;
 		}
 		VID_RestoreSystemGamma();
@@ -1946,7 +1946,7 @@ void VID_Shutdown (void)
 		DestroyWindow(mainwindow);
 	mainwindow = 0;
 	if (vid_isfullscreen && isgl)
-		ChangeDisplaySettings (NULL, 0);
+		ChangeDisplaySettings (NULL, CDS_FULLSCREEN);
 	vid_isfullscreen = false;
 }
 
