@@ -48,7 +48,7 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 qboolean Crypto_ServerAppendToChallenge(const char *data_in, size_t len_in, char *data_out, size_t *len_out, size_t maxlen);
 crypto_t *Crypto_ServerGetInstance(lhnetaddress_t *peeraddress);
-qboolean Crypto_ServerFinishInstance(crypto_t *out, crypto_t *in); // also clears allocated memory
+qboolean Crypto_FinishInstance(crypto_t *out, crypto_t *in); // also clears allocated memory, and frees the instance received by ServerGetInstance
 const char *Crypto_GetInfoResponseDataString(void);
 
 // retrieves a host key for an address (can be exposed to menuqc, or used by the engine to look up stored keys e.g. for server bookmarking)

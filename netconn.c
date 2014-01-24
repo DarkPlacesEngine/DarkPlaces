@@ -1516,10 +1516,10 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	}
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
-	crypto = &cls.crypto;
-	if(crypto && crypto->authenticated)
+	crypto = &cls.netcon->crypto;
+	if(cls.crypto.authenticated)
 	{
-		Crypto_ServerFinishInstance(&cls.netcon->crypto, crypto);
+		Crypto_FinishInstance(crypto, &cls.crypto);
 		Con_Printf("%s connection to %s has been established: server is %s@%.*s, I am %.*s@%.*s\n",
 				crypto->use_aes ? "Encrypted" : "Authenticated",
 				cls.netcon->address,
@@ -3079,7 +3079,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 							Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
 						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 						if(crypto && crypto->authenticated)
-							Crypto_ServerFinishInstance(&client->netconnection->crypto, crypto);
+							Crypto_FinishInstance(&client->netconnection->crypto, crypto);
 						SV_SendServerinfo(client);
 					}
 					else
@@ -3089,7 +3089,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						if (developer_extra.integer)
 							Con_Printf("Datagram_ParseConnectionless: sending duplicate accept to %s.\n", addressstring2);
 						if(crypto && crypto->authenticated)
-							Crypto_ServerFinishInstance(&client->netconnection->crypto, crypto);
+							Crypto_FinishInstance(&client->netconnection->crypto, crypto);
 						NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 					}
 					return true;
@@ -3111,7 +3111,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 					// now set up the client
 					if(crypto && crypto->authenticated)
-						Crypto_ServerFinishInstance(&conn->crypto, crypto);
+						Crypto_FinishInstance(&conn->crypto, crypto);
 					SV_ConnectClient(clientnum, conn);
 					NetConn_Heartbeat(1);
 					return true;
