@@ -1,4 +1,3 @@
-// TODO key loading, generating, saving
 #include "quakedef.h"
 #include "crypto.h"
 #include "common.h"
@@ -534,7 +533,7 @@ static crypto_t *Crypto_ServerFindInstance(lhnetaddress_t *peeraddress, qboolean
 	return crypto;
 }
 
-qboolean Crypto_ServerFinishInstance(crypto_t *out, crypto_t *crypto)
+qboolean Crypto_FinishInstance(crypto_t *out, crypto_t *crypto)
 {
 	// no check needed here (returned pointers are only used in prefilled fields)
 	if(!crypto || !crypto->authenticated)
@@ -651,7 +650,7 @@ static void Crypto_StoreHostKey(lhnetaddress_t *peeraddress, const char *keystri
 
 		if(idend - idstart == FP64_SIZE && keyend - keystart == FP64_SIZE)
 		{
-			for(keyid = 0; keyid < MAX_PUBKEYS; ++keyid)
+			for(keyid = MAX_PUBKEYS - 1; keyid >= 0; --keyid)
 				if(pubkeys[keyid])
 					if(!memcmp(pubkeys_fp64[keyid], keystart, FP64_SIZE))
 					{
@@ -659,8 +658,7 @@ static void Crypto_StoreHostKey(lhnetaddress_t *peeraddress, const char *keystri
 						idfp[FP64_SIZE] = 0;
 						break;
 					}
-			if(keyid >= MAX_PUBKEYS)
-				keyid = -1;
+			// If this failed, keyid will be -1.
 		}
 	}
 
@@ -1764,13 +1762,13 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			p = GetUntilNul(&data_in, &len_in);
 			if(p && *p)
 			{
+				// Find the highest numbered matching key for p.
 				for(i = 0; i < MAX_PUBKEYS; ++i)
 				{
 					if(pubkeys[i])
 						if(!strcmp(p, pubkeys_fp64[i]))
 							if(pubkeys_havepriv[i])
-								if(serverid < 0)
-									serverid = i;
+								serverid = i;
 				}
 				if(serverid < 0)
 					return Crypto_ServerError(data_out, len_out, "Invalid server key", NULL);
@@ -1778,12 +1776,12 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			p = GetUntilNul(&data_in, &len_in);
 			if(p && *p)
 			{
+				// Find the highest numbered matching key for p.
 				for(i = 0; i < MAX_PUBKEYS; ++i)
 				{
 					if(pubkeys[i])
 						if(!strcmp(p, pubkeys_fp64[i]))
-							if(clientid < 0)
-								clientid = i;
+							clientid = i;
 				}
 				if(clientid < 0)
 					return Crypto_ServerError(data_out, len_out, "Invalid client key", NULL);
@@ -2236,22 +2234,20 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 					break;
 				continue;
 			}
+			// Find the highest numbered matching key for p.
 			for(i = 0; i < MAX_PUBKEYS; ++i)
 			{
 				if(pubkeys[i])
 				if(!strcmp(p, pubkeys_fp64[i]))
 				{
 					if(pubkeys_havepriv[i])
-						if(clientid < 0)
-							clientid = i;
+						clientid = i;
 					if(server_can_auth)
-						if(serverid < 0)
-							if(wantserverid < 0 || i == wantserverid)
-								serverid = i;
+						if(wantserverid < 0 || i == wantserverid)
+							serverid = i;
 				}
 			}
-			if(clientid >= 0 && serverid >= 0)
-				break;
+			// Not breaking, as higher keys in the list always have priority.
 		}
 
 		// if stored host key is not found:
@@ -2260,7 +2256,6 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 		if(serverid >= 0 || clientid >= 0)
 		{
-			// TODO at this point, fill clientside crypto struct!
 			MAKE_CDATA;
 			CDATA->cdata_id = ++cdata_id;
 			CDATA->s = serverid;
