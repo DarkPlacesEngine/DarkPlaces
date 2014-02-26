@@ -5210,18 +5210,20 @@ static void R_View_UpdateEntityVisible (void)
 	int samples;
 	entity_render_t *ent;
 
-	renderimask = r_refdef.envmap                                    ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
-		: r_fb.water.hideplayer                                      ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL)
-		: (chase_active.integer || r_fb.water.renderingscene)  ? RENDER_VIEWMODEL
-		:                                                          RENDER_EXTERIORMODEL;
+	if (r_refdef.envmap || r_fb.water.hideplayer)
+		renderimask = RENDER_EXTERIORMODEL | RENDER_VIEWMODEL;
+	else if (chase_active.integer || r_fb.water.renderingscene)
+		renderimask = RENDER_VIEWMODEL;
+	else
+		renderimask = RENDER_EXTERIORMODEL;
 	if (!r_drawviewmodel.integer)
 		renderimask |= RENDER_VIEWMODEL;
 	if (!r_drawexteriormodel.integer)
 		renderimask |= RENDER_EXTERIORMODEL;
+	memset(r_refdef.viewcache.entityvisible, 0, r_refdef.scene.numentities);
 	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
-		memset(r_refdef.viewcache.entityvisible, 0, r_refdef.scene.numentities);
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
@@ -5237,7 +5239,9 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
-			r_refdef.viewcache.entityvisible[i] = !(ent->flags & renderimask) && ((ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)) || !R_CullBox(ent->mins, ent->maxs));
+			if (!(ent->flags & renderimask))
+			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
 	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane && !r_trippy.integer)
