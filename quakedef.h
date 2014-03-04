@@ -162,8 +162,8 @@ extern char engineversion[128];
 #define	MAX_DLIGHTS				256 ///< max number of dynamic lights (rocket flashes, etc) in scene at once
 #define	MAX_CACHED_PICS			1024 ///< max number of 2D pics loaded at once
 #define	CACHEPICHASHSIZE		256 ///< number of hash buckets for accelerating 2D pic name lookups
-#define	MAX_PARTICLEEFFECTNAME	256 ///< maximum number of unique names of particle effects (for particleeffectnum)
-#define	MAX_PARTICLEEFFECTINFO	4096 ///< maximum number of unique particle effects (each name may associate with several of these)
+#define	MAX_PARTICLEEFFECTNAME	4096 ///< maximum number of unique names of particle effects (for particleeffectnum)
+#define	MAX_PARTICLEEFFECTINFO	8192 ///< maximum number of unique particle effects (each name may associate with several of these)
 #define	MAX_PARTICLETEXTURES	256 ///< maximum number of unique particle textures in the particle font
 #define	MAXCLVIDEOS				65 ///< maximum number of video streams being played back at once (1 is reserved for the playvideo command)
 #define	MAX_DYNAMIC_TEXTURE_COUNT	64 ///< maximum number of dynamic textures (web browsers, playvideo, etc)

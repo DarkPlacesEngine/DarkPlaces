@@ -3011,7 +3011,7 @@ int SV_ParticleEffectIndex(const char *name)
 				{
 					if (argc == 2)
 					{
-						for (effectnameindex = 1;effectnameindex < SV_MAX_PARTICLEEFFECTNAME;effectnameindex++)
+						for (effectnameindex = 1;effectnameindex < MAX_PARTICLEEFFECTNAME;effectnameindex++)
 						{
 							if (sv.particleeffectname[effectnameindex][0])
 							{
@@ -3025,7 +3025,7 @@ int SV_ParticleEffectIndex(const char *name)
 							}
 						}
 						// if we run out of names, abort
-						if (effectnameindex == SV_MAX_PARTICLEEFFECTNAME)
+						if (effectnameindex == MAX_PARTICLEEFFECTNAME)
 						{
 							Con_Printf("%s:%i: too many effects!\n", filename, linenumber);
 							break;
@@ -3037,7 +3037,7 @@ int SV_ParticleEffectIndex(const char *name)
 		}
 	}
 	// search for the name
-	for (effectnameindex = 1;effectnameindex < SV_MAX_PARTICLEEFFECTNAME && sv.particleeffectname[effectnameindex][0];effectnameindex++)
+	for (effectnameindex = 1;effectnameindex < MAX_PARTICLEEFFECTNAME && sv.particleeffectname[effectnameindex][0];effectnameindex++)
 		if (!strcmp(sv.particleeffectname[effectnameindex], name))
 			return effectnameindex;
 	// return 0 if we couldn't find it
