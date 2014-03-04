@@ -108,6 +108,8 @@ cvar_t r_speeds_graph_x = {CVAR_SAVE, "r_speeds_graph_x", "0", "position of grap
 cvar_t r_speeds_graph_y = {CVAR_SAVE, "r_speeds_graph_y", "0", "position of graph"};
 cvar_t r_speeds_graph_width = {CVAR_SAVE, "r_speeds_graph_width", "256", "size of graph"};
 cvar_t r_speeds_graph_height = {CVAR_SAVE, "r_speeds_graph_height", "128", "size of graph"};
+cvar_t r_speeds_graph_maxtimedelta = {CVAR_SAVE, "r_speeds_graph_maxtimedelta", "16667", "maximum timedelta to display in the graph (this value will be the top line)"};
+cvar_t r_speeds_graph_maxdefault = {CVAR_SAVE, "r_speeds_graph_maxdefault", "100", "if the minimum and maximum observed values are closer than this, use this value as the graph range (keeps small numbers from being big graphs)"};
 
 
 
@@ -1095,7 +1097,7 @@ static void R_TimeReport_EndFrame(void)
 		// if we currently have no graph data, reset the graph data entirely
 		if (!cls.r_speeds_graph_data)
 			for (i = 0;i < r_stat_count;i++)
-				cls.r_speeds_graph_datamin[i] = cls.r_speeds_graph_datamax[i] = r_refdef.stats[i];
+				cls.r_speeds_graph_datamin[i] = cls.r_speeds_graph_datamax[i] = 0;
 		if (cls.r_speeds_graph_length != r_speeds_graph_length.integer)
 		{
 			int i, stat, index, d, graph_length, *graph_data;
@@ -1136,6 +1138,7 @@ static void R_TimeReport_EndFrame(void)
 		int numlines;
 		const int *data;
 		float x, y, width, height, scalex, scaley;
+		int range_default = max(r_speeds_graph_maxdefault.integer, 1);
 		int color, stat, stats, index, range_min, range_max;
 		int graph_current, graph_length, *graph_data;
 		int statindex[R_SPEEDS_GRAPH_COLORS];
@@ -1224,13 +1227,11 @@ static void R_TimeReport_EndFrame(void)
 					continue;
 				// prefer to graph stats with 0 base, but if they are
 				// negative we have no choice
-				range_min = min(cls.r_speeds_graph_datamin[stat], 0);
-				range_max = cls.r_speeds_graph_datamax[stat];
+				range_min = cls.r_speeds_graph_datamin[stat];
+				range_max = max(cls.r_speeds_graph_datamax[stat], range_min + range_default);
 				// some stats we specifically override the graph scale on
 				if (stat == r_stat_timedelta)
-					range_max = 100000;
-				if (range_max == range_min)
-					range_max++;
+					range_max = r_speeds_graph_maxtimedelta.integer;
 				scaley = height / (range_max - range_min);
 				// generate lines (2 vertices each)
 				// to deal with incomplete data we walk right to left
@@ -1402,6 +1403,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_speeds_graph_y);
 	Cvar_RegisterVariable(&r_speeds_graph_width);
 	Cvar_RegisterVariable(&r_speeds_graph_height);
+	Cvar_RegisterVariable(&r_speeds_graph_maxtimedelta);
+	Cvar_RegisterVariable(&r_speeds_graph_maxdefault);
 
 	// if we want no console, turn it off here too
 	if (COM_CheckParm ("-noconsole"))

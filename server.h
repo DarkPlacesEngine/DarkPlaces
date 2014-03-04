@@ -141,9 +141,8 @@ typedef struct server_s
 	server_floodaddress_t connectfloodaddresses[MAX_CONNECTFLOODADDRESSES];
 	server_floodaddress_t getstatusfloodaddresses[MAX_GETSTATUSFLOODADDRESSES];
 
-#define SV_MAX_PARTICLEEFFECTNAME 256
 	qboolean particleeffectnamesloaded;
-	char particleeffectname[SV_MAX_PARTICLEEFFECTNAME][MAX_QPATH];
+	char particleeffectname[MAX_PARTICLEEFFECTNAME][MAX_QPATH];
 
 	int writeentitiestoclient_stats_culled_pvs;
 	int writeentitiestoclient_stats_culled_trace;
