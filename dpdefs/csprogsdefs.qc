@@ -978,10 +978,10 @@ string(string format, ...) sprintf = #627;
 //you know sprintf :P
 //supported stuff:
 //  %
-//  optional: <argpos>$ for the argument to format
+//  optional: <argpos>$ for the argument to format (the arg counter then is not increased)
 //  flags: #0- +
-//  optional: <width>, *, or *<argpos>$ for the field width
-//  optional: .<precision>, .*, or .*<argpos>$ for the precision
+//  optional: <width>, *, or *<argpos>$ for the field width (width is read before value and precision)
+//  optional: .<precision>, .*, or .*<argpos>$ for the precision (precision is read before value)
 //  length modifiers: h for forcing a float, l for forcing an int/entity (by default, %d etc. cast a float to int)
 //  conversions:
 //    d takes a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an int
