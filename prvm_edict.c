@@ -2220,7 +2220,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			if ( a < prog->progs_numglobals)
 				if ( prog->globals.ip[remapglobal(a)] >= 0 )
 					if ( prog->globals.ip[remapglobal(a)] < prog->progs_numfunctions )
-						if ( !prog->functions[prog->globals.ip[remapglobal(a)]].first_statement == -642 )
+						if ( prog->functions[prog->globals.ip[remapglobal(a)]].first_statement == -642 )
 							++prog->numexplicitcoveragestatements;
 		case OP_CALL1:
 		case OP_CALL2:
