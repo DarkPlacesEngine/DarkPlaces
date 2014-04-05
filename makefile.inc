@@ -26,6 +26,7 @@ CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-sig
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
 
 SDL_CONFIG?=sdl-config
+SDL2_CONFIG?=sdl2-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
 SDLCONFIG_UNIXCFLAGS_X11?=
 SDLCONFIG_UNIXLIBS?=`$(SDL_CONFIG) --libs`
@@ -300,36 +301,41 @@ VPATH := ../../../
 help:
 	@echo
 	@echo "===== Choose one ====="
-	@echo "* $(MAKE) clean               : delete all files produced by the build except"
-	@echo "                             profiling information"
-	@echo "* $(MAKE) clean-profile       : delete all files produced by the build, including"
-	@echo "                             profiling informaiton"
-	@echo "* $(MAKE) help                : this help"
-	@echo "* $(MAKE) debug               : make client and server binaries (debug versions)"
-	@echo "* $(MAKE) profile             : make client and server binaries (profile versions)"
-	@echo "* $(MAKE) release             : make client and server binaries (release versions)"
-	@echo "* $(MAKE) release-profile     : make client and server binaries (release versions)"
-	@echo "                             with profileing optomizations) The profiled"
-	@echo "                             version of the program must have been"
-	@echo "                             previously compiled"
-	@echo "* $(MAKE) nexuiz              : make client and server binaries with nexuiz icon"
-	@echo "                             (release versions)"
-	@echo "* $(MAKE) cl-debug            : make client (debug version)"
-	@echo "* $(MAKE) cl-profile          : make client (profile version)"
-	@echo "* $(MAKE) cl-release          : make client (release version)"
-	@echo "* $(MAKE) cl-release-profile  : make client (release version)"
-	@echo "* $(MAKE) cl-nexuiz           : make client with nexuiz icon (release version)"
-	@echo "* $(MAKE) sv-debug            : make dedicated server (debug version)"
-	@echo "* $(MAKE) sv-profile          : make dedicated server (profile version)"
-	@echo "* $(MAKE) sv-release          : make dedicated server (release version)"
-	@echo "* $(MAKE) sv-release-profile  : make dedicated server (release version)"
-	@echo "* $(MAKE) sv-nexuiz           : make dedicated server with nexuiz icon"
-	@echo "                             (release version)"
-	@echo "* $(MAKE) sdl-debug           : make SDL client (debug version)"
-	@echo "* $(MAKE) sdl-profile         : make SDL client (profile version)"
-	@echo "* $(MAKE) sdl-profile-profile : make SDL client (profile version)"
-	@echo "* $(MAKE) sdl-release         : make SDL client (release version)"
-	@echo "* $(MAKE) sdl-nexuiz          : make SDL client with nexuiz icon (release version)"
+	@echo "* $(MAKE) clean                : delete all files produced by the build except"
+	@echo "                              profiling information"
+	@echo "* $(MAKE) clean-profile        : delete all files produced by the build, including"
+	@echo "                              profiling informaiton"
+	@echo "* $(MAKE) help                 : this help"
+	@echo "* $(MAKE) debug                : make client and server binaries (debug versions)"
+	@echo "* $(MAKE) profile              : make client and server binaries (profile versions)"
+	@echo "* $(MAKE) release              : make client and server binaries (release versions)"
+	@echo "* $(MAKE) release-profile      : make client and server binaries (release versions)"
+	@echo "                              (with profiling optimizations) The profiled"
+	@echo "                              version of the program must have been"
+	@echo "                              previously compiled"
+	@echo "* $(MAKE) nexuiz               : make client and server binaries with nexuiz icon"
+	@echo "                              (release versions)"
+	@echo "* $(MAKE) cl-debug             : make client (debug version)"
+	@echo "* $(MAKE) cl-profile           : make client (profile version)"
+	@echo "* $(MAKE) cl-release-profile   : make client (release profile version)"
+	@echo "* $(MAKE) cl-release           : make client (release version)"
+	@echo "* $(MAKE) cl-nexuiz            : make client with nexuiz icon (release version)"
+	@echo "* $(MAKE) sv-debug             : make dedicated server (debug version)"
+	@echo "* $(MAKE) sv-profile           : make dedicated server (profile version)"
+	@echo "* $(MAKE) sv-release-profile   : make dedicated server (release profile version)"
+	@echo "* $(MAKE) sv-release           : make dedicated server (release version)"
+	@echo "* $(MAKE) sv-nexuiz            : make dedicated server with nexuiz icon"
+	@echo "                              (release version)"
+	@echo "* $(MAKE) sdl-debug            : make SDL client (debug version)"
+	@echo "* $(MAKE) sdl-profile          : make SDL client (profile version)"
+	@echo "* $(MAKE) sdl-release-profile  : make SDL client (release version)"
+	@echo "* $(MAKE) sdl-release          : make SDL client (release version)"
+	@echo "* $(MAKE) sdl-nexuiz           : make SDL client with nexuiz icon (release version)"
+	@echo "* $(MAKE) sdl2-debug           : make SDL2 client (debug version)"
+	@echo "* $(MAKE) sdl2-profile         : make SDL2 client (profile version)"
+	@echo "* $(MAKE) sdl2-release-profile : make SDL2 client (release profile version)"
+	@echo "* $(MAKE) sdl2-release         : make SDL2 client (release version)"
+	@echo "* $(MAKE) sdl2-nexuiz          : make SDL2 client with nexuiz icon (release version)"
 	@echo
 
 debug :
@@ -421,6 +427,21 @@ sdl-nexuiz :
 	$(MAKE) bin-release \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
 		EXE='$(EXE_SDLNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
+
+sdl2-debug :
+	$(MAKE) SDL_CONFIG=$(SDL2_CONFIG) sdl-debug
+
+sdl2-profile :
+	$(MAKE) SDL_CONFIG=$(SDL2_CONFIG) sdl-profile
+
+sdl2-release :
+	$(MAKE) SDL_CONFIG=$(SDL2_CONFIG) sdl-release
+
+sdl2-release-profile :
+	$(MAKE) SDL_CONFIG=$(SDL2_CONFIG) sdl-release-profile
+
+sdl2-nexuiz :
+	$(MAKE) SDL_CONFIG=$(SDL2_CONFIG) sdl-nexuiz
 
 bin-debug :
 	$(CHECKLEVEL1)

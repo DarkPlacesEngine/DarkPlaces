@@ -895,7 +895,7 @@ extern qboolean r_shadow_shadowmapsampler;
 extern int r_shadow_shadowmappcf;
 qboolean R_CompileShader_CheckStaticParms(void)
 {
-	static int r_compileshader_staticparms_save[1];
+	static int r_compileshader_staticparms_save[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5];
 	memcpy(r_compileshader_staticparms_save, r_compileshader_staticparms, sizeof(r_compileshader_staticparms));
 	memset(r_compileshader_staticparms, 0, sizeof(r_compileshader_staticparms));
 
@@ -6412,7 +6412,7 @@ static void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!(r_glsl_postprocess.integer || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))
+	if (!((r_glsl_postprocess.integer || r_fxaa.integer) || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))
 	 && !r_bloom.integer
 	 && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0))
 	 && !useviewfbo
