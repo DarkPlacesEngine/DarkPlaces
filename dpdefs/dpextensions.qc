@@ -1026,12 +1026,12 @@ string(string format, ...) sprintf = #627;
 //  flags: #0- +
 //  optional: <width>, *, or *<argpos>$ for the field width (width is read before value and precision)
 //  optional: .<precision>, .*, or .*<argpos>$ for the precision (precision is read before value)
-//  length modifiers: h for forcing a float, l for forcing an int/entity (by default, %d etc. cast a float to int)
+//  length modifiers: h for forcing a float, l for forcing an entity (by default, %d etc. cast a float to int), ll for forcing an int
 //  conversions:
-//    d takes a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an int
-//    i takes an int/entity if no length is specified or i is, and a float if h is specified as length, and cast it to an int
-//    ouxXc take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to an unsigned int
-//    eEfFgG take a float if no length is specified or h is, and an int/entity if l is specified as length, and cast it to a double
+//    d takes a float if no length is specified or h is, and an entity if l is specified as length, and an int if ll is specified as length, and cast it to an int
+//    i takes an entity if no length is specified or l is, and a float if h is specified as length, and an int if ll is specified as length, and cast it to an int
+//    ouxXc take a float if no length is specified or h is, and an entity if l is specified as length, and an int if ll is specified as length, and cast it to an unsigned int
+//    eEfFgG take a float if no length is specified or h is, and an entity if l is specified as length, and an int if ll is specified as length, and cast it to a double
 //    s takes a string
 //    vV takes a vector, and processes the three components as if it were a gG for all three components, separated by space
 //    For conversions s and c, the flag # makes precision and width interpreted
