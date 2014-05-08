@@ -2435,8 +2435,8 @@ static void SV_WalkMove (prvm_edict_t *ent)
 			if (PRVM_serveredictfloat(ent, movetype) != MOVETYPE_WALK)
 				return;
 
-			// only step up while jumping if that is enabled
-			if (sv_jumpstep.integer)
+			// return if attempting to jump while airborn (unless sv_jumpstep)
+			if (!sv_jumpstep.integer)
 				if (!oldonground && PRVM_serveredictfloat(ent, waterlevel) == 0)
 					return;
 		}
