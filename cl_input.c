@@ -836,7 +836,7 @@ static qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 	for (i = 0;i < NUMOFFSETS;i++)
 	{
 		VectorAdd(offsets[i], s->origin, neworigin);
-		if (!CL_TraceBox(neworigin, cl.playercrouchmins, cl.playercrouchmaxs, neworigin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true).startsolid)
+		if (!CL_TraceBox(neworigin, cl.playercrouchmins, cl.playercrouchmaxs, neworigin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true).startsolid)
 		{
 			VectorCopy(neworigin, s->origin);
 			return true;
@@ -868,7 +868,7 @@ static void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 		// low ceiling first
 		if (s->crouched)
 		{
-			trace = CL_TraceBox(s->origin, cl.playerstandmins, cl.playerstandmaxs, s->origin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+			trace = CL_TraceBox(s->origin, cl.playerstandmins, cl.playerstandmaxs, s->origin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 			if (!trace.startsolid)
 				s->crouched = false;
 		}
@@ -887,7 +887,7 @@ static void CL_ClientMovement_UpdateStatus(cl_clientmovement_state_t *s)
 	// set onground
 	VectorSet(origin1, s->origin[0], s->origin[1], s->origin[2] + 1);
 	VectorSet(origin2, s->origin[0], s->origin[1], s->origin[2] - 1); // -2 causes clientside doublejump bug at above 150fps, raising that to 300fps :)
-	trace = CL_TraceBox(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+	trace = CL_TraceBox(origin1, s->mins, s->maxs, origin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 	if(trace.fraction < 1 && trace.plane.normal[2] > 0.7)
 	{
 		s->onground = true;
@@ -939,20 +939,20 @@ static void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 	for (bump = 0, t = s->cmd.frametime;bump < 8 && VectorLength2(s->velocity) > 0;bump++)
 	{
 		VectorMA(s->origin, t, s->velocity, neworigin);
-		trace = CL_TraceBox(s->origin, s->mins, s->maxs, neworigin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+		trace = CL_TraceBox(s->origin, s->mins, s->maxs, neworigin, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 		if (trace.fraction < 1 && trace.plane.normal[2] == 0)
 		{
 			// may be a step or wall, try stepping up
 			// first move forward at a higher level
 			VectorSet(currentorigin2, s->origin[0], s->origin[1], s->origin[2] + cl.movevars_stepheight);
 			VectorSet(neworigin2, neworigin[0], neworigin[1], s->origin[2] + cl.movevars_stepheight);
-			trace2 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+			trace2 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 			if (!trace2.startsolid)
 			{
 				// then move down from there
 				VectorCopy(trace2.endpos, currentorigin2);
 				VectorSet(neworigin2, trace2.endpos[0], trace2.endpos[1], s->origin[2]);
-				trace3 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+				trace3 = CL_TraceBox(currentorigin2, s->mins, s->maxs, neworigin2, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 				//Con_Printf("%f %f %f %f : %f %f %f %f : %f %f %f %f\n", trace.fraction, trace.endpos[0], trace.endpos[1], trace.endpos[2], trace2.fraction, trace2.endpos[0], trace2.endpos[1], trace2.endpos[2], trace3.fraction, trace3.endpos[0], trace3.endpos[1], trace3.endpos[2]);
 				// accept the new trace if it made some progress
 				if (fabs(trace3.endpos[0] - trace.endpos[0]) >= 0.03125 || fabs(trace3.endpos[1] - trace.endpos[1]) >= 0.03125)
@@ -1352,9 +1352,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
 				VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
 				if (cls.protocol == PROTOCOL_QUAKEWORLD)
-					trace = CL_TraceBox(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true);
+					trace = CL_TraceBox(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true);
 				else
-					trace = CL_TraceLine(neworigin2, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, true, true, NULL, true, false);
+					trace = CL_TraceLine(neworigin2, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, collision_extendmovelength.value, true, true, NULL, true, false);
 				if (trace.fraction == 1 && !trace.startsolid)
 					friction *= cl.movevars_edgefriction;
 			}

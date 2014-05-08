@@ -1205,7 +1205,7 @@ void Sbar_ShowFPS(void)
 		trace.hittexture = NULL; // to make sure
 		// TODO change this trace to be stopped by anything "visible" (i.e. with a drawsurface), but not stuff like weapclip
 		// probably needs adding a new SUPERCONTENTS type
-		trace = CL_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, true, false, NULL, true, true);
+		trace = CL_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, true, true);
 		if(trace.hittexture)
 			strlcpy(texstring, trace.hittexture->name, sizeof(texstring));
 		else

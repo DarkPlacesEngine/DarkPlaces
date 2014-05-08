@@ -772,7 +772,7 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 		part->typeindex = pt_spark;
 		part->bounce = 0;
 		VectorMA(part->org, lifetime, part->vel, endvec);
-		trace = CL_TraceLine(part->org, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK, true, false, NULL, false, false);
+		trace = CL_TraceLine(part->org, endvec, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_LIQUIDSMASK, collision_extendmovelength.value, true, false, NULL, false, false);
 		part->die = cl.time + lifetime * trace.fraction;
 		part2 = CL_NewParticle(endvec, pt_raindecal, pcolor1, pcolor2, tex_rainsplash, part->size, part->size * 20, part->alpha, part->alpha / 0.4, 0, 0, trace.endpos[0] + trace.plane.normal[0], trace.endpos[1] + trace.plane.normal[1], trace.endpos[2] + trace.plane.normal[2], trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2], 0, 0, 0, 0, pqualityreduction, 0, 1, PBLEND_ADD, PARTICLE_ORIENTED_DOUBLESIDED, -1, -1, -1, 1, 1, 0, 0, NULL);
 		if (part2)
@@ -913,7 +913,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	{
 		VectorRandom(org2);
 		VectorMA(org, maxdist, org2, org2);
-		trace = CL_TraceLine(org, org2, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, true, false, &hitent, false, true);
+		trace = CL_TraceLine(org, org2, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, &hitent, false, true);
 		// take the closest trace result that doesn't end up hitting a NOMARKS
 		// surface (sky for example)
 		if (bestfrac > trace.fraction && !(trace.hitq3surfaceflags & Q3SURFACEFLAG_NOMARKS))
@@ -1870,7 +1870,7 @@ void CL_ParticleExplosion (const vec3_t org)
 					{
 						VectorRandom(v2);
 						VectorMA(org, 128, v2, v);
-						trace = CL_TraceLine(org, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, false);
+						trace = CL_TraceLine(org, v, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, false);
 					}
 					while (k < 16 && trace.fraction < 0.1f);
 					VectorSubtract(trace.endpos, org, v2);
@@ -2979,7 +2979,7 @@ void R_DrawParticles (void)
 //				if (p->bounce && cl.time >= p->delayedcollisions)
 				if (p->bounce && cl_particles_collisions.integer && VectorLength(p->vel))
 				{
-					trace = CL_TraceLine(oldorg, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), true, false, &hitent, false, false);
+					trace = CL_TraceLine(oldorg, p->org, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | ((p->typeindex == pt_rain || p->typeindex == pt_snow) ? SUPERCONTENTS_LIQUIDSMASK : 0), collision_extendmovelength.value, true, false, &hitent, false, false);
 					// if the trace started in or hit something of SUPERCONTENTS_NODROP
 					// or if the trace hit something flagged as NOIMPACT
 					// then remove the particle
