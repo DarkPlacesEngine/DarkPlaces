@@ -638,6 +638,7 @@ finished:
 #if COLLISIONPARANOID >= 1
 trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask)
 {
+	prvm_prog_t *prog = SVVM_prog;
 	int endstuck;
 	trace_t trace;
 	vec3_t temp;
