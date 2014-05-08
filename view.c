@@ -591,9 +591,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 #else
 				// trace from first person view location to our chosen third person view location
 #if 1
-				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, NULL, false, true);
 #else
-				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, NULL, false);
 #endif
 				VectorCopy(trace.endpos, bestvieworg);
 				offset[2] = 0;
@@ -606,9 +606,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 						chase_dest[1] = vieworg[1] - forward[1] * camback + up[1] * camup + offset[1];
 						chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup + offset[2];
 #if 1
-						trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+						trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, NULL, false, true);
 #else
-						trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+						trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, NULL, false);
 #endif
 						if (bestvieworg[2] > trace.endpos[2])
 							bestvieworg[2] = trace.endpos[2];
@@ -634,7 +634,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				chase_dest[0] = vieworg[0] + forward[0] * dist;
 				chase_dest[1] = vieworg[1] + forward[1] * dist;
 				chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
-				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false, true);
+				trace = CL_TraceLine(vieworg, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, collision_extendmovelength.value, true, false, NULL, false, true);
 				VectorMAMAM(1, trace.endpos, 8, forward, 4, trace.plane.normal, vieworg);
 			}
 		}

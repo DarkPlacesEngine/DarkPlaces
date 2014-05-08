@@ -2715,7 +2715,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 				if (settings.staticmode)
 				{
 					// static mode fires a LOT of rays but none of them are identical, so they are not cached
-					cliptrace = CL_TraceLine(clipstart, clipend, settings.staticmode ? MOVE_WORLDONLY : (settings.hitmodels ? MOVE_HITMODEL : MOVE_NOMONSTERS), NULL, hitsupercontentsmask, true, false, NULL, true, true);
+					cliptrace = CL_TraceLine(clipstart, clipend, settings.staticmode ? MOVE_WORLDONLY : (settings.hitmodels ? MOVE_HITMODEL : MOVE_NOMONSTERS), NULL, hitsupercontentsmask, collision_extendmovelength.value, true, false, NULL, true, true);
 				}
 				else
 				{
@@ -5187,7 +5187,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	else
 	{
 		// FIXME: these traces should scan all render entities instead of cl.world
-		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
+		if (CL_TraceLine(r_refdef.view.origin, rtlight->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction < 1)
 			return;
 	}
 	VectorScale(rtlight->currentcolor, cscale, color);
@@ -5520,7 +5520,7 @@ static void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1.0f)
+			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.view.origin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -5970,7 +5970,7 @@ static void R_Shadow_SetCursorLocationForView(void)
 	vec3_t dest, endpos;
 	trace_t trace;
 	VectorMA(r_refdef.view.origin, r_editlights_cursordistance.value, r_refdef.view.forward, dest);
-	trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true);
+	trace = CL_TraceLine(r_refdef.view.origin, dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true);
 	if (trace.fraction < 1)
 	{
 		dist = trace.fraction * r_editlights_cursordistance.value;
@@ -6754,7 +6754,7 @@ void R_LightPoint(float *color, const vec3_t p, const int flags)
 			if (f <= 0)
 				continue;
 			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1)
+			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction == 1)
 				VectorMA(color, f, light->currentcolor, color);
 		}
 	}
@@ -6775,7 +6775,7 @@ void R_LightPoint(float *color, const vec3_t p, const int flags)
 			if (f <= 0)
 				continue;
 			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction == 1)
+			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction == 1)
 				VectorMA(color, f, light->color, color);
 		}
 	}
@@ -6859,7 +6859,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 			intensity = min(1.0f, (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) * r_shadow_lightintensityscale.value;
 			if (intensity <= 0.0f)
 				continue;
-			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction < 1)
 				continue;
 			// scale down intensity to add to both ambient and diffuse
 			//intensity *= 0.5f;
@@ -6892,7 +6892,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 			intensity = (1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist) * r_shadow_lightintensityscale.value;
 			if (intensity <= 0.0f)
 				continue;
-			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, true, false, NULL, false, true).fraction < 1)
+			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, collision_extendmovelength.value, true, false, NULL, false, true).fraction < 1)
 				continue;
 			// scale down intensity to add to both ambient and diffuse
 			//intensity *= 0.5f;

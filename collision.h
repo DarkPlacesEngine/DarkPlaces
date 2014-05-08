@@ -155,12 +155,12 @@ void Collision_TraceBrushTriangleFloat(trace_t *trace, const colbrushf_t *thisbr
 // passedict is excluded from clipping checks
 struct frameblend_s;
 struct skeleton_s;
-void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask);
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, qboolean hitsurfaces);
+void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, float extend);
+void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, float extend, qboolean hitsurfaces);
 void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask);
 // like above but does not do a transform and does nothing if model is NULL
-void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents);
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, qboolean hitsurfaces);
+void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontents, float extend);
+void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontents, float extend, qboolean hitsurfaces);
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents);
 // caching surface trace for renderer (NOT THREAD SAFE)
 void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask);
@@ -170,9 +170,6 @@ void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, dp_model_t *model, 
 // updates fraction, endpos, plane and surface info if new fraction is shorter
 void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel);
 
-// shorten a trace by the given factor
-void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t end);
-
 // this enables rather large debugging spew!
 // settings:
 // 0 = no spew
@@ -181,11 +178,10 @@ void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t e
 // 3 = spew detailed trace flow (bsp tree recursion info)
 #define COLLISIONPARANOID 0
 
-// make every trace <collision_endposnudge>qu longer, and shorten the result, to work around a stupid bug somewhere
-#define COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-extern cvar_t collision_endposnudge;
-#endif
-
+extern cvar_t collision_impactnudge;
+extern cvar_t collision_extendtracelinelength;
+extern cvar_t collision_extendtraceboxlength;
+extern cvar_t collision_extendmovelength;
+extern cvar_t collision_prefernudgedfraction;
 
 #endif
