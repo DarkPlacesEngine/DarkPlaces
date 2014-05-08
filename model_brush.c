@@ -1263,22 +1263,44 @@ loc0:
 				dt = ((x * surface->lightmapinfo->texinfo->vecs[1][0] + y * surface->lightmapinfo->texinfo->vecs[1][1] + mid * surface->lightmapinfo->texinfo->vecs[1][2] + surface->lightmapinfo->texinfo->vecs[1][3]) - surface->lightmapinfo->texturemins[1]) * 0.0625f;
 
 				// check the bounds
-				dsi = (int)ds;
-				dti = (int)dt;
+				// thanks to jitspoe for pointing out that this int cast was
+				// rounding toward zero, so we floor it
+				dsi = (int)floor(ds);
+				dti = (int)floor(dt);
 				lmwidth = ((surface->lightmapinfo->extents[0]>>4)+1);
 				lmheight = ((surface->lightmapinfo->extents[1]>>4)+1);
 
 				// is it in bounds?
-				if (dsi >= 0 && dsi < lmwidth-1 && dti >= 0 && dti < lmheight-1)
+				// we have to tolerate a position of lmwidth-1 for some rare
+				// cases - in which case the sampling position still gets
+				// clamped but the color gets interpolated to that edge.
+				if (dsi >= 0 && dsi < lmwidth && dti >= 0 && dti < lmheight)
 				{
+					// in the rare cases where we're sampling slightly off
+					// the polygon, clamp the sampling position (we can still
+					// interpolate outside it, where it becomes extrapolation)
+					if (dsi < 0)
+						dsi = 0;
+					if (dti < 0)
+						dti = 0;
+					if (dsi > lmwidth-2)
+						dsi = lmwidth-2;
+					if (dti > lmheight-2)
+						dti = lmheight-2;
+					
 					// calculate bilinear interpolation factors
-					// and also multiply by fixedpoint conversion factors
+					// and also multiply by fixedpoint conversion factors to
+					// compensate for lightmaps being 0-255 (as 0-2), we use
+					// r_refdef.scene.rtlightstylevalue here which is already
+					// 0.000-2.148 range
+					// (if we used r_refdef.scene.lightstylevalue this
+					//  divisor would be 32768 rather than 128)
 					dsfrac = ds - dsi;
 					dtfrac = dt - dti;
-					w00 = (1 - dsfrac) * (1 - dtfrac) * (1.0f / 32768.0f);
-					w01 = (    dsfrac) * (1 - dtfrac) * (1.0f / 32768.0f);
-					w10 = (1 - dsfrac) * (    dtfrac) * (1.0f / 32768.0f);
-					w11 = (    dsfrac) * (    dtfrac) * (1.0f / 32768.0f);
+					w00 = (1 - dsfrac) * (1 - dtfrac) * (1.0f / 128.0f);
+					w01 = (    dsfrac) * (1 - dtfrac) * (1.0f / 128.0f);
+					w10 = (1 - dsfrac) * (    dtfrac) * (1.0f / 128.0f);
+					w11 = (    dsfrac) * (    dtfrac) * (1.0f / 128.0f);
 
 					// values for pointer math
 					line3 = lmwidth * 3; // LordHavoc: *3 for colored lighting
@@ -1290,7 +1312,7 @@ loc0:
 					// bilinear filter each lightmap style, and sum them
 					for (maps = 0;maps < MAXLIGHTMAPS && surface->lightmapinfo->styles[maps] != 255;maps++)
 					{
-						scale = r_refdef.scene.lightstylevalue[surface->lightmapinfo->styles[maps]];
+						scale = r_refdef.scene.rtlightstylevalue[surface->lightmapinfo->styles[maps]];
 						w = w00 * scale;VectorMA(ambientcolor, w, lightmap            , ambientcolor);
 						w = w01 * scale;VectorMA(ambientcolor, w, lightmap + 3        , ambientcolor);
 						w = w10 * scale;VectorMA(ambientcolor, w, lightmap + line3    , ambientcolor);
