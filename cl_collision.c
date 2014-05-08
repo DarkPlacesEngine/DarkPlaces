@@ -2,11 +2,7 @@
 #include "quakedef.h"
 #include "cl_collision.h"
 
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-float CL_SelectTraceLine(const vec3_t start, const vec3_t pEnd, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
-#else
 float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
-#endif
 {
 	float maxfrac, maxrealfrac;
 	int n;
@@ -14,20 +10,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	vec_t tracemins[3], tracemaxs[3];
 	trace_t trace;
 	vec_t tempnormal[3], starttransformed[3], endtransformed[3];
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	vec3_t end;
-	vec_t len = 0;
-
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-	{
-		// TRICK: make the trace 1 qu longer!
-		VectorSubtract(pEnd, start, end);
-		len = VectorNormalizeLength(end);
-		VectorMA(pEnd, collision_endposnudge.value, end, end);
-	}
-	else
-		VectorCopy(pEnd, end);
-#endif
 
 	memset (&trace, 0 , sizeof(trace_t));
 	trace.fraction = 1;
@@ -71,10 +53,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-		if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-			Collision_ShortenTrace(&trace, len / (len + collision_endposnudge.value), pEnd);
-#endif
 		if (maxrealfrac < trace.realfraction)
 			continue;
 
@@ -423,7 +401,7 @@ skipnetworkplayers:
 		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
 		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipstart, hitsupercontentsmask, 0.0f);
 		else
 			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
@@ -441,11 +419,7 @@ finished:
 CL_TraceLine
 ==================
 */
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-trace_t CL_TraceLine(const vec3_t start, const vec3_t pEnd, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
-#else
-trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
-#endif
+trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, float extend, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int i, bodysupercontents;
@@ -469,26 +443,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	vec3_t end;
-	vec_t len = 0;
-
-	if (VectorCompare(start, pEnd))
-		return CL_TracePoint(start, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
-
-	if(collision_endposnudge.value > 0)
-	{
-		// TRICK: make the trace 1 qu longer!
-		VectorSubtract(pEnd, start, end);
-		len = VectorNormalizeLength(end);
-		VectorMA(pEnd, collision_endposnudge.value, end, end);
-	}
-	else
-		VectorCopy(pEnd, end);
-#else
 	if (VectorCompare(start, end))
 		return CL_TracePoint(start, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
-#endif
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -502,7 +458,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 #endif
 
 	// clip to world
-	Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
+	Collision_ClipLineToWorld(&cliptrace, cl.worldmodel, clipstart, clipend, hitsupercontentsmask, extend, hitsurfaces);
 	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
@@ -551,7 +507,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipLineToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask, hitsurfaces);
+			Collision_ClipLineToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask, extend, hitsurfaces);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
@@ -597,7 +553,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 				continue;
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
-			Collision_ClipLineToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask, hitsurfaces);
+			Collision_ClipLineToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask, extend, hitsurfaces);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
@@ -661,9 +617,9 @@ skipnetworkplayers:
 		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
 		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if (type == MOVE_MISSILE && (int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask, extend);
 		else
-			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, hitsurfaces);
+			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, extend, hitsurfaces);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -671,10 +627,6 @@ skipnetworkplayers:
 	}
 
 finished:
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
-#endif
 	return cliptrace;
 }
 
@@ -683,11 +635,7 @@ finished:
 CL_Move
 ==================
 */
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t pEnd, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
-#else
-trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
-#endif
+trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, float extend, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	vec3_t hullmins, hullmaxs;
@@ -715,33 +663,6 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	vec3_t end;
-	vec_t len = 0;
-
-	if (VectorCompare(mins, maxs))
-	{
-		vec3_t shiftstart, shiftend;
-		VectorAdd(start, mins, shiftstart);
-		VectorAdd(pEnd, mins, shiftend);
-		if (VectorCompare(start, pEnd))
-			trace = CL_TracePoint(shiftstart, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
-		else
-			trace = CL_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities, false);
-		VectorSubtract(trace.endpos, mins, trace.endpos);
-		return trace;
-	}
-
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-	{
-		// TRICK: make the trace 1 qu longer!
-		VectorSubtract(pEnd, start, end);
-		len = VectorNormalizeLength(end);
-		VectorMA(pEnd, collision_endposnudge.value, end, end);
-	}
-	else
-		VectorCopy(pEnd, end);
-#else
 	if (VectorCompare(mins, maxs))
 	{
 		vec3_t shiftstart, shiftend;
@@ -750,11 +671,10 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		if (VectorCompare(start, end))
 			trace = CL_TracePoint(shiftstart, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
 		else
-			trace = CL_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities, false);
+			trace = CL_TraceLine(shiftstart, shiftend, type, passedict, hitsupercontentsmask, extend, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities, false);
 		VectorSubtract(trace.endpos, mins, trace.endpos);
 		return trace;
 	}
-#endif
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -770,7 +690,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 #endif
 
 	// clip to world
-	Collision_ClipToWorld(&cliptrace, cl.worldmodel, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+	Collision_ClipToWorld(&cliptrace, cl.worldmodel, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask, extend);
 	cliptrace.worldstartsolid = cliptrace.bmodelstartsolid = cliptrace.startsolid;
 	if (cliptrace.startsolid || cliptrace.fraction < 1)
 		cliptrace.ent = prog ? prog->edicts : NULL;
@@ -830,7 +750,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
-			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask, extend);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
@@ -876,7 +796,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				continue;
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
-			Collision_ClipToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask, extend);
 			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
@@ -940,9 +860,9 @@ skipnetworkplayers:
 		VectorCopy(PRVM_clientedictvector(touch, mins), touchmins);
 		VectorCopy(PRVM_clientedictvector(touch, maxs), touchmaxs);
 		if ((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins2, clipmaxs2, clipend, hitsupercontentsmask, extend);
 		else
-			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask);
+			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask, extend);
 
 		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
 			*hitnetworkentity = 0;
@@ -950,10 +870,6 @@ skipnetworkplayers:
 	}
 
 finished:
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
-#endif
 	return cliptrace;
 }
 
@@ -962,11 +878,7 @@ finished:
 CL_Cache_TraceLine
 ==================
 */
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t pEnd, int type, int hitsupercontentsmask)
-#else
 trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int type, int hitsupercontentsmask)
-#endif
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int i;
@@ -985,20 +897,6 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	vec3_t end;
-	vec_t len = 0;
-
-	if(collision_endposnudge.value > 0 && !VectorCompare(start, pEnd))
-	{
-		// TRICK: make the trace 1 qu longer!
-		VectorSubtract(pEnd, start, end);
-		len = VectorNormalizeLength(end);
-		VectorMA(pEnd, collision_endposnudge.value, end, end);
-	}
-	else
-		VectorCopy(pEnd, end);
-#endif
 
 	VectorCopy(start, clipstart);
 	VectorCopy(end, clipend);
@@ -1070,10 +968,6 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 	}
 
 finished:
-#ifdef COLLISION_STUPID_TRACE_ENDPOS_IN_SOLID_WORKAROUND
-	if(!VectorCompare(start, pEnd) && collision_endposnudge.value > 0)
-		Collision_ShortenTrace(&cliptrace, len / (len + collision_endposnudge.value), pEnd);
-#endif
 	return cliptrace;
 }
 
