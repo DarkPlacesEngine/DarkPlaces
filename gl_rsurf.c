@@ -524,6 +524,8 @@ void R_View_WorldVisibility(qboolean forcenovis)
 			int leafstackpos;
 			mportal_t *p;
 			mleaf_t *leafstack[8192];
+			vec3_t cullmins, cullmaxs;
+			float cullbias = r_nearclip.value * 2.0f; // the nearclip plane can easily end up culling portals in certain perfectly-aligned views, causing view blackouts
 			// simple-frustum portal method:
 			// follows portals leading outward from viewleaf, does not venture
 			// offscreen or into leafs that are not visible, faster than
@@ -548,20 +550,27 @@ void R_View_WorldVisibility(qboolean forcenovis)
 						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 				// follow portals into other leafs
 				// the checks are:
-				// if viewer is behind portal (portal faces outward into the scene)
-				// and the portal polygon's bounding box is on the screen
-				// and the leaf has not been visited yet
+				// the leaf has not been visited yet
 				// and the leaf is visible in the pvs
-				// (the first two checks won't cause as many cache misses as the leaf checks)
+				// the portal polygon's bounding box is on the screen
 				for (p = leaf->portals;p;p = p->next)
 				{
 					r_refdef.stats[r_stat_world_portals]++;
-					if (DotProduct(r_refdef.view.origin, p->plane.normal) < (p->plane.dist + 1)
-					 && !r_refdef.viewcache.world_leafvisible[p->past - model->brush.data_leafs]
-					 && CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, p->past->clusterindex)
-					 && !R_CullBox(p->mins, p->maxs)
-					 && leafstackpos < (int)(sizeof(leafstack) / sizeof(leafstack[0])))
-						leafstack[leafstackpos++] = p->past;
+					if (r_refdef.viewcache.world_leafvisible[p->past - model->brush.data_leafs])
+						continue;
+					if (!CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, p->past->clusterindex))
+						continue;
+					cullmins[0] = p->mins[0] - cullbias;
+					cullmins[1] = p->mins[1] - cullbias;
+					cullmins[2] = p->mins[2] - cullbias;
+					cullmaxs[0] = p->maxs[0] + cullbias;
+					cullmaxs[1] = p->maxs[1] + cullbias;
+					cullmaxs[2] = p->maxs[2] + cullbias;
+					if (R_CullBox(cullmins, cullmaxs))
+						continue;
+					if (leafstackpos >= (int)(sizeof(leafstack) / sizeof(leafstack[0])))
+						break;
+					leafstack[leafstackpos++] = p->past;
 				}
 			}
 		}
