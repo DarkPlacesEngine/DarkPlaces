@@ -4,7 +4,7 @@
 
 float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int *hitent, entity_render_t *ignoreent)
 {
-	float maxfrac, maxrealfrac;
+	float maxfrac;
 	int n;
 	entity_render_t *ent;
 	vec_t tracemins[3], tracemaxs[3];
@@ -13,7 +13,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 
 	memset (&trace, 0 , sizeof(trace_t));
 	trace.fraction = 1;
-	trace.realfraction = 1;
 	VectorCopy (end, trace.endpos);
 
 	if (hitent)
@@ -24,7 +23,6 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
 	maxfrac = trace.fraction;
-	maxrealfrac = trace.realfraction;
 
 	tracemins[0] = min(start[0], end[0]);
 	tracemaxs[0] = max(start[0], end[0]);
@@ -53,17 +51,16 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		Matrix4x4_Transform(&ent->inversematrix, start, starttransformed);
 		Matrix4x4_Transform(&ent->inversematrix, end, endtransformed);
 		Collision_ClipTrace_Box(&trace, ent->model->normalmins, ent->model->normalmaxs, starttransformed, vec3_origin, vec3_origin, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID, 0, NULL);
-		if (maxrealfrac < trace.realfraction)
+		if (maxfrac < trace.fraction)
 			continue;
 
 		ent->model->TraceLine(ent->model, ent->frameblend, ent->skeleton, &trace, starttransformed, endtransformed, SUPERCONTENTS_SOLID);
 
-		if (maxrealfrac > trace.realfraction)
+		if (maxfrac > trace.fraction)
 		{
 			if (hitent)
 				*hitent = n;
 			maxfrac = trace.fraction;
-			maxrealfrac = trace.realfraction;
 			if (normal)
 			{
 				VectorCopy(trace.plane.normal, tempnormal);
@@ -292,7 +289,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
 			Collision_ClipPointToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, hitsupercontentsmask);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
 		}
@@ -338,7 +335,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
 			Collision_ClipPointToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, hitsupercontentsmask);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
@@ -405,7 +402,7 @@ skipnetworkplayers:
 		else
 			Collision_ClipPointToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, hitsupercontentsmask);
 
-		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+		if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 			*hitnetworkentity = 0;
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}
@@ -508,7 +505,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
 			Collision_ClipLineToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, end, hitsupercontentsmask, extend, hitsurfaces);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
 		}
@@ -554,7 +551,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
 			Collision_ClipLineToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask, extend, hitsurfaces);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
@@ -621,7 +618,7 @@ skipnetworkplayers:
 		else
 			Collision_ClipLineToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipend, hitsupercontentsmask, extend, hitsurfaces);
 
-		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+		if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 			*hitnetworkentity = 0;
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}
@@ -751,7 +748,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
 			Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &ent->matrix, &ent->inversematrix, start, mins, maxs, end, hitsupercontentsmask, extend);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
 		}
@@ -797,7 +794,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
 			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
 			Collision_ClipToGenericEntity(&trace, NULL, NULL, NULL, cl.playerstandmins, cl.playerstandmaxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask, extend);
-			if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = i;
 			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
@@ -864,7 +861,7 @@ skipnetworkplayers:
 		else
 			Collision_ClipToGenericEntity(&trace, model, touch->priv.server->frameblend, &touch->priv.server->skeleton, touchmins, touchmaxs, bodysupercontents, &matrix, &imatrix, clipstart, clipmins, clipmaxs, clipend, hitsupercontentsmask, extend);
 
-		if (cliptrace.realfraction > trace.realfraction && hitnetworkentity)
+		if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 			*hitnetworkentity = 0;
 		Collision_CombineTraces(&cliptrace, &trace, (void *)touch, PRVM_clientedictfloat(touch, solid) == SOLID_BSP);
 	}

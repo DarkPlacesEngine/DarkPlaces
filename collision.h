@@ -27,12 +27,9 @@ typedef struct trace_s
 	// (set only by Q1BSP tracing)
 	int inwater;
 	// fraction of the total distance that was traveled before impact
+	// in case of impact this is actually nudged a bit off the surface
 	// (1.0 = did not hit anything)
 	double fraction;
-	// like fraction but is not nudged away from the surface (better for
-	// comparisons between two trace structs, as only one nudge for the final
-	// result is ever needed)
-	double realfraction;
 	// final position of the trace (simply a point between start and end)
 	double endpos[3];
 	// surface normal at impact (not really correct for edge collisions)
@@ -182,6 +179,5 @@ extern cvar_t collision_impactnudge;
 extern cvar_t collision_extendtracelinelength;
 extern cvar_t collision_extendtraceboxlength;
 extern cvar_t collision_extendmovelength;
-extern cvar_t collision_prefernudgedfraction;
 
 #endif
