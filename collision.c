@@ -12,8 +12,8 @@
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
 cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
 cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
-cvar_t collision_enternudge = {0, "collision_enternudge", "0.03125", "how much to bias collision entry fraction"};
-cvar_t collision_leavenudge = {0, "collision_leavenudge", "0.03125", "how much to bias collision exit fraction"};
+cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
+cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
 cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
 cvar_t collision_extendmovelength = {0, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge/collision_enternudge/collision_leavenudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
 cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge/collision_enternudge/collision_leavenudge (this does not alter the final trace length)"};
