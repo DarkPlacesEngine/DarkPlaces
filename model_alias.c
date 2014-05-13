@@ -761,7 +761,6 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	float *vertex3f = vertex3fbuf;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
 		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
@@ -801,7 +800,6 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	// box trace, performed as brush trace
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
 		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));

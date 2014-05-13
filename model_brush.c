@@ -793,18 +793,11 @@ static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int nu
 				VectorCopy (plane->normal, t->trace->plane.normal);
 			}
 
-			// calculate the true fraction
+			// calculate the return fraction which is nudged off the surface a bit
 			t1 = DotProduct(t->trace->plane.normal, t->start) - t->trace->plane.dist;
 			t2 = DotProduct(t->trace->plane.normal, t->end) - t->trace->plane.dist;
-			midf = t1 / (t1 - t2);
-			t->trace->realfraction = bound(0, midf, 1);
-
-			// calculate the return fraction which is nudged off the surface a bit
 			midf = (t1 - collision_impactnudge.value) / (t1 - t2);
 			t->trace->fraction = bound(0, midf, 1);
-
-			if (collision_prefernudgedfraction.integer)
-				t->trace->realfraction = t->trace->fraction;
 
 #if COLLISIONPARANOID >= 3
 			Con_Print("D");
@@ -898,7 +891,6 @@ static void Mod_Q1BSP_TracePoint(struct model_s *model, const frameblend_t *fram
 	memset(trace, 0, sizeof(trace_t));
 	rhc.trace = trace;
 	rhc.trace->fraction = 1;
-	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	VectorCopy(start, rhc.start);
@@ -930,7 +922,6 @@ static void Mod_Q1BSP_TraceLine(struct model_s *model, const frameblend_t *frame
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
-	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	VectorCopy(start, rhc.start);
@@ -948,7 +939,6 @@ static void Mod_Q1BSP_TraceLine(struct model_s *model, const frameblend_t *frame
 		rhc.trace = &testtrace;
 		rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 		rhc.trace->fraction = 1;
-		rhc.trace->realfraction = 1;
 		rhc.trace->allsolid = true;
 		VectorCopy(test, rhc.start);
 		VectorCopy(test, rhc.end);
@@ -987,7 +977,6 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, const frameblend_t *frameb
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
-	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	VectorSubtract(boxmaxs, boxmins, boxsize);
 	if (boxsize[0] < 3)
@@ -1030,7 +1019,6 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, const frameblend_t *frameb
 		rhc.trace = &testtrace;
 		rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 		rhc.trace->fraction = 1;
-		rhc.trace->realfraction = 1;
 		rhc.trace->allsolid = true;
 		VectorCopy(test, rhc.start);
 		VectorCopy(test, rhc.end);
@@ -1099,7 +1087,6 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	memset(trace, 0, sizeof(trace_t));
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	Collision_TraceLineBrushFloat(trace, start, end, &cbox, &cbox);
 #else
 	RecursiveHullCheckTraceInfo_t rhc;
@@ -1157,7 +1144,6 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
-	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	VectorCopy(start, rhc.start);
 	VectorCopy(end, rhc.end);
@@ -1173,7 +1159,6 @@ void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t 
 {
 	memset(trace, 0, sizeof(trace_t));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	if (BoxesOverlap(start, start, cmins, cmaxs))
 	{
 		trace->startsupercontents |= boxsupercontents;
@@ -1398,18 +1383,11 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 		VectorCopy(normal, t->trace->plane.normal);
 		t->trace->plane.dist = DotProduct(normal, p);
 
-		// calculate the true fraction
+		// calculate the return fraction which is nudged off the surface a bit
 		t1 = DotProduct(t->start, t->trace->plane.normal) - t->trace->plane.dist;
 		t2 = DotProduct(t->end, t->trace->plane.normal) - t->trace->plane.dist;
-		midf = t1 / (t1 - t2);
-		t->trace->realfraction = midf;
-
-		// calculate the return fraction which is nudged off the surface a bit
 		midf = (t1 - collision_impactnudge.value) / (t1 - t2);
 		t->trace->fraction = bound(0, midf, 1);
-
-		if (collision_prefernudgedfraction.integer)
-			t->trace->realfraction = t->trace->fraction;
 
 		t->trace->hittexture = surface->texture->currentframe;
 		t->trace->hitq3surfaceflags = t->trace->hittexture->surfaceflags;
@@ -1521,7 +1499,6 @@ static void Mod_Q1BSP_TraceLineAgainstSurfaces(struct model_s *model, const fram
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
-	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	VectorCopy(start, rhc.start);
@@ -6243,7 +6220,6 @@ void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameble
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 
 	bih = &model->collision_bih;
@@ -6319,7 +6295,6 @@ static void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 
 	// push first node
@@ -6459,7 +6434,6 @@ void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameble
 	// box trace, performed as brush trace
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 
 	// calculate tracebox-like parameters for efficient culling
@@ -6606,14 +6580,12 @@ void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *fra
 #endif
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 #if 0
 	Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	hitsupercontents = trace->hitsupercontents;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->startsupercontents = hitsupercontents;
 #endif
@@ -6628,7 +6600,6 @@ int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, c
 	VectorSet(end, start[0], start[1], model->normalmins[2]);
 	memset(&trace, 0, sizeof(trace));
 	trace.fraction = 1;
-	trace.realfraction = 1;
 	trace.hitsupercontentsmask = 0;
 	Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask);
 	return trace.hitsupercontents;
@@ -6710,7 +6681,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *mod
 			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 			// if we found an impact on the front side, don't waste time
 			// exploring the far side
-			if (midfrac <= trace->realfraction)
+			if (midfrac <= trace->fraction)
 				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 			return;
 		}
@@ -6858,7 +6829,6 @@ static void Mod_Q3BSP_TracePoint(dp_model_t *model, const frameblend_t *frameble
 	q3mbrush_t *brush;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (mod_collision_bih.integer)
 		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask);
@@ -6887,7 +6857,6 @@ static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	segmentmins[0] = min(start[0], end[0]) - 1;
 	segmentmins[1] = min(start[1], end[1]) - 1;
@@ -6930,7 +6899,6 @@ static void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameble
 	// box trace, performed as brush trace
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
-	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	segmentmins[0] = min(start->mins[0], end->mins[0]) - 1;
 	segmentmins[1] = min(start->mins[1], end->mins[1]) - 1;
