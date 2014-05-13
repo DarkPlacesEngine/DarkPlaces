@@ -10,13 +10,9 @@
 #define COLLISION_PLANE_DIST_EPSILON (2.0f / COLLISION_SNAPSCALE)
 
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
-cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias collision trace start"};
-cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
-cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
-cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
-cvar_t collision_extendmovelength = {0, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge/collision_enternudge/collision_leavenudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
-cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge/collision_enternudge/collision_leavenudge (this does not alter the final trace length)"};
-cvar_t collision_extendtracelinelength = {0, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge/collision_enternudge/collision_leavenudge (this does not alter the final trace length)"};
+cvar_t collision_extendmovelength = {0, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
+cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
+cvar_t collision_extendtracelinelength = {0, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
 cvar_t collision_debug_tracelineasbox = {0, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
 cvar_t collision_cache = {0, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
 //cvar_t collision_triangle_neighborsides = {0, "collision_triangle_neighborsides", "1", "override automatic side generation if triangle has neighbors with face planes that form a convex edge (perfect solution, but can not work for all edges)"};
@@ -28,10 +24,6 @@ mempool_t *collision_mempool;
 void Collision_Init (void)
 {
 	Cvar_RegisterVariable(&collision_impactnudge);
-	Cvar_RegisterVariable(&collision_startnudge);
-	Cvar_RegisterVariable(&collision_endnudge);
-	Cvar_RegisterVariable(&collision_enternudge);
-	Cvar_RegisterVariable(&collision_leavenudge);
 	Cvar_RegisterVariable(&collision_extendmovelength);
 	Cvar_RegisterVariable(&collision_extendtracelinelength);
 	Cvar_RegisterVariable(&collision_extendtraceboxlength);
@@ -652,8 +644,8 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 		}
 		startplane[3] = furthestplanedist_float(startplane, other_start->points, othernumpoints);
 		endplane[3] = furthestplanedist_float(startplane, other_end->points, othernumpoints);
-		startdist = nearestplanedist_float(startplane, trace_start->points, tracenumpoints) - startplane[3] - collision_startnudge.value;
-		enddist = nearestplanedist_float(endplane, trace_end->points, tracenumpoints) - endplane[3] - collision_endnudge.value;
+		startdist = nearestplanedist_float(startplane, trace_start->points, tracenumpoints) - startplane[3];
+		enddist = nearestplanedist_float(endplane, trace_end->points, tracenumpoints) - endplane[3];
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
@@ -666,15 +658,13 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 		if (startdist > enddist)
 		{
 			// moving into brush
-			if (enddist >= collision_enternudge.value)
+			if (enddist > 0.0f)
 				return;
 			if (startdist >= 0)
 			{
 				// enter
 				imove = 1 / (startdist - enddist);
-				f = (startdist - collision_enternudge.value) * imove;
-				if (f < 0)
-					f = 0;
+				f = startdist * imove;
 				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
@@ -726,9 +716,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 			if (enddist > 0)
 			{
 				// leave
-				f = (startdist + collision_leavenudge.value) / (startdist - enddist);
-				if (f > 1)
-					f = 1;
+				f = startdist / (startdist - enddist);
 				// check if this will reduce the collision time range
 				if (leavefrac > f)
 				{
@@ -821,8 +809,8 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		startplane[3] = other_start->planes[nplane].dist;
 		VectorCopy(other_end->planes[nplane].normal, endplane);
 		endplane[3] = other_end->planes[nplane].dist;
-		startdist = DotProduct(linestart, startplane) - startplane[3] - collision_startnudge.value;
-		enddist = DotProduct(lineend, endplane) - endplane[3] - collision_endnudge.value;
+		startdist = DotProduct(linestart, startplane) - startplane[3];
+		enddist = DotProduct(lineend, endplane) - endplane[3];
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
 
 		// aside from collisions, this is also used for error correction
@@ -835,15 +823,13 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 		if (startdist > enddist)
 		{
 			// moving into brush
-			if (enddist >= collision_enternudge.value)
+			if (enddist > 0.0f)
 				return;
 			if (startdist > 0)
 			{
 				// enter
 				imove = 1 / (startdist - enddist);
-				f = (startdist - collision_enternudge.value) * imove;
-				if (f < 0)
-					f = 0;
+				f = startdist * imove;
 				// check if this will reduce the collision time range
 				if (enterfrac < f)
 				{
@@ -878,9 +864,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			if (enddist > 0)
 			{
 				// leave
-				f = (startdist + collision_leavenudge.value) / (startdist - enddist);
-				if (f > 1)
-					f = 1;
+				f = startdist / (startdist - enddist);
 				// check if this will reduce the collision time range
 				if (leavefrac > f)
 				{
