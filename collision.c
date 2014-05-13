@@ -14,7 +14,6 @@ cvar_t collision_startnudge = {0, "collision_startnudge", "0", "how much to bias
 cvar_t collision_endnudge = {0, "collision_endnudge", "0", "how much to bias collision trace end"};
 cvar_t collision_enternudge = {0, "collision_enternudge", "0", "how much to bias collision entry fraction"};
 cvar_t collision_leavenudge = {0, "collision_leavenudge", "0", "how much to bias collision exit fraction"};
-cvar_t collision_prefernudgedfraction = {0, "collision_prefernudgedfraction", "1", "whether to sort collision events by nudged fraction (1) or real fraction (0)"};
 cvar_t collision_extendmovelength = {0, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge/collision_enternudge/collision_leavenudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
 cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge/collision_enternudge/collision_leavenudge (this does not alter the final trace length)"};
 cvar_t collision_extendtracelinelength = {0, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge/collision_enternudge/collision_leavenudge (this does not alter the final trace length)"};
@@ -33,7 +32,6 @@ void Collision_Init (void)
 	Cvar_RegisterVariable(&collision_endnudge);
 	Cvar_RegisterVariable(&collision_enternudge);
 	Cvar_RegisterVariable(&collision_leavenudge);
-	Cvar_RegisterVariable(&collision_prefernudgedfraction);
 	Cvar_RegisterVariable(&collision_extendmovelength);
 	Cvar_RegisterVariable(&collision_extendtracelinelength);
 	Cvar_RegisterVariable(&collision_extendtraceboxlength);
@@ -685,14 +683,14 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 					// if the collision time range is now empty, no collision
 					if (enterfrac > leavefrac)
 						return;
-					// if the collision would be further away than the trace's
-					// existing collision data, we don't care about this
-					// collision
-					if (enterfrac > trace->realfraction)
-						return;
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
 					enterfrac2 = (startdist - collision_impactnudge.value) * imove;
+					// if the collision would be further away than the trace's
+					// existing collision data, we don't care about this
+					// collision
+					if (enterfrac2 >= trace->fraction)
+						return;
 					ie = 1.0f - enterfrac;
 					newimpactplane[0] = startplane[0] * ie + endplane[0] * enterfrac;
 					newimpactplane[1] = startplane[1] * ie + endplane[1] * enterfrac;
@@ -757,10 +755,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 			trace->hitsupercontents = other_start->supercontents;
 			trace->hitq3surfaceflags = hitq3surfaceflags;
 			trace->hittexture = hittexture;
-			trace->realfraction = bound(0, enterfrac, 1);
 			trace->fraction = bound(0, enterfrac2, 1);
-			if (collision_prefernudgedfraction.integer)
-				trace->realfraction = trace->fraction;
 			VectorCopy(newimpactplane, trace->plane.normal);
 			trace->plane.dist = newimpactplane[3];
 		}
@@ -857,14 +852,14 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 					// if the collision time range is now empty, no collision
 					if (enterfrac > leavefrac)
 						return;
-					// if the collision would be further away than the trace's
-					// existing collision data, we don't care about this
-					// collision
-					if (enterfrac > trace->realfraction)
-						return;
 					// calculate the nudged fraction and impact normal we'll
 					// need if we accept this collision later
 					enterfrac2 = (startdist - collision_impactnudge.value) * imove;
+					// if the collision would be further away than the trace's
+					// existing collision data, we don't care about this
+					// collision
+					if (enterfrac2 >= trace->fraction)
+						return;
 					ie = 1.0f - enterfrac;
 					newimpactplane[0] = startplane[0] * ie + endplane[0] * enterfrac;
 					newimpactplane[1] = startplane[1] * ie + endplane[1] * enterfrac;
@@ -912,10 +907,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			trace->hitsupercontents = other_start->supercontents;
 			trace->hitq3surfaceflags = hitq3surfaceflags;
 			trace->hittexture = hittexture;
-			trace->realfraction = bound(0, enterfrac, 1);
 			trace->fraction = bound(0, enterfrac2, 1);
-			if (collision_prefernudgedfraction.integer)
-				trace->realfraction = trace->fraction;
 			VectorCopy(newimpactplane, trace->plane.normal);
 			trace->plane.dist = newimpactplane[3];
 		}
@@ -1234,9 +1226,7 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 
 void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2, int supercontents, int q3surfaceflags, const texture_t *texture)
 {
-#if 1
-	// more optimized
-	float d1, d2, d, f, impact[3], edgenormal[3], faceplanenormal[3], faceplanedist, faceplanenormallength2, edge01[3], edge21[3], edge02[3];
+	float d1, d2, d, f, f2, impact[3], edgenormal[3], faceplanenormal[3], faceplanedist, faceplanenormallength2, edge01[3], edge21[3], edge02[3];
 
 	// this function executes:
 	// 32 ops when line starts behind triangle
@@ -1293,11 +1283,12 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// and subtracting the face plane distance (this is the distance of the
 	// triangle along that same normal)
 	// then multiply by the recipricol distance delta
-	// 2 ops
+	// 4 ops
 	f = (d1 - faceplanedist) * d;
+	f2  = f - collision_impactnudge.value * d;
 	// skip out if this impact is further away than previous ones
 	// 1 ops
-	if (f > trace->realfraction)
+	if (f2 >= trace->fraction)
 		return;
 	// calculate the perfect impact point for classification of insidedness
 	// 9 ops
@@ -1332,14 +1323,7 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// 8 ops (rare)
 
 	// store the new trace fraction
-	trace->realfraction = f;
-
-	// calculate a nudged fraction to keep it out of the surface
-	// (the main fraction remains perfect)
-	trace->fraction = f - collision_impactnudge.value * d;
-
-	if (collision_prefernudgedfraction.integer)
-		trace->realfraction = trace->fraction;
+	trace->fraction = f2;
 
 	// store the new trace plane (because collisions only happen from
 	// the front this is always simply the triangle normal, never flipped)
@@ -1350,103 +1334,6 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	trace->hitsupercontents = supercontents;
 	trace->hitq3surfaceflags = q3surfaceflags;
 	trace->hittexture = texture;
-#else
-	float d1, d2, d, f, fnudged, impact[3], edgenormal[3], faceplanenormal[3], faceplanedist, edge[3];
-
-	// this code is designed for clockwise triangles, conversion to
-	// counterclockwise would require swapping some things around...
-	// it is easier to simply swap the point0 and point2 parameters to this
-	// function when calling it than it is to rewire the internals.
-
-	// calculate the unnormalized faceplanenormal of the triangle,
-	// this represents the front side
-	TriangleNormal(point0, point1, point2, faceplanenormal);
-	// there's no point in processing a degenerate triangle
-	// (GIGO - Garbage In, Garbage Out)
-	if (DotProduct(faceplanenormal, faceplanenormal) < 0.0001f)
-		return;
-	// calculate the unnormalized distance
-	faceplanedist = DotProduct(point0, faceplanenormal);
-
-	// calculate the unnormalized start distance
-	d1 = DotProduct(faceplanenormal, linestart) - faceplanedist;
-	// if start point is on the back side there is no collision
-	// (we don't care about traces going through the triangle the wrong way)
-	if (d1 <= 0)
-		return;
-
-	// calculate the unnormalized end distance
-	d2 = DotProduct(faceplanenormal, lineend) - faceplanedist;
-	// if both are in front, there is no collision
-	if (d2 >= 0)
-		return;
-
-	// from here on we know d1 is >= 0 and d2 is < 0
-	// this means the line starts infront and ends behind, passing through it
-
-	// calculate the recipricol of the distance delta,
-	// so we can use it multiple times cheaply (instead of division)
-	d = 1.0f / (d1 - d2);
-	// calculate the impact fraction by taking the start distance (> 0)
-	// and subtracting the face plane distance (this is the distance of the
-	// triangle along that same normal)
-	// then multiply by the recipricol distance delta
-	f = d1 * d;
-	// skip out if this impact is further away than previous ones
-	if (f > trace->realfraction)
-		return;
-	// calculate the perfect impact point for classification of insidedness
-	impact[0] = linestart[0] + f * (lineend[0] - linestart[0]);
-	impact[1] = linestart[1] + f * (lineend[1] - linestart[1]);
-	impact[2] = linestart[2] + f * (lineend[2] - linestart[2]);
-
-	// calculate the edge normal and reject if impact is outside triangle
-	// (an edge normal faces away from the triangle, to get the desired normal
-	//  a crossproduct with the faceplanenormal is used, and because of the way
-	// the insidedness comparison is written it does not need to be normalized)
-
-	VectorSubtract(point2, point0, edge);
-	CrossProduct(edge, faceplanenormal, edgenormal);
-	if (DotProduct(impact, edgenormal) > DotProduct(point0, edgenormal))
-		return;
-
-	VectorSubtract(point0, point1, edge);
-	CrossProduct(edge, faceplanenormal, edgenormal);
-	if (DotProduct(impact, edgenormal) > DotProduct(point1, edgenormal))
-		return;
-
-	VectorSubtract(point1, point2, edge);
-	CrossProduct(edge, faceplanenormal, edgenormal);
-	if (DotProduct(impact, edgenormal) > DotProduct(point2, edgenormal))
-		return;
-
-	// store the new trace fraction
-	trace->realfraction = bound(0, f, 1);
-
-	// store the new trace plane (because collisions only happen from
-	// the front this is always simply the triangle normal, never flipped)
-	VectorNormalize(faceplanenormal);
-	VectorCopy(faceplanenormal, trace->plane.normal);
-	trace->plane.dist = DotProduct(point0, faceplanenormal);
-
-	// calculate the normalized start and end distances
-	d1 = DotProduct(trace->plane.normal, linestart) - trace->plane.dist;
-	d2 = DotProduct(trace->plane.normal, lineend) - trace->plane.dist;
-
-	// calculate a nudged fraction to keep it out of the surface
-	// (the main fraction remains perfect)
-	fnudged = (d1 - collision_impactnudge.value) / (d1 - d2);
-	trace->fraction = bound(0, fnudged, 1);
-
-	// store the new trace endpos
-	// not needed, it's calculated later when the trace is finished
-	//trace->endpos[0] = linestart[0] + fnudged * (lineend[0] - linestart[0]);
-	//trace->endpos[1] = linestart[1] + fnudged * (lineend[1] - linestart[1]);
-	//trace->endpos[2] = linestart[2] + fnudged * (lineend[2] - linestart[2]);
-	trace->hitsupercontents = supercontents;
-	trace->hitq3surfaceflags = q3surfaceflags;
-	trace->hittexture = texture;
-#endif
 }
 
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac)
@@ -1814,7 +1701,7 @@ extendtraceinfo_t;
 static void Collision_ClipExtendPrepare(extendtraceinfo_t *extendtraceinfo, trace_t *trace, const vec3_t tstart, const vec3_t tend, float textend)
 {
 	memset(trace, 0, sizeof(*trace));
-	trace->fraction = trace->realfraction = 1;
+	trace->fraction = 1;
 
 	extendtraceinfo->trace = trace;
 	VectorCopy(tstart, extendtraceinfo->realstart);
@@ -1846,7 +1733,6 @@ static void Collision_ClipExtendFinish(extendtraceinfo_t *extendtraceinfo)
 	{
 		// undo the extended trace length
 		trace->fraction *= extendtraceinfo->scaletoextend;
-		trace->realfraction *= extendtraceinfo->scaletoextend;
 
 		// if the extended trace hit something that the unextended trace did not hit (even considering the collision_impactnudge), then we have to clear the hit information
 		if (trace->fraction > 1.0f)
@@ -1863,7 +1749,6 @@ static void Collision_ClipExtendFinish(extendtraceinfo_t *extendtraceinfo)
 
 	// clamp things
 	trace->fraction = bound(0, trace->fraction, 1);
-	trace->realfraction = bound(0, trace->realfraction, 1);
 
 	// calculate the end position
 	VectorMA(extendtraceinfo->realstart, trace->fraction, extendtraceinfo->realdelta, trace->endpos);
@@ -1965,7 +1850,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 {
 	float starttransformed[3];
 	memset(trace, 0, sizeof(*trace));
-	trace->fraction = trace->realfraction = 1;
+	trace->fraction = 1;
 
 	Matrix4x4_Transform(inversematrix, start, starttransformed);
 #if COLLISIONPARANOID >= 3
@@ -1986,7 +1871,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontents)
 {
 	memset(trace, 0, sizeof(*trace));
-	trace->fraction = trace->realfraction = 1;
+	trace->fraction = 1;
 	if (model && model->TracePoint)
 		model->TracePoint(model, NULL, NULL, trace, start, hitsupercontents);
 	VectorCopy(start, trace->endpos);
@@ -2002,7 +1887,7 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 		if (isbmodel)
 			cliptrace->bmodelstartsolid = true;
 		cliptrace->startsolid = true;
-		if (cliptrace->realfraction == 1)
+		if (cliptrace->fraction == 1)
 			cliptrace->ent = touch;
 		if (cliptrace->startdepth > trace->startdepth)
 		{
@@ -2017,10 +1902,9 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 	//	cliptrace->inopen = true;
 	if (trace->inwater)
 		cliptrace->inwater = true;
-	if ((trace->realfraction < cliptrace->realfraction) && (VectorLength2(trace->plane.normal) > 0))
+	if ((trace->fraction < cliptrace->fraction) && (VectorLength2(trace->plane.normal) > 0))
 	{
 		cliptrace->fraction = trace->fraction;
-		cliptrace->realfraction = trace->realfraction;
 		VectorCopy(trace->endpos, cliptrace->endpos);
 		cliptrace->plane = trace->plane;
 		cliptrace->ent = touch;
@@ -2029,23 +1913,4 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 		cliptrace->hittexture = trace->hittexture;
 	}
 	cliptrace->startsupercontents |= trace->startsupercontents;
-}
-
-void Collision_ShortenTrace(trace_t *trace, float shorten_factor, const vec3_t end)
-{
-	// now undo our moving end 1 qu farther...
-	trace->fraction = bound(trace->fraction, trace->fraction / shorten_factor - 1e-6, 1); // we subtract 1e-6 to guard for roundoff errors
-	trace->realfraction = bound(trace->realfraction, trace->realfraction / shorten_factor - 1e-6, 1); // we subtract 1e-6 to guard for roundoff errors
-	if(trace->fraction >= 1) // trace would NOT hit if not expanded!
-	{
-		trace->fraction = 1;
-		trace->realfraction = 1;
-		VectorCopy(end, trace->endpos);
-		memset(&trace->plane, 0, sizeof(trace->plane));
-		trace->ent = NULL;
-		trace->hitsupercontentsmask = 0;
-		trace->hitsupercontents = 0;
-		trace->hitq3surfaceflags = 0;
-		trace->hittexture = NULL;
-	}
 }
