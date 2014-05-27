@@ -2793,7 +2793,7 @@ void VM_isserver(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0,VM_serverstate);
 
-	PRVM_G_FLOAT(OFS_RETURN) = sv.active && (svs.maxclients > 1 || cls.state == ca_dedicated);
+	PRVM_G_FLOAT(OFS_RETURN) = sv.active;
 }
 
 /*
