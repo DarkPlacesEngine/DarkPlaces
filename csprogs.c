@@ -227,6 +227,7 @@ static void CSQC_SetGlobals (double frametime)
 	prvm_prog_t *prog = CLVM_prog;
 	CSQC_BEGIN
 		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobalfloat(cltime) = realtime; // Spike named it that way.
 		PRVM_clientglobalfloat(frametime) = frametime;
 		PRVM_clientglobalfloat(servercommandframe) = cls.servermovesequence;
 		PRVM_clientglobalfloat(clientcommandframe) = cl.movecmd[0].sequence;

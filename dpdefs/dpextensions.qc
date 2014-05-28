@@ -899,10 +899,10 @@ vector gettaginfo_up;
 //idea: tZork
 //darkplaces implementation: tZork, divVerent
 //constant definitions:
-float GETTIME_FRAMESTART = 0; // time of start of frame
-float GETTIME_REALTIME = 1; // current time (may be OS specific)
+float GETTIME_FRAMESTART = 0; // time of start of frame relative to an arbitrary point in time
+float GETTIME_REALTIME = 1; // current absolute time (OS specific)
 float GETTIME_HIRES = 2; // like REALTIME, but may reset between QC invocations and thus can be higher precision
-float GETTIME_UPTIME = 3; // time since start of the engine
+float GETTIME_UPTIME = 3; // time of start of frame since start of the engine
 //builtin definitions:
 float(float tmr) gettime = #519;
 //description:
@@ -1183,7 +1183,9 @@ void(vector dir) vectorvectors = #432;
 //builtin definitions:
 string(string filename) whichpack = #503;
 //description:
-//returns the name of the pak/pk3/whatever containing the given file, in the same path space as FRIK_FILE functions use (that is, possibly with a path name prefix)
+//for files in a pak/pk3/whatever, returns the pack's file name in FRIK_FILE name space.
+//for physical files, returns "".
+//in case of error, returns string_null.
 
 //DP_QC_URI_ESCAPE
 //idea: divVerent

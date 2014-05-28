@@ -3723,6 +3723,8 @@ const char *FS_WhichPack(const char *filename)
 	searchpath_t *sp = FS_FindFile(filename, &index, true);
 	if(sp && sp->pack)
 		return sp->pack->shortname;
+	else if(sp)
+		return "";
 	else
 		return 0;
 }
