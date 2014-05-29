@@ -63,7 +63,7 @@ static q3shader_data_t* q3shader_data;
 static void mod_start(void)
 {
 	int i, count;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
 	SCR_PushLoadingScreen(false, "Loading models", 1.0);
@@ -86,7 +86,7 @@ static void mod_start(void)
 static void mod_shutdown(void)
 {
 	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
 	for (i = 0;i < nummodels;i++)
@@ -101,7 +101,7 @@ static void mod_newmap(void)
 {
 	msurface_t *surface;
 	int i, j, k, surfacenum, ssize, tsize;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
 	for (i = 0;i < nummodels;i++)
@@ -533,7 +533,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 void Mod_ClearUsed(void)
 {
 	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0])
@@ -543,7 +543,7 @@ void Mod_ClearUsed(void)
 void Mod_PurgeUnused(void)
 {
 	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 	for (i = 0;i < nummodels;i++)
 	{
@@ -573,7 +573,7 @@ dp_model_t *Mod_FindName(const char *name, const char *parentname)
 	// if we're not dedicatd, the renderer calls will crash without video
 	Host_StartVideo();
 
-	nummodels = Mem_ExpandableArray_IndexRange(&models);
+	nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 
 	if (!name[0])
 		Host_Error ("Mod_ForName: empty name");
@@ -626,7 +626,7 @@ Reloads all models if they have changed
 void Mod_Reload(void)
 {
 	int i, count;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
 	SCR_PushLoadingScreen(false, "Reloading models", 1.0);
@@ -657,7 +657,7 @@ Mod_Print
 static void Mod_Print(void)
 {
 	int i;
-	int nummodels = Mem_ExpandableArray_IndexRange(&models);
+	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
 	Con_Print("Loaded models:\n");
@@ -1244,7 +1244,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 	// other hand animated models don't use a lot of vertices anyway...
 	if (!mesh->vbo_vertexbuffer && !vid.useinterleavedarrays)
 	{
-		size_t size;
+		int size;
 		unsigned char *mem;
 		size = 0;
 		mesh->vbooffset_vertexmesh         = size;if (mesh->vertexmesh        ) size += mesh->numverts * sizeof(r_vertexmesh_t);
@@ -1691,7 +1691,7 @@ void Mod_LoadQ3Shaders(void)
 						break;
 					}
 					// name
-					j = strlen(com_token)+1;
+					j = (int)strlen(com_token)+1;
 					custsurfaceparmnames[numcustsurfaceflags] = (char *)Mem_Alloc(tempmempool, j);
 					strlcpy(custsurfaceparmnames[numcustsurfaceflags], com_token, j+1);
 					// value
@@ -3042,7 +3042,7 @@ void Mod_BuildVBOs(void)
 	// other hand animated models don't use a lot of vertices anyway...
 	if (!loadmodel->surfmesh.vbo_vertexbuffer && !vid.useinterleavedarrays)
 	{
-		size_t size;
+		int size;
 		unsigned char *mem;
 		size = 0;
 		loadmodel->surfmesh.vbooffset_vertexmesh         = size;if (loadmodel->surfmesh.data_vertexmesh        ) size += loadmodel->surfmesh.num_vertices * sizeof(r_vertexmesh_t);
@@ -3434,7 +3434,7 @@ static void Mod_Decompile_f(void)
 			{
 				// individual frame
 				// check for additional frames with same name
-				for (l = 0, k = strlen(animname);animname[l];l++)
+				for (l = 0, k = (int)strlen(animname);animname[l];l++)
 					if(animname[l] < '0' || animname[l] > '9')
 						k = l + 1;
 				if(k > 0 && animname[k-1] == '_')
@@ -3444,7 +3444,7 @@ static void Mod_Decompile_f(void)
 				for (j = i + 1;j < mod->numframes;j++)
 				{
 					strlcpy(animname2, mod->animscenes[j].name, sizeof(animname2));
-					for (l = 0, k = strlen(animname2);animname2[l];l++)
+					for (l = 0, k = (int)strlen(animname2);animname2[l];l++)
 						if(animname2[l] < '0' || animname2[l] > '9')
 							k = l + 1;
 					if(k > 0 && animname[k-1] == '_')

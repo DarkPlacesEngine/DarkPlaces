@@ -714,7 +714,7 @@ static void Con_MessageMode_f (void)
 	if(Cmd_Argc() > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
-		chat_bufferlen = strlen(chat_buffer);
+		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 }
 
@@ -731,7 +731,7 @@ static void Con_MessageMode2_f (void)
 	if(Cmd_Argc() > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
-		chat_bufferlen = strlen(chat_buffer);
+		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 }
 
@@ -746,7 +746,7 @@ static void Con_CommandMode_f (void)
 	if(Cmd_Argc() > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
-		chat_bufferlen = strlen(chat_buffer);
+		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 	chat_mode = -1; // command
 }
@@ -983,7 +983,7 @@ void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean 
 		rcon_redirect_buffer[2] = 0;
 		rcon_redirect_buffer[3] = 0;
 		// this is a reply to a CCREQ_RCON
-		rcon_redirect_buffer[4] = (char)CCREP_RCON;
+		rcon_redirect_buffer[4] = (unsigned char)CCREP_RCON;
 	}
 	else
 		memcpy(rcon_redirect_buffer, "\377\377\377\377n", 5); // QW rcon print
@@ -1543,7 +1543,7 @@ static void Con_DrawInput (void)
 				text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
 			else if (y + 3 < (int)sizeof(editlinecopy)-1)
 			{
-				int ofs = u8_bytelen(text + key_linepos, 1);
+				int ofs = (int)u8_bytelen(text + key_linepos, 1);
 				size_t len;
 				const char *curbuf;
 				char charbuf16[16];
@@ -2458,10 +2458,10 @@ static void Nicks_CutMatchesNormal(int count)
 	// cut match 0 down to the longest possible completion
 	int i;
 	unsigned int c, l;
-	c = strlen(Nicks_sanlist[0]) - 1;
+	c = (unsigned int)strlen(Nicks_sanlist[0]) - 1;
 	for(i = 1; i < count; ++i)
 	{
-		l = strlen(Nicks_sanlist[i]) - 1;
+		l = (unsigned int)strlen(Nicks_sanlist[i]) - 1;
 		if(l < c)
 			c = l;
 
@@ -2500,7 +2500,7 @@ static void Nicks_CutMatchesAlphaNumeric(int count)
 	char *a, *b;
 	char space_char = (con_nickcompletion_flags.integer & NICKS_NO_SPACES) ? 'a' : ' '; // yes this is correct, we want NO spaces when no spaces
 
-	c = strlen(Nicks_sanlist[0]);
+	c = (unsigned int)strlen(Nicks_sanlist[0]);
 	for(i = 0, l = 0; i < (int)c; ++i)
 	{
 		if( (Nicks_sanlist[0][i] >= 'a' && Nicks_sanlist[0][i] <= 'z') ||
@@ -2558,7 +2558,7 @@ static void Nicks_CutMatchesNoSpaces(int count)
 	char tempstr[sizeof(Nicks_sanlist[0])];
 	char *a, *b;
 
-	c = strlen(Nicks_sanlist[0]);
+	c = (unsigned int)strlen(Nicks_sanlist[0]);
 	for(i = 0, l = 0; i < (int)c; ++i)
 	{
 		if(Nicks_sanlist[0][i] != ' ') // here it's what's NOT copied
@@ -2713,10 +2713,10 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 		len = min(size - Nicks_matchpos - 3, strlen(msg));
 		memcpy(&buffer[Nicks_matchpos], msg, len);
 		if( len < (size - 7) ) // space for color (^[0-9] or ^xrgb) and space and \0
-			len = Nicks_AddLastColor(buffer, Nicks_matchpos+len);
+			len = (int)Nicks_AddLastColor(buffer, Nicks_matchpos+(int)len);
 		buffer[len++] = ' ';
 		buffer[len] = 0;
-		return len;
+		return (int)len;
 	} else if(n > 1)
 	{
 		int len;
@@ -2727,7 +2727,7 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 		Nicks_CutMatches(n);
 
 		msg = Nicks_sanlist[0];
-		len = min(size - Nicks_matchpos, strlen(msg));
+		len = (int)min(size - Nicks_matchpos, strlen(msg));
 		memcpy(&buffer[Nicks_matchpos], msg, len);
 		buffer[Nicks_matchpos + len] = 0;
 		//pos += len;
@@ -3021,7 +3021,7 @@ done:
 			if(n)
 			{ // was a nick, might have an offset, and needs colors ;) --blub
 				key_linepos = pos - Nicks_offset[0];
-				cmd_len = strlen(Nicks_list[0]);
+				cmd_len = (int)strlen(Nicks_list[0]);
 				cmd_len = min(cmd_len, (int)sizeof(key_line) - 3 - pos);
 
 				memcpy(&key_line[key_linepos] , Nicks_list[0], cmd_len);

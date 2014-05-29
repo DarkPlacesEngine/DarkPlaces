@@ -90,7 +90,7 @@ snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sa
 	sb->format.channels = in_format->channels;
 	sb->format.width = in_format->width;
 	sb->format.speed = sb_speed;
-	sb->maxframes = newsampleframes;
+	sb->maxframes = (unsigned int)newsampleframes;
 	sb->nbframes = 0;
 
 	if (!Snd_AppendToSndBuffer (sb, samples, sampleframes, in_format))
@@ -289,7 +289,7 @@ qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, 
 		}
 	}
 
-	sb->nbframes += outcount;
+	sb->nbframes += (unsigned int)outcount;
 	return true;
 }
 

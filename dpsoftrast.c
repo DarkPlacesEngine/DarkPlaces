@@ -1318,25 +1318,25 @@ void DPSOFTRAST_SetTexture(int unitnum, int index)
 void DPSOFTRAST_SetVertexPointer(const float *vertex3f, size_t stride)
 {
 	dpsoftrast.pointer_vertex3f = vertex3f;
-	dpsoftrast.stride_vertex = stride;
+	dpsoftrast.stride_vertex = (int)stride;
 }
 void DPSOFTRAST_SetColorPointer(const float *color4f, size_t stride)
 {
 	dpsoftrast.pointer_color4f = color4f;
 	dpsoftrast.pointer_color4ub = NULL;
-	dpsoftrast.stride_color = stride;
+	dpsoftrast.stride_color = (int)stride;
 }
 void DPSOFTRAST_SetColorPointer4ub(const unsigned char *color4ub, size_t stride)
 {
 	dpsoftrast.pointer_color4f = NULL;
 	dpsoftrast.pointer_color4ub = color4ub;
-	dpsoftrast.stride_color = stride;
+	dpsoftrast.stride_color = (int)stride;
 }
 void DPSOFTRAST_SetTexCoordPointer(int unitnum, int numcomponents, size_t stride, const float *texcoordf)
 {
 	dpsoftrast.pointer_texcoordf[unitnum] = texcoordf;
 	dpsoftrast.components_texcoord[unitnum] = numcomponents;
-	dpsoftrast.stride_texcoord[unitnum] = stride;
+	dpsoftrast.stride_texcoord[unitnum] = (int)stride;
 }
 
 DEFCOMMAND(18, SetShader, int mode; int permutation; int exactspecularmath;)

@@ -2287,7 +2287,7 @@ size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen)
 	for(i = blocks; i > 0; )
 	{
 		--i;
-		base64_3to4(buf + 3*i, buf + 4*i, buflen - 3*i);
+		base64_3to4(buf + 3*i, buf + 4*i, (int)(buflen - 3*i));
 	}
 	return blocks * 4;
 }

@@ -277,7 +277,7 @@ typedef struct gl_state_s
 	IDirect3DSurface9 *d3drt_backbuffercolorsurface;
 	void *d3dvertexbuffer;
 	void *d3dvertexdata;
-	size_t d3dvertexsize;
+	int d3dvertexsize;
 #endif
 }
 gl_state_t;
@@ -505,7 +505,7 @@ static void gl_backend_devicelost(void)
 		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
-	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
+	endindex = (int)Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
 	{
 		buffer = (r_meshbuffer_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.meshbufferarray, i);
@@ -3337,12 +3337,12 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	if (buffer->isindexbuffer)
 	{
 		r_refdef.stats[r_stat_indexbufferuploadcount]++;
-		r_refdef.stats[r_stat_indexbufferuploadsize] += size;
+		r_refdef.stats[r_stat_indexbufferuploadsize] += (int)size;
 	}
 	else
 	{
 		r_refdef.stats[r_stat_vertexbufferuploadcount]++;
-		r_refdef.stats[r_stat_vertexbufferuploadsize] += size;
+		r_refdef.stats[r_stat_vertexbufferuploadsize] += (int)size;
 	}
 	if (!subdata)
 		buffer->size = size;
@@ -3390,7 +3390,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 					if (buffer->devicebuffer)
 						IDirect3DIndexBuffer9_Release((IDirect3DIndexBuffer9*)buffer->devicebuffer);
 					buffer->devicebuffer = NULL;
-					if (FAILED(result = IDirect3DDevice9_CreateIndexBuffer(vid_d3d9dev, offset+size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, NULL)))
+					if (FAILED(result = IDirect3DDevice9_CreateIndexBuffer(vid_d3d9dev, (unsigned int)(offset+size), buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9indexbuffer, NULL)))
 						Sys_Error("IDirect3DDevice9_CreateIndexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? (int)D3DUSAGE_DYNAMIC : 0, buffer->isindex16 ? (int)D3DFMT_INDEX16 : (int)D3DFMT_INDEX32, buffer->isdynamic ? (int)D3DPOOL_DEFAULT : (int)D3DPOOL_MANAGED, &d3d9indexbuffer, (int)result);
 					buffer->devicebuffer = (void *)d3d9indexbuffer;
 					buffer->size = offset+size;
@@ -3412,7 +3412,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 					if (buffer->devicebuffer)
 						IDirect3DVertexBuffer9_Release((IDirect3DVertexBuffer9*)buffer->devicebuffer);
 					buffer->devicebuffer = NULL;
-					if (FAILED(result = IDirect3DDevice9_CreateVertexBuffer(vid_d3d9dev, offset+size, buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, NULL)))
+					if (FAILED(result = IDirect3DDevice9_CreateVertexBuffer(vid_d3d9dev, (unsigned int)(offset+size), buffer->isdynamic ? D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED, &d3d9vertexbuffer, NULL)))
 						Sys_Error("IDirect3DDevice9_CreateVertexBuffer(%p, %d, %x, %x, %x, %p, NULL) returned %x\n", vid_d3d9dev, (int)size, buffer->isdynamic ? (int)D3DUSAGE_DYNAMIC : 0, 0, buffer->isdynamic ? (int)D3DPOOL_DEFAULT : (int)D3DPOOL_MANAGED, &d3d9vertexbuffer, (int)result);
 					buffer->devicebuffer = (void *)d3d9vertexbuffer;
 					buffer->size = offset+size;
@@ -3500,7 +3500,7 @@ void GL_Mesh_ListVBOs(qboolean printeach)
 	size_t bufferstat[R_BUFFERDATA_COUNT][2][2];
 	r_meshbuffer_t *buffer;
 	memset(bufferstat, 0, sizeof(bufferstat));
-	endindex = Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
+	endindex = (int)Mem_ExpandableArray_IndexRange(&gl_state.meshbufferarray);
 	for (i = 0;i < endindex;i++)
 	{
 		buffer = (r_meshbuffer_t *) Mem_ExpandableArray_RecordAtIndex(&gl_state.meshbufferarray, i);
@@ -3554,7 +3554,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 			gl_state.pointer_vertex_offset = bufferoffset;
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
-			qglVertexPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			qglVertexPointer(components, gltype, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 		}
 #endif
 		break;
@@ -3572,7 +3572,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
 			// LordHavoc: special flag added to gltype for unnormalized types
-			qglVertexAttribPointer(GLSLATTRIB_POSITION, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+			qglVertexAttribPointer(GLSLATTRIB_POSITION, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 		}
 		break;
 	case RENDERPATH_D3D9:
@@ -3614,7 +3614,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 				gl_state.pointer_color_offset = bufferoffset;
 				CHECKGLERROR
 				GL_BindVBO(bufferobject);
-				qglColorPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				qglColorPointer(components, gltype, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else
@@ -3655,7 +3655,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 				CHECKGLERROR
 				GL_BindVBO(bufferobject);
 				// LordHavoc: special flag added to gltype for unnormalized types
-				qglVertexAttribPointer(GLSLATTRIB_COLOR, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				qglVertexAttribPointer(GLSLATTRIB_COLOR, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else
@@ -3713,7 +3713,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 				unit->pointer_texcoord_offset = bufferoffset;
 				GL_ClientActiveTexture(unitnum);
 				GL_BindVBO(bufferobject);
-				qglTexCoordPointer(components, gltype, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				qglTexCoordPointer(components, gltype, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else
@@ -3751,7 +3751,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 				unit->pointer_texcoord_offset = bufferoffset;
 				GL_BindVBO(bufferobject);
 				// LordHavoc: special flag added to gltype for unnormalized types
-				qglVertexAttribPointer(unitnum+GLSLATTRIB_TEXCOORD0, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
+				qglVertexAttribPointer(unitnum+GLSLATTRIB_TEXCOORD0, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
 		else

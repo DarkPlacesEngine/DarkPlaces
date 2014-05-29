@@ -146,10 +146,10 @@ typedef struct surfmesh_s
 	int num_triangles; // number of triangles in the mesh
 	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
 	r_meshbuffer_t *data_element3i_indexbuffer;
-	size_t data_element3i_bufferoffset;
+	int data_element3i_bufferoffset;
 	unsigned short *data_element3s; // unsigned short[tris*3] triangles of the mesh in unsigned short format (NULL if num_vertices > 65536)
 	r_meshbuffer_t *data_element3s_indexbuffer;
-	size_t data_element3s_bufferoffset;
+	int data_element3s_bufferoffset;
 	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
 	// vertex data in system memory
 	int num_vertices; // number of vertices in the mesh

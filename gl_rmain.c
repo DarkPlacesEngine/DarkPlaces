@@ -1629,7 +1629,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 					vsresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_vs.fx", fs_gamedir, cachename), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				}
 				else
-					vsresult = qD3DXCompileShader(vertstring, strlen(vertstring), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
+					vsresult = qD3DXCompileShader(vertstring, (unsigned int)strlen(vertstring), NULL, NULL, "main", vsversion, shaderflags, &vsbuffer, &vslog, &vsconstanttable);
 				if (vsbuffer)
 				{
 					vsbinsize = ID3DXBuffer_GetBufferSize(vsbuffer);
@@ -1652,7 +1652,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 					psresult = qD3DXCompileShaderFromFileA(va(vabuf, sizeof(vabuf), "%s/%s_ps.fx", fs_gamedir, cachename), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				}
 				else
-					psresult = qD3DXCompileShader(fragstring, strlen(fragstring), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
+					psresult = qD3DXCompileShader(fragstring, (unsigned int)strlen(fragstring), NULL, NULL, "main", psversion, shaderflags, &psbuffer, &pslog, &psconstanttable);
 				if (psbuffer)
 				{
 					psbinsize = ID3DXBuffer_GetBufferSize(psbuffer);
@@ -1780,23 +1780,23 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 
 	vertstring_length = 0;
 	for (i = 0;i < vertstrings_count;i++)
-		vertstring_length += strlen(vertstrings_list[i]);
+		vertstring_length += (int)strlen(vertstrings_list[i]);
 	vertstring = t = (char *)Mem_Alloc(tempmempool, vertstring_length + 1);
-	for (i = 0;i < vertstrings_count;t += strlen(vertstrings_list[i]), i++)
+	for (i = 0;i < vertstrings_count;t += (int)strlen(vertstrings_list[i]), i++)
 		memcpy(t, vertstrings_list[i], strlen(vertstrings_list[i]));
 
 	geomstring_length = 0;
 	for (i = 0;i < geomstrings_count;i++)
-		geomstring_length += strlen(geomstrings_list[i]);
+		geomstring_length += (int)strlen(geomstrings_list[i]);
 	geomstring = t = (char *)Mem_Alloc(tempmempool, geomstring_length + 1);
-	for (i = 0;i < geomstrings_count;t += strlen(geomstrings_list[i]), i++)
+	for (i = 0;i < geomstrings_count;t += (int)strlen(geomstrings_list[i]), i++)
 		memcpy(t, geomstrings_list[i], strlen(geomstrings_list[i]));
 
 	fragstring_length = 0;
 	for (i = 0;i < fragstrings_count;i++)
-		fragstring_length += strlen(fragstrings_list[i]);
+		fragstring_length += (int)strlen(fragstrings_list[i]);
 	fragstring = t = (char *)Mem_Alloc(tempmempool, fragstring_length + 1);
-	for (i = 0;i < fragstrings_count;t += strlen(fragstrings_list[i]), i++)
+	for (i = 0;i < fragstrings_count;t += (int)strlen(fragstrings_list[i]), i++)
 		memcpy(t, fragstrings_list[i], strlen(fragstrings_list[i]));
 
 	// try to load the cached shader, or generate one
@@ -1900,7 +1900,7 @@ void R_GLSL_Restart_f(void)
 		{
 			r_hlsl_permutation_t *p;
 			r_hlsl_permutation = NULL;
-			limit = Mem_ExpandableArray_IndexRange(&r_hlsl_permutationarray);
+			limit = (unsigned int)Mem_ExpandableArray_IndexRange(&r_hlsl_permutationarray);
 			for (i = 0;i < limit;i++)
 			{
 				if ((p = (r_hlsl_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_hlsl_permutationarray, i)))
@@ -1927,7 +1927,7 @@ void R_GLSL_Restart_f(void)
 		{
 			r_glsl_permutation_t *p;
 			r_glsl_permutation = NULL;
-			limit = Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
+			limit = (unsigned int)Mem_ExpandableArray_IndexRange(&r_glsl_permutationarray);
 			for (i = 0;i < limit;i++)
 			{
 				if ((p = (r_glsl_permutation_t*)Mem_ExpandableArray_RecordAtIndex(&r_glsl_permutationarray, i)))
@@ -4832,7 +4832,7 @@ r_meshbuffer_t *R_BufferData_Store(size_t datasize, const void *data, r_bufferda
 		Sys_Error("R_BufferData_Store: failed to create a new buffer of sufficient size\n");
 
 	mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
-	offset = mem->current;
+	offset = (int)mem->current;
 	mem->current += padsize;
 
 	// upload the data to the buffer at the chosen offset

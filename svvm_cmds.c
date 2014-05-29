@@ -1496,8 +1496,8 @@ static void VM_SV_WritePicture(prvm_prog_t *prog)
 	if(Image_Compress(imgname, size, &buf, &size))
 	{
 		// actual picture
-		MSG_WriteShort(WriteDest(prog), size);
-		SZ_Write(WriteDest(prog), (unsigned char *) buf, size);
+		MSG_WriteShort(WriteDest(prog), (int)size);
+		SZ_Write(WriteDest(prog), (unsigned char *) buf, (int)size);
 	}
 	else
 	{
