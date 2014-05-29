@@ -2921,8 +2921,13 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 #if SDL_MAJOR_VERSION == 1
 	SDL_Rect **vidmodes;
 	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
+#ifdef WIN64
+	SDL_Rect **ENDRECT = (SDL_Rect**)-1LL;
+#else
+	SDL_Rect **ENDRECT = (SDL_Rect**)-1;
+#endif
 
-	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); vidmodes && vidmodes != (SDL_Rect**)(-1) && *vidmodes; ++vidmodes)
+	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); vidmodes && vidmodes != ENDRECT && *vidmodes; ++vidmodes)
 	{
 		if(k >= maxcount)
 			break;

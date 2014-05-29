@@ -473,7 +473,7 @@ static void SCR_CaptureVideo_Avi_SoundFrame(const portable_sampleframe_t *paintb
 		out_ptr[3] = (unsigned char)(n1 >> 8);
 	}
 
-	x = length*4;
+	x = (int)length*4;
 	if(format->canseek)
 	{
 		SCR_CaptureVideo_RIFF_OverflowCheck(8 + x);

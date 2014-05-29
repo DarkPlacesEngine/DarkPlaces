@@ -914,14 +914,14 @@ static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintb
 	ogg_packet pt;
 	int *map = mapping[bound(1, cls.capturevideo.soundchannels, 8) - 1];
 
-	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, length);
+	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, (int)length);
 	for(j = 0; j < cls.capturevideo.soundchannels; ++j)
 	{
 		float *b = vorbis_buffer[map[j]];
 		for(i = 0; i < length; ++i)
 			b[i] = paintbuffer[i].sample[j];
 	}
-	qvorbis_analysis_wrote(&format->vd, length);
+	qvorbis_analysis_wrote(&format->vd, (int)length);
 
 	while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
 	{

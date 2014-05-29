@@ -855,7 +855,7 @@ static void r_textures_devicelost(void)
 {
 	int i, endindex;
 	gltexture_t *glt;
-	endindex = Mem_ExpandableArray_IndexRange(&texturearray);
+	endindex = (int)Mem_ExpandableArray_IndexRange(&texturearray);
 	for (i = 0;i < endindex;i++)
 	{
 		glt = (gltexture_t *) Mem_ExpandableArray_RecordAtIndex(&texturearray, i);
@@ -899,7 +899,7 @@ static void r_textures_devicerestored(void)
 {
 	int i, endindex;
 	gltexture_t *glt;
-	endindex = Mem_ExpandableArray_IndexRange(&texturearray);
+	endindex = (int)Mem_ExpandableArray_IndexRange(&texturearray);
 	for (i = 0;i < endindex;i++)
 	{
 		glt = (gltexture_t *) Mem_ExpandableArray_RecordAtIndex(&texturearray, i);

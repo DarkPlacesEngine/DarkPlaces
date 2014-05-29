@@ -142,7 +142,7 @@ static void Cmd_Centerprint_f (void)
 			strlcat(msg, " ", sizeof(msg));
 			strlcat(msg, Cmd_Argv(i), sizeof(msg));
 		}
-		c = strlen(msg);
+		c = (unsigned int)strlen(msg);
 		for(p = 0, i = 0; i < c; ++i)
 		{
 			if(msg[i] == '\\')
@@ -219,7 +219,7 @@ void Cbuf_InsertText (const char *text)
 	{
 		// we don't have a SZ_Prepend, so...
 		memmove(cmd_text.data + l, cmd_text.data, cmd_text.cursize);
-		cmd_text.cursize += l;
+		cmd_text.cursize += (int)l;
 		memcpy(cmd_text.data, text, l);
 	}
 	Cbuf_UnlockThreadMutex();
@@ -2106,7 +2106,7 @@ void Cmd_ForwardStringToServer (const char *s)
 					break;
 				}
 				// write the resulting text
-				SZ_Write(&cls.netcon->message, (unsigned char *)temp, strlen(temp));
+				SZ_Write(&cls.netcon->message, (unsigned char *)temp, (int)strlen(temp));
 				s += 2;
 				continue;
 			}

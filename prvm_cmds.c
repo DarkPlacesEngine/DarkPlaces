@@ -2212,8 +2212,8 @@ void VM_strlennocol(prvm_prog_t *prog)
 
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	//nCnt = COM_StringLengthNoColors(szString, 0, NULL);
-	nCnt = u8_COM_StringLengthNoColors(szString, 0, NULL);
+	//nCnt = (int)COM_StringLengthNoColors(szString, 0, NULL);
+	nCnt = (int)u8_COM_StringLengthNoColors(szString, 0, NULL);
 
 	PRVM_G_FLOAT(OFS_RETURN) = nCnt;
 }
@@ -2327,7 +2327,7 @@ void VM_substring(prvm_prog_t *prog)
 
 	if (start < 0) // FTE_STRINGS feature
 	{
-		u_slength = u8_strlen(s);
+		u_slength = (int)u8_strlen(s);
 		start += u_slength;
 		start = bound(0, start, u_slength);
 	}
@@ -2335,7 +2335,7 @@ void VM_substring(prvm_prog_t *prog)
 	if (length < 0) // FTE_STRINGS feature
 	{
 		if (!u_slength) // it's not calculated when it's not needed above
-			u_slength = u8_strlen(s);
+			u_slength = (int)u8_strlen(s);
 		length += u_slength - start + 1;
 	}
 		
@@ -2686,7 +2686,7 @@ void VM_tokenizebyseparator (prvm_prog_t *prog)
 		if (!s[0])
 			continue;
 		separators[numseparators] = s;
-		separatorlen[numseparators] = strlen(s);
+		separatorlen[numseparators] = (int)strlen(s);
 		numseparators++;
 	}
 
@@ -4718,7 +4718,7 @@ void BufStr_Flush(prvm_prog_t *prog)
 	prvm_stringbuffer_t *stringbuffer;
 	int i, numbuffers;
 
-	numbuffers = Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
+	numbuffers = (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
 	for (i = 0; i < numbuffers; i++)
 		if ( (stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i)) )
 			BufStr_Del(prog, stringbuffer);
@@ -5236,7 +5236,7 @@ void VM_buf_writefile(prvm_prog_t *prog)
 	{
 		if (stringbuffer->strings[strindex])
 		{
-			if ((strlength = strlen(stringbuffer->strings[strindex])))
+			if ((strlength = (int)strlen(stringbuffer->strings[strindex])))
 				FS_Write(prog->openfiles[filenum], stringbuffer->strings[strindex], strlength);
 			FS_Write(prog->openfiles[filenum], "\n", 1);
 		}
@@ -5259,7 +5259,7 @@ static const char *detect_match_rule(char *pattern, int *matchrule)
 	char *ppos, *qpos;
 	int patternlength;
 
-	patternlength = strlen(pattern);
+	patternlength = (int)strlen(pattern);
 	ppos = strchr(pattern, '*');
 	qpos = strchr(pattern, '?');
 	// has ? - pattern
@@ -5369,7 +5369,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 		strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
 		match = detect_match_rule(string, &matchrule);
 	}
-	matchlen = strlen(match);
+	matchlen = (int)strlen(match);
 
 	// find
 	i = (prog->argc > 3) ? (int)PRVM_G_FLOAT(OFS_PARM3) : 0;
@@ -5417,7 +5417,7 @@ void VM_matchpattern(prvm_prog_t *prog)
 	}
 
 	// offset
-	l = strlen(match);
+	l = (int)strlen(match);
 	if (prog->argc > 3)
 		s += max(0, min((unsigned int)PRVM_G_FLOAT(OFS_PARM3), strlen(s)-1));
 
@@ -5652,7 +5652,7 @@ void VM_strstrofs (prvm_prog_t *prog)
 	instr = PRVM_G_STRING(OFS_PARM0);
 	match = PRVM_G_STRING(OFS_PARM1);
 	firstofs = (prog->argc > 2)?(int)PRVM_G_FLOAT(OFS_PARM2):0;
-	firstofs = u8_bytelen(instr, firstofs);
+	firstofs = (int)u8_bytelen(instr, firstofs);
 
 	if (firstofs && (firstofs < 0 || firstofs > (int)strlen(instr)))
 	{
@@ -5675,7 +5675,7 @@ void VM_str2chr (prvm_prog_t *prog)
 	int index;
 	VM_SAFEPARMCOUNT(2, VM_str2chr);
 	s = PRVM_G_STRING(OFS_PARM0);
-	index = u8_bytelen(s, (int)PRVM_G_FLOAT(OFS_PARM1));
+	index = (int)u8_bytelen(s, (int)PRVM_G_FLOAT(OFS_PARM1));
 
 	if((unsigned)index < strlen(s))
 	{
@@ -5805,7 +5805,7 @@ void VM_strconv (prvm_prog_t *prog)
 	redalpha = (int) PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
 	rednum = (int) PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
 	VM_VarString(prog, 3, (char *) resbuf, sizeof(resbuf));
-	len = strlen((char *) resbuf);
+	len = (int)strlen((char *) resbuf);
 
 	for (i = 0; i < len; i++, result++)	//should this be done backwards?
 	{
@@ -5957,7 +5957,7 @@ void VM_digest_hex(prvm_prog_t *prog)
 	if(!digest)
 		digest = "";
 	VM_VarString(prog, 1, s, sizeof(s));
-	len = strlen(s);
+	len = (int)strlen(s);
 
 	outlen = 0;
 

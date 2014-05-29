@@ -1729,7 +1729,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			name[j] = MSG_ReadByte(&miptexsb);
 		name[j] = 0;
 		// pretty up the buffer (replacing any trailing garbage with 0)
-		for (j = strlen(name);j < 16;j++)
+		for (j = (int)strlen(name);j < 16;j++)
 			name[j] = 0;
 
 		if (!name[0])
@@ -2165,7 +2165,7 @@ static void Mod_Q1BSP_LoadVertexes(sizebuf_t *sb)
 {
 	mvertex_t	*out;
 	int			i, count;
-	size_t		structsize = 12;
+	int			structsize = 12;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadVertexes: funny lump size in %s",loadmodel->name);
@@ -2187,7 +2187,7 @@ static void Mod_Q1BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
 {
 	mmodel_t	*out;
 	int			i, j, count;
-	size_t structsize = (48+4*hullinfo->filehulls);
+	int			structsize = (48+4*hullinfo->filehulls);
 
 	if (sb->cursize % structsize)
 		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
@@ -2222,7 +2222,7 @@ static void Mod_Q1BSP_LoadEdges(sizebuf_t *sb)
 {
 	medge_t *out;
 	int 	i, count;
-	size_t	structsize = loadmodel->brush.isbsp2 ? 8 : 4;
+	int		structsize = loadmodel->brush.isbsp2 ? 8 : 4;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadEdges: funny lump size in %s",loadmodel->name);
@@ -2260,7 +2260,7 @@ static void Mod_Q1BSP_LoadTexinfo(sizebuf_t *sb)
 {
 	mtexinfo_t *out;
 	int i, j, k, count, miptex;
-	size_t structsize = 40;
+	int structsize = 40;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadTexinfo: funny lump size in %s",loadmodel->name);
@@ -2463,7 +2463,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 	float texmins[2], texmaxs[2], val;
 	rtexture_t *lightmaptexture, *deluxemaptexture;
 	char vabuf[1024];
-	size_t structsize = loadmodel->brush.isbsp2 ? 28 : 20;
+	int structsize = loadmodel->brush.isbsp2 ? 28 : 20;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
@@ -2771,7 +2771,7 @@ static void Mod_Q1BSP_LoadNodes(sizebuf_t *sb)
 {
 	int			i, j, count, p, child[2];
 	mnode_t 	*out;
-	size_t structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 24);
+	int structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 24);
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadNodes: funny lump size in %s",loadmodel->name);
@@ -2875,7 +2875,7 @@ static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
 {
 	mleaf_t *out;
 	int i, j, count, p, firstmarksurface, nummarksurfaces;
-	size_t structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 28);
+	int structsize = loadmodel->brush.isbsp2rmqe ? 32 : (loadmodel->brush.isbsp2 ? 44 : 28);
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
@@ -2991,7 +2991,7 @@ static void Mod_Q1BSP_LoadClipnodes(sizebuf_t *sb, hullinfo_t *hullinfo)
 	mclipnode_t *out;
 	int			i, count;
 	hull_t		*hull;
-	size_t structsize = loadmodel->brush.isbsp2 ? 12 : 8;
+	int structsize = loadmodel->brush.isbsp2 ? 12 : 8;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadClipnodes: funny lump size in %s",loadmodel->name);
@@ -3073,7 +3073,7 @@ static void Mod_Q1BSP_MakeHull0(void)
 static void Mod_Q1BSP_LoadLeaffaces(sizebuf_t *sb)
 {
 	int i, j;
-	size_t structsize = loadmodel->brush.isbsp2 ? 4 : 2;
+	int structsize = loadmodel->brush.isbsp2 ? 4 : 2;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadLeaffaces: funny lump size in %s",loadmodel->name);
@@ -3105,7 +3105,7 @@ static void Mod_Q1BSP_LoadLeaffaces(sizebuf_t *sb)
 static void Mod_Q1BSP_LoadSurfedges(sizebuf_t *sb)
 {
 	int		i;
-	size_t structsize = 4;
+	int structsize = 4;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadSurfedges: funny lump size in %s",loadmodel->name);
@@ -3121,7 +3121,7 @@ static void Mod_Q1BSP_LoadPlanes(sizebuf_t *sb)
 {
 	int			i;
 	mplane_t	*out;
-	size_t structsize = 20;
+	int structsize = 20;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q1BSP_LoadPlanes: funny lump size in %s", loadmodel->name);
@@ -3271,7 +3271,7 @@ static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 
 static void Mod_Q1BSP_FinalizePortals(void)
 {
-	int i, j, numportals, numpoints, portalindex, portalrange = Mem_ExpandableArray_IndexRange(&portalarray);
+	int i, j, numportals, numpoints, portalindex, portalrange = (int)Mem_ExpandableArray_IndexRange(&portalarray);
 	portal_t *p;
 	mportal_t *portal;
 	mvertex_t *point;

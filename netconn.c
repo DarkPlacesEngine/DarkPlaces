@@ -840,13 +840,13 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes += packetLen + 28;
 
 			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
-			if (sendme && NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress) == (int)sendmelen)
+			if (sendme && NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress) == (int)sendmelen)
 			{
 				conn->lastSendTime = realtime;
 				conn->packetsReSent++;
 			}
 
-			totallen += sendmelen + 28;
+			totallen += (int)sendmelen + 28;
 		}
 
 		// if we have a new reliable message to send, do so
@@ -892,13 +892,13 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 			if(sendme)
-				NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
+				NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress);
 
 			conn->lastSendTime = realtime;
 			conn->packetsSent++;
 			conn->reliableMessagesSent++;
 
-			totallen += sendmelen + 28;
+			totallen += (int)sendmelen + 28;
 		}
 
 		// if we have an unreliable message to send, do so
@@ -922,12 +922,12 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 
 			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 			if(sendme)
-				NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
+				NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress);
 
 			conn->packetsSent++;
 			conn->unreliableMessagesSent++;
 
-			totallen += sendmelen + 28;
+			totallen += (int)sendmelen + 28;
 		}
 	}
 
@@ -1203,7 +1203,7 @@ void NetConn_UpdateSockets(void)
 
 static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, size_t length, protocolversion_t protocol, double newtimeout)
 {
-	int originallength = length;
+	int originallength = (int)length;
 	unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 	unsigned char cryptosendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
 	unsigned char cryptoreadbuffer[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
@@ -1292,13 +1292,13 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		if (conn == cls.netcon)
 		{
 			SZ_Clear(&cl_message);
-			SZ_Write(&cl_message, data, length);
+			SZ_Write(&cl_message, data, (int)length);
 			MSG_BeginReading(&cl_message);
 		}
 		else
 		{
 			SZ_Clear(&sv_message);
-			SZ_Write(&sv_message, data, length);
+			SZ_Write(&sv_message, data, (int)length);
 			MSG_BeginReading(&sv_message);
 		}
 		return 2;
@@ -1312,7 +1312,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		const void *sendme;
 		size_t sendmelen;
 
-		originallength = length;
+		originallength = (int)length;
 		data = (const unsigned char *) Crypto_DecryptPacket(&conn->crypto, data, length, cryptoreadbuffer, &length, sizeof(cryptoreadbuffer));
 		if(!data)
 			return 0;
@@ -1365,13 +1365,13 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 						if (conn == cls.netcon)
 						{
 							SZ_Clear(&cl_message);
-							SZ_Write(&cl_message, data, length);
+							SZ_Write(&cl_message, data, (int)length);
 							MSG_BeginReading(&cl_message);
 						}
 						else
 						{
 							SZ_Clear(&sv_message);
-							SZ_Write(&sv_message, data, length);
+							SZ_Write(&sv_message, data, (int)length);
 							MSG_BeginReading(&sv_message);
 						}
 						return 2;
@@ -1424,7 +1424,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 							conn->nq.sendSequence++;
 
 							sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
-							if (sendme && NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress) == (int)sendmelen)
+							if (sendme && NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress) == (int)sendmelen)
 							{
 								conn->lastSendTime = realtime;
 								conn->packetsSent++;
@@ -1452,7 +1452,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 				StoreBigLong(temppacket + 4, sequence);
 				sendme = Crypto_EncryptPacket(&conn->crypto, temppacket, 8, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 				if(sendme)
-					NetConn_Write(conn->mysocket, sendme, sendmelen, &conn->peeraddress);
+					NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress);
 				if (sequence == conn->nq.receiveSequence)
 				{
 					conn->lastMessageTime = realtime;
@@ -1460,7 +1460,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 					conn->nq.receiveSequence++;
 					if( conn->receiveMessageLength + length <= (int)sizeof( conn->receiveMessage ) ) {
 						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
-						conn->receiveMessageLength += length;
+						conn->receiveMessageLength += (int)length;
 					} else {
 						Con_Printf( "Reliable message (seq: %i) too big for message buffer!\n"
 									"Dropping the message!\n", sequence );
@@ -1477,13 +1477,13 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 							if (conn == cls.netcon)
 							{
 								SZ_Clear(&cl_message);
-								SZ_Write(&cl_message, conn->receiveMessage, length);
+								SZ_Write(&cl_message, conn->receiveMessage, (int)length);
 								MSG_BeginReading(&cl_message);
 							}
 							else
 							{
 								SZ_Clear(&sv_message);
-								SZ_Write(&sv_message, conn->receiveMessage, length);
+								SZ_Write(&sv_message, conn->receiveMessage, (int)length);
 								MSG_BeginReading(&sv_message);
 							}
 							return 2;
@@ -1823,20 +1823,20 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				if(sendlength)
 				{
 					memcpy(senddata, "\377\377\377\377", 4);
-					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+					NetConn_Write(mysocket, senddata, (int)sendlength+4, peeraddress);
 				}
 				break;
 			case CRYPTO_DISCARD:
 				if(sendlength)
 				{
 					memcpy(senddata, "\377\377\377\377", 4);
-					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+					NetConn_Write(mysocket, senddata, (int)sendlength+4, peeraddress);
 				}
 				return true;
 				break;
 			case CRYPTO_REPLACE:
 				string = senddata+4;
-				length = sendlength;
+				length = (int)sendlength;
 				break;
 		}
 
@@ -1863,12 +1863,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				e = strchr(rcon_password.string, ' ');
 				n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
 
-				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, n))
+				if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 29), (unsigned char *) argbuf, (int)strlen(argbuf), (unsigned char *) rcon_password.string, n))
 				{
 					int k;
 					buf[45] = ' ';
 					strlcpy(buf + 46, argbuf, sizeof(buf) - 46);
-					NetConn_Write(mysocket, buf, 46 + strlen(buf + 46), peeraddress);
+					NetConn_Write(mysocket, buf, 46 + (int)strlen(buf + 46), peeraddress);
 					cls.rcon_commands[i][0] = 0;
 					--cls.rcon_trying;
 
@@ -2695,7 +2695,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
 		return false;
 
-	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, strlen(password)))
+	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, (int)strlen(password)))
 		return false;
 
 	return !memcmp(mdfourbuf, hash, 16);
@@ -2718,7 +2718,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	if (i == MAX_CHALLENGES)
 		return false;
 
-	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, strlen(password)))
+	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, (int)strlen(password)))
 		return false;
 
 	if(memcmp(mdfourbuf, hash, 16))
@@ -2927,20 +2927,20 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				if(sendlength)
 				{
 					memcpy(senddata, "\377\377\377\377", 4);
-					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+					NetConn_Write(mysocket, senddata, (int)sendlength+4, peeraddress);
 				}
 				break;
 			case CRYPTO_DISCARD:
 				if(sendlength)
 				{
 					memcpy(senddata, "\377\377\377\377", 4);
-					NetConn_Write(mysocket, senddata, sendlength+4, peeraddress);
+					NetConn_Write(mysocket, senddata, (int)sendlength+4, peeraddress);
 				}
 				return true;
 				break;
 			case CRYPTO_REPLACE:
 				string = senddata+4;
-				length = sendlength;
+				length = (int)sendlength;
 				break;
 		}
 
@@ -2973,7 +2973,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			dpsnprintf(response, sizeof(response), "\377\377\377\377challenge %s", challenge[i].string);
 			response_len = strlen(response) + 1;
 			Crypto_ServerAppendToChallenge(string, length, response, &response_len, sizeof(response));
-			NetConn_Write(mysocket, response, response_len, peeraddress);
+			NetConn_Write(mysocket, response, (int)response_len, peeraddress);
 			return true;
 		}
 		if (length > 8 && !memcmp(string, "connect\\", 8))

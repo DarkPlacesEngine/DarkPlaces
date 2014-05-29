@@ -5481,7 +5481,7 @@ void MR_Init(void)
 	res_count = VID_SortModes(res, res_count, false, false, true);
 	if(res_count)
 	{
-		video_resolutions_count = res_count;
+		video_resolutions_count = (int)res_count;
 		video_resolutions = (video_resolution_t *) Mem_Alloc(cls.permanentmempool, sizeof(*video_resolutions) * (video_resolutions_count + 1));
 		memset(&video_resolutions[video_resolutions_count], 0, sizeof(video_resolutions[video_resolutions_count]));
 		for(i = 0; i < res_count; ++i)
