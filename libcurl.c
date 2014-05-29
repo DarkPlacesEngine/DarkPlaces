@@ -430,7 +430,10 @@ static size_t CURL_fwrite(void *data, size_t size, size_t nmemb, void *vdi)
 
 	di->bytes_received += bytes;
 
-	return ret; // why not ret / nmemb?
+	return ret;
+	// Why not ret / nmemb?
+	// Because CURLOPT_WRITEFUNCTION docs say to return the number of bytes.
+	// Yes, this is incompatible to fwrite(2).
 }
 
 typedef enum
