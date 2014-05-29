@@ -327,7 +327,7 @@ static void S_SoundList_f (void)
 		{
 			unsigned int size;
 
-			size = sfx->memsize;
+			size = (unsigned int)sfx->memsize;
 			Con_Printf ("%c%c%c(%5iHz %2db %6s) %8i : %s\n",
 						(sfx->loopstart < sfx->total_length) ? 'L' : ' ',
 						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',

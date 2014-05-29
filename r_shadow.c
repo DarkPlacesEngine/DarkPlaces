@@ -2418,7 +2418,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	if (enable && r_shadow_bouncegrid_static.integer)
 	{
 		enable = false;
-		range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		range = (unsigned int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 		for (lightindex = 0;lightindex < range;lightindex++)
 		{
 			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
@@ -2605,7 +2605,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	// clear variables that produce warnings otherwise
 	memset(splatcolor, 0, sizeof(splatcolor));
 	// iterate world rtlights
-	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+	range = (unsigned int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 	range1 = settings.staticmode ? 0 : r_refdef.scene.numlights;
 	range2 = range + range1;
 	photoncount = 0;
@@ -5241,11 +5241,11 @@ void R_Shadow_DrawCoronas(void)
 		if (usequery)
 		{
 			GL_ColorMask(0,0,0,0);
-			if (r_maxqueries < (range + r_refdef.scene.numlights) * 2)
+			if (r_maxqueries < ((unsigned int)range + r_refdef.scene.numlights) * 2)
 			if (r_maxqueries < MAX_OCCLUSION_QUERIES)
 			{
 				i = r_maxqueries;
-				r_maxqueries = (range + r_refdef.scene.numlights) * 4;
+				r_maxqueries = ((unsigned int)range + r_refdef.scene.numlights) * 4;
 				r_maxqueries = min(r_maxqueries, MAX_OCCLUSION_QUERIES);
 				CHECKGLERROR
 				qglGenQueriesARB(r_maxqueries - i, r_queries + i);
@@ -5483,7 +5483,7 @@ int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radiu
 	unsigned int range;
 	dlight_t *light;
 	rtlight_t *rtlight;
-	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+	range = (unsigned int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
 	if (lightindex >= range)
 		return -1;
 	light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
@@ -6458,7 +6458,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 		if (!light)
 			continue;
 		if (light == r_shadow_selectedlight)
-			lightnumber = lightindex;
+			lightnumber = (int)lightindex;
 		lightcount++;
 	}
 	dpsnprintf(temp, sizeof(temp), "Cursor origin: %.0f %.0f %.0f", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2]); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, false, FONT_DEFAULT);y += 8;
@@ -6734,7 +6734,7 @@ void R_LightPoint(float *color, const vec3_t p, const int flags)
 	if (flags & LP_RTWORLD)
 	{
 		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-		numlights = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+		numlights = (int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
 		for (i = 0; i < numlights; i++)
 		{
 			dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);
@@ -6840,7 +6840,7 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 	if (flags & LP_RTWORLD)
 	{
 		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-		numlights = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
+		numlights = (int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
 		for (i = 0; i < numlights; i++)
 		{
 			dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);

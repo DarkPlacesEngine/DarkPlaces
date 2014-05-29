@@ -1377,7 +1377,7 @@ static void CL_StopDownload(int size, int crc)
 			{
 				Con_Printf("Inflated download: new size: %u (%g%%)\n", (unsigned)inflated_size, 100.0 - 100.0*(cls.qw_downloadmemorycursize / (float)inflated_size));
 				cls.qw_downloadmemory = out;
-				cls.qw_downloadmemorycursize = inflated_size;
+				cls.qw_downloadmemorycursize = (int)inflated_size;
 			}
 			else
 			{

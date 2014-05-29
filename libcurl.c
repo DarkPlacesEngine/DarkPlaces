@@ -206,7 +206,7 @@ typedef struct downloadinfo_s
 	CURL *curle;
 	qboolean started;
 	int loadtype;
-	unsigned long bytes_received; // for buffer
+	size_t bytes_received; // for buffer
 	double bytes_received_curl; // for throttling
 	double bytes_sent_curl; // for throttling
 	struct downloadinfo_s *next, *prev;

@@ -2706,7 +2706,7 @@ Write "datasize" bytes into a file
 */
 fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 {
-	fs_offset_t result;
+	fs_offset_t written = 0;
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
@@ -2716,15 +2716,26 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 	FS_Purge (file);
 
 	// Write the buffer and update the position
-	result = write (file->handle, data, (fs_offset_t)datasize);
+	// LordHavoc: to hush a warning about passing size_t to an unsigned int parameter on Win64 we do this as multiple writes if the size would be too big for an integer (we never write that big in one go, but it's a theory)
+	while (written < (fs_offset_t)datasize)
+	{
+		// figure out how much to write in one chunk
+		fs_offset_t maxchunk = 1<<30; // 1 GiB
+		int chunk = (int)min((fs_offset_t)datasize - written, maxchunk);
+		int result = (int)write (file->handle, (const unsigned char *)data + written, chunk);
+		// if at least some was written, add it to our accumulator
+		if (result > 0)
+			written += result;
+		// if the result is not what we expected, consider the write to be incomplete
+		if (result != chunk)
+			break;
+	}
 	file->position = lseek (file->handle, 0, SEEK_CUR);
 	if (file->real_length < file->position)
 		file->real_length = file->position;
 
-	if (result < 0)
-		return 0;
-
-	return result;
+	// note that this will never be less than 0 even if the write failed
+	return written;
 }
 
 
@@ -3831,7 +3842,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 	}
 
 	strm.next_in = (unsigned char*)data;
-	strm.avail_in = size;
+	strm.avail_in = (unsigned int)size;
 
 	tmp = (unsigned char *) Mem_Alloc(tempmempool, size);
 	if(!tmp)
@@ -3842,7 +3853,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 	}
 
 	strm.next_out = tmp;
-	strm.avail_out = size;
+	strm.avail_out = (unsigned int)size;
 
 	if(qz_deflate(&strm, Z_FINISH) != Z_STREAM_END)
 	{
@@ -3932,7 +3943,7 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	}
 
 	strm.next_in = (unsigned char*)data;
-	strm.avail_in = size;
+	strm.avail_in = (unsigned int)size;
 
 	do
 	{

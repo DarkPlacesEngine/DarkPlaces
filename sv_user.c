@@ -878,7 +878,7 @@ void SV_ReadClientMessage(void)
 clc_stringcmd_invalid:
 			Con_Printf("Received invalid stringcmd from %s\n", host_client->name);
 			if(developer.integer > 0)
-				Com_HexDumpToConsole((unsigned char *) s, strlen(s));
+				Com_HexDumpToConsole((unsigned char *) s, (int)strlen(s));
 			break;
 
 		case clc_disconnect:

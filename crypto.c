@@ -90,7 +90,7 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 	{
 		if(pos + 4 + lumpsize[i] > len)
 			return 0;
-		Crypto_UnLittleLong(&buf[pos], lumpsize[i]);
+		Crypto_UnLittleLong(&buf[pos], (unsigned long)lumpsize[i]);
 		pos += 4;
 		memcpy(&buf[pos], lumps[i], lumpsize[i]);
 		pos += lumpsize[i];
@@ -1083,7 +1083,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	if(keygen_i < 0)
 	{
 		Con_Printf("Unexpected response from keygen server:\n");
-		Com_HexDumpToConsole(buffer, length_received);
+		Com_HexDumpToConsole(buffer, (int)length_received);
 		SV_UnlockThreadMutex();
 		return;
 	}
@@ -1096,7 +1096,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		else
 		{
 			Con_Printf("Invalid response from keygen server:\n");
-			Com_HexDumpToConsole(buffer, length_received);
+			Com_HexDumpToConsole(buffer, (int)length_received);
 		}
 		keygen_i = -1;
 		SV_UnlockThreadMutex();
@@ -1485,15 +1485,15 @@ const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t 
 			if(developer_networking.integer)
 			{
 				Con_Print("To be encrypted:\n");
-				Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+				Com_HexDumpToConsole((const unsigned char *) data_src, (int)len_src);
 			}
-			if(len_src + 32 > len || !HMAC_SHA256_32BYTES(h, (const unsigned char *) data_src, len_src, crypto->dhkey, DHKEY_SIZE))
+			if(len_src + 32 > len || !HMAC_SHA256_32BYTES(h, (const unsigned char *) data_src, (int)len_src, crypto->dhkey, DHKEY_SIZE))
 			{
 				Con_Printf("Crypto_EncryptPacket failed (not enough space: %d bytes in, %d bytes out)\n", (int) len_src, (int) len);
 				return NULL;
 			}
 			*len_dst = ((len_src + 15) / 16) * 16 + 16; // add 16 for HMAC, then round to 16-size for AES
-			((unsigned char *) data_dst)[0] = *len_dst - len_src;
+			((unsigned char *) data_dst)[0] = (unsigned char)(*len_dst - len_src);
 			memcpy(((unsigned char *) data_dst)+1, h, 15);
 			aescpy(crypto->dhkey, (const unsigned char *) data_dst, ((unsigned char *) data_dst) + 16, (const unsigned char *) data_src, len_src);
 			//                    IV                                dst                                src                               len
@@ -1501,7 +1501,7 @@ const void *Crypto_EncryptPacket(crypto_t *crypto, const void *data_src, size_t 
 		else
 		{
 			// HMAC packet = 16 bytes HMAC-SHA-256 (truncated to 128 bits), data
-			if(len_src + 16 > len || !HMAC_SHA256_32BYTES(h, (const unsigned char *) data_src, len_src, crypto->dhkey, DHKEY_SIZE))
+			if(len_src + 16 > len || !HMAC_SHA256_32BYTES(h, (const unsigned char *) data_src, (int)len_src, crypto->dhkey, DHKEY_SIZE))
 			{
 				Con_Printf("Crypto_EncryptPacket failed (not enough space: %d bytes in, %d bytes out)\n", (int) len_src, (int) len);
 				return NULL;
@@ -1559,7 +1559,7 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 			}
 			seacpy(crypto->dhkey, (unsigned char *) data_src, (unsigned char *) data_dst, ((const unsigned char *) data_src) + 16, *len_dst);
 			//                    IV                          dst                         src                                      len
-			if(!HMAC_SHA256_32BYTES(h, (const unsigned char *) data_dst, *len_dst, crypto->dhkey, DHKEY_SIZE))
+			if(!HMAC_SHA256_32BYTES(h, (const unsigned char *) data_dst, (int)*len_dst, crypto->dhkey, DHKEY_SIZE))
 			{
 				Con_Printf("HMAC fail\n");
 				return NULL;
@@ -1572,7 +1572,7 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 			if(developer_networking.integer)
 			{
 				Con_Print("Decrypted:\n");
-				Com_HexDumpToConsole((const unsigned char *) data_dst, *len_dst);
+				Com_HexDumpToConsole((const unsigned char *) data_dst, (int)*len_dst);
 			}
 			return data_dst; // no need to copy
 		}
@@ -1590,10 +1590,10 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 				return NULL;
 			}
 			//memcpy(data_dst, data_src + 16, *len_dst);
-			if(!HMAC_SHA256_32BYTES(h, ((const unsigned char *) data_src) + 16, *len_dst, crypto->dhkey, DHKEY_SIZE))
+			if(!HMAC_SHA256_32BYTES(h, ((const unsigned char *) data_src) + 16, (int)*len_dst, crypto->dhkey, DHKEY_SIZE))
 			{
 				Con_Printf("HMAC fail\n");
-				Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+				Com_HexDumpToConsole((const unsigned char *) data_src, (int)len_src);
 				return NULL;
 			}
 
@@ -1611,14 +1611,14 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 					if(memcmp((const unsigned char *) data_src, h, 16)) // ignore first byte, used for length
 					{
 						Con_Printf("HMAC mismatch\n");
-						Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+						Com_HexDumpToConsole((const unsigned char *) data_src, (int)len_src);
 						return NULL;
 					}
 				}
 				else
 				{
 					Con_Printf("HMAC mismatch\n");
-					Com_HexDumpToConsole((const unsigned char *) data_src, len_src);
+					Com_HexDumpToConsole((const unsigned char *) data_src, (int)len_src);
 					return NULL;
 				}
 			}

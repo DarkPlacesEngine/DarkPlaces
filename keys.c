@@ -116,7 +116,7 @@ static void Key_History_Push(void)
 	if(strncmp(key_line, "]quit ", 6)) // putting these into the history just sucks
 	if(strcmp(key_line, "]rcon_password")) // putting these into the history just sucks
 	if(strncmp(key_line, "]rcon_password ", 15)) // putting these into the history just sucks
-		ConBuffer_AddLine(&history, key_line + 1, strlen(key_line) - 1, 0);
+		ConBuffer_AddLine(&history, key_line + 1, (int)strlen(key_line) - 1, 0);
 	Con_Printf("%s\n", key_line); // don't mark empty lines as history
 	history_line = -1;
 	if (history_matchfound)
@@ -128,7 +128,7 @@ static qboolean Key_History_Get_foundCommand(void)
 	if (!history_matchfound)
 		return false;
 	strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
-	key_linepos = strlen(key_line);
+	key_linepos = (int)strlen(key_line);
 	history_matchfound = false;
 	return true;
 }
@@ -147,14 +147,14 @@ static void Key_History_Up(void)
 		if(history_line != -1)
 		{
 			strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
-			key_linepos = strlen(key_line);
+			key_linepos = (int)strlen(key_line);
 		}
 	}
 	else if(history_line > 0)
 	{
 		--history_line; // this also does -1 -> 0, so it is good
 		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
-		key_linepos = strlen(key_line);
+		key_linepos = (int)strlen(key_line);
 	}
 }
 
@@ -177,7 +177,7 @@ static void Key_History_Down(void)
 		strlcpy(key_line + 1, history_savedline, sizeof(key_line) - 1);
 	}
 
-	key_linepos = strlen(key_line);
+	key_linepos = (int)strlen(key_line);
 }
 
 static void Key_History_First(void)
@@ -189,7 +189,7 @@ static void Key_History_First(void)
 	{
 		history_line = 0;
 		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
-		key_linepos = strlen(key_line);
+		key_linepos = (int)strlen(key_line);
 	}
 }
 
@@ -202,7 +202,7 @@ static void Key_History_Last(void)
 	{
 		history_line = CONBUFFER_LINES_COUNT(&history) - 1;
 		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
-		key_linepos = strlen(key_line);
+		key_linepos = (int)strlen(key_line);
 	}
 }
 
@@ -851,12 +851,12 @@ Key_Console (int key, int unicode)
 			
 			// save the content of the variable in cvar_str
 			cvar_str = Cvar_VariableString(cvar);
-			cvar_str_len = strlen(cvar_str);
+			cvar_str_len = (int)strlen(cvar_str);
 			if (cvar_str_len==0)
 				return;
 			
 			// insert space and cvar_str in key_line
-			chars_to_move = strlen(&key_line[key_linepos]);
+			chars_to_move = (int)strlen(&key_line[key_linepos]);
 			if (key_linepos + 1 + cvar_str_len + chars_to_move < MAX_INPUTLINE)
 			{
 				if (chars_to_move)
@@ -914,7 +914,7 @@ Key_Console (int key, int unicode)
 		{
 			int		pos;
 			size_t          inchar = 0;
-			pos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
+			pos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 			while (pos)
 				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
 					pos-=2;
@@ -930,11 +930,11 @@ Key_Console (int key, int unicode)
 				}
 			// we need to move to the beginning of the character when in a wide character:
 			u8_charidx(key_line, pos + 1, &inchar);
-			key_linepos = pos + 1 - inchar;
+			key_linepos = (int)(pos + 1 - inchar);
 		}
 		else
 		{
-			key_linepos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
+			key_linepos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 		}
 		return;
 	}
@@ -944,7 +944,7 @@ Key_Console (int key, int unicode)
 	{
 		if (key_linepos > 1)
 		{
-			int newpos = u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
+			int newpos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 			strlcpy(key_line + newpos, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
 			key_linepos = newpos;
 		}
@@ -1011,7 +1011,7 @@ Key_Console (int key, int unicode)
 			// skip the char
 			if (key_line[pos] == STRING_COLOR_TAG && key_line[pos+1] == STRING_COLOR_TAG) // consider ^^ as a character
 				pos++;
-			pos += u8_bytelen(key_line + pos, 1);
+			pos += (int)u8_bytelen(key_line + pos, 1);
 			
 			// now go beyond all next consecutive color tags, if any
 			if(pos < len)
@@ -1027,7 +1027,7 @@ Key_Console (int key, int unicode)
 			key_linepos = pos;
 		}
 		else
-			key_linepos += u8_bytelen(key_line + key_linepos, 1);
+			key_linepos += (int)u8_bytelen(key_line + key_linepos, 1);
 		return;
 	}
 
@@ -1233,7 +1233,7 @@ Key_Message (int key, int ascii)
 
 	if (key == K_BACKSPACE) {
 		if (chat_bufferlen) {
-			chat_bufferlen = u8_prevbyte(chat_buffer, chat_bufferlen);
+			chat_bufferlen = (unsigned int)u8_prevbyte(chat_buffer, chat_bufferlen);
 			chat_buffer[chat_bufferlen] = 0;
 		}
 		return;

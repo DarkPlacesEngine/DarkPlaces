@@ -648,7 +648,7 @@ void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 			FS_Printf(f,"sv.sound_precache %i %s\n", i, sv.sound_precache[i]);
 
 	// darkplaces extension - save buffers
-	numbuffers = Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
+	numbuffers = (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
 	for (i = 0; i < numbuffers; i++)
 	{
 		prvm_stringbuffer_t *stringbuffer = (prvm_stringbuffer_t*) Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i);
@@ -1088,7 +1088,7 @@ static void Host_Loadgame_f (void)
 	Mem_Free(text);
 
 	// remove all temporary flagged string buffers (ones created with BufStr_FindCreateReplace)
-	numbuffers = Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
+	numbuffers = (int)Mem_ExpandableArray_IndexRange(&prog->stringbuffersarray);
 	for (i = 0; i < numbuffers; i++)
 	{
 		if ( (stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, i)) )
@@ -2652,11 +2652,11 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			char argbuf[1500];
 			dpsnprintf(argbuf, sizeof(argbuf), "%ld.%06d %s", (long) time(NULL), (int) (rand() % 1000000), Cmd_Args());
 			memcpy(buf, "\377\377\377\377srcon HMAC-MD4 TIME ", 24);
-			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, strlen(argbuf), (unsigned char *) rcon_password.string, n))
+			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, (int)strlen(argbuf), (unsigned char *) rcon_password.string, n))
 			{
 				buf[40] = ' ';
 				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
-				NetConn_Write(mysocket, buf, 41 + strlen(buf + 41), &to);
+				NetConn_Write(mysocket, buf, 41 + (int)strlen(buf + 41), &to);
 			}
 		}
 		else

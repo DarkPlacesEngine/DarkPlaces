@@ -1776,7 +1776,7 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 
 void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
-	cls.capturevideo.soundsampleframe += length;
+	cls.capturevideo.soundsampleframe += (int)length;
 	cls.capturevideo.soundframe(paintbuffer, length);
 }
 

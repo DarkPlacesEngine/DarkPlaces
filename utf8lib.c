@@ -445,7 +445,7 @@ int u8_byteofs(const char *_s, size_t i, size_t *len)
 		}
 
 		if (len) *len = 1;
-		return i;
+		return (int)i;
 	}
 
 	st = ln = 0;
@@ -458,7 +458,7 @@ int u8_byteofs(const char *_s, size_t i, size_t *len)
 	} while(i-- > 0);
 	if (len)
 		*len = ln;
-	return ofs;
+	return (int)ofs;
 }
 
 /** Get the char-index for a byte-index.
@@ -478,7 +478,7 @@ int u8_charidx(const char *_s, size_t i, size_t *len)
 	if (!utf8_enable.integer)
 	{
 		if (len) *len = 0;
-		return i;
+		return (int)i;
 	}
 
 	while (ofs < i && s[ofs])
@@ -896,8 +896,8 @@ size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, 
 	{
 		size_t l = u8_bytelen(in, maxwidth);
 		size_t actual_width = u8_strnlen(in, l);
-		int pad = (actual_width >= minwidth) ? 0 : (minwidth - actual_width);
-		int prec = l;
+		int pad = (int)((actual_width >= minwidth) ? 0 : (minwidth - actual_width));
+		int prec = (int)l;
 		int lpad = leftalign ? 0 : pad;
 		int rpad = leftalign ? pad : 0;
 		return dpsnprintf(out, outsize, "%*s%.*s%*s", lpad, "", prec, in, rpad, "");
@@ -908,8 +908,8 @@ size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qboolean 
 {
 	size_t l = u8_bytelen_colorcodes(in, maxwidth);
 	size_t actual_width = u8_strnlen_colorcodes(in, l);
-	int pad = (actual_width >= minwidth) ? 0 : (minwidth - actual_width);
-	int prec = l;
+	int pad = (int)((actual_width >= minwidth) ? 0 : (minwidth - actual_width));
+	int prec = (int)l;
 	int lpad = leftalign ? 0 : pad;
 	int rpad = leftalign ? pad : 0;
 	return dpsnprintf(out, outsize, "%*s%.*s%*s", lpad, "", prec, in, rpad, "");
