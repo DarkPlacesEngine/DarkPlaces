@@ -7,6 +7,10 @@
 
 int		image_width;
 int		image_height;
+int		image_q2flags;
+int		image_q2value;
+int		image_q2contents;
+char	image_q2animname[32];
 
 static void Image_CopyAlphaFromBlueBGRA(unsigned char *outpixels, const unsigned char *inpixels, int w, int h)
 {
@@ -757,6 +761,11 @@ static unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize, int *m
 
 	image_width = LittleLong(inwal->width);
 	image_height = LittleLong(inwal->height);
+	image_q2flags = LittleLong(inwal->flags);
+	image_q2value = LittleLong(inwal->value);
+	image_q2contents = LittleLong(inwal->contents);
+	memcpy(image_q2animname, inwal->animname, sizeof(inwal->animname));
+	image_q2animname[sizeof(image_q2animname)-1] = 0;
 	if (image_width > 32768 || image_height > 32768 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf("LoadWAL: invalid size %ix%i\n", image_width, image_height);
@@ -952,6 +961,12 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 		if (f)
 		{
 			int mymiplevel = miplevel ? *miplevel : 0;
+			image_width = 0;
+			image_height = 0;
+			image_q2flags = 0;
+			image_q2value = 0;
+			image_q2contents = 0;
+			image_q2animname[0] = 0;
 			data = format->loadfunc(f, (int)filesize, &mymiplevel);
 			Mem_Free(f);
 			if (data)

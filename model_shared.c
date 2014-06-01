@@ -2443,6 +2443,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	if (!name)
 		name = "";
 	strlcpy(texture->name, name, sizeof(texture->name));
+	texture->basealpha = 1.0f;
 	shader = name[0] ? Mod_LookupQ3Shader(name) : NULL;
 
 	texflagsmask = ~0;
@@ -2746,6 +2747,11 @@ nothing                GL_ZERO GL_ONE
 				{
 					if(texture->skinframes[0]->hasalpha)
 						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+					texture->q2flags = texture->skinframes[0]->q2flags;
+					texture->q2value = texture->skinframes[0]->q2value;
+					texture->q2contents = texture->skinframes[0]->q2contents;
+					if (texture->q2contents)
+						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, texture->q2contents);
 				}
 				else
 					success = false;

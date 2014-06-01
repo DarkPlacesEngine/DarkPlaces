@@ -225,6 +225,7 @@ svbspmesh_t;
 
 // Q2 bsp stuff
 
+#define Q2BSPMAGIC ('I' + 'B' * 256 + 'S' * 65536 + 'P' * 16777216)
 #define Q2BSPVERSION	38
 
 // leaffaces, leafbrushes, planes, and verts are still bounded by
@@ -325,7 +326,7 @@ typedef struct q2dmodel_s
 
 
 
-
+/*
 typedef struct q2dnode_s
 {
 	int			planenum;
@@ -335,7 +336,6 @@ typedef struct q2dnode_s
 	unsigned short	firstface;
 	unsigned short	numfaces;	// counting both sides
 } q2dnode_t;
-
 
 typedef struct q2texinfo_s
 {
@@ -402,6 +402,7 @@ typedef struct q2darea_s
 	int		numareaportals;
 	int		firstareaportal;
 } q2darea_t;
+*/
 
 
 //Q3 bsp stuff
