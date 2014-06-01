@@ -82,6 +82,11 @@ typedef struct skinframe_s
 	qboolean qgeneratemerged;
 	qboolean qgeneratenmap;
 	qboolean qgenerateglow;
+	// for q2 wal files we have some extra info
+	int q2flags;
+	int q2value;
+	int q2contents;
+	// we could also store the q2animname from the wal but we have no current need of it
 }
 skinframe_t;
 
@@ -538,6 +543,8 @@ typedef struct texture_s
 	int basematerialflags;
 	// current material flags (updated each bmodel render)
 	int currentmaterialflags;
+	// base material alpha (used for Q2 materials)
+	float basealpha;
 
 	// PolygonOffset values for rendering this material
 	// (these are added to the r_refdef values and submodel values)
@@ -560,14 +567,14 @@ typedef struct texture_s
 	// direct pointers to each of the frames in the sequences
 	// (indexed as [alternate][frame])
 	struct texture_s *anim_frames[2][10];
-	// set if animated or there is an alternate frame set
-	// (this is an optimization in the renderer)
+	// 1 = q1bsp animation with anim_total[0] >= 2 (animated) or anim_total[1] >= 1 (alternate frame set)
+	// 2 = q2bsp animation with anim_total[0] >= 2 (uses self.frame)
 	int animated;
 
 	// renderer checks if this texture needs updating...
 	int update_lastrenderframe;
 	void *update_lastrenderentity;
-	// the current alpha of this texture (may be affected by r_wateralpha)
+	// the current alpha of this texture (may be affected by r_wateralpha, also basealpha, and ent->alpha)
 	float currentalpha;
 	// the current texture frame in animation
 	struct texture_s *currentframe;
@@ -618,6 +625,13 @@ typedef struct texture_s
 	int supercontents;
 	int textureflags;
 
+	// q2bsp
+	// we have to load the texture multiple times when Q2SURF_ flags differ,
+	// though it still shares the skinframe
+	int q2flags;
+	int q2value;
+	int q2contents;
+
 	// reflection
 	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
 	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)
@@ -648,9 +662,13 @@ typedef struct texture_s
 
 typedef struct mtexinfo_s
 {
-	float vecs[2][4];
-	texture_t *texture;
-	int flags;
+	float		vecs[2][4];		// [s/t][xyz offset]
+	int			textureindex;
+	int			q1flags;
+	int			q2flags;			// miptex flags + overrides
+	int			q2value;			// light emission, etc
+	char		q2texture[32];	// texture name (textures/*.wal)
+	int			q2nexttexinfo;	// for animations, -1 = end of chain
 }
 mtexinfo_t;
 
@@ -747,6 +765,8 @@ typedef struct model_brush_s
 	qboolean isbsp2rmqe;
 	// true if this model is a BSP2 .bsp file (expanded 32bit bsp format for DarkPlaces, others?)
 	qboolean isbsp2;
+	// true if this model is a Quake2 .bsp file (IBSP46)
+	qboolean isq2bsp;
 	// string of entity definitions (.map format)
 	char *entities;
 
@@ -880,12 +900,11 @@ typedef struct model_brushq1_s
 }
 model_brushq1_t;
 
-/* MSVC can't compile empty structs, so this is commented out for now
 typedef struct model_brushq2_s
 {
+	int dummy; // MSVC can't handle an empty struct
 }
 model_brushq2_t;
-*/
 
 typedef struct model_brushq3_s
 {
@@ -1063,9 +1082,7 @@ typedef struct model_s
 	model_sprite_t	sprite;
 	model_brush_t	brush;
 	model_brushq1_t	brushq1;
-	/* MSVC can't handle an empty struct, so this is commented out for now
 	model_brushq2_t	brushq2;
-	*/
 	model_brushq3_t	brushq3;
 	// flags this model for offseting sounds to the model center (used by brush models)
 	int soundfromcenter;
@@ -1184,6 +1201,9 @@ void Mod_BrushInit(void);
 // used for talking to the QuakeC mainly
 int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
 int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
+// used for loading wal files in Mod_LoadTextureFromQ3Shader
+int Mod_Q2BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents);
+int Mod_Q2BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents);
 
 // a lot of model formats use the Q1BSP code, so here are the prototypes...
 struct entity_render_s;
@@ -1206,6 +1226,8 @@ void Mod_CollisionBIH_TraceLine(dp_model_t *model, const struct frameblend_s *fr
 void Mod_CollisionBIH_TraceBox(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask);
 void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, struct colbrushf_s *start, struct colbrushf_s *end, int hitsupercontentsmask);
 void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask);
+qboolean Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end);
+int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point);
 int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, const vec3_t point);
 bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t *out);
 

@@ -3400,6 +3400,10 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	skinframe->fog = NULL;
 	skinframe->reflect = NULL;
 	skinframe->hasalpha = false;
+	skinframe->q2flags = image_q2flags;
+	skinframe->q2value = image_q2value;
+	skinframe->q2contents = image_q2contents;
+	// we could store the q2animname here too
 
 	if (ddsbase)
 	{
@@ -8143,7 +8147,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		{
 			// use an alternate animation if the entity's frame is not 0,
 			// and only if the texture has an alternate animation
-			if (rsurface.ent_alttextures && t->anim_total[1])
+			if (t->animated == 2) // q2bsp
+				t = t->anim_frames[0][ent->framegroupblend[0].frame % t->anim_total[0]];
+			else if (rsurface.ent_alttextures && t->anim_total[1])
 				t = t->anim_frames[1][(t->anim_total[1] >= 2) ? ((int)(rsurface.shadertime * 5.0f) % t->anim_total[1]) : 0];
 			else
 				t = t->anim_frames[0][(t->anim_total[0] >= 2) ? ((int)(rsurface.shadertime * 5.0f) % t->anim_total[0]) : 0];
@@ -8174,7 +8180,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->backgroundcurrentskinframe = t->backgroundskinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundskinframerate, t->backgroundnumskinframes)];
 
 	t->currentmaterialflags = t->basematerialflags;
-	t->currentalpha = rsurface.colormod[3];
+	t->currentalpha = rsurface.colormod[3] * t->basealpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer || r_trippy.integer))
 		t->currentalpha *= r_wateralpha.value;
 	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay)
@@ -12721,6 +12727,7 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 
 	texture.update_lastrenderframe = -1; // regenerate this texture
 	texture.basematerialflags = materialflags | MATERIALFLAG_CUSTOMSURFACE | MATERIALFLAG_WALL;
+	texture.basealpha = 1.0f;
 	texture.currentskinframe = skinframe;
 	texture.currenttexmatrix = *texmatrix; // requires MATERIALFLAG_CUSTOMSURFACE
 	texture.offsetmapping = OFFSETMAPPING_OFF;

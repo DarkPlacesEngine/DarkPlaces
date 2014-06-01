@@ -2,7 +2,8 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
-extern int image_width, image_height;
+extern int image_width, image_height, image_q2flags, image_q2value, image_q2contents;
+extern char image_q2animname[32];
 
 
 // swizzle components (even converting number of components) and flip images
