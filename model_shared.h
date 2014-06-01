@@ -765,7 +765,7 @@ typedef struct model_brush_s
 	qboolean isbsp2rmqe;
 	// true if this model is a BSP2 .bsp file (expanded 32bit bsp format for DarkPlaces, others?)
 	qboolean isbsp2;
-	// true if this model is a Quake2 .bsp file (IBSP46)
+	// true if this model is a Quake2 .bsp file (IBSP38)
 	qboolean isq2bsp;
 	// string of entity definitions (.map format)
 	char *entities;
