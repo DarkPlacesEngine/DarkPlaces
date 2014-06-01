@@ -2503,7 +2503,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 	for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 	{
 		surface->lightmapinfo = loadmodel->data_surfaces_lightmapinfo + surfacenum;
-		// the struct on disk is the same in BSP29 (Q1), BSP30 (HL1), and IBSP46 (Q2)
+		// the struct on disk is the same in BSP29 (Q1), BSP30 (HL1), and IBSP38 (Q2)
 		planenum = loadmodel->brush.isbsp2 ? MSG_ReadLittleLong(sb) : (unsigned short)MSG_ReadLittleShort(sb);
 		/*side = */loadmodel->brush.isbsp2 ? MSG_ReadLittleLong(sb) : (unsigned short)MSG_ReadLittleShort(sb);
 		firstedge = MSG_ReadLittleLong(sb);
