@@ -1586,6 +1586,10 @@ static void CL_RelinkWorld(void)
 	CL_UpdateRenderEntity(&ent->render);
 	r_refdef.scene.worldentity = &ent->render;
 	r_refdef.scene.worldmodel = cl.worldmodel;
+
+	// if the world is q2bsp, animate the textures
+	if (ent->render.model && ent->render.model->brush.isq2bsp)
+		ent->render.framegroupblend[0].frame = (int)(cl.time * 2.0f);
 }
 
 static void CL_RelinkStaticEntities(void)
