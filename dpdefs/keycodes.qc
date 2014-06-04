@@ -43,7 +43,7 @@ float K_END		=	152;
 
 float K_NUMLOCK		= 154;
 float K_CAPSLOCK	= 155;
-float K_SCROLLLOCK	= 156;
+float K_SCROLLOCK	= 156;
 
 float K_KP_0	=	157;
 float K_KP_INS	=	157; // same as K_KP_0
