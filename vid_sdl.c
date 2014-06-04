@@ -231,18 +231,18 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_KP_PLUS:            return K_KP_PLUS;
 	case SDLK_KP_ENTER:           return K_KP_ENTER;
 #if SDL_MAJOR_VERSION == 1
-	case SDLK_KP_1:               return K_KP_1;
-	case SDLK_KP_2:               return K_KP_2;
-	case SDLK_KP_3:               return K_KP_3;
-	case SDLK_KP_4:               return K_KP_4;
+	case SDLK_KP_1:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_1 : K_END);
+	case SDLK_KP_2:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_2 : K_DOWNARROW);
+	case SDLK_KP_3:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_3 : K_PGDN);
+	case SDLK_KP_4:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_4 : K_LEFTARROW);
 	case SDLK_KP_5:               return K_KP_5;
-	case SDLK_KP_6:               return K_KP_6;
-	case SDLK_KP_7:               return K_KP_7;
-	case SDLK_KP_8:               return K_KP_8;
-	case SDLK_KP_9:               return K_KP_9;
-	case SDLK_KP_0:               return K_KP_0;
+	case SDLK_KP_6:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_6 : K_RIGHTARROW);
+	case SDLK_KP_7:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_7 : K_HOME);
+	case SDLK_KP_8:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_8 : K_UPARROW);
+	case SDLK_KP_9:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_9 : K_PGUP);
+	case SDLK_KP_0:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_0 : K_INS);
 #endif
-	case SDLK_KP_PERIOD:          return K_KP_PERIOD;
+	case SDLK_KP_PERIOD:          return ((SDL_GetModState() & KMOD_NUM) ? K_KP_PERIOD : K_DEL);
 //	case SDLK_APPLICATION:        return K_APPLICATION;
 //	case SDLK_POWER:              return K_POWER;
 	case SDLK_KP_EQUALS:          return K_KP_EQUALS;
@@ -1113,7 +1113,16 @@ void Sys_SendKeyEvents( void )
 			case SDL_KEYUP:
 				keycode = MapKey(event.key.keysym.sym);
 				if (!VID_JoyBlockEmulatedKeys(keycode))
+				{
+					if(keycode == K_NUMLOCK || keycode == K_CAPSLOCK)
+					{
+						// simulate down followed by up
+						Key_Event(keycode, event.key.keysym.unicode, true);
+						Key_Event(keycode, event.key.keysym.unicode, false);
+						break;
+					}
 					Key_Event(keycode, event.key.keysym.unicode, (event.key.state == SDL_PRESSED));
+				}
 				break;
 			case SDL_ACTIVEEVENT:
 				if( event.active.state & SDL_APPACTIVE )
