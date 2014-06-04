@@ -1766,11 +1766,6 @@ Key_Event (int key, int ascii, qboolean down)
 		return;
 	}
 
-	if (ascii == 0x80 && utf8_enable.integer) // pressing AltGr-5 (or AltGr-e) and for some reason we get windows-1252 encoding?
-		ascii = 0x20AC; // we want the Euro currency sign
-		// TODO find out which vid_ drivers do it and fix it there
-		// but catching U+0080 here is no loss as that char is not useful anyway
-
 	// get key binding
 	bind = keybindings[key_bmap][key];
 	if (!bind)
@@ -1781,7 +1776,7 @@ Key_Event (int key, int ascii, qboolean down)
 
 	if(key_consoleactive)
 		keydest = key_console;
-	
+
 	if (down)
 	{
 		// increment key repeat count each time a down is received so that things
@@ -1805,7 +1800,7 @@ Key_Event (int key, int ascii, qboolean down)
 
 	if(keydest == key_void)
 		return;
-	
+
 	// key_consoleactive is a flag not a key_dest because the console is a
 	// high priority overlay ontop of the normal screen (designed as a safety
 	// feature so that developers and users can rescue themselves from a bad

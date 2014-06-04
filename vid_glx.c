@@ -284,6 +284,10 @@ static int XLateKey(XKeyEvent *ev, Uchar *ascii)
 		case XK_KP_Subtract: key = K_KP_MINUS; break;
 		case XK_KP_Divide: key = K_KP_SLASH; break;
 
+		case XK_Num_Lock: key = K_NUMLOCK; break;
+		case XK_Caps_Lock: key = K_CAPSLOCK; break;
+		case XK_Scroll_Lock: key = K_SCROLLOCK; break;
+
 		case XK_asciicircum:	*ascii = key = '^'; break; // for some reason, XLookupString returns "" on this one for Grunt|2
 
 		case XK_section:	*ascii = key = '~'; break;
