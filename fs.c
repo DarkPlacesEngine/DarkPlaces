@@ -990,7 +990,7 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 	}
 
 	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
-	pack->ignorecase = false; // PAK is case sensitive
+	pack->ignorecase = true; // PAK is sensitive in Quake1 but insensitive in Quake2
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = 0;
