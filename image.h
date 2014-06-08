@@ -2,8 +2,7 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
-extern int image_width, image_height, image_q2flags, image_q2value, image_q2contents;
-extern char image_q2animname[32];
+extern int image_width, image_height;
 
 
 // swizzle components (even converting number of components) and flip images
@@ -28,6 +27,12 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 
 // loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
 qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);
+
+// loads the palette from an 8bit pcx image into your provided array
+qboolean LoadPCX_PaletteOnly(const unsigned char *f, int filesize, unsigned char *palette768b);
+
+// get the metadata from a Quake2 wal file
+qboolean LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c);
 
 // loads a texture, as a texture
 rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean sRGB);

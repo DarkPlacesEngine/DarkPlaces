@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t r_colormap_palette = {0, "r_colormap_palette", "gfx/colormap_palette.lmp", "name of a palette lmp file to override the shirt/pants colors of player models. It consists of 16 shirt colors, 16 scoreboard shirt colors, 16 pants colors and 16 scoreboard pants colors"};
 
@@ -21,6 +22,8 @@ unsigned int palette_bgra_shirtaswhite[256];
 unsigned int palette_bgra_transparent[256];
 unsigned int palette_bgra_embeddedpic[256];
 unsigned char palette_featureflags[256];
+
+unsigned int q2palette_bgra_complete[256];
 
 // John Carmack said the quake palette.lmp can be considered public domain because it is not an important asset to id, so I include it here as a fallback if no external palette file is found.
 unsigned char host_quakepal[768] =
@@ -183,6 +186,27 @@ static void Palette_SetupSpecialPalettes(void)
 	palette_bgra_font[0] = 0;
 }
 
+static void Palette_LoadQ2Colormap(void)
+{
+	fs_offset_t filesize;
+	unsigned char * q2colormapfile = FS_LoadFile("pics/colormap.pcx", tempmempool, true, &filesize);
+	if (q2colormapfile && filesize >= 768)
+	{
+		unsigned char q2palette_rgb[256][3];
+		unsigned char *out = (unsigned char *) q2palette_bgra_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
+		int i;
+		LoadPCX_PaletteOnly(q2colormapfile, filesize, q2palette_rgb[0]);
+		for (i = 0;i < 256;i++)
+		{
+			out[i*4+2] = q2palette_rgb[i][0];
+			out[i*4+1] = q2palette_rgb[i][1];
+			out[i*4+0] = q2palette_rgb[i][2];
+			out[i*4+3] = 255;
+		}
+		Mem_Free(q2colormapfile);
+	}
+}
+
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, float contrastboost, unsigned char *out, int rampsize)
 {
 	int i, adjusted;
@@ -326,6 +350,8 @@ static void Palette_Load(void)
 	}
 
 	Palette_SetupSpecialPalettes();
+
+	Palette_LoadQ2Colormap();
 }
 
 void Palette_Init(void)

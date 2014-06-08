@@ -2747,9 +2747,6 @@ nothing                GL_ZERO GL_ONE
 				{
 					if(texture->skinframes[0]->hasalpha)
 						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-					texture->q2flags = texture->skinframes[0]->q2flags;
-					texture->q2value = texture->skinframes[0]->q2value;
-					texture->q2contents = texture->skinframes[0]->q2contents;
 					if (texture->q2contents)
 						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, texture->q2contents);
 				}
