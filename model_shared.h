@@ -82,11 +82,6 @@ typedef struct skinframe_s
 	qboolean qgeneratemerged;
 	qboolean qgeneratenmap;
 	qboolean qgenerateglow;
-	// for q2 wal files we have some extra info
-	int q2flags;
-	int q2value;
-	int q2contents;
-	// we could also store the q2animname from the wal but we have no current need of it
 }
 skinframe_t;
 
@@ -767,6 +762,10 @@ typedef struct model_brush_s
 	qboolean isbsp2;
 	// true if this model is a Quake2 .bsp file (IBSP38)
 	qboolean isq2bsp;
+	// true if this model is a Quake3 .bsp file (IBSP46)
+	qboolean isq3bsp;
+	// true if this model is a Quake1/Quake2 .bsp file where skymasking capability exists
+	qboolean skymasking;
 	// string of entity definitions (.map format)
 	char *entities;
 

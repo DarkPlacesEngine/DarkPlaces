@@ -380,6 +380,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 
 void CL_ParseEntityLump(char *entdata)
 {
+	qboolean loadedsky = false;
 	const char *data;
 	char key[128], value[MAX_INPUTLINE];
 	FOG_clear(); // LordHavoc: no fog until set
@@ -408,11 +409,20 @@ void CL_ParseEntityLump(char *entdata)
 			return; // error
 		strlcpy (value, com_token, sizeof (value));
 		if (!strcmp("sky", key))
+		{
+			loadedsky = true;
 			R_SetSkyBox(value);
+		}
 		else if (!strcmp("skyname", key)) // non-standard, introduced by QuakeForge... sigh.
+		{
+			loadedsky = true;
 			R_SetSkyBox(value);
+		}
 		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
+		{
+			loadedsky = true;
 			R_SetSkyBox(value);
+		}
 		else if (!strcmp("fog", key))
 		{
 			FOG_clear(); // so missing values get good defaults
@@ -455,6 +465,9 @@ void CL_ParseEntityLump(char *entdata)
 			r_refdef.fog_height_texturename[63] = 0;
 		}
 	}
+
+	if (!loadedsky && cl.worldmodel->brush.isq2bsp)
+		R_SetSkyBox("unit1_");
 }
 
 static const vec3_t defaultmins = {-4096, -4096, -4096};

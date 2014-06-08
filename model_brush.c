@@ -2524,6 +2524,10 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		surface->lightmapinfo->texinfo = loadmodel->brushq1.texinfo + texinfoindex;
 		surface->texture = loadmodel->data_textures + surface->lightmapinfo->texinfo->textureindex;
 
+		// Q2BSP doesn't use lightmaps on sky or warped surfaces (water), but still has a lightofs of 0
+		if (lightmapoffset == 0 && (surface->texture->q2flags & (Q2SURF_SKY | Q2SURF_WARP)))
+			lightmapoffset = -1;
+
 		//surface->flags = surface->texture->flags;
 		//if (LittleShort(in->side))
 		//	surface->flags |= SURF_PLANEBACK;
@@ -2598,7 +2602,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 			surface->lightmapinfo->samples = NULL;
 #if 1
 			// give non-lightmapped water a 1x white lightmap
-			if (surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
+			if (!loadmodel->brush.isq2bsp && surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
 				surface->lightmapinfo->samples = (unsigned char *)Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 				surface->lightmapinfo->styles[0] = 0;
@@ -3775,9 +3779,12 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	mod->brush.isbsp2 = false;
 	mod->brush.ishlbsp = false;
+	mod->brush.isbsp2rmqe = false;
+	mod->brush.isbsp2 = false;
 	mod->brush.isq2bsp = false;
+	mod->brush.isq3bsp = false;
+	mod->brush.skymasking = true;
 	i = MSG_ReadLittleLong(&sb);
 	switch(i)
 	{
@@ -4269,7 +4276,7 @@ static void Mod_Q2BSP_LoadNodes(sizebuf_t *sb)
 static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 {
 	mtexinfo_t *out;
-	int i, j, k, count;
+	int i, j, k, l, count;
 	int structsize = 76;
 	int maxtextures = 1024; // hardcoded limit of quake2 engine, so we may as well use it as an upper bound
 	char filename[MAX_QPATH];
@@ -4307,8 +4314,21 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 			{
 				texture_t *tx = loadmodel->data_textures + j;
 				int q2flags = out->q2flags;
-				Mod_LoadTextureFromQ3Shader(tx, filename, true, true, MATERIALFLAG_WALL);
-				tx->q2flags = q2flags; // override the flags from the wal
+				unsigned char *walfile = NULL;
+				fs_offset_t walfilesize = 0;
+				Mod_LoadTextureFromQ3Shader(tx, filename, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
+				// now read the .wal file to get metadata (even if a .tga was overriding it, we still need the wal data)
+				walfile = FS_LoadFile(filename, tempmempool, true, &walfilesize);
+				if (walfile)
+				{
+					int w, h;
+					char q2animname32c[32];
+					LoadWAL_GetMetadata(walfile, (int)walfilesize, &w, &h, &q2flags, &tx->q2value, &tx->q2contents, q2animname32c);
+					tx->width = w;
+					tx->height = h;
+					tx->q2flags = q2flags;
+					Mem_Free(walfile);
+				}
 				// also modify the texture to have the correct contents and such based on flags
 				// note that we create multiple texture_t structures if q2flags differs
 				if (q2flags & Q2SURF_LIGHT)
@@ -4322,6 +4342,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				if (q2flags & Q2SURF_SKY)
 				{
 					// sky is a rather specific thing
+					q2flags &= ~Q2SURF_NODRAW; // quake2 had a slightly different meaning than we have in mind here...
 					tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 					tx->supercontents = SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP | SUPERCONTENTS_OPAQUE;
 					tx->surfaceflags = Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NOIMPACT | Q3SURFACEFLAG_NOMARKS | Q3SURFACEFLAG_NODLIGHT | Q3SURFACEFLAG_NOLIGHTMAP;
@@ -4329,7 +4350,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				if (q2flags & Q2SURF_WARP)
 				{
 					// we use a scroll instead of a warp
-					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL;
+					tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_FULLBRIGHT;
 					// if it's also transparent, we can enable the WATERSHADER
 					// but we do not set the WATERALPHA flag because we don't
 					// want to honor r_wateralpha in q2bsp
@@ -4341,11 +4362,17 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				{
 					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED;
 					tx->basealpha = 0.3333f;
+					tx->supercontents &= ~SUPERCONTENTS_OPAQUE;
+					if (tx->q2contents & Q2CONTENTS_SOLID)
+						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
 				}
 				if (q2flags & Q2SURF_TRANS66)
 				{
 					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED;
 					tx->basealpha = 0.6667f;
+					tx->supercontents &= ~SUPERCONTENTS_OPAQUE;
+					if (tx->q2contents & Q2CONTENTS_SOLID)
+						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
 				}
 				if (q2flags & Q2SURF_FLOWING)
 				{
@@ -4355,8 +4382,19 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				}
 				if (q2flags & Q2SURF_NODRAW)
 				{
-					tx->basematerialflags |= MATERIALFLAG_NODRAW;
+					tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 				}
+				if (tx->q2contents & (Q2CONTENTS_TRANSLUCENT | Q2CONTENTS_MONSTERCLIP | Q2CONTENTS_PLAYERCLIP))
+					tx->q2contents |= Q2CONTENTS_DETAIL;
+				if (!(tx->q2contents & (Q2CONTENTS_SOLID | Q2CONTENTS_WINDOW | Q2CONTENTS_AUX | Q2CONTENTS_LAVA | Q2CONTENTS_SLIME | Q2CONTENTS_WATER | Q2CONTENTS_MIST | Q2CONTENTS_PLAYERCLIP | Q2CONTENTS_MONSTERCLIP | Q2CONTENTS_MIST)))
+					tx->q2contents |= Q2CONTENTS_SOLID;
+				if (tx->q2flags & (Q2SURF_HINT | Q2SURF_SKIP))
+					tx->q2contents = 0;
+				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, tx->q2contents);
+				// set the current values to the base values
+				tx->currentframe = tx;
+				tx->currentskinframe = tx->skinframes[0];
+				tx->currentmaterialflags = tx->basematerialflags;
 				loadmodel->num_texturesperskin++;
 				loadmodel->num_textures = loadmodel->num_texturesperskin;
 			}
@@ -4393,7 +4431,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 		for (j = i;j >= 0 && t->anim_total[0] < (int)(sizeof(t->anim_frames[0])/sizeof(t->anim_frames[0][0]));j = loadmodel->brushq1.texinfo[j].q2nexttexinfo)
 		{
 			// detect looping and stop there
-			if (loadmodel->brushq1.texinfo[j].textureindex == out->textureindex)
+			if (t->anim_total[0] && loadmodel->brushq1.texinfo[j].textureindex == out->textureindex)
 				break;
 			t->anim_frames[0][t->anim_total[0]++] = &loadmodel->data_textures[loadmodel->brushq1.texinfo[j].textureindex];
 		}
@@ -4407,16 +4445,13 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 		// note that this can overwrite the rest of the sequence - so if the
 		// start of a sequence is found later than the other parts of the
 		// sequence, it will go back and rewrite them correctly.
-		for (j = i;j >= 0;j = loadmodel->brushq1.texinfo[j].q2nexttexinfo)
+		for (k = 0;k < t->anim_total[0];k++)
 		{
-			texture_t *txj = &loadmodel->data_textures[loadmodel->brushq1.texinfo[j].textureindex];
-			txj->animated = t->animated;
-			txj->anim_total[0] = t->anim_total[0];
-			txj->anim_total[1] = t->anim_total[1];
-			for (k = 0;k < t->anim_total[0];k++)
-				txj->anim_frames[0][k] = t->anim_frames[0][k];
-			for (k = 0;k < t->anim_total[1];k++)
-				txj->anim_frames[1][k] = t->anim_frames[1][k];
+			texture_t *txk = t->anim_frames[0][k];
+			txk->animated = t->animated;
+			txk->anim_total[0] = t->anim_total[0];
+			for (l = 0;l < t->anim_total[0];l++)
+				txk->anim_frames[0][l] = t->anim_frames[0][l];
 		}
 	}
 }
@@ -4431,7 +4466,7 @@ static void Mod_Q2BSP_LoadLighting(sizebuf_t *sb)
 static void Mod_Q2BSP_LoadLeafs(sizebuf_t *sb)
 {
 	mleaf_t *out;
-	int i, j, count, firstmarksurface, nummarksurfaces;
+	int i, j, count, firstmarksurface, nummarksurfaces, firstmarkbrush, nummarkbrushes;
 	int structsize = 28;
 
 	if (sb->cursize % structsize)
@@ -4457,6 +4492,8 @@ static void Mod_Q2BSP_LoadLeafs(sizebuf_t *sb)
 	
 		firstmarksurface = (unsigned short)MSG_ReadLittleShort(sb);
 		nummarksurfaces  = (unsigned short)MSG_ReadLittleShort(sb);
+		firstmarkbrush = (unsigned short)MSG_ReadLittleShort(sb);
+		nummarkbrushes  = (unsigned short)MSG_ReadLittleShort(sb);
 
 		for (j = 0;j < 4;j++)
 			out->ambient_sound_level[j] = 0;
@@ -4477,6 +4514,18 @@ static void Mod_Q2BSP_LoadLeafs(sizebuf_t *sb)
 			Con_Printf("Mod_Q2BSP_LoadLeafs: invalid leafsurface range %i:%i outside range %i:%i\n", firstmarksurface, firstmarksurface+nummarksurfaces, 0, loadmodel->brush.num_leafsurfaces);
 			out->firstleafsurface = NULL;
 			out->numleafsurfaces = 0;
+		}
+
+		if (firstmarkbrush >= 0 && firstmarkbrush + nummarkbrushes <= loadmodel->brush.num_leafbrushes)
+		{
+			out->firstleafbrush = loadmodel->brush.data_leafbrushes + firstmarkbrush;
+			out->numleafbrushes = nummarkbrushes;
+		}
+		else
+		{
+			Con_Printf("Mod_Q2BSP_LoadLeafs: invalid leafbrush range %i:%i outside range %i:%i\n", firstmarkbrush, firstmarkbrush+nummarkbrushes, 0, loadmodel->brush.num_leafbrushes);
+			out->firstleafbrush = NULL;
+			out->numleafbrushes = 0;
 		}
 	}
 }
@@ -4509,7 +4558,7 @@ static void Mod_Q2BSP_LoadBrushSides(sizebuf_t *sb)
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q2BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
 	count = sb->cursize / structsize;
-	out = (q3mbrushside_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_brushsides * sizeof(*out));
+	out = (q3mbrushside_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_brushsides = out;
 	loadmodel->brush.num_brushsides = count;
@@ -4521,9 +4570,17 @@ static void Mod_Q2BSP_LoadBrushSides(sizebuf_t *sb)
 			Host_Error("Mod_Q2BSP_LoadBrushSides: invalid planeindex %i (%i planes)", n, loadmodel->brush.num_planes);
 		out->plane = loadmodel->brush.data_planes + n;
 		n = MSG_ReadLittleShort(sb);
-		if (n < 0 || n >= loadmodel->num_textures)
-			Host_Error("Mod_Q2BSP_LoadBrushSides: invalid texinfo index %i (%i texinfos)", n, loadmodel->brushq1.numtexinfo);
-		out->texture = loadmodel->data_textures + loadmodel->brushq1.texinfo[n].textureindex;
+		if (n >= 0)
+		{
+			if (n >= loadmodel->brushq1.numtexinfo)
+				Host_Error("Mod_Q2BSP_LoadBrushSides: invalid texinfo index %i (%i texinfos)", n, loadmodel->brushq1.numtexinfo);
+			out->texture = loadmodel->data_textures + loadmodel->brushq1.texinfo[n].textureindex;
+		}
+		else
+		{
+			//Con_Printf("Mod_Q2BSP_LoadBrushSides: brushside %i has texinfo index %i < 0, changing to generic texture!\n", i, n);
+			out->texture = &mod_q1bsp_texture_solid;
+		}
 	}
 }
 
@@ -4537,7 +4594,7 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q2BSP_LoadBrushes: funny lump size in %s",loadmodel->name);
 	count = sb->cursize / structsize;
-	out = (q3mbrush_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_brushes * sizeof(*out));
+	out = (q3mbrush_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
 	loadmodel->brush.data_brushes = out;
 	loadmodel->brush.num_brushes = count;
@@ -4576,6 +4633,8 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 			planes[j].q3surfaceflags = out->firstbrushside[j].texture->surfaceflags;
 			planes[j].texture = out->firstbrushside[j].texture;
 			q3surfaceflags |= planes[j].q3surfaceflags;
+			// LordHavoc: kind of a mean hack here, but we want the surfaces to have the brush contents
+			out->firstbrushside[j].texture->supercontents = supercontents;
 		}
 		// make the colbrush from the planes
 		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, q3surfaceflags, out->texture, true);
@@ -4587,22 +4646,29 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 		Mem_Free(planes);
 }
 
+static void Mod_Q2BSP_LoadPOP(sizebuf_t *sb)
+{
+	// this is probably a "proof of purchase" lump of some sort, it seems to be 0 size in most bsp files (but not q2dm1.bsp for instance)
+	sb->readcount = sb->cursize;
+}
 
 static void Mod_Q2BSP_LoadAreas(sizebuf_t *sb)
 {
 	// we currently don't use areas, they represent closable doors as vis blockers
+	sb->readcount = sb->cursize;
 }
 
 static void Mod_Q2BSP_LoadAreaPortals(sizebuf_t *sb)
 {
 	// we currently don't use areas, they represent closable doors as vis blockers
+	sb->readcount = sb->cursize;
 }
 
 static void Mod_Q2BSP_LoadSubmodels(sizebuf_t *sb)
 {
 	mmodel_t	*out;
 	int			i, count;
-	int			structsize = 56;
+	int			structsize = 48;
 
 	if (sb->cursize % structsize)
 		Host_Error ("Mod_Q2BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
@@ -4627,7 +4693,6 @@ static void Mod_Q2BSP_LoadSubmodels(sizebuf_t *sb)
 		out->origin[1] = MSG_ReadLittleFloat(sb);
 		out->origin[2] = MSG_ReadLittleFloat(sb);
 		out->headnode[0] = MSG_ReadLittleLong(sb);
-		out->visleafs  = MSG_ReadLittleLong(sb);
 		out->firstface = MSG_ReadLittleLong(sb);
 		out->numfaces  = MSG_ReadLittleLong(sb);
 	}
@@ -4669,9 +4734,12 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq2;
 
-	mod->brush.isbsp2 = false;
 	mod->brush.ishlbsp = false;
+	mod->brush.isbsp2rmqe = false;
+	mod->brush.isbsp2 = false;
 	mod->brush.isq2bsp = true; // q1bsp loaders mostly work but we need a few tweaks
+	mod->brush.isq3bsp = false;
+	mod->brush.skymasking = true;
 	mod->modeldatatypestring = "Q2BSP";
 
 	i = MSG_ReadLittleLong(&sb);
@@ -4748,12 +4816,13 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q2BSP_LoadLighting(&lumpsb[Q2LUMP_LIGHTING]);
 	Mod_Q1BSP_LoadPlanes(&lumpsb[Q2LUMP_PLANES]);
 	Mod_Q2BSP_LoadTexinfo(&lumpsb[Q2LUMP_TEXINFO]);
-	Mod_Q2BSP_LoadBrushes(&lumpsb[Q2LUMP_BRUSHES]);
 	Mod_Q2BSP_LoadBrushSides(&lumpsb[Q2LUMP_BRUSHSIDES]);
+	Mod_Q2BSP_LoadBrushes(&lumpsb[Q2LUMP_BRUSHES]);
 	Mod_Q1BSP_LoadFaces(&lumpsb[Q2LUMP_FACES]);
 	Mod_Q1BSP_LoadLeaffaces(&lumpsb[Q2LUMP_LEAFFACES]);
 	Mod_Q2BSP_LoadLeafBrushes(&lumpsb[Q2LUMP_LEAFBRUSHES]);
 	Mod_Q2BSP_LoadVisibility(&lumpsb[Q2LUMP_VISIBILITY]);
+	Mod_Q2BSP_LoadPOP(&lumpsb[Q2LUMP_POP]);
 	Mod_Q2BSP_LoadAreas(&lumpsb[Q2LUMP_AREAS]);
 	Mod_Q2BSP_LoadAreaPortals(&lumpsb[Q2LUMP_AREAPORTALS]);
 	Mod_Q2BSP_LoadLeafs(&lumpsb[Q2LUMP_LEAFS]);
@@ -4811,6 +4880,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
 	{
+		mnode_t *rootnode = NULL;
 		int firstbrush = loadmodel->brush.num_brushes, lastbrush = 0;
 		if (i > 0)
 		{
@@ -4848,11 +4918,17 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// set node/leaf parents for this submodel
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + bm->headnode[0], NULL);
+		// note: if the root of this submodel is a leaf (headnode[0] < 0) then there is nothing to do...
+		// (this happens in base3.bsp)
+		if (bm->headnode[0] >= 0)
+			rootnode = mod->brush.data_nodes + bm->headnode[0];
+		else
+			rootnode = (mnode_t*)(mod->brush.data_leafs + -1 - bm->headnode[0]);
+		Mod_Q1BSP_LoadNodes_RecursiveSetParent(rootnode, NULL);
 
 		// make the model surface list (used by shadowing/lighting)
 		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
-		Mod_Q2BSP_FindSubmodelBrushRange_r(mod, mod->brush.data_nodes + bm->headnode[0], &firstbrush, &lastbrush);
+		Mod_Q2BSP_FindSubmodelBrushRange_r(mod, rootnode, &firstbrush, &lastbrush);
 		if (firstbrush <= lastbrush)
 		{
 			mod->firstmodelbrush = firstbrush;
@@ -7615,6 +7691,11 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->modeldatatypestring = "Q3BSP";
 
 	mod->type = mod_brushq3;
+	mod->brush.ishlbsp = false;
+	mod->brush.isbsp2rmqe = false;
+	mod->brush.isbsp2 = false;
+	mod->brush.isq2bsp = false;
+	mod->brush.isq3bsp = true;
 	mod->numframes = 2; // although alternate textures are not supported it is annoying to complain about no such frame 1
 	mod->numskins = 1;
 

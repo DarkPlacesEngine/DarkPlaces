@@ -193,6 +193,8 @@ cvar_t sv_autodemo_perclient_nameformat = {CVAR_SAVE, "sv_autodemo_perclient_nam
 cvar_t sv_autodemo_perclient_discardable = {CVAR_SAVE, "sv_autodemo_perclient_discardable", "0", "Allow game code to decide whether a demo should be kept or discarded."};
 
 cvar_t halflifebsp = {0, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
+cvar_t sv_mapformat_is_quake2 = {0, "sv_mapformat_is_quake2", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors, .frame on submodels and other things)"};
+cvar_t sv_mapformat_is_quake3 = {0, "sv_mapformat_is_quake3", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors)"};
 
 server_t sv;
 server_static_t svs;
@@ -603,6 +605,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_autodemo_perclient_discardable);
 
 	Cvar_RegisterVariable (&halflifebsp);
+	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
+	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
@@ -3343,6 +3347,8 @@ void SV_SpawnServer (const char *server)
 	cls.signon = 0;
 
 	Cvar_SetValue("halflifebsp", worldmodel->brush.ishlbsp);
+	Cvar_SetValue("sv_mapformat_is_quake2", worldmodel->brush.isq2bsp);
+	Cvar_SetValue("sv_mapformat_is_quake3", worldmodel->brush.isq3bsp);
 
 	if(*sv_random_seed.string)
 	{
