@@ -324,6 +324,9 @@ typedef struct q2dmodel_s
 #define	Q2SURF_FLOWING	0x40	// scroll towards angle
 #define	Q2SURF_NODRAW		0x80	// don't bother referencing the texture
 
+#define Q2SURF_HINT		0x100   // make a primary bsp splitter
+#define Q2SURF_SKIP		0x200   // completely ignore, allowing non-closed brushes
+
 
 
 /*
