@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef QUAKEDEF_H
 #define QUAKEDEF_H
 
+#ifdef __APPLE__
+# include <TargetConditionals.h>
+#endif
+
 #if defined(__GNUC__) && (__GNUC__ > 2)
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
@@ -427,7 +431,7 @@ extern cvar_t sessionid;
 # define LINK_TO_LIBVORBIS 1
 # define DP_MOBILETOUCH	1
 # define DP_FREETYPE_STATIC 1
-#elif defined(TARGET_OS_IPHONE) /* must come first because it also defines MACOSX */
+#elif TARGET_OS_IPHONE /* must come first because it also defines MACOSX */
 # define DP_OS_NAME		"iPhoneOS"
 # define DP_OS_STR		"iphoneos"
 # define USE_GLES2		1
