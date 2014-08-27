@@ -22,14 +22,6 @@
 		Boston, MA  02111-1307, USA
 */
 
-#ifdef __APPLE__
-// include SDL for IPHONEOS code
-# include <TargetConditionals.h>
-# if TARGET_OS_IPHONE
-#  include <SDL.h>
-# endif
-#endif
-
 #include <limits.h>
 #include <fcntl.h>
 
@@ -46,6 +38,12 @@
 #endif
 
 #include "quakedef.h"
+
+#if TARGET_OS_IPHONE
+// include SDL for IPHONEOS code
+# include <SDL.h>
+#endif
+
 #include "thread.h"
 
 #include "fs.h"
