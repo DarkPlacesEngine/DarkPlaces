@@ -1,0 +1,32 @@
+language: cpp
+matrix:
+  include:
+  - os: linux
+    env: PROJECT=xonotic OS="linux32"
+    compiler: gcc
+  - os: linux
+    env: PROJECT=xonotic OS="linux64"
+    compiler: gcc
+  - os: linux
+    env: PROJECT=xonotic OS="win32"
+    compiler: gcc
+  - os: linux
+    env: PROJECT=xonotic OS="win64"
+    compiler: gcc
+  - os: osx
+    env: PROJECT=xonotic OS="osx"
+    compiler: gcc
+before_install:
+- "./.travis-before_install-${PROJECT}.sh $OS"
+install:
+- true
+before_script:
+- true
+script:
+- "./.travis-script-${PROJECT}.sh $OS"
+after_success:
+- true
+after_failure:
+- true
+after_script:
+- true
