@@ -7,6 +7,9 @@ if [ "`uname`" = 'Linux' ]; then
 fi
 
 for os in "$@"; do
+  git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
+    --prefix=".deps/${os}/" master:"misc/builddeps/${os}" | tar xvf -
+
   case "$os" in
     linux32)
       # Prepare an i386 chroot. This is required as we otherwise can't install
@@ -52,13 +55,11 @@ for os in "$@"; do
       ;;
     osx)
       git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
-        --prefix=SDL.framework/ master:misc/buildfiles/osx/Xonotic.app/Contents/Frameworks/SDL.framework | tar xvf -
+        --prefix=SDL2.framework/ master:misc/buildfiles/osx/Xonotic.app/Contents/Frameworks/SDL2.framework | tar xvf -
       ;;
   esac
 done
 
-git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
-  --prefix=.deps/ master:misc/builddeps | tar xvf -
 for X in .deps/*; do
   rsync --remove-source-files -aL "$X"/*/ "$X"/ || true
 done
