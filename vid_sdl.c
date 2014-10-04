@@ -100,6 +100,7 @@ static vid_mode_t desktop_mode;
 
 #ifndef SDLK_PERCENT
 #define SDLK_PERCENT '%'
+#if SDL_MAJOR_VERSION == 1
 #define SDLK_PRINTSCREEN SDLK_PRINT
 #define SDLK_SCROLLLOCK SDLK_SCROLLOCK
 #define SDLK_NUMLOCKCLEAR SDLK_NUMLOCK
@@ -113,6 +114,7 @@ static vid_mode_t desktop_mode;
 #define SDLK_KP_8 SDLK_KP8
 #define SDLK_KP_9 SDLK_KP9
 #define SDLK_KP_0 SDLK_KP0
+#endif
 #endif
 
 static int MapKey( unsigned int sdlkey )
@@ -203,10 +205,8 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_F10:                return K_F10;
 	case SDLK_F11:                return K_F11;
 	case SDLK_F12:                return K_F12;
-#if SDL_MAJOR_VERSION == 1
 	case SDLK_PRINTSCREEN:        return K_PRINTSCREEN;
 	case SDLK_SCROLLLOCK:         return K_SCROLLOCK;
-#endif
 	case SDLK_PAUSE:              return K_PAUSE;
 	case SDLK_INSERT:             return K_INS;
 	case SDLK_HOME:               return K_HOME;
@@ -222,15 +222,12 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_LEFT:               return K_LEFTARROW;
 	case SDLK_DOWN:               return K_DOWNARROW;
 	case SDLK_UP:                 return K_UPARROW;
-#if SDL_MAJOR_VERSION == 1
 	case SDLK_NUMLOCKCLEAR:       return K_NUMLOCK;
-#endif
 	case SDLK_KP_DIVIDE:          return K_KP_DIVIDE;
 	case SDLK_KP_MULTIPLY:        return K_KP_MULTIPLY;
 	case SDLK_KP_MINUS:           return K_KP_MINUS;
 	case SDLK_KP_PLUS:            return K_KP_PLUS;
 	case SDLK_KP_ENTER:           return K_KP_ENTER;
-#if SDL_MAJOR_VERSION == 1
 	case SDLK_KP_1:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_1 : K_END);
 	case SDLK_KP_2:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_2 : K_DOWNARROW);
 	case SDLK_KP_3:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_3 : K_PGDN);
@@ -241,7 +238,6 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_KP_8:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_8 : K_UPARROW);
 	case SDLK_KP_9:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_9 : K_PGUP);
 	case SDLK_KP_0:               return ((SDL_GetModState() & KMOD_NUM) ? K_KP_0 : K_INS);
-#endif
 	case SDLK_KP_PERIOD:          return ((SDL_GetModState() & KMOD_NUM) ? K_KP_PERIOD : K_DEL);
 //	case SDLK_APPLICATION:        return K_APPLICATION;
 //	case SDLK_POWER:              return K_POWER;
@@ -1235,9 +1231,9 @@ void Sys_SendKeyEvents( void )
 			case SDL_KEYUP:
 #ifdef DEBUGSDLEVENTS
 				if (event.type == SDL_KEYDOWN)
-					Con_DPrintf("SDL_Event: SDL_KEYDOWN %i unicode %i\n", event.key.keysym.sym, event.key.keysym.unicode);
+					Con_DPrintf("SDL_Event: SDL_KEYDOWN %i\n", event.key.keysym.sym);
 				else
-					Con_DPrintf("SDL_Event: SDL_KEYUP %i unicode %i\n", event.key.keysym.sym, event.key.keysym.unicode);
+					Con_DPrintf("SDL_Event: SDL_KEYUP %i\n", event.key.keysym.sym);
 #endif
 				keycode = MapKey(event.key.keysym.sym);
 				if (!VID_JoyBlockEmulatedKeys(keycode))
