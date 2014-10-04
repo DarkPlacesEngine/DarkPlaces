@@ -1952,6 +1952,7 @@ void GLES_Init(void)
 	vid.support.arb_draw_buffers = false;
 	vid.support.arb_multitexture = false;
 	vid.support.arb_occlusion_query = false;
+	vid.support.arb_query_buffer_object = false;
 	vid.support.arb_shadow = false;
 	vid.support.arb_texture_compression = false; // different (vendor-specific) formats than on desktop OpenGL...
 	vid.support.arb_texture_cube_map = SDL_GL_ExtensionSupported("GL_OES_texture_cube_map") != 0;
