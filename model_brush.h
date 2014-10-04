@@ -120,6 +120,8 @@ mplane_t;
 #define MATERIALFLAG_NORTLIGHT 134217728
 // alphagen vertex
 #define MATERIALFLAG_ALPHAGEN_VERTEX 268435456
+// use occlusion buffer for corona
+#define MATERIALFLAG_OCCLUDE 536870912
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency

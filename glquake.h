@@ -1071,6 +1071,14 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 #define GL_QUERY_RESULT_AVAILABLE_ARB                     0x8867
 #endif
 
+// GL_ARB_query_buffer_object
+#ifndef GL_QUERY_BUFFER_ARB
+#define GL_QUERY_BUFFER_ARB                               0x9192
+#define GL_QUERY_BUFFER_BINDING_ARB                       0x9193
+#define GL_QUERY_RESULT_NO_WAIT_ARB                       0x9194
+#define GL_QUERY_BUFFER_BARRIER_BIT_ARB                   0x00008000
+#endif
+
 // GL_EXT_bgr
 #define GL_BGR					0x80E0
 

@@ -1525,6 +1525,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	vid.support.arb_depth_texture = true;
 	vid.support.arb_draw_buffers = vid_d3d9caps.NumSimultaneousRTs > 1;
 	vid.support.arb_occlusion_query = true; // can't find a cap for this
+	vid.support.arb_query_buffer_object = true;
 	vid.support.arb_shadow = true;
 	vid.support.arb_texture_compression = true;
 	vid.support.arb_texture_cube_map = true;
