@@ -317,6 +317,7 @@ typedef struct rtlight_s
 	vec3_t currentcolor;
 	/// used by corona updates, due to occlusion query
 	float corona_visibility;
+	unsigned int occlusion_buf;
 	unsigned int corona_queryindex_visiblepixels;
 	unsigned int corona_queryindex_allpixels;
 	/// this is R_GetCubemap(rtlight->cubemapname)
