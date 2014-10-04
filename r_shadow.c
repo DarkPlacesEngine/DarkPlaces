@@ -269,6 +269,9 @@ static rtexture_t *r_shadow_fb_colortexture;
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
 
+// buffer for doing corona fading
+unsigned int r_shadow_occlusion_buf = 0;
+
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
@@ -3941,7 +3944,6 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	rtlight->cached_numshadowentities              = 0;
 	rtlight->cached_numshadowentities_noselfshadow = 0;
 	rtlight->cached_numsurfaces                    = 0;
-	rtlight->occlusion_buf                         = 0;
 	rtlight->cached_lightentities                  = NULL;
 	rtlight->cached_lightentities_noselfshadow     = NULL;
 	rtlight->cached_shadowentities                 = NULL;
@@ -5166,12 +5168,16 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			// See if we can use the GPU-side method to prevent implicit sync
 			if (vid.support.arb_query_buffer_object) {
 #define BUFFER_OFFSET(i)    ((void*)NULL + (i))
-				qglGenBuffersARB(1, &rtlight->occlusion_buf);
-				qglBindBufferARB(GL_QUERY_BUFFER_ARB, rtlight->occlusion_buf);
-				qglBufferDataARB(GL_QUERY_BUFFER_ARB, 8, NULL, GL_DYNAMIC_COPY);
+				if (!r_shadow_occlusion_buf) {
+					qglGenBuffersARB(1, &r_shadow_occlusion_buf);
+					qglBindBufferARB(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
+					qglBufferDataARB(GL_QUERY_BUFFER_ARB, 8, NULL, GL_DYNAMIC_COPY);
+				} else {
+					qglBindBufferARB(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
+				}
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(0));
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(4));
-				qglBindBufferBase(GL_UNIFORM_BUFFER, 0, rtlight->occlusion_buf);
+				qglBindBufferBase(GL_UNIFORM_BUFFER, 0, r_shadow_occlusion_buf);
 				occlude = MATERIALFLAG_OCCLUDE;
 			} else {
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
@@ -5223,9 +5229,6 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		R_DrawCustomSurface(r_shadow_lightcorona, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NODEPTHTEST | occlude, 0, 4, 0, 2, false, false);
 		if(negated)
 			GL_BlendEquationSubtract(false);
-	}
-	if (rtlight->occlusion_buf) {
-		qglDeleteBuffersARB(1, &rtlight->occlusion_buf);
 	}
 }
 
