@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "dpsoftrast.h"
+#include "utf8lib.h"
 
 #ifndef __IPHONEOS__
 #ifdef MACOSX
@@ -1213,8 +1214,7 @@ void Sys_SendKeyEvents( void )
 	static qboolean sound_active = true;
 	int keycode;
 	int i;
-	int j;
-	int unicode;
+	Uchar unicode;
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
@@ -1353,30 +1353,11 @@ void Sys_SendKeyEvents( void )
 #ifdef DEBUGSDLEVENTS
 				Con_DPrintf("SDL_Event: SDL_TEXTINPUT - text: %s\n", event.text.text);
 #endif
-				// we have some characters to parse
-				{
-					unicode = 0;
-					for (i = 0;event.text.text[i];)
-					{
-						unicode = event.text.text[i++];
-						if (unicode & 0x80)
-						{
-							// UTF-8 character
-							// strip high bits (we could count these to validate character length but we don't)
-							for (j = 0x80;unicode & j;j >>= 1)
-								unicode ^= j;
-							for (;(event.text.text[i] & 0xC0) == 0x80;i++)
-								unicode = (unicode << 6) | (event.text.text[i] & 0x3F);
-							// low characters are invalid and could be bad, so replace them
-							if (unicode < 0x80)
-								unicode = '?'; // we could use 0xFFFD instead, the unicode substitute character
-						}
-						//Con_DPrintf("SDL_TEXTINPUT: K_TEXT %i \n", unicode);
-
-						Key_Event(K_TEXT, unicode, true);
-						Key_Event(K_TEXT, unicode, false);
-					}
-				}
+				// convert utf8 string to char
+				// NOTE: this code is supposed to run even if utf8enable is 0
+				unicode = u8_getchar_utf8_enabled(event.text.text + (int)u8_bytelen(event.text.text, 0), NULL);
+				Key_Event(K_TEXT, unicode, true);
+				Key_Event(K_TEXT, unicode, false);
 				break;
 			case SDL_MOUSEMOTION:
 				break;
