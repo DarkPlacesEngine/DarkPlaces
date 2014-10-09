@@ -1,12 +1,13 @@
 #!/bin/sh
 
-set -ex
+set -e
 
-openssl aes-256-cbc \
-  -K $encrypted_08aaf016324d_key -iv $encrypted_08aaf016324d_iv \
-  -in .travis-id_rsa-xonotic -out id_rsa-xonotic -d
+openssl aes-256-cbc -K $encrypted_eeb6f7a14a8e_key -iv $encrypted_eeb6f7a14a8e_iv -in .travis-id_rsa-xonotic -out id_rsa-xonotic -d
+
+set -x
+
 chmod 0600 id_rsa-xonotic
-ssh-keygen -y -f id_rsa-xonotic
+# ssh-keygen -y -f id_rsa-xonotic
 
 rev=`git rev-parse HEAD`
 
