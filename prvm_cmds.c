@@ -6813,7 +6813,8 @@ nolength:
 			default:
 verbatim:
 				if(o < end - 1)
-					*o++ = *s++;
+					*o++ = *s;
+				++s;
 				break;
 		}
 	}
