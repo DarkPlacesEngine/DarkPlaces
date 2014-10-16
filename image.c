@@ -794,7 +794,6 @@ static unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize, int *m
 
 qboolean LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c)
 {
-	unsigned char *image_buffer;
 	const q2wal_t *inwal = (const q2wal_t *)f;
 
 	if (filesize < (int) sizeof(q2wal_t))
@@ -1005,11 +1004,15 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 					if(f)
 					{
 						int mymiplevel2 = miplevel ? *miplevel : 0;
+						int image_width_save = image_width;
+						int image_height_save = image_height;
 						data2 = format->loadfunc(f, (int)filesize, &mymiplevel2);
-						if(data2 && mymiplevel == mymiplevel2)
+						if(data2 && mymiplevel == mymiplevel2 && image_width == image_width_save && image_height == image_height_save)
 							Image_CopyAlphaFromBlueBGRA(data, data2, image_width, image_height);
 						else
 							Con_Printf("loadimagepixelsrgba: corrupt or invalid alpha image %s_alpha\n", basename);
+						image_width = image_width_save;
+						image_height = image_height_save;
 						if(data2)
 							Mem_Free(data2);
 						Mem_Free(f);
