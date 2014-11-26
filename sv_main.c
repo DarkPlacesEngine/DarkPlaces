@@ -2477,7 +2477,9 @@ static void SV_UpdateToReliableMessages (void)
 		if (name == NULL)
 			name = "";
 		// always point the string back at host_client->name to keep it safe
-		strlcpy (host_client->name, name, sizeof (host_client->name));
+		//strlcpy (host_client->name, name, sizeof (host_client->name));
+		if (name != host_client->name) // prevent buffer overlap SIGABRT on Mac OSX
+			strlcpy (host_client->name, name, sizeof (host_client->name));
 		PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
@@ -2507,7 +2509,9 @@ static void SV_UpdateToReliableMessages (void)
 		if (model == NULL)
 			model = "";
 		// always point the string back at host_client->name to keep it safe
-		strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+		//strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+		if (model != host_client->playermodel) // prevent buffer overlap SIGABRT on Mac OSX
+			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
 		PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
 
 		// NEXUIZ_PLAYERSKIN
@@ -2515,7 +2519,9 @@ static void SV_UpdateToReliableMessages (void)
 		if (skin == NULL)
 			skin = "";
 		// always point the string back at host_client->name to keep it safe
-		strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+		//strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+		if (skin != host_client->playerskin) // prevent buffer overlap SIGABRT on Mac OSX
+			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
 		PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 
 		// TODO: add an extension name for this [1/17/2008 Black]
