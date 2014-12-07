@@ -1776,7 +1776,7 @@ static qboolean Curl_SendRequirement(const char *filename, qboolean foundone, ch
 	const char *thispack = FS_WhichPack(filename);
 	const char *packurl;
 
-	if(!thispack)
+	if(!thispack || !*thispack)
 		return false;
 
 	p = strrchr(thispack, '/');
