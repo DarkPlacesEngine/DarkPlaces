@@ -1971,7 +1971,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->sides = glt->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	glt->texnum = 0;
 	glt->dirty = false;
-	glt->glisdepthstencil = glt->texturetype == TEXTYPE_DEPTHBUFFER24STENCIL8;
+	glt->glisdepthstencil = textype == TEXTYPE_DEPTHBUFFER24STENCIL8;
 	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
