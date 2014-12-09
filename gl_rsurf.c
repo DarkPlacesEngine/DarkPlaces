@@ -775,13 +775,13 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 					// recurse front side first because the svbsp building prefers it
 					if (info->relativelightorigin[plane->type] >= plane->dist)
 					{
-						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK-1)
 							nodestack[nodestackpos++] = node->children[0];
 						nodestack[nodestackpos++] = node->children[1];
 					}
 					else
 					{
-						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK-1)
 							nodestack[nodestackpos++] = node->children[1];
 						nodestack[nodestackpos++] = node->children[0];
 					}
@@ -805,13 +805,13 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 					// recurse front side first because the svbsp building prefers it
 					if (PlaneDist(info->relativelightorigin, plane) >= 0)
 					{
-						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK-1)
 							nodestack[nodestackpos++] = node->children[0];
 						nodestack[nodestackpos++] = node->children[1];
 					}
 					else
 					{
-						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+						if (nodestackpos < GETLIGHTINFO_MAXNODESTACK-1)
 							nodestack[nodestackpos++] = node->children[1];
 						nodestack[nodestackpos++] = node->children[0];
 					}
@@ -1084,7 +1084,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 #endif
 			if (info->lightmins[axis] <= node->backmax)
 			{
-				if (info->lightmaxs[axis] >= node->frontmin && nodestackpos < GETLIGHTINFO_MAXNODESTACK)
+				if (info->lightmaxs[axis] >= node->frontmin && nodestackpos < GETLIGHTINFO_MAXNODESTACK-1)
 					nodestack[nodestackpos++] = node->front;
 				nodestack[nodestackpos++] = node->back;
 				continue;
