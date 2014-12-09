@@ -227,7 +227,7 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 			attenuation = MSG_ReadByte(&cl_message) / 64.0;
 		else
 			attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
-	
+
 		speed = 1.0f;
 
 		ent = (channel>>3)&1023;
@@ -1039,7 +1039,7 @@ static void QW_CL_ParseNails(void)
 	{
 		for (j = 0;j < 6;j++)
 			bits[j] = MSG_ReadByte(&cl_message);
-		if (cl.qw_num_nails > 255)
+		if (cl.qw_num_nails >= 255)
 			continue;
 		v = cl.qw_nails[cl.qw_num_nails++];
 		v[0] = ( ( bits[0] + ((bits[1]&15)<<8) ) <<1) - 4096;

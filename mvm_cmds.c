@@ -318,9 +318,9 @@ static void VM_M_setserverlistmaskstring(prvm_prog_t *prog)
 	str = PRVM_G_STRING( OFS_PARM2 );
 
 	masknr = (int)PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
+	if( masknr >= 0 && masknr < SERVERLIST_ANDMASKCOUNT )
 		mask = &serverlist_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
+	else if( masknr >= 512 && masknr - 512 < SERVERLIST_ORMASKCOUNT )
 		mask = &serverlist_ormasks[masknr - 512 ];
 	else
 	{
@@ -380,9 +380,9 @@ static void VM_M_setserverlistmasknumber(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT( 4, VM_M_setserverlistmasknumber );
 
 	masknr = (int)PRVM_G_FLOAT( OFS_PARM0 );
-	if( masknr >= 0 && masknr <= SERVERLIST_ANDMASKCOUNT )
+	if( masknr >= 0 && masknr < SERVERLIST_ANDMASKCOUNT )
 		mask = &serverlist_andmasks[masknr];
-	else if( masknr >= 512 && masknr - 512 <= SERVERLIST_ORMASKCOUNT )
+	else if( masknr >= 512 && masknr - 512 < SERVERLIST_ORMASKCOUNT )
 		mask = &serverlist_ormasks[masknr - 512 ];
 	else
 	{

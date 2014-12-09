@@ -87,14 +87,14 @@ void R_MeshQueue_RenderTransparent(void)
 		trans_sortarraysize = r_transparent_sortarraysize.integer;
 		if (trans_hash)
 			Mem_Free(trans_hash);
-		trans_hash = (meshqueue_t **)Mem_Alloc(cls.permanentmempool, sizeof(trans_hash) * trans_sortarraysize); 
+		trans_hash = (meshqueue_t **)Mem_Alloc(cls.permanentmempool, sizeof(meshqueue_t *) * trans_sortarraysize); 
 		if (trans_hashpointer)
 			Mem_Free(trans_hashpointer);
-		trans_hashpointer = (meshqueue_t ***)Mem_Alloc(cls.permanentmempool, sizeof(trans_hashpointer) * trans_sortarraysize); 
+		trans_hashpointer = (meshqueue_t ***)Mem_Alloc(cls.permanentmempool, sizeof(meshqueue_t **) * trans_sortarraysize); 
 	}
 
 	// build index
-	memset(trans_hash, 0, sizeof(trans_hash) * trans_sortarraysize);
+	memset(trans_hash, 0, sizeof(meshqueue_t *) * trans_sortarraysize);
 	for (i = 0; i < trans_sortarraysize; i++)
 		trans_hashpointer[i] = &trans_hash[i];
 	distscale = (trans_sortarraysize - 1) / min(mqt_viewmaxdist, r_transparent_sortmaxdist.integer);
