@@ -2129,7 +2129,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 				for (i = 0;i < (int)sizeof(value);i++)
 					if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
 						break;
-				if (value[i])
+				if (i < (int)sizeof(value) && value[i])
 				{
 					for (;i < (int)sizeof(value);i++)
 					{

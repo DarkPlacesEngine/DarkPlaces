@@ -3560,7 +3560,7 @@ void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, f
 		return;
 	}
 
-	if(debugPolys.begin_vertices > VMPOLYGONS_MAXPOINTS)
+	if(debugPolys.begin_vertices >= VMPOLYGONS_MAXPOINTS)
 	{
 		Con_Printf("Debug_PolygonVertex: may have %i vertices max\n", VMPOLYGONS_MAXPOINTS);
 		return;
