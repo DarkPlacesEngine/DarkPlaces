@@ -3530,7 +3530,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 				lighttris++;
 
 	shadowtris = 0;
-	if (rtlight->static_numlighttrispvsbytes)
+	if (rtlight->static_numshadowtrispvsbytes)
 		for (i = 0;i < rtlight->static_numshadowtrispvsbytes*8;i++)
 			if (CHECKPVSBIT(rtlight->static_shadowtrispvs, i))
 				shadowtris++;
