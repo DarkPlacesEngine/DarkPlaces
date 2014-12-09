@@ -568,7 +568,9 @@ void CL_DrawVideo(void)
 #ifndef USE_GLES2
 	// disable video-only stipple
 	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
+	{
 		qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
+	}
 #endif
 
 	// VorteX: draw subtitle_text
