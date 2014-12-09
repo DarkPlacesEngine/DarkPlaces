@@ -4236,7 +4236,7 @@ static void Mod_Q2BSP_LoadNodes(sizebuf_t *sb)
 		out->numsurfaces = (unsigned short)MSG_ReadLittleShort(sb);
 		if (out->firstsurface + out->numsurfaces > (unsigned int)loadmodel->num_surfaces)
 		{
-			Con_Printf("Mod_Q2BSP_LoadNodes: invalid surface index range %i+%i (file has only %i surfaces)\n", p, out->firstsurface, out->numsurfaces, loadmodel->num_surfaces);
+			Con_Printf("Mod_Q2BSP_LoadNodes: invalid surface index range %i+%i (file has only %i surfaces)\n", out->firstsurface, out->numsurfaces, loadmodel->num_surfaces);
 			out->firstsurface = 0;
 			out->numsurfaces = 0;
 		}
