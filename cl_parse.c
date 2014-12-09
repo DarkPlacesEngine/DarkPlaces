@@ -276,7 +276,7 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 
 	MSG_ReadVector(&cl_message, pos, cls.protocol);
 
-	if (sound_num >= MAX_SOUNDS)
+	if (sound_num < 0 || sound_num >= MAX_SOUNDS)
 	{
 		Con_Printf("CL_ParseStartSoundPacket: sound_num (%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
 		return;
@@ -2305,6 +2305,13 @@ static void CL_ParseStaticSound (int large)
 		sound_num = (unsigned short) MSG_ReadShort(&cl_message);
 	else
 		sound_num = MSG_ReadByte(&cl_message);
+
+	if (sound_num < 0 || sound_num >= MAX_SOUNDS)
+	{
+		Con_Printf("CL_ParseStaticSound: sound_num(%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
+		return;
+	}
+
 	vol = MSG_ReadByte(&cl_message);
 	atten = MSG_ReadByte(&cl_message);
 

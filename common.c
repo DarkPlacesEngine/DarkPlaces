@@ -1620,7 +1620,7 @@ void COM_Init_Commands (void)
 		{
 			// arg contains whitespace, store quotes around it
 			com_cmdline[n++] = '\"';
-			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
+			while ((n < ((int)sizeof(com_cmdline) - 2)) && com_argv[j][i])
 				com_cmdline[n++] = com_argv[j][i++];
 			com_cmdline[n++] = '\"';
 		}
