@@ -33,7 +33,9 @@ for os in "$@"; do
       ;;
     win32)
       chroot=
-      makeflags='STRIP=: DP_MAKE_TARGET=mingw UNAME=MINGW32 CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6" WINDRES="i686-w64-mingw32-windres" SDL_CONFIG="../../../${deps}/bin/sdl2-config" DP_LINK_ZLIB=dlopen DP_LINK_JPEG=dlopen DP_LINK_ODE=dlopen DP_LINK_CRYPTO=dlopen DP_LINK_CRYPTO_RIJNDAEL=dlopen WIN32RELEASE=1 D3D=1'
+      # -mstackrealign works around SDL2-2.0.3 issue that stack is not 16 bytes aligned, breaking SSE.
+      # Please kill once SDL comes to its senses.
+      makeflags='STRIP=: DP_MAKE_TARGET=mingw UNAME=MINGW32 CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -mstackrealign -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6" WINDRES="i686-w64-mingw32-windres" SDL_CONFIG="../../../${deps}/bin/sdl2-config" DP_LINK_ZLIB=dlopen DP_LINK_JPEG=dlopen DP_LINK_ODE=dlopen DP_LINK_CRYPTO=dlopen DP_LINK_CRYPTO_RIJNDAEL=dlopen WIN32RELEASE=1 D3D=1'
       maketargets='release'
       outputs='darkplaces.exe:xonotic.exe darkplaces-sdl.exe:xonotic-sdl.exe darkplaces-dedicated.exe:xonotic-dedicated.exe'
       ;;
