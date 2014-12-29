@@ -2847,6 +2847,7 @@ void VID_Finish (void)
 	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
 	if (vid_usingvsync != vid_usevsync)
 	{
+		vid_usingvsync = vid_usevsync;
 		if (SDL_GL_SetSwapInterval(vid_usevsync != 0) >= 0)
 			Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
 		else
