@@ -31,7 +31,7 @@ for os in "$@"; do
           LIB_JPEG=../../../${deps}/lib/libjpeg.a
         DP_LINK_ODE=shared
           CFLAGS_ODE="-DUSEODE -DLINK_TO_LIBODE -DdDOUBLE"
-          LIB_ODE="../../../${deps}/lib/libode.a"
+          LIB_ODE="../../../${deps}/lib/libode.a -lstdc++"
         DP_LINK_ZLIB=shared'
       maketargets='release'
       outputs='darkplaces-glx:darkplaces-linux32-glx darkplaces-sdl:darkplaces-linux32-sdl darkplaces-dedicated:darkplaces-linux32-dedicated'
@@ -48,7 +48,7 @@ for os in "$@"; do
           LIB_JPEG="../../../${deps}/lib/libjpeg.a"
         DP_LINK_ODE=shared
           CFLAGS_ODE="-DUSEODE -DLINK_TO_LIBODE -DdDOUBLE"
-          LIB_ODE="../../../${deps}/lib/libode.a"
+          LIB_ODE="../../../${deps}/lib/libode.a -lstdc++"
         DP_LINK_ZLIB=shared'
       maketargets='release'
       outputs='darkplaces-glx:darkplaces-linux64-glx darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
