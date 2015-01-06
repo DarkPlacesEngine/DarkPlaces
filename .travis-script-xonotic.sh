@@ -108,6 +108,11 @@ for os in "$@"; do
       ;;
   esac
 
+  # Condense whitespace in makeflags.
+  makeflags=$(
+    printf "%s\n" "$makeflags" | xargs echo"
+  )
+
   (
   trap "${chroot} make -C ${PWD} ${makeflags} clean" EXIT
   eval "${chroot} make -C ${PWD} ${makeflags} ${maketargets}"
