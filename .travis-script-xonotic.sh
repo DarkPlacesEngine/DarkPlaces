@@ -110,7 +110,7 @@ for os in "$@"; do
 
   # Condense whitespace in makeflags.
   makeflags=$(
-    printf "%s\n" "$makeflags" | xargs echo
+    printf "%s\n" "$makeflags" | tr '\n' ' '
   )
 
   (
