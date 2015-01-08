@@ -46,6 +46,8 @@ for os in "$@"; do
       )
       ;;
     win32)
+      sudo apt-get install -y \
+        mingw-w64 mingw32- mingw32-binutils-
       ;;
     win64)
       sudo apt-get install -y \
