@@ -63,6 +63,7 @@ for os in "$@"; do
         UNAME=MINGW32
         WIN32RELEASE=1
         CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -mstackrealign -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
+	CPUOPTIMIZATIONS="-march=pentium2 -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math"
         WINDRES="i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
