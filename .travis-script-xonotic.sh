@@ -55,14 +55,14 @@ for os in "$@"; do
       ;;
     win32)
       chroot=
-      # -mincoming-stack-boundary=2 works around SDL2-2.0.3 issue that stack is not 16 bytes aligned, breaking SSE.
+      # -mstackrealign works around SDL2-2.0.3 issue that stack is not 16 bytes aligned, breaking SSE.
       # Please kill once SDL comes to its senses.
       makeflags='STRIP=:
         D3D=1
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN32RELEASE=1
-        CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -mincoming-stack-boundary=2 -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
+        CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -mstackrealign -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
         WINDRES="i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
