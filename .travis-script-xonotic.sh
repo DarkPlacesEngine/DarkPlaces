@@ -54,6 +54,7 @@ for os in "$@"; do
       outputs='darkplaces-glx:darkplaces-linux64-glx darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
       ;;
     win32)
+      # For now SSE is turned off due to unavoidable bugs in the version of mingw-w64 travis has.
       chroot=
       makeflags='STRIP=:
         D3D=1
@@ -61,7 +62,7 @@ for os in "$@"; do
         UNAME=MINGW32
         WIN32RELEASE=1
         CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
-	CPUOPTIMIZATIONS="-march=pentium2 -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math"
+	CPUOPTIMIZATIONS="-march=pentium2 -DNO_SSE -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math"
         WINDRES="i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
