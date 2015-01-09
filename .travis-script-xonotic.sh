@@ -54,16 +54,16 @@ for os in "$@"; do
       outputs='darkplaces-glx:darkplaces-linux64-glx darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
       ;;
     win32)
-      # For now SSE is turned off due to unavoidable bugs in the version of mingw-w64 travis has.
+      # Need to use -mstackrealign as nothing guarantees that callbacks from
+      # other Win32 DLLs - including SDL2 - retain 16 bytes alignment.
       chroot=
       makeflags='STRIP=:
         D3D=1
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN32RELEASE=1
-        CC="i686-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
-	CPUOPTIMIZATIONS="-march=pentium2 -DNO_SSE -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math"
-        WINDRES="i686-w64-mingw32-windres"
+        CC="/opt/cross_toolchain_32/bin/i686-w64-mingw32-gcc -g1 -mstackrealign -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
+        WINDRES="/opt/cross_toolchain_32/bin/i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
         DP_LINK_CRYPTO_RIJNDAEL=dlopen
@@ -80,8 +80,8 @@ for os in "$@"; do
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN64RELEASE=1
-        CC="x86_64-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
-        WINDRES="x86_64-w64-mingw32-windres"
+        CC="/opt/cross_toolchain_64/bin/x86_64-w64-mingw32-gcc -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
+        WINDRES="/opt/cross_toolchain_64/bin/x86_64-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
         DP_LINK_CRYPTO_RIJNDAEL=dlopen
