@@ -46,12 +46,14 @@ for os in "$@"; do
       )
       ;;
     win32)
-      sudo apt-get install -y \
-        mingw-w64 mingw32- mingw32-binutils-
+      wget -qO- http://beta.xonotic.org/win-builds.org/cross_toolchain_32.tar.xz | sudo tar xaJvf - -C/ opt/cross_toolchain_32
+      # Easiest way to statically link to libwinpthread is to delete the shared version.
+      sudo rm /opt/cross_toolchain_32/bin/libwinpthread-1.dll /opt/cross_toolchain_32/i686-w64-mingw32/lib/libwinpthread.dll.a
       ;;
     win64)
-      sudo apt-get install -y \
-        mingw-w64 mingw32- mingw32-binutils-
+      wget -qO- http://beta.xonotic.org/win-builds.org/cross_toolchain_64.tar.xz | sudo tar xvJf - -C/ opt/cross_toolchain_64
+      # Easiest way to statically link to libwinpthread is to delete the shared version.
+      sudo rm /opt/cross_toolchain_64/bin/libwinpthread-1.dll /opt/cross_toolchain_64/x86_64-w64-mingw32/lib/libwinpthread.dll.a
       ;;
     osx)
       git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
