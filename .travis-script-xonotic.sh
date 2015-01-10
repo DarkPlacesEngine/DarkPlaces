@@ -62,7 +62,7 @@ for os in "$@"; do
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN32RELEASE=1
-        CC="/opt/cross_toolchain_32/bin/i686-w64-mingw32-gcc -static -g1 -mstackrealign -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DUSE_WSPIAPI_H -DSUPPORTIPV6"
+        CC="/opt/cross_toolchain_32/bin/i686-w64-mingw32-gcc -static -g1 -mstackrealign -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
         WINDRES="/opt/cross_toolchain_32/bin/i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
