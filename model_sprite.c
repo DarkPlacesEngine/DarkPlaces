@@ -67,6 +67,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 	texture->specularscalemod = 1;
 	texture->specularpowermod = 1;
 	texture->basematerialflags = MATERIALFLAG_WALL;
+	texture->basealpha = 1.0f;
 	if (fullbright)
 		texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (additive)
