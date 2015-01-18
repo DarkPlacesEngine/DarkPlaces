@@ -46,9 +46,15 @@ for os in "$@"; do
       )
       ;;
     win32)
+      git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
+        --prefix=".icons/" master:"misc/logos/icons_ico" | tar xvf -
+      mv .icons/xonotic.ico darkplaces.ico
       wget -qO- http://beta.xonotic.org/win-builds.org/cross_toolchain_32.tar.xz | sudo tar xaJvf - -C/ opt/cross_toolchain_32
       ;;
     win64)
+      git archive --format=tar --remote=git://de.git.xonotic.org/xonotic/xonotic.git \
+        --prefix=".icons/" master:"misc/logos/icons_ico" | tar xvf -
+      mv .icons/xonotic.ico darkplaces.ico
       wget -qO- http://beta.xonotic.org/win-builds.org/cross_toolchain_64.tar.xz | sudo tar xvJf - -C/ opt/cross_toolchain_64
       ;;
     osx)
