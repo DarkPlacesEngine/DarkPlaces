@@ -114,15 +114,15 @@ for os in "$@"; do
   )
 
   (
-  trap "${chroot} make -C ${PWD} ${makeflags} clean" EXIT
-  eval "${chroot} make -C ${PWD} ${makeflags} ${maketargets}"
-  for o in $outputs; do
-    src=${o%%:*}
-    dst=${o#*:}
-    sftp -oStrictHostKeyChecking=no -i id_rsa-xonotic -P 2222 -b - autobuild-bin-uploader@beta.xonotic.org <<EOF
+    trap "${chroot} make -C ${PWD} ${makeflags} clean" EXIT
+    eval "${chroot} make -C ${PWD} ${makeflags} ${maketargets}"
+    for o in $outputs; do
+      src=${o%%:*}
+      dst=${o#*:}
+      sftp -oStrictHostKeyChecking=no -i id_rsa-xonotic -P 2222 -b - autobuild-bin-uploader@beta.xonotic.org <<EOF
 put ${src} ${rev}/${dst}
 EOF
-  done
+    done
   )
 
 done
