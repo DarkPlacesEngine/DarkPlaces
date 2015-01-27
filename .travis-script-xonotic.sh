@@ -94,7 +94,7 @@ for os in "$@"; do
     osx)
       chroot=
       makeflags='STRIP=:
-        CC="gcc -g1 -arch x86_64 -arch i386 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk -mmacosx-version-min=10.5 -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
+        CC="gcc -g1 -arch x86_64 -arch i386 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk -mmacosx-version-min=10.5 -Wl,-rpath -Wl,@loader_path/../Frameworks -Wl,-rpath -Wl,@loader_path -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
         SDLCONFIG_MACOSXCFLAGS="-I${PWD}/SDL2.framework/Headers"
         SDLCONFIG_MACOSXLIBS="-F${PWD} -framework SDL2 -framework Cocoa -I${PWD}/SDL2.framework/Headers"
         SDLCONFIG_MACOSXSTATICLIBS="-F${PWD} -framework SDL2 -framework Cocoa -I${PWD}/SDL2.framework/Headers"
