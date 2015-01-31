@@ -461,7 +461,9 @@ static void Cmd_Exec(const char *filename)
 {
 	char *f;
 	size_t filenameLen = strlen(filename);
-	qboolean isdefaultcfg = filenameLen >= 11 && !strcmp(filename + filenameLen - 11, "default.cfg");
+	qboolean isdefaultcfg =
+		!strcmp(filename, "default.cfg") ||
+		(filenameLen >= 12 && !strcmp(filename + filenameLen - 12, "/default.cfg"));
 
 	if (!strcmp(filename, "config.cfg"))
 	{
