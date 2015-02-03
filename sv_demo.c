@@ -83,7 +83,7 @@ void SV_WriteNetnameIntoDemo(client_t *client)
 {
 	// This "pseudo packet" is written so a program can easily find out whose demo this is
 	sizebuf_t buf;
-	unsigned char bufdata[128];
+	unsigned char bufdata[MAX_SCOREBOARDNAME + 64];
 
 	if(client->sv_demo_file == NULL)
 		return;
