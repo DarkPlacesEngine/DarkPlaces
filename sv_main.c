@@ -933,7 +933,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->netconnection->message,message);
 
 	SV_StopDemoRecording(client); // to split up demos into different files
-	if(sv_autodemo_perclient.integer && client->netconnection)
+	if(sv_autodemo_perclient.integer)
 	{
 		char demofile[MAX_OSPATH];
 		char ipaddress[MAX_QPATH];
