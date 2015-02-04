@@ -2315,7 +2315,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				CDATA->next_step = 1;
 				*len_out = data_out_p - data_out;
 			}
-			else if(clientid >= 0)
+			else // if(clientid >= 0) // guaranteed by condition one level outside
 			{
 				// skip over server auth, perform client auth only
 				if(!CDATA->id)
@@ -2339,8 +2339,6 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				data_out_p += *len_out;
 				*len_out = data_out_p - data_out;
 			}
-			else
-				*len_out = data_out_p - data_out;
 
 			return CRYPTO_DISCARD;
 		}
