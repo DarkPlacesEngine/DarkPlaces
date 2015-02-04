@@ -2540,8 +2540,8 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 			if (!skeleton->relativetransforms || skeleton->model != model)
 			{
 				skeleton->model = model;
-				skeleton->relativetransforms = (matrix4x4_t *) Mem_Realloc(cls.levelmempool, skeleton->relativetransforms, sizeof(*skeleton->relativetransforms) * skeleton->model->num_bones);
-				for (bonenum = 0;bonenum < model->num_bones;bonenum++)
+				skeleton->relativetransforms = (matrix4x4_t *) Mem_Realloc(cls.levelmempool, skeleton->relativetransforms, sizeof(*skeleton->relativetransforms) * numbones);
+				for (bonenum = 0;bonenum < numbones;bonenum++)
 					skeleton->relativetransforms[bonenum] = identitymatrix;
 			}
 			for (bonenum = 0;bonenum < numbones;bonenum++)
