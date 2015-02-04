@@ -535,9 +535,9 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 {
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	const unsigned char *a;
-	*string = 0;
 	if (!address || !string || stringbuffersize < 1)
 		return 0;
+	*string = 0;
 	switch(address->addresstype)
 	{
 	default:
