@@ -1068,17 +1068,17 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		return;
 	}
 
-	if(keygen_i >= MAX_PUBKEYS || !pubkeys[keygen_i])
-	{
-		Con_Printf("overflow of keygen_i\n");
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
 	if(keygen_i < 0)
 	{
 		Con_Printf("Unexpected response from keygen server:\n");
 		Com_HexDumpToConsole(buffer, (int)length_received);
+		SV_UnlockThreadMutex();
+		return;
+	}
+	if(keygen_i >= MAX_PUBKEYS || !pubkeys[keygen_i])
+	{
+		Con_Printf("overflow of keygen_i\n");
+		keygen_i = -1;
 		SV_UnlockThreadMutex();
 		return;
 	}
