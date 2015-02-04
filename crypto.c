@@ -412,17 +412,12 @@ static const char *GetUntilNul(const char **data, size_t *len)
 		*len = 0;
 		return NULL;
 	}
-	else
-	{
-		n = (p - *data) + 1;
-		*len -= n;
-		*data += n;
-		if(*len == 0)
-			*data = NULL;
-		return (const char *) data_save;
-	}
-	*data = NULL;
-	return NULL;
+	n = (p - *data) + 1;
+	*len -= n;
+	*data += n;
+	if(*len == 0)
+		*data = NULL;
+	return (const char *) data_save;
 }
 
 // d0pk reading
