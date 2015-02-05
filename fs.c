@@ -797,7 +797,11 @@ static qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 		return true;
 
 	// Load the local file description
-	lseek (pack->handle, pfile->offset, SEEK_SET);
+	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
+	{
+		Con_Printf ("Can't seek in package %s\n", pack->filename);
+		return false;
+	}
 	count = read (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
 	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
 	{
