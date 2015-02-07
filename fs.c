@@ -1007,7 +1007,7 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 
 	numpackfiles = header.dirlen / sizeof(dpackfile_t);
 
-	if (numpackfiles > MAX_FILES_IN_PACK)
+	if (numpackfiles < 0 || numpackfiles > MAX_FILES_IN_PACK)
 	{
 		Con_Printf ("%s has %i files\n", packfile, numpackfiles);
 		close(packhandle);
@@ -1036,6 +1036,9 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 	{
 		fs_offset_t offset = (unsigned int)LittleLong (info[i].filepos);
 		fs_offset_t size = (unsigned int)LittleLong (info[i].filelen);
+
+		// Ensure a zero terminated file name (required by format).
+		info[i].name[sizeof(info[i].name) - 1] = 0;
 
 		FS_AddFileToPack (info[i].name, pack, offset, size, size, PACKFILE_FLAG_TRUEOFFS);
 	}
