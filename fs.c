@@ -893,6 +893,25 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 }
 
 
+static void FS_mkdir (const char *path)
+{
+	if(COM_CheckParm("-readonly"))
+		return;
+
+#if WIN32
+	if (_mkdir (path) == -1)
+#else
+	if (mkdir (path, 0777) == -1)
+#endif
+	{
+		// No logging for this. The only caller is FS_CreatePath (which
+		// calls it in ways that will intentionally produce EEXIST),
+		// and its own callers always use the directory afterwards and
+		// thus will detect failure that way.
+	}
+}
+
+
 /*
 ============
 FS_CreatePath
@@ -3413,18 +3432,6 @@ int FS_SysFileType (const char *path)
 qboolean FS_SysFileExists (const char *path)
 {
 	return FS_SysFileType (path) != FS_FILETYPE_NONE;
-}
-
-void FS_mkdir (const char *path)
-{
-	if(COM_CheckParm("-readonly"))
-		return;
-
-#if WIN32
-	_mkdir (path);
-#else
-	mkdir (path, 0777);
-#endif
 }
 
 /*
