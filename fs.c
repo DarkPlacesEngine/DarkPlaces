@@ -1934,7 +1934,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	if(access(va(vabuf, sizeof(vabuf), "%s%s/", userdir, gamedirname1), W_OK | X_OK) >= 0)
 		fd = 1;
 	else
-		fd = 0;
+		fd = -1;
 #endif
 	if(fd >= 0)
 	{
