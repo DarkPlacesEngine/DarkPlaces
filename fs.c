@@ -3824,7 +3824,7 @@ qboolean FS_IsRegisteredQuakePack(const char *name)
 				int diff;
 
 				middle = (left + right) / 2;
-				diff = !strcmp_funct (pak->files[middle].name, "gfx/pop.lmp");
+				diff = strcmp_funct (pak->files[middle].name, "gfx/pop.lmp");
 
 				// Found it
 				if (!diff)
