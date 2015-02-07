@@ -2759,7 +2759,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 	{
 		if (lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
 		{
-			Con_Printf("WARNING: could not seek in %s.\n");
+			Con_Printf("WARNING: could not seek in %s.\n", file->filename);
 		}
 	}
 
