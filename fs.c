@@ -2715,7 +2715,15 @@ int FS_Close (qfile_t* file)
 	if (file->filename)
 	{
 		if (file->flags & QFILE_FLAG_REMOVE)
-			remove(file->filename);
+		{
+			if (remove(file->filename) == -1)
+			{
+				// No need to report this. If removing a just
+				// written file failed, this most likely means
+				// someone else deleted it first - which we
+				// like.
+			}
+		}
 
 		Mem_Free((void *) file->filename);
 	}
