@@ -668,7 +668,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x21) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if (remaining < namesize || namesize >= (int)sizeof (*pack->files))
+			if (namesize < 0 || remaining < namesize || namesize >= (int)sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
