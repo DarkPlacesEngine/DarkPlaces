@@ -615,7 +615,11 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 
 	// Load the central directory in memory
 	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
-	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
+	if (lseek (pack->handle, eocd->cdir_offset, SEEK_SET) == -1)
+	{
+		Mem_Free (central_dir);
+		return -1;
+	}
 	if(read (pack->handle, central_dir, eocd->cdir_size) != (fs_offset_t) eocd->cdir_size)
 	{
 		Mem_Free (central_dir);
@@ -2722,7 +2726,12 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
-		lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR);
+	{
+		if (lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
+		{
+			Con_Printf("WARNING: could not seek in %s.\n");
+		}
+	}
 
 	// Purge cached data
 	FS_Purge (file);
@@ -2815,7 +2824,12 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)buffersize)
 				count = (fs_offset_t)buffersize;
-			lseek (file->handle, file->offset + file->position, SEEK_SET);
+			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			{
+				// Seek failed. When reading from a pipe, and
+				// the caller never called FS_Seek, this still
+				// works fine.  So no reporting this error.
+			}
 			nb = read (file->handle, &((unsigned char*)buffer)[done], count);
 			if (nb > 0)
 			{
@@ -2830,7 +2844,12 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)sizeof (file->buff))
 				count = (fs_offset_t)sizeof (file->buff);
-			lseek (file->handle, file->offset + file->position, SEEK_SET);
+			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			{
+				// Seek failed. When reading from a pipe, and
+				// the caller never called FS_Seek, this still
+				// works fine.  So no reporting this error.
+			}
 			nb = read (file->handle, file->buff, count);
 			if (nb > 0)
 			{
@@ -3103,7 +3122,8 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 		ztk->in_len = 0;
 		ztk->in_position = 0;
 		file->position = 0;
-		lseek (file->handle, file->offset, SEEK_SET);
+		if (lseek (file->handle, file->offset, SEEK_SET) == -1)
+			Con_Printf("IMPOSSIBLE: couldn't seek in already opened pk3 file.\n");
 
 		// Reset the Zlib stream
 		ztk->zstream.next_in = ztk->input;
