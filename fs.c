@@ -3935,8 +3935,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 		return NULL;
 	}
 
-	if(deflated_size)
-		*deflated_size = (size_t)strm.total_out;
+	*deflated_size = (size_t)strm.total_out;
 
 	memcpy(out, tmp, strm.total_out);
 	Mem_Free(tmp);
@@ -4050,8 +4049,7 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	memcpy(out, outbuf.data, outbuf.cursize);
 	Mem_Free(outbuf.data);
 
-	if(inflated_size)
-		*inflated_size = (size_t)outbuf.cursize;
+	*inflated_size = (size_t)outbuf.cursize;
 	
 	return out;
 }
