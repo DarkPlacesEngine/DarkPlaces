@@ -2,10 +2,14 @@
 #ifndef COLLISION_H
 #define COLLISION_H
 
-typedef struct plane_s
+typedef union plane_s
 {
-	vec3_t	normal;
-	float	dist;
+	struct
+	{
+		vec3_t	normal;
+		vec_t	dist;
+	};
+	vec4_t dist_and_normal;
 }
 plane_t;
 
@@ -76,8 +80,15 @@ typedef struct colplanef_s
 {
 	const struct texture_s *texture;
 	int q3surfaceflags;
-	vec3_t normal;
-	vec_t dist;
+	union
+	{
+		struct
+		{
+			vec3_t normal;
+			vec_t dist;
+		};
+		vec4_t normal_and_dist;
+	};
 }
 colplanef_t;
 
