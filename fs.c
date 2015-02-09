@@ -586,6 +586,16 @@ static qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk
 
 	Mem_Free (buffer);
 
+	if (
+			eocd->cdir_size < 0 || eocd->cdir_size > filesize ||
+			eocd->cdir_offset < 0 || eocd->cdir_offset >= filesize ||
+			eocd->cdir_offset + eocd->cdir_size > filesize
+	   )
+	{
+		// Obviously invalid central directory.
+		return false;
+	}
+
 	return true;
 }
 
@@ -605,7 +615,11 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 
 	// Load the central directory in memory
 	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
-	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
+	if (lseek (pack->handle, eocd->cdir_offset, SEEK_SET) == -1)
+	{
+		Mem_Free (central_dir);
+		return -1;
+	}
 	if(read (pack->handle, central_dir, eocd->cdir_size) != (fs_offset_t) eocd->cdir_size)
 	{
 		Mem_Free (central_dir);
@@ -654,7 +668,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x21) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if (remaining < namesize || namesize >= (int)sizeof (*pack->files))
+			if (namesize < 0 || remaining < namesize || namesize >= (int)sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
@@ -797,7 +811,11 @@ static qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 		return true;
 
 	// Load the local file description
-	lseek (pack->handle, pfile->offset, SEEK_SET);
+	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
+	{
+		Con_Printf ("Can't seek in package %s\n", pack->filename);
+		return false;
+	}
 	count = read (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
 	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
 	{
@@ -872,6 +890,25 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 	pfile->flags = flags;
 
 	return pfile;
+}
+
+
+static void FS_mkdir (const char *path)
+{
+	if(COM_CheckParm("-readonly"))
+		return;
+
+#if WIN32
+	if (_mkdir (path) == -1)
+#else
+	if (mkdir (path, 0777) == -1)
+#endif
+	{
+		// No logging for this. The only caller is FS_CreatePath (which
+		// calls it in ways that will intentionally produce EEXIST),
+		// and its own callers always use the directory afterwards and
+		// thus will detect failure that way.
+	}
 }
 
 
@@ -970,7 +1007,7 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 
 	numpackfiles = header.dirlen / sizeof(dpackfile_t);
 
-	if (numpackfiles > MAX_FILES_IN_PACK)
+	if (numpackfiles < 0 || numpackfiles > MAX_FILES_IN_PACK)
 	{
 		Con_Printf ("%s has %i files\n", packfile, numpackfiles);
 		close(packhandle);
@@ -999,6 +1036,9 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 	{
 		fs_offset_t offset = (unsigned int)LittleLong (info[i].filepos);
 		fs_offset_t size = (unsigned int)LittleLong (info[i].filelen);
+
+		// Ensure a zero terminated file name (required by format).
+		info[i].name[sizeof(info[i].name) - 1] = 0;
 
 		FS_AddFileToPack (info[i].name, pack, offset, size, size, PACKFILE_FLAG_TRUEOFFS);
 	}
@@ -1894,7 +1934,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	if(access(va(vabuf, sizeof(vabuf), "%s%s/", userdir, gamedirname1), W_OK | X_OK) >= 0)
 		fd = 1;
 	else
-		fd = 0;
+		fd = -1;
 #endif
 	if(fd >= 0)
 	{
@@ -2675,7 +2715,15 @@ int FS_Close (qfile_t* file)
 	if (file->filename)
 	{
 		if (file->flags & QFILE_FLAG_REMOVE)
-			remove(file->filename);
+		{
+			if (remove(file->filename) == -1)
+			{
+				// No need to report this. If removing a just
+				// written file failed, this most likely means
+				// someone else deleted it first - which we
+				// like.
+			}
+		}
 
 		Mem_Free((void *) file->filename);
 	}
@@ -2708,7 +2756,12 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
-		lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR);
+	{
+		if (lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
+		{
+			Con_Printf("WARNING: could not seek in %s.\n", file->filename);
+		}
+	}
 
 	// Purge cached data
 	FS_Purge (file);
@@ -2801,7 +2854,12 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)buffersize)
 				count = (fs_offset_t)buffersize;
-			lseek (file->handle, file->offset + file->position, SEEK_SET);
+			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			{
+				// Seek failed. When reading from a pipe, and
+				// the caller never called FS_Seek, this still
+				// works fine.  So no reporting this error.
+			}
 			nb = read (file->handle, &((unsigned char*)buffer)[done], count);
 			if (nb > 0)
 			{
@@ -2816,7 +2874,12 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)sizeof (file->buff))
 				count = (fs_offset_t)sizeof (file->buff);
-			lseek (file->handle, file->offset + file->position, SEEK_SET);
+			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			{
+				// Seek failed. When reading from a pipe, and
+				// the caller never called FS_Seek, this still
+				// works fine.  So no reporting this error.
+			}
 			nb = read (file->handle, file->buff, count);
 			if (nb > 0)
 			{
@@ -3089,7 +3152,8 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 		ztk->in_len = 0;
 		ztk->in_position = 0;
 		file->position = 0;
-		lseek (file->handle, file->offset, SEEK_SET);
+		if (lseek (file->handle, file->offset, SEEK_SET) == -1)
+			Con_Printf("IMPOSSIBLE: couldn't seek in already opened pk3 file.\n");
 
 		// Reset the Zlib stream
 		ztk->zstream.next_in = ztk->input;
@@ -3379,18 +3443,6 @@ int FS_SysFileType (const char *path)
 qboolean FS_SysFileExists (const char *path)
 {
 	return FS_SysFileType (path) != FS_FILETYPE_NONE;
-}
-
-void FS_mkdir (const char *path)
-{
-	if(COM_CheckParm("-readonly"))
-		return;
-
-#if WIN32
-	_mkdir (path);
-#else
-	mkdir (path, 0777);
-#endif
 }
 
 /*
@@ -3772,7 +3824,7 @@ qboolean FS_IsRegisteredQuakePack(const char *name)
 				int diff;
 
 				middle = (left + right) / 2;
-				diff = !strcmp_funct (pak->files[middle].name, "gfx/pop.lmp");
+				diff = strcmp_funct (pak->files[middle].name, "gfx/pop.lmp");
 
 				// Found it
 				if (!diff)
@@ -3883,8 +3935,7 @@ unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflat
 		return NULL;
 	}
 
-	if(deflated_size)
-		*deflated_size = (size_t)strm.total_out;
+	*deflated_size = (size_t)strm.total_out;
 
 	memcpy(out, tmp, strm.total_out);
 	Mem_Free(tmp);
@@ -3998,8 +4049,7 @@ unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflat
 	memcpy(out, outbuf.data, outbuf.cursize);
 	Mem_Free(outbuf.data);
 
-	if(inflated_size)
-		*inflated_size = (size_t)outbuf.cursize;
+	*inflated_size = (size_t)outbuf.cursize;
 	
 	return out;
 }

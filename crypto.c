@@ -412,17 +412,12 @@ static const char *GetUntilNul(const char **data, size_t *len)
 		*len = 0;
 		return NULL;
 	}
-	else
-	{
-		n = (p - *data) + 1;
-		*len -= n;
-		*data += n;
-		if(*len == 0)
-			*data = NULL;
-		return (const char *) data_save;
-	}
-	*data = NULL;
-	return NULL;
+	n = (p - *data) + 1;
+	*len -= n;
+	*data += n;
+	if(*len == 0)
+		*data = NULL;
+	return (const char *) data_save;
 }
 
 // d0pk reading
@@ -1073,17 +1068,17 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 		return;
 	}
 
-	if(keygen_i >= MAX_PUBKEYS || !pubkeys[keygen_i])
-	{
-		Con_Printf("overflow of keygen_i\n");
-		keygen_i = -1;
-		SV_UnlockThreadMutex();
-		return;
-	}
 	if(keygen_i < 0)
 	{
 		Con_Printf("Unexpected response from keygen server:\n");
 		Com_HexDumpToConsole(buffer, (int)length_received);
+		SV_UnlockThreadMutex();
+		return;
+	}
+	if(keygen_i >= MAX_PUBKEYS || !pubkeys[keygen_i])
+	{
+		Con_Printf("overflow of keygen_i\n");
+		keygen_i = -1;
 		SV_UnlockThreadMutex();
 		return;
 	}
@@ -2320,7 +2315,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				CDATA->next_step = 1;
 				*len_out = data_out_p - data_out;
 			}
-			else if(clientid >= 0)
+			else // if(clientid >= 0) // guaranteed by condition one level outside
 			{
 				// skip over server auth, perform client auth only
 				if(!CDATA->id)
@@ -2344,8 +2339,6 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				data_out_p += *len_out;
 				*len_out = data_out_p - data_out;
 			}
-			else
-				*len_out = data_out_p - data_out;
 
 			return CRYPTO_DISCARD;
 		}

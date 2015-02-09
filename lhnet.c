@@ -535,9 +535,9 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 {
 	lhnetaddressnative_t *address = (lhnetaddressnative_t *)vaddress;
 	const unsigned char *a;
-	*string = 0;
 	if (!address || !string || stringbuffersize < 1)
 		return 0;
+	*string = 0;
 	switch(address->addresstype)
 	{
 	default:
@@ -978,7 +978,13 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 								namelen = sizeof(localaddress->addr.in6);
 								bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
 								if (bindresult != -1)
-									getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+								{
+									if (getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen))
+									{
+										// If getsockname failed, we can assume the bound socket is useless.
+										bindresult = -1;
+									}
+								}
 							}
 							else
 #endif
@@ -986,7 +992,13 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 								namelen = sizeof(localaddress->addr.in);
 								bindresult = bind(lhnetsocket->inetsocket, &localaddress->addr.sock, namelen);
 								if (bindresult != -1)
-									getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen);
+								{
+									if (getsockname(lhnetsocket->inetsocket, &localaddress->addr.sock, &namelen))
+									{
+										// If getsockname failed, we can assume the bound socket is useless.
+										bindresult = -1;
+									}
+								}
 							}
 							if (bindresult != -1)
 							{
@@ -997,7 +1009,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 								{
 									// enable DSCP for ToS support
 									int tos = lhnet_default_dscp << 2;
-									setsockopt(lhnetsocket->inetsocket, IPPROTO_IP, IP_TOS, (char *) &tos, sizeof(tos));
+									if (setsockopt(lhnetsocket->inetsocket, IPPROTO_IP, IP_TOS, (char *) &tos, sizeof(tos)))
+									{
+										// Error in setsockopt - fine, we'll simply set no TOS then.
+									}
 								}
 #endif
 								lhnetsocket->next = &lhnet_socketlist;

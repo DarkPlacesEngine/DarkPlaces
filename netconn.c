@@ -2743,7 +2743,7 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 	qboolean hasquotes;
 	qboolean restricted = false;
 	qboolean have_usernames = false;
-	char vabuf[1024];
+	static char vabuf[1024];
 
 	userpass_start = rcon_password.string;
 	while((userpass_end = strchr(userpass_start, ' ')))

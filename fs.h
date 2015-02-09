@@ -129,8 +129,6 @@ int FS_SysFileType (const char *filename);		// only look for files outside of pa
 qboolean FS_FileExists (const char *filename);		// the file can be into a package
 qboolean FS_SysFileExists (const char *filename);	// only look for files outside of packages
 
-void FS_mkdir (const char *path);
-
 unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
 unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflated_size, mempool_t *mempool);
 

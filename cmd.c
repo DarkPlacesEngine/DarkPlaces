@@ -976,7 +976,7 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 	cvar_t *cvar;
 	long argno;
 	char *endptr;
-	char vabuf[1024];
+	static char vabuf[1024]; // cmd_mutex
 
 	if(is_multiple)
 		*is_multiple = false;
