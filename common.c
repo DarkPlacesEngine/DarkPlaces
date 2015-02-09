@@ -1619,13 +1619,22 @@ void COM_Init_Commands (void)
 		if (strstr(com_argv[j], " "))
 		{
 			// arg contains whitespace, store quotes around it
+			// This condition checks whether we can allow to put
+			// in two quote characters.
+			if (n >= ((int)sizeof(com_cmdline) - 2))
+				break;
 			com_cmdline[n++] = '\"';
+			// This condition checks whether we can allow one
+			// more character and a quote character.
 			while ((n < ((int)sizeof(com_cmdline) - 2)) && com_argv[j][i])
+				// FIXME: Doesn't quote special characters.
 				com_cmdline[n++] = com_argv[j][i++];
 			com_cmdline[n++] = '\"';
 		}
 		else
 		{
+			// This condition checks whether we can allow one
+			// more character.
 			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
 				com_cmdline[n++] = com_argv[j][i++];
 		}
@@ -2084,7 +2093,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 		Con_Printf("InfoString_SetValue: no room for \"%s\" \"%s\" in infostring\n", key, value);
 		return;
 	}
-	if (value && value[0])
+	if (value[0])
 	{
 		// set the key/value and append the remaining text
 		char tempbuffer[MAX_INPUTLINE];
