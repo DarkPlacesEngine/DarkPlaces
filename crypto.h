@@ -20,9 +20,11 @@ typedef struct
 {
 	unsigned char dhkey[DHKEY_SIZE]; // shared key, not NUL terminated
 	char client_idfp[FP64_SIZE+1];
-	char client_keyfp[FP64_SIZE+1]; // NULL if signature fail
+	char client_keyfp[FP64_SIZE+1];
+	qboolean client_issigned;
 	char server_idfp[FP64_SIZE+1];
-	char server_keyfp[FP64_SIZE+1]; // NULL if signature fail
+	char server_keyfp[FP64_SIZE+1];
+	qboolean server_issigned;
 	qboolean authenticated;
 	qboolean use_aes;
 	void *data;
@@ -53,7 +55,7 @@ const char *Crypto_GetInfoResponseDataString(void);
 
 // retrieves a host key for an address (can be exposed to menuqc, or used by the engine to look up stored keys e.g. for server bookmarking)
 // pointers may be NULL
-qboolean Crypto_RetrieveHostKey(lhnetaddress_t *peeraddress, int *keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, int *aeslevel);
+qboolean Crypto_RetrieveHostKey(lhnetaddress_t *peeraddress, int *keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, int *aeslevel, qboolean *issigned);
 int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, qboolean *issigned); // return value: -1 if more to come, +1 if valid, 0 if end of list
 
 size_t Crypto_SignData(const void *data, size_t datasize, int keyid, void *signed_data, size_t signed_size);

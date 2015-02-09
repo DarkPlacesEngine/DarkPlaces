@@ -2428,6 +2428,7 @@ string(float ccase, float calpha, float cnum, string s, ...) strconv = #224; // 
 string(float chars, string s, ...) strpad = #225; // pad string with spaces to a specified length, < 0 = left padding, > 0 = right padding
 string(string info, string key, string value, ...) infoadd = #226; // sets or adds a key/value pair to an infostring - note: forbidden characters are \ and "
 string(string info, string key) infoget = #227; // gets a key/value pair in an infostring, returns value or null if not found
+float(string s1, string s2) strcmp = #228; // compare two strings
 float(string s1, string s2, float len) strncmp = #228; // compare two strings up to the specified number of characters, if their length differs and is within the specified limit the result will be negative, otherwise it is the difference in value of their first non-matching character.
 float(string s1, string s2) strcasecmp = #229; // compare two strings with case-insensitive matching, characters a-z are considered equivalent to the matching A-Z character, no other differences, and this does not consider special characters equal even if they look similar
 float(string s1, string s2, float len) strncasecmp = #230; // same as strcasecmp but with a length limit, see strncmp
@@ -2559,9 +2560,10 @@ void coverage() = #642;  // Reports a coverage event. The engine counts for each
 //idea: divVerent
 //darkplaces implementation: divVerent
 //field definitions: (SVQC)
-.string crypto_keyfp; // fingerprint of CA key the player used to authenticate, or string_null if not verified
-.string crypto_mykeyfp; // fingerprint of CA key the server used to authenticate to the player, or string_null if not verified
+.string crypto_keyfp; // fingerprint of CA key the player used to authenticate
+.string crypto_mykeyfp; // fingerprint of CA key the server used to authenticate to the player
 .string crypto_idfp; // fingerprint of ID used by the player entity, or string_null if not identified
+.float crypto_idfp_signed; // set if the player's ID has been signed
 .string crypto_encryptmethod; // the string "AES128" if encrypting, and string_null if plaintext
 .string crypto_signmethod; // the string "HMAC-SHA256" if signing, and string_null if plaintext
 // there is no field crypto_myidfp, as that info contains no additional information the QC may have a use for
