@@ -354,6 +354,7 @@ float(string key) stringtokeynum = #341;
 //field definitions: (MENUQC)
 string(string serveraddress) crypto_getkeyfp = #633; // retrieves the cached host key's CA fingerprint of a server given by IP address
 string(string serveraddress) crypto_getidfp = #634; // retrieves the cached host key fingerprint of a server given by IP address
+float(string serveraddress) crypto_getidstatus = #643; // retrieves the cached host key's key status. See below for CRYPTO_IDSTATUS_ defines.
 string(string serveraddress) crypto_getencryptlevel = #635; // 0 if never encrypting, 1 supported, 2 requested, 3 required, appended by list of allowed methods in order of preference ("AES128"), preceded by a space each
 string(float i) crypto_getmykeyfp = #636; // retrieves the CA key fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
 string(float i) crypto_getmyidfp = #637; // retrieves the ID fingerprint of a given CA slot, or "" if slot is unused but more to come, or string_null if end of list
@@ -401,6 +402,7 @@ string(float ccase, float calpha, float cnum, string s, ...) strconv = #224;
 string(float chars, string s, ...) strpad = #225;
 string(string info, string key, string value, ...) infoadd = #226;
 string(string info, string key) infoget = #227;
+float(string s1, string s2) strcmp = #228;
 float(string s1, string s2, float len) strncmp = #228;
 float(string s1, string s2) strcasecmp = #229;
 float(string s1, string s2, float len) strncasecmp = #230;

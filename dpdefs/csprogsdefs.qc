@@ -194,7 +194,7 @@ const float VF_DRAWCROSSHAIR	= 21;	//(float)
 const float VF_CL_VIEWANGLES	= 33;	//(vector)
 const float VF_CL_VIEWANGLES_X	= 34;	//(float)
 const float VF_CL_VIEWANGLES_Y	= 35;	//(float)
-const float VF_CL_VIEWANGLES_Z	= 36;	//(float) 
+const float VF_CL_VIEWANGLES_Z	= 36;	//(float)
 
 const float VF_PERSPECTIVE      = 200;
 
@@ -291,7 +291,7 @@ const float TE_EXPLOSION2					= 12;
 	const float TE_EXPLOSIONQUAD 				= 70;
 	const float TE_SPIKEQUAD					= 58;
 	const float TE_SUPERSPIKEQUAD				= 59;
-	
+
 // PFlags for Dynamic Lights
 const float PFLAGS_NOSHADOW					= 1;
 const float PFLAGS_CORONA					= 2;
@@ -447,6 +447,7 @@ string(float ccase, float calpha, float cnum, string s, ...) strconv = #224;
 string(float chars, string s, ...) strpad = #225;
 string(string info, string key, string value, ...) infoadd = #226;
 string(string info, string key) infoget = #227;
+float(string s1, string s2) strcmp = #228;
 float(string s1, string s2, float len) strncmp = #228;
 float(string s1, string s2) strcasecmp = #229;
 float(string s1, string s2, float len) strncasecmp = #230;
@@ -656,11 +657,11 @@ float PARTICLE_BEAM = 3;
 float particle_type; // one of PT_
 float particle_blendmode; // one of PBLEND_ values
 float particle_orientation; // one of PARTICLE_ values
-vector particle_color1; 
+vector particle_color1;
 vector particle_color2;
 float particle_tex; // number of chunk in particlefont
 float particle_size;
-float particle_sizeincrease; 
+float particle_sizeincrease;
 float particle_alpha;
 float particle_alphafade;
 float particle_time;
@@ -692,10 +693,10 @@ float(vector org, vector vel) spawnparticle = #527; // returns 0 when failed, 1 
 float(vector org, vector vel, float theme) quickparticle = #527; // not reading globals, just theme, returns 0 when failed, 1 when spawned
 float(vector org, vector vel, float delay, float collisiondelay) delayedparticle = #528;
 float(vector org, vector vel, float delay, float collisiondelay, float theme) quickdelayedparticle = #528;
-// description: this builtin provides an easy and flexible way to spawn particles, 
-// it is not created as replace for DP_SV_POINTPARTICLES but as an addition to it. 
+// description: this builtin provides an easy and flexible way to spawn particles,
+// it is not created as replace for DP_SV_POINTPARTICLES but as an addition to it.
 // With this extension you can create a specific particles like rain particles, or entity particles
-// notes: 
+// notes:
 // 1) 0 is default particle template, it could be changed
 // 2) color vectors could have value 0-255 of each component
 // restrictions: max themes could be between 4 and 2048
@@ -805,7 +806,7 @@ vector(float entitynum, float fldnum) getentityvec = #504;
 //darkplaces implementation: Blub\0
 //console commands:
 //  loadfont fontname fontmaps size1 size2 ...
-//   A font can simply be gfx/tgafile (freetype fonts doent need extension), 
+//   A font can simply be gfx/tgafile (freetype fonts doent need extension),
 //   or alternatively you can specify multiple fonts and faces
 //   Like this: gfx/vera-sans:2,gfx/fallback:1
 //   to load face 2 of the font gfx/vera-sans and use face 1
@@ -834,7 +835,7 @@ float FONT_USER6 = 14;     // 'user6', userdefined fonts
 float FONT_USER7 = 15;     // 'user7' slot, userdefined fonts
 //builtin definitions:
 float findfont(string s) = #356; // find font by fontname and return it's index
-float loadfont(string fontname, string fontmaps, string sizes, float slot, float fix_scale, float fix_voffset) = #357; 
+float loadfont(string fontname, string fontmaps, string sizes, float slot, float fix_scale, float fix_voffset) = #357;
 // loads font immediately so stringwidth() function can be used just after builtin call
 // returns a font slotnum (which is used to set drawfont to)
 // first 3 parms are identical to "loadfont" console command ones
@@ -865,7 +866,7 @@ float stringwidth_menu(string text, float allowColorCodes, vector size) = #468; 
 //   r_font_postprocess_shadow_y X  : font outline shadow y shift amount, applied during outlining
 //   r_font_postprocess_shadow_z X  : font outline shadow z shift amount, applied during blurring
 //description: engine support for truetype/freetype fonts
-//so .AFM+.PFB/.OTF/.TTF files could be stuffed as fontmaps in loadfont() 
+//so .AFM+.PFB/.OTF/.TTF files could be stuffed as fontmaps in loadfont()
 //(console command version will support them as well)
 
 //DP_CSQC_BINDMAPS
@@ -896,7 +897,7 @@ float(string url, float id, string content_type, string delim, float buf, float 
 //constant definitions:
 const float VF_MAINVIEW         = 400;
 //use setproperty(VF_MAINVIEW, 1); before calling R_RenderView for the render
-//that shall become the "main" view, which is e.g. used by PRYDON_CLIENTCURSOR 
+//that shall become the "main" view, which is e.g. used by PRYDON_CLIENTCURSOR
 //this flag is set for the first scene, and not cleared by R_ClearScene
 //this flag is automatically cleared by R_RenderView
 //so when not using this extension, the first view rendered is the main view
