@@ -764,13 +764,18 @@ void SV_ApplyClientMove (void)
 	PRVM_serveredictfloat(host_client->edict, ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
 }
 
-static void SV_FrameLost(int framenum)
+static qboolean SV_FrameLost(int framenum)
 {
 	if (host_client->entitydatabase5)
 	{
-		EntityFrame5_LostFrame(host_client->entitydatabase5, framenum);
-		EntityFrameCSQC_LostFrame(host_client, framenum);
+		if (framenum <= host_client->entitydatabase5->latestframenum)
+		{
+			EntityFrame5_LostFrame(host_client->entitydatabase5, framenum);
+			EntityFrameCSQC_LostFrame(host_client, framenum);
+			return true;
+		}
 	}
+	return false;
 }
 
 static void SV_FrameAck(int framenum)
@@ -954,7 +959,8 @@ clc_stringcmd_invalid:
 			{
 				int i;
 				for (i = host_client->latestframenum + 1;i < num;i++)
-					SV_FrameLost(i);
+					if (!SV_FrameLost(i))
+						break;
 				SV_FrameAck(num);
 				host_client->latestframenum = num;
 			}
