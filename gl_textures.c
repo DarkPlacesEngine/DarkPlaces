@@ -1960,7 +1960,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->inputdepth = 1;
 	glt->flags = TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_FORCENEAREST;
 	glt->miplevel = 0;
-	glt->textype = texinfo;
+	glt->textype = GL_TEXTURE_2D;
 	glt->texturetype = textype;
 	glt->inputdatasize = width*height*texinfo->internalbytesperpixel;
 	glt->palette = NULL;
