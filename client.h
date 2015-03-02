@@ -638,7 +638,7 @@ typedef struct usercmd_s
 	int msec; // for predicted moves
 	int buttons;
 	int impulse;
-	int sequence;
+	unsigned int sequence;
 	qboolean applied; // if false we're still accumulating a move
 	qboolean predicted; // if true the sequence should be sent as 0
 
@@ -856,8 +856,7 @@ typedef struct client_static_s
 	cl_downloadack_t dp_downloadack[CL_MAX_DOWNLOADACKS];
 
 	// input sequence numbers are not reset on level change, only connect
-	int movesequence;
-	int servermovesequence;
+	unsigned int servermovesequence;
 
 	// quakeworld stuff below
 
@@ -1275,7 +1274,7 @@ typedef struct client_state_s
 #define LATESTFRAMENUMS 32
 	int latestframenumsposition;
 	int latestframenums[LATESTFRAMENUMS];
-	int latestsendnums[LATESTFRAMENUMS];
+	unsigned int latestsendnums[LATESTFRAMENUMS];
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 	entityframeqw_database_t *entitydatabaseqw;

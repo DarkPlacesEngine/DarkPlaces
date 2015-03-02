@@ -1601,7 +1601,7 @@ void CL_ClientMovement_Replay(void)
 		if (cl.movecmd[i].sequence > cls.servermovesequence)
 			totalmovemsec += cl.movecmd[i].msec;
 	cl.movement_predicted = totalmovemsec >= cl_movement_minping.value && cls.servermovesequence && (cl_movement.integer && !cls.demoplayback && cls.signon == SIGNONS && cl.stats[STAT_HEALTH] > 0 && !cl.intermission);
-	//Con_Printf("%i = %.0f >= %.0f && %i && (%i && %i && %i == %i && %i > 0 && %i\n", cl.movement_predicted, totalmovemsec, cl_movement_minping.value, cls.servermovesequence, cl_movement.integer, !cls.demoplayback, cls.signon, SIGNONS, cl.stats[STAT_HEALTH], !cl.intermission);
+	//Con_Printf("%i = %.0f >= %.0f && %u && (%i && %i && %i == %i && %i > 0 && %i\n", cl.movement_predicted, totalmovemsec, cl_movement_minping.value, cls.servermovesequence, cl_movement.integer, !cls.demoplayback, cls.signon, SIGNONS, cl.stats[STAT_HEALTH], !cl.intermission);
 	if (cl.movement_predicted)
 	{
 		//Con_Printf("%ims\n", cl.movecmd[0].msec);
@@ -2060,8 +2060,11 @@ void CL_SendMove(void)
 		// framerate, this is 10 bytes, if client framerate is lower this
 		// will be more...
 		int i, j;
-		int oldsequence = cl.cmd.sequence - bound(1, cl_netrepeatinput.integer + 1, 3);
-		if (oldsequence < 1)
+		unsigned int oldsequence = cl.cmd.sequence;
+		unsigned int delta = bound(1, cl_netrepeatinput.integer + 1, 3);
+		if (oldsequence > delta)
+			oldsequence = oldsequence - delta;
+		else
 			oldsequence = 1;
 		for (i = 0;i < LATESTFRAMENUMS;i++)
 		{
