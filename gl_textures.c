@@ -1960,7 +1960,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->inputdepth = 1;
 	glt->flags = TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_FORCENEAREST;
 	glt->miplevel = 0;
-	glt->textype = GL_TEXTURE_2D;
+	glt->textype = texinfo;
 	glt->texturetype = textype;
 	glt->inputdatasize = width*height*texinfo->internalbytesperpixel;
 	glt->palette = NULL;
@@ -1972,7 +1972,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->texnum = 0;
 	glt->dirty = false;
 	glt->glisdepthstencil = textype == TEXTYPE_DEPTHBUFFER24STENCIL8;
-	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
+	glt->gltexturetypeenum = GL_TEXTURE_2D;
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
 	glt->updatacallback_data = NULL;
