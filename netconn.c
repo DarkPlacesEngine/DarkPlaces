@@ -1248,6 +1248,12 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		{
 			conn->droppedDatagrams += count;
 			//Con_DPrintf("Dropped %u datagram(s)\n", count);
+			// If too may packets have been dropped, only write the
+			// last NETGRAPH_PACKETS ones to the netgraph. Why?
+			// Because there's no point in writing more than
+			// these as the netgraph is going to be full anyway.
+			if (count > NETGRAPH_PACKETS)
+				count = NETGRAPH_PACKETS;
 			while (count--)
 			{
 				conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
@@ -1338,6 +1344,12 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 						count = sequence - conn->nq.unreliableReceiveSequence;
 						conn->droppedDatagrams += count;
 						//Con_DPrintf("Dropped %u datagram(s)\n", count);
+						// If too may packets have been dropped, only write the
+						// last NETGRAPH_PACKETS ones to the netgraph. Why?
+						// Because there's no point in writing more than
+						// these as the netgraph is going to be full anyway.
+						if (count > NETGRAPH_PACKETS)
+							count = NETGRAPH_PACKETS;
 						while (count--)
 						{
 							conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
