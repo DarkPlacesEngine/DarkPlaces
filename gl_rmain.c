@@ -3169,7 +3169,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 
 typedef struct
 {
-	int loadsequence; // incremented each level change
+	unsigned int loadsequence; // incremented each level change
 	memexpandablearray_t array;
 	skinframe_t *hash[SKINFRAME_HASH];
 }

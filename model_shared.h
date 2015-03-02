@@ -68,7 +68,7 @@ typedef struct skinframe_s
 	// mark and sweep garbage collection, this value is updated to a new value
 	// on each level change for the used skinframes, if some are not used they
 	// are freed
-	int loadsequence;
+	unsigned int loadsequence;
 	// indicates whether this texture has transparent pixels
 	qboolean hasalpha;
 	// average texture color, if applicable
