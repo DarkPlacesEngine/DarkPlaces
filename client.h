@@ -921,19 +921,6 @@ client_static_t;
 
 extern client_static_t	cls;
 
-typedef struct client_movementqueue_s
-{
-	double time;
-	float frametime;
-	int sequence;
-	float viewangles[3];
-	float move[3];
-	qboolean jump;
-	qboolean crouch;
-	qboolean canjump;
-}
-client_movementqueue_t;
-
 //[515]: csqc
 typedef struct
 {
