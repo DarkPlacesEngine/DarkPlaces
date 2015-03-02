@@ -214,9 +214,9 @@ typedef struct client_s
 	/// communications handle
 	netconn_t *netconnection;
 
-	int movesequence;
+	unsigned int movesequence;
 	signed char movement_count[NETGRAPH_PACKETS];
-	int movement_highestsequence_seen; // not the same as movesequence if prediction is off
+	unsigned int movement_highestsequence_seen; // not the same as movesequence if prediction is off
 	/// movement
 	usercmd_t cmd;
 	/// intended motion calced from cmd
@@ -312,7 +312,7 @@ typedef struct client_s
 
 	// last sent move sequence
 	// if the move sequence changed, an empty entity frame is sent
-	int lastmovesequence;
+	unsigned int lastmovesequence;
 } client_t;
 
 

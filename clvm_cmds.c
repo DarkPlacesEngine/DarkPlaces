@@ -1446,9 +1446,9 @@ static void VM_CL_getmousepos(prvm_prog_t *prog)
 //#345 float(float framenum) getinputstate (EXT_CSQC)
 static void VM_CL_getinputstate (prvm_prog_t *prog)
 {
-	int i, frame;
+	unsigned int i, frame;
 	VM_SAFEPARMCOUNT(1, VM_CL_getinputstate);
-	frame = (int)PRVM_G_FLOAT(OFS_PARM0);
+	frame = (unsigned int)PRVM_G_FLOAT(OFS_PARM0);
 	PRVM_G_FLOAT(OFS_RETURN) = false;
 	for (i = 0;i < CL_MAX_USERCMDS;i++)
 	{
