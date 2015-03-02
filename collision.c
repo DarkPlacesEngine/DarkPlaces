@@ -1422,7 +1422,7 @@ static collision_cachedtrace_t *collision_cachedtrace_array;
 static int collision_cachedtrace_firstfree;
 static int collision_cachedtrace_lastused;
 static int collision_cachedtrace_max;
-static int collision_cachedtrace_sequence;
+static unsigned char collision_cachedtrace_sequence;
 static int collision_cachedtrace_hashsize;
 static int *collision_cachedtrace_hash;
 static unsigned int *collision_cachedtrace_arrayfullhashindex;
@@ -1470,7 +1470,7 @@ static void Collision_Cache_RebuildHash(void)
 {
 	int index;
 	int range = collision_cachedtrace_lastused + 1;
-	int sequence = collision_cachedtrace_sequence;
+	unsigned char sequence = collision_cachedtrace_sequence;
 	int firstfree = collision_cachedtrace_max;
 	int lastused = 0;
 	int *hash = collision_cachedtrace_hash;
@@ -1540,7 +1540,7 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	unsigned int fullhashindex;
 	int index = 0;
 	int range;
-	int sequence = collision_cachedtrace_sequence;
+	unsigned char sequence = collision_cachedtrace_sequence;
 	int *hash = collision_cachedtrace_hash;
 	unsigned int *arrayfullhashindex = collision_cachedtrace_arrayfullhashindex;
 	unsigned int *arraynext = collision_cachedtrace_arraynext;
