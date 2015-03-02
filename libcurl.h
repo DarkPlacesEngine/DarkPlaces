@@ -15,6 +15,7 @@ qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, i
 
 qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 qboolean Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+void Curl_Cancel_ToMemory(curl_callback_t callback, void* cbdata);
 
 void Curl_Init(void);
 void Curl_Init_Commands(void);

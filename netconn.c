@@ -690,7 +690,7 @@ qboolean NetConn_CanSend(netconn_t *conn)
 	}
 }
 
-void NetConn_UpdateCleartime(double *cleartime, int rate, int burstsize, int len)
+static void NetConn_UpdateCleartime(double *cleartime, int rate, int burstsize, int len)
 {
 	double bursttime = burstsize / (double)rate;
 
