@@ -863,8 +863,8 @@ typedef struct client_static_s
 	// value of "qport" cvar at time of connection
 	int qw_qport;
 	// copied from cls.netcon->qw. variables every time they change, or set by demos (which have no cls.netcon)
-	int qw_incoming_sequence;
-	int qw_outgoing_sequence;
+	unsigned int qw_incoming_sequence;
+	unsigned int qw_outgoing_sequence;
 
 	// current file download buffer (only saved when file is completed)
 	char qw_downloadname[MAX_QPATH];
@@ -1416,9 +1416,9 @@ typedef struct client_state_s
 
 	float qw_weaponkick;
 
-	int qw_validsequence;
+	unsigned int qw_validsequence;
 
-	int qw_deltasequence[QW_UPDATE_BACKUP];
+	unsigned int qw_deltasequence[QW_UPDATE_BACKUP];
 
 	// csqc stuff:
 	// server entity number corresponding to a clientside entity
