@@ -11626,7 +11626,7 @@ void R_DecalSystem_Reset(decalsystem_t *decalsystem)
 	memset(decalsystem, 0, sizeof(*decalsystem));
 }
 
-static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex, int surfaceindex, int decalsequence)
+static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex, int surfaceindex, unsigned int decalsequence)
 {
 	tridecal_t *decal;
 	tridecal_t *decals;
@@ -11706,7 +11706,7 @@ extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
 // baseparms, parms, temps
-static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, int decalsequence, qboolean dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
+static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, unsigned int decalsequence, qboolean dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
 {
 	int cornerindex;
 	int index;
@@ -11799,7 +11799,7 @@ static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, flo
 		for (cornerindex = 0;cornerindex < numpoints-2;cornerindex++)
 			R_DecalSystem_SpawnTriangle(decalsystem, v[0], v[cornerindex+1], v[cornerindex+2], tc[0], tc[cornerindex+1], tc[cornerindex+2], c[0], c[cornerindex+1], c[cornerindex+2], -1, surfaceindex, decalsequence);
 }
-static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, int decalsequence)
+static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, unsigned int decalsequence)
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
@@ -11960,7 +11960,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 }
 
 // do not call this outside of rendering code - use R_DecalSystem_SplatEntities instead
-static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, int decalsequence)
+static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec3_t worldnormal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float worldsize, unsigned int decalsequence)
 {
 	int renderentityindex;
 	float worldmins[3];
@@ -11996,7 +11996,7 @@ typedef struct r_decalsystem_splatqueue_s
 	float color[4];
 	float tcrange[4];
 	float worldsize;
-	int decalsequence;
+	unsigned int decalsequence;
 }
 r_decalsystem_splatqueue_t;
 
@@ -12035,7 +12035,7 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 	int i;
 	decalsystem_t *decalsystem = &ent->decalsystem;
 	int numdecals;
-	int killsequence;
+	unsigned int killsequence;
 	tridecal_t *decal;
 	float frametime;
 	float lifetime;
@@ -12052,7 +12052,7 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 		return;
 	}
 
-	killsequence = cl.decalsequence - max(1, cl_decals_max.integer);
+	killsequence = cl.decalsequence - bound(1, (unsigned int) cl_decals_max.integer, cl.decalsequence);
 	lifetime = cl_decals_time.value + cl_decals_fadetime.value;
 
 	if (decalsystem->lastupdatetime)
@@ -12067,7 +12067,7 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 		if (decal->color4f[0][3])
 		{
 			decal->lived += frametime;
-			if (killsequence - decal->decalsequence > 0 || decal->lived >= lifetime)
+			if (killsequence > decal->decalsequence || decal->lived >= lifetime)
 			{
 				memset(decal, 0, sizeof(*decal));
 				if (decalsystem->freedecal > i)

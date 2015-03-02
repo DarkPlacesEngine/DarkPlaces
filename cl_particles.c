@@ -2566,7 +2566,7 @@ void R_DrawDecals (void)
 	float frametime;
 	float decalfade;
 	float drawdist2;
-	int killsequence = cl.decalsequence - max(0, cl_decals_max.integer);
+	unsigned int killsequence = cl.decalsequence - bound(0, (unsigned int) cl_decals_max.integer, cl.decalsequence);
 
 	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
 	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
@@ -2584,7 +2584,7 @@ void R_DrawDecals (void)
 		if (!decal->typeindex)
 			continue;
 
-		if (killsequence - decal->decalsequence > 0)
+		if (killsequence > decal->decalsequence)
 			goto killdecal;
 
 		if (cl.time > decal->time2 + cl_decals_time.value)

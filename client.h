@@ -213,7 +213,7 @@ typedef struct tridecal_s
 	// for visibility culling
 	int				surfaceindex;
 	// old decals are killed to obey cl_decals_max
-	int				decalsequence;
+	unsigned int	decalsequence;
 }
 tridecal_t;
 
@@ -967,7 +967,7 @@ typedef struct decal_s
 	// fields used by rendering:  (44 bytes)
 	unsigned short	typeindex;
 	unsigned short	texnum;
-	int				decalsequence;
+	unsigned int	decalsequence;
 	vec3_t			org;
 	vec3_t			normal;
 	float			size;
@@ -1290,7 +1290,7 @@ typedef struct client_state_s
 	vec3_t playercrouchmaxs;
 
 	// old decals are killed based on this
-	int decalsequence;
+	unsigned int decalsequence;
 
 	int max_entities;
 	int max_csqcrenderentities;
