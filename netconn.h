@@ -197,14 +197,14 @@ typedef struct netconn_s
 		int			qport;
 
 	// sequencing variables
-		int			incoming_sequence;
-		int			incoming_acknowledged;
-		int			incoming_reliable_acknowledged;	///< single bit
+		unsigned int		incoming_sequence;
+		unsigned int		incoming_acknowledged;
+		qboolean		incoming_reliable_acknowledged;	///< single bit
 
-		int			incoming_reliable_sequence;		///< single bit, maintained local
+		qboolean		incoming_reliable_sequence;		///< single bit, maintained local
 
-		int			reliable_sequence;			///< single bit
-		int			last_reliable_sequence;		///< sequence number of last send
+		qboolean		reliable_sequence;			///< single bit
+		unsigned int		last_reliable_sequence;		///< sequence number of last send
 	}
 	qw;
 

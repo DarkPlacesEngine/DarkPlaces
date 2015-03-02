@@ -764,9 +764,9 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendreliable = true;
 		}
 		// outgoing unreliable packet number, and outgoing reliable packet number (0 or 1)
-		StoreLittleLong(sendbuffer, (unsigned int)conn->outgoing_unreliable_sequence | ((unsigned int)sendreliable<<31));
+		StoreLittleLong(sendbuffer, conn->outgoing_unreliable_sequence | (((unsigned int)sendreliable)<<31));
 		// last received unreliable packet number, and last received reliable packet number (0 or 1)
-		StoreLittleLong(sendbuffer + 4, (unsigned int)conn->qw.incoming_sequence | ((unsigned int)conn->qw.incoming_reliable_sequence<<31));
+		StoreLittleLong(sendbuffer + 4, conn->qw.incoming_sequence | (((unsigned int)conn->qw.incoming_reliable_sequence)<<31));
 		packetLen = 8;
 		conn->outgoing_unreliable_sequence++;
 		// client sends qport in every packet
@@ -1212,7 +1212,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
-		int sequence, sequence_ack;
+		unsigned int sequence, sequence_ack;
 		int reliable_ack, reliable_message;
 		int count;
 		//int qport;
