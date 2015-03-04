@@ -262,6 +262,20 @@ void Cvar_CompleteCvarPrint (const char *partial)
 			Con_Printf ("^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 }
 
+// check if a cvar is held by some progs
+static qboolean Cvar_IsAutoCvar(cvar_t *var)
+{
+	int i;
+	prvm_prog_t *prog;
+	for (i = 0;i < PRVM_PROG_MAX;i++)
+	{
+		prog = &prvm_prog_list[i];
+		if (prog->loaded && var->globaldefindex_progid[i] == prog->id)
+			return true;
+	}
+	return false;
+}
+
 // we assume that prog is already set to the target progs
 static void Cvar_UpdateAutoCvar(cvar_t *var)
 {
@@ -751,6 +765,18 @@ void Cvar_RestoreInitState(void)
 			if (!(c->flags & CVAR_ALLOCATED))
 			{
 				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it was registered after init!\n", c->name);
+				// In this case, at least reset it to the default.
+				if((c->flags & CVAR_NORESETTODEFAULTS) == 0)
+					Cvar_SetQuick(c, c->defstring);
+				cp = &c->next;
+				continue;
+			}
+			if (Cvar_IsAutoCvar(c))
+			{
+				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it is an autocvar used by running progs!\n", c->name);
+				// In this case, at least reset it to the default.
+				if((c->flags & CVAR_NORESETTODEFAULTS) == 0)
+					Cvar_SetQuick(c, c->defstring);
 				cp = &c->next;
 				continue;
 			}
