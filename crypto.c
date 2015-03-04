@@ -2127,11 +2127,11 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		int wantserverid = -1;
 
 		// these three are harmless
-		if(string[4] == CCREP_SERVER_INFO)
+		if((unsigned char) string[4] == CCREP_SERVER_INFO)
 			return CRYPTO_NOMATCH;
-		if(string[4] == CCREP_PLAYER_INFO)
+		if((unsigned char) string[4] == CCREP_PLAYER_INFO)
 			return CRYPTO_NOMATCH;
-		if(string[4] == CCREP_RULE_INFO)
+		if((unsigned char) string[4] == CCREP_RULE_INFO)
 			return CRYPTO_NOMATCH;
 
 		Crypto_RetrieveHostKey(&cls.connect_address, &wantserverid, NULL, 0, NULL, 0, NULL, NULL);
