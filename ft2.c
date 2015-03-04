@@ -629,6 +629,11 @@ static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *setti
 	font->settings = settings;
 
 	namelen = strlen(name);
+	if (namelen + 5 > sizeof(filename))
+	{
+		Con_Printf("WARNING: too long font name. Cannot load this.\n");
+		return false;
+	}
 
 	// try load direct file
 	memcpy(filename, name, namelen+1);
