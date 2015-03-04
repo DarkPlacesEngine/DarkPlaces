@@ -586,6 +586,12 @@ static void QW_CL_RequestNextDownload(void)
 	// clear name of file that just finished
 	cls.qw_downloadname[0] = 0;
 
+	// skip the download fragment if playing a demo
+	if (!cls.netcon)
+	{
+		return;
+	}
+
 	switch (cls.qw_downloadtype)
 	{
 	case dl_single:
