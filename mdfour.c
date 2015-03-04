@@ -148,13 +148,13 @@ static void mdfour_tail(struct mdfour *md, const unsigned char *in, int n)
 	if (n <= 55) {
 		copy4(buf+56, b);
 		copy64(M, buf);
-		mdfour64(M);
+		mdfour64(md, M);
 	} else {
 		copy4(buf+120, b);
 		copy64(M, buf);
-		mdfour64(M);
+		mdfour64(md, M);
 		copy64(M, buf+64);
-		mdfour64(M);
+		mdfour64(md, M);
 	}
 }
 
