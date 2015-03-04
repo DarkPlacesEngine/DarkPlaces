@@ -558,9 +558,11 @@ void _Mem_FreePool(mempool_t **poolpointer, const char *filename, int fileline)
 			_Mem_FreeBlock(pool->chain, filename, fileline);
 
 		// free child pools, too
-		for(iter = poolchain; iter; temp = iter = iter->next)
+		for(iter = poolchain; iter; iter = temp) {
+			temp = iter->next;
 			if(iter->parent == pool)
 				_Mem_FreePool(&temp, filename, fileline);
+		}
 
 		// free the pool itself
 		Clump_FreeBlock(pool, sizeof(*pool));
