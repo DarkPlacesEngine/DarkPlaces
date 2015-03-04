@@ -1957,10 +1957,12 @@ void SHOWLMP_decodeshow(void)
 		showlmp_t *oldshowlmps = cl.showlmps;
 		cl.max_showlmps += 16;
 		cl.showlmps = (showlmp_t *) Mem_Alloc(cls.levelmempool, cl.max_showlmps * sizeof(showlmp_t));
-		if (cl.num_showlmps)
-			memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
 		if (oldshowlmps)
+		{
+			if (cl.num_showlmps)
+				memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
 			Mem_Free(oldshowlmps);
+		}
 	}
 	for (k = 0;k < cl.max_showlmps;k++)
 		if (cl.showlmps[k].isactive && !strcmp(cl.showlmps[k].label, lmplabel))
