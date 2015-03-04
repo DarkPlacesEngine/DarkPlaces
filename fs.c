@@ -3350,7 +3350,7 @@ void FS_DefaultExtension (char *path, const char *extension, size_t size_path)
 
 	// if path doesn't have a .EXT, append extension
 	// (extension should include the .)
-	src = path + strlen(path) - 1;
+	src = path + strlen(path);
 
 	while (*src != '/' && src != path)
 	{
