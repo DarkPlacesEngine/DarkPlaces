@@ -1793,7 +1793,12 @@ static void Host_Pause_f (void)
 	}
 	
 	sv.paused ^= 1;
-	SV_BroadcastPrintf("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
+	if (cmd_source != src_command)
+		SV_BroadcastPrintf("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
+	else if(*(sv_adminnick.string))
+		SV_BroadcastPrintf("%s %spaused the game\n", sv_adminnick.string, sv.paused ? "" : "un");
+	else
+		SV_BroadcastPrintf("%s %spaused the game\n", hostname.string, sv.paused ? "" : "un");
 	// send notification to all clients
 	MSG_WriteByte(&sv.reliable_datagram, svc_setpause);
 	MSG_WriteByte(&sv.reliable_datagram, sv.paused);
