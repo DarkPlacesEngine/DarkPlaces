@@ -2791,7 +2791,6 @@ static void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 {
 	char key[512];
 	char value[512];
-	char *o;
 	const char *s;
 
 	if (Cmd_Argc() != 2)
@@ -2805,27 +2804,33 @@ static void Host_FullInfo_f (void) // credit: taken from QuakeWorld
 		s++;
 	while (*s)
 	{
-		o = key;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-		*o = 0;
-
+		size_t len = strcspn(s, "\\");
+		if (len >= sizeof(key)) {
+			len = sizeof(key) - 1;
+		}
+		strlcpy(key, s, len + 1);
+		s += len;
 		if (!*s)
 		{
 			Con_Printf ("MISSING VALUE\n");
 			return;
 		}
+		++s; // Skip over backslash.
 
-		o = value;
-		s++;
-		while (*s && *s != '\\')
-			*o++ = *s++;
-		*o = 0;
-
-		if (*s)
-			s++;
+		len = strcspn(s, "\\");
+		if (len >= sizeof(value)) {
+			len = sizeof(value) - 1;
+		}
+		strlcpy(value, s, len + 1);
 
 		CL_SetInfo(key, value, false, false, false, false);
+
+		s += len;
+		if (!*s)
+		{
+			break;
+		}
+		++s; // Skip over backslash.
 	}
 }
 
