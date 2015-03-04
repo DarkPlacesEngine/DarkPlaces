@@ -587,8 +587,8 @@ static qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk
 	Mem_Free (buffer);
 
 	if (
-			eocd->cdir_size < 0 || eocd->cdir_size > filesize ||
-			eocd->cdir_offset < 0 || eocd->cdir_offset >= filesize ||
+			eocd->cdir_size > filesize ||
+			eocd->cdir_offset >= filesize ||
 			eocd->cdir_offset + eocd->cdir_size > filesize
 	   )
 	{
