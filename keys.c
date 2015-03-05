@@ -1189,9 +1189,17 @@ Key_Console (int key, int unicode)
 			// can't use strcpy to move string to right
 			len++;
 			//memmove(&key_line[key_linepos + u8_bytelen(key_line + key_linepos, 1)], &key_line[key_linepos], len);
+			if (key_linepos + blen + len >= MAX_INPUTLINE)
+				return;
 			memmove(&key_line[key_linepos + blen], &key_line[key_linepos], len);
 		}
+		// FIXME: This is not proper overwriting with utf8.
+		if (key_linepos + blen >= MAX_INPUTLINE)
+			return;
 		memcpy(key_line + key_linepos, buf, blen);
+		if (blen > len)
+			key_line[key_linepos + blen] = 0;
+		// END OF FIXME
 		key_linepos += blen;
 		//key_linepos += u8_fromchar(unicode, key_line + key_linepos, sizeof(key_line) - key_linepos - 1);
 		//key_line[key_linepos] = ascii;
