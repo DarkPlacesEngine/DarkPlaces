@@ -1213,7 +1213,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
 		unsigned int sequence, sequence_ack;
-		int reliable_ack, reliable_message;
+		qboolean reliable_ack, reliable_message;
 		int count;
 		//int qport;
 
@@ -1234,8 +1234,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		}
 
 		conn->packetsReceived++;
-		reliable_message = (sequence >> 31) & 1;
-		reliable_ack = (sequence_ack >> 31) & 1;
+		reliable_message = (sequence >> 31) != 0;
+		reliable_ack = (sequence_ack >> 31) != 0;
 		sequence &= ~(1<<31);
 		sequence_ack &= ~(1<<31);
 		if (sequence <= conn->qw.incoming_sequence)
