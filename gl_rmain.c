@@ -6001,7 +6001,6 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 		}
 	}
 	planeindex = bestplaneindex;
-	p = r_fb.water.waterplanes + planeindex;
 
 	// if this surface does not fit any known plane rendered this frame, add one
 	if (planeindex < 0 || bestplanescore > 0.001f)
@@ -6028,6 +6027,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	else
 	{
 		// merge mins/maxs when we're adding this surface to the plane
+		p = r_fb.water.waterplanes + planeindex;
 		p->mins[0] = min(p->mins[0], mins[0]);
 		p->mins[1] = min(p->mins[1], mins[1]);
 		p->mins[2] = min(p->mins[2], mins[2]);
