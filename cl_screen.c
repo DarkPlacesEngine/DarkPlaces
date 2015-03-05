@@ -954,7 +954,8 @@ void R_TimeReport(const char *desc)
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
 
 	length = dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
-	length = min(length, (int)sizeof(tempbuf) - 1);
+	if (length < 0)
+		length = (int)sizeof(tempbuf) - 1;
 	if (r_speeds_longestitem < length)
 		r_speeds_longestitem = length;
 	for (;length < r_speeds_longestitem;length++)
