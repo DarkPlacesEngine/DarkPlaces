@@ -4426,9 +4426,8 @@ string altstr_prepare(string)
 void VM_altstr_prepare(prvm_prog_t *prog)
 {
 	const char *instr, *in;
-	int size;
 	char outstr[VM_STRINGTEMP_LENGTH];
-	int outpos;
+	size_t outpos;
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
 
@@ -4438,13 +4437,13 @@ void VM_altstr_prepare(prvm_prog_t *prog)
 	{
 		if (*in == '\'' && outpos < sizeof(outstr) - 2)
 		{
-			out[outpos++] = '\\';
-			out[outpos++] = '\'';
+			outstr[outpos++] = '\\';
+			outstr[outpos++] = '\'';
 		}
 		else
-			out[outpos++] = *in;
+			outstr[outpos++] = *in;
 	}
-	out[outpos++] = 0;
+	outstr[outpos] = 0;
 
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
 }
