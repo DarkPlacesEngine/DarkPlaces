@@ -5248,7 +5248,7 @@ static void R_View_UpdateEntityVisible (void)
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
-	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane && !r_trippy.integer)
+	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane && !r_trippy.integer)
 		// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
 	{
 		for (i = 0;i < r_refdef.scene.numentities;i++)
