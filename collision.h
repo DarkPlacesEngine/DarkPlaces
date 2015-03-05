@@ -9,7 +9,7 @@ typedef union plane_s
 		vec3_t	normal;
 		vec_t	dist;
 	};
-	vec4_t dist_and_normal;
+	vec4_t normal_and_dist;
 }
 plane_t;
 

@@ -48,8 +48,15 @@ mvertex_t;
 // plane_t structure
 typedef struct mplane_s
 {
-	vec3_t normal;
-	float dist;
+	union
+	{
+		struct
+		{
+			vec3_t normal;
+			vec_t dist;
+		};
+		vec4_t normal_and_dist;
+	};
 	// for texture axis selection and fast side tests
 	int type; // set by PlaneClassify()
 	int signbits; // set by PlaneClassify()
