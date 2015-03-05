@@ -4425,23 +4425,26 @@ string altstr_prepare(string)
 */
 void VM_altstr_prepare(prvm_prog_t *prog)
 {
-	char *out;
 	const char *instr, *in;
 	int size;
 	char outstr[VM_STRINGTEMP_LENGTH];
+	int outpos;
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
 
 	instr = PRVM_G_STRING( OFS_PARM0 );
 
-	for( out = outstr, in = instr, size = sizeof(outstr) - 1 ; size && *in ; size--, in++, out++ )
-		if( *in == '\'' && size > 1) {
-			*out++ = '\\';
-			*out = '\'';
-			size--;
-		} else
-			*out = *in;
-	*out = 0;
+	for (in = instr, outpos = 0; *in && outpos < sizeof(outstr) - 1; ++in)
+	{
+		if (*in == '\'' && outpos < sizeof(outstr) - 2)
+		{
+			out[outpos++] = '\\';
+			out[outpos++] = '\'';
+		}
+		else
+			out[outpos++] = *in;
+	}
+	out[outpos++] = 0;
 
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
 }
