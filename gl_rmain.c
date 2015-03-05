@@ -6004,18 +6004,26 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 	p = r_fb.water.waterplanes + planeindex;
 
 	// if this surface does not fit any known plane rendered this frame, add one
-	if ((planeindex < 0 || bestplanescore > 0.001f) && r_fb.water.numwaterplanes < r_fb.water.maxwaterplanes)
+	if (planeindex < 0 || bestplanescore > 0.001f)
 	{
-		// store the new plane
-		planeindex = r_fb.water.numwaterplanes++;
-		p = r_fb.water.waterplanes + planeindex;
-		p->plane = plane;
-		// clear materialflags and pvs
-		p->materialflags = 0;
-		p->pvsvalid = false;
-		p->camera_entity = t->camera_entity;
-		VectorCopy(mins, p->mins);
-		VectorCopy(maxs, p->maxs);
+		if (r_fb.water.numwaterplanes < r_fb.water.maxwaterplanes)
+		{
+			// store the new plane
+			planeindex = r_fb.water.numwaterplanes++;
+			p = r_fb.water.waterplanes + planeindex;
+			p->plane = plane;
+			// clear materialflags and pvs
+			p->materialflags = 0;
+			p->pvsvalid = false;
+			p->camera_entity = t->camera_entity;
+			VectorCopy(mins, p->mins);
+			VectorCopy(maxs, p->maxs);
+		}
+		else
+		{
+			// We're totally screwed.
+			return;
+		}
 	}
 	else
 	{
