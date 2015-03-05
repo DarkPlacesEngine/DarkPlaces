@@ -1221,7 +1221,7 @@ qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clip
 		if(PRVM_clientedictfunction(ed, camera_transform))
 		{
 			ret = true;
-			if(viewmatrix || clipplane || visorigin)
+			if(viewmatrix && clipplane && visorigin)
 			{
 				Matrix4x4_ToVectors(viewmatrix, forward, left, up, origin);
 				AnglesFromVectors(ang, forward, up, false);
