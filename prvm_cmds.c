@@ -5090,21 +5090,19 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 	size_t alloclen;
 	prvm_stringbuffer_t *stringbuffer;
 	char string[VM_STRINGTEMP_LENGTH];
-	int filenum, strindex, c, end;
+	int strindex, c, end;
 	const char *filename;
 	char vabuf[1024];
+	qfile_t *file;
 
 	VM_SAFEPARMCOUNT(2, VM_buf_loadfile);
 
 	// get file
 	filename = PRVM_G_STRING(OFS_PARM0);
-	for (filenum = 0;filenum < PRVM_MAX_OPENFILES;filenum++)
-		if (prog->openfiles[filenum] == NULL)
-			break;
-	prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", filename), false);
-	if (prog->openfiles[filenum] == NULL)
-		prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", filename), false);
-	if (prog->openfiles[filenum] == NULL)
+	file = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", filename), false);
+	if (file == NULL)
+		file = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", filename), false);
+	if (file == NULL)
 	{
 		if (developer_extra.integer)
 			VM_Warning(prog, "VM_buf_loadfile: failed to open file %s in %s\n", filename, prog->name);
@@ -5129,7 +5127,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 		end = 0;
 		for (;;)
 		{
-			c = FS_Getc(prog->openfiles[filenum]);
+			c = FS_Getc(file);
 			if (c == '\r' || c == '\n' || c < 0)
 				break;
 			if (end < VM_STRINGTEMP_LENGTH - 1)
@@ -5139,9 +5137,9 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 		// remove \n following \r
 		if (c == '\r')
 		{
-			c = FS_Getc(prog->openfiles[filenum]);
+			c = FS_Getc(file);
 			if (c != '\n')
-				FS_UnGetc(prog->openfiles[filenum], (unsigned char)c);
+				FS_UnGetc(file, (unsigned char)c);
 		}
 		// add and continue
 		if (c >= 0 || end)
@@ -5158,10 +5156,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 	}
 
 	// close file
-	FS_Close(prog->openfiles[filenum]);
-	prog->openfiles[filenum] = NULL;
-	if (prog->openfiles_origin[filenum])
-		PRVM_Free((char *)prog->openfiles_origin[filenum]);
+	FS_Close(file);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
