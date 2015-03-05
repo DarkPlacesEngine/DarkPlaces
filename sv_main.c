@@ -1686,7 +1686,7 @@ static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			}
 
 			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel->brush.TraceLineOfSight && !r_trippy.integer)
+			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel && sv.worldmodel->brush.TraceLineOfSight && !r_trippy.integer)
 			{
 				int samples =
 					s->number <= svs.maxclients
