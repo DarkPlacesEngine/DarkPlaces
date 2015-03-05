@@ -4435,7 +4435,7 @@ void VM_altstr_prepare(prvm_prog_t *prog)
 	instr = PRVM_G_STRING( OFS_PARM0 );
 
 	for( out = outstr, in = instr, size = sizeof(outstr) - 1 ; size && *in ; size--, in++, out++ )
-		if( *in == '\'' ) {
+		if( *in == '\'' && size > 1) {
 			*out++ = '\\';
 			*out = '\'';
 			size--;
