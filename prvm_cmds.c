@@ -4425,23 +4425,25 @@ string altstr_prepare(string)
 */
 void VM_altstr_prepare(prvm_prog_t *prog)
 {
-	char *out;
 	const char *instr, *in;
-	int size;
 	char outstr[VM_STRINGTEMP_LENGTH];
+	size_t outpos;
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
 
 	instr = PRVM_G_STRING( OFS_PARM0 );
 
-	for( out = outstr, in = instr, size = sizeof(outstr) - 1 ; size && *in ; size--, in++, out++ )
-		if( *in == '\'' ) {
-			*out++ = '\\';
-			*out = '\'';
-			size--;
-		} else
-			*out = *in;
-	*out = 0;
+	for (in = instr, outpos = 0; *in && outpos < sizeof(outstr) - 1; ++in)
+	{
+		if (*in == '\'' && outpos < sizeof(outstr) - 2)
+		{
+			outstr[outpos++] = '\\';
+			outstr[outpos++] = '\'';
+		}
+		else
+			outstr[outpos++] = *in;
+	}
+	outstr[outpos] = 0;
 
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
 }
@@ -5090,21 +5092,19 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 	size_t alloclen;
 	prvm_stringbuffer_t *stringbuffer;
 	char string[VM_STRINGTEMP_LENGTH];
-	int filenum, strindex, c, end;
+	int strindex, c, end;
 	const char *filename;
 	char vabuf[1024];
+	qfile_t *file;
 
 	VM_SAFEPARMCOUNT(2, VM_buf_loadfile);
 
 	// get file
 	filename = PRVM_G_STRING(OFS_PARM0);
-	for (filenum = 0;filenum < PRVM_MAX_OPENFILES;filenum++)
-		if (prog->openfiles[filenum] == NULL)
-			break;
-	prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", filename), false);
-	if (prog->openfiles[filenum] == NULL)
-		prog->openfiles[filenum] = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", filename), false);
-	if (prog->openfiles[filenum] == NULL)
+	file = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", filename), false);
+	if (file == NULL)
+		file = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", filename), false);
+	if (file == NULL)
 	{
 		if (developer_extra.integer)
 			VM_Warning(prog, "VM_buf_loadfile: failed to open file %s in %s\n", filename, prog->name);
@@ -5129,7 +5129,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 		end = 0;
 		for (;;)
 		{
-			c = FS_Getc(prog->openfiles[filenum]);
+			c = FS_Getc(file);
 			if (c == '\r' || c == '\n' || c < 0)
 				break;
 			if (end < VM_STRINGTEMP_LENGTH - 1)
@@ -5139,9 +5139,9 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 		// remove \n following \r
 		if (c == '\r')
 		{
-			c = FS_Getc(prog->openfiles[filenum]);
+			c = FS_Getc(file);
 			if (c != '\n')
-				FS_UnGetc(prog->openfiles[filenum], (unsigned char)c);
+				FS_UnGetc(file, (unsigned char)c);
 		}
 		// add and continue
 		if (c >= 0 || end)
@@ -5158,10 +5158,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 	}
 
 	// close file
-	FS_Close(prog->openfiles[filenum]);
-	prog->openfiles[filenum] = NULL;
-	if (prog->openfiles_origin[filenum])
-		PRVM_Free((char *)prog->openfiles_origin[filenum]);
+	FS_Close(file);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 

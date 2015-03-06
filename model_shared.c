@@ -1578,7 +1578,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)shader->name, strlen (shader->name));
 	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
 	q3shader_hash_entry_t* lastEntry = NULL;
-	while (entry != NULL)
+	do
 	{
 		if (strcasecmp (entry->shader.name, shader->name) == 0)
 		{
@@ -1611,6 +1611,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 		lastEntry = entry;
 		entry = entry->chain;
 	}
+	while (entry != NULL);
 	if (entry == NULL)
 	{
 		if (lastEntry->shader.name[0] != 0)

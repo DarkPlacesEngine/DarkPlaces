@@ -436,6 +436,8 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel
 		return NULL;
 	}
 
+	memset(palettei, 0, sizeof(palettei));
+
 	// advance to end of header
 	fin = f + 18;
 

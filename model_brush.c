@@ -4415,7 +4415,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 	// if we encounter the textures out of order, the later ones won't mark the earlier ones in a sequence, so the earlier 
 	for (i = 0, out = loadmodel->brushq1.texinfo;i < count;i++, out++)
 	{
-		int j = i;
+		int j;
 		texture_t *t = loadmodel->data_textures + out->textureindex;
 
 		// if this is not animated, skip it

@@ -493,6 +493,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 	cl.oldonground = clonground;
 	cl.calcrefdef_prevtime = max(cl.calcrefdef_prevtime, cl.oldtime);
 
+	VectorClear(gunangles);
 	VectorClear(gunorg);
 	viewmodelmatrix_nobob = identitymatrix;
 	viewmodelmatrix_withbob = identitymatrix;

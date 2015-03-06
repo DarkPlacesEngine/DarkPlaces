@@ -954,7 +954,8 @@ void R_TimeReport(const char *desc)
 	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0 + 0.5);
 
 	length = dpsnprintf(tempbuf, sizeof(tempbuf), "%8i %s", t, desc);
-	length = min(length, (int)sizeof(tempbuf) - 1);
+	if (length < 0)
+		length = (int)sizeof(tempbuf) - 1;
 	if (r_speeds_longestitem < length)
 		r_speeds_longestitem = length;
 	for (;length < r_speeds_longestitem;length++)
@@ -1957,10 +1958,12 @@ void SHOWLMP_decodeshow(void)
 		showlmp_t *oldshowlmps = cl.showlmps;
 		cl.max_showlmps += 16;
 		cl.showlmps = (showlmp_t *) Mem_Alloc(cls.levelmempool, cl.max_showlmps * sizeof(showlmp_t));
-		if (cl.num_showlmps)
-			memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
 		if (oldshowlmps)
+		{
+			if (cl.num_showlmps)
+				memcpy(cl.showlmps, oldshowlmps, cl.num_showlmps * sizeof(showlmp_t));
 			Mem_Free(oldshowlmps);
+		}
 	}
 	for (k = 0;k < cl.max_showlmps;k++)
 		if (cl.showlmps[k].isactive && !strcmp(cl.showlmps[k].label, lmplabel))

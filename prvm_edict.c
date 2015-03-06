@@ -3087,10 +3087,12 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
 		{
 			Con_DPrintf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, prog->tempstringsbuf.maxsize/1024);
 			prog->tempstringsbuf.data = (unsigned char *) Mem_Alloc(prog->progs_mempool, prog->tempstringsbuf.maxsize);
-			if (old.cursize)
-				memcpy(prog->tempstringsbuf.data, old.data, old.cursize);
 			if (old.data)
+			{
+				if (old.cursize)
+					memcpy(prog->tempstringsbuf.data, old.data, old.cursize);
 				Mem_Free(old.data);
+			}
 		}
 	}
 	t = (char *)prog->tempstringsbuf.data + prog->tempstringsbuf.cursize;
