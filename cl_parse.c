@@ -2893,6 +2893,8 @@ static void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 10);
 			colorStart = MSG_ReadByte(&cl_message);
 			colorLength = MSG_ReadByte(&cl_message);
+			if (colorLength == 0)
+				colorLength = 1;
 			CL_ParticleExplosion2(pos, colorStart, colorLength);
 			tempcolor = palette_rgb[(rand()%colorLength) + colorStart];
 			color[0] = tempcolor[0] * (2.0f / 255.0f);
