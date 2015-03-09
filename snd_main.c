@@ -1493,7 +1493,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 			if (snd_spatialization_occlusion.integer)
 			{
 				if(snd_spatialization_occlusion.integer & 1)
-					if(listener_pvs)
+					if(listener_pvs && cl.worldmodel)
 					{
 						int cluster = cl.worldmodel->brush.PointInLeaf(cl.worldmodel, ch->origin)->clusterindex;
 						if(cluster >= 0 && cluster < 8 * listener_pvsbytes && !CHECKPVSBIT(listener_pvs, cluster))
