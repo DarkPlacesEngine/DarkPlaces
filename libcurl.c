@@ -980,6 +980,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 						++numdownloads_added;
 					}
 
+					if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 					return false;
 				}
 			}
@@ -1003,6 +1004,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 							}
 						}
 
+						if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 						return false;
 					}
 					else
