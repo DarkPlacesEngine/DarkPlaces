@@ -1248,7 +1248,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 	{
 		vec3_t dir, pos;
 		float len, dec, qd;
-		int smoke, blood, bubbles, r, color;
+		int smoke, blood, bubbles, r, color, count;
 
 		if (spawndlight && r_refdef.scene.numlights < MAX_DLIGHTS)
 		{
@@ -1284,6 +1284,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 
 		VectorSubtract(originmaxs, originmins, dir);
 		len = VectorNormalizeLength(dir);
+
 		if (ent)
 		{
 			dec = -ent->persistent.trail_time;
@@ -1305,8 +1306,9 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		blood = cl_particles.integer && cl_particles_blood.integer;
 		bubbles = cl_particles.integer && cl_particles_bubbles.integer && !cl_particles_quake.integer && (CL_PointSuperContents(pos) & (SUPERCONTENTS_WATER | SUPERCONTENTS_SLIME));
 		qd = 1.0f / cl_particles_quality.value;
+		count = 0;
 
-		while (len >= 0)
+		while (len >= 0 && ++count <= 16384)
 		{
 			dec = 3;
 			if (blood)
