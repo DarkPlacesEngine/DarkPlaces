@@ -4417,6 +4417,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 	{
 		int j;
 		texture_t *t = loadmodel->data_textures + out->textureindex;
+		t->currentframe = t; // fix the reallocated pointer
 
 		// if this is not animated, skip it
 		// if this is already processed, skip it (part of an existing sequence)
