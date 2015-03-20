@@ -8431,7 +8431,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		}
 	}
 
-	return t->currentframe;
+	return t;
 }
 
 rsurfacestate_t rsurface;
