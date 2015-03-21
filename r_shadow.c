@@ -298,6 +298,7 @@ cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_
 cvar_t r_shadow_realtime_dlight_svbspculling = {0, "r_shadow_realtime_dlight_svbspculling", "0", "enables svbsp optimization on dynamic lights (very slow!)"};
 cvar_t r_shadow_realtime_dlight_portalculling = {0, "r_shadow_realtime_dlight_portalculling", "0", "enables portal optimization on dynamic lights (slow!)"};
 cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
+cvar_t r_shadow_realtime_world_importlightentitiesfrommap = {0, "r_shadow_realtime_world_importlightentitiesfrommap", "1", "load lights from .ent file or map entities at startup if no .rtlights or .lights file is present (if set to 2, always use the .ent or map entities)"};
 cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
 cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
 cvar_t r_shadow_realtime_world_compile = {0, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
@@ -735,6 +736,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_lightradiusscale);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_frontsidecasting);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_importlightentitiesfrommap);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_shadows);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight_svbspculling);
@@ -6036,10 +6038,14 @@ void R_Shadow_EditLights_Reload_f(void)
 		return;
 	strlcpy(r_shadow_mapname, cl.worldname, sizeof(r_shadow_mapname));
 	R_Shadow_ClearWorldLights();
-	R_Shadow_LoadWorldLights();
-	if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
+	if (r_shadow_realtime_world_importlightentitiesfrommap.integer <= 1)
 	{
-		R_Shadow_LoadLightsFile();
+		R_Shadow_LoadWorldLights();
+		if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
+			R_Shadow_LoadLightsFile();
+	}
+	if (r_shadow_realtime_world_importlightentitiesfrommap.integer >= 1)
+	{
 		if (!Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray))
 			R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
 	}
