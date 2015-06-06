@@ -5169,7 +5169,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			CHECKGLERROR
 			// See if we can use the GPU-side method to prevent implicit sync
 			if (vid.support.arb_query_buffer_object) {
-#define BUFFER_OFFSET(i)    ((void*)NULL + (i))
+#define BUFFER_OFFSET(i)    ((GLint *)((unsigned char*)NULL + (i)))
 				if (!r_shadow_occlusion_buf) {
 					qglGenBuffersARB(1, &r_shadow_occlusion_buf);
 					qglBindBufferARB(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
