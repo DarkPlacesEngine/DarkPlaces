@@ -1976,6 +1976,18 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				altanims[k] = anims[k];
 		}
 
+		if (max < 1)
+		{
+			// Warn.
+			Con_Printf("Missing frame 0 of %s\n", tx->name);
+
+			// however, we can handle this by duplicating the alternate animation into the primary
+			max = altmax;
+			for (k = 0;k < 10;k++)
+				anims[k] = altanims[k];
+		}
+
+
 		// link together the primary animation
 		for (j = 0;j < max;j++)
 		{
