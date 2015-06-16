@@ -1904,6 +1904,12 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx = loadmodel->data_textures + i;
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
+		num = tx->name[1];
+		if ((num < '0' || num > '9') && (num < 'a' || num > 'j'))
+		{
+			Con_Printf("Bad animating texture %s\n", tx->name);
+			continue;
+		}
 		if (tx->anim_total[0] || tx->anim_total[1])
 			continue;	// already sequenced
 
@@ -1922,8 +1928,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				anims[num - '0'] = tx2;
 			else if (num >= 'a' && num <= 'j')
 				altanims[num - 'a'] = tx2;
-			else
-				Con_Printf("Bad animating texture %s\n", tx->name);
+			// No need to warn otherwise - we already did above.
 		}
 
 		max = altmax = 0;
