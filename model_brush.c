@@ -1961,6 +1961,12 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		if (incomplete)
 			continue;
 
+		// If we have exactly one frame, something's wrong.
+		if (max + altmax <= 1)
+		{
+			Con_Printf("Texture %s is animated (leading +) but has only one frame\n", tx->name);
+		}
+
 		if (altmax < 1)
 		{
 			// if there is no alternate animation, duplicate the primary
