@@ -293,6 +293,7 @@ typedef enum gamemode_e
 	GAME_STEELSTORM, // added by motorsep
 	GAME_STEELSTORM2, // added by motorsep
 	GAME_SSAMMO, // added by motorsep
+	GAME_STEELSTORMREVENANTS, // added by motorsep 07/19/2015
 	GAME_TOMESOFMEPHISTOPHELES, // added by motorsep
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
