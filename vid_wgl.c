@@ -216,7 +216,7 @@ static HINSTANCE hInstDI;
 
 // forward-referenced functions
 static void IN_StartupMouse (void);
-static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_mode_t *mode, DWORD WindowStyle, RECT &rect);
+static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_mode_t *mode, DWORD WindowStyle, RECT *rect);
 
 //====================================
 
@@ -1166,7 +1166,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		ExWindowStyle = 0;
 	}
 
-	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, rect);
+	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, &rect);
 
 	pixelformat = 0;
 	newpixelformat = 0;
@@ -1324,7 +1324,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	return true;
 }
 
-static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_mode_t *mode, DWORD WindowStyle, RECT &rect)
+static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_mode_t *mode, DWORD WindowStyle, RECT *rect)
 {
 	int CenterX, CenterY;
 
@@ -1413,7 +1413,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 		ExWindowStyle = 0;
 	}
 
-	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, rect);
+	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, &rect);
 
 	gl_extensions = "";
 	gl_platformextensions = "";
@@ -1748,7 +1748,7 @@ qboolean VID_InitModeSOFT(viddef_mode_t *mode)
 		ExWindowStyle = 0;
 	}
 
-	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, rect);
+	AdjustWindowBounds(fullscreen, &width, &height, mode, WindowStyle, &rect);
 
 	pixelformat = 0;
 	newpixelformat = 0;
