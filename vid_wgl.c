@@ -1328,11 +1328,11 @@ static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_m
 {
 	int CenterX, CenterY;
 
-	rect.top = 0;
-	rect.left = 0;
-	rect.right = width;
-	rect.bottom = height;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
+	rect->top = 0;
+	rect->left = 0;
+	rect->right = *width;
+	rect->bottom = *height;
+	AdjustWindowRectEx(rect, WindowStyle, false, 0);
 
 	if (fullscreen)
 	{
@@ -1349,29 +1349,29 @@ static void AdjustWindowBounds(int fullscreen, int *width, int *height, viddef_m
 		// if height/width matches physical screen height/width, adjust it to available desktop size
 		// and allow 2 pixels on top for the title bar so the window can be moved
 		const int titleBarPixels = 2;
-		if (width == GetSystemMetrics(SM_CXSCREEN) && (height == GetSystemMetrics(SM_CYSCREEN) || height == workHeight - titleBarPixels))
+		if (*width == GetSystemMetrics(SM_CXSCREEN) && (*height == GetSystemMetrics(SM_CYSCREEN) || *height == workHeight - titleBarPixels))
 		{
-			rect.right -= width - workWidth;
-			width = mode->width = workWidth;
-			rect.bottom -= height - (workHeight - titleBarPixels);
-			height = mode->height = workHeight - titleBarPixels;
+			rect->right -= *width - workWidth;
+			*width = mode->width = workWidth;
+			rect->bottom -= *height - (workHeight - titleBarPixels);
+			*height = mode->height = workHeight - titleBarPixels;
 			CenterX = 0;
 			CenterY = titleBarPixels;
 		}
 		else
 		{
-			CenterX = max(0, (workWidth - width) / 2);
-			CenterY = max(0, (workHeight - height) / 2);
+			CenterX = max(0, (workWidth - *width) / 2);
+			CenterY = max(0, (workHeight - *height) / 2);
 		}
 	}
 
 	// x and y may be changed by WM_MOVE messages
 	window_x = CenterX;
 	window_y = CenterY;
-	rect.left += CenterX;
-	rect.right += CenterX;
-	rect.top += CenterY;
-	rect.bottom += CenterY;
+	rect->left += CenterX;
+	rect->right += CenterX;
+	rect->top += CenterY;
+	rect->bottom += CenterY;
 }
 
 #ifdef SUPPORTD3D
