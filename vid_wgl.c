@@ -216,7 +216,7 @@ static HINSTANCE hInstDI;
 
 // forward-referenced functions
 static void IN_StartupMouse (void);
-
+static void AdjustWindowBounds(int fullscreen, int &width, int &height, viddef_mode_t *mode, DWORD WindowStyle, RECT &rect);
 
 //====================================
 
@@ -913,7 +913,6 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	int pixelformat, newpixelformat;
 	UINT numpixelformats;
 	DWORD WindowStyle, ExWindowStyle;
-	int CenterX, CenterY;
 	const char *gldrivername;
 	int depth;
 	DEVMODE thismode;
@@ -1167,32 +1166,7 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 		ExWindowStyle = 0;
 	}
 
-	rect.top = 0;
-	rect.left = 0;
-	rect.right = width;
-	rect.bottom = height;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
-
-	if (fullscreen)
-	{
-		CenterX = 0;
-		CenterY = 0;
-	}
-	else
-	{
-		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
-		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
-	}
-	CenterX = max(0, CenterX);
-	CenterY = max(0, CenterY);
-
-	// x and y may be changed by WM_MOVE messages
-	window_x = CenterX;
-	window_y = CenterY;
-	rect.left += CenterX;
-	rect.right += CenterX;
-	rect.top += CenterY;
-	rect.bottom += CenterY;
+	AdjustWindowBounds(fullscreen, width, height, mode, WindowStyle, rect);
 
 	pixelformat = 0;
 	newpixelformat = 0;
@@ -1350,6 +1324,56 @@ qboolean VID_InitModeGL(viddef_mode_t *mode)
 	return true;
 }
 
+static void AdjustWindowBounds(int fullscreen, int &width, int &height, viddef_mode_t *mode, DWORD WindowStyle, RECT &rect)
+{
+	int CenterX, CenterY;
+
+	rect.top = 0;
+	rect.left = 0;
+	rect.right = width;
+	rect.bottom = height;
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
+
+	if (fullscreen)
+	{
+		CenterX = 0;
+		CenterY = 0;
+	}
+	else
+	{
+		RECT workArea;
+		SystemParametersInfo(SPI_GETWORKAREA, NULL, &workArea, 0);
+		int workWidth = workArea.right - workArea.left;
+		int workHeight = workArea.bottom - workArea.top;
+
+		// if height/width matches physical screen height/width, adjust it to available desktop size
+		// and allow 2 pixels on top for the title bar so the window can be moved
+		const int titleBarPixels = 2;
+		if (width == GetSystemMetrics(SM_CXSCREEN) && (height == GetSystemMetrics(SM_CYSCREEN) || height == workHeight - titleBarPixels))
+		{
+			rect.right -= width - workWidth;
+			width = mode->width = workWidth;
+			rect.bottom -= height - (workHeight - titleBarPixels);
+			height = mode->height = workHeight - titleBarPixels;
+			CenterX = 0;
+			CenterY = titleBarPixels;
+		}
+		else
+		{
+			CenterX = max(0, (workWidth - width) / 2);
+			CenterY = max(0, (workHeight - height) / 2);
+		}
+	}
+
+	// x and y may be changed by WM_MOVE messages
+	window_x = CenterX;
+	window_y = CenterY;
+	rect.left += CenterX;
+	rect.right += CenterX;
+	rect.top += CenterY;
+	rect.bottom += CenterY;
+}
+
 #ifdef SUPPORTD3D
 static D3DADAPTER_IDENTIFIER9 d3d9adapteridentifier;
 
@@ -1365,7 +1389,6 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 	RECT rect;
 	MSG msg;
 	DWORD WindowStyle, ExWindowStyle;
-	int CenterX, CenterY;
 	int bpp = mode->bitsperpixel;
 	int width = mode->width;
 	int height = mode->height;
@@ -1390,32 +1413,7 @@ qboolean VID_InitModeDX(viddef_mode_t *mode, int version)
 		ExWindowStyle = 0;
 	}
 
-	rect.top = 0;
-	rect.left = 0;
-	rect.right = width;
-	rect.bottom = height;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
-
-	if (fullscreen)
-	{
-		CenterX = 0;
-		CenterY = 0;
-	}
-	else
-	{
-		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
-		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
-	}
-	CenterX = max(0, CenterX);
-	CenterY = max(0, CenterY);
-
-	// x and y may be changed by WM_MOVE messages
-	window_x = CenterX;
-	window_y = CenterY;
-	rect.left += CenterX;
-	rect.right += CenterX;
-	rect.top += CenterY;
-	rect.bottom += CenterY;
+	AdjustWindowBounds(fullscreen, width, height, mode, WindowStyle, rect);
 
 	gl_extensions = "";
 	gl_platformextensions = "";
@@ -1599,7 +1597,6 @@ qboolean VID_InitModeSOFT(viddef_mode_t *mode)
 	MSG msg;
 	int pixelformat, newpixelformat;
 	DWORD WindowStyle, ExWindowStyle;
-	int CenterX, CenterY;
 	int depth;
 	DEVMODE thismode;
 	qboolean foundmode, foundgoodmode;
@@ -1751,32 +1748,7 @@ qboolean VID_InitModeSOFT(viddef_mode_t *mode)
 		ExWindowStyle = 0;
 	}
 
-	rect.top = 0;
-	rect.left = 0;
-	rect.right = width;
-	rect.bottom = height;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
-
-	if (fullscreen)
-	{
-		CenterX = 0;
-		CenterY = 0;
-	}
-	else
-	{
-		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
-		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
-	}
-	CenterX = max(0, CenterX);
-	CenterY = max(0, CenterY);
-
-	// x and y may be changed by WM_MOVE messages
-	window_x = CenterX;
-	window_y = CenterY;
-	rect.left += CenterX;
-	rect.right += CenterX;
-	rect.top += CenterY;
-	rect.bottom += CenterY;
+	AdjustWindowBounds(fullscreen, width, height, mode, WindowStyle, rect);
 
 	pixelformat = 0;
 	newpixelformat = 0;
