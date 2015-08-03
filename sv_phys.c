@@ -2713,10 +2713,14 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 					ent->priv.server->suspendedinairflag = true;
 				VectorClear (PRVM_serveredictvector(ent, velocity));
 				VectorClear (PRVM_serveredictvector(ent, avelocity));
+				movetime = 0;
 			}
 			else
+			{
 				PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) & ~FL_ONGROUND;
-			movetime = 0;
+				if (!sv_gameplayfix_slidemoveprojectiles.integer)
+					movetime = 0;
+			}
 			break;
 		}
 	}
