@@ -171,6 +171,9 @@ LDFLAGS_SDL+=$(LDFLAGS_UNIXSDL_PRELOAD)
 CFLAGS_PRELOAD=$(CFLAGS_UNIX_PRELOAD)
 .endif
 
+CFLAGS_NET=
+# Systems without IPv6 support should uncomment this:
+#CFLAGS_NET+=-DNOSUPPORTIPV6
 
 ##### BSD Make specific definitions #####
 
