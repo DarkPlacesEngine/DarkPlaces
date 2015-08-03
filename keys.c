@@ -753,21 +753,6 @@ Key_Console (int key, int unicode)
 				i= MAX_INPUTLINE - key_linepos - 1;
 			if (i > 0)
 			{
-				// terencehill: insert the clipboard text between the characters of the line
-				/*
-				char *temp = (char *) Z_Malloc(MAX_INPUTLINE);
-				cbd[i]=0;
-				temp[0]=0;
-				if ( key_linepos < (int)strlen(key_line) )
-					strlcpy(temp, key_line + key_linepos, (int)strlen(key_line) - key_linepos +1);
-				key_line[key_linepos] = 0;
-				strlcat(key_line, cbd, sizeof(key_line));
-				if (temp[0])
-					strlcat(key_line, temp, sizeof(key_line));
-				Z_Free(temp);
-				key_linepos += i;
-				*/
-				// blub: I'm changing this to use memmove() like the rest of the code does.
 				cbd[i] = 0;
 				memmove(key_line + key_linepos + i, key_line + key_linepos, sizeof(key_line) - key_linepos - i);
 				memcpy(key_line + key_linepos, cbd, i);
@@ -1050,7 +1035,6 @@ Key_Console (int key, int unicode)
 		Key_History_Down();
 		return;
 	}
-	// ~1.0795 = 82/76  using con_textsize 64 76 is height of the char, 6 is the distance between 2 lines
 
 	if (keydown[K_CTRL])
 	{
@@ -1186,24 +1170,21 @@ Key_Console (int key, int unicode)
 		// check insert mode, or always insert if at end of line
 		if (key_insert || len == 0)
 		{
+			if (key_linepos + len + blen >= MAX_INPUTLINE)
+				return;
 			// can't use strcpy to move string to right
 			len++;
-			//memmove(&key_line[key_linepos + u8_bytelen(key_line + key_linepos, 1)], &key_line[key_linepos], len);
 			if (key_linepos + blen + len >= MAX_INPUTLINE)
 				return;
 			memmove(&key_line[key_linepos + blen], &key_line[key_linepos], len);
 		}
-		// FIXME: This is not proper overwriting with utf8.
-		if (key_linepos + blen >= MAX_INPUTLINE)
+		else if (key_linepos + len + blen - u8_bytelen(key_line + key_linepos, 1) >= MAX_INPUTLINE)
 			return;
 		memcpy(key_line + key_linepos, buf, blen);
 		if (blen > len)
 			key_line[key_linepos + blen] = 0;
 		// END OF FIXME
 		key_linepos += blen;
-		//key_linepos += u8_fromchar(unicode, key_line + key_linepos, sizeof(key_line) - key_linepos - 1);
-		//key_line[key_linepos] = ascii;
-		//key_linepos++;
 	}
 }
 
