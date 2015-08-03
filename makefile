@@ -402,6 +402,10 @@ ifdef DP_PRELOAD_DEPENDENCIES
 endif
 endif
 
+CFLAGS_NET=
+# Systems without IPv6 support should uncomment this:
+#CFLAGS_NET+=-DNOSUPPORTIPV6
+
 ##### GNU Make specific definitions #####
 
 DO_LD=$(CC) -o ../../../$@ $^ $(LDFLAGS)
