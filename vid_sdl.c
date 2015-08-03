@@ -2414,6 +2414,50 @@ static void VID_OutputVersion(void)
 					version.major, version.minor, version.patch );
 }
 
+#ifdef WIN32
+static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
+{
+	LONG width = mode->width; // vid_width
+	LONG height = mode->height; // vid_height
+
+	// adjust width and height for the space occupied by window decorators (title bar, borders)
+	rect->top = 0;
+	rect->left = 0;
+	rect->right = width;
+	rect->bottom = height;
+	AdjustWindowRectEx(rect, WS_CAPTION|WS_THICKFRAME, false, 0);
+
+	RECT workArea;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+	int workWidth = workArea.right - workArea.left;
+	int workHeight = workArea.bottom - workArea.top;
+
+	// SDL forces the window height to be <= screen height - 27px (on Win8.1 - probably intended for the title bar) 
+	// If the task bar is docked to the the left screen border and we move the window to negative y,
+	// there would be some part of the regular desktop visible on the bottom of the screen.
+	int titleBarPixels = 2;
+	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	if (screenHeight == workHeight)
+		titleBarPixels = -rect->top;
+
+	//Con_Printf("window mode: %dx%d, workArea: %d/%d-%d/%d (%dx%d), title: %d\n", width, height, workArea.left, workArea.top, workArea.right, workArea.bottom, workArea.right - workArea.left, workArea.bottom - workArea.top, titleBarPixels);
+
+	// if height and width matches the physical or previously adjusted screen height and width, adjust it to available desktop area
+	if ((width == GetSystemMetrics(SM_CXSCREEN) || width == workWidth) && (height == screenHeight || height == workHeight - titleBarPixels))
+	{
+		rect->left = workArea.left;
+		mode->width = workWidth;
+		rect->top = workArea.top + titleBarPixels;
+		mode->height = workHeight - titleBarPixels;
+	}
+	else 
+	{
+		rect->left = workArea.left + max(0, (workWidth - width) / 2);
+		rect->top = workArea.top + (0, (workHeight - height) / 2);
+	}
+}
+#endif
+
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 #if SDL_MAJOR_VERSION == 1
@@ -2483,6 +2527,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
+	int xPos = SDL_WINDOWPOS_UNDEFINED;
+	int yPos = SDL_WINDOWPOS_UNDEFINED;
 #if SDL_MAJOR_VERSION == 1
 	{
 		const SDL_VideoInfo *vi = SDL_GetVideoInfo();
@@ -2515,6 +2561,15 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 			else
 				windowflags |= SDL_WINDOW_FULLSCREEN;
 			vid_isfullscreen = true;
+		}
+		else {
+#ifdef WIN32
+			DWORD windowStyle = 0;
+			RECT rect;
+			AdjustWindowBounds(mode, &rect);
+			xPos = rect.left;
+			yPos = rect.top;
+#endif
 		}
 	}
 #endif
@@ -2572,7 +2627,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	mode->height = screen->h;
 #else
 	window_flags = windowflags;
-	window = SDL_CreateWindow(gamename, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mode->width, mode->height, windowflags);
+	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
