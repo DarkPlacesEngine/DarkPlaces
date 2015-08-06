@@ -150,6 +150,10 @@ typedef struct entvars_s
 	float	spawnflags;
 	string_t	target;
 	string_t	targetname;
+	// motorsep 08/05/2015; support for Doom 3 entity spawnargs (whem mapping in DarkRadiant)
+	string_t	target0;
+	string_t	name;
+	// motorsep ends
 	float	dmg_take;
 	float	dmg_save;
 	int	dmg_inflictor;

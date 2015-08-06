@@ -3257,10 +3257,15 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 {
 	int i, j;
 	int edictnum = PRVM_NUM_FOR_EDICT(edict);
-	const char *targetname = NULL;
+	const char *targetname = NULL;	
 
 	if (prog == SVVM_prog)
 		targetname = PRVM_GetString(prog, PRVM_serveredictstring(edict, targetname));
+
+	// motorsep 08/05/2015; support for Doom 3 entity spawnargs (whem mapping in DarkRadiant)
+	if(!targetname)
+		targetname = PRVM_GetString( prog, PRVM_serveredictstring( edict, name ) );
+	// motorsep ends
 
 	if(targetname)
 		if(!*targetname) // ""
@@ -3288,6 +3293,12 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 		if(targetname)
 		{
 			const char *target = PRVM_GetString(prog, PRVM_serveredictstring(ed, target));
+			
+			// motorsep 08/05/2015; support for Doom 3 entity spawnargs (whem mapping in DarkRadiant)
+			if(!target)
+				target = PRVM_GetString( prog, PRVM_serveredictstring( ed, target0 ) );
+			// motorsep ends
+
 			if(target)
 				if(!strcmp(target, targetname))
 					return true;
