@@ -2527,8 +2527,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
-	int xPos = SDL_WINDOWPOS_UNDEFINED;
-	int yPos = SDL_WINDOWPOS_UNDEFINED;
 #if SDL_MAJOR_VERSION == 1
 	{
 		const SDL_VideoInfo *vi = SDL_GetVideoInfo();
@@ -2549,6 +2547,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		}
 	}
 #else
+	int xPos = SDL_WINDOWPOS_UNDEFINED;
+	int yPos = SDL_WINDOWPOS_UNDEFINED;
 	{
 		if (mode->fullscreen) {
 			if (vid_desktopfullscreen.integer)
@@ -2564,7 +2564,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		}
 		else {
 #ifdef WIN32
-			DWORD windowStyle = 0;
 			RECT rect;
 			AdjustWindowBounds(mode, &rect);
 			xPos = rect.left;
