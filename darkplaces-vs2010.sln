@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual C++ Express 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-wgl", "darkplaces-wgl-vs2010.vcxproj", "{6E3D4311-BB84-4EB7-8C6C-10AA3D249C28}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-wgl-vs2010", "darkplaces-wgl-vs2010.vcxproj", "{6E3D4311-BB84-4EB7-8C6C-10AA3D249C28}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl", "darkplaces-sdl-vs2010.vcxproj", "{7470C8B3-FCA7-42D3-9909-5F9E735C7C51}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl-vs2010", "darkplaces-sdl-vs2010.vcxproj", "{7470C8B3-FCA7-42D3-9909-5F9E735C7C51}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated", "darkplaces-dedicated-vs2010.vcxproj", "{389AE334-D907-4069-90B3-F0551B3EFDE9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated-vs2010", "darkplaces-dedicated-vs2010.vcxproj", "{389AE334-D907-4069-90B3-F0551B3EFDE9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl2-vs2010", "darkplaces-sdl2-vs2010.vcxproj", "{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

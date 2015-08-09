@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Desktop
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-wgl", "darkplaces-wgl-vs2013.vcxproj", "{6E3D4311-BB84-4EB7-8C6C-10AA3D249C28}"
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-wgl-vs2013", "darkplaces-wgl-vs2013.vcxproj", "{6E3D4311-BB84-4EB7-8C6C-10AA3D249C28}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl", "darkplaces-sdl-vs2013.vcxproj", "{7470C8B3-FCA7-42D3-9909-5F9E735C7C51}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl-vs2013", "darkplaces-sdl-vs2013.vcxproj", "{7470C8B3-FCA7-42D3-9909-5F9E735C7C51}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated", "darkplaces-dedicated-vs2013.vcxproj", "{389AE334-D907-4069-90B3-F0551B3EFDE9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-dedicated-vs2013", "darkplaces-dedicated-vs2013.vcxproj", "{389AE334-D907-4069-90B3-F0551B3EFDE9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "darkplaces-sdl2-vs2013", "darkplaces-sdl2-vs2013.vcxproj", "{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +43,14 @@ Global
 		{389AE334-D907-4069-90B3-F0551B3EFDE9}.Release|Win32.Build.0 = Release|Win32
 		{389AE334-D907-4069-90B3-F0551B3EFDE9}.Release|x64.ActiveCfg = Release|x64
 		{389AE334-D907-4069-90B3-F0551B3EFDE9}.Release|x64.Build.0 = Release|x64
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Debug|Win32.Build.0 = Debug|Win32
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Debug|x64.ActiveCfg = Debug|x64
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Debug|x64.Build.0 = Debug|x64
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Release|Win32.ActiveCfg = Release|Win32
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Release|Win32.Build.0 = Release|Win32
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Release|x64.ActiveCfg = Release|x64
+		{72D93E63-FDBB-4AA3-B42B-FAADA6D7F5B2}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
