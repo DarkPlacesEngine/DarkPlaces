@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{389AE334-D907-4069-90B3-F0551B3EFDE9}</ProjectGuid>
-    <RootNamespace>darkplacesdedicated</RootNamespace>
+    <ProjectGuid>{7470C8B3-FCA7-42D3-9909-5F9E735C7C51}</ProjectGuid>
+    <RootNamespace>darkplacessdl2</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <ProjectName>darkplaces-dedicated-vs2012</ProjectName>
+    <ProjectName>darkplaces-sdl2-vs2012</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -52,19 +52,19 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vs2012_win32.props" />
+    <Import Project="vs2012_sdl2_win32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vs2012_win32.props" />
+    <Import Project="vs2012_sdl2_win32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vs2012_win64.props" />
+    <Import Project="vs2012_sdl2_win64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="vs2012_win64.props" />
+    <Import Project="vs2012_sdl2_win64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -105,8 +105,9 @@
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -128,8 +129,9 @@
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX64</TargetMachine>
     </Link>
   </ItemDefinitionGroup>
@@ -149,7 +151,7 @@
     <Link>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
@@ -174,7 +176,7 @@
     <Link>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX64</TargetMachine>
@@ -185,7 +187,7 @@
     <ClCompile Include="builddate.c" />
     <ClCompile Include="cap_avi.c" />
     <ClCompile Include="cap_ogg.c" />
-    <ClCompile Include="cd_null.c" />
+    <ClCompile Include="cd_sdl.c" />
     <ClCompile Include="cd_shared.c" />
     <ClCompile Include="cl_collision.c" />
     <ClCompile Include="cl_demo.c" />
@@ -252,7 +254,12 @@
     <ClCompile Include="r_sky.c" />
     <ClCompile Include="r_sprites.c" />
     <ClCompile Include="sbar.c" />
-    <ClCompile Include="snd_null.c" />
+    <ClCompile Include="snd_main.c" />
+    <ClCompile Include="snd_mem.c" />
+    <ClCompile Include="snd_mix.c" />
+    <ClCompile Include="snd_ogg.c" />
+    <ClCompile Include="snd_sdl.c" />
+    <ClCompile Include="snd_wav.c" />
     <ClCompile Include="sv_demo.c" />
     <ClCompile Include="sv_main.c" />
     <ClCompile Include="sv_move.c" />
@@ -260,11 +267,11 @@
     <ClCompile Include="sv_user.c" />
     <ClCompile Include="svbsp.c" />
     <ClCompile Include="svvm_cmds.c" />
-    <ClCompile Include="sys_linux.c" />
+    <ClCompile Include="sys_sdl.c" />
     <ClCompile Include="sys_shared.c" />
-    <ClCompile Include="thread_null.c" />
+    <ClCompile Include="thread_sdl.c" />
     <ClCompile Include="utf8lib.c" />
-    <ClCompile Include="vid_null.c" />
+    <ClCompile Include="vid_sdl.c" />
     <ClCompile Include="vid_shared.c" />
     <ClCompile Include="view.c" />
     <ClCompile Include="wad.c" />
@@ -350,6 +357,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="sbar.h" />
     <ClInclude Include="screen.h" />
+    <ClInclude Include="SDLMain.h" />
     <ClInclude Include="server.h" />
     <ClInclude Include="shader_glsl.h" />
     <ClInclude Include="shader_hlsl.h" />
