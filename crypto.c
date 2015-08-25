@@ -2492,7 +2492,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			}
 
 			// cache the server key
-			Crypto_StoreHostKey(&cls.connect_address, va(vabuf, sizeof(vabuf), "%d %s@%s", crypto->use_aes ? 1 : 0, crypto->server_idfp, pubkeys_fp64[CDATA->s]), false);
+			Crypto_StoreHostKey(&cls.connect_address, va(vabuf, sizeof(vabuf), "%d %s@%s%s", crypto->use_aes ? 1 : 0, crypto->server_idfp, crypto->server_issigned ? "" : "~", pubkeys_fp64[CDATA->s]), false);
 
 			if(CDATA->c >= 0)
 			{
