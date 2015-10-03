@@ -71,7 +71,7 @@
     <_ProjectFileVersion>11.0.50727.1</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir))\</OutDir>
+    <OutDir>$(SolutionDir)\</OutDir>
     <IntDir>$(Configuration)-$(ProjectName)-$(Platform)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
