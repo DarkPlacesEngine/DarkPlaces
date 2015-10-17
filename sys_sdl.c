@@ -169,7 +169,21 @@ char *Sys_ConsoleInput(void)
 
 char *Sys_GetClipboardData (void)
 {
-#ifdef WIN32
+#if SDL_MAJOR_VERSION != 1
+	char *data = NULL;
+	char *cliptext;
+
+	cliptext = SDL_GetClipboardText();
+	if (cliptext != NULL) {
+		size_t allocsize;
+		allocsize = strlen(cliptext) + 1;
+		data = (char *)Z_Malloc (allocsize);
+		strlcpy (data, cliptext, allocsize);
+		SDL_free(cliptext);
+	}
+
+	return data;
+#elif defined(WIN32)
 	char *data = NULL;
 	char *cliptext;
 
