@@ -3105,7 +3105,11 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 {
 	int i;
 	if (!bufferlength)
+	{
+		if (pointer)
+			*pointer = NULL;
 		return 0;
+	}
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
