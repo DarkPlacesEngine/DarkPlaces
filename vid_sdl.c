@@ -87,7 +87,7 @@ static int video_bpp;
 static SDL_Surface *screen;
 static int video_flags;
 #else
-static SDL_GLContext *context;
+static SDL_GLContext context;
 static SDL_Window *window;
 static int window_flags;
 #endif
