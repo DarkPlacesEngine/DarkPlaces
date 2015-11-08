@@ -238,11 +238,10 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 # define HAVE_Sleep 1
 #endif
 
+#ifndef WIN32
 #if defined(CLOCK_MONOTONIC) || defined(CLOCK_HIRES)
 # define HAVE_CLOCKGETTIME 1
 #endif
-
-#ifndef WIN32
 // FIXME improve this check, manpage hints to DST_NONE
 # define HAVE_GETTIMEOFDAY 1
 #endif

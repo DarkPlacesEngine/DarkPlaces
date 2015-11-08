@@ -220,7 +220,7 @@ void PR_Cmd_Init(void);
 // general functions
 void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);
 void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength);
-prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, char *format);
+prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, const char *format);
 void BufStr_Set(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer, int strindex, const char *str);
 void BufStr_Del(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer);
 void BufStr_Flush(prvm_prog_t *prog);
