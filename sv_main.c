@@ -123,6 +123,7 @@ cvar_t sv_gameplayfix_unstickplayers = {0, "sv_gameplayfix_unstickplayers", "1",
 cvar_t sv_gameplayfix_unstickentities = {0, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position"};
 cvar_t sv_gameplayfix_fixedcheckwatertransition = {0, "sv_gameplayfix_fixedcheckwatertransition", "1", "fix two very stupid bugs in SV_CheckWaterTransition when watertype is CONTENTS_EMPTY (the bugs causes waterlevel to be 1 on first frame, -1 on second frame - the fix makes it 0 on both frames)"};
 cvar_t sv_gravity = {CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
+cvar_t sv_init_frame_count = {0, "sv_init_frame_count", "2", "number of frames to run to allow everything to settle before letting clients connect"};
 cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping"};
 cvar_t sv_jumpvelocity = {0, "sv_jumpvelocity", "270", "cvar that can be used by QuakeC code for jump velocity"};
@@ -534,6 +535,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_unstickentities);
 	Cvar_RegisterVariable (&sv_gameplayfix_fixedcheckwatertransition);
 	Cvar_RegisterVariable (&sv_gravity);
+	Cvar_RegisterVariable (&sv_init_frame_count);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_jumpstep);
 	Cvar_RegisterVariable (&sv_jumpvelocity);
@@ -3492,7 +3494,7 @@ void SV_SpawnServer (const char *server)
 
 // run two frames to allow everything to settle
 	sv.time = 1.0001;
-	for (i = 0;i < 2;i++)
+	for (i = 0;i < sv_init_frame_count.integer;i++)
 	{
 		sv.frametime = 0.1;
 		SV_Physics ();
