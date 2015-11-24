@@ -70,7 +70,7 @@ typedef struct prvm_required_field_s
 typedef struct prvm_edict_private_s
 {
 	qboolean free;
-	float freetime;
+	float freetime; // realtime of last change to "free" (i.e. also set on allocation)
 	int mark; // used during leaktest (0 = unref, >0 = referenced); special values during server physics:
 #define PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN -1
 #define PRVM_EDICT_MARK_SETORIGIN_CAUGHT -2
@@ -531,6 +531,7 @@ prvm_stringbuffer_t;
 typedef struct prvm_prog_s
 {
 	double				starttime; // system time when PRVM_Prog_Load was called
+	double				inittime; // system time when QC initialization code finished (any entity created before is not a leak)
 	double				profiletime; // system time when last PRVM_CallProfile was called (or PRVM_Prog_Load initially)
 	unsigned int		id; // increasing unique id of progs instance
 	mfunction_t			*functions;

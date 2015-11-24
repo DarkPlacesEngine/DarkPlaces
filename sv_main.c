@@ -3500,6 +3500,9 @@ void SV_SpawnServer (const char *server)
 		SV_Physics ();
 	}
 
+	// Once all init frames have been run, we consider svqc code fully initialized.
+	prog->inittime = realtime;
+
 	if (cls.state == ca_dedicated)
 		Mod_PurgeUnused();
 
