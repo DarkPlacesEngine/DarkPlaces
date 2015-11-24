@@ -2453,7 +2453,7 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 	else 
 	{
 		rect->left = workArea.left + max(0, (workWidth - width) / 2);
-		rect->top = workArea.top + ((workHeight - height) / 2);
+		rect->top = workArea.top + max(0, (workHeight - height) / 2);
 	}
 }
 #endif
