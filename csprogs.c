@@ -1145,6 +1145,9 @@ void CL_VM_Init (void)
 	// call the prog init
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
 
+	// Once CSQC_Init was called, we consider csqc code fully initialized.
+	prog->inittime = realtime;
+
 	cl.csqc_loaded = true;
 
 	cl.csqc_vidvars.drawcrosshair = false;

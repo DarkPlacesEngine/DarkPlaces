@@ -5407,6 +5407,9 @@ static void MP_Init (void)
 
 	// call the prog init
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_init),"m_init() required");
+
+	// Once m_init was called, we consider menuqc code fully initialized.
+	prog->inittime = realtime;
 }
 
 //============================================================================
