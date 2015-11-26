@@ -34,6 +34,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 #endif
 
+#ifdef WIN32
+// Enable NVIDIA High Performance Graphics while using Integrated Graphics.
+extern "C" {
+__declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+}
+#endif
+
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
 
