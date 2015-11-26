@@ -36,9 +36,13 @@ extern LPDIRECT3DDEVICE9 vid_d3d9dev;
 
 #ifdef WIN32
 // Enable NVIDIA High Performance Graphics while using Integrated Graphics.
+#ifdef __cplusplus
 extern "C" {
+#endif
 __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
+#ifdef __cplusplus
 }
+#endif
 #endif
 
 mempool_t *r_main_mempool;
