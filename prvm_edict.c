@@ -3284,18 +3284,6 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 		if(!*targetname) // ""
 			targetname = NULL;
 
-	if(mark == 0)
-	{
-		for (i = 0;i < prog->numglobaldefs;i++)
-		{
-			ddef_t *d = &prog->globaldefs[i];
-			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
-				continue;
-			if(edictnum == PRVM_GLOBALFIELDEDICT(d->ofs))
-				return true;
-		}
-	}
-
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
@@ -3325,19 +3313,35 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 
 static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 {
-	int j;
+	int i, j;
 	qboolean found_new;
 	int stage;
 
+	// Stage 1: world, all entities that are relevant, and all entities that are referenced by globals.
+	stage = 1;
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
 		if(ed->priv.required->free)
 			continue;
-		ed->priv.required->mark = PRVM_IsEdictRelevant(prog, ed) ? 1 : 0;
+		ed->priv.required->mark = PRVM_IsEdictRelevant(prog, ed) ? stage : 0;
+	}
+	for (i = 0;i < prog->numglobaldefs;i++)
+	{
+		ddef_t *d = &prog->globaldefs[i];
+		prvm_edict_t *ed;
+		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
+			continue;
+		j = PRVM_GLOBALFIELDEDICT(d->ofs);
+		if (i < 0 || j >= prog->max_edicts) {
+			Con_Printf("Invalid entity reference from global %s.\n", PRVM_GetString(prog, d->s_name));
+			continue;
+		}
+		ed = PRVM_EDICT_NUM(j);;
+		ed->priv.required->mark = stage;
 	}
 
-	stage = 1;
+	// Future stages: all entities that are referenced by an entity of the previous stage.
 	do
 	{
 		found_new = false;
