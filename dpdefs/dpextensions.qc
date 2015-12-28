@@ -1,13 +1,6 @@
 
 //DarkPlaces supported extension list, draft version 1.04
 
-//things that don't have extensions yet:
-.float disableclientprediction;
-// 0 allows prediction only for MOVETYPE_WALK
-// 1 disables prediction completely
-// -1 allows prediction for all movetypes
-// Requires CSQC to perform player prediction, and requires explicit CSQC networking of movetype (or equivalent) from server to client.
-
 //definitions that id Software left out:
 //these are passed as the 'nomonsters' parameter to traceline/tracebox (yes really this was supported in all quake engines, nomonsters is misnamed)
 float MOVE_NORMAL = 0; // same as FALSE
@@ -1487,6 +1480,37 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //making explosion models that face the viewer (does not work well with chase_active).  for example: float() explosion_customizeentityforclient = {self.angles = vectoangles(other.origin + other.view_ofs - self.origin);self.angles_x = 0 - self.angles_x;};
 //implementation notes:
 //entity customization is done before per-client culling (visibility for instance) because the entity may be doing setorigin to display itself in different locations on different clients, may be altering its .modelindex, .effects and other fields important to culling, so customized entities increase cpu usage (non-customized entities can use all the early culling they want however, as they are not changing on a per client basis).
+
+//DP_SV_DISABLECLIENTPREDICTION
+//idea: LordHavoc, Mario
+//darkplaces implementation: LordHavoc, Mario
+//field definitions:
+.float disableclientprediction;
+//description:
+//By default, player entities are enabled for prediction by the engine if the
+//engine assumes the client can sensibly predict them. As the NQ and DarkPlaces
+//protocol does not network movetype, this in particular allows for client
+//prediction only if movetype == MOVETYPE_WALK.
+//Setting this field to 1 disables prediction in any case - this is useful when
+//the client cannot sensibly predict the server's idea of how the player moves
+//(common in case of pure serverside grappling hook or jetpack
+//implementations).
+//Setting this field to -1 forces prediction even if the server assumes the
+//client cannot predict the current movetype of a player entity (obviously,
+//this then requires matching client-side prediction code in CSQC, as the
+//engine's own client prediction will sure not handle these cases right due to
+//not knowing the serverside value of movetype). This is allowed in combination
+//with the following movetypes:
+// MOVETYPE_NONE (useful to have full QC control over movement)
+// MOVETYPE_WALK (redundant but harmless)
+// MOVETYPE_STEP
+// MOVETYPE_FLY (useful for spectators)
+// MOVETYPE_TOSS
+// MOVETYPE_NOCLIP (useful for spectators)
+// MOVETYPE_FLYMISSILE
+// MOVETYPE_BOUNCE
+// MOVETYPE_BOUNCEMISSILE
+// MOVETYPE_FLY_WORLDONLY (useful for spectators)
 
 //DP_SV_DISCARDABLEDEMO
 //idea: parasti
