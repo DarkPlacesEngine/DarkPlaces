@@ -99,7 +99,10 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 
 	memset(blend, 0, MAX_FRAMEBLENDS * sizeof(*blend));
 
-	if (!model || !model->surfmesh.isanimated)
+	// rpolzer: Not testing isanimated here - a model might have
+	// "animations" that move no vertices (but only bones), thus rendering
+	// may assume it's not animated while processing can't.
+	if (!model)
 	{
 		blend[0].lerp = 1;
 		return;
