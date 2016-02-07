@@ -2402,7 +2402,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 				}
 				if(!cvar)
 					prog->error_cmd("PRVM_LoadProgs: could not create cvar for autocvar global %s in %s", name, prog->name);
-				cvar->globaldefindex_progid[prog - prvm_prog_list] = prog->id;
 				cvar->globaldefindex[prog - prvm_prog_list] = i;
 			}
 			else if((cvar->flags & CVAR_PRIVATE) == 0)
@@ -2439,7 +2438,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, prog->name);
 						goto fail;
 				}
-				cvar->globaldefindex_progid[prog - prvm_prog_list] = prog->id;
 				cvar->globaldefindex[prog - prvm_prog_list] = i;
 			}
 			else
