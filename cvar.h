@@ -134,7 +134,6 @@ typedef struct cvar_s
 	float initvector[3];
 	const char *initdefstring;
 
-	unsigned int globaldefindex_progid[3];
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];
 
