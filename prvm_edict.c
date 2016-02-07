@@ -1938,6 +1938,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	unsigned int d;
 	char vabuf[1024];
 	char vabuf2[1024];
+	cvar_t *cvar;
 
 	if (prog->loaded)
 		prog->error_cmd("PRVM_LoadProgs: there is already a %s program loaded!", prog->name );
@@ -2353,6 +2354,9 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 	}
 
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+		cvar->globaldefindex[prog - prvm_prog_list] = -1;
+
 	for (i=0 ; i<prog->numglobaldefs ; i++)
 	{
 		const char *name;
@@ -2364,7 +2368,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		)
 		{
 			prvm_eval_t *val = PRVM_GLOBALFIELDVALUE(prog->globaldefs[i].ofs);
-			cvar_t *cvar = Cvar_FindVar(name + 9);
+			cvar = Cvar_FindVar(name + 9);
 			//Con_Printf("PRVM_LoadProgs: autocvar global %s in %s, processing...\n", name, prog->name);
 			if(!cvar)
 			{
