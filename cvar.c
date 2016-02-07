@@ -486,6 +486,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	cvar_t *current, *next, *cvar;
 	char *oldstr;
 	size_t alloclen;
+	int i;
 
 	if (developer_extra.integer)
 		Con_DPrintf("Cvar_RegisterVariable({\"%s\", \"%s\", %i});\n", variable->name, variable->string, variable->flags);
@@ -508,6 +509,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			variable->defstring = cvar->defstring;
 			variable->value = atof (variable->string);
 			variable->integer = (int) variable->value;
+			// Preserve autocvar status.
+			memcpy(variable->globaldefindex, cvar->globaldefindex, sizeof(variable->globaldefindex));
+			memcpy(variable->globaldefindex_stringno, cvar->globaldefindex_stringno, sizeof(variable->globaldefindex_stringno));
 			// replace cvar with this one...
 			variable->next = cvar->next;
 			if (cvar_vars == cvar)
@@ -550,6 +554,10 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 
+	// Mark it as not an autocvar.
+	for (i = 0;i < PRVM_PROG_MAX;i++)
+		variable->globaldefindex[i] = -1;
+
 // link the variable in
 // alphanumerical order
 	for( current = NULL, next = cvar_vars ; next && strcmp( next->name, variable->name ) < 0 ; current = next, next = next->next )
@@ -578,6 +586,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 {
 	int hashindex;
 	cvar_t *current, *next, *cvar;
+	int i;
 
 	if (developer_extra.integer)
 		Con_DPrintf("Cvar_Get(\"%s\", \"%s\", %i);\n", name, value, flags);
@@ -630,6 +639,10 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 		cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
 	else
 		cvar->description = cvar_dummy_description; // actually checked by VM_cvar_type
+
+	// Mark it as not an autocvar.
+	for (i = 0;i < PRVM_PROG_MAX;i++)
+		cvar->globaldefindex[i] = -1;
 
 // link the variable in
 // alphanumerical order
