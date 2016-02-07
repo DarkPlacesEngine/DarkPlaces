@@ -270,7 +270,7 @@ static qboolean Cvar_IsAutoCvar(cvar_t *var)
 	for (i = 0;i < PRVM_PROG_MAX;i++)
 	{
 		prog = &prvm_prog_list[i];
-		if (prog->loaded && var->globaldefindex_progid[i] == prog->id)
+		if (prog->loaded && var->globaldefindex_progid[i] == prog->id && var->globaldefindex[i] >= 0)
 			return true;
 	}
 	return false;
@@ -287,7 +287,7 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 	for (i = 0;i < PRVM_PROG_MAX;i++)
 	{
 		prog = &prvm_prog_list[i];
-		if (prog->loaded && var->globaldefindex_progid[i] == prog->id)
+		if (prog->loaded && var->globaldefindex_progid[i] == prog->id && var->globaldefindex[i] >= 0)
 		{
 			// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
 			switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
