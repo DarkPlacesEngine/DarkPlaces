@@ -3100,7 +3100,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		GL_AlphaToCoverage(false);
 	Matrix4x4_Transform(&r_refdef.view.viewport.viewmatrix, rtlight->shadoworigin, viewlightorigin);
 	Matrix4x4_Concat(&lighttoview, &r_refdef.view.viewport.viewmatrix, &rtlight->matrix_lighttoworld);
-	Matrix4x4_Invert_Simple(&viewtolight, &lighttoview);
+	Matrix4x4_Invert_Full(&viewtolight, &lighttoview);
 	Matrix4x4_ToArrayFloatGL(&viewtolight, viewtolight16f);
 	switch(vid.renderpath)
 	{
@@ -5840,7 +5840,7 @@ void R_RenderView_UpdateViewVectors(void)
 	Matrix4x4_ToVectors(&r_refdef.view.matrix, r_refdef.view.forward, r_refdef.view.left, r_refdef.view.up, r_refdef.view.origin);
 	VectorNegate(r_refdef.view.left, r_refdef.view.right);
 	// make an inverted copy of the view matrix for tracking sprites
-	Matrix4x4_Invert_Simple(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
+	Matrix4x4_Invert_Full(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 }
 
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);

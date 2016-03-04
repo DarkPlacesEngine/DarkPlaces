@@ -719,11 +719,14 @@ static void VM_CL_getlight (prvm_prog_t *prog)
 //============================================================================
 //[515]: SCENE MANAGER builtins
 
+extern cvar_t v_yshearing;
 void CSQC_R_RecalcView (void)
 {
 	extern matrix4x4_t viewmodelmatrix_nobob;
 	extern matrix4x4_t viewmodelmatrix_withbob;
 	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], 1);
+	if (v_yshearing.integer)
+		Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix);
 	Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 	Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 	Matrix4x4_Concat(&viewmodelmatrix_withbob, &r_refdef.view.matrix, &cl.csqc_viewmodelmatrixfromengine);
@@ -1177,7 +1180,7 @@ static void VM_CL_project (prvm_prog_t *prog)
 
 	VM_SAFEPARMCOUNT(1, VM_CL_project);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), f);
-	Matrix4x4_Invert_Simple(&m, &r_refdef.view.matrix);
+	Matrix4x4_Invert_Full(&m, &r_refdef.view.matrix);
 	Matrix4x4_Transform(&m, f, v);
 	if(v_flipped.integer)
 		v[1] = -v[1];
