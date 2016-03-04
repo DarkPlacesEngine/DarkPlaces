@@ -549,6 +549,74 @@ void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t u
 	}
 }
 
+void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up)
+{
+	double angle, sr, tp, sy, cr, sgnp, cy;
+
+	angle = angles[YAW] * (M_PI*2 / 360);
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = ANGLEMOD(angles[PITCH]);
+	// Avoid hitting tan(M_PI/2 * (2n+1))...
+	// TODO shouldn't this be a cvar?
+	// |pitch| <= 90 degrees.
+	if (angle <= 90 && angle > 80)
+		angle = 80;
+	if (angle >= 270 && angle < 280)
+		angle = 280;
+	// |pitch| > 90 degrees.
+	if (angle > 90 && angle < 100)
+		angle = 100;
+	if (angle < 270 && angle > 260)
+		angle = 260;
+	// Flip the view when "turning over".
+	sgnp = (angle > 90) && (angle < 270) ? -1.0 : 1.0;
+	angle *= (M_PI*2 / 360);
+	tp = tan(angle);
+	if (forward)
+	{
+		forward[0] = cy*sgnp;
+		forward[1] = sy*sgnp;
+		forward[2] = -tp;
+	}
+	if (left || up)
+	{
+		if (angles[ROLL])
+		{
+			angle = angles[ROLL] * (M_PI*2 / 360);
+			sr = sin(angle);
+			cr = cos(angle);
+			if (left)
+			{
+				left[0] = cr*-sy;
+				left[1] = cr*cy;
+				left[2] = sr*sgnp;
+			}
+			if (up)
+			{
+				up[0] = -sr*-sy;
+				up[1] = -sr*cy;
+				up[2] = cr*sgnp;
+			}
+		}
+		else
+		{
+			if (left)
+			{
+				left[0] = -sy;
+				left[1] = cy;
+				left[2] = 0;
+			}
+			if (up)
+			{
+				up[0] = 0;
+				up[1] = 0;
+				up[2] = sgnp;
+			}
+		}
+	}
+}
+
 // LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
 void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch)
 {

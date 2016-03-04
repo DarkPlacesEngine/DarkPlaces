@@ -1097,7 +1097,7 @@ void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	m[14] = -2 * nearclip * farclip / (farclip - nearclip);
 
 	Matrix4x4_FromArrayFloatGL(&basematrix, cubeviewmatrix[side]);
-	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
+	Matrix4x4_Invert_Full(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
 	if (nearplane)
@@ -1125,7 +1125,7 @@ void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	m[14] = -2 * nearclip * farclip / (farclip - nearclip);
 
 	Matrix4x4_FromArrayFloatGL(&basematrix, rectviewmatrix[side]);
-	Matrix4x4_Invert_Simple(&tempmatrix, &v->cameramatrix);
+	Matrix4x4_Invert_Full(&tempmatrix, &v->cameramatrix);
 	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
 
 	switch(vid.renderpath)
