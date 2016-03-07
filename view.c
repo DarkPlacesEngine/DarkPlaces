@@ -110,7 +110,7 @@ cvar_t v_deathtiltangle = {0, "v_deathtiltangle", "80", "what roll angle to use 
 // Prophecy camera pitchangle by Alexander "motorsep" Zubov
 cvar_t chase_pitchangle = {CVAR_SAVE, "chase_pitchangle", "55", "chase cam pitch angle"};
 
-cvar_t v_yshearing = {0, "v_yshearing", "0", "be all out of gum (1 = vertical slope input, 2 = vertical pitch input)"};
+cvar_t v_yshearing = {0, "v_yshearing", "0", "be all out of gum (set this to the maximum angle to allow Y shearing for - try values like 75)"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -524,8 +524,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			r_refdef.view.matrix = *entrendermatrix;
 			Matrix4x4_AdjustOrigin(&r_refdef.view.matrix, 0, 0, clstatsviewheight);
 		}
-		if (v_yshearing.integer)
-			Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix);
+		if (v_yshearing.value > 0)
+			Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix, v_yshearing.value);
 		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 		Matrix4x4_Copy(&viewmodelmatrix_withbob, &viewmodelmatrix_nobob);
@@ -859,16 +859,16 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			viewangles[2] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
 		}
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 1);
-		if (v_yshearing.integer)
-			Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix);
+		if (v_yshearing.value > 0)
+			Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix, v_yshearing.value);
 
 		// calculate a viewmodel matrix for use in view-attached entities
 		Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 		Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 
 		Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix_withbob, gunorg[0], gunorg[1], gunorg[2], gunangles[0], gunangles[1], gunangles[2], cl_viewmodel_scale.value);
-		if (v_yshearing.integer)
-			Matrix4x4_QuakeToDuke3D(&viewmodelmatrix_withbob, &viewmodelmatrix_withbob);
+		if (v_yshearing.value > 0)
+			Matrix4x4_QuakeToDuke3D(&viewmodelmatrix_withbob, &viewmodelmatrix_withbob, v_yshearing.value);
 
 		VectorCopy(vieworg, cl.csqc_vieworiginfromengine);
 		VectorCopy(viewangles, cl.csqc_viewanglesfromengine);

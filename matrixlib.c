@@ -890,7 +890,7 @@ void Matrix4x4_CreateFromQuakeEntity(matrix4x4_t *out, double x, double y, doubl
 	}
 }
 
-void Matrix4x4_QuakeToDuke3D(const matrix4x4_t *in, matrix4x4_t *out)
+void Matrix4x4_QuakeToDuke3D(const matrix4x4_t *in, matrix4x4_t *out, double maxShearAngle)
 {
 	// Sorry - this isn't direct at all. We can't just use an alternative to
 	// Matrix4x4_CreateFromQuakeEntity as in some cases the input for
@@ -910,7 +910,7 @@ void Matrix4x4_QuakeToDuke3D(const matrix4x4_t *in, matrix4x4_t *out)
 	scaleleft = VectorNormalizeLength(left);
 	scaleup = VectorNormalizeLength(up);
 	AnglesFromVectors(angles, forward, up, false);
-	AngleVectorsDuke3DFLU(angles, forward, left, up);
+	AngleVectorsDuke3DFLU(angles, forward, left, up, maxShearAngle);
 	VectorScale(forward, scaleforward, forward);
 	VectorScale(left, scaleleft, left);
 	VectorScale(up, scaleup, up);

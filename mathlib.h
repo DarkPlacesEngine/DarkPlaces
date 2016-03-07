@@ -253,7 +253,7 @@ void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 /// LordHavoc: proper matrix version of AngleVectors
 void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
 /// divVerent: improper matrix version of AngleVectors
-void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
+void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up, double maxShearAngle);
 /// LordHavoc: builds a [3][4] matrix
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
 /// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
