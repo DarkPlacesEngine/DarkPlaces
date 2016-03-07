@@ -725,8 +725,8 @@ void CSQC_R_RecalcView (void)
 	extern matrix4x4_t viewmodelmatrix_nobob;
 	extern matrix4x4_t viewmodelmatrix_withbob;
 	Matrix4x4_CreateFromQuakeEntity(&r_refdef.view.matrix, cl.csqc_vieworigin[0], cl.csqc_vieworigin[1], cl.csqc_vieworigin[2], cl.csqc_viewangles[0], cl.csqc_viewangles[1], cl.csqc_viewangles[2], 1);
-	if (v_yshearing.integer)
-		Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix);
+	if (v_yshearing.value > 0)
+		Matrix4x4_QuakeToDuke3D(&r_refdef.view.matrix, &r_refdef.view.matrix, v_yshearing.value);
 	Matrix4x4_Copy(&viewmodelmatrix_nobob, &r_refdef.view.matrix);
 	Matrix4x4_ConcatScale(&viewmodelmatrix_nobob, cl_viewmodel_scale.value);
 	Matrix4x4_Concat(&viewmodelmatrix_withbob, &r_refdef.view.matrix, &cl.csqc_viewmodelmatrixfromengine);
