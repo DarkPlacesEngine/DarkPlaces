@@ -461,24 +461,6 @@ cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-pl
 cvar_t cl_csqc_generatemousemoveevents = {0, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
 
 extern cvar_t v_flipped;
-extern cvar_t v_yshearing;
-
-static void IN_AddToPitch(float angle)
-{
-	// In Duke3D mode, aiming up/down looks like scrolling - so let input
-	// modify the pitch slope instead of the pitch angle to compensate.
-	// This can be turned off by v_yshearing 2.
-	if (v_yshearing.integer == 1)
-	{
-		float tp = tanf(cl.viewangles[PITCH] * M_PI / 180);
-		tp += angle * M_PI / 180;
-		cl.viewangles[PITCH] = atanf(tp) * 180 / M_PI;
-	}
-	else
-	{
-		cl.viewangles[PITCH] += angle;
-	}
-}
 
 /*
 ================
@@ -505,15 +487,15 @@ static void CL_AdjustAngles (void)
 	if (in_klook.state & 1)
 	{
 		V_StopPitchDrift ();
-		IN_AddToPitch(-speed*cl_pitchspeed.value * CL_KeyState (&in_forward));
-		IN_AddToPitch(speed*cl_pitchspeed.value * CL_KeyState (&in_back));
+		cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * CL_KeyState (&in_forward);
+		cl.viewangles[PITCH] += speed*cl_pitchspeed.value * CL_KeyState (&in_back);
 	}
 
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
 
-	IN_AddToPitch(-speed*cl_pitchspeed.value * up);
-	IN_AddToPitch(-speed*cl_pitchspeed.value * down);
+	cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * up;
+	cl.viewangles[PITCH] += speed*cl_pitchspeed.value * down;
 
 	if (up || down)
 		V_StopPitchDrift ();
@@ -679,7 +661,7 @@ void CL_Input (void)
 				cl.cmd.sidemove += m_side.value * in_mouse_x * modulatedsensitivity;
 			else
 				cl.viewangles[YAW] -= m_yaw.value * in_mouse_x * modulatedsensitivity * cl.viewzoom;
-			IN_AddToPitch(m_pitch.value * in_mouse_y * modulatedsensitivity * cl.viewzoom);
+			cl.viewangles[PITCH] += m_pitch.value * in_mouse_y * modulatedsensitivity * cl.viewzoom;
 		}
 		else
 		{
@@ -793,12 +775,12 @@ static void CL_UpdatePrydonCursor(void)
 	}
 	if (cl.cmd.cursor_screen[1] < -1)
 	{
-		IN_AddToPitch(m_pitch.value * (cl.cmd.cursor_screen[1] - -1) * vid.height * sensitivity.value * cl.viewzoom);
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - -1) * vid.height * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[1] = -1;
 	}
 	if (cl.cmd.cursor_screen[1] > 1)
 	{
-		IN_AddToPitch(m_pitch.value * (cl.cmd.cursor_screen[1] - 1) * vid.height * sensitivity.value * cl.viewzoom);
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - 1) * vid.height * sensitivity.value * cl.viewzoom;
 		cl.cmd.cursor_screen[1] = 1;
 	}
 	*/
