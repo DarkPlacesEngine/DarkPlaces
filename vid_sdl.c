@@ -2465,6 +2465,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	int flags = SDL_OPENGL;
 #else
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+	int xPos = SDL_WINDOWPOS_UNDEFINED;
+	int yPos = SDL_WINDOWPOS_UNDEFINED;
 #endif
 #ifndef USE_GLES2
 	int i;
@@ -2547,8 +2549,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		}
 	}
 #else
-	int xPos = SDL_WINDOWPOS_UNDEFINED;
-	int yPos = SDL_WINDOWPOS_UNDEFINED;
 	{
 		if (mode->fullscreen) {
 			if (vid_desktopfullscreen.integer)
