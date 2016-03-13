@@ -24,10 +24,10 @@ for os in "$@"; do
       # Now install our dependencies.
       sudo i386 chroot "$chroot" apt-get install -y \
         libxpm-dev libsdl1.2-dev libxxf86vm-dev
-      wget https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
-      tar xf SDL2-2.0.3.tar.gz
+      wget https://www.libsdl.org/release/SDL2-2.0.4.tar.gz
+      tar xf SDL2-2.0.4.tar.gz
       (
-      cd SDL2-2.0.3
+      cd SDL2-2.0.4
       sudo i386 chroot "$chroot" sh -c "cd $PWD && ./configure --enable-static --disable-shared"
       sudo i386 chroot "$chroot" make -C "$PWD"
       sudo i386 chroot "$chroot" make -C "$PWD" install
@@ -36,10 +36,10 @@ for os in "$@"; do
     linux64)
       sudo apt-get install -y \
         libxpm-dev libsdl1.2-dev libxxf86vm-dev
-      wget https://www.libsdl.org/release/SDL2-2.0.3.tar.gz
-      tar xf SDL2-2.0.3.tar.gz
+      wget https://www.libsdl.org/release/SDL2-2.0.4.tar.gz
+      tar xf SDL2-2.0.4.tar.gz
       (
-      cd SDL2-2.0.3
+      cd SDL2-2.0.4
       ./configure --enable-static --disable-shared
       make
       sudo make install
