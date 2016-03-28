@@ -317,6 +317,8 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 				continue;
 
 			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;
 
@@ -533,6 +535,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 				continue;
 
 			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;
 
@@ -776,6 +780,8 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 				continue;
 
 			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;
 
