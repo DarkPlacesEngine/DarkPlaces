@@ -1726,55 +1726,78 @@ static void FS_ListGameDirs(void)
 #endif
 */
 
+static void COM_InsertFlags(const char *buf) {
+	const char *p;
+	char *q;
+	const char **new_argv;
+	int i = 0;
+	int args_left = 256;
+	new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 2));
+	if(com_argc == 0)
+		new_argv[0] = "dummy";  // Can't really happen.
+	else
+		new_argv[0] = com_argv[0];
+	++i;
+	p = buf;
+	while(COM_ParseToken_Console(&p))
+	{
+		size_t sz = strlen(com_token) + 1; // shut up clang
+		if(i > args_left)
+			break;
+		q = (char *)Mem_Alloc(fs_mempool, sz);
+		strlcpy(q, com_token, sz);
+		new_argv[i] = q;
+		++i;
+	}
+	// Now: i <= args_left + 1.
+	if (com_argc >= 1)
+	{
+		memcpy((char *)(&new_argv[i]), &com_argv[1], sizeof(*com_argv) * (com_argc - 1));
+		i += com_argc - 1;
+	}
+	// Now: i <= args_left + (com_argc || 1).
+	new_argv[i] = NULL;
+	com_argv = new_argv;
+	com_argc = i;
+}
+
 /*
 ================
 FS_Init_SelfPack
 ================
 */
+static unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer);
 void FS_Init_SelfPack (void)
 {
 	PK3_OpenLibrary ();
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
-	if(com_selffd >= 0)
+
+	// Load darkplaces.opt from the FS.
+	if (!COM_CheckParm("-noopt"))
 	{
-		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
-		if(fs_selfpack)
+		char *buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
+		if(buf)
+			COM_InsertFlags(buf);
+		Mem_Free(buf);
+	}
+
+	// Provide the SelfPack.
+	if (!COM_CheckParm("-noselfpack"))
+	{
+		if (com_selffd >= 0)
 		{
-			char *buf, *q;
-			const char *p;
-			FS_AddSelfPack();
-			buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
-			if(buf)
+			fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
+			if(fs_selfpack)
 			{
-				const char **new_argv;
-				int i = 0;
-				int args_left = 256;
-				new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 2));
-				if(com_argc == 0)
+				FS_AddSelfPack();
+				if (!COM_CheckParm("-noopt"))
 				{
-					new_argv[0] = "dummy";
-					com_argc = 1;
+					char *buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
+					if(buf)
+						COM_InsertFlags(buf);
+					Mem_Free(buf);
 				}
-				else
-				{
-					memcpy((char *)(&new_argv[0]), &com_argv[0], sizeof(*com_argv) * com_argc);
-				}
-				p = buf;
-				while(COM_ParseToken_Console(&p))
-				{
-					size_t sz = strlen(com_token) + 1; // shut up clang
-					if(i >= args_left)
-						break;
-					q = (char *)Mem_Alloc(fs_mempool, sz);
-					strlcpy(q, com_token, sz);
-					new_argv[com_argc + i] = q;
-					++i;
-				}
-				new_argv[i+com_argc] = NULL;
-				com_argv = new_argv;
-				com_argc = com_argc + i;
 			}
-			Mem_Free(buf);
 		}
 	}
 }
@@ -3228,19 +3251,17 @@ void FS_Purge (qfile_t* file)
 
 /*
 ============
-FS_LoadFile
+FS_LoadAndCloseQFile
 
-Filename are relative to the quake directory.
+Loads full content of a qfile_t and closes it.
 Always appends a 0 byte.
 ============
 */
-unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+static unsigned char *FS_LoadAndCloseQFile (qfile_t *file, const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
 {
-	qfile_t *file;
 	unsigned char *buf = NULL;
 	fs_offset_t filesize = 0;
 
-	file = FS_OpenVirtualFile(path, quiet);
 	if (file)
 	{
 		filesize = file->real_length;
@@ -3262,6 +3283,36 @@ unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, f
 	if (filesizepointer)
 		*filesizepointer = filesize;
 	return buf;
+}
+
+
+/*
+============
+FS_LoadFile
+
+Filename are relative to the quake directory.
+Always appends a 0 byte.
+============
+*/
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+{
+	qfile_t *file = FS_OpenVirtualFile(path, quiet);
+	return FS_LoadAndCloseQFile(file, path, pool, quiet, filesizepointer);
+}
+
+
+/*
+============
+FS_SysLoadFile
+
+Filename are OS paths.
+Always appends a 0 byte.
+============
+*/
+static unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+{
+	qfile_t *file = FS_SysOpen(path, "rb", false);
+	return FS_LoadAndCloseQFile(file, path, pool, quiet, filesizepointer);
 }
 
 
