@@ -180,8 +180,23 @@ CFLAGS_RELEASE=
 CFLAGS_RELEASE_PROFILE=-fbranch-probabilities
 CFLAGS_SDL=$(SDLCONFIG_CFLAGS)
 
-CFLAGS_SSE=-msse
-CFLAGS_SSE2=-msse2
+ifeq ($(DP_MACHINE),x86_64)
+	CFLAGS_SSE=-msse
+	CFLAGS_SSE2=-msse2
+else
+ifeq ($(DP_MACHINE),i686)
+	CFLAGS_SSE=-msse
+	CFLAGS_SSE2=-msse2
+else
+ifeq ($(DP_MACHINE),i386)
+	CFLAGS_SSE=-msse
+	CFLAGS_SSE2=-msse2
+else
+	CFLAGS_SSE=
+	CFLAGS_SSE2=
+endif # ifeq ($(DP_MACHINE),i386)
+endif # ifeq ($(DP_MACHINE),i686)
+endif # ifeq ($(DP_MACHINE),x86_64)
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
