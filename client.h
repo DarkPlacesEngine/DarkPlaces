@@ -834,6 +834,7 @@ typedef struct client_static_s
 	double connect_nextsendtime;
 	lhnetsocket_t *connect_mysocket;
 	lhnetaddress_t connect_address;
+	lhnetaddress_t rcon_address;
 	// protocol version of the server we're connected to
 	// (kept outside client_state_t because it's used between levels)
 	protocolversion_t protocol;
