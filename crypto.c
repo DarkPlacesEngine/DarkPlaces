@@ -7,15 +7,20 @@
 #include "libcurl.h"
 
 cvar_t crypto_developer = {CVAR_SAVE, "crypto_developer", "0", "print extra info about crypto handshake"};
+cvar_t crypto_aeslevel = {CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required)"};
+
 cvar_t crypto_servercpupercent = {CVAR_SAVE, "crypto_servercpupercent", "10", "allowed crypto CPU load in percent for server operation (0 = no limit, faster)"};
 cvar_t crypto_servercpumaxtime = {CVAR_SAVE, "crypto_servercpumaxtime", "0.01", "maximum allowed crypto CPU time per frame (0 = no limit)"};
 cvar_t crypto_servercpudebug = {CVAR_SAVE, "crypto_servercpudebug", "0", "print statistics about time usage by crypto"};
 static double crypto_servercpu_accumulator = 0;
 static double crypto_servercpu_lastrealtime = 0;
-cvar_t crypto_aeslevel = {CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required)"};
+
+extern cvar_t net_sourceaddresscheck;
+
 int crypto_keyfp_recommended_length;
 static const char *crypto_idstring = NULL;
 static char crypto_idstring_buf[512];
+
 
 #define PROTOCOL_D0_BLIND_ID FOURCC_D0PK
 #define PROTOCOL_VLEN (('v' << 0) | ('l' << 8) | ('e' << 16) | ('n' << 24))
@@ -1727,7 +1732,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 					break;
 		// if the challenge is not recognized, drop the packet
 		if (i == MAX_CHALLENGES) // challenge mismatch is silent
-			return CRYPTO_DISCARD; // pre-challenge: rather be silent
+			return Crypto_SoftServerError(data_out, len_out, "missing challenge in connect");
 
 		crypto = Crypto_ServerFindInstance(peeraddress, false);
 		if(!crypto || !crypto->authenticated)
@@ -1742,23 +1747,23 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 		id = (cnt ? atoi(cnt) : -1);
 		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
 		if(!cnt)
-			return CRYPTO_DISCARD; // pre-challenge: rather be silent
+			return Crypto_SoftServerError(data_out, len_out, "missing cnt in d0pk");
 		GetUntilNul(&data_in, &len_in);
 		if(!data_in)
-			return CRYPTO_DISCARD; // pre-challenge: rather be silent
+			return Crypto_SoftServerError(data_out, len_out, "missing appended data in d0pk");
 		if(!strcmp(cnt, "0"))
 		{
 			int i;
 			if (!(s = InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue))))
-				return CRYPTO_DISCARD; // pre-challenge: rather be silent
+				return Crypto_SoftServerError(data_out, len_out, "missing challenge in d0pk\\0");
 			// validate the challenge
 			for (i = 0;i < MAX_CHALLENGES;i++)
 				if(challenge[i].time > 0)
 					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
 						break;
 			// if the challenge is not recognized, drop the packet
-			if (i == MAX_CHALLENGES) // challenge mismatch is silent
-				return CRYPTO_DISCARD; // pre-challenge: rather be silent
+			if (i == MAX_CHALLENGES)
+				return Crypto_SoftServerError(data_out, len_out, "invalid challenge in d0pk\\0");
 
 			if (!(s = InfoString_GetValue(string + 4, "aeslevel", infostringvalue, sizeof(infostringvalue))))
 				aeslevel = 0; // not supported
@@ -2075,7 +2080,7 @@ static int Crypto_ClientError(char *data_out, size_t *len_out, const char *msg)
 static int Crypto_SoftClientError(char *data_out, size_t *len_out, const char *msg)
 {
 	*len_out = 0;
-	Con_Printf("%s\n", msg);
+	Con_DPrintf("%s\n", msg);
 	return CRYPTO_DISCARD;
 }
 
@@ -2185,6 +2190,10 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		int wantserver_aeslevel = 0;
 		qboolean wantserver_issigned = false;
 
+		// Must check the source IP here, if we want to prevent other servers' replies from falsely advancing the crypto state, preventing successful connect to the real server.
+		if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
+			return Crypto_SoftClientError(data_out, len_out, "challenge message from wrong server");
+
 		// if we have a stored host key for the server, assume serverid to already be selected!
 		// (the loop will refuse to overwrite this one then)
 		wantserver_idfp[0] = 0;
@@ -2201,7 +2210,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		GetUntilNul(&data_in, &len_in);
 		if(!data_in)
 			return (wantserverid >= 0) ? Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though a host key is present") :
-				(d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ServerError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)", NULL) :
+				(d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ClientError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)") :
 				CRYPTO_NOMATCH;
 
 		// FTEQW extension protocol
@@ -2237,7 +2246,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 		if(!vlen_blind_id_ptr)
 			return (wantserverid >= 0) ? Crypto_ClientError(data_out, len_out, "Server tried an unauthenticated connection even though authentication is required") :
-				(d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ServerError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)", NULL) :
+				(d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ClientError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)") :
 				CRYPTO_NOMATCH;
 
 		data_in = vlen_blind_id_ptr;
@@ -2302,7 +2311,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				default: // dummy, never happens, but to make gcc happy...
 				case 0:
 					if(wantserver_aeslevel >= 3)
-						return Crypto_ServerError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)", NULL);
+						return Crypto_ClientError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)");
 					CDATA->wantserver_aes = false;
 					break;
 				case 1:
@@ -2313,7 +2322,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 					break;
 				case 3:
 					if(wantserver_aeslevel <= 0)
-						return Crypto_ServerError(data_out, len_out, "This server requires encryption to be supported (crypto_aeslevel >= 1, and d0_rijndael library must be present)", NULL);
+						return Crypto_ClientError(data_out, len_out, "This server requires encryption to be supported (crypto_aeslevel >= 1, and d0_rijndael library must be present)");
 					CDATA->wantserver_aes = true;
 					break;
 			}
@@ -2373,7 +2382,6 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				data_out_p += *len_out;
 				*len_out = data_out_p - data_out;
 			}
-
 			return CRYPTO_DISCARD;
 		}
 		else
@@ -2381,7 +2389,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			if(wantserver_idfp[0]) // if we know a host key, honor its encryption setting
 			if(wantserver_aeslevel >= 3)
 				return Crypto_ClientError(data_out, len_out, "Server insists on encryption, but neither can authenticate to the other");
-			return (d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ServerError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)", NULL) :
+			return (d0_rijndael_dll && crypto_aeslevel.integer >= 3) ? Crypto_ClientError(data_out, len_out, "This server requires encryption to be not required (crypto_aeslevel <= 2)") :
 				CRYPTO_NOMATCH;
 		}
 	}
@@ -2389,6 +2397,11 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	{
 		const char *cnt;
 		int id;
+
+		// Must check the source IP here, if we want to prevent other servers' replies from falsely advancing the crypto state, preventing successful connect to the real server.
+		if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
+			return Crypto_SoftClientError(data_out, len_out, "d0pk\\ message from wrong server");
+
 		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
 		id = (cnt ? atoi(cnt) : -1);
 		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
@@ -2402,7 +2415,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 		{
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 1)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
@@ -2451,7 +2464,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 3)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
@@ -2533,7 +2546,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			if(id >= 0)
 				if(CDATA->cdata_id != id)
-					return Crypto_SoftServerError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
+					return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\id\\%d when expecting %d", id, CDATA->cdata_id));
 			if(CDATA->next_step != 5)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 

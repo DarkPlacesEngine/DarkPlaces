@@ -82,6 +82,7 @@ cvar_t net_connecttimeout = {0, "net_connecttimeout","15", "after requesting a c
 cvar_t net_connectfloodblockingtimeout = {0, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
 cvar_t net_challengefloodblockingtimeout = {0, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
 cvar_t net_getstatusfloodblockingtimeout = {0, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
+cvar_t net_sourceaddresscheck = {0, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
 cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
@@ -1904,8 +1905,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// darkplaces or quake3
 			char protocolnames[1400];
-			Protocol_Names(protocolnames, sizeof(protocolnames));
 			Con_DPrintf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+				Con_DPrintf("challenge message from wrong server %s\n", addressstring2);
+				return true;
+			}
+			Protocol_Names(protocolnames, sizeof(protocolnames));
 #ifdef CONFIG_MENU
 			M_Update_Return_Reason("Got challenge response");
 #endif
@@ -1918,6 +1923,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
 			// darkplaces or quake3
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+				Con_DPrintf("accept message from wrong server %s\n", addressstring2);
+				return true;
+			}
 #ifdef CONFIG_MENU
 			M_Update_Return_Reason("Accepted");
 #endif
@@ -1927,6 +1936,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
 		{
 			char rejectreason[128];
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+				Con_DPrintf("reject message from wrong server %s\n", addressstring2);
+				return true;
+			}
 			cls.connect_trying = false;
 			string += 7;
 			length = min(length - 7, (int)sizeof(rejectreason) - 1);
@@ -2097,6 +2110,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length > 1 && string[0] == 'c' && (string[1] == '-' || (string[1] >= '0' && string[1] <= '9')) && cls.connect_trying)
 		{
 			// challenge message
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+				Con_DPrintf("c message from wrong server %s\n", addressstring2);
+				return true;
+			}
 			Con_Printf("challenge %s received, sending QuakeWorld connect request back to %s\n", string + 1, addressstring2);
 #ifdef CONFIG_MENU
 			M_Update_Return_Reason("Got QuakeWorld challenge response");
@@ -2110,6 +2127,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		if (length >= 1 && string[0] == 'j' && cls.connect_trying)
 		{
 			// accept message
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+				Con_DPrintf("j message from wrong server %s\n", addressstring2);
+				return true;
+			}
 #ifdef CONFIG_MENU
 			M_Update_Return_Reason("QuakeWorld Accepted");
 #endif
@@ -2167,7 +2188,11 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (string[0] == 'n')
 		{
-			// qw print command
+			// qw print command, used by rcon replies too
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address) && LHNETADDRESS_Compare(peeraddress, &cls.rcon_address)) {
+				Con_DPrintf("n message from wrong server %s\n", addressstring2);
+				return true;
+			}
 			Con_Printf("QW print command from server at %s:\n%s\n", addressstring2, string + 1);
 		}
 		// we may not have liked the packet, but it was a command packet, so
@@ -2203,6 +2228,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (cls.connect_trying)
 			{
 				lhnetaddress_t clientportaddress;
+				if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
+					Con_DPrintf("CCREP_ACCEPT message from wrong server %s\n", addressstring2);
+					break;
+				}
 				clientportaddress = *peeraddress;
 				LHNETADDRESS_SetPort(&clientportaddress, MSG_ReadLong(&cl_message));
 				// extra ProQuake stuff
@@ -2229,8 +2258,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			break;
 		case CCREP_REJECT:
-			if (developer_extra.integer)
-				Con_DPrintf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
+			if (developer_extra.integer) {
+				Con_DPrintf("CCREP_REJECT message from wrong server %s\n", addressstring2);
+				break;
+			}
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
+				break;
 			cls.connect_trying = false;
 #ifdef CONFIG_MENU
 			M_Update_Return_Reason((char *)MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
@@ -2261,6 +2294,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 #endif
 			break;
 		case CCREP_RCON: // RocketGuy: ProQuake rcon support
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.rcon_address)) {
+				Con_DPrintf("CCREP_RCON message from wrong server %s\n", addressstring2);
+				break;
+			}
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREP_RCON from %s.\n", addressstring2);
 
@@ -3835,6 +3872,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
 	Cvar_RegisterVariable(&net_challengefloodblockingtimeout);
 	Cvar_RegisterVariable(&net_getstatusfloodblockingtimeout);
+	Cvar_RegisterVariable(&net_sourceaddresscheck);
 	Cvar_RegisterVariable(&cl_netlocalping);
 	Cvar_RegisterVariable(&cl_netpacketloss_send);
 	Cvar_RegisterVariable(&cl_netpacketloss_receive);
