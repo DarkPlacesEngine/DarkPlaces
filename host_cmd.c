@@ -2552,9 +2552,7 @@ static void Host_PQRcon_f (void)
 {
 	int n;
 	const char *e;
-	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
-	char peer_address[64];
 
 	if (Cmd_Argc() == 1)
 	{
@@ -2572,9 +2570,7 @@ static void Host_PQRcon_f (void)
 	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
 
 	if (cls.netcon)
-	{
-		InfoString_GetValue(cls.userinfo, "*ip", peer_address, sizeof(peer_address));
-	}
+		cls.rcon_address = cls.netcon->peeraddress;
 	else
 	{
 		if (!rcon_address.string[0])
@@ -2582,10 +2578,9 @@ static void Host_PQRcon_f (void)
 			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
 			return;
 		}
-		strlcpy(peer_address, rcon_address.string, strlen(rcon_address.string)+1);
+		LHNETADDRESS_FromString(&cls.rcon_address, rcon_address.string, sv_netport.integer);
 	}
-	LHNETADDRESS_FromString(&to, peer_address, sv_netport.integer);
-	mysocket = NetConn_ChooseClientSocketForAddress(&to);
+	mysocket = NetConn_ChooseClientSocketForAddress(&cls.rcon_address);
 	if (mysocket)
 	{
 		sizebuf_t buf;
@@ -2598,7 +2593,7 @@ static void Host_PQRcon_f (void)
 		MSG_WriteByte(&buf, 0); // terminate the (possibly partial) string
 		MSG_WriteString(&buf, Cmd_Args());
 		StoreBigLong(buf.data, NETFLAG_CTL | (buf.cursize & NETFLAG_LENGTH_MASK));
-		NetConn_Write(mysocket, buf.data, buf.cursize, &to);
+		NetConn_Write(mysocket, buf.data, buf.cursize, &cls.rcon_address);
 		SZ_Clear(&buf);
 	}
 }
@@ -2619,7 +2614,6 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 {
 	int i, n;
 	const char *e;
-	lhnetaddress_t to;
 	lhnetsocket_t *mysocket;
 	char vabuf[1024];
 
@@ -2639,7 +2633,7 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
 
 	if (cls.netcon)
-		to = cls.netcon->peeraddress;
+		cls.rcon_address = cls.netcon->peeraddress;
 	else
 	{
 		if (!rcon_address.string[0])
@@ -2647,9 +2641,9 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
 			return;
 		}
-		LHNETADDRESS_FromString(&to, rcon_address.string, sv_netport.integer);
+		LHNETADDRESS_FromString(&cls.rcon_address, rcon_address.string, sv_netport.integer);
 	}
-	mysocket = NetConn_ChooseClientSocketForAddress(&to);
+	mysocket = NetConn_ChooseClientSocketForAddress(&cls.rcon_address);
 	if (mysocket && Cmd_Args()[0])
 	{
 		// simply put together the rcon packet and send it
@@ -2665,13 +2659,13 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			}
 			for (i = 0;i < MAX_RCONS;i++)
 				if(cls.rcon_commands[i][0])
-					if (!LHNETADDRESS_Compare(&to, &cls.rcon_addresses[i]))
+					if (!LHNETADDRESS_Compare(&cls.rcon_address, &cls.rcon_addresses[i]))
 						break;
 			++cls.rcon_trying;
 			if(i >= MAX_RCONS)
-				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &to); // otherwise we'll request the challenge later
+				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &cls.rcon_address); // otherwise we'll request the challenge later
 			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
-			cls.rcon_addresses[cls.rcon_ringpos] = to;
+			cls.rcon_addresses[cls.rcon_ringpos] = cls.rcon_address;
 			cls.rcon_timeout[cls.rcon_ringpos] = realtime + rcon_secure_challengetimeout.value;
 			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
 		}
@@ -2685,12 +2679,12 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 			{
 				buf[40] = ' ';
 				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
-				NetConn_Write(mysocket, buf, 41 + (int)strlen(buf + 41), &to);
+				NetConn_Write(mysocket, buf, 41 + (int)strlen(buf + 41), &cls.rcon_address);
 			}
 		}
 		else
 		{
-			NetConn_WriteString(mysocket, va(vabuf, sizeof(vabuf), "\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &to);
+			NetConn_WriteString(mysocket, va(vabuf, sizeof(vabuf), "\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &cls.rcon_address);
 		}
 	}
 }
