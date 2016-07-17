@@ -506,6 +506,8 @@ static void CL_AdjustAngles (void)
 		cl.viewangles[YAW] -= 360;
 	if (cl.viewangles[PITCH] >= 180)
 		cl.viewangles[PITCH] -= 360;
+        // TODO: honor serverinfo minpitch and maxpitch values in PROTOCOL_QUAKEWORLD
+        // TODO: honor proquake pq_fullpitch cvar when playing on proquake server (server stuffcmd's this to 0 usually)
 	cl.viewangles[PITCH] = bound(in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
 	cl.viewangles[ROLL] = bound(-180, cl.viewangles[ROLL], 180);
 }
