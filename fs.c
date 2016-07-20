@@ -74,7 +74,6 @@
 # define dup _dup
 #endif
 
-#define USE_RWOPS 1
 #if USE_RWOPS
 # include <SDL.h>
 typedef SDL_RWops *filedesc_t;
