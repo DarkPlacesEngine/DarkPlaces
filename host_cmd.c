@@ -2615,7 +2615,6 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 	int i, n;
 	const char *e;
 	lhnetsocket_t *mysocket;
-	char vabuf[1024];
 
 	if (Cmd_Argc() == 1)
 	{
@@ -2684,7 +2683,10 @@ static void Host_Rcon_f (void) // credit: taken from QuakeWorld
 		}
 		else
 		{
-			NetConn_WriteString(mysocket, va(vabuf, sizeof(vabuf), "\377\377\377\377rcon %.*s %s", n, rcon_password.string, Cmd_Args()), &cls.rcon_address);
+			char buf[1500];
+			memcpy(buf, "\377\377\377\377", 4);
+			dpsnprintf(buf+4, sizeof(buf)-4, "rcon %.*s %s",  n, rcon_password.string, Cmd_Args());
+			NetConn_WriteString(mysocket, buf, &cls.rcon_address);
 		}
 	}
 }
