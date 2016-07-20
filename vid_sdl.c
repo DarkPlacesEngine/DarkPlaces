@@ -787,7 +787,6 @@ static void IN_Move_TouchScreen_SteelStorm(void)
 	float move[3], aim[3];
 	static qboolean oldbuttons[128];
 	static qboolean buttons[128];
-	static keydest_t oldkeydest;
 	keydest_t keydest = (key_consoleactive & KEY_CONSOLEACTIVE_USER) ? key_console : key_dest;
 	memcpy(oldbuttons, buttons, sizeof(oldbuttons));
 	memset(multitouchs, 0, sizeof(multitouchs));
@@ -810,17 +809,6 @@ static void IN_Move_TouchScreen_SteelStorm(void)
 		multitouch[MAXFINGERS-1][0] = 0;
 	}*/
 
-	if (oldkeydest != keydest)
-	{
-		switch(keydest)
-		{
-		case key_game: VID_ShowKeyboard(false);break;
-		case key_console: VID_ShowKeyboard(true);break;
-		case key_message: VID_ShowKeyboard(true);break;
-		default: break; /* qc extensions control the other cases */
-		}
-	}
-	oldkeydest = keydest;
 	// TODO: make touchscreen areas controlled by a config file or the VMs. THIS IS A MESS!
 	// TODO: can't just clear buttons[] when entering a new keydest, some keys would remain pressed
 	// SS:BR menuqc has many peculiarities, including that it can't accept more than one command per frame and pressing and releasing on the same frame
@@ -979,10 +967,26 @@ void IN_Move( void )
 {
 	static int old_x = 0, old_y = 0;
 	static int stuck = 0;
+	static keydest_t oldkeydest;
+	static qboolean oldshowkeyboard;
 	int x, y;
 	vid_joystate_t joystate;
+	keydest_t keydest = (key_consoleactive & KEY_CONSOLEACTIVE_USER) ? key_console : key_dest;
 
 	scr_numtouchscreenareas = 0;
+
+	// Only apply the new keyboard state if the input changes.
+	if (keydest != oldkeydest || !!vid_touchscreen_showkeyboard.integer != oldshowkeyboard)
+	{
+		switch(keydest)
+		{
+			case key_console: VID_ShowKeyboard(true);break;
+			case key_message: VID_ShowKeyboard(true);break;
+			default: VID_ShowKeyboard(!!vid_touchscreen_showkeyboard.integer); break;
+		}
+	}
+	oldkeydest = keydest;
+	oldshowkeyboard = !!vid_touchscreen_showkeyboard.integer;
 
 	if (vid_touchscreen.integer)
 	{
