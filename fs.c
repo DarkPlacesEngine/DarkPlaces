@@ -2085,15 +2085,18 @@ void FS_Init (void)
 		*fs_userdir = 0; // user wants roaming installation, no userdir
 	else
 	{
+#ifdef DP_FS_USERDIR
+		strlcpy(fs_userdir, DP_FS_USERDIR, sizeof(fs_userdir));
+#else
 		int dirmode;
 		int highestuserdirmode = USERDIRMODE_COUNT - 1;
 		int preferreduserdirmode = USERDIRMODE_COUNT - 1;
 		int userdirstatus[USERDIRMODE_COUNT];
-#ifdef WIN32
+# ifdef WIN32
 		// historical behavior...
 		if (!strcmp(gamedirname1, "id1"))
 			preferreduserdirmode = USERDIRMODE_NOHOME;
-#endif
+# endif
 		// check what limitations the user wants to impose
 		if (COM_CheckParm("-home")) preferreduserdirmode = USERDIRMODE_HOME;
 		if (COM_CheckParm("-mygames")) preferreduserdirmode = USERDIRMODE_MYGAMES;
@@ -2125,6 +2128,7 @@ void FS_Init (void)
 		// and finally, we picked one...
 		FS_ChooseUserDir((userdirmode_t)dirmode, fs_userdir, sizeof(fs_userdir));
 		Con_DPrintf("userdir %i is the winner\n", dirmode);
+#endif
 	}
 
 	// if userdir equal to basedir, clear it to avoid confusion later
