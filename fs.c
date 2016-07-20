@@ -74,6 +74,38 @@
 # define dup _dup
 #endif
 
+#define USE_RWOPS 1
+#if USE_RWOPS
+# include <SDL.h>
+typedef SDL_RWops *filedesc_t;
+# define FILEDESC_INVALID NULL
+# define FILEDESC_ISVALID(fd) ((fd) != NULL)
+# define FILEDESC_READ(fd,buf,count) ((fs_offset_t)SDL_RWread(fd, buf, 1, count))
+# define FILEDESC_WRITE(fd,buf,count) ((fs_offset_t)SDL_RWwrite(fd, buf, 1, count))
+# define FILEDESC_CLOSE SDL_RWclose
+# define FILEDESC_SEEK SDL_RWseek
+static filedesc_t FILEDESC_DUP(const char *filename, filedesc_t fd) {
+	filedesc_t new_fd = SDL_RWFromFile(filename, "rb");
+	if (SDL_RWseek(new_fd, SDL_RWseek(fd, 0, RW_SEEK_CUR), RW_SEEK_SET) < 0) {
+		SDL_RWclose(new_fd);
+		return NULL;
+	}
+	return new_fd;
+}
+# define unlink(name) Con_DPrintf("Sorry, no unlink support when trying to unlink %s.\n", (name))
+#else
+typedef int filedesc_t;
+# define FILEDESC_INVALID -1
+# define FILEDESC_ISVALID(fd) ((fd) != -1)
+# define FILEDESC_READ read
+# define FILEDESC_WRITE write
+# define FILEDESC_CLOSE close
+# define FILEDESC_SEEK lseek
+static filedesc_t FILEDESC_DUP(const char *filename, filedesc_t fd) {
+	return dup(fd);
+}
+#endif
+
 /** \page fs File System
 
 All of Quake's data access is through a hierchal file system, but the contents
@@ -212,7 +244,7 @@ typedef struct
 struct qfile_s
 {
 	int				flags;
-	int				handle;					///< file descriptor
+	filedesc_t			handle;					///< file descriptor
 	fs_offset_t		real_length;			///< uncompressed file size (for files opened in "read" mode)
 	fs_offset_t		position;				///< current position in the file
 	fs_offset_t		offset;					///< offset into the package (0 if external file)
@@ -286,7 +318,7 @@ typedef struct pack_s
 {
 	char filename [MAX_OSPATH];
 	char shortname [MAX_QPATH];
-	int handle;
+	filedesc_t handle;
 	int ignorecase;  ///< PK3 ignores case
 	int numfiles;
 	qboolean vpack;
@@ -532,14 +564,14 @@ PK3_GetEndOfCentralDir
 Extract the end of the central directory from a PK3 package
 ====================
 */
-static qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOfCentralDir_t *eocd)
+static qboolean PK3_GetEndOfCentralDir (const char *packfile, filedesc_t packhandle, pk3_endOfCentralDir_t *eocd)
 {
 	fs_offset_t filesize, maxsize;
 	unsigned char *buffer, *ptr;
 	int ind;
 
 	// Get the package size
-	filesize = lseek (packhandle, 0, SEEK_END);
+	filesize = FILEDESC_SEEK (packhandle, 0, SEEK_END);
 	if (filesize < ZIP_END_CDIR_SIZE)
 		return false;
 
@@ -549,8 +581,8 @@ static qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk
 	else
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
 	buffer = (unsigned char *)Mem_Alloc (tempmempool, maxsize);
-	lseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (read (packhandle, buffer, maxsize) != (fs_offset_t) maxsize)
+	FILEDESC_SEEK (packhandle, filesize - maxsize, SEEK_SET);
+	if (FILEDESC_READ (packhandle, buffer, maxsize) != (fs_offset_t) maxsize)
 	{
 		Mem_Free (buffer);
 		return false;
@@ -615,12 +647,12 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 
 	// Load the central directory in memory
 	central_dir = (unsigned char *)Mem_Alloc (tempmempool, eocd->cdir_size);
-	if (lseek (pack->handle, eocd->cdir_offset, SEEK_SET) == -1)
+	if (FILEDESC_SEEK (pack->handle, eocd->cdir_offset, SEEK_SET) == -1)
 	{
 		Mem_Free (central_dir);
 		return -1;
 	}
-	if(read (pack->handle, central_dir, eocd->cdir_size) != (fs_offset_t) eocd->cdir_size)
+	if(FILEDESC_READ (pack->handle, central_dir, eocd->cdir_size) != (fs_offset_t) eocd->cdir_size)
 	{
 		Mem_Free (central_dir);
 		return -1;
@@ -731,7 +763,7 @@ FS_LoadPackPK3
 Create a package entry associated with a PK3 file
 ====================
 */
-static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qboolean silent)
+static pack_t *FS_LoadPackPK3FromFD (const char *packfile, filedesc_t packhandle, qboolean silent)
 {
 	pk3_endOfCentralDir_t eocd;
 	pack_t *pack;
@@ -741,7 +773,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qbool
 	{
 		if(!silent)
 			Con_Printf ("%s is not a PK3 file\n", packfile);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 
@@ -749,7 +781,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qbool
 	if (eocd.disknum != 0 || eocd.cdir_disknum != 0)
 	{
 		Con_Printf ("%s is a multi-volume ZIP archive\n", packfile);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 
@@ -759,7 +791,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qbool
 	if (eocd.nbentries > MAX_FILES_IN_PACK)
 	{
 		Con_Printf ("%s contains too many files (%hu)\n", packfile, eocd.nbentries);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 #endif
@@ -776,7 +808,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qbool
 	if (real_nb_files < 0)
 	{
 		Con_Printf ("%s is not a valid PK3 file\n", packfile);
-		close(pack->handle);
+		FILEDESC_CLOSE(pack->handle);
 		Mem_Free(pack);
 		return NULL;
 	}
@@ -784,11 +816,13 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, int packhandle, qbool
 	Con_DPrintf("Added packfile %s (%i files)\n", packfile, real_nb_files);
 	return pack;
 }
+
+static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qboolean nonblocking);
 static pack_t *FS_LoadPackPK3 (const char *packfile)
 {
-	int packhandle;
-	packhandle = FS_SysOpenFD (packfile, "rb", false);
-	if (packhandle < 0)
+	filedesc_t packhandle;
+	packhandle = FS_SysOpenFiledesc (packfile, "rb", false);
+	if (!FILEDESC_ISVALID(packhandle))
 		return NULL;
 	return FS_LoadPackPK3FromFD(packfile, packhandle, false);
 }
@@ -811,12 +845,12 @@ static qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 		return true;
 
 	// Load the local file description
-	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
+	if (FILEDESC_SEEK (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
 		Con_Printf ("Can't seek in package %s\n", pack->filename);
 		return false;
 	}
-	count = read (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
+	count = FILEDESC_READ (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
 	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
 	{
 		Con_Printf ("Can't retrieve file %s in package %s\n", pfile->name, pack->filename);
@@ -976,23 +1010,23 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 {
 	dpackheader_t header;
 	int i, numpackfiles;
-	int packhandle;
+	filedesc_t packhandle;
 	pack_t *pack;
 	dpackfile_t *info;
 
-	packhandle = FS_SysOpenFD(packfile, "rb", false);
-	if (packhandle < 0)
+	packhandle = FS_SysOpenFiledesc(packfile, "rb", false);
+	if (!FILEDESC_ISVALID(packhandle))
 		return NULL;
-	if(read (packhandle, (void *)&header, sizeof(header)) != sizeof(header))
+	if(FILEDESC_READ (packhandle, (void *)&header, sizeof(header)) != sizeof(header))
 	{
 		Con_Printf ("%s is not a packfile\n", packfile);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 	if (memcmp(header.id, "PACK", 4))
 	{
 		Con_Printf ("%s is not a packfile\n", packfile);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 	header.dirofs = LittleLong (header.dirofs);
@@ -1001,7 +1035,7 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 	if (header.dirlen % sizeof(dpackfile_t))
 	{
 		Con_Printf ("%s has an invalid directory size\n", packfile);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 
@@ -1010,17 +1044,17 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 	if (numpackfiles < 0 || numpackfiles > MAX_FILES_IN_PACK)
 	{
 		Con_Printf ("%s has %i files\n", packfile, numpackfiles);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 
 	info = (dpackfile_t *)Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
-	lseek (packhandle, header.dirofs, SEEK_SET);
-	if(header.dirlen != read (packhandle, (void *)info, header.dirlen))
+	FILEDESC_SEEK (packhandle, header.dirofs, SEEK_SET);
+	if(header.dirlen != FILEDESC_READ (packhandle, (void *)info, header.dirlen))
 	{
 		Con_Printf("%s is an incomplete PAK, not loading\n", packfile);
 		Mem_Free(info);
-		close(packhandle);
+		FILEDESC_CLOSE(packhandle);
 		return NULL;
 	}
 
@@ -1063,7 +1097,7 @@ static pack_t *FS_LoadPackVirtual (const char *dirname)
 	pack->vpack = true;
 	pack->ignorecase = false;
 	strlcpy (pack->filename, dirname, sizeof(pack->filename));
-	pack->handle = -1;
+	pack->handle = FILEDESC_INVALID;
 	pack->numfiles = -1;
 	pack->files = NULL;
 	Con_DPrintf("Added packfile %s (virtual pack)\n", dirname);
@@ -1351,7 +1385,7 @@ static void FS_ClearSearchPath (void)
 			if(!search->pack->vpack)
 			{
 				// close the file
-				close(search->pack->handle);
+				FILEDESC_CLOSE(search->pack->handle);
 				// free any memory associated with it
 				if (search->pack->files)
 					Mem_Free(search->pack->files);
@@ -1766,7 +1800,6 @@ static void COM_InsertFlags(const char *buf) {
 FS_Init_SelfPack
 ================
 */
-static unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer);
 void FS_Init_SelfPack (void)
 {
 	PK3_OpenLibrary ();
@@ -1781,6 +1814,7 @@ void FS_Init_SelfPack (void)
 		Mem_Free(buf);
 	}
 
+#ifndef USE_RWOPS
 	// Provide the SelfPack.
 	if (!COM_CheckParm("-noselfpack"))
 	{
@@ -1800,6 +1834,7 @@ void FS_Init_SelfPack (void)
 			}
 		}
 	}
+#endif
 }
 
 static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsize)
@@ -1949,9 +1984,9 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	// see if we can write to this path (note: won't create path)
 #ifdef WIN32
 	// no access() here, we must try to open the file for appending
-	fd = FS_SysOpenFD(va(vabuf, sizeof(vabuf), "%s%s/config.cfg", userdir, gamedirname1), "a", false);
+	fd = FS_SysOpenFiledesc(va(vabuf, sizeof(vabuf), "%s%s/config.cfg", userdir, gamedirname1), "a", false);
 	if(fd >= 0)
-		close(fd);
+		FILEDESC_CLOSE(fd);
 #else
 	// on Unix, we don't need to ACTUALLY attempt to open the file
 	if(access(va(vabuf, sizeof(vabuf), "%s%s/", userdir, gamedirname1), W_OK | X_OK) >= 0)
@@ -2175,9 +2210,9 @@ void FS_Shutdown (void)
 		Thread_DestroyMutex(fs_mutex);
 }
 
-int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
+static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qboolean nonblocking)
 {
-	int handle = -1;
+	filedesc_t handle = FILEDESC_INVALID;
 	int mod, opt;
 	unsigned int ind;
 	qboolean dolock = false;
@@ -2199,7 +2234,7 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 			break;
 		default:
 			Con_Printf ("FS_SysOpen(%s, %s): invalid mode\n", filepath, mode);
-			return -1;
+			return FILEDESC_INVALID;
 	}
 	for (ind = 1; mode[ind] != '\0'; ind++)
 	{
@@ -2224,15 +2259,20 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 		opt |= O_NONBLOCK;
 
 	if(COM_CheckParm("-readonly") && mod != O_RDONLY)
-		return -1;
+		return FILEDESC_INVALID;
 
-#ifdef WIN32
-# if _MSC_VER >= 1400
-	_sopen_s(&handle, filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
-# else
-	handle = _sopen (filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
-# endif
+#if USE_RWOPS
+	if (dolock)
+		return FILEDESC_INVALID;
+	handle = SDL_RWFromFile(filepath, mode);
 #else
+# ifdef WIN32
+#  if _MSC_VER >= 1400
+	_sopen_s(&handle, filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+#  else
+	handle = _sopen (filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+#  endif
+# else
 	handle = open (filepath, mod | opt, 0666);
 	if(handle >= 0 && dolock)
 	{
@@ -2243,13 +2283,23 @@ int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
 		l.l_len = 0;
 		if(fcntl(handle, F_SETLK, &l) == -1)
 		{
-			close(handle);
+			FILEDESC_CLOSE(handle);
 			handle = -1;
 		}
 	}
+# endif
 #endif
 
 	return handle;
+}
+
+int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
+{
+#ifdef USE_RWOPS
+	return -1;
+#else
+	return FS_SysOpenFiledesc(filepath, mode, nonblocking);
+#endif
 }
 
 /*
@@ -2265,8 +2315,8 @@ qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblockin
 
 	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
 	file->ungetc = EOF;
-	file->handle = FS_SysOpenFD(filepath, mode, nonblocking);
-	if (file->handle < 0)
+	file->handle = FS_SysOpenFiledesc(filepath, mode, nonblocking);
+	if (!FILEDESC_ISVALID(file->handle))
 	{
 		Mem_Free (file);
 		return NULL;
@@ -2274,13 +2324,13 @@ qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblockin
 
 	file->filename = Mem_strdup(fs_mempool, filepath);
 
-	file->real_length = lseek (file->handle, 0, SEEK_END);
+	file->real_length = FILEDESC_SEEK (file->handle, 0, SEEK_END);
 
 	// For files opened in append mode, we start at the end of the file
 	if (mode[0] == 'a')
 		file->position = file->real_length;
 	else
-		lseek (file->handle, 0, SEEK_SET);
+		FILEDESC_SEEK (file->handle, 0, SEEK_SET);
 
 	return file;
 }
@@ -2296,7 +2346,7 @@ Open a packed file using its package file descriptor
 static qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 {
 	packfile_t *pfile;
-	int dup_handle;
+	filedesc_t dup_handle;
 	qfile_t* file;
 
 	pfile = &pack->files[pack_ind];
@@ -2317,17 +2367,17 @@ static qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	}
 #endif
 
-	// LordHavoc: lseek affects all duplicates of a handle so we do it before
+	// LordHavoc: FILEDESC_SEEK affects all duplicates of a handle so we do it before
 	// the dup() call to avoid having to close the dup_handle on error here
-	if (lseek (pack->handle, pfile->offset, SEEK_SET) == -1)
+	if (FILEDESC_SEEK (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
 		Con_Printf ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %08x%08x)\n",
 					pfile->name, pack->filename, (unsigned int)(pfile->offset >> 32), (unsigned int)(pfile->offset));
 		return NULL;
 	}
 
-	dup_handle = dup (pack->handle);
-	if (dup_handle < 0)
+	dup_handle = FILEDESC_DUP (pack->filename, pack->handle);
+	if (!FILEDESC_ISVALID(dup_handle))
 	{
 		Con_Printf ("FS_OpenPackedFile: can't dup package's handle (pack: %s)\n", pack->filename);
 		return NULL;
@@ -2369,7 +2419,7 @@ static qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 		if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
 		{
 			Con_Printf ("FS_OpenPackedFile: inflate init error (file: %s)\n", pfile->name);
-			close(dup_handle);
+			FILEDESC_CLOSE(dup_handle);
 			Mem_Free(file);
 			return NULL;
 		}
@@ -2732,7 +2782,7 @@ int FS_Close (qfile_t* file)
 		return 0;
 	}
 
-	if (close (file->handle))
+	if (FILEDESC_CLOSE (file->handle))
 		return EOF;
 
 	if (file->filename)
@@ -2780,7 +2830,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 	// If necessary, seek to the exact file position we're supposed to be
 	if (file->buff_ind != file->buff_len)
 	{
-		if (lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
+		if (FILEDESC_SEEK (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
 		{
 			Con_Printf("WARNING: could not seek in %s.\n", file->filename);
 		}
@@ -2796,7 +2846,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 		// figure out how much to write in one chunk
 		fs_offset_t maxchunk = 1<<30; // 1 GiB
 		int chunk = (int)min((fs_offset_t)datasize - written, maxchunk);
-		int result = (int)write (file->handle, (const unsigned char *)data + written, chunk);
+		int result = (int)FILEDESC_WRITE (file->handle, (const unsigned char *)data + written, chunk);
 		// if at least some was written, add it to our accumulator
 		if (result > 0)
 			written += result;
@@ -2804,7 +2854,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 		if (result != chunk)
 			break;
 	}
-	file->position = lseek (file->handle, 0, SEEK_CUR);
+	file->position = FILEDESC_SEEK (file->handle, 0, SEEK_CUR);
 	if (file->real_length < file->position)
 		file->real_length = file->position;
 
@@ -2877,13 +2927,13 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)buffersize)
 				count = (fs_offset_t)buffersize;
-			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			if (FILEDESC_SEEK (file->handle, file->offset + file->position, SEEK_SET) == -1)
 			{
 				// Seek failed. When reading from a pipe, and
 				// the caller never called FS_Seek, this still
 				// works fine.  So no reporting this error.
 			}
-			nb = read (file->handle, &((unsigned char*)buffer)[done], count);
+			nb = FILEDESC_READ (file->handle, &((unsigned char*)buffer)[done], count);
 			if (nb > 0)
 			{
 				done += nb;
@@ -2897,13 +2947,13 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		{
 			if (count > (fs_offset_t)sizeof (file->buff))
 				count = (fs_offset_t)sizeof (file->buff);
-			if (lseek (file->handle, file->offset + file->position, SEEK_SET) == -1)
+			if (FILEDESC_SEEK (file->handle, file->offset + file->position, SEEK_SET) == -1)
 			{
 				// Seek failed. When reading from a pipe, and
 				// the caller never called FS_Seek, this still
 				// works fine.  So no reporting this error.
 			}
-			nb = read (file->handle, file->buff, count);
+			nb = FILEDESC_READ (file->handle, file->buff, count);
 			if (nb > 0)
 			{
 				file->buff_len = nb;
@@ -2939,8 +2989,8 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			count = (fs_offset_t)(ztk->comp_length - ztk->in_position);
 			if (count > (fs_offset_t)sizeof (ztk->input))
 				count = (fs_offset_t)sizeof (ztk->input);
-			lseek (file->handle, file->offset + (fs_offset_t)ztk->in_position, SEEK_SET);
-			if (read (file->handle, ztk->input, count) != count)
+			FILEDESC_SEEK (file->handle, file->offset + (fs_offset_t)ztk->in_position, SEEK_SET);
+			if (FILEDESC_READ (file->handle, ztk->input, count) != count)
 			{
 				Con_Printf ("FS_Read: unexpected end of file\n");
 				break;
@@ -3063,7 +3113,7 @@ int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 		buff_size *= 2;
 	}
 
-	len = write (file->handle, tempbuff, len);
+	len = FILEDESC_WRITE (file->handle, tempbuff, len);
 	Mem_Free (tempbuff);
 
 	return len;
@@ -3158,7 +3208,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 	// Unpacked or uncompressed files can seek directly
 	if (! (file->flags & QFILE_FLAG_DEFLATED))
 	{
-		if (lseek (file->handle, file->offset + offset, SEEK_SET) == -1)
+		if (FILEDESC_SEEK (file->handle, file->offset + offset, SEEK_SET) == -1)
 			return -1;
 		file->position = offset;
 		return 0;
@@ -3175,7 +3225,7 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 		ztk->in_len = 0;
 		ztk->in_position = 0;
 		file->position = 0;
-		if (lseek (file->handle, file->offset, SEEK_SET) == -1)
+		if (FILEDESC_SEEK (file->handle, file->offset, SEEK_SET) == -1)
 			Con_Printf("IMPOSSIBLE: couldn't seek in already opened pk3 file.\n");
 
 		// Reset the Zlib stream
@@ -3309,7 +3359,7 @@ Filename are OS paths.
 Always appends a 0 byte.
 ============
 */
-static unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
 {
 	qfile_t *file = FS_SysOpen(path, "rb", false);
 	return FS_LoadAndCloseQFile(file, path, pool, quiet, filesizepointer);
