@@ -1880,6 +1880,10 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		}
+		else if (tx->name[0] == '{') // fence textures
+		{
+			tx->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
+		}
 		else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 		{
 			// replace the texture with black
