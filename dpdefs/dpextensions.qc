@@ -2599,3 +2599,12 @@ void coverage() = #642;  // Reports a coverage event. The engine counts for each
 float(string url, float id, string content_type, string delim, float buf, float keyid) crypto_uri_postbuf = #513;
 //description:
 //use -1 as buffer handle to justs end delim as postdata
+
+//DP_USERMOVETYPES
+//idea: divVerent
+//darkplaces implementation: Mario
+//movetype definitions:
+float MOVETYPE_USER_FIRST = 128;
+float MOVETYPE_USER_LAST = 191;
+//description:
+//user defined movetypes can be added between the start and end points, without producing unknown movetype warnings

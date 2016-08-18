@@ -2881,6 +2881,8 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 		}
 		break;
 	default:
+		if((int) PRVM_serveredictfloat(ent, movetype) >= MOVETYPE_USER_FIRST && (int) PRVM_serveredictfloat(ent, movetype) <= MOVETYPE_USER_LAST)
+			break;
 		Con_Printf ("SV_Physics: bad movetype %i\n", (int)PRVM_serveredictfloat(ent, movetype));
 		break;
 	}
@@ -2929,6 +2931,8 @@ static void SV_Physics_ClientEntity_NoThink (prvm_edict_t *ent)
 	case MOVETYPE_PHYSICS:
 		break;
 	default:
+		if((int) PRVM_serveredictfloat(ent, movetype) >= MOVETYPE_USER_FIRST && (int) PRVM_serveredictfloat(ent, movetype) <= MOVETYPE_USER_LAST)
+			break;
 		Con_Printf ("SV_Physics_ClientEntity_NoThink: bad movetype %i\n", (int)PRVM_serveredictfloat(ent, movetype));
 		break;
 	}
@@ -3117,6 +3121,8 @@ static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_RunThink (ent);
 		break;
 	default:
+		if((int) PRVM_serveredictfloat(ent, movetype) >= MOVETYPE_USER_FIRST && (int) PRVM_serveredictfloat(ent, movetype) <= MOVETYPE_USER_LAST)
+			break;
 		Con_Printf ("SV_Physics_ClientEntity: bad movetype %i\n", (int)PRVM_serveredictfloat(ent, movetype));
 		break;
 	}
