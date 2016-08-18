@@ -335,6 +335,8 @@ typedef struct client_s
 #define MOVETYPE_FAKEPUSH		13		///< tenebrae's push that doesn't push
 #define MOVETYPE_PHYSICS		32		///< indicates this object is physics controlled
 #define MOVETYPE_FLY_WORLDONLY		33		///< like MOVETYPE_FLY, but uses MOVE_WORLDONLY for all its traces; objects of this movetype better be SOLID_NOT or SOLID_TRIGGER please, or else...
+#define MOVETYPE_USER_FIRST		128		///< user defined movetypes
+#define MOVETYPE_USER_LAST		191
 
 // edict->solid values
 #define	SOLID_NOT				0		///< no interaction with other objects
