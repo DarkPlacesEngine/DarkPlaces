@@ -16,7 +16,9 @@ unsigned int palette_bgra_alpha[256];
 unsigned int palette_bgra_nocolormap[256];
 unsigned int palette_bgra_nocolormapnofullbrights[256];
 unsigned int palette_bgra_nofullbrights[256];
+unsigned int palette_bgra_nofullbrights_transparent[256];
 unsigned int palette_bgra_onlyfullbrights[256];
+unsigned int palette_bgra_onlyfullbrights_transparent[256];
 unsigned int palette_bgra_pantsaswhite[256];
 unsigned int palette_bgra_shirtaswhite[256];
 unsigned int palette_bgra_transparent[256];
@@ -133,11 +135,17 @@ static void Palette_SetupSpecialPalettes(void)
 		palette_bgra_nofullbrights[i] = palette_bgra_complete[i];
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_bgra_nofullbrights[i] = palette_bgra_complete[0];
+	for (i = 0;i < 256;i++)
+		palette_bgra_nofullbrights_transparent[i] = palette_bgra_nofullbrights[i];
+	palette_bgra_nofullbrights_transparent[transparentcolor] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_bgra_onlyfullbrights[i] = 0;
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_bgra_onlyfullbrights[i] = palette_bgra_complete[i];
+	for (i = 0;i < 256;i++)
+		palette_bgra_onlyfullbrights_transparent[i] = palette_bgra_onlyfullbrights[i];
+	palette_bgra_onlyfullbrights_transparent[transparentcolor] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_bgra_nocolormapnofullbrights[i] = palette_bgra_complete[i];
