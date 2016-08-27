@@ -350,6 +350,8 @@ cvar_t r_shadow_bouncegrid_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_upd
 cvar_t r_shadow_bouncegrid_x = {CVAR_SAVE, "r_shadow_bouncegrid_x", "64", "maximum texture size of bouncegrid on X axis"};
 cvar_t r_shadow_bouncegrid_y = {CVAR_SAVE, "r_shadow_bouncegrid_y", "64", "maximum texture size of bouncegrid on Y axis"};
 cvar_t r_shadow_bouncegrid_z = {CVAR_SAVE, "r_shadow_bouncegrid_z", "32", "maximum texture size of bouncegrid on Z axis"};
+cvar_t r_shadow_bouncegrid_culllightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_culllightpaths", "1", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
+cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sortlightpaths", "1", "sort light paths before accumulating them into the bouncegrid texture, this reduces cpu cache misses"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "0", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility) - bad performance (synchronous rendering) - worse on multi-gpu!"};
@@ -531,6 +533,7 @@ static void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
+	r_shadow_bouncegrid_state.maxsplatpaths = 16384;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -782,6 +785,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_x);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_y);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_z);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_culllightpaths);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_sortlightpaths);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
@@ -2321,6 +2326,105 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
 }
 
+// these are temporary data per-frame, sorted and performed in a more
+// cache-friendly order than the original photons
+typedef struct r_shadow_bouncegrid_splatpath_s
+{
+	vec3_t point;
+	vec3_t step;
+	vec3_t splatcolor;
+	vec3_t splatdir;
+	vec_t splatintensity;
+	int remainingsplats;
+}
+r_shadow_bouncegrid_splatpath_t;
+
+static void R_shadow_BounceGrid_AddSplatPath(vec3_t originalstart, vec3_t originalend, vec3_t color)
+{
+	int bestaxis;
+	int numsplats;
+	float len;
+	float ilen;
+	vec3_t start;
+	vec3_t end;
+	vec3_t diff;
+	vec3_t originaldir;
+	r_shadow_bouncegrid_splatpath_t *path;
+
+	// cull paths that fail R_CullBox in dynamic mode
+	if (!r_shadow_bouncegrid_state.settings.staticmode
+	 && r_shadow_bouncegrid_culllightpaths.integer)
+	{
+		vec3_t cullmins, cullmaxs;
+		cullmins[0] = min(originalstart[0], originalend[0]) - r_shadow_bouncegrid_state.settings.spacing[0];
+		cullmins[1] = min(originalstart[1], originalend[1]) - r_shadow_bouncegrid_state.settings.spacing[1];
+		cullmins[2] = min(originalstart[2], originalend[2]) - r_shadow_bouncegrid_state.settings.spacing[2];
+		cullmaxs[0] = max(originalstart[0], originalend[0]) + r_shadow_bouncegrid_state.settings.spacing[0];
+		cullmaxs[1] = max(originalstart[1], originalend[1]) + r_shadow_bouncegrid_state.settings.spacing[1];
+		cullmaxs[2] = max(originalstart[2], originalend[2]) + r_shadow_bouncegrid_state.settings.spacing[2];
+		if (R_CullBox(cullmins, cullmaxs))
+			return;
+	}
+
+	// if the light path is going upward, reverse it - we always draw down.
+	if (originalend[2] < originalstart[2])
+	{
+		VectorCopy(originalend, start);
+		VectorCopy(originalstart, end);
+	}
+	else
+	{
+		VectorCopy(originalstart, start);
+		VectorCopy(originalend, end);
+	}
+
+	// transform to texture pixels
+	start[0] = (start[0] - r_shadow_bouncegrid_state.mins[0]) * r_shadow_bouncegrid_state.ispacing[0];
+	start[1] = (start[1] - r_shadow_bouncegrid_state.mins[1]) * r_shadow_bouncegrid_state.ispacing[1];
+	start[2] = (start[2] - r_shadow_bouncegrid_state.mins[2]) * r_shadow_bouncegrid_state.ispacing[2];
+	end[0] = (end[0] - r_shadow_bouncegrid_state.mins[0]) * r_shadow_bouncegrid_state.ispacing[0];
+	end[1] = (end[1] - r_shadow_bouncegrid_state.mins[1]) * r_shadow_bouncegrid_state.ispacing[1];
+	end[2] = (end[2] - r_shadow_bouncegrid_state.mins[2]) * r_shadow_bouncegrid_state.ispacing[2];
+
+	// check if we need to grow the splatpaths array
+	if (r_shadow_bouncegrid_state.maxsplatpaths <= r_shadow_bouncegrid_state.numsplatpaths)
+	{
+		// double the limit, this will persist from frame to frame so we don't
+		// make the same mistake each time
+		r_shadow_bouncegrid_splatpath_t *newpaths;
+		r_shadow_bouncegrid_state.maxsplatpaths *= 2;
+		newpaths = (r_shadow_bouncegrid_splatpath_t *)R_FrameData_Alloc(sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
+		if (r_shadow_bouncegrid_state.splatpaths)
+			memcpy(newpaths, r_shadow_bouncegrid_state.splatpaths, r_shadow_bouncegrid_state.numsplatpaths * sizeof(r_shadow_bouncegrid_splatpath_t));
+		r_shadow_bouncegrid_state.splatpaths = newpaths;
+	}
+
+	// divide a series of splats along the length using the maximum axis
+	VectorSubtract(end, start, diff);
+	// pick the best axis to trace along
+	bestaxis = 0;
+	if (diff[1]*diff[1] > diff[bestaxis]*diff[bestaxis])
+		bestaxis = 1;
+	if (diff[2]*diff[2] > diff[bestaxis]*diff[bestaxis])
+		bestaxis = 2;
+	len = fabs(diff[bestaxis]);
+	ilen = 1.0f / len;
+	numsplats = (int)(floor(len + 0.5f));
+	// sanity limits
+	numsplats = bound(0, numsplats, 1024);
+
+	VectorSubtract(originalstart, originalend, originaldir);
+	VectorNormalize(originaldir);
+
+	path = r_shadow_bouncegrid_state.splatpaths + r_shadow_bouncegrid_state.numsplatpaths++;
+	VectorCopy(start, path->point);
+	VectorScale(diff, ilen, path->step);
+	VectorCopy(color, path->splatcolor);
+	VectorCopy(originaldir, path->splatdir);
+	path->splatintensity = VectorLength(color);
+	path->remainingsplats = numsplats;
+}
+
 static qboolean R_Shadow_BounceGrid_CheckEnable(int flag)
 {
 	qboolean enable = r_shadow_bouncegrid_state.capable && r_shadow_bouncegrid.integer != 0 && r_refdef.scene.worldmodel;
@@ -2632,6 +2736,168 @@ static void R_Shadow_BounceGrid_ClearPixels(void)
 	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 }
 
+static int R_Shadow_BounceGrid_SplatPathCompare(const void *pa, const void *pb)
+{
+	r_shadow_bouncegrid_splatpath_t *a = (r_shadow_bouncegrid_splatpath_t *)pa;
+	r_shadow_bouncegrid_splatpath_t *b = (r_shadow_bouncegrid_splatpath_t *)pb;
+	// we only really care about sorting by Z
+	if (a->point[2] < b->point[2])
+		return -1;
+	if (a->point[2] > b->point[2])
+		return 1;
+	return 0;
+}
+
+static void R_Shadow_BounceGrid_PerformSplats(void)
+{
+	r_shadow_bouncegrid_splatpath_t *splatpaths = r_shadow_bouncegrid_state.splatpaths;
+	r_shadow_bouncegrid_splatpath_t *splatpath;
+	unsigned char *pixel;
+	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
+	float *highpixel;
+	float *highpixels = r_shadow_bouncegrid_state.highpixels;
+	int numsplatpaths = r_shadow_bouncegrid_state.numsplatpaths;
+	int splatindex;
+	vec3_t steppos;
+	vec3_t stepdelta;
+	vec3_t dir;
+	float texlerp[2][3];
+	float splatcolor[32];
+	float pixelweight[8];
+	float w;
+	int resolution[3];
+	int tex[3];
+	int pixelindex[8];
+	int corner;
+	int pixelsperband = r_shadow_bouncegrid_state.pixelsperband;
+	int pixelband;
+	int pixelbands = r_shadow_bouncegrid_state.pixelbands;
+	int numsteps;
+	int step;
+	
+	// hush warnings about uninitialized data - pixelbands doesn't change but...
+	memset(splatcolor, 0, sizeof(splatcolor));
+
+	// we use this a lot, so get a local copy
+	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
+
+	// sort the splats before we execute them, to reduce cache misses
+	if (r_shadow_bouncegrid_sortlightpaths.integer)
+		qsort(splatpaths, numsplatpaths, sizeof(*splatpaths), R_Shadow_BounceGrid_SplatPathCompare);
+	
+	splatpath = splatpaths;
+	for (splatindex = 0;splatindex < numsplatpaths;splatindex++, splatpath++)
+	{
+		
+		// calculate second order spherical harmonics values (average, slopeX, slopeY, slopeZ)
+		// accumulate average shotcolor
+		VectorCopy(splatpath->splatdir, dir);
+		splatcolor[ 0] = splatpath->splatcolor[0];
+		splatcolor[ 1] = splatpath->splatcolor[1];
+		splatcolor[ 2] = splatpath->splatcolor[2];
+		splatcolor[ 3] = 0.0f;
+		if (pixelbands > 1)
+		{
+			// store bentnormal in case the shader has a use for it,
+			// bentnormal is an intensity-weighted average of the directions,
+			// and will be normalized on conversion to texture pixels.
+			splatcolor[ 4] = dir[0] * splatpath->splatintensity;
+			splatcolor[ 5] = dir[1] * splatpath->splatintensity;
+			splatcolor[ 6] = dir[2] * splatpath->splatintensity;
+			splatcolor[ 7] = splatpath->splatintensity;
+			// for each color component (R, G, B) calculate the amount that a
+			// direction contributes
+			splatcolor[ 8] = splatcolor[0] * max(0.0f, dir[0]);
+			splatcolor[ 9] = splatcolor[0] * max(0.0f, dir[1]);
+			splatcolor[10] = splatcolor[0] * max(0.0f, dir[2]);
+			splatcolor[11] = 0.0f;
+			splatcolor[12] = splatcolor[1] * max(0.0f, dir[0]);
+			splatcolor[13] = splatcolor[1] * max(0.0f, dir[1]);
+			splatcolor[14] = splatcolor[1] * max(0.0f, dir[2]);
+			splatcolor[15] = 0.0f;
+			splatcolor[16] = splatcolor[2] * max(0.0f, dir[0]);
+			splatcolor[17] = splatcolor[2] * max(0.0f, dir[1]);
+			splatcolor[18] = splatcolor[2] * max(0.0f, dir[2]);
+			splatcolor[19] = 0.0f;
+			// and do the same for negative directions
+			splatcolor[20] = splatcolor[0] * max(0.0f, -dir[0]);
+			splatcolor[21] = splatcolor[0] * max(0.0f, -dir[1]);
+			splatcolor[22] = splatcolor[0] * max(0.0f, -dir[2]);
+			splatcolor[23] = 0.0f;
+			splatcolor[24] = splatcolor[1] * max(0.0f, -dir[0]);
+			splatcolor[25] = splatcolor[1] * max(0.0f, -dir[1]);
+			splatcolor[26] = splatcolor[1] * max(0.0f, -dir[2]);
+			splatcolor[27] = 0.0f;
+			splatcolor[28] = splatcolor[2] * max(0.0f, -dir[0]);
+			splatcolor[29] = splatcolor[2] * max(0.0f, -dir[1]);
+			splatcolor[30] = splatcolor[2] * max(0.0f, -dir[2]);
+			splatcolor[31] = 0.0f;
+		}
+		// calculate the number of steps we need to traverse this distance
+		VectorCopy(splatpath->point, steppos);
+		VectorCopy(splatpath->step, stepdelta);
+		numsteps = splatpath->remainingsplats;
+		for (step = 0;step < numsteps;step++)
+		{
+			r_refdef.stats[r_stat_bouncegrid_splats]++;
+			// figure out which texture pixels this is in
+			texlerp[1][0] = steppos[0] - 0.5f;
+			texlerp[1][1] = steppos[1] - 0.5f;
+			texlerp[1][2] = steppos[2] - 0.5f;
+			tex[0] = (int)floor(texlerp[1][0]);
+			tex[1] = (int)floor(texlerp[1][1]);
+			tex[2] = (int)floor(texlerp[1][2]);
+			if (tex[0] >= 1
+			 && tex[1] >= 1
+			 && tex[2] >= 1
+			 && tex[0] < resolution[0] - 2
+			 && tex[1] < resolution[1] - 2
+			 && tex[2] < resolution[2] - 2)
+			{
+				// it is within bounds...  do the real work now
+				// calculate the lerp factors
+				texlerp[1][0] -= tex[0];
+				texlerp[1][1] -= tex[1];
+				texlerp[1][2] -= tex[2];
+				texlerp[0][0] = 1.0f - texlerp[1][0];
+				texlerp[0][1] = 1.0f - texlerp[1][1];
+				texlerp[0][2] = 1.0f - texlerp[1][2];
+				// calculate individual pixel indexes and weights
+				pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[0] = (texlerp[0][0]*texlerp[0][1]*texlerp[0][2]);
+				pixelindex[1] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[1] = (texlerp[1][0]*texlerp[0][1]*texlerp[0][2]);
+				pixelindex[2] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[2] = (texlerp[0][0]*texlerp[1][1]*texlerp[0][2]);
+				pixelindex[3] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[3] = (texlerp[1][0]*texlerp[1][1]*texlerp[0][2]);
+				pixelindex[4] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[4] = (texlerp[0][0]*texlerp[0][1]*texlerp[1][2]);
+				pixelindex[5] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[5] = (texlerp[1][0]*texlerp[0][1]*texlerp[1][2]);
+				pixelindex[6] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[6] = (texlerp[0][0]*texlerp[1][1]*texlerp[1][2]);
+				pixelindex[7] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[7] = (texlerp[1][0]*texlerp[1][1]*texlerp[1][2]);
+				// update the 8 pixels...
+				for (pixelband = 0;pixelband < pixelbands;pixelband++)
+				{
+					for (corner = 0;corner < 8;corner++)
+					{
+						// calculate address for pixel
+						w = pixelweight[corner];
+						pixel = pixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
+						highpixel = highpixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
+						// add to the high precision pixel color
+						highpixel[0] += (splatcolor[pixelband*4+0]*w);
+						highpixel[1] += (splatcolor[pixelband*4+1]*w);
+						highpixel[2] += (splatcolor[pixelband*4+2]*w);
+						highpixel[3] += (splatcolor[pixelband*4+3]*w);
+						// flag the low precision pixel as needing to be updated
+						pixel[3] = 255;
+						// advance to next band of coefficients
+						//pixel += pixelsperband*4;
+						//highpixel += pixelsperband*4;
+					}
+				}
+			}
+			VectorAdd(steppos, stepdelta, steppos);
+		}
+	}
+}
+
 static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 {
 	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
@@ -2712,15 +2978,9 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	int maxbounce;
 	int shootparticles;
 	int shotparticles;
-	int resolution[3];
-	int tex[3];
 	trace_t cliptrace;
 	//trace_t cliptrace2;
 	//trace_t cliptrace3;
-	unsigned char *pixel;
-	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
-	float *highpixel;
-	float *highpixels = r_shadow_bouncegrid_state.highpixels;
 	unsigned int lightindex;
 	unsigned int seed = (unsigned int)(realtime * 1000.0f);
 	vec3_t shotcolor;
@@ -2729,23 +2989,13 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	vec3_t clipend;
 	vec3_t clipstart;
 	vec3_t clipdiff;
-	vec3_t steppos;
-	vec3_t stepdelta;
 	vec_t radius;
 	vec_t s;
-	float texlerp[2][3];
-	float splatcolor[32];
-	float pixelweight[8];
-	float w;
-	int pixelindex[8];
-	int corner;
-	int pixelsperband = r_shadow_bouncegrid_state.pixelsperband;
-	int pixelband;
-	int pixelbands = r_shadow_bouncegrid_state.pixelbands;
-	int numsteps;
-	int step;
 	rtlight_t *rtlight;
-	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
+
+	// we'll need somewhere to store these
+	r_shadow_bouncegrid_state.numsplatpaths = 0;
+	r_shadow_bouncegrid_state.splatpaths = (r_shadow_bouncegrid_splatpath_t *)R_FrameData_Alloc(sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
 
 	// figure out what we want to interact with
 	if (settings.hitmodels)
@@ -2753,8 +3003,6 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	else
 		hitsupercontentsmask = SUPERCONTENTS_SOLID;// | SUPERCONTENTS_LIQUIDSMASK;
 	maxbounce = settings.maxbounce;
-	// clear variables that produce warnings otherwise
-	memset(splatcolor, 0, sizeof(splatcolor));
 
 	for (lightindex = 0;lightindex < range2;lightindex++)
 	{
@@ -2807,108 +3055,9 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 				}
 				if (bouncecount > 0 || settings.includedirectlighting)
 				{
-					// calculate second order spherical harmonics values (average, slopeX, slopeY, slopeZ)
-					// accumulate average shotcolor
-					w = VectorLength(shotcolor);
-					splatcolor[ 0] = shotcolor[0];
-					splatcolor[ 1] = shotcolor[1];
-					splatcolor[ 2] = shotcolor[2];
-					splatcolor[ 3] = 0.0f;
-					if (pixelbands > 1)
-					{
-						VectorSubtract(clipstart, cliptrace.endpos, clipdiff);
-						VectorNormalize(clipdiff);
-						// store bentnormal in case the shader has a use for it
-						splatcolor[ 4] = clipdiff[0] * w;
-						splatcolor[ 5] = clipdiff[1] * w;
-						splatcolor[ 6] = clipdiff[2] * w;
-						splatcolor[ 7] = w;
-						// accumulate directional contributions (+X, +Y, +Z, -X, -Y, -Z)
-						splatcolor[ 8] = shotcolor[0] * max(0.0f, clipdiff[0]);
-						splatcolor[ 9] = shotcolor[0] * max(0.0f, clipdiff[1]);
-						splatcolor[10] = shotcolor[0] * max(0.0f, clipdiff[2]);
-						splatcolor[11] = 0.0f;
-						splatcolor[12] = shotcolor[1] * max(0.0f, clipdiff[0]);
-						splatcolor[13] = shotcolor[1] * max(0.0f, clipdiff[1]);
-						splatcolor[14] = shotcolor[1] * max(0.0f, clipdiff[2]);
-						splatcolor[15] = 0.0f;
-						splatcolor[16] = shotcolor[2] * max(0.0f, clipdiff[0]);
-						splatcolor[17] = shotcolor[2] * max(0.0f, clipdiff[1]);
-						splatcolor[18] = shotcolor[2] * max(0.0f, clipdiff[2]);
-						splatcolor[19] = 0.0f;
-						splatcolor[20] = shotcolor[0] * max(0.0f, -clipdiff[0]);
-						splatcolor[21] = shotcolor[0] * max(0.0f, -clipdiff[1]);
-						splatcolor[22] = shotcolor[0] * max(0.0f, -clipdiff[2]);
-						splatcolor[23] = 0.0f;
-						splatcolor[24] = shotcolor[1] * max(0.0f, -clipdiff[0]);
-						splatcolor[25] = shotcolor[1] * max(0.0f, -clipdiff[1]);
-						splatcolor[26] = shotcolor[1] * max(0.0f, -clipdiff[2]);
-						splatcolor[27] = 0.0f;
-						splatcolor[28] = shotcolor[2] * max(0.0f, -clipdiff[0]);
-						splatcolor[29] = shotcolor[2] * max(0.0f, -clipdiff[1]);
-						splatcolor[30] = shotcolor[2] * max(0.0f, -clipdiff[2]);
-						splatcolor[31] = 0.0f;
-					}
-					// calculate the number of steps we need to traverse this distance
-					VectorSubtract(cliptrace.endpos, clipstart, stepdelta);
-					numsteps = (int)(VectorLength(stepdelta) * r_shadow_bouncegrid_state.ispacing[0]);
-					numsteps = bound(1, numsteps, 1024);
-					w = 1.0f / numsteps;
-					VectorScale(stepdelta, w, stepdelta);
-					VectorMA(clipstart, 0.5f, stepdelta, steppos);
-					for (step = 0;step < numsteps;step++)
-					{
-						r_refdef.stats[r_stat_bouncegrid_splats]++;
-						// figure out which texture pixel this is in
-						texlerp[1][0] = ((steppos[0] - r_shadow_bouncegrid_state.mins[0]) * r_shadow_bouncegrid_state.ispacing[0]) - 0.5f;
-						texlerp[1][1] = ((steppos[1] - r_shadow_bouncegrid_state.mins[1]) * r_shadow_bouncegrid_state.ispacing[1]) - 0.5f;
-						texlerp[1][2] = ((steppos[2] - r_shadow_bouncegrid_state.mins[2]) * r_shadow_bouncegrid_state.ispacing[2]) - 0.5f;
-						tex[0] = (int)floor(texlerp[1][0]);
-						tex[1] = (int)floor(texlerp[1][1]);
-						tex[2] = (int)floor(texlerp[1][2]);
-						if (tex[0] >= 1 && tex[1] >= 1 && tex[2] >= 1 && tex[0] < resolution[0] - 2 && tex[1] < resolution[1] - 2 && tex[2] < resolution[2] - 2)
-						{
-							// it is within bounds...  do the real work now
-							// calculate the lerp factors
-							texlerp[1][0] -= tex[0];
-							texlerp[1][1] -= tex[1];
-							texlerp[1][2] -= tex[2];
-							texlerp[0][0] = 1.0f - texlerp[1][0];
-							texlerp[0][1] = 1.0f - texlerp[1][1];
-							texlerp[0][2] = 1.0f - texlerp[1][2];
-							// calculate individual pixel indexes and weights
-							pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[0] = (texlerp[0][0]*texlerp[0][1]*texlerp[0][2]);
-							pixelindex[1] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[1] = (texlerp[1][0]*texlerp[0][1]*texlerp[0][2]);
-							pixelindex[2] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[2] = (texlerp[0][0]*texlerp[1][1]*texlerp[0][2]);
-							pixelindex[3] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[3] = (texlerp[1][0]*texlerp[1][1]*texlerp[0][2]);
-							pixelindex[4] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[4] = (texlerp[0][0]*texlerp[0][1]*texlerp[1][2]);
-							pixelindex[5] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[5] = (texlerp[1][0]*texlerp[0][1]*texlerp[1][2]);
-							pixelindex[6] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[6] = (texlerp[0][0]*texlerp[1][1]*texlerp[1][2]);
-							pixelindex[7] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[7] = (texlerp[1][0]*texlerp[1][1]*texlerp[1][2]);
-							// update the 8 pixels...
-							for (pixelband = 0;pixelband < pixelbands;pixelband++)
-							{
-								for (corner = 0;corner < 8;corner++)
-								{
-									// calculate address for pixel
-									w = pixelweight[corner];
-									pixel = pixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
-									highpixel = highpixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
-									// add to the high precision pixel color
-									highpixel[0] += (splatcolor[pixelband*4+0]*w);
-									highpixel[1] += (splatcolor[pixelband*4+1]*w);
-									highpixel[2] += (splatcolor[pixelband*4+2]*w);
-									highpixel[3] += (splatcolor[pixelband*4+3]*w);
-									// flag the low precision pixel as needing to be updated
-									pixel[3] = 255;
-									// advance to next band of coefficients
-									//pixel += pixelsperband*4;
-									//highpixel += pixelsperband*4;
-								}
-							}
-						}
-						VectorAdd(steppos, stepdelta, steppos);
-					}
+					vec3_t hitpos;
+					VectorCopy(cliptrace.endpos, hitpos);
+					R_shadow_BounceGrid_AddSplatPath(clipstart, hitpos, shotcolor);
 				}
 				if (cliptrace.fraction >= 1.0f)
 					break;
@@ -3017,13 +3166,16 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	// calculate weighting factors for distributing photons among the lights
 	R_Shadow_BounceGrid_AssignPhotons(&settings, range, range1, range2, flag, &photonscaling);
 
+	// trace the photons from lights and accumulate illumination
+	R_Shadow_BounceGrid_TracePhotons(settings, range, range1, range2, photonscaling, flag);
+
 	// clear the pixels[] and highpixels[] arrays, it is important that we
 	// clear pixels[] now because we do tricks with marking pixels as needing
 	// conversion, even though the source of truth data is in highpixels[]
 	R_Shadow_BounceGrid_ClearPixels();
 
-	// trace the photons from lights and accumulate illumination
-	R_Shadow_BounceGrid_TracePhotons(settings, range, range1, range2, photonscaling, flag);
+	// sort and accumulate the light splatting in the texture
+	R_Shadow_BounceGrid_PerformSplats();
 
 	// convert the pixels that were marked and upload the texture
 	R_Shadow_BounceGrid_ConvertPixelsAndUpload();
