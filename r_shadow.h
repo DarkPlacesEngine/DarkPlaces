@@ -51,7 +51,7 @@ typedef struct r_shadow_bouncegrid_settings_s
 	float particlebounceintensity;
 	float particleintensity;
 	int maxphotons;
-	float intensityperphoton;
+	float energyperphoton;
 	float spacing[3];
 	int stablerandom;
 }

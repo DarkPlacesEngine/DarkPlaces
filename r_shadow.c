@@ -326,32 +326,34 @@ cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to 
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
 cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
+cvar_t r_shadow_bouncegrid_blur = {CVAR_SAVE, "r_shadow_bouncegrid_blur", "1", "apply a 1-radius blur on bouncegrid to denoise it and deal with boundary issues with surfaces"};
 cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
-cvar_t r_shadow_bouncegrid_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_directionalshading", "0", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
-cvar_t r_shadow_bouncegrid_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dlightparticlemultiplier", "0", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
-cvar_t r_shadow_bouncegrid_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
+cvar_t r_shadow_bouncegrid_dynamic_culllightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_culllightpaths", "1", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
+cvar_t r_shadow_bouncegrid_dynamic_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_dlightparticlemultiplier", "1", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
+cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "0", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
+cvar_t r_shadow_bouncegrid_dynamic_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
+cvar_t r_shadow_bouncegrid_dynamic_energyperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_energyperphoton", "10000", "amount of light that one photon should represent"};
+cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "4", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "2", "maximum number of bounces for a particle (minimum is 0)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by energyperphoton"};
+cvar_t r_shadow_bouncegrid_dynamic_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_spacing", "64", "unit size of bouncegrid pixel"};
+cvar_t r_shadow_bouncegrid_dynamic_stablerandom = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_stablerandom", "1", "make particle distribution consistent from frame to frame"};
+cvar_t r_shadow_bouncegrid_dynamic_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
 cvar_t r_shadow_bouncegrid_includedirectlighting = {CVAR_SAVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
 cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_lightradiusscale", "4", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_maxbounce", "2", "maximum number of bounces for a particle (minimum is 0)"};
 cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
 cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "1", "brightness of particles contributing to bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by intensityperphoton"};
-cvar_t r_shadow_bouncegrid_intensityperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_intensityperphoton", "10000", "amount of light that one photon should represent"};
-cvar_t r_shadow_bouncegrid_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_spacing", "64", "unit size of bouncegrid pixel"};
-cvar_t r_shadow_bouncegrid_stablerandom = {CVAR_SAVE, "r_shadow_bouncegrid_stablerandom", "1", "make particle distribution consistent from frame to frame"};
+cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sortlightpaths", "1", "sort light paths before accumulating them into the bouncegrid texture, this reduces cpu cache misses"};
 cvar_t r_shadow_bouncegrid_static = {CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
 cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
+cvar_t r_shadow_bouncegrid_static_energyperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_static_energyperphoton", "1000", "amount of light that one photon should represent in static mode"};
 cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "10", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxphotons", "250000", "upper bound on photons in static mode"};
-cvar_t r_shadow_bouncegrid_static_intensityperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_static_intensityperphoton", "1000", "amount of light that one photon should represent in static mode"};
-cvar_t r_shadow_bouncegrid_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
+cvar_t r_shadow_bouncegrid_static_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_static_spacing", "32", "unit size of bouncegrid pixel when in static mode"};
 cvar_t r_shadow_bouncegrid_x = {CVAR_SAVE, "r_shadow_bouncegrid_x", "64", "maximum texture size of bouncegrid on X axis"};
 cvar_t r_shadow_bouncegrid_y = {CVAR_SAVE, "r_shadow_bouncegrid_y", "64", "maximum texture size of bouncegrid on Y axis"};
 cvar_t r_shadow_bouncegrid_z = {CVAR_SAVE, "r_shadow_bouncegrid_z", "32", "maximum texture size of bouncegrid on Z axis"};
-cvar_t r_shadow_bouncegrid_culllightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_culllightpaths", "1", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
-cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sortlightpaths", "1", "sort light paths before accumulating them into the bouncegrid texture, this reduces cpu cache misses"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "0", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility) - bad performance (synchronous rendering) - worse on multi-gpu!"};
@@ -761,32 +763,34 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_blur);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_bounceanglediffuse);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_directionalshading);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_dlightparticlemultiplier);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_hitmodels);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_culllightpaths);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_directionalshading);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_dlightparticlemultiplier);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_hitmodels);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_energyperphoton);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_lightradiusscale);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_maxbounce);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_maxphotons);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_spacing);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_stablerandom);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_updateinterval);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_includedirectlighting);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensity);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_lightradiusscale);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_maxbounce);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_maxphotons);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensityperphoton);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_spacing);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_stablerandom);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_sortlightpaths);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_spacing);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_directionalshading);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_lightradiusscale);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_maxbounce);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_maxphotons);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_intensityperphoton);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_updateinterval);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_energyperphoton);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_x);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_y);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_z);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_culllightpaths);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_sortlightpaths);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
@@ -2353,7 +2357,7 @@ static void R_shadow_BounceGrid_AddSplatPath(vec3_t originalstart, vec3_t origin
 
 	// cull paths that fail R_CullBox in dynamic mode
 	if (!r_shadow_bouncegrid_state.settings.staticmode
-	 && r_shadow_bouncegrid_culllightpaths.integer)
+	 && r_shadow_bouncegrid_dynamic_culllightpaths.integer)
 	{
 		vec3_t cullmins, cullmaxs;
 		cullmins[0] = min(originalstart[0], originalend[0]) - r_shadow_bouncegrid_state.settings.spacing[0];
@@ -2461,26 +2465,29 @@ static qboolean R_Shadow_BounceGrid_CheckEnable(int flag)
 
 static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t *settings)
 {
+	qboolean s = r_shadow_bouncegrid_static.integer != 0;
+	float spacing = s ? r_shadow_bouncegrid_static_spacing.value : r_shadow_bouncegrid_dynamic_spacing.value;
+
 	// prevent any garbage in alignment padded areas as we'll be using memcmp
 	memset(settings, 0, sizeof(*settings)); 
 
 	// build up a complete collection of the desired settings, so that memcmp can be used to compare parameters
-	settings->staticmode                    = r_shadow_bouncegrid_static.integer != 0;
+	settings->staticmode                    = s;
 	settings->bounceanglediffuse            = r_shadow_bouncegrid_bounceanglediffuse.integer != 0;
-	settings->directionalshading            = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_directionalshading.integer != 0) && r_shadow_bouncegrid_state.allowdirectionalshading;
-	settings->dlightparticlemultiplier      = r_shadow_bouncegrid_dlightparticlemultiplier.value;
-	settings->hitmodels                     = r_shadow_bouncegrid_hitmodels.integer != 0;
+	settings->directionalshading            = (s ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_dynamic_directionalshading.integer != 0) && r_shadow_bouncegrid_state.allowdirectionalshading;
+	settings->dlightparticlemultiplier      = s ? 0 : r_shadow_bouncegrid_dynamic_dlightparticlemultiplier.value;
+	settings->hitmodels                     = s ? false : r_shadow_bouncegrid_dynamic_hitmodels.integer != 0;
 	settings->includedirectlighting         = r_shadow_bouncegrid_includedirectlighting.integer != 0 || r_shadow_bouncegrid.integer == 2;
-	settings->lightradiusscale              = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_lightradiusscale.value : r_shadow_bouncegrid_lightradiusscale.value);
-	settings->maxbounce                     = (r_shadow_bouncegrid_static.integer != 0 ? r_shadow_bouncegrid_static_maxbounce.integer : r_shadow_bouncegrid_maxbounce.integer);
+	settings->lightradiusscale              = (s ? r_shadow_bouncegrid_static_lightradiusscale.value : r_shadow_bouncegrid_dynamic_lightradiusscale.value);
+	settings->maxbounce                     = (s ? r_shadow_bouncegrid_static_maxbounce.integer : r_shadow_bouncegrid_dynamic_maxbounce.integer);
 	settings->particlebounceintensity       = r_shadow_bouncegrid_particlebounceintensity.value;
-	settings->particleintensity             = r_shadow_bouncegrid_particleintensity.value * 16384.0f * (settings->directionalshading ? 4.0f : 1.0f) / (r_shadow_bouncegrid_spacing.value * r_shadow_bouncegrid_spacing.value);
-	settings->maxphotons                    = r_shadow_bouncegrid_static.integer ? r_shadow_bouncegrid_static_maxphotons.integer : r_shadow_bouncegrid_maxphotons.integer;
-	settings->intensityperphoton            = r_shadow_bouncegrid_static.integer ? r_shadow_bouncegrid_static_intensityperphoton.integer : r_shadow_bouncegrid_intensityperphoton.integer;
-	settings->spacing[0]                    = r_shadow_bouncegrid_spacing.value;
-	settings->spacing[1]                    = r_shadow_bouncegrid_spacing.value;
-	settings->spacing[2]                    = r_shadow_bouncegrid_spacing.value;
-	settings->stablerandom                  = r_shadow_bouncegrid_stablerandom.integer;
+	settings->particleintensity             = r_shadow_bouncegrid_particleintensity.value * 16384.0f * (settings->directionalshading ? 4.0f : 1.0f) / (spacing * spacing);
+	settings->maxphotons                    = s ? r_shadow_bouncegrid_static_maxphotons.integer : r_shadow_bouncegrid_dynamic_maxphotons.integer;
+	settings->energyperphoton            = s ? r_shadow_bouncegrid_static_energyperphoton.integer : r_shadow_bouncegrid_dynamic_energyperphoton.integer;
+	settings->spacing[0]                    = spacing;
+	settings->spacing[1]                    = spacing;
+	settings->spacing[2]                    = spacing;
+	settings->stablerandom                  = s ? 0 : r_shadow_bouncegrid_dynamic_stablerandom.integer;
 
 	// bound the values for sanity
 	settings->maxphotons = bound(1, settings->maxphotons, 25000000);
@@ -2714,26 +2721,13 @@ static void R_Shadow_BounceGrid_AssignPhotons(r_shadow_bouncegrid_settings_t *se
 		//if (VectorLength2(rtlight->photoncolor) == 0.0f)
 		//	rtlight->photons = 0;
 	}
-	// the user provided an intensityperphoton value which we try to use
+	// the user provided an energyperphoton value which we try to use
 	// if that results in too many photons to shoot this frame, then we cap it
 	// which causes photons to appear/disappear from frame to frame, so we don't
 	// like doing that in the typical case
-	normalphotonscaling = 1.0f / max(0.0001f, r_shadow_bouncegrid_intensityperphoton.value);
+	normalphotonscaling = 1.0f / max(0.0001f, r_shadow_bouncegrid_dynamic_energyperphoton.value);
 	maxphotonscaling = (float)settings->maxphotons / max(1, photoncount);
 	*photonscaling = min(normalphotonscaling, maxphotonscaling);
-}
-
-static void R_Shadow_BounceGrid_ClearPixels(void)
-{
-	int pixelband;
-	for (pixelband = 0;pixelband < r_shadow_bouncegrid_state.pixelbands;pixelband++)
-	{
-		if (pixelband == 1)
-			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 128, r_shadow_bouncegrid_state.bytesperband);
-		else
-			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 0, r_shadow_bouncegrid_state.bytesperband);
-	}
-	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 }
 
 static int R_Shadow_BounceGrid_SplatPathCompare(const void *pa, const void *pb)
@@ -2748,12 +2742,16 @@ static int R_Shadow_BounceGrid_SplatPathCompare(const void *pa, const void *pb)
 	return 0;
 }
 
+static void R_Shadow_BounceGrid_ClearPixels(void)
+{
+	// clear the highpixels array we'll be accumulating into
+	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+}
+
 static void R_Shadow_BounceGrid_PerformSplats(void)
 {
 	r_shadow_bouncegrid_splatpath_t *splatpaths = r_shadow_bouncegrid_state.splatpaths;
 	r_shadow_bouncegrid_splatpath_t *splatpath;
-	unsigned char *pixel;
-	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
 	float *highpixel;
 	float *highpixels = r_shadow_bouncegrid_state.highpixels;
 	int numsplatpaths = r_shadow_bouncegrid_state.numsplatpaths;
@@ -2774,7 +2772,7 @@ static void R_Shadow_BounceGrid_PerformSplats(void)
 	int pixelbands = r_shadow_bouncegrid_state.pixelbands;
 	int numsteps;
 	int step;
-	
+
 	// hush warnings about uninitialized data - pixelbands doesn't change but...
 	memset(splatcolor, 0, sizeof(splatcolor));
 
@@ -2878,18 +2876,12 @@ static void R_Shadow_BounceGrid_PerformSplats(void)
 					{
 						// calculate address for pixel
 						w = pixelweight[corner];
-						pixel = pixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
 						highpixel = highpixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
 						// add to the high precision pixel color
 						highpixel[0] += (splatcolor[pixelband*4+0]*w);
 						highpixel[1] += (splatcolor[pixelband*4+1]*w);
 						highpixel[2] += (splatcolor[pixelband*4+2]*w);
 						highpixel[3] += (splatcolor[pixelband*4+3]*w);
-						// flag the low precision pixel as needing to be updated
-						pixel[3] = 255;
-						// advance to next band of coefficients
-						//pixel += pixelsperband*4;
-						//highpixel += pixelsperband*4;
 					}
 				}
 			}
@@ -2898,26 +2890,16 @@ static void R_Shadow_BounceGrid_PerformSplats(void)
 	}
 }
 
-static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
+static void R_Shadow_BounceGrid_BlurPixelsInDirection(const float *inpixels, float *outpixels, int off)
 {
-	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
-	unsigned char *pixel;
-	float *highpixels = r_shadow_bouncegrid_state.highpixels;
-	float *highpixel;
-	unsigned int pixelbands = r_shadow_bouncegrid_state.pixelbands;
-	unsigned int pixelband;
-	unsigned int x, y, z;
+	const float *inpixel;
+	float *outpixel;
+	int pixelbands = r_shadow_bouncegrid_state.pixelbands;
+	int pixelband;
 	unsigned int index;
+	unsigned int x, y, z;
 	unsigned int resolution[3];
-	int c[4];
 	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
-	// generate pixels array from highpixels array
-	//
-	// skip first and last columns, rows, and layers as these are blank
-	//
-	// the pixel[3] value was deliberately written along with highpixels
-	// updates, so we can use it to detect only pixels that need to be
-	// converted, the rest were already memset to neutral values.
 	for (pixelband = 0;pixelband < pixelbands;pixelband++)
 	{
 		for (z = 1;z < resolution[2]-1;z++)
@@ -2926,28 +2908,99 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 			{
 				x = 1;
 				index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
-				pixel = pixels + 4*index;
-				highpixel = highpixels + 4*index;
-				for (;x < resolution[0]-1;x++, pixel += 4, highpixel += 4)
+				inpixel = inpixels + 4*index;
+				outpixel = outpixels + 4*index;
+				for (;x < resolution[0]-1;x++, inpixel += 4, outpixel += 4)
 				{
-					// only convert pixels that were hit by photons
-					if (pixel[3] == 255)
+					outpixel[0] = (inpixel[0] + inpixel[  off] + inpixel[0-off]) * (1.0f / 3.0);
+					outpixel[1] = (inpixel[1] + inpixel[1+off] + inpixel[1-off]) * (1.0f / 3.0);
+					outpixel[2] = (inpixel[2] + inpixel[2+off] + inpixel[2-off]) * (1.0f / 3.0);
+					outpixel[3] = (inpixel[3] + inpixel[3+off] + inpixel[3-off]) * (1.0f / 3.0);
+				}
+			}
+		}
+	}
+}
+
+static void R_Shadow_BounceGrid_BlurPixels(void)
+{
+	float *highpixels = r_shadow_bouncegrid_state.highpixels;
+	float *temppixels1 = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	float *temppixels2 = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	unsigned int resolution[3];
+
+	if (!r_shadow_bouncegrid_blur.integer)
+		return;
+	
+	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
+
+	// blur on X
+	R_Shadow_BounceGrid_BlurPixelsInDirection(highpixels, temppixels1, 4);
+	// blur on Y
+	R_Shadow_BounceGrid_BlurPixelsInDirection(temppixels1, temppixels2, resolution[0] * 4);
+	// blur on Z
+	R_Shadow_BounceGrid_BlurPixelsInDirection(temppixels2, highpixels, resolution[0] * resolution[1] * 4);
+}
+
+static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
+{
+	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
+	unsigned char *pixel;
+	float *highpixels = r_shadow_bouncegrid_state.highpixels;
+	float *highpixel;
+	float *bandpixel;
+	unsigned int pixelsperband = r_shadow_bouncegrid_state.pixelsperband;
+	unsigned int pixelbands = r_shadow_bouncegrid_state.pixelbands;
+	unsigned int pixelband;
+	unsigned int x, y, z;
+	unsigned int index, bandindex;
+	unsigned int resolution[3];
+	int c[4];
+	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
+	// start by clearing the pixels array - we won't be writing to all of it
+	for (pixelband = 0;pixelband < pixelbands;pixelband++)
+	{
+		// clear to neutral values before we bother converting
+		if (pixelband == 1)
+			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 128, r_shadow_bouncegrid_state.bytesperband);
+		else
+			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 0, r_shadow_bouncegrid_state.bytesperband);
+	}
+	// skip first and last columns, rows, and layers as these are always blank
+	// skip higher pixelbands on pixels that have no color
+	for (z = 1;z < resolution[2]-1;z++)
+	{
+		for (y = 1;y < resolution[1]-1;y++)
+		{
+			x = 1;
+			pixelband = 0;
+			index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
+			highpixel = highpixels + 4*index;
+			for (;x < resolution[0]-1;x++, index++, highpixel += 4)
+			{
+				// only convert pixels that were hit by photons
+				if (VectorLength2(highpixel))
+				{
+					// process all of the pixelbands for this pixel
+					for (pixelband = 0, bandindex = index;pixelband < pixelbands;pixelband++, bandindex += pixelsperband)
 					{
-						// normalize the bentnormal...
+						pixel = pixels + 4*bandindex;
+						bandpixel = highpixels + 4*bandindex;
+						// normalize the bentnormal pixelband...
 						if (pixelband == 1)
 						{
-							VectorNormalize(highpixel);
-							c[0] = (int)(highpixel[0]*128.0f+128.0f);
-							c[1] = (int)(highpixel[1]*128.0f+128.0f);
-							c[2] = (int)(highpixel[2]*128.0f+128.0f);
-							c[3] = (int)(highpixel[3]*128.0f+128.0f);
+							VectorNormalize(bandpixel);
+							c[0] = (int)(bandpixel[0]*128.0f+128.0f);
+							c[1] = (int)(bandpixel[1]*128.0f+128.0f);
+							c[2] = (int)(bandpixel[2]*128.0f+128.0f);
+							c[3] = (int)(bandpixel[3]*128.0f+128.0f);
 						}
 						else
 						{
-							c[0] = (int)(highpixel[0]*256.0f);
-							c[1] = (int)(highpixel[1]*256.0f);
-							c[2] = (int)(highpixel[2]*256.0f);
-							c[3] = (int)(highpixel[3]*256.0f);
+							c[0] = (int)(bandpixel[0]*256.0f);
+							c[1] = (int)(bandpixel[1]*256.0f);
+							c[2] = (int)(bandpixel[2]*256.0f);
+							c[3] = (int)(bandpixel[3]*256.0f);
 						}
 						pixel[2] = (unsigned char)bound(0, c[0], 255);
 						pixel[1] = (unsigned char)bound(0, c[1], 255);
@@ -3147,7 +3200,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	}
 
 	// if all the settings seem identical to the previous update, return
-	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_updateinterval.value) && !settingschanged)
+	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_dynamic_updateinterval.value) && !settingschanged)
 		return;
 
 	// store the new settings
@@ -3169,15 +3222,16 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	// trace the photons from lights and accumulate illumination
 	R_Shadow_BounceGrid_TracePhotons(settings, range, range1, range2, photonscaling, flag);
 
-	// clear the pixels[] and highpixels[] arrays, it is important that we
-	// clear pixels[] now because we do tricks with marking pixels as needing
-	// conversion, even though the source of truth data is in highpixels[]
+	// clear the texture
 	R_Shadow_BounceGrid_ClearPixels();
-
-	// sort and accumulate the light splatting in the texture
+	
+	// accumulate the light splatting into texture
 	R_Shadow_BounceGrid_PerformSplats();
 
-	// convert the pixels that were marked and upload the texture
+	// apply a mild blur filter to the texture
+	R_Shadow_BounceGrid_BlurPixels();
+
+	// convert the pixels to lower precision and upload the texture
 	R_Shadow_BounceGrid_ConvertPixelsAndUpload();
 }
 
