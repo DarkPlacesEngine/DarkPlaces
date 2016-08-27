@@ -80,6 +80,11 @@ typedef struct r_shadow_bouncegrid_state_s
 	vec3_t mins;
 	vec3_t maxs;
 	vec3_t size;
+	int maxsplatpaths;
+
+	// per-frame data that is very temporary
+	int numsplatpaths;
+	struct r_shadow_bouncegrid_splatpath_s *splatpaths;
 }
 r_shadow_bouncegrid_state_t;
 
