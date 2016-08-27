@@ -2647,14 +2647,21 @@ void R_Shadow_UpdateBounceGridTexture(void)
 		cullmaxs[0] = rtlight->shadoworigin[0] + radius;
 		cullmaxs[1] = rtlight->shadoworigin[1] + radius;
 		cullmaxs[2] = rtlight->shadoworigin[2] + radius;
-		if (R_CullBox(cullmins, cullmaxs))
-			continue;
-		if (r_refdef.scene.worldmodel
-		 && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
-		 && !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, cullmins, cullmaxs))
-			continue;
 		w = r_shadow_lightintensityscale.value * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
-		if (w * VectorLength2(rtlight->color) == 0.0f)
+		if (!settings.staticmode)
+		{
+			if (R_CullBox(cullmins, cullmaxs))
+				continue;
+			if (r_refdef.scene.worldmodel
+			 && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
+			 && !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, cullmins, cullmaxs))
+				continue;
+			if (w * VectorLength2(rtlight->color) == 0.0f)
+				continue;
+		}
+		// a light that does not emit any light before style is applied, can be
+		// skipped entirely (it may just be a corona)
+		if (rtlight->radius == 0.0f || VectorLength2(rtlight->color) == 0.0f)
 			continue;
 		w *= ((rtlight->style >= 0 && rtlight->style < MAX_LIGHTSTYLES) ? r_refdef.scene.rtlightstylevalue[rtlight->style] : 1);
 		VectorScale(rtlight->color, w, rtlight->photoncolor);
@@ -2669,8 +2676,12 @@ void R_Shadow_UpdateBounceGridTexture(void)
 		lightintensity = VectorLength(rtlight->color) * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
 		if (lightindex >= range)
 			lightintensity *= settings.dlightparticlemultiplier;
-		rtlight->photons = max(0.0f, lightintensity * s * s);
+		rtlight->photons = bound(0.0f, lightintensity * s * s, MAXBOUNCEGRIDPARTICLESPERLIGHT);
 		photoncount += rtlight->photons;
+		// if the lightstyle happens to be off right now, we can skip actually
+		// firing the photons, but we did have to count them in the total.
+		if (VectorLength2(rtlight->photoncolor) == 0.0f)
+			rtlight->photons = 0;
 	}
 	photonscaling = (float)settings.photons / max(1, photoncount);
 	photonresidual = 0.0f;
@@ -2688,11 +2699,8 @@ void R_Shadow_UpdateBounceGridTexture(void)
 		// skip a light with no photons
 		if (rtlight->photons == 0.0f)
 			continue;
-		// skip a light with no photon color)
-		if (VectorLength2(rtlight->photoncolor) == 0.0f)
-			continue;
 		photonresidual += rtlight->photons * photonscaling;
-		shootparticles = (int)bound(0, photonresidual, MAXBOUNCEGRIDPARTICLESPERLIGHT);
+		shootparticles = (int)floor(photonresidual);
 		if (!shootparticles)
 			continue;
 		photonresidual -= shootparticles;
