@@ -38,10 +38,52 @@ extern cvar_t gl_ext_separatestencil;
 extern cvar_t gl_ext_stenciltwoside;
 
 // used by shader for bouncegrid feature
-extern rtexture_t *r_shadow_bouncegridtexture;
-extern matrix4x4_t r_shadow_bouncegridmatrix;
-extern vec_t r_shadow_bouncegridintensity;
-extern qboolean r_shadow_bouncegriddirectional;
+typedef struct r_shadow_bouncegrid_settings_s
+{
+	qboolean staticmode;
+	qboolean bounceanglediffuse;
+	qboolean directionalshading;
+	qboolean includedirectlighting;
+	float dlightparticlemultiplier;
+	qboolean hitmodels;
+	float lightradiusscale;
+	int maxbounce;
+	float particlebounceintensity;
+	float particleintensity;
+	int maxphotons;
+	float intensityperphoton;
+	float spacing[3];
+	int stablerandom;
+}
+r_shadow_bouncegrid_settings_t;
+
+typedef struct r_shadow_bouncegrid_state_s
+{
+	r_shadow_bouncegrid_settings_t settings;
+	qboolean capable;
+	qboolean allowdirectionalshading;
+	qboolean directional; // copied from settings.directionalshading after createtexture is decided
+	qboolean createtexture; // set to true to recreate the texture rather than updating it - happens when size changes or directional changes
+	rtexture_t *texture;
+	matrix4x4_t matrix;
+	vec_t intensity;
+	double lastupdatetime;
+	int resolution[3];
+	int numpixels;
+	int pixelbands;
+	int pixelsperband;
+	int bytesperband;
+	unsigned char *pixels;
+	float *highpixels;
+	float spacing[3];
+	float ispacing[3];
+	vec3_t mins;
+	vec3_t maxs;
+	vec3_t size;
+}
+r_shadow_bouncegrid_state_t;
+
+extern r_shadow_bouncegrid_state_t r_shadow_bouncegrid_state;
 
 void R_Shadow_Init(void);
 qboolean R_Shadow_ShadowMappingEnabled(void);
