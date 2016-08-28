@@ -1961,6 +1961,9 @@ void GLES_Init(void)
 	vid.support.ext_texture_edge_clamp = true; // GLES2 core
 	vid.support.ext_texture_filter_anisotropic = false; // probably don't want to use it...
 	vid.support.ext_texture_srgb = false;
+	vid.support.arb_texture_float = SDL_GL_ExtensionSupported("GL_OES_texture_float") != 0;
+	vid.support.arb_half_float_pixel = SDL_GL_ExtensionSupported("GL_OES_texture_half_float") != 0;
+	vid.support.arb_half_float_vertex = SDL_GL_ExtensionSupported("GL_OES_vertex_half_float") != 0;
 
 	// NOTE: On some devices, a value of 512 gives better FPS than the maximum.
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);

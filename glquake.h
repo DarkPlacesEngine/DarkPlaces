@@ -658,6 +658,12 @@ extern void (GLAPIENTRY *qglDrawBuffersARB)(GLsizei n, const GLenum *bufs);
 #define GL_LUMINANCE_ALPHA16F_ARB                            0x881F
 #endif
 
+// GL_ARB_half_float_pixel
+#ifndef GL_HALF_FLOAT_ARB
+typedef unsigned short GLhalfARB;
+#define GL_HALF_FLOAT_ARB                                    0x140B
+#endif
+
 // GL_EXT_texture_sRGB
 #ifndef GL_SRGB_EXT
 #define GL_SRGB_EXT                                          0x8C40
