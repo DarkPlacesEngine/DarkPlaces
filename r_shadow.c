@@ -333,27 +333,29 @@ cvar_t r_shadow_bouncegrid_dynamic_dlightparticlemultiplier = {CVAR_SAVE, "r_sha
 cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "0", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
 cvar_t r_shadow_bouncegrid_dynamic_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
 cvar_t r_shadow_bouncegrid_dynamic_energyperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_energyperphoton", "10000", "amount of light that one photon should represent"};
-cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "4", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "2", "maximum number of bounces for a particle (minimum is 0)"};
+cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "10", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0)"};
 cvar_t r_shadow_bouncegrid_dynamic_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by energyperphoton"};
 cvar_t r_shadow_bouncegrid_dynamic_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_spacing", "64", "unit size of bouncegrid pixel"};
 cvar_t r_shadow_bouncegrid_dynamic_stablerandom = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_stablerandom", "1", "make particle distribution consistent from frame to frame"};
 cvar_t r_shadow_bouncegrid_dynamic_updateinterval = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
+cvar_t r_shadow_bouncegrid_dynamic_x = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_x", "64", "maximum texture size of bouncegrid on X axis"};
+cvar_t r_shadow_bouncegrid_dynamic_y = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_y", "64", "maximum texture size of bouncegrid on Y axis"};
+cvar_t r_shadow_bouncegrid_dynamic_z = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_z", "32", "maximum texture size of bouncegrid on Z axis"};
+cvar_t r_shadow_bouncegrid_floatcolors = {CVAR_SAVE, "r_shadow_bouncegrid_floatcolors", "1", "upload texture as RGBA16F (or RGBA32F when set to 2) rather than RGBA8 format - this gives more dynamic range and accuracy"};
 cvar_t r_shadow_bouncegrid_includedirectlighting = {CVAR_SAVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
 cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "1", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
-cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "1", "brightness of particles contributing to bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "2", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
+cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "0.25", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sortlightpaths", "1", "sort light paths before accumulating them into the bouncegrid texture, this reduces cpu cache misses"};
+cvar_t r_shadow_bouncegrid_lightpathsize = {CVAR_SAVE, "r_shadow_bouncegrid_lightpathsize", "1", "width of the light path for accumulation of light in the bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_static = {CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
 cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
-cvar_t r_shadow_bouncegrid_static_energyperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_static_energyperphoton", "1000", "amount of light that one photon should represent in static mode"};
+cvar_t r_shadow_bouncegrid_static_energyperphoton = {CVAR_SAVE, "r_shadow_bouncegrid_static_energyperphoton", "10000", "amount of light that one photon should represent in static mode"};
 cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "10", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxphotons", "250000", "upper bound on photons in static mode"};
-cvar_t r_shadow_bouncegrid_static_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_static_spacing", "32", "unit size of bouncegrid pixel when in static mode"};
-cvar_t r_shadow_bouncegrid_x = {CVAR_SAVE, "r_shadow_bouncegrid_x", "64", "maximum texture size of bouncegrid on X axis"};
-cvar_t r_shadow_bouncegrid_y = {CVAR_SAVE, "r_shadow_bouncegrid_y", "64", "maximum texture size of bouncegrid on Y axis"};
-cvar_t r_shadow_bouncegrid_z = {CVAR_SAVE, "r_shadow_bouncegrid_z", "32", "maximum texture size of bouncegrid on Z axis"};
+cvar_t r_shadow_bouncegrid_static_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_static_spacing", "64", "unit size of bouncegrid pixel when in static mode"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "0", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility) - bad performance (synchronous rendering) - worse on multi-gpu!"};
@@ -776,8 +778,13 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_spacing);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_stablerandom);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_updateinterval);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_x);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_y);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_z);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_floatcolors);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_includedirectlighting);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensity);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_lightpathsize);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_sortlightpaths);
@@ -788,9 +795,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_maxbounce);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_maxphotons);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_static_energyperphoton);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_x);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_y);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_z);
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
@@ -2330,6 +2334,9 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadow
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
 }
 
+#define MAXBOUNCEGRIDSPLATSIZE 7
+#define MAXBOUNCEGRIDSPLATSIZE1 (MAXBOUNCEGRIDSPLATSIZE+1)
+
 // these are temporary data per-frame, sorted and performed in a more
 // cache-friendly order than the original photons
 typedef struct r_shadow_bouncegrid_splatpath_s
@@ -2343,7 +2350,7 @@ typedef struct r_shadow_bouncegrid_splatpath_s
 }
 r_shadow_bouncegrid_splatpath_t;
 
-static void R_shadow_BounceGrid_AddSplatPath(vec3_t originalstart, vec3_t originalend, vec3_t color)
+static void R_Shadow_BounceGrid_AddSplatPath(vec3_t originalstart, vec3_t originalend, vec3_t color)
 {
 	int bestaxis;
 	int numsplats;
@@ -2473,6 +2480,9 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 
 	// build up a complete collection of the desired settings, so that memcmp can be used to compare parameters
 	settings->staticmode                    = s;
+	settings->blur                          = r_shadow_bouncegrid_blur.integer != 0;
+	settings->floatcolors                   = bound(0, r_shadow_bouncegrid_floatcolors.integer, 2);
+	settings->lightpathsize                 = bound(1, r_shadow_bouncegrid_lightpathsize.integer, MAXBOUNCEGRIDSPLATSIZE);
 	settings->bounceanglediffuse            = r_shadow_bouncegrid_bounceanglediffuse.integer != 0;
 	settings->directionalshading            = (s ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_dynamic_directionalshading.integer != 0) && r_shadow_bouncegrid_state.allowdirectionalshading;
 	settings->dlightparticlemultiplier      = s ? 0 : r_shadow_bouncegrid_dynamic_dlightparticlemultiplier.value;
@@ -2487,7 +2497,7 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 	settings->spacing[0]                    = spacing;
 	settings->spacing[1]                    = spacing;
 	settings->spacing[2]                    = spacing;
-	settings->stablerandom                  = s ? 0 : r_shadow_bouncegrid_dynamic_stablerandom.integer;
+	settings->stablerandom                  = s ? 1 : r_shadow_bouncegrid_dynamic_stablerandom.integer;
 
 	// bound the values for sanity
 	settings->maxphotons = bound(1, settings->maxphotons, 25000000);
@@ -2557,12 +2567,12 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 
 	// if dynamic we may or may not want to use the world bounds
 	// if the dynamic size is smaller than the world bounds, use it instead
-	if (!settings->staticmode && (r_shadow_bouncegrid_x.integer * r_shadow_bouncegrid_y.integer * r_shadow_bouncegrid_z.integer < resolution[0] * resolution[1] * resolution[2]))
+	if (!settings->staticmode && (r_shadow_bouncegrid_dynamic_x.integer * r_shadow_bouncegrid_dynamic_y.integer * r_shadow_bouncegrid_dynamic_z.integer < resolution[0] * resolution[1] * resolution[2]))
 	{
 		// we know the resolution we want
-		c[0] = r_shadow_bouncegrid_x.integer;
-		c[1] = r_shadow_bouncegrid_y.integer;
-		c[2] = r_shadow_bouncegrid_z.integer;
+		c[0] = r_shadow_bouncegrid_dynamic_x.integer;
+		c[1] = r_shadow_bouncegrid_dynamic_y.integer;
+		c[2] = r_shadow_bouncegrid_dynamic_z.integer;
 		// now we can calculate the texture size (power of 2 if required)
 		c[0] = bound(4, c[0], (int)vid.maxtexturesize_3d);
 		c[1] = bound(4, c[1], (int)vid.maxtexturesize_3d);
@@ -2606,15 +2616,13 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	r_shadow_bouncegrid_state.pixelsperband = resolution[0]*resolution[1]*resolution[2];
 	r_shadow_bouncegrid_state.bytesperband = r_shadow_bouncegrid_state.pixelsperband*4;
 	numpixels = r_shadow_bouncegrid_state.pixelsperband*r_shadow_bouncegrid_state.pixelbands;
-	if (r_shadow_bouncegrid_state.numpixels != numpixels || !r_shadow_bouncegrid_state.pixels || !r_shadow_bouncegrid_state.highpixels)
+	if (r_shadow_bouncegrid_state.numpixels != numpixels)
 	{
 		if (r_shadow_bouncegrid_state.texture)
 		{
 			R_FreeTexture(r_shadow_bouncegrid_state.texture);
 			r_shadow_bouncegrid_state.texture = NULL;
 		}
-		r_shadow_bouncegrid_state.pixels = (unsigned char *)Mem_Realloc(r_main_mempool, r_shadow_bouncegrid_state.pixels, numpixels * sizeof(unsigned char[4]));
-		r_shadow_bouncegrid_state.highpixels = (float *)Mem_Realloc(r_main_mempool, r_shadow_bouncegrid_state.highpixels, numpixels * sizeof(float[4]));
 		r_shadow_bouncegrid_state.numpixels = numpixels;
 	}
 
@@ -2725,7 +2733,7 @@ static void R_Shadow_BounceGrid_AssignPhotons(r_shadow_bouncegrid_settings_t *se
 	// if that results in too many photons to shoot this frame, then we cap it
 	// which causes photons to appear/disappear from frame to frame, so we don't
 	// like doing that in the typical case
-	normalphotonscaling = 1.0f / max(0.0001f, r_shadow_bouncegrid_dynamic_energyperphoton.value);
+	normalphotonscaling = 1.0f / max(0.0001f, settings->energyperphoton);
 	maxphotonscaling = (float)settings->maxphotons / max(1, photoncount);
 	*photonscaling = min(normalphotonscaling, maxphotonscaling);
 }
@@ -2745,30 +2753,29 @@ static int R_Shadow_BounceGrid_SplatPathCompare(const void *pa, const void *pb)
 static void R_Shadow_BounceGrid_ClearPixels(void)
 {
 	// clear the highpixels array we'll be accumulating into
+	r_shadow_bouncegrid_state.highpixels = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 }
 
 static void R_Shadow_BounceGrid_PerformSplats(void)
 {
+	int splatsize = r_shadow_bouncegrid_state.settings.lightpathsize;
+	int splatsize1 = splatsize + 1;
 	r_shadow_bouncegrid_splatpath_t *splatpaths = r_shadow_bouncegrid_state.splatpaths;
 	r_shadow_bouncegrid_splatpath_t *splatpath;
-	float *highpixel;
 	float *highpixels = r_shadow_bouncegrid_state.highpixels;
 	int numsplatpaths = r_shadow_bouncegrid_state.numsplatpaths;
 	int splatindex;
 	vec3_t steppos;
 	vec3_t stepdelta;
 	vec3_t dir;
-	float texlerp[2][3];
+	float texcorner[3];
+	float texlerp[MAXBOUNCEGRIDSPLATSIZE1][3];
 	float splatcolor[32];
-	float pixelweight[8];
-	float w;
+	float boxweight = 1.0f / (splatsize * splatsize * splatsize);
 	int resolution[3];
 	int tex[3];
-	int pixelindex[8];
-	int corner;
 	int pixelsperband = r_shadow_bouncegrid_state.pixelsperband;
-	int pixelband;
 	int pixelbands = r_shadow_bouncegrid_state.pixelbands;
 	int numsteps;
 	int step;
@@ -2782,11 +2789,14 @@ static void R_Shadow_BounceGrid_PerformSplats(void)
 	// sort the splats before we execute them, to reduce cache misses
 	if (r_shadow_bouncegrid_sortlightpaths.integer)
 		qsort(splatpaths, numsplatpaths, sizeof(*splatpaths), R_Shadow_BounceGrid_SplatPathCompare);
-	
+
+	// the middle row/column/layer of each splat are full intensity
+	for (step = 1;step < splatsize;step++)
+		VectorSet(texlerp[step], 1.0f, 1.0f, 1.0f);
+
 	splatpath = splatpaths;
 	for (splatindex = 0;splatindex < numsplatpaths;splatindex++, splatpath++)
 	{
-		
 		// calculate second order spherical harmonics values (average, slopeX, slopeY, slopeZ)
 		// accumulate average shotcolor
 		VectorCopy(splatpath->splatdir, dir);
@@ -2838,50 +2848,52 @@ static void R_Shadow_BounceGrid_PerformSplats(void)
 		for (step = 0;step < numsteps;step++)
 		{
 			r_refdef.stats[r_stat_bouncegrid_splats]++;
-			// figure out which texture pixels this is in
-			texlerp[1][0] = steppos[0] - 0.5f;
-			texlerp[1][1] = steppos[1] - 0.5f;
-			texlerp[1][2] = steppos[2] - 0.5f;
-			tex[0] = (int)floor(texlerp[1][0]);
-			tex[1] = (int)floor(texlerp[1][1]);
-			tex[2] = (int)floor(texlerp[1][2]);
+			// figure out the min corner of the pixels we'll need to update
+			texcorner[0] = steppos[0] - (splatsize1 * 0.5f);
+			texcorner[1] = steppos[1] - (splatsize1 * 0.5f);
+			texcorner[2] = steppos[2] - (splatsize1 * 0.5f);
+			tex[0] = (int)floor(texcorner[0]);
+			tex[1] = (int)floor(texcorner[1]);
+			tex[2] = (int)floor(texcorner[2]);
+			// only update if it is within reasonable bounds
 			if (tex[0] >= 1
 			 && tex[1] >= 1
 			 && tex[2] >= 1
-			 && tex[0] < resolution[0] - 2
-			 && tex[1] < resolution[1] - 2
-			 && tex[2] < resolution[2] - 2)
+			 && tex[0] < resolution[0] - splatsize1
+			 && tex[1] < resolution[1] - splatsize1
+			 && tex[2] < resolution[2] - splatsize1)
 			{
 				// it is within bounds...  do the real work now
-				// calculate the lerp factors
-				texlerp[1][0] -= tex[0];
-				texlerp[1][1] -= tex[1];
-				texlerp[1][2] -= tex[2];
-				texlerp[0][0] = 1.0f - texlerp[1][0];
-				texlerp[0][1] = 1.0f - texlerp[1][1];
-				texlerp[0][2] = 1.0f - texlerp[1][2];
-				// calculate individual pixel indexes and weights
-				pixelindex[0] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[0] = (texlerp[0][0]*texlerp[0][1]*texlerp[0][2]);
-				pixelindex[1] = (((tex[2]  )*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[1] = (texlerp[1][0]*texlerp[0][1]*texlerp[0][2]);
-				pixelindex[2] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[2] = (texlerp[0][0]*texlerp[1][1]*texlerp[0][2]);
-				pixelindex[3] = (((tex[2]  )*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[3] = (texlerp[1][0]*texlerp[1][1]*texlerp[0][2]);
-				pixelindex[4] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]  );pixelweight[4] = (texlerp[0][0]*texlerp[0][1]*texlerp[1][2]);
-				pixelindex[5] = (((tex[2]+1)*resolution[1]+tex[1]  )*resolution[0]+tex[0]+1);pixelweight[5] = (texlerp[1][0]*texlerp[0][1]*texlerp[1][2]);
-				pixelindex[6] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]  );pixelweight[6] = (texlerp[0][0]*texlerp[1][1]*texlerp[1][2]);
-				pixelindex[7] = (((tex[2]+1)*resolution[1]+tex[1]+1)*resolution[0]+tex[0]+1);pixelweight[7] = (texlerp[1][0]*texlerp[1][1]*texlerp[1][2]);
-				// update the 8 pixels...
-				for (pixelband = 0;pixelband < pixelbands;pixelband++)
+				int xi, yi, zi;
+
+				// calculate the antialiased box edges
+				texlerp[splatsize][0] = texcorner[0] - tex[0];
+				texlerp[splatsize][1] = texcorner[1] - tex[1];
+				texlerp[splatsize][2] = texcorner[2] - tex[2];
+				texlerp[0][0] = 1.0f - texlerp[splatsize][0];
+				texlerp[0][1] = 1.0f - texlerp[splatsize][1];
+				texlerp[0][2] = 1.0f - texlerp[splatsize][2];
+
+				// accumulate light onto the pixels
+				for (zi = 0;zi < splatsize1;zi++)
 				{
-					for (corner = 0;corner < 8;corner++)
+					for (yi = 0;yi < splatsize1;yi++)
 					{
-						// calculate address for pixel
-						w = pixelweight[corner];
-						highpixel = highpixels + 4 * pixelindex[corner] + pixelband * pixelsperband * 4;
-						// add to the high precision pixel color
-						highpixel[0] += (splatcolor[pixelband*4+0]*w);
-						highpixel[1] += (splatcolor[pixelband*4+1]*w);
-						highpixel[2] += (splatcolor[pixelband*4+2]*w);
-						highpixel[3] += (splatcolor[pixelband*4+3]*w);
+						int index = ((tex[2]+zi)*resolution[1]+tex[1]+yi)*resolution[0]+tex[0];
+						for (xi = 0;xi < splatsize1;xi++, index++)
+						{
+							float w = texlerp[xi][0]*texlerp[yi][1]*texlerp[zi][2] * boxweight;
+							int band = 0;
+							float *p = highpixels + 4 * index + band * pixelsperband * 4;
+							for (;band < pixelbands;band++, p += pixelsperband * 4)
+							{
+								// add to the pixel color
+								p[0] += splatcolor[band*4+0] * w;
+								p[1] += splatcolor[band*4+1] * w;
+								p[2] += splatcolor[band*4+2] * w;
+								p[3] += splatcolor[band*4+3] * w;
+							}
+						}
 					}
 				}
 			}
@@ -2944,8 +2956,12 @@ static void R_Shadow_BounceGrid_BlurPixels(void)
 
 static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 {
-	unsigned char *pixels = r_shadow_bouncegrid_state.pixels;
-	unsigned char *pixel;
+	int floatcolors = r_shadow_bouncegrid_state.settings.floatcolors;
+	unsigned char *pixelsbgra8 = NULL;
+	unsigned char *pixelbgra8;
+	unsigned short *pixelsrgba16f = NULL;
+	unsigned short *pixelrgba16f;
+	float *pixelsrgba32f = NULL;
 	float *highpixels = r_shadow_bouncegrid_state.highpixels;
 	float *highpixel;
 	float *bandpixel;
@@ -2957,69 +2973,154 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 	unsigned int resolution[3];
 	int c[4];
 	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
-	// start by clearing the pixels array - we won't be writing to all of it
-	for (pixelband = 0;pixelband < pixelbands;pixelband++)
+
+	if (r_shadow_bouncegrid_state.createtexture && r_shadow_bouncegrid_state.texture)
 	{
-		// clear to neutral values before we bother converting
-		if (pixelband == 1)
-			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 128, r_shadow_bouncegrid_state.bytesperband);
-		else
-			memset(r_shadow_bouncegrid_state.pixels + pixelband * r_shadow_bouncegrid_state.bytesperband, 0, r_shadow_bouncegrid_state.bytesperband);
+		R_FreeTexture(r_shadow_bouncegrid_state.texture);
+		r_shadow_bouncegrid_state.texture = NULL;
 	}
-	// skip first and last columns, rows, and layers as these are always blank
-	// skip higher pixelbands on pixels that have no color
-	for (z = 1;z < resolution[2]-1;z++)
+
+	// if bentnormals exist, we need to normalize and bias them for the shader
+	if (pixelbands > 1)
 	{
-		for (y = 1;y < resolution[1]-1;y++)
+		pixelband = 1;
+		for (z = 0;z < resolution[2]-1;z++)
 		{
-			x = 1;
-			pixelband = 0;
-			index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
-			highpixel = highpixels + 4*index;
-			for (;x < resolution[0]-1;x++, index++, highpixel += 4)
+			for (y = 0;y < resolution[1]-1;y++)
 			{
-				// only convert pixels that were hit by photons
-				if (VectorLength2(highpixel))
+				x = 1;
+				index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
+				highpixel = highpixels + 4*index;
+				for (;x < resolution[0]-1;x++, index++, highpixel += 4)
 				{
-					// process all of the pixelbands for this pixel
-					for (pixelband = 0, bandindex = index;pixelband < pixelbands;pixelband++, bandindex += pixelsperband)
-					{
-						pixel = pixels + 4*bandindex;
-						bandpixel = highpixels + 4*bandindex;
-						// normalize the bentnormal pixelband...
-						if (pixelband == 1)
-						{
-							VectorNormalize(bandpixel);
-							c[0] = (int)(bandpixel[0]*128.0f+128.0f);
-							c[1] = (int)(bandpixel[1]*128.0f+128.0f);
-							c[2] = (int)(bandpixel[2]*128.0f+128.0f);
-							c[3] = (int)(bandpixel[3]*128.0f+128.0f);
-						}
-						else
-						{
-							c[0] = (int)(bandpixel[0]*256.0f);
-							c[1] = (int)(bandpixel[1]*256.0f);
-							c[2] = (int)(bandpixel[2]*256.0f);
-							c[3] = (int)(bandpixel[3]*256.0f);
-						}
-						pixel[2] = (unsigned char)bound(0, c[0], 255);
-						pixel[1] = (unsigned char)bound(0, c[1], 255);
-						pixel[0] = (unsigned char)bound(0, c[2], 255);
-						pixel[3] = (unsigned char)bound(0, c[3], 255);
-					}
+					// only convert pixels that were hit by photons
+					if (highpixel[3] != 0.0f)
+						VectorNormalize(highpixel);
+					VectorSet(highpixel, highpixel[0] * 0.5f + 0.5f, highpixel[1] * 0.5f + 0.5f, highpixel[2] * 0.5f + 0.5f);
+					highpixel[pixelsperband * 4 + 3] = 1.0f;
 				}
 			}
 		}
 	}
 
-	if (!r_shadow_bouncegrid_state.createtexture)
-		R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixels, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
-	else
+	// start by clearing the pixels array - we won't be writing to all of it
+	//
+	// then process only the pixels that have at least some color, skipping
+	// the higher bands for speed on pixels that are black
+	switch (floatcolors)
 	{
-		if (r_shadow_bouncegrid_state.texture)
-			R_FreeTexture(r_shadow_bouncegrid_state.texture);
-		r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixels, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
+	case 0:
+		pixelsbgra8 = R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned char[4]));
+		for (pixelband = 0;pixelband < pixelbands;pixelband++)
+		{
+			if (pixelband == 1)
+				memset(pixelsbgra8 + pixelband * r_shadow_bouncegrid_state.bytesperband, 128, r_shadow_bouncegrid_state.bytesperband);
+			else
+				memset(pixelsbgra8 + pixelband * r_shadow_bouncegrid_state.bytesperband, 0, r_shadow_bouncegrid_state.bytesperband);
+		}
+		for (z = 1;z < resolution[2]-1;z++)
+		{
+			for (y = 1;y < resolution[1]-1;y++)
+			{
+				x = 1;
+				pixelband = 0;
+				index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
+				highpixel = highpixels + 4*index;
+				for (;x < resolution[0]-1;x++, index++, highpixel += 4)
+				{
+					// only convert pixels that were hit by photons
+					if (VectorLength2(highpixel))
+					{
+						// normalize the bentnormal now
+						if (pixelbands > 1)
+						{
+							VectorNormalize(highpixel + pixelsperband * 4);
+							highpixel[pixelsperband * 4 + 3] = 1.0f;
+						}
+						// process all of the pixelbands for this pixel
+						for (pixelband = 0, bandindex = index;pixelband < pixelbands;pixelband++, bandindex += pixelsperband)
+						{
+							pixelbgra8 = pixelsbgra8 + 4*bandindex;
+							bandpixel = highpixels + 4*bandindex;
+							c[0] = (int)(bandpixel[0]*256.0f);
+							c[1] = (int)(bandpixel[1]*256.0f);
+							c[2] = (int)(bandpixel[2]*256.0f);
+							c[3] = (int)(bandpixel[3]*256.0f);
+							pixelbgra8[2] = (unsigned char)bound(0, c[0], 255);
+							pixelbgra8[1] = (unsigned char)bound(0, c[1], 255);
+							pixelbgra8[0] = (unsigned char)bound(0, c[2], 255);
+							pixelbgra8[3] = (unsigned char)bound(0, c[3], 255);
+						}
+					}
+				}
+			}
+		}
+
+		if (!r_shadow_bouncegrid_state.createtexture)
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixelsbgra8, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+		else
+			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixelsbgra8, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
+		break;
+	case 1:
+		pixelsrgba16f = R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
+		memset(pixelsrgba16f, 0, r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
+		for (z = 1;z < resolution[2]-1;z++)
+		{
+			for (y = 1;y < resolution[1]-1;y++)
+			{
+				x = 1;
+				pixelband = 0;
+				index = ((pixelband*resolution[2]+z)*resolution[1]+y)*resolution[0]+x;
+				highpixel = highpixels + 4*index;
+				for (;x < resolution[0]-1;x++, index++, highpixel += 4)
+				{
+					// only convert pixels that were hit by photons
+					if (VectorLength2(highpixel))
+					{
+						// process all of the pixelbands for this pixel
+						for (pixelband = 0, bandindex = index;pixelband < pixelbands;pixelband++, bandindex += pixelsperband)
+						{
+							// time to have fun with IEEE 754 bit hacking...
+							union {
+								float f[4];
+								unsigned int raw[4];
+							} u;
+							pixelrgba16f = pixelsrgba16f + 4*bandindex;
+							bandpixel = highpixels + 4*bandindex;
+							VectorCopy4(bandpixel, u.f);
+							VectorCopy4(u.raw, c);
+							// this math supports negative numbers, snaps denormals to zero
+							//pixelrgba16f[0] = (unsigned short)(((c[0] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[0] - 0x38000000) >> 13) & 0x7FFF) | ((c[0] >> 16) & 0x8000));
+							//pixelrgba16f[1] = (unsigned short)(((c[1] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[1] - 0x38000000) >> 13) & 0x7FFF) | ((c[1] >> 16) & 0x8000));
+							//pixelrgba16f[2] = (unsigned short)(((c[2] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[2] - 0x38000000) >> 13) & 0x7FFF) | ((c[2] >> 16) & 0x8000));
+							//pixelrgba16f[3] = (unsigned short)(((c[3] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[3] - 0x38000000) >> 13) & 0x7FFF) | ((c[3] >> 16) & 0x8000));
+							// this math does not support negative
+							pixelrgba16f[0] = (unsigned short)((c[0] < 0x38000000) ? 0 : ((c[0] - 0x38000000) >> 13));
+							pixelrgba16f[1] = (unsigned short)((c[1] < 0x38000000) ? 0 : ((c[1] - 0x38000000) >> 13));
+							pixelrgba16f[2] = (unsigned short)((c[2] < 0x38000000) ? 0 : ((c[2] - 0x38000000) >> 13));
+							pixelrgba16f[3] = (unsigned short)((c[3] < 0x38000000) ? 0 : ((c[3] - 0x38000000) >> 13));
+						}
+					}
+				}
+			}
+		}
+
+		if (!r_shadow_bouncegrid_state.createtexture)
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba16f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+		else
+			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba16f, TEXTYPE_COLORBUFFER16F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
+		break;
+	case 2:
+		// our native format happens to match, so this is easy.
+		pixelsrgba32f = highpixels;
+
+		if (!r_shadow_bouncegrid_state.createtexture)
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba32f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+		else
+			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba32f, TEXTYPE_COLORBUFFER32F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
+		break;
 	}
+
 	r_shadow_bouncegrid_state.lastupdatetime = realtime;
 }
 
@@ -3110,7 +3211,7 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 				{
 					vec3_t hitpos;
 					VectorCopy(cliptrace.endpos, hitpos);
-					R_shadow_BounceGrid_AddSplatPath(clipstart, hitpos, shotcolor);
+					R_Shadow_BounceGrid_AddSplatPath(clipstart, hitpos, shotcolor);
 				}
 				if (cliptrace.fraction >= 1.0f)
 					break;
@@ -3186,12 +3287,6 @@ void R_Shadow_UpdateBounceGridTexture(void)
 			R_FreeTexture(r_shadow_bouncegrid_state.texture);
 			r_shadow_bouncegrid_state.texture = NULL;
 		}
-		if (r_shadow_bouncegrid_state.pixels)
-			Mem_Free(r_shadow_bouncegrid_state.pixels);
-		r_shadow_bouncegrid_state.pixels = NULL;
-		if (r_shadow_bouncegrid_state.highpixels)
-			Mem_Free(r_shadow_bouncegrid_state.highpixels);
-		r_shadow_bouncegrid_state.highpixels = NULL;
 		r_shadow_bouncegrid_state.numpixels = 0;
 		r_shadow_bouncegrid_state.directional = false;
 

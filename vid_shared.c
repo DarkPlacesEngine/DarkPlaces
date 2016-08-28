@@ -1095,6 +1095,9 @@ void VID_CheckExtensions(void)
 	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 	vid.support.ext_texture_srgb = GL_CheckExtension("GL_EXT_texture_sRGB", NULL, "-nosrgb", false);
+	vid.support.arb_texture_float = GL_CheckExtension("GL_ARB_texture_float", NULL, "-notexturefloat", false);
+	vid.support.arb_half_float_pixel = GL_CheckExtension("GL_ARB_half_float_pixel", NULL, "-nohalffloatpixel", false);
+	vid.support.arb_half_float_vertex = GL_CheckExtension("GL_ARB_half_float_vertex", NULL, "-nohalffloatvertex", false);
 	vid.support.arb_multisample = GL_CheckExtension("GL_ARB_multisample", multisamplefuncs, "-nomultisample", false);
 	vid.allowalphatocoverage = false;
 

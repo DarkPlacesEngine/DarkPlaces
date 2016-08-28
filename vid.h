@@ -75,6 +75,9 @@ typedef struct viddef_support_s
 	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
 	qboolean ext_texture_srgb;
+	qboolean arb_texture_float;
+	qboolean arb_half_float_pixel;
+	qboolean arb_half_float_vertex;
 	qboolean arb_multisample;
 }
 viddef_support_t;
