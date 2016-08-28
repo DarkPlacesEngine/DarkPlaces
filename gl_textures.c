@@ -209,7 +209,7 @@ typedef struct gltexture_s
 
 	// dynamic texture stuff [11/22/2007 Black]
 	updatecallback_t updatecallback;
-	void *updatacallback_data;
+	void *updatecallback_data;
 	// --- [11/22/2007 Black]
 
 	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
@@ -353,13 +353,13 @@ void R_MakeTextureDynamic(rtexture_t *rt, updatecallback_t updatecallback, void 
 
 	glt->flags |= GLTEXF_DYNAMIC;
 	glt->updatecallback = updatecallback;
-	glt->updatacallback_data = data;
+	glt->updatecallback_data = data;
 }
 
 static void R_UpdateDynamicTexture(gltexture_t *glt) {
 	glt->dirty = false;
 	if( glt->updatecallback ) {
-		glt->updatecallback( (rtexture_t*) glt, glt->updatacallback_data );
+		glt->updatecallback( (rtexture_t*) glt, glt->updatecallback_data );
 	}
 }
 
@@ -1803,7 +1803,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	glt->gltexturetypeenum = gltexturetypeenums[glt->texturetype];
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
-	glt->updatacallback_data = NULL;
+	glt->updatecallback_data = NULL;
 
 	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth, &glt->miplevels);
 
@@ -1975,7 +1975,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	glt->gltexturetypeenum = GL_TEXTURE_2D;
 	// init the dynamic texture attributes, too [11/22/2007 Black]
 	glt->updatecallback = NULL;
-	glt->updatacallback_data = NULL;
+	glt->updatecallback_data = NULL;
 
 	GL_Texture_CalcImageSize(glt->texturetype, glt->flags, glt->miplevel, glt->inputwidth, glt->inputheight, glt->inputdepth, &glt->tilewidth, &glt->tileheight, &glt->tiledepth, &glt->miplevels);
 
