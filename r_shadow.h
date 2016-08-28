@@ -44,10 +44,13 @@ typedef struct r_shadow_bouncegrid_settings_s
 	qboolean bounceanglediffuse;
 	qboolean directionalshading;
 	qboolean includedirectlighting;
+	qboolean blur;
+	int floatcolors;
 	float dlightparticlemultiplier;
 	qboolean hitmodels;
 	float lightradiusscale;
 	int maxbounce;
+	int lightpathsize;
 	float particlebounceintensity;
 	float particleintensity;
 	int maxphotons;
@@ -73,8 +76,6 @@ typedef struct r_shadow_bouncegrid_state_s
 	int pixelbands;
 	int pixelsperband;
 	int bytesperband;
-	unsigned char *pixels;
-	float *highpixels;
 	float spacing[3];
 	float ispacing[3];
 	vec3_t mins;
@@ -85,6 +86,7 @@ typedef struct r_shadow_bouncegrid_state_s
 	// per-frame data that is very temporary
 	int numsplatpaths;
 	struct r_shadow_bouncegrid_splatpath_s *splatpaths;
+	float *highpixels;
 }
 r_shadow_bouncegrid_state_t;
 
