@@ -1515,35 +1515,35 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 					dst += bytesPerPixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 8)
 					{
-						unsigned char ch = *src++;
-						*dst = 255 * !!((ch & 0x80) >> 7); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x40) >> 6); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x20) >> 5); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x10) >> 4); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x08) >> 3); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x04) >> 2); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x02) >> 1); dst += bytesPerPixel;
-						*dst = 255 * !!((ch & 0x01) >> 0); dst += bytesPerPixel;
+						unsigned char c = *src++;
+						*dst = 255 * !!((c & 0x80) >> 7); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x40) >> 6); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x20) >> 5); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x10) >> 4); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x08) >> 3); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x04) >> 2); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x02) >> 1); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x01) >> 0); dst += bytesPerPixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY2:
 					dst += bytesPerPixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 4)
 					{
-						unsigned char ch = *src++;
-						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
-						*dst = ( ((ch & 0xA0) >> 6) * 0x55 ); ch <<= 2; dst += bytesPerPixel;
+						unsigned char c = *src++;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY4:
 					dst += bytesPerPixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 2)
 					{
-						unsigned char ch = *src++;
-						*dst = ( ((ch & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
-						*dst = ( ((ch & 0x0F) ) * 0x11); dst += bytesPerPixel;
+						unsigned char c = *src++;
+						*dst = ( ((c & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
+						*dst = ( ((c & 0x0F) ) * 0x11); dst += bytesPerPixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY:

@@ -966,15 +966,15 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 
 			// already downloading the file?
 			{
-				downloadinfo *di = Curl_Find(fn);
-				if(di)
+				downloadinfo *existingdownloadinfo = Curl_Find(fn);
+				if(existingdownloadinfo)
 				{
-					Con_Printf("Can't download %s, already getting it from %s!\n", fn, CleanURL(di->url, urlbuf, sizeof(urlbuf)));
+					Con_Printf("Can't download %s, already getting it from %s!\n", fn, CleanURL(existingdownloadinfo->url, urlbuf, sizeof(urlbuf)));
 
 					// however, if it was not for this map yet...
-					if(forthismap && !di->forthismap)
+					if(forthismap && !existingdownloadinfo->forthismap)
 					{
-						di->forthismap = true;
+						existingdownloadinfo->forthismap = true;
 						// this "fakes" a download attempt so the client will wait for
 						// the download to finish and then reconnect
 						++numdownloads_added;
@@ -1012,10 +1012,10 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 						qfile_t *f = FS_OpenRealFile(fn, "rb", false);
 						if(f)
 						{
-							char buf[4] = {0};
-							FS_Read(f, buf, sizeof(buf)); // no "-1", I will use memcmp
+							char b[4] = {0};
+							FS_Read(f, b, sizeof(b)); // no "-1", I will use memcmp
 
-							if(memcmp(buf, "PK\x03\x04", 4) && memcmp(buf, "PACK", 4))
+							if(memcmp(b, "PK\x03\x04", 4) && memcmp(b, "PACK", 4))
 							{
 								Con_DPrintf("Detected non-PAK %s, clearing and NOT resuming.\n", fn);
 								FS_Close(f);
