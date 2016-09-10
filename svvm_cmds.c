@@ -524,7 +524,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 	const char	*sample;
 	int			channel;
 	prvm_edict_t		*entity;
-	int 		volume;
+	int 		nvolume;
 	int flags;
 	float attenuation;
 	float pitchchange;
@@ -534,7 +534,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = (int)(PRVM_G_FLOAT(OFS_PARM3) * 255);
+	nvolume = (int)(PRVM_G_FLOAT(OFS_PARM3) * 255);
 	if (prog->argc < 5)
 	{
 		Con_DPrintf("VM_SV_sound: given only 4 parameters, expected 5, assuming attenuation = ATTN_NORMAL\n");
@@ -562,7 +562,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED);
 	}
 
-	if (volume < 0 || volume > 255)
+	if (nvolume < 0 || nvolume > 255)
 	{
 		VM_Warning(prog, "SV_StartSound: volume must be in range 0-1\n");
 		return;
@@ -582,7 +582,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 		return;
 	}
 
-	SV_StartSound (entity, channel, sample, volume, attenuation, flags & CHANNELFLAG_RELIABLE, pitchchange);
+	SV_StartSound (entity, channel, sample, nvolume, attenuation, flags & CHANNELFLAG_RELIABLE, pitchchange);
 }
 
 /*
@@ -598,7 +598,7 @@ is omitted (since no entity is being tracked).
 static void VM_SV_pointsound(prvm_prog_t *prog)
 {
 	const char	*sample;
-	int 		volume;
+	int 		nvolume;
 	float		attenuation;
 	float		pitchchange;
 	vec3_t		org;
@@ -607,11 +607,11 @@ static void VM_SV_pointsound(prvm_prog_t *prog)
 
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	sample = PRVM_G_STRING(OFS_PARM1);
-	volume = (int)(PRVM_G_FLOAT(OFS_PARM2) * 255);
+	nvolume = (int)(PRVM_G_FLOAT(OFS_PARM2) * 255);
 	attenuation = PRVM_G_FLOAT(OFS_PARM3);
 	pitchchange = prog->argc < 5 ? 0 : PRVM_G_FLOAT(OFS_PARM4) * 0.01f;
 
-	if (volume < 0 || volume > 255)
+	if (nvolume < 0 || nvolume > 255)
 	{
 		VM_Warning(prog, "SV_StartPointSound: volume must be in range 0-1\n");
 		return;
@@ -623,7 +623,7 @@ static void VM_SV_pointsound(prvm_prog_t *prog)
 		return;
 	}
 
-	SV_StartPointSound (org, sample, volume, attenuation, pitchchange);
+	SV_StartPointSound (org, sample, nvolume, attenuation, pitchchange);
 }
 
 /*

@@ -57,6 +57,9 @@
 #include "lhnet.h"
 
 #if defined(WIN32)
+// as of Visual Studio 2015, EWOULDBLOCK and ECONNREFUSED are real things, with different values than we want when talking to WinSock, so we have to undef them here or change the rest of the code.
+#undef EWOULDBLOCK
+#undef ECONNREFUSED
 #define EWOULDBLOCK WSAEWOULDBLOCK
 #define ECONNREFUSED WSAECONNREFUSED
 

@@ -249,7 +249,6 @@ rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 rtexture_t *r_shadow_shadowmap2ddepthtexture;
 rtexture_t *r_shadow_shadowmapvsdcttexture;
 int r_shadow_shadowmapsize; // changes for each light based on distance
-int r_shadow_shadowmaplod; // changes for each light based on distance
 
 GLuint r_shadow_prepassgeometryfbo;
 GLuint r_shadow_prepasslightingdiffusespecularfbo;
@@ -432,7 +431,6 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapshadowsampler = r_shadow_shadowmapping_useshadowsampler.integer != 0;
 	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
 	r_shadow_shadowmapborder = bound(0, r_shadow_shadowmapping_bordersize.integer, 16);
-	r_shadow_shadowmaplod = -1;
 	r_shadow_shadowmapsize = 0;
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
@@ -547,7 +545,6 @@ static void r_shadow_start(void)
 	r_shadow_shadowmapvsdcttexture = NULL;
 	r_shadow_shadowmapmaxsize = 0;
 	r_shadow_shadowmapsize = 0;
-	r_shadow_shadowmaplod = 0;
 	r_shadow_shadowmapfilterquality = -1;
 	r_shadow_shadowmapdepthbits = 0;
 	r_shadow_shadowmapvsdct = false;
@@ -3010,7 +3007,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 	switch (floatcolors)
 	{
 	case 0:
-		pixelsbgra8 = R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned char[4]));
+		pixelsbgra8 = (unsigned char *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned char[4]));
 		for (pixelband = 0;pixelband < pixelbands;pixelband++)
 		{
 			if (pixelband == 1)
@@ -3062,7 +3059,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixelsbgra8, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
 	case 1:
-		pixelsrgba16f = R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
+		pixelsrgba16f = (unsigned short *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
 		memset(pixelsrgba16f, 0, r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
 		for (z = 1;z < resolution[2]-1;z++)
 		{
@@ -4673,11 +4670,6 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 		matrix4x4_t radiustolight = rtlight->matrix_worldtolight;
 		Matrix4x4_Abs(&radiustolight);
 
-		r_shadow_shadowmaplod = 0;
-		for (i = 1;i < R_SHADOW_SHADOWMAP_NUMCUBEMAPS;i++)
-			if ((r_shadow_shadowmapmaxsize >> i) > lodlinear)
-				r_shadow_shadowmaplod = i;
-
 		size = bound(r_shadow_shadowmapborder, lodlinear, r_shadow_shadowmapmaxsize);
 			
 		borderbias = r_shadow_shadowmapborder / (float)(size - r_shadow_shadowmapborder);
@@ -4721,7 +4713,7 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 				castermask |= (entitysides_noselfshadow[i] = R_Shadow_CalcEntitySideMask(shadowentities_noselfshadow[i], &rtlight->matrix_worldtolight, &radiustolight, borderbias)); 
 		}
 
-		//Con_Printf("distance %f lodlinear %i (lod %i) size %i\n", distance, lodlinear, r_shadow_shadowmaplod, size);
+		//Con_Printf("distance %f lodlinear %i size %i\n", distance, lodlinear, size);
 
 		// render shadow casters into 6 sided depth texture
 		for (side = 0;side < 6;side++) if (receivermask & (1 << side))

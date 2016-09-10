@@ -15,7 +15,6 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	int blends;
 	matrix4x4_t *bonepose;
 	matrix4x4_t *boneposerelative;
-	float m[12];
 	const blendweights_t * RESTRICT weights;
 	int num_vertices_minus_one;
 
@@ -105,37 +104,38 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 	{
 		for (i = 0;i < model->num_bones;i++)
 		{
-			const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
-			float lerp = frameblend[0].lerp,
-				tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
-				rx = pose7s[3] * lerp,
-				ry = pose7s[4] * lerp,
-				rz = pose7s[5] * lerp,
-				rw = pose7s[6] * lerp,
-				dx = tx*rw + ty*rz - tz*ry,
-				dy = -tx*rz + ty*rw + tz*rx,
-				dz = tx*ry - ty*rx + tz*rw,
-				dw = -tx*rx - ty*ry - tz*rz,
+			float m[12];
+			const short * RESTRICT firstpose7s = model->data_poses7s + 7 * (frameblend[0].subframe * model->num_bones + i);
+			float firstlerp = frameblend[0].lerp,
+				firsttx = firstpose7s[0], firstty = firstpose7s[1], firsttz = firstpose7s[2],
+				rx = firstpose7s[3] * firstlerp,
+				ry = firstpose7s[4] * firstlerp,
+				rz = firstpose7s[5] * firstlerp,
+				rw = firstpose7s[6] * firstlerp,
+				dx = firsttx*rw + firstty*rz - firsttz*ry,
+				dy = -firsttx*rz + firstty*rw + firsttz*rx,
+				dz = firsttx*ry - firstty*rx + firsttz*rw,
+				dw = -firsttx*rx - firstty*ry - firsttz*rz,
 				scale, sx, sy, sz, sw;
 			for (blends = 1;blends < MAX_FRAMEBLENDS && frameblend[blends].lerp > 0;blends++)
 			{
-				const short * RESTRICT pose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
-				float lerp = frameblend[blends].lerp,
-					tx = pose7s[0], ty = pose7s[1], tz = pose7s[2],
-					qx = pose7s[3], qy = pose7s[4], qz = pose7s[5], qw = pose7s[6];
-				if(rx*qx + ry*qy + rz*qz + rw*qw < 0) lerp = -lerp;
-				qx *= lerp;
-				qy *= lerp;
-				qz *= lerp;
-				qw *= lerp;
+				const short * RESTRICT blendpose7s = model->data_poses7s + 7 * (frameblend[blends].subframe * model->num_bones + i);
+				float blendlerp = frameblend[blends].lerp,
+					blendtx = blendpose7s[0], blendty = blendpose7s[1], blendtz = blendpose7s[2],
+					qx = blendpose7s[3], qy = blendpose7s[4], qz = blendpose7s[5], qw = blendpose7s[6];
+				if(rx*qx + ry*qy + rz*qz + rw*qw < 0) blendlerp = -blendlerp;
+				qx *= blendlerp;
+				qy *= blendlerp;
+				qz *= blendlerp;
+				qw *= blendlerp;
 				rx += qx;
 				ry += qy;
 				rz += qz;
 				rw += qw;
-				dx += tx*qw + ty*qz - tz*qy;
-				dy += -tx*qz + ty*qw + tz*qx;
-				dz += tx*qy - ty*qx + tz*qw;
-				dw += -tx*qx - ty*qy - tz*qz;
+				dx += blendtx*qw + blendty*qz - blendtz*qy;
+				dy += -blendtx*qz + blendty*qw + blendtz*qx;
+				dz += blendtx*qy - blendty*qx + blendtz*qw;
+				dw += -blendtx*qx - blendty*qy - blendtz*qz;
 			}
 			scale = 1.0f / (rx*rx + ry*ry + rz*rz + rw*rw);
 			sx = rx * scale;
@@ -336,19 +336,19 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 			const float * RESTRICT n = model->surfmesh.data_normal3f;
 			if (svector3f && tvector3f)
 			{
-				const float * RESTRICT sv = model->surfmesh.data_svector3f;
-				const float * RESTRICT tv = model->surfmesh.data_tvector3f;
+				const float * RESTRICT svec = model->surfmesh.data_svector3f;
+				const float * RESTRICT tvec = model->surfmesh.data_tvector3f;
 
 				// Note that for SSE each iteration stores one element past end, so we break one vertex short
 				// and handle that with scalars in that case
-				for (i = 0; i < num_vertices_minus_one; i++, v += 3, n += 3, sv += 3, tv += 3, b++,
+				for (i = 0; i < num_vertices_minus_one; i++, v += 3, n += 3, svec += 3, tvec += 3, b++,
 						vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3)
 				{
 					LOAD_MATRIX4();
 					TRANSFORM_POSITION(v, vertex3f);
 					TRANSFORM_VECTOR(n, normal3f);
-					TRANSFORM_VECTOR(sv, svector3f);
-					TRANSFORM_VECTOR(tv, tvector3f);
+					TRANSFORM_VECTOR(svec, svector3f);
+					TRANSFORM_VECTOR(tvec, tvector3f);
 				}
 
 				// Last vertex needs to be done with scalars to avoid reading/writing 1 word past end of arrays
@@ -356,8 +356,8 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 					LOAD_MATRIX_SCALAR();
 					TRANSFORM_POSITION_SCALAR(v, vertex3f);
 					TRANSFORM_VECTOR_SCALAR(n, normal3f);
-					TRANSFORM_VECTOR_SCALAR(sv, svector3f);
-					TRANSFORM_VECTOR_SCALAR(tv, tvector3f);
+					TRANSFORM_VECTOR_SCALAR(svec, svector3f);
+					TRANSFORM_VECTOR_SCALAR(tvec, tvector3f);
 				}
 				//printf("elapsed ticks: %llu\n", rdtsc() - ts); // XXX
 				return;
@@ -406,31 +406,31 @@ void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const f
 
 	if (svector3f)
 	{
-		const float * RESTRICT sv = model->surfmesh.data_svector3f;
+		const float * RESTRICT svec = model->surfmesh.data_svector3f;
 		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0; i < num_vertices_minus_one; i++, sv += 3, b++, svector3f += 3)
+		for (i = 0; i < num_vertices_minus_one; i++, svec += 3, b++, svector3f += 3)
 		{
 			LOAD_MATRIX3();
-			TRANSFORM_VECTOR(sv, svector3f);
+			TRANSFORM_VECTOR(svec, svector3f);
 		}
 		{
 			LOAD_MATRIX_SCALAR();
-			TRANSFORM_VECTOR_SCALAR(sv, svector3f);
+			TRANSFORM_VECTOR_SCALAR(svec, svector3f);
 		}
 	}
 
 	if (tvector3f)
 	{
-		const float * RESTRICT tv = model->surfmesh.data_tvector3f;
+		const float * RESTRICT tvec = model->surfmesh.data_tvector3f;
 		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0; i < num_vertices_minus_one; i++, tv += 3, b++, tvector3f += 3)
+		for (i = 0; i < num_vertices_minus_one; i++, tvec += 3, b++, tvector3f += 3)
 		{
 			LOAD_MATRIX3();
-			TRANSFORM_VECTOR(tv, tvector3f);
+			TRANSFORM_VECTOR(tvec, tvector3f);
 		}
 		{
 			LOAD_MATRIX_SCALAR();
-			TRANSFORM_VECTOR_SCALAR(tv, tvector3f);
+			TRANSFORM_VECTOR_SCALAR(tvec, tvector3f);
 		}
 	}
 

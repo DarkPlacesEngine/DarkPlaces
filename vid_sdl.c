@@ -84,7 +84,7 @@ static int win_half_height = 50;
 static int video_bpp;
 
 #if SDL_MAJOR_VERSION == 1
-static SDL_Surface *screen;
+static SDL_Surface *video_screen;
 static int video_flags;
 #else
 static SDL_GLContext context;
@@ -1154,7 +1154,7 @@ void Sys_SendKeyEvents( void )
 					vid.width = event.resize.w;
 					vid.height = event.resize.h;
 					if (!vid_isfullscreen)
-						screen = SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
+						video_screen = SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
 					if (vid_softsurface)
 					{
 						SDL_FreeSurface(vid_softsurface);
@@ -2622,15 +2622,15 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	video_bpp = mode->bitsperpixel;
 #if SDL_MAJOR_VERSION == 1
 	video_flags = flags;
-	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
-	if (screen == NULL)
+	video_screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
+	if (video_screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
-	mode->width = screen->w;
-	mode->height = screen->h;
+	mode->width = video_screen->w;
+	mode->height = video_screen->h;
 #else
 	window_flags = windowflags;
 	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
@@ -2734,15 +2734,15 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	video_bpp = mode->bitsperpixel;
 #if SDL_MAJOR_VERSION == 1
 	video_flags = flags;
-	screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
-	if (screen == NULL)
+	video_screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
+	if (video_screen == NULL)
 	{
 		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
-	mode->width = screen->w;
-	mode->height = screen->h;
+	mode->width = video_screen->w;
+	mode->height = video_screen->h;
 #else
 	window_flags = windowflags;
 	window = SDL_CreateWindow(gamename, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mode->width, mode->height, windowflags);
@@ -2927,8 +2927,8 @@ void VID_Finish (void)
 #if SDL_MAJOR_VERSION == 1
 //		if (!r_test.integer)
 		{
-			SDL_BlitSurface(vid_softsurface, NULL, screen, NULL);
-			SDL_Flip(screen);
+			SDL_BlitSurface(vid_softsurface, NULL, video_screen, NULL);
+			SDL_Flip(video_screen);
 		}
 #else
 			{

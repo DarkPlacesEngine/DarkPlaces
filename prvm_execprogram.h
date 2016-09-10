@@ -125,15 +125,15 @@
 		{
 			if (prog->watch_global_type != ev_void)
 			{
-				prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
+				prvm_eval_t *g = PRVM_GLOBALFIELDVALUE(prog->watch_global);
 				prog->xstatement = st + 1 - cached_statements;
-				PRVM_Watchpoint(prog, 1, "Global watchpoint hit by engine", prog->watch_global_type, &prog->watch_global_value, f);
+				PRVM_Watchpoint(prog, 1, "Global watchpoint hit by engine", prog->watch_global_type, &prog->watch_global_value, g);
 			}
 			if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 			{
-				prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+				prvm_eval_t *g = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
 				prog->xstatement = st + 1 - cached_statements;
-				PRVM_Watchpoint(prog, 1, "Entityfield watchpoint hit by engine", prog->watch_field_type, &prog->watch_edictfield_value, f);
+				PRVM_Watchpoint(prog, 1, "Entityfield watchpoint hit by engine", prog->watch_field_type, &prog->watch_edictfield_value, g);
 			}
 		}
 #endif
@@ -482,21 +482,21 @@
 					goto cleanup;
 				}
 
-				newf = &prog->functions[OPA->function];
-				if (newf->callcount++ == 0 && (prvm_coverage.integer & 1))
-					PRVM_FunctionCoverageEvent(prog, newf);
+				enterfunc = &prog->functions[OPA->function];
+				if (enterfunc->callcount++ == 0 && (prvm_coverage.integer & 1))
+					PRVM_FunctionCoverageEvent(prog, enterfunc);
 
-				if (newf->first_statement < 0)
+				if (enterfunc->first_statement < 0)
 				{
 					// negative first_statement values are built in functions
-					int builtinnumber = -newf->first_statement;
+					int builtinnumber = -enterfunc->first_statement;
 					prog->xfunction->builtinsprofile++;
 					if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
 					{
 						prog->builtins[builtinnumber](prog);
 #ifdef PRVMTIMEPROFILING 
 						tm = Sys_DirtyTime();
-						newf->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
+						enterfunc->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 						prog->xfunction->tbprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 						starttm = tm;
 #endif
@@ -521,7 +521,7 @@
 						prog->error_cmd("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, prog->name);
 				}
 				else
-					st = cached_statements + PRVM_EnterFunction(prog, newf);
+					st = cached_statements + PRVM_EnterFunction(prog, enterfunc);
 				startst = st;
 				DISPATCH_OPCODE();
 
@@ -840,15 +840,15 @@
 			{
 				if (prog->watch_global_type != ev_void)
 				{
-					prvm_eval_t *f = PRVM_GLOBALFIELDVALUE(prog->watch_global);
+					prvm_eval_t *g = PRVM_GLOBALFIELDVALUE(prog->watch_global);
 					prog->xstatement = st - cached_statements;
-					PRVM_Watchpoint(prog, 0, "Global watchpoint hit", prog->watch_global_type, &prog->watch_global_value, f);
+					PRVM_Watchpoint(prog, 0, "Global watchpoint hit", prog->watch_global_type, &prog->watch_global_value, g);
 				}
 				if (prog->watch_field_type != ev_void && prog->watch_edict < prog->max_edicts)
 				{
-					prvm_eval_t *f = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
+					prvm_eval_t *g = PRVM_EDICTFIELDVALUE(prog->edicts + prog->watch_edict, prog->watch_field);
 					prog->xstatement = st - cached_statements;
-					PRVM_Watchpoint(prog, 0, "Entityfield watchpoint hit", prog->watch_field_type, &prog->watch_edictfield_value, f);
+					PRVM_Watchpoint(prog, 0, "Entityfield watchpoint hit", prog->watch_field_type, &prog->watch_edictfield_value, g);
 				}
 			}
 #endif

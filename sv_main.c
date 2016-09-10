@@ -710,7 +710,7 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable, float speed)
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int nvolume, float attenuation, qboolean reliable, float speed)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	sizebuf_t *dest;
@@ -718,9 +718,9 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 
 	dest = (reliable ? &sv.reliable_datagram : &sv.datagram);
 
-	if (volume < 0 || volume > 255)
+	if (nvolume < 0 || nvolume > 255)
 	{
-		Con_Printf ("SV_StartSound: volume = %i\n", volume);
+		Con_Printf ("SV_StartSound: volume = %i\n", nvolume);
 		return;
 	}
 
@@ -750,7 +750,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 
 	speed4000 = (int)floor(speed * 4000.0f + 0.5f);
 	field_mask = 0;
-	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+	if (nvolume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
@@ -765,7 +765,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 	MSG_WriteByte (dest, svc_sound);
 	MSG_WriteByte (dest, field_mask);
 	if (field_mask & SND_VOLUME)
-		MSG_WriteByte (dest, volume);
+		MSG_WriteByte (dest, nvolume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (dest, (int)(attenuation*64));
 	if (field_mask & SND_SPEEDUSHORT4000)
@@ -802,13 +802,13 @@ function, therefore the check for it is omitted.
 
 ==================
 */
-void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation, float speed)
+void SV_StartPointSound (vec3_t origin, const char *sample, int nvolume, float attenuation, float speed)
 {
 	int sound_num, field_mask, i, speed4000;
 
-	if (volume < 0 || volume > 255)
+	if (nvolume < 0 || nvolume > 255)
 	{
-		Con_Printf ("SV_StartPointSound: volume = %i\n", volume);
+		Con_Printf ("SV_StartPointSound: volume = %i\n", nvolume);
 		return;
 	}
 
@@ -828,7 +828,7 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 
 	speed4000 = (int)(speed * 40.0f);
 	field_mask = 0;
-	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
+	if (nvolume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
@@ -841,7 +841,7 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 	MSG_WriteByte (&sv.datagram, svc_sound);
 	MSG_WriteByte (&sv.datagram, field_mask);
 	if (field_mask & SND_VOLUME)
-		MSG_WriteByte (&sv.datagram, volume);
+		MSG_WriteByte (&sv.datagram, nvolume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (&sv.datagram, (int)(attenuation*64));
 	if (field_mask & SND_SPEEDUSHORT4000)
@@ -939,13 +939,13 @@ void SV_SendServerinfo (client_t *client)
 	{
 		char demofile[MAX_OSPATH];
 		char ipaddress[MAX_QPATH];
-		size_t i;
+		size_t j;
 
 		// start a new demo file
 		LHNETADDRESS_ToString(&(client->netconnection->peeraddress), ipaddress, sizeof(ipaddress), true);
-		for(i = 0; ipaddress[i]; ++i)
-			if(!isalnum(ipaddress[i]))
-				ipaddress[i] = '-';
+		for(j = 0; ipaddress[j]; ++j)
+			if(!isalnum(ipaddress[j]))
+				ipaddress[j] = '-';
 		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), sv.worldbasename, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
 
 		SV_StartDemoRecording(client, demofile, -1);
@@ -964,14 +964,14 @@ void SV_SendServerinfo (client_t *client)
 
 		if(client->sv_demo_file != NULL)
 		{
-			int i;
+			int k;
 			static char buf[NET_MAXMESSAGE];
 			sizebuf_t sb;
 
 			sb.data = (unsigned char *) buf;
 			sb.maxsize = sizeof(buf);
-			i = 0;
-			while(MakeDownloadPacket(sv.csqc_progname, svs.csqc_progdata, sv.csqc_progsize, sv.csqc_progcrc, i++, &sb, sv.protocol))
+			k = 0;
+			while(MakeDownloadPacket(sv.csqc_progname, svs.csqc_progdata, sv.csqc_progsize, sv.csqc_progcrc, k++, &sb, sv.protocol))
 				SV_WriteDemoMessage(client, &sb, false);
 		}
 

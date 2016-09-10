@@ -1001,7 +1001,7 @@ extern cvar_t r_viewscale;
 extern float viewscalefpsadjusted;
 static void R_TimeReport_EndFrame(void)
 {
-	int i, j, lines, y;
+	int j, lines;
 	cl_locnode_t *loc;
 	char string[1024+4096];
 	mleaf_t *viewleaf;
@@ -1065,6 +1065,7 @@ static void R_TimeReport_EndFrame(void)
 
 	if (string[0])
 	{
+		int i, y;
 		if (string[strlen(string)-1] == '\n')
 			string[strlen(string)-1] = 0;
 		lines = 1;
@@ -1096,12 +1097,13 @@ static void R_TimeReport_EndFrame(void)
 	if (r_speeds_graph.integer)
 	{
 		// if we currently have no graph data, reset the graph data entirely
+		int i;
 		if (!cls.r_speeds_graph_data)
 			for (i = 0;i < r_stat_count;i++)
 				cls.r_speeds_graph_datamin[i] = cls.r_speeds_graph_datamax[i] = 0;
 		if (cls.r_speeds_graph_length != r_speeds_graph_length.integer)
 		{
-			int i, stat, index, d, graph_length, *graph_data;
+			int stat, index, d, graph_length, *graph_data;
 			cls.r_speeds_graph_length = r_speeds_graph_length.integer;
 			cls.r_speeds_graph_current = 0;
 			if (cls.r_speeds_graph_data)
@@ -1136,7 +1138,7 @@ static void R_TimeReport_EndFrame(void)
 	{
 		char legend[128];
 		r_vertexgeneric_t *v;
-		int numlines;
+		int i, numlines;
 		const int *data;
 		float x, y, width, height, scalex, scaley;
 		int range_default = max(r_speeds_graph_maxdefault.integer, 1);

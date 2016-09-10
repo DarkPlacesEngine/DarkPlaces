@@ -1261,9 +1261,9 @@ static void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t
 
     if( wishspeed > curspeed * 1.01f )
     {
-        float accelspeed = curspeed + airforwardaccel * cl.movevars_maxairspeed * s->cmd.frametime;
-        if( accelspeed < wishspeed )
-            wishspeed = accelspeed;
+        float faccelspeed = curspeed + airforwardaccel * cl.movevars_maxairspeed * s->cmd.frametime;
+        if( faccelspeed < wishspeed )
+            wishspeed = faccelspeed;
     }
     else
     {
@@ -2061,7 +2061,6 @@ void CL_SendMove(void)
 		// if cl_netrepeatinput is 1 and client framerate matches server
 		// framerate, this is 10 bytes, if client framerate is lower this
 		// will be more...
-		int i, j;
 		unsigned int oldsequence = cl.cmd.sequence;
 		unsigned int delta = bound(1, cl_netrepeatinput.integer + 1, 3);
 		if (oldsequence > delta)

@@ -93,7 +93,7 @@ float CDAudio_SysGetVolume (void)
 }
 
 
-void CDAudio_SysSetVolume (float volume)
+void CDAudio_SysSetVolume (float fvolume)
 {
 	// IMPLEMENTME
 }

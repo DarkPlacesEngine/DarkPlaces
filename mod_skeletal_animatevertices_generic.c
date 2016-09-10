@@ -66,19 +66,19 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 			const float * RESTRICT n = model->surfmesh.data_normal3f;
 			if (svector3f && tvector3f)
 			{
-				const float * RESTRICT sv = model->surfmesh.data_svector3f;
-				const float * RESTRICT tv = model->surfmesh.data_tvector3f;
+				const float * RESTRICT svec = model->surfmesh.data_svector3f;
+				const float * RESTRICT tvec = model->surfmesh.data_tvector3f;
 
 				// Note that for SSE each iteration stores one element past end, so we break one vertex short
 				// and handle that with scalars in that case
-				for (i = 0; i < model->surfmesh.num_vertices; i++, v += 3, n += 3, sv += 3, tv += 3, b++,
+				for (i = 0; i < model->surfmesh.num_vertices; i++, v += 3, n += 3, svec += 3, tvec += 3, b++,
 						vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3)
 				{
 					LOAD_MATRIX4();
 					TRANSFORM_POSITION(v, vertex3f);
 					TRANSFORM_VECTOR(n, normal3f);
-					TRANSFORM_VECTOR(sv, svector3f);
-					TRANSFORM_VECTOR(tv, tvector3f);
+					TRANSFORM_VECTOR(svec, svector3f);
+					TRANSFORM_VECTOR(tvec, tvector3f);
 				}
 
 				return;
@@ -114,23 +114,23 @@ void Mod_Skeletal_AnimateVertices_Generic(const dp_model_t * RESTRICT model, con
 
 	if (svector3f)
 	{
-		const float * RESTRICT sv = model->surfmesh.data_svector3f;
+		const float * RESTRICT svec = model->surfmesh.data_svector3f;
 		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0; i < model->surfmesh.num_vertices; i++, sv += 3, b++, svector3f += 3)
+		for (i = 0; i < model->surfmesh.num_vertices; i++, svec += 3, b++, svector3f += 3)
 		{
 			LOAD_MATRIX3();
-			TRANSFORM_VECTOR(sv, svector3f);
+			TRANSFORM_VECTOR(svec, svector3f);
 		}
 	}
 
 	if (tvector3f)
 	{
-		const float * RESTRICT tv = model->surfmesh.data_tvector3f;
+		const float * RESTRICT tvec = model->surfmesh.data_tvector3f;
 		const unsigned short * RESTRICT b = model->surfmesh.blends;
-		for (i = 0; i < model->surfmesh.num_vertices; i++, tv += 3, b++, tvector3f += 3)
+		for (i = 0; i < model->surfmesh.num_vertices; i++, tvec += 3, b++, tvector3f += 3)
 		{
 			LOAD_MATRIX3();
-			TRANSFORM_VECTOR(tv, tvector3f);
+			TRANSFORM_VECTOR(tvec, tvector3f);
 		}
 	}
 }

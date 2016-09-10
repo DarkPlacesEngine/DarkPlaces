@@ -482,7 +482,7 @@ typedef struct challenge_s
 }
 challenge_t;
 
-extern challenge_t challenge[MAX_CHALLENGES];
+extern challenge_t challenges[MAX_CHALLENGES];
 
 #endif
 

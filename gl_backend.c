@@ -130,7 +130,7 @@ int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
 
 #ifdef DEBUGGL
-int errornumber = 0;
+int gl_errornumber = 0;
 
 void GL_PrintError(int errornumber, const char *filename, int linenumber)
 {

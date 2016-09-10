@@ -171,7 +171,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	const char			*sample;
 	int					channel;
 	prvm_edict_t		*entity;
-	float 				volume;
+	float 				fvolume;
 	float				attenuation;
 	float pitchchange;
 	float				startposition;
@@ -183,10 +183,10 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	entity = PRVM_G_EDICT(OFS_PARM0);
 	channel = (int)PRVM_G_FLOAT(OFS_PARM1);
 	sample = PRVM_G_STRING(OFS_PARM2);
-	volume = PRVM_G_FLOAT(OFS_PARM3);
+	fvolume = PRVM_G_FLOAT(OFS_PARM3);
 	attenuation = PRVM_G_FLOAT(OFS_PARM4);
 
-	if (volume < 0 || volume > 1)
+	if (fvolume < 0 || fvolume > 1)
 	{
 		VM_Warning(prog, "VM_CL_sound: volume must be in range 0-1\n");
 		return;
@@ -229,14 +229,14 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	}
 
 	CL_VM_GetEntitySoundOrigin(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), org);
-	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, volume, attenuation, startposition, flags, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
+	S_StartSound_StartPosition_Flags(MAX_EDICTS + PRVM_NUM_FOR_EDICT(entity), channel, S_FindName(sample), org, fvolume, attenuation, startposition, flags, pitchchange > 0.0f ? pitchchange * 0.01f : 1.0f);
 }
 
 // #483 void(vector origin, string sample, float volume, float attenuation) pointsound
 static void VM_CL_pointsound(prvm_prog_t *prog)
 {
 	const char			*sample;
-	float 				volume;
+	float 				fvolume;
 	float				attenuation;
 	vec3_t				org;
 
@@ -244,10 +244,10 @@ static void VM_CL_pointsound(prvm_prog_t *prog)
 
 	VectorCopy( PRVM_G_VECTOR(OFS_PARM0), org);
 	sample = PRVM_G_STRING(OFS_PARM1);
-	volume = PRVM_G_FLOAT(OFS_PARM2);
+	fvolume = PRVM_G_FLOAT(OFS_PARM2);
 	attenuation = PRVM_G_FLOAT(OFS_PARM3);
 
-	if (volume < 0 || volume > 1)
+	if (fvolume < 0 || fvolume > 1)
 	{
 		VM_Warning(prog, "VM_CL_pointsound: volume must be in range 0-1\n");
 		return;
@@ -260,7 +260,7 @@ static void VM_CL_pointsound(prvm_prog_t *prog)
 	}
 
 	// Send World Entity as Entity to Play Sound (for CSQC, that is MAX_EDICTS)
-	S_StartSound(MAX_EDICTS, 0, S_FindName(sample), org, volume, attenuation);
+	S_StartSound(MAX_EDICTS, 0, S_FindName(sample), org, fvolume, attenuation);
 }
 
 // #14 entity() spawn
@@ -3381,7 +3381,6 @@ static void VMPolygons_Store(vmpolygons_t *polys)
 	else
 	{
 		// queue the polygon as 3D for sorted transparent rendering later
-		int i;
 		if (polys->max_triangles < polys->num_triangles + polys->begin_vertices-2)
 		{
 			while (polys->max_triangles < polys->num_triangles + polys->begin_vertices-2)

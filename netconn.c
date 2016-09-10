@@ -111,7 +111,7 @@ int masterreplycount = 0;
 int serverquerycount = 0;
 int serverreplycount = 0;
 
-challenge_t challenge[MAX_CHALLENGES];
+challenge_t challenges[MAX_CHALLENGES];
 
 #ifdef CONFIG_MENU
 /// this is only false if there are still servers left to query
@@ -2511,7 +2511,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	int length;
 	char teambuf[3];
 	const char *crypto_idstring;
-	const char *str;
+	const char *worldstatusstr;
 
 	// How many clients are there?
 	for (i = 0;i < (unsigned int)svs.maxclients;i++)
@@ -2525,13 +2525,13 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 	}
 
 	*qcstatus = 0;
-	str = PRVM_GetString(prog, PRVM_serverglobalstring(worldstatus));
-	if(str && *str)
+	worldstatusstr = PRVM_GetString(prog, PRVM_serverglobalstring(worldstatus));
+	if(worldstatusstr && *worldstatusstr)
 	{
 		char *p;
 		const char *q;
 		p = qcstatus;
-		for(q = str; *q && (size_t)(p - qcstatus) < (sizeof(qcstatus) - 1); ++q)
+		for(q = worldstatusstr; *q && (size_t)(p - qcstatus) < (sizeof(qcstatus) - 1); ++q)
 			if(*q != '\\' && *q != '\n')
 				*p++ = *q;
 		*p = 0;
@@ -2572,13 +2572,13 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 
 		for (i = 0;i < (unsigned int)svs.maxclients;i++)
 		{
-			client_t *cl = &svs.clients[i];
-			if (cl->active)
+			client_t *client = &svs.clients[i];
+			if (client->active)
 			{
 				int nameind, cleanind, pingvalue;
 				char curchar;
-				char cleanname [sizeof(cl->name)];
-				const char *str;
+				char cleanname [sizeof(client->name)];
+				const char *statusstr;
 				prvm_edict_t *ed;
 
 				// Remove all characters '"' and '\' in the player name
@@ -2586,7 +2586,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 				cleanind = 0;
 				do
 				{
-					curchar = cl->name[nameind++];
+					curchar = client->name[nameind++];
 					if (curchar != '"' && curchar != '\\')
 					{
 						cleanname[cleanind++] = curchar;
@@ -2596,21 +2596,21 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 				} while (curchar != '\0');
 				cleanname[cleanind] = 0; // cleanind is always a valid index even at this point
 
-				pingvalue = (int)(cl->ping * 1000.0f);
-				if(cl->netconnection)
+				pingvalue = (int)(client->ping * 1000.0f);
+				if(client->netconnection)
 					pingvalue = bound(1, pingvalue, 9999);
 				else
 					pingvalue = 0;
 
 				*qcstatus = 0;
 				ed = PRVM_EDICT_NUM(i + 1);
-				str = PRVM_GetString(prog, PRVM_serveredictstring(ed, clientstatus));
-				if(str && *str)
+				statusstr = PRVM_GetString(prog, PRVM_serveredictstring(ed, clientstatus));
+				if(statusstr && *statusstr)
 				{
 					char *p;
 					const char *q;
 					p = qcstatus;
-					for(q = str; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
+					for(q = statusstr; *q && p != qcstatus + sizeof(qcstatus) - 1; ++q)
 						if(*q != '\\' && *q != '"' && !ISWHITESPACE(*q))
 							*p++ = *q;
 					*p = 0;
@@ -2618,15 +2618,15 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 
 				if (IS_NEXUIZ_DERIVED(gamemode) && (teamplay.integer > 0))
 				{
-					if(cl->frags == -666) // spectator
+					if(client->frags == -666) // spectator
 						strlcpy(teambuf, " 0", sizeof(teambuf));
-					else if(cl->colors == 0x44) // red team
+					else if(client->colors == 0x44) // red team
 						strlcpy(teambuf, " 1", sizeof(teambuf));
-					else if(cl->colors == 0xDD) // blue team
+					else if(client->colors == 0xDD) // blue team
 						strlcpy(teambuf, " 2", sizeof(teambuf));
-					else if(cl->colors == 0xCC) // yellow team
+					else if(client->colors == 0xCC) // yellow team
 						strlcpy(teambuf, " 3", sizeof(teambuf));
-					else if(cl->colors == 0x99) // pink team
+					else if(client->colors == 0x99) // pink team
 						strlcpy(teambuf, " 4", sizeof(teambuf));
 					else
 						strlcpy(teambuf, " 0", sizeof(teambuf));
@@ -2643,7 +2643,7 @@ static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg
 										cleanname);
 				else
 					length = dpsnprintf(ptr, left, "%d %d%s \"%s\"\n",
-										cl->frags,
+										client->frags,
 										pingvalue,
 										teambuf,
 										cleanname);
@@ -2755,13 +2755,13 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	char mdfourbuf[16];
 	int i;
 
-	if(slen < (int)(sizeof(challenge[0].string)) - 1)
+	if(slen < (int)(sizeof(challenges[0].string)) - 1)
 		return false;
 
 	// validate the challenge
 	for (i = 0;i < MAX_CHALLENGES;i++)
-		if(challenge[i].time > 0)
-			if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strncmp(challenge[i].string, s, sizeof(challenge[0].string) - 1))
+		if(challenges[i].time > 0)
+			if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strncmp(challenges[i].string, s, sizeof(challenges[0].string) - 1))
 				break;
 	// if the challenge is not recognized, drop the packet
 	if (i == MAX_CHALLENGES)
@@ -2774,7 +2774,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 		return false;
 
 	// unmark challenge to prevent replay attacks
-	challenge[i].time = 0;
+	challenges[i].time = 0;
 
 	return true;
 }
@@ -2925,8 +2925,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 {
 	int i, ret, clientnum, best;
 	double besttime;
-	client_t *client;
-	char *s, *string, response[1400], addressstring2[128];
+	char *string, response[1400], addressstring2[128];
 	static char stringbuf[16384]; // server only
 	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
@@ -2996,30 +2995,30 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
 			{
-				if(challenge[i].time > 0)
-					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address))
+				if(challenges[i].time > 0)
+					if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address))
 						break;
-				if (besttime > challenge[i].time)
-					besttime = challenge[best = i].time;
+				if (besttime > challenges[i].time)
+					besttime = challenges[best = i].time;
 			}
 			// if we did not find an exact match, choose the oldest and
 			// update address and string
 			if (i == MAX_CHALLENGES)
 			{
 				i = best;
-				challenge[i].address = *peeraddress;
-				NetConn_BuildChallengeString(challenge[i].string, sizeof(challenge[i].string));
+				challenges[i].address = *peeraddress;
+				NetConn_BuildChallengeString(challenges[i].string, sizeof(challenges[i].string));
 			}
 			else
 			{
 				// flood control: drop if requesting challenge too often
-				if(challenge[i].time > realtime - net_challengefloodblockingtimeout.value)
+				if(challenges[i].time > realtime - net_challengefloodblockingtimeout.value)
 					return true;
 			}
-			challenge[i].time = realtime;
+			challenges[i].time = realtime;
 			// send the challenge
 			memcpy(response, "\377\377\377\377", 4);
-			dpsnprintf(response+4, sizeof(response)-4, "challenge %s", challenge[i].string);
+			dpsnprintf(response+4, sizeof(response)-4, "challenge %s", challenges[i].string);
 			response_len = strlen(response) + 1;
 			Crypto_ServerAppendToChallenge(string, length, response, &response_len, sizeof(response));
 			NetConn_Write(mysocket, response, (int)response_len, peeraddress);
@@ -3027,6 +3026,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (length > 8 && !memcmp(string, "connect\\", 8))
 		{
+			char *s;
+			client_t *client;
 			crypto_t *crypto = Crypto_ServerGetInstance(peeraddress);
 			string += 7;
 			length -= 7;
@@ -3054,8 +3055,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				{
 					// validate the challenge
 					for (i = 0;i < MAX_CHALLENGES;i++)
-						if(challenge[i].time > 0)
-							if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+						if(challenges[i].time > 0)
+							if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
 								break;
 					// if the challenge is not recognized, drop the packet
 					if (i == MAX_CHALLENGES)
@@ -3253,7 +3254,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (length >= 5 && !memcmp(string, "rcon ", 5))
 		{
-			int i;
+			int j;
 			char *s = string + 5;
 			char *endpos = string + length + 1; // one behind the NUL, so adding strlen+1 will eventually reach it
 			char password[64];
@@ -3261,12 +3262,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if(rcon_secure.integer > 0)
 				return true;
 
-			for (i = 0;!ISWHITESPACE(*s);s++)
-				if (i < (int)sizeof(password) - 1)
-					password[i++] = *s;
+			for (j = 0;!ISWHITESPACE(*s);s++)
+				if (j < (int)sizeof(password) - 1)
+					password[j++] = *s;
 			if(ISWHITESPACE(*s) && s != endpos) // skip leading ugly space
 				++s;
-			password[i] = 0;
+			password[j] = 0;
 			if (!ISWHITESPACE(password[0]))
 			{
 				const char *userlevel = RCon_Authenticate(peeraddress, password, s, endpos, plaintext_matching, NULL, 0);
@@ -3306,6 +3307,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		int c;
 		int protocolnumber;
 		const char *protocolname;
+		client_t *knownclient;
+		client_t *newclient;
 		data += 4;
 		length -= 4;
 		SZ_Clear(&sv_message);
@@ -3351,16 +3354,16 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			// see if this connect request comes from a known client
-			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			for (clientnum = 0, knownclient = svs.clients;clientnum < svs.maxclients;clientnum++, knownclient++)
 			{
-				if (client->netconnection && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
+				if (knownclient->netconnection && LHNETADDRESS_Compare(peeraddress, &knownclient->netconnection->peeraddress) == 0)
 				{
 					// this is either a duplicate connection request
 					// or coming back from a timeout
 					// (if so, keep their stuff intact)
 
 					crypto_t *crypto = Crypto_ServerGetInstance(peeraddress);
-					if((crypto && crypto->authenticated) || client->netconnection->crypto.authenticated)
+					if((crypto && crypto->authenticated) || knownclient->netconnection->crypto.authenticated)
 					{
 						if (developer_extra.integer)
 							Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Attempt to downgrade crypto.\" to %s.\n", addressstring2);
@@ -3382,15 +3385,15 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					// save space for the header, filled in later
 					MSG_WriteLong(&sv_message, 0);
 					MSG_WriteByte(&sv_message, CCREP_ACCEPT);
-					MSG_WriteLong(&sv_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(client->netconnection->mysocket)));
+					MSG_WriteLong(&sv_message, LHNETADDRESS_GetPort(LHNET_AddressFromSocket(knownclient->netconnection->mysocket)));
 					StoreBigLong(sv_message.data, NETFLAG_CTL | (sv_message.cursize & NETFLAG_LENGTH_MASK));
 					NetConn_Write(mysocket, sv_message.data, sv_message.cursize, peeraddress);
 					SZ_Clear(&sv_message);
 
 					// if client is already spawned, re-send the
 					// serverinfo message as they'll need it to play
-					if (client->begun)
-						SV_SendServerinfo(client);
+					if (knownclient->begun)
+						SV_SendServerinfo(knownclient);
 					return true;
 				}
 			}
@@ -3400,10 +3403,10 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				break;
 
 			// find a slot for the new client
-			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			for (clientnum = 0, newclient = svs.clients;clientnum < svs.maxclients;clientnum++, newclient++)
 			{
 				netconn_t *conn;
-				if (!client->active && (client->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
+				if (!newclient->active && (newclient->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
 				{
 					// connect to the client
 					// everything is allocated, just fill in the details

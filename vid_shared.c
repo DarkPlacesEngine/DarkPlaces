@@ -1230,14 +1230,14 @@ void VID_CheckExtensions(void)
 }
 #endif
 
-float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone)
+float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float fsensitivity, float deadzone)
 {
 	float value;
 	value = (axis >= 0 && axis < MAXJOYAXIS) ? joystate->axis[axis] : 0.0f;
 	value = value > deadzone ? (value - deadzone) : (value < -deadzone ? (value + deadzone) : 0.0f);
 	value *= deadzone > 0 ? (1.0f / (1.0f - deadzone)) : 1.0f;
 	value = bound(-1, value, 1);
-	return value * sensitivity;
+	return value * fsensitivity;
 }
 
 qboolean VID_JoyBlockEmulatedKeys(int keycode)

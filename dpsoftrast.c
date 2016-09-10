@@ -1664,10 +1664,10 @@ static void DPSOFTRAST_Fill4f(float *dst, const float *src, int size)
 static void DPSOFTRAST_Vertex_Transform(float *out4f, const float *in4f, int numitems, const float *inmatrix16f)
 {
 #ifdef SSE_POSSIBLE
-	static const float identitymatrix[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+	static const float identitymatrix16f[4][4] = {{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 	__m128 m0, m1, m2, m3;
 	float *end;
-	if (!memcmp(identitymatrix, inmatrix16f, sizeof(float[16])))
+	if (!memcmp(identitymatrix16f, inmatrix16f, sizeof(float[16])))
 	{
 		// fast case for identity matrix
 		if (out4f != in4f) memcpy(out4f, in4f, numitems * sizeof(float[4]));
@@ -1810,7 +1810,7 @@ static int DPSOFTRAST_Vertex_BoundY(int *starty, int *endy, const float *minposf
 	
 static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems)
 {
-	static const float identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+	static const float identitymatrix16f[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 	float *end = out4f + numitems*4;
 	__m128 viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter), viewportscale = _mm_load_ps(dpsoftrast.fb_viewportscale);
 	__m128 minpos, maxpos;
@@ -1852,17 +1852,17 @@ static int DPSOFTRAST_Vertex_Project(float *out4f, float *screen4f, int *starty,
 		ALIGN(float maxposf[4]);
 		_mm_store_ps(minposf, minpos);
 		_mm_store_ps(maxposf, maxpos);
-		return DPSOFTRAST_Vertex_BoundY(starty, endy, minposf, maxposf, identitymatrix);
+		return DPSOFTRAST_Vertex_BoundY(starty, endy, minposf, maxposf, identitymatrix16f);
 	}
 	return 0;
 }
 
 static int DPSOFTRAST_Vertex_TransformProject(float *out4f, float *screen4f, int *starty, int *endy, const float *in4f, int numitems, const float *inmatrix16f)
 {
-	static const float identitymatrix[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
+	static const float identitymatrix16f[16] = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
 	__m128 m0, m1, m2, m3, viewportcenter, viewportscale, minpos, maxpos;
 	float *end;
-	if (!memcmp(identitymatrix, inmatrix16f, sizeof(float[16])))
+	if (!memcmp(identitymatrix16f, inmatrix16f, sizeof(float[16])))
 		return DPSOFTRAST_Vertex_Project(out4f, screen4f, starty, endy, in4f, numitems);
 	end = out4f + numitems*4;
 	viewportcenter = _mm_load_ps(dpsoftrast.fb_viewportcenter);
@@ -2294,12 +2294,12 @@ static void DPSOFTRAST_Texture2DBGRA8(DPSOFTRAST_Texture *texture, int mip, floa
 	pixelbase = (unsigned char *)texture->bytes + texture->mipmap[mip][0] + texture->mipmap[mip][1] - 4*width;
 	if(texture->filter & DPSOFTRAST_TEXTURE_FILTER_LINEAR)
 	{
-		unsigned int tc[2] = { x * (width<<12) - 2048, y * (height<<12) - 2048};
+		unsigned int tc[2] = { (unsigned int)floor(x) * (width<<12) - 2048, (unsigned int)floor(y) * (height<<12) - 2048};
 		unsigned int frac[2] = { tc[0]&0xFFF, tc[1]&0xFFF };
 		unsigned int ifrac[2] = { 0x1000 - frac[0], 0x1000 - frac[1] };
 		unsigned int lerp[4] = { ifrac[0]*ifrac[1], frac[0]*ifrac[1], ifrac[0]*frac[1], frac[0]*frac[1] };
-		int tci[2] = { tc[0]>>12, tc[1]>>12 };
-		int tci1[2] = { tci[0] + 1, tci[1] + 1 };
+		int tci[2] = { (int)tc[0]>>12, (int)tc[1]>>12 };
+		int tci1[2] = { (int)tci[0] + 1, (int)tci[1] + 1 };
 		if (texture->flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 		{
 			tci[0] = tci[0] >= 0 ? (tci[0] <= wrapmask[0] ? tci[0] : wrapmask[0]) : 0;
@@ -2325,7 +2325,7 @@ static void DPSOFTRAST_Texture2DBGRA8(DPSOFTRAST_Texture *texture, int mip, floa
 	}
 	else
 	{
-		int tci[2] = { x * width, y * height };
+		int tci[2] = { (int)floor(x) * width, (int)floor(y) * height };
 		if (texture->flags & DPSOFTRAST_TEXTURE_FLAG_CLAMPTOEDGE)
 		{
 			tci[0] = tci[0] >= 0 ? (tci[0] <= wrapmask[0] ? tci[0] : wrapmask[0]) : 0;
