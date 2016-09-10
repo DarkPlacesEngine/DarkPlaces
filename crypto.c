@@ -1727,8 +1727,8 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			return CRYPTO_NOMATCH; // will be later accepted if encryption was set up
 		// validate the challenge
 		for (i = 0;i < MAX_CHALLENGES;i++)
-			if(challenge[i].time > 0)
-				if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+			if(challenges[i].time > 0)
+				if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
 					break;
 		// if the challenge is not recognized, drop the packet
 		if (i == MAX_CHALLENGES) // challenge mismatch is silent
@@ -1758,8 +1758,8 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 				return Crypto_SoftServerError(data_out, len_out, "missing challenge in d0pk\\0");
 			// validate the challenge
 			for (i = 0;i < MAX_CHALLENGES;i++)
-				if(challenge[i].time > 0)
-					if (!LHNETADDRESS_Compare(peeraddress, &challenge[i].address) && !strcmp(challenge[i].string, s))
+				if(challenges[i].time > 0)
+					if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
 						break;
 			// if the challenge is not recognized, drop the packet
 			if (i == MAX_CHALLENGES)

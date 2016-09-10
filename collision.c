@@ -162,7 +162,7 @@ static void Collision_CalcEdgeDirsForPolygonBrushFloat(colbrushf_t *brush)
 colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, const texture_t *texture, int hasaabbplanes)
 {
 	// TODO: planesbuf could be replaced by a remapping table
-	int j, k, l, m, w, xyzflags;
+	int j, k, w, xyzflags;
 	int numpointsbuf = 0, maxpointsbuf = 256, numedgedirsbuf = 0, maxedgedirsbuf = 256, numplanesbuf = 0, maxplanesbuf = 256, numelementsbuf = 0, maxelementsbuf = 256;
 	int isaabb = true;
 	double maxdist;
@@ -203,6 +203,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 	// whose polygon is clipped away by the other planes)
 	for (j = 0;j < numoriginalplanes;j++)
 	{
+		int n;
 		// add the new plane
 		VectorCopy(originalplanes[j].normal, planesbuf[numplanesbuf].normal);
 		planesbuf[numplanesbuf].dist = originalplanes[j].dist;
@@ -268,6 +269,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// add the unique points for this polygon
 		for (k = 0;k < pnumpoints;k++)
 		{
+			int m;
 			float v[3];
 			// downgrade to float precision before comparing
 			VectorCopy(&p[w][k*3], v);
@@ -305,11 +307,12 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		}
 
 		// add the unique edgedirs for this polygon
-		for (k = 0, l = pnumpoints-1;k < pnumpoints;l = k, k++)
+		for (k = 0, n = pnumpoints-1;k < pnumpoints;n = k, k++)
 		{
+			int m;
 			float dir[3];
 			// downgrade to float precision before comparing
-			VectorSubtract(&p[w][k*3], &p[w][l*3], dir);
+			VectorSubtract(&p[w][k*3], &p[w][n*3], dir);
 			VectorNormalize(dir);
 
 			// check if there is already a matching edgedir (no duplicates)
@@ -446,7 +449,6 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 
 void Collision_CalcPlanesForTriangleBrushFloat(colbrushf_t *brush)
 {
-	int i;
 	float edge0[3], edge1[3], edge2[3];
 	colpointf_t *p;
 
@@ -539,6 +541,7 @@ void Collision_CalcPlanesForTriangleBrushFloat(colbrushf_t *brush)
 
 	if (developer_extra.integer)
 	{
+		int i;
 		// validity check - will be disabled later
 		Collision_ValidateBrush(brush);
 		for (i = 0;i < brush->numplanes;i++)

@@ -3566,7 +3566,6 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 	stringlist_t dirlist;
 	const char *slash, *backslash, *colon, *separator;
 	char *basepath;
-	char temp[MAX_OSPATH];
 
 	for (i = 0;pattern[i] == '.' || pattern[i] == ':' || pattern[i] == '/' || pattern[i] == '\\';i++)
 		;
@@ -3601,6 +3600,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 			pak = searchpath->pack;
 			for (i = 0;i < pak->numfiles;i++)
 			{
+				char temp[MAX_OSPATH];
 				strlcpy(temp, pak->files[i].name, sizeof(temp));
 				while (temp[0])
 				{
@@ -3684,6 +3684,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 
 				// for each entry in matchedSet try to open the subdirectories specified in subpath
 				for( dirlistindex = 0 ; dirlistindex < matchedSet.numstrings ; dirlistindex++ ) {
+					char temp[MAX_OSPATH];
 					strlcpy( temp, matchedSet.strings[ dirlistindex ], sizeof(temp) );
 					strlcat( temp, subpath, sizeof(temp) );
 					listdirectory( &foundSet, searchpath->filename, temp );
@@ -3707,17 +3708,17 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 
 			for (dirlistindex = 0;dirlistindex < matchedSet.numstrings;dirlistindex++)
 			{
-				const char *temp = matchedSet.strings[dirlistindex];
-				if (matchpattern(temp, (char *)pattern, true))
+				const char *matchtemp = matchedSet.strings[dirlistindex];
+				if (matchpattern(matchtemp, (char *)pattern, true))
 				{
 					for (resultlistindex = 0;resultlistindex < resultlist.numstrings;resultlistindex++)
-						if (!strcmp(resultlist.strings[resultlistindex], temp))
+						if (!strcmp(resultlist.strings[resultlistindex], matchtemp))
 							break;
 					if (resultlistindex == resultlist.numstrings)
 					{
-						stringlistappend(&resultlist, temp);
+						stringlistappend(&resultlist, matchtemp);
 						if (!quiet && developer_loading.integer)
-							Con_Printf("SearchDirFile: %s\n", temp);
+							Con_Printf("SearchDirFile: %s\n", matchtemp);
 					}
 				}
 			}

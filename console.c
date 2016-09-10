@@ -1664,7 +1664,7 @@ static int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, flo
 	int startidx;
 	int nskip = 0;
 	int continuationWidth = 0;
-	size_t l;
+	size_t len;
 	double t = cl.time; // saved so it won't change
 	con_text_info_t ti;
 
@@ -1676,10 +1676,10 @@ static int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, flo
 	ti.ymax = y + height;
 	ti.continuationString = continuationString;
 
-	l = 0;
-	Con_WordWidthFunc(&ti, NULL, &l, -1);
-	l = strlen(continuationString);
-	continuationWidth = (int) Con_WordWidthFunc(&ti, continuationString, &l, -1);
+	len = 0;
+	Con_WordWidthFunc(&ti, NULL, &len, -1);
+	len = strlen(continuationString);
+	continuationWidth = (int) Con_WordWidthFunc(&ti, continuationString, &len, -1);
 
 	// first find the first line to draw by backwards iterating and word wrapping to find their length...
 	startidx = CON_LINES_COUNT;
@@ -1856,7 +1856,6 @@ static int Con_LineHeight(int lineno)
 	{
 		float width = vid_conwidth.value;
 		con_text_info_t ti;
-		con_lineinfo_t *li = &CON_LINES(lineno);
 		ti.fontsize = con_textsize.value;
 		ti.font = FONT_CONSOLE;
 		li->height = COM_Wordwrap(li->start, li->len, 0, width, Con_WordWidthFunc, &ti, Con_CountLineFunc, NULL);

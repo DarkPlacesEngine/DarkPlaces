@@ -717,7 +717,7 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 		CSQC_END
 	}
 }
-qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed)
+qboolean CL_VM_Event_Sound(int sound_num, float fvolume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	qboolean r = false;
@@ -731,7 +731,7 @@ qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float atten
 			PRVM_G_FLOAT(OFS_PARM0) = ent;
 			PRVM_G_FLOAT(OFS_PARM1) = CHAN_ENGINE2USER(channel);
 			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(prog, cl.sound_name[sound_num] );
-			PRVM_G_FLOAT(OFS_PARM3) = volume;
+			PRVM_G_FLOAT(OFS_PARM3) = fvolume;
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );
 			PRVM_G_FLOAT(OFS_PARM6) = speed * 100.0f;

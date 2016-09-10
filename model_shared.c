@@ -921,7 +921,7 @@ static void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *
 void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting)
 {
 	int i, tnum;
-	float sdir[3], tdir[3], normal[3], *sv, *tv;
+	float sdir[3], tdir[3], normal[3], *svec, *tvec;
 	const float *v0, *v1, *v2, *tc0, *tc1, *tc2, *n;
 	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
 	const int *e;
@@ -987,14 +987,14 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 	// make the tangents completely perpendicular to the surface normal, and
 	// then normalize them
 	// 16 assignments, 2 divide, 2 sqrt, 2 negates, 14 adds, 24 multiplies
-	for (i = 0, sv = svector3f + 3 * firstvertex, tv = tvector3f + 3 * firstvertex, n = normal3f + 3 * firstvertex;i < numvertices;i++, sv += 3, tv += 3, n += 3)
+	for (i = 0, svec = svector3f + 3 * firstvertex, tvec = tvector3f + 3 * firstvertex, n = normal3f + 3 * firstvertex;i < numvertices;i++, svec += 3, tvec += 3, n += 3)
 	{
-		f = -DotProduct(sv, n);
-		VectorMA(sv, f, n, sv);
-		VectorNormalize(sv);
-		f = -DotProduct(tv, n);
-		VectorMA(tv, f, n, tv);
-		VectorNormalize(tv);
+		f = -DotProduct(svec, n);
+		VectorMA(svec, f, n, svec);
+		VectorNormalize(svec);
+		f = -DotProduct(tvec, n);
+		VectorMA(tvec, f, n, tvec);
+		VectorNormalize(tvec);
 	}
 }
 
@@ -2967,7 +2967,7 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
-		int t = (int)(surface->texture - mod->data_textures);
+		t = (int)(surface->texture - mod->data_textures);
 		numsurfacesfortexture[t]++;
 	}
 	j = 0;
@@ -2979,7 +2979,7 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
-		int t = (int)(surface->texture - mod->data_textures);
+		t = (int)(surface->texture - mod->data_textures);
 		mod->sortedmodelsurfaces[firstsurfacefortexture[t]++] = j + mod->firstmodelsurface;
 	}
 	Mem_Free(firstsurfacefortexture);

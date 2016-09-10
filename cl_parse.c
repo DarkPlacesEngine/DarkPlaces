@@ -208,7 +208,7 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 	vec3_t  pos;
 	int 	channel, ent;
 	int 	sound_num;
-	int 	volume;
+	int 	nvolume;
 	int 	field_mask;
 	float 	attenuation;
 	float	speed;
@@ -219,9 +219,9 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 		channel = MSG_ReadShort(&cl_message);
 
 		if (channel & (1<<15))
-			volume = MSG_ReadByte(&cl_message);
+			nvolume = MSG_ReadByte(&cl_message);
 		else
-			volume = DEFAULT_SOUND_PACKET_VOLUME;
+			nvolume = DEFAULT_SOUND_PACKET_VOLUME;
 
 		if (channel & (1<<14))
 			attenuation = MSG_ReadByte(&cl_message) / 64.0;
@@ -240,9 +240,9 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 		field_mask = MSG_ReadByte(&cl_message);
 
 		if (field_mask & SND_VOLUME)
-			volume = MSG_ReadByte(&cl_message);
+			nvolume = MSG_ReadByte(&cl_message);
 		else
-			volume = DEFAULT_SOUND_PACKET_VOLUME;
+			nvolume = DEFAULT_SOUND_PACKET_VOLUME;
 
 		if (field_mask & SND_ATTENUATION)
 			attenuation = MSG_ReadByte(&cl_message) / 64.0;
@@ -291,8 +291,8 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 	if (ent >= cl.max_entities)
 		CL_ExpandEntities(ent);
 
-	if( !CL_VM_Event_Sound(sound_num, volume / 255.0f, channel, attenuation, ent, pos, fflags, speed) )
-		S_StartSound_StartPosition_Flags (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation, 0, fflags, speed);
+	if( !CL_VM_Event_Sound(sound_num, nvolume / 255.0f, channel, attenuation, ent, pos, fflags, speed) )
+		S_StartSound_StartPosition_Flags (ent, channel, cl.sound_precache[sound_num], pos, nvolume/255.0f, attenuation, 0, fflags, speed);
 }
 
 /*
@@ -3462,8 +3462,8 @@ void CL_ParseServerMessage(void)
 			if (!cmdlogname[cmdindex])
 			{
 				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
-				temp = "<unknown>";
-				cmdlogname[cmdindex] = temp;
+				const char *d = "<unknown>";
+				cmdlogname[cmdindex] = d;
 			}
 
 			// other commands
@@ -3471,7 +3471,7 @@ void CL_ParseServerMessage(void)
 			{
 			default:
 				{
-					char description[32*64], temp[64];
+					char description[32*64], logtemp[64];
 					int count;
 					strlcpy(description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
@@ -3481,8 +3481,8 @@ void CL_ParseServerMessage(void)
 					i &= 31;
 					while(count > 0)
 					{
-						dpsnprintf(temp, sizeof(temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
-						strlcat(description, temp, sizeof(description));
+						dpsnprintf(logtemp, sizeof(logtemp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+						strlcat(description, logtemp, sizeof(description));
 						count--;
 						i++;
 						i &= 31;
@@ -3827,8 +3827,8 @@ void CL_ParseServerMessage(void)
 			if (!cmdlogname[cmdindex])
 			{
 				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
-				temp = "<unknown>";
-				cmdlogname[cmdindex] = temp;
+				const char *d = "<unknown>";
+				cmdlogname[cmdindex] = d;
 			}
 
 			// other commands
@@ -3836,7 +3836,7 @@ void CL_ParseServerMessage(void)
 			{
 			default:
 				{
-					char description[32*64], temp[64];
+					char description[32*64], tempdesc[64];
 					int count;
 					strlcpy (description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
@@ -3846,8 +3846,8 @@ void CL_ParseServerMessage(void)
 					i &= 31;
 					while(count > 0)
 					{
-						dpsnprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
-						strlcat (description, temp, sizeof (description));
+						dpsnprintf (tempdesc, sizeof (tempdesc), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+						strlcat (description, tempdesc, sizeof (description));
 						count--;
 						i++;
 						i &= 31;
@@ -3998,8 +3998,9 @@ void CL_ParseServerMessage(void)
 				}
 				else
 				{
-					int i = (unsigned short)MSG_ReadShort(&cl_message);
-					char *s = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
+					char *s;
+					i = (unsigned short)MSG_ReadShort(&cl_message);
+					s = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 					if (i < 32768)
 					{
 						if (i >= 1 && i < MAX_MODELS)

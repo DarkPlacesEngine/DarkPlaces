@@ -1129,11 +1129,11 @@ extern void (GLAPIENTRY *qglBlendFuncSeparate)(GLenum sfactorRGB, GLenum dfactor
 
 #ifdef DEBUGGL
 #ifdef USE_GLES2
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = glGetError();if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = glGetError();if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
 #else
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);errornumber = qglGetError ? qglGetError() : 0;if (errornumber) GL_PrintError(errornumber, __FILE__, __LINE__);}}
+#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = qglGetError ? qglGetError() : 0;if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
 #endif
-extern int errornumber;
+extern int gl_errornumber;
 void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
 #define CHECKGLERROR

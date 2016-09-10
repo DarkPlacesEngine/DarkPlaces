@@ -2143,7 +2143,6 @@ extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
 extern rtexture_t *r_shadow_shadowmapvsdcttexture;
 extern matrix4x4_t r_shadow_shadowmapmatrix;
-extern int r_shadow_shadowmaplod; // changes for each light based on distance
 extern int r_shadow_prepass_width;
 extern int r_shadow_prepass_height;
 extern rtexture_t *r_shadow_prepassgeometrydepthbuffer;
@@ -3581,7 +3580,6 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, qboolean sRGB)
 {
 	int i;
-	unsigned char *temp1, *temp2;
 	skinframe_t *skinframe;
 	char vabuf[1024];
 
@@ -3615,11 +3613,11 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 
 	if (r_loadnormalmap && r_shadow_bumpscale_basetexture.value > 0)
 	{
-		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
-		temp2 = temp1 + width * height * 4;
-		Image_HeightmapToNormalmap_BGRA(skindata, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
-		Mem_Free(temp1);
+		unsigned char *a = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
+		unsigned char *b = a + width * height * 4;
+		Image_HeightmapToNormalmap_BGRA(skindata, b, width, height, false, r_shadow_bumpscale_basetexture.value);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, b, TEXTYPE_BGRA, (textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
+		Mem_Free(a);
 	}
 	skinframe->base = skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, sRGB ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags, -1, NULL);
 	if (textureflags & TEXF_ALPHA)
@@ -3739,15 +3737,15 @@ static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboo
 
 	if (skinframe->qgeneratenmap)
 	{
-		unsigned char *temp1, *temp2;
+		unsigned char *a, *b;
 		skinframe->qgeneratenmap = false;
-		temp1 = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
-		temp2 = temp1 + width * height * 4;
+		a = (unsigned char *)Mem_Alloc(tempmempool, width * height * 8);
+		b = a + width * height * 4;
 		// use either a custom palette or the quake palette
-		Image_Copy8bitBGRA(skindata, temp1, width * height, palette_bgra_complete);
-		Image_HeightmapToNormalmap_BGRA(temp1, temp2, width, height, false, r_shadow_bumpscale_basetexture.value);
-		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, temp2, TEXTYPE_BGRA, (skinframe->textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
-		Mem_Free(temp1);
+		Image_Copy8bitBGRA(skindata, a, width * height, palette_bgra_complete);
+		Image_HeightmapToNormalmap_BGRA(a, b, width, height, false, r_shadow_bumpscale_basetexture.value);
+		skinframe->nmap = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_nmap", skinframe->basename), width, height, b, TEXTYPE_BGRA, (skinframe->textureflags | TEXF_ALPHA) & (r_mipnormalmaps.integer ? ~0 : ~TEXF_MIPMAP), -1, NULL);
+		Mem_Free(a);
 	}
 
 	if (skinframe->qgenerateglow)
@@ -9066,7 +9064,6 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	qboolean dynamicvertex;
 	float amplitude;
 	float animpos;
-	float scale;
 	float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
 	float waveparms[4];
 	unsigned char *ub;
@@ -9864,6 +9861,7 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	// in place
 	for (deformindex = 0, deform = rsurface.texture->deforms;deformindex < Q3MAXDEFORMS && deform->deform && r_deformvertexes.integer;deformindex++, deform++)
 	{
+		float scale;
 		switch (deform->deform)
 		{
 		default:
@@ -11139,9 +11137,9 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(rsurface.batchnumvertices);
 		for (j = 0, vi = 0;j < rsurface.batchnumvertices;j++, vi++)
 		{
-			unsigned char c = (vi << 3) * (1.0f / 256.0f);
+			unsigned char d = (vi << 3) * (1.0f / 256.0f);
 			VectorCopy(rsurface.batchvertex3f + 3*vi, batchvertex[vi].vertex3f);
-			Vector4Set(batchvertex[vi].color4f, c, c, c, 1);
+			Vector4Set(batchvertex[vi].color4f, d, d, d, 1);
 		}
 		R_Mesh_PrepareVertices_Generic_Unlock();
 		RSurf_DrawBatch();
@@ -11153,13 +11151,13 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 		batchvertex = R_Mesh_PrepareVertices_Generic_Lock(3*rsurface.batchnumtriangles);
 		for (j = 0, e = rsurface.batchelement3i + 3 * rsurface.batchfirsttriangle;j < rsurface.batchnumtriangles;j++, e += 3)
 		{
-			unsigned char c = ((j + rsurface.batchfirsttriangle) << 3) * (1.0f / 256.0f);
+			unsigned char d = ((j + rsurface.batchfirsttriangle) << 3) * (1.0f / 256.0f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[0], batchvertex[j*3+0].vertex3f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[1], batchvertex[j*3+1].vertex3f);
 			VectorCopy(rsurface.batchvertex3f + 3*e[2], batchvertex[j*3+2].vertex3f);
-			Vector4Set(batchvertex[j*3+0].color4f, c, c, c, 1);
-			Vector4Set(batchvertex[j*3+1].color4f, c, c, c, 1);
-			Vector4Set(batchvertex[j*3+2].color4f, c, c, c, 1);
+			Vector4Set(batchvertex[j*3+0].color4f, d, d, d, 1);
+			Vector4Set(batchvertex[j*3+1].color4f, d, d, d, 1);
+			Vector4Set(batchvertex[j*3+2].color4f, d, d, d, 1);
 		}
 		R_Mesh_PrepareVertices_Generic_Unlock();
 		R_Mesh_Draw(0, rsurface.batchnumtriangles*3, 0, rsurface.batchnumtriangles, NULL, NULL, 0, NULL, NULL, 0);

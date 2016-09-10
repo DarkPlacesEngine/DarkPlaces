@@ -233,7 +233,7 @@ static void SV_WaterMove (void)
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
 	vec3_t wishvel, v_angle;
-	vec_t speed, newspeed, wishspeed, addspeed, accelspeed, temp;
+	vec_t speed, newspeed, fwishspeed, addspeed, accelspeed, temp;
 
 	// user intentions
 	VectorCopy(PRVM_serveredictvector(host_client->edict, v_angle), v_angle);
@@ -247,14 +247,14 @@ static void SV_WaterMove (void)
 	else
 		wishvel[2] += cmd.upmove;
 
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed > sv_maxspeed.value)
+	fwishspeed = VectorLength(wishvel);
+	if (fwishspeed > sv_maxspeed.value)
 	{
-		temp = sv_maxspeed.value/wishspeed;
+		temp = sv_maxspeed.value/fwishspeed;
 		VectorScale (wishvel, temp, wishvel);
-		wishspeed = sv_maxspeed.value;
+		fwishspeed = sv_maxspeed.value;
 	}
-	wishspeed *= 0.7;
+	fwishspeed *= 0.7;
 
 	// water friction
 	speed = VectorLength(PRVM_serveredictvector(host_client->edict, velocity));
@@ -270,15 +270,15 @@ static void SV_WaterMove (void)
 		newspeed = 0;
 
 	// water acceleration
-	if (!wishspeed)
+	if (!fwishspeed)
 		return;
 
-	addspeed = wishspeed - newspeed;
+	addspeed = fwishspeed - newspeed;
 	if (addspeed <= 0)
 		return;
 
 	VectorNormalize (wishvel);
-	accelspeed = (sv_wateraccelerate.value < 0 ? sv_accelerate.value : sv_wateraccelerate.value) * wishspeed * sv.frametime;
+	accelspeed = (sv_wateraccelerate.value < 0 ? sv_accelerate.value : sv_wateraccelerate.value) * fwishspeed * sv.frametime;
 	if (accelspeed > addspeed)
 		accelspeed = addspeed;
 
@@ -800,7 +800,7 @@ SV_ReadClientMessage
 void SV_ReadClientMessage(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	int cmd, num, start;
+	int netcmd, num, start;
 	char *s, *p, *q;
 
 	if(sv_autodemo_perclient.integer >= 2)
@@ -825,8 +825,8 @@ void SV_ReadClientMessage(void)
 			return;
 		}
 
-		cmd = MSG_ReadByte(&sv_message);
-		if (cmd == -1)
+		netcmd = MSG_ReadByte(&sv_message);
+		if (netcmd == -1)
 		{
 			// end of message
 			// apply the moves that were read this frame
@@ -834,10 +834,10 @@ void SV_ReadClientMessage(void)
 			break;
 		}
 
-		switch (cmd)
+		switch (netcmd)
 		{
 		default:
-			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", cmd, sv_message.readcount);
+			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", netcmd, sv_message.readcount);
 			if (developer_networking.integer)
 				Com_HexDumpToConsole(sv_message.data, sv_message.cursize);
 			SV_DropClient (false);

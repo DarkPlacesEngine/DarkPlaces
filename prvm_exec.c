@@ -737,7 +737,7 @@ MVM_ExecuteProgram
 void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
 {
 	mstatement_t	*st, *startst;
-	mfunction_t	*f, *newf;
+	mfunction_t		*func, *enterfunc;
 	prvm_edict_t	*ed;
 	prvm_eval_t	*ptr;
 	int		jumpcount, cachedpr_trace, exitdepth;
@@ -768,7 +768,7 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 		prog->error_cmd("MVM_ExecuteProgram: %s", errormessage);
 	}
 
-	f = &prog->functions[fnum];
+	func = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
 	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
@@ -779,7 +779,7 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction(prog, f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, func)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -829,7 +829,7 @@ cleanup:
 	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
 	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
-	f->totaltime += tm;
+	func->totaltime += tm;
 
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();
@@ -844,7 +844,7 @@ CLVM_ExecuteProgram
 void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessage)
 {
 	mstatement_t	*st, *startst;
-	mfunction_t	*f, *newf;
+	mfunction_t		*func, *enterfunc;
 	prvm_edict_t	*ed;
 	prvm_eval_t	*ptr;
 	int		jumpcount, cachedpr_trace, exitdepth;
@@ -875,7 +875,7 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 		prog->error_cmd("CLVM_ExecuteProgram: %s", errormessage);
 	}
 
-	f = &prog->functions[fnum];
+	func = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
 	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
@@ -886,7 +886,7 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction(prog, f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, func)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -936,7 +936,7 @@ cleanup:
 	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
 	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
-	f->totaltime += tm;
+	func->totaltime += tm;
 
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();
@@ -955,7 +955,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 #endif
 {
 	mstatement_t	*st, *startst;
-	mfunction_t	*f, *newf;
+	mfunction_t		*func, *enterfunc;
 	prvm_edict_t	*ed;
 	prvm_eval_t	*ptr;
 	int		jumpcount, cachedpr_trace, exitdepth;
@@ -986,7 +986,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 		prog->error_cmd("SVVM_ExecuteProgram: %s", errormessage);
 	}
 
-	f = &prog->functions[fnum];
+	func = &prog->functions[fnum];
 
 	// after executing this function, delete all tempstrings it created
 	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
@@ -997,7 +997,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	exitdepth = prog->depth;
 
 // make a stack frame
-	st = &prog->statements[PRVM_EnterFunction(prog, f)];
+	st = &prog->statements[PRVM_EnterFunction(prog, func)];
 	// save the starting statement pointer for profiling
 	// (when the function exits or jumps, the (st - startst) integer value is
 	// added to the function's profile counter)
@@ -1047,7 +1047,7 @@ cleanup:
 	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 
 	tm = Sys_DirtyTime() - calltime;if (tm < 0 || tm >= 1800) tm = 0;
-	f->totaltime += tm;
+	func->totaltime += tm;
 
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();

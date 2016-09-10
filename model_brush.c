@@ -2688,7 +2688,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		Mod_AllocLightmap_Init(&allocState, lightmapsize, lightmapsize);
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 		{
-			int i, iu, iv, lightmapx = 0, lightmapy = 0;
+			int iu, iv, lightmapx = 0, lightmapy = 0;
 			float u, v, ubase, vbase, uscale, vscale;
 
 			if (!loadmodel->brushq1.lightmapupdateflags[surfacenum])
@@ -4303,7 +4303,7 @@ static void Mod_Q2BSP_LoadNodes(sizebuf_t *sb)
 static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 {
 	mtexinfo_t *out;
-	int i, j, k, l, count;
+	int i, l, count;
 	int structsize = 76;
 	int maxtextures = 1024; // hardcoded limit of quake2 engine, so we may as well use it as an upper bound
 	char filename[MAX_QPATH];
@@ -4319,6 +4319,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 
 	for (i = 0;i < count;i++, out++)
 	{
+		int j, k;
 		for (k = 0;k < 2;k++)
 			for (j = 0;j < 4;j++)
 				out->vecs[k][j] = MSG_ReadLittleFloat(sb);
@@ -4442,7 +4443,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 	// if we encounter the textures out of order, the later ones won't mark the earlier ones in a sequence, so the earlier 
 	for (i = 0, out = loadmodel->brushq1.texinfo;i < count;i++, out++)
 	{
-		int j;
+		int j, k;
 		texture_t *t = loadmodel->data_textures + out->textureindex;
 		t->currentframe = t; // fix the reallocated pointer
 
@@ -8027,9 +8028,9 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	int maxvn = 0, numvn = 1;
 	char *texturenames = NULL;
 	float dist, modelradius, modelyawradius, yawradius;
-	float *v = NULL;
-	float *vt = NULL;
-	float *vn = NULL;
+	float *obj_v = NULL;
+	float *obj_vt = NULL;
+	float *obj_vn = NULL;
 	float mins[3];
 	float maxs[3];
 	float corner[3];
@@ -8043,7 +8044,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	skinfile_t *skinfiles = NULL;
 	unsigned char *data = NULL;
 	int *submodelfirstsurface;
-	msurface_t *surface;
+	msurface_t *tempsurface;
 	msurface_t *tempsurfaces;
 
 	memset(&vfirst, 0, sizeof(vfirst));
@@ -8149,19 +8150,19 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (maxv <= numv)
 			{
 				maxv = max(maxv * 2, 1024);
-				v = (float *)Mem_Realloc(tempmempool, v, maxv * sizeof(float[3]));
+				obj_v = (float *)Mem_Realloc(tempmempool, obj_v, maxv * sizeof(float[3]));
 			}
 			if(mod_obj_orientation.integer)
 			{
-				v[numv*3+0] = atof(argv[1]);
-				v[numv*3+2] = atof(argv[2]);
-				v[numv*3+1] = atof(argv[3]);
+				obj_v[numv*3+0] = atof(argv[1]);
+				obj_v[numv*3+2] = atof(argv[2]);
+				obj_v[numv*3+1] = atof(argv[3]);
 			}
 			else
 			{
-				v[numv*3+0] = atof(argv[1]);
-				v[numv*3+1] = atof(argv[2]);
-				v[numv*3+2] = atof(argv[3]);
+				obj_v[numv*3+0] = atof(argv[1]);
+				obj_v[numv*3+1] = atof(argv[2]);
+				obj_v[numv*3+2] = atof(argv[3]);
 			}
 			numv++;
 		}
@@ -8170,10 +8171,10 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (maxvt <= numvt)
 			{
 				maxvt = max(maxvt * 2, 1024);
-				vt = (float *)Mem_Realloc(tempmempool, vt, maxvt * sizeof(float[2]));
+				obj_vt = (float *)Mem_Realloc(tempmempool, obj_vt, maxvt * sizeof(float[2]));
 			}
-			vt[numvt*2+0] = atof(argv[1]);
-			vt[numvt*2+1] = 1-atof(argv[2]);
+			obj_vt[numvt*2+0] = atof(argv[1]);
+			obj_vt[numvt*2+1] = 1-atof(argv[2]);
 			numvt++;
 		}
 		else if (!strcmp(argv[0], "vn"))
@@ -8181,19 +8182,19 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (maxvn <= numvn)
 			{
 				maxvn = max(maxvn * 2, 1024);
-				vn = (float *)Mem_Realloc(tempmempool, vn, maxvn * sizeof(float[3]));
+				obj_vn = (float *)Mem_Realloc(tempmempool, obj_vn, maxvn * sizeof(float[3]));
 			}
 			if(mod_obj_orientation.integer)
 			{
-				vn[numvn*3+0] = atof(argv[1]);
-				vn[numvn*3+2] = atof(argv[2]);
-				vn[numvn*3+1] = atof(argv[3]);
+				obj_vn[numvn*3+0] = atof(argv[1]);
+				obj_vn[numvn*3+2] = atof(argv[2]);
+				obj_vn[numvn*3+1] = atof(argv[3]);
 			}
 			else
 			{
-				vn[numvn*3+0] = atof(argv[1]);
-				vn[numvn*3+1] = atof(argv[2]);
-				vn[numvn*3+2] = atof(argv[3]);
+				obj_vn[numvn*3+0] = atof(argv[1]);
+				obj_vn[numvn*3+1] = atof(argv[2]);
+				obj_vn[numvn*3+2] = atof(argv[3]);
 			}
 			numvn++;
 		}
@@ -8234,12 +8235,12 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				vcurrent.nextindex = -1;
 				vcurrent.textureindex = textureindex;
 				vcurrent.submodelindex = submodelindex;
-				if (v && index1 >= 0 && index1 < numv)
-					VectorCopy(v + 3*index1, vcurrent.v);
-				if (vt && index2 >= 0 && index2 < numvt)
-					Vector2Copy(vt + 2*index2, vcurrent.vt);
-				if (vn && index3 >= 0 && index3 < numvn)
-					VectorCopy(vn + 3*index3, vcurrent.vn);
+				if (obj_v && index1 >= 0 && index1 < numv)
+					VectorCopy(obj_v + 3*index1, vcurrent.v);
+				if (obj_vt && index2 >= 0 && index2 < numvt)
+					Vector2Copy(obj_vt + 2*index2, vcurrent.vt);
+				if (obj_vn && index3 >= 0 && index3 < numvn)
+					VectorCopy(obj_vn + 3*index3, vcurrent.vn);
 				if (numtriangles == 0)
 				{
 					VectorCopy(vcurrent.v, mins);
@@ -8343,7 +8344,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// allocate storage for the worst case number of surfaces, later we resize
 	tempsurfaces = (msurface_t *)Mem_Alloc(loadmodel->mempool, numtextures * loadmodel->brush.numsubmodels * sizeof(msurface_t));
 	submodelfirstsurface = (int *)Mem_Alloc(loadmodel->mempool, (loadmodel->brush.numsubmodels+1) * sizeof(int));
-	surface = tempsurfaces;
+	tempsurface = tempsurfaces;
 	for (submodelindex = 0;submodelindex < loadmodel->brush.numsubmodels;submodelindex++)
 	{
 		submodelfirstsurface[submodelindex] = loadmodel->num_surfaces;
@@ -8362,10 +8363,10 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			surfacevertices = 0;
 			surfaceelements = 0;
 			// we hack in a texture index in the surface to be fixed up later...
-			surface->texture = (texture_t *)((size_t)textureindex);
+			tempsurface->texture = (texture_t *)((size_t)textureindex);
 			// calculate bounds as we go
-			VectorCopy(thisvertex->v, surface->mins);
-			VectorCopy(thisvertex->v, surface->maxs);
+			VectorCopy(thisvertex->v, tempsurface->mins);
+			VectorCopy(thisvertex->v, tempsurface->maxs);
 			for (;vertexindex < numtriangles*3;vertexindex++)
 			{
 				thisvertex = vertices + vertexindex;
@@ -8374,12 +8375,12 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if (thisvertex->textureindex != textureindex)
 					continue;
 				// add vertex to surface bounds
-				surface->mins[0] = min(surface->mins[0], thisvertex->v[0]);
-				surface->mins[1] = min(surface->mins[1], thisvertex->v[1]);
-				surface->mins[2] = min(surface->mins[2], thisvertex->v[2]);
-				surface->maxs[0] = max(surface->maxs[0], thisvertex->v[0]);
-				surface->maxs[1] = max(surface->maxs[1], thisvertex->v[1]);
-				surface->maxs[2] = max(surface->maxs[2], thisvertex->v[2]);
+				tempsurface->mins[0] = min(tempsurface->mins[0], thisvertex->v[0]);
+				tempsurface->mins[1] = min(tempsurface->mins[1], thisvertex->v[1]);
+				tempsurface->mins[2] = min(tempsurface->mins[2], thisvertex->v[2]);
+				tempsurface->maxs[0] = max(tempsurface->maxs[0], thisvertex->v[0]);
+				tempsurface->maxs[1] = max(tempsurface->maxs[1], thisvertex->v[1]);
+				tempsurface->maxs[2] = max(tempsurface->maxs[2], thisvertex->v[2]);
 				// add the vertex if it is not found in the merged set, and
 				// get its index (triangle element) for the surface
 				vertexhashindex = (unsigned int)(thisvertex->v[0] * 3571 + thisvertex->v[0] * 1777 + thisvertex->v[0] * 457) % (unsigned int)vertexhashsize;
@@ -8402,13 +8403,13 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				surfaceelements++;
 			}
 			surfacetriangles = surfaceelements / 3;
-			surface->num_vertices = surfacevertices;
-			surface->num_triangles = surfacetriangles;
-			surface->num_firstvertex = firstvertex;
-			surface->num_firsttriangle = firsttriangle;
-			firstvertex += surface->num_vertices;
-			firsttriangle += surface->num_triangles;
-			surface++;
+			tempsurface->num_vertices = surfacevertices;
+			tempsurface->num_triangles = surfacetriangles;
+			tempsurface->num_firstvertex = firstvertex;
+			tempsurface->num_firsttriangle = firsttriangle;
+			firstvertex += tempsurface->num_vertices;
+			firsttriangle += tempsurface->num_triangles;
+			tempsurface++;
 			loadmodel->num_surfaces++;
 		}
 	}
@@ -8455,9 +8456,9 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// free data
 	Mem_Free(vertices);
 	Mem_Free(texturenames);
-	Mem_Free(v);
-	Mem_Free(vt);
-	Mem_Free(vn);
+	Mem_Free(obj_v);
+	Mem_Free(obj_vt);
+	Mem_Free(obj_vn);
 	Mem_Free(vertexhashtable);
 	Mem_Free(vertexhashdata);
 
@@ -8547,24 +8548,24 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 		{
 			const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
-			const float *v = mod->surfmesh.data_vertex3f + 3 * surface->num_firstvertex;
+			const float *v3f = mod->surfmesh.data_vertex3f + 3 * surface->num_firstvertex;
 			int k;
 			if (!surface->num_vertices)
 				continue;
 			if (!l)
 			{
 				l = true;
-				VectorCopy(v, mod->normalmins);
-				VectorCopy(v, mod->normalmaxs);
+				VectorCopy(v3f, mod->normalmins);
+				VectorCopy(v3f, mod->normalmaxs);
 			}
-			for (k = 0;k < surface->num_vertices;k++, v += 3)
+			for (k = 0;k < surface->num_vertices;k++, v3f += 3)
 			{
-				mod->normalmins[0] = min(mod->normalmins[0], v[0]);
-				mod->normalmins[1] = min(mod->normalmins[1], v[1]);
-				mod->normalmins[2] = min(mod->normalmins[2], v[2]);
-				mod->normalmaxs[0] = max(mod->normalmaxs[0], v[0]);
-				mod->normalmaxs[1] = max(mod->normalmaxs[1], v[1]);
-				mod->normalmaxs[2] = max(mod->normalmaxs[2], v[2]);
+				mod->normalmins[0] = min(mod->normalmins[0], v3f[0]);
+				mod->normalmins[1] = min(mod->normalmins[1], v3f[1]);
+				mod->normalmins[2] = min(mod->normalmins[2], v3f[2]);
+				mod->normalmaxs[0] = max(mod->normalmaxs[0], v3f[0]);
+				mod->normalmaxs[1] = max(mod->normalmaxs[1], v3f[1]);
+				mod->normalmaxs[2] = max(mod->normalmaxs[2], v3f[2]);
 			}
 		}
 		corner[0] = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
