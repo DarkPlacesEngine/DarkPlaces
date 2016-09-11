@@ -1449,7 +1449,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	// note: in practice this never actually receives batches
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
-	R_Shadow_RenderMode_Lighting(false, true, false, (ent->flags & RENDER_NOSELFSHADOW) != 0);
+	R_Shadow_RenderMode_Lighting(false, true, rtlight->shadowmapatlassidesize != 0, (ent->flags & RENDER_NOSELFSHADOW) != 0);
 	R_Shadow_SetupEntityLight(ent);
 	for (i = 0;i < numsurfaces;i = j)
 	{
