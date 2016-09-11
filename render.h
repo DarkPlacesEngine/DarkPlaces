@@ -616,8 +616,6 @@ void R_Shadow_UpdateBounceGridTexture(void);
 void R_DrawLightningBeams(void);
 void VM_CL_AddPolygonsToMeshQueue(struct prvm_prog_s *prog);
 void R_DrawPortals(void);
-void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
 void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_Water_AddWaterPlane(msurface_t *surface, int entno);
 int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);

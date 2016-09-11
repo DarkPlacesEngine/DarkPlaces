@@ -105,8 +105,8 @@ void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
-void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping);
-void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadowmapping);
+void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
+void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping);
 void R_Shadow_RenderMode_VisibleShadowVolumes(void);
 void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
 void R_Shadow_RenderMode_End(void);
@@ -128,6 +128,7 @@ void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 
 void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_Shadow_ClearShadowMapTexture(void);
 void R_Shadow_DrawPrepass(void);
 void R_Shadow_DrawLights(void);
 void R_Shadow_DrawCoronas(void);
@@ -153,7 +154,7 @@ void R_Shadow_PrepareModelShadows(void);
 void R_LightPoint(float *color, const vec3_t p, const int flags);
 void R_CompleteLightPoint(float *ambientcolor, float *diffusecolor, float *diffusenormal, const vec3_t p, const int flags);
 
-void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_Shadow_DrawShadowMaps(void);
+void R_Shadow_DrawModelShadows(void);
 
 #endif

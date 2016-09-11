@@ -3492,14 +3492,14 @@ static void Mod_Decompile_f(void)
 	}
 }
 
-void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, int width, int height)
+void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, mempool_t *mempool, int width, int height)
 {
 	int y;
 	memset(state, 0, sizeof(*state));
 	state->width = width;
 	state->height = height;
 	state->currentY = 0;
-	state->rows = (mod_alloclightmap_row_t *)Mem_Alloc(loadmodel->mempool, state->height * sizeof(*state->rows));
+	state->rows = (mod_alloclightmap_row_t *)Mem_Alloc(mempool, state->height * sizeof(*state->rows));
 	for (y = 0;y < state->height;y++)
 	{
 		state->rows[y].currentX = 0;
@@ -4202,7 +4202,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 	lm_borderpixels = mod_generatelightmaps_borderpixels.integer;
 	lm_texturesize = bound(lm_borderpixels*2+1, 64, (int)vid.maxtexturesize_2d);
 	//lm_maxpixels = lm_texturesize-(lm_borderpixels*2+1);
-	Mod_AllocLightmap_Init(&lmstate, lm_texturesize, lm_texturesize);
+	Mod_AllocLightmap_Init(&lmstate, loadmodel->mempool, lm_texturesize, lm_texturesize);
 	lightmapnumber = 0;
 	for (surfaceindex = 0;surfaceindex < model->num_surfaces;surfaceindex++)
 	{
@@ -4250,7 +4250,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 				surfaceindex = -1;
 				lightmapnumber = 0;
 				Mod_AllocLightmap_Free(&lmstate);
-				Mod_AllocLightmap_Init(&lmstate, lm_texturesize, lm_texturesize);
+				Mod_AllocLightmap_Init(&lmstate, loadmodel->mempool, lm_texturesize, lm_texturesize);
 				break;
 			}
 			// if we have maxed out the lightmap size, and this triangle does

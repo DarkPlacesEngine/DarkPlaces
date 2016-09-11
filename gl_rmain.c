@@ -2136,8 +2136,10 @@ extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
 extern qboolean r_shadow_usingshadowmap2d;
 extern qboolean r_shadow_usingshadowmaportho;
-extern float r_shadow_shadowmap_texturescale[2];
-extern float r_shadow_shadowmap_parameters[4];
+extern float r_shadow_modelshadowmap_texturescale[4];
+extern float r_shadow_modelshadowmap_parameters[4];
+extern float r_shadow_lightshadowmap_texturescale[4];
+extern float r_shadow_lightshadowmap_parameters[4];
 extern qboolean r_shadow_shadowmapvsdct;
 extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
@@ -2673,8 +2675,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (mode == SHADERMODE_WATER)
 				hlslPSSetParameter2f(D3DPSREGISTER_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
-		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 		hlslPSSetParameter3f(D3DPSREGISTER_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		hlslPSSetParameter1f(D3DPSREGISTER_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
 		hlslPSSetParameter3f(D3DPSREGISTER_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
@@ -2836,8 +2846,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_ShadowMapMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ShadowMapMatrix, 1, false, m16f);}
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform2f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 
 		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1f(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
@@ -2982,8 +3000,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_TexMatrixM1, 1, false, m16f);}
 		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_BackgroundTexMatrixM1, 1, false, m16f);}
 		{Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ShadowMapMatrixM1, 1, false, m16f);}
-		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 
 		DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
@@ -3111,8 +3137,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		hlslPSSetParameter2f(D3DPSREGISTER_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
@@ -3138,8 +3164,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
@@ -3161,8 +3187,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		DPSOFTRAST_Uniform1f(       DPSOFTRAST_UNIFORM_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
@@ -7371,6 +7397,7 @@ static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
+extern int r_shadow_shadowmapatlas_modelshadows_size;
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	qboolean shadowmapping = false;
@@ -7422,18 +7449,25 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 		}
 	}
 
+	R_Shadow_PrepareModelShadows();
 	R_Shadow_PrepareLights(fbo, depthtexture, colortexture);
-	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
-		R_Shadow_PrepareModelShadows();
 	if (r_timereport_active)
 		R_TimeReport("preparelights");
 
-	if (R_Shadow_ShadowMappingEnabled())
-		shadowmapping = true;
+	// render all the shadowmaps that will be used for this view
+	shadowmapping = R_Shadow_ShadowMappingEnabled();
+	if (shadowmapping || r_shadow_shadowmapatlas_modelshadows_size)
+	{
+		R_Shadow_DrawShadowMaps();
+		if (r_timereport_active)
+			R_TimeReport("shadowmaps");
+	}
 
+	// render prepass deferred lighting if r_shadow_deferred is on, this produces light buffers that will be sampled in forward pass
 	if (r_shadow_usingdeferredprepass)
 		R_Shadow_DrawPrepass();
 
+	// now we begin the forward pass of the view render
 	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDepth)
 	{
 		r_refdef.scene.worldmodel->DrawDepth(r_refdef.scene.worldentity);
@@ -7445,16 +7479,6 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 		R_DrawModelsDepth();
 		if (r_timereport_active)
 			R_TimeReport("modeldepth");
-	}
-
-	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
-	{
-		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadowMaps(fbo, depthtexture, colortexture);
-		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
 	}
 
 	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->Draw)
@@ -7479,7 +7503,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_Shadow_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7500,7 +7524,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_Shadow_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)

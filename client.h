@@ -286,7 +286,7 @@ typedef struct rtlight_s
 	char cubemapname[64];
 	/// light style to monitor for brightness
 	int style;
-	/// whether light should render shadows
+	/// whether light should render shadows (see castshadows for whether it actually does this frame)
 	int shadow;
 	/// intensity of corona to render
 	vec_t corona;
@@ -323,6 +323,8 @@ typedef struct rtlight_s
 	rtexture_t *currentcubemap;
 	/// set by R_Shadow_PrepareLight to decide whether R_Shadow_DrawLight should draw it
 	qboolean draw;
+	/// set by R_Shadow_PrepareLight to indicate whether R_Shadow_DrawShadowMaps should do anything
+	qboolean castshadows;
 	/// these fields are set by R_Shadow_PrepareLight for later drawing
 	int cached_numlightentities;
 	int cached_numlightentities_noselfshadow;
@@ -352,6 +354,12 @@ typedef struct rtlight_s
 	int compiled;
 	/// the shadowing mode used to compile this light
 	int shadowmode;
+	/// the size that this light should have (assuming no scene LOD kicking in to reduce it)
+	int shadowmapsidesize;
+	/// position of this light in the shadowmap atlas
+	int shadowmapatlasposition[2];
+	/// size of one side of this light in the shadowmap atlas (for omnidirectional shadowmaps this is the min corner of a 2x3 arrangement, or a 4x3 arrangement in the case of noselfshadow entities being present)
+	int shadowmapatlassidesize;
 	/// premade shadow volumes to render for world entity
 	shadowmesh_t *static_meshchain_shadow_zpass;
 	shadowmesh_t *static_meshchain_shadow_zfail;
