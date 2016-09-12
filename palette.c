@@ -204,7 +204,8 @@ static void Palette_LoadQ2Colormap(void)
 		unsigned char *out = (unsigned char *) q2palette_bgra_complete; // palette is accessed as 32bit for speed reasons, but is created as 8bit bytes
 		int i;
 		LoadPCX_PaletteOnly(q2colormapfile, filesize, q2palette_rgb[0]);
-		for (i = 0;i < 256;i++)
+		// this stops at color 255 because it is a pink transparent color that we don't actually want to preserve color on.
+		for (i = 0;i < 255;i++)
 		{
 			out[i*4+2] = q2palette_rgb[i][0];
 			out[i*4+1] = q2palette_rgb[i][1];

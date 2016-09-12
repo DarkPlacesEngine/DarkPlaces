@@ -42,6 +42,7 @@ cvar_t r_trippy = {0, "r_trippy", "0", "easter egg"};
 cvar_t r_fxaa = {CVAR_SAVE, "r_fxaa", "0", "fast approximate anti aliasing"};
 cvar_t mod_noshader_default_offsetmapping = {CVAR_SAVE, "mod_noshader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces that are not using q3 shader files"};
 cvar_t mod_obj_orientation = {0, "mod_obj_orientation", "1", "fix orientation of OBJ models to the usual conventions (if zero, use coordinates as is)"};
+cvar_t mod_q2bsp_littransparentsurfaces = {0, "mod_q2bsp_littransparentsurfaces", "0", "allows lighting on rain in 3v3gloom3 and other cases of transparent surfaces that have lightmaps that were ignored by quake2"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1", "enables collisions with curves (SLOW)"};
 cvar_t mod_q3bsp_curves_collisions_stride = {0, "mod_q3bsp_curves_collisions_stride", "16", "collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
 cvar_t mod_q3bsp_curves_stride = {0, "mod_q3bsp_curves_stride", "16", "particle effect collisions against curves: optimize performance by doing a combined collision check for this triangle amount first (-1 avoids any box tests)"};
@@ -89,6 +90,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_fxaa);
 	Cvar_RegisterVariable(&mod_noshader_default_offsetmapping);
 	Cvar_RegisterVariable(&mod_obj_orientation);
+	Cvar_RegisterVariable(&mod_q2bsp_littransparentsurfaces);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions_stride);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_stride);
@@ -4333,7 +4335,9 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 		// find an existing match for the texture if possible
 		dpsnprintf(filename, sizeof(filename), "textures/%s.wal", out->q2texture);
 		for (j = 0;j < loadmodel->num_texturesperskin;j++)
-			if (!strcmp(filename, loadmodel->data_textures[j].name) && out->q2flags == loadmodel->data_textures[j].q2flags)
+			if (!strcmp(filename, loadmodel->data_textures[j].name)
+			 && out->q2flags == loadmodel->data_textures[j].q2flags
+			 && out->q2value == loadmodel->data_textures[j].q2value)
 				break;
 		// if we don't find the texture, store the new texture
 		if (j == loadmodel->num_texturesperskin)
@@ -4344,19 +4348,24 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				int q2flags = out->q2flags;
 				unsigned char *walfile = NULL;
 				fs_offset_t walfilesize = 0;
-				Mod_LoadTextureFromQ3Shader(tx, filename, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
+				Mod_LoadTextureFromQ3Shader(tx, filename, true, true, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
 				// now read the .wal file to get metadata (even if a .tga was overriding it, we still need the wal data)
 				walfile = FS_LoadFile(filename, tempmempool, true, &walfilesize);
 				if (walfile)
 				{
 					int w, h;
-					char q2animname32c[32];
-					LoadWAL_GetMetadata(walfile, (int)walfilesize, &w, &h, &q2flags, &tx->q2value, &tx->q2contents, q2animname32c);
+					LoadWAL_GetMetadata(walfile, (int)walfilesize, &w, &h, NULL, NULL, &tx->q2contents, NULL);
 					tx->width = w;
 					tx->height = h;
-					tx->q2flags = q2flags;
 					Mem_Free(walfile);
 				}
+				else
+				{
+					tx->width = 16;
+					tx->height = 16;
+				}
+				tx->q2flags = out->q2flags;
+				tx->q2value = out->q2value;
 				// also modify the texture to have the correct contents and such based on flags
 				// note that we create multiple texture_t structures if q2flags differs
 				if (q2flags & Q2SURF_LIGHT)
@@ -4389,7 +4398,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				if (q2flags & Q2SURF_TRANS33)
 				{
 					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED;
-					tx->basealpha = 0.3333f;
+					tx->basealpha = 1.0f / 3.0f;
 					tx->supercontents &= ~SUPERCONTENTS_OPAQUE;
 					if (tx->q2contents & Q2CONTENTS_SOLID)
 						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
@@ -4397,7 +4406,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				if (q2flags & Q2SURF_TRANS66)
 				{
 					tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED;
-					tx->basealpha = 0.6667f;
+					tx->basealpha = 2.0f / 3.0f;
 					tx->supercontents &= ~SUPERCONTENTS_OPAQUE;
 					if (tx->q2contents & Q2CONTENTS_SOLID)
 						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
@@ -4405,8 +4414,21 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				if (q2flags & Q2SURF_FLOWING)
 				{
 					tx->tcmods[0].tcmod = Q3TCMOD_SCROLL;
-					tx->tcmods[0].parms[0] = -1.6f;
+					if (q2flags & Q2SURF_WARP)
+						tx->tcmods[0].parms[0] = -0.5f;
+					else
+						tx->tcmods[0].parms[0] = -1.6f;
 					tx->tcmods[0].parms[1] = 0.0f;
+				}
+				if (q2flags & Q2SURF_ALPHATEST)
+				{
+					// KMQUAKE2 and other modded engines added this flag for lit alpha tested surfaces
+					tx->basematerialflags |= MATERIALFLAG_ALPHATEST | MATERIALFLAG_NOSHADOW;
+				}
+				else if (q2flags & (Q2SURF_TRANS33 | Q2SURF_TRANS66 | Q2SURF_WARP))
+				{
+					if (!mod_q2bsp_littransparentsurfaces.integer)
+						tx->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 				}
 				if (q2flags & Q2SURF_NODRAW)
 				{
@@ -4619,6 +4641,9 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 	int i, j, firstside, numsides, contents, count, maxplanes, q3surfaceflags, supercontents;
 	colplanef_t *planes;
 	int structsize = 12;
+	qboolean brushmissingtextures;
+	int numbrushesmissingtextures = 0;
+	int numcreatedtextures = 0;
 
 	if (sb->cursize % structsize)
 		Host_Error("Mod_Q2BSP_LoadBrushes: funny lump size in %s",loadmodel->name);
@@ -4631,7 +4656,7 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 	maxplanes = 0;
 	planes = NULL;
 
-	for (i = 0;i < count;i++, out++)
+	for (i = 0; i < count; i++, out++)
 	{
 		firstside = MSG_ReadLittleLong(sb);
 		numsides = MSG_ReadLittleLong(sb);
@@ -4641,11 +4666,49 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 
 		out->firstbrushside = loadmodel->brush.data_brushsides + firstside;
 		out->numbrushsides = numsides;
-		// not really the same...  we should store the q2 contents
-		out->texture = out->firstbrushside->texture;
 		// convert the contents to our values
 		supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, contents);
 
+		// problem: q2bsp brushes have contents but not a texture
+		// problem: q2bsp brushsides *may* have a texture or may not
+		// problem: all brushsides and brushes must have a texture for trace_hittexture functionality to work, and the collision code is engineered around this assumption
+		// solution: nasty hacks
+		brushmissingtextures = false;
+		out->texture = NULL;
+		for (j = 0; j < out->numbrushsides; j++)
+		{
+			if (out->firstbrushside[j].texture == &mod_q1bsp_texture_solid)
+				brushmissingtextures = true;
+			else
+			{
+				// if we can find a matching texture on a brush side we can use it instead of creating one
+				if (out->firstbrushside[j].texture->supercontents == supercontents)
+					out->texture = out->firstbrushside[j].texture;
+			}
+		}
+		if (brushmissingtextures || out->texture == NULL)
+		{
+			numbrushesmissingtextures++;
+			// if we didn't find any appropriate texture (matching contents), we'll have to create one
+			// we could search earlier ones for a matching one but that can be slow
+			if (out->texture == NULL)
+			{
+				texture_t *validtexture;
+				validtexture = (texture_t *)Mem_Alloc(loadmodel->mempool, sizeof(texture_t));
+				dpsnprintf(validtexture->name, sizeof(validtexture->name), "brushcollision%i", numcreatedtextures);
+				validtexture->surfaceflags = 0;
+				validtexture->supercontents = supercontents;
+				numcreatedtextures++;
+				out->texture = validtexture;
+			}
+			// out->texture now contains a texture with appropriate contents, copy onto any missing sides
+			for (j = 0; j < out->numbrushsides; j++)
+				if (out->firstbrushside[j].texture == &mod_q1bsp_texture_solid)
+					out->firstbrushside[j].texture = out->texture;
+		}
+
+		// make a colbrush from the brush
+		q3surfaceflags = 0;
 		// make a list of mplane_t structs to construct a colbrush from
 		if (maxplanes < out->numbrushsides)
 		{
@@ -4654,7 +4717,6 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 				Mem_Free(planes);
 			planes = (colplanef_t *)Mem_Alloc(tempmempool, sizeof(colplanef_t) * maxplanes);
 		}
-		q3surfaceflags = 0;
 		for (j = 0;j < out->numbrushsides;j++)
 		{
 			VectorCopy(out->firstbrushside[j].plane->normal, planes[j].normal);
@@ -4662,10 +4724,7 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 			planes[j].q3surfaceflags = out->firstbrushside[j].texture->surfaceflags;
 			planes[j].texture = out->firstbrushside[j].texture;
 			q3surfaceflags |= planes[j].q3surfaceflags;
-			// LordHavoc: kind of a mean hack here, but we want the surfaces to have the brush contents
-			out->firstbrushside[j].texture->supercontents = supercontents;
 		}
-		// make the colbrush from the planes
 		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, q3surfaceflags, out->texture, true);
 
 		// this whole loop can take a while (e.g. on redstarrepublic4)
@@ -4673,6 +4732,8 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 	}
 	if (planes)
 		Mem_Free(planes);
+	if (numcreatedtextures)
+		Con_DPrintf("Mod_Q2BSP_LoadBrushes: %i brushes own sides that lack textures or have differing contents from the brush, %i textures have been created to describe these contents.\n", numbrushesmissingtextures, numcreatedtextures);
 }
 
 static void Mod_Q2BSP_LoadPOP(sizebuf_t *sb)
