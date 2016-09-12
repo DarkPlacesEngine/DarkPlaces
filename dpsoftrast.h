@@ -139,6 +139,14 @@ typedef enum glsl_attrib_e
 }
 glsl_attrib;
 
+typedef enum shaderlanguage_e
+{
+	SHADERLANGUAGE_GLSL,
+	SHADERLANGUAGE_HLSL,
+	SHADERLANGUAGE_COUNT
+}
+shaderlanguage_t;
+
 // this enum selects which of the glslshadermodeinfo entries should be used
 typedef enum shadermode_e
 {
