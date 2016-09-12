@@ -336,6 +336,7 @@ typedef struct q2dmodel_s
 #define Q2SURF_HINT		0x100   // make a primary bsp splitter
 #define Q2SURF_SKIP		0x200   // completely ignore, allowing non-closed brushes
 
+#define Q2SURF_ALPHATEST 0x02000000	// alpha test masking of color 255 in wal textures (supported by modded engines)
 
 
 /*
