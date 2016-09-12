@@ -801,22 +801,36 @@ qboolean LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth
 	if (filesize < (int) sizeof(q2wal_t))
 	{
 		Con_Print("LoadWAL: invalid WAL file\n");
-		*retwidth = 16;
-		*retheight = 16;
-		*retflags = 0;
-		*retvalue = 0;
-		*retcontents = 0;
-		memset(retanimname32c, 0, 32);
+		if (retwidth)
+			*retwidth = 16;
+		if (retheight)
+			*retheight = 16;
+		if (retflags)
+			*retflags = 0;
+		if (retvalue)
+			*retvalue = 0;
+		if (retcontents)
+			*retcontents = 0;
+		if (retanimname32c)
+			memset(retanimname32c, 0, 32);
 		return false;
 	}
 
-	*retwidth = LittleLong(inwal->width);
-	*retheight = LittleLong(inwal->height);
-	*retflags = LittleLong(inwal->flags);
-	*retvalue = LittleLong(inwal->value);
-	*retcontents = LittleLong(inwal->contents);
-	memcpy(retanimname32c, inwal->animname, 32);
-	retanimname32c[31] = 0;
+	if (retwidth)
+		*retwidth = LittleLong(inwal->width);
+	if (retheight)
+		*retheight = LittleLong(inwal->height);
+	if (retflags)
+		*retflags = LittleLong(inwal->flags);
+	if (retvalue)
+		*retvalue = LittleLong(inwal->value);
+	if (retcontents)
+		*retcontents = LittleLong(inwal->contents);
+	if (retanimname32c)
+	{
+		memcpy(retanimname32c, inwal->animname, 32);
+		retanimname32c[31] = 0;
+	}
 	return true;
 }
 
