@@ -263,7 +263,7 @@ shadowmesh_t;
 #define TEXTURE_MAXFRAMES 64
 #define Q3WAVEPARMS 4
 #define Q3DEFORM_MAXPARMS 3
-#define Q3SHADER_MAXLAYERS 2 // FIXME support more than that (currently only two are used, so why keep more in RAM?)
+#define Q3SHADER_MAXLAYERS 8
 #define Q3RGBGEN_MAXPARMS 3
 #define Q3ALPHAGEN_MAXPARMS 1
 #define Q3TCGEN_MAXPARMS 6
@@ -451,7 +451,6 @@ typedef struct q3shaderinfo_s
 	qboolean lighting;
 	qboolean vertexalpha;
 	qboolean textureblendalpha;
-	int primarylayer, backgroundlayer;
 	q3shaderinfo_layer_t layers[Q3SHADER_MAXLAYERS];
 	char skyboxname[Q3PATHLENGTH];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
@@ -503,6 +502,20 @@ typedef struct q3shaderinfo_s
 }
 q3shaderinfo_t;
 
+typedef struct texture_shaderpass_s
+{
+	qboolean alphatest; // FIXME: handle alphafunc properly
+	float framerate;
+	int numframes;
+	skinframe_t *skinframes[TEXTURE_MAXFRAMES];
+	int blendfunc[2];
+	q3shaderinfo_layer_rgbgen_t rgbgen;
+	q3shaderinfo_layer_alphagen_t alphagen;
+	q3shaderinfo_layer_tcgen_t tcgen;
+	q3shaderinfo_layer_tcmod_t tcmods[Q3MAXTCMODS];
+}
+texture_shaderpass_t;
+
 typedef enum texturelayertype_e
 {
 	TEXTURELAYERTYPE_INVALID,
@@ -546,16 +559,10 @@ typedef struct texture_s
 	float biaspolygonfactor;
 	float biaspolygonoffset;
 
-	// textures to use when rendering this material
+	// textures to use when rendering this material (derived from materialshaderpass)
 	skinframe_t *currentskinframe;
-	int numskinframes;
-	float skinframerate;
-	skinframe_t *skinframes[TEXTURE_MAXFRAMES];
-	// background layer (for terrain texture blending)
+	// textures to use for terrain texture blending (derived from backgroundshaderpass)
 	skinframe_t *backgroundcurrentskinframe;
-	int backgroundnumskinframes;
-	float backgroundskinframerate;
-	skinframe_t *backgroundskinframes[TEXTURE_MAXFRAMES];
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -578,12 +585,14 @@ typedef struct texture_s
 	matrix4x4_t currentbackgroundtexmatrix;
 
 	// various q3 shader features
-	q3shaderinfo_layer_rgbgen_t rgbgen;
-	q3shaderinfo_layer_alphagen_t alphagen;
-	q3shaderinfo_layer_tcgen_t tcgen;
-	q3shaderinfo_layer_tcmod_t tcmods[Q3MAXTCMODS];
-	q3shaderinfo_layer_tcmod_t backgroundtcmods[Q3MAXTCMODS];
 	q3shaderinfo_deform_t deforms[Q3MAXDEFORMS];
+	texture_shaderpass_t *shaderpasses[Q3SHADER_MAXLAYERS]; // all shader passes in one array
+	texture_shaderpass_t *materialshaderpass; // equal to one of shaderpasses[] or NULL
+	texture_shaderpass_t *backgroundshaderpass; // equal to one of shaderpasses[] or NULL
+	unsigned char startpreshaderpass; // range within shaderpasses[]
+	unsigned char endpreshaderpass; // number of preshaderpasses
+	unsigned char startpostshaderpass; // range within shaderpasses[]
+	unsigned char endpostshaderpass; // number of postshaderpasses
 
 	qboolean colormapping;
 	rtexture_t *basetexture; // original texture without pants/shirt/glow
@@ -1146,6 +1155,8 @@ void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
 qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
+texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe);
+texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
 
 extern cvar_t r_mipskins;
 extern cvar_t r_mipnormalmaps;

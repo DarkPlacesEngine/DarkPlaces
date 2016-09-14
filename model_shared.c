@@ -100,7 +100,7 @@ static void mod_shutdown(void)
 static void mod_newmap(void)
 {
 	msurface_t *surface;
-	int i, j, k, surfacenum, ssize, tsize;
+	int i, j, k, l, surfacenum, ssize, tsize;
 	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
@@ -110,10 +110,11 @@ static void mod_newmap(void)
 		{
 			for (j = 0;j < mod->num_textures && mod->data_textures;j++)
 			{
-				for (k = 0;k < mod->data_textures[j].numskinframes;k++)
-					R_SkinFrame_MarkUsed(mod->data_textures[j].skinframes[k]);
-				for (k = 0;k < mod->data_textures[j].backgroundnumskinframes;k++)
-					R_SkinFrame_MarkUsed(mod->data_textures[j].backgroundskinframes[k]);
+				// note that materialshaderpass and backgroundshaderpass point to shaderpasses[] and so do the pre/post shader ranges, so this catches all of them...
+				for (l = 0; l < Q3SHADER_MAXLAYERS; l++)
+					if (mod->data_textures[j].shaderpasses[l])
+						for (k = 0; k < mod->data_textures[j].shaderpasses[l]->numframes; k++)
+							R_SkinFrame_MarkUsed(mod->data_textures[j].shaderpasses[l]->skinframes[k]);
 			}
 			if (mod->brush.solidskyskinframe)
 				R_SkinFrame_MarkUsed(mod->brush.solidskyskinframe);
@@ -348,7 +349,9 @@ static void Mod_FindPotentialDeforms(dp_model_t *mod)
 	for (i = 0;i < mod->num_textures;i++)
 	{
 		texture = mod->data_textures + i;
-		if (texture->tcgen.tcgen == Q3TCGEN_ENVIRONMENT)
+		if (texture->materialshaderpass && texture->materialshaderpass->tcgen.tcgen == Q3TCGEN_ENVIRONMENT)
+			mod->wantnormals = true;
+		if (texture->materialshaderpass && texture->materialshaderpass->tcgen.tcgen == Q3TCGEN_ENVIRONMENT)
 			mod->wantnormals = true;
 		for (j = 0;j < Q3MAXDEFORMS;j++)
 		{
@@ -1727,8 +1730,6 @@ void Mod_LoadQ3Shaders(void)
 			shader.lighting = false;
 			shader.vertexalpha = false;
 			shader.textureblendalpha = false;
-			shader.primarylayer = 0;
-			shader.backgroundlayer = 0;
 			shader.skyboxname[0] = 0;
 			shader.deforms[0].deform = Q3DEFORM_NONE;
 			shader.dpnortlight = false;
@@ -2380,30 +2381,6 @@ void Mod_LoadQ3Shaders(void)
 			// hide this shader if a cvar said it should be killed
 			if (shader.dpshaderkill)
 				shader.numlayers = 0;
-			// pick the primary layer to render with
-			if (shader.numlayers)
-			{
-				shader.backgroundlayer = -1;
-				shader.primarylayer = 0;
-				// if lightmap comes first this is definitely an ordinary texture
-				// if the first two layers have the correct blendfuncs and use vertex alpha, it is a blended terrain shader
-				if ((shader.layers[shader.primarylayer].texturename != NULL)
-				  && !strcasecmp(shader.layers[shader.primarylayer].texturename[0], "$lightmap"))
-				{
-					shader.backgroundlayer = -1;
-					shader.primarylayer = 1;
-				}
-				else if (shader.numlayers >= 2
-				&&   shader.layers[1].alphagen.alphagen == Q3ALPHAGEN_VERTEX
-				&&  (shader.layers[0].blendfunc[0] == GL_ONE       && shader.layers[0].blendfunc[1] == GL_ZERO                && !shader.layers[0].alphatest)
-				&& ((shader.layers[1].blendfunc[0] == GL_SRC_ALPHA && shader.layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
-				||  (shader.layers[1].blendfunc[0] == GL_ONE       && shader.layers[1].blendfunc[1] == GL_ZERO                &&  shader.layers[1].alphatest)))
-				{
-					// terrain blending or other effects
-					shader.backgroundlayer = 0;
-					shader.primarylayer = 1;
-				}
-			}
 			// fix up multiple reflection types
 			if(shader.textureflags & Q3TEXTUREFLAG_WATERSHADER)
 				shader.textureflags &= ~(Q3TEXTUREFLAG_REFRACTION | Q3TEXTUREFLAG_REFLECTION | Q3TEXTUREFLAG_CAMERA);
@@ -2435,9 +2412,52 @@ q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 	return NULL;
 }
 
-qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
+texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe)
+{
+	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(loadmodel->mempool, sizeof(*shaderpass));
+	shaderpass->framerate = 0.0f;
+	shaderpass->numframes = 1;
+	shaderpass->blendfunc[0] = GL_ONE;
+	shaderpass->blendfunc[1] = GL_ZERO;
+	shaderpass->rgbgen.rgbgen = Q3RGBGEN_IDENTITY;
+	shaderpass->alphagen.alphagen = Q3ALPHAGEN_IDENTITY;
+	shaderpass->alphatest = false;
+	shaderpass->tcgen.tcgen = Q3TCGEN_TEXTURE;
+	shaderpass->skinframes[0] = skinframe;
+	return shaderpass;
+}
+
+texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename)
 {
 	int j;
+	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(loadmodel->mempool, sizeof(*shaderpass));
+	shaderpass->alphatest = layer->alphatest != 0;
+	shaderpass->framerate = layer->framerate;
+	shaderpass->numframes = layer->numframes;
+	shaderpass->blendfunc[0] = layer->blendfunc[0];
+	shaderpass->blendfunc[1] = layer->blendfunc[1];
+	shaderpass->rgbgen = layer->rgbgen;
+	shaderpass->alphagen = layer->alphagen;
+	shaderpass->tcgen = layer->tcgen;
+	for (j = 0; j < Q3MAXTCMODS && layer->tcmods[j].tcmod != Q3TCMOD_NONE; j++)
+		shaderpass->tcmods[j] = layer->tcmods[j];
+	for (j = 0; j < layer->numframes; j++)
+	{
+		if (cls.state == ca_dedicated)
+		{
+			shaderpass->skinframes[j] = NULL;
+		}
+		else if (!(shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false)))
+		{
+			Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for layer %i of shader ^2\"%s\"\n", loadmodel->name, layer->texturename[j], j, layerindex, texturename);
+			shaderpass->skinframes[j] = R_SkinFrame_LoadMissing();
+		}
+	}
+	return shaderpass;
+}
+
+qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
+{
 	int texflagsmask, texflagsor;
 	qboolean success = true;
 	q3shaderinfo_t *shader;
@@ -2549,51 +2569,99 @@ nothing                GL_ZERO GL_ONE
 		}
 		if (!shader->lighting)
 			texture->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
-		if (shader->primarylayer >= 0)
+
+		// here be dragons: convert quake3 shaders to material
+		if (shader->numlayers > 0)
 		{
-			q3shaderinfo_layer_t* primarylayer = shader->layers + shader->primarylayer;
-			// copy over many primarylayer parameters
-			texture->rgbgen = primarylayer->rgbgen;
-			texture->alphagen = primarylayer->alphagen;
-			texture->tcgen = primarylayer->tcgen;
-			memcpy(texture->tcmods, primarylayer->tcmods, sizeof(texture->tcmods));
-			// load the textures
-			texture->numskinframes = primarylayer->numframes;
-			texture->skinframerate = primarylayer->framerate;
-			for (j = 0;j < primarylayer->numframes;j++)
+			int i;
+			int terrainbackgroundlayer = -1;
+			int lightmaplayer = -1;
+			int alphagenspecularlayer = -1;
+			int rgbgenvertexlayer = -1;
+			int rgbgendiffuselayer = -1;
+			int materiallayer = -1;
+			int endofprelayers = 0;
+			int firstpostlayer = 0;
+			int shaderpassindex = 0;
+			for (i = 0; i < shader->numlayers; i++)
 			{
-				if(cls.state == ca_dedicated)
-				{
-					texture->skinframes[j] = NULL;
-				}
-				else if (!(texture->skinframes[j] = R_SkinFrame_LoadExternal(primarylayer->texturename[j], (primarylayer->texflags & texflagsmask) | texflagsor, false)))
-				{
-					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for shader ^2\"%s\"\n", loadmodel->name, primarylayer->texturename[j], j, texture->name);
-					texture->skinframes[j] = R_SkinFrame_LoadMissing();
-				}
+				if (shader->layers[i].texturename != NULL && !strcasecmp(shader->layers[i].texturename[0], "$lightmap"))
+					lightmaplayer = i;
+				if (shader->layers[i].rgbgen.rgbgen == Q3RGBGEN_VERTEX)
+					rgbgenvertexlayer = i;
+				if (shader->layers[i].rgbgen.rgbgen == Q3RGBGEN_LIGHTINGDIFFUSE)
+					rgbgendiffuselayer = i;
+				if (shader->layers[i].alphagen.alphagen == Q3ALPHAGEN_LIGHTINGSPECULAR)
+					alphagenspecularlayer = i;
 			}
-		}
-		if (shader->backgroundlayer >= 0)
-		{
-			q3shaderinfo_layer_t* backgroundlayer = shader->layers + shader->backgroundlayer;
-			// copy over one secondarylayer parameter
-			memcpy(texture->backgroundtcmods, backgroundlayer->tcmods, sizeof(texture->backgroundtcmods));
-			// load the textures
-			texture->backgroundnumskinframes = backgroundlayer->numframes;
-			texture->backgroundskinframerate = backgroundlayer->framerate;
-			for (j = 0;j < backgroundlayer->numframes;j++)
+			if (shader->numlayers >= 2
+			 && shader->layers[1].alphagen.alphagen == Q3ALPHAGEN_VERTEX
+			 && (shader->layers[0].blendfunc[0] == GL_ONE && shader->layers[0].blendfunc[1] == GL_ZERO && !shader->layers[0].alphatest)
+			 && ((shader->layers[1].blendfunc[0] == GL_SRC_ALPHA && shader->layers[1].blendfunc[1] == GL_ONE_MINUS_SRC_ALPHA)
+				 || (shader->layers[1].blendfunc[0] == GL_ONE && shader->layers[1].blendfunc[1] == GL_ZERO && shader->layers[1].alphatest)))
 			{
-				if(cls.state == ca_dedicated)
-				{
-					texture->skinframes[j] = NULL;
-				}
-				else if (!(texture->backgroundskinframes[j] = R_SkinFrame_LoadExternal(backgroundlayer->texturename[j], (backgroundlayer->texflags & texflagsmask) | texflagsor, false)))
-				{
-					Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (background frame %i) for shader ^2\"%s\"\n", loadmodel->name, backgroundlayer->texturename[j], j, texture->name);
-					texture->backgroundskinframes[j] = R_SkinFrame_LoadMissing();
-				}
+				// terrain blend or certain other effects involving alphatest over a regular layer
+				terrainbackgroundlayer = 0;
+				materiallayer = 1;
+				// terrain may be vertex lit (in which case both layers are rgbGen vertex) or lightmapped (in which ase the third layer is lightmap)
+				firstpostlayer = lightmaplayer >= 0 ? lightmaplayer + 1 : materiallayer + 1;
 			}
+			else if (lightmaplayer == 0)
+			{
+				// ordinary texture but with $lightmap before diffuse
+				materiallayer = 1;
+				firstpostlayer = lightmaplayer + 2;
+			}
+			else if (lightmaplayer >= 1)
+			{
+				// ordinary texture - we don't properly apply lighting to the prelayers, but oh well...
+				endofprelayers = lightmaplayer - 1;
+				materiallayer = lightmaplayer - 1;
+				firstpostlayer = lightmaplayer + 1;
+			}
+			else if (rgbgenvertexlayer >= 0)
+			{
+				// map models with baked lighting
+				materiallayer = rgbgenvertexlayer;
+				endofprelayers = rgbgenvertexlayer;
+				firstpostlayer = rgbgenvertexlayer + 1;
+			}
+			else if (rgbgendiffuselayer >= 0)
+			{
+				// entity models with dynamic lighting
+				materiallayer = rgbgendiffuselayer;
+				endofprelayers = rgbgendiffuselayer;
+				firstpostlayer = rgbgendiffuselayer + 1;
+				// player models often have specular as a pass after diffuse - we don't currently make use of that specular texture (would need to meld it into the skinframe)...
+				if (alphagenspecularlayer >= 0)
+					firstpostlayer = alphagenspecularlayer + 1;
+			}
+			else
+			{
+				// special effects shaders - treat first as primary layer and do everything else as post
+				endofprelayers = 0;
+				materiallayer = 0;
+				firstpostlayer = 1;
+			}
+			// convert the main material layer
+			// FIXME: if alphagenspecularlayer is used, we should pass a specular texture name to R_SkinFrame_LoadExternal and have it load that texture instead of the assumed name for _gloss texture
+			if (materiallayer >= 0)
+				texture->materialshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[materiallayer], materiallayer, (shader->layers[materiallayer].texflags & texflagsmask) | texflagsor, texture->name);
+			// convert the terrain background blend layer (if any)
+			if (terrainbackgroundlayer >= 0)
+				texture->backgroundshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[terrainbackgroundlayer], terrainbackgroundlayer, (shader->layers[terrainbackgroundlayer].texflags & texflagsmask) | texflagsor, texture->name);
+			// convert the prepass layers (if any)
+			texture->startpreshaderpass = shaderpassindex;
+			for (i = 0; i < endofprelayers; i++)
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].texflags & texflagsmask) | texflagsor, texture->name);
+			texture->endpreshaderpass = shaderpassindex;
+			texture->startpostshaderpass = shaderpassindex;
+			// convert the postpass layers (if any)
+			for (i = firstpostlayer; i < shader->numlayers; i++)
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].texflags & texflagsmask) | texflagsor, texture->name);
+			texture->startpostshaderpass = shaderpassindex;
 		}
+
 		if (shader->dpshadow)
 			texture->basematerialflags &= ~MATERIALFLAG_NOSHADOW;
 		if (shader->dpnoshadow)
@@ -2734,19 +2802,19 @@ nothing                GL_ZERO GL_ONE
 			texture->basematerialflags |= MATERIALFLAG_WALL;
 			texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 		}
-		texture->numskinframes = 1;
 		if(cls.state == ca_dedicated)
 		{
-			texture->skinframes[0] = NULL;
+			texture->materialshaderpass = NULL;
 			success = false;
 		}
 		else
 		{
 			if (fallback)
 			{
-				if ((texture->skinframes[0] = R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false)))
+				texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false));
+				if (texture->materialshaderpass->skinframes[0])
 				{
-					if(texture->skinframes[0]->hasalpha)
+					if (texture->materialshaderpass->skinframes[0]->hasalpha)
 						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 					if (texture->q2contents)
 						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, texture->q2contents);
@@ -2762,12 +2830,12 @@ nothing                GL_ZERO GL_ONE
 	}
 	// init the animation variables
 	texture->currentframe = texture;
-	if (texture->numskinframes < 1)
-		texture->numskinframes = 1;
-	if (!texture->skinframes[0])
-		texture->skinframes[0] = R_SkinFrame_LoadMissing();
-	texture->currentskinframe = texture->skinframes[0];
-	texture->backgroundcurrentskinframe = texture->backgroundskinframes[0];
+	if (!texture->materialshaderpass)
+		texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(R_SkinFrame_LoadMissing());
+	if (!texture->materialshaderpass->skinframes[0])
+		texture->materialshaderpass->skinframes[0] = R_SkinFrame_LoadMissing();
+	texture->currentskinframe = texture->materialshaderpass ? texture->materialshaderpass->skinframes[0] : NULL;
+	texture->backgroundcurrentskinframe = texture->backgroundshaderpass ? texture->backgroundshaderpass->skinframes[0] : NULL;
 	return success;
 }
 
