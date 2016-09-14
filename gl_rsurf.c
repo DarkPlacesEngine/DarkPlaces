@@ -1618,7 +1618,7 @@ static void R_ListWorldTextures (void)
 
 	Con_Print("Worldmodel textures :\n");
 	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
-		if (t->numskinframes)
+		if (t->name[0] && strcasecmp(t->name, "NO TEXTURE FOUND"))
 			Con_Printf("%s\n", t->name);
 }
 

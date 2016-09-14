@@ -1622,7 +1622,7 @@ static void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int
 static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 {
 	int i, j, k, num, max, altmax, mtwidth, mtheight, doffset, incomplete, nummiptex = 0;
-	skinframe_t *skinframe;
+	skinframe_t *skinframemissing;
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
 	texture_t backuptex;
 	unsigned char *data, *mtdata;
@@ -1653,9 +1653,9 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 	// fill out all slots with notexture
 	if (cls.state != ca_dedicated)
-		skinframe = R_SkinFrame_LoadMissing();
+		skinframemissing = R_SkinFrame_LoadMissing();
 	else
-		skinframe = NULL;
+		skinframemissing = NULL;
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
@@ -1664,10 +1664,8 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx->basealpha = 1.0f;
 		if (cls.state != ca_dedicated)
 		{
-			tx->numskinframes = 1;
-			tx->skinframerate = 1;
-			tx->skinframes[0] = skinframe;
-			tx->currentskinframe = tx->skinframes[0];
+			tx->materialshaderpass = tx->shaderpasses[0] = Mod_CreateShaderPass(skinframemissing);
+			tx->currentskinframe = skinframemissing;
 		}
 		tx->basematerialflags = MATERIALFLAG_WALL;
 		if (i == loadmodel->num_textures - 1)
@@ -1827,7 +1825,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
+				skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
 					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (skinframe)
@@ -1856,15 +1854,15 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 					else if (mtdata) // texture included
 						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
-				// if skinframe is still NULL the "missing" texture will be used
+				// if skinframe is still NULL the "missing" texture has already been assigned to this
 				if (skinframe)
-					tx->skinframes[0] = skinframe;
+					tx->materialshaderpass->skinframes[0] = skinframe;
 			}
 			// LordHavoc: some Tenebrae textures get replaced by black
 			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
+				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
+				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
 		}
 
 		tx->basematerialflags = MATERIALFLAG_WALL;
@@ -1879,7 +1877,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			else
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
-			if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+			if (tx->materialshaderpass->skinframes[0]->hasalpha)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		}
 		else if (tx->name[0] == '{') // fence textures
@@ -1895,12 +1893,12 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		else if (!strcmp(tx->name, "caulk"))
 			tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-		else if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+		else if (tx->materialshaderpass->skinframes[0]->hasalpha)
 			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 
 		// start out with no animation
 		tx->currentframe = tx;
-		tx->currentskinframe = tx->skinframes[0];
+		tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		tx->currentmaterialflags = tx->basematerialflags;
 	}
 
@@ -4413,12 +4411,12 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				}
 				if (q2flags & Q2SURF_FLOWING)
 				{
-					tx->tcmods[0].tcmod = Q3TCMOD_SCROLL;
+					tx->materialshaderpass->tcmods[0].tcmod = Q3TCMOD_SCROLL;
 					if (q2flags & Q2SURF_WARP)
-						tx->tcmods[0].parms[0] = -0.5f;
+						tx->materialshaderpass->tcmods[0].parms[0] = -0.5f;
 					else
-						tx->tcmods[0].parms[0] = -1.6f;
-					tx->tcmods[0].parms[1] = 0.0f;
+						tx->materialshaderpass->tcmods[0].parms[0] = -1.6f;
+					tx->materialshaderpass->tcmods[0].parms[1] = 0.0f;
 				}
 				if (q2flags & Q2SURF_ALPHATEST)
 				{
@@ -4443,7 +4441,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, tx->q2contents);
 				// set the current values to the base values
 				tx->currentframe = tx;
-				tx->currentskinframe = tx->skinframes[0];
+				tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 				tx->currentmaterialflags = tx->basematerialflags;
 				loadmodel->num_texturesperskin++;
 				loadmodel->num_textures = loadmodel->num_texturesperskin;

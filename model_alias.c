@@ -909,9 +909,7 @@ static void Mod_BuildAliasSkinFromSkinFrame(texture_t *texture, skinframe_t *ski
 	memset(texture, 0, sizeof(*texture));
 	texture->currentframe = texture;
 	//texture->animated = false;
-	texture->numskinframes = 1;
-	texture->skinframerate = 1;
-	texture->skinframes[0] = skinframe;
+	texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(skinframe);
 	texture->currentskinframe = skinframe;
 	//texture->backgroundnumskinframes = 0;
 	//texture->customblendfunc[0] = 0;

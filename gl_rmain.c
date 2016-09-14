@@ -8208,13 +8208,13 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		if (strcmp(r_qwskincache[i].name, cl.scores[i].qw_skin))
 			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
 		t->currentskinframe = r_qwskincache[i].skinframe;
-		if (t->currentskinframe == NULL)
-			t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
+		if (t->materialshaderpass && t->currentskinframe == NULL)
+			t->currentskinframe = t->materialshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->materialshaderpass->framerate, t->materialshaderpass->numframes)];
 	}
-	else if (t->numskinframes >= 2)
-		t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
-	if (t->backgroundnumskinframes >= 2)
-		t->backgroundcurrentskinframe = t->backgroundskinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundskinframerate, t->backgroundnumskinframes)];
+	else if (t->materialshaderpass && t->materialshaderpass->numframes >= 2)
+		t->currentskinframe = t->materialshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->materialshaderpass->framerate, t->materialshaderpass->numframes)];
+	if (t->backgroundshaderpass && t->backgroundshaderpass->numframes >= 2)
+		t->backgroundcurrentskinframe = t->backgroundshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundshaderpass->framerate, t->backgroundshaderpass->numframes)];
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.colormod[3] * t->basealpha;
@@ -8249,7 +8249,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 	if (rsurface.ent_flags & (RENDER_NODEPTHTEST | RENDER_VIEWMODEL))
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
-	if (t->backgroundnumskinframes)
+	if (t->backgroundshaderpass)
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 	if (t->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
@@ -8278,10 +8278,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		Matrix4x4_CreateIdentity(&t->currentbackgroundtexmatrix);
 	}
 
-	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
-		R_tcMod_ApplyToMatrix(&t->currenttexmatrix, tcmod, t->currentmaterialflags);
-	for (i = 0, tcmod = t->backgroundtcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
-		R_tcMod_ApplyToMatrix(&t->currentbackgroundtexmatrix, tcmod, t->currentmaterialflags);
+	if (t->materialshaderpass)
+		for (i = 0, tcmod = t->materialshaderpass->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
+			R_tcMod_ApplyToMatrix(&t->currenttexmatrix, tcmod, t->currentmaterialflags);
 
 	t->colormapping = VectorLength2(rsurface.colormap_pantscolor) + VectorLength2(rsurface.colormap_shirtcolor) >= (1.0f / 1048576.0f);
 	if (t->currentskinframe->qpixels)
@@ -8298,8 +8297,10 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->glowtexture = t->currentskinframe->glow;
 	t->fogtexture = t->currentskinframe->fog;
 	t->reflectmasktexture = t->currentskinframe->reflect;
-	if (t->backgroundnumskinframes)
+	if (t->backgroundshaderpass)
 	{
+		for (i = 0, tcmod = t->backgroundshaderpass->tcmods; i < Q3MAXTCMODS && tcmod->tcmod; i++, tcmod++)
+			R_tcMod_ApplyToMatrix(&t->currentbackgroundtexmatrix, tcmod, t->currentmaterialflags);
 		t->backgroundbasetexture = (!t->colormapping && t->backgroundcurrentskinframe->merged) ? t->backgroundcurrentskinframe->merged : t->backgroundcurrentskinframe->base;
 		t->backgroundnmaptexture = t->backgroundcurrentskinframe->nmap;
 		t->backgroundglosstexture = r_texture_black;
@@ -9242,60 +9243,63 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			break;
 		}
 	}
-	switch(rsurface.texture->tcgen.tcgen)
+	if (rsurface.texture->materialshaderpass)
 	{
-	default:
-	case Q3TCGEN_TEXTURE:
-		break;
-	case Q3TCGEN_LIGHTMAP:
-		if (!dynamicvertex)
+		switch (rsurface.texture->materialshaderpass->tcgen.tcgen)
 		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_lightmap] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_lightmap] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_lightmap] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_lightmap] += batchnumtriangles;
+		default:
+		case Q3TCGEN_TEXTURE:
+			break;
+		case Q3TCGEN_LIGHTMAP:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_lightmap] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_lightmap] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_lightmap] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_lightmap] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
+			needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
+			break;
+		case Q3TCGEN_VECTOR:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_vector] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_vector] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_vector] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_vector] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
+			break;
+		case Q3TCGEN_ENVIRONMENT:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_environment] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_environment] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_environment] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_environment] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
+			break;
 		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
-		needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
-		break;
-	case Q3TCGEN_VECTOR:
-		if (!dynamicvertex)
+		if (rsurface.texture->materialshaderpass->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_vector] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_vector] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_vector] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_vector] += batchnumtriangles;
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcmod_turbulent] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcmod_turbulent] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcmod_turbulent] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcmod_turbulent] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
-		break;
-	case Q3TCGEN_ENVIRONMENT:
-		if (!dynamicvertex)
-		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_environment] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_environment] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_environment] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_environment] += batchnumtriangles;
-		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
-		break;
-	}
-	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
-	{
-		if (!dynamicvertex)
-		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcmod_turbulent] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcmod_turbulent] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcmod_turbulent] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcmod_turbulent] += batchnumtriangles;
-		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 	}
 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
@@ -10138,10 +10142,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		}
 	}
 
-	if (rsurface.batchtexcoordtexture2f)
+	if (rsurface.batchtexcoordtexture2f && rsurface.texture->materialshaderpass)
 	{
 	// generate texcoords based on the chosen texcoord source
-		switch(rsurface.texture->tcgen.tcgen)
+		switch(rsurface.texture->materialshaderpass->tcgen.tcgen)
 		{
 		default:
 		case Q3TCGEN_TEXTURE:
@@ -10159,8 +10163,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
 			for (j = 0;j < batchnumvertices;j++)
 			{
-				rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms);
-				rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms + 3);
+				rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->materialshaderpass->tcgen.parms);
+				rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->materialshaderpass->tcgen.parms + 3);
 			}
 			break;
 		case Q3TCGEN_ENVIRONMENT:
@@ -10200,10 +10204,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		// and we only support that as the first one
 		// (handling a mixture of turbulent and other tcmods would be problematic
 		//  without punting it entirely to a software path)
-		if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
+		if (rsurface.texture->materialshaderpass->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 		{
-			amplitude = rsurface.texture->tcmods[0].parms[1];
-			animpos = rsurface.texture->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->tcmods[0].parms[3];
+			amplitude = rsurface.texture->materialshaderpass->tcmods[0].parms[1];
+			animpos = rsurface.texture->materialshaderpass->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->materialshaderpass->tcmods[0].parms[3];
 	//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 	//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
 	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
