@@ -5068,8 +5068,8 @@ qboolean R_Shadow_PrepareLights_AddSceneLight(rtlight_t *rtlight)
 		return false;
 	if (r_shadow_scenemaxlights <= r_shadow_scenenumlights && r_shadow_scenemaxlights < MAX_SCENELIGHTS)
 	{
-		r_shadow_scenemaxlights = bound(1024, r_shadow_scenemaxlights, 65536);
-		r_shadow_scenelightlist = (rtlight_t **)Mem_Realloc(r_main_mempool, r_shadow_scenelightlist, r_shadow_scenemaxlights);
+		r_shadow_scenemaxlights = bound(1024, r_shadow_scenemaxlights, MAX_SCENELIGHTS);
+		r_shadow_scenelightlist = (rtlight_t **)Mem_Realloc(r_main_mempool, r_shadow_scenelightlist, r_shadow_scenemaxlights * sizeof(rtlight_t *));
 	}
 	r_shadow_scenelightlist[r_shadow_scenenumlights++] = rtlight;
 	return true;
