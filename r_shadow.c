@@ -5064,10 +5064,11 @@ void R_Shadow_DrawPrepass(void)
 #define MAX_SCENELIGHTS 65536
 qboolean R_Shadow_PrepareLights_AddSceneLight(rtlight_t *rtlight)
 {
-	if (r_shadow_scenenumlights >= MAX_SCENELIGHTS)
-		return false;
-	if (r_shadow_scenemaxlights <= r_shadow_scenenumlights && r_shadow_scenemaxlights < MAX_SCENELIGHTS)
+	if (r_shadow_scenemaxlights <= r_shadow_scenenumlights)
 	{
+		if (r_shadow_scenenumlights >= MAX_SCENELIGHTS)
+			return false;
+		r_shadow_scenemaxlights *= 2;
 		r_shadow_scenemaxlights = bound(1024, r_shadow_scenemaxlights, MAX_SCENELIGHTS);
 		r_shadow_scenelightlist = (rtlight_t **)Mem_Realloc(r_main_mempool, r_shadow_scenelightlist, r_shadow_scenemaxlights * sizeof(rtlight_t *));
 	}
