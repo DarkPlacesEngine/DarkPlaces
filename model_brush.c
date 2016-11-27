@@ -6782,7 +6782,7 @@ static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t s
 	if (model->brush.submodel || mod_q3bsp_tracelineofsight_brushes.integer)
 	{
 		trace_t trace;
-		model->TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK, SUPERCONTENTS_SKY);
+		model->TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK, 0);
 		return trace.fraction == 1;
 	}
 	else
