@@ -589,11 +589,11 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				chase_dest[2] = vieworg[2] - forward[2] * camback + up[2] * camup;
 #if 0
 #if 1
-				//trace = CL_TraceLine(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-				trace = CL_TraceLine(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+				//trace = CL_TraceLine(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, 0, true, false, NULL, false);
+				trace = CL_TraceLine(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, 0, true, false, NULL, false);
 #else
-				//trace = CL_TraceBox(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
-				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, true, false, NULL, false);
+				//trace = CL_TraceBox(vieworg, eyeboxmins, eyeboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, 0, true, false, NULL, false);
+				trace = CL_TraceBox(vieworg, camboxmins, camboxmaxs, chase_dest, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_SKY, 0, true, false, NULL, false);
 #endif
 				VectorCopy(trace.endpos, vieworg);
 				vieworg[2] -= 8;
