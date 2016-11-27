@@ -551,7 +551,6 @@ static void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
-	r_shadow_bouncegrid_state.maxsplatpaths = 16384;
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -653,6 +652,13 @@ static void r_shadow_shutdown(void)
 	if (r_shadow_scenelightlist)
 		Mem_Free(r_shadow_scenelightlist);
 	r_shadow_scenelightlist = NULL;
+	r_shadow_bouncegrid_state.highpixels = NULL;
+	if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
+	if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
+	if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
+	if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
+	if (r_shadow_bouncegrid_state.splatpaths) Mem_Free(r_shadow_bouncegrid_state.splatpaths); r_shadow_bouncegrid_state.splatpaths = NULL;
+	r_shadow_bouncegrid_state.maxsplatpaths = 0;
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
 	r_shadow_attenuationgradienttexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
@@ -721,6 +727,13 @@ static void r_shadow_shutdown(void)
 
 static void r_shadow_newmap(void)
 {
+	r_shadow_bouncegrid_state.highpixels = NULL;
+	if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
+	if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
+	if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
+	if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
+	if (r_shadow_bouncegrid_state.splatpaths) Mem_Free(r_shadow_bouncegrid_state.splatpaths); r_shadow_bouncegrid_state.splatpaths = NULL;
+	r_shadow_bouncegrid_state.maxsplatpaths = 0;
 	if (r_shadow_bouncegrid_state.texture)    R_FreeTexture(r_shadow_bouncegrid_state.texture);r_shadow_bouncegrid_state.texture = NULL;
 	if (r_shadow_lightcorona)                 R_SkinFrame_MarkUsed(r_shadow_lightcorona);
 	if (r_editlights_sprcursor)               R_SkinFrame_MarkUsed(r_editlights_sprcursor);
@@ -2464,12 +2477,10 @@ static void R_Shadow_BounceGrid_AddSplatPath(vec3_t originalstart, vec3_t origin
 	{
 		// double the limit, this will persist from frame to frame so we don't
 		// make the same mistake each time
-		r_shadow_bouncegrid_splatpath_t *newpaths;
 		r_shadow_bouncegrid_state.maxsplatpaths *= 2;
-		newpaths = (r_shadow_bouncegrid_splatpath_t *)R_FrameData_Alloc(sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
-		if (r_shadow_bouncegrid_state.splatpaths)
-			memcpy(newpaths, r_shadow_bouncegrid_state.splatpaths, r_shadow_bouncegrid_state.numsplatpaths * sizeof(r_shadow_bouncegrid_splatpath_t));
-		r_shadow_bouncegrid_state.splatpaths = newpaths;
+		if (r_shadow_bouncegrid_state.maxsplatpaths < 16384)
+			r_shadow_bouncegrid_state.maxsplatpaths = 16384;
+		r_shadow_bouncegrid_state.splatpaths = (r_shadow_bouncegrid_splatpath_t *)Mem_Realloc(r_main_mempool, r_shadow_bouncegrid_state.splatpaths, sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
 	}
 
 	// divide a series of splats along the length using the maximum axis
@@ -2568,6 +2579,13 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 	settings->spacing[0] = bound(1, settings->spacing[0], 512);
 	settings->spacing[1] = bound(1, settings->spacing[1], 512);
 	settings->spacing[2] = bound(1, settings->spacing[2], 512);
+
+	// check if the ram requirements for blur would be excessive and disable it (increase lightpathsize to compensate)
+	if (spacing < 32 && settings->blur)
+	{
+		settings->blur = false;
+		settings->lightpathsize += 2;
+	}
 }
 
 static void R_Shadow_BounceGrid_UpdateSpacing(void)
@@ -2680,11 +2698,14 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	numpixels = r_shadow_bouncegrid_state.pixelsperband*r_shadow_bouncegrid_state.pixelbands;
 	if (r_shadow_bouncegrid_state.numpixels != numpixels)
 	{
-		if (r_shadow_bouncegrid_state.texture)
-		{
-			R_FreeTexture(r_shadow_bouncegrid_state.texture);
-			r_shadow_bouncegrid_state.texture = NULL;
-		}
+		if (r_shadow_bouncegrid_state.texture) R_FreeTexture(r_shadow_bouncegrid_state.texture);r_shadow_bouncegrid_state.texture = NULL;
+		r_shadow_bouncegrid_state.highpixels = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
+		if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
+		if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
+		if (r_shadow_bouncegrid_state.splatpaths) Mem_Free(r_shadow_bouncegrid_state.splatpaths); r_shadow_bouncegrid_state.splatpaths = NULL;
+		r_shadow_bouncegrid_state.maxsplatpaths = 0;
 		r_shadow_bouncegrid_state.numpixels = numpixels;
 	}
 
@@ -2815,7 +2836,12 @@ static int R_Shadow_BounceGrid_SplatPathCompare(const void *pa, const void *pb)
 static void R_Shadow_BounceGrid_ClearPixels(void)
 {
 	// clear the highpixels array we'll be accumulating into
-	r_shadow_bouncegrid_state.highpixels = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	if (r_shadow_bouncegrid_state.blurpixels[0] == NULL)
+		r_shadow_bouncegrid_state.blurpixels[0] = (float *)Mem_Alloc(r_main_mempool, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	if (r_shadow_bouncegrid_state.settings.blur && r_shadow_bouncegrid_state.blurpixels[1] == NULL)
+		r_shadow_bouncegrid_state.blurpixels[1] = (float *)Mem_Alloc(r_main_mempool, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	r_shadow_bouncegrid_state.highpixels_index = 0;
+	r_shadow_bouncegrid_state.highpixels = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index];
 	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 }
 
@@ -2998,22 +3024,29 @@ static void R_Shadow_BounceGrid_BlurPixelsInDirection(const float *inpixels, flo
 
 static void R_Shadow_BounceGrid_BlurPixels(void)
 {
-	float *highpixels = r_shadow_bouncegrid_state.highpixels;
-	float *temppixels1 = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
-	float *temppixels2 = (float *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
+	float *pixels[4];
 	unsigned int resolution[3];
 
-	if (!r_shadow_bouncegrid_blur.integer)
+	if (!r_shadow_bouncegrid_state.settings.blur)
 		return;
 	
 	VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
 
+	pixels[0] = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index];
+	pixels[1] = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index ^ 1];
+	pixels[2] = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index];
+	pixels[3] = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index ^ 1];
+
 	// blur on X
-	R_Shadow_BounceGrid_BlurPixelsInDirection(highpixels, temppixels1, 4);
+	R_Shadow_BounceGrid_BlurPixelsInDirection(pixels[0], pixels[1], 4);
 	// blur on Y
-	R_Shadow_BounceGrid_BlurPixelsInDirection(temppixels1, temppixels2, resolution[0] * 4);
+	R_Shadow_BounceGrid_BlurPixelsInDirection(pixels[1], pixels[2], resolution[0] * 4);
 	// blur on Z
-	R_Shadow_BounceGrid_BlurPixelsInDirection(temppixels2, highpixels, resolution[0] * resolution[1] * 4);
+	R_Shadow_BounceGrid_BlurPixelsInDirection(pixels[2], pixels[3], resolution[0] * resolution[1] * 4);
+
+	// toggle the state, highpixels now points to pixels[3] result
+	r_shadow_bouncegrid_state.highpixels_index ^= 1;
+	r_shadow_bouncegrid_state.highpixels = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index];
 }
 
 static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
@@ -3072,7 +3105,9 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 	switch (floatcolors)
 	{
 	case 0:
-		pixelsbgra8 = (unsigned char *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned char[4]));
+		if (r_shadow_bouncegrid_state.u8pixels == NULL)
+			r_shadow_bouncegrid_state.u8pixels = (unsigned char *)Mem_Alloc(r_main_mempool, r_shadow_bouncegrid_state.numpixels * sizeof(unsigned char[4]));
+		pixelsbgra8 = r_shadow_bouncegrid_state.u8pixels;
 		for (pixelband = 0;pixelband < pixelbands;pixelband++)
 		{
 			if (pixelband == 1)
@@ -3124,7 +3159,9 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixelsbgra8, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
 	case 1:
-		pixelsrgba16f = (unsigned short *)R_FrameData_Alloc(r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
+		if (r_shadow_bouncegrid_state.fp16pixels == NULL)
+			r_shadow_bouncegrid_state.fp16pixels = (unsigned short *)Mem_Alloc(r_main_mempool, r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
+		pixelsrgba16f = r_shadow_bouncegrid_state.fp16pixels;
 		memset(pixelsrgba16f, 0, r_shadow_bouncegrid_state.numpixels * sizeof(unsigned short[4]));
 		for (z = 1;z < resolution[2]-1;z++)
 		{
@@ -3215,7 +3252,6 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	Math_RandomSeed_FromInt(&randomseed, seed);
 
 	r_shadow_bouncegrid_state.numsplatpaths = 0;
-	r_shadow_bouncegrid_state.splatpaths = (r_shadow_bouncegrid_splatpath_t *)R_FrameData_Alloc(sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
 
 	// figure out what we want to interact with
 	if (settings.hitmodels)
@@ -3393,6 +3429,13 @@ void R_Shadow_UpdateBounceGridTexture(void)
 			R_FreeTexture(r_shadow_bouncegrid_state.texture);
 			r_shadow_bouncegrid_state.texture = NULL;
 		}
+		r_shadow_bouncegrid_state.highpixels = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
+		if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
+		if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
+		if (r_shadow_bouncegrid_state.splatpaths) Mem_Free(r_shadow_bouncegrid_state.splatpaths); r_shadow_bouncegrid_state.splatpaths = NULL;
+		r_shadow_bouncegrid_state.maxsplatpaths = 0;
 		r_shadow_bouncegrid_state.numpixels = 0;
 		r_shadow_bouncegrid_state.directional = false;
 
@@ -3434,6 +3477,18 @@ void R_Shadow_UpdateBounceGridTexture(void)
 
 	// convert the pixels to lower precision and upload the texture
 	R_Shadow_BounceGrid_ConvertPixelsAndUpload();
+
+	// after we compute the static lighting we don't need to keep the highpixels array around
+	if (settings.staticmode)
+	{
+		r_shadow_bouncegrid_state.highpixels = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
+		if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
+		if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
+		if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
+		if (r_shadow_bouncegrid_state.splatpaths) Mem_Free(r_shadow_bouncegrid_state.splatpaths); r_shadow_bouncegrid_state.splatpaths = NULL;
+		r_shadow_bouncegrid_state.maxsplatpaths = 0;
+	}
 }
 
 void R_Shadow_RenderMode_VisibleShadowVolumes(void)
