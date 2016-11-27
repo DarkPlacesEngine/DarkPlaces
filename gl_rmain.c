@@ -4689,7 +4689,13 @@ void *R_FrameData_Alloc(size_t size)
 	while (!r_framedata_mem || r_framedata_mem->current + size > r_framedata_mem->size)
 	{
 		// emergency - we ran out of space, allocate more memory
-		newvalue = bound(0.25f, r_framedatasize.value * 2.0f, 256.0f);
+		// note: this has no upper-bound, we'll fail to allocate memory eventually and just die
+		newvalue = r_framedatasize.value * 2.0f;
+		// upper bound based on architecture - if we try to allocate more than this we could overflow, better to loop until we error out on allocation failure
+		if (sizeof(size_t) >= 8)
+			newvalue = bound(0.25f, newvalue, (float)(1ll << 42));
+		else
+			newvalue = bound(0.25f, newvalue, (float)(1 << 10));
 		// this might not be a growing it, but we'll allocate another buffer every time
 		Cvar_SetValueQuick(&r_framedatasize, newvalue);
 		R_FrameData_Resize(true);
