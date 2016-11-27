@@ -3732,7 +3732,7 @@ static void Mod_GenerateLightmaps_LightPoint(dp_model_t *model, const vec3_t pos
 			continue;
 		if (model && model->TraceLine)
 		{
-			model->TraceLine(model, NULL, NULL, &trace, pos, lightorigin, SUPERCONTENTS_VISBLOCKERMASK);
+			model->TraceLine(model, NULL, NULL, &trace, pos, lightorigin, SUPERCONTENTS_VISBLOCKERMASK, SUPERCONTENTS_SKY);
 			if (trace.fraction < 1)
 				continue;
 		}
@@ -3934,7 +3934,7 @@ static void Mod_GenerateLightmaps_SamplePoint(const float *pos, const float *nor
 				if (!normal)
 				{
 					// for light grid we'd better check visibility of the offset point
-					cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK);
+					cl.worldmodel->TraceLine(cl.worldmodel, NULL, NULL, &trace, pos, offsetpos, SUPERCONTENTS_VISBLOCKERMASK, SUPERCONTENTS_SKY);
 					if (trace.fraction < 1)
 						VectorLerp(pos, trace.fraction, offsetpos, offsetpos);
 				}
