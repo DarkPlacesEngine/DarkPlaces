@@ -95,6 +95,7 @@ static memclump_t *clumpchain = NULL;
 
 cvar_t developer_memory = {0, "developer_memory", "0", "prints debugging information about memory allocations"};
 cvar_t developer_memorydebug = {0, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
+cvar_t developer_memoryreportlargerthanmb = {0, "developer_memorylargerthanmb", "16", "prints debugging information about memory allocations over this size"};
 cvar_t sys_memsize_physical = {CVAR_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
 cvar_t sys_memsize_virtual = {CVAR_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
 
@@ -390,21 +391,21 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	}
 	if (mem_mutex)
 		Thread_LockMutex(mem_mutex);
-	if (developer_memory.integer)
-		Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, (int)size);
+	if (developer_memory.integer || size >= developer_memoryreportlargerthanmb.value * 1048576)
+		Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %f bytes (%f MB)\n", pool->name, filename, fileline, (double)size, (double)size / 1048576.0f);
 	//if (developer.integer > 0 && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
 	realsize = alignment + sizeof(memheader_t) + size + sizeof(sentinel2);
 	pool->realsize += realsize;
 	base = (unsigned char *)Clump_AllocBlock(realsize);
-	if (base== NULL)
+	if (base == NULL)
 	{
 		Mem_PrintList(0);
 		Mem_PrintStats();
 		Mem_PrintList(1<<30);
 		Mem_PrintStats();
-		Sys_Error("Mem_Alloc: out of memory (alloc at %s:%i)", filename, fileline);
+		Sys_Error("Mem_Alloc: out of memory (alloc of size %f (%.3fMB) at %s:%i)", (double)realsize, (double)realsize / (1 << 20), filename, fileline);
 	}
 	// calculate address that aligns the end of the memheader_t to the specified alignment
 	mem = (memheader_t*)((((size_t)base + sizeof(memheader_t) + (alignment-1)) & ~(alignment-1)) - sizeof(memheader_t));
@@ -919,6 +920,7 @@ void Memory_Init_Commands (void)
 	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);
+	Cvar_RegisterVariable (&developer_memoryreportlargerthanmb);
 	Cvar_RegisterVariable (&sys_memsize_physical);
 	Cvar_RegisterVariable (&sys_memsize_virtual);
 
