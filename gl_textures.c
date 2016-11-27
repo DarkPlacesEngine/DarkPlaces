@@ -1256,13 +1256,13 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	for (width  = glt->tilewidth;width  < glt->inputwidth ;width  <<= 1);
 	for (height = glt->tileheight;height < glt->inputheight;height <<= 1);
 	for (depth  = glt->tiledepth;depth  < glt->inputdepth ;depth  <<= 1);
+	R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 
 	if (prevbuffer == NULL)
 	{
 		width = glt->tilewidth;
 		height = glt->tileheight;
 		depth = glt->tiledepth;
-//		R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 //		memset(resizebuffer, 0, width * height * depth * glt->sides * glt->bytesperpixel);
 //		prevbuffer = resizebuffer;
 	}
@@ -1271,7 +1271,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		if (glt->textype->textype == TEXTYPE_PALETTE)
 		{
 			// promote paletted to BGRA, so we only have to worry about BGRA in the rest of this code
-			R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 			Image_Copy8bitBGRA(prevbuffer, colorconvertbuffer, glt->inputwidth * glt->inputheight * glt->inputdepth * glt->sides, glt->palette);
 			prevbuffer = colorconvertbuffer;
 		}
@@ -1279,7 +1278,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		{
 			// multiply RGB channels by A channel before uploading
 			int alpha;
-			R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 			for (i = 0;i < glt->inputwidth*glt->inputheight*glt->inputdepth*4;i += 4)
 			{
 				alpha = prevbuffer[i+3];
@@ -1293,14 +1291,12 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		// scale up to a power of 2 size (if appropriate)
 		if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 		{
-			R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 			Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 			prevbuffer = resizebuffer;
 		}
 		// apply mipmap reduction algorithm to get down to picmip/max_size
 		while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 		{
-			R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 			Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 			prevbuffer = resizebuffer;
 		}
@@ -1343,7 +1339,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 						qglTexImage2D(GL_TEXTURE_2D, mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
@@ -1357,7 +1352,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 						qglTexImage3D(GL_TEXTURE_3D, mip++, glt->glinternalformat, width, height, depth, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
@@ -1375,14 +1369,12 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
 					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 						prevbuffer = resizebuffer;
 					}
 					// picmip/max_size
 					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 						prevbuffer = resizebuffer;
 					}
@@ -1392,7 +1384,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					{
 						while (width > 1 || height > 1 || depth > 1)
 						{
-							R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 							prevbuffer = resizebuffer;
 							qglTexImage2D(cubemapside[i], mip++, glt->glinternalformat, width, height, 0, glt->glformat, glt->gltype, prevbuffer);CHECKGLERROR
@@ -1427,7 +1418,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 						if (IDirect3DTexture9_LockRect((IDirect3DTexture9*)glt->d3dtexture, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
@@ -1451,7 +1441,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 				{
 					while (width > 1 || height > 1 || depth > 1)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 						prevbuffer = resizebuffer;
 						if (IDirect3DVolumeTexture9_LockBox((IDirect3DVolumeTexture9*)glt->d3dtexture, mip, &d3dlockedbox, NULL, 0) == D3D_OK && d3dlockedbox.pBits)
@@ -1474,14 +1463,12 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
 					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 						prevbuffer = resizebuffer;
 					}
 					// picmip/max_size
 					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 						prevbuffer = resizebuffer;
 					}
@@ -1496,7 +1483,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					{
 						while (width > 1 || height > 1 || depth > 1)
 						{
-							R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 							Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1);
 							prevbuffer = resizebuffer;
 							if (IDirect3DCubeTexture9_LockRect((IDirect3DCubeTexture9*)glt->d3dtexture, (D3DCUBEMAP_FACES)i, mip, &d3dlockedrect, NULL, 0) == D3D_OK && d3dlockedrect.pBits)
@@ -1573,7 +1559,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 		case GLTEXTURETYPE_CUBEMAP:
 			if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 			{
-				R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 				unsigned char *combinedbuffer = (unsigned char *)Mem_Alloc(tempmempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 				// convert and upload each side in turn,
 				// from a continuous block of input texels
@@ -1585,14 +1570,12 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					texturebuffer += glt->inputwidth * glt->inputheight * glt->inputdepth * glt->textype->inputbytesperpixel;
 					if (glt->inputwidth != width || glt->inputheight != height || glt->inputdepth != depth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_Resample32(prevbuffer, glt->inputwidth, glt->inputheight, glt->inputdepth, resizebuffer, width, height, depth, r_lerpimages.integer);
 						prevbuffer = resizebuffer;
 					}
 					// picmip/max_size
 					while (width > glt->tilewidth || height > glt->tileheight || depth > glt->tiledepth)
 					{
-						R_MakeResizeBufferBigger(width * height * depth * glt->sides * glt->bytesperpixel);
 						Image_MipReduce32(prevbuffer, resizebuffer, &width, &height, &depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 						prevbuffer = resizebuffer;
 					}
