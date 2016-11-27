@@ -57,6 +57,7 @@ typedef struct r_shadow_bouncegrid_settings_s
 	float energyperphoton;
 	float spacing[3];
 	int stablerandom;
+	float bounceminimumintensity2;
 }
 r_shadow_bouncegrid_settings_t;
 
@@ -86,7 +87,11 @@ typedef struct r_shadow_bouncegrid_state_s
 	// per-frame data that is very temporary
 	int numsplatpaths;
 	struct r_shadow_bouncegrid_splatpath_s *splatpaths;
-	float *highpixels;
+	int highpixels_index; // which one is active - this toggles when doing blur
+	float *highpixels; // equals blurpixels[highpixels_index]
+	float *blurpixels[2];
+	unsigned char *u8pixels; // temporary processing buffer when outputting to rgba8 format
+	unsigned short *fp16pixels; // temporary processing buffer when outputting to rgba16f format
 }
 r_shadow_bouncegrid_state_t;
 

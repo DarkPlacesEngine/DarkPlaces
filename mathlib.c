@@ -900,3 +900,82 @@ int LoopingFrameNumberFromDouble(double t, int loopframes)
 		return (int)t;
 }
 
+static unsigned int mul_Lecuyer[4] = { 0x12e15e35, 0xb500f16e, 0x2e714eb2, 0xb37916a5 };
+
+static void mul128(unsigned int a[], unsigned int b[], unsigned int dest[4])
+{
+	unsigned long long t[4];
+	t[0] = a[0] * b[0];
+	t[1] = a[1] * b[1];
+	t[2] = a[2] * b[2];
+	t[3] = a[3] * b[3];
+
+	// this is complicated because C doesn't have a way to make use of the
+	// cpu status carry flag, so we do it all in reverse order from what
+	// would otherwise make sense, and have to make multiple passes...
+	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
+	t[2] += t[1] >> 32; t[1] &= 0xffffffff;
+	t[1] += t[0] >> 32; t[0] &= 0xffffffff;
+
+	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
+	t[2] += t[1] >> 32; t[1] &= 0xffffffff;
+
+	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
+
+	dest[0] = t[0] & 0xffffffff;
+	dest[1] = t[1] & 0xffffffff;
+	dest[2] = t[2] & 0xffffffff;
+	dest[3] = t[3] & 0xffffffff;
+}
+
+void Math_RandomSeed_Reset(randomseed_t *r)
+{
+	r->s[0] = 1;
+	r->s[1] = 0;
+	r->s[2] = 0;
+	r->s[3] = 0;
+}
+
+void Math_RandomSeed_FromInt(randomseed_t *r, unsigned int n)
+{
+	// if the entire s[] is zero the algorithm would break completely, so make sure it isn't zero by putting a 1 here
+	r->s[0] = 1;
+	r->s[1] = 0;
+	r->s[2] = 0;
+	r->s[3] = n;
+}
+
+unsigned long long Math_rand64(randomseed_t *r)
+{
+	unsigned int o[4];
+	mul128(r->s, mul_Lecuyer, o);
+	r->s[0] = o[0];
+	r->s[1] = o[1];
+	r->s[2] = o[2];
+	r->s[3] = o[3];
+	return ((unsigned long long)o[3] << 32) + o[2];
+}
+
+float Math_randomf(randomseed_t *r)
+{
+	unsigned long long n = Math_rand64(r);
+	return n * (0.25f / 0x80000000 / 0x80000000);
+}
+
+float Math_crandomf(randomseed_t *r)
+{
+	// do this with a signed number and double the result, so we make use of all parts of the cow
+	long long n = (long long)Math_rand64(r);
+	return n * (0.5f / 0x80000000 / 0x80000000);
+}
+
+float Math_randomrangef(randomseed_t *r, float minf, float maxf)
+{
+	return Math_randomf(r) * (maxf - minf) + minf;
+}
+
+int Math_randomrangei(randomseed_t *r, int mini, int maxi)
+{
+	unsigned long long n = Math_rand64(r);
+	return (int)(((n >> 33) * (maxi - mini) + mini) >> 31);
+}

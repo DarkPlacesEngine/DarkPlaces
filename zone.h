@@ -139,6 +139,7 @@ extern mempool_t *zonemempool;
 
 extern struct cvar_s developer_memory;
 extern struct cvar_s developer_memorydebug;
+extern struct cvar_s developer_memoryreportlargerthanmb;
 
 #endif
 
