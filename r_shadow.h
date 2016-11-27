@@ -57,6 +57,7 @@ typedef struct r_shadow_bouncegrid_settings_s
 	float energyperphoton;
 	float spacing[3];
 	int stablerandom;
+	float bounceminimumintensity2;
 }
 r_shadow_bouncegrid_settings_t;
 
