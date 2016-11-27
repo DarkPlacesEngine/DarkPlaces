@@ -3188,6 +3188,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 
 static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t settings, unsigned int range, unsigned int range1, unsigned int range2, float photonscaling, int flag)
 {
+	vec3_t bouncerandom[10];
 	dlight_t *light;
 	int bouncecount;
 	int hitsupercontentsmask;
@@ -3200,6 +3201,7 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	//trace_t cliptrace3;
 	unsigned int lightindex;
 	unsigned int seed = (unsigned int)(realtime * 1000.0f);
+	randomseed_t randomseed;
 	vec3_t shotcolor;
 	vec3_t baseshotcolor;
 	vec3_t surfcolor;
@@ -3210,7 +3212,8 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	vec_t s;
 	rtlight_t *rtlight;
 
-	// we'll need somewhere to store these
+	Math_RandomSeed_FromInt(&randomseed, seed);
+
 	r_shadow_bouncegrid_state.numsplatpaths = 0;
 	r_shadow_bouncegrid_state.splatpaths = (r_shadow_bouncegrid_splatpath_t *)R_FrameData_Alloc(sizeof(r_shadow_bouncegrid_splatpath_t) * r_shadow_bouncegrid_state.maxsplatpaths);
 
@@ -3245,25 +3248,68 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 		VectorScale(rtlight->photoncolor, s, baseshotcolor);
 		r_refdef.stats[r_stat_bouncegrid_lights]++;
 		r_refdef.stats[r_stat_bouncegrid_particles] += shootparticles;
+		switch (settings.stablerandom)
+		{
+		default:
+			break;
+		case 1:
+			Math_RandomSeed_FromInt(&randomseed, lightindex * 11937);
+			// prime the random number generator a bit
+			Math_crandomf(&randomseed);
+			break;
+		case 2:
+			seed = lightindex * 11937;
+			// prime the random number generator a bit
+			lhcheeserand(seed);
+			break;
+		}
 		for (shotparticles = 0;shotparticles < shootparticles;shotparticles++)
 		{
-			if (settings.stablerandom > 0)
-				seed = lightindex * 11937 + shotparticles;
 			VectorCopy(baseshotcolor, shotcolor);
 			VectorCopy(rtlight->shadoworigin, clipstart);
-			if (settings.stablerandom < 0)
+			switch (settings.stablerandom)
+			{
+			default:
+			case 0:
 				VectorRandom(clipend);
-			else
-				VectorCheeseRandom(clipend);
+				if (settings.bounceanglediffuse)
+				{
+					// we want random to be stable, so we still have to do all the random we would have done
+					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
+						VectorRandom(bouncerandom[bouncecount]);
+				}
+				break;
+			case -1:
+			case 1:
+				VectorLehmerRandom(&randomseed, clipend);
+				if (settings.bounceanglediffuse)
+				{
+					// we want random to be stable, so we still have to do all the random we would have done
+					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
+						VectorLehmerRandom(&randomseed, bouncerandom[bouncecount]);
+				}
+				break;
+			case -2:
+			case 2:
+				VectorCheeseRandom(seed, clipend);
+				if (settings.bounceanglediffuse)
+				{
+					// we want random to be stable, so we still have to do all the random we would have done
+					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
+						VectorCheeseRandom(seed, bouncerandom[bouncecount]);
+				}
+				break;
+			}
 			VectorMA(clipstart, radius, clipend, clipend);
 			for (bouncecount = 0;;bouncecount++)
 			{
 				r_refdef.stats[r_stat_bouncegrid_traces]++;
 				//r_refdef.scene.worldmodel->TraceLineAgainstSurfaces(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace, clipstart, clipend, hitsupercontentsmask);
 				//r_refdef.scene.worldmodel->TraceLine(r_refdef.scene.worldmodel, NULL, NULL, &cliptrace2, clipstart, clipend, hitsupercontentsmask);
-				if (settings.staticmode)
+				if (settings.staticmode || settings.stablerandom <= 0)
 				{
 					// static mode fires a LOT of rays but none of them are identical, so they are not cached
+					// non-stable random in dynamic mode also never reuses a direction, so there's no reason to cache it
 					cliptrace = CL_TraceLine(clipstart, clipend, settings.staticmode ? MOVE_WORLDONLY : (settings.hitmodels ? MOVE_HITMODEL : MOVE_NOMONSTERS), NULL, hitsupercontentsmask, skipsupercontentsmask, collision_extendmovelength.value, true, false, NULL, true, true);
 				}
 				else
@@ -3300,11 +3346,7 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 				{
 					// random direction, primarily along plane normal
 					s = VectorDistance(cliptrace.endpos, clipend);
-					if (settings.stablerandom < 0)
-						VectorRandom(clipend);
-					else
-						VectorCheeseRandom(clipend);
-					VectorMA(cliptrace.plane.normal, 0.95f, clipend, clipend);
+					VectorMA(cliptrace.plane.normal, 0.95f, bouncerandom[bouncecount], clipend);
 					VectorNormalize(clipend);
 					VectorScale(clipend, s, clipend);
 				}
