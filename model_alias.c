@@ -752,7 +752,7 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	}
 }
 
-static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
@@ -762,6 +762,7 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
+	trace->skipsupercontentsmask = skipsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
 		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) - 1;
@@ -777,7 +778,7 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 		Mem_Free(vertex3f);
 }
 
-static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask)
 {
 	int i;
 	vec3_t shiftstart, shiftend;
@@ -792,7 +793,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	{
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
-		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask);
+		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask, skipsupercontentsmask);
 		VectorSubtract(trace->endpos, boxmins, trace->endpos);
 		return;
 	}
@@ -801,6 +802,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
+	trace->skipsupercontentsmask = skipsupercontentsmask;
 	if (model->surfmesh.num_vertices > 1024)
 		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
