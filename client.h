@@ -395,8 +395,11 @@ typedef struct rtlight_s
 	rtlight_particle_t *particlecache_particles;
 
 	/// bouncegrid light info
-	float photoncolor[3];
-	float photons;
+	float bouncegrid_photoncolor[3];
+	float bouncegrid_photons;
+	int bouncegrid_hits;
+	int bouncegrid_traces;
+	float bouncegrid_effectiveradius;
 }
 rtlight_t;
 
