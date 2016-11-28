@@ -908,8 +908,8 @@ static unsigned int mul_Lecuyer[4] = { 0x12e15e35, 0xb500f16e, 0x2e714eb2, 0xb37
 static void mul128(const unsigned int a[], const unsigned int b[], unsigned int dest[4])
 {
 #ifdef __GNUC__
-	unsigned __int128 ia = (a[0] << 96) + (a[1] << 64) + (a[2] << 32) + (a[3]);
-	unsigned __int128 ib = (b[0] << 96) + (b[1] << 64) + (b[2] << 32) + (b[3]);
+	unsigned __int128 ia = ((__int128)a[0] << 96) | ((__int128)a[1] << 64) | ((__int128)a[2] << 32) | (a[3]);
+	unsigned __int128 ib = ((__int128)b[0] << 96) | ((__int128)b[1] << 64) | ((__int128)b[2] << 32) | (b[3]);
 	unsigned __int128 id = ia * ib;
 	dest[0] = (id >> 96) & 0xffffffff;
 	dest[1] = (id >> 64) & 0xffffffff;
@@ -968,7 +968,7 @@ static void mul128(const unsigned int a[], const unsigned int b[], unsigned int 
 #endif
 }
 
-void testmul128(unsigned int a0, unsigned int a1, unsigned int a2, unsigned int a3, unsigned int b0, unsigned int b1, unsigned int b2, unsigned int b3, unsigned int x0, unsigned int x1, unsigned int x2, unsigned int x3)
+static void testmul128(unsigned int a0, unsigned int a1, unsigned int a2, unsigned int a3, unsigned int b0, unsigned int b1, unsigned int b2, unsigned int b3, unsigned int x0, unsigned int x1, unsigned int x2, unsigned int x3)
 {
 	unsigned int a[4];
 	unsigned int b[4];
