@@ -836,6 +836,7 @@ float RadiusFromBoundsAndOrigin (const vec3_t mins, const vec3_t maxs, const vec
 	return sqrt(max(m1[0], m2[0]) + max(m1[1], m2[1]) + max(m1[2], m2[2]));
 }
 
+static void Math_RandomSeed_UnitTests(void);
 void Mathlib_Init(void)
 {
 	int a;
@@ -844,6 +845,8 @@ void Mathlib_Init(void)
 	ixtable[0] = 0;
 	for (a = 1;a < 4096;a++)
 		ixtable[a] = 1.0f / a;
+
+	Math_RandomSeed_UnitTests();
 }
 
 #include "matrixlib.h"
@@ -902,30 +905,129 @@ int LoopingFrameNumberFromDouble(double t, int loopframes)
 
 static unsigned int mul_Lecuyer[4] = { 0x12e15e35, 0xb500f16e, 0x2e714eb2, 0xb37916a5 };
 
-static void mul128(unsigned int a[], unsigned int b[], unsigned int dest[4])
+static void mul128(const unsigned int a[], const unsigned int b[], unsigned int dest[4])
 {
+#ifdef __GNUC__
+	unsigned __int128 ia = (a[0] << 96) + (a[1] << 64) + (a[2] << 32) + (a[3]);
+	unsigned __int128 ib = (b[0] << 96) + (b[1] << 64) + (b[2] << 32) + (b[3]);
+	unsigned __int128 id = ia * ib;
+	dest[0] = (id >> 96) & 0xffffffff;
+	dest[1] = (id >> 64) & 0xffffffff;
+	dest[2] = (id >> 32) & 0xffffffff;
+	dest[3] = (id) & 0xffffffff;
+#else
 	unsigned long long t[4];
-	t[0] = a[0] * b[0];
-	t[1] = a[1] * b[1];
-	t[2] = a[2] * b[2];
-	t[3] = a[3] * b[3];
 
-	// this is complicated because C doesn't have a way to make use of the
-	// cpu status carry flag, so we do it all in reverse order from what
-	// would otherwise make sense, and have to make multiple passes...
-	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
-	t[2] += t[1] >> 32; t[1] &= 0xffffffff;
-	t[1] += t[0] >> 32; t[0] &= 0xffffffff;
+	// this multiply chain is relatively straightforward - a[] is repeatedly
+	// added with shifts based on b[] and the results stored into uint64,
+	// but due to C limitations (no access to carry flag) we have to resolve
+	// carries in a really lame way which wastes a fair number of ops
+	// (repeatedly iterating MSB to LSB, rather than LSB to MSB with carry),
+	// an alternative would be to use 16bit multiplies and resolve carries
+	// only at the end, but that would be twice as many multiplies...
+	//
+	// note: >> 32 is a function call in win32 MSVS2015 debug builds.
+	t[0] = (unsigned long long)a[0] * b[3];
+	t[1] = (unsigned long long)a[1] * b[3];
+	t[2] = (unsigned long long)a[2] * b[3];
+	t[3] = (unsigned long long)a[3] * b[3];
+	t[0] += t[1] >> 32;
+	t[1] &= 0xffffffff;
+	t[1] += t[2] >> 32;
+	t[2] &= 0xffffffff;
+	t[2] += t[3] >> 32;
 
-	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
-	t[2] += t[1] >> 32; t[1] &= 0xffffffff;
+	t[0] += t[1] >> 32;
+	t[1] &= 0xffffffff;
+	t[1] += t[2] >> 32;
+	t[2] &= 0xffffffff;
 
-	t[3] += t[2] >> 32; t[2] &= 0xffffffff;
+	t[0] += t[1] >> 32;
+	t[1] &= 0xffffffff;
+
+	t[0] += (unsigned long long)a[1] * b[2];
+	t[1] += (unsigned long long)a[2] * b[2];
+	t[2] += (unsigned long long)a[3] * b[2];
+	t[0] += t[1] >> 32;
+	t[1] &= 0xffffffff;
+	t[1] += t[2] >> 32;
+
+	t[0] += t[1] >> 32;
+	t[1] &= 0xffffffff;
+
+	t[0] += (unsigned long long)a[2] * b[1];
+	t[1] += (unsigned long long)a[3] * b[1];
+	t[0] += t[1] >> 32;
+
+	t[0] += (unsigned long long)a[3] * b[0];
 
 	dest[0] = t[0] & 0xffffffff;
 	dest[1] = t[1] & 0xffffffff;
 	dest[2] = t[2] & 0xffffffff;
 	dest[3] = t[3] & 0xffffffff;
+#endif
+}
+
+void testmul128(unsigned int a0, unsigned int a1, unsigned int a2, unsigned int a3, unsigned int b0, unsigned int b1, unsigned int b2, unsigned int b3, unsigned int x0, unsigned int x1, unsigned int x2, unsigned int x3)
+{
+	unsigned int a[4];
+	unsigned int b[4];
+	unsigned int expected[4];
+	unsigned int result[4];
+	a[0] = a0;
+	a[1] = a1;
+	a[2] = a2;
+	a[3] = a3;
+	b[0] = b0;
+	b[1] = b1;
+	b[2] = b2;
+	b[3] = b3;
+	expected[0] = x0;
+	expected[1] = x1;
+	expected[2] = x2;
+	expected[3] = x3;
+	mul128(a, b, result);
+	if (result[0] != expected[0]
+	 || result[1] != expected[1]
+	 || result[2] != expected[2]
+	 || result[3] != expected[3])
+		Con_Printf("testmul128(\na = %08x %08x %08x %08x,\nb = %08x %08x %08x %08x,\nx = %08x %08x %08x %08x) instead computed\nc = %08x %08x %08x %08x\n", a[0], a[1], a[2], a[3], b[0], b[1], b[2], b[3], expected[0], expected[1], expected[2], expected[3], result[0], result[1], result[2], result[3]);
+}
+
+void Math_RandomSeed_UnitTests(void)
+{
+	testmul128(
+		0x00000000, 0x00000000, 0x00000000, 0x00000001,
+		0x00000000, 0x00000000, 0x00000000, 0x00000001,
+		0x00000000, 0x00000000, 0x00000000, 0x00000001);
+	testmul128(
+		0x00000000, 0x00000000, 0x00000000, 0x00000001,
+		0x00000000, 0x00000000, 0x00000001, 0x00000000,
+		0x00000000, 0x00000000, 0x00000001, 0x00000000);
+	testmul128(
+		0x00000000, 0x00000000, 0x00000001, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000001,
+		0x00000000, 0x00000000, 0x00000001, 0x00000000);
+	testmul128(
+		0x00000000, 0x00000000, 0x00000000, 0x00000001,
+		0x00000001, 0x00000001, 0x00000001, 0x00000001,
+		0x00000001, 0x00000001, 0x00000001, 0x00000001);
+	testmul128(
+		0x00000000, 0x00000000, 0x00000000, 0x00000002,
+		0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+		0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe);
+	testmul128(
+		0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+		0x00000000, 0x00000000, 0x00000000, 0x00000002,
+		0xffffffff, 0xffffffff, 0xffffffff, 0xfffffffe);
+	testmul128(
+		0x00000000, 0x00000000, 0xffffffff, 0xffffffff,
+		0x00000000, 0x00000000, 0x00000002, 0x00000000,
+		0x00000001, 0xffffffff, 0xfffffffe, 0x00000000);
+	testmul128(
+		0x00000000, 0x00000000, 0x00000002, 0x00000000,
+		0x00000000, 0x00000000, 0xffffffff, 0xffffffff,
+		0x00000001, 0xffffffff, 0xfffffffe, 0x00000000);
 }
 
 void Math_RandomSeed_Reset(randomseed_t *r)
@@ -936,13 +1038,12 @@ void Math_RandomSeed_Reset(randomseed_t *r)
 	r->s[3] = 0;
 }
 
-void Math_RandomSeed_FromInt(randomseed_t *r, unsigned int n)
+void Math_RandomSeed_FromInts(randomseed_t *r, unsigned int s0, unsigned int s1, unsigned int s2, unsigned int s3)
 {
-	// if the entire s[] is zero the algorithm would break completely, so make sure it isn't zero by putting a 1 here
-	r->s[0] = 1;
-	r->s[1] = 0;
-	r->s[2] = 0;
-	r->s[3] = n;
+	r->s[0] = s0;
+	r->s[1] = s1;
+	r->s[2] = s2;
+	r->s[3] = s3 | 1; // the Lehmer RNG requires that the seed be odd
 }
 
 unsigned long long Math_rand64(randomseed_t *r)

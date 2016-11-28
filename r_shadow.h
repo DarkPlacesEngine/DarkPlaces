@@ -45,6 +45,7 @@ typedef struct r_shadow_bouncegrid_settings_s
 	qboolean directionalshading;
 	qboolean includedirectlighting;
 	qboolean blur;
+	qboolean normalizevectors;
 	int floatcolors;
 	float dlightparticlemultiplier;
 	qboolean hitmodels;
