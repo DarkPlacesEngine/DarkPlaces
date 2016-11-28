@@ -359,6 +359,7 @@ cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_SAVE, "r_shadow_bounc
 cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "0.25", "brightness of particles contributing to bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sortlightpaths", "1", "sort light paths before accumulating them into the bouncegrid texture, this reduces cpu cache misses"};
 cvar_t r_shadow_bouncegrid_lightpathsize = {CVAR_SAVE, "r_shadow_bouncegrid_lightpathsize", "1", "width of the light path for accumulation of light in the bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_normalizevectors = { CVAR_SAVE, "r_shadow_bouncegrid_normalizevectors", "1", "normalize random vectors (otherwise their length can vary, which dims the lighting further from the light)" };
 cvar_t r_shadow_bouncegrid_static = {CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
 cvar_t r_shadow_bouncegrid_static_bounceminimumintensity = { CVAR_SAVE, "r_shadow_bouncegrid_static_bounceminimumintensity", "0.01", "stop bouncing once intensity drops below this fraction of the original particle color" };
 cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
@@ -823,6 +824,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_includedirectlighting);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_intensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_lightpathsize);
+	Cvar_RegisterVariable(&r_shadow_bouncegrid_normalizevectors);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particlebounceintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_particleintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_sortlightpaths);
@@ -2575,8 +2577,9 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 	settings->spacing[0]                    = spacing;
 	settings->spacing[1]                    = spacing;
 	settings->spacing[2]                    = spacing;
-	settings->stablerandom                  = s ? 1 : r_shadow_bouncegrid_dynamic_stablerandom.integer;
+	settings->stablerandom                  = r_shadow_bouncegrid_dynamic_stablerandom.integer;
 	settings->bounceminimumintensity2       = bounceminimumintensity * bounceminimumintensity;
+	settings->normalizevectors              = r_shadow_bouncegrid_normalizevectors.integer != 0;
 
 	// bound the values for sanity
 	settings->maxphotons = bound(1, settings->maxphotons, 25000000);
@@ -3273,7 +3276,7 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	//trace_t cliptrace2;
 	//trace_t cliptrace3;
 	unsigned int lightindex;
-	unsigned int seed = (unsigned int)(realtime * 1000.0f);
+	unsigned int seed;
 	randomseed_t randomseed;
 	vec3_t shotcolor;
 	vec3_t baseshotcolor;
@@ -3284,8 +3287,18 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 	vec_t radius;
 	vec_t s;
 	rtlight_t *rtlight;
+	union
+	{
+		unsigned int s[4];
+		double d;
+	}
+	rseed;
 
-	Math_RandomSeed_FromInt(&randomseed, seed);
+	// compute a seed for the unstable random modes
+	memset(&rseed, 0, sizeof(rseed));
+	rseed.d = realtime;
+	Math_RandomSeed_FromInts(&randomseed, rseed.s[0], rseed.s[1], rseed.s[2], rseed.s[3]);
+	seed = rseed.s[0] ^ rseed.s[1] ^ rseed.s[2] ^ rseed.s[3];
 
 	r_shadow_bouncegrid_state.numsplatpaths = 0;
 
@@ -3325,21 +3338,33 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 		r_refdef.stats[r_stat_bouncegrid_particles] += shootparticles;
 		// we stop caring about bounces once the brightness goes below this fraction of the original intensity
 		bounceminimumintensity2 = VectorLength(baseshotcolor) * settings.bounceminimumintensity2;
-		switch (settings.stablerandom)
+
+		// for stablerandom we start the RNG with the position of the light
+		if (settings.stablerandom > 0)
 		{
-		default:
-			break;
-		case 1:
-			Math_RandomSeed_FromInt(&randomseed, lightindex * 11937);
-			// prime the random number generator a bit
-			Math_crandomf(&randomseed);
-			break;
-		case 2:
-			seed = lightindex * 11937;
-			// prime the random number generator a bit
-			lhcheeserand(seed);
-			break;
+			union
+			{
+				unsigned int i[4];
+				float f[4];
+			}
+			u;
+			u.f[0] = rtlight->shadoworigin[0];
+			u.f[1] = rtlight->shadoworigin[1];
+			u.f[2] = rtlight->shadoworigin[2];
+			u.f[3] = 1;
+			switch (settings.stablerandom)
+			{
+			default:
+				break;
+			case 1:
+				seed = u.i[0] ^ u.i[1] ^ u.i[2] ^ u.i[3];
+				break;
+			case 2:
+				Math_RandomSeed_FromInts(&randomseed, u.i[0], u.i[1], u.i[2], u.i[3]);
+				break;
+			}
 		}
+
 		for (shotparticles = 0;shotparticles < shootparticles;shotparticles++)
 		{
 			VectorCopy(baseshotcolor, shotcolor);
@@ -3358,16 +3383,6 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 				break;
 			case -1:
 			case 1:
-				VectorLehmerRandom(&randomseed, clipend);
-				if (settings.bounceanglediffuse)
-				{
-					// we want random to be stable, so we still have to do all the random we would have done
-					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
-						VectorLehmerRandom(&randomseed, bouncerandom[bouncecount]);
-				}
-				break;
-			case -2:
-			case 2:
 				VectorCheeseRandom(seed, clipend);
 				if (settings.bounceanglediffuse)
 				{
@@ -3376,7 +3391,22 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 						VectorCheeseRandom(seed, bouncerandom[bouncecount]);
 				}
 				break;
+			case -2:
+			case 2:
+				VectorLehmerRandom(&randomseed, clipend);
+				if (settings.bounceanglediffuse)
+				{
+					// we want random to be stable, so we still have to do all the random we would have done
+					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
+						VectorLehmerRandom(&randomseed, bouncerandom[bouncecount]);
+				}
+				break;
 			}
+
+			// we want a uniform distribution spherically, not merely within the sphere
+			if (settings.normalizevectors)
+				VectorNormalize(clipend);
+
 			VectorMA(clipstart, radius, clipend, clipend);
 			for (bouncecount = 0;;bouncecount++)
 			{
