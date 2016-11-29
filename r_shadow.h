@@ -51,13 +51,15 @@ typedef struct r_shadow_bouncegrid_settings_s
 	qboolean hitmodels;
 	float lightradiusscale;
 	int maxbounce;
-	int lightpathsize;
+	float lightpathsize_initial;
+	float lightpathsize_conespread;
 	float particlebounceintensity;
 	float particleintensity;
 	int maxphotons;
 	float energyperphoton;
 	float spacing[3];
-	int stablerandom;
+	int rng_type;
+	int rng_seed;
 	float bounceminimumintensity2;
 }
 r_shadow_bouncegrid_settings_t;
