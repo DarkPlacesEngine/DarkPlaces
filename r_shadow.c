@@ -2626,8 +2626,54 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	// calculate texture size enclosing entire world bounds at the spacing
 	if (r_refdef.scene.worldmodel)
 	{
-		VectorMA(r_refdef.scene.worldmodel->normalmins, -2.0f, spacing, mins);
-		VectorMA(r_refdef.scene.worldmodel->normalmaxs, 2.0f, spacing, maxs);
+		int lightindex;
+		int range;
+		qboolean bounds_set = false;
+		dlight_t *light;
+		rtlight_t *rtlight;
+
+		// calculate bounds enclosing world lights as they should be noticably tighter 
+		// than the world bounds on maps with unlit monster containers (see e1m7 etc)
+		range = (unsigned int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
+		for (lightindex = 0;lightindex < range;lightindex++)
+		{
+			const vec_t *rtlmins, *rtlmaxs;
+
+			light = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, lightindex);
+			if (!light)
+				continue;
+
+			rtlight = &light->rtlight;
+			rtlmins = rtlight->cullmins;
+			rtlmaxs = rtlight->cullmaxs;
+
+			if (!bounds_set)
+			{
+				VectorCopy(rtlmins, mins);
+				VectorCopy(rtlmaxs, maxs);
+				bounds_set = true;
+			}
+			else
+			{
+				mins[0] = min(mins[0], rtlmins[0]);
+				mins[1] = min(mins[1], rtlmins[1]);
+				mins[2] = min(mins[2], rtlmins[2]);
+				maxs[0] = max(maxs[0], rtlmaxs[0]);
+				maxs[1] = max(maxs[1], rtlmaxs[1]);
+				maxs[2] = max(maxs[2], rtlmaxs[2]);
+			}
+		}
+
+		// limit to no larger than the world bounds
+		mins[0] = max(mins[0], r_refdef.scene.worldmodel->normalmins[0]);
+		mins[1] = max(mins[1], r_refdef.scene.worldmodel->normalmins[1]);
+		mins[2] = max(mins[2], r_refdef.scene.worldmodel->normalmins[2]);
+		maxs[0] = min(maxs[0], r_refdef.scene.worldmodel->normalmaxs[0]);
+		maxs[1] = min(maxs[1], r_refdef.scene.worldmodel->normalmaxs[1]);
+		maxs[2] = min(maxs[2], r_refdef.scene.worldmodel->normalmaxs[2]);
+
+		VectorMA(mins, -2.0f, spacing, mins);
+		VectorMA(maxs, 2.0f, spacing, maxs);
 	}
 	else
 	{
