@@ -1309,6 +1309,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			loadmodel->skinscenes[loadmodel->numskins].loop = true;
 
 			//increase skin counts
+			loadmodel->num_textures++;
 			loadmodel->numskins++;
 			totalskins++;
 
