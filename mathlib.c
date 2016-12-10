@@ -907,7 +907,7 @@ static unsigned int mul_Lecuyer[4] = { 0x12e15e35, 0xb500f16e, 0x2e714eb2, 0xb37
 
 static void mul128(const unsigned int a[], const unsigned int b[], unsigned int dest[4])
 {
-#if defined(__GNUC__) && defined(__x86_64__)
+#if 0 //defined(__GNUC__) && defined(__x86_64__)
 	unsigned __int128 ia = ((__int128)a[0] << 96) | ((__int128)a[1] << 64) | ((__int128)a[2] << 32) | (a[3]);
 	unsigned __int128 ib = ((__int128)b[0] << 96) | ((__int128)b[1] << 64) | ((__int128)b[2] << 32) | (b[3]);
 	unsigned __int128 id = ia * ib;
