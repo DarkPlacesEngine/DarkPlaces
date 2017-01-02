@@ -1036,7 +1036,7 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
 	// player_run/player_stand1 does not horribly malfunction if the
 	// velocity becomes a denormalized float
-	if (VectorLength2(PRVM_serveredictvector(ent, velocity)) < 0.0001)
+	if (VectorLength2(PRVM_serveredictvector(ent, velocity)) < 0.0000001)
 		VectorClear(PRVM_serveredictvector(ent, velocity));
 
 	// LordHavoc: max velocity fix, inspired by Maddes's source fixes, but this is faster
