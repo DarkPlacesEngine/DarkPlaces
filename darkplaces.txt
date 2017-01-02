@@ -7,7 +7,7 @@ DarkPlaces engine is the result, I hope everyone likes it.
 
 I am not very good at writing documentation, so this readme is organized as a feature list, with information on each feature, I hope it is still adequate documentation.
 
-If you have any suggestions for features to document in detail in the readme or any other questions/comments/bugreports/suggestions/etc, send me an email with the address lordhavoc ghdigital com (add @ and . characters as appropriate)
+If you have any suggestions for features to document in detail in the readme or any other questions/comments/bugreports/suggestions/etc, send me an email with the address darkplacesengine gmail com (add @ and . characters as appropriate)
 
 
 

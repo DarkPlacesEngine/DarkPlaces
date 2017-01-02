@@ -4138,7 +4138,7 @@ void M_GameOptions_Draw (void)
 			M_Print(x, 146, " More than 255 players??");
 			M_Print(x, 154, "  First, question your  ");
 			M_Print(x, 162, "   sanity, then email   ");
-			M_Print(x, 170, " lordhavoc@ghdigital.com");
+			M_Print(x, 170, "darkplacesengine@gmail.com");
 		}
 		else
 			m_serverInfoMessage = false;
