@@ -1664,21 +1664,16 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	if (cls.state != ca_dedicated)
-		skinframemissing = R_SkinFrame_LoadMissing();
-	else
-		skinframemissing = NULL;
+	skinframemissing = R_SkinFrame_LoadMissing();
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
 		tx->width = 16;
 		tx->height = 16;
 		tx->basealpha = 1.0f;
-		if (cls.state != ca_dedicated)
-		{
-			tx->materialshaderpass = tx->shaderpasses[0] = Mod_CreateShaderPass(skinframemissing);
-			tx->currentskinframe = skinframemissing;
-		}
+		tx->materialshaderpass = tx->shaderpasses[0] = Mod_CreateShaderPass(skinframemissing);
+		tx->materialshaderpass->skinframes[0] = skinframemissing;
+		tx->currentskinframe = skinframemissing;
 		tx->basematerialflags = MATERIALFLAG_WALL;
 		if (i == loadmodel->num_textures - 1)
 		{
@@ -1788,6 +1783,10 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx->height = mtheight;
 		tx->basealpha = 1.0f;
 
+		// start out with no animation
+		tx->currentframe = tx;
+		tx->currentskinframe = tx->materialshaderpass != NULL ? tx->materialshaderpass->skinframes[0] : NULL;
+
 		if (tx->name[0] == '*')
 		{
 			if (!strncmp(tx->name, "*lava", 5))
@@ -1875,6 +1874,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
 				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
+			tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		}
 
 		tx->basematerialflags = MATERIALFLAG_WALL;
@@ -1889,7 +1889,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			else
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
-			if (tx->materialshaderpass->skinframes[0]->hasalpha)
+			if (tx->currentskinframe != NULL && tx->currentskinframe->hasalpha)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		}
 		else if (tx->name[0] == '{') // fence textures
@@ -1905,12 +1905,8 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		else if (!strcmp(tx->name, "caulk"))
 			tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-		else if (tx->materialshaderpass->skinframes[0]->hasalpha)
+		else if (tx->currentskinframe != NULL && tx->currentskinframe->hasalpha)
 			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-
-		// start out with no animation
-		tx->currentframe = tx;
-		tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		tx->currentmaterialflags = tx->basematerialflags;
 	}
 
@@ -4421,7 +4417,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 					if (tx->q2contents & Q2CONTENTS_SOLID)
 						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
 				}
-				if (q2flags & Q2SURF_FLOWING)
+				if ((q2flags & Q2SURF_FLOWING) && tx->materialshaderpass != NULL)
 				{
 					tx->materialshaderpass->tcmods[0].tcmod = Q3TCMOD_SCROLL;
 					if (q2flags & Q2SURF_WARP)
@@ -4453,7 +4449,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, tx->q2contents);
 				// set the current values to the base values
 				tx->currentframe = tx;
-				tx->currentskinframe = tx->materialshaderpass->skinframes[0];
+				tx->currentskinframe = tx->materialshaderpass != NULL ? tx->materialshaderpass->skinframes[0] : NULL;
 				tx->currentmaterialflags = tx->basematerialflags;
 				loadmodel->num_texturesperskin++;
 				loadmodel->num_textures = loadmodel->num_texturesperskin;
@@ -5717,7 +5713,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 
 	// allocate a texture pool if we need it
-	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
+	if (loadmodel->texturepool == NULL)
 		loadmodel->texturepool = R_AllocTexturePool();
 
 	mergedpixels = (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4);
