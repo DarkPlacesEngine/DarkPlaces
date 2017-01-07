@@ -178,7 +178,7 @@ extern char engineversion[128];
 // NUM_AMBIENTS to NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS - 1 = normal entity sounds
 // NUM_AMBIENTS + MAX_DYNAMIC_CHANNELS to total_channels = static sounds
 #define	MAX_DYNAMIC_CHANNELS	512
-#define	MAX_CHANNELS			1028
+#define	MAX_CHANNELS			(8192 + 4)
 #define	MODLIST_TOTALSIZE		256
 #define	MAX_FAVORITESERVERS		256
 #define	MAX_DECALSYSTEM_QUEUE	1024
