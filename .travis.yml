@@ -4,15 +4,39 @@ matrix:
   - os: linux
     env: PROJECT=xonotic OS="linux32"
     compiler: gcc
+    sudo: false
+    addons:
+      apt:
+        packages:
+          - libxpm-dev:i386
+          - libsdl1.2-dev:i386
+          - libxxf86vm-dev:i386
+          - gcc-multilib
+          - g++-multilib
+          # Workaround packages to install to fix dependency hell.
+          - libglu1-mesa-dev:i386
+          - libcaca-dev:i386
+          - libxext-dev:i386
+          - libslang2-dev:i386
+          - libpng-dev:i386
   - os: linux
     env: PROJECT=xonotic OS="linux64"
     compiler: gcc
+    sudo: false
+    addons:
+      apt:
+        packages:
+          - libxpm-dev
+          - libsdl1.2-dev
+          - libxxf86vm-dev
   - os: linux
     env: PROJECT=xonotic OS="win32"
     compiler: gcc
+    sudo: false
   - os: linux
     env: PROJECT=xonotic OS="win64"
     compiler: gcc
+    sudo: false
   - os: osx
     env: PROJECT=xonotic OS="osx"
     compiler: gcc
