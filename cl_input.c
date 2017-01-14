@@ -423,7 +423,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning
 
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
-cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement"};
+cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement on DP servers (use cl_nopred for QWSV servers)"};
 cvar_t cl_movement_replay = {0, "cl_movement_replay", "1", "use engine prediction"};
 cvar_t cl_movement_nettimeout = {CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
 cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
@@ -442,6 +442,7 @@ cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "h
 cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
 cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
 cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
+cvar_t cl_nopred = {CVAR_SAVE, "cl_nopred", "0", "(QWSV only) disables player movement prediction when playing on QWSV servers (this setting is separate from cl_movement because player expectations are different when playing on DP vs QW servers)"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far you can aim upward (quake used -70)"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far you can aim downward (quake used 80)"};
@@ -1814,7 +1815,20 @@ void CL_SendMove(void)
 		cl.cmd.msec = 100;
 	cl.cmd.frametime = cl.cmd.msec * (1.0 / 1000.0);
 
-	cl.cmd.predicted = cl_movement.integer != 0;
+	switch(cls.protocol)
+	{
+	case PROTOCOL_QUAKEWORLD:
+		// quakeworld uses a different cvar with opposite meaning, for compatibility
+		cl.cmd.predicted = cl_nopred.integer == 0;
+		break;
+	case PROTOCOL_DARKPLACES6:
+	case PROTOCOL_DARKPLACES7:
+		cl.cmd.predicted = cl_movement.integer != 0;
+		break;
+	default:
+		cl.cmd.predicted = false;
+		break;
+	}
 
 	// movement is set by input code (forwardmove/sidemove/upmove)
 	// always dump the first two moves, because they may contain leftover inputs from the last level
@@ -2240,6 +2254,7 @@ void CL_InitInput (void)
 	Cvar_RegisterVariable(&cl_movement_jumpvelocity);
 	Cvar_RegisterVariable(&cl_movement_airaccel_qw);
 	Cvar_RegisterVariable(&cl_movement_airaccel_sideways_friction);
+	Cvar_RegisterVariable(&cl_nopred);
 
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
