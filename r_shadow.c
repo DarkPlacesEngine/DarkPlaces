@@ -464,19 +464,19 @@ static void R_Shadow_SetShadowMode(void)
 			{
 				if (!r_fb.usedepthtextures)
 					r_shadow_shadowmappcf = 1;
-				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && vid.support.arb_shadow && r_shadow_shadowmapshadowsampler) 
+				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && vid.support.arb_shadow && r_shadow_shadowmapshadowsampler)
 				{
 					r_shadow_shadowmapsampler = true;
 					r_shadow_shadowmappcf = 1;
 				}
 				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
 					r_shadow_shadowmappcf = 1;
-				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa")) 
+				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa"))
 					r_shadow_shadowmappcf = 1;
-				else 
+				else
 					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 			}
-			else 
+			else
 			{
                 r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
 				switch (r_shadow_shadowmapfilterquality)
@@ -1607,7 +1607,7 @@ static int R_Shadow_CullFrustumSides(rtlight_t *rtlight, float size, float borde
 	int sides = 0x3F, masks[6] = { 3<<4, 3<<4, 3<<0, 3<<0, 3<<2, 3<<2 };
 	float scale = (size - 2*border)/size, len;
 	float bias = border / (float)(size - border), dp, dn, ap, an;
-	// check if cone enclosing side would cross frustum plane 
+	// check if cone enclosing side would cross frustum plane
 	scale = 2 / (scale*scale + 2);
 	Matrix4x4_OriginFromMatrix(&rtlight->matrix_lighttoworld, o);
 	for (i = 0;i < 5;i++)
@@ -2565,7 +2565,7 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 	float bounceminimumintensity = s ? r_shadow_bouncegrid_static_bounceminimumintensity.value : r_shadow_bouncegrid_dynamic_bounceminimumintensity.value;
 
 	// prevent any garbage in alignment padded areas as we'll be using memcmp
-	memset(settings, 0, sizeof(*settings)); 
+	memset(settings, 0, sizeof(*settings));
 
 	// build up a complete collection of the desired settings, so that memcmp can be used to compare parameters
 	settings->staticmode                    = s;
@@ -5646,7 +5646,7 @@ static void R_Shadow_DrawModelShadowMaps(void)
 	VectorAdd(shadoworigin, r_refdef.view.origin, shadoworigin);
 	dot1 = DotProduct(r_refdef.view.forward, shadowdir);
 	dot2 = DotProduct(r_refdef.view.up, shadowdir);
-	if (fabs(dot1) <= fabs(dot2)) 
+	if (fabs(dot1) <= fabs(dot2))
 		VectorMA(r_refdef.view.forward, -dot1, shadowdir, shadowforward);
 	else
 		VectorMA(r_refdef.view.up, -dot2, shadowdir, shadowforward);
@@ -5706,7 +5706,7 @@ static void R_Shadow_DrawModelShadowMaps(void)
 
 	Matrix4x4_Concat(&mvpmatrix, &r_refdef.view.viewport.projectmatrix, &r_refdef.view.viewport.viewmatrix);
 	Matrix4x4_Invert_Full(&invmvpmatrix, &mvpmatrix);
-	Matrix4x4_CreateScale3(&scalematrix, size, -size, 1); 
+	Matrix4x4_CreateScale3(&scalematrix, size, -size, 1);
 	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, -0.5f * bias);
 	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
@@ -5935,13 +5935,10 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
-			CHECKGLERROR
 			// See if we can use the GPU-side method to prevent implicit sync
 			if (vid.support.arb_query_buffer_object) {
 #define BUFFER_OFFSET(i)    ((GLint *)((unsigned char*)NULL + (i)))
@@ -5956,13 +5953,23 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(4));
 				qglBindBufferBase(GL_UNIFORM_BUFFER, 0, r_shadow_occlusion_buf);
 				occlude = MATERIALFLAG_OCCLUDE;
-			} else {
-				qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
-				qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels); 
-				if (visiblepixels < 1 || allpixels < 1)
-					return;
-				rtlight->corona_visibility *= bound(0, (float)visiblepixels / (float)allpixels, 1);
+				cscale *= rtlight->corona_visibility;
+				CHECKGLERROR
+				break;
 			}
+			// fallthrough
+#else
+			return;
+#endif
+		case RENDERPATH_GL11:
+		case RENDERPATH_GL13:
+#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
+			CHECKGLERROR
+			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
+			qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
+			if (visiblepixels < 1 || allpixels < 1)
+				return;
+			rtlight->corona_visibility *= bound(0, (float)visiblepixels / (float)allpixels, 1);
 			cscale *= rtlight->corona_visibility;
 			CHECKGLERROR
 			break;
