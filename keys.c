@@ -1198,7 +1198,7 @@ static void
 Key_Message (int key, int ascii)
 {
 	char vabuf[1024];
-	if (key == K_ENTER || ascii == 10 || ascii == 13)
+	if (key == K_ENTER || key == K_KP_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
 			Cmd_ExecuteString(chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
