@@ -11,10 +11,10 @@ for os in "$@"; do
 
   case "$os" in
     linux32)
-      wget https://www.libsdl.org/release/SDL2-2.0.4.tar.gz
-      tar xf SDL2-2.0.4.tar.gz
+      wget https://www.libsdl.org/release/SDL2-2.0.5.tar.gz
+      tar xf SDL2-2.0.5.tar.gz
       (
-      cd SDL2-2.0.4
+      cd SDL2-2.0.5
       export CC="gcc -m32"
       i386 ./configure --enable-static --disable-shared --prefix="$USRLOCAL" || cat config.log
       i386 make
@@ -22,10 +22,10 @@ for os in "$@"; do
       )
       ;;
     linux64)
-      wget https://www.libsdl.org/release/SDL2-2.0.4.tar.gz
-      tar xf SDL2-2.0.4.tar.gz
+      wget https://www.libsdl.org/release/SDL2-2.0.5.tar.gz
+      tar xf SDL2-2.0.5.tar.gz
       (
-      cd SDL2-2.0.4
+      cd SDL2-2.0.5
       ./configure --enable-static --disable-shared --prefix="$USRLOCAL"
       make
       make install
