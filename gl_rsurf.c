@@ -1449,7 +1449,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	// note: in practice this never actually receives batches
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
-	R_Shadow_RenderMode_Lighting(false, true, false);
+	R_Shadow_RenderMode_Lighting(false, true, rtlight->shadowmapatlassidesize != 0, (ent->flags & RENDER_NOSELFSHADOW) != 0);
 	R_Shadow_SetupEntityLight(ent);
 	for (i = 0;i < numsurfaces;i = j)
 	{
@@ -1618,7 +1618,7 @@ static void R_ListWorldTextures (void)
 
 	Con_Print("Worldmodel textures :\n");
 	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
-		if (t->numskinframes)
+		if (t->name[0] && strcasecmp(t->name, "NO TEXTURE FOUND"))
 			Con_Printf("%s\n", t->name);
 }
 

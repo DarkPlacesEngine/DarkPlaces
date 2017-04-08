@@ -75,8 +75,8 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 	else if (skinframe->hasalpha)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
-	texture->numskinframes = 1;
-	texture->currentskinframe = texture->skinframes[0] = skinframe;
+	texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(skinframe);
+	texture->currentskinframe = skinframe;
 	texture->surfaceflags = 0;
 	texture->supercontents = SUPERCONTENTS_SOLID;
 	if (!(texture->basematerialflags & MATERIALFLAG_BLENDED))

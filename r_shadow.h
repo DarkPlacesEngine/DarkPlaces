@@ -45,18 +45,22 @@ typedef struct r_shadow_bouncegrid_settings_s
 	qboolean directionalshading;
 	qboolean includedirectlighting;
 	qboolean blur;
+	qboolean normalizevectors;
 	int floatcolors;
 	float dlightparticlemultiplier;
 	qboolean hitmodels;
 	float lightradiusscale;
 	int maxbounce;
-	int lightpathsize;
+	float lightpathsize_initial;
+	float lightpathsize_conespread;
 	float particlebounceintensity;
 	float particleintensity;
 	int maxphotons;
 	float energyperphoton;
 	float spacing[3];
-	int stablerandom;
+	int rng_type;
+	int rng_seed;
+	float bounceminimumintensity2;
 }
 r_shadow_bouncegrid_settings_t;
 
@@ -86,7 +90,11 @@ typedef struct r_shadow_bouncegrid_state_s
 	// per-frame data that is very temporary
 	int numsplatpaths;
 	struct r_shadow_bouncegrid_splatpath_s *splatpaths;
-	float *highpixels;
+	int highpixels_index; // which one is active - this toggles when doing blur
+	float *highpixels; // equals blurpixels[highpixels_index]
+	float *blurpixels[2];
+	unsigned char *u8pixels; // temporary processing buffer when outputting to rgba8 format
+	unsigned short *fp16pixels; // temporary processing buffer when outputting to rgba16f format
 }
 r_shadow_bouncegrid_state_t;
 
@@ -105,8 +113,8 @@ void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
 void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
-void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping);
-void R_Shadow_RenderMode_DrawDeferredLight(qboolean stenciltest, qboolean shadowmapping);
+void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
+void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping);
 void R_Shadow_RenderMode_VisibleShadowVolumes(void);
 void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
 void R_Shadow_RenderMode_End(void);
@@ -128,6 +136,7 @@ void R_RTLight_Compile(rtlight_t *rtlight);
 void R_RTLight_Uncompile(rtlight_t *rtlight);
 
 void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_Shadow_ClearShadowMapTexture(void);
 void R_Shadow_DrawPrepass(void);
 void R_Shadow_DrawLights(void);
 void R_Shadow_DrawCoronas(void);
@@ -153,7 +162,7 @@ void R_Shadow_PrepareModelShadows(void);
 void R_LightPoint(float *color, const vec3_t p, const int flags);
 void R_CompleteLightPoint(float *ambientcolor, float *diffusecolor, float *diffusenormal, const vec3_t p, const int flags);
 
-void R_DrawModelShadowMaps(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-void R_DrawModelShadows(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_Shadow_DrawShadowMaps(void);
+void R_Shadow_DrawModelShadows(void);
 
 #endif

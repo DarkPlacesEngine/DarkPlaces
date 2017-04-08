@@ -1106,15 +1106,15 @@ void R_Viewport_InitCubeSideView(r_viewport_t *v, const matrix4x4_t *cameramatri
 	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, m);
 }
 
-void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, int border, float nearclip, float farclip, const float *nearplane)
+void R_Viewport_InitRectSideView(r_viewport_t *v, const matrix4x4_t *cameramatrix, int side, int size, int border, float nearclip, float farclip, const float *nearplane, int offsetx, int offsety)
 {
 	matrix4x4_t tempmatrix, basematrix;
 	float m[16];
 	memset(v, 0, sizeof(*v));
 	v->type = R_VIEWPORTTYPE_PERSPECTIVECUBESIDE;
 	v->cameramatrix = *cameramatrix;
-	v->x = (side & 1) * size;
-	v->y = (side >> 1) * size;
+	v->x = offsetx + (side & 1) * size;
+	v->y = offsety + (side >> 1) * size;
 	v->width = size;
 	v->height = size;
 	v->depth = 1;

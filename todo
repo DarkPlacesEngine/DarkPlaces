@@ -344,6 +344,7 @@
 1 feature lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
 1 feature lhfire: post lhfire_gui build
 1 feature lhfire: prepare example scripts for release
+2 bug darkplaces renderer: tcmod rotate breaks svector/tvector, causing weird normalmapping effects on lighting (kristus)
 2 bug darkplaces collision: bmodel bounding boxes need to be calculated to account for clip brushes, which are not in the drawing hull (metlslime)
 2 bug darkplaces collision: modify Collision_ClipTrace_Line_Sphere to have a slight backoff on impact, like all other collision functions (tell TheBurningRed)
 2 bug darkplaces collision: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)

@@ -637,9 +637,6 @@ const char *builtinhlslshaderstrings[] =
 0
 };
 
-char *glslshaderstring = NULL;
-char *hlslshaderstring = NULL;
-
 //=======================================================================================================================================================
 
 typedef struct shaderpermutationinfo_s
@@ -651,9 +648,14 @@ shaderpermutationinfo_t;
 
 typedef struct shadermodeinfo_s
 {
-	const char *filename;
+	const char *sourcebasename;
+	const char *extension;
+	const char **builtinshaderstrings;
 	const char *pretext;
 	const char *name;
+	char *filename;
+	char *builtinstring;
+	int builtincrc;
 }
 shadermodeinfo_t;
 
@@ -695,46 +697,48 @@ shaderpermutationinfo_t shaderpermutationinfo[SHADERPERMUTATION_COUNT] =
 };
 
 // NOTE: MUST MATCH ORDER OF SHADERMODE_* ENUMS!
-shadermodeinfo_t glslshadermodeinfo[SHADERMODE_COUNT] =
+shadermodeinfo_t shadermodeinfo[SHADERLANGUAGE_COUNT][SHADERMODE_COUNT] =
 {
-	{"glsl/default.glsl", "#define MODE_GENERIC\n", " generic"},
-	{"glsl/default.glsl", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"glsl/default.glsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
-	{"glsl/default.glsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"glsl/default.glsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"glsl/default.glsl", "#define MODE_LIGHTMAP\n", " lightmap"},
-	{"glsl/default.glsl", "#define MODE_FAKELIGHT\n", " fakelight"},
-	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
-	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
-	{"glsl/default.glsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"glsl/default.glsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"glsl/default.glsl", "#define MODE_REFRACTION\n", " refraction"},
-	{"glsl/default.glsl", "#define MODE_WATER\n", " water"},
-	{"glsl/default.glsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
-	{"glsl/default.glsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
-};
-
-shadermodeinfo_t hlslshadermodeinfo[SHADERMODE_COUNT] =
-{
-	{"hlsl/default.hlsl", "#define MODE_GENERIC\n", " generic"},
-	{"hlsl/default.hlsl", "#define MODE_POSTPROCESS\n", " postprocess"},
-	{"hlsl/default.hlsl", "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
-	{"hlsl/default.hlsl", "#define MODE_FLATCOLOR\n", " flatcolor"},
-	{"hlsl/default.hlsl", "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTMAP\n", " lightmap"},
-	{"hlsl/default.hlsl", "#define MODE_FAKELIGHT\n", " fakelight"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
-	{"hlsl/default.hlsl", "#define MODE_LIGHTSOURCE\n", " lightsource"},
-	{"hlsl/default.hlsl", "#define MODE_REFRACTION\n", " refraction"},
-	{"hlsl/default.hlsl", "#define MODE_WATER\n", " water"},
-	{"hlsl/default.hlsl", "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
-	{"hlsl/default.hlsl", "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+	// SHADERLANGUAGE_GLSL
+	{
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_GENERIC\n", " generic"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_POSTPROCESS\n", " postprocess"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_FLATCOLOR\n", " flatcolor"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTMAP\n", " lightmap"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_FAKELIGHT\n", " fakelight"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTSOURCE\n", " lightsource"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_REFRACTION\n", " refraction"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_WATER\n", " water"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+	},
+	// SHADERLANGUAGE_HLSL
+	{
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_GENERIC\n", " generic"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_POSTPROCESS\n", " postprocess"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_DEPTH_OR_SHADOW\n", " depth/shadow"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_FLATCOLOR\n", " flatcolor"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTMAP\n", " lightmap"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_FAKELIGHT\n", " fakelight"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_LIGHTSOURCE\n", " lightsource"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_REFRACTION\n", " refraction"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_WATER\n", " water"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_DEFERREDGEOMETRY\n", " deferredgeometry"},
+		{"combined", "hlsl", builtinhlslshaderstrings, "#define MODE_DEFERREDLIGHTSOURCE\n", " deferredlightsource"},
+	},
 };
 
 struct r_glsl_permutation_s;
@@ -1028,55 +1032,42 @@ static char *R_ShaderStrCat(const char **strings)
 	return string;
 }
 
-static char *R_GetShaderText(const char *filename, qboolean printfromdisknotice, qboolean builtinonly)
+static char *R_ShaderStrCat(const char **strings);
+static void R_InitShaderModeInfo(void)
+{
+	int i, language;
+	shadermodeinfo_t *modeinfo;
+	// we have a bunch of things to compute that weren't calculated at engine compile time - all filenames should have a crc of the builtin strings to prevent accidental overrides (any customization must be updated to match engine)
+	for (language = 0; language < SHADERLANGUAGE_COUNT; language++)
+	{
+		for (i = 0; i < SHADERMODE_COUNT; i++)
+		{
+			char filename[MAX_QPATH];
+			modeinfo = &shadermodeinfo[language][i];
+			modeinfo->builtinstring = R_ShaderStrCat(modeinfo->builtinshaderstrings);
+			modeinfo->builtincrc = CRC_Block((const unsigned char *)modeinfo->builtinstring, strlen(modeinfo->builtinstring));
+			dpsnprintf(filename, sizeof(filename), "%s/%s_crc%i.%s", modeinfo->extension, modeinfo->sourcebasename, modeinfo->builtincrc, modeinfo->extension);
+			modeinfo->filename = Mem_strdup(r_main_mempool, filename);
+		}
+	}
+}
+
+static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean printfromdisknotice, qboolean builtinonly)
 {
 	char *shaderstring;
-	if (!filename || !filename[0])
-		return NULL;
-	// LordHavoc: note that FS_LoadFile appends a 0 byte to make it a valid string, so does R_ShaderStrCat
-	if (!strcmp(filename, "glsl/default.glsl"))
-	{
-		if (builtinonly)
-			return R_ShaderStrCat(builtinshaderstrings);
-		if (!glslshaderstring)
-		{
-			glslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-			if (glslshaderstring)
-				Con_DPrintf("Loading shaders from file %s...\n", filename);
-			else
-				glslshaderstring = R_ShaderStrCat(builtinshaderstrings);
-		}
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(glslshaderstring) + 1);
-		memcpy(shaderstring, glslshaderstring, strlen(glslshaderstring) + 1);
-		return shaderstring;
-	}
-	if (!strcmp(filename, "hlsl/default.hlsl"))
-	{
-		if (builtinonly)
-			return R_ShaderStrCat(builtinhlslshaderstrings);
-		if (!hlslshaderstring)
-		{
-			hlslshaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
-			if (hlslshaderstring)
-				Con_DPrintf("Loading shaders from file %s...\n", filename);
-			else
-				hlslshaderstring = R_ShaderStrCat(builtinhlslshaderstrings);
-		}
-		shaderstring = (char *) Mem_Alloc(r_main_mempool, strlen(hlslshaderstring) + 1);
-		memcpy(shaderstring, hlslshaderstring, strlen(hlslshaderstring) + 1);
-		return shaderstring;
-	}
-	// we don't have builtin strings for any other files
-	if (builtinonly)
-		return NULL;
-	shaderstring = (char *)FS_LoadFile(filename, r_main_mempool, false, NULL);
+	// if the mode has no filename we have to return the builtin string
+	if (builtinonly || !modeinfo->filename)
+		return Mem_strdup(r_main_mempool, modeinfo->builtinstring);
+	// note that FS_LoadFile appends a 0 byte to make it a valid string
+	shaderstring = (char *)FS_LoadFile(modeinfo->filename, r_main_mempool, false, NULL);
 	if (shaderstring)
 	{
 		if (printfromdisknotice)
-			Con_DPrintf("from disk %s... ", filename);
+			Con_DPrintf("Loading shaders from file %s...\n", modeinfo->filename);
 		return shaderstring;
 	}
-	return shaderstring;
+	// fall back to builtinstring
+	return Mem_strdup(r_main_mempool, modeinfo->builtinstring);
 }
 
 static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, unsigned int permutation)
@@ -1084,7 +1075,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	int i;
 	int ubibind;
 	int sampler;
-	shadermodeinfo_t *modeinfo = glslshadermodeinfo + mode;
+	shadermodeinfo_t *modeinfo = &shadermodeinfo[SHADERLANGUAGE_GLSL][mode];
 	char *sourcestring;
 	char permutationname[256];
 	int vertstrings_count = 0;
@@ -1100,7 +1091,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	p->program = 0;
 
 	permutationname[0] = 0;
-	sourcestring  = R_GetShaderText(modeinfo->filename, true, false);
+	sourcestring = ShaderModeInfo_GetShaderText(modeinfo, true, false);
 
 	strlcat(permutationname, modeinfo->filename, sizeof(permutationname));
 
@@ -1702,7 +1693,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode, unsigned int permutation)
 {
 	int i;
-	shadermodeinfo_t *modeinfo = hlslshadermodeinfo + mode;
+	shadermodeinfo_t *modeinfo = &shadermodeinfo[SHADERLANGUAGE_HLSL][mode];
 	int vertstring_length = 0;
 	int geomstring_length = 0;
 	int fragstring_length = 0;
@@ -1726,7 +1717,7 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 
 	permutationname[0] = 0;
 	cachename[0] = 0;
-	sourcestring = R_GetShaderText(modeinfo->filename, true, false);
+	sourcestring = ShaderModeInfo_GetShaderText(modeinfo, true, false);
 
 	strlcat(permutationname, modeinfo->filename, sizeof(permutationname));
 	strlcat(cachename, "hlsl/", sizeof(cachename));
@@ -1900,12 +1891,6 @@ static void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int per
 void R_GLSL_Restart_f(void)
 {
 	unsigned int i, limit;
-	if (glslshaderstring)
-		Mem_Free(glslshaderstring);
-	glslshaderstring = NULL;
-	if (hlslshaderstring)
-		Mem_Free(hlslshaderstring);
-	hlslshaderstring = NULL;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_D3D9:
@@ -1968,9 +1953,9 @@ static void R_GLSL_DumpShader_f(void)
 	shadermodeinfo_t *modeinfo;
 	qfile_t *file;
 
-	for (language = 0;language < 2;language++)
+	for (language = 0;language < SHADERLANGUAGE_COUNT;language++)
 	{
-		modeinfo = (language == 0 ? glslshadermodeinfo : hlslshadermodeinfo);
+		modeinfo = shadermodeinfo[language];
 		for (mode = 0;mode < SHADERMODE_COUNT;mode++)
 		{
 			// don't dump the same file multiple times (most or all shaders come from the same file)
@@ -1979,7 +1964,7 @@ static void R_GLSL_DumpShader_f(void)
 					break;
 			if (dupe >= 0)
 				continue;
-			text = R_GetShaderText(modeinfo[mode].filename, false, true);
+			text = modeinfo[mode].builtinstring;
 			if (!text)
 				continue;
 			file = FS_OpenRealFile(modeinfo[mode].filename, "w", false);
@@ -1998,7 +1983,6 @@ static void R_GLSL_DumpShader_f(void)
 			}
 			else
 				Con_Printf("failed to write to %s\n", modeinfo[mode].filename);
-			Mem_Free(text);
 		}
 	}
 }
@@ -2136,8 +2120,10 @@ extern rtexture_t *r_shadow_attenuation2dtexture;
 extern rtexture_t *r_shadow_attenuation3dtexture;
 extern qboolean r_shadow_usingshadowmap2d;
 extern qboolean r_shadow_usingshadowmaportho;
-extern float r_shadow_shadowmap_texturescale[2];
-extern float r_shadow_shadowmap_parameters[4];
+extern float r_shadow_modelshadowmap_texturescale[4];
+extern float r_shadow_modelshadowmap_parameters[4];
+extern float r_shadow_lightshadowmap_texturescale[4];
+extern float r_shadow_lightshadowmap_parameters[4];
 extern qboolean r_shadow_shadowmapvsdct;
 extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
@@ -2673,8 +2659,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 			if (mode == SHADERMODE_WATER)
 				hlslPSSetParameter2f(D3DPSREGISTER_NormalmapScrollBlend, rsurface.texture->r_water_waterscroll[0], rsurface.texture->r_water_waterscroll[1]);
 		}
-		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 		hlslPSSetParameter3f(D3DPSREGISTER_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		hlslPSSetParameter1f(D3DPSREGISTER_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
 		hlslPSSetParameter3f(D3DPSREGISTER_EyePosition, rsurface.localvieworigin[0], rsurface.localvieworigin[1], rsurface.localvieworigin[2]);
@@ -2836,8 +2830,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		if (r_glsl_permutation->loc_TexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_TexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BackgroundTexMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BackgroundTexMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_ShadowMapMatrix >= 0) {Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_ShadowMapMatrix, 1, false, m16f);}
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform2f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			if (r_glsl_permutation->loc_ShadowMap_TextureScale >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			if (r_glsl_permutation->loc_ShadowMap_Parameters >= 0) qglUniform4f(r_glsl_permutation->loc_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 
 		if (r_glsl_permutation->loc_Color_Glow >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		if (r_glsl_permutation->loc_Alpha >= 0) qglUniform1f(r_glsl_permutation->loc_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
@@ -2982,8 +2984,16 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currenttexmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_TexMatrixM1, 1, false, m16f);}
 		{Matrix4x4_ToArrayFloatGL(&rsurface.texture->currentbackgroundtexmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_BackgroundTexMatrixM1, 1, false, m16f);}
 		{Matrix4x4_ToArrayFloatGL(&r_shadow_shadowmapmatrix, m16f);DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ShadowMapMatrixM1, 1, false, m16f);}
-		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (permutation & SHADERPERMUTATION_SHADOWMAPORTHO)
+		{
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_modelshadowmap_texturescale[0], r_shadow_modelshadowmap_texturescale[1], r_shadow_modelshadowmap_texturescale[2], r_shadow_modelshadowmap_texturescale[3]);
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_modelshadowmap_parameters[0], r_shadow_modelshadowmap_parameters[1], r_shadow_modelshadowmap_parameters[2], r_shadow_modelshadowmap_parameters[3]);
+		}
+		else
+		{
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+			DPSOFTRAST_Uniform4f(DPSOFTRAST_UNIFORM_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
+		}
 
 		DPSOFTRAST_Uniform3f(DPSOFTRAST_UNIFORM_Color_Glow, rsurface.glowmod[0], rsurface.glowmod[1], rsurface.glowmod[2]);
 		DPSOFTRAST_Uniform1f(DPSOFTRAST_UNIFORM_Alpha, rsurface.texture->lightmapcolor[3] * ((rsurface.texture->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay) ? rsurface.texture->r_water_wateralpha : 1));
@@ -3111,8 +3121,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Ambient , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Diffuse , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		hlslPSSetParameter3f(D3DPSREGISTER_DeferredColor_Specular, lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		hlslPSSetParameter2f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_TextureScale, r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		hlslPSSetParameter4f(D3DPSREGISTER_ShadowMap_Parameters, r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		hlslPSSetParameter1f(D3DPSREGISTER_SpecularPower, (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		hlslPSSetParameter2f(D3DPSREGISTER_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		hlslPSSetParameter2f(D3DPSREGISTER_PixelToScreenTexCoord, 1.0f/vid.width, 1.0/vid.height);
@@ -3138,8 +3148,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_DeferredColor_Ambient     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		if (r_glsl_permutation->loc_DeferredColor_Diffuse     >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		if (r_glsl_permutation->loc_DeferredColor_Specular    >= 0) qglUniform3f(       r_glsl_permutation->loc_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform2f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		if (r_glsl_permutation->loc_ShadowMap_TextureScale    >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_TextureScale   , r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
@@ -3161,8 +3171,8 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Ambient    , lightcolorbase[0] * ambientscale , lightcolorbase[1] * ambientscale , lightcolorbase[2] * ambientscale );
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Diffuse    , lightcolorbase[0] * diffusescale , lightcolorbase[1] * diffusescale , lightcolorbase[2] * diffusescale );
 		DPSOFTRAST_Uniform3f(       DPSOFTRAST_UNIFORM_DeferredColor_Specular   , lightcolorbase[0] * specularscale, lightcolorbase[1] * specularscale, lightcolorbase[2] * specularscale);
-		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_shadowmap_texturescale[0], r_shadow_shadowmap_texturescale[1]);
-		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_shadowmap_parameters[0], r_shadow_shadowmap_parameters[1], r_shadow_shadowmap_parameters[2], r_shadow_shadowmap_parameters[3]);
+		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_TextureScale   , r_shadow_lightshadowmap_texturescale[0], r_shadow_lightshadowmap_texturescale[1], r_shadow_lightshadowmap_texturescale[2], r_shadow_lightshadowmap_texturescale[3]);
+		DPSOFTRAST_Uniform4f(       DPSOFTRAST_UNIFORM_ShadowMap_Parameters     , r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		DPSOFTRAST_Uniform1f(       DPSOFTRAST_UNIFORM_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		DPSOFTRAST_Uniform2f(       DPSOFTRAST_UNIFORM_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
 		DPSOFTRAST_Uniform2f(DPSOFTRAST_UNIFORM_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
@@ -4125,13 +4135,11 @@ static void gl_main_start(void)
 	r_glsl_permutation = NULL;
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_glsl_permutationarray, r_main_mempool, sizeof(r_glsl_permutation_t), 256);
-	glslshaderstring = NULL;
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
 	Mem_ExpandableArray_NewArray(&r_hlsl_permutationarray, r_main_mempool, sizeof(r_hlsl_permutation_t), 256);
 #endif
-	hlslshaderstring = NULL;
 	memset(&r_svbsp, 0, sizeof (r_svbsp));
 
 	memset(r_texture_cubemaps, 0, sizeof(r_texture_cubemaps));
@@ -4227,13 +4235,11 @@ static void gl_main_shutdown(void)
 	r_glsl_permutation = NULL;
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
 	Mem_ExpandableArray_FreeArray(&r_glsl_permutationarray);
-	glslshaderstring = NULL;
 #ifdef SUPPORTD3D
 	r_hlsl_permutation = NULL;
 	memset(r_hlsl_permutationhash, 0, sizeof(r_hlsl_permutationhash));
 	Mem_ExpandableArray_FreeArray(&r_hlsl_permutationarray);
 #endif
-	hlslshaderstring = NULL;
 }
 
 static void gl_main_newmap(void)
@@ -4266,6 +4272,7 @@ void GL_Main_Init(void)
 {
 	int i;
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
+	R_InitShaderModeInfo();
 
 	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
 	Cmd_AddCommand("r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
@@ -7377,6 +7384,7 @@ static void R_DrawEntityBBoxes(void);
 static void R_DrawModelDecals(void);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
+extern int r_shadow_shadowmapatlas_modelshadows_size;
 void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
 	qboolean shadowmapping = false;
@@ -7428,18 +7436,25 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 		}
 	}
 
+	R_Shadow_PrepareModelShadows();
 	R_Shadow_PrepareLights(fbo, depthtexture, colortexture);
-	if (r_shadows.integer > 0 && r_refdef.lightmapintensity > 0)
-		R_Shadow_PrepareModelShadows();
 	if (r_timereport_active)
 		R_TimeReport("preparelights");
 
-	if (R_Shadow_ShadowMappingEnabled())
-		shadowmapping = true;
+	// render all the shadowmaps that will be used for this view
+	shadowmapping = R_Shadow_ShadowMappingEnabled();
+	if (shadowmapping || r_shadow_shadowmapatlas_modelshadows_size)
+	{
+		R_Shadow_DrawShadowMaps();
+		if (r_timereport_active)
+			R_TimeReport("shadowmaps");
+	}
 
+	// render prepass deferred lighting if r_shadow_deferred is on, this produces light buffers that will be sampled in forward pass
 	if (r_shadow_usingdeferredprepass)
 		R_Shadow_DrawPrepass();
 
+	// now we begin the forward pass of the view render
 	if (r_depthfirst.integer >= 1 && cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawDepth)
 	{
 		r_refdef.scene.worldmodel->DrawDepth(r_refdef.scene.worldentity);
@@ -7451,16 +7466,6 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 		R_DrawModelsDepth();
 		if (r_timereport_active)
 			R_TimeReport("modeldepth");
-	}
-
-	if (r_shadows.integer >= 2 && shadowmapping && r_refdef.lightmapintensity > 0)
-	{
-		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadowMaps(fbo, depthtexture, colortexture);
-		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
 	}
 
 	if (cl.csqc_vidvars.drawworld && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->Draw)
@@ -7485,7 +7490,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_Shadow_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -7506,7 +7511,7 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.lightmapintensity > 0)
 	{
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
-		R_DrawModelShadows(fbo, depthtexture, colortexture);
+		R_Shadow_DrawModelShadows();
 		R_ResetViewRendering3D(fbo, depthtexture, colortexture);
 		// don't let sound skip if going slow
 		if (r_refdef.scene.extraupdate)
@@ -8209,13 +8214,13 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		if (strcmp(r_qwskincache[i].name, cl.scores[i].qw_skin))
 			R_LoadQWSkin(&r_qwskincache[i], cl.scores[i].qw_skin);
 		t->currentskinframe = r_qwskincache[i].skinframe;
-		if (t->currentskinframe == NULL)
-			t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
+		if (t->materialshaderpass && t->currentskinframe == NULL)
+			t->currentskinframe = t->materialshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->materialshaderpass->framerate, t->materialshaderpass->numframes)];
 	}
-	else if (t->numskinframes >= 2)
-		t->currentskinframe = t->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->skinframerate, t->numskinframes)];
-	if (t->backgroundnumskinframes >= 2)
-		t->backgroundcurrentskinframe = t->backgroundskinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundskinframerate, t->backgroundnumskinframes)];
+	else if (t->materialshaderpass && t->materialshaderpass->numframes >= 2)
+		t->currentskinframe = t->materialshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->materialshaderpass->framerate, t->materialshaderpass->numframes)];
+	if (t->backgroundshaderpass && t->backgroundshaderpass->numframes >= 2)
+		t->backgroundcurrentskinframe = t->backgroundshaderpass->skinframes[LoopingFrameNumberFromDouble(rsurface.shadertime * t->backgroundshaderpass->framerate, t->backgroundshaderpass->numframes)];
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.colormod[3] * t->basealpha;
@@ -8250,7 +8255,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_NOSHADOW | MATERIALFLAG_NOCULLFACE;
 	if (rsurface.ent_flags & (RENDER_NODEPTHTEST | RENDER_VIEWMODEL))
 		t->currentmaterialflags |= MATERIALFLAG_SHORTDEPTHRANGE;
-	if (t->backgroundnumskinframes)
+	if (t->backgroundshaderpass)
 		t->currentmaterialflags |= MATERIALFLAG_VERTEXTEXTUREBLEND;
 	if (t->currentmaterialflags & MATERIALFLAG_BLENDED)
 	{
@@ -8279,10 +8284,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		Matrix4x4_CreateIdentity(&t->currentbackgroundtexmatrix);
 	}
 
-	for (i = 0, tcmod = t->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
-		R_tcMod_ApplyToMatrix(&t->currenttexmatrix, tcmod, t->currentmaterialflags);
-	for (i = 0, tcmod = t->backgroundtcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
-		R_tcMod_ApplyToMatrix(&t->currentbackgroundtexmatrix, tcmod, t->currentmaterialflags);
+	if (t->materialshaderpass)
+		for (i = 0, tcmod = t->materialshaderpass->tcmods;i < Q3MAXTCMODS && tcmod->tcmod;i++, tcmod++)
+			R_tcMod_ApplyToMatrix(&t->currenttexmatrix, tcmod, t->currentmaterialflags);
 
 	t->colormapping = VectorLength2(rsurface.colormap_pantscolor) + VectorLength2(rsurface.colormap_shirtcolor) >= (1.0f / 1048576.0f);
 	if (t->currentskinframe->qpixels)
@@ -8299,8 +8303,10 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	t->glowtexture = t->currentskinframe->glow;
 	t->fogtexture = t->currentskinframe->fog;
 	t->reflectmasktexture = t->currentskinframe->reflect;
-	if (t->backgroundnumskinframes)
+	if (t->backgroundshaderpass)
 	{
+		for (i = 0, tcmod = t->backgroundshaderpass->tcmods; i < Q3MAXTCMODS && tcmod->tcmod; i++, tcmod++)
+			R_tcMod_ApplyToMatrix(&t->currentbackgroundtexmatrix, tcmod, t->currentmaterialflags);
 		t->backgroundbasetexture = (!t->colormapping && t->backgroundcurrentskinframe->merged) ? t->backgroundcurrentskinframe->merged : t->backgroundcurrentskinframe->base;
 		t->backgroundnmaptexture = t->backgroundcurrentskinframe->nmap;
 		t->backgroundglosstexture = r_texture_black;
@@ -9243,60 +9249,63 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 			break;
 		}
 	}
-	switch(rsurface.texture->tcgen.tcgen)
+	if (rsurface.texture->materialshaderpass)
 	{
-	default:
-	case Q3TCGEN_TEXTURE:
-		break;
-	case Q3TCGEN_LIGHTMAP:
-		if (!dynamicvertex)
+		switch (rsurface.texture->materialshaderpass->tcgen.tcgen)
 		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_lightmap] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_lightmap] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_lightmap] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_lightmap] += batchnumtriangles;
+		default:
+		case Q3TCGEN_TEXTURE:
+			break;
+		case Q3TCGEN_LIGHTMAP:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_lightmap] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_lightmap] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_lightmap] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_lightmap] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
+			needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
+			break;
+		case Q3TCGEN_VECTOR:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_vector] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_vector] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_vector] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_vector] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
+			break;
+		case Q3TCGEN_ENVIRONMENT:
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_environment] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_environment] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_environment] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_environment] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
+			break;
 		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_LIGHTMAP;
-		needsupdate |= BATCHNEED_VERTEXMESH_LIGHTMAP;
-		break;
-	case Q3TCGEN_VECTOR:
-		if (!dynamicvertex)
+		if (rsurface.texture->materialshaderpass->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_vector] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_vector] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_vector] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_vector] += batchnumtriangles;
+			if (!dynamicvertex)
+			{
+				r_refdef.stats[r_stat_batch_dynamic_batches_because_tcmod_turbulent] += 1;
+				r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcmod_turbulent] += batchnumsurfaces;
+				r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcmod_turbulent] += batchnumvertices;
+				r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcmod_turbulent] += batchnumtriangles;
+			}
+			dynamicvertex = true;
+			batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
+			needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
-		break;
-	case Q3TCGEN_ENVIRONMENT:
-		if (!dynamicvertex)
-		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcgen_environment] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcgen_environment] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcgen_environment] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcgen_environment] += batchnumtriangles;
-		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
-		break;
-	}
-	if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
-	{
-		if (!dynamicvertex)
-		{
-			r_refdef.stats[r_stat_batch_dynamic_batches_because_tcmod_turbulent] += 1;
-			r_refdef.stats[r_stat_batch_dynamic_surfaces_because_tcmod_turbulent] += batchnumsurfaces;
-			r_refdef.stats[r_stat_batch_dynamic_vertices_because_tcmod_turbulent] += batchnumvertices;
-			r_refdef.stats[r_stat_batch_dynamic_triangles_because_tcmod_turbulent] += batchnumtriangles;
-		}
-		dynamicvertex = true;
-		batchneed |= BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_TEXCOORD;
-		needsupdate |= BATCHNEED_VERTEXMESH_TEXCOORD;
 	}
 
 	if (!rsurface.modelvertexmesh && (batchneed & (BATCHNEED_VERTEXMESH_VERTEX | BATCHNEED_VERTEXMESH_NORMAL | BATCHNEED_VERTEXMESH_VECTOR | BATCHNEED_VERTEXMESH_VERTEXCOLOR | BATCHNEED_VERTEXMESH_TEXCOORD | BATCHNEED_VERTEXMESH_LIGHTMAP)))
@@ -10139,10 +10148,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		}
 	}
 
-	if (rsurface.batchtexcoordtexture2f)
+	if (rsurface.batchtexcoordtexture2f && rsurface.texture->materialshaderpass)
 	{
 	// generate texcoords based on the chosen texcoord source
-		switch(rsurface.texture->tcgen.tcgen)
+		switch(rsurface.texture->materialshaderpass->tcgen.tcgen)
 		{
 		default:
 		case Q3TCGEN_TEXTURE:
@@ -10160,8 +10169,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;
 			for (j = 0;j < batchnumvertices;j++)
 			{
-				rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms);
-				rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->tcgen.parms + 3);
+				rsurface.batchtexcoordtexture2f[j*2+0] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->materialshaderpass->tcgen.parms);
+				rsurface.batchtexcoordtexture2f[j*2+1] = DotProduct(rsurface.batchvertex3f + 3*j, rsurface.texture->materialshaderpass->tcgen.parms + 3);
 			}
 			break;
 		case Q3TCGEN_ENVIRONMENT:
@@ -10201,10 +10210,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 		// and we only support that as the first one
 		// (handling a mixture of turbulent and other tcmods would be problematic
 		//  without punting it entirely to a software path)
-		if (rsurface.texture->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
+		if (rsurface.texture->materialshaderpass->tcmods[0].tcmod == Q3TCMOD_TURBULENT)
 		{
-			amplitude = rsurface.texture->tcmods[0].parms[1];
-			animpos = rsurface.texture->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->tcmods[0].parms[3];
+			amplitude = rsurface.texture->materialshaderpass->tcmods[0].parms[1];
+			animpos = rsurface.texture->materialshaderpass->tcmods[0].parms[2] + rsurface.shadertime * rsurface.texture->materialshaderpass->tcmods[0].parms[3];
 	//		rsurface.batchtexcoordtexture2f = R_FrameData_Alloc(batchnumvertices * sizeof(float[2]));
 	//		rsurface.batchtexcoordtexture2f_vertexbuffer = NULL;
 	//		rsurface.batchtexcoordtexture2f_bufferoffset = 0;

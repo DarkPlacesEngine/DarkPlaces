@@ -1634,7 +1634,7 @@ static void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int
 static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 {
 	int i, j, k, num, max, altmax, mtwidth, mtheight, doffset, incomplete, nummiptex = 0;
-	skinframe_t *skinframe;
+	skinframe_t *skinframemissing;
 	texture_t *tx, *tx2, *anims[10], *altanims[10];
 	texture_t backuptex;
 	unsigned char *data, *mtdata;
@@ -1664,23 +1664,16 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	if (cls.state != ca_dedicated)
-		skinframe = R_SkinFrame_LoadMissing();
-	else
-		skinframe = NULL;
+	skinframemissing = R_SkinFrame_LoadMissing();
 	for (i = 0, tx = loadmodel->data_textures;i < loadmodel->num_textures;i++, tx++)
 	{
 		strlcpy(tx->name, "NO TEXTURE FOUND", sizeof(tx->name));
 		tx->width = 16;
 		tx->height = 16;
 		tx->basealpha = 1.0f;
-		if (cls.state != ca_dedicated)
-		{
-			tx->numskinframes = 1;
-			tx->skinframerate = 1;
-			tx->skinframes[0] = skinframe;
-			tx->currentskinframe = tx->skinframes[0];
-		}
+		tx->materialshaderpass = tx->shaderpasses[0] = Mod_CreateShaderPass(skinframemissing);
+		tx->materialshaderpass->skinframes[0] = skinframemissing;
+		tx->currentskinframe = skinframemissing;
 		tx->basematerialflags = MATERIALFLAG_WALL;
 		if (i == loadmodel->num_textures - 1)
 		{
@@ -1790,6 +1783,10 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx->height = mtheight;
 		tx->basealpha = 1.0f;
 
+		// start out with no animation
+		tx->currentframe = tx;
+		tx->currentskinframe = tx->materialshaderpass != NULL ? tx->materialshaderpass->skinframes[0] : NULL;
+
 		if (tx->name[0] == '*')
 		{
 			if (!strncmp(tx->name, "*lava", 5))
@@ -1839,7 +1836,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			}
 			else
 			{
-				skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
+				skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (!skinframe)
 					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false);
 				if (skinframe)
@@ -1868,15 +1865,16 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 					else if (mtdata) // texture included
 						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				}
-				// if skinframe is still NULL the "missing" texture will be used
+				// if skinframe is still NULL the "missing" texture has already been assigned to this
 				if (skinframe)
-					tx->skinframes[0] = skinframe;
+					tx->materialshaderpass->skinframes[0] = skinframe;
 			}
 			// LordHavoc: some Tenebrae textures get replaced by black
 			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
+				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, false);
 			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-				tx->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
+				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, false);
+			tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		}
 
 		tx->basematerialflags = MATERIALFLAG_WALL;
@@ -1891,7 +1889,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW;
 			else
 				tx->basematerialflags |= MATERIALFLAG_WATERSCROLL | MATERIALFLAG_LIGHTBOTHSIDES | MATERIALFLAG_NOSHADOW | MATERIALFLAG_WATERALPHA | MATERIALFLAG_WATERSHADER;
-			if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+			if (tx->currentskinframe != NULL && tx->currentskinframe->hasalpha)
 				tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		}
 		else if (tx->name[0] == '{') // fence textures
@@ -1907,12 +1905,8 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
 		else if (!strcmp(tx->name, "caulk"))
 			tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
-		else if (tx->skinframes[0] && tx->skinframes[0]->hasalpha)
+		else if (tx->currentskinframe != NULL && tx->currentskinframe->hasalpha)
 			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-
-		// start out with no animation
-		tx->currentframe = tx;
-		tx->currentskinframe = tx->skinframes[0];
 		tx->currentmaterialflags = tx->basematerialflags;
 	}
 
@@ -2699,7 +2693,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		int stainmapsize = 0;
 		mod_alloclightmap_state_t allocState;
 
-		Mod_AllocLightmap_Init(&allocState, lightmapsize, lightmapsize);
+		Mod_AllocLightmap_Init(&allocState, loadmodel->mempool, lightmapsize, lightmapsize);
 		for (surfacenum = 0, surface = loadmodel->data_surfaces;surfacenum < count;surfacenum++, surface++)
 		{
 			int iu, iv, lightmapx = 0, lightmapy = 0;
@@ -4423,14 +4417,14 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 					if (tx->q2contents & Q2CONTENTS_SOLID)
 						tx->q2contents = (tx->q2contents & ~Q2CONTENTS_SOLID) | Q2CONTENTS_WINDOW;
 				}
-				if (q2flags & Q2SURF_FLOWING)
+				if ((q2flags & Q2SURF_FLOWING) && tx->materialshaderpass != NULL)
 				{
-					tx->tcmods[0].tcmod = Q3TCMOD_SCROLL;
+					tx->materialshaderpass->tcmods[0].tcmod = Q3TCMOD_SCROLL;
 					if (q2flags & Q2SURF_WARP)
-						tx->tcmods[0].parms[0] = -0.5f;
+						tx->materialshaderpass->tcmods[0].parms[0] = -0.5f;
 					else
-						tx->tcmods[0].parms[0] = -1.6f;
-					tx->tcmods[0].parms[1] = 0.0f;
+						tx->materialshaderpass->tcmods[0].parms[0] = -1.6f;
+					tx->materialshaderpass->tcmods[0].parms[1] = 0.0f;
 				}
 				if (q2flags & Q2SURF_ALPHATEST)
 				{
@@ -4455,7 +4449,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, tx->q2contents);
 				// set the current values to the base values
 				tx->currentframe = tx;
-				tx->currentskinframe = tx->skinframes[0];
+				tx->currentskinframe = tx->materialshaderpass != NULL ? tx->materialshaderpass->skinframes[0] : NULL;
 				tx->currentmaterialflags = tx->basematerialflags;
 				loadmodel->num_texturesperskin++;
 				loadmodel->num_textures = loadmodel->num_texturesperskin;
@@ -5719,7 +5713,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 
 	// allocate a texture pool if we need it
-	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
+	if (loadmodel->texturepool == NULL)
 		loadmodel->texturepool = R_AllocTexturePool();
 
 	mergedpixels = (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4);

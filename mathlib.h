@@ -311,7 +311,7 @@ typedef struct randomseed_s
 randomseed_t;
 
 void Math_RandomSeed_Reset(randomseed_t *r);
-void Math_RandomSeed_FromInt(randomseed_t *r, unsigned int n);
+void Math_RandomSeed_FromInts(randomseed_t *r, unsigned int s0, unsigned int s1, unsigned int s2, unsigned int s3);
 unsigned long long Math_rand64(randomseed_t *r);
 float Math_randomf(randomseed_t *r);
 float Math_crandomf(randomseed_t *r);
