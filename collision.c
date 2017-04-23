@@ -646,7 +646,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *trace_sta
 			VectorNormalize(endplane);
 		}
 		startplane[3] = furthestplanedist_float(startplane, other_start->points, othernumpoints);
-		endplane[3] = furthestplanedist_float(startplane, other_end->points, othernumpoints);
+		endplane[3] = furthestplanedist_float(endplane, other_end->points, othernumpoints);
 		startdist = nearestplanedist_float(startplane, trace_start->points, tracenumpoints) - startplane[3];
 		enddist = nearestplanedist_float(endplane, trace_end->points, tracenumpoints) - endplane[3];
 		//Con_Printf("%c%i: startdist = %f, enddist = %f, startdist / (startdist - enddist) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, startdist, enddist, startdist / (startdist - enddist));
