@@ -4535,21 +4535,27 @@ static void ModList_RebuildList(void)
 {
 	int i,j;
 	stringlist_t list;
+	const char *description;
 
 	stringlistinit(&list);
 	listdirectory(&list, fs_basedir, "");
 	stringlistsort(&list, true);
 	modlist_count = 0;
 	modlist_numenabled = fs_numgamedirs;
-	for (i = 0;i < list.numstrings;i++)
+	for (i = 0;i < list.numstrings && modlist_count < MODLIST_TOTALSIZE;i++)
 	{
-		if (modlist_count >= MODLIST_TOTALSIZE)	break;
-		// check all dirs to see if they "appear" to be mods
+		// quickly skip names with dot characters - generally these are files, not directories
+		if (strchr(list.strings[i], '.')) continue;
+
 		// reject any dirs that are part of the base game
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
 		//if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
-		if (FS_CheckNastyPath (list.strings[i], true)) continue;
-		if (!FS_CheckGameDir(list.strings[i])) continue;
+
+		// check if we can get a description of the gamedir (from modinfo.txt),
+		// or if the directory is valid but has no description (fs_checkgamedir_missing)
+		// otherwise this isn't a valid gamedir
+		description = FS_CheckGameDir(list.strings[i]);
+		if (description == NULL || description == fs_checkgamedir_missing) continue;
 
 		strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
 		//check currently loaded mods
