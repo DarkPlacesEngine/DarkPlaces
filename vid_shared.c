@@ -1476,6 +1476,21 @@ static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable, cachehwgamma;
 
+void VID_ApplyGammaToColor(const float *rgb, float *out)
+{
+	int i;
+	if (cachecolorenable)
+	{
+		for (i = 0; i < 3; i++)
+			out[i] = pow(cachecontrastboost * rgb[i] / ((cachecontrastboost - 1) * rgb[i] + 1), 1.0 / invpow(0.5, 1 - cachegrey[i])) * cachewhite[i] + cacheblack[i];
+	}
+	else
+	{
+		for (i = 0; i < 3; i++)
+			out[i] = pow(cachecontrastboost * rgb[i] / ((cachecontrastboost - 1) * rgb[i] + 1), 1.0 / cachegamma) * cachecontrast + cachebrightness;
+	}
+}
+
 unsigned int vid_gammatables_serial = 0; // so other subsystems can poll if gamma parameters have changed
 qboolean vid_gammatables_trivial = true;
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
