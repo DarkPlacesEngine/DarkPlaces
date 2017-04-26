@@ -2739,6 +2739,11 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	char mdfourbuf[16];
 	long t1, t2;
 
+	if (!password[0]) {
+		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		return false;
+	}
+
 	t1 = (long) time(NULL);
 	t2 = strtol(s, NULL, 0);
 	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
@@ -2754,6 +2759,11 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 {
 	char mdfourbuf[16];
 	int i;
+
+	if (!password[0]) {
+		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		return false;
+	}
 
 	if(slen < (int)(sizeof(challenges[0].string)) - 1)
 		return false;
@@ -2781,6 +2791,11 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 
 static qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
+	if (!password[0]) {
+		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		return false;
+	}
+
 	return !strcmp(password, hash);
 }
 
@@ -2799,12 +2814,12 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 	{
 		have_usernames = true;
 		strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
-		if(buf[0])
+		if(buf[0])  // Ignore empty entries due to leading/duplicate space.
 			if(comparator(peeraddress, buf, password, cs, cslen))
 				goto allow;
 		userpass_start = userpass_end + 1;
 	}
-	if(userpass_start[0])
+	if(userpass_start[0])  // Ignore empty trailing entry due to trailing space or password not set.
 	{
 		userpass_end = userpass_start + strlen(userpass_start);
 		if(comparator(peeraddress, userpass_start, password, cs, cslen))
@@ -2818,12 +2833,12 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 	{
 		have_usernames = true;
 		strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
-		if(buf[0])
+		if(buf[0])  // Ignore empty entries due to leading/duplicate space.
 			if(comparator(peeraddress, buf, password, cs, cslen))
 				goto check;
 		userpass_start = userpass_end + 1;
 	}
-	if(userpass_start[0])
+	if(userpass_start[0])  // Ignore empty trailing entry due to trailing space or password not set.
 	{
 		userpass_end = userpass_start + strlen(userpass_start);
 		if(comparator(peeraddress, userpass_start, password, cs, cslen))
