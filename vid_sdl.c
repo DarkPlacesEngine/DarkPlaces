@@ -1218,12 +1218,14 @@ void Sys_SendKeyEvents( void )
 	static qboolean sound_active = true;
 	int keycode;
 	int i;
+	qboolean isdown;
 	Uchar unicode;
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
 
 	while( SDL_PollEvent( &event ) )
+		loop_start:
 		switch( event.type ) {
 			case SDL_QUIT:
 #ifdef DEBUGSDLEVENTS
@@ -1240,8 +1242,31 @@ void Sys_SendKeyEvents( void )
 					Con_DPrintf("SDL_Event: SDL_KEYUP %i\n", event.key.keysym.sym);
 #endif
 				keycode = MapKey(event.key.keysym.sym);
+				isdown = (event.key.state == SDL_PRESSED);
+				unicode = 0;
+				if(isdown)
+				{
+					if(SDL_PollEvent(&event))
+					{
+						if(event.type == SDL_TEXTINPUT)
+						{
+							// combine key code from SDL_KEYDOWN event and character
+							// from SDL_TEXTINPUT event in a single Key_Event call
+#ifdef DEBUGSDLEVENTS
+							Con_DPrintf("SDL_Event: SDL_TEXTINPUT - text: %s\n", event.text.text);
+#endif
+							unicode = u8_getchar_utf8_enabled(event.text.text + (int)u8_bytelen(event.text.text, 0), NULL);
+						}
+						else
+						{
+							if (!VID_JoyBlockEmulatedKeys(keycode))
+								Key_Event(keycode, 0, isdown);
+							goto loop_start;
+						}
+					}
+				}
 				if (!VID_JoyBlockEmulatedKeys(keycode))
-					Key_Event(keycode, 0, (event.key.state == SDL_PRESSED));
+					Key_Event(keycode, unicode, isdown);
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 			case SDL_MOUSEBUTTONUP:
