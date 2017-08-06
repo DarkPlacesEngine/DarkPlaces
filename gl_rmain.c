@@ -1115,6 +1115,27 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		geomstrings_list[geomstrings_count++] = "#define GLSL130\n";
 		fragstrings_list[fragstrings_count++] = "#define GLSL130\n";
 	}
+	// if we can do #version 120, we should (this adds the invariant keyword)
+	else if(vid.support.glshaderversion >= 120)
+	{
+		vertstrings_list[vertstrings_count++] = "#version 120\n";
+		geomstrings_list[geomstrings_count++] = "#version 120\n";
+		fragstrings_list[fragstrings_count++] = "#version 120\n";
+		vertstrings_list[vertstrings_count++] = "#define GLSL120\n";
+		geomstrings_list[geomstrings_count++] = "#define GLSL120\n";
+		fragstrings_list[fragstrings_count++] = "#define GLSL120\n";
+	}
+	// GLES also adds several things from GLSL120
+	switch(vid.renderpath)
+	{
+	case RENDERPATH_GLES2:
+		vertstrings_list[vertstrings_count++] = "#define GLES\n";
+		geomstrings_list[geomstrings_count++] = "#define GLES\n";
+		fragstrings_list[fragstrings_count++] = "#define GLES\n";
+		break;
+	default:
+		break;
+	}
 
 	// the first pretext is which type of shader to compile as
 	// (later these will all be bound together as a program object)
