@@ -37,7 +37,7 @@
 "# endif\n",
 "#endif\n",
 "\n",
-"#if defined(GLSL120) || defined(GLSL130) || defined(GLSL140) || defined(GLES)\n"
+"#if (defined(GLSL120) || defined(GLSL130) || defined(GLSL140) || defined(GLES)) && defined(VERTEX_SHADER)\n"
 "invariant gl_Position; // fix for lighting polygons not matching base surface\n",
 "# endif\n",
 "#if defined(GLSL130) || defined(GLSL140)\n",
