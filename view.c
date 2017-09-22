@@ -670,50 +670,53 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 
 				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
 
-				// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
-				if(teleported)
+				if(cl_followmodel.value || cl_leanmodel.value)
 				{
-					// try to fix the first highpass; result is NOT
-					// perfect! TODO find a better fix
-					VectorCopy(viewangles, cl.gunangles_prev);
+					// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
+					if(teleported)
+					{
+						// try to fix the first highpass; result is NOT
+						// perfect! TODO find a better fix
+						VectorCopy(viewangles, cl.gunangles_prev);
+						VectorCopy(vieworg, cl.gunorg_prev);
+					}
+
+					// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
+					VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
+					highpass3_limited(vieworg, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
 					VectorCopy(vieworg, cl.gunorg_prev);
+					VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
+
+					// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
+					VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
+					cl.gunangles_highpass[PITCH] += 360 * floor((viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
+					cl.gunangles_highpass[YAW] += 360 * floor((viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
+					cl.gunangles_highpass[ROLL] += 360 * floor((viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
+					highpass3_limited(viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
+					VectorCopy(viewangles, cl.gunangles_prev);
+					VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
+
+					// 3. calculate the RAW adjustment vectors
+					gunorg[0] *= -cl_followmodel_side_speed.value;
+					gunorg[1] *= -cl_followmodel_side_speed.value;
+					gunorg[2] *= -cl_followmodel_up_speed.value;
+
+					gunangles[PITCH] *= -cl_leanmodel_up_speed.value;
+					gunangles[YAW] *= -cl_leanmodel_side_speed.value;
+					gunangles[ROLL] = 0;
+
+					// 4. perform highpass/lowpass on the adjustment vectors (turning velocity into acceleration!)
+					//    trick: we must do the lowpass LAST, so the lowpass vector IS the final vector!
+					highpass3(gunorg, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_up_highpass.value, cl.gunorg_adjustment_highpass, gunorg);
+					lowpass3(gunorg, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_up_lowpass.value, cl.gunorg_adjustment_lowpass, gunorg);
+					// we assume here: PITCH = 0, YAW = 1, ROLL = 2
+					highpass3(gunangles, frametime*cl_leanmodel_up_highpass.value, frametime*cl_leanmodel_side_highpass.value, 0, cl.gunangles_adjustment_highpass, gunangles);
+					lowpass3(gunangles, frametime*cl_leanmodel_up_lowpass.value, frametime*cl_leanmodel_side_lowpass.value, 0, cl.gunangles_adjustment_lowpass, gunangles);
+
+					// 5. use the adjusted vectors
+					VectorAdd(vieworg, gunorg, gunorg);
+					VectorAdd(viewangles, gunangles, gunangles);
 				}
-
-				// 2. for the gun origin, only keep the high frequency (non-DC) parts, which is "somewhat like velocity"
-				VectorAdd(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
-				highpass3_limited(vieworg, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_side_highpass1.value, cl_followmodel_side_limit.value, frametime*cl_followmodel_up_highpass1.value, cl_followmodel_up_limit.value, cl.gunorg_highpass, gunorg);
-				VectorCopy(vieworg, cl.gunorg_prev);
-				VectorSubtract(cl.gunorg_highpass, cl.gunorg_prev, cl.gunorg_highpass);
-
-				// in the highpass, we _store_ the DIFFERENCE to the actual view angles...
-				VectorAdd(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
-				cl.gunangles_highpass[PITCH] += 360 * floor((viewangles[PITCH] - cl.gunangles_highpass[PITCH]) / 360 + 0.5);
-				cl.gunangles_highpass[YAW] += 360 * floor((viewangles[YAW] - cl.gunangles_highpass[YAW]) / 360 + 0.5);
-				cl.gunangles_highpass[ROLL] += 360 * floor((viewangles[ROLL] - cl.gunangles_highpass[ROLL]) / 360 + 0.5);
-				highpass3_limited(viewangles, frametime*cl_leanmodel_up_highpass1.value, cl_leanmodel_up_limit.value, frametime*cl_leanmodel_side_highpass1.value, cl_leanmodel_side_limit.value, 0, 0, cl.gunangles_highpass, gunangles);
-				VectorCopy(viewangles, cl.gunangles_prev);
-				VectorSubtract(cl.gunangles_highpass, cl.gunangles_prev, cl.gunangles_highpass);
-
-				// 3. calculate the RAW adjustment vectors
-				gunorg[0] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
-				gunorg[1] *= (cl_followmodel.value ? -cl_followmodel_side_speed.value : 0);
-				gunorg[2] *= (cl_followmodel.value ? -cl_followmodel_up_speed.value : 0);
-
-				gunangles[PITCH] *= (cl_leanmodel.value ? -cl_leanmodel_up_speed.value : 0);
-				gunangles[YAW] *= (cl_leanmodel.value ? -cl_leanmodel_side_speed.value : 0);
-				gunangles[ROLL] = 0;
-
-				// 4. perform highpass/lowpass on the adjustment vectors (turning velocity into acceleration!)
-				//    trick: we must do the lowpass LAST, so the lowpass vector IS the final vector!
-				highpass3(gunorg, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_side_highpass.value, frametime*cl_followmodel_up_highpass.value, cl.gunorg_adjustment_highpass, gunorg);
-				lowpass3(gunorg, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_side_lowpass.value, frametime*cl_followmodel_up_lowpass.value, cl.gunorg_adjustment_lowpass, gunorg);
-				// we assume here: PITCH = 0, YAW = 1, ROLL = 2
-				highpass3(gunangles, frametime*cl_leanmodel_up_highpass.value, frametime*cl_leanmodel_side_highpass.value, 0, cl.gunangles_adjustment_highpass, gunangles);
-				lowpass3(gunangles, frametime*cl_leanmodel_up_lowpass.value, frametime*cl_leanmodel_side_lowpass.value, 0, cl.gunangles_adjustment_lowpass, gunangles);
-
-				// 5. use the adjusted vectors
-				VectorAdd(vieworg, gunorg, gunorg);
-				VectorAdd(viewangles, gunangles, gunangles);
 
 				// bounded XY speed, used by several effects below
 				xyspeed = bound (0, sqrt(clvelocity[0]*clvelocity[0] + clvelocity[1]*clvelocity[1]), cl_bob_velocity_limit.value);
