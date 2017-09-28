@@ -56,17 +56,16 @@ for os in "$@"; do
       outputs='darkplaces-glx:darkplaces-linux64-glx darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
       ;;
     win32)
-      # other Win32 DLLs - including SDL2 - retain 16 bytes alignment.
-      export LD_LIBRARY_PATH="$USRLOCAL/opt/cross_toolchain_32/x86_64-slackware-linux/i686-w64-mingw32/lib:$USRLOCAL/opt/cross_toolchain_32/libexec/gcc/i686-w64-mingw32/4.8.3"
       chroot=
       # Need to use -mstackrealign as nothing guarantees that callbacks from
+      # other Win32 DLLs - including SDL2 - retain 16 bytes alignment.
       makeflags='STRIP=:
         D3D=1
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN32RELEASE=1
-        CC="$USRLOCAL/opt/cross_toolchain_32/bin/i686-w64-mingw32-gcc -static -g1 -mstackrealign -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
-        WINDRES="$USRLOCAL/opt/cross_toolchain_32/bin/i686-w64-mingw32-windres"
+        CC="i686-w64-mingw32-gcc -static -g1 -mstackrealign -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
+        WINDRES="i686-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
         DP_LINK_CRYPTO_RIJNDAEL=dlopen
@@ -77,15 +76,14 @@ for os in "$@"; do
       outputs='darkplaces.exe:darkplaces-x86-wgl.exe darkplaces-sdl.exe:darkplaces-x86.exe darkplaces-dedicated.exe:darkplaces-x86-dedicated.exe'
       ;;
     win64)
-      export LD_LIBRARY_PATH="$USRLOCAL/opt/cross_toolchain_64/x86_64-slackware-linux/x86_64-w64-mingw32/lib:$USRLOCAL/opt/cross_toolchain_64/libexec/gcc/x86_64-w64-mingw32/4.8.3"
       chroot=
       makeflags='STRIP=:
         D3D=1
         DP_MAKE_TARGET=mingw
         UNAME=MINGW32
         WIN64RELEASE=1
-        CC="$USRLOCAL/opt/cross_toolchain_64/bin/x86_64-w64-mingw32-gcc -static -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
-        WINDRES="$USRLOCAL/opt/cross_toolchain_64/bin/x86_64-w64-mingw32-windres"
+        CC="x86_64-w64-mingw32-gcc -static -g1 -Wl,--dynamicbase -Wl,--nxcompat -I../../../${deps}/include -L../../../${deps}/lib -DSUPPORTIPV6"
+        WINDRES="x86_64-w64-mingw32-windres"
         SDL_CONFIG="../../../${deps}/bin/sdl2-config"
         DP_LINK_CRYPTO=dlopen
         DP_LINK_CRYPTO_RIJNDAEL=dlopen
