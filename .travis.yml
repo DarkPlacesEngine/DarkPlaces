@@ -14,11 +14,14 @@ matrix:
           - gcc-multilib
           - g++-multilib
           # Workaround packages to install to fix dependency hell.
-          - libglu1-mesa-dev:i386
           - libcaca-dev:i386
-          - libxext-dev:i386
-          - libslang2-dev:i386
+          - libgl1-mesa-dev:i386
+          - libglib2.0-dev:i386
+          - libglu1-mesa-dev:i386
           - libpng-dev:i386
+          - libpulse-dev:i386
+          - libslang2-dev:i386
+          - libxext-dev:i386
   - os: linux
     env: PROJECT=xonotic OS="linux64"
     compiler: gcc
@@ -33,10 +36,20 @@ matrix:
     env: PROJECT=xonotic OS="win32"
     compiler: gcc
     sudo: false
+    addons:
+      apt:
+        packages:
+          - gcc-mingw-w64-i686
+          - binutils-mingw-w64-i686
   - os: linux
     env: PROJECT=xonotic OS="win64"
     compiler: gcc
     sudo: false
+    addons:
+      apt:
+        packages:
+          - gcc-mingw-w64-x86-64
+          - binutils-mingw-w64-x86-64
   - os: osx
     env: PROJECT=xonotic OS="osx"
     compiler: gcc
