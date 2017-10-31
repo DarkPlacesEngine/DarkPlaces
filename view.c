@@ -670,7 +670,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 
 				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
 
-				if(cl_followmodel.value || cl_leanmodel.value)
+				if(cl_followmodel.integer || cl_leanmodel.integer)
 				{
 					// 1. if we teleported, clear the frametime... the lowpass will recover the previous value then
 					if(teleported)
@@ -716,6 +716,12 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					// 5. use the adjusted vectors
 					VectorAdd(vieworg, gunorg, gunorg);
 					VectorAdd(viewangles, gunangles, gunangles);
+				}
+				else
+				{
+					// Just initialize gunorg/gunangles.
+					VectorCopy(vieworg, gunorg);
+					VectorCopy(viewangles, gunangles);
 				}
 
 				// bounded XY speed, used by several effects below
