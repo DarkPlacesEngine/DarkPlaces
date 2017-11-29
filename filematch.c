@@ -179,12 +179,6 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 		adddirentry(list, path, n_file.cFileName);
 	} while (FindNextFile(hFile, &n_file) != 0);
 	FindClose(hFile);
-
-	// convert names to lowercase because windows does not care, but pattern matching code often does
-	for (i = 0;i < list->numstrings;i++)
-		for (c = list->strings[i];*c;c++)
-			if (*c >= 'A' && *c <= 'Z')
-				*c += 'a' - 'A';
 }
 #else
 void listdirectory(stringlist_t *list, const char *basepath, const char *path)
