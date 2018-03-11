@@ -636,6 +636,10 @@ typedef struct texture_s
 	int q2value;
 	int q2contents;
 
+	// q1qsp
+	/// this points to a variant of the sky texture that has MATERIALFLAG_NOSHADOW, for the e1m5 logo shadow trick.
+	struct texture_s *skynoshadowtexture;
+
 	// reflection
 	float reflectmin; // when refraction is used, minimum amount of reflection (when looking straight down)
 	float reflectmax; // when refraction is used, maximum amount of reflection (when looking parallel to water)

@@ -1633,9 +1633,9 @@ static void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int
 
 static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 {
-	int i, j, k, num, max, altmax, mtwidth, mtheight, doffset, incomplete, nummiptex = 0;
+	int i, j, k, num, max, altmax, mtwidth, mtheight, doffset, incomplete, nummiptex = 0, firstskynoshadowtexture = 0;
 	skinframe_t *skinframemissing;
-	texture_t *tx, *tx2, *anims[10], *altanims[10];
+	texture_t *tx, *tx2, *anims[10], *altanims[10], *currentskynoshadowtexture;
 	texture_t backuptex;
 	unsigned char *data, *mtdata;
 	const char *s;
@@ -1648,20 +1648,63 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 	loadmodel->data_textures = NULL;
 
-	// add two slots for notexture walls and notexture liquids
+	// add two slots for notexture walls and notexture liquids, and duplicate
+	// all sky textures; sky surfaces can be shadow-casting or not, the surface
+	// loading will choose according to the contents behind the surface
+	// (necessary to support e1m5 logo shadow which has a SKY contents brush,
+	// while correctly treating sky textures as occluders in other situations).
 	if (sb->cursize)
 	{
+		int numsky = 0;
+		size_t watermark;
 		nummiptex = MSG_ReadLittleLong(sb);
 		loadmodel->num_textures = nummiptex + 2;
-		loadmodel->num_texturesperskin = loadmodel->num_textures;
+		// save the position so we can go back to it
+		watermark = sb->readcount;
+		for (i = 0; i < nummiptex; i++)
+		{
+			doffset = MSG_ReadLittleLong(sb);
+			if (r_nosurftextures.integer)
+				continue;
+			if (doffset == -1)
+			{
+				Con_DPrintf("%s: miptex #%i missing\n", loadmodel->name, i);
+				continue;
+			}
+
+			MSG_InitReadBuffer(&miptexsb, sb->data + doffset, sb->cursize - doffset);
+
+			// copy name, but only up to 16 characters
+			// (the output buffer can hold more than this, but the input buffer is
+			//  only 16)
+			for (j = 0; j < 16; j++)
+				name[j] = MSG_ReadByte(&miptexsb);
+			name[j] = 0;
+			// pretty up the buffer (replacing any trailing garbage with 0)
+			for (j = (int)strlen(name); j < 16; j++)
+				name[j] = 0;
+
+			if (!strncmp(name, "sky", 3))
+				numsky++;
+		}
+
+		// bump it back to where we started parsing
+		sb->readcount = watermark;
+
+		firstskynoshadowtexture = loadmodel->num_textures;
+		loadmodel->num_textures += numsky;
 	}
 	else
 	{
 		loadmodel->num_textures = 2;
-		loadmodel->num_texturesperskin = loadmodel->num_textures;
+		firstskynoshadowtexture = loadmodel->num_textures;
 	}
+	loadmodel->num_texturesperskin = loadmodel->num_textures;
 
 	loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_textures * sizeof(texture_t));
+
+	// we'll be writing to these in parallel for sky textures
+	currentskynoshadowtexture = loadmodel->data_textures + firstskynoshadowtexture;
 
 	// fill out all slots with notexture
 	skinframemissing = R_SkinFrame_LoadMissing();
@@ -1717,7 +1760,6 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		s += 5;
 	FS_StripExtension(s, mapname, sizeof(mapname));
 
-	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
 	// LordHavoc: mostly rewritten map texture loader
 	for (i = 0;i < nummiptex;i++)
 	{
@@ -1902,12 +1944,21 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			tx->basematerialflags |= MATERIALFLAG_REFLECTION;
 		}
 		else if (!strncmp(tx->name, "sky", 3))
-			tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			tx->basematerialflags = MATERIALFLAG_SKY;
 		else if (!strcmp(tx->name, "caulk"))
 			tx->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 		else if (tx->currentskinframe != NULL && tx->currentskinframe->hasalpha)
 			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 		tx->currentmaterialflags = tx->basematerialflags;
+
+		// duplicate of sky with NOSHADOW
+		if (tx->basematerialflags & MATERIALFLAG_SKY)
+		{
+			*currentskynoshadowtexture = *tx;
+			currentskynoshadowtexture->basematerialflags |= MATERIALFLAG_NOSHADOW;
+			tx->skynoshadowtexture = currentskynoshadowtexture;
+			currentskynoshadowtexture++;
+		}
 	}
 
 	// sequence the animations
@@ -3181,6 +3232,26 @@ static void Mod_Q1BSP_LoadPlanes(sizebuf_t *sb)
 	}
 }
 
+// fixes up sky surfaces that have SKY contents behind them, so that they do not cast shadows (e1m5 logo shadow trick).
+static void Mod_Q1BSP_AssignNoShadowSkySurfaces(dp_model_t *mod)
+{
+	int i;
+	msurface_t *surface;
+	vec3_t center;
+	int contents;
+	for (i = 0, surface = mod->data_surfaces + mod->firstmodelsurface; i < mod->nummodelsurfaces; i++, surface++)
+	{
+		if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
+		{
+			// check if the point behind the surface polygon is SOLID or SKY contents
+			VectorMAMAM(0.5f, surface->mins, 0.5f, surface->maxs, -0.25f, mod->surfmesh.data_normal3f + 3*surface->num_firstvertex, center);
+			contents = Mod_Q1BSP_PointSuperContents(mod, 0, center);
+			if (!(contents & SUPERCONTENTS_SOLID))
+				surface->texture = surface->texture->skynoshadowtexture;
+		}
+	}
+}
+
 static void Mod_Q1BSP_LoadMapBrushes(void)
 {
 #if 0
@@ -4049,6 +4120,9 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		// set node/leaf parents for this submodel
 		Mod_Q1BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + mod->brushq1.hulls[0].firstclipnode, NULL);
 
+		// this has to occur after hull info has been set, as it uses Mod_Q1BSP_PointSuperContents
+		Mod_Q1BSP_AssignNoShadowSkySurfaces(mod);
+
 		// make the model surface list (used by shadowing/lighting)
 		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
 		Mod_MakeSortedSurfaces(mod);
@@ -4386,7 +4460,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				{
 					// sky is a rather specific thing
 					q2flags &= ~Q2SURF_NODRAW; // quake2 had a slightly different meaning than we have in mind here...
-					tx->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+					tx->basematerialflags = MATERIALFLAG_SKY;
 					tx->supercontents = SUPERCONTENTS_SKY | SUPERCONTENTS_NODROP | SUPERCONTENTS_OPAQUE;
 					tx->surfaceflags = Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NOIMPACT | Q3SURFACEFLAG_NOMARKS | Q3SURFACEFLAG_NODLIGHT | Q3SURFACEFLAG_NOLIGHTMAP;
 				}
