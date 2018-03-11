@@ -81,6 +81,7 @@ cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow 
 cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t sv_cullentities_trace_delay_players = {0, "sv_cullentities_trace_delay_players", "0.2", "number of seconds until the entity gets actually culled if it is a player entity"};
 cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t sv_cullentities_trace_eyejitter = {0, "sv_cullentities_trace_eyejitter", "16", "jitter the eye by this much for each trace"};
 cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
 cvar_t sv_cullentities_trace_prediction_time = {0, "sv_cullentities_trace_prediction_time", "0.2", "how many seconds of prediction to use"};
 cvar_t sv_cullentities_trace_entityocclusion = {0, "sv_cullentities_trace_entityocclusion", "0", "also check if doors and other bsp models are in the way"};
@@ -493,6 +494,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
+	Cvar_RegisterVariable (&sv_cullentities_trace_eyejitter);
 	Cvar_RegisterVariable (&sv_cullentities_trace_entityocclusion);
 	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
 	Cvar_RegisterVariable (&sv_cullentities_trace_prediction_time);
@@ -1485,12 +1487,14 @@ static void SV_PrepareEntitiesForSending(void)
 
 #define MAX_LINEOFSIGHTTRACES 64
 
-qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qboolean SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	float pitchsign;
 	float alpha;
 	float starttransformed[3], endtransformed[3];
+	float boxminstransformed[3], boxmaxstransformed[3];
+	float localboxcenter[3], localboxextents[3], localboxmins[3], localboxmaxs[3];
 	int blocked = 0;
 	int traceindex;
 	int originalnumtouchedicts;
@@ -1500,12 +1504,20 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 	dp_model_t *model;
 	prvm_edict_t *touch;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
+	vec3_t eyemins, eyemaxs, start;
 	vec3_t boxmins, boxmaxs;
 	vec3_t clipboxmins, clipboxmaxs;
 	vec3_t endpoints[MAX_LINEOFSIGHTTRACES];
 
 	numtraces = min(numtraces, MAX_LINEOFSIGHTTRACES);
 
+	// jitter the eye location within this box
+	eyemins[0] = eye[0] - eyejitter;
+	eyemaxs[0] = eye[0] + eyejitter;
+	eyemins[1] = eye[1] - eyejitter;
+	eyemaxs[1] = eye[1] + eyejitter;
+	eyemins[2] = eye[2] - eyejitter;
+	eyemaxs[2] = eye[2] + eyejitter;
 	// expand the box a little
 	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0];
 	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0];
@@ -1519,8 +1531,8 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 		VectorSet(endpoints[traceindex], lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));
 
 	// calculate sweep box for the entire swarm of traces
-	VectorCopy(eye, clipboxmins);
-	VectorCopy(eye, clipboxmaxs);
+	VectorCopy(eyemins, clipboxmins);
+	VectorCopy(eyemaxs, clipboxmaxs);
 	for (traceindex = 0;traceindex < numtraces;traceindex++)
 	{
 		clipboxmins[0] = min(clipboxmins[0], endpoints[traceindex][0]);
@@ -1566,9 +1578,10 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 
 	for (traceindex = 0;traceindex < numtraces;traceindex++)
 	{
+		VectorSet(start, lhrandom(eyemins[0], eyemaxs[0]), lhrandom(eyemins[1], eyemaxs[1]), lhrandom(eyemins[2], eyemaxs[2]));
 		// check world occlusion
 		if (sv.worldmodel && sv.worldmodel->brush.TraceLineOfSight)
-			if (!sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, eye, endpoints[traceindex]))
+			if (!sv.worldmodel->brush.TraceLineOfSight(sv.worldmodel, start, endpoints[traceindex], boxmins, boxmaxs))
 				continue;
 		for (touchindex = 0;touchindex < numtouchedicts;touchindex++)
 		{
@@ -1581,9 +1594,22 @@ qboolean SV_CanSeeBox(int numtraces, vec_t enlarge, vec3_t eye, vec3_t entboxmin
 				Matrix4x4_CreateFromQuakeEntity(&matrix, PRVM_serveredictvector(touch, origin)[0], PRVM_serveredictvector(touch, origin)[1], PRVM_serveredictvector(touch, origin)[2], pitchsign * PRVM_serveredictvector(touch, angles)[0], PRVM_serveredictvector(touch, angles)[1], PRVM_serveredictvector(touch, angles)[2], 1);
 				Matrix4x4_Invert_Simple(&imatrix, &matrix);
 				// see if the ray hits this entity
-				Matrix4x4_Transform(&imatrix, eye, starttransformed);
+				Matrix4x4_Transform(&imatrix, start, starttransformed);
 				Matrix4x4_Transform(&imatrix, endpoints[traceindex], endtransformed);
-				if (!model->brush.TraceLineOfSight(model, starttransformed, endtransformed))
+				Matrix4x4_Transform(&imatrix, boxmins, boxminstransformed);
+				Matrix4x4_Transform(&imatrix, boxmaxs, boxmaxstransformed);
+				// transform the AABB to local space
+				VectorMAM(0.5f, boxminstransformed, 0.5f, boxmaxstransformed, localboxcenter);
+				localboxextents[0] = fabs(boxmaxstransformed[0] - localboxcenter[0]);
+				localboxextents[1] = fabs(boxmaxstransformed[1] - localboxcenter[1]);
+				localboxextents[2] = fabs(boxmaxstransformed[2] - localboxcenter[2]);
+				localboxmins[0] = localboxcenter[0] - localboxextents[0];
+				localboxmins[1] = localboxcenter[1] - localboxextents[1];
+				localboxmins[2] = localboxcenter[2] - localboxextents[2];
+				localboxmaxs[0] = localboxcenter[0] + localboxextents[0];
+				localboxmaxs[1] = localboxcenter[1] + localboxextents[1];
+				localboxmaxs[2] = localboxcenter[2] + localboxextents[2];
+				if (!model->brush.TraceLineOfSight(model, starttransformed, endtransformed, localboxmins, localboxmaxs))
 				{
 					blocked++;
 					break;
@@ -1703,7 +1729,7 @@ static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				{
 					int eyeindex;
 					for (eyeindex = 0;eyeindex < sv.writeentitiestoclient_numeyes;eyeindex++)
-						if(SV_CanSeeBox(samples, enlarge, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+						if(SV_CanSeeBox(samples, sv_cullentities_trace_eyejitter.value, enlarge, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 							break;
 					if(eyeindex < sv.writeentitiestoclient_numeyes)
 						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
@@ -1786,7 +1812,7 @@ static void SV_AddCameraEyes(void)
 		for(k = 0; k < sv.writeentitiestoclient_numeyes; ++k)
 		if(eye_levels[k] <= MAX_EYE_RECURSION)
 		{
-			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_enlarge.value, sv.writeentitiestoclient_eyes[k], mi, ma))
+			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv.writeentitiestoclient_eyes[k], mi, ma))
 			{
 				eye_levels[sv.writeentitiestoclient_numeyes] = eye_levels[k] + 1;
 				VectorCopy(camera_origins[j], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
@@ -1847,7 +1873,7 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 		vec_t predtime = bound(0, host_client->ping, sv_cullentities_trace_prediction_time.value);
 		vec3_t predeye;
 		VectorMA(eye, predtime, PRVM_serveredictvector(camera, velocity), predeye);
-		if (SV_CanSeeBox(1, 0, eye, predeye, predeye))
+		if (SV_CanSeeBox(1, 0, 0, eye, predeye, predeye))
 		{
 			VectorCopy(predeye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
 			sv.writeentitiestoclient_numeyes++;
