@@ -307,10 +307,8 @@ typedef struct rtlight_s
 	/// culling
 	vec3_t cullmins;
 	vec3_t cullmaxs;
-	// culling
-	//vec_t cullradius;
-	// squared cullradius
-	//vec_t cullradius2;
+	/// when r_shadow_culllights_trace is set, this is refreshed by each successful trace.
+	double trace_timer;
 
 	// rendering properties, updated each time a light is rendered
 	// this is rtlight->color * d_lightstylevalue

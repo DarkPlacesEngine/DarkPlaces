@@ -334,6 +334,13 @@ cvar_t r_shadow_sortsurfaces = {0, "r_shadow_sortsurfaces", "1", "improve perfor
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
+cvar_t r_shadow_culllights_pvs = {CVAR_SAVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
+cvar_t r_shadow_culllights_trace = {CVAR_SAVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
+cvar_t r_shadow_culllights_trace_eyejitter = {CVAR_SAVE, "r_shadow_culllights_trace_eyejitter", "16", "offset eye location randomly by this much"};
+cvar_t r_shadow_culllights_trace_enlarge = {CVAR_SAVE, "r_shadow_culllights_trace_enlarge", "0.1", "make light bounds bigger by *1.0+enlarge"};
+cvar_t r_shadow_culllights_trace_samples = {CVAR_SAVE, "r_shadow_culllights_trace_samples", "16", "use this many traces to random positions (in addition to center trace)"};
+cvar_t r_shadow_culllights_trace_tempsamples = {CVAR_SAVE, "r_shadow_culllights_trace_tempsamples", "16", "use this many traces if the light was created by csqc (no inter-frame caching), -1 disables the check (to avoid flicker entirely)"};
+cvar_t r_shadow_culllights_trace_delay = {CVAR_SAVE, "r_shadow_culllights_trace_delay", "1", "light will be considered visible for this many seconds after any trace connects"};
 cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
 cvar_t r_shadow_bouncegrid_blur = {CVAR_SAVE, "r_shadow_bouncegrid_blur", "0", "apply a 1-radius blur on bouncegrid to denoise it and deal with boundary issues with surfaces"};
 cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
@@ -804,6 +811,13 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&r_shadow_culllights_pvs);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_eyejitter);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_enlarge);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_samples);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_tempsamples);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_delay);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_blur);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_bounceanglediffuse);
@@ -2846,12 +2860,26 @@ static void R_Shadow_BounceGrid_AssignPhotons(r_shadow_bouncegrid_settings_t *se
 		w = r_shadow_lightintensityscale.value * (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale);
 		if (!settings->staticmode)
 		{
+			// skip if the expanded light box does not touch any visible leafs
+			if (r_refdef.scene.worldmodel
+				&& r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
+				&& !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, cullmins, cullmaxs))
+				continue;
+			// skip if the expanded light box is not visible to traceline
+			// note that PrepareLight already did this check but for a smaller box, so we
+			// end up casting more traces per frame per light when using bouncegrid, which
+			// is probably fine (and they use the same timer)
+			if (r_shadow_culllights_trace.integer)
+			{
+				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+					rtlight->trace_timer = realtime;
+				if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+					return;
+			}
+			// skip if expanded light box is offscreen
 			if (R_CullBox(cullmins, cullmaxs))
 				continue;
-			if (r_refdef.scene.worldmodel
-			 && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
-			 && !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, cullmins, cullmaxs))
-				continue;
+			// skip if overall light intensity is zero
 			if (w * VectorLength2(rtlight->color) == 0.0f)
 				continue;
 		}
@@ -4656,7 +4684,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	}
 	*/
 
-	// if lightstyle is currently off, don't draw the light
+	// skip if lightstyle is currently off
 	if (VectorLength2(rtlight->currentcolor) < (1.0f / 1048576.0f))
 		return;
 
@@ -4664,10 +4692,27 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	if (nolight)
 		return;
 
-	// if the light box is offscreen, skip it
+	// skip if the light box is not touching any visible leafs
+	if (r_shadow_culllights_pvs.integer
+		&& r_refdef.scene.worldmodel
+		&& r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs
+		&& !r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, rtlight->cullmins, rtlight->cullmaxs))
+		return;
+
+	// skip if the light box is not visible to traceline
+	if (r_shadow_culllights_trace.integer)
+	{
+		if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+			rtlight->trace_timer = realtime;
+		if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+			return;
+	}
+
+	// skip if the light box is off screen
 	if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
 		return;
 
+	// in the typical case this will be quickly replaced by GetLightInfo
 	VectorCopy(rtlight->cullmins, rtlight->cached_cullmins);
 	VectorCopy(rtlight->cullmaxs, rtlight->cached_cullmaxs);
 
