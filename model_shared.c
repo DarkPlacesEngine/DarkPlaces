@@ -2498,7 +2498,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
-			texture->basematerialflags = MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			texture->basematerialflags = MATERIALFLAG_SKY;
 			if (shader->skyboxname[0])
 			{
 				// quake3 seems to append a _ to the skybox name, so this must do so as well
@@ -2794,7 +2794,7 @@ nothing                GL_ZERO GL_ONE
 		}
 		else if (texture->surfaceflags & Q3SURFACEFLAG_SKY)
 		{
-			texture->basematerialflags |= MATERIALFLAG_SKY | MATERIALFLAG_NOSHADOW;
+			texture->basematerialflags |= MATERIALFLAG_SKY;
 			texture->supercontents = SUPERCONTENTS_SKY;
 		}
 		else
