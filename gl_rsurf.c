@@ -704,6 +704,8 @@ typedef struct r_q1bsp_getlightinfo_s
 	const unsigned char *pvs;
 	qboolean svbsp_active;
 	qboolean svbsp_insertoccluder;
+	qboolean noocclusion; // avoids PVS culling
+	qboolean frontsidecasting; // casts shadows from surfaces facing the light (otherwise ones facing away)
 	int numfrustumplanes;
 	const mplane_t *frustumplanes;
 }
@@ -734,7 +736,8 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 	const vec_t *v[3];
 	float v2[3][3];
 	qboolean insidebox;
-	qboolean frontsidecasting = r_shadow_frontsidecasting.integer != 0;
+	qboolean noocclusion = info->noocclusion;
+	qboolean frontsidecasting = info->frontsidecasting;
 	qboolean svbspactive = info->svbsp_active;
 	qboolean svbspinsertoccluder = info->svbsp_insertoccluder;
 	const int *leafsurfaceindices;
@@ -824,7 +827,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 			// leaf
 			leaf = (mleaf_t *)node;
 #if 1
-			if (r_shadow_frontsidecasting.integer && info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
+			if (!info->noocclusion && info->pvs != NULL && !CHECKPVSBIT(info->pvs, leaf->clusterindex))
 				continue;
 #endif
 #if 1
@@ -941,7 +944,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 						addedtris = true;
 						if (castshadow)
 						{
-							if (currentmaterialflags & MATERIALFLAG_NOCULLFACE)
+							if (noocclusion || (currentmaterialflags & MATERIALFLAG_NOCULLFACE))
 							{
 								// if the material is double sided we
 								// can't cull by direction
@@ -983,6 +986,8 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 	int nodeleafindex;
 	int currentmaterialflags;
 	qboolean castshadow;
+	qboolean noocclusion = info->noocclusion;
+	qboolean frontsidecasting = info->frontsidecasting;
 	msurface_t *surface;
 	const int *e;
 	const vec_t *v[3];
@@ -1042,13 +1047,13 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 				SETPVSBIT(info->outlighttrispvs, t);
 				if (castshadow)
 				{
-					if (currentmaterialflags & MATERIALFLAG_NOCULLFACE)
+					if (noocclusion || (currentmaterialflags & MATERIALFLAG_NOCULLFACE))
 					{
 						// if the material is double sided we
 						// can't cull by direction
 						SETPVSBIT(info->outshadowtrispvs, t);
 					}
-					else if (r_shadow_frontsidecasting.integer)
+					else if (frontsidecasting)
 					{
 						// front side casting occludes backfaces,
 						// so they are completely useless as both
@@ -1205,9 +1210,11 @@ static int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
 
 extern cvar_t r_shadow_sortsurfaces;
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
 {
 	r_q1bsp_getlightinfo_t info;
+	info.frontsidecasting = r_shadow_frontsidecasting.integer != 0;
+	info.noocclusion = noocclusion || !info.frontsidecasting;
 	VectorCopy(relativelightorigin, info.relativelightorigin);
 	info.lightradius = lightradius;
 	info.lightmins[0] = info.relativelightorigin[0] - info.lightradius;
@@ -1246,18 +1253,18 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	else
 		memset(outshadowtrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	memset(outlighttrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
-	if (info.model->brush.GetPVS && r_shadow_frontsidecasting.integer)
+	if (info.model->brush.GetPVS && !info.noocclusion)
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;
 	RSurf_ActiveWorldEntity();
 
-	if (r_shadow_frontsidecasting.integer && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer && info.model->brush.data_portals)
+	if (!info.noocclusion && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer && info.model->brush.data_portals)
 	{
 		// use portal recursion for exact light volume culling, and exact surface checking
 		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, true, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs, info.outshadowtrispvs, info.outlighttrispvs, info.visitingleafpvs);
 	}
-	else if (r_shadow_frontsidecasting.integer && r_shadow_realtime_dlight_portalculling.integer && info.model->brush.data_portals)
+	else if (!info.noocclusion && r_shadow_realtime_dlight_portalculling.integer && info.model->brush.data_portals)
 	{
 		// use portal recursion for exact light volume culling, but not the expensive exact surface checking
 		Portal_Visibility(info.model, info.relativelightorigin, info.outleaflist, info.outleafpvs, &info.outnumleafs, info.outsurfacelist, info.outsurfacepvs, &info.outnumsurfaces, NULL, 0, r_shadow_realtime_dlight_portalculling.integer >= 2, info.lightmins, info.lightmaxs, info.outmins, info.outmaxs, info.outshadowtrispvs, info.outlighttrispvs, info.visitingleafpvs);
@@ -1268,7 +1275,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		// optionally using svbsp for exact culling of compiled lights
 		// (or if the user enables dlight svbsp culling, which is mostly for
 		//  debugging not actual use)
-		R_Q1BSP_CallRecursiveGetLightInfo(&info, (r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer) != 0);
+		R_Q1BSP_CallRecursiveGetLightInfo(&info, !info.noocclusion && (r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer) != 0);
 	}
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
