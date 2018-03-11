@@ -164,8 +164,7 @@ static void adddirentry(stringlist_t *list, const char *path, const char *name)
 #ifdef WIN32
 void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 {
-	int i;
-	char pattern[4096], *c;
+	char pattern[4096];
 	WIN32_FIND_DATA n_file;
 	HANDLE hFile;
 	strlcpy (pattern, basepath, sizeof(pattern));
