@@ -1502,7 +1502,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 
 				if(snd_spatialization_occlusion.integer & 2)
 					if(!occluded)
-						if(cl.worldmodel && cl.worldmodel->brush.TraceLineOfSight && !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, ch->origin))
+						if(cl.worldmodel && cl.worldmodel->brush.TraceLineOfSight && !cl.worldmodel->brush.TraceLineOfSight(cl.worldmodel, listener_origin, ch->origin, ch->origin, ch->origin))
 							occluded = true;
 			}
 			if(occluded)

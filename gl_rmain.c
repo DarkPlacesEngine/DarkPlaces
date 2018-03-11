@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "cl_video.h"
 #include "dpsoftrast.h"
+#include "cl_collision.h"
 
 #ifdef SUPPORTD3D
 #include <d3d9.h>
@@ -109,10 +110,12 @@ cvar_t r_drawworld = {0, "r_drawworld","1", "draw world (most static stuff)"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1", "draw your weapon model"};
 cvar_t r_drawexteriormodel = {0, "r_drawexteriormodel","1", "draw your player model (e.g. in chase cam, reflections)"};
 cvar_t r_cullentities_trace = {0, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
+cvar_t r_cullentities_trace_entityocclusion = { 0, "r_cullentities_trace_entityocclusion", "1", "check for occluding entities such as doors, not just world hull" };
 cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
 cvar_t r_cullentities_trace_tempentitysamples = {0, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
 cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
 cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+cvar_t r_cullentities_trace_eyejitter = {0, "r_cullentities_trace_eyejitter", "16", "randomly offset rays from the eye by this much to reduce the odds of flickering"};
 cvar_t r_sortentities = {0, "r_sortentities", "0", "sort entities before drawing (might be faster)"};
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
 cvar_t r_fullbright = {0, "r_fullbright","0", "makes map very bright and renders faster"};
@@ -4351,6 +4354,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_draw2d);
 	Cvar_RegisterVariable(&r_drawworld);
 	Cvar_RegisterVariable(&r_cullentities_trace);
+	Cvar_RegisterVariable(&r_cullentities_trace_entityocclusion);
 	Cvar_RegisterVariable(&r_cullentities_trace_samples);
 	Cvar_RegisterVariable(&r_cullentities_trace_tempentitysamples);
 	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
@@ -5218,42 +5222,88 @@ static void R_View_UpdateEntityLighting (void)
 	}
 }
 
-#define MAX_LINEOFSIGHTTRACES 64
-
-static qboolean R_CanSeeBox(int numsamples, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	int i;
+	vec3_t eyemins, eyemaxs;
 	vec3_t boxmins, boxmaxs;
 	vec3_t start;
 	vec3_t end;
 	dp_model_t *model = r_refdef.scene.worldmodel;
+	static vec3_t positions[] = {
+		{ 0.5f, 0.5f, 0.5f },
+		{ 0.0f, 0.0f, 0.0f },
+		{ 0.0f, 0.0f, 1.0f },
+		{ 0.0f, 1.0f, 0.0f },
+		{ 0.0f, 1.0f, 1.0f },
+		{ 1.0f, 0.0f, 0.0f },
+		{ 1.0f, 0.0f, 1.0f },
+		{ 1.0f, 1.0f, 0.0f },
+		{ 1.0f, 1.0f, 1.0f },
+	};
 
-	if (!model || !model->brush.TraceLineOfSight)
+	// sample count can be set to -1 to skip this logic, for flicker-prone objects
+	if (numsamples < 0)
 		return true;
 
+	// view origin is not used for culling in portal/reflection/refraction renders or isometric views
+	if (r_refdef.view.useclipplane || !r_refdef.view.useperspective || r_trippy.integer)
+		return true;
+
+	if (!r_cullentities_trace_entityocclusion.integer && (!model || !model->brush.TraceLineOfSight))
+		return true;
+
+	// expand the eye box a little
+	eyemins[0] = eye[0] - eyejitter;
+	eyemaxs[0] = eye[0] + eyejitter;
+	eyemins[1] = eye[1] - eyejitter;
+	eyemaxs[1] = eye[1] + eyejitter;
+	eyemins[2] = eye[2] - eyejitter;
+	eyemaxs[2] = eye[2] + eyejitter;
 	// expand the box a little
-	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0];
-	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0];
-	boxmins[1] = (enlarge+1) * entboxmins[1] - enlarge * entboxmaxs[1];
-	boxmaxs[1] = (enlarge+1) * entboxmaxs[1] - enlarge * entboxmins[1];
-	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2];
-	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2];
+	boxmins[0] = (entboxenlarge + 1) * entboxmins[0] - entboxenlarge * entboxmaxs[0];
+	boxmaxs[0] = (entboxenlarge + 1) * entboxmaxs[0] - entboxenlarge * entboxmins[0];
+	boxmins[1] = (entboxenlarge + 1) * entboxmins[1] - entboxenlarge * entboxmaxs[1];
+	boxmaxs[1] = (entboxenlarge + 1) * entboxmaxs[1] - entboxenlarge * entboxmins[1];
+	boxmins[2] = (entboxenlarge + 1) * entboxmins[2] - entboxenlarge * entboxmaxs[2];
+	boxmaxs[2] = (entboxenlarge + 1) * entboxmaxs[2] - entboxenlarge * entboxmins[2];
 
-	// return true if eye is inside enlarged box
-	if (BoxesOverlap(boxmins, boxmaxs, eye, eye))
+	// return true if eye overlaps enlarged box
+	if (BoxesOverlap(boxmins, boxmaxs, eyemins, eyemaxs))
 		return true;
 
-	// try center
-	VectorCopy(eye, start);
-	VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, end);
-	if (model->brush.TraceLineOfSight(model, start, end))
+	// try specific positions in the box first - note that these can be cached
+	if (r_cullentities_trace_entityocclusion.integer)
+	{
+		for (i = 0; i < sizeof(positions) / sizeof(positions[0]); i++)
+		{
+			VectorCopy(eye, start);
+			end[0] = boxmins[0] + (boxmaxs[0] - boxmins[0]) * positions[i][0];
+			end[1] = boxmins[1] + (boxmaxs[1] - boxmins[1]) * positions[i][1];
+			end[2] = boxmins[2] + (boxmaxs[2] - boxmins[2]) * positions[i][2];
+			//trace_t trace = CL_TraceLine(start, end, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, 0.0f, true, false, NULL, true, true);
+			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NOMONSTERS, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY);
+			// not picky - if the trace ended anywhere in the box we're good
+			if (BoxesOverlap(trace.endpos, trace.endpos, boxmins, boxmaxs))
+				return true;
+		}
+	}
+	else if (model->brush.TraceLineOfSight(model, start, end, boxmins, boxmaxs))
 		return true;
 
 	// try various random positions
-	for (i = 0;i < numsamples;i++)
+	for (i = 0; i < numsamples; i++)
 	{
+		VectorSet(start, lhrandom(eyemins[0], eyemaxs[0]), lhrandom(eyemins[1], eyemaxs[1]), lhrandom(eyemins[2], eyemaxs[2]));
 		VectorSet(end, lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));
-		if (model->brush.TraceLineOfSight(model, start, end))
+		if (r_cullentities_trace_entityocclusion.integer)
+		{
+			trace_t trace = CL_TraceLine(start, end, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, 0.0f, true, false, NULL, true, true);
+			// not picky - if the trace ended anywhere in the box we're good
+			if (BoxesOverlap(trace.endpos, trace.endpos, boxmins, boxmaxs))
+				return true;
+		}
+		else if (model->brush.TraceLineOfSight(model, start, end, boxmins, boxmaxs))
 			return true;
 	}
 
@@ -5302,22 +5352,19 @@ static void R_View_UpdateEntityVisible (void)
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
-	if(r_cullentities_trace.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.TraceLineOfSight && !r_refdef.view.useclipplane && !r_trippy.integer)
-		// sorry, this check doesn't work for portal/reflection/refraction renders as the view origin is not useful for culling
+	if (r_cullentities_trace.integer)
 	{
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			if (!r_refdef.viewcache.entityvisible[i])
 				continue;
 			ent = r_refdef.scene.entities[i];
-			if(!(ent->flags & (RENDER_VIEWMODEL | RENDER_WORLDOBJECT | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
+			if (!(ent->flags & (RENDER_VIEWMODEL | RENDER_WORLDOBJECT | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
 			{
-				samples = ent->entitynumber ? r_cullentities_trace_samples.integer : r_cullentities_trace_tempentitysamples.integer;
-				if (samples < 0)
-					continue; // temp entities do pvs only
-				if(R_CanSeeBox(samples, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
+				samples = ent->last_trace_visibility == 0 ? r_cullentities_trace_tempentitysamples.integer : r_cullentities_trace_samples.integer;
+				if (R_CanSeeBox(samples, r_cullentities_trace_eyejitter.value, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
 					ent->last_trace_visibility = realtime;
-				if(ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
+				if (ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
 					r_refdef.viewcache.entityvisible[i] = 0;
 			}
 		}

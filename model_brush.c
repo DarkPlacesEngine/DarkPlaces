@@ -70,7 +70,7 @@ static texture_t mod_q1bsp_texture_lava;
 static texture_t mod_q1bsp_texture_slime;
 static texture_t mod_q1bsp_texture_water;
 
-static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end);
+static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs);
 
 void Mod_BrushInit(void)
 {
@@ -1182,11 +1182,11 @@ void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t 
 	}
 }
 
-static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end)
+static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs)
 {
 	trace_t trace;
 	Mod_Q1BSP_TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK, 0);
-	return trace.fraction == 1;
+	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
 static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
@@ -6786,7 +6786,7 @@ static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambie
 	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
 }
 
-static int Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(mnode_t *node, double p1[3], double p2[3])
+static int Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(mnode_t *node, double p1[3], double p2[3], double endpos[3])
 {
 	double t1, t2;
 	double midf, mid[3];
@@ -6836,31 +6836,34 @@ static int Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(mnode_t *node, double p
 		// or if start is solid and end is empty
 		// as these degenerate cases usually indicate the eye is in solid and
 		// should see the target point anyway
-		ret = Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side    ], p1, mid);
+		ret = Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side    ], p1, mid, endpos);
 		if (ret != 0)
 			return ret;
-		ret = Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side ^ 1], mid, p2);
+		ret = Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(node->children[side ^ 1], mid, p2, endpos);
 		if (ret != 1)
 			return ret;
+		VectorCopy(mid, endpos);
 		return 2;
 	}
 	return ((mleaf_t *)node)->clusterindex < 0;
 }
 
-static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end)
+static qboolean Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs)
 {
 	if (model->brush.submodel || mod_q3bsp_tracelineofsight_brushes.integer)
 	{
 		trace_t trace;
 		model->TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK, 0);
-		return trace.fraction == 1;
+		return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 	}
 	else
 	{
-		double tracestart[3], traceend[3];
+		double tracestart[3], traceend[3], traceendpos[3];
 		VectorCopy(start, tracestart);
 		VectorCopy(end, traceend);
-		return !Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(model->brush.data_nodes, tracestart, traceend);
+		VectorCopy(end, traceendpos);
+		Mod_Q3BSP_TraceLineOfSight_RecursiveNodeCheck(model->brush.data_nodes, tracestart, traceend, traceendpos);
+		return BoxesOverlap(traceendpos, traceendpos, acceptmins, acceptmaxs);
 	}
 }
 
@@ -7230,11 +7233,11 @@ int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const 
 	return trace.startsupercontents;
 }
 
-qboolean Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end)
+qboolean Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs)
 {
 	trace_t trace;
 	Mod_CollisionBIH_TraceLine(model, NULL, NULL, &trace, start, end, SUPERCONTENTS_VISBLOCKERMASK, 0);
-	return trace.fraction == 1;
+	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
 void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask)
