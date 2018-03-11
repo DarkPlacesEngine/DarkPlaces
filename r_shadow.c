@@ -4138,7 +4138,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		// this variable must be set for the CompileShadowVolume/CompileShadowMap code
 		r_shadow_compilingrtlight = rtlight;
 		R_FrameData_SetMark();
-		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, 0, NULL);
+		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, 0, NULL, rtlight->shadow == 0);
 		R_FrameData_ReturnToMark();
 		numleafpvsbytes = (model->brush.num_leafs + 7) >> 3;
 		numshadowtrispvsbytes = ((model->brush.shadowmesh ? model->brush.shadowmesh->numtriangles : model->surfmesh.num_triangles) + 7) >> 3;
@@ -4694,7 +4694,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	{
 		// dynamic light, world available and can receive realtime lighting
 		// calculate lit surfaces and leafs
-		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rtlight->cached_cullmins, rtlight->cached_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes);
+		r_refdef.scene.worldmodel->GetLightInfo(r_refdef.scene.worldentity, rtlight->shadoworigin, rtlight->radius, rtlight->cached_cullmins, rtlight->cached_cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes, rtlight->shadow == 0);
 		R_Shadow_ComputeShadowCasterCullingPlanes(rtlight);
 		leaflist = r_shadow_buffer_leaflist;
 		leafpvs = r_shadow_buffer_leafpvs;
