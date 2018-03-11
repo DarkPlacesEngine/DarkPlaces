@@ -162,6 +162,7 @@ void R_DrawExplosions(void);
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
 int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes);
+qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
 
 #include "r_modules.h"
 
