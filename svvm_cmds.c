@@ -1648,6 +1648,10 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 	prvm_prog_t *prog = SVVM_prog;
 	int			i;
 	char		s[17];
+	union {
+		int i;
+		float f;
+	} u;
 
 	if(!vm_customstats)
 		return;
@@ -1669,7 +1673,9 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 			break;
 		//float field sent as-is
 		case 8:
-			stats[i+32] = PRVM_E_INT(ent, vm_customstats[i].fieldoffset);
+			// can't directly use PRVM_E_INT on the field because it may be PRVM_64 and a double is not the representation we want to send
+			u.f = PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
+			stats[i+32] = u.i;
 			break;
 		//integer value of float field
 		case 2:
