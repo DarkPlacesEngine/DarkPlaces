@@ -1105,6 +1105,7 @@ void Sbar_ShowFPS(void)
 	char blurstring[32];
 	char topspeedstring[48];
 	char texstring[MAX_QPATH];
+	char entstring[32];
 	qboolean red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
@@ -1114,8 +1115,9 @@ void Sbar_ShowFPS(void)
 	datestring[0] = 0;
 	speedstring[0] = 0;
 	blurstring[0] = 0;
-	texstring[0] = 0;
 	topspeedstring[0] = 0;
+	texstring[0] = 0;
+	entstring[0] = 0;
 	if (showfps.integer)
 	{
 		red = (showfps_framerate < 1.0f);
@@ -1197,19 +1199,50 @@ void Sbar_ShowFPS(void)
 		vec3_t org;
 		vec3_t dest;
 		vec3_t temp;
-		trace_t trace;
+		trace_t svtrace, cltrace;
+		int hitnetentity = -1;
 
 		Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, org);
 		VectorSet(temp, 65536, 0, 0);
 		Matrix4x4_Transform(&r_refdef.view.matrix, temp, dest);
-		trace.hittexture = NULL; // to make sure
-		// TODO change this trace to be stopped by anything "visible" (i.e. with a drawsurface), but not stuff like weapclip
-		// probably needs adding a new SUPERCONTENTS type
-		trace = CL_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, NULL, true, true);
-		if(trace.hittexture)
-			strlcpy(texstring, trace.hittexture->name, sizeof(texstring));
+		// clear the traces as we may or may not fill them out, and mark them with an invalid fraction so we know if we did
+		memset(&svtrace, 0, sizeof(svtrace));
+		memset(&cltrace, 0, sizeof(cltrace));
+		svtrace.fraction = 2.0;
+		cltrace.fraction = 2.0;
+		// ray hits models (even animated ones) and ignores translucent materials
+		if (SVVM_prog != NULL)
+			svtrace = SV_TraceLine(org, dest, MOVE_HITMODEL, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value);
+		cltrace = CL_TraceLine(org, dest, MOVE_HITMODEL, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, &hitnetentity, true, true);
+		if (cltrace.hittexture)
+			strlcpy(texstring, cltrace.hittexture->name, sizeof(texstring));
 		else
 			strlcpy(texstring, "(no texture hit)", sizeof(texstring));
+		fps_strings++;
+		if (svtrace.fraction < cltrace.fraction)
+		{
+			if (svtrace.ent != NULL)
+			{
+				prvm_prog_t *prog = SVVM_prog;
+				dpsnprintf(entstring, sizeof(entstring), "server entity %i", (int)PRVM_EDICT_TO_PROG(svtrace.ent));
+			}
+			else
+				strlcpy(entstring, "(no entity hit)", sizeof(entstring));
+		}
+		else
+		{
+			if (CLVM_prog != NULL && cltrace.ent != NULL)
+			{
+				prvm_prog_t *prog = CLVM_prog;
+				dpsnprintf(entstring, sizeof(entstring), "client entity %i", (int)PRVM_EDICT_TO_PROG(cltrace.ent));
+			}
+			else if (hitnetentity > 0)
+				dpsnprintf(entstring, sizeof(entstring), "network entity %i", hitnetentity);
+			else if (hitnetentity == 0)
+				strlcpy(entstring, "world entity", sizeof(entstring));
+			else
+				strlcpy(entstring, "(no entity hit)", sizeof(entstring));
+		}
 		fps_strings++;
 	}
 	if (fps_strings)
@@ -1292,6 +1325,13 @@ void Sbar_ShowFPS(void)
 			fps_x = vid_conwidth.integer - DrawQ_TextWidth(texstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
 			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
 			DrawQ_String(fps_x, fps_y, texstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+			fps_y += fps_scaley;
+		}
+		if (entstring[0])
+		{
+			fps_x = vid_conwidth.integer - DrawQ_TextWidth(entstring, 0, fps_scalex, fps_scaley, true, FONT_INFOBAR);
+			DrawQ_Fill(fps_x, fps_y, vid_conwidth.integer - fps_x, fps_scaley, 0, 0, 0, 0.5, 0);
+			DrawQ_String(fps_x, fps_y, entstring, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			fps_y += fps_scaley;
 		}
 	}
