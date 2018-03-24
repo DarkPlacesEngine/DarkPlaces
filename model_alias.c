@@ -752,33 +752,46 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	}
 }
 
-static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
 	msurface_t *surface;
-	float vertex3fbuf[1024*3];
+	float vertex3fbuf[1024 * 3];
 	float *vertex3f = vertex3fbuf;
+	float *freevertex3f = NULL;
+	// for static cases we can just call CollisionBIH which is much faster
+	if ((frameblend == NULL || (frameblend[0].subframe == 0 && frameblend[1].lerp == 0)) && (skeleton == NULL || skeleton->relativetransforms == NULL))
+	{
+		Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
+		return;
+	}
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->skipsupercontentsmask = skipsupercontentsmask;
-	if (model->surfmesh.num_vertices > 1024)
-		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
+	trace->skipmaterialflagsmask = skipmaterialflagsmask;
 	segmentmins[0] = min(start[0], end[0]) - 1;
 	segmentmins[1] = min(start[1], end[1]) - 1;
 	segmentmins[2] = min(start[2], end[2]) - 1;
 	segmentmaxs[0] = max(start[0], end[0]) + 1;
 	segmentmaxs[1] = max(start[1], end[1]) + 1;
 	segmentmaxs[2] = max(start[2], end[2]) + 1;
-	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
+	if (frameblend == NULL || frameblend[0].subframe != 0 || frameblend[0].lerp != 0 || skeleton != NULL)
+	{
+		if (model->surfmesh.num_vertices > 1024)
+			vertex3f = freevertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
+		model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
+	}
+	else
+		vertex3f = model->surfmesh.data_vertex3f;
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
 		Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
-	if (vertex3f != vertex3fbuf)
-		Mem_Free(vertex3f);
+	if (freevertex3f)
+		Mem_Free(freevertex3f);
 }
 
-static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask)
+static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int i;
 	vec3_t shiftstart, shiftend;
@@ -793,8 +806,15 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	{
 		VectorAdd(start, boxmins, shiftstart);
 		VectorAdd(end, boxmins, shiftend);
-		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask, skipsupercontentsmask);
+		Mod_MDLMD2MD3_TraceLine(model, frameblend, skeleton, trace, shiftstart, shiftend, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 		VectorSubtract(trace->endpos, boxmins, trace->endpos);
+		return;
+	}
+
+	// for static cases we can just call CollisionBIH which is much faster
+	if ((frameblend == NULL || (frameblend[0].subframe == 0 && frameblend[1].lerp == 0)) && (skeleton == NULL || skeleton->relativetransforms == NULL))
+	{
+		Mod_CollisionBIH_TraceBox(model, frameblend, skeleton, trace, start, boxmins, boxmaxs, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 		return;
 	}
 
@@ -803,6 +823,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	trace->fraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->skipsupercontentsmask = skipsupercontentsmask;
+	trace->skipmaterialflagsmask = skipmaterialflagsmask;
 	if (model->surfmesh.num_vertices > 1024)
 		vertex3f = (float *)Mem_Alloc(tempmempool, model->surfmesh.num_vertices * sizeof(float[3]));
 	segmentmins[0] = min(start[0], end[0]) + boxmins[0] - 1;
@@ -1330,9 +1351,10 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -1601,9 +1623,10 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	surface->num_firstvertex = 0;
 	surface->num_vertices = loadmodel->surfmesh.num_vertices;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -1796,9 +1819,10 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -2196,9 +2220,10 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -2574,9 +2599,10 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -3252,9 +3278,10 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if(mod_alias_force_animated.string[0])
 		loadmodel->surfmesh.isanimated = mod_alias_force_animated.integer != 0;
 
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
@@ -4018,9 +4045,10 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (!header.ofs_bounds)
 		Mod_Alias_CalculateBoundingBox();
 
-	if (!loadmodel->surfmesh.isanimated && loadmodel->surfmesh.num_triangles >= 1)
+	// Always make a BIH for the first frame, we can use it where possible.
+	Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
+	if (!loadmodel->surfmesh.isanimated)
 	{
-		Mod_MakeCollisionBIH(loadmodel, true, &loadmodel->collision_bih);
 		loadmodel->TraceBox = Mod_CollisionBIH_TraceBox;
 		loadmodel->TraceBrush = Mod_CollisionBIH_TraceBrush;
 		loadmodel->TraceLine = Mod_CollisionBIH_TraceLine;
