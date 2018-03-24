@@ -94,6 +94,7 @@ cvar_t r_transparent_sortsurfacesbynearest = {0, "r_transparent_sortsurfacesbyne
 cvar_t r_transparent_useplanardistance = {0, "r_transparent_useplanardistance", "0", "sort transparent meshes by distance from view plane rather than spherical distance to the chosen point"};
 cvar_t r_showoverdraw = {0, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {0, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
+cvar_t r_showbboxes_client = { 0, "r_showbboxes_client", "0", "shows bounding boxes of clientside qc entities, value controls opacity scaling (1 = 10%,  10 = 100%)" };
 cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
@@ -4340,6 +4341,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_transparent_useplanardistance);
 	Cvar_RegisterVariable(&r_showoverdraw);
 	Cvar_RegisterVariable(&r_showbboxes);
+	Cvar_RegisterVariable(&r_showbboxes_client);
 	Cvar_RegisterVariable(&r_showsurfaces);
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_shownormals);
@@ -7450,7 +7452,7 @@ void R_RenderWaterPlanes(int fbo, rtexture_t *depthtexture, rtexture_t *colortex
 
 extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
-static void R_DrawEntityBBoxes(void);
+static void R_DrawEntityBBoxes(prvm_prog_t *prog);
 static void R_DrawModelDecals(void);
 extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
@@ -7635,11 +7637,17 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 				R_TimeReport("portals");
 		}
 
+		if (r_showbboxes_client.value > 0)
+		{
+			R_DrawEntityBBoxes(CLVM_prog);
+			if (r_timereport_active)
+				R_TimeReport("clbboxes");
+		}
 		if (r_showbboxes.value > 0)
 		{
-			R_DrawEntityBBoxes();
+			R_DrawEntityBBoxes(SVVM_prog);
 			if (r_timereport_active)
-				R_TimeReport("bboxes");
+				R_TimeReport("svbboxes");
 		}
 	}
 
@@ -7703,10 +7711,36 @@ static const unsigned short bboxelements[36] =
 	1, 0, 2, 1, 2, 3,
 };
 
+#define BBOXEDGES 13
+static const float bboxedges[BBOXEDGES][6] = 
+{
+	// whole box
+	{ 0, 0, 0, 1, 1, 1 },
+	// bottom edges
+	{ 0, 0, 0, 0, 1, 0 },
+	{ 0, 0, 0, 1, 0, 0 },
+	{ 0, 1, 0, 1, 1, 0 },
+	{ 1, 0, 0, 1, 1, 0 },
+	// top edges
+	{ 0, 0, 1, 0, 1, 1 },
+	{ 0, 0, 1, 1, 0, 1 },
+	{ 0, 1, 1, 1, 1, 1 },
+	{ 1, 0, 1, 1, 1, 1 },
+	// vertical edges
+	{ 0, 0, 0, 0, 0, 1 },
+	{ 1, 0, 0, 1, 0, 1 },
+	{ 0, 1, 0, 0, 1, 1 },
+	{ 1, 1, 0, 1, 1, 1 },
+};
+
 static void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
 {
-	int i;
-	float *v, *c, f1, f2, vertex3f[8*3], color4f[8*4];
+	int numvertices = BBOXEDGES * 8;
+	float vertex3f[BBOXEDGES * 8 * 3], color4f[BBOXEDGES * 8 * 4];
+	int numtriangles = BBOXEDGES * 12;
+	unsigned short elements[BBOXEDGES * 36];
+	int i, edge;
+	float *v, *c, f1, f2, edgemins[3], edgemaxs[3];
 
 	RSurf_ActiveWorldEntity();
 
@@ -7714,20 +7748,29 @@ static void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float c
 	GL_DepthMask(false);
 	GL_DepthRange(0, 1);
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-//	R_Mesh_ResetTextureState();
 
-	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2]; //
-	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
-	vertex3f[ 6] = mins[0];vertex3f[ 7] = maxs[1];vertex3f[ 8] = mins[2];
-	vertex3f[ 9] = maxs[0];vertex3f[10] = maxs[1];vertex3f[11] = mins[2];
-	vertex3f[12] = mins[0];vertex3f[13] = mins[1];vertex3f[14] = maxs[2];
-	vertex3f[15] = maxs[0];vertex3f[16] = mins[1];vertex3f[17] = maxs[2];
-	vertex3f[18] = mins[0];vertex3f[19] = maxs[1];vertex3f[20] = maxs[2];
-	vertex3f[21] = maxs[0];vertex3f[22] = maxs[1];vertex3f[23] = maxs[2];
-	R_FillColors(color4f, 8, cr, cg, cb, ca);
+	for (edge = 0; edge < BBOXEDGES; edge++)
+	{
+		for (i = 0; i < 3; i++)
+		{
+			edgemins[i] = mins[i] + (maxs[i] - mins[i]) * bboxedges[edge][i] - 0.25f;
+			edgemaxs[i] = mins[i] + (maxs[i] - mins[i]) * bboxedges[edge][3 + i] + 0.25f;
+		}
+		vertex3f[edge * 24 + 0] = edgemins[0]; vertex3f[edge * 24 + 1] = edgemins[1]; vertex3f[edge * 24 + 2] = edgemins[2];
+		vertex3f[edge * 24 + 3] = edgemaxs[0]; vertex3f[edge * 24 + 4] = edgemins[1]; vertex3f[edge * 24 + 5] = edgemins[2];
+		vertex3f[edge * 24 + 6] = edgemins[0]; vertex3f[edge * 24 + 7] = edgemaxs[1]; vertex3f[edge * 24 + 8] = edgemins[2];
+		vertex3f[edge * 24 + 9] = edgemaxs[0]; vertex3f[edge * 24 + 10] = edgemaxs[1]; vertex3f[edge * 24 + 11] = edgemins[2];
+		vertex3f[edge * 24 + 12] = edgemins[0]; vertex3f[edge * 24 + 13] = edgemins[1]; vertex3f[edge * 24 + 14] = edgemaxs[2];
+		vertex3f[edge * 24 + 15] = edgemaxs[0]; vertex3f[edge * 24 + 16] = edgemins[1]; vertex3f[edge * 24 + 17] = edgemaxs[2];
+		vertex3f[edge * 24 + 18] = edgemins[0]; vertex3f[edge * 24 + 19] = edgemaxs[1]; vertex3f[edge * 24 + 20] = edgemaxs[2];
+		vertex3f[edge * 24 + 21] = edgemaxs[0]; vertex3f[edge * 24 + 22] = edgemaxs[1]; vertex3f[edge * 24 + 23] = edgemaxs[2];
+		for (i = 0; i < 36; i++)
+			elements[edge * 36 + i] = edge * 8 + bboxelements[i];
+	}
+	R_FillColors(color4f, numvertices, cr, cg, cb, ca);
 	if (r_refdef.fogenabled)
 	{
-		for (i = 0, v = vertex3f, c = color4f;i < 8;i++, v += 3, c += 4)
+		for (i = 0, v = vertex3f, c = color4f; i < numvertices; i++, v += 3, c += 4)
 		{
 			f1 = RSurf_FogVertex(v);
 			f2 = 1 - f1;
@@ -7736,22 +7779,19 @@ static void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float c
 			c[2] = c[2] * f1 + r_refdef.fogcolor[2] * f2;
 		}
 	}
-	R_Mesh_PrepareVertices_Generic_Arrays(8, vertex3f, color4f, NULL);
+	R_Mesh_PrepareVertices_Generic_Arrays(numvertices, vertex3f, color4f, NULL);
 	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic_NoTexture(false, false);
-	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
+	R_Mesh_Draw(0, numvertices, 0, numtriangles, NULL, NULL, 0, elements, NULL, 0);
 }
 
 static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
 {
-	prvm_prog_t *prog = SVVM_prog;
+	// hacky overloading of the parameters
+	prvm_prog_t *prog = (prvm_prog_t *)rtlight;
 	int i;
 	float color[4];
 	prvm_edict_t *edict;
-
-	// this function draws bounding boxes of server entities
-	if (!sv.active)
-		return;
 
 	GL_CullFace(GL_NONE);
 	R_SetupShader_Generic_NoTexture(false, false);
@@ -7769,37 +7809,37 @@ static void R_DrawEntityBBoxes_Callback(const entity_render_t *ent, const rtligh
 			case SOLID_CORPSE:   Vector4Set(color, 1, 0.5, 0, 0.05);break;
 			default:             Vector4Set(color, 0, 0, 0, 0.50);break;
 		}
-		color[3] *= r_showbboxes.value;
+		if (prog == CLVM_prog)
+			color[3] *= r_showbboxes_client.value;
+		else
+			color[3] *= r_showbboxes.value;
 		color[3] = bound(0, color[3], 1);
 		GL_DepthTest(!r_showdisabledepthtest.integer);
-		GL_CullFace(r_refdef.view.cullface_front);
 		R_DrawBBoxMesh(edict->priv.server->areamins, edict->priv.server->areamaxs, color[0], color[1], color[2], color[3]);
 	}
 }
 
-static void R_DrawEntityBBoxes(void)
+static void R_DrawEntityBBoxes(prvm_prog_t *prog)
 {
 	int i;
 	prvm_edict_t *edict;
 	vec3_t center;
-	prvm_prog_t *prog = SVVM_prog;
 
-	// this function draws bounding boxes of server entities
-	if (!sv.active)
+	if (prog == NULL)
 		return;
 
-	for (i = 0;i < prog->num_edicts;i++)
+	for (i = 0; i < prog->num_edicts; i++)
 	{
 		edict = PRVM_EDICT_NUM(i);
 		if (edict->priv.server->free)
 			continue;
 		// exclude the following for now, as they don't live in world coordinate space and can't be solid:
-		if(PRVM_serveredictedict(edict, tag_entity) != 0)
+		if (PRVM_serveredictedict(edict, tag_entity) != 0)
 			continue;
-		if(PRVM_serveredictedict(edict, viewmodelforclient) != 0)
+		if (PRVM_serveredictedict(edict, viewmodelforclient) != 0)
 			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
-		R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)NULL);
+		R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)prog);
 	}
 }
 
