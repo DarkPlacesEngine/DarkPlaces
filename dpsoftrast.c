@@ -257,7 +257,7 @@ typedef ALIGN(struct DPSOFTRAST_State_Thread_s
 	ALIGN(float fb_clipplane[4]);
 
 	int shader_mode;
-	int shader_permutation;
+	dpuint64 shader_permutation;
 	int shader_exactspecularmath;
 
 	DPSOFTRAST_Texture *texbound[DPSOFTRAST_MAXTEXTUREUNITS];
@@ -336,7 +336,7 @@ typedef ALIGN(struct DPSOFTRAST_State_s
 	int drawclipped;
 	
 	int shader_mode;
-	int shader_permutation;
+	dpuint64 shader_permutation;
 	int shader_exactspecularmath;
 
 	int texture_max;
@@ -1339,14 +1339,14 @@ void DPSOFTRAST_SetTexCoordPointer(int unitnum, int numcomponents, size_t stride
 	dpsoftrast.stride_texcoord[unitnum] = (int)stride;
 }
 
-DEFCOMMAND(18, SetShader, int mode; int permutation; int exactspecularmath;)
+DEFCOMMAND(18, SetShader, int mode; dpuint64 permutation; int exactspecularmath;)
 static void DPSOFTRAST_Interpret_SetShader(DPSOFTRAST_State_Thread *thread, DPSOFTRAST_Command_SetShader *command)
 {
 	thread->shader_mode = command->mode;
 	thread->shader_permutation = command->permutation;
 	thread->shader_exactspecularmath = command->exactspecularmath;
 }
-void DPSOFTRAST_SetShader(int mode, int permutation, int exactspecularmath)
+void DPSOFTRAST_SetShader(int mode, dpuint64 permutation, int exactspecularmath)
 {
 	DPSOFTRAST_Command_SetShader *command = DPSOFTRAST_ALLOCATECOMMAND(SetShader);
 	command->mode = mode;
