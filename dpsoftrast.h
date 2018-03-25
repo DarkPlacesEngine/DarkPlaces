@@ -322,7 +322,7 @@ typedef enum DPSOFTRAST_UNIFORM_e
 }
 DPSOFTRAST_UNIFORM;
 
-void DPSOFTRAST_SetShader(int mode, int permutation, int exactspecularmath);
+void DPSOFTRAST_SetShader(int mode, dpuint64 permutation, int exactspecularmath);
 #define DPSOFTRAST_Uniform1f(index, v0) DPSOFTRAST_Uniform4f(index, v0, 0, 0, 0)
 #define DPSOFTRAST_Uniform2f(index, v0, v1) DPSOFTRAST_Uniform4f(index, v0, v1, 0, 0)
 #define DPSOFTRAST_Uniform3f(index, v0, v1, v2) DPSOFTRAST_Uniform4f(index, v0, v1, v2, 0)
