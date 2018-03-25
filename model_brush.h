@@ -70,65 +70,65 @@ mplane_t;
 //#define SURF_PLANEBACK 2
 
 // indicates that all triangles of the surface should be added to the BIH collision system
-#define MATERIALFLAG_MESHCOLLISIONS 0x00000001
+#define MATERIALFLAG_MESHCOLLISIONS 1
 // use alpha blend on this material
-#define MATERIALFLAG_ALPHA 0x00000002
+#define MATERIALFLAG_ALPHA 2
 // use additive blend on this material
-#define MATERIALFLAG_ADD 0x00000004
+#define MATERIALFLAG_ADD 4
 // turn off depth test on this material
-#define MATERIALFLAG_NODEPTHTEST 0x00000008
+#define MATERIALFLAG_NODEPTHTEST 8
 // multiply alpha by r_wateralpha cvar
-#define MATERIALFLAG_WATERALPHA 0x00000010
+#define MATERIALFLAG_WATERALPHA 16
 // draw with no lighting
-#define MATERIALFLAG_FULLBRIGHT 0x00000020
+#define MATERIALFLAG_FULLBRIGHT 32
 // drawn as a normal surface (alternative to SKY)
-#define MATERIALFLAG_WALL 0x00000040
+#define MATERIALFLAG_WALL 64
 // this surface shows the sky in its place, alternative to WALL
 // skipped if transparent
-#define MATERIALFLAG_SKY 0x00000080
+#define MATERIALFLAG_SKY 128
 // swirling water effect (used with MATERIALFLAG_WALL)
-#define MATERIALFLAG_WATERSCROLL 0x00000100
+#define MATERIALFLAG_WATERSCROLL 256
 // skips drawing the surface
-#define MATERIALFLAG_NODRAW 0x00000200
+#define MATERIALFLAG_NODRAW 512
 // probably used only on q1bsp water
-#define MATERIALFLAG_LIGHTBOTHSIDES 0x00000400
+#define MATERIALFLAG_LIGHTBOTHSIDES 1024
 // use alpha test on this material
-#define MATERIALFLAG_ALPHATEST 0x00000800
+#define MATERIALFLAG_ALPHATEST 2048
 // treat this material as a blended transparency (as opposed to an alpha test
 // transparency), this causes special fog behavior, and disables glDepthMask
-#define MATERIALFLAG_BLENDED 0x00001000
+#define MATERIALFLAG_BLENDED 4096
 // render using a custom blendfunc
-#define MATERIALFLAG_CUSTOMBLEND 0x00002000
+#define MATERIALFLAG_CUSTOMBLEND 8192
 // do not cast shadows from this material
-#define MATERIALFLAG_NOSHADOW 0x00004000
+#define MATERIALFLAG_NOSHADOW 16384
 // render using vertex alpha (q3bsp) as texture blend parameter between foreground (normal) skinframe and background skinframe
-#define MATERIALFLAG_VERTEXTEXTUREBLEND 0x00008000
+#define MATERIALFLAG_VERTEXTEXTUREBLEND 32768
 // disables GL_CULL_FACE on this texture (making it double sided)
-#define MATERIALFLAG_NOCULLFACE 0x000100000
+#define MATERIALFLAG_NOCULLFACE 65536
 // render with a very short depth range (like 10% of normal), this causes entities to appear infront of most of the scene
-#define MATERIALFLAG_SHORTDEPTHRANGE 0x00020000
+#define MATERIALFLAG_SHORTDEPTHRANGE 131072
 // render water, comprising refraction and reflection (note: this is always opaque, the shader does the alpha effect)
-#define MATERIALFLAG_WATERSHADER 0x00040000
+#define MATERIALFLAG_WATERSHADER 262144
 // render refraction (note: this is just a way to distort the background, otherwise useless)
-#define MATERIALFLAG_REFRACTION 0x00080000
+#define MATERIALFLAG_REFRACTION 524288
 // render reflection
-#define MATERIALFLAG_REFLECTION 0x00100000
+#define MATERIALFLAG_REFLECTION 1048576
 // use model lighting on this material (q1bsp lightmap sampling or q3bsp lightgrid, implies FULLBRIGHT is false)
-#define MATERIALFLAG_MODELLIGHT 0x00200000
+#define MATERIALFLAG_MODELLIGHT 4194304
 // add directional model lighting to this material (q3bsp lightgrid only)
-#define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 0x00400000
+#define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 8388608
 // causes RSurf_GetCurrentTexture to leave alone certain fields
-#define MATERIALFLAG_CUSTOMSURFACE 0x00800000
+#define MATERIALFLAG_CUSTOMSURFACE 16777216
 // causes MATERIALFLAG_BLENDED to render a depth pass before rendering, hiding backfaces and other hidden geometry
-#define MATERIALFLAG_TRANSDEPTH 0x01000000
+#define MATERIALFLAG_TRANSDEPTH 33554432
 // like refraction, but doesn't distort etc.
-#define MATERIALFLAG_CAMERA 0x02000000
+#define MATERIALFLAG_CAMERA 67108864
 // disable rtlight on surface, use R_LightPoint instead
-#define MATERIALFLAG_NORTLIGHT 0x04000000
+#define MATERIALFLAG_NORTLIGHT 134217728
 // alphagen vertex
-#define MATERIALFLAG_ALPHAGEN_VERTEX 0x08000000
+#define MATERIALFLAG_ALPHAGEN_VERTEX 268435456
 // use occlusion buffer for corona
-#define MATERIALFLAG_OCCLUDE 0x10000000
+#define MATERIALFLAG_OCCLUDE 536870912
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency
