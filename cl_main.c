@@ -1810,12 +1810,7 @@ void CL_RelinkBeams(void)
 			entrender = CL_NewTempEntity (0);
 			if (!entrender)
 				return;
-			//VectorCopy (org, ent->render.origin);
 			entrender->model = b->model;
-			//ent->render.effects = EF_FULLBRIGHT;
-			//ent->render.angles[0] = pitch;
-			//ent->render.angles[1] = yaw;
-			//ent->render.angles[2] = rand()%360;
 			Matrix4x4_CreateFromQuakeEntity(&entrender->matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
 			CL_UpdateRenderEntity(entrender);
 			VectorMA(org, 30, dist, org);
@@ -1887,6 +1882,7 @@ void CSQC_RelinkAllEntities (int drawmask)
 	CL_RelinkStaticEntities();
 	CL_RelinkBeams();
 	CL_RelinkEffects();
+	CL_RelinkLightFlashes();
 
 	// link stuff
 	if (drawmask & ENTMASK_ENGINE)
@@ -1947,7 +1943,6 @@ void CL_UpdateWorld(void)
 		// update the engine-based viewmodel
 		CL_UpdateViewModel();
 
-		CL_RelinkLightFlashes();
 		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
 
 		// decals, particles, and explosions will be updated during rneder

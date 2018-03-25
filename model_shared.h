@@ -406,7 +406,7 @@ typedef struct q3shaderinfo_layer_s
 	int clampmap;
 	float framerate;
 	int numframes;
-	int texflags;
+	int dptexflags;
 	char** texturename;
 	int blendfunc[2];
 	q3shaderinfo_layer_rgbgen_t rgbgen;
@@ -627,7 +627,6 @@ typedef struct texture_s
 	char name[64];
 	int surfaceflags;
 	int supercontents;
-	int textureflags;
 
 	// q2bsp
 	// we have to load the texture multiple times when Q2SURF_ flags differ,

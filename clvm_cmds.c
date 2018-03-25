@@ -758,7 +758,6 @@ static void VM_CL_R_AddEntities (prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntities);
 	drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
 	CSQC_RelinkAllEntities(drawmask);
-	CL_RelinkLightFlashes();
 
 	PRVM_clientglobalfloat(time) = cl.time;
 	for(i=1;i<prog->num_edicts;i++)
