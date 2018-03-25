@@ -193,6 +193,12 @@ typedef struct surfmesh_s
 
 	// vertex and index buffers for rendering
 	r_meshbuffer_t *vertexmesh_vertexbuffer;
+
+	// dynamic mesh building support (Mod_Mesh_*)
+	int num_vertexhashsize; // always pow2 for simple masking
+	int *data_vertexhash; // hash table - wrapping buffer for storing index of similar vertex with -1 as terminator
+	int max_vertices; // preallocated size of data_vertex3f and friends (always >= num_vertices)
+	int max_triangles; // preallocated size of data_element3i
 }
 surfmesh_t;
 
@@ -736,6 +742,9 @@ typedef struct msurface_s
 	int deprecatedq3num_bboxstride;
 	// FIXME: collisionmarkframe should be kept in a separate array
 	int deprecatedq3collisionmarkframe; // q3bsp // don't collide twice in one trace
+
+	// used by Mod_Mesh_Finalize when building sortedmodelsurfaces
+	qboolean included;
 }
 msurface_t;
 
@@ -1039,12 +1048,14 @@ typedef struct model_s
 	float			*data_baseboneposeinverse;
 	// textures of this model
 	int				num_textures;
+	int				max_textures; // preallocated for expansion (Mod_Mesh_*)
 	int				num_texturesperskin;
 	texture_t		*data_textures;
 	qboolean		wantnormals;
 	qboolean		wanttangents;
 	// surfaces of this model
 	int				num_surfaces;
+	int				max_surfaces; // preallocated for expansion (Mod_Mesh_*)
 	msurface_t		*data_surfaces;
 	// optional lightmapinfo data for surface lightmap updates
 	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
@@ -1160,6 +1171,8 @@ q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
 qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
 texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe);
 texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
+/// Sets up a material to render the provided skinframe.  See also R_SkinFrame_LoadInternalBGRA.
+void Mod_LoadCustomMaterial(texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
 
 extern cvar_t r_mipskins;
 extern cvar_t r_mipnormalmaps;
@@ -1232,6 +1245,16 @@ void R_Q1BSP_DrawShadowMap(int side, struct entity_render_s *ent, const vec3_t r
 void R_Q1BSP_CompileShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist);
 void R_Q1BSP_DrawShadowVolume(struct entity_render_s *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
 void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
+
+// dynamic mesh building (every frame) for debugging and other uses
+void Mod_Mesh_Create(dp_model_t *mod, const char *name);
+void Mod_Mesh_Destroy(dp_model_t *mod);
+void Mod_Mesh_Reset(dp_model_t *mod);
+texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name);
+msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex);
+int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
+void Mod_Mesh_AddTriangle(dp_model_t *mod, msurface_t *surf, int e0, int e1, int e2);
+void Mod_Mesh_Finalize(dp_model_t *mod);
 
 // Collision optimization using Bounding Interval Hierarchy
 void Mod_CollisionBIH_TracePoint(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
