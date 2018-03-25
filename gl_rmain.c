@@ -7612,10 +7612,6 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 		R_DrawExplosions();
 		if (r_timereport_active)
 			R_TimeReport("explosions");
-
-		R_DrawLightningBeams();
-		if (r_timereport_active)
-			R_TimeReport("lightning");
 	}
 
 	if (cl.csqc_loaded)
