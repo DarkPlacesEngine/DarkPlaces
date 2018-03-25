@@ -2011,7 +2011,7 @@ void Mod_LoadQ3Shaders(void)
 							// multilayer terrain shader or similar
 							shader.textureblendalpha = true;
 							if (mod_q3shader_force_terrain_alphaflag.integer)
-								shader.layers[0].texflags |= TEXF_ALPHA;
+								shader.layers[0].dptexflags |= TEXF_ALPHA;
 						}
 					}
 
@@ -2023,29 +2023,29 @@ void Mod_LoadQ3Shaders(void)
 							layer->blendfunc[0] = GL_SRC_ALPHA;
 					}
 					
-					layer->texflags = 0;
+					layer->dptexflags = 0;
 					if (layer->alphatest)
-						layer->texflags |= TEXF_ALPHA;
+						layer->dptexflags |= TEXF_ALPHA;
 					switch(layer->blendfunc[0])
 					{
 						case GL_SRC_ALPHA:
 						case GL_ONE_MINUS_SRC_ALPHA:
-							layer->texflags |= TEXF_ALPHA;
+							layer->dptexflags |= TEXF_ALPHA;
 							break;
 					}
 					switch(layer->blendfunc[1])
 					{
 						case GL_SRC_ALPHA:
 						case GL_ONE_MINUS_SRC_ALPHA:
-							layer->texflags |= TEXF_ALPHA;
+							layer->dptexflags |= TEXF_ALPHA;
 							break;
 					}
 					if (!(shader.surfaceparms & Q3SURFACEPARM_NOMIPMAPS))
-						layer->texflags |= TEXF_MIPMAP;
+						layer->dptexflags |= TEXF_MIPMAP;
 					if (!(shader.textureflags & Q3TEXTUREFLAG_NOPICMIP))
-						layer->texflags |= TEXF_PICMIP | TEXF_COMPRESS;
+						layer->dptexflags |= TEXF_PICMIP | TEXF_COMPRESS;
 					if (layer->clampmap)
-						layer->texflags |= TEXF_CLAMP;
+						layer->dptexflags |= TEXF_CLAMP;
 					continue;
 				}
 				numparameters = 0;
@@ -2467,6 +2467,7 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	texture->basealpha = 1.0f;
 	shader = name[0] ? Mod_LookupQ3Shader(name) : NULL;
 
+	// allow disabling of picmip or compression by defaulttexflags
 	texflagsmask = ~0;
 	if(!(defaulttexflags & TEXF_PICMIP))
 		texflagsmask &= ~TEXF_PICMIP;
@@ -2492,9 +2493,6 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	{
 		if (developer_loading.integer)
 			Con_Printf("%s: loaded shader for %s\n", loadmodel->name, name);
-
-		// allow disabling of picmip or compression by defaulttexflags
-		texture->textureflags = (shader->textureflags & texflagsmask) | texflagsor;
 
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
@@ -2646,19 +2644,19 @@ nothing                GL_ZERO GL_ONE
 			// convert the main material layer
 			// FIXME: if alphagenspecularlayer is used, we should pass a specular texture name to R_SkinFrame_LoadExternal and have it load that texture instead of the assumed name for _gloss texture
 			if (materiallayer >= 0)
-				texture->materialshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[materiallayer], materiallayer, (shader->layers[materiallayer].texflags & texflagsmask) | texflagsor, texture->name);
+				texture->materialshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[materiallayer], materiallayer, (shader->layers[materiallayer].dptexflags & texflagsmask) | texflagsor, texture->name);
 			// convert the terrain background blend layer (if any)
 			if (terrainbackgroundlayer >= 0)
-				texture->backgroundshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[terrainbackgroundlayer], terrainbackgroundlayer, (shader->layers[terrainbackgroundlayer].texflags & texflagsmask) | texflagsor, texture->name);
+				texture->backgroundshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[terrainbackgroundlayer], terrainbackgroundlayer, (shader->layers[terrainbackgroundlayer].dptexflags & texflagsmask) | texflagsor, texture->name);
 			// convert the prepass layers (if any)
 			texture->startpreshaderpass = shaderpassindex;
 			for (i = 0; i < endofprelayers; i++)
-				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].texflags & texflagsmask) | texflagsor, texture->name);
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
 			texture->endpreshaderpass = shaderpassindex;
 			texture->startpostshaderpass = shaderpassindex;
 			// convert the postpass layers (if any)
 			for (i = firstpostlayer; i < shader->numlayers; i++)
-				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].texflags & texflagsmask) | texflagsor, texture->name);
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
 			texture->startpostshaderpass = shaderpassindex;
 		}
 

@@ -92,7 +92,6 @@ rmesh_t;
 // useful functions for rendering
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b);
 void R_FillColors(float *out, int verts, float r, float g, float b, float a);
-int R_Mesh_AddVertex3f(rmesh_t *mesh, const float *v);
 void R_Mesh_AddPolygon3f(rmesh_t *mesh, int numvertices, float *vertex3f);
 void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *planes);
 
