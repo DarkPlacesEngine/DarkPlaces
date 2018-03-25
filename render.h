@@ -613,7 +613,6 @@ void SCR_DrawConsole(void);
 void R_Shadow_EditLights_DrawSelectedLightProperties(void);
 void R_DecalSystem_Reset(decalsystem_t *decalsystem);
 void R_Shadow_UpdateBounceGridTexture(void);
-void R_DrawLightningBeams(void);
 void VM_CL_AddPolygonsToMeshQueue(struct prvm_prog_s *prog);
 void R_DrawPortals(void);
 void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
