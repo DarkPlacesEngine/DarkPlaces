@@ -2041,6 +2041,7 @@ void CL_NewFrameReceived(int num);
 void CL_ParseEntityLump(char *entitystring);
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius);
 void CL_RelinkLightFlashes(void);
+void CL_Beam_AddPolygons(const beam_t *b);
 void Sbar_ShowFPS(void);
 void Sbar_ShowFPS_Update(void);
 void Host_SaveConfig(void);

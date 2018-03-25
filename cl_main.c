@@ -1776,7 +1776,10 @@ void CL_RelinkBeams(void)
 				r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 			}
 			if (cl_beams_polygons.integer)
+			{
+				CL_Beam_AddPolygons(b);
 				continue;
+			}
 		}
 
 		// calculate pitch and yaw
