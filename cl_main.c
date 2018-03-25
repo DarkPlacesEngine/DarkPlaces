@@ -1895,6 +1895,8 @@ void CSQC_RelinkAllEntities (int drawmask)
 
 	// update view blend
 	V_CalcViewBlend();
+
+	CL_MeshEntities_AddToScene();
 }
 
 /*
@@ -2368,6 +2370,83 @@ void CL_Locs_Reload_f(void)
 	}
 }
 
+entity_t cl_meshentities[NUM_MESHENTITIES];
+dp_model_t cl_meshentitymodels[NUM_MESHENTITIES];
+const char *cl_meshentitynames[NUM_MESHENTITIES] =
+{
+	"MESH_DEBUG",
+	"MESH_CSQC_POLYGONS",
+	"MESH_PARTICLES",
+	"MESH_UI",
+};
+
+void CL_MeshEntities_Restart(void)
+{
+	int i;
+	entity_t *ent;
+	for (i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
+	}
+}
+
+void CL_MeshEntities_Init(void)
+{
+	int i;
+	entity_t *ent;
+	for (i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		ent->state_current.active = true;
+		ent->render.model = cl_meshentitymodels + i;
+		ent->render.alpha = 1;
+		ent->render.flags = RENDER_LIGHT;
+		ent->render.framegroupblend[0].lerp = 1;
+		ent->render.frameblend[0].lerp = 1;
+		VectorSet(ent->render.colormod, 1, 1, 1);
+		VectorSet(ent->render.glowmod, 1, 1, 1);
+		VectorSet(ent->render.modellight_ambient, 1, 1, 1);
+		VectorSet(ent->render.modellight_diffuse, 0, 0, 0);
+		VectorSet(ent->render.modellight_lightdir, 0, 0, 1);
+		Matrix4x4_CreateIdentity(&ent->render.matrix);
+		CL_UpdateRenderEntity(&ent->render);
+	}
+	cl_meshentities[MESH_CSQCPOLYGONS].render.flags = RENDER_SHADOW | RENDER_LIGHT;
+	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
+}
+
+void CL_MeshEntities_AddToScene(void)
+{
+	int i;
+	entity_t *ent;
+	for (i = 0; i < NUM_MESHENTITIES && r_refdef.scene.numentities < r_refdef.scene.maxentities; i++)
+	{
+		ent = cl_meshentities + i;
+		if (ent->render.model->num_surfaces == 0)
+			continue;
+		Mod_Mesh_Finalize(ent->render.model);
+		VectorCopy(ent->render.model->normalmins, ent->render.mins);
+		VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
+		r_refdef.scene.entities[r_refdef.scene.numentities++] = &ent->render;
+	}
+}
+
+void CL_MeshEntities_Reset(void)
+{
+	int i;
+	entity_t *ent;
+	for (i = 0; i < NUM_MESHENTITIES && r_refdef.scene.numentities < r_refdef.scene.maxentities; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Reset(ent->render.model);
+	}
+}
+
+void CL_MeshEntities_Shutdown(void)
+{
+}
+
 /*
 ===========
 CL_Shutdown
@@ -2378,6 +2457,7 @@ void CL_Shutdown (void)
 	CL_Screen_Shutdown();
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
+	CL_MeshEntities_Shutdown();
 
 	Mem_FreePool (&cls.permanentmempool);
 	Mem_FreePool (&cls.levelmempool);
@@ -2497,6 +2577,7 @@ void CL_Init (void)
 	CL_Parse_Init();
 	CL_Particles_Init();
 	CL_Screen_Init();
+	CL_MeshEntities_Init();
 
 	CL_Video_Init();
 }

@@ -1021,6 +1021,7 @@ void Host_Main(void)
 			R_TimeReport("client");
 
 			CL_UpdateScreen();
+			CL_MeshEntities_Reset();
 			R_TimeReport("render");
 
 			if (host_speeds.integer)
