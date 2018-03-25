@@ -751,7 +751,7 @@ typedef struct r_glsl_permutation_s
 	/// hash lookup data
 	struct r_glsl_permutation_s *hashnext;
 	unsigned int mode;
-	unsigned int permutation;
+	dpuint64 permutation;
 
 	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
@@ -962,7 +962,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "#define " n "\n"; \
 	else \
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "\n"
-static void R_CompileShader_AddStaticParms(unsigned int mode, unsigned int permutation)
+static void R_CompileShader_AddStaticParms(unsigned int mode, dpuint64 permutation)
 {
 	shaderstaticparms_count = 0;
 
@@ -990,7 +990,7 @@ r_glsl_permutation_t *r_glsl_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_glsl_permutationarray;
 
-static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, unsigned int permutation)
+static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, dpuint64 permutation)
 {
 	//unsigned int hashdepth = 0;
 	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
@@ -1074,7 +1074,7 @@ static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean p
 	return Mem_strdup(r_main_mempool, modeinfo->builtinstring);
 }
 
-static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, unsigned int permutation)
+static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, dpuint64 permutation)
 {
 	int i;
 	int ubibind;
@@ -1156,7 +1156,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	// now add all the permutation pretexts
 	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 	{
-		if (permutation & (1<<i))
+		if (permutation & (1ll<<i))
 		{
 			vertstrings_list[vertstrings_count++] = shaderpermutationinfo[i].pretext;
 			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i].pretext;
@@ -1389,7 +1389,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		Mem_Free(sourcestring);
 }
 
-static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int permutation)
+static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permutation)
 {
 	r_glsl_permutation_t *perm = R_GLSL_FindPermutation(mode, permutation);
 	if (r_glsl_permutation != perm)
@@ -1409,7 +1409,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, unsigned int per
 				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 				{
 					// reduce i more quickly whenever it would not remove any bits
-					int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
+					dpuint64 j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
 					if (!(permutation & j))
 						continue;
 					permutation -= j;
@@ -1451,7 +1451,7 @@ typedef struct r_hlsl_permutation_s
 	/// hash lookup data
 	struct r_hlsl_permutation_s *hashnext;
 	unsigned int mode;
-	unsigned int permutation;
+	dpuint64 permutation;
 
 	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
@@ -1538,7 +1538,7 @@ r_hlsl_permutation_t *r_hlsl_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_hlsl_permutationarray;
 
-static r_hlsl_permutation_t *R_HLSL_FindPermutation(unsigned int mode, unsigned int permutation)
+static r_hlsl_permutation_t *R_HLSL_FindPermutation(unsigned int mode, dpuint64 permutation)
 {
 	//unsigned int hashdepth = 0;
 	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
@@ -1715,7 +1715,7 @@ static void R_HLSL_CacheShader(r_hlsl_permutation_t *p, const char *cachename, c
 	psbin = (DWORD *)Mem_Realloc(tempmempool, psbin, 0);
 }
 
-static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode, unsigned int permutation)
+static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode, dpuint64 permutation)
 {
 	int i;
 	shadermodeinfo_t *modeinfo = &shadermodeinfo[SHADERLANGUAGE_HLSL][mode];
@@ -1771,7 +1771,7 @@ static void R_HLSL_CompilePermutation(r_hlsl_permutation_t *p, unsigned int mode
 	// now add all the permutation pretexts
 	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 	{
-		if (permutation & (1<<i))
+		if (permutation & (1ll<<i))
 		{
 			vertstrings_list[vertstrings_count++] = shaderpermutationinfo[i].pretext;
 			geomstrings_list[geomstrings_count++] = shaderpermutationinfo[i].pretext;
@@ -1861,7 +1861,7 @@ static inline void hlslPSSetParameter3f(D3DPSREGISTER_t r, float x, float y, flo
 static inline void hlslPSSetParameter2f(D3DPSREGISTER_t r, float x, float y) {float temp[4];Vector4Set(temp, x, y, 0, 0);IDirect3DDevice9_SetPixelShaderConstantF(vid_d3d9dev, r, temp, 1);}
 static inline void hlslPSSetParameter1f(D3DPSREGISTER_t r, float x) {float temp[4];Vector4Set(temp, x, 0, 0, 0);IDirect3DDevice9_SetPixelShaderConstantF(vid_d3d9dev, r, temp, 1);}
 
-void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutation)
+void R_SetupShader_SetPermutationHLSL(unsigned int mode, dpuint64 permutation)
 {
 	r_hlsl_permutation_t *perm = R_HLSL_FindPermutation(mode, permutation);
 	if (r_hlsl_permutation != perm)
@@ -1878,7 +1878,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 				{
 					// reduce i more quickly whenever it would not remove any bits
-					int j = 1<<(SHADERPERMUTATION_COUNT-1-i);
+					dpuint64 j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
 					if (!(permutation & j))
 						continue;
 					permutation -= j;
@@ -1905,7 +1905,7 @@ void R_SetupShader_SetPermutationHLSL(unsigned int mode, unsigned int permutatio
 }
 #endif
 
-static void R_SetupShader_SetPermutationSoft(unsigned int mode, unsigned int permutation)
+static void R_SetupShader_SetPermutationSoft(unsigned int mode, dpuint64 permutation)
 {
 	DPSOFTRAST_SetShader(mode, permutation, r_shadow_glossexact.integer);
 	DPSOFTRAST_UniformMatrix4fv(DPSOFTRAST_UNIFORM_ModelViewProjectionMatrixM1, 1, false, gl_modelviewprojection16f);
@@ -2014,7 +2014,7 @@ static void R_GLSL_DumpShader_f(void)
 
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
 {
-	unsigned int permutation = 0;
+	dpuint64 permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	permutation |= SHADERPERMUTATION_VIEWTINT;
@@ -2095,7 +2095,7 @@ void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
 
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
 {
-	unsigned int permutation = 0;
+	dpuint64 permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (depthrgb)
@@ -2213,7 +2213,7 @@ void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, 
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	unsigned int permutation = 0;
+	dpuint64 permutation = 0;
 	unsigned int mode = 0;
 	int blendfuncflags;
 	static float dummy_colormod[3] = {1, 1, 1};
@@ -3101,7 +3101,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	unsigned int permutation = 0;
+	dpuint64 permutation = 0;
 	unsigned int mode = 0;
 	const float *lightcolorbase = rtlight->currentcolor;
 	float ambientscale = rtlight->ambientscale;
@@ -6820,7 +6820,7 @@ static void R_Bloom_MakeTexture(void)
 
 static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 {
-	unsigned int permutation;
+	dpuint64 permutation;
 	float uservecs[4][4];
 
 	R_EntityMatrix(&identitymatrix);
