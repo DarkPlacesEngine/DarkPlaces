@@ -56,7 +56,6 @@ cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg i
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
 cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
 cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
-cvar_t scr_screenshot_hwgamma = {CVAR_SAVE, "scr_screenshot_hwgamma","1", "apply the video gamma ramp to saved screenshots and videos"};
 cvar_t scr_screenshot_alpha = {0, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
 cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
@@ -116,7 +115,6 @@ cvar_t r_speeds_graph_maxdefault = {CVAR_SAVE, "r_speeds_graph_maxdefault", "100
 extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
 extern cvar_t r_fog_clear;
-#define WANT_SCREENSHOT_HWGAMMA (scr_screenshot_hwgamma.integer && vid_usinghwgamma)
 
 int jpeg_supported = false;
 
@@ -1364,7 +1362,6 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_png);
 	Cvar_RegisterVariable (&scr_screenshot_gammaboost);
-	Cvar_RegisterVariable (&scr_screenshot_hwgamma);
 	Cvar_RegisterVariable (&scr_screenshot_name_in_mapdir);
 	Cvar_RegisterVariable (&scr_screenshot_alpha);
 	Cvar_RegisterVariable (&scr_screenshot_timestamp);
@@ -1611,17 +1608,10 @@ Cb = R * -.169 + G * -.332 + B *  .500 + 128.;
 Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 */
 
-	if(WANT_SCREENSHOT_HWGAMMA)
-	{
-		VID_BuildGammaTables(&cls.capturevideo.vidramp[0], 256);
-	}
-	else
-	{
-		// identity gamma table
-		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp, 256);
-		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256, 256);
-		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256*2, 256);
-	}
+	// identity gamma table
+	BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp, 256);
+	BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256, 256);
+	BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, cls.capturevideo.vidramp + 256*2, 256);
 	if(scr_screenshot_gammaboost.value != 1)
 	{
 		double igamma = 1 / scr_screenshot_gammaboost.value;
@@ -2007,22 +1997,15 @@ qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *b
 
 	GL_ReadPixelsBGRA(x, y, width, height, buffer1);
 
-	if(gammacorrect && (scr_screenshot_gammaboost.value != 1 || WANT_SCREENSHOT_HWGAMMA))
+	if(gammacorrect && (scr_screenshot_gammaboost.value != 1))
 	{
 		int i;
 		double igamma = 1.0 / scr_screenshot_gammaboost.value;
 		unsigned short vidramp[256 * 3];
-		if(WANT_SCREENSHOT_HWGAMMA)
-		{
-			VID_BuildGammaTables(&vidramp[0], 256);
-		}
-		else
-		{
-			// identity gamma table
-			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp, 256);
-			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256, 256);
-			BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256*2, 256);
-		}
+		// identity gamma table
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp, 256);
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256, 256);
+		BuildGammaTable16(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, vidramp + 256*2, 256);
 		if(scr_screenshot_gammaboost.value != 1)
 		{
 			for (i = 0;i < 256 * 3;i++)

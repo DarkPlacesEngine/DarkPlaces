@@ -2124,8 +2124,6 @@ static void M_Menu_Options_ColorControl_AdjustSliders (int dir)
 
 	optnum = 1;
 	if (options_colorcontrol_cursor == optnum++)
-		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
-	else if (options_colorcontrol_cursor == optnum++)
 	{
 		Cvar_SetValueQuick (&v_color_enable, 0);
 		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.125, 5));
@@ -2236,7 +2234,6 @@ static void M_Options_ColorControl_Draw (void)
 	m_opty = 32 - bound(0, m_optcursor - (visible >> 1), max(0, OPTIONS_COLORCONTROL_ITEMS - visible)) * 8;
 
 	M_Options_PrintCommand( "     Reset to defaults", true);
-	M_Options_PrintCheckbox("Hardware Gamma Control", vid_hardwaregammasupported.integer, v_hwgamma.integer);
 	M_Options_PrintSlider(  "                 Gamma", !v_color_enable.integer, v_gamma.value, 1, 5);
 	M_Options_PrintSlider(  "              Contrast", !v_color_enable.integer, v_contrast.value, 1, 5);
 	M_Options_PrintSlider(  "            Brightness", !v_color_enable.integer, v_brightness.value, 0, 0.8);
@@ -2270,8 +2267,7 @@ static void M_Options_ColorControl_Draw (void)
 	c[0] = menu_options_colorcontrol_correctionvalue.value; // intensity value that should be matched up to a 50% dither to 'correct' quake
 	c[1] = c[0];
 	c[2] = c[1];
-	if (!(vid_hardwaregammasupported.integer && v_hwgamma.integer))
-		VID_ApplyGammaToColor(c, c);
+	VID_ApplyGammaToColor(c, c);
 	s = (float) 48 / 2 * vid.width / vid_conwidth.integer;
 	t = (float) 48 / 2 * vid.height / vid_conheight.integer;
 	u = s * 0.5;
@@ -2309,7 +2305,6 @@ static void M_Options_ColorControl_Key (int k, int ascii)
 		switch (options_colorcontrol_cursor)
 		{
 		case 0:
-			Cvar_SetValueQuick(&v_hwgamma, 1);
 			Cvar_SetValueQuick(&v_gamma, 1);
 			Cvar_SetValueQuick(&v_contrast, 1);
 			Cvar_SetValueQuick(&v_brightness, 0);

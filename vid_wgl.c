@@ -321,7 +321,7 @@ void VID_Finish (void)
 	// without this help
 	Sleep(0);
 
-	VID_UpdateGamma(false, 256);
+	VID_UpdateGamma();
 }
 
 //==========================================================================
@@ -498,7 +498,6 @@ void AppActivate(BOOL fActive, BOOL minimize)
 				ChangeDisplaySettings (NULL, CDS_FULLSCREEN);
 			vid_wassuspended = true;
 		}
-		VID_RestoreSystemGamma();
 	}
 }
 
@@ -709,32 +708,6 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 	/* return 1 if handled message, 0 if not */
 	return lRet;
-}
-
-int VID_SetGamma(unsigned short *ramps, int rampsize)
-{
-	if (qwglMakeCurrent)
-	{
-		HDC hdc = GetDC (NULL);
-		int i = SetDeviceGammaRamp(hdc, ramps);
-		ReleaseDC (NULL, hdc);
-		return i; // return success or failure
-	}
-	else
-		return 0;
-}
-
-int VID_GetGamma(unsigned short *ramps, int rampsize)
-{
-	if (qwglMakeCurrent)
-	{
-		HDC hdc = GetDC (NULL);
-		int i = GetDeviceGammaRamp(hdc, ramps);
-		ReleaseDC (NULL, hdc);
-		return i; // return success or failure
-	}
-	else
-		return 0;
 }
 
 static void GL_CloseLibrary(void)
@@ -1870,7 +1843,6 @@ void VID_Shutdown (void)
 
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
-	VID_RestoreSystemGamma();
 
 	vid_initialized = false;
 	isgl = gldll != NULL;

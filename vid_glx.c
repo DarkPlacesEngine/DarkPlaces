@@ -119,11 +119,9 @@ static qboolean vid_usingmouse = false;
 static qboolean vid_usinghidecursor = false;
 static qboolean vid_usingvsync = false;
 static qboolean vid_usevsync = false;
-static qboolean vid_x11_hardwaregammasupported = false;
 #ifdef USEDGA
 static qboolean vid_x11_dgasupported = false;
 #endif
-static int vid_x11_gammarampsize = 0;
 
 #ifdef USEDGA
 cvar_t vid_dgamouse = {CVAR_SAVE, "vid_dgamouse", "0", "make use of DGA mouse input"};
@@ -705,7 +703,6 @@ static void HandleEvents(void)
 				break;
 			// window restored
 			vid_hidden = false;
-			VID_RestoreSystemGamma();
 
 			if(vid_isvidmodefullscreen)
 			{
@@ -742,7 +739,6 @@ static void HandleEvents(void)
 				break;
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
-			VID_RestoreSystemGamma();
 
 			if(vid_isvidmodefullscreen)
 				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, &init_vidmode);
@@ -779,7 +775,6 @@ static void HandleEvents(void)
 
 			// window is no longer the input focus
 			vid_activewindow = false;
-			VID_RestoreSystemGamma();
 
 			break;
 		case EnterNotify:
@@ -855,7 +850,6 @@ void VID_Shutdown(void)
 
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
-	VID_RestoreSystemGamma();
 
 	// FIXME: glXDestroyContext here?
 	if (vid_isvidmodefullscreen)
@@ -893,7 +887,6 @@ void VID_Shutdown(void)
 static void signal_handler(int sig)
 {
 	Con_Printf("Received signal %d, exiting...\n", sig);
-	VID_RestoreSystemGamma();
 	Sys_Quit(1);
 }
 
@@ -969,17 +962,7 @@ void VID_Finish (void)
 	}
 
 	if (vid_x11_hardwaregammasupported)
-		VID_UpdateGamma(false, vid_x11_gammarampsize);
-}
-
-int VID_SetGamma(unsigned short *ramps, int rampsize)
-{
-	return XF86VidModeSetGammaRamp(vidx11_display, vidx11_screen, rampsize, ramps, ramps + rampsize, ramps + rampsize*2);
-}
-
-int VID_GetGamma(unsigned short *ramps, int rampsize)
-{
-	return XF86VidModeGetGammaRamp(vidx11_display, vidx11_screen, rampsize, ramps, ramps + rampsize, ramps + rampsize*2);
+		VID_UpdateGamma();
 }
 
 void VID_Init(void)
@@ -1316,7 +1299,6 @@ static qboolean VID_InitModeSoft(viddef_mode_t *mode)
 	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_activewindow = true;
-	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
 #ifdef USEDGA
 	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
 	if (!vid_x11_dgasupported)
@@ -1663,7 +1645,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingvsync = false;
 	vid_hidden = false;
 	vid_activewindow = true;
-	vid_x11_hardwaregammasupported = XF86VidModeGetGammaRampSize(vidx11_display, vidx11_screen, &vid_x11_gammarampsize) != 0;
 #ifdef USEDGA
 	vid_x11_dgasupported = XF86DGAQueryVersion(vidx11_display, &MajorVersion, &MinorVersion);
 	if (!vid_x11_dgasupported)
