@@ -2848,7 +2848,6 @@ void VID_Shutdown (void)
 {
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
-	VID_RestoreSystemGamma();
 
 #if SDL_MAJOR_VERSION == 1
 #ifndef WIN32
@@ -2881,24 +2880,6 @@ void VID_Shutdown (void)
 	gl_platformextensions = "";
 }
 
-int VID_SetGamma (unsigned short *ramps, int rampsize)
-{
-#if SDL_MAJOR_VERSION == 1
-	return !SDL_SetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
-#else
-	return !SDL_SetWindowGammaRamp (window, ramps, ramps + rampsize, ramps + rampsize*2);
-#endif
-}
-
-int VID_GetGamma (unsigned short *ramps, int rampsize)
-{
-#if SDL_MAJOR_VERSION == 1
-	return !SDL_GetGammaRamp (ramps, ramps + rampsize, ramps + rampsize*2);
-#else
-	return !SDL_GetWindowGammaRamp (window, ramps, ramps + rampsize, ramps + rampsize*2);
-#endif
-}
-
 void VID_Finish (void)
 {
 #if SDL_MAJOR_VERSION == 1
@@ -2912,7 +2893,7 @@ void VID_Finish (void)
 #endif
 	vid_activewindow = !vid_hidden && vid_hasfocus;
 
-	VID_UpdateGamma(false, 256);
+	VID_UpdateGamma();
 
 	if (!vid_hidden)
 	{

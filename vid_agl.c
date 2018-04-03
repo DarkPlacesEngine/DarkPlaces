@@ -190,7 +190,6 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	}
 }
 
-#define GAMMA_TABLE_SIZE 256
 void VID_Finish (void)
 {
 	qboolean vid_usevsync;
@@ -216,7 +215,7 @@ void VID_Finish (void)
 			GL_Finish();
 		qaglSwapBuffers(context);
 	}
-	VID_UpdateGamma(false, GAMMA_TABLE_SIZE);
+	VID_UpdateGamma();
 
 	if (apple_multithreadedgl.integer)
 	{
@@ -255,65 +254,9 @@ void VID_Finish (void)
 	}
 }
 
-int VID_SetGamma(unsigned short *ramps, int rampsize)
-{
-	CGGammaValue table_red [GAMMA_TABLE_SIZE];
-	CGGammaValue table_green [GAMMA_TABLE_SIZE];
-	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
-	int i;
-
-	// Convert the unsigned short table into 3 float tables
-	for (i = 0; i < rampsize; i++)
-		table_red[i] = (float)ramps[i] / 65535.0f;
-	for (i = 0; i < rampsize; i++)
-		table_green[i] = (float)ramps[i + rampsize] / 65535.0f;
-	for (i = 0; i < rampsize; i++)
-		table_blue[i] = (float)ramps[i + 2 * rampsize] / 65535.0f;
-
-	if (CGSetDisplayTransferByTable(CGMainDisplayID(), rampsize, table_red, table_green, table_blue) != CGDisplayNoErr)
-	{
-		Con_Print("VID_SetGamma: ERROR: CGSetDisplayTransferByTable failed!\n");
-		return false;
-	}
-
-	return true;
-}
-
-int VID_GetGamma(unsigned short *ramps, int rampsize)
-{
-	CGGammaValue table_red [GAMMA_TABLE_SIZE];
-	CGGammaValue table_green [GAMMA_TABLE_SIZE];
-	CGGammaValue table_blue [GAMMA_TABLE_SIZE];
-	CGTableCount actualsize = 0;
-	int i;
-
-	// Get the gamma ramps from the system
-	if (CGGetDisplayTransferByTable(CGMainDisplayID(), rampsize, table_red, table_green, table_blue, &actualsize) != CGDisplayNoErr)
-	{
-		Con_Print("VID_GetGamma: ERROR: CGGetDisplayTransferByTable failed!\n");
-		return false;
-	}
-	if (actualsize != (unsigned int)rampsize)
-	{
-		Con_Printf("VID_GetGamma: ERROR: invalid gamma table size (%u != %u)\n", actualsize, rampsize);
-		return false;
-	}
-
-	// Convert the 3 float tables into 1 unsigned short table
-	for (i = 0; i < rampsize; i++)
-		ramps[i] = table_red[i] * 65535.0f;
-	for (i = 0; i < rampsize; i++)
-		ramps[i + rampsize] = table_green[i] * 65535.0f;
-	for (i = 0; i < rampsize; i++)
-		ramps[i + 2 * rampsize] = table_blue[i] * 65535.0f;
-
-	return true;
-}
-
 void signal_handler(int sig)
 {
 	Sys_PrintfToTerminal("Received signal %d, exiting...\n", sig);
-	VID_RestoreSystemGamma();
 	Sys_Quit(1);
 }
 
@@ -398,7 +341,6 @@ void VID_Shutdown(void)
 
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
-	VID_RestoreSystemGamma();
 
 	if (context != NULL)
 	{
@@ -456,11 +398,7 @@ static OSStatus MainWindowEventHandler (EventHandlerCallRef nextHandler, EventRe
 static void VID_AppFocusChanged(qboolean windowIsActive)
 {
 	if (vid_activewindow != windowIsActive)
-	{
 		vid_activewindow = windowIsActive;
-		if (!vid_activewindow)
-			VID_RestoreSystemGamma();
-	}
 
 	if (windowIsActive || !snd_mutewhenidle.integer)
 	{
