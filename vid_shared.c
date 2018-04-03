@@ -140,9 +140,6 @@ cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces So
 cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "8", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
 cvar_t vid_soft_interlace = {CVAR_SAVE, "vid_soft_interlace", "1", "whether the DarkPlaces Software Rasterizer should interlace the screen bands occupied by each thread"};
 
-// we don't know until we try it!
-cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1", "indicates whether hardware gamma is supported (updated by attempts to set hardware gamma ramps)"};
-
 // VorteX: more info cvars, mostly set in VID_CheckExtensions
 cvar_t gl_info_vendor = {CVAR_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
 cvar_t gl_info_renderer = {CVAR_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
@@ -150,13 +147,6 @@ cvar_t gl_info_version = {CVAR_READONLY, "gl_info_version", "", "indicates versi
 cvar_t gl_info_extensions = {CVAR_READONLY, "gl_info_extensions", "", "indicates extension list found by engine, space separated."};
 cvar_t gl_info_platform = {CVAR_READONLY, "gl_info_platform", "", "indicates GL platform: WGL, GLX, or AGL."};
 cvar_t gl_info_driver = {CVAR_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
-
-// whether hardware gamma ramps are currently in effect
-qboolean vid_usinghwgamma = false;
-
-int vid_gammarampsize = 0;
-unsigned short *vid_gammaramps = NULL;
-unsigned short *vid_systemgammaramps = NULL;
 
 cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
@@ -205,10 +195,9 @@ cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5", "desired color of g
 cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1", "desired color of white"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
-cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "0", "enables use of hardware gamma correction ramps if available (note: does not work very well on Windows2000 and above), values are 0 = off, 1 = attempt to use hardware gamma, 2 = use hardware gamma whether it works or not"};
-cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps if available (note: overrides v_hwgamma)"};
+cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps"};
 cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
-cvar_t v_psycho = {0, "v_psycho", "0", "easter egg"};
+cvar_t v_psycho = {0, "v_psycho", "0", "easter egg - R.I.P. zinx http://obits.al.com/obituaries/birmingham/obituary.aspx?n=christopher-robert-lais&pid=186080667"};
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -1474,7 +1463,7 @@ static void Force_CenterView_f (void)
 
 static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
-static int cachecolorenable, cachehwgamma;
+static int cachecolorenable;
 
 void VID_ApplyGammaToColor(const float *rgb, float *out)
 {
@@ -1518,6 +1507,8 @@ void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
 	// immensely butchered it to work with variable framerates and fit in with
 	// the rest of darkplaces.
+	//
+	// R.I.P. zinx http://obits.al.com/obituaries/birmingham/obituary.aspx?n=christopher-robert-lais&pid=186080667
 	if (v_psycho.integer)
 	{
 		int x, y;
@@ -1555,36 +1546,12 @@ void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 	}
 }
 
-void VID_UpdateGamma(qboolean force, int rampsize)
+void VID_UpdateGamma(void)
 {
 	cvar_t *c;
 	float f;
-	int wantgamma;
 	qboolean gamma_changed = false;
 
-	// LordHavoc: don't mess with gamma tables if running dedicated
-	if (cls.state == ca_dedicated)
-		return;
-
-	wantgamma = v_hwgamma.integer;
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES2:
-		if (v_glslgamma.integer)
-			wantgamma = 0;
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-		break;
-	}
-	if(!vid_activewindow)
-		wantgamma = 0;
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 	BOUNDCVAR(v_gamma, 0.1, 5);
 	BOUNDCVAR(v_contrast, 0.2, 5);
@@ -1630,6 +1597,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 		}
 	}
 
+	// if any gamma settings were changed, bump vid_gammatables_serial so we regenerate the gamma ramp texture
 #define GAMMACHECK(cache, value) if (cache != (value)) gamma_changed = true;cache = (value)
 	if(v_psycho.integer)
 		gamma_changed = true;
@@ -1650,64 +1618,7 @@ void VID_UpdateGamma(qboolean force, int rampsize)
 
 	if(gamma_changed)
 		++vid_gammatables_serial;
-
-	GAMMACHECK(cachehwgamma    , wantgamma);
 #undef GAMMACHECK
-
-	if (!force && !gamma_forcenextframe && !gamma_changed)
-		return;
-
-	gamma_forcenextframe = false;
-
-	if (cachehwgamma)
-	{
-		if (!vid_usinghwgamma)
-		{
-			vid_usinghwgamma = true;
-			if (vid_gammarampsize != rampsize || !vid_gammaramps)
-			{
-				vid_gammarampsize = rampsize;
-				if (vid_gammaramps)
-					Z_Free(vid_gammaramps);
-				vid_gammaramps = (unsigned short *)Z_Malloc(6 * vid_gammarampsize * sizeof(unsigned short));
-				vid_systemgammaramps = vid_gammaramps + 3 * vid_gammarampsize;
-			}
-			VID_GetGamma(vid_systemgammaramps, vid_gammarampsize);
-		}
-
-		VID_BuildGammaTables(vid_gammaramps, vid_gammarampsize);
-
-		// set vid_hardwaregammasupported to true if VID_SetGamma succeeds, OR if vid_hwgamma is >= 2 (forced gamma - ignores driver return value)
-		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps, vid_gammarampsize) || cachehwgamma >= 2);
-		// if custom gamma ramps failed (Windows stupidity), restore to system gamma
-		if(!vid_hardwaregammasupported.integer)
-		{
-			if (vid_usinghwgamma)
-			{
-				vid_usinghwgamma = false;
-				VID_SetGamma(vid_systemgammaramps, vid_gammarampsize);
-			}
-		}
-	}
-	else
-	{
-		if (vid_usinghwgamma)
-		{
-			vid_usinghwgamma = false;
-			VID_SetGamma(vid_systemgammaramps, vid_gammarampsize);
-		}
-	}
-}
-
-void VID_RestoreSystemGamma(void)
-{
-	if (vid_usinghwgamma)
-	{
-		vid_usinghwgamma = false;
-		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_systemgammaramps, vid_gammarampsize));
-		// force gamma situation to be reexamined next frame
-		gamma_forcenextframe = true;
-	}
 }
 
 #ifdef WIN32
@@ -1743,7 +1654,6 @@ void VID_Shared_Init(void)
 	Con_Printf("DPSOFTRAST not available (SSE2 not compiled in)\n");
 #endif
 
-	Cvar_RegisterVariable(&vid_hardwaregammasupported);
 	Cvar_RegisterVariable(&gl_info_vendor);
 	Cvar_RegisterVariable(&gl_info_renderer);
 	Cvar_RegisterVariable(&gl_info_version);
@@ -1766,7 +1676,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_g);
 	Cvar_RegisterVariable(&v_color_white_b);
 
-	Cvar_RegisterVariable(&v_hwgamma);
 	Cvar_RegisterVariable(&v_glslgamma);
 	Cvar_RegisterVariable(&v_glslgamma_2d);
 
