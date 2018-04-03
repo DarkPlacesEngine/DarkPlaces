@@ -567,8 +567,8 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			break;
 
 		case WM_MOVE:
-			window_x = (int) LOWORD(lParam);
-			window_y = (int) HIWORD(lParam);
+			window_x = (short) LOWORD(lParam);
+			window_y = (short) HIWORD(lParam);
 			VID_SetMouse(false, false, false);
 			break;
 
