@@ -2167,11 +2167,13 @@ void R_DrawGamma(void)
 	case RENDERPATH_D3D10:
 	case RENDERPATH_D3D11:
 	case RENDERPATH_GLES2:
-		if (v_glslgamma.integer)
+		if (vid_usinghwgamma || v_glslgamma.integer)
 			return;
 		break;
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
+		if (vid_usinghwgamma)
+			return;
 		break;
 	case RENDERPATH_GLES1:
 	case RENDERPATH_SOFT:

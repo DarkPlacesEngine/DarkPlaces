@@ -111,8 +111,8 @@ typedef struct viddef_s
 	qboolean stencil;
 	qboolean sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
 	qboolean sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
-	qboolean sRGBcapable2D; // whether 2D rendering can be sRGB corrected (renderpath)
-	qboolean sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath)
+	qboolean sRGBcapable2D; // whether 2D rendering can be sRGB corrected (renderpath, v_hwgamma)
+	qboolean sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath, v_hwgamma)
 
 	renderpath_t renderpath;
 	qboolean forcevbo; // some renderpaths can not operate without it
@@ -177,6 +177,8 @@ void VID_EnableJoystick(qboolean enable);
 
 extern qboolean vid_hidden;
 extern qboolean vid_activewindow;
+extern cvar_t vid_hardwaregammasupported;
+extern qboolean vid_usinghwgamma;
 extern qboolean vid_supportrefreshrate;
 
 extern cvar_t vid_soft;
@@ -222,6 +224,7 @@ extern cvar_t v_color_grey_b;
 extern cvar_t v_color_white_r;
 extern cvar_t v_color_white_g;
 extern cvar_t v_color_white_b;
+extern cvar_t v_hwgamma;
 
 // brand of graphics chip
 extern const char *gl_vendor;
@@ -263,9 +266,20 @@ qboolean VID_InitMode(viddef_mode_t *mode);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 
-// updates cachegamma variables and bumps vid_gammatables_serial if anything changed
+// sets hardware gamma correction, returns false if the device does not
+// support gamma control
+// (ONLY called by VID_UpdateGamma and VID_RestoreSystemGamma)
+int VID_SetGamma(unsigned short *ramps, int rampsize);
+// gets hardware gamma correction, returns false if the device does not
+// support gamma control
+// (ONLY called by VID_UpdateGamma and VID_RestoreSystemGamma)
+int VID_GetGamma(unsigned short *ramps, int rampsize);
+// makes sure ramp arrays are big enough and calls VID_GetGamma/VID_SetGamma
 // (ONLY to be called from VID_Finish!)
-void VID_UpdateGamma(void);
+void VID_UpdateGamma(qboolean force, int rampsize);
+// turns off hardware gamma ramps immediately
+// (called from various shutdown/deactivation functions)
+void VID_RestoreSystemGamma(void);
 
 qboolean VID_HasScreenKeyboardSupport(void);
 void VID_ShowKeyboard(qboolean show);
