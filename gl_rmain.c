@@ -125,6 +125,12 @@ cvar_t r_fakelight = {0, "r_fakelight","0", "render 'fake' lighting instead of r
 cvar_t r_fakelight_intensity = {0, "r_fakelight_intensity","0.75", "fakelight intensity modifier"};
 #define FAKELIGHT_ENABLED (r_fakelight.integer >= 2 || (r_fakelight.integer && r_refdef.scene.worldmodel && !r_refdef.scene.worldmodel->lit))
 
+cvar_t r_fullbright_directed = {0, "r_fullbright_directed", "0", "render fullbright things (unlit worldmodel and EF_FULLBRIGHT entities, but not fullbright shaders) using a constant light direction instead to add more depth while keeping uniform brightness"};
+cvar_t r_fullbright_directed_ambient = {0, "r_fullbright_directed_ambient", "0.5", "ambient light multiplier for directed fullbright"};
+cvar_t r_fullbright_directed_diffuse = {0, "r_fullbright_directed_diffuse", "0.75", "diffuse light multiplier for directed fullbright"};
+cvar_t r_fullbright_directed_pitch = {0, "r_fullbright_directed_pitch", "20", "constant pitch direction ('height') of the fake light source to use for fullbright"};
+cvar_t r_fullbright_directed_pitch_relative = {0, "r_fullbright_directed_pitch_relative", "0", "whether r_fullbright_directed_pitch is interpreted as absolute (0) or relative (1) pitch"};
+
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
@@ -4371,6 +4377,11 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_dynamic);
 	Cvar_RegisterVariable(&r_fakelight);
 	Cvar_RegisterVariable(&r_fakelight_intensity);
+	Cvar_RegisterVariable(&r_fullbright_directed);
+	Cvar_RegisterVariable(&r_fullbright_directed_ambient);
+	Cvar_RegisterVariable(&r_fullbright_directed_diffuse);
+	Cvar_RegisterVariable(&r_fullbright_directed_pitch);
+	Cvar_RegisterVariable(&r_fullbright_directed_pitch_relative);
 	Cvar_RegisterVariable(&r_fullbright);
 	Cvar_RegisterVariable(&r_shadows);
 	Cvar_RegisterVariable(&r_shadows_darken);
@@ -5114,6 +5125,26 @@ void R_AnimCache_CacheVisibleEntities(void)
 
 extern cvar_t r_overheadsprites_pushback;
 
+static void R_GetDirectedFullbright(vec3_t ambient, vec3_t diffuse, vec3_t worldspacenormal)
+{
+	vec3_t angles;
+
+	VectorSet(ambient, r_fullbright_directed_ambient.value, r_fullbright_directed_ambient.value, r_fullbright_directed_ambient.value);
+	VectorSet(diffuse, r_fullbright_directed_diffuse.value, r_fullbright_directed_diffuse.value, r_fullbright_directed_diffuse.value);
+
+	// Use cl.viewangles and not r_refdef.view.forward here so it is the
+	// same for all stereo views, and to better handle pitches outside
+	// [-90, 90] (in_pitch_* cvars allow that).
+	VectorCopy(cl.viewangles, angles);
+	if (r_fullbright_directed_pitch_relative.integer) {
+		angles[PITCH] += r_fullbright_directed_pitch.value;
+	} else {
+		angles[PITCH] = r_fullbright_directed_pitch.value;
+	}
+	AngleVectors(angles, worldspacenormal, NULL, NULL);
+	VectorNegate(worldspacenormal, worldspacenormal);
+}
+
 static void R_View_UpdateEntityLighting (void)
 {
 	int i;
@@ -5134,9 +5165,21 @@ static void R_View_UpdateEntityLighting (void)
 		if (ent->model && ent->model == cl.worldmodel)
 		{
 			// TODO: use modellight for r_ambient settings on world?
-			VectorSet(ent->modellight_ambient, 0, 0, 0);
-			VectorSet(ent->modellight_diffuse, 0, 0, 0);
-			VectorSet(ent->modellight_lightdir, 0, 0, 1);
+			// The logic here currently matches RSurf_ActiveWorldEntity.
+			if (r_fullbright_directed.integer && (r_fullbright.integer || !ent->model || !ent->model->lit))
+			{
+				R_GetDirectedFullbright(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+				Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, ent->modellight_lightdir);
+				if(VectorLength2(ent->modellight_lightdir) == 0)
+					VectorSet(ent->modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+				VectorNormalize(ent->modellight_lightdir);
+			}
+			else
+			{
+				VectorSet(ent->modellight_ambient, 0, 0, 0);
+				VectorSet(ent->modellight_diffuse, 0, 0, 0);
+				VectorSet(ent->modellight_lightdir, 0, 0, 1);
+			}
 			continue;
 		}
 		
@@ -5165,8 +5208,18 @@ static void R_View_UpdateEntityLighting (void)
 						org[2] = org[2] + r_overheadsprites_pushback.value;
 					R_LightPoint(ent->modellight_ambient, org, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
 				}
-				else
+				else if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
+				{
 					R_CompleteLightPoint(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal, org, LP_LIGHTMAP);
+				}
+				else if (r_fullbright_directed.integer)
+				{
+					R_GetDirectedFullbright(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+				}
+				else
+				{
+					VectorSet(ent->modellight_ambient, 1, 1, 1);
+				}
 
 				if(ent->flags & RENDER_EQUALIZE)
 				{
@@ -5213,8 +5266,18 @@ static void R_View_UpdateEntityLighting (void)
 					}
 				}
 			}
-			else // highly rare
-				VectorSet(ent->modellight_ambient, 1, 1, 1);
+			else
+			{
+				// EF_FULLBRIGHT entity.
+				if (r_fullbright_directed.integer)
+				{
+					R_GetDirectedFullbright(ent->modellight_ambient, ent->modellight_diffuse, tempdiffusenormal);
+				}
+				else
+				{
+					VectorSet(ent->modellight_ambient, 1, 1, 1);
+				}
+			}
 		}
 
 		// move the light direction into modelspace coordinates for lighting code
@@ -8601,9 +8664,17 @@ void RSurf_ActiveWorldEntity(void)
 	rsurface.fogheightfade = r_refdef.fogheightfade;
 	rsurface.fogplaneviewdist = r_refdef.fogplaneviewdist;
 	rsurface.fogmasktabledistmultiplier = FOGMASKTABLEWIDTH * rsurface.fograngerecip;
-	VectorSet(rsurface.modellight_ambient, 0, 0, 0);
-	VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
-	VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
+	if (r_fullbright_directed.integer && (r_fullbright.integer || !model->lit))
+	{
+		R_GetDirectedFullbright(rsurface.modellight_ambient, rsurface.modellight_diffuse, rsurface.modellight_lightdir);
+		rsurface.ent_flags |= RENDER_LIGHT | RENDER_DYNAMICMODELLIGHT;
+	}
+	else
+	{
+		VectorSet(rsurface.modellight_ambient, 0, 0, 0);
+		VectorSet(rsurface.modellight_diffuse, 0, 0, 0);
+		VectorSet(rsurface.modellight_lightdir, 0, 0, 1);
+	}
 	VectorSet(rsurface.colormap_pantscolor, 0, 0, 0);
 	VectorSet(rsurface.colormap_shirtcolor, 0, 0, 0);
 	VectorSet(rsurface.colormod, r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale);
@@ -8718,6 +8789,10 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.ent_skinnum = ent->skinnum;
 	rsurface.ent_qwskin = (ent->entitynumber <= cl.maxclients && ent->entitynumber >= 1 && cls.protocol == PROTOCOL_QUAKEWORLD && cl.scores[ent->entitynumber - 1].qw_skin[0] && !strcmp(ent->model->name, "progs/player.mdl")) ? (ent->entitynumber - 1) : -1;
 	rsurface.ent_flags = ent->flags;
+	if (r_fullbright_directed.integer && (r_fullbright.integer || !model->lit))
+	{
+		rsurface.ent_flags |= RENDER_LIGHT | RENDER_DYNAMICMODELLIGHT;
+	}
 	rsurface.shadertime = r_refdef.scene.time - ent->shadertime;
 	rsurface.matrix = ent->matrix;
 	rsurface.inversematrix = ent->inversematrix;
