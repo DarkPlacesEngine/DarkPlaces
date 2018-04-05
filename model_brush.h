@@ -104,7 +104,7 @@ mplane_t;
 // render using vertex alpha (q3bsp) as texture blend parameter between foreground (normal) skinframe and background skinframe
 #define MATERIALFLAG_VERTEXTEXTUREBLEND 0x00008000
 // disables GL_CULL_FACE on this texture (making it double sided)
-#define MATERIALFLAG_NOCULLFACE 0x000100000
+#define MATERIALFLAG_NOCULLFACE 0x00010000
 // render with a very short depth range (like 10% of normal), this causes entities to appear infront of most of the scene
 #define MATERIALFLAG_SHORTDEPTHRANGE 0x00020000
 // render water, comprising refraction and reflection (note: this is always opaque, the shader does the alpha effect)
