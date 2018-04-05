@@ -1626,6 +1626,7 @@ Key_Init (void)
 	Cmd_AddCommand ("in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
 	Cmd_AddCommand ("in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
 	Cmd_AddCommand ("in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
+	Cmd_AddCommand ("in_releaseall", Key_ReleaseAll, "releases all currently pressed keys (debug command)");
 
 	Cmd_AddCommand ("bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
 	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
