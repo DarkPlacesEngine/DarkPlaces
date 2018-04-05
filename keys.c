@@ -1989,14 +1989,3 @@ Key_ReleaseAll (void)
 	// now all keys are guaranteed down (once the event queue is unblocked)
 	// and only future events count
 }
-
-/*
-===================
-Key_ClearStates
-===================
-*/
-void
-Key_ClearStates (void)
-{
-	memset(keydown, 0, sizeof(keydown));
-}
