@@ -429,7 +429,7 @@ ClearAllStates
 */
 static void ClearAllStates (void)
 {
-	Key_ClearStates ();
+	Key_ReleaseAll();
 	if (vid_usingmouse)
 		mouse_oldbuttonstate = 0;
 }

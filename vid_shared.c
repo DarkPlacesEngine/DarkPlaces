@@ -1850,6 +1850,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 static void VID_OpenSystems(void)
 {
+	Key_ReleaseAll();
 	R_Modules_Start();
 	S_Startup();
 }
@@ -1858,6 +1859,7 @@ static void VID_CloseSystems(void)
 {
 	S_Shutdown();
 	R_Modules_Shutdown();
+	Key_ReleaseAll();
 }
 
 qboolean vid_commandlinecheck = true;
