@@ -961,8 +961,7 @@ void VID_Finish (void)
 			break;
 	}
 
-	if (vid_x11_hardwaregammasupported)
-		VID_UpdateGamma();
+	VID_UpdateGamma();
 }
 
 void VID_Init(void)
