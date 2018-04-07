@@ -2500,7 +2500,7 @@ static void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rt
 	vec_t right[3], up[3], size, ca;
 	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
 
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	r_refdef.stats[r_stat_drawndecals] += numsurfaces;
 //	R_Mesh_ResetTextureState();
@@ -2659,7 +2659,7 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 	float minparticledist_start, minparticledist_end;
 	qboolean dofade;
 
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	Vector4Set(colormultiplier, r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), r_refdef.view.colorscale * (1.0 / 256.0f), cl_particles_alpha.value * (1.0 / 256.0f));
 
