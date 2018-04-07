@@ -1948,7 +1948,9 @@ void CL_UpdateWorld(void)
 		// update the engine-based viewmodel
 		CL_UpdateViewModel();
 
-		CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
+		// when csqc is loaded, it will call this in CSQC_UpdateView
+		if (!cl.csqc_loaded)
+			CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
 
 		// decals, particles, and explosions will be updated during rneder
 	}
