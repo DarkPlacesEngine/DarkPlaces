@@ -3873,8 +3873,8 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	int tex2d, tex3d, texcubemap, texnum;
 	if (unitnum >= vid.teximageunits)
 		return;
-//	if (unit->texture == tex)
-//		return;
+	if (unit->texture == tex)
+		return;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
