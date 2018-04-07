@@ -3536,63 +3536,6 @@ static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 		VM_Warning(prog, "VM_CL_R_PolygonEnd: %i vertices isn't a good choice\n", polys->begin_vertices);
 }
 
-static vmpolygons_t debugPolys;
-
-void Debug_PolygonBegin(const char *picname, int drawflag)
-{
-	if(!debugPolys.initialized)
-		VM_InitPolygons(&debugPolys);
-	if(debugPolys.begin_active)
-	{
-		Con_Printf("Debug_PolygonBegin: called twice without Debug_PolygonEnd after first\n");
-		return;
-	}
-	debugPolys.begin_texture = picname[0] ? Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT)->tex : r_texture_white;
-	debugPolys.begin_drawflag = drawflag;
-	debugPolys.begin_vertices = 0;
-	debugPolys.begin_active = true;
-}
-
-void Debug_PolygonVertex(float x, float y, float z, float s, float t, float r, float g, float b, float a)
-{
-	if(!debugPolys.begin_active)
-	{
-		Con_Printf("Debug_PolygonVertex: Debug_PolygonBegin wasn't called\n");
-		return;
-	}
-
-	if(debugPolys.begin_vertices >= VMPOLYGONS_MAXPOINTS)
-	{
-		Con_Printf("Debug_PolygonVertex: may have %i vertices max\n", VMPOLYGONS_MAXPOINTS);
-		return;
-	}
-
-	debugPolys.begin_vertex[debugPolys.begin_vertices][0] = x;
-	debugPolys.begin_vertex[debugPolys.begin_vertices][1] = y;
-	debugPolys.begin_vertex[debugPolys.begin_vertices][2] = z;
-	debugPolys.begin_texcoord[debugPolys.begin_vertices][0] = s;
-	debugPolys.begin_texcoord[debugPolys.begin_vertices][1] = t;
-	debugPolys.begin_color[debugPolys.begin_vertices][0] = r;
-	debugPolys.begin_color[debugPolys.begin_vertices][1] = g;
-	debugPolys.begin_color[debugPolys.begin_vertices][2] = b;
-	debugPolys.begin_color[debugPolys.begin_vertices][3] = a;
-	debugPolys.begin_vertices++;
-}
-
-void Debug_PolygonEnd(void)
-{
-	if (!debugPolys.begin_active)
-	{
-		Con_Printf("Debug_PolygonEnd: Debug_PolygonBegin wasn't called\n");
-		return;
-	}
-	debugPolys.begin_active = false;
-	if (debugPolys.begin_vertices >= 3)
-		VMPolygons_Store(&debugPolys);
-	else
-		Con_Printf("Debug_PolygonEnd: %i vertices isn't a good choice\n", debugPolys.begin_vertices);
-}
-
 /*
 =============
 CL_CheckBottom
