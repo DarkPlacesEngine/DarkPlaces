@@ -2406,7 +2406,7 @@ void CL_MeshEntities_Init(void)
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
 		ent->render.alpha = 1;
-		ent->render.flags = RENDER_LIGHT;
+		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
 		ent->render.frameblend[0].lerp = 1;
 		VectorSet(ent->render.colormod, 1, 1, 1);
@@ -2417,7 +2417,6 @@ void CL_MeshEntities_Init(void)
 		Matrix4x4_CreateIdentity(&ent->render.matrix);
 		CL_UpdateRenderEntity(&ent->render);
 	}
-	cl_meshentities[MESH_CSQCPOLYGONS].render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
