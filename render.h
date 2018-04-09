@@ -139,6 +139,7 @@ r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype );
 
 void R_SkinFrame_PrepareForPurge(void);
 void R_SkinFrame_MarkUsed(skinframe_t *skinframe);
+void R_SkinFrame_PurgeSkinFrame(skinframe_t *skinframe);
 void R_SkinFrame_Purge(void);
 // set last to NULL to start from the beginning
 skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name );
