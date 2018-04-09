@@ -614,14 +614,29 @@ typedef struct texture_s
 	rtexture_t *backgroundnmaptexture; // normalmap (bumpmap for dot3)
 	rtexture_t *backgroundglosstexture; // glossmap (for dot3)
 	rtexture_t *backgroundglowtexture; // glow only (fullbrights)
-	float specularscale;
 	float specularpower;
-	// color tint (colormod * currentalpha) used for rtlighting this material
-	float dlightcolor[3];
-	// color tint (colormod * 2) used for lightmapped lighting on this material
-	// includes alpha as 4th component
-	// replaces role of gl_Color in GLSL shader
-	float lightmapcolor[4];
+
+	// rendering parameters - updated by R_GetCurrentTexture using rsurface.render_* fields
+	// (almost) all map textures are lightmap (no MATERIALFLAG_MODELLIGHT set),
+	// (almost) all model textures are MATERIALFLAG_MODELLIGHT,
+	// MATERIALFLAG_FULLBRIGHT is rendered as a forced MATERIALFLAG_MODELLIGHT with rtlights disabled
+	float render_glowmod[3];
+	// MATERIALFLAG_MODELLIGHT uses these parameters
+	float render_modellight_ambient[3];
+	float render_modellight_diffuse[3];
+	float render_modellight_lightdir[3];
+	float render_modellight_specular[3];
+	// lightmap rendering (not MATERIALFLAG_MODELLIGHT)
+	float render_lightmap_ambient[3];
+	float render_lightmap_diffuse[3];
+	float render_lightmap_specular[3];
+	// rtlights use these colors for the materials on this entity
+	float render_rtlight_diffuse[3];
+	float render_rtlight_specular[3];
+	// tint applied on top of render_*_diffuse for pants layer
+	float render_colormap_pants[3];
+	// tint applied on top of render_*_diffuse for shirt layer
+	float render_colormap_shirt[3];
 
 	// from q3 shaders
 	int customblendfunc[2];

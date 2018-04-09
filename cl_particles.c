@@ -2723,10 +2723,14 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 			// note: lighting is not cheap!
 			if (particletype[p->typeindex].lighting)
 			{
+				float a[3], c[3], dir[3];
 				vecorg[0] = p->org[0];
 				vecorg[1] = p->org[1];
 				vecorg[2] = p->org[2];
-				R_LightPoint(c4f, vecorg, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT);
+				R_CompleteLightPoint(a, c, dir, vecorg, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
+				c4f[0] = p->color[0] * colormultiplier[0] * (a[0] + 0.25f * c[0]);
+				c4f[1] = p->color[1] * colormultiplier[1] * (a[1] + 0.25f * c[1]);
+				c4f[2] = p->color[2] * colormultiplier[2] * (a[2] + 0.25f * c[2]);
 			}
 			// mix in the fog color
 			if (r_refdef.fogenabled)

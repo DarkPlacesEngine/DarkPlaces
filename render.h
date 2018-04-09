@@ -125,7 +125,7 @@ extern cvar_t r_dynamic;
 
 void R_Init(void);
 void R_UpdateVariables(void); // must call after setting up most of r_refdef, but before calling R_RenderView
-void R_RenderView(void); // must set r_refdef and call R_UpdateVariables first
+void R_RenderView(void); // must set r_refdef and call R_UpdateVariables and CL_UpdateEntityShading first
 void R_RenderView_UpdateViewVectors(void); // just updates r_refdef.view.{forward,left,up,origin,right,inverse_matrix}
 
 typedef enum r_refdef_scene_type_s {
@@ -401,18 +401,6 @@ typedef struct rsurfacestate_s
 	// animation blending state from entity
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	skeleton_t *skeleton;
-	// directional model shading state from entity
-	vec3_t modellight_ambient;
-	vec3_t modellight_diffuse;
-	vec3_t modellight_lightdir;
-	// colormapping state from entity (these are black if colormapping is off)
-	vec3_t colormap_pantscolor;
-	vec3_t colormap_shirtcolor;
-	// special coloring of ambient/diffuse textures (gloss not affected)
-	// colormod[3] is the alpha of the entity
-	float colormod[4];
-	// special coloring of glow textures
-	float glowmod[3];
 	// view location in model space
 	vec3_t localvieworigin;
 	// polygon offset data for submodels
@@ -451,8 +439,8 @@ typedef struct rsurfacestate_s
 	float userwavefunc_param[Q3WAVEFUNC_USER_COUNT];
 
 	// pointer to an entity_render_t used only by R_GetCurrentTexture and
-	// RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity as a unique id within
-	// each frame (see r_frame also)
+	// RSurf_ActiveModelEntity as a unique id within each frame (see r_frame
+	// also)
 	entity_render_t *entity;
 }
 rsurfacestate_t;
@@ -461,7 +449,6 @@ extern rsurfacestate_t rsurface;
 
 void R_HDR_UpdateIrisAdaptation(const vec3_t point);
 
-void RSurf_ActiveWorldEntity(void);
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass);
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
 void RSurf_SetupDepthAndCulling(void);
@@ -508,7 +495,7 @@ rsurfacepass_t;
 void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
 void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy);
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal);
-void R_SetupShader_Surface(const vec3_t lightcolorbase, qboolean modellighting, float ambientscale, float diffusescale, float specularscale, rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
+void R_SetupShader_Surface(const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_waterstate_waterplane_s

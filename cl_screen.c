@@ -1895,6 +1895,7 @@ static void R_Envmap_f (void)
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 4);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 
+	CL_UpdateEntityShading();
 	for (j = 0;j < 12;j++)
 	{
 		dpsnprintf(filename, sizeof(filename), "env/%s%s.tga", basename, envmapinfo[j].name);
@@ -2187,7 +2188,10 @@ static void SCR_DrawScreen (void)
 		if (cl.csqc_loaded)
 			CL_VM_UpdateView(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
 		else
+		{
+			CL_UpdateEntityShading();
 			R_RenderView();
+		}
 	}
 
 	if (!r_stereo_sidebyside.integer && !r_stereo_horizontal.integer && !r_stereo_vertical.integer)

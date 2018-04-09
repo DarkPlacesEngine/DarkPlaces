@@ -696,17 +696,12 @@ static void VM_CL_getlight (prvm_prog_t *prog)
 {
 	vec3_t ambientcolor, diffusecolor, diffusenormal;
 	vec3_t p;
+	int flags = prog->argc >= 2 ? PRVM_G_FLOAT(OFS_PARM1) : LP_LIGHTMAP;
 
 	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getlight);
 
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), p);
-	VectorClear(ambientcolor);
-	VectorClear(diffusecolor);
-	VectorClear(diffusenormal);
-	if (prog->argc >= 2)
-		R_CompleteLightPoint(ambientcolor, diffusecolor, diffusenormal, p, PRVM_G_FLOAT(OFS_PARM1));
-	else if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
-		cl.worldmodel->brush.LightPoint(cl.worldmodel, p, ambientcolor, diffusecolor, diffusenormal);
+	R_CompleteLightPoint(ambientcolor, diffusecolor, diffusenormal, p, flags, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
 	VectorMA(ambientcolor, 0.5, diffusecolor, PRVM_G_VECTOR(OFS_RETURN));
 	if (PRVM_clientglobalvector(getlight_ambient))
 		VectorCopy(ambientcolor, PRVM_clientglobalvector(getlight_ambient));
@@ -2453,7 +2448,7 @@ static int CL_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 extern cvar_t cl_bob;
 extern cvar_t cl_bobcycle;
 extern cvar_t cl_bobup;
-int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
+int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex, prvm_vec_t *shadingorigin)
 {
 	int ret;
 	int attachloop;
@@ -2526,6 +2521,16 @@ int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int
 			Matrix4x4_AdjustOrigin(out, 0, 0, bound(-7, bob, 4));
 		}
 		*/
+
+		// return the origin of the view
+		if (shadingorigin)
+			Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, shadingorigin);
+	}
+	else
+	{
+		// return the origin of the root entity in the chain
+		if (shadingorigin)
+			Matrix4x4_OriginFromMatrix(out, shadingorigin);
 	}
 	return 0;
 }
@@ -2582,7 +2587,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	tagindex = (int)PRVM_G_FLOAT(OFS_PARM1);
-	returncode = CL_GetTagMatrix(prog, &tag_matrix, e, tagindex);
+	returncode = CL_GetTagMatrix(prog, &tag_matrix, e, tagindex, NULL);
 	Matrix4x4_ToVectors(&tag_matrix, forward, left, up, origin);
 	VectorCopy(forward, PRVM_clientglobalvector(v_forward));
 	VectorScale(left, -1, PRVM_clientglobalvector(v_right));
@@ -3230,7 +3235,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));		
 			break;
 		case 16: // light
-			VectorMA(cl.entities[entnum].render.modellight_ambient, 0.5, cl.entities[entnum].render.modellight_diffuse, PRVM_G_VECTOR(OFS_RETURN));
+			VectorMA(cl.entities[entnum].render.render_modellight_ambient, 0.5, cl.entities[entnum].render.render_modellight_diffuse, PRVM_G_VECTOR(OFS_RETURN));
 			break;	
 		default:
 			PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -3266,6 +3271,7 @@ static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
 	CL_UpdateViewEntities();
+	CL_UpdateEntityShading();
 
 	// now draw stuff!
 	R_RenderView();
@@ -4250,7 +4256,7 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	flags = PRVM_G_FLOAT(OFS_PARM1);
 
 	// use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
-	CL_GetTagMatrix(prog, &entrendermatrix, ent, 0);
+	CL_GetTagMatrix(prog, &entrendermatrix, ent, 0, NULL);
 
 	VectorCopy(cl.csqc_viewangles, clviewangles);
 	teleported = (flags & REFDEFFLAG_TELEPORTED) != 0;

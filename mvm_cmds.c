@@ -1624,7 +1624,8 @@ void MVM_init_cmd(prvm_prog_t *prog)
 	scene->maxentities = MAX_EDICTS + 256 + 512;
 	scene->entities = (entity_render_t **)Mem_Alloc(prog->progs_mempool, sizeof(entity_render_t *) * scene->maxentities);
 
-	scene->ambient = 32.0f;
+	// LadyHavoc: what is this for?
+	scene->ambientintensity = 32.0f;
 }
 
 void MVM_reset_cmd(prvm_prog_t *prog)

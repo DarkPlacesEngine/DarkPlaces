@@ -573,10 +573,37 @@ typedef struct entity_render_s
 	int animcache_skeletaltransform3x4offset;
 	int animcache_skeletaltransform3x4size;
 
-	// current lighting from map (updated ONLY by client code, not renderer)
-	vec3_t modellight_ambient;
-	vec3_t modellight_diffuse; // q3bsp
-	vec3_t modellight_lightdir; // q3bsp
+	// CL_UpdateEntityShading reads these fields
+	// used only if RENDER_CUSTOMIZEDMODELLIGHT is set
+	vec3_t custommodellight_ambient;
+	vec3_t custommodellight_diffuse;
+	vec3_t custommodellight_lightdir;
+	// CSQC entities get their shading from the root of their attachment chain
+	float custommodellight_origin[3];
+
+	// derived lighting parameters (CL_UpdateEntityShading)
+
+	// used by MATERIALFLAG_FULLBRIGHT which is MATERIALFLAG_MODELLIGHT with
+	// this as ambient color, along with MATERIALFLAG_NORTLIGHT
+	float render_fullbright[3];
+	// color tint for the base pass glow textures if any
+	float render_glowmod[3];
+	// MATERIALFLAG_MODELLIGHT uses these parameters
+	float render_modellight_ambient[3];
+	float render_modellight_diffuse[3];
+	float render_modellight_lightdir[3];
+	float render_modellight_specular[3];
+	// lightmap rendering (not MATERIALFLAG_MODELLIGHT)
+	float render_lightmap_ambient[3];
+	float render_lightmap_diffuse[3];
+	float render_lightmap_specular[3];
+	// rtlights use these colors for the materials on this entity
+	float render_rtlight_diffuse[3];
+	float render_rtlight_specular[3];
+	// ignore lightmap and use lightgrid on this entity (e.g. FULLBRIGHT)
+	qboolean render_modellight_forced;
+	// do not process per pixel lights on this entity at all (like MATERIALFLAG_NORTLIGHT)
+	qboolean render_rtlight_disabled;
 
 	// storage of decals on this entity
 	// (note: if allowdecals is set, be sure to call R_DecalSystem_Reset on removal!)
@@ -1886,7 +1913,12 @@ typedef struct r_refdef_scene_s {
 	// controls intensity lightmap layers
 	unsigned short lightstylevalue[MAX_LIGHTSTYLES];	// 8.8 fraction of base light value
 
-	float ambient;
+	// adds brightness to the whole scene, separate from lightmapintensity
+	// see CL_UpdateEntityShading
+	float ambientintensity;
+	// brightness of lightmap and modellight lighting on materials
+	// see CL_UpdateEntityShading
+	float lightmapintensity;
 
 	qboolean rtworld;
 	qboolean rtworldshadows;
@@ -1956,9 +1988,6 @@ typedef struct r_refdef_s
 	// true during envmap command capture
 	qboolean envmap;
 
-	// brightness of world lightmaps and related lighting
-	// (often reduced when world rtlights are enabled)
-	float lightmapintensity;
 	// whether to draw world lights realtime, dlights realtime, and their shadows
 	float polygonfactor;
 	float polygonoffset;
@@ -2032,6 +2061,7 @@ extern const char *cl_meshentitynames[NUM_MESHENTITIES];
 #define CL_Mesh_UI() (&cl_meshentitymodels[MESH_UI])
 void CL_MeshEntities_AddToScene(void);
 void CL_MeshEntities_Reset(void);
+void CL_UpdateEntityShading(void);
 
 void CL_NewFrameReceived(int num);
 void CL_ParseEntityLump(char *entitystring);

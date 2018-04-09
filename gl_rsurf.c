@@ -583,10 +583,7 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(true, true, false, false, false);
-	else
-		R_DrawModelSurfaces(ent, true, true, false, false, false);
+	R_DrawModelSurfaces(ent, true, true, false, false, false);
 }
 
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
@@ -597,10 +594,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	if (model == NULL)
 		return;
 
-	if (ent == r_refdef.scene.worldentity)
-		RSurf_ActiveWorldEntity();
-	else
-		RSurf_ActiveModelEntity(ent, true, false, false);
+	RSurf_ActiveModelEntity(ent, true, false, false);
 
 	surfaces = model->data_surfaces;
 	flagsmask = MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA;
@@ -629,7 +623,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 				R_Water_AddWaterPlane(surfaces + j, n);
 		}
 	}
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -637,10 +631,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, true, false, false, false);
-	else
-		R_DrawModelSurfaces(ent, false, true, false, false, false);
+	R_DrawModelSurfaces(ent, false, true, false, false, false);
 }
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
@@ -654,10 +645,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 //	R_Mesh_ResetTextureState();
-	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, true, false, false);
-	else
-		R_DrawModelSurfaces(ent, false, false, true, false, false);
+	R_DrawModelSurfaces(ent, false, false, true, false, false);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
@@ -665,10 +653,7 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, false, false, true, false);
-	else
-		R_DrawModelSurfaces(ent, false, false, false, true, false);
+	R_DrawModelSurfaces(ent, false, false, false, true, false);
 }
 
 void R_Q1BSP_DrawPrepass(entity_render_t *ent)
@@ -676,10 +661,7 @@ void R_Q1BSP_DrawPrepass(entity_render_t *ent)
 	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	if (ent == r_refdef.scene.worldentity)
-		R_DrawWorldSurfaces(false, true, false, false, true);
-	else
-		R_DrawModelSurfaces(ent, false, true, false, false, true);
+	R_DrawModelSurfaces(ent, false, true, false, false, true);
 }
 
 typedef struct r_q1bsp_getlightinfo_s
@@ -1257,7 +1239,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
 	else
 		info.pvs = NULL;
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	if (!info.noocclusion && r_shadow_compilingrtlight && r_shadow_realtime_world_compileportalculling.integer && info.model->brush.data_portals)
 	{
@@ -1278,7 +1260,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		R_Q1BSP_CallRecursiveGetLightInfo(&info, !info.noocclusion && (r_shadow_compilingrtlight ? r_shadow_realtime_world_compilesvbsp.integer : r_shadow_realtime_dlight_svbspculling.integer) != 0);
 	}
 
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 
 	// limit combined leaf box to light boundaries
 	outmins[0] = max(info.outmins[0] - 1, info.lightmins[0]);
@@ -1518,7 +1500,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 				;
 			// now figure out what to do with this particular range of surfaces
 			// VorteX: added MATERIALFLAG_NORTLIGHT
-			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NORTLIGHT)) != MATERIALFLAG_WALL)
+			if ((rsurface.texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NORTLIGHT)) != MATERIALFLAG_WALL)
 				continue;
 			if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 				continue;
