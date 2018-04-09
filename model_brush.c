@@ -7899,6 +7899,7 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.isbsp2 = false;
 	mod->brush.isq2bsp = false;
 	mod->brush.isq3bsp = true;
+	mod->brush.skymasking = true;
 	mod->numframes = 2; // although alternate textures are not supported it is annoying to complain about no such frame 1
 	mod->numskins = 1;
 

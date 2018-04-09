@@ -10511,6 +10511,7 @@ void RSurf_SetupDepthAndCulling(void)
 
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
+	int i, j;
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
@@ -10518,20 +10519,52 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 	skyrenderlater = true;
 	RSurf_SetupDepthAndCulling();
 	GL_DepthMask(true);
-	// LordHavoc: HalfLife maps have freaky skypolys so don't use
+
+	// add the vertices of the surfaces to a world bounding box so we can scissor the sky render later
+	if (r_sky_scissor.integer)
+	{
+		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
+		for (i = 0; i < texturenumsurfaces; i++)
+		{
+			const msurface_t *surf = texturesurfacelist[i];
+			const float *v;
+			float p[3];
+			for (j = 0, v = rsurface.batchvertex3f + 3 * surf->num_firstvertex; j < surf->num_vertices; j++, v += 3)
+			{
+				Matrix4x4_Transform(&rsurface.matrix, v, p);
+				if (skyscissor)
+				{
+					if (skyscissormins[0] > p[0]) skyscissormins[0] = p[0];
+					if (skyscissormins[1] > p[1]) skyscissormins[1] = p[1];
+					if (skyscissormins[2] > p[2]) skyscissormins[2] = p[2];
+					if (skyscissormaxs[0] < p[0]) skyscissormaxs[0] = p[0];
+					if (skyscissormaxs[1] < p[1]) skyscissormaxs[1] = p[1];
+					if (skyscissormaxs[2] < p[2]) skyscissormaxs[2] = p[2];
+				}
+				else
+				{
+					VectorCopy(p, skyscissormins);
+					VectorCopy(p, skyscissormaxs);
+					skyscissor = true;
+				}
+			}
+		}
+	}
+
+	// LadyHavoc: HalfLife maps have freaky skypolys so don't use
 	// skymasking on them, and Quake3 never did sky masking (unlike
 	// software Quake and software Quake2), so disable the sky masking
 	// in Quake3 maps as it causes problems with q3map2 sky tricks,
 	// and skymasking also looks very bad when noclipping outside the
 	// level, so don't use it then either.
-	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.skymasking && r_q1bsp_skymasking.integer && !r_refdef.viewcache.world_novis && !r_trippy.integer)
+	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.skymasking && (r_refdef.scene.worldmodel->brush.isq3bsp ? r_q3bsp_renderskydepth.integer : r_q1bsp_skymasking.integer) && !r_refdef.viewcache.world_novis && !r_trippy.integer)
 	{
 		R_Mesh_ResetTextureState();
 		if (skyrendermasked)
 		{
 			R_SetupShader_DepthOrShadow(false, false, false);
 			// depth-only (masking)
-			GL_ColorMask(0,0,0,0);
+			GL_ColorMask(0, 0, 0, 0);
 			// just to make sure that braindead drivers don't draw
 			// anything despite that colormask...
 			GL_BlendFunc(GL_ZERO, GL_ONE);
