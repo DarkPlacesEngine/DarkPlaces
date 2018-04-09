@@ -5595,7 +5595,7 @@ void R_Shadow_PrepareModelShadows(void)
 		return;
 	}
 
-	size = 2 * r_shadow_shadowmapmaxsize;
+	size = r_shadow_shadowmaptexturesize / 4;
 	scale = r_shadow_shadowmapping_precision.value * r_shadows_shadowmapscale.value;
 	radius = 0.5f * size / scale;
 
