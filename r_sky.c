@@ -9,9 +9,7 @@ cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clo
 cvar_t r_sky_scissor = {0, "r_sky_scissor", "1", "limit rendering of sky to approximately the area of the sky surfaces"};
 int skyrenderlater;
 int skyrendermasked;
-int skyscissor;
-float skyscissormins[3];
-float skyscissormaxs[3];
+int skyscissor[4];
 
 static int skyrendersphere;
 static int skyrenderbox;
@@ -64,9 +62,7 @@ void R_SkyStartFrame(void)
 	// for depth-masked sky, we need to know whether any sky was rendered
 	skyrenderlater = false;
 	// we can scissor the sky to just the relevant area
-	skyscissor = false;
-	VectorClear(skyscissormins);
-	VectorClear(skyscissormaxs);
+	Vector4Clear(skyscissor);
 	if (r_sky.integer)
 	{
 		if (skyboxskinframe[0] || skyboxskinframe[1] || skyboxskinframe[2] || skyboxskinframe[3] || skyboxskinframe[4] || skyboxskinframe[5])
@@ -406,16 +402,15 @@ static void R_SkySphere(void)
 
 void R_Sky(void)
 {
-	int scissor[4];
 	Matrix4x4_CreateFromQuakeEntity(&skymatrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, 0, 0, r_refdef.farclip * (0.5f / 16.0f));
 	Matrix4x4_Invert_Simple(&skyinversematrix, &skymatrix);
 
-	if (r_sky_scissor.integer && skyscissor)
+	if (r_sky_scissor.integer)
 	{
-		// compute the scissor, if it's offscreen just return
-		if (R_ScissorForBBox(skyscissormins, skyscissormaxs, scissor))
+		// if the scissor is empty just return
+		if (skyscissor[2] == 0 || skyscissor[3] == 0)
 			return;
-		GL_Scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+		GL_Scissor(skyscissor[0], skyscissor[1], skyscissor[2], skyscissor[3]);
 		GL_ScissorTest(true);
 	}
 	if (skyrendersphere)
