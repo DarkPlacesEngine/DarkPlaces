@@ -2406,14 +2406,14 @@ void CL_MeshEntities_Init(void)
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
 		ent->render.alpha = 1;
-		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
+		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT | RENDER_CUSTOMIZEDMODELLIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
 		ent->render.frameblend[0].lerp = 1;
 		VectorSet(ent->render.colormod, 1, 1, 1);
 		VectorSet(ent->render.glowmod, 1, 1, 1);
-		VectorSet(ent->render.modellight_ambient, 1, 1, 1);
-		VectorSet(ent->render.modellight_diffuse, 0, 0, 0);
-		VectorSet(ent->render.modellight_lightdir, 0, 0, 1);
+		VectorSet(ent->render.custommodellight_ambient, 1, 1, 1);
+		VectorSet(ent->render.custommodellight_diffuse, 0, 0, 0);
+		VectorSet(ent->render.custommodellight_lightdir, 0, 0, 1);
 		Matrix4x4_CreateIdentity(&ent->render.matrix);
 		CL_UpdateRenderEntity(&ent->render);
 	}
@@ -2449,6 +2449,221 @@ void CL_MeshEntities_Reset(void)
 
 void CL_MeshEntities_Shutdown(void)
 {
+}
+
+extern cvar_t r_overheadsprites_pushback;
+extern cvar_t r_fullbright_directed_pitch_relative;
+extern cvar_t r_fullbright_directed_pitch;
+extern cvar_t r_fullbright_directed_ambient;
+extern cvar_t r_fullbright_directed_diffuse;
+extern cvar_t r_fullbright_directed;
+extern cvar_t r_equalize_entities_minambient;
+extern cvar_t r_equalize_entities_to;
+extern cvar_t r_equalize_entities_by;
+extern cvar_t r_hdr_glowintensity;
+
+static void CL_UpdateEntityShading_GetDirectedFullbright(vec3_t ambient, vec3_t diffuse, vec3_t worldspacenormal)
+{
+	vec3_t angles;
+
+	VectorSet(ambient, r_fullbright_directed_ambient.value, r_fullbright_directed_ambient.value, r_fullbright_directed_ambient.value);
+	VectorSet(diffuse, r_fullbright_directed_diffuse.value, r_fullbright_directed_diffuse.value, r_fullbright_directed_diffuse.value);
+
+	// Use cl.viewangles and not r_refdef.view.forward here so it is the
+	// same for all stereo views, and to better handle pitches outside
+	// [-90, 90] (in_pitch_* cvars allow that).
+	VectorCopy(cl.viewangles, angles);
+	if (r_fullbright_directed_pitch_relative.integer) {
+		angles[PITCH] += r_fullbright_directed_pitch.value;
+	}
+	else {
+		angles[PITCH] = r_fullbright_directed_pitch.value;
+	}
+	AngleVectors(angles, worldspacenormal, NULL, NULL);
+	VectorNegate(worldspacenormal, worldspacenormal);
+}
+
+static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
+{
+	float shadingorigin[3], f, fa, fd, fdd, a[3], c[3], dir[3];
+	int q;
+
+	for (q = 0; q < 3; q++)
+		a[q] = c[q] = dir[q] = 0;
+
+	ent->render_modellight_forced = false;
+	ent->render_rtlight_disabled = false;
+
+	// pick an appropriate value for render_modellight_origin - if this is an
+	// attachment we want to use the parent's render_modellight_origin so that
+	// shading is the same (also important for r_shadows to cast shadows in the
+	// same direction)
+	if (VectorLength2(ent->custommodellight_origin))
+	{
+		// CSQC entities always provide this (via CL_GetTagMatrix)
+		for (q = 0; q < 3; q++)
+			shadingorigin[q] = ent->custommodellight_origin[q];
+	}
+	else if (ent->entitynumber > 0 && ent->entitynumber < cl.num_entities)
+	{
+		// network entity - follow attachment chain back to a root entity,
+		int entnum = ent->entitynumber, recursion;
+		for (recursion = 32; recursion > 0; --recursion)
+		{
+			int parentnum = cl.entities[entnum].state_current.tagentity;
+			if (parentnum < 1 || parentnum >= cl.num_entities || !cl.entities_active[parentnum])
+				break;
+			entnum = parentnum;
+		}
+		// grab the root entity's origin
+		Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, shadingorigin);
+	}
+	else
+	{
+		// not a CSQC entity (which sets custommodellight_origin), not a network
+		// entity - so it's probably not attached to anything
+		Matrix4x4_OriginFromMatrix(&ent->matrix, shadingorigin);
+	}
+
+	if (!(ent->flags & RENDER_LIGHT) || r_fullbright.integer)
+	{
+		// intentionally EF_FULLBRIGHT entity
+		// the only type that is not scaled by r_refdef.scene.lightmapintensity
+		// CSQC can still provide its own customized modellight values
+		ent->render_rtlight_disabled = true;
+		ent->render_modellight_forced = true;
+		if (ent->flags & RENDER_CUSTOMIZEDMODELLIGHT)
+		{
+			// custom colors provided by CSQC
+			for (q = 0; q < 3; q++)
+			{
+				a[q] = ent->custommodellight_ambient[q];
+				c[q] = ent->custommodellight_diffuse[q];
+				dir[q] = ent->custommodellight_lightdir[q];
+			}
+		}
+		else if (r_fullbright_directed.integer)
+			CL_UpdateEntityShading_GetDirectedFullbright(a, c, dir);
+		else
+			for (q = 0; q < 3; q++)
+				a[q] = 1;
+	}
+	else
+	{
+		// fetch the lighting from the worldmodel data
+
+		// CSQC can provide its own customized modellight values
+		if (ent->flags & RENDER_CUSTOMIZEDMODELLIGHT)
+		{
+			ent->render_modellight_forced = true;
+			for (q = 0; q < 3; q++)
+			{
+				a[q] = ent->custommodellight_ambient[q];
+				c[q] = ent->custommodellight_diffuse[q];
+				dir[q] = ent->custommodellight_lightdir[q];
+			}
+		}
+		else if (ent->model->type == mod_sprite && !(ent->model->data_textures[0].basematerialflags & MATERIALFLAG_FULLBRIGHT))
+		{
+			if (ent->model->sprite.sprnum_type == SPR_OVERHEAD) // apply offset for overhead sprites
+				shadingorigin[2] = shadingorigin[2] + r_overheadsprites_pushback.value;
+			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
+			ent->render_modellight_forced = true;
+			ent->render_rtlight_disabled = true;
+		}
+		else if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
+			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
+		else if (r_fullbright_directed.integer)
+			CL_UpdateEntityShading_GetDirectedFullbright(a, c, dir);
+		else
+			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
+
+		if (ent->flags & RENDER_EQUALIZE)
+		{
+			// first fix up ambient lighting...
+			if (r_equalize_entities_minambient.value > 0)
+			{
+				fd = 0.299f * ent->render_modellight_diffuse[0] + 0.587f * ent->render_modellight_diffuse[1] + 0.114f * ent->render_modellight_diffuse[2];
+				if (fd > 0)
+				{
+					fa = (0.299f * ent->render_modellight_ambient[0] + 0.587f * ent->render_modellight_ambient[1] + 0.114f * ent->render_modellight_ambient[2]);
+					if (fa < r_equalize_entities_minambient.value * fd)
+					{
+						// solve:
+						//   fa'/fd' = minambient
+						//   fa'+0.25*fd' = fa+0.25*fd
+						//   ...
+						//   fa' = fd' * minambient
+						//   fd'*(0.25+minambient) = fa+0.25*fd
+						//   ...
+						//   fd' = (fa+0.25*fd) * 1 / (0.25+minambient)
+						//   fa' = (fa+0.25*fd) * minambient / (0.25+minambient)
+						//   ...
+						fdd = (fa + 0.25f * fd) / (0.25f + r_equalize_entities_minambient.value);
+						f = fdd / fd; // f>0 because all this is additive; f<1 because fdd<fd because this follows from fa < r_equalize_entities_minambient.value * fd
+						for (q = 0; q < 3; q++)
+						{
+							a[q] = (1 - f)*0.25f * c[q];
+							c[q] *= f;
+						}
+					}
+				}
+			}
+
+			if (r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
+			{
+				fa = 0.299f * a[0] + 0.587f * a[1] + 0.114f * a[2];
+				fd = 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2];
+				f = fa + 0.25 * fd;
+				if (f > 0)
+				{
+					// adjust brightness and saturation to target
+					float l2 = r_equalize_entities_by.value, l1 = 1 - l2;
+					for (q = 0; q < 3; q++)
+					{
+						a[q] = l1 * a[q] + l2 * (fa / f);
+						c[q] = l1 * c[q] + l2 * (fd / f);
+					}
+				}
+			}
+		}
+	}
+
+	for (q = 0; q < 3; q++)
+	{
+		ent->render_fullbright[q] = ent->colormod[q];
+		ent->render_glowmod[q] = ent->glowmod[q] * r_hdr_glowintensity.value;
+		ent->render_modellight_ambient[q] = a[q] * ent->colormod[q];
+		ent->render_modellight_diffuse[q] = c[q] * ent->colormod[q];
+		ent->render_modellight_specular[q] = c[q];
+		ent->render_modellight_lightdir[q] = dir[q];
+		ent->render_lightmap_ambient[q] = ent->colormod[q] * r_refdef.scene.ambientintensity;
+		ent->render_lightmap_diffuse[q] = ent->colormod[q] * r_refdef.scene.lightmapintensity;
+		ent->render_lightmap_specular[q] = r_refdef.scene.lightmapintensity;
+		ent->render_rtlight_diffuse[q] = ent->colormod[q];
+		ent->render_rtlight_specular[q] = 1;
+	}
+
+	// these flags disable code paths, make sure it's obvious if they're ignored by storing 0 1 2
+	if (ent->render_modellight_forced)
+		for (q = 0; q < 3; q++)
+			ent->render_lightmap_ambient[q] = ent->render_lightmap_diffuse[q] = ent->render_lightmap_specular[q] = q;
+	if (ent->render_rtlight_disabled)
+		for (q = 0; q < 3; q++)
+			ent->render_rtlight_diffuse[q] = ent->render_rtlight_specular[q] = q;
+
+	if (VectorLength2(ent->render_modellight_lightdir) == 0)
+		VectorSet(ent->render_modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
+	VectorNormalize(ent->render_modellight_lightdir);
+}
+
+
+void CL_UpdateEntityShading(void)
+{
+	int i;
+	CL_UpdateEntityShading_Entity(r_refdef.scene.worldentity);
+	for (i = 0; i < r_refdef.scene.numentities; i++)
+		CL_UpdateEntityShading_Entity(r_refdef.scene.entities[i]);
 }
 
 /*
