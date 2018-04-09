@@ -159,8 +159,7 @@ void R_Shadow_PrepareModelShadows(void);
 #define LP_LIGHTMAP		1
 #define LP_RTWORLD		2
 #define LP_DYNLIGHT		4
-void R_LightPoint(float *color, const vec3_t p, const int flags);
-void R_CompleteLightPoint(float *ambientcolor, float *diffusecolor, float *diffusenormal, const vec3_t p, const int flags);
+void R_CompleteLightPoint(float *ambient, float *diffuse, float *lightdir, const vec3_t p, const int flags, float lightmapintensity, float ambientintensity);
 
 void R_Shadow_DrawShadowMaps(void);
 void R_Shadow_DrawModelShadows(void);

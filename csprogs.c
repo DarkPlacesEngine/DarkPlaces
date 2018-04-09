@@ -346,8 +346,9 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	if (!VectorLength2(entrender->glowmod))
 		VectorSet(entrender->glowmod, 1, 1, 1);
 
-	// LordHavoc: use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
-	CL_GetTagMatrix(prog, &entrender->matrix, ed, 0);
+	// LadyHavoc: use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
+	// this also sets the custommodellight_origin for us
+	CL_GetTagMatrix(prog, &entrender->matrix, ed, 0, entrender->custommodellight_origin);
 
 	// set up the animation data
 	VM_GenerateFrameGroupBlend(prog, ed->priv.server->framegroupblend, ed);
@@ -363,9 +364,9 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	// model light
 	if (renderflags & RF_MODELLIGHT)
 	{
-		if (PRVM_clientedictvector(ed, modellight_ambient)) VectorCopy(PRVM_clientedictvector(ed, modellight_ambient), entrender->modellight_ambient); else VectorClear(entrender->modellight_ambient);
-		if (PRVM_clientedictvector(ed, modellight_diffuse)) VectorCopy(PRVM_clientedictvector(ed, modellight_diffuse), entrender->modellight_diffuse); else VectorClear(entrender->modellight_diffuse);
-		if (PRVM_clientedictvector(ed, modellight_dir))     VectorCopy(PRVM_clientedictvector(ed, modellight_dir), entrender->modellight_lightdir);    else VectorClear(entrender->modellight_lightdir);
+		if (PRVM_clientedictvector(ed, modellight_ambient)) VectorCopy(PRVM_clientedictvector(ed, modellight_ambient), entrender->custommodellight_ambient); else VectorClear(entrender->custommodellight_ambient);
+		if (PRVM_clientedictvector(ed, modellight_diffuse)) VectorCopy(PRVM_clientedictvector(ed, modellight_diffuse), entrender->custommodellight_diffuse); else VectorClear(entrender->custommodellight_diffuse);
+		if (PRVM_clientedictvector(ed, modellight_dir))     VectorCopy(PRVM_clientedictvector(ed, modellight_dir), entrender->custommodellight_lightdir);    else VectorClear(entrender->custommodellight_lightdir);
 		entrender->flags |= RENDER_CUSTOMIZEDMODELLIGHT;
 	}
 
@@ -1189,15 +1190,13 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 
 	CSQC_BEGIN;
 
-	// FIXME consider attachments here!
-
 	ed = PRVM_EDICT_NUM(entnum - MAX_EDICTS);
 
 	if(!ed->priv.required->free)
 	{
 		mod = CL_GetModelFromEdict(ed);
 		VectorCopy(PRVM_clientedictvector(ed, origin), out);
-		if(CL_GetTagMatrix(prog, &matrix, ed, 0) == 0)
+		if(CL_GetTagMatrix(prog, &matrix, ed, 0, NULL) == 0)
 			Matrix4x4_OriginFromMatrix(&matrix, out);
 		if (mod && mod->soundfromcenter)
 			VectorMAMAM(1.0f, out, 0.5f, mod->normalmins, 0.5f, mod->normalmaxs, out);
