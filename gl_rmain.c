@@ -10529,24 +10529,47 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 			const msurface_t *surf = texturesurfacelist[i];
 			const float *v;
 			float p[3];
+			float mins[3], maxs[3];
+			int scissor[4];
 			for (j = 0, v = rsurface.batchvertex3f + 3 * surf->num_firstvertex; j < surf->num_vertices; j++, v += 3)
 			{
 				Matrix4x4_Transform(&rsurface.matrix, v, p);
-				if (skyscissor)
+				if (j > 0)
 				{
-					if (skyscissormins[0] > p[0]) skyscissormins[0] = p[0];
-					if (skyscissormins[1] > p[1]) skyscissormins[1] = p[1];
-					if (skyscissormins[2] > p[2]) skyscissormins[2] = p[2];
-					if (skyscissormaxs[0] < p[0]) skyscissormaxs[0] = p[0];
-					if (skyscissormaxs[1] < p[1]) skyscissormaxs[1] = p[1];
-					if (skyscissormaxs[2] < p[2]) skyscissormaxs[2] = p[2];
+					if (mins[0] > p[0]) mins[0] = p[0];
+					if (mins[1] > p[1]) mins[1] = p[1];
+					if (mins[2] > p[2]) mins[2] = p[2];
+					if (maxs[0] < p[0]) maxs[0] = p[0];
+					if (maxs[1] < p[1]) maxs[1] = p[1];
+					if (maxs[2] < p[2]) maxs[2] = p[2];
 				}
 				else
 				{
-					VectorCopy(p, skyscissormins);
-					VectorCopy(p, skyscissormaxs);
-					skyscissor = true;
+					VectorCopy(p, mins);
+					VectorCopy(p, maxs);
 				}
+			}
+			if (!R_ScissorForBBox(mins, maxs, scissor))
+			{
+				if (skyscissor[2])
+				{
+					if (skyscissor[0] > scissor[0])
+					{
+						skyscissor[2] += skyscissor[0] - scissor[0];
+						skyscissor[0] = scissor[0];
+					}
+					if (skyscissor[1] > scissor[1])
+					{
+						skyscissor[3] += skyscissor[1] - scissor[1];
+						skyscissor[1] = scissor[1];
+					}
+					if (skyscissor[0] + skyscissor[2] < scissor[0] + scissor[2])
+						skyscissor[2] = scissor[0] + scissor[2] - skyscissor[0];
+					if (skyscissor[1] + skyscissor[3] < scissor[1] + scissor[3])
+						skyscissor[3] = scissor[1] + scissor[3] - skyscissor[1];
+				}
+				else
+					Vector4Copy(scissor, skyscissor);
 			}
 		}
 	}
