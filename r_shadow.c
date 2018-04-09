@@ -3879,10 +3879,10 @@ static void R_Shadow_RenderLighting_VisibleLighting(int texturenumsurfaces, cons
 	RSurf_DrawBatch();
 }
 
-static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t lightcolor, float ambientscale, float diffusescale, float specularscale)
+static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msurface_t **texturesurfacelist, const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3])
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
-	R_SetupShader_Surface(lightcolor, false, ambientscale, diffusescale, specularscale, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
+	R_SetupShader_Surface(ambientcolor, diffusecolor, specularcolor, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
 	RSurf_DrawBatch();
 }
 
@@ -3975,29 +3975,26 @@ static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numve
 	}
 }
 
-static void R_Shadow_RenderLighting_Light_Vertex(int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t lightcolor, float ambientscale, float diffusescale)
+static void R_Shadow_RenderLighting_Light_Vertex(int texturenumsurfaces, const msurface_t **texturesurfacelist, const float ambientcolor[3], const float diffusecolor[3])
 {
 	// OpenGL 1.1 path (anything)
 	float ambientcolorbase[3], diffusecolorbase[3];
 	float ambientcolorpants[3], diffusecolorpants[3];
 	float ambientcolorshirt[3], diffusecolorshirt[3];
-	const float *surfacecolor = rsurface.texture->dlightcolor;
-	const float *surfacepants = rsurface.colormap_pantscolor;
-	const float *surfaceshirt = rsurface.colormap_shirtcolor;
+	const float *surfacepants = rsurface.texture->render_colormap_pants;
+	const float *surfaceshirt = rsurface.texture->render_colormap_shirt;
 	rtexture_t *basetexture = rsurface.texture->basetexture;
 	rtexture_t *pantstexture = rsurface.texture->pantstexture;
 	rtexture_t *shirttexture = rsurface.texture->shirttexture;
 	qboolean dopants = pantstexture && VectorLength2(surfacepants) >= (1.0f / 1048576.0f);
 	qboolean doshirt = shirttexture && VectorLength2(surfaceshirt) >= (1.0f / 1048576.0f);
-	ambientscale *= 2 * r_refdef.view.colorscale;
-	diffusescale *= 2 * r_refdef.view.colorscale;
-	ambientcolorbase[0] = lightcolor[0] * ambientscale * surfacecolor[0];ambientcolorbase[1] = lightcolor[1] * ambientscale * surfacecolor[1];ambientcolorbase[2] = lightcolor[2] * ambientscale * surfacecolor[2];
-	diffusecolorbase[0] = lightcolor[0] * diffusescale * surfacecolor[0];diffusecolorbase[1] = lightcolor[1] * diffusescale * surfacecolor[1];diffusecolorbase[2] = lightcolor[2] * diffusescale * surfacecolor[2];
+	VectorCopy(ambientcolor, ambientcolorbase);
+	VectorCopy(diffusecolor, diffusecolorbase);
 	ambientcolorpants[0] = ambientcolorbase[0] * surfacepants[0];ambientcolorpants[1] = ambientcolorbase[1] * surfacepants[1];ambientcolorpants[2] = ambientcolorbase[2] * surfacepants[2];
 	diffusecolorpants[0] = diffusecolorbase[0] * surfacepants[0];diffusecolorpants[1] = diffusecolorbase[1] * surfacepants[1];diffusecolorpants[2] = diffusecolorbase[2] * surfacepants[2];
 	ambientcolorshirt[0] = ambientcolorbase[0] * surfaceshirt[0];ambientcolorshirt[1] = ambientcolorbase[1] * surfaceshirt[1];ambientcolorshirt[2] = ambientcolorbase[2] * surfaceshirt[2];
 	diffusecolorshirt[0] = diffusecolorbase[0] * surfaceshirt[0];diffusecolorshirt[1] = diffusecolorbase[1] * surfaceshirt[1];diffusecolorshirt[2] = diffusecolorbase[2] * surfaceshirt[2];
-	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | (diffusescale > 0 ? BATCHNEED_ARRAY_NORMAL : 0) | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
+	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | (VectorLength2(diffusecolor) > 0 ? BATCHNEED_ARRAY_NORMAL : 0) | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
 	rsurface.passcolor4f = (float *)R_FrameData_Alloc((rsurface.batchfirstvertex + rsurface.batchnumvertices) * sizeof(float[4]));
 	R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 	R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), rsurface.passcolor4f, 0, 0);
@@ -4047,25 +4044,28 @@ static void R_Shadow_RenderLighting_Light_Vertex(int texturenumsurfaces, const m
 extern cvar_t gl_lightmaps;
 void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
-	float ambientscale, diffusescale, specularscale;
 	qboolean negated;
-	float lightcolor[3];
-	VectorCopy(rsurface.rtlight->currentcolor, lightcolor);
-	ambientscale = rsurface.rtlight->ambientscale + rsurface.texture->rtlightambient;
-	diffusescale = rsurface.rtlight->diffusescale * max(0, 1.0 - rsurface.texture->rtlightambient);
-	specularscale = rsurface.rtlight->specularscale * rsurface.texture->specularscale;
+	float ambientcolor[3], diffusecolor[3], specularcolor[3];
+	VectorM(rsurface.rtlight->ambientscale + rsurface.texture->rtlightambient, rsurface.texture->render_rtlight_diffuse, ambientcolor);
+	VectorM(rsurface.rtlight->diffusescale * max(0, 1.0 - rsurface.texture->rtlightambient), rsurface.texture->render_rtlight_diffuse, diffusecolor);
+	VectorM(rsurface.rtlight->specularscale, rsurface.texture->render_rtlight_specular, specularcolor);
 	if (!r_shadow_usenormalmap.integer)
 	{
-		ambientscale += 1.0f * diffusescale;
-		diffusescale = 0;
-		specularscale = 0;
+		VectorMAM(1.0f, ambientcolor, 1.0f, diffusecolor, ambientcolor);
+		VectorClear(diffusecolor);
+		VectorClear(specularcolor);
 	}
-	if ((ambientscale + diffusescale) * VectorLength2(lightcolor) + specularscale * VectorLength2(lightcolor) < (1.0f / 1048576.0f))
+	VectorMultiply(ambientcolor, rsurface.rtlight->currentcolor, ambientcolor);
+	VectorMultiply(diffusecolor, rsurface.rtlight->currentcolor, diffusecolor);
+	VectorMultiply(specularcolor, rsurface.rtlight->currentcolor, specularcolor);
+	if (VectorLength2(ambientcolor) + VectorLength2(diffusecolor) + VectorLength2(specularcolor) < (1.0f / 1048576.0f))
 		return;
-	negated = (lightcolor[0] + lightcolor[1] + lightcolor[2] < 0) && vid.support.ext_blend_subtract;
+	negated = (rsurface.rtlight->currentcolor[0] + rsurface.rtlight->currentcolor[1] + rsurface.rtlight->currentcolor[2] < 0) && vid.support.ext_blend_subtract;
 	if(negated)
 	{
-		VectorNegate(lightcolor, lightcolor);
+		VectorNegate(ambientcolor, ambientcolor);
+		VectorNegate(diffusecolor, diffusecolor);
+		VectorNegate(specularcolor, specularcolor);
 		GL_BlendEquationSubtract(true);
 	}
 	RSurf_SetupDepthAndCulling();
@@ -4076,13 +4076,13 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		R_Shadow_RenderLighting_VisibleLighting(texturenumsurfaces, texturesurfacelist);
 		break;
 	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
-		R_Shadow_RenderLighting_Light_GLSL(texturenumsurfaces, texturesurfacelist, lightcolor, ambientscale, diffusescale, specularscale);
+		R_Shadow_RenderLighting_Light_GLSL(texturenumsurfaces, texturesurfacelist, ambientcolor, diffusecolor, specularcolor);
 		break;
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN:
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN:
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN:
 	case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-		R_Shadow_RenderLighting_Light_Vertex(texturenumsurfaces, texturesurfacelist, lightcolor, ambientscale, diffusescale);
+		R_Shadow_RenderLighting_Light_Vertex(texturenumsurfaces, texturesurfacelist, ambientcolor, diffusecolor);
 		break;
 	default:
 		Con_Printf("R_Shadow_RenderLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -4459,7 +4459,7 @@ static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist
 {
 	shadowmesh_t *mesh;
 
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
@@ -4479,7 +4479,7 @@ static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist
 	else if (r_refdef.scene.worldentity->model)
 		r_refdef.scene.worldmodel->DrawShadowMap(r_shadow_shadowmapside, r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, surfacesides, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
 
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
@@ -4494,7 +4494,7 @@ static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacel
 	if (r_refdef.scene.worldmodel->brush.shadowmesh ? !r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i : !r_refdef.scene.worldmodel->surfmesh.data_neighbor3i)
 		return;
 
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
@@ -4551,7 +4551,7 @@ static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacel
 		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
 	}
 
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
@@ -4577,7 +4577,7 @@ static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 		ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
 		break;
 	}
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 void R_Shadow_SetupEntityLight(const entity_render_t *ent)
@@ -4596,7 +4596,7 @@ static void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const uns
 		return;
 
 	// set up properties for rendering light onto this entity
-	RSurf_ActiveWorldEntity();
+	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 	rsurface.entitytolight = rsurface.rtlight->matrix_worldtolight;
 	Matrix4x4_Concat(&rsurface.entitytoattenuationxyz, &matrix_attenuationxyz, &rsurface.entitytolight);
 	Matrix4x4_Concat(&rsurface.entitytoattenuationz, &matrix_attenuationz, &rsurface.entitytolight);
@@ -4604,7 +4604,7 @@ static void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const uns
 
 	r_refdef.scene.worldmodel->DrawLight(r_refdef.scene.worldentity, numsurfaces, surfacelist, lighttrispvs);
 
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 static void R_Shadow_DrawEntityLight(entity_render_t *ent)
@@ -4617,7 +4617,7 @@ static void R_Shadow_DrawEntityLight(entity_render_t *ent)
 
 	model->DrawLight(ent, model->nummodelsurfaces, model->sortedmodelsurfaces, NULL);
 
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
 static void R_Shadow_PrepareLight(rtlight_t *rtlight)
@@ -5567,7 +5567,7 @@ void R_Shadow_PrepareModelShadows(void)
 	r_shadow_nummodelshadows = 0;
 	r_shadow_shadowmapatlas_modelshadows_size = 0;
 
-	if (!r_refdef.scene.numentities || r_refdef.lightmapintensity <= 0.0f || r_shadows.integer <= 0)
+	if (!r_refdef.scene.numentities || r_refdef.scene.lightmapintensity <= 0.0f || r_shadows.integer <= 0)
 		return;
 
 	switch (r_shadow_shadowmode)
@@ -5735,7 +5735,7 @@ static void R_Shadow_DrawModelShadowMaps(void)
 		relativeshadowmaxs[2] = relativelightorigin[2] + r_shadows_throwdistance.value * fabs(relativelightdirection[2]) + radius * (fabs(relativeforward[2]) + fabs(relativeright[2]));
 		RSurf_ActiveModelEntity(ent, false, false, false);
 		ent->model->DrawShadowMap(0, ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
-		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 	}
 
 #if 0
@@ -5832,45 +5832,14 @@ void R_Shadow_DrawModelShadows(void)
 			Matrix4x4_Transform3x3(&ent->inversematrix, shadowdir, relativelightdirection);
 		else
 		{
-			if(ent->entitynumber != 0)
-			{
-				if(ent->entitynumber >= MAX_EDICTS) // csqc entity
-				{
-					// FIXME handle this
-					VectorNegate(ent->modellight_lightdir, relativelightdirection);
-				}
-				else
-				{
-					// networked entity - might be attached in some way (then we should use the parent's light direction, to not tear apart attached entities)
-					int entnum, entnum2, recursion;
-					entnum = entnum2 = ent->entitynumber;
-					for(recursion = 32; recursion > 0; --recursion)
-					{
-						entnum2 = cl.entities[entnum].state_current.tagentity;
-						if(entnum2 >= 1 && entnum2 < cl.num_entities && cl.entities_active[entnum2])
-							entnum = entnum2;
-						else
-							break;
-					}
-					if(recursion && recursion != 32) // if we followed a valid non-empty attachment chain
-					{
-						VectorNegate(cl.entities[entnum].render.modellight_lightdir, relativelightdirection);
-						// transform into modelspace of OUR entity
-						Matrix4x4_Transform3x3(&cl.entities[entnum].render.matrix, relativelightdirection, tmp);
-						Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
-					}
-					else
-						VectorNegate(ent->modellight_lightdir, relativelightdirection);
-				}
-			}
-			else
-				VectorNegate(ent->modellight_lightdir, relativelightdirection);
+			VectorNegate(ent->render_modellight_lightdir, tmp);
+			Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
 		}
 
 		VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
 		RSurf_ActiveModelEntity(ent, false, false, false);
 		ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
-		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveWorldEntity/RSurf_ActiveModelEntity
+		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 	}
 
 	// not really the right mode, but this will disable any silly stencil features
@@ -6105,7 +6074,7 @@ void R_Shadow_DrawCoronas(void)
 				qglGenQueriesARB(r_maxqueries - i, r_queries + i);
 				CHECKGLERROR
 			}
-			RSurf_ActiveWorldEntity();
+			RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_CullFace(GL_NONE);
 			GL_DepthMask(false);
@@ -7569,141 +7538,48 @@ LIGHT SAMPLING
 =============================================================================
 */
 
-void R_LightPoint(float *color, const vec3_t p, const int flags)
+void R_CompleteLightPoint(float *ambient, float *diffuse, float *lightdir, const vec3_t p, const int flags, float lightmapintensity, float ambientintensity)
 {
-	int i, numlights, flag;
-	float f, relativepoint[3], dist, dist2, lightradius2;
-	vec3_t diffuse, n;
-	rtlight_t *light;
-	dlight_t *dlight;
-
-	if (r_fullbright.integer)
-	{
-		VectorSet(color, 1, 1, 1);
-		return;
-	}
-
-	VectorClear(color);
-
-	if (flags & LP_LIGHTMAP)
-	{
-		if (!r_fullbright.integer && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
-		{
-			VectorClear(diffuse);
-			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, color, diffuse, n);
-			VectorAdd(color, diffuse, color);
-		}
-		else
-			VectorSet(color, 1, 1, 1);
-		color[0] += r_refdef.scene.ambient;
-		color[1] += r_refdef.scene.ambient;
-		color[2] += r_refdef.scene.ambient;
-	}
-
-	if (flags & LP_RTWORLD)
-	{
-		flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
-		numlights = (int)Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray);
-		for (i = 0; i < numlights; i++)
-		{
-			dlight = (dlight_t *) Mem_ExpandableArray_RecordAtIndex(&r_shadow_worldlightsarray, i);
-			if (!dlight)
-				continue;
-			light = &dlight->rtlight;
-			if (!(light->flags & flag))
-				continue;
-			// sample
-			lightradius2 = light->radius * light->radius;
-			VectorSubtract(light->shadoworigin, p, relativepoint);
-			dist2 = VectorLength2(relativepoint);
-			if (dist2 >= lightradius2)
-				continue;
-			dist = sqrt(dist2) / light->radius;
-			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
-			if (f <= 0)
-				continue;
-			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, NULL, false, true).fraction == 1)
-				VectorMA(color, f, light->currentcolor, color);
-		}
-	}
-	if (flags & LP_DYNLIGHT)
-	{
-		// sample dlights
-		for (i = 0;i < r_refdef.scene.numlights;i++)
-		{
-			light = r_refdef.scene.lights[i];
-			// sample
-			lightradius2 = light->radius * light->radius;
-			VectorSubtract(light->shadoworigin, p, relativepoint);
-			dist2 = VectorLength2(relativepoint);
-			if (dist2 >= lightradius2)
-				continue;
-			dist = sqrt(dist2) / light->radius;
-			f = dist < 1 ? (r_shadow_lightintensityscale.value * ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist))) : 0;
-			if (f <= 0)
-				continue;
-			// todo: add to both ambient and diffuse
-			if (!light->shadow || CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, NULL, false, true).fraction == 1)
-				VectorMA(color, f, light->color, color);
-		}
-	}
-}
-
-void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const vec3_t p, const int flags)
-{
-	int i, numlights, flag;
+	int i, numlights, flag, q;
 	rtlight_t *light;
 	dlight_t *dlight;
 	float relativepoint[3];
 	float color[3];
-	float dir[3];
 	float dist;
 	float dist2;
 	float intensity;
-	float sample[5*3];
+	float sa[3], sx[3], sy[3], sz[3], sd[3];
 	float lightradius2;
 
-	if (r_fullbright.integer)
-	{
-		VectorSet(ambient, 1, 1, 1);
-		VectorClear(diffuse);
-		VectorClear(lightdir);
-		return;
-	}
+	// use first order spherical harmonics to combine directional lights
+	for (q = 0; q < 3; q++)
+		sa[q] = sx[q] = sy[q] = sz[q] = sd[q] = 0;
 
-	if (flags == LP_LIGHTMAP)
+	if (flags & LP_LIGHTMAP)
 	{
-		VectorSet(ambient, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
-		VectorClear(diffuse);
-		VectorClear(lightdir);
 		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
-			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, ambient, diffuse, lightdir);
+		{
+			float tempambient[3];
+			for (q = 0; q < 3; q++)
+				tempambient[q] = color[q] = relativepoint[q] = 0;
+			r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, tempambient, color, relativepoint);
+			// calculate a weighted average light direction as well
+			intensity = VectorLength(color);
+			for (q = 0; q < 3; q++)
+			{
+				sa[q] += (0.5f * color[q] + tempambient[q]) * lightmapintensity;
+				sx[q] += (relativepoint[0] * color[q]) * lightmapintensity;
+				sy[q] += (relativepoint[1] * color[q]) * lightmapintensity;
+				sz[q] += (relativepoint[2] * color[q]) * lightmapintensity;
+				sd[q] += (intensity * relativepoint[q]) * lightmapintensity;
+			}
+		}
 		else
-			VectorSet(ambient, 1, 1, 1);
-		return;
-	}
-
-	memset(sample, 0, sizeof(sample));
-	VectorSet(sample, r_refdef.scene.ambient, r_refdef.scene.ambient, r_refdef.scene.ambient);
-
-	if ((flags & LP_LIGHTMAP) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
-	{
-		vec3_t tempambient;
-		VectorClear(tempambient);
-		VectorClear(color);
-		VectorClear(relativepoint);
-		r_refdef.scene.worldmodel->brush.LightPoint(r_refdef.scene.worldmodel, p, tempambient, color, relativepoint);
-		VectorScale(tempambient, r_refdef.lightmapintensity, tempambient);
-		VectorScale(color, r_refdef.lightmapintensity, color);
-		VectorAdd(sample, tempambient, sample);
-		VectorMA(sample    , 0.5f            , color, sample    );
-		VectorMA(sample + 3, relativepoint[0], color, sample + 3);
-		VectorMA(sample + 6, relativepoint[1], color, sample + 6);
-		VectorMA(sample + 9, relativepoint[2], color, sample + 9);
-		// calculate a weighted average light direction as well
-		intensity = VectorLength(color);
-		VectorMA(sample + 12, intensity, relativepoint, sample + 12);
+		{
+			// unlit map - fullbright but scaled by lightmapintensity
+			for (q = 0; q < 3; q++)
+				sa[q] += lightmapintensity;
+		}
 	}
 
 	if (flags & LP_RTWORLD)
@@ -7730,17 +7606,18 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 				continue;
 			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, NULL, false, true).fraction < 1)
 				continue;
-			// scale down intensity to add to both ambient and diffuse
-			//intensity *= 0.5f;
+			for (q = 0; q < 3; q++)
+				color[q] = light->currentcolor[q] * intensity;
+			intensity = VectorLength(color);
 			VectorNormalize(relativepoint);
-			VectorScale(light->currentcolor, intensity, color);
-			VectorMA(sample    , 0.5f            , color, sample    );
-			VectorMA(sample + 3, relativepoint[0], color, sample + 3);
-			VectorMA(sample + 6, relativepoint[1], color, sample + 6);
-			VectorMA(sample + 9, relativepoint[2], color, sample + 9);
-			// calculate a weighted average light direction as well
-			intensity *= VectorLength(color);
-			VectorMA(sample + 12, intensity, relativepoint, sample + 12);
+			for (q = 0; q < 3; q++)
+			{
+				sa[q] += 0.5f * color[q];
+				sx[q] += relativepoint[0] * color[q];
+				sy[q] += relativepoint[1] * color[q];
+				sz[q] += relativepoint[2] * color[q];
+				sd[q] += intensity * relativepoint[q];
+			}
 		}
 		// FIXME: sample bouncegrid too!
 	}
@@ -7763,30 +7640,30 @@ void R_CompleteLightPoint(vec3_t ambient, vec3_t diffuse, vec3_t lightdir, const
 				continue;
 			if (light->shadow && CL_TraceLine(p, light->shadoworigin, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, NULL, false, true).fraction < 1)
 				continue;
-			// scale down intensity to add to both ambient and diffuse
-			//intensity *= 0.5f;
+			for (q = 0; q < 3; q++)
+				color[q] = light->currentcolor[q] * intensity;
+			intensity = VectorLength(color);
 			VectorNormalize(relativepoint);
-			VectorScale(light->currentcolor, intensity, color);
-			VectorMA(sample    , 0.5f            , color, sample    );
-			VectorMA(sample + 3, relativepoint[0], color, sample + 3);
-			VectorMA(sample + 6, relativepoint[1], color, sample + 6);
-			VectorMA(sample + 9, relativepoint[2], color, sample + 9);
-			// calculate a weighted average light direction as well
-			intensity *= VectorLength(color);
-			VectorMA(sample + 12, intensity, relativepoint, sample + 12);
+			for (q = 0; q < 3; q++)
+			{
+				sa[q] += 0.5f * color[q];
+				sx[q] += relativepoint[0] * color[q];
+				sy[q] += relativepoint[1] * color[q];
+				sz[q] += relativepoint[2] * color[q];
+				sd[q] += intensity * relativepoint[q];
+			}
 		}
 	}
 
-	// calculate the direction we'll use to reduce the sample to a directional light source
-	VectorCopy(sample + 12, dir);
-	//VectorSet(dir, sample[3] + sample[4] + sample[5], sample[6] + sample[7] + sample[8], sample[9] + sample[10] + sample[11]);
-	VectorNormalize(dir);
-	// extract the diffuse color along the chosen direction and scale it
-	diffuse[0] = (dir[0]*sample[3] + dir[1]*sample[6] + dir[2]*sample[ 9] + sample[ 0]);
-	diffuse[1] = (dir[0]*sample[4] + dir[1]*sample[7] + dir[2]*sample[10] + sample[ 1]);
-	diffuse[2] = (dir[0]*sample[5] + dir[1]*sample[8] + dir[2]*sample[11] + sample[ 2]);
-	// subtract some of diffuse from ambient
-	VectorMA(sample, -0.333f, diffuse, ambient);
-	// store the normalized lightdir
-	VectorCopy(dir, lightdir);
+	// calculate the weighted-average light direction (bentnormal)
+	for (q = 0; q < 3; q++)
+		lightdir[q] = sd[q];
+	VectorNormalize(lightdir);
+	for (q = 0; q < 3; q++)
+	{
+		// extract the diffuse color along the chosen direction and scale it
+		diffuse[q] = (lightdir[0] * sx[q] + lightdir[1] * sy[q] + lightdir[2] * sz[q]);
+		// subtract some of diffuse from ambient
+		ambient[q] = sa[q] + -0.333f * diffuse[q] + ambientintensity;
+	}
 }

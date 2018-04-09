@@ -115,15 +115,13 @@ mplane_t;
 #define MATERIALFLAG_REFLECTION 0x00100000
 // use model lighting on this material (q1bsp lightmap sampling or q3bsp lightgrid, implies FULLBRIGHT is false)
 #define MATERIALFLAG_MODELLIGHT 0x00200000
-// add directional model lighting to this material (q3bsp lightgrid only)
-#define MATERIALFLAG_MODELLIGHT_DIRECTIONAL 0x00400000
 // causes RSurf_GetCurrentTexture to leave alone certain fields
 #define MATERIALFLAG_CUSTOMSURFACE 0x00800000
 // causes MATERIALFLAG_BLENDED to render a depth pass before rendering, hiding backfaces and other hidden geometry
 #define MATERIALFLAG_TRANSDEPTH 0x01000000
 // like refraction, but doesn't distort etc.
 #define MATERIALFLAG_CAMERA 0x02000000
-// disable rtlight on surface, use R_LightPoint instead
+// disable rtlight on surface - does not disable other types of lighting (LIGHTMAP, MODELLIGHT)
 #define MATERIALFLAG_NORTLIGHT 0x04000000
 // alphagen vertex
 #define MATERIALFLAG_ALPHAGEN_VERTEX 0x08000000
