@@ -354,6 +354,7 @@
     <ClInclude Include="palette.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="portals.h" />
+    <ClInclude Include="prvm_offsets.h" />
     <ClInclude Include="pr_comp.h" />
     <ClInclude Include="progdefs.h" />
     <ClInclude Include="progs.h" />
