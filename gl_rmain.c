@@ -3129,6 +3129,23 @@ void R_SkinFrame_MarkUsed(skinframe_t *skinframe)
 	skinframe->loadsequence = r_skinframe.loadsequence;
 }
 
+void R_SkinFrame_PurgeSkinFrame(skinframe_t *s)
+{
+	if (s->merged == s->base)
+		s->merged = NULL;
+	R_PurgeTexture(s->stain); s->stain = NULL;
+	R_PurgeTexture(s->merged); s->merged = NULL;
+	R_PurgeTexture(s->base); s->base = NULL;
+	R_PurgeTexture(s->pants); s->pants = NULL;
+	R_PurgeTexture(s->shirt); s->shirt = NULL;
+	R_PurgeTexture(s->nmap); s->nmap = NULL;
+	R_PurgeTexture(s->gloss); s->gloss = NULL;
+	R_PurgeTexture(s->glow); s->glow = NULL;
+	R_PurgeTexture(s->fog); s->fog = NULL;
+	R_PurgeTexture(s->reflect); s->reflect = NULL;
+	s->loadsequence = 0;
+}
+
 void R_SkinFrame_Purge(void)
 {
 	int i;
@@ -3138,22 +3155,7 @@ void R_SkinFrame_Purge(void)
 		for (s = r_skinframe.hash[i];s;s = s->next)
 		{
 			if (s->loadsequence && s->loadsequence != r_skinframe.loadsequence)
-			{
-				if (s->merged == s->base)
-					s->merged = NULL;
-				// FIXME: maybe pass a pointer to the pointer to R_PurgeTexture and reset it to NULL inside? [11/29/2007 Black]
-				R_PurgeTexture(s->stain );s->stain  = NULL;
-				R_PurgeTexture(s->merged);s->merged = NULL;
-				R_PurgeTexture(s->base  );s->base   = NULL;
-				R_PurgeTexture(s->pants );s->pants  = NULL;
-				R_PurgeTexture(s->shirt );s->shirt  = NULL;
-				R_PurgeTexture(s->nmap  );s->nmap   = NULL;
-				R_PurgeTexture(s->gloss );s->gloss  = NULL;
-				R_PurgeTexture(s->glow  );s->glow   = NULL;
-				R_PurgeTexture(s->fog   );s->fog    = NULL;
-				R_PurgeTexture(s->reflect);s->reflect = NULL;
-				s->loadsequence = 0;
-			}
+				R_SkinFrame_PurgeSkinFrame(s);
 		}
 	}
 }
@@ -3218,20 +3220,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		dyntexture = CL_GetDynTexture( basename );
 		if (!add && !dyntexture)
 			return NULL;
-		if (item->merged == item->base)
-			item->merged = NULL;
-		// FIXME: maybe pass a pointer to the pointer to R_PurgeTexture and reset it to NULL inside? [11/29/2007 Black]
-		R_PurgeTexture(item->stain );item->stain  = NULL;
-		R_PurgeTexture(item->merged);item->merged = NULL;
-		R_PurgeTexture(item->base  );item->base   = NULL;
-		R_PurgeTexture(item->pants );item->pants  = NULL;
-		R_PurgeTexture(item->shirt );item->shirt  = NULL;
-		R_PurgeTexture(item->nmap  );item->nmap   = NULL;
-		R_PurgeTexture(item->gloss );item->gloss  = NULL;
-		R_PurgeTexture(item->glow  );item->glow   = NULL;
-		R_PurgeTexture(item->fog   );item->fog    = NULL;
-	R_PurgeTexture(item->reflect);item->reflect = NULL;
-		item->loadsequence = 0;
+		R_SkinFrame_PurgeSkinFrame(item);
 	}
 	else if( item->base == NULL )
 	{
