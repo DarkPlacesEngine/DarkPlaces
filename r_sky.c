@@ -6,8 +6,12 @@
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1", "enables sky rendering (black otherwise)"};
 cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1", "speed at which upper clouds layer scrolls in quake sky"};
 cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clouds layer scrolls in quake sky"};
+cvar_t r_sky_scissor = {0, "r_sky_scissor", "1", "limit rendering of sky to approximately the area of the sky surfaces"};
 int skyrenderlater;
 int skyrendermasked;
+int skyscissor;
+float skyscissormins[3];
+float skyscissormaxs[3];
 
 static int skyrendersphere;
 static int skyrenderbox;
@@ -59,6 +63,10 @@ void R_SkyStartFrame(void)
 	skyrendermasked = false;
 	// for depth-masked sky, we need to know whether any sky was rendered
 	skyrenderlater = false;
+	// we can scissor the sky to just the relevant area
+	skyscissor = false;
+	VectorClear(skyscissormins);
+	VectorClear(skyscissormaxs);
 	if (r_sky.integer)
 	{
 		if (skyboxskinframe[0] || skyboxskinframe[1] || skyboxskinframe[2] || skyboxskinframe[3] || skyboxskinframe[4] || skyboxskinframe[5])
@@ -398,9 +406,18 @@ static void R_SkySphere(void)
 
 void R_Sky(void)
 {
+	int scissor[4];
 	Matrix4x4_CreateFromQuakeEntity(&skymatrix, r_refdef.view.origin[0], r_refdef.view.origin[1], r_refdef.view.origin[2], 0, 0, 0, r_refdef.farclip * (0.5f / 16.0f));
 	Matrix4x4_Invert_Simple(&skyinversematrix, &skymatrix);
 
+	if (r_sky_scissor.integer && skyscissor)
+	{
+		// compute the scissor, if it's offscreen just return
+		if (R_ScissorForBBox(skyscissormins, skyscissormaxs, scissor))
+			return;
+		GL_Scissor(scissor[0], scissor[1], scissor[2], scissor[3]);
+		GL_ScissorTest(true);
+	}
 	if (skyrendersphere)
 	{
 		// this does not modify depth buffer
@@ -420,6 +437,7 @@ void R_Sky(void)
 		//GL_Clear(GL_DEPTH_BUFFER_BIT);
 	}
 	*/
+	GL_Scissor(0, 0, vid.width, vid.height);
 }
 
 //===============================================================
@@ -454,6 +472,7 @@ void R_Sky_Init(void)
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);
+	Cvar_RegisterVariable (&r_sky_scissor);
 	memset(&skyboxskinframe, 0, sizeof(skyboxskinframe));
 	skyname[0] = 0;
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap, NULL, NULL);
