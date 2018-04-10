@@ -2815,7 +2815,7 @@ nothing                GL_ZERO GL_ONE
 					if (texture->materialshaderpass->skinframes[0]->hasalpha)
 						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 					if (texture->q2contents)
-						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, texture->q2contents);
+						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(texture->q2contents);
 				}
 				else
 					success = false;

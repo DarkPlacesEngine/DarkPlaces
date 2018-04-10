@@ -662,7 +662,7 @@ static void VM_CL_pointcontents (prvm_prog_t *prog)
 	vec3_t point;
 	VM_SAFEPARMCOUNT(1, VM_CL_pointcontents);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), point);
-	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, CL_PointSuperContents(point));
+	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(CL_PointSuperContents(point));
 }
 
 // #48 void(vector o, vector d, float color, float count) particle
