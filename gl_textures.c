@@ -996,6 +996,7 @@ void R_Textures_Frame (void)
 {
 #ifdef GL_TEXTURE_MAX_ANISOTROPY_EXT
 	static int old_aniso = 0;
+	static qboolean first_time_aniso = true;
 #endif
 
 	// could do procedural texture animation here, if we keep track of which
@@ -1032,6 +1033,12 @@ void R_Textures_Frame (void)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
+			// ignore the first difference, any textures loaded by now probably had the same aniso value
+			if (first_time_aniso)
+			{
+				first_time_aniso = false;
+				break;
+			}
 			CHECKGLERROR
 			GL_ActiveTexture(0);
 			for (pool = gltexturepoolchain;pool;pool = pool->next)
