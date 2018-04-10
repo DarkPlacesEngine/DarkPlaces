@@ -195,8 +195,7 @@ cvar_t v_color_grey_b = {CVAR_SAVE, "v_color_grey_b", "0.5", "desired color of g
 cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1", "desired color of white"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
-cvar_t v_glslgamma = {CVAR_SAVE, "v_glslgamma", "1", "enables use of GLSL to apply gamma correction ramps"};
-cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "0", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
+cvar_t v_glslgamma_2d = {CVAR_SAVE, "v_glslgamma_2d", "1", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
 cvar_t v_psycho = {0, "v_psycho", "0", "easter egg - R.I.P. zinx http://obits.al.com/obituaries/birmingham/obituary.aspx?n=christopher-robert-lais&pid=186080667"};
 
 // brand of graphics chip
@@ -1060,10 +1059,7 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_cube_map = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
-#ifndef __APPLE__
-	// LordHavoc: too many bugs on OSX!
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
-#endif
 	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
 	vid.support.arb_uniform_buffer_object = GL_CheckExtension("GL_ARB_uniform_buffer_object", ubofuncs, "-noubo", false);
 	vid.support.ati_separate_stencil = GL_CheckExtension("separatestencil", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
@@ -1676,7 +1672,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_g);
 	Cvar_RegisterVariable(&v_color_white_b);
 
-	Cvar_RegisterVariable(&v_glslgamma);
 	Cvar_RegisterVariable(&v_glslgamma_2d);
 
 	Cvar_RegisterVariable(&v_psycho);
