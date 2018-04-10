@@ -640,7 +640,7 @@ static void Mod_Q1BSP_FindNonSolidLocation(dp_model_t *model, const vec3_t in, v
 	VectorCopy(info.center, out);
 }
 
-int Mod_Q1BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents)
+int Mod_Q1BSP_SuperContentsFromNativeContents(int nativecontents)
 {
 	switch(nativecontents)
 	{
@@ -660,7 +660,7 @@ int Mod_Q1BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativeconte
 	return 0;
 }
 
-int Mod_Q1BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents)
+int Mod_Q1BSP_NativeContentsFromSuperContents(int supercontents)
 {
 	if (supercontents & (SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY))
 		return CONTENTS_SOLID;
@@ -813,7 +813,7 @@ static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int nu
 	// we reached a leaf contents
 
 	// check for empty
-	num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
+	num = Mod_Q1BSP_SuperContentsFromNativeContents(num);
 	if (!t->trace->startfound)
 	{
 		t->trace->startfound = true;
@@ -868,7 +868,7 @@ static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, i
 		plane = planes + nodes[num].planenum;
 		num = nodes[num].children[(plane->type < 3 ? point[plane->type] : DotProduct(plane->normal, point)) < plane->dist];
 	}
-	num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
+	num = Mod_Q1BSP_SuperContentsFromNativeContents(num);
 	t->trace->startsupercontents |= num;
 	if (num & SUPERCONTENTS_LIQUIDSMASK)
 		t->trace->inwater = true;
@@ -1060,7 +1060,7 @@ static int Mod_Q1BSP_PointSuperContents(struct model_s *model, int frame, const 
 		plane = planes + nodes[num].planenum;
 		num = nodes[num].children[(plane->type < 3 ? point[plane->type] : DotProduct(plane->normal, point)) < plane->dist];
 	}
-	return Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
+	return Mod_Q1BSP_SuperContentsFromNativeContents(num);
 }
 
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, int boxsupercontents, int boxq3surfaceflags, const texture_t *boxtexture)
@@ -1491,7 +1491,7 @@ static int Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(RecursiveHullCheck
 		return Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(t, model, node->children[side ^ 1], mid, p2);
 	}
 	leaf = (const mleaf_t *)node;
-	side = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, leaf->contents);
+	side = Mod_Q1BSP_SuperContentsFromNativeContents(leaf->contents);
 	if (!t->trace->startfound)
 	{
 		t->trace->startfound = true;
@@ -4248,7 +4248,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Con_DPrintf("Stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
 }
 
-int Mod_Q2BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents)
+int Mod_Q2BSP_SuperContentsFromNativeContents(int nativecontents)
 {
 	int supercontents = 0;
 	if (nativecontents & CONTENTSQ2_SOLID)
@@ -4272,7 +4272,7 @@ int Mod_Q2BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativeconte
 	return supercontents;
 }
 
-int Mod_Q2BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents)
+int Mod_Q2BSP_NativeContentsFromSuperContents(int supercontents)
 {
 	int nativecontents = 0;
 	if (supercontents & SUPERCONTENTS_SOLID)
@@ -4531,7 +4531,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 					tx->q2contents |= Q2CONTENTS_SOLID;
 				if (tx->q2flags & (Q2SURF_HINT | Q2SURF_SKIP))
 					tx->q2contents = 0;
-				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, tx->q2contents);
+				tx->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(tx->q2contents);
 				// set the current values to the base values
 				tx->currentframe = tx;
 				tx->currentskinframe = tx->materialshaderpass != NULL ? tx->materialshaderpass->skinframes[0] : NULL;
@@ -4758,7 +4758,7 @@ static void Mod_Q2BSP_LoadBrushes(sizebuf_t *sb)
 		out->firstbrushside = loadmodel->brush.data_brushsides + firstside;
 		out->numbrushsides = numsides;
 		// convert the contents to our values
-		supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(loadmodel, contents);
+		supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(contents);
 
 		// problem: q2bsp brushes have contents but not a texture
 		// problem: q2bsp brushsides *may* have a texture or may not
@@ -5219,8 +5219,8 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Con_DPrintf("Stats for q2bsp model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
 }
 
-static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents);
-static int Mod_Q3BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents);
+static int Mod_Q3BSP_SuperContentsFromNativeContents(int nativecontents);
+static int Mod_Q3BSP_NativeContentsFromSuperContents(int supercontents);
 
 static void Mod_Q3BSP_LoadEntities(lump_t *l)
 {
@@ -5308,11 +5308,11 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	for (i = 0;i < count;i++)
 	{
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
-		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
+		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(LittleLong(in[i].contents));
 		Mod_LoadTextureFromQ3Shader(out + i, in[i].name, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
 		// restore the surfaceflags and supercontents
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
-		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in[i].contents));
+		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(LittleLong(in[i].contents));
 	}
 }
 
@@ -7812,7 +7812,7 @@ bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qboolean userendersurfaces, bih_t
 	return out;
 }
 
-static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents)
+static int Mod_Q3BSP_SuperContentsFromNativeContents(int nativecontents)
 {
 	int supercontents = 0;
 	if (nativecontents & CONTENTSQ3_SOLID)
@@ -7842,7 +7842,7 @@ static int Mod_Q3BSP_SuperContentsFromNativeContents(dp_model_t *model, int nati
 	return supercontents;
 }
 
-static int Mod_Q3BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents)
+static int Mod_Q3BSP_NativeContentsFromSuperContents(int supercontents)
 {
 	int nativecontents = 0;
 	if (supercontents & SUPERCONTENTS_SOLID)

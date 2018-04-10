@@ -867,8 +867,8 @@ typedef struct model_brush_s
 	shadowmesh_t *collisionmesh;
 
 	// common functions
-	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
-	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
+	int (*SuperContentsFromNativeContents)(int nativecontents);
+	int (*NativeContentsFromSuperContents)(int supercontents);
 	unsigned char *(*GetPVS)(struct model_s *model, const vec3_t p);
 	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qboolean merge);
 	int (*BoxTouchingPVS)(struct model_s *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs);
@@ -1240,11 +1240,11 @@ qboolean Mod_AllocLightmap_Block(mod_alloclightmap_state_t *state, int blockwidt
 // bsp models
 void Mod_BrushInit(void);
 // used for talking to the QuakeC mainly
-int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
-int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
+int Mod_Q1BSP_NativeContentsFromSuperContents(int supercontents);
+int Mod_Q1BSP_SuperContentsFromNativeContents(int nativecontents);
 // used for loading wal files in Mod_LoadTextureFromQ3Shader
-int Mod_Q2BSP_SuperContentsFromNativeContents(dp_model_t *model, int nativecontents);
-int Mod_Q2BSP_NativeContentsFromSuperContents(dp_model_t *model, int supercontents);
+int Mod_Q2BSP_SuperContentsFromNativeContents(int nativecontents);
+int Mod_Q2BSP_NativeContentsFromSuperContents(int supercontents);
 
 // a lot of model formats use the Q1BSP code, so here are the prototypes...
 struct entity_render_s;
