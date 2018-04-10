@@ -2154,7 +2154,7 @@ static qboolean SV_CheckWater (prvm_edict_t *ent)
 	// Acquire Super Contents Prior to Resets
 	cont = SV_PointSuperContents(point);
 	// Acquire Native Contents Here
-	nNativeContents = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, cont);
+	nNativeContents = Mod_Q1BSP_NativeContentsFromSuperContents(cont);
 
 	// DRESK - Support for Entity Contents Transition Event
 	if(PRVM_serveredictfloat(ent, watertype))
@@ -2540,7 +2540,7 @@ static void SV_CheckWaterTransition (prvm_edict_t *ent)
 	// LordHavoc: bugfixes in this function are keyed to the sv_gameplayfix_bugfixedcheckwatertransition cvar - if this cvar is 0 then all the original bugs should be reenabled for compatibility
 	int cont;
 	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
-	cont = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(entorigin));
+	cont = Mod_Q1BSP_NativeContentsFromSuperContents(SV_PointSuperContents(entorigin));
 	if (!PRVM_serveredictfloat(ent, watertype))
 	{
 		// just spawned here

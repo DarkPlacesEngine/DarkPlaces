@@ -1266,7 +1266,7 @@ static void VM_SV_pointcontents(prvm_prog_t *prog)
 	vec3_t point;
 	VM_SAFEPARMCOUNT(1, VM_SV_pointcontents);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), point);
-	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_PointSuperContents(point));
+	PRVM_G_FLOAT(OFS_RETURN) = Mod_Q1BSP_NativeContentsFromSuperContents(SV_PointSuperContents(point));
 }
 
 /*
