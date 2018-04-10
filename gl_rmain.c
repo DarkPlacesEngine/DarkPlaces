@@ -268,7 +268,6 @@ cvar_t r_buffermegs[R_BUFFERDATA_COUNT] =
 	{CVAR_SAVE, "r_buffermegs_uniform", "0.25", "uniform buffer size for one frame"},
 };
 
-extern cvar_t v_glslgamma;
 extern cvar_t v_glslgamma_2d;
 
 extern qboolean v_flipped_state;
@@ -2034,7 +2033,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		permutation |= SHADERPERMUTATION_GLOW;
 	else if (texturemode == GL_DECAL)
 		permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
-	if (usegamma && v_glslgamma.integer && v_glslgamma_2d.integer && !vid.sRGB2D && r_texture_gammaramps && !vid_gammatables_trivial)
+	if (usegamma && v_glslgamma_2d.integer && !vid.sRGB2D && r_texture_gammaramps && !vid_gammatables_trivial)
 		permutation |= SHADERPERMUTATION_GAMMARAMPS;
 	if (suppresstexalpha)
 		permutation |= SHADERPERMUTATION_REFLECTCUBE;
@@ -2050,7 +2049,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 		R_Mesh_TexBind(GL20TU_FIRST , first );
 		R_Mesh_TexBind(GL20TU_SECOND, second);
 		if (permutation & SHADERPERMUTATION_GAMMARAMPS)
-			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps);
+			R_Mesh_TexBind(GL20TU_GAMMARAMPS, r_texture_gammaramps);
 #endif
 		break;
 	case RENDERPATH_D3D10:
@@ -6226,6 +6225,7 @@ static void R_Bloom_StartFrame(void)
 	case RENDERPATH_GL11:
 	case RENDERPATH_GL13:
 	case RENDERPATH_GLES1:
+		return; // don't bother
 	case RENDERPATH_GLES2:
 	case RENDERPATH_D3D9:
 	case RENDERPATH_D3D10:
@@ -6302,7 +6302,7 @@ static void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
 
-	if (!((r_glsl_postprocess.integer || r_fxaa.integer) || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || (v_glslgamma.integer && !vid_gammatables_trivial))
+	if (!((r_glsl_postprocess.integer || r_fxaa.integer) || (!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) || !vid_gammatables_trivial)
 	 && !r_bloom.integer
 	 && (R_Stereo_Active() || (r_motionblur.value <= 0 && r_damageblur.value <= 0))
 	 && !useviewfbo
@@ -6606,7 +6606,7 @@ static void R_BlendView(int fbo, rtexture_t *depthtexture, rtexture_t *colortext
 		permutation =
 			  (r_fb.bloomtexture[r_fb.bloomindex] ? SHADERPERMUTATION_BLOOM : 0)
 			| (r_refdef.viewblend[3] > 0 ? SHADERPERMUTATION_VIEWTINT : 0)
-			| ((v_glslgamma.value && !vid_gammatables_trivial) ? SHADERPERMUTATION_GAMMARAMPS : 0)
+			| (!vid_gammatables_trivial ? SHADERPERMUTATION_GAMMARAMPS : 0)
 			| (r_glsl_postprocess.integer ? SHADERPERMUTATION_POSTPROCESSING : 0)
 			| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1) ? SHADERPERMUTATION_SATURATION : 0);
 
@@ -6955,7 +6955,7 @@ void R_UpdateVariables(void)
 	case RENDERPATH_D3D11:
 	case RENDERPATH_SOFT:
 	case RENDERPATH_GLES2:
-		if(v_glslgamma.integer && !vid_gammatables_trivial)
+		if(!vid_gammatables_trivial)
 		{
 			if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)
 			{
