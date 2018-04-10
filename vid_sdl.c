@@ -1977,7 +1977,8 @@ void GLES_Init(void)
 		Calling them just threw an exception. Android developer relations confirmed that they forgot to implement these. (yeah...)
 		It's apparently been fixed in 2.2, though I haven't tested."
 	*/
-	vid.support.ext_framebuffer_object = false;//true;
+	// LadyHavoc: Android 2.1 is way old now, enabling this again, it's going to be required soon.
+	vid.support.ext_framebuffer_object = true;
 
 	vid.support.ext_packed_depth_stencil = false;
 	vid.support.ext_stencil_two_side = false;
