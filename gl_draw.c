@@ -45,8 +45,6 @@ cvar_t r_font_antialias = {CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 
 cvar_t r_nearest_2d = {CVAR_SAVE, "r_nearest_2d", "0", "use nearest filtering on all 2d textures (including conchars)"};
 cvar_t r_nearest_conchars = {CVAR_SAVE, "r_nearest_conchars", "0", "use nearest filtering on conchars texture"};
 
-extern cvar_t v_glslgamma;
-
 //=============================================================================
 /* Support Routines */
 
@@ -2154,114 +2152,5 @@ void DrawQ_RecalcView(void)
 {
 	if(r_refdef.draw2dstage)
 		r_refdef.draw2dstage = -1; // next draw call will set viewport etc. again
-}
-
-static float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
-void R_DrawGamma(void)
-{
-	float c[4];
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_GLES2:
-		if (v_glslgamma.integer)
-			return;
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-		break;
-	case RENDERPATH_GLES1:
-	case RENDERPATH_SOFT:
-		return;
-	}
-	// all the blends ignore depth
-//	R_Mesh_ResetTextureState();
-	R_SetupShader_Generic_NoTexture(true, true);
-	GL_DepthMask(true);
-	GL_DepthRange(0, 1);
-	GL_PolygonOffset(0, 0);
-	GL_DepthTest(false);
-
-	// interpretation of brightness and contrast:
-	//   color range := brightness .. (brightness + contrast)
-	// i.e. "c *= contrast; c += brightness"
-	// plausible values for brightness thus range from -contrast to 1
-
-	// apply pre-brightness (subtractive brightness, for where contrast was >= 1)
-	if (vid.support.ext_blend_subtract)
-	{
-		if (v_color_enable.integer)
-		{
-			c[0] = -v_color_black_r.value / v_color_white_r.value;
-			c[1] = -v_color_black_g.value / v_color_white_g.value;
-			c[2] = -v_color_black_b.value / v_color_white_b.value;
-		}
-		else
-			c[0] = c[1] = c[2] = -v_brightness.value / v_contrast.value;
-		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
-		{
-			// need SUBTRACTIVE blending to do this!
-			GL_BlendEquationSubtract(true);
-			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_Color(c[0], c[1], c[2], 1);
-			R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
-			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			GL_BlendEquationSubtract(false);
-		}
-	}
-
-	// apply contrast
-	if (v_color_enable.integer)
-	{
-		c[0] = v_color_white_r.value;
-		c[1] = v_color_white_g.value;
-		c[2] = v_color_white_b.value;
-	}
-	else
-		c[0] = c[1] = c[2] = v_contrast.value;
-	if (c[0] >= 1.003f || c[1] >= 1.003f || c[2] >= 1.003f)
-	{
-		GL_BlendFunc(GL_DST_COLOR, GL_ONE);
-		while (c[0] >= 1.003f || c[1] >= 1.003f || c[2] >= 1.003f)
-		{
-			float cc[4];
-			cc[0] = bound(0, c[0] - 1, 1);
-			cc[1] = bound(0, c[1] - 1, 1);
-			cc[2] = bound(0, c[2] - 1, 1);
-			GL_Color(cc[0], cc[1], cc[2], 1);
-			R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
-			R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			c[0] /= 1 + cc[0];
-			c[1] /= 1 + cc[1];
-			c[2] /= 1 + cc[2];
-		}
-	}
-	if (c[0] <= 0.997f || c[1] <= 0.997f || c[2] <= 0.997f)
-	{
-		GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
-		GL_Color(c[0], c[1], c[2], 1);
-		R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
-		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-	}
-
-	// apply post-brightness (additive brightness, for where contrast was <= 1)
-	if (v_color_enable.integer)
-	{
-		c[0] = v_color_black_r.value;
-		c[1] = v_color_black_g.value;
-		c[2] = v_color_black_b.value;
-	}
-	else
-		c[0] = c[1] = c[2] = v_brightness.value;
-	if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
-	{
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_Color(c[0], c[1], c[2], 1);
-		R_Mesh_PrepareVertices_Generic_Arrays(3, blendvertex3f, NULL, NULL);
-		R_Mesh_Draw(0, 3, 0, 1, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-	}
 }
 

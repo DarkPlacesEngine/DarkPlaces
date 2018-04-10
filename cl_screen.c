@@ -112,7 +112,6 @@ cvar_t r_speeds_graph_maxdefault = {CVAR_SAVE, "r_speeds_graph_maxdefault", "100
 
 
 
-extern cvar_t v_glslgamma;
 extern cvar_t sbar_info_pos;
 extern cvar_t r_fog_clear;
 
@@ -2276,8 +2275,6 @@ static void SCR_DrawScreen (void)
 
 	DrawQ_Finish();
 
-	R_DrawGamma();
-
 	R_Mesh_Finish();
 }
 
@@ -2601,6 +2598,10 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 			return;
 		loadingscreen_lastupdate = t;
 	}
+
+	// set up the r_texture_gammaramps texture which we need for rendering the loadingscreenpic
+	VID_UpdateGamma();
+	R_UpdateVariables();
 
 	if(!scr_loadingscreen_background.integer)
 		clear = true;
