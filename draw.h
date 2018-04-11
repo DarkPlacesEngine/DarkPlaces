@@ -24,31 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef DRAW_H
 #define DRAW_H
 
-// FIXME: move this stuff to cl_screen
-typedef struct cachepic_s
-{
-	// size of pic
-	int width, height;
-	// this flag indicates that it should be loaded and unloaded on demand
-	int autoload;
-	// texture flags to upload with
-	int texflags;
-	// texture may be freed after a while
-	int lastusedframe;
-	// renderer texture to use
-	rtexture_t *tex;
-	// used for hash lookups
-	struct cachepic_s *chain;
-	// flags - CACHEPICFLAG_NEWPIC for example
-	unsigned int flags;
-	// has alpha?
-	qboolean hasalpha;
-	// name of pic
-	char name[MAX_QPATH];
-	// allow to override/free the texture
-	qboolean allow_free_tex;
-}
-cachepic_t;
+typedef struct cachepic_s cachepic_t;
 
 typedef enum cachepicflags_e
 {
@@ -58,7 +34,8 @@ typedef enum cachepicflags_e
 	CACHEPICFLAG_NOCLAMP = 8,
 	CACHEPICFLAG_NEWPIC = 16, // disables matching texflags check, because a pic created with Draw_NewPic should not be subject to that
 	CACHEPICFLAG_MIPMAP = 32,
-	CACHEPICFLAG_NEAREST = 64 // force nearest filtering instead of linear
+	CACHEPICFLAG_NEAREST = 64, // force nearest filtering instead of linear
+	CACHEPICFLAG_FAILONMISSING = 128 // return NULL if the pic has no texture
 }
 cachepicflags_t;
 
@@ -67,8 +44,8 @@ void Draw_Frame (void);
 cachepic_t *Draw_CachePic_Flags (const char *path, unsigned int cachepicflags);
 cachepic_t *Draw_CachePic (const char *path); // standard function with no options, used throughout engine
 // create or update a pic's image
-cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels);
-// free the texture memory used by a pic
+cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned char *pixels, textype_t textype, int texflags);
+// free the texture memory used by a pic (the cachepic_t itself is eternal)
 void Draw_FreePic(const char *picname);
 
 // a triangle mesh..
@@ -113,7 +90,7 @@ typedef struct ft2_settings_s
 #define MAX_FONT_FALLBACKS 3
 typedef struct dp_font_s
 {
-	rtexture_t *tex;
+	cachepic_t *pic;
 	float width_of[256]; // width_of[0] == max width of any char; 1.0f is base width (1/16 of texture width); therefore, all widths have to be <= 1 (does not include scale)
 	float maxwidth; // precalculated max width of the font (includes scale)
 	char texpath[MAX_QPATH];
@@ -197,6 +174,11 @@ void DrawQ_Finish(void);
 void DrawQ_ProcessDrawFlag(int flags, qboolean alpha); // sets GL_DepthMask and GL_BlendFunc
 void DrawQ_RecalcView(void); // use this when changing r_refdef.view.* from e.g. csqc
 
+
+const char *Draw_GetPicName(cachepic_t *pic);
+int Draw_GetPicWidth(cachepic_t *pic);
+int Draw_GetPicHeight(cachepic_t *pic);
+qboolean Draw_IsPicLoaded(cachepic_t *pic);
 rtexture_t *Draw_GetPicTexture(cachepic_t *pic);
 
 extern rtexturepool_t *drawtexturepool; // used by ft2.c

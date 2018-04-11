@@ -414,7 +414,7 @@ void M_Menu_Main_f (void)
 		MAIN_ITEMS = 5;
 
 	// check if the game data is missing and use a different main menu if so
-	m_missingdata = !forceqmenu.integer && Draw_CachePic (s)->tex == r_texture_notexture;
+	m_missingdata = !forceqmenu.integer && !Draw_IsPicLoaded(Draw_CachePic(s));
 	if (m_missingdata)
 		MAIN_ITEMS = 2;
 
@@ -458,7 +458,7 @@ static void M_Main_Draw (void)
 		int y1, y2, y3;
 		M_Background(640, 480);
 		p = Draw_CachePic ("gfx/menu/tb-transfusion");
-		M_DrawPic (640/2 - p->width/2, 40, "gfx/menu/tb-transfusion");
+		M_DrawPic (640/2 - Draw_GetPicWidth(p)/2, 40, "gfx/menu/tb-transfusion");
 		y2 = 120;
 		// 8 rather than MAIN_ITEMS to skip a number and not miss the last option
 		for (y1 = 1; y1 <= 8; y1++)
@@ -479,7 +479,7 @@ static void M_Main_Draw (void)
 	M_Background(320, 200);
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/ttl_main");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_main");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/ttl_main");
 // Nehahra
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -758,7 +758,7 @@ static void M_SinglePlayer_Draw (void)
 	// Some mods don't have a single player mode
 	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
-		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl");
+		M_DrawPic ((320 - Draw_GetPicWidth(p)) / 2, 4, "gfx/ttl_sgl");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
 		if (gamemode == GAME_GOODVSBAD2)
@@ -771,7 +771,7 @@ static void M_SinglePlayer_Draw (void)
 	{
 		int		f;
 
-		M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_sgl");
+		M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/ttl_sgl");
 		M_DrawPic (72, 32, "gfx/sp_menu");
 
 		f = (int)(realtime * 10)%6;
@@ -925,7 +925,7 @@ static void M_Load_Draw (void)
 	M_Background(320, 200);
 
 	p = Draw_CachePic ("gfx/p_load");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_load" );
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/p_load" );
 
 	for (i=0 ; i< MAX_SAVEGAMES; i++)
 		M_Print(16, 32 + 8*i, m_filenames[i]);
@@ -943,7 +943,7 @@ static void M_Save_Draw (void)
 	M_Background(320, 200);
 
 	p = Draw_CachePic ("gfx/p_save");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_save");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/p_save");
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 		M_Print(16, 32 + 8*i, m_filenames[i]);
@@ -1052,7 +1052,7 @@ static void M_Transfusion_Episode_Draw (void)
 	M_Background(640, 480);
 
 	p = Draw_CachePic ("gfx/menu/tb-episodes");
-	M_DrawPic (640/2 - p->width/2, 40, "gfx/menu/tb-episodes");
+	M_DrawPic (640/2 - Draw_GetPicWidth(p)/2, 40, "gfx/menu/tb-episodes");
 	for (y = 0; y < EPISODE_ITEMS; y++){
 		M_DrawPic (0, 160 + y * 40, va(vabuf, sizeof(vabuf), "gfx/menu/episode%i", y+1));
 	}
@@ -1110,7 +1110,7 @@ static void M_Transfusion_Skill_Draw (void)
 	M_Background(640, 480);
 
 	p = Draw_CachePic ("gfx/menu/tb-difficulty");
-	M_DrawPic(640/2 - p->width/2, 40, "gfx/menu/tb-difficulty");
+	M_DrawPic(640/2 - Draw_GetPicWidth(p)/2, 40, "gfx/menu/tb-difficulty");
 
 	for (y = 0; y < SKILL_ITEMS; y++)
 	{
@@ -1215,7 +1215,7 @@ static void M_MultiPlayer_Draw (void)
 	{
 		M_Background(640, 480);
 		p = Draw_CachePic ("gfx/menu/tb-online");
-		M_DrawPic (640/2 - p->width/2, 140, "gfx/menu/tb-online");
+		M_DrawPic (640/2 - Draw_GetPicWidth(p)/2, 140, "gfx/menu/tb-online");
 		for (f = 1; f <= MULTIPLAYER_ITEMS; f++)
 			M_DrawPic (0, 180 + f*40, va(vabuf, sizeof(vabuf), "gfx/menu/online%i", f));
 		M_DrawPic (0, 220 + m_multiplayer_cursor * 40, va(vabuf, sizeof(vabuf), "gfx/menu/online%iselected", m_multiplayer_cursor + 1));
@@ -1225,7 +1225,7 @@ static void M_MultiPlayer_Draw (void)
 
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_multi");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/p_multi");
 	M_DrawPic (72, 32, "gfx/mp_menu");
 
 	f = (int)(realtime * 10)%6;
@@ -1344,7 +1344,7 @@ static void M_Setup_Draw (void)
 
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_multi");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/p_multi");
 
 	M_Print(64, 40, "Your name");
 	M_DrawTextBox (160, 32, 16, 1);
@@ -1415,7 +1415,7 @@ static void M_Setup_Draw (void)
 				}
 				menuplyr_translated[i] = palette_bgra_transparent[j];
 			}
-			Draw_NewPic("gfx/menuplyr", menuplyr_width, menuplyr_height, true, (unsigned char *)menuplyr_translated);
+			Draw_NewPic("gfx/menuplyr", menuplyr_width, menuplyr_height, (unsigned char *)menuplyr_translated, TEXTYPE_BGRA, TEXF_CLAMP);
 		}
 		M_DrawPic(160, 48, "gfx/bigbox");
 		M_DrawPic(172, 56, "gfx/menuplyr");
@@ -1680,7 +1680,7 @@ static void M_Options_Draw (void)
 
 	M_DrawPic(16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_option");
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
+	M_DrawPic((320-Draw_GetPicWidth(p))/2, 4, "gfx/p_option");
 
 	m_optnum = 0;
 	m_optcursor = options_cursor;
@@ -1889,7 +1889,7 @@ static void M_Options_Effects_Draw (void)
 
 	M_DrawPic(16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_option");
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
+	M_DrawPic((320-Draw_GetPicWidth(p))/2, 4, "gfx/p_option");
 
 	m_optcursor = options_effects_cursor;
 	m_optnum = 0;
@@ -2036,7 +2036,7 @@ static void M_Options_Graphics_Draw (void)
 
 	M_DrawPic(16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_option");
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
+	M_DrawPic((320-Draw_GetPicWidth(p))/2, 4, "gfx/p_option");
 
 	m_optcursor = options_graphics_cursor;
 	m_optnum = 0;
@@ -2226,7 +2226,7 @@ static void M_Options_ColorControl_Draw (void)
 
 	M_DrawPic(16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_option");
-	M_DrawPic((320-p->width)/2, 4, "gfx/p_option");
+	M_DrawPic((320-Draw_GetPicWidth(p))/2, 4, "gfx/p_option");
 
 	m_optcursor = options_colorcontrol_cursor;
 	m_optnum = 0;
@@ -2617,7 +2617,7 @@ static void M_Keys_Draw (void)
 	M_Background(320, 48 + 8 * numcommands);
 
 	p = Draw_CachePic ("gfx/ttl_cstm");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/ttl_cstm");
 
 	if (bind_grab)
 		M_Print(12, 32, "Press a key or button for this action");
@@ -2928,7 +2928,7 @@ static void M_Video_Draw (void)
 
 	M_DrawPic(16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/vidmodes");
-	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes");
+	M_DrawPic((320-Draw_GetPicWidth(p))/2, 4, "gfx/vidmodes");
 
 	t = 0;
 
@@ -3370,7 +3370,7 @@ static void M_LanConfig_Draw (void)
 
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_multi");
-	basex = (320-p->width)/2;
+	basex = (320-Draw_GetPicWidth(p))/2;
 	M_DrawPic (basex, 4, "gfx/p_multi");
 
 	if (StartingGame)
@@ -3994,7 +3994,7 @@ void M_GameOptions_Draw (void)
 
 	M_DrawPic (16, 4, "gfx/qplaque");
 	p = Draw_CachePic ("gfx/p_multi");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi");
+	M_DrawPic ( (320-Draw_GetPicWidth(p))/2, 4, "gfx/p_multi");
 
 	M_DrawTextBox (152, 32, 10, 1);
 	M_Print(160, 40, "begin game");
@@ -4435,7 +4435,7 @@ static void M_ServerList_Draw (void)
 	end = min(start + visible, serverlist_viewcount);
 
 	p = Draw_CachePic ("gfx/p_multi");
-	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi");
+	M_DrawPic((640 - Draw_GetPicWidth(p)) / 2, 4, "gfx/p_multi");
 	if (end > start)
 	{
 		for (n = start;n < end;n++)
@@ -4671,7 +4671,7 @@ static void M_ModList_Draw (void)
 	end = min(start + visible, modlist_count);
 
 	p = Draw_CachePic ("gfx/p_option");
-	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_option");
+	M_DrawPic((640 - Draw_GetPicWidth(p)) / 2, 4, "gfx/p_option");
 	if (end > start)
 	{
 		for (n = start;n < end;n++)
@@ -4889,7 +4889,7 @@ void M_Draw (void)
 			drop1 = Draw_CachePic ("gfx/menu/blooddrop1");
 			drop2 = Draw_CachePic ("gfx/menu/blooddrop2");
 			drop3 = Draw_CachePic ("gfx/menu/blooddrop3");
-			for (scale_x = 0; scale_x <= vid_conwidth.integer; scale_x += p->width) {
+			for (scale_x = 0; scale_x <= vid_conwidth.integer; scale_x += Draw_GetPicWidth(p)) {
 				for (scale_y = -scale_y_repeat; scale_y <= vid_conheight.integer; scale_y += scale_y_repeat) {
 					DrawQ_Pic (scale_x + 21, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, drop3, 0, 0, 1, 1, 1, 1, 0);
 					DrawQ_Pic (scale_x +  116, scale_y_repeat + scale_y + scale_y_rate * scale_y_repeat, drop1, 0, 0, 1, 1, 1, 1, 0);

@@ -1183,11 +1183,13 @@ void Mod_CreateCollisionMesh(dp_model_t *mod);
 void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
 q3shaderinfo_t *Mod_LookupQ3Shader(const char *name);
-qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
-texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe);
-texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
+qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags);
+texture_shaderpass_t *Mod_CreateShaderPass(mempool_t *mempool, skinframe_t *skinframe);
+texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, const char *modelname, q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
 /// Sets up a material to render the provided skinframe.  See also R_SkinFrame_LoadInternalBGRA.
-void Mod_LoadCustomMaterial(texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
+void Mod_LoadCustomMaterial(mempool_t *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
+/// Removes all shaderpasses from material, and optionally deletes the textures in the skinframes.
+void Mod_UnloadCustomMaterial(texture_t *texture, qboolean purgeskins);
 
 extern cvar_t r_mipskins;
 extern cvar_t r_mipnormalmaps;
@@ -1265,8 +1267,8 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 void Mod_Mesh_Create(dp_model_t *mod, const char *name);
 void Mod_Mesh_Destroy(dp_model_t *mod);
 void Mod_Mesh_Reset(dp_model_t *mod);
-texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name);
-msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex);
+texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int addmaterialflags);
+msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchwithprevioussurface);
 int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(dp_model_t *mod, msurface_t *surf, int e0, int e1, int e2);
 void Mod_Mesh_Finalize(dp_model_t *mod);

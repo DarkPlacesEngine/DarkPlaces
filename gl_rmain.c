@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_main.c
 
 #include "quakedef.h"
-#include "cl_dyntexture.h"
 #include "r_shadow.h"
 #include "polygon.h"
 #include "image.h"
@@ -3195,16 +3194,13 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		if (!strcmp(item->basename, basename) && (comparecrc < 0 || (item->textureflags == textureflags && item->comparewidth == comparewidth && item->compareheight == compareheight && item->comparecrc == comparecrc)))
 			break;
 
-	if (!item) {
-		rtexture_t *dyntexture;
-		// check whether its a dynamic texture
-		dyntexture = CL_GetDynTexture( basename );
-		if (!add && !dyntexture)
+	if (!item)
+	{
+		if (!add)
 			return NULL;
 		item = (skinframe_t *)Mem_ExpandableArray_AllocRecord(&r_skinframe.array);
 		memset(item, 0, sizeof(*item));
 		strlcpy(item->basename, basename, sizeof(item->basename));
-		item->base = dyntexture; // either NULL or dyntexture handle
 		item->textureflags = textureflags & ~TEXF_FORCE_RELOAD;
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
@@ -3214,20 +3210,9 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	}
 	else if (textureflags & TEXF_FORCE_RELOAD)
 	{
-		rtexture_t *dyntexture;
-		// check whether its a dynamic texture
-		dyntexture = CL_GetDynTexture( basename );
-		if (!add && !dyntexture)
+		if (!add)
 			return NULL;
 		R_SkinFrame_PurgeSkinFrame(item);
-	}
-	else if( item->base == NULL )
-	{
-		rtexture_t *dyntexture;
-		// check whether its a dynamic texture
-		// this only needs to be done because Purge doesnt delete skinframes - only sets the texture pointers to NULL and we need to restore it before returing.. [11/29/2007 Black]
-		dyntexture = CL_GetDynTexture( basename );
-		item->base = dyntexture; // either NULL or dyntexture handle
 	}
 
 	R_SkinFrame_MarkUsed(item);
@@ -3270,7 +3255,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 	}
 
 extern cvar_t gl_picmip;
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain)
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
 {
 	int j;
 	unsigned char *pixels;
@@ -3304,6 +3289,8 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	if (!r_loaddds || !(ddsbase = R_LoadTextureDDSFile(r_main_texturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", basename), vid.sRGB3D, textureflags, &ddshasalpha, ddsavgcolor, miplevel, false)))
 	{
 		basepixels = loadimagepixelsbgra(name, complain, true, false, &miplevel);
+		if (basepixels == NULL && fallbacknotexture)
+			basepixels = Image_GenerateNoTexture();
 		if (basepixels == NULL)
 			return NULL;
 	}
@@ -3729,7 +3716,7 @@ skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, co
 		Con_Printf("loading embedded 8bit image \"%s\"\n", name);
 
 	skinframe->base = skinframe->merged = R_LoadTexture2D(r_main_texturepool, skinframe->basename, width, height, skindata, TEXTYPE_PALETTE, textureflags, -1, palette);
-	if (textureflags & TEXF_ALPHA)
+	if ((textureflags & TEXF_ALPHA) && alphapalette)
 	{
 		for (i = 0;i < width * height;i++)
 		{
@@ -3774,6 +3761,73 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 	skinframe->avgcolor[2] = rand() / RAND_MAX;
 	skinframe->avgcolor[3] = 1;
 
+	return skinframe;
+}
+
+skinframe_t *R_SkinFrame_LoadNoTexture(void)
+{
+	int x, y;
+	static unsigned char pix[16][16][4];
+
+	if (cls.state == ca_dedicated)
+		return NULL;
+
+	// this makes a light grey/dark grey checkerboard texture
+	if (!pix[0][0][3])
+	{
+		for (y = 0; y < 16; y++)
+		{
+			for (x = 0; x < 16; x++)
+			{
+				if ((y < 8) ^ (x < 8))
+				{
+					pix[y][x][0] = 128;
+					pix[y][x][1] = 128;
+					pix[y][x][2] = 128;
+					pix[y][x][3] = 255;
+				}
+				else
+				{
+					pix[y][x][0] = 64;
+					pix[y][x][1] = 64;
+					pix[y][x][2] = 64;
+					pix[y][x][3] = 255;
+				}
+			}
+		}
+	}
+
+	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, pix[0][0], 16, 16, false);
+}
+
+skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
+{
+	skinframe_t *skinframe;
+	if (cls.state == ca_dedicated)
+		return NULL;
+	// if already loaded just return it, otherwise make a new skinframe
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (textureflags & TEXF_FORCE_RELOAD) ? -1 : 0, true);
+	if (skinframe->base)
+		return skinframe;
+	textureflags &= ~TEXF_FORCE_RELOAD;
+	skinframe->stain = NULL;
+	skinframe->merged = NULL;
+	skinframe->base = NULL;
+	skinframe->pants = NULL;
+	skinframe->shirt = NULL;
+	skinframe->nmap = NULL;
+	skinframe->gloss = NULL;
+	skinframe->glow = NULL;
+	skinframe->fog = NULL;
+	skinframe->reflect = NULL;
+	skinframe->hasalpha = (textureflags & TEXF_ALPHA) != 0;
+	// if no data was provided, then clearly the caller wanted to get a blank skinframe
+	if (!tex)
+		return NULL;
+	if (developer_loading.integer)
+		Con_Printf("loading 32bit skin \"%s\"\n", name);
+	skinframe->base = skinframe->merged = tex;
+	Vector4Set(skinframe->avgcolor, 1, 1, 1, 1); // bogus placeholder
 	return skinframe;
 }
 

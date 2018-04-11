@@ -111,7 +111,7 @@ void W_UnloadAll(void)
 	memset(&wad, 0, sizeof(wad));
 }
 
-unsigned char *W_GetLumpName(const char *name)
+unsigned char *W_GetLumpName(const char *name, fs_offset_t *returnfilesize)
 {
 	int i;
 	fs_offset_t filesize;
@@ -146,8 +146,14 @@ unsigned char *W_GetLumpName(const char *name)
 	}
 
 	for (lump = wad.gfx.lumps, i = 0;i < wad.gfx.numlumps;i++, lump++)
+	{
 		if (!strcmp(clean, lump->name))
+		{
+			if (returnfilesize)
+				*returnfilesize = lump->size;
 			return (wad.gfx_base + lump->filepos);
+		}
+	}
 	return NULL;
 }
 

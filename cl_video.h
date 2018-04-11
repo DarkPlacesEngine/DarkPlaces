@@ -2,10 +2,7 @@
 #ifndef CL_VIDEO_H
 #define CL_VIDEO_H
 
-#include "cl_dyntexture.h"
-
-// yields DYNAMIC_TEXTURE_PATH_PREFIX CLVIDEOPREFIX video name for a path
-#define CLVIDEOPREFIX	CLDYNTEXTUREPREFIX "video/"
+#define CLVIDEOPREFIX	"video/"
 #define CLTHRESHOLD		2.0
 
 #define MENUOWNER		1
@@ -46,7 +43,11 @@ typedef struct clvideo_s
 
 	void	*imagedata;
 
-	cachepic_t cpif;
+	// cachepic holds the relevant texture_t and we simply update the texture as needed
+	cachepic_t *cachepic;
+	char	name[MAX_QPATH]; // name of this video UI element (not the filename)
+	int		width;
+	int		height;
 
 	// VorteX: subtitles array
 	int		subtitles;

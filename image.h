@@ -4,6 +4,7 @@
 
 extern int image_width, image_height;
 
+unsigned char *Image_GenerateNoTexture(void);
 
 // swizzle components (even converting number of components) and flip images
 // (warning: input must be different than output due to non-linear read/write)
@@ -24,6 +25,9 @@ unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel
 
 // loads a texture, as pixel data
 unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB, int *miplevel);
+
+// searches for lmp and wad pics of the provided name and returns true and their dimensions if found
+qboolean Image_GetStockPicSize(const char *filename, int *returnwidth, int *returnheight);
 
 // loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
 qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);

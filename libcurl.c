@@ -598,7 +598,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 
 		pixels = decode_image(di, content_type);
 		if(pixels)
-			Draw_NewPic(p, image_width, image_height, true, pixels);
+			Draw_NewPic(p, image_width, image_height, pixels, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_CLAMP);
 		else
 			CLEAR_AND_RETRY();
 	}

@@ -457,7 +457,7 @@ static void SCR_DrawPause (void)
 		return;
 
 	pic = Draw_CachePic ("gfx/pause");
-	DrawQ_Pic ((vid_conwidth.integer - pic->width)/2, (vid_conheight.integer - pic->height)/2, pic, 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic ((vid_conwidth.integer - Draw_GetPicWidth(pic))/2, (vid_conheight.integer - Draw_GetPicHeight(pic))/2, pic, 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -479,26 +479,26 @@ static void SCR_DrawBrand (void)
 	{
 	case 1:	// bottom left
 		x = 0;
-		y = vid_conheight.integer - pic->height;
+		y = vid_conheight.integer - Draw_GetPicHeight(pic);
 		break;
 	case 2:	// bottom centre
-		x = (vid_conwidth.integer - pic->width) / 2;
-		y = vid_conheight.integer - pic->height;
+		x = (vid_conwidth.integer - Draw_GetPicWidth(pic)) / 2;
+		y = vid_conheight.integer - Draw_GetPicHeight(pic);
 		break;
 	case 3:	// bottom right
-		x = vid_conwidth.integer - pic->width;
-		y = vid_conheight.integer - pic->height;
+		x = vid_conwidth.integer - Draw_GetPicWidth(pic);
+		y = vid_conheight.integer - Draw_GetPicHeight(pic);
 		break;
 	case 4:	// centre right
-		x = vid_conwidth.integer - pic->width;
-		y = (vid_conheight.integer - pic->height) / 2;
+		x = vid_conwidth.integer - Draw_GetPicWidth(pic);
+		y = (vid_conheight.integer - Draw_GetPicHeight(pic)) / 2;
 		break;
 	case 5:	// top right
-		x = vid_conwidth.integer - pic->width;
+		x = vid_conwidth.integer - Draw_GetPicWidth(pic);
 		y = 0;
 		break;
 	case 6:	// top centre
-		x = (vid_conwidth.integer - pic->width) / 2;
+		x = (vid_conwidth.integer - Draw_GetPicWidth(pic)) / 2;
 		y = 0;
 		break;
 	case 7:	// top left
@@ -507,7 +507,7 @@ static void SCR_DrawBrand (void)
 		break;
 	case 8:	// centre left
 		x = 0;
-		y = (vid_conheight.integer - pic->height) / 2;
+		y = (vid_conheight.integer - Draw_GetPicHeight(pic)) / 2;
 		break;
 	default:
 		return;
@@ -2070,9 +2070,9 @@ static void SCR_DrawTouchscreenOverlay(void)
 			DrawQ_Fill(a->rect[0] +              1, a->rect[1] + a->rect[3] - 2, a->rect[2] - 2,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
 			DrawQ_Fill(a->rect[0] +              2, a->rect[1] + a->rect[3] - 1, a->rect[2] - 4,          1    , 1, 1, 1, vid_touchscreen_outlinealpha.value * (0.5f + 0.5f * a->active), 0);
 		}
-		pic = a->pic ? Draw_CachePic(a->pic) : NULL;
-		if (pic && pic->tex != r_texture_notexture)
-			DrawQ_Pic(a->rect[0], a->rect[1], Draw_CachePic(a->pic), a->rect[2], a->rect[3], 1, 1, 1, vid_touchscreen_overlayalpha.value * (0.5f + 0.5f * a->active), 0);
+		pic = a->pic ? Draw_CachePic_Flags(a->pic, CACHEPICFLAG_FAILONMISSING) : NULL;
+		if (Draw_IsPicLoaded(pic))
+			DrawQ_Pic(a->rect[0], a->rect[1], pic, a->rect[2], a->rect[3], 1, 1, 1, vid_touchscreen_overlayalpha.value * (0.5f + 0.5f * a->active), 0);
 		if (a->text && a->text[0])
 		{
 			int textwidth = DrawQ_TextWidth(a->text, 0, a->textheight, a->textheight, false, FONT_CHAT);
@@ -2499,8 +2499,8 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	// draw the loading plaque
 	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
-	w = loadingscreenpic->width;
-	h = loadingscreenpic->height;
+	w = Draw_GetPicWidth(loadingscreenpic);
+	h = Draw_GetPicHeight(loadingscreenpic);
 
 	// apply scale
 	w *= scr_loadingscreen_scale.value;

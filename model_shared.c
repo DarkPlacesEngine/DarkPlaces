@@ -2412,9 +2412,9 @@ q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
 	return NULL;
 }
 
-texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe)
+texture_shaderpass_t *Mod_CreateShaderPass(mempool_t *mempool, skinframe_t *skinframe)
 {
-	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(loadmodel->mempool, sizeof(*shaderpass));
+	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(mempool, sizeof(*shaderpass));
 	shaderpass->framerate = 0.0f;
 	shaderpass->numframes = 1;
 	shaderpass->blendfunc[0] = GL_ONE;
@@ -2427,10 +2427,10 @@ texture_shaderpass_t *Mod_CreateShaderPass(skinframe_t *skinframe)
 	return shaderpass;
 }
 
-texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename)
+texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, const char *modelname, q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename)
 {
 	int j;
-	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(loadmodel->mempool, sizeof(*shaderpass));
+	texture_shaderpass_t *shaderpass = (texture_shaderpass_t *)Mem_Alloc(mempool, sizeof(*shaderpass));
 	shaderpass->alphatest = layer->alphatest != 0;
 	shaderpass->framerate = layer->framerate;
 	shaderpass->numframes = layer->numframes;
@@ -2442,21 +2442,11 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(q3shaderinfo_layer_t
 	for (j = 0; j < Q3MAXTCMODS && layer->tcmods[j].tcmod != Q3TCMOD_NONE; j++)
 		shaderpass->tcmods[j] = layer->tcmods[j];
 	for (j = 0; j < layer->numframes; j++)
-	{
-		if (cls.state == ca_dedicated)
-		{
-			shaderpass->skinframes[j] = NULL;
-		}
-		else if (!(shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false)))
-		{
-			Con_Printf("^1%s:^7 could not load texture ^3\"%s\"^7 (frame %i) for layer %i of shader ^2\"%s\"\n", loadmodel->name, layer->texturename[j], j, layerindex, texturename);
-			shaderpass->skinframes[j] = R_SkinFrame_LoadMissing();
-		}
-	}
+		shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false, true);
 	return shaderpass;
 }
 
-qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
+qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
 {
 	int texflagsmask, texflagsor;
 	qboolean success = true;
@@ -2492,12 +2482,12 @@ qboolean Mod_LoadTextureFromQ3Shader(texture_t *texture, const char *name, qbool
 	if (shader)
 	{
 		if (developer_loading.integer)
-			Con_Printf("%s: loaded shader for %s\n", loadmodel->name, name);
+			Con_Printf("%s: loaded shader for %s\n", modelname, name);
 
 		if (shader->surfaceparms & Q3SURFACEPARM_SKY)
 		{
 			texture->basematerialflags = MATERIALFLAG_SKY;
-			if (shader->skyboxname[0])
+			if (shader->skyboxname[0] && loadmodel)
 			{
 				// quake3 seems to append a _ to the skybox name, so this must do so as well
 				dpsnprintf(loadmodel->brush.skybox, sizeof(loadmodel->brush.skybox), "%s_", shader->skyboxname);
@@ -2644,19 +2634,19 @@ nothing                GL_ZERO GL_ONE
 			// convert the main material layer
 			// FIXME: if alphagenspecularlayer is used, we should pass a specular texture name to R_SkinFrame_LoadExternal and have it load that texture instead of the assumed name for _gloss texture
 			if (materiallayer >= 0)
-				texture->materialshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[materiallayer], materiallayer, (shader->layers[materiallayer].dptexflags & texflagsmask) | texflagsor, texture->name);
+				texture->materialshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(mempool, modelname, &shader->layers[materiallayer], materiallayer, (shader->layers[materiallayer].dptexflags & texflagsmask) | texflagsor, texture->name);
 			// convert the terrain background blend layer (if any)
 			if (terrainbackgroundlayer >= 0)
-				texture->backgroundshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[terrainbackgroundlayer], terrainbackgroundlayer, (shader->layers[terrainbackgroundlayer].dptexflags & texflagsmask) | texflagsor, texture->name);
+				texture->backgroundshaderpass = texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(mempool, modelname, &shader->layers[terrainbackgroundlayer], terrainbackgroundlayer, (shader->layers[terrainbackgroundlayer].dptexflags & texflagsmask) | texflagsor, texture->name);
 			// convert the prepass layers (if any)
 			texture->startpreshaderpass = shaderpassindex;
 			for (i = 0; i < endofprelayers; i++)
-				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(mempool, modelname, &shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
 			texture->endpreshaderpass = shaderpassindex;
 			texture->startpostshaderpass = shaderpassindex;
 			// convert the postpass layers (if any)
 			for (i = firstpostlayer; i < shader->numlayers; i++)
-				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(&shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
+				texture->shaderpasses[shaderpassindex++] = Mod_CreateShaderPassFromQ3ShaderLayer(mempool, modelname, &shader->layers[i], i, (shader->layers[i].dptexflags & texflagsmask) | texflagsor, texture->name);
 			texture->startpostshaderpass = shaderpassindex;
 		}
 
@@ -2766,25 +2756,25 @@ nothing                GL_ZERO GL_ONE
 		if (shader->dpmeshcollisions)
 			texture->basematerialflags |= MATERIALFLAG_MESHCOLLISIONS;
 		if (shader->dpshaderkill && developer_extra.integer)
-			Con_DPrintf("^1%s:^7 killing shader ^3\"%s\" because of cvar\n", loadmodel->name, name);
+			Con_DPrintf("^1%s:^7 killing shader ^3\"%s\" because of cvar\n", modelname, name);
 	}
 	else if (!strcmp(texture->name, "noshader") || !texture->name[0])
 	{
 		if (developer_extra.integer)
-			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", loadmodel->name, name);
+			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", modelname, name);
 		texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 	}
 	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
 	{
 		if (developer_extra.integer)
-			Con_DPrintf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", loadmodel->name, name);
+			Con_DPrintf("^1%s:^7 using fallback nodraw material for ^3\"%s\"\n", modelname, name);
 		texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 		texture->supercontents = SUPERCONTENTS_SOLID;
 	}
 	else
 	{
 		if (developer_extra.integer)
-			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", loadmodel->name, texture->name);
+			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", modelname, texture->name);
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 		{
 			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
@@ -2809,27 +2799,23 @@ nothing                GL_ZERO GL_ONE
 		{
 			if (fallback)
 			{
-				texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false));
-				if (texture->materialshaderpass->skinframes[0])
-				{
-					if (texture->materialshaderpass->skinframes[0]->hasalpha)
-						texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-					if (texture->q2contents)
-						texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(texture->q2contents);
-				}
-				else
-					success = false;
+				texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(mempool, R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false, true));
+				if (texture->materialshaderpass->skinframes[0]->hasalpha)
+					texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+				if (texture->q2contents)
+					texture->supercontents = Mod_Q2BSP_SuperContentsFromNativeContents(texture->q2contents);
 			}
 			else
 				success = false;
 			if (!success && warnmissing)
-				Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", loadmodel->name, texture->name);
+				Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", modelname, texture->name);
 		}
 	}
 	// init the animation variables
 	texture->currentframe = texture;
+	texture->currentmaterialflags = texture->basematerialflags;
 	if (!texture->materialshaderpass)
-		texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(R_SkinFrame_LoadMissing());
+		texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(mempool, R_SkinFrame_LoadMissing());
 	if (!texture->materialshaderpass->skinframes[0])
 		texture->materialshaderpass->skinframes[0] = R_SkinFrame_LoadMissing();
 	texture->currentskinframe = texture->materialshaderpass ? texture->materialshaderpass->skinframes[0] : NULL;
@@ -2837,13 +2823,14 @@ nothing                GL_ZERO GL_ONE
 	return success;
 }
 
-void Mod_LoadCustomMaterial(texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe)
+void Mod_LoadCustomMaterial(mempool_t *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe)
 {
 	if (!(materialflags & (MATERIALFLAG_WALL | MATERIALFLAG_SKY)))
-		Con_DPrintf("^1%s:^7 Custom texture ^3\"%s\" does not have MATERIALFLAG_WALL set\n", loadmodel->name, texture->name);
+		Con_DPrintf("^1Custom texture ^3\"%s\" does not have MATERIALFLAG_WALL set\n", texture->name);
+
 	strlcpy(texture->name, name, sizeof(texture->name));
 	texture->basealpha = 1.0f;
-	texture->basematerialflags = texture->currentmaterialflags = materialflags;
+	texture->basematerialflags = materialflags;
 	texture->supercontents = supercontents;
 
 	texture->offsetmapping = (mod_noshader_default_offsetmapping.value) ? OFFSETMAPPING_DEFAULT : OFFSETMAPPING_OFF;
@@ -2857,17 +2844,35 @@ void Mod_LoadCustomMaterial(texture_t *texture, const char *name, int superconte
 	// JUST GREP FOR "specularscalemod = 1".
 
 	if (developer_extra.integer)
-		Con_DPrintf("^1%s:^7 Custom texture ^3\"%s\"\n", loadmodel->name, texture->name);
-	texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(skinframe);
+		Con_DPrintf("^1Custom texture ^3\"%s\"\n", texture->name);
+	if (skinframe)
+		texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(mempool, skinframe);
 
 	// init the animation variables
+	texture->currentmaterialflags = texture->basematerialflags;
 	texture->currentframe = texture;
-	if (!texture->materialshaderpass)
-		texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(R_SkinFrame_LoadMissing());
-	if (!texture->materialshaderpass->skinframes[0])
-		texture->materialshaderpass->skinframes[0] = R_SkinFrame_LoadMissing();
-	texture->currentskinframe = texture->materialshaderpass ? texture->materialshaderpass->skinframes[0] : NULL;
-	texture->backgroundcurrentskinframe = texture->backgroundshaderpass ? texture->backgroundshaderpass->skinframes[0] : NULL;
+	texture->currentskinframe = skinframe;
+	texture->backgroundcurrentskinframe = NULL;
+}
+
+void Mod_UnloadCustomMaterial(texture_t *texture, qboolean purgeskins)
+{
+	int i, j;
+	for (i = 0; i < sizeof(texture->shaderpasses) / sizeof(texture->shaderpasses[0]); i++)
+	{
+		if (texture->shaderpasses[i])
+		{
+			if (purgeskins)
+				for (j = 0; j < sizeof(texture->shaderpasses[i]->skinframes) / sizeof(skinframe_t *);j++)
+					if (texture->shaderpasses[i]->skinframes[j] && texture->shaderpasses[i]->skinframes[j]->base)
+						R_SkinFrame_PurgeSkinFrame(texture->shaderpasses[i]->skinframes[j]);
+			Mem_Free(texture->shaderpasses[i]);
+			texture->shaderpasses[i] = NULL;
+		}
+	}
+	texture->materialshaderpass = NULL;
+	texture->currentskinframe = NULL;
+	texture->backgroundcurrentskinframe = NULL;
 }
 
 skinfile_t *Mod_LoadSkinFiles(void)
@@ -4609,7 +4614,7 @@ void Mod_Mesh_Reset(dp_model_t *mod)
 	mod->DrawAddWaterPlanes = NULL; // will be set if a texture needs it
 }
 
-texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name)
+texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int addmaterialflags)
 {
 	int i;
 	texture_t *t;
@@ -4626,35 +4631,62 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name)
 			mod->data_surfaces[i].texture = mod->data_textures + (mod->data_surfaces[i].texture - oldtextures);
 	}
 	t = &mod->data_textures[mod->num_textures++];
-	Mod_LoadTextureFromQ3Shader(t, name, false, true, 0);
+	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags);
+	t->basematerialflags |= addmaterialflags;
+	switch (defaultdrawflags & DRAWFLAG_MASK)
+	{
+	case DRAWFLAG_ADDITIVE:
+		t->basematerialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED;
+		t->currentmaterialflags = t->basematerialflags;
+		break;
+	case DRAWFLAG_MODULATE:
+		t->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_BLENDED;
+		t->currentmaterialflags = t->basematerialflags;
+		t->customblendfunc[0] = GL_DST_COLOR;
+		t->customblendfunc[1] = GL_ZERO;
+		break;
+	case DRAWFLAG_2XMODULATE:
+		t->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_BLENDED;
+		t->currentmaterialflags = t->basematerialflags;
+		t->customblendfunc[0] = GL_DST_COLOR;
+		t->customblendfunc[1] = GL_SRC_COLOR;
+		break;
+	case DRAWFLAG_SCREEN:
+		t->basematerialflags |= MATERIALFLAG_CUSTOMBLEND | MATERIALFLAG_BLENDED;
+		t->currentmaterialflags = t->basematerialflags;
+		t->customblendfunc[0] = GL_ONE_MINUS_DST_COLOR;
+		t->customblendfunc[1] = GL_ONE;
+		break;
+	default:
+		break;
+	}
 	return t;
 }
 
-msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex)
+msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchwithprevioussurface)
 {
 	msurface_t *surf;
-	// check if the proposed surface matches the last one we created
-	if (mod->num_surfaces == 0 || mod->data_surfaces[mod->num_surfaces - 1].texture != tex)
+	// batch if possible; primarily useful for UI rendering where bounding boxes don't matter
+	if (batchwithprevioussurface && mod->num_surfaces > 0 && mod->data_surfaces[mod->num_surfaces - 1].texture == tex)
+		return mod->data_surfaces + mod->num_surfaces - 1;
+	// create new surface
+	if (mod->max_surfaces == mod->num_surfaces)
 	{
-		if (mod->max_surfaces == mod->num_surfaces)
-		{
-			mod->max_surfaces = 2 * max(mod->num_surfaces, 64);
-			mod->data_surfaces = (msurface_t *)Mem_Realloc(mod->mempool, mod->data_surfaces, mod->max_surfaces * sizeof(*mod->data_surfaces));
-			mod->sortedmodelsurfaces = (int *)Mem_Realloc(mod->mempool, mod->sortedmodelsurfaces, mod->max_surfaces * sizeof(*mod->sortedmodelsurfaces));
-		}
-		surf = mod->data_surfaces + mod->num_surfaces;
-		mod->num_surfaces++;
-		memset(surf, 0, sizeof(*surf));
-		surf->texture = tex;
-		surf->num_firsttriangle = mod->surfmesh.num_triangles;
-		surf->num_firstvertex = mod->surfmesh.num_vertices;
-		if (tex->basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
-		if (tex->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
-		return surf;
+		mod->max_surfaces = 2 * max(mod->num_surfaces, 64);
+		mod->data_surfaces = (msurface_t *)Mem_Realloc(mod->mempool, mod->data_surfaces, mod->max_surfaces * sizeof(*mod->data_surfaces));
+		mod->sortedmodelsurfaces = (int *)Mem_Realloc(mod->mempool, mod->sortedmodelsurfaces, mod->max_surfaces * sizeof(*mod->sortedmodelsurfaces));
 	}
-	return mod->data_surfaces + mod->num_surfaces - 1;
+	surf = mod->data_surfaces + mod->num_surfaces;
+	mod->num_surfaces++;
+	memset(surf, 0, sizeof(*surf));
+	surf->texture = tex;
+	surf->num_firsttriangle = mod->surfmesh.num_triangles;
+	surf->num_firstvertex = mod->surfmesh.num_vertices;
+	if (tex->basematerialflags & (MATERIALFLAG_SKY))
+		mod->DrawSky = R_Q1BSP_DrawSky;
+	if (tex->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+		mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+	return surf;
 }
 
 int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)

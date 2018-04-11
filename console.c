@@ -1975,7 +1975,7 @@ void Con_DrawConsole (int lines)
 		conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic_Flags("gfx/conback", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0) : NULL;
 		sx *= realtime; sy *= realtime;
 		sx -= floor(sx); sy -= floor(sy);
-		if (conbackpic && conbackpic->tex != r_texture_notexture)
+		if (Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
 					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
 					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
@@ -1992,7 +1992,7 @@ void Con_DrawConsole (int lines)
 		conbackpic = Draw_CachePic_Flags("gfx/conback2", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
 		sx *= realtime; sy *= realtime;
 		sx -= floor(sx); sy -= floor(sy);
-		if(conbackpic && conbackpic->tex != r_texture_notexture)
+		if(Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
 					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
 					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
@@ -2007,7 +2007,7 @@ void Con_DrawConsole (int lines)
 		conbackpic = Draw_CachePic_Flags("gfx/conback3", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
 		sx *= realtime; sy *= realtime;
 		sx -= floor(sx); sy -= floor(sy);
-		if(conbackpic && conbackpic->tex != r_texture_notexture)
+		if(Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
 					0 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,
 					1 + sx, 0 + sy, scr_conbrightness.value, scr_conbrightness.value, scr_conbrightness.value, alpha,

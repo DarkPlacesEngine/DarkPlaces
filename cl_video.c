@@ -1,6 +1,5 @@
 
 #include "quakedef.h"
-#include "cl_dyntexture.h"
 #include "cl_video.h"
 
 // cvars
@@ -72,22 +71,20 @@ static qboolean OpenStream( clvideo_t * video )
 static void VideoUpdateCallback(rtexture_t *rt, void *data)
 {
 	clvideo_t *video = (clvideo_t *) data;
-	R_UpdateTexture( video->cpif.tex, (unsigned char *)video->imagedata, 0, 0, 0, video->cpif.width, video->cpif.height, 1 );
+	Draw_NewPic(video->name, video->width, video->height, (unsigned char *)video->imagedata, TEXTYPE_BGRA, TEXF_CLAMP);
 }
 
 static void LinkVideoTexture( clvideo_t *video )
 {
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, video->cpif.width, video->cpif.height, NULL, TEXTYPE_BGRA, TEXF_PERSISTENT | TEXF_CLAMP, -1, NULL );
-	R_MakeTextureDynamic( video->cpif.tex, VideoUpdateCallback, video );
-	CL_LinkDynTexture( video->cpif.name, video->cpif.tex );
+	video->cachepic = Draw_NewPic(video->name, video->width, video->height, NULL, TEXTYPE_BGRA, TEXF_CLAMP);
+	// make R_GetTexture() call our VideoUpdateCallback
+	R_MakeTextureDynamic(Draw_GetPicTexture(video->cachepic), VideoUpdateCallback, video);
 }
 
 static void UnlinkVideoTexture( clvideo_t *video )
 {
-	CL_UnlinkDynTexture( video->cpif.name );
-	// free the texture
-	R_FreeTexture( video->cpif.tex );
-	video->cpif.tex = NULL;
+	// free the texture (this does not destroy the cachepic_t, which is eternal)
+	Draw_FreePic(video->name);
 	// free the image data
 	Mem_Free( video->imagedata );
 }
@@ -119,7 +116,7 @@ static qboolean WakeVideo( clvideo_t * video )
 			return false;
 		}
 
-	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->imagedata = Mem_Alloc( cls.permanentmempool, video->width * video->height * cl_videobytesperpixel );
 	LinkVideoTexture( video );
 
 	// update starttime
@@ -217,11 +214,12 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 
 static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner, const char *subtitlesfile )
 {
-	strlcpy( video->filename, filename, sizeof(video->filename) );
+	strlcpy(video->filename, filename, sizeof(video->filename));
+	dpsnprintf(video->name, sizeof(video->name), CLVIDEOPREFIX "%s", name);
 	video->ownertag = owner;
 	if( strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) )
 		return NULL;
-	strlcpy( video->cpif.name, name, sizeof(video->cpif.name) );
+	video->cachepic = Draw_CachePic_Flags(name, CACHEPICFLAG_NOTPERSISTENT | CACHEPICFLAG_QUIET);
 
 	if( !OpenStream( video ) )
 		return NULL;
@@ -232,9 +230,9 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->lasttime = realtime;
 	video->subtitles = 0;
 
-	video->cpif.width = video->getwidth( video->stream );
-	video->cpif.height = video->getheight( video->stream );
-	video->imagedata = Mem_Alloc( cls.permanentmempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->width = video->getwidth( video->stream );
+	video->height = video->getheight( video->stream );
+	video->imagedata = Mem_Alloc( cls.permanentmempool, video->width * video->height * cl_videobytesperpixel );
 	LinkVideoTexture( video );
 
 	// VorteX: load simple subtitle_text file
@@ -289,7 +287,7 @@ clvideo_t *CL_GetVideoByName( const char *name )
 
 	for( i = 0 ; i < cl_num_videos ; i++ )
 		if( cl_videos[ i ].state != CLVIDEO_UNUSED
-			&&	!strcmp( cl_videos[ i ].cpif.name , name ) )
+			&&	!strcmp( cl_videos[ i ].name , name ) )
 			break;
 	if( i != cl_num_videos )
 		return CL_GetVideoBySlot( i );
@@ -387,7 +385,7 @@ void CL_Video_Frame(void)
 			{
 				do {
 					video->framenum++;
-					if (video->decodeframe(video->stream, video->imagedata, cl_videormask, cl_videogmask, cl_videobmask, cl_videobytesperpixel, cl_videobytesperpixel * video->cpif.width))
+					if (video->decodeframe(video->stream, video->imagedata, cl_videormask, cl_videogmask, cl_videobmask, cl_videobytesperpixel, cl_videobytesperpixel * video->width))
 					{ 
 						// finished?
 						CL_RestartVideo(video);
@@ -396,7 +394,7 @@ void CL_Video_Frame(void)
 						return;
 					}
 				} while(video->framenum < destframe);
-				R_MarkDirtyTexture(video->cpif.tex);
+				R_MarkDirtyTexture(Draw_GetPicTexture(video->cachepic));
 			}
 		}
 	}
@@ -557,12 +555,12 @@ void CL_DrawVideo(void)
 
 	// draw video
 	if (v_glslgamma_video.value >= 1)
-		DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
+		DrawQ_SuperPic(px, py, video->cachepic, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, 0);
 	else
 	{
-		DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, DRAWFLAG_NOGAMMA);
+		DrawQ_SuperPic(px, py, video->cachepic, sx, sy, st[0], st[1], b, b, b, 1, st[2], st[3], b, b, b, 1, st[4], st[5], b, b, b, 1, st[6], st[7], b, b, b, 1, DRAWFLAG_NOGAMMA);
 		if (v_glslgamma_video.value > 0.0)
-			DrawQ_SuperPic(px, py, &video->cpif, sx, sy, st[0], st[1], b, b, b, v_glslgamma_video.value, st[2], st[3], b, b, b, v_glslgamma_video.value, st[4], st[5], b, b, b, v_glslgamma_video.value, st[6], st[7], b, b, b, v_glslgamma_video.value, 0);
+			DrawQ_SuperPic(px, py, video->cachepic, sx, sy, st[0], st[1], b, b, b, v_glslgamma_video.value, st[2], st[3], b, b, b, v_glslgamma_video.value, st[4], st[5], b, b, b, v_glslgamma_video.value, st[6], st[7], b, b, b, v_glslgamma_video.value, 0);
 	}
 
 #ifndef USE_GLES2
@@ -600,13 +598,12 @@ void CL_DrawVideo(void)
 
 void CL_VideoStart(char *filename, const char *subtitlesfile)
 {
-	char vabuf[1024];
 	Host_StartVideo();
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
 	// already contains video/
-	if( !OpenVideo( cl_videos, filename, va(vabuf, sizeof(vabuf),  CLDYNTEXTUREPREFIX "%s", filename ), 0, subtitlesfile ) )
+	if( !OpenVideo( cl_videos, filename, filename, 0, subtitlesfile ) )
 		return;
 	// expand the active range to include the new entry
 	cl_num_videos = max(cl_num_videos, 1);
