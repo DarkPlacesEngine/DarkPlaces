@@ -66,7 +66,7 @@ typedef struct lumpinfo_s
 } lumpinfo_t;
 
 void W_UnloadAll(void);
-unsigned char *W_GetLumpName(const char *name);
+unsigned char *W_GetLumpName(const char *name, fs_offset_t *returnfilesize);
 
 // halflife texture wads
 void W_LoadTextureWadFile(char *filename, int complain);

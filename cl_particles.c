@@ -2180,7 +2180,7 @@ static void R_InitParticleTexture (void)
 	// we invert it again during the blendfunc to make it work...
 
 #ifndef DUMPPARTICLEFONT
-	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, false);
+	decalskinframe = R_SkinFrame_LoadExternal("particles/particlefont.tga", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, false, false);
 	if (decalskinframe)
 	{
 		particlefonttexture = decalskinframe->base;
@@ -2427,12 +2427,7 @@ static void R_InitParticleTexture (void)
 				Con_Printf("particles/particlefont.txt: texnum %i outside valid range (0 to %i)\n", i, MAX_PARTICLETEXTURES);
 				continue;
 			}
-			sf = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true); // note: this loads as sRGB if sRGB is active!
-			if(!sf)
-			{
-				// R_SkinFrame_LoadExternal already complained
-				continue;
-			}
+			sf = R_SkinFrame_LoadExternal(texturename, TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, true, true); // note: this loads as sRGB if sRGB is active!
 			particletexture[i].texture = sf->base;
 			particletexture[i].s1 = s1;
 			particletexture[i].t1 = t1;

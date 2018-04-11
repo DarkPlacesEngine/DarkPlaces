@@ -201,7 +201,6 @@
     <ClCompile Include="cd_shared.c" />
     <ClCompile Include="cl_collision.c" />
     <ClCompile Include="cl_demo.c" />
-    <ClCompile Include="cl_dyntexture.c" />
     <ClCompile Include="cl_input.c" />
     <ClCompile Include="cl_main.c" />
     <ClCompile Include="cl_parse.c" />
@@ -300,7 +299,6 @@
     <ClInclude Include="cap_ogg.h" />
     <ClInclude Include="cdaudio.h" />
     <ClInclude Include="cl_collision.h" />
-    <ClInclude Include="cl_dyntexture.h" />
     <ClInclude Include="cl_gecko.h" />
     <ClInclude Include="cl_screen.h" />
     <ClInclude Include="cl_video.h" />

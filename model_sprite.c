@@ -75,7 +75,7 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 	else if (skinframe->hasalpha)
 		texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	texture->currentmaterialflags = texture->basematerialflags;
-	texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(skinframe);
+	texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(loadmodel->mempool, skinframe);
 	texture->currentskinframe = skinframe;
 	texture->surfaceflags = 0;
 	texture->supercontents = SUPERCONTENTS_SOLID;
@@ -220,7 +220,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 						dpsnprintf (name, sizeof(name), "%s_%i", loadmodel->name, i);
 						dpsnprintf (fogname, sizeof(fogname), "%s_%ifog", loadmodel->name, i);
 					}
-					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags | TEXF_COMPRESS, false)))
+					if (!(skinframe = R_SkinFrame_LoadExternal(name, texflags | TEXF_COMPRESS, false, false)))
 					{
 						unsigned char *pixels = (unsigned char *) Mem_Alloc(loadmodel->mempool, width*height*4);
 						if (version == SPRITE32_VERSION)
@@ -464,7 +464,7 @@ void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		{
 			const dsprite2frame_t *pinframe;
 			pinframe = &pinqsprite->frames[i];
-			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags, false)))
+			if (!(skinframe = R_SkinFrame_LoadExternal(pinframe->name, texflags, false, false)))
 			{
 				Con_Printf("Mod_IDS2_Load: failed to load %s", pinframe->name);
 				skinframe = R_SkinFrame_LoadMissing();

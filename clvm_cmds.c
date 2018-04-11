@@ -1714,13 +1714,11 @@ static void VM_CL_ReadPicture (prvm_prog_t *prog)
 	// if yes, it is used and the data is discarded
 	// if not, the (low quality) data is used to build a new texture, whose name will get returned
 
-	pic = Draw_CachePic_Flags (name, CACHEPICFLAG_NOTPERSISTENT);
+	pic = Draw_CachePic_Flags(name, CACHEPICFLAG_NOTPERSISTENT | CACHEPICFLAG_FAILONMISSING);
 
 	if(size)
 	{
-		if(pic->tex == r_texture_notexture)
-			pic->tex = NULL; // don't overwrite the notexture by Draw_NewPic
-		if(pic->tex && !cl_readpicture_force.integer)
+		if (Draw_IsPicLoaded(pic) && !cl_readpicture_force.integer)
 		{
 			// texture found and loaded
 			// skip over the jpeg as we don't need it
@@ -1735,7 +1733,7 @@ static void VM_CL_ReadPicture (prvm_prog_t *prog)
 			MSG_ReadBytes(&cl_message, size, buf);
 			data = JPEG_LoadImage_BGRA(buf, size, NULL);
 			Mem_Free(buf);
-			Draw_NewPic(name, image_width, image_height, false, data);
+			Draw_NewPic(name, image_width, image_height, data, TEXTYPE_BGRA, TEXF_CLAMP);
 			Mem_Free(data);
 		}
 	}
@@ -3479,7 +3477,7 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 		while(sf && sf->textureflags != tf);
 
 		if(!sf || !sf->base)
-			sf = R_SkinFrame_LoadExternal(picname, tf, true);
+			sf = R_SkinFrame_LoadExternal(picname, tf, true, true);
 
 		if(sf)
 			R_SkinFrame_MarkUsed(sf);

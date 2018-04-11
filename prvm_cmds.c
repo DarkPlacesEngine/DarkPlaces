@@ -3292,8 +3292,7 @@ void VM_precache_pic(prvm_prog_t *prog)
 			flags |= CACHEPICFLAG_MIPMAP;
 	}
 
-	// AK Draw_CachePic is supposed to always return a valid pointer
-	if( Draw_CachePic_Flags(s, flags)->tex == r_texture_notexture )
+	if( !Draw_IsPicLoaded(Draw_CachePic_Flags(s, flags)) )
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
@@ -3951,15 +3950,15 @@ void VM_getimagesize(prvm_prog_t *prog)
 	VM_CheckEmptyString(prog, p);
 
 	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_NOTPERSISTENT);
-	if( pic->tex == r_texture_notexture )
+	if (!Draw_IsPicLoaded(pic))
 	{
 		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
 		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
 	}
 	else
 	{
-		PRVM_G_VECTOR(OFS_RETURN)[0] = pic->width;
-		PRVM_G_VECTOR(OFS_RETURN)[1] = pic->height;
+		PRVM_G_VECTOR(OFS_RETURN)[0] = Draw_GetPicWidth(pic);
+		PRVM_G_VECTOR(OFS_RETURN)[1] = Draw_GetPicHeight(pic);
 	}
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }

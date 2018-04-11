@@ -21,7 +21,7 @@ static void r_lightningbeams_start(void)
 
 static void CL_Beams_SetupExternalTexture(void)
 {
-	if (Mod_LoadTextureFromQ3Shader(&cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR))
+	if (Mod_LoadTextureFromQ3Shader(r_main_mempool, "r_lightning.c", &cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR))
 		cl_beams_externaltexture.basematerialflags = cl_beams_externaltexture.currentmaterialflags = MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE;
 	else
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
@@ -77,7 +77,7 @@ static void CL_Beams_SetupBuiltinTexture(void)
 	}
 
 	skinframe = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, texwidth, texheight, false);
-	Mod_LoadCustomMaterial(&cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE, skinframe);
+	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE, skinframe);
 	Mem_Free(data);
 }
 
@@ -183,7 +183,7 @@ void CL_Beam_AddPolygons(const beam_t *b)
 	//  the viewer)
 
 	mod = &cl_meshentitymodels[MESH_PARTICLES];
-	surf = Mod_Mesh_AddSurface(mod, r_lightningbeam_qmbtexture.integer ? &cl_beams_externaltexture : &cl_beams_builtintexture);
+	surf = Mod_Mesh_AddSurface(mod, r_lightningbeam_qmbtexture.integer ? &cl_beams_externaltexture : &cl_beams_builtintexture, false);
 	// polygon 1
 	VectorM(r_lightningbeam_thickness.value, right, offset);
 	CL_Beam_AddQuad(mod, surf, start, end, offset, t1, t2);

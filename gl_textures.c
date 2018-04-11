@@ -324,7 +324,7 @@ static textypeinfo_t *R_GetTexTypeInfo(textype_t textype, int flags)
 	case TEXTYPE_SRGB_BGRA: return ((flags & TEXF_COMPRESS) && vid.support.ext_texture_compression_s3tc) ? ((flags & TEXF_ALPHA) ? &textype_sRGB_bgra_alpha_compress : &textype_sRGB_bgra_compress) : ((flags & TEXF_ALPHA) ? &textype_sRGB_bgra_alpha : &textype_sRGB_bgra);
 #endif
 	default:
-		Host_Error("R_GetTexTypeInfo: unknown texture format");
+		Host_Error("R_GetTexTypeInfo: unknown texture format %i with flags %x", (int)textype, flags);
 		break;
 	}
 	return NULL;

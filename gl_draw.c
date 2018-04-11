@@ -23,10 +23,29 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 #include "cl_video.h"
-#include "cl_dyntexture.h"
 
 #include "ft2.h"
 #include "ft2_fontdefs.h"
+
+struct cachepic_s
+{
+	// size of pic
+	int width, height;
+	// this flag indicates that it should be loaded and unloaded on demand
+	int autoload;
+	// texture flags to upload with
+	int texflags;
+	// texture may be freed after a while
+	int lastusedframe;
+	// renderable texture
+	skinframe_t *skinframe;
+	// used for hash lookups
+	struct cachepic_s *chain;
+	// flags - CACHEPICFLAG_NEWPIC for example
+	unsigned int flags;
+	// name of pic
+	char name[MAX_QPATH];
+};
 
 dp_fonts_t dp_fonts;
 static mempool_t *fonts_mempool = NULL;
@@ -48,259 +67,11 @@ cvar_t r_nearest_conchars = {CVAR_SAVE, "r_nearest_conchars", "0", "use nearest 
 //=============================================================================
 /* Support Routines */
 
-#define FONT_FILESIZE 13468
 static cachepic_t *cachepichash[CACHEPICHASHSIZE];
 static cachepic_t cachepics[MAX_CACHED_PICS];
 static int numcachepics;
 
 rtexturepool_t *drawtexturepool;
-
-static const unsigned char concharimage[FONT_FILESIZE] =
-{
-#include "lhfont.h"
-};
-
-static rtexture_t *draw_generateconchars(void)
-{
-	int i;
-	unsigned char *data;
-	double random;
-	rtexture_t *tex;
-
-	data = LoadTGA_BGRA (concharimage, FONT_FILESIZE, NULL);
-// Gold numbers
-	for (i = 0;i < 8192;i++)
-	{
-		random = lhrandom (0.0,1.0);
-		data[i*4+3] = data[i*4+0];
-		data[i*4+2] = 83 + (unsigned char)(random * 64);
-		data[i*4+1] = 71 + (unsigned char)(random * 32);
-		data[i*4+0] = 23 + (unsigned char)(random * 16);
-	}
-// White chars
-	for (i = 8192;i < 32768;i++)
-	{
-		random = lhrandom (0.0,1.0);
-		data[i*4+3] = data[i*4+0];
-		data[i*4+2] = 95 + (unsigned char)(random * 64);
-		data[i*4+1] = 95 + (unsigned char)(random * 64);
-		data[i*4+0] = 95 + (unsigned char)(random * 64);
-	}
-// Gold numbers
-	for (i = 32768;i < 40960;i++)
-	{
-		random = lhrandom (0.0,1.0);
-		data[i*4+3] = data[i*4+0];
-		data[i*4+2] = 83 + (unsigned char)(random * 64);
-		data[i*4+1] = 71 + (unsigned char)(random * 32);
-		data[i*4+0] = 23 + (unsigned char)(random * 16);
-	}
-// Red chars
-	for (i = 40960;i < 65536;i++)
-	{
-		random = lhrandom (0.0,1.0);
-		data[i*4+3] = data[i*4+0];
-		data[i*4+2] = 96 + (unsigned char)(random * 64);
-		data[i*4+1] = 43 + (unsigned char)(random * 32);
-		data[i*4+0] = 27 + (unsigned char)(random * 32);
-	}
-
-#if 0
-	Image_WriteTGABGRA ("gfx/generated_conchars.tga", 256, 256, data);
-#endif
-
-	tex = R_LoadTexture2D(drawtexturepool, "conchars", 256, 256, data, TEXTYPE_BGRA, TEXF_ALPHA | (r_nearest_conchars.integer ? TEXF_FORCENEAREST : 0), -1, NULL);
-	Mem_Free(data);
-	return tex;
-}
-
-static rtexture_t *draw_generateditherpattern(void)
-{
-	int x, y;
-	unsigned char pixels[8][8];
-	for (y = 0;y < 8;y++)
-		for (x = 0;x < 8;x++)
-			pixels[y][x] = ((x^y) & 4) ? 254 : 0;
-	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, pixels[0], TEXTYPE_PALETTE, TEXF_FORCENEAREST, -1, palette_bgra_transparent);
-}
-
-typedef struct embeddedpic_s
-{
-	const char *name;
-	int width;
-	int height;
-	const char *pixels;
-}
-embeddedpic_t;
-
-static const embeddedpic_t embeddedpics[] =
-{
-	{
-	"gfx/prydoncursor001", 16, 16,
-	"477777774......."
-	"77.....6........"
-	"7.....6........."
-	"7....6.........."
-	"7.....6........."
-	"7..6...6........"
-	"7.6.6...6......."
-	"76...6...6......"
-	"4.....6.6......."
-	".......6........"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	},
-	{
-	"ui/mousepointer", 16, 16,
-	"477777774......."
-	"77.....6........"
-	"7.....6........."
-	"7....6.........."
-	"7.....6........."
-	"7..6...6........"
-	"7.6.6...6......."
-	"76...6...6......"
-	"4.....6.6......."
-	".......6........"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	},
-	{
-	"gfx/crosshair1", 16, 16,
-	"................"
-	"................"
-	"................"
-	"...33......33..."
-	"...355....553..."
-	"....577..775...."
-	".....77..77....."
-	"................"
-	"................"
-	".....77..77....."
-	"....577..775...."
-	"...355....553..."
-	"...33......33..."
-	"................"
-	"................"
-	"................"
-	},
-	{
-	"gfx/crosshair2", 16, 16,
-	"................"
-	"................"
-	"................"
-	"...3........3..."
-	"....5......5...."
-	".....7....7....."
-	"......7..7......"
-	"................"
-	"................"
-	"......7..7......"
-	".....7....7....."
-	"....5......5...."
-	"...3........3..."
-	"................"
-	"................"
-	"................"
-	},
-	{
-	"gfx/crosshair3", 16, 16,
-	"................"
-	".......77......."
-	".......77......."
-	"................"
-	"................"
-	".......44......."
-	".......44......."
-	".77..44..44..77."
-	".77..44..44..77."
-	".......44......."
-	".......44......."
-	"................"
-	"................"
-	".......77......."
-	".......77......."
-	"................"
-	},
-	{
-	"gfx/crosshair4", 16, 16,
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"........7777777."
-	"........752....."
-	"........72......"
-	"........7......."
-	"........7......."
-	"........7......."
-	"........7......."
-	"................"
-	},
-	{
-	"gfx/crosshair5", 8, 8,
-	"........"
-	"........"
-	"....7..."
-	"........"
-	"..7.7.7."
-	"........"
-	"....7..."
-	"........"
-	},
-	{
-	"gfx/crosshair6", 2, 2,
-	"77"
-	"77"
-	},
-	{
-	"gfx/crosshair7", 16, 16,
-	"................"
-	".3............3."
-	"..5...2332...5.."
-	"...7.3....3.7..."
-	"....7......7...."
-	"...3.7....7.3..."
-	"..2...7..7...2.."
-	"..3..........3.."
-	"..3..........3.."
-	"..2...7..7...2.."
-	"...3.7....7.3..."
-	"....7......7...."
-	"...7.3....3.7..."
-	"..5...2332...5.."
-	".3............3."
-	"................"
-	},
-	{NULL, 0, 0, NULL}
-};
-
-static rtexture_t *draw_generatepic(const char *name, qboolean quiet)
-{
-	const embeddedpic_t *p;
-	for (p = embeddedpics;p->name;p++)
-		if (!strcmp(name, p->name))
-			return R_LoadTexture2D(drawtexturepool, p->name, p->width, p->height, (const unsigned char *)p->pixels, TEXTYPE_PALETTE, TEXF_ALPHA, -1, palette_bgra_embeddedpic);
-	if (!strcmp(name, "gfx/conchars"))
-		return draw_generateconchars();
-	if (!strcmp(name, "gfx/colorcontrol/ditherpattern"))
-		return draw_generateditherpattern();
-	if (!quiet)
-		Con_DPrintf("Draw_CachePic: failed to load %s\n", name);
-	return r_texture_notexture;
-}
 
 int draw_frame = 1;
 
@@ -313,17 +84,8 @@ Draw_CachePic
 cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 {
 	int crc, hashkey;
-	unsigned char *pixels = NULL;
 	cachepic_t *pic;
-	fs_offset_t lmpsize;
-	unsigned char *lmpdata;
-	char lmpname[MAX_QPATH];
 	int texflags;
-	int j;
-	qboolean ddshasalpha;
-	float ddsavgcolor[4];
-	qboolean loaded = false;
-	char vabuf[1024];
 
 	texflags = TEXF_ALPHA;
 	if (!(cachepicflags & CACHEPICFLAG_NOCLAMP))
@@ -340,20 +102,24 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 	{
-		if (!strcmp (path, pic->name))
+		if (!strcmp(path, pic->name))
 		{
 			// if it was created (or replaced) by Draw_NewPic, just return it
-			if(pic->flags & CACHEPICFLAG_NEWPIC)
+			if (pic->flags & CACHEPICFLAG_NEWPIC)
+			{
+				if (pic->skinframe)
+					R_SkinFrame_MarkUsed(pic->skinframe);
+				pic->lastusedframe = draw_frame;
 				return pic;
+			}
 			if (!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
 			{
-				if(!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
-				{
-					if(pic->tex)
-						pic->autoload = false; // persist it
-					else
-						goto reload; // load it below, and then persist
-				}
+				if (!pic->skinframe || !pic->skinframe->base)
+					goto reload;
+				if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
+					pic->autoload = false; // caller is making this pic persistent
+				R_SkinFrame_MarkUsed(pic->skinframe);
+				pic->lastusedframe = draw_frame;
 				return pic;
 			}
 		}
@@ -373,138 +139,26 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	cachepichash[hashkey] = pic;
 
 reload:
-	// TODO why does this crash?
-	if(pic->allow_free_tex && pic->tex)
-		R_PurgeTexture(pic->tex);
+	if (pic->skinframe)
+		R_SkinFrame_PurgeSkinFrame(pic->skinframe);
 
-	// check whether it is an dynamic texture (if so, we can directly use its texture handler)
 	pic->flags = cachepicflags;
-	pic->tex = CL_GetDynTexture( path );
-	// if so, set the width/height, too
-	if( pic->tex ) {
-		pic->allow_free_tex = false;
-		pic->width = R_TextureWidth(pic->tex);
-		pic->height = R_TextureHeight(pic->tex);
-		// we're done now (early-out)
-		return pic;
-	}
-
-	pic->allow_free_tex = true;
-
-	pic->hasalpha = true; // assume alpha unless we know it has none
 	pic->texflags = texflags;
-	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT);
+	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT) != 0;
 	pic->lastusedframe = draw_frame;
 
-	// load a high quality image from disk if possible
-	if (!loaded && r_texture_dds_load.integer != 0 && (pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0, false)))
-	{
-		// note this loads even if autoload is true, otherwise we can't get the width/height
-		loaded = true;
-		pic->hasalpha = ddshasalpha;
-		pic->width = R_TextureWidth(pic->tex);
-		pic->height = R_TextureHeight(pic->tex);
-	}
-	if (!loaded && ((pixels = loadimagepixelsbgra(pic->name, false, true, false, NULL)) || (!strncmp(pic->name, "gfx/", 4) && (pixels = loadimagepixelsbgra(pic->name+4, false, true, false, NULL)))))
-	{
-		loaded = true;
-		pic->hasalpha = false;
-		if (pic->texflags & TEXF_ALPHA)
-		{
-			for (j = 3;j < image_width * image_height * 4;j += 4)
-			{
-				if (pixels[j] < 255)
-				{
-					pic->hasalpha = true;
-					break;
-				}
-			}
-		}
+	// load high quality image (this falls back to low quality too)
+	pic->skinframe = R_SkinFrame_LoadExternal(pic->name, texflags, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
 
-		pic->width = image_width;
-		pic->height = image_height;
-		if (!pic->autoload)
-		{
-			pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, image_width, image_height, pixels, vid.sRGB2D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, pic->texflags & (pic->hasalpha ? ~0 : ~TEXF_ALPHA), -1, NULL);
-#ifndef USE_GLES2
-			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
-#endif
-		}
-	}
-	if (!loaded)
+	// get the dimensions of the image we loaded (if it was successful)
+	if (pic->skinframe && pic->skinframe->base)
 	{
-		pic->autoload = false;
-		// never compress the fallback images
-		pic->texflags &= ~TEXF_COMPRESS;
+		pic->width = R_TextureWidth(pic->skinframe->base);
+		pic->height = R_TextureHeight(pic->skinframe->base);
 	}
 
-	// now read the low quality version (wad or lmp file), and take the pic
-	// size from that even if we don't upload the texture, this way the pics
-	// show up the right size in the menu even if they were replaced with
-	// higher or lower resolution versions
-	dpsnprintf(lmpname, sizeof(lmpname), "%s.lmp", pic->name);
-	if ((!strncmp(pic->name, "gfx/", 4) || (gamemode == GAME_BLOODOMNICIDE && !strncmp(pic->name, "locale/", 6))) && (lmpdata = FS_LoadFile(lmpname, tempmempool, false, &lmpsize)))
-	{
-		if (developer_loading.integer)
-			Con_Printf("loading lump \"%s\"\n", pic->name);
-
-		if (lmpsize >= 9)
-		{
-			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
-			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
-			// if no high quality replacement image was found, upload the original low quality texture
-			if (!loaded)
-			{
-				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, vid.sRGB2D ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
-			}
-		}
-		Mem_Free(lmpdata);
-	}
-	else if ((lmpdata = W_GetLumpName (pic->name + 4)))
-	{
-		if (developer_loading.integer)
-			Con_Printf("loading gfx.wad lump \"%s\"\n", pic->name + 4);
-
-		if (!strcmp(pic->name, "gfx/conchars"))
-		{
-			// conchars is a raw image and with color 0 as transparent instead of 255
-			pic->width = 128;
-			pic->height = 128;
-			// if no high quality replacement image was found, upload the original low quality texture
-			if (!loaded)
-			{
-				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, 128, 128, lmpdata, vid.sRGB2D != 0 ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_font);
-			}
-		}
-		else
-		{
-			pic->width = lmpdata[0] + lmpdata[1] * 256 + lmpdata[2] * 65536 + lmpdata[3] * 16777216;
-			pic->height = lmpdata[4] + lmpdata[5] * 256 + lmpdata[6] * 65536 + lmpdata[7] * 16777216;
-			// if no high quality replacement image was found, upload the original low quality texture
-			if (!loaded)
-			{
-				loaded = true;
-				pic->tex = R_LoadTexture2D(drawtexturepool, pic->name, pic->width, pic->height, lmpdata + 8, vid.sRGB2D != 0 ? TEXTYPE_SRGB_PALETTE : TEXTYPE_PALETTE, pic->texflags, -1, palette_bgra_transparent);
-			}
-		}
-	}
-
-	if (pixels)
-	{
-		Mem_Free(pixels);
-		pixels = NULL;
-	}
-	if (!loaded)
-	{
-		// if it's not found on disk, generate an image
-		pic->tex = draw_generatepic(pic->name, (cachepicflags & CACHEPICFLAG_QUIET) != 0);
-		pic->width = R_TextureWidth(pic->tex);
-		pic->height = R_TextureHeight(pic->tex);
-		pic->allow_free_tex = (pic->tex != r_texture_notexture);
-	}
+	// check for a low quality version of the pic and use its size if possible, to match the stock hud
+	Image_GetStockPicSize(pic->name, &pic->width, &pic->height);
 
 	return pic;
 }
@@ -514,38 +168,45 @@ cachepic_t *Draw_CachePic (const char *path)
 	return Draw_CachePic_Flags (path, 0); // default to persistent!
 }
 
+const char *Draw_GetPicName(cachepic_t *pic)
+{
+	if (pic == NULL)
+		return "";
+	return pic->name;
+}
+
+int Draw_GetPicWidth(cachepic_t *pic)
+{
+	if (pic == NULL)
+		return 0;
+	return pic->width;
+}
+
+int Draw_GetPicHeight(cachepic_t *pic)
+{
+	if (pic == NULL)
+		return 0;
+	return pic->height;
+}
+
+qboolean Draw_IsPicLoaded(cachepic_t *pic)
+{
+	if (pic == NULL)
+		return false;
+	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
+		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags, false, true);
+	// skinframe will only be NULL if the pic was created with CACHEPICFLAG_FAILONMISSING and not found
+	return pic->skinframe != NULL && pic->skinframe->base != NULL;
+}
+
 rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 {
-	char vabuf[1024];
-	if (pic->autoload && !pic->tex)
-	{
-		if (pic->tex == NULL && r_texture_dds_load.integer != 0)
-		{
-			qboolean ddshasalpha;
-			float ddsavgcolor[4];
-			pic->tex = R_LoadTextureDDSFile(drawtexturepool, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), vid.sRGB2D, pic->texflags, &ddshasalpha, ddsavgcolor, 0, false);
-		}
-		if (pic->tex == NULL)
-		{
-			pic->tex = loadtextureimage(drawtexturepool, pic->name, false, pic->texflags, true, vid.sRGB2D);
-#ifndef USE_GLES2
-			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
-#endif
-		}
-		if (pic->tex == NULL && !strncmp(pic->name, "gfx/", 4))
-		{
-			pic->tex = loadtextureimage(drawtexturepool, pic->name+4, false, pic->texflags, true, vid.sRGB2D);
-#ifndef USE_GLES2
-			if (r_texture_dds_save.integer && qglGetCompressedTexImageARB && pic->tex)
-				R_SaveTextureDDSFile(pic->tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", pic->name), r_texture_dds_save.integer < 2, pic->hasalpha);
-#endif
-		}
-		if (pic->tex == NULL)
-			pic->tex = draw_generatepic(pic->name, true);
-	}
+	if (pic == NULL)
+		return NULL;
+	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
+		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags, false, true);
 	pic->lastusedframe = draw_frame;
-	return pic->tex;
+	return pic->skinframe ? pic->skinframe->base : NULL;
 }
 
 void Draw_Frame(void)
@@ -557,17 +218,12 @@ void Draw_Frame(void)
 		return;
 	nextpurgetime = realtime + 0.05;
 	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
-	{
-		if (pic->autoload && pic->tex && pic->lastusedframe < draw_frame)
-		{
-			R_FreeTexture(pic->tex);
-			pic->tex = NULL;
-		}
-	}
+		if (pic->autoload && pic->skinframe && pic->skinframe->base && pic->lastusedframe < draw_frame)
+			R_SkinFrame_PurgeSkinFrame(pic->skinframe);
 	draw_frame++;
 }
 
-cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, unsigned char *pixels_bgra)
+cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned char *pixels_bgra, textype_t textype, int texflags)
 {
 	int crc, hashkey;
 	cachepic_t *pic;
@@ -580,9 +236,11 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 
 	if (pic)
 	{
-		if (pic->flags == CACHEPICFLAG_NEWPIC && pic->tex && pic->width == width && pic->height == height)
+		if (pic->flags & CACHEPICFLAG_NEWPIC && pic->skinframe && pic->skinframe->base && pic->width == width && pic->height == height)
 		{
-			R_UpdateTexture(pic->tex, pixels_bgra, 0, 0, 0, width, height, 1);
+			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1);
+			R_SkinFrame_MarkUsed(pic->skinframe);
+			pic->lastusedframe = draw_frame;
 			return pic;
 		}
 	}
@@ -602,12 +260,15 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, int alpha, u
 		cachepichash[hashkey] = pic;
 	}
 
+	R_SkinFrame_PurgeSkinFrame(pic->skinframe);
+
 	pic->flags = CACHEPICFLAG_NEWPIC; // disable texflags checks in Draw_CachePic
+	pic->flags |= (texflags & TEXF_CLAMP) ? 0 : CACHEPICFLAG_NOCLAMP;
+	pic->flags |= (texflags & TEXF_FORCENEAREST) ? CACHEPICFLAG_NEAREST : 0;
 	pic->width = width;
 	pic->height = height;
-	if (pic->allow_free_tex && pic->tex)
-		R_FreeTexture(pic->tex);
-	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels_bgra, TEXTYPE_BGRA, (alpha ? TEXF_ALPHA : 0), -1, NULL);
+	pic->skinframe = R_SkinFrame_LoadInternalBGRA(picname, texflags, pixels_bgra, width, height, vid.sRGB2D);
+	pic->lastusedframe = draw_frame;
 	return pic;
 }
 
@@ -616,15 +277,14 @@ void Draw_FreePic(const char *picname)
 	int crc;
 	int hashkey;
 	cachepic_t *pic;
-	// this doesn't really free the pic, but does free it's texture
+	// this doesn't really free the pic, but does free its texture
 	crc = CRC_Block((unsigned char *)picname, strlen(picname));
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 	{
-		if (!strcmp (picname, pic->name) && pic->tex)
+		if (!strcmp (picname, pic->name) && pic->skinframe)
 		{
-			R_FreeTexture(pic->tex);
-			pic->tex = NULL;
+			R_SkinFrame_PurgeSkinFrame(pic->skinframe);
 			pic->width = 0;
 			pic->height = 0;
 			return;
@@ -677,20 +337,20 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 			Con_DPrintf("Failed to load font-file for '%s', it will not support as many characters.\n", fnt->texpath);
 	}
 
-	fnt->tex = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
-	if(fnt->tex == r_texture_notexture)
+	fnt->pic = Draw_CachePic_Flags(fnt->texpath, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0) | CACHEPICFLAG_FAILONMISSING);
+	if(!Draw_IsPicLoaded(fnt->pic))
 	{
 		for (i = 0; i < MAX_FONT_FALLBACKS; ++i)
 		{
 			if (!fnt->fallbacks[i][0])
 				break;
-			fnt->tex = Draw_CachePic_Flags(fnt->fallbacks[i], CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
-			if(fnt->tex != r_texture_notexture)
+			fnt->pic = Draw_CachePic_Flags(fnt->fallbacks[i], CACHEPICFLAG_QUIET | CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0) | CACHEPICFLAG_FAILONMISSING);
+			if(Draw_IsPicLoaded(fnt->pic))
 				break;
 		}
-		if(fnt->tex == r_texture_notexture)
+		if(!Draw_IsPicLoaded(fnt->pic))
 		{
-			fnt->tex = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0))->tex;
+			fnt->pic = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0));
 			strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
 		}
 		else
@@ -1031,7 +691,16 @@ static void gl_draw_shutdown(void)
 
 static void gl_draw_newmap(void)
 {
+	int i;
 	font_newmap();
+
+	// mark all of the persistent pics so they are not purged...
+	for (i = 0; i < numcachepics; i++)
+	{
+		cachepic_t *pic = cachepics + i;
+		if (!pic->autoload && pic->skinframe)
+			R_SkinFrame_MarkUsed(pic->skinframe);
+	}
 }
 
 void GL_Draw_Init (void)
@@ -1090,7 +759,7 @@ static void _DrawQ_SetupAndProcessDrawFlag(int flags, cachepic_t *pic, float alp
 	_DrawQ_Setup();
 	if(!r_draw2d.integer && !r_draw2d_force)
 		return;
-	DrawQ_ProcessDrawFlag(flags, (alpha < 1) || (pic && pic->hasalpha));
+	DrawQ_ProcessDrawFlag(flags, (alpha < 1) || (pic && pic->skinframe && pic->skinframe->hasalpha));
 }
 void DrawQ_ProcessDrawFlag(int flags, qboolean alpha)
 {
@@ -1532,8 +1201,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	const float *width_of;
 
 	int tw, th;
-	tw = R_TextureWidth(fnt->tex);
-	th = R_TextureHeight(fnt->tex);
+	tw = Draw_GetPicWidth(fnt->pic);
+	th = Draw_GetPicHeight(fnt->pic);
 
 	if (!h) h = w;
 	if (!h) {
@@ -1570,8 +1239,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 
 //	R_Mesh_ResetTextureState();
 	if (!fontmap)
-		R_Mesh_TexBind(0, fnt->tex);
-	R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
+		R_Mesh_TexBind(0, Draw_GetPicTexture(fnt->pic));
+	R_SetupShader_Generic(Draw_GetPicTexture(fnt->pic), NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
 
 	ac = color4f;
 	at = texcoord2f;
@@ -1707,7 +1376,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 							at = texcoord2f;
 							av = vertex3f;
 						}
-						R_SetupShader_Generic(fnt->tex, NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
+						R_SetupShader_Generic(Draw_GetPicTexture(fnt->pic), NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
 						map = ft2_oldstyle_map;
 					}
 				}
@@ -1786,7 +1455,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 							break;
 						}
 					}
-					R_SetupShader_Generic(map->pic->tex, NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
+					R_SetupShader_Generic(Draw_GetPicTexture(map->pic), NULL, GL_MODULATE, 1, (flags & DRAWFLAGS_BLEND) ? false : true, true, false);
 				}
 
 				mapch = ch - map->start;
@@ -2108,7 +1777,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	_DrawQ_Setup();
 
 	// We have to convert the con coords into real coords
-	// OGL uses top to bottom
+	// OGL uses bottom to top (origin is in bottom left)
 	ix = (int)(0.5 + x * ((float)r_refdef.view.width / vid_conwidth.integer)) + r_refdef.view.x;
 	iy = (int)(0.5 + y * ((float)r_refdef.view.height / vid_conheight.integer)) + r_refdef.view.y;
 	iw = (int)(0.5 + width * ((float)r_refdef.view.width / vid_conwidth.integer));

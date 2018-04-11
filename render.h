@@ -146,11 +146,13 @@ void R_SkinFrame_Purge(void);
 // set last to NULL to start from the beginning
 skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name );
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add);
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain);
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture);
 skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, qboolean sRGB);
 skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height);
 skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, const unsigned char *skindata, int width, int height, const unsigned int *palette, const unsigned int *alphapalette);
 skinframe_t *R_SkinFrame_LoadMissing(void);
+skinframe_t *R_SkinFrame_LoadNoTexture(void);
+skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB);
 
 rtexture_t *R_GetCubemap(const char *basename);
 
@@ -459,7 +461,6 @@ void RSurf_SetupDepthAndCulling(void);
 void R_Mesh_ResizeArrays(int newvertices);
 
 texture_t *R_GetCurrentTexture(texture_t *t);
-void R_DrawWorldSurfaces(qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
 void R_AddWaterPlanes(entity_render_t *ent);
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);

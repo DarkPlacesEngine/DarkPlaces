@@ -1332,7 +1332,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
 	if (developer_font.integer)
 	{
-		if (map->pic->tex == r_texture_notexture)
+		if (!Draw_IsPicLoaded(map->pic))
 			Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
 		else
 			Con_Printf("Using cached font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
@@ -1348,7 +1348,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	map->sfy = mapstart->sfy;
 
 	pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
-	if (map->pic->tex == r_texture_notexture)
+	if (!Draw_IsPicLoaded(map->pic))
 	{
 		data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
 		if (!data)
@@ -1624,16 +1624,12 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		map->glyphs[mapch].image = false;
 	}
 
-	if (map->pic->tex == r_texture_notexture)
+	if (!Draw_IsPicLoaded(map->pic))
 	{
 		int w = map->glyphSize * FONT_CHARS_PER_LINE;
 		int h = map->glyphSize * FONT_CHAR_LINES;
-		rtexture_t *tex;
-		// abuse the Draw_CachePic system to keep track of this texture
-		tex = R_LoadTexture2D(drawtexturepool, map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0), -1, NULL);
-		// if tex is NULL for any reason, the pic->tex will remain set to r_texture_notexture
-		if (tex)
-			map->pic->tex = tex;
+		// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
+		Draw_NewPic(map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
 
 		if (r_font_diskcache.integer >= 1)
 		{
@@ -1649,8 +1645,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			}
 			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), w, h, data);
 #ifndef USE_GLES2
-			if (r_font_compress.integer && qglGetCompressedTexImageARB && tex)
-				R_SaveTextureDDSFile(tex, va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
+			if (r_font_compress.integer && qglGetCompressedTexImageARB && Draw_IsPicLoaded(map->pic))
+				R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
 #endif
 		}
 	}
@@ -1658,7 +1654,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	if(data)
 		Mem_Free(data);
 
-	if (map->pic->tex == r_texture_notexture)
+	if (!Draw_IsPicLoaded(map->pic))
 	{
 		// if the first try isn't successful, keep it with a broken texture
 		// otherwise we retry to load it every single frame where ft2 rendering is used
