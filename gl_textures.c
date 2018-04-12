@@ -3142,7 +3142,7 @@ int R_RealGetTexture(rtexture_t *rt)
 		return glt->texnum;
 	}
 	else
-		return 0;
+		return r_texture_white->texnum;
 }
 
 void R_ClearTexture (rtexture_t *rt)
