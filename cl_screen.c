@@ -38,7 +38,7 @@ cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when fra
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
 cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
 cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
-cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
+cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","1", "show the last visible background during loading screen (costs one screenful of video memory)"};
 cvar_t scr_loadingscreen_scale = {0, "scr_loadingscreen_scale","1", "scale factor of the background"};
 cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
 cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
@@ -2563,7 +2563,7 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	if(loadingscreentexture)
 	{
 		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
-		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1, true, true, true);
+		R_SetupShader_Generic(loadingscreentexture, NULL, GL_MODULATE, 1, false, true, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
