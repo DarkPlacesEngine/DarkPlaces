@@ -1856,7 +1856,7 @@ static void R_Envmap_f (void)
 		r_refdef.view.quality = 1;
 		r_refdef.view.clear = true;
 		R_Mesh_Start();
-		R_RenderView();
+		R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		R_Mesh_Finish();
 		SCR_ScreenShot(filename, buffer1, buffer2, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false, false, false);
 	}
@@ -2143,7 +2143,7 @@ static void SCR_DrawScreen (void)
 		else
 		{
 			CL_UpdateEntityShading();
-			R_RenderView();
+			R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		}
 	}
 

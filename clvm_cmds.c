@@ -3272,7 +3272,7 @@ static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 	CL_UpdateEntityShading();
 
 	// now draw stuff!
-	R_RenderView();
+	R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 
 	Mod_Mesh_Reset(CL_Mesh_CSQC());
 

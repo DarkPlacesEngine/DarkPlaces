@@ -269,10 +269,13 @@ rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
 rtexture_t *r_shadow_prepasslightingdiffusetexture;
 rtexture_t *r_shadow_prepasslightingspeculartexture;
 
-// keep track of the provided framebuffer info
-static int r_shadow_fb_fbo;
-static rtexture_t *r_shadow_fb_depthtexture;
-static rtexture_t *r_shadow_fb_colortexture;
+int r_shadow_viewfbo;
+rtexture_t *r_shadow_viewdepthtexture;
+rtexture_t *r_shadow_viewcolortexture;
+int r_shadow_viewx;
+int r_shadow_viewy;
+int r_shadow_viewwidth;
+int r_shadow_viewheight;
 
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
@@ -2111,7 +2114,7 @@ void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight)
 void R_Shadow_RenderMode_Reset(void)
 {
 	R_Mesh_ResetTextureState();
-	R_Mesh_SetRenderTargets(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(r_shadow_viewfbo, r_shadow_viewdepthtexture, r_shadow_viewcolortexture, NULL, NULL, NULL);
 	R_SetViewport(&r_refdef.view.viewport);
 	GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
 	GL_DepthRange(0, 1);
@@ -5330,7 +5333,7 @@ qboolean R_Shadow_PrepareLights_AddSceneLight(rtlight_t *rtlight)
 }
 
 void R_Shadow_DrawLightSprites(void);
-void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
+void R_Shadow_PrepareLights(void)
 {
 	int flag;
 	int lnum;
@@ -5353,10 +5356,6 @@ void R_Shadow_PrepareLights(int fbo, rtexture_t *depthtexture, rtexture_t *color
 		r_shadow_shadowmapmaxsize != shadowmapmaxsize ||
 		r_shadow_shadowmapdepthtexture != r_fb.usedepthtextures)
 		R_Shadow_FreeShadowMaps();
-
-	r_shadow_fb_fbo = fbo;
-	r_shadow_fb_depthtexture = depthtexture;
-	r_shadow_fb_colortexture = colortexture;
 
 	r_shadow_usingshadowmaportho = false;
 
@@ -5799,15 +5798,15 @@ void R_Shadow_DrawModelShadows(void)
 	if (!r_shadow_nummodelshadows || (r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL && r_shadows.integer != 1))
 		return;
 
-	R_ResetViewRendering3D(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture);
+	R_ResetViewRendering3D(r_shadow_viewfbo, r_shadow_viewdepthtexture, r_shadow_viewcolortexture, r_shadow_viewx, r_shadow_viewy, r_shadow_viewwidth, r_shadow_viewheight);
 	//GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(NULL);
-	r_shadow_lightscissor[0] = r_refdef.view.x;
-	r_shadow_lightscissor[1] = vid.height - r_refdef.view.y - r_refdef.view.height;
-	r_shadow_lightscissor[2] = r_refdef.view.width;
-	r_shadow_lightscissor[3] = r_refdef.view.height;
+	r_shadow_lightscissor[0] = r_shadow_viewx;
+	r_shadow_lightscissor[1] = (r_shadow_viewfbo ? r_shadow_viewheight : vid.height) - r_shadow_viewy - r_shadow_viewheight;
+	r_shadow_lightscissor[2] = r_shadow_viewwidth;
+	r_shadow_lightscissor[3] = r_shadow_viewheight;
 	R_Shadow_RenderMode_StencilShadowVolumes(false);
 
 	// get shadow dir
@@ -5851,7 +5850,7 @@ void R_Shadow_DrawModelShadows(void)
 	//GL_ScissorTest(true);
 	//R_EntityMatrix(&identitymatrix);
 	//R_Mesh_ResetTextureState();
-	R_ResetViewRendering2D(r_shadow_fb_fbo, r_shadow_fb_depthtexture, r_shadow_fb_colortexture);
+	R_ResetViewRendering2D(r_shadow_viewfbo, r_shadow_viewdepthtexture, r_shadow_viewcolortexture, r_shadow_viewx, r_shadow_viewy, r_shadow_viewwidth, r_shadow_viewheight);
 
 	// set up a darkening blend on shadowed areas
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
