@@ -127,7 +127,7 @@ extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
 
 void R_UpdateVariables(void); // must call after setting up most of r_refdef, but before calling R_RenderView
-void R_RenderView(void); // must set r_refdef and call R_UpdateVariables and CL_UpdateEntityShading first
+void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height); // must set r_refdef and call R_UpdateVariables and CL_UpdateEntityShading first
 void R_RenderView_UpdateViewVectors(void); // just updates r_refdef.view.{forward,left,up,origin,right,inverse_matrix}
 
 typedef enum r_refdef_scene_type_s {
@@ -460,7 +460,6 @@ void RSurf_SetupDepthAndCulling(void);
 
 texture_t *R_GetCurrentTexture(texture_t *t);
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
-void R_AddWaterPlanes(entity_render_t *ent);
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 
@@ -574,10 +573,10 @@ extern r_framebufferstate_t r_fb;
 
 extern cvar_t r_viewfbo;
 
-void R_ResetViewRendering2D_Common(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, float x2, float y2); // this is called by R_ResetViewRendering2D and _DrawQ_Setup and internal
-void R_ResetViewRendering2D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-void R_ResetViewRendering3D(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
-void R_SetupView(qboolean allowwaterclippingplane, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture);
+void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight, float x2, float y2); // this is called by R_ResetViewRendering2D and _DrawQ_Setup and internal
+void R_ResetViewRendering2D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
+void R_ResetViewRendering3D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
+void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
 extern const float r_screenvertex3f[12];
 extern cvar_t r_shadows;
 extern cvar_t r_shadows_darken;
@@ -594,6 +593,38 @@ extern cvar_t r_transparent_useplanardistance;
 extern cvar_t r_transparent_sortarraysize;
 extern cvar_t r_transparent_sortmindist;
 extern cvar_t r_transparent_sortmaxdist;
+
+extern qboolean r_shadow_usingdeferredprepass;
+extern rtexture_t *r_shadow_attenuationgradienttexture;
+extern rtexture_t *r_shadow_attenuation2dtexture;
+extern rtexture_t *r_shadow_attenuation3dtexture;
+extern qboolean r_shadow_usingshadowmap2d;
+extern qboolean r_shadow_usingshadowmaportho;
+extern float r_shadow_modelshadowmap_texturescale[4];
+extern float r_shadow_modelshadowmap_parameters[4];
+extern float r_shadow_lightshadowmap_texturescale[4];
+extern float r_shadow_lightshadowmap_parameters[4];
+extern qboolean r_shadow_shadowmapvsdct;
+extern rtexture_t *r_shadow_shadowmap2ddepthbuffer;
+extern rtexture_t *r_shadow_shadowmap2ddepthtexture;
+extern rtexture_t *r_shadow_shadowmapvsdcttexture;
+extern matrix4x4_t r_shadow_shadowmapmatrix;
+extern int r_shadow_prepass_width;
+extern int r_shadow_prepass_height;
+extern rtexture_t *r_shadow_prepassgeometrydepthbuffer;
+extern rtexture_t *r_shadow_prepassgeometrynormalmaptexture;
+extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
+extern rtexture_t *r_shadow_prepasslightingspeculartexture;
+extern int r_shadow_viewfbo;
+extern rtexture_t *r_shadow_viewdepthtexture;
+extern rtexture_t *r_shadow_viewcolortexture;
+extern int r_shadow_viewx;
+extern int r_shadow_viewy;
+extern int r_shadow_viewwidth;
+extern int r_shadow_viewheight;
+
+void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
+void R_RenderWaterPlanes(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
 
 void R_Model_Sprite_Draw(entity_render_t *ent);
 

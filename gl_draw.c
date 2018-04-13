@@ -750,7 +750,7 @@ static void _DrawQ_Setup(void) // see R_ResetViewRendering2D
 		return;
 	DrawQ_FlushUI();
 	r_refdef.draw2dstage = 1;
-	R_ResetViewRendering2D_Common(0, NULL, NULL, vid_conwidth.integer, vid_conheight.integer);
+	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
 }
 
 qboolean r_draw2d_force = false;
