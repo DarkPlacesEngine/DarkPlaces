@@ -39,6 +39,9 @@
 
 typedef enum textype_e
 {
+	// placeholder for unused textures in r_rendertarget_t
+	TEXTYPE_UNUSED,
+
 	// 8bit paletted
 	TEXTYPE_PALETTE,
 	// 32bit RGBA

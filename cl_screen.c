@@ -777,6 +777,8 @@ const char *r_stat_name[r_stat_count] =
 	"bloom",
 	"bloom_copypixels",
 	"bloom_drawpixels",
+	"rendertargets_used",
+	"rendertargets_pixels",
 	"indexbufferuploadcount",
 	"indexbufferuploadsize",
 	"vertexbufferuploadcount",
@@ -1004,6 +1006,7 @@ static void R_TimeReport_EndFrame(void)
 "bouncegrid:%4i lights%6i particles%6i traces%6i hits%6i splats%6i bounces\n"
 "photon cache efficiency:%6i cached%6i traced%6ianimated\n"
 "%6i draws%8i vertices%8i triangles bloompixels%8i copied%8i drawn\n"
+"%3i rendertargets%8i pixels\n"
 "updated%5i indexbuffers%8i bytes%5i vertexbuffers%8i bytes\n"
 "animcache%5ib gpuskeletal%7i vertices (%7i with normals)\n"
 "fastbatch%5i count%5i surfaces%7i vertices %7i triangles\n"
@@ -1020,6 +1023,7 @@ static void R_TimeReport_EndFrame(void)
 , r_refdef.stats[r_stat_bouncegrid_lights], r_refdef.stats[r_stat_bouncegrid_particles], r_refdef.stats[r_stat_bouncegrid_traces], r_refdef.stats[r_stat_bouncegrid_hits], r_refdef.stats[r_stat_bouncegrid_splats], r_refdef.stats[r_stat_bouncegrid_bounces]
 , r_refdef.stats[r_stat_photoncache_cached], r_refdef.stats[r_stat_photoncache_traced], r_refdef.stats[r_stat_photoncache_animated]
 , r_refdef.stats[r_stat_draws], r_refdef.stats[r_stat_draws_vertices], r_refdef.stats[r_stat_draws_elements] / 3, r_refdef.stats[r_stat_bloom_copypixels], r_refdef.stats[r_stat_bloom_drawpixels]
+, r_refdef.stats[r_stat_rendertargets_used], r_refdef.stats[r_stat_rendertargets_pixels]
 , r_refdef.stats[r_stat_indexbufferuploadcount], r_refdef.stats[r_stat_indexbufferuploadsize], r_refdef.stats[r_stat_vertexbufferuploadcount], r_refdef.stats[r_stat_vertexbufferuploadsize]
 , r_refdef.stats[r_stat_animcache_skeletal_bones], r_refdef.stats[r_stat_animcache_shape_vertices], r_refdef.stats[r_stat_animcache_shade_vertices]
 , r_refdef.stats[r_stat_batch_fast_batches], r_refdef.stats[r_stat_batch_fast_surfaces], r_refdef.stats[r_stat_batch_fast_vertices], r_refdef.stats[r_stat_batch_fast_triangles]
@@ -1807,6 +1811,7 @@ static void R_Envmap_f (void)
 	char filename[MAX_QPATH], basename[MAX_QPATH];
 	unsigned char *buffer1;
 	unsigned char *buffer2;
+	r_rendertarget_t *rt;
 
 	if (Cmd_Argc() != 3)
 	{
@@ -1848,6 +1853,8 @@ static void R_Envmap_f (void)
 	buffer1 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 4);
 	buffer2 = (unsigned char *)Mem_Alloc(tempmempool, size * size * 3);
 
+	// TODO: use TEXTYPE_COLORBUFFER16F and output to .exr files as well?
+	rt = R_RenderTarget_Get(size, size, TEXTYPE_DEPTHBUFFER24STENCIL8, true, TEXTYPE_COLORBUFFER, TEXTYPE_UNUSED, TEXTYPE_UNUSED, TEXTYPE_UNUSED);
 	CL_UpdateEntityShading();
 	for (j = 0;j < 12;j++)
 	{
@@ -1856,7 +1863,7 @@ static void R_Envmap_f (void)
 		r_refdef.view.quality = 1;
 		r_refdef.view.clear = true;
 		R_Mesh_Start();
-		R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
+		R_RenderView(rt->fbo, rt->depthtexture, rt->colortexture[0], 0, 0, size, size);
 		R_Mesh_Finish();
 		SCR_ScreenShot(filename, buffer1, buffer2, 0, vid.height - (r_refdef.view.y + r_refdef.view.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false, false, false, false);
 	}
@@ -2230,6 +2237,7 @@ static void SCR_DrawScreen (void)
 	DrawQ_Finish();
 
 	R_Mesh_Finish();
+	R_RenderTarget_FreeUnused(false);
 }
 
 typedef struct loadingscreenstack_s
