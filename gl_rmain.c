@@ -8264,12 +8264,12 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		if (t->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 		{
 			// basic lit geometry
-			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, t->render_lightmap_diffuse[0], t->render_lightmap_diffuse[1], t->render_lightmap_diffuse[2], t->currentalpha);
+			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, 2, 2, 2, t->currentalpha);
 			// add pants/shirt if needed
 			if (VectorLength2(t->render_colormap_pants) >= (1.0f / 1048576.0f) && t->pantstexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->pantstexture, &t->currenttexmatrix, t->render_colormap_pants[0] * t->render_lightmap_diffuse[0], t->render_colormap_pants[1] * t->render_lightmap_diffuse[1], t->render_colormap_pants[2] * t->render_lightmap_diffuse[2], t->currentalpha);
+				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->pantstexture, &t->currenttexmatrix, 2 * t->render_colormap_pants[0], 2 * t->render_colormap_pants[1], 2 * t->render_colormap_pants[2], t->currentalpha);
 			if (VectorLength2(t->render_colormap_shirt) >= (1.0f / 1048576.0f) && t->shirttexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->shirttexture, &t->currenttexmatrix, t->render_colormap_shirt[0] * t->render_lightmap_diffuse[0], t->render_colormap_shirt[1] * t->render_lightmap_diffuse[1], t->render_colormap_shirt[2] * t->render_lightmap_diffuse[2], t->currentalpha);
+				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->shirttexture, &t->currenttexmatrix, 2 * t->render_colormap_shirt[0], 2 * t->render_colormap_shirt[1], 2 * t->render_colormap_shirt[2], t->currentalpha);
 		}
 		else
 		{
