@@ -64,6 +64,8 @@ typedef enum r_stat_e
 	r_stat_bloom,
 	r_stat_bloom_copypixels,
 	r_stat_bloom_drawpixels,
+	r_stat_rendertargets_used,
+	r_stat_rendertargets_pixels,
 	r_stat_indexbufferuploadcount,
 	r_stat_indexbufferuploadsize,
 	r_stat_vertexbufferuploadcount,

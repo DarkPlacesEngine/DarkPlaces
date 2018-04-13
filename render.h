@@ -501,14 +501,41 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean 
 void R_SetupShader_Surface(const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
+typedef struct r_rendertarget_s {
+	// texcoords for sampling from the viewport (clockwise: 0,0 1,0 1,1 0,1)
+	float texcoord2f[8];
+	// textures are this size and type
+	int texturewidth;
+	int textureheight;
+	// TEXTYPE for each color target - usually TEXTYPE_COLORBUFFER16F
+	textype_t colortextype[4];
+	// TEXTYPE for depth target - usually TEXTYPE_DEPTHBUFFER24 or TEXTYPE_SHADOWMAP24_COMP
+	textype_t depthtextype;
+	// if true the depth target will be a renderbuffer rather than a texture (still rtexture_t though)
+	qboolean depthisrenderbuffer;
+	// framebuffer object referencing the textures
+	int fbo;
+	// there can be up to 4 color targets and 1 depth target, the depthtexture
+	// may be a real texture (readable) or just a renderbuffer (not readable,
+	// but potentially faster)
+	rtexture_t *colortexture[4];
+	rtexture_t *depthtexture;
+	// a rendertarget will not be reused in the same frame (realtime == lastusetime),
+	// on a new frame, matching rendertargets will be reused (texturewidth, textureheight, number of color and depth textures and their types),
+	// when a new frame arrives the rendertargets can be reused by requests for matching texturewidth,textureheight and fbo configuration (the number of color and depth textures), when a rendertarget is not reused for > 200ms (realtime - lastusetime > 0.2) the rendertarget's resources will be freed (fbo, textures) and it can be reused for any target in future frames
+	double lastusetime;
+} r_rendertarget_t;
+
+// called each frame after render to delete render targets that have not been used for a while
+void R_RenderTarget_FreeUnused(qboolean force);
+// returns a rendertarget, creates rendertarget if needed or intelligently reuses targets across frames if they match and have not been used already this frame
+r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qboolean depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3);
+
 typedef struct r_waterstate_waterplane_s
 {
-	rtexture_t *texture_refraction; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFRACTION
-	rtexture_t *texture_reflection; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFLECTION
-	rtexture_t *texture_camera; // MATERIALFLAG_CAMERA
-	int fbo_refraction;
-	int fbo_reflection;
-	int fbo_camera;
+	r_rendertarget_t *rt_refraction; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFRACTION
+	r_rendertarget_t *rt_reflection; // MATERIALFLAG_WATERSHADER or MATERIALFLAG_REFLECTION
+	r_rendertarget_t *rt_camera; // MATERIALFLAG_CAMERA
 	mplane_t plane;
 	int materialflags; // combined flags of all water surfaces on this plane
 	unsigned char pvsbits[(MAX_MAP_LEAFS+7)>>3]; // FIXME: buffer overflow on huge maps
@@ -523,7 +550,6 @@ typedef struct r_waterstate_s
 	int waterwidth, waterheight;
 	int texturewidth, textureheight;
 	int camerawidth, cameraheight;
-	rtexture_t *depthtexture;
 
 	int maxwaterplanes; // same as MAX_WATERPLANES
 	int numwaterplanes;
@@ -542,30 +568,27 @@ r_waterstate_t;
 typedef struct r_framebufferstate_s
 {
 	textype_t textype; // type of color buffer we're using (dependent on r_viewfbo cvar)
-	int fbo; // non-zero if r_viewfbo is enabled and working
 	int screentexturewidth, screentextureheight; // dimensions of texture
 
-	rtexture_t *colortexture; // non-NULL if fbo is non-zero
-	rtexture_t *depthtexture; // non-NULL if fbo is non-zero
+	// rt_* fields are per-RenderView so we reset them in R_Bloom_StartFrame
+	r_rendertarget_t *rt_screen;
+	r_rendertarget_t *rt_bloom;
+
 	rtexture_t *ghosttexture; // for r_motionblur (not recommended on multi-GPU hardware!)
-	rtexture_t *bloomtexture[2]; // for r_bloom, multi-stage processing
-	int bloomfbo[2]; // fbos for rendering into bloomtexture[]
-	int bloomindex; // which bloomtexture[] contains the final image
+	float ghosttexcoord2f[8]; // for r_motionblur
 
 	int bloomwidth, bloomheight;
-	int bloomtexturewidth, bloomtextureheight;
 
 	// arrays for rendering the screen passes
-	float screentexcoord2f[8]; // texcoords for colortexture or ghosttexture
-	float bloomtexcoord2f[8]; // texcoords for bloomtexture[]
 	float offsettexcoord2f[8]; // temporary use while updating bloomtexture[]
-
-	r_viewport_t bloomviewport;
 
 	r_waterstate_t water;
 
 	qboolean ghosttexture_valid; // don't draw garbage on first frame with motionblur
 	qboolean usedepthtextures; // use depth texture instead of depth renderbuffer (faster if you need to read it later anyway)
+
+	// rendertargets (fbo and viewport), these can be reused across frames
+	memexpandablearray_t rendertargets;
 }
 r_framebufferstate_t;
 

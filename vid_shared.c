@@ -1148,7 +1148,7 @@ void VID_CheckExtensions(void)
 	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
 	if (vid.support.arb_multitexture)
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-	if (vid_gl20.integer && vid.support.gl20shaders)
+	if (vid_gl20.integer && vid.support.gl20shaders && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two)
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
@@ -1156,7 +1156,7 @@ void VID_CheckExtensions(void)
 		vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
 		vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
 		vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
-		Con_DPrintf("Using GL2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
+		Con_DPrintf("Using GL2.0+fbo rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
 		vid.renderpath = RENDERPATH_GL20;
 		vid.sRGBcapable2D = false;
 		vid.sRGBcapable3D = true;
@@ -1813,7 +1813,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 			(vid_sRGB_fallback.integer >= 3) // force fallback
 			||
 			(vid_sRGB_fallback.integer >= 2 && // fallback if framebuffer is 8bit
-				!(r_viewfbo.integer >= 2 && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two && vid.samples < 2))
+				r_viewfbo.integer < 2)
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
