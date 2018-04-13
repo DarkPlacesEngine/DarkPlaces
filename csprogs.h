@@ -100,8 +100,6 @@ void CL_VM_Parse_CenterPrint(const char *msg);
 int CL_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
 int CL_GetTagMatrix(prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex, prvm_vec_t *shadingorigin);
 void CL_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
-/* VMs exposing the polygon calls must call this on Init/Reset */
-void VM_Polygons_Reset(prvm_prog_t *prog);
 void QW_CL_StartUpload(unsigned char *data, int size);
 
 void CSQC_UpdateNetworkTimes(double newtime, double oldtime);

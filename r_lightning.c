@@ -21,9 +21,7 @@ static void r_lightningbeams_start(void)
 
 static void CL_Beams_SetupExternalTexture(void)
 {
-	if (Mod_LoadTextureFromQ3Shader(r_main_mempool, "r_lightning.c", &cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR))
-		cl_beams_externaltexture.basematerialflags = cl_beams_externaltexture.currentmaterialflags = MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE;
-	else
+	if (Mod_LoadTextureFromQ3Shader(r_main_mempool, "r_lightning.c", &cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE))
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
 
@@ -77,7 +75,7 @@ static void CL_Beams_SetupBuiltinTexture(void)
 	}
 
 	skinframe = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, texwidth, texheight, false);
-	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE, skinframe);
+	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_VERTEXCOLOR, skinframe);
 	Mem_Free(data);
 }
 

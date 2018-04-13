@@ -458,30 +458,30 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents);
 void RSurf_SetupDepthAndCulling(void);
 
-void R_Mesh_ResizeArrays(int newvertices);
-
 texture_t *R_GetCurrentTexture(texture_t *t);
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass);
 void R_AddWaterPlanes(entity_render_t *ent);
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
 
-#define BATCHNEED_VERTEXMESH_VERTEX      (1<< 1) // set up rsurface.batchvertexmesh
-#define BATCHNEED_VERTEXMESH_NORMAL      (1<< 2) // set up normals in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchnormal3f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_VECTOR      (1<< 3) // set up vectors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchsvector3f and rsurface.batchtvector3f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_VERTEXCOLOR (1<< 4) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_TEXCOORD    (1<< 5) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_LIGHTMAP    (1<< 6) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_VERTEXMESH_SKELETAL    (1<< 7) // set up skeletal index and weight data for vertex shader
-#define BATCHNEED_ARRAY_VERTEX           (1<< 8) // set up rsurface.batchvertex3f and optionally others
-#define BATCHNEED_ARRAY_NORMAL           (1<< 9) // set up normals in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchnormal3f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_VECTOR           (1<<10) // set up vectors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchsvector3f and rsurface.batchtvector3f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_VERTEXCOLOR      (1<<11) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_TEXCOORD         (1<<12) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_LIGHTMAP         (1<<13) // set up vertex colors in rsurface.batchvertexmesh if BATCHNEED_MESH, set up rsurface.batchlightmapcolor4f if BATCHNEED_ARRAYS
-#define BATCHNEED_ARRAY_SKELETAL         (1<<14) // set up skeletal index and weight data for vertex shader
-#define BATCHNEED_NOGAPS                 (1<<15) // force vertex copying if firstvertex is not zero or there are gaps
-#define BATCHNEED_ALLOWMULTIDRAW         (1<<16) // allow multiple draws
+#define BATCHNEED_VERTEXMESH_VERTEX           (1<< 0) // set up positions in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_NORMAL           (1<< 1) // set up normals in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_VECTOR           (1<< 2) // set up tangent vectors in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_VERTEXTINTCOLOR  (1<< 3) // set up vertex tint colors in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_VERTEXCOLOR      (1<< 4) // set up vertex light colors in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_TEXCOORD         (1<< 5) // set up surface texcoords in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_LIGHTMAP         (1<< 6) // set up lightmap texcoords in rsurface.batchvertexmesh
+#define BATCHNEED_VERTEXMESH_SKELETAL         (1<< 7) // set up skeletal index and weight data for vertex shader
+#define BATCHNEED_ARRAY_VERTEX                (1<< 8) // set up rsurface.batchvertex3f
+#define BATCHNEED_ARRAY_NORMAL                (1<< 9) // set up rsurface.batchnormal3f
+#define BATCHNEED_ARRAY_VECTOR                (1<<10) // set up rsurface.batchsvector3f and rsurface.batchtvector3f
+#define BATCHNEED_ARRAY_VERTEXTINTCOLOR       (1<<11) // set up rsurface.batchvertexcolor4f
+#define BATCHNEED_ARRAY_VERTEXCOLOR           (1<<12) // set up rsurface.batchlightmapcolor4f
+#define BATCHNEED_ARRAY_TEXCOORD              (1<<13) // set up rsurface.batchtexcoordtexture2f
+#define BATCHNEED_ARRAY_LIGHTMAP              (1<<14) // set up rsurface.batchtexcoordlightmap2f
+#define BATCHNEED_ARRAY_SKELETAL              (1<<15) // set up skeletal index and weight data for vertex shader
+#define BATCHNEED_NOGAPS                      (1<<16) // force vertex copying if firstvertex is not zero or there are gaps
+#define BATCHNEED_ALLOWMULTIDRAW              (1<<17) // allow multiple draws
 void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist);
 void RSurf_DrawBatch(void);
 
@@ -604,7 +604,6 @@ void SCR_DrawConsole(void);
 void R_Shadow_EditLights_DrawSelectedLightProperties(void);
 void R_DecalSystem_Reset(decalsystem_t *decalsystem);
 void R_Shadow_UpdateBounceGridTexture(void);
-void VM_CL_AddPolygonsToMeshQueue(struct prvm_prog_s *prog);
 void R_DrawPortals(void);
 void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
 void R_Water_AddWaterPlane(msurface_t *surface, int entno);
