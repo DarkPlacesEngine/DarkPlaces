@@ -7438,9 +7438,6 @@ void R_RenderScene(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture)
 			R_TimeReport("explosions");
 	}
 
-	if (cl.csqc_loaded)
-		VM_CL_AddPolygonsToMeshQueue(CLVM_prog);
-
 	if (r_refdef.view.showdebug)
 	{
 		if (cl_locs_show.integer)
@@ -8169,8 +8166,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_NORTLIGHT;
 	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND && !(R_BlendFuncFlags(t->customblendfunc[0], t->customblendfunc[1]) & BLENDFUNC_ALLOWS_COLORMOD))
 	{
-		// some CUSTOMBLEND blendfuncs are too weird for anything but fullbright rendering, and even then we have to ignore colormod and view colorscale
-		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_MODELLIGHT | MATERIALFLAG_NORTLIGHT;
+		// some CUSTOMBLEND blendfuncs are too weird, we have to ignore colormod and view colorscale
+		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_NORTLIGHT;
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->glowmod[q];
@@ -8245,8 +8242,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = rsurface.entity->render_modellight_lightdir[q] * r_refdef.view.colorscale;
-			t->render_modellight_ambient[q] = rsurface.entity->render_modellight_ambient[q] * r_refdef.view.colorscale;
+			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
 			t->render_lightmap_ambient[q] = rsurface.entity->render_lightmap_ambient[q] * r_refdef.view.colorscale;
@@ -8254,6 +8251,30 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			t->render_lightmap_specular[q] = rsurface.entity->render_lightmap_specular[q] * 2 * r_refdef.view.colorscale;
 			t->render_rtlight_diffuse[q] = rsurface.entity->render_rtlight_diffuse[q] * r_refdef.view.colorscale;
 			t->render_rtlight_specular[q] = rsurface.entity->render_rtlight_specular[q] * r_refdef.view.colorscale;
+		}
+	}
+
+	if (t->currentmaterialflags & MATERIALFLAG_VERTEXCOLOR)
+	{
+		// since MATERIALFLAG_VERTEXCOLOR uses the lightmapcolor4f vertex
+		// attribute, we punt it to the lightmap path and hope for the best,
+		// but lighting doesn't work.
+		//
+		// FIXME: this is fine for effects but CSQC polygons should be subject
+		// to lighting.
+		t->currentmaterialflags &= ~MATERIALFLAG_MODELLIGHT;
+		for (q = 0; q < 3; q++)
+		{
+			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
+			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_ambient[q] = 0;
+			t->render_modellight_diffuse[q] = 0;
+			t->render_modellight_specular[q] = 0;
+			t->render_lightmap_ambient[q] = 0;
+			t->render_lightmap_diffuse[q] = rsurface.entity->render_fullbright[q] * r_refdef.view.colorscale;
+			t->render_lightmap_specular[q] = 0;
+			t->render_rtlight_diffuse[q] = 0;
+			t->render_rtlight_specular[q] = 0;
 		}
 	}
 

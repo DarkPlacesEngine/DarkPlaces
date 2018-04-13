@@ -944,7 +944,7 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 					Image_StripImageExtension(skinfileitem->replacement, stripbuf, sizeof(stripbuf));
 					if(developer_extra.integer)
 						Con_DPrintf("--> got %s from skin file\n", stripbuf);
-					Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+					Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 					break;
 				}
 			}
@@ -963,7 +963,7 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 		if(developer_extra.integer)
 			Con_DPrintf("--> using default\n");
 		Image_StripImageExtension(shadername, stripbuf, sizeof(stripbuf));
-		Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 	}
 }
 
@@ -1259,7 +1259,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 					dpsnprintf (name, sizeof(name), "%s_%i_%i", loadmodel->name, i, j);
 				else
 					dpsnprintf (name, sizeof(name), "%s_%i", loadmodel->name, i);
-				if (!Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, false, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS))
+				if (!Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, false, false, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL))
 					Mod_LoadCustomMaterial(loadmodel->mempool, loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, SUPERCONTENTS_SOLID, MATERIALFLAG_WALL, R_SkinFrame_LoadInternalQuake(name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_PICMIP, true, r_fullbrights.integer, (unsigned char *)datapointer, skinwidth, skinheight));
 				datapointer += skinwidth * skinheight;
 				totalskins++;
@@ -1451,7 +1451,7 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 		loadmodel->data_textures = (texture_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-			Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS);
+			Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i * loadmodel->num_surfaces, inskin, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 	}
 	else
 	{

@@ -252,14 +252,12 @@ static void SCR_CheckDrawCenterString (void)
 static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, int graphheight, float graphscale, int graphlimit, const char *label, float textsize, int packetcounter, netgraphitem_t *netgraph)
 {
 	netgraphitem_t *graph;
-	int j, x, y, numlines;
+	int j, x, y;
 	int totalbytes = 0;
 	char bytesstring[128];
 	float g[NETGRAPH_PACKETS][7];
 	float *a;
 	float *b;
-	r_vertexgeneric_t vertex[(NETGRAPH_PACKETS+2)*6*2];
-	r_vertexgeneric_t *v;
 	DrawQ_Fill(graphx, graphy, graphwidth, graphheight + textsize * 2, 0, 0, 0, 0.5, 0);
 	// draw the bar graph itself
 	memset(g, 0, sizeof(g));
@@ -299,38 +297,18 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 		g[j][6] = bound(0.0f, g[j][6], 1.0f);
 	}
 	// render the lines for the graph
-	numlines = 0;
-	v = vertex;
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
 		a = g[j];
 		b = g[(j+1)%NETGRAPH_PACKETS];
 		if (a[0] < 0.0f || b[0] > 1.0f || b[0] < a[0])
 			continue;
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[2], 0.0f);Vector4Set(v->color4f, 1.0f, 1.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[2], 0.0f);Vector4Set(v->color4f, 1.0f, 1.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[1], 0.0f);Vector4Set(v->color4f, 1.0f, 0.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[1], 0.0f);Vector4Set(v->color4f, 1.0f, 0.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[5], 0.0f);Vector4Set(v->color4f, 0.0f, 1.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[5], 0.0f);Vector4Set(v->color4f, 0.0f, 1.0f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[4], 0.0f);Vector4Set(v->color4f, 1.0f, 1.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[4], 0.0f);Vector4Set(v->color4f, 1.0f, 1.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[3], 0.0f);Vector4Set(v->color4f, 1.0f, 0.5f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[3], 0.0f);Vector4Set(v->color4f, 1.0f, 0.5f, 0.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		VectorSet(v->vertex3f, graphx + graphwidth * a[0], graphy + graphheight * a[6], 0.0f);Vector4Set(v->color4f, 0.0f, 0.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-		VectorSet(v->vertex3f, graphx + graphwidth * b[0], graphy + graphheight * b[6], 0.0f);Vector4Set(v->color4f, 0.0f, 0.0f, 1.0f, 1.0f);Vector2Set(v->texcoord2f, 0.0f, 0.0f);v++;
-
-		numlines += 6;
-	}
-	if (numlines > 0)
-	{
-		R_Mesh_PrepareVertices_Generic(numlines*2, vertex, NULL, 0);
-		DrawQ_Lines(0.0f, numlines, 0, false);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[2], graphx + graphwidth * b[0], graphy + graphheight * b[2], 1.0f, 1.0f, 1.0f, 1.0f, 0);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[1], graphx + graphwidth * b[0], graphy + graphheight * b[1], 1.0f, 0.0f, 0.0f, 1.0f, 0);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[5], graphx + graphwidth * b[0], graphy + graphheight * b[5], 0.0f, 1.0f, 0.0f, 1.0f, 0);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[4], graphx + graphwidth * b[0], graphy + graphheight * b[4], 1.0f, 1.0f, 1.0f, 1.0f, 0);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[3], graphx + graphwidth * b[0], graphy + graphheight * b[3], 1.0f, 0.5f, 0.0f, 1.0f, 0);
+		DrawQ_Line(1, graphx + graphwidth * a[0], graphy + graphheight * a[6], graphx + graphwidth * b[0], graphy + graphheight * b[6], 0.0f, 0.0f, 1.0f, 1.0f, 0);
 	}
 	x = graphx;
 	y = graphy + graphheight;
@@ -1134,8 +1112,7 @@ static void R_TimeReport_EndFrame(void)
 	if (cls.r_speeds_graph_length)
 	{
 		char legend[128];
-		r_vertexgeneric_t *v;
-		int i, numlines;
+		int i;
 		const int *data;
 		float x, y, width, height, scalex, scaley;
 		int range_default = max(r_speeds_graph_maxdefault.integer, 1);
@@ -1215,9 +1192,6 @@ static void R_TimeReport_EndFrame(void)
 			// legend text is drawn after the graphs
 			// render the graph lines, we'll go back and render the legend text later
 			scalex = (float)width / (1000000.0 * r_speeds_graph_seconds.value);
-			// get space in a vertex buffer to draw this
-			numlines = stats * (graph_length - 1);
-			v = R_Mesh_PrepareVertices_Generic_Lock(numlines * 2);
 			stats = 0;
 			for (color = 0;color < R_SPEEDS_GRAPH_COLORS;color++)
 			{
@@ -1240,39 +1214,19 @@ static void R_TimeReport_EndFrame(void)
 				sum = 0;
 				for (i = 0;i < graph_length - 1;)
 				{
-					v->vertex3f[0] = x + width - sum * scalex;
-					if (v->vertex3f[0] < x)
-						v->vertex3f[0] = x;
-					v->vertex3f[1] = y + height - (data[index] - range_min) * scaley;
-					v->vertex3f[2] = 0;
-					v->color4f[0] = r_speeds_graph_colors[color][0];
-					v->color4f[1] = r_speeds_graph_colors[color][1];
-					v->color4f[2] = r_speeds_graph_colors[color][2];
-					v->color4f[3] = r_speeds_graph_colors[color][3];
-					v->texcoord2f[0] = 0;
-					v->texcoord2f[1] = 0;
-					v++;
+					float x1, y1, x2, y2;
+					x1 = max(x, x + width - sum * scalex);
+					y1 = y + height - (data[index] - range_min) * scaley;
 					sum += graph_data[r_stat_timedelta * graph_length + index];
 					index--;
 					if (index < 0)
 						index = graph_length - 1;
 					i++;
-					v->vertex3f[0] = x + width - sum * scalex;
-					if (v->vertex3f[0] < x)
-						v->vertex3f[0] = x;
-					v->vertex3f[1] = y + height - (data[index] - range_min) * scaley;
-					v->vertex3f[2] = 0;
-					v->color4f[0] = r_speeds_graph_colors[color][0];
-					v->color4f[1] = r_speeds_graph_colors[color][1];
-					v->color4f[2] = r_speeds_graph_colors[color][2];
-					v->color4f[3] = r_speeds_graph_colors[color][3];
-					v->texcoord2f[0] = 0;
-					v->texcoord2f[1] = 0;
-					v++;
+					x2 = max(x, x + width - sum * scalex);
+					y2 = y + height - (data[index] - range_min) * scaley;
+					DrawQ_Line(1, x1, y1, x2, y2, r_speeds_graph_colors[color][0], r_speeds_graph_colors[color][1], r_speeds_graph_colors[color][2], r_speeds_graph_colors[color][3], 0);
 				}
 			}
-			R_Mesh_PrepareVertices_Generic_Unlock();
-			DrawQ_Lines(0.0f, numlines, 0, false);
 		}
 
 		// return to not drawing anything if r_render is 0

@@ -116,43 +116,6 @@ typedef struct prvm_edict_s
 	} fields;
 } prvm_edict_t;
 
-#define VMPOLYGONS_MAXPOINTS 64
-
-typedef struct vmpolygons_triangle_s
-{
-	rtexture_t		*texture;
-	int				drawflag;
-	qboolean hasalpha;
-	unsigned short	elements[3];
-} vmpolygons_triangle_t;
-
-typedef struct vmpolygons_s
-{
-	mempool_t		*pool;
-	qboolean		initialized;
-
-	int				max_vertices;
-	int				num_vertices;
-	float			*data_vertex3f;
-	float			*data_color4f;
-	float			*data_texcoord2f;
-
-	int				max_triangles;
-	int				num_triangles;
-	vmpolygons_triangle_t *data_triangles;
-	unsigned short	*data_sortedelement3s;
-
-	qboolean		begin_active;
-	int	begin_draw2d;
-	rtexture_t		*begin_texture;
-	int				begin_drawflag;
-	int				begin_vertices;
-	float			begin_vertex[VMPOLYGONS_MAXPOINTS][3];
-	float			begin_color[VMPOLYGONS_MAXPOINTS][4];
-	float			begin_texcoord[VMPOLYGONS_MAXPOINTS][2];
-	qboolean		begin_texture_hasalpha;
-} vmpolygons_t;
-
 extern prvm_eval_t prvm_badvalue;
 
 #define PRVM_alledictfloat(ed, fieldname)    (PRVM_EDICTFIELDFLOAT(ed, prog->fieldoffsets.fieldname))
@@ -634,9 +597,10 @@ typedef struct prvm_prog_s
 	// buffer for storing all tempstrings created during one invocation of ExecuteProgram
 	sizebuf_t			tempstringsbuf;
 
-	// LordHavoc: moved this here to clean up things that relied on prvm_prog_list too much
-	// FIXME: make VM_CL_R_Polygon functions use Debug_Polygon functions?
-	vmpolygons_t		vmpolygons;
+	// in csqc the polygonbegin,polygonvertex,polygonend sequencing is
+	// stateful, so this tracks the last polygonbegin's choice of
+	// CL_Mesh_CSQC or CL_Mesh_UI for this polygon
+	dp_model_t			*polygonbegin_model;
 
 	// copies of some vars that were former read from sv
 	int					num_edicts;

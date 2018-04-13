@@ -2446,7 +2446,7 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, 
 	return shaderpass;
 }
 
-qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags)
+qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags, int defaultmaterialflags)
 {
 	int texflagsmask, texflagsor;
 	qboolean success = true;
@@ -2613,6 +2613,9 @@ nothing                GL_ZERO GL_ONE
 				materiallayer = rgbgenvertexlayer;
 				endofprelayers = rgbgenvertexlayer;
 				firstpostlayer = rgbgenvertexlayer + 1;
+				// special case for rgbgen vertex if MATERIALFLAG_VERTEXCOLOR is expected on this material
+				if (defaultmaterialflags & MATERIALFLAG_VERTEXCOLOR)
+					texture->basematerialflags |= MATERIALFLAG_VERTEXCOLOR;
 			}
 			else if (rgbgendiffuselayer >= 0)
 			{
@@ -2777,17 +2780,17 @@ nothing                GL_ZERO GL_ONE
 			Con_DPrintf("^1%s:^7 No shader found for texture ^3\"%s\"\n", modelname, texture->name);
 		if (texture->surfaceflags & Q3SURFACEFLAG_NODRAW)
 		{
-			texture->basematerialflags |= MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
+			texture->basematerialflags = MATERIALFLAG_NODRAW | MATERIALFLAG_NOSHADOW;
 			texture->supercontents = SUPERCONTENTS_SOLID;
 		}
 		else if (texture->surfaceflags & Q3SURFACEFLAG_SKY)
 		{
-			texture->basematerialflags |= MATERIALFLAG_SKY;
+			texture->basematerialflags = MATERIALFLAG_SKY;
 			texture->supercontents = SUPERCONTENTS_SKY;
 		}
 		else
 		{
-			texture->basematerialflags |= MATERIALFLAG_WALL;
+			texture->basematerialflags = defaultmaterialflags;
 			texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 		}
 		if(cls.state == ca_dedicated)
@@ -2797,9 +2800,10 @@ nothing                GL_ZERO GL_ONE
 		}
 		else
 		{
-			if (fallback)
+			skinframe_t *skinframe = R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false, fallback);
+			if (skinframe)
 			{
-				texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(mempool, R_SkinFrame_LoadExternal(texture->name, defaulttexflags, false, true));
+				texture->materialshaderpass = texture->shaderpasses[0] = Mod_CreateShaderPass(mempool, skinframe);
 				if (texture->materialshaderpass->skinframes[0]->hasalpha)
 					texture->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 				if (texture->q2contents)
@@ -4614,7 +4618,7 @@ void Mod_Mesh_Reset(dp_model_t *mod)
 	mod->DrawAddWaterPlanes = NULL; // will be set if a texture needs it
 }
 
-texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int addmaterialflags)
+texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags)
 {
 	int i;
 	texture_t *t;
@@ -4631,8 +4635,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 			mod->data_surfaces[i].texture = mod->data_textures + (mod->data_surfaces[i].texture - oldtextures);
 	}
 	t = &mod->data_textures[mod->num_textures++];
-	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags);
-	t->basematerialflags |= addmaterialflags;
+	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags, defaultmaterialflags);
 	switch (defaultdrawflags & DRAWFLAG_MASK)
 	{
 	case DRAWFLAG_ADDITIVE:

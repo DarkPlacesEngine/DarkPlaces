@@ -1826,7 +1826,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 		// LordHavoc: backup the texture_t because q3 shader loading overwrites it
 		backuptex = loadmodel->data_textures[i];
-		if (name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, name, false, false, 0))
+		if (name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, name, false, false, 0, MATERIALFLAG_WALL))
 			continue;
 		loadmodel->data_textures[i] = backuptex;
 
@@ -4439,7 +4439,7 @@ static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
 				int q2flags = out->q2flags;
 				unsigned char *walfile = NULL;
 				fs_offset_t walfilesize = 0;
-				Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, tx, filename, true, true, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
+				Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, tx, filename, true, true, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 				// now read the .wal file to get metadata (even if a .tga was overriding it, we still need the wal data)
 				walfile = FS_LoadFile(filename, tempmempool, true, &walfilesize);
 				if (walfile)
@@ -5309,7 +5309,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	{
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(LittleLong(in[i].contents));
-		Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, out + i, in[i].name, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS);
+		Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, out + i, in[i].name, true, true, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 		// restore the surfaceflags and supercontents
 		out[i].surfaceflags = LittleLong(in[i].surfaceflags);
 		out[i].supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(LittleLong(in[i].contents));

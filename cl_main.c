@@ -2406,7 +2406,7 @@ void CL_MeshEntities_Init(void)
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
 		ent->render.alpha = 1;
-		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT | RENDER_CUSTOMIZEDMODELLIGHT;
+		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
 		ent->render.frameblend[0].lerp = 1;
 		VectorSet(ent->render.colormod, 1, 1, 1);

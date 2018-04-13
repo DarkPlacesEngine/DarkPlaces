@@ -1612,7 +1612,7 @@ void MVM_init_cmd(prvm_prog_t *prog)
 	r_refdef_scene_t *scene;
 
 	VM_Cmd_Init(prog);
-	VM_Polygons_Reset(prog);
+	prog->polygonbegin_model = NULL;
 
 	scene = R_GetScenePointer( RST_MENU );
 
@@ -1634,5 +1634,5 @@ void MVM_reset_cmd(prvm_prog_t *prog)
 
 	//VM_Cmd_Init();
 	VM_Cmd_Reset(prog);
-	VM_Polygons_Reset(prog);
+	prog->polygonbegin_model = NULL;
 }
