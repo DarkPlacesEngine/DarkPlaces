@@ -340,7 +340,9 @@ cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel texture
 cvar_t r_shadow_culllights_pvs = {CVAR_SAVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
 cvar_t r_shadow_culllights_trace = {CVAR_SAVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
 cvar_t r_shadow_culllights_trace_eyejitter = {CVAR_SAVE, "r_shadow_culllights_trace_eyejitter", "16", "offset eye location randomly by this much"};
-cvar_t r_shadow_culllights_trace_enlarge = {CVAR_SAVE, "r_shadow_culllights_trace_enlarge", "0.1", "make light bounds bigger by *1.0+enlarge"};
+cvar_t r_shadow_culllights_trace_enlarge = {CVAR_SAVE, "r_shadow_culllights_trace_enlarge", "0", "make light bounds bigger by *(1.0+enlarge)"};
+cvar_t r_shadow_culllights_trace_expand = {CVAR_SAVE, "r_shadow_culllights_trace_expand", "8", "make light bounds bigger by this many units"};
+cvar_t r_shadow_culllights_trace_pad = {CVAR_SAVE, "r_shadow_culllights_trace_expand", "8", "accept traces that hit within this many units of the light bounds"};
 cvar_t r_shadow_culllights_trace_samples = {CVAR_SAVE, "r_shadow_culllights_trace_samples", "16", "use this many traces to random positions (in addition to center trace)"};
 cvar_t r_shadow_culllights_trace_tempsamples = {CVAR_SAVE, "r_shadow_culllights_trace_tempsamples", "16", "use this many traces if the light was created by csqc (no inter-frame caching), -1 disables the check (to avoid flicker entirely)"};
 cvar_t r_shadow_culllights_trace_delay = {CVAR_SAVE, "r_shadow_culllights_trace_delay", "1", "light will be considered visible for this many seconds after any trace connects"};
@@ -818,6 +820,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_culllights_trace);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_eyejitter);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_enlarge);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_expand);
+	Cvar_RegisterVariable(&r_shadow_culllights_trace_pad);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_samples);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_tempsamples);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_delay);
@@ -2874,7 +2878,7 @@ static void R_Shadow_BounceGrid_AssignPhotons(r_shadow_bouncegrid_settings_t *se
 			// is probably fine (and they use the same timer)
 			if (r_shadow_culllights_trace.integer)
 			{
-				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
 					rtlight->trace_timer = realtime;
 				if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 					return;
@@ -4707,7 +4711,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	// skip if the light box is not visible to traceline
 	if (r_shadow_culllights_trace.integer)
 	{
-		if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+		if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
 			rtlight->trace_timer = realtime;
 		if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 			return;

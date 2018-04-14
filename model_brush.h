@@ -219,6 +219,7 @@ typedef struct mportal_s
 	mvertex_t *points;
 	vec3_t mins, maxs; // culling
 	mplane_t plane;
+	double tracetime; // refreshed to realtime by traceline tests
 }
 mportal_t;
 

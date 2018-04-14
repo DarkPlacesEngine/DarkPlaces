@@ -582,7 +582,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_edict_t **resultedicts);
 
-qboolean SV_CanSeeBox(int numsamples, vec_t eyejitter, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
+qboolean SV_CanSeeBox(int numsamples, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
 
 int SV_PointSuperContents(const vec3_t point);
 
