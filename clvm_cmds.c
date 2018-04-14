@@ -2446,12 +2446,13 @@ static int CL_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 extern cvar_t cl_bob;
 extern cvar_t cl_bobcycle;
 extern cvar_t cl_bobup;
-int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex, prvm_vec_t *shadingorigin)
+int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex, prvm_vec_t *returnshadingorigin)
 {
 	int ret;
 	int attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	dp_model_t *model;
+	vec3_t shadingorigin;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
 
@@ -2521,15 +2522,15 @@ int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int
 		*/
 
 		// return the origin of the view
-		if (shadingorigin)
-			Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, shadingorigin);
+		Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, shadingorigin);
 	}
 	else
 	{
 		// return the origin of the root entity in the chain
-		if (shadingorigin)
-			Matrix4x4_OriginFromMatrix(out, shadingorigin);
+		Matrix4x4_OriginFromMatrix(out, shadingorigin);
 	}
+	if (returnshadingorigin)
+		VectorCopy(shadingorigin, returnshadingorigin);
 	return 0;
 }
 
