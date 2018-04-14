@@ -92,6 +92,25 @@ cvar_t v_ipitch_level = {0, "v_ipitch_level", "0.3", "v_idlescale pitch amount"}
 
 cvar_t v_idlescale = {0, "v_idlescale", "0", "how much of the quake 'drunken view' effect to use"};
 
+cvar_t v_isometric = {0, "v_isometric", "0", "changes view to isometric (non-perspective)"};
+cvar_t v_isometric_verticalfov = { 0, "v_isometric_verticalfov", "512", "vertical field of view in game units (horizontal is computed using aspect ratio based on this)"};
+cvar_t v_isometric_xx = {0, "v_isometric_xx", "0", "camera matrix"};
+cvar_t v_isometric_xy = {0, "v_isometric_xy", "-1", "camera matrix"};
+cvar_t v_isometric_xz = {0, "v_isometric_xz", "0", "camera matrix"};
+cvar_t v_isometric_yx = {0, "v_isometric_yx", "-1", "camera matrix"};
+cvar_t v_isometric_yy = {0, "v_isometric_yy", "0", "camera matrix"};
+cvar_t v_isometric_yz = {0, "v_isometric_yz", "0", "camera matrix"};
+cvar_t v_isometric_zx = {0, "v_isometric_zx", "0", "camera matrix"};
+cvar_t v_isometric_zy = {0, "v_isometric_zy", "0", "camera matrix"};
+cvar_t v_isometric_zz = {0, "v_isometric_zz", "1", "camera matrix"};
+cvar_t v_isometric_tx = {0, "v_isometric_tx", "1767", "camera position"};
+cvar_t v_isometric_ty = {0, "v_isometric_ty", "1767", "camera position"};
+cvar_t v_isometric_tz = {0, "v_isometric_tz", "1425", "camera position"};
+cvar_t v_isometric_rot_pitch = {0, "v_isometric_rot_pitch", "0", "camera rotation"};
+cvar_t v_isometric_rot_yaw = {0, "v_isometric_rot_yaw", "-45", "camera rotation"};
+cvar_t v_isometric_rot_roll = {0, "v_isometric_rot_roll", "-60", "camera rotation"};
+cvar_t v_isometric_locked_orientation = {0, "v_isometric_locked_orientation", "1", "camera rotation is fixed"};
+
 cvar_t crosshair = {CVAR_SAVE, "crosshair", "0", "selects crosshair to use (0 is none)"};
 
 cvar_t v_centermove = {0, "v_centermove", "0.15", "how long before the view begins to center itself (if freelook/+mlook/+jlook/+klook are off)"};
@@ -943,6 +962,45 @@ void V_CalcRefdef (void)
 	}
 }
 
+void V_MakeViewIsometric(void)
+{
+	// when using isometric view to play normal games we have to rotate the camera to make the Ortho matrix do the right thing (forward as up the screen, etc)
+	matrix4x4_t relative;
+	matrix4x4_t modifiedview;
+	matrix4x4_t modify;
+	float t[4][4];
+	t[0][0] = v_isometric_xx.value;
+	t[0][1] = v_isometric_xy.value;
+	t[0][2] = v_isometric_xz.value;
+	t[0][3] = 0.0f;
+	t[1][0] = v_isometric_yx.value;
+	t[1][1] = v_isometric_yy.value;
+	t[1][2] = v_isometric_yz.value;
+	t[1][3] = 0.0f;
+	t[2][0] = v_isometric_zx.value;
+	t[2][1] = v_isometric_zy.value;
+	t[2][2] = v_isometric_zz.value;
+	t[2][3] = 0.0f;
+	t[3][0] = 0.0f;
+	t[3][1] = 0.0f;
+	t[3][2] = 0.0f;
+	t[3][3] = 1.0f;
+	Matrix4x4_FromArrayFloatGL(&modify, t[0]);
+
+	// if the orientation is locked, extract the origin and create just a translate matrix to start with
+	if (v_isometric_locked_orientation.integer)
+	{
+		vec3_t vx, vy, vz, origin;
+		Matrix4x4_ToVectors(&r_refdef.view.matrix, vx, vy, vz, origin);
+		Matrix4x4_CreateTranslate(&r_refdef.view.matrix, origin[0], origin[1], origin[2]);
+	}
+
+	Matrix4x4_Concat(&modifiedview, &r_refdef.view.matrix, &modify);
+	Matrix4x4_CreateFromQuakeEntity(&relative, v_isometric_tx.value, v_isometric_ty.value, v_isometric_tz.value, v_isometric_rot_pitch.value, v_isometric_rot_yaw.value, v_isometric_rot_roll.value, 1.0f);
+	Matrix4x4_Concat(&r_refdef.view.matrix, &modifiedview, &relative);
+}
+
+
 void V_FadeViewFlashs(void)
 {
 	// don't flash if time steps backwards
@@ -1124,6 +1182,25 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_iyaw_level);
 	Cvar_RegisterVariable (&v_iroll_level);
 	Cvar_RegisterVariable (&v_ipitch_level);
+
+	Cvar_RegisterVariable(&v_isometric);
+	Cvar_RegisterVariable(&v_isometric_verticalfov);
+	Cvar_RegisterVariable(&v_isometric_xx);
+	Cvar_RegisterVariable(&v_isometric_xy);
+	Cvar_RegisterVariable(&v_isometric_xz);
+	Cvar_RegisterVariable(&v_isometric_yx);
+	Cvar_RegisterVariable(&v_isometric_yy);
+	Cvar_RegisterVariable(&v_isometric_yz);
+	Cvar_RegisterVariable(&v_isometric_zx);
+	Cvar_RegisterVariable(&v_isometric_zy);
+	Cvar_RegisterVariable(&v_isometric_zz);
+	Cvar_RegisterVariable(&v_isometric_tx);
+	Cvar_RegisterVariable(&v_isometric_ty);
+	Cvar_RegisterVariable(&v_isometric_tz);
+	Cvar_RegisterVariable(&v_isometric_rot_pitch);
+	Cvar_RegisterVariable(&v_isometric_rot_yaw);
+	Cvar_RegisterVariable(&v_isometric_rot_roll);
+	Cvar_RegisterVariable(&v_isometric_locked_orientation);
 
 	Cvar_RegisterVariable (&v_idlescale);
 	Cvar_RegisterVariable (&crosshair);
