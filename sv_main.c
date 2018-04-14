@@ -81,6 +81,7 @@ cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0", "somewhat slow 
 cvar_t sv_cullentities_trace_delay = {0, "sv_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t sv_cullentities_trace_delay_players = {0, "sv_cullentities_trace_delay_players", "0.2", "number of seconds until the entity gets actually culled if it is a player entity"};
 cvar_t sv_cullentities_trace_enlarge = {0, "sv_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t sv_cullentities_trace_expand = { 0, "sv_cullentities_trace_expand", "0", "box is expanded by this many units for entity culling" };
 cvar_t sv_cullentities_trace_eyejitter = {0, "sv_cullentities_trace_eyejitter", "16", "jitter the eye by this much for each trace"};
 cvar_t sv_cullentities_trace_prediction = {0, "sv_cullentities_trace_prediction", "1", "also trace from the predicted player position"};
 cvar_t sv_cullentities_trace_prediction_time = {0, "sv_cullentities_trace_prediction_time", "0.2", "how many seconds of prediction to use"};
@@ -494,6 +495,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay);
 	Cvar_RegisterVariable (&sv_cullentities_trace_delay_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_enlarge);
+	Cvar_RegisterVariable (&sv_cullentities_trace_expand);
 	Cvar_RegisterVariable (&sv_cullentities_trace_eyejitter);
 	Cvar_RegisterVariable (&sv_cullentities_trace_entityocclusion);
 	Cvar_RegisterVariable (&sv_cullentities_trace_prediction);
@@ -1487,7 +1489,7 @@ static void SV_PrepareEntitiesForSending(void)
 
 #define MAX_LINEOFSIGHTTRACES 64
 
-qboolean SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qboolean SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	float pitchsign;
@@ -1519,12 +1521,12 @@ qboolean SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec3_t eye,
 	eyemins[2] = eye[2] - eyejitter;
 	eyemaxs[2] = eye[2] + eyejitter;
 	// expand the box a little
-	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0];
-	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0];
-	boxmins[1] = (enlarge+1) * entboxmins[1] - enlarge * entboxmaxs[1];
-	boxmaxs[1] = (enlarge+1) * entboxmaxs[1] - enlarge * entboxmins[1];
-	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2];
-	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2];
+	boxmins[0] = (enlarge+1) * entboxmins[0] - enlarge * entboxmaxs[0] - entboxexpand;
+	boxmaxs[0] = (enlarge+1) * entboxmaxs[0] - enlarge * entboxmins[0] + entboxexpand;
+	boxmins[1] = (enlarge+1) * entboxmins[1] - enlarge * entboxmaxs[1] - entboxexpand;
+	boxmaxs[1] = (enlarge+1) * entboxmaxs[1] - enlarge * entboxmins[1] + entboxexpand;
+	boxmins[2] = (enlarge+1) * entboxmins[2] - enlarge * entboxmaxs[2] - entboxexpand;
+	boxmaxs[2] = (enlarge+1) * entboxmaxs[2] - enlarge * entboxmins[2] + entboxexpand;
 
 	VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, endpoints[0]);
 	for (traceindex = 1;traceindex < numtraces;traceindex++)
@@ -1729,7 +1731,7 @@ static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				{
 					int eyeindex;
 					for (eyeindex = 0;eyeindex < sv.writeentitiestoclient_numeyes;eyeindex++)
-						if(SV_CanSeeBox(samples, sv_cullentities_trace_eyejitter.value, enlarge, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+						if(SV_CanSeeBox(samples, sv_cullentities_trace_eyejitter.value, enlarge, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 							break;
 					if(eyeindex < sv.writeentitiestoclient_numeyes)
 						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
@@ -1812,7 +1814,7 @@ static void SV_AddCameraEyes(void)
 		for(k = 0; k < sv.writeentitiestoclient_numeyes; ++k)
 		if(eye_levels[k] <= MAX_EYE_RECURSION)
 		{
-			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv.writeentitiestoclient_eyes[k], mi, ma))
+			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[k], mi, ma))
 			{
 				eye_levels[sv.writeentitiestoclient_numeyes] = eye_levels[k] + 1;
 				VectorCopy(camera_origins[j], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
@@ -1873,7 +1875,7 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 		vec_t predtime = bound(0, host_client->ping, sv_cullentities_trace_prediction_time.value);
 		vec3_t predeye;
 		VectorMA(eye, predtime, PRVM_serveredictvector(camera, velocity), predeye);
-		if (SV_CanSeeBox(1, 0, 0, eye, predeye, predeye))
+		if (SV_CanSeeBox(1, 0, 0, 0, eye, predeye, predeye))
 		{
 			VectorCopy(predeye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
 			sv.writeentitiestoclient_numeyes++;

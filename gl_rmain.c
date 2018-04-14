@@ -114,6 +114,8 @@ cvar_t r_cullentities_trace_entityocclusion = { 0, "r_cullentities_trace_entityo
 cvar_t r_cullentities_trace_samples = {0, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
 cvar_t r_cullentities_trace_tempentitysamples = {0, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
 cvar_t r_cullentities_trace_enlarge = {0, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t r_cullentities_trace_expand = {0, "r_cullentities_trace_expand", "0", "box expanded by this many units for entity culling"};
+cvar_t r_cullentities_trace_pad = {0, "r_cullentities_trace_pad", "8", "accept traces that hit within this many units of the box"};
 cvar_t r_cullentities_trace_delay = {0, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
 cvar_t r_cullentities_trace_eyejitter = {0, "r_cullentities_trace_eyejitter", "16", "randomly offset rays from the eye by this much to reduce the odds of flickering"};
 cvar_t r_sortentities = {0, "r_sortentities", "0", "sort entities before drawing (might be faster)"};
@@ -4266,6 +4268,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_cullentities_trace_samples);
 	Cvar_RegisterVariable(&r_cullentities_trace_tempentitysamples);
 	Cvar_RegisterVariable(&r_cullentities_trace_enlarge);
+	Cvar_RegisterVariable(&r_cullentities_trace_expand);
+	Cvar_RegisterVariable(&r_cullentities_trace_pad);
 	Cvar_RegisterVariable(&r_cullentities_trace_delay);
 	Cvar_RegisterVariable(&r_cullentities_trace_eyejitter);
 	Cvar_RegisterVariable(&r_sortentities);
@@ -5023,11 +5027,12 @@ void R_AnimCache_CacheVisibleEntities(void)
 
 //==================================================================================
 
-qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	int i;
 	vec3_t eyemins, eyemaxs;
 	vec3_t boxmins, boxmaxs;
+	vec3_t padmins, padmaxs;
 	vec3_t start;
 	vec3_t end;
 	dp_model_t *model = r_refdef.scene.worldmodel;
@@ -5062,12 +5067,19 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_
 	eyemins[2] = eye[2] - eyejitter;
 	eyemaxs[2] = eye[2] + eyejitter;
 	// expand the box a little
-	boxmins[0] = (entboxenlarge + 1) * entboxmins[0] - entboxenlarge * entboxmaxs[0];
-	boxmaxs[0] = (entboxenlarge + 1) * entboxmaxs[0] - entboxenlarge * entboxmins[0];
-	boxmins[1] = (entboxenlarge + 1) * entboxmins[1] - entboxenlarge * entboxmaxs[1];
-	boxmaxs[1] = (entboxenlarge + 1) * entboxmaxs[1] - entboxenlarge * entboxmins[1];
-	boxmins[2] = (entboxenlarge + 1) * entboxmins[2] - entboxenlarge * entboxmaxs[2];
-	boxmaxs[2] = (entboxenlarge + 1) * entboxmaxs[2] - entboxenlarge * entboxmins[2];
+	boxmins[0] = (entboxenlarge + 1) * entboxmins[0] - entboxenlarge * entboxmaxs[0] - entboxexpand;
+	boxmaxs[0] = (entboxenlarge + 1) * entboxmaxs[0] - entboxenlarge * entboxmins[0] + entboxexpand;
+	boxmins[1] = (entboxenlarge + 1) * entboxmins[1] - entboxenlarge * entboxmaxs[1] - entboxexpand;
+	boxmaxs[1] = (entboxenlarge + 1) * entboxmaxs[1] - entboxenlarge * entboxmins[1] + entboxexpand;
+	boxmins[2] = (entboxenlarge + 1) * entboxmins[2] - entboxenlarge * entboxmaxs[2] - entboxexpand;
+	boxmaxs[2] = (entboxenlarge + 1) * entboxmaxs[2] - entboxenlarge * entboxmins[2] + entboxexpand;
+	// make an even larger box for the acceptable area
+	padmins[0] = boxmins[0] - pad;
+	padmaxs[0] = boxmaxs[0] + pad;
+	padmins[1] = boxmins[1] - pad;
+	padmaxs[1] = boxmaxs[1] + pad;
+	padmins[2] = boxmins[2] - pad;
+	padmaxs[2] = boxmaxs[2] + pad;
 
 	// return true if eye overlaps enlarged box
 	if (BoxesOverlap(boxmins, boxmaxs, eyemins, eyemaxs))
@@ -5085,11 +5097,11 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_
 			//trace_t trace = CL_TraceLine(start, end, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, 0.0f, true, false, NULL, true, true);
 			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
 			// not picky - if the trace ended anywhere in the box we're good
-			if (BoxesOverlap(trace.endpos, trace.endpos, boxmins, boxmaxs))
+			if (BoxesOverlap(trace.endpos, trace.endpos, padmins, padmaxs))
 				return true;
 		}
 	}
-	else if (model->brush.TraceLineOfSight(model, start, end, boxmins, boxmaxs))
+	else if (model->brush.TraceLineOfSight(model, start, end, padmins, padmaxs))
 		return true;
 
 	// try various random positions
@@ -5101,10 +5113,10 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec3_
 		{
 			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
 			// not picky - if the trace ended anywhere in the box we're good
-			if (BoxesOverlap(trace.endpos, trace.endpos, boxmins, boxmaxs))
+			if (BoxesOverlap(trace.endpos, trace.endpos, padmins, padmaxs))
 				return true;
 		}
-		else if (model->brush.TraceLineOfSight(model, start, end, boxmins, boxmaxs))
+		else if (model->brush.TraceLineOfSight(model, start, end, padmins, padmaxs))
 			return true;
 	}
 
@@ -5163,7 +5175,7 @@ static void R_View_UpdateEntityVisible (void)
 			if (!(ent->flags & (RENDER_VIEWMODEL | RENDER_WORLDOBJECT | RENDER_NODEPTHTEST)) && !(ent->model && (ent->model->name[0] == '*')))
 			{
 				samples = ent->last_trace_visibility == 0 ? r_cullentities_trace_tempentitysamples.integer : r_cullentities_trace_samples.integer;
-				if (R_CanSeeBox(samples, r_cullentities_trace_eyejitter.value, r_cullentities_trace_enlarge.value, r_refdef.view.origin, ent->mins, ent->maxs))
+				if (R_CanSeeBox(samples, r_cullentities_trace_eyejitter.value, r_cullentities_trace_enlarge.value, r_cullentities_trace_expand.value, r_cullentities_trace_pad.value, r_refdef.view.origin, ent->mins, ent->maxs))
 					ent->last_trace_visibility = realtime;
 				if (ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
 					r_refdef.viewcache.entityvisible[i] = 0;

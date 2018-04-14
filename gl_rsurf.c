@@ -30,6 +30,14 @@ cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to 
 cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
 cvar_t r_useportalculling = {0, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
 cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
+cvar_t r_vis_trace = {0, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
+cvar_t r_vis_trace_samples = {0, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
+cvar_t r_vis_trace_delay = {0, "r_vis_trace_delay", "1", "keep a portal visible for this many seconds"};
+cvar_t r_vis_trace_eyejitter = {0, "r_vis_trace_eyejitter", "8", "use a random offset of this much on the start of each traceline"};
+cvar_t r_vis_trace_enlarge = {0, "r_vis_trace_enlarge", "0", "make portal bounds bigger for tests by (1+this)*size"};
+cvar_t r_vis_trace_expand = {0, "r_vis_trace_expand", "0", "make portal bounds bigger for tests by this many units"};
+cvar_t r_vis_trace_pad = {0, "r_vis_trace_pad", "8", "accept traces that hit within this many units of the portal"};
+cvar_t r_vis_trace_surfaces = {0, "r_vis_trace_surfaces", "0", "also use tracelines to cull surfaces"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
 /*
@@ -418,9 +426,15 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	surfaceindexend = surfaceindexstart + model->nummodelsurfaces;
 	surfaces = model->data_surfaces;
 	surfacevisible = r_refdef.viewcache.world_surfacevisible;
-	for (surfaceindex = surfaceindexstart;surfaceindex < surfaceindexend;surfaceindex++)
-		if (surfacevisible[surfaceindex] && R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs))
-			surfacevisible[surfaceindex] = 0;
+	for (surfaceindex = surfaceindexstart; surfaceindex < surfaceindexend; surfaceindex++)
+	{
+		if (surfacevisible[surfaceindex])
+		{
+			if (R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)
+			 || (r_vis_trace_surfaces.integer && !R_CanSeeBox(r_vis_trace_samples.integer, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)))
+				surfacevisible[surfaceindex] = 0;
+		}
+	}
 }
 
 void R_View_WorldVisibility(qboolean forcenovis)
@@ -568,6 +582,13 @@ void R_View_WorldVisibility(qboolean forcenovis)
 					cullmaxs[2] = p->maxs[2] + cullbias;
 					if (R_CullBox(cullmins, cullmaxs))
 						continue;
+					if (r_vis_trace.integer)
+					{
+						if (p->tracetime != realtime && R_CanSeeBox(r_vis_trace_samples.value, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, cullmins, cullmaxs))
+							p->tracetime = realtime;
+						if (realtime - p->tracetime > r_vis_trace_delay.value)
+							continue;
+					}
 					if (leafstackpos >= (int)(sizeof(leafstack) / sizeof(leafstack[0])))
 						break;
 					leafstack[leafstackpos++] = p->past;
@@ -576,7 +597,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 		}
 	}
 
-        R_View_WorldVisibility_CullSurfaces();
+	R_View_WorldVisibility_CullSurfaces();
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
@@ -1633,6 +1654,14 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_lockvisibility);
 	Cvar_RegisterVariable(&r_useportalculling);
 	Cvar_RegisterVariable(&r_usesurfaceculling);
+	Cvar_RegisterVariable(&r_vis_trace);
+	Cvar_RegisterVariable(&r_vis_trace_samples);
+	Cvar_RegisterVariable(&r_vis_trace_delay);
+	Cvar_RegisterVariable(&r_vis_trace_eyejitter);
+	Cvar_RegisterVariable(&r_vis_trace_enlarge);
+	Cvar_RegisterVariable(&r_vis_trace_expand);
+	Cvar_RegisterVariable(&r_vis_trace_pad);
+	Cvar_RegisterVariable(&r_vis_trace_surfaces);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
 	Cmd_AddCommand ("r_replacemaptexture", R_ReplaceWorldTexture, "override a map texture for testing purposes");
