@@ -1844,6 +1844,7 @@ static void R_Envmap_f (void)
 	r_refdef.view.depth = 1;
 	r_refdef.view.useperspective = true;
 	r_refdef.view.isoverlay = false;
+	r_refdef.view.ismain = true;
 
 	r_refdef.view.frustum_x = 1; // tan(45 * M_PI / 180.0);
 	r_refdef.view.frustum_y = 1; // tan(45 * M_PI / 180.0);
@@ -2065,6 +2066,8 @@ void R_ClearScreen(qboolean fogcolor)
 }
 
 int r_stereo_side;
+extern cvar_t v_isometric;
+extern cvar_t v_isometric_verticalfov;
 
 static void SCR_DrawScreen (void)
 {
@@ -2128,20 +2131,34 @@ static void SCR_DrawScreen (void)
 			r_refdef.view.z = 0;
 		}
 
-		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-		// LordHavoc: this is designed to produce widescreen fov values
-		// when the screen is wider than 4/3 width/height aspect, to do
-		// this it simply assumes the requested fov is the vertical fov
-		// for a 4x3 display, if the ratio is not 4x3 this makes the fov
-		// higher/lower according to the ratio
-		r_refdef.view.useperspective = true;
-		r_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0/4.0) * cl.viewzoom;
-		r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
+		if (v_isometric.integer)
+		{
+			r_refdef.view.useperspective = false;
+			r_refdef.view.frustum_y = v_isometric_verticalfov.value * cl.viewzoom;
+			r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
+			r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+			r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+			r_refdef.view.ortho_x = r_refdef.view.frustum_x; // used by VM_CL_R_SetView
+			r_refdef.view.ortho_y = r_refdef.view.frustum_y; // used by VM_CL_R_SetView
+		}
+		else
+		{
+			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+			// LordHavoc: this is designed to produce widescreen fov values
+			// when the screen is wider than 4/3 width/height aspect, to do
+			// this it simply assumes the requested fov is the vertical fov
+			// for a 4x3 display, if the ratio is not 4x3 this makes the fov
+			// higher/lower according to the ratio
+			r_refdef.view.useperspective = true;
+			r_refdef.view.frustum_y = tan(scr_fov.value * M_PI / 360.0) * (3.0 / 4.0) * cl.viewzoom;
+			r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
 
-		r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
-		r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
-		r_refdef.view.ortho_x = atan(r_refdef.view.frustum_x) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
-		r_refdef.view.ortho_y = atan(r_refdef.view.frustum_y) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
+			r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+			r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+			r_refdef.view.ortho_x = atan(r_refdef.view.frustum_x) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
+			r_refdef.view.ortho_y = atan(r_refdef.view.frustum_y) * (360.0 / M_PI); // abused as angle by VM_CL_R_SetView
+		}
+		r_refdef.view.ismain = true;
 
 		// if CSQC is loaded, it is required to provide the CSQC_UpdateView function,
 		// and won't render a view if it does not call that.

@@ -5474,15 +5474,15 @@ static void R_View_SetFrustum(const int *scissor)
 	}
 	else
 	{
-		VectorScale(left, -r_refdef.view.ortho_x, r_refdef.view.frustum[0].normal);
-		VectorScale(left,  r_refdef.view.ortho_x, r_refdef.view.frustum[1].normal);
-		VectorScale(up, -r_refdef.view.ortho_y, r_refdef.view.frustum[2].normal);
-		VectorScale(up,  r_refdef.view.ortho_y, r_refdef.view.frustum[3].normal);
-		VectorCopy(forward, r_refdef.view.frustum[4].normal);
-		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal) + r_refdef.view.ortho_x;
-		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal) + r_refdef.view.ortho_x;
-		r_refdef.view.frustum[2].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[2].normal) + r_refdef.view.ortho_y;
-		r_refdef.view.frustum[3].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[3].normal) + r_refdef.view.ortho_y;
+		VectorScale(forward, -1.0f, r_refdef.view.frustum[0].normal);
+		VectorScale(forward,  1.0f, r_refdef.view.frustum[1].normal);
+		VectorScale(left, -1.0f, r_refdef.view.frustum[2].normal);
+		VectorScale(left,  1.0f, r_refdef.view.frustum[3].normal);
+		VectorScale(up, -1.0f, r_refdef.view.frustum[4].normal);
+		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal) - r_refdef.view.ortho_x;
+		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal) - r_refdef.view.ortho_x;
+		r_refdef.view.frustum[2].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[2].normal) - r_refdef.view.ortho_y;
+		r_refdef.view.frustum[3].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[3].normal) - r_refdef.view.ortho_y;
 		r_refdef.view.frustum[4].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[4].normal) + r_refdef.nearclip;
 	}
 	r_refdef.view.numfrustumplanes = 5;
@@ -6920,6 +6920,8 @@ R_RenderView
 */
 int dpsoftrast_test;
 extern cvar_t r_shadow_bouncegrid;
+extern cvar_t v_isometric;
+extern void V_MakeViewIsometric(void);
 void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height)
 {
 	matrix4x4_t originalmatrix = r_refdef.view.matrix, offsetmatrix;
@@ -6977,6 +6979,9 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 		r_refdef.view.matrix = originalmatrix;
 		return;
 	}
+
+	if (v_isometric.integer && r_refdef.view.ismain)
+		V_MakeViewIsometric();
 
 	r_refdef.view.colorscale = r_hdr_scenebrightness.value * r_hdr_irisadaptation_value.value;
 

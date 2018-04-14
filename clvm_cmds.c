@@ -3252,18 +3252,15 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 // --blub
 static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 {
+	qboolean ismain = r_refdef.view.ismain;
 	double t = Sys_DirtyTime();
 	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
 
 	// update the views
-	if(r_refdef.view.ismain)
+	if(ismain)
 	{
 		// set the main view
 		csqc_main_r_refdef_view = r_refdef.view;
-
-		// clear the flags so no other view becomes "main" unless CSQC sets VF_MAINVIEW
-		r_refdef.view.ismain = false;
-		csqc_original_r_refdef_view.ismain = false;
 	}
 
 	// we need to update any RENDER_VIEWMODEL entities at this point because
@@ -3280,6 +3277,14 @@ static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
 	t = Sys_DirtyTime() - t;if (t < 0 || t >= 1800) t = 0;
 	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= t;
+
+	// update the views
+	if (ismain)
+	{
+		// clear the flags so no other view becomes "main" unless CSQC sets VF_MAINVIEW
+		r_refdef.view.ismain = false;
+		csqc_original_r_refdef_view.ismain = false;
+	}
 }
 
 //void(string texturename, float flag[, float is2d]) R_BeginPolygon

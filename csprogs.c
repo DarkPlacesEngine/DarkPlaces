@@ -476,7 +476,6 @@ qboolean CL_VM_UpdateView (double frametime)
 		return false;
 	R_TimeReport("pre-UpdateView");
 	CSQC_BEGIN
-		r_refdef.view.ismain = true;
 		csqc_original_r_refdef_view = r_refdef.view;
 		csqc_main_r_refdef_view = r_refdef.view;
 		//VectorCopy(cl.viewangles, oldangles);
