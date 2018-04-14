@@ -12042,7 +12042,7 @@ static void R_DrawDebugModel(void)
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 
 #ifndef USE_GLES2
-	if (r_showtris.integer && qglPolygonMode)
+	if (r_showtris.value > 0 && qglPolygonMode)
 	{
 		if (r_showdisabledepthtest.integer)
 		{
