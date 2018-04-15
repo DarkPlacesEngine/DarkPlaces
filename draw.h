@@ -134,7 +134,15 @@ extern dp_fonts_t dp_fonts;
 #define STRING_COLOR_RGB_TAG_CHAR	'x'
 #define STRING_COLOR_RGB_TAG		"^x"
 
-// all of these functions will set r_defdef.draw2dstage if not in 2D rendering mode (and of course prepare for 2D rendering in that case)
+// prepare for 2D rendering (sets r_refdef.draw2dstage = 1 and calls R_ResetViewRendering2D)
+void DrawQ_Start(void);
+// resets r_refdef.draw2dstage to 0
+void DrawQ_Finish(void);
+// batch draw the pending geometry in the CL_Mesh_UI() model and reset the model,
+// to be called by things like DrawQ_SetClipArea which make disruptive state changes.
+void DrawQ_FlushUI(void);
+// use this when changing r_refdef.view.* from e.g. csqc
+void DrawQ_RecalcView(void);
 
 // draw an image (or a filled rectangle if pic == NULL)
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags);
@@ -163,12 +171,6 @@ void DrawQ_SetClipArea(float x, float y, float width, float height);
 void DrawQ_ResetClipArea(void);
 // draw a line
 void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags);
-// resets r_refdef.draw2dstage
-void DrawQ_Finish(void);
-void DrawQ_RecalcView(void); // use this when changing r_refdef.view.* from e.g. csqc
-// batch draw the pending geometry in the CL_Mesh_UI() model and reset the model,
-// to be called by things like DrawQ_SetClipArea which make disruptive state changes.
-void DrawQ_FlushUI(void);
 
 const char *Draw_GetPicName(cachepic_t *pic);
 int Draw_GetPicWidth(cachepic_t *pic);

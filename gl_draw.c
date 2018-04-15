@@ -744,11 +744,8 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap, NULL, NULL);
 }
 
-static void _DrawQ_Setup(void) // see R_ResetViewRendering2D
+void DrawQ_Start(void)
 {
-	if (r_refdef.draw2dstage == 1)
-		return;
-	DrawQ_FlushUI();
 	r_refdef.draw2dstage = 1;
 	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
 }
@@ -760,7 +757,6 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	dp_model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
-	_DrawQ_Setup();
 	if (!pic)
 		pic = Draw_CachePic("white");
 	if (width == 0)
@@ -787,7 +783,6 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	dp_model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
-	_DrawQ_Setup();
 	if (!pic)
 		pic = Draw_CachePic("white");
 	if (width == 0)
@@ -1076,8 +1071,6 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	int tw, th;
 	tw = Draw_GetPicWidth(fnt->pic);
 	th = Draw_GetPicHeight(fnt->pic);
-
-	_DrawQ_Setup();
 
 	if (!h) h = w;
 	if (!h) {
@@ -1384,7 +1377,6 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	dp_model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
-	_DrawQ_Setup();
 	if (!pic)
 		pic = Draw_CachePic("white");
 	if (width == 0)
@@ -1406,16 +1398,15 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	float offsetx, offsety;
-	_DrawQ_Setup();
 	// width is measured in real pixels
 	if (fabs(x2 - x1) > fabs(y2 - y1))
 	{
 		offsetx = 0;
-		offsety = width * vid_conheight.value / vid.height;
+		offsety = 0.5f * width * vid_conheight.value / vid.height;
 	}
 	else
 	{
-		offsetx = width * vid_conwidth.value / vid.width;
+		offsetx = 0.5f * width * vid_conwidth.value / vid.width;
 		offsety = 0;
 	}
 	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_VERTEXCOLOR), true);
@@ -1430,7 +1421,6 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
 	int ix, iy, iw, ih;
-	_DrawQ_Setup();
 	DrawQ_FlushUI();
 
 	// We have to convert the con coords into real coords
@@ -1466,7 +1456,6 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 void DrawQ_ResetClipArea(void)
 {
 	DrawQ_FlushUI();
-	_DrawQ_Setup();
 	GL_ScissorTest(false);
 }
 

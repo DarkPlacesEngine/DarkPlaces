@@ -103,6 +103,8 @@ cvar_t r_showcollisionbrushes = {0, "r_showcollisionbrushes", "0", "draws collis
 cvar_t r_showcollisionbrushes_polygonfactor = {0, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
 cvar_t r_showcollisionbrushes_polygonoffset = {0, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
 cvar_t r_showdisabledepthtest = {0, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing"};
+cvar_t r_showspriteedges = {0, "r_showspriteedges", "0", "renders a debug outline to show the polygon shape of each sprite frame rendered (may be 2 or more in case of interpolated animations), for debugging rendering bugs with specific view types"};
+cvar_t r_showparticleedges = {0, "r_showparticleedges", "0", "renders a debug outline to show the polygon shape of each particle, for debugging rendering bugs with specific view types"};
 cvar_t r_drawportals = {0, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
 cvar_t r_drawentities = {0, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
 cvar_t r_draw2d = {0, "r_draw2d","1", "draw 2D stuff (dangerous to turn off)"};
@@ -4259,6 +4261,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonoffset);
 	Cvar_RegisterVariable(&r_showdisabledepthtest);
+	Cvar_RegisterVariable(&r_showspriteedges);
+	Cvar_RegisterVariable(&r_showparticleedges);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_draw2d);
@@ -5684,15 +5688,11 @@ void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rt
 
 void R_ResetViewRendering2D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	DrawQ_Finish();
-
 	R_ResetViewRendering2D_Common(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight, 1.0f, 1.0f);
 }
 
 void R_ResetViewRendering3D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	DrawQ_Finish();
-
 	R_SetupView(true, viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
 	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	GL_Color(1, 1, 1, 1);
@@ -6930,6 +6930,9 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	rtexture_t *viewcolortexture = NULL;
 	int viewx = r_refdef.view.x, viewy = r_refdef.view.y, viewwidth = r_refdef.view.width, viewheight = r_refdef.view.height;
 
+	// finish any 2D rendering that was queued
+	DrawQ_Finish();
+
 	dpsoftrast_test = r_test.integer;
 
 	if (r_timereport_active)
@@ -7067,6 +7070,9 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	r_refdef.view.matrix = originalmatrix;
 
 	CHECKGLERROR
+
+	// go back to 2d rendering
+	DrawQ_Start();
 }
 
 void R_RenderWaterPlanes(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
@@ -12320,6 +12326,51 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
+
+void R_DebugLine(vec3_t start, vec3_t end)
+{
+	dp_model_t *mod = CL_Mesh_UI();
+	msurface_t *surf;
+	int e0, e1, e2, e3;
+	float offsetx, offsety, x1, y1, x2, y2, width = 1.0f;
+	float r1 = 1.0f, g1 = 0.0f, b1 = 0.0f, alpha1 = 0.25f;
+	float r2 = 1.0f, g2 = 1.0f, b2 = 0.0f, alpha2 = 0.25f;
+	vec4_t w[2], s[2];
+
+	// transform to screen coords first
+	Vector4Set(w[0], start[0], start[1], start[2], 1);
+	Vector4Set(w[1], end[0], end[1], end[2], 1);
+	R_Viewport_TransformToScreen(&r_refdef.view.viewport, w[0], s[0]);
+	R_Viewport_TransformToScreen(&r_refdef.view.viewport, w[1], s[1]);
+	x1 = s[0][0] * vid_conwidth.value / vid.width;
+	y1 = (vid.height - s[0][1]) * vid_conheight.value / vid.height;
+	x2 = s[1][0] * vid_conwidth.value / vid.width;
+	y2 = (vid.height - s[1][1]) * vid_conheight.value / vid.height;
+	//Con_DPrintf("R_DebugLine: %.0f,%.0f to %.0f,%.0f\n", x1, y1, x2, y2);
+
+	// add the line to the UI mesh for drawing later
+
+	// width is measured in real pixels
+	if (fabs(x2 - x1) > fabs(y2 - y1))
+	{
+		offsetx = 0;
+		offsety = 0.5f * width * vid_conheight.value / vid.height;
+	}
+	else
+	{
+		offsetx = 0.5f * width * vid_conwidth.value / vid.width;
+		offsety = 0;
+	}
+	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_VERTEXCOLOR), true);
+	e0 = Mod_Mesh_IndexForVertex(mod, surf, x1 - offsetx, y1 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r1, g1, b1, alpha1);
+	e1 = Mod_Mesh_IndexForVertex(mod, surf, x2 - offsetx, y2 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r2, g2, b2, alpha2);
+	e2 = Mod_Mesh_IndexForVertex(mod, surf, x2 + offsetx, y2 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r2, g2, b2, alpha2);
+	e3 = Mod_Mesh_IndexForVertex(mod, surf, x1 + offsetx, y1 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r1, g1, b1, alpha1);
+	Mod_Mesh_AddTriangle(mod, surf, e0, e1, e2);
+	Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
+
+}
+
 
 void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass)
 {

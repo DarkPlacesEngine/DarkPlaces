@@ -736,6 +736,8 @@ static void VM_CL_R_ClearScene (prvm_prog_t *prog)
 	r_refdef.scene.numlights = 0;
 	// restore the view settings to the values that VM_CL_UpdateView received from the client code
 	r_refdef.view = csqc_original_r_refdef_view;
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = false;
 	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 	cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
@@ -3278,6 +3280,9 @@ static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 	t = Sys_DirtyTime() - t;if (t < 0 || t >= 1800) t = 0;
 	prog->functions[PRVM_clientfunction(CSQC_UpdateView)].totaltime -= t;
 
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = false;
+
 	// update the views
 	if (ismain)
 	{
@@ -3299,8 +3304,17 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 
 	texname = PRVM_G_STRING(OFS_PARM0);
 	drawflags = (int)PRVM_G_FLOAT(OFS_PARM1);
-	// weird hacky way to figure out if this is a 2D HUD polygon or a scene polygon
-	draw2d = (prog->argc >= 3 ? (int)PRVM_G_FLOAT(OFS_PARM2) : r_refdef.draw2dstage);
+	if (prog->argc >= 3)
+		draw2d = PRVM_G_FLOAT(OFS_PARM2) != 0;
+	else
+	{
+		// weird hacky way to figure out if this is a 2D HUD polygon or a scene
+		// polygon, for compatibility with mods aimed at old darkplaces versions
+		// - polygonbegin_guess2d is 0 if the most recent major call was
+		// clearscene, 1 if the most recent major call was drawpic (and similar)
+		// or renderscene
+		draw2d = prog->polygonbegin_guess2d;
+	}
 
 	// we need to remember whether this is a 2D or 3D mesh we're adding to
 	mod = draw2d ? CL_Mesh_UI() : CL_Mesh_CSQC();
@@ -4756,6 +4770,7 @@ void CLVM_init_cmd(prvm_prog_t *prog)
 {
 	VM_Cmd_Init(prog);
 	prog->polygonbegin_model = NULL;
+	prog->polygonbegin_guess2d = 0;
 }
 
 void CLVM_reset_cmd(prvm_prog_t *prog)
@@ -4763,4 +4778,5 @@ void CLVM_reset_cmd(prvm_prog_t *prog)
 	World_End(&cl.world);
 	VM_Cmd_Reset(prog);
 	prog->polygonbegin_model = NULL;
+	prog->polygonbegin_guess2d = 0;
 }
