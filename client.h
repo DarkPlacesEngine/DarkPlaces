@@ -1815,6 +1815,12 @@ typedef struct r_refdef_view_s
 	vec3_t frustumcorner[4];
 	// if turned off it renders an ortho view
 	int useperspective;
+	// allows visibility culling based on the view origin (e.g. pvs and R_CanSeeBox)
+	// this is turned off by:
+	// r_trippy
+	// !r_refdef.view.useperspective
+	// (sometimes) r_refdef.view.useclipplane
+	int usevieworiginculling;
 	float ortho_x, ortho_y;
 
 	// screen area to render in

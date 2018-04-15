@@ -914,6 +914,48 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 #endif
 }
 
+void R_Viewport_InitOrtho3D(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float nearclip, float farclip, const float *nearplane)
+{
+	matrix4x4_t tempmatrix, basematrix;
+	float m[16];
+	memset(v, 0, sizeof(*v));
+
+	v->type = R_VIEWPORTTYPE_PERSPECTIVE;
+	v->cameramatrix = *cameramatrix;
+	v->x = x;
+	v->y = y;
+	v->z = 0;
+	v->width = width;
+	v->height = height;
+	v->depth = 1;
+	memset(m, 0, sizeof(m));
+	m[0]  = 1.0 / frustumx;
+	m[5]  = 1.0 / frustumy;
+	m[10] = -2 / (farclip - nearclip);
+	m[14] = -(farclip + nearclip) / (farclip - nearclip);
+	m[15] = 1;
+	v->screentodepth[0] = -farclip / (farclip - nearclip);
+	v->screentodepth[1] = farclip * nearclip / (farclip - nearclip);
+
+	Matrix4x4_Invert_Full(&tempmatrix, &v->cameramatrix);
+	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
+	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
+	Matrix4x4_Concat(&v->viewmatrix, &basematrix, &tempmatrix);
+
+	if (nearplane)
+		R_Viewport_ApplyNearClipPlaneFloatGL(v, m, nearplane[0], nearplane[1], nearplane[2], nearplane[3]);
+
+	if(v_flipped.integer)
+	{
+		m[0] = -m[0];
+		m[4] = -m[4];
+		m[8] = -m[8];
+		m[12] = -m[12];
+	}
+
+	Matrix4x4_FromArrayFloatGL(&v->projectmatrix, m);
+}
+
 void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float nearclip, float farclip, const float *nearplane)
 {
 	matrix4x4_t tempmatrix, basematrix;

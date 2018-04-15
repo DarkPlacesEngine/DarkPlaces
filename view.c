@@ -94,22 +94,27 @@ cvar_t v_idlescale = {0, "v_idlescale", "0", "how much of the quake 'drunken vie
 
 cvar_t v_isometric = {0, "v_isometric", "0", "changes view to isometric (non-perspective)"};
 cvar_t v_isometric_verticalfov = { 0, "v_isometric_verticalfov", "512", "vertical field of view in game units (horizontal is computed using aspect ratio based on this)"};
-cvar_t v_isometric_xx = {0, "v_isometric_xx", "0", "camera matrix"};
-cvar_t v_isometric_xy = {0, "v_isometric_xy", "-1", "camera matrix"};
+cvar_t v_isometric_xx = {0, "v_isometric_xx", "1", "camera matrix"};
+cvar_t v_isometric_xy = {0, "v_isometric_xy", "0", "camera matrix"};
 cvar_t v_isometric_xz = {0, "v_isometric_xz", "0", "camera matrix"};
-cvar_t v_isometric_yx = {0, "v_isometric_yx", "-1", "camera matrix"};
-cvar_t v_isometric_yy = {0, "v_isometric_yy", "0", "camera matrix"};
+cvar_t v_isometric_yx = {0, "v_isometric_yx", "0", "camera matrix"};
+cvar_t v_isometric_yy = {0, "v_isometric_yy", "1", "camera matrix"};
 cvar_t v_isometric_yz = {0, "v_isometric_yz", "0", "camera matrix"};
 cvar_t v_isometric_zx = {0, "v_isometric_zx", "0", "camera matrix"};
 cvar_t v_isometric_zy = {0, "v_isometric_zy", "0", "camera matrix"};
 cvar_t v_isometric_zz = {0, "v_isometric_zz", "1", "camera matrix"};
-cvar_t v_isometric_tx = {0, "v_isometric_tx", "1767", "camera position"};
-cvar_t v_isometric_ty = {0, "v_isometric_ty", "1767", "camera position"};
-cvar_t v_isometric_tz = {0, "v_isometric_tz", "1425", "camera position"};
-cvar_t v_isometric_rot_pitch = {0, "v_isometric_rot_pitch", "0", "camera rotation"};
-cvar_t v_isometric_rot_yaw = {0, "v_isometric_rot_yaw", "-45", "camera rotation"};
-cvar_t v_isometric_rot_roll = {0, "v_isometric_rot_roll", "-60", "camera rotation"};
+cvar_t v_isometric_tx = {0, "v_isometric_tx", "0", "camera position (player-relative)"};
+cvar_t v_isometric_ty = {0, "v_isometric_ty", "0", "camera position (player-relative)"};
+cvar_t v_isometric_tz = {0, "v_isometric_tz", "0", "camera position (player-relative)"};
+cvar_t v_isometric_rot_pitch = {0, "v_isometric_rot_pitch", "60", "camera rotation"};
+cvar_t v_isometric_rot_yaw = {0, "v_isometric_rot_yaw", "135", "camera rotation"};
+cvar_t v_isometric_rot_roll = {0, "v_isometric_rot_roll", "0", "camera rotation"};
+cvar_t v_isometric_relx = {0, "v_isometric_relx", "0", "camera position*forward"};
+cvar_t v_isometric_rely = {0, "v_isometric_rely", "0", "camera position*left"};
+cvar_t v_isometric_relz = {0, "v_isometric_relz", "0", "camera position*up"};
+cvar_t v_isometric_flipcullface = {0, "v_isometric_flipcullface", "0", "flips the backface culling"};
 cvar_t v_isometric_locked_orientation = {0, "v_isometric_locked_orientation", "1", "camera rotation is fixed"};
+cvar_t v_isometric_usevieworiginculling = {0, "v_isometric_usevieworiginculling", "0", "check visibility to the player location (can look pretty weird)"};
 
 cvar_t crosshair = {CVAR_SAVE, "crosshair", "0", "selects crosshair to use (0 is none)"};
 
@@ -968,7 +973,18 @@ void V_MakeViewIsometric(void)
 	matrix4x4_t relative;
 	matrix4x4_t modifiedview;
 	matrix4x4_t modify;
+	vec3_t forward, left, up, org;
 	float t[4][4];
+
+	r_refdef.view.useperspective = false;
+	r_refdef.view.usevieworiginculling = !r_trippy.value && v_isometric_usevieworiginculling.integer;
+	r_refdef.view.frustum_y = v_isometric_verticalfov.value * cl.viewzoom;
+	r_refdef.view.frustum_x = r_refdef.view.frustum_y * (float)r_refdef.view.width / (float)r_refdef.view.height / vid_pixelheight.value;
+	r_refdef.view.frustum_x *= r_refdef.frustumscale_x;
+	r_refdef.view.frustum_y *= r_refdef.frustumscale_y;
+	r_refdef.view.ortho_x = r_refdef.view.frustum_x; // used by VM_CL_R_SetView
+	r_refdef.view.ortho_y = r_refdef.view.frustum_y; // used by VM_CL_R_SetView
+
 	t[0][0] = v_isometric_xx.value;
 	t[0][1] = v_isometric_xy.value;
 	t[0][2] = v_isometric_xz.value;
@@ -998,6 +1014,16 @@ void V_MakeViewIsometric(void)
 	Matrix4x4_Concat(&modifiedview, &r_refdef.view.matrix, &modify);
 	Matrix4x4_CreateFromQuakeEntity(&relative, v_isometric_tx.value, v_isometric_ty.value, v_isometric_tz.value, v_isometric_rot_pitch.value, v_isometric_rot_yaw.value, v_isometric_rot_roll.value, 1.0f);
 	Matrix4x4_Concat(&r_refdef.view.matrix, &modifiedview, &relative);
+	Matrix4x4_ToVectors(&r_refdef.view.matrix, forward, left, up, org);
+	VectorMAMAMAM(1.0f, org, v_isometric_relx.value, forward, v_isometric_rely.value, left, v_isometric_relz.value, up, org);
+	Matrix4x4_FromVectors(&r_refdef.view.matrix, forward, left, up, org);
+
+	if (v_isometric_flipcullface.integer)
+	{
+		int a = r_refdef.view.cullface_front;
+		r_refdef.view.cullface_front = r_refdef.view.cullface_back;
+		r_refdef.view.cullface_back = a;
+	}
 }
 
 
@@ -1200,7 +1226,12 @@ void V_Init (void)
 	Cvar_RegisterVariable(&v_isometric_rot_pitch);
 	Cvar_RegisterVariable(&v_isometric_rot_yaw);
 	Cvar_RegisterVariable(&v_isometric_rot_roll);
+	Cvar_RegisterVariable(&v_isometric_relx);
+	Cvar_RegisterVariable(&v_isometric_rely);
+	Cvar_RegisterVariable(&v_isometric_relz);
+	Cvar_RegisterVariable(&v_isometric_flipcullface);
 	Cvar_RegisterVariable(&v_isometric_locked_orientation);
+	Cvar_RegisterVariable(&v_isometric_usevieworiginculling);
 
 	Cvar_RegisterVariable (&v_idlescale);
 	Cvar_RegisterVariable (&crosshair);

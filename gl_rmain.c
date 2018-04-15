@@ -5057,7 +5057,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 		return true;
 
 	// view origin is not used for culling in portal/reflection/refraction renders or isometric views
-	if (r_refdef.view.useclipplane || !r_refdef.view.useperspective || r_trippy.integer)
+	if (!r_refdef.view.usevieworiginculling)
 		return true;
 
 	if (!r_cullentities_trace_entityocclusion.integer && (!model || !model->brush.TraceLineOfSight))
@@ -5478,16 +5478,16 @@ static void R_View_SetFrustum(const int *scissor)
 	}
 	else
 	{
-		VectorScale(forward, -1.0f, r_refdef.view.frustum[0].normal);
-		VectorScale(forward,  1.0f, r_refdef.view.frustum[1].normal);
-		VectorScale(left, -1.0f, r_refdef.view.frustum[2].normal);
-		VectorScale(left,  1.0f, r_refdef.view.frustum[3].normal);
-		VectorScale(up, -1.0f, r_refdef.view.frustum[4].normal);
+		VectorScale(left, -1.0f, r_refdef.view.frustum[0].normal);
+		VectorScale(left,  1.0f, r_refdef.view.frustum[1].normal);
+		VectorScale(up, -1.0f, r_refdef.view.frustum[2].normal);
+		VectorScale(up,  1.0f, r_refdef.view.frustum[3].normal);
+		VectorScale(forward, -1.0f, r_refdef.view.frustum[4].normal);
 		r_refdef.view.frustum[0].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[0].normal) - r_refdef.view.ortho_x;
 		r_refdef.view.frustum[1].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[1].normal) - r_refdef.view.ortho_x;
 		r_refdef.view.frustum[2].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[2].normal) - r_refdef.view.ortho_y;
 		r_refdef.view.frustum[3].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[3].normal) - r_refdef.view.ortho_y;
-		r_refdef.view.frustum[4].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[4].normal) + r_refdef.nearclip;
+		r_refdef.view.frustum[4].dist = DotProduct (r_refdef.view.origin, r_refdef.view.frustum[4].normal) - r_refdef.farclip;
 	}
 	r_refdef.view.numfrustumplanes = 5;
 
@@ -5534,7 +5534,7 @@ static void R_View_UpdateWithScissor(const int *myscissor)
 {
 	R_Main_ResizeViewCache();
 	R_View_SetFrustum(myscissor);
-	R_View_WorldVisibility(r_refdef.view.useclipplane);
+	R_View_WorldVisibility(!r_refdef.view.usevieworiginculling);
 	R_View_UpdateEntityVisible();
 }
 
@@ -5542,7 +5542,7 @@ static void R_View_Update(void)
 {
 	R_Main_ResizeViewCache();
 	R_View_SetFrustum(NULL);
-	R_View_WorldVisibility(r_refdef.view.useclipplane);
+	R_View_WorldVisibility(!r_refdef.view.usevieworiginculling);
 	R_View_UpdateEntityVisible();
 }
 
@@ -5579,7 +5579,7 @@ void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *view
 	rtheight = viewfbo ? R_TextureHeight(viewdepthtexture ? viewdepthtexture : viewcolortexture) : vid.height;
 
 	if (!r_refdef.view.useperspective)
-		R_Viewport_InitOrtho(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, -r_refdef.view.ortho_x, -r_refdef.view.ortho_y, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitOrtho3D(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
 	else if (vid.stencil && r_useinfinitefarclip.integer)
 		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
@@ -6079,6 +6079,8 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			}
 
 			r_refdef.view.clipplane = p->plane;
+			// reflected view origin may be in solid, so don't cull with it
+			r_refdef.view.usevieworiginculling = false;
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
@@ -6207,6 +6209,8 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			
 			// camera needs no clipplane
 			r_refdef.view.useclipplane = false;
+			// TODO: is the camera origin always valid?  if so we don't need to clear this
+			r_refdef.view.usevieworiginculling = false;
 
 			PlaneClassify(&r_refdef.view.clipplane);
 
@@ -6983,6 +6987,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 		return;
 	}
 
+	r_refdef.view.usevieworiginculling = !r_trippy.value && r_refdef.view.useperspective;
 	if (v_isometric.integer && r_refdef.view.ismain)
 		V_MakeViewIsometric();
 
