@@ -487,7 +487,7 @@ void R_View_WorldVisibility(qboolean forcenovis)
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
-		if (!viewleaf || viewleaf->clusterindex < 0 || forcenovis || r_trippy.integer || !r_refdef.view.useperspective)
+		if (!viewleaf || viewleaf->clusterindex < 0 || forcenovis || !r_refdef.view.usevieworiginculling)
 		{
 			// no visibility method: (used when floating around in the void)
 			// simply cull each leaf to the frustum (view pyramid)
