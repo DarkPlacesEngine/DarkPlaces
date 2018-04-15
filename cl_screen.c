@@ -2077,6 +2077,10 @@ static void SCR_DrawScreen (void)
 
 	R_UpdateVariables();
 
+	// this will be set back to 0 by R_RenderView during CL_VM_UpdateView
+	r_refdef.draw2dstage = 1;
+	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
+
 	// Quake uses clockwise winding, so these are swapped
 	r_refdef.view.cullface_front = GL_BACK;
 	r_refdef.view.cullface_back = GL_FRONT;

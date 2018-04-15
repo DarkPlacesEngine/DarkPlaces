@@ -600,7 +600,10 @@ void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rt
 void R_ResetViewRendering2D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
 void R_ResetViewRendering3D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
 void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight);
+void R_DebugLine(vec3_t start, vec3_t end);
 extern const float r_screenvertex3f[12];
+extern cvar_t r_showspriteedges;
+extern cvar_t r_showparticleedges;
 extern cvar_t r_shadows;
 extern cvar_t r_shadows_darken;
 extern cvar_t r_shadows_drawafterrtlighting;

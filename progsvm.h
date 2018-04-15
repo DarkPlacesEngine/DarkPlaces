@@ -601,6 +601,13 @@ typedef struct prvm_prog_s
 	// stateful, so this tracks the last polygonbegin's choice of
 	// CL_Mesh_CSQC or CL_Mesh_UI for this polygon
 	dp_model_t			*polygonbegin_model;
+	// indicates if polygonbegin should be interpreted as 2d
+	// (clearscene sets this to false, renderscene sets this to true, drawpic
+	//  also sets this to true)
+	// note that in FTEQW polygonbegin with 2 args is handled very differently,
+	// where the behavior is always 3D unless DRAWFLAG_2D is passed, but
+	// DRAWFLAG_2D conflicts with our DRAWFLAG_SCREEN.
+	qboolean			polygonbegin_guess2d;
 
 	// copies of some vars that were former read from sv
 	int					num_edicts;

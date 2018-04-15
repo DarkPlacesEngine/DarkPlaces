@@ -486,6 +486,8 @@ qboolean CL_VM_UpdateView (double frametime)
 		// CSQC_UpdateView function does not call R_ClearScene as it should
 		r_refdef.scene.numentities = 0;
 		r_refdef.scene.numlights = 0;
+		// polygonbegin without draw2d arg has to guess
+		prog->polygonbegin_guess2d = false;
 		// pass in width and height as parameters (EXT_CSQC_1)
 		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
 		PRVM_G_FLOAT(OFS_PARM1) = vid.height;

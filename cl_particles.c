@@ -2862,6 +2862,13 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 			t2f[6] = v[1];t2f[7] = tex->t1;
 			break;
 		}
+		if (r_showparticleedges.integer)
+		{
+			R_DebugLine(v3f, v3f + 3);
+			R_DebugLine(v3f + 3, v3f + 6);
+			R_DebugLine(v3f + 6, v3f + 9);
+			R_DebugLine(v3f + 9, v3f);
+		}
 	}
 
 	// now render batches of particles based on blendmode and texture
