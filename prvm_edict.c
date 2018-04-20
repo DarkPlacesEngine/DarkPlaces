@@ -521,7 +521,8 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		line[i] = '\0';
 		break;
 	case ev_entity:
-		dpsnprintf (line, linelength, "%i", val->edict);
+		i = val->edict;
+		dpsnprintf (line, linelength, "%i", i);
 		break;
 	case ev_function:
 		f = prog->functions + val->function;
