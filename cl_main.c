@@ -2385,7 +2385,7 @@ const char *cl_meshentitynames[NUM_MESHENTITIES] =
 	"MESH_UI",
 };
 
-void CL_MeshEntities_Restart(void)
+static void CL_MeshEntities_Restart(void)
 {
 	int i;
 	entity_t *ent;
@@ -2396,7 +2396,7 @@ void CL_MeshEntities_Restart(void)
 	}
 }
 
-void CL_MeshEntities_Init(void)
+static void CL_MeshEntities_Init(void)
 {
 	int i;
 	entity_t *ent;
@@ -2447,7 +2447,7 @@ void CL_MeshEntities_Reset(void)
 	}
 }
 
-void CL_MeshEntities_Shutdown(void)
+static void CL_MeshEntities_Shutdown(void)
 {
 }
 
