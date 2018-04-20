@@ -318,15 +318,9 @@ typedef ptrdiff_t GLsizeiptrARB;
 #endif
 
 // GL_ARB_multitexture
-extern void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
-extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
-extern void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
-extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE
 #define GL_ACTIVE_TEXTURE			0x84E0
-#define GL_CLIENT_ACTIVE_TEXTURE	0x84E1
 #define GL_MAX_TEXTURE_UNITS		0x84E2
 #define GL_TEXTURE0					0x84C0
 #define GL_TEXTURE1					0x84C1
@@ -737,7 +731,6 @@ extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf b
 
 extern void (GLAPIENTRY *qglClear)(GLbitfield mask);
 
-extern void (GLAPIENTRY *qglAlphaFunc)(GLenum func, GLclampf ref);
 extern void (GLAPIENTRY *qglBlendFunc)(GLenum sfactor, GLenum dfactor);
 extern void (GLAPIENTRY *qglCullFace)(GLenum mode);
 
@@ -746,9 +739,6 @@ extern void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
 extern void (GLAPIENTRY *qglEnable)(GLenum cap);
 extern void (GLAPIENTRY *qglDisable)(GLenum cap);
 extern GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
-
-extern void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
-extern void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
 
 extern void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
 extern void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
@@ -770,41 +760,8 @@ extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean
 extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
-extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-extern void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
-extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-extern void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
-extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
-extern void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
-extern void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
-extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
-extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-extern void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
-extern void (GLAPIENTRY *qglBegin)(GLenum mode);
-extern void (GLAPIENTRY *qglEnd)(void);
-
-extern void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
-//extern void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
-//extern void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-//extern void (GLAPIENTRY *qglPushMatrix)(void);
-//extern void (GLAPIENTRY *qglPopMatrix)(void);
-extern void (GLAPIENTRY *qglLoadIdentity)(void);
-//extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
-extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
-//extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
-//extern void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
-//extern void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-//extern void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-//extern void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
-//extern void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
-//extern void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
-//extern void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 extern void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
@@ -813,9 +770,6 @@ extern void (GLAPIENTRY *qglStencilMask)(GLuint mask);
 extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
-extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
-extern void (GLAPIENTRY *qglTexEnvfv)(GLenum target, GLenum pname, const GLfloat *params);
-extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
@@ -851,7 +805,6 @@ extern void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 //extern void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
 
 //[515]: added on 29.07.2005
-extern void (GLAPIENTRY *qglLineWidth)(GLfloat width);
 extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 // GL 2.0 shader objects
@@ -1157,10 +1110,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglGetString glGetString
 //#define qglActiveStencilFaceEXT glActiveStencilFace
 #define qglActiveTexture glActiveTexture
-#define qglAlphaFunc glAlphaFunc
-#define qglArrayElement glArrayElement
 #define qglAttachShader glAttachShader
-//#define qglBegin glBegin
 //#define qglBeginQueryARB glBeginQuery
 #define qglBindAttribLocation glBindAttribLocation
 //#define qglBindFragDataLocation glBindFragDataLocation
@@ -1177,11 +1127,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglClearColor glClearColor
 #define qglClearDepthf glClearDepthf
 #define qglClearStencil glClearStencil
-#define qglClientActiveTexture glClientActiveTexture
-#define qglColor4f glColor4f
-#define qglColor4ub glColor4ub
 #define qglColorMask glColorMask
-#define qglColorPointer glColorPointer
 #define qglCompileShader glCompileShader
 #define qglCompressedTexImage2DARB glCompressedTexImage2D
 #define qglCompressedTexImage3DARB glCompressedTexImage3D
@@ -1203,7 +1149,6 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglDepthRangef glDepthRangef
 #define qglDetachShader glDetachShader
 #define qglDisable glDisable
-#define qglDisableClientState glDisableClientState
 #define qglDisableVertexAttribArray glDisableVertexAttribArray
 #define qglDrawArrays glDrawArrays
 //#define qglDrawBuffer glDrawBuffer
@@ -1211,9 +1156,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglDrawElements glDrawElements
 //#define qglDrawRangeElements glDrawRangeElements
 #define qglEnable glEnable
-#define qglEnableClientState glEnableClientState
 #define qglEnableVertexAttribArray glEnableVertexAttribArray
-//#define qglEnd glEnd
 //#define qglEndQueryARB glEndQuery
 #define qglFinish glFinish
 #define qglFlush glFlush
@@ -1252,16 +1195,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglGetUniformfv glGetUniformfv
 #define qglGetUniformiv glGetUniformiv
 #define qglHint glHint
-#define qglLineWidth glLineWidth
 #define qglLinkProgram glLinkProgram
-#define qglLoadIdentity glLoadIdentity
-#define qglLoadMatrixf glLoadMatrixf
-#define qglMatrixMode glMatrixMode
-#define qglMultiTexCoord1f glMultiTexCoord1f
-#define qglMultiTexCoord2f glMultiTexCoord2f
-#define qglMultiTexCoord3f glMultiTexCoord3f
-#define qglMultiTexCoord4f glMultiTexCoord4f
-#define qglNormalPointer glNormalPointer
 #define qglPixelStorei glPixelStorei
 #define qglPointSize glPointSize
 //#define qglPolygonMode glPolygonMode
@@ -1277,14 +1211,6 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglStencilMask glStencilMask
 #define qglStencilOp glStencilOp
 #define qglStencilOpSeparate glStencilOpSeparate
-#define qglTexCoord1f glTexCoord1f
-#define qglTexCoord2f glTexCoord2f
-#define qglTexCoord3f glTexCoord3f
-#define qglTexCoord4f glTexCoord4f
-#define qglTexCoordPointer glTexCoordPointer
-#define qglTexEnvf glTexEnvf
-#define qglTexEnvfv glTexEnvfv
-#define qglTexEnvi glTexEnvi
 #define qglTexImage2D glTexImage2D
 #define qglTexImage3D glTexImage3D
 #define qglTexParameterf glTexParameterf
@@ -1313,11 +1239,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglUniformMatrix4fv glUniformMatrix4fv
 #define qglUseProgram glUseProgram
 #define qglValidateProgram glValidateProgram
-#define qglVertex2f glVertex2f
-#define qglVertex3f glVertex3f
-#define qglVertex4f glVertex4f
 #define qglVertexAttribPointer glVertexAttribPointer
-#define qglVertexPointer glVertexPointer
 #define qglViewport glViewport
 #define qglVertexAttrib1f glVertexAttrib1f
 //#define qglVertexAttrib1s glVertexAttrib1s

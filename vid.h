@@ -30,14 +30,7 @@ extern int cl_available;
 
 typedef enum renderpath_e
 {
-	RENDERPATH_GL11,
-	RENDERPATH_GL13,
 	RENDERPATH_GL20,
-	RENDERPATH_D3D9,
-	RENDERPATH_D3D10,
-	RENDERPATH_D3D11,
-	RENDERPATH_SOFT,
-	RENDERPATH_GLES1,
 	RENDERPATH_GLES2
 }
 renderpath_t;
@@ -133,13 +126,6 @@ typedef struct viddef_s
 
 	viddef_support_t support;
 
-	// in RENDERPATH_SOFT this is a 32bpp native-endian ARGB framebuffer
-	// (native-endian ARGB meaning that in little endian it is BGRA bytes,
-	//  in big endian it is ARGB byte order, the format is converted during
-	//  blit to the window)
-	unsigned int *softpixels;
-	unsigned int *softdepthpixels;
-
 	int forcetextype; // always use GL_BGRA for D3D, always use GL_RGBA for GLES, etc
 } viddef_t;
 
@@ -178,10 +164,6 @@ void VID_EnableJoystick(qboolean enable);
 extern qboolean vid_hidden;
 extern qboolean vid_activewindow;
 extern qboolean vid_supportrefreshrate;
-
-extern cvar_t vid_soft;
-extern cvar_t vid_soft_threads;
-extern cvar_t vid_soft_interlace;
 
 extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;

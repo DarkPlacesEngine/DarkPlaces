@@ -6723,23 +6723,9 @@ static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambie
 	q3dlightgrid_t *a, *s;
 
 	// scale lighting by lightstyle[0] so that darkmode in dpmod works properly
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES2:
-		// LordHavoc: FIXME: is this true?
-		stylescale = 1; // added while render
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-		stylescale = r_refdef.scene.rtlightstylevalue[0];
-		break;
-	}
+	// LadyHavoc: FIXME: is this true?
+	stylescale = 1; // added while render
+	//stylescale = r_refdef.scene.rtlightstylevalue[0];
 
 	if (!model->brushq3.num_lightgrid)
 	{

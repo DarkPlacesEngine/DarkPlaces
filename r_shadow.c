@@ -139,12 +139,6 @@ demonstrated by the game Doom3.
 #include "cl_collision.h"
 #include "portals.h"
 #include "image.h"
-#include "dpsoftrast.h"
-
-#ifdef SUPPORTD3D
-#include <d3d9.h>
-extern LPDIRECT3DDEVICE9 vid_d3d9dev;
-#endif
 
 static void R_Shadow_EditLights_Init(void);
 
@@ -157,10 +151,6 @@ typedef enum r_shadow_rendermode_e
 	R_SHADOW_RENDERMODE_ZFAIL_STENCIL,
 	R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL,
 	R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE,
-	R_SHADOW_RENDERMODE_LIGHT_VERTEX,
-	R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN,
-	R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN,
-	R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN,
 	R_SHADOW_RENDERMODE_LIGHT_GLSL,
 	R_SHADOW_RENDERMODE_VISIBLEVOLUMES,
 	R_SHADOW_RENDERMODE_VISIBLELIGHTING,
@@ -510,17 +500,6 @@ static void R_Shadow_SetShadowMode(void)
 				r_shadow_shadowmapsampler = false;
 			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			break;
-		case RENDERPATH_D3D9:
-		case RENDERPATH_D3D10:
-		case RENDERPATH_D3D11:
-		case RENDERPATH_SOFT:
-			r_shadow_shadowmapsampler = false;
-			r_shadow_shadowmappcf = 1;
-			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-			break;
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 			break;
 		}
@@ -637,15 +616,6 @@ static void r_shadow_start(void)
 	case RENDERPATH_GLES2:
 		// for performance reasons, do not use directional shading on GLES devices
 		r_shadow_bouncegrid_state.capable = vid.support.ext_texture_3d;
-		break;
-		// these renderpaths do not currently have the code to display the bouncegrid, so disable it on them...
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
 		break;
 	}
 }
@@ -2075,29 +2045,7 @@ void R_Shadow_RenderMode_Begin(void)
 		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
 	}
 
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES2:
-		r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
-		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
-		if (r_textureunits.integer >= 2 && vid.texunits >= 2 && r_shadow_texture3d.integer && r_shadow_attenuation3dtexture)
-			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN;
-		else if (r_textureunits.integer >= 3 && vid.texunits >= 3)
-			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN;
-		else if (r_textureunits.integer >= 2 && vid.texunits >= 2)
-			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN;
-		else
-			r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_VERTEX;
-		break;
-	}
+	r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 
 	CHECKGLERROR
 #if 0
@@ -2249,20 +2197,9 @@ void R_Shadow_ClearShadowMapTexture(void)
 		GL_ColorMask(0, 0, 0, 0);
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		// we invert the cull mode because we flip the projection matrix
-		// NOTE: this actually does nothing because the DrawShadowMap code sets it to doublesided...
-		GL_CullFace(r_refdef.view.cullface_front);
 		break;
 	}
 	Vector4Set(clearcolor, 1, 1, 1, 1);
@@ -2335,20 +2272,9 @@ static void R_Shadow_RenderMode_ShadowMap(int side, int size, int x, int y)
 		GL_ColorMask(0,0,0,0);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-		// we invert the cull mode because we flip the projection matrix
-		// NOTE: this actually does nothing because the DrawShadowMap code sets it to doublesided...
-		GL_CullFace(r_refdef.view.cullface_front);
 		break;
 	}
 
@@ -3708,176 +3634,6 @@ qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	return false;
 }
 
-static void R_Shadow_RenderLighting_Light_Vertex_Shading(int firstvertex, int numverts, const float *diffusecolor, const float *ambientcolor)
-{
-	int i;
-	const float *vertex3f;
-	const float *normal3f;
-	float *color4f;
-	float dist, dot, distintensity, shadeintensity, v[3], n[3];
-	switch (r_shadow_rendermode)
-	{
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN:
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN:
-		if (VectorLength2(diffusecolor) > 0)
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, normal3f = rsurface.batchnormal3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, normal3f += 3, color4f += 4)
-			{
-				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-				Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
-				if ((dot = DotProduct(n, v)) < 0)
-				{
-					shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-					VectorMA(ambientcolor, shadeintensity, diffusecolor, color4f);
-				}
-				else
-					VectorCopy(ambientcolor, color4f);
-				if (r_refdef.fogenabled)
-				{
-					float f;
-					f = RSurf_FogVertex(vertex3f);
-					VectorScale(color4f, f, color4f);
-				}
-				color4f[3] = 1;
-			}
-		}
-		else
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, color4f += 4)
-			{
-				VectorCopy(ambientcolor, color4f);
-				if (r_refdef.fogenabled)
-				{
-					float f;
-					Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-					f = RSurf_FogVertex(vertex3f);
-					VectorScale(color4f + 4*i, f, color4f);
-				}
-				color4f[3] = 1;
-			}
-		}
-		break;
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN:
-		if (VectorLength2(diffusecolor) > 0)
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, normal3f = rsurface.batchnormal3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, normal3f += 3, color4f += 4)
-			{
-				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-				if ((dist = fabs(v[2])) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
-				{
-					Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
-					if ((dot = DotProduct(n, v)) < 0)
-					{
-						shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-						color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity;
-						color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity;
-						color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity;
-					}
-					else
-					{
-						color4f[0] = ambientcolor[0] * distintensity;
-						color4f[1] = ambientcolor[1] * distintensity;
-						color4f[2] = ambientcolor[2] * distintensity;
-					}
-					if (r_refdef.fogenabled)
-					{
-						float f;
-						f = RSurf_FogVertex(vertex3f);
-						VectorScale(color4f, f, color4f);
-					}
-				}
-				else
-					VectorClear(color4f);
-				color4f[3] = 1;
-			}
-		}
-		else
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, color4f += 4)
-			{
-				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-				if ((dist = fabs(v[2])) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
-				{
-					color4f[0] = ambientcolor[0] * distintensity;
-					color4f[1] = ambientcolor[1] * distintensity;
-					color4f[2] = ambientcolor[2] * distintensity;
-					if (r_refdef.fogenabled)
-					{
-						float f;
-						f = RSurf_FogVertex(vertex3f);
-						VectorScale(color4f, f, color4f);
-					}
-				}
-				else
-					VectorClear(color4f);
-				color4f[3] = 1;
-			}
-		}
-		break;
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-		if (VectorLength2(diffusecolor) > 0)
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, normal3f = rsurface.batchnormal3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, normal3f += 3, color4f += 4)
-			{
-				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-				if ((dist = VectorLength(v)) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
-				{
-					distintensity = (1 - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist);
-					Matrix4x4_Transform3x3(&rsurface.entitytolight, normal3f, n);
-					if ((dot = DotProduct(n, v)) < 0)
-					{
-						shadeintensity = -dot / sqrt(VectorLength2(v) * VectorLength2(n));
-						color4f[0] = (ambientcolor[0] + shadeintensity * diffusecolor[0]) * distintensity;
-						color4f[1] = (ambientcolor[1] + shadeintensity * diffusecolor[1]) * distintensity;
-						color4f[2] = (ambientcolor[2] + shadeintensity * diffusecolor[2]) * distintensity;
-					}
-					else
-					{
-						color4f[0] = ambientcolor[0] * distintensity;
-						color4f[1] = ambientcolor[1] * distintensity;
-						color4f[2] = ambientcolor[2] * distintensity;
-					}
-					if (r_refdef.fogenabled)
-					{
-						float f;
-						f = RSurf_FogVertex(vertex3f);
-						VectorScale(color4f, f, color4f);
-					}
-				}
-				else
-					VectorClear(color4f);
-				color4f[3] = 1;
-			}
-		}
-		else
-		{
-			for (i = 0, vertex3f = rsurface.batchvertex3f + 3*firstvertex, color4f = rsurface.passcolor4f + 4 * firstvertex;i < numverts;i++, vertex3f += 3, color4f += 4)
-			{
-				Matrix4x4_Transform(&rsurface.entitytolight, vertex3f, v);
-				if ((dist = VectorLength(v)) < 1 && (distintensity = r_shadow_attentable[(int)(dist * ATTENTABLESIZE)]))
-				{
-					distintensity = (1 - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist);
-					color4f[0] = ambientcolor[0] * distintensity;
-					color4f[1] = ambientcolor[1] * distintensity;
-					color4f[2] = ambientcolor[2] * distintensity;
-					if (r_refdef.fogenabled)
-					{
-						float f;
-						f = RSurf_FogVertex(vertex3f);
-						VectorScale(color4f, f, color4f);
-					}
-				}
-				else
-					VectorClear(color4f);
-				color4f[3] = 1;
-			}
-		}
-		break;
-	default:
-		break;
-	}
-}
-
 static void R_Shadow_RenderLighting_VisibleLighting(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	// used to display how many times a surface is lit for level design purposes
@@ -3891,161 +3647,6 @@ static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msu
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
 	R_SetupShader_Surface(ambientcolor, diffusecolor, specularcolor, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
 	RSurf_DrawBatch();
-}
-
-static void R_Shadow_RenderLighting_Light_Vertex_Pass(int firstvertex, int numvertices, int numtriangles, const int *element3i, vec3_t diffusecolor2, vec3_t ambientcolor2)
-{
-	int renders;
-	int i;
-	int stop;
-	int newfirstvertex;
-	int newlastvertex;
-	int newnumtriangles;
-	int *newe;
-	const int *e;
-	float *c;
-	int maxtriangles = 1024;
-	int newelements[1024*3];
-	R_Shadow_RenderLighting_Light_Vertex_Shading(firstvertex, numvertices, diffusecolor2, ambientcolor2);
-	for (renders = 0;renders < 4;renders++)
-	{
-		stop = true;
-		newfirstvertex = 0;
-		newlastvertex = 0;
-		newnumtriangles = 0;
-		newe = newelements;
-		// due to low fillrate on the cards this vertex lighting path is
-		// designed for, we manually cull all triangles that do not
-		// contain a lit vertex
-		// this builds batches of triangles from multiple surfaces and
-		// renders them at once
-		for (i = 0, e = element3i;i < numtriangles;i++, e += 3)
-		{
-			if (VectorLength2(rsurface.passcolor4f + e[0] * 4) + VectorLength2(rsurface.passcolor4f + e[1] * 4) + VectorLength2(rsurface.passcolor4f + e[2] * 4) >= 0.01)
-			{
-				if (newnumtriangles)
-				{
-					newfirstvertex = min(newfirstvertex, e[0]);
-					newlastvertex  = max(newlastvertex, e[0]);
-				}
-				else
-				{
-					newfirstvertex = e[0];
-					newlastvertex = e[0];
-				}
-				newfirstvertex = min(newfirstvertex, e[1]);
-				newlastvertex  = max(newlastvertex, e[1]);
-				newfirstvertex = min(newfirstvertex, e[2]);
-				newlastvertex  = max(newlastvertex, e[2]);
-				newe[0] = e[0];
-				newe[1] = e[1];
-				newe[2] = e[2];
-				newnumtriangles++;
-				newe += 3;
-				if (newnumtriangles >= maxtriangles)
-				{
-					R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, 0, newnumtriangles, newelements, NULL, 0, NULL, NULL, 0);
-					newnumtriangles = 0;
-					newe = newelements;
-					stop = false;
-				}
-			}
-		}
-		if (newnumtriangles >= 1)
-		{
-			R_Mesh_Draw(newfirstvertex, newlastvertex - newfirstvertex + 1, 0, newnumtriangles, newelements, NULL, 0, NULL, NULL, 0);
-			stop = false;
-		}
-		// if we couldn't find any lit triangles, exit early
-		if (stop)
-			break;
-		// now reduce the intensity for the next overbright pass
-		// we have to clamp to 0 here incase the drivers have improper
-		// handling of negative colors
-		// (some old drivers even have improper handling of >1 color)
-		stop = true;
-		for (i = 0, c = rsurface.passcolor4f + 4 * firstvertex;i < numvertices;i++, c += 4)
-		{
-			if (c[0] > 1 || c[1] > 1 || c[2] > 1)
-			{
-				c[0] = max(0, c[0] - 1);
-				c[1] = max(0, c[1] - 1);
-				c[2] = max(0, c[2] - 1);
-				stop = false;
-			}
-			else
-				VectorClear(c);
-		}
-		// another check...
-		if (stop)
-			break;
-	}
-}
-
-static void R_Shadow_RenderLighting_Light_Vertex(int texturenumsurfaces, const msurface_t **texturesurfacelist, const float ambientcolor[3], const float diffusecolor[3])
-{
-	// OpenGL 1.1 path (anything)
-	float ambientcolorbase[3], diffusecolorbase[3];
-	float ambientcolorpants[3], diffusecolorpants[3];
-	float ambientcolorshirt[3], diffusecolorshirt[3];
-	const float *surfacepants = rsurface.texture->render_colormap_pants;
-	const float *surfaceshirt = rsurface.texture->render_colormap_shirt;
-	rtexture_t *basetexture = rsurface.texture->basetexture;
-	rtexture_t *pantstexture = rsurface.texture->pantstexture;
-	rtexture_t *shirttexture = rsurface.texture->shirttexture;
-	qboolean dopants = pantstexture && VectorLength2(surfacepants) >= (1.0f / 1048576.0f);
-	qboolean doshirt = shirttexture && VectorLength2(surfaceshirt) >= (1.0f / 1048576.0f);
-	VectorCopy(ambientcolor, ambientcolorbase);
-	VectorCopy(diffusecolor, diffusecolorbase);
-	ambientcolorpants[0] = ambientcolorbase[0] * surfacepants[0];ambientcolorpants[1] = ambientcolorbase[1] * surfacepants[1];ambientcolorpants[2] = ambientcolorbase[2] * surfacepants[2];
-	diffusecolorpants[0] = diffusecolorbase[0] * surfacepants[0];diffusecolorpants[1] = diffusecolorbase[1] * surfacepants[1];diffusecolorpants[2] = diffusecolorbase[2] * surfacepants[2];
-	ambientcolorshirt[0] = ambientcolorbase[0] * surfaceshirt[0];ambientcolorshirt[1] = ambientcolorbase[1] * surfaceshirt[1];ambientcolorshirt[2] = ambientcolorbase[2] * surfaceshirt[2];
-	diffusecolorshirt[0] = diffusecolorbase[0] * surfaceshirt[0];diffusecolorshirt[1] = diffusecolorbase[1] * surfaceshirt[1];diffusecolorshirt[2] = diffusecolorbase[2] * surfaceshirt[2];
-	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | (VectorLength2(diffusecolor) > 0 ? BATCHNEED_ARRAY_NORMAL : 0) | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
-	rsurface.passcolor4f = (float *)R_FrameData_Alloc((rsurface.batchfirstvertex + rsurface.batchnumvertices) * sizeof(float[4]));
-	R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
-	R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), rsurface.passcolor4f, 0, 0);
-	R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), rsurface.batchtexcoordtexture2f, rsurface.batchtexcoordtexture2f_vertexbuffer, rsurface.batchtexcoordtexture2f_bufferoffset);
-	R_Mesh_TexBind(0, basetexture);
-	R_Mesh_TexMatrix(0, &rsurface.texture->currenttexmatrix);
-	R_Mesh_TexCombine(0, GL_MODULATE, GL_MODULATE, 1, 1);
-	switch(r_shadow_rendermode)
-	{
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN:
-		R_Mesh_TexBind(1, r_shadow_attenuation3dtexture);
-		R_Mesh_TexMatrix(1, &rsurface.entitytoattenuationxyz);
-		R_Mesh_TexCombine(1, GL_MODULATE, GL_MODULATE, 1, 1);
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
-		break;
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN:
-		R_Mesh_TexBind(2, r_shadow_attenuation2dtexture);
-		R_Mesh_TexMatrix(2, &rsurface.entitytoattenuationz);
-		R_Mesh_TexCombine(2, GL_MODULATE, GL_MODULATE, 1, 1);
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
-		// fall through
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN:
-		R_Mesh_TexBind(1, r_shadow_attenuation2dtexture);
-		R_Mesh_TexMatrix(1, &rsurface.entitytoattenuationxyz);
-		R_Mesh_TexCombine(1, GL_MODULATE, GL_MODULATE, 1, 1);
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
-		break;
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-		break;
-	default:
-		break;
-	}
-	//R_Mesh_TexBind(0, basetexture);
-	R_Shadow_RenderLighting_Light_Vertex_Pass(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.batchelement3i + 3*rsurface.batchfirsttriangle, diffusecolorbase, ambientcolorbase);
-	if (dopants)
-	{
-		R_Mesh_TexBind(0, pantstexture);
-		R_Shadow_RenderLighting_Light_Vertex_Pass(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.batchelement3i + 3*rsurface.batchfirsttriangle, diffusecolorpants, ambientcolorpants);
-	}
-	if (doshirt)
-	{
-		R_Mesh_TexBind(0, shirttexture);
-		R_Shadow_RenderLighting_Light_Vertex_Pass(rsurface.batchfirstvertex, rsurface.batchnumvertices, rsurface.batchnumtriangles, rsurface.batchelement3i + 3*rsurface.batchfirsttriangle, diffusecolorshirt, ambientcolorshirt);
-	}
 }
 
 extern cvar_t gl_lightmaps;
@@ -4084,12 +3685,6 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		break;
 	case R_SHADOW_RENDERMODE_LIGHT_GLSL:
 		R_Shadow_RenderLighting_Light_GLSL(texturenumsurfaces, texturesurfacelist, ambientcolor, diffusecolor, specularcolor);
-		break;
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX3DATTEN:
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2D1DATTEN:
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX2DATTEN:
-	case R_SHADOW_RENDERMODE_LIGHT_VERTEX:
-		R_Shadow_RenderLighting_Light_Vertex(texturenumsurfaces, texturesurfacelist, ambientcolor, diffusecolor);
 		break;
 	default:
 		Con_Printf("R_Shadow_RenderLighting: unknown r_shadow_rendermode %i\n", r_shadow_rendermode);
@@ -5366,10 +4961,6 @@ void R_Shadow_PrepareLights(void)
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-	case RENDERPATH_SOFT:
 #ifndef USE_GLES2
 		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
 		{
@@ -5413,9 +5004,6 @@ void R_Shadow_PrepareLights(void)
 		}
 #endif
 		break;
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		r_shadow_usingdeferredprepass = false;
 		break;
@@ -5760,32 +5348,6 @@ static void R_Shadow_DrawModelShadowMaps(void)
 	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, -0.5f * bias);
 	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
-
-	switch (vid.renderpath)
-	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
-	case RENDERPATH_GL20:
-	case RENDERPATH_SOFT:
-	case RENDERPATH_GLES1:
-	case RENDERPATH_GLES2:
-		break;
-	case RENDERPATH_D3D9:
-	case RENDERPATH_D3D10:
-	case RENDERPATH_D3D11:
-#ifdef MATRIX4x4_OPENGLORIENTATION
-		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][1]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][2]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[0][3]	*= -1.0f;
-#else
-		r_shadow_shadowmapmatrix.m[0][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[1][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[2][0]	*= -1.0f;
-		r_shadow_shadowmapmatrix.m[3][0]	*= -1.0f;
-#endif
-		break;
-	}
 }
 
 void R_Shadow_DrawModelShadows(void)
@@ -5901,10 +5463,7 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
-		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 			CHECKGLERROR
@@ -5923,18 +5482,6 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
 			CHECKGLERROR
 #endif
-			break;
-		case RENDERPATH_D3D9:
-			Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			break;
-		case RENDERPATH_SOFT:
-			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 			break;
 		}
 	}
@@ -5955,7 +5502,6 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		switch(vid.renderpath)
 		{
 		case RENDERPATH_GL20:
-		case RENDERPATH_GLES1:
 		case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 			// See if we can use the GPU-side method to prevent implicit sync
@@ -5976,13 +5522,6 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 				CHECKGLERROR
 				break;
 			}
-			// fallthrough
-#else
-			return;
-#endif
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
-#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 			CHECKGLERROR
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
 			qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
@@ -5995,20 +5534,6 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 #else
 			return;
 #endif
-		case RENDERPATH_D3D9:
-			Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			return;
-		case RENDERPATH_D3D10:
-			Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			return;
-		case RENDERPATH_D3D11:
-			Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			return;
-		case RENDERPATH_SOFT:
-			//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-			return;
-		default:
-			return;
 		}
 	}
 	else
@@ -6057,10 +5582,7 @@ void R_Shadow_DrawCoronas(void)
 	r_numqueries = 0;
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
 		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
@@ -6088,20 +5610,6 @@ void R_Shadow_DrawCoronas(void)
 			R_SetupShader_Generic_NoTexture(false, false);
 		}
 #endif
-		break;
-	case RENDERPATH_D3D9:
-		usequery = false;
-		//Con_DPrintf("FIXME D3D9 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_SOFT:
-		usequery = false;
-		//Con_DPrintf("FIXME SOFT %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 	for (lightindex = 0;lightindex < range;lightindex++)

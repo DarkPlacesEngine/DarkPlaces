@@ -221,7 +221,6 @@
     <ClCompile Include="csprogs.c" />
     <ClCompile Include="curves.c" />
     <ClCompile Include="cvar.c" />
-    <ClCompile Include="dpsoftrast.c" />
     <ClCompile Include="dpvsimpledecode.c" />
     <ClCompile Include="filematch.c" />
     <ClCompile Include="fractalnoise.c" />
@@ -313,7 +312,6 @@
     <ClInclude Include="csprogs.h" />
     <ClInclude Include="curves.h" />
     <ClInclude Include="cvar.h" />
-    <ClInclude Include="dpsoftrast.h" />
     <ClInclude Include="dpvsimpledecode.h" />
     <ClInclude Include="draw.h" />
     <ClInclude Include="fs.h" />
@@ -374,7 +372,6 @@
     <ClInclude Include="SDLMain.h" />
     <ClInclude Include="server.h" />
     <ClInclude Include="shader_glsl.h" />
-    <ClInclude Include="shader_hlsl.h" />
     <ClInclude Include="snd_main.h" />
     <ClInclude Include="snd_ogg.h" />
     <ClInclude Include="snd_wav.h" />
