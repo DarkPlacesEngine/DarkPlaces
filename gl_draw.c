@@ -1431,22 +1431,9 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	ih = (int)(0.5 + height * ((float)r_refdef.view.height / vid_conheight.integer));
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL11:
-	case RENDERPATH_GL13:
 	case RENDERPATH_GL20:
-	case RENDERPATH_GLES1:
 	case RENDERPATH_GLES2:
-	case RENDERPATH_SOFT:
 		GL_Scissor(ix, vid.height - iy - ih, iw, ih);
-		break;
-	case RENDERPATH_D3D9:
-		GL_Scissor(ix, iy, iw, ih);
-		break;
-	case RENDERPATH_D3D10:
-		Con_DPrintf("FIXME D3D10 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
-		break;
-	case RENDERPATH_D3D11:
-		Con_DPrintf("FIXME D3D11 %s:%i %s\n", __FILE__, __LINE__, __FUNCTION__);
 		break;
 	}
 

@@ -5,15 +5,6 @@
 #endif
 #include "image.h"
 
-#ifdef SUPPORTD3D
-#include <d3d9.h>
-#ifdef _MSC_VER
-#pragma comment(lib, "d3d9.lib")
-#endif
-
-LPDIRECT3DDEVICE9 vid_d3d9dev;
-#endif
-
 #ifdef WIN32
 //#include <XInput.h>
 #define XINPUT_GAMEPAD_DPAD_UP          0x0001
@@ -135,11 +126,6 @@ cvar_t joy_x360_sensitivitypitch = {0, "joy_x360_sensitivitypitch", "-1", "movem
 cvar_t joy_x360_sensitivityyaw = {0, "joy_x360_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_x360_sensitivityroll = {0, "joy_x360_sensitivityroll", "1", "movement multiplier"};
 
-// cvars for DPSOFTRAST
-cvar_t vid_soft = {CVAR_SAVE, "vid_soft", "0", "enables use of the DarkPlaces Software Rasterizer rather than OpenGL or Direct3D"};
-cvar_t vid_soft_threads = {CVAR_SAVE, "vid_soft_threads", "8", "the number of threads the DarkPlaces Software Rasterizer should use"}; 
-cvar_t vid_soft_interlace = {CVAR_SAVE, "vid_soft_interlace", "1", "whether the DarkPlaces Software Rasterizer should interlace the screen bands occupied by each thread"};
-
 // VorteX: more info cvars, mostly set in VID_CheckExtensions
 cvar_t gl_info_vendor = {CVAR_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
 cvar_t gl_info_renderer = {CVAR_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
@@ -168,8 +154,6 @@ cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in wi
 cvar_t vid_grabkeyboard = {CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
 cvar_t vid_minwidth = {0, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {0, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
-cvar_t vid_gl13 = {0, "vid_gl13", "1", "enables faster rendering using OpenGL 1.3 features (such as GL_ARB_texture_env_combine extension)"};
-cvar_t vid_gl20 = {0, "vid_gl20", "1", "enables faster rendering using OpenGL 2.0 features (such as GL_ARB_fragment_shader extension)"};
 cvar_t gl_finish = {0, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
 cvar_t vid_sRGB = {CVAR_SAVE, "vid_sRGB", "0", "if hardware is capable, modify rendering to be gamma corrected for the sRGB color standard (computer monitors, TVs), recommended"};
 cvar_t vid_sRGB_fallback = {CVAR_SAVE, "vid_sRGB_fallback", "0", "do an approximate sRGB fallback if not properly supported by hardware (2: also use the fallback if framebuffer is 8bit, 3: always use the fallback even if sRGB is supported)"};
@@ -216,12 +200,7 @@ char gl_driver[256];
 
 #ifndef USE_GLES2
 // GL_ARB_multitexture
-void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
-void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
-void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
-void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
-void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 
 // general GL functions
 
@@ -229,7 +208,6 @@ void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GL
 
 void (GLAPIENTRY *qglClear)(GLbitfield mask);
 
-void (GLAPIENTRY *qglAlphaFunc)(GLenum func, GLclampf ref);
 void (GLAPIENTRY *qglBlendFunc)(GLenum sfactor, GLenum dfactor);
 void (GLAPIENTRY *qglCullFace)(GLenum mode);
 
@@ -238,9 +216,6 @@ void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
 void (GLAPIENTRY *qglEnable)(GLenum cap);
 void (GLAPIENTRY *qglDisable)(GLenum cap);
 GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
-
-void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
-void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
 
 void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
 void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
@@ -262,41 +237,8 @@ void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
-void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
-void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
-void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
-void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
-void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
-void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
-void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-void (GLAPIENTRY *qglVertex4f)(GLfloat x, GLfloat y, GLfloat z, GLfloat w);
-void (GLAPIENTRY *qglBegin)(GLenum mode);
-void (GLAPIENTRY *qglEnd)(void);
-
-void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
-//void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
-//void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
 void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-//void (GLAPIENTRY *qglPushMatrix)(void);
-//void (GLAPIENTRY *qglPopMatrix)(void);
-void (GLAPIENTRY *qglLoadIdentity)(void);
-//void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
-void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
-//void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
-//void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
-//void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
-//void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
-//void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
-//void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
@@ -305,9 +247,6 @@ void (GLAPIENTRY *qglStencilMask)(GLuint mask);
 void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 void (GLAPIENTRY *qglClearStencil)(GLint s);
 
-void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
-void (GLAPIENTRY *qglTexEnvfv)(GLenum target, GLenum pname, const GLfloat *params);
-void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
@@ -355,7 +294,6 @@ void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 //void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
 
 //[515]: added on 29.07.2005
-void (GLAPIENTRY *qglLineWidth)(GLfloat width);
 void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 void (GLAPIENTRY *qglBlendEquationEXT)(GLenum);
@@ -605,7 +543,6 @@ static dllfunction_t opengl110funcs[] =
 {
 	{"glClearColor", (void **) &qglClearColor},
 	{"glClear", (void **) &qglClear},
-	{"glAlphaFunc", (void **) &qglAlphaFunc},
 	{"glBlendFunc", (void **) &qglBlendFunc},
 	{"glCullFace", (void **) &qglCullFace},
 	{"glDrawBuffer", (void **) &qglDrawBuffer},
@@ -613,8 +550,6 @@ static dllfunction_t opengl110funcs[] =
 	{"glEnable", (void **) &qglEnable},
 	{"glDisable", (void **) &qglDisable},
 	{"glIsEnabled", (void **) &qglIsEnabled},
-	{"glEnableClientState", (void **) &qglEnableClientState},
-	{"glDisableClientState", (void **) &qglDisableClientState},
 	{"glGetBooleanv", (void **) &qglGetBooleanv},
 	{"glGetDoublev", (void **) &qglGetDoublev},
 	{"glGetFloatv", (void **) &qglGetFloatv},
@@ -630,51 +565,14 @@ static dllfunction_t opengl110funcs[] =
 	{"glDrawElements", (void **) &qglDrawElements},
 	{"glDrawArrays", (void **) &qglDrawArrays},
 	{"glColorMask", (void **) &qglColorMask},
-	{"glVertexPointer", (void **) &qglVertexPointer},
-	{"glNormalPointer", (void **) &qglNormalPointer},
-	{"glColorPointer", (void **) &qglColorPointer},
-	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
-	{"glArrayElement", (void **) &qglArrayElement},
-	{"glColor4ub", (void **) &qglColor4ub},
-	{"glColor4f", (void **) &qglColor4f},
-	{"glTexCoord1f", (void **) &qglTexCoord1f},
-	{"glTexCoord2f", (void **) &qglTexCoord2f},
-	{"glTexCoord3f", (void **) &qglTexCoord3f},
-	{"glTexCoord4f", (void **) &qglTexCoord4f},
-	{"glVertex2f", (void **) &qglVertex2f},
-	{"glVertex3f", (void **) &qglVertex3f},
-	{"glVertex4f", (void **) &qglVertex4f},
-	{"glBegin", (void **) &qglBegin},
-	{"glEnd", (void **) &qglEnd},
 //[515]: added on 29.07.2005
-	{"glLineWidth", (void**) &qglLineWidth},
 	{"glPointSize", (void**) &qglPointSize},
-//
-	{"glMatrixMode", (void **) &qglMatrixMode},
-//	{"glOrtho", (void **) &qglOrtho},
-//	{"glFrustum", (void **) &qglFrustum},
 	{"glViewport", (void **) &qglViewport},
-//	{"glPushMatrix", (void **) &qglPushMatrix},
-//	{"glPopMatrix", (void **) &qglPopMatrix},
-	{"glLoadIdentity", (void **) &qglLoadIdentity},
-//	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
-	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
-//	{"glMultMatrixd", (void **) &qglMultMatrixd},
-//	{"glMultMatrixf", (void **) &qglMultMatrixf},
-//	{"glRotated", (void **) &qglRotated},
-//	{"glRotatef", (void **) &qglRotatef},
-//	{"glScaled", (void **) &qglScaled},
-//	{"glScalef", (void **) &qglScalef},
-//	{"glTranslated", (void **) &qglTranslated},
-//	{"glTranslatef", (void **) &qglTranslatef},
 	{"glReadPixels", (void **) &qglReadPixels},
 	{"glStencilFunc", (void **) &qglStencilFunc},
 	{"glStencilMask", (void **) &qglStencilMask},
 	{"glStencilOp", (void **) &qglStencilOp},
 	{"glClearStencil", (void **) &qglClearStencil},
-	{"glTexEnvf", (void **) &qglTexEnvf},
-	{"glTexEnvfv", (void **) &qglTexEnvfv},
-	{"glTexEnvi", (void **) &qglTexEnvi},
 	{"glTexParameterf", (void **) &qglTexParameterf},
 	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
@@ -723,12 +621,7 @@ static dllfunction_t drawrangeelementsextfuncs[] =
 
 static dllfunction_t multitexturefuncs[] =
 {
-	{"glMultiTexCoord1fARB", (void **) &qglMultiTexCoord1f},
-	{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
-	{"glMultiTexCoord3fARB", (void **) &qglMultiTexCoord3f},
-	{"glMultiTexCoord4fARB", (void **) &qglMultiTexCoord4f},
 	{"glActiveTextureARB", (void **) &qglActiveTexture},
-	{"glClientActiveTextureARB", (void **) &qglClientActiveTexture},
 	{NULL, NULL}
 };
 
@@ -991,7 +884,7 @@ void VID_ClearExtensions(void)
 
 	// clear the extension flags
 	memset(&vid.support, 0, sizeof(vid.support));
-	vid.renderpath = RENDERPATH_GL11;
+	vid.renderpath = RENDERPATH_GL20;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
 	vid.useinterleavedarrays = false;
@@ -1131,12 +1024,9 @@ void VID_CheckExtensions(void)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
 
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
-	if (vid.support.ext_texture_filter_anisotropic)
-		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
-	if (vid.support.arb_texture_cube_map)
-		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
-	if (vid.support.ext_texture_3d)
-		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
+	qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
+	qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
+	qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
 	// verify that 3d textures are really supported
 	if (vid.support.ext_texture_3d && vid.maxtexturesize_3d < 32)
@@ -1146,9 +1036,8 @@ void VID_CheckExtensions(void)
 	}
 
 	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
-	if (vid.support.arb_multitexture)
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-	if (vid_gl20.integer && vid.support.gl20shaders && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two)
+	qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
+	if (vid.support.gl20shaders && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two)
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
@@ -1165,29 +1054,8 @@ void VID_CheckExtensions(void)
 		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
 		vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
 	}
-	else if (vid.support.arb_texture_env_combine && vid.texunits >= 2 && vid_gl13.integer)
-	{
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
-		vid.teximageunits = vid.texunits;
-		vid.texarrayunits = vid.texunits;
-		Con_DPrintf("Using GL1.3 rendering path - %i texture units, single pass rendering\n", vid.texunits);
-		vid.renderpath = RENDERPATH_GL13;
-		vid.sRGBcapable2D = false;
-		vid.sRGBcapable3D = false;
-		vid.useinterleavedarrays = false;
-	}
 	else
-	{
-		vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
-		vid.teximageunits = vid.texunits;
-		vid.texarrayunits = vid.texunits;
-		Con_DPrintf("Using GL1.1 rendering path - %i texture units, two pass rendering\n", vid.texunits);
-		vid.renderpath = RENDERPATH_GL11;
-		vid.sRGBcapable2D = false;
-		vid.sRGBcapable3D = false;
-		vid.useinterleavedarrays = false;
-	}
+		Sys_Error("OpenGL 2.0 and GL_EXT_framebuffer_object required");
 
 	// enable multisample antialiasing if possible
 	if(vid.support.arb_multisample)
@@ -1636,20 +1504,6 @@ static dllhandle_t xinputdll_dll = NULL;
 
 void VID_Shared_Init(void)
 {
-#ifdef SSE_POSSIBLE
-	if (Sys_HaveSSE2())
-	{
-		Con_Printf("DPSOFTRAST available (SSE2 instructions detected)\n");
-		Cvar_RegisterVariable(&vid_soft);
-		Cvar_RegisterVariable(&vid_soft_threads);
-		Cvar_RegisterVariable(&vid_soft_interlace);
-	}
-	else
-		Con_Printf("DPSOFTRAST not available (SSE2 disabled or not detected)\n");
-#else
-	Con_Printf("DPSOFTRAST not available (SSE2 not compiled in)\n");
-#endif
-
 	Cvar_RegisterVariable(&gl_info_vendor);
 	Cvar_RegisterVariable(&gl_info_renderer);
 	Cvar_RegisterVariable(&gl_info_version);
@@ -1698,8 +1552,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_desktopfullscreen);
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
-	Cvar_RegisterVariable(&vid_gl13);
-	Cvar_RegisterVariable(&vid_gl20);
 	Cvar_RegisterVariable(&gl_finish);
 	Cvar_RegisterVariable(&vid_sRGB);
 	Cvar_RegisterVariable(&vid_sRGB_fallback);
@@ -1793,8 +1645,6 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL11:
-		case RENDERPATH_GL13:
 		case RENDERPATH_GL20:
 #ifdef GL_STEREO
 			{
@@ -1804,6 +1654,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 			}
 #endif
 			break;
+		case RENDERPATH_GLES2:
 		default:
 			vid.stereobuffer = false;
 			break;
@@ -2025,76 +1876,4 @@ size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean 
 		--count;
 	}
 	return count;
-}
-
-void VID_Soft_SharedSetup(void)
-{
-	gl_platform = "DPSOFTRAST";
-	gl_platformextensions = "";
-
-	gl_renderer = "DarkPlaces-Soft";
-	gl_vendor = "Forest Hale";
-	gl_version = "0.0";
-	gl_extensions = "";
-
-	// clear the extension flags
-	memset(&vid.support, 0, sizeof(vid.support));
-	Cvar_SetQuick(&gl_info_extensions, "");
-
-	// DPSOFTRAST requires BGRA
-	vid.forcetextype = TEXTYPE_BGRA;
-
-	vid.forcevbo = false;
-	vid.support.arb_depth_texture = true;
-	vid.support.arb_draw_buffers = true;
-	vid.support.arb_occlusion_query = true;
-	vid.support.arb_query_buffer_object = false;
-	vid.support.arb_shadow = true;
-	//vid.support.arb_texture_compression = true;
-	vid.support.arb_texture_cube_map = true;
-	vid.support.arb_texture_non_power_of_two = false;
-	vid.support.arb_vertex_buffer_object = true;
-	vid.support.ext_blend_subtract = true;
-	vid.support.ext_draw_range_elements = true;
-	vid.support.ext_framebuffer_object = true;
-
-	vid.support.ext_texture_3d = true;
-	//vid.support.ext_texture_compression_s3tc = true;
-	vid.support.ext_texture_filter_anisotropic = true;
-	vid.support.ati_separate_stencil = true;
-	vid.support.ext_texture_srgb = false;
-
-	vid.maxtexturesize_2d = 16384;
-	vid.maxtexturesize_3d = 512;
-	vid.maxtexturesize_cubemap = 16384;
-	vid.texunits = 4;
-	vid.teximageunits = 32;
-	vid.texarrayunits = 8;
-	vid.max_anisotropy = 1;
-	vid.maxdrawbuffers = 4;
-
-	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
-	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
-	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
-	Con_DPrintf("Using DarkPlaces Software Rasterizer rendering path\n");
-	vid.renderpath = RENDERPATH_SOFT;
-	vid.sRGBcapable2D = false;
-	vid.sRGBcapable3D = false;
-	vid.useinterleavedarrays = false;
-
-	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
-	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
-	Cvar_SetQuick(&gl_info_version, gl_version);
-	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
-	Cvar_SetQuick(&gl_info_driver, gl_driver);
-
-	// LordHavoc: report supported extensions
-#ifdef CONFIG_MENU
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
-#else
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\n", vm_sv_extensions );
-#endif
-
-	// clear to black (loading plaque will be seen over this)
-	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
 }
