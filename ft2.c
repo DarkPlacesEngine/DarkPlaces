@@ -1329,14 +1329,8 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		(unsigned) mapidx);
 
 	// create a cachepic_t from the data now, or reuse an existing one
-	map->pic = Draw_CachePic_Flags(map_identifier, CACHEPICFLAG_QUIET);
 	if (developer_font.integer)
-	{
-		if (!Draw_IsPicLoaded(map->pic))
-			Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
-		else
-			Con_Printf("Using cached font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
-	}
+		Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
 
 	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
@@ -1348,27 +1342,24 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	map->sfy = mapstart->sfy;
 
 	pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
-	if (!Draw_IsPicLoaded(map->pic))
+	data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
+	if (!data)
 	{
-		data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
-		if (!data)
+		Con_Printf("ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
+		Mem_Free(map);
+		return false;
+	}
+	// initialize as white texture with zero alpha
+	tp = 0;
+	while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
+	{
+		if (bytesPerPixel == 4)
 		{
-			Con_Printf("ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
-			Mem_Free(map);
-			return false;
+			data[tp++] = 0xFF;
+			data[tp++] = 0xFF;
+			data[tp++] = 0xFF;
 		}
-		// initialize as white texture with zero alpha
-		tp = 0;
-		while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
-		{
-			if (bytesPerPixel == 4)
-			{
-				data[tp++] = 0xFF;
-				data[tp++] = 0xFF;
-				data[tp++] = 0xFF;
-			}
-			data[tp++] = 0x00;
-		}
+		data[tp++] = 0x00;
 	}
 
 	memset(map->width_of, 0, sizeof(map->width_of));
@@ -1624,12 +1615,11 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 		map->glyphs[mapch].image = false;
 	}
 
-	if (!Draw_IsPicLoaded(map->pic))
 	{
 		int w = map->glyphSize * FONT_CHARS_PER_LINE;
 		int h = map->glyphSize * FONT_CHAR_LINES;
 		// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
-		Draw_NewPic(map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
+		map->pic = Draw_NewPic(map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
 
 		if (r_font_diskcache.integer >= 1)
 		{

@@ -2151,6 +2151,8 @@ void R_SkinFrame_MarkUsed(skinframe_t *skinframe)
 
 void R_SkinFrame_PurgeSkinFrame(skinframe_t *s)
 {
+	if (s == NULL)
+		return;
 	if (s->merged == s->base)
 		s->merged = NULL;
 	R_PurgeTexture(s->stain); s->stain = NULL;
@@ -2301,7 +2303,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	// return an existing skinframe if already loaded
 	// if loading of the first image fails, don't make a new skinframe as it
 	// would cause all future lookups of this to be missing
-	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, false);
+	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, -1, false);
 	if (skinframe && skinframe->base)
 		return skinframe;
 

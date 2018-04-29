@@ -148,7 +148,7 @@ reload:
 	pic->lastusedframe = draw_frame;
 
 	// load high quality image (this falls back to low quality too)
-	pic->skinframe = R_SkinFrame_LoadExternal(pic->name, texflags, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
+	pic->skinframe = R_SkinFrame_LoadExternal(pic->name, texflags | TEXF_FORCE_RELOAD, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
 
 	// get the dimensions of the image we loaded (if it was successful)
 	if (pic->skinframe && pic->skinframe->base)
@@ -194,7 +194,7 @@ qboolean Draw_IsPicLoaded(cachepic_t *pic)
 	if (pic == NULL)
 		return false;
 	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
-		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags, false, true);
+		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags | TEXF_FORCE_RELOAD, false, true);
 	// skinframe will only be NULL if the pic was created with CACHEPICFLAG_FAILONMISSING and not found
 	return pic->skinframe != NULL && pic->skinframe->base != NULL;
 }
@@ -204,7 +204,7 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 	if (pic == NULL)
 		return NULL;
 	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
-		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags, false, true);
+		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags | TEXF_FORCE_RELOAD, false, true);
 	pic->lastusedframe = draw_frame;
 	return pic->skinframe ? pic->skinframe->base : NULL;
 }
@@ -267,7 +267,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 	pic->flags |= (texflags & TEXF_FORCENEAREST) ? CACHEPICFLAG_NEAREST : 0;
 	pic->width = width;
 	pic->height = height;
-	pic->skinframe = R_SkinFrame_LoadInternalBGRA(picname, texflags, pixels_bgra, width, height, vid.sRGB2D);
+	pic->skinframe = R_SkinFrame_LoadInternalBGRA(picname, texflags | TEXF_FORCE_RELOAD, pixels_bgra, width, height, vid.sRGB2D);
 	pic->lastusedframe = draw_frame;
 	return pic;
 }
