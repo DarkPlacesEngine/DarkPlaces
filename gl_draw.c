@@ -790,10 +790,10 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	if (height == 0)
 		height = pic->height;
 	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, pic->name, flags, pic->texflags, MATERIALFLAG_VERTEXCOLOR), true);
-	e0 = Mod_Mesh_IndexForVertex(mod, surf, x - cosaf * org_x - cosar * org_y, y - sinaf * org_x - sinar * org_y, 0, 0, 0, -1, 0, 0, 0, 0, red, green, blue, alpha);
-	e1 = Mod_Mesh_IndexForVertex(mod, surf, x + cosaf * (width - org_x) - cosar * org_y, y + sinaf * (width - org_x) - sinar * org_y, 0, 0, 0, -1, 1, 0, 0, 0, red, green, blue, alpha);
-	e2 = Mod_Mesh_IndexForVertex(mod, surf, x + cosaf * (width - org_x) + cosar * (height - org_y), sinaf*(width - org_x) + sinar * (height - org_y), 0, 0, 0, -1, 1, 1, 0, 0, red, green, blue, alpha);
-	e3 = Mod_Mesh_IndexForVertex(mod, surf, x - cosaf * org_x + cosar * (height - org_y), y - sinaf * org_x + sinar * (height - org_y), 0, 0, 0, -1, 0, 1, 0, 0, red, green, blue, alpha);
+	e0 = Mod_Mesh_IndexForVertex(mod, surf, x - cosaf *          org_x  - cosar *           org_y , y - sinaf *          org_x  - sinar *           org_y , 0, 0, 0, -1, 0, 0, 0, 0, red, green, blue, alpha);
+	e1 = Mod_Mesh_IndexForVertex(mod, surf, x + cosaf * (width - org_x) - cosar *           org_y , y + sinaf * (width - org_x) - sinar *           org_y , 0, 0, 0, -1, 1, 0, 0, 0, red, green, blue, alpha);
+	e2 = Mod_Mesh_IndexForVertex(mod, surf, x + cosaf * (width - org_x) + cosar * (height - org_y), y + sinaf * (width - org_x) + sinar * (height - org_y), 0, 0, 0, -1, 1, 1, 0, 0, red, green, blue, alpha);
+	e3 = Mod_Mesh_IndexForVertex(mod, surf, x - cosaf *          org_x  + cosar * (height - org_y), y - sinaf *          org_x  + sinar * (height - org_y), 0, 0, 0, -1, 0, 1, 0, 0, red, green, blue, alpha);
 	Mod_Mesh_AddTriangle(mod, surf, e0, e1, e2);
 	Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
 }
