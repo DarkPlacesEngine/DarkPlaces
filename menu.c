@@ -414,7 +414,7 @@ void M_Menu_Main_f (void)
 		MAIN_ITEMS = 5;
 
 	// check if the game data is missing and use a different main menu if so
-	m_missingdata = !forceqmenu.integer && !Draw_IsPicLoaded(Draw_CachePic(s));
+	m_missingdata = !forceqmenu.integer && !Draw_IsPicLoaded(Draw_CachePic_Flags(s, CACHEPICFLAG_FAILONMISSING));
 	if (m_missingdata)
 		MAIN_ITEMS = 2;
 
