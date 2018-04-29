@@ -1894,10 +1894,10 @@ unsigned char *Image_GenerateNoTexture(void)
 	{
 		for (x = 0; x < 16; x++)
 		{
-			data[(y * 8 + x) * 4 + 0] =
-				data[(y * 8 + x) * 4 + 1] =
-				data[(y * 8 + x) * 4 + 2] = (y < 8) ^ (x < 8) ? 128 : 64;
-			data[(y * 8 + x) * 4 + 3] = 255;
+			data[(y * 16 + x) * 4 + 0] =
+			data[(y * 16 + x) * 4 + 1] =
+			data[(y * 16 + x) * 4 + 2] = (y < 8) ^ (x < 8) ? 128 : 64;
+			data[(y * 16 + x) * 4 + 3] = 255;
 		}
 	}
 	return data;
