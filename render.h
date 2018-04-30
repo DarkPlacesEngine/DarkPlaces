@@ -280,6 +280,7 @@ void R_SkinFrame_Purge(void);
 skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name );
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add);
 skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture);
+skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture);
 skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, qboolean sRGB);
 skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, int loadpantsandshirt, int loadglowtexture, const unsigned char *skindata, int width, int height);
 skinframe_t *R_SkinFrame_LoadInternal8bit(const char *name, int textureflags, const unsigned char *skindata, int width, int height, const unsigned int *palette, const unsigned int *alphapalette);
