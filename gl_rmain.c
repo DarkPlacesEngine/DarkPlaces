@@ -2278,8 +2278,25 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		skinframe->avgcolor[3] = avgcolor[4] / (255.0 * cnt); \
 	}
 
-extern cvar_t gl_picmip;
 skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
+{
+	skinframe_t *skinframe;
+
+	if (cls.state == ca_dedicated)
+		return NULL;
+
+	// return an existing skinframe if already loaded
+	// if loading of the first image fails, don't make a new skinframe as it
+	// would cause all future lookups of this to be missing
+	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, -1, false);
+	if (skinframe && skinframe->base)
+		return skinframe;
+
+	return R_SkinFrame_LoadExternal_SkinFrame(skinframe, name, textureflags, complain, fallbacknotexture);
+}
+
+extern cvar_t gl_picmip;
+skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
 {
 	int j;
 	unsigned char *pixels;
@@ -2287,7 +2304,6 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 	unsigned char *basepixels = NULL;
 	int basepixels_width = 0;
 	int basepixels_height = 0;
-	skinframe_t *skinframe;
 	rtexture_t *ddsbase = NULL;
 	qboolean ddshasalpha = false;
 	float ddsavgcolor[4];
@@ -2299,13 +2315,6 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 
 	if (cls.state == ca_dedicated)
 		return NULL;
-
-	// return an existing skinframe if already loaded
-	// if loading of the first image fails, don't make a new skinframe as it
-	// would cause all future lookups of this to be missing
-	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, -1, false);
-	if (skinframe && skinframe->base)
-		return skinframe;
 
 	Image_StripImageExtension(name, basename, sizeof(basename));
 
@@ -2512,7 +2521,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (textureflags & TEXF_FORCE_RELOAD) ? -1 : skindata ? CRC_Block(skindata, width*height*4) : 0, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (!(textureflags & TEXF_FORCE_RELOAD) && skindata) ? CRC_Block(skindata, width*height*4) : -1, true);
 	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
@@ -2582,7 +2591,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (!(textureflags & TEXF_FORCE_RELOAD) && skindata) ? CRC_Block(skindata, width*height) : -1, true);
 	if (skinframe->base)
 		return skinframe;
 	//textureflags &= ~TEXF_FORCE_RELOAD;

@@ -105,23 +105,19 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		if (!strcmp(path, pic->name))
 		{
 			// if it was created (or replaced) by Draw_NewPic, just return it
-			if (pic->flags & CACHEPICFLAG_NEWPIC)
+			if (!(pic->flags & CACHEPICFLAG_NEWPIC))
 			{
-				if (pic->skinframe)
-					R_SkinFrame_MarkUsed(pic->skinframe);
-				pic->lastusedframe = draw_frame;
-				return pic;
-			}
-			if (!((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP))) // ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
-			{
-				if (!pic->skinframe || !pic->skinframe->base)
+				// reload the pic if texflags changed in important ways
+				// ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
+				if (!pic->skinframe || !pic->skinframe->base || ((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP)))
 					goto reload;
 				if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 					pic->autoload = false; // caller is making this pic persistent
-				R_SkinFrame_MarkUsed(pic->skinframe);
-				pic->lastusedframe = draw_frame;
-				return pic;
 			}
+			if (pic->skinframe)
+				R_SkinFrame_MarkUsed(pic->skinframe);
+			pic->lastusedframe = draw_frame;
+			return pic;
 		}
 	}
 
@@ -147,8 +143,16 @@ reload:
 	pic->autoload = (cachepicflags & CACHEPICFLAG_NOTPERSISTENT) != 0;
 	pic->lastusedframe = draw_frame;
 
-	// load high quality image (this falls back to low quality too)
-	pic->skinframe = R_SkinFrame_LoadExternal(pic->name, texflags | TEXF_FORCE_RELOAD, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
+	if (pic->skinframe)
+	{
+		// reload image after it was unloaded or texflags changed significantly
+		R_SkinFrame_LoadExternal_SkinFrame(pic->skinframe, pic->name, texflags | TEXF_FORCE_RELOAD, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
+	}
+	else
+	{
+		// load high quality image (this falls back to low quality too)
+		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, texflags | TEXF_FORCE_RELOAD, (cachepicflags & CACHEPICFLAG_QUIET) == 0, (cachepicflags & CACHEPICFLAG_FAILONMISSING) == 0);
+	}
 
 	// get the dimensions of the image we loaded (if it was successful)
 	if (pic->skinframe && pic->skinframe->base)
@@ -262,6 +266,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 
 	R_SkinFrame_PurgeSkinFrame(pic->skinframe);
 
+	pic->autoload = false;
 	pic->flags = CACHEPICFLAG_NEWPIC; // disable texflags checks in Draw_CachePic
 	pic->flags |= (texflags & TEXF_CLAMP) ? 0 : CACHEPICFLAG_NOCLAMP;
 	pic->flags |= (texflags & TEXF_FORCENEAREST) ? CACHEPICFLAG_NEAREST : 0;
@@ -759,6 +764,8 @@ void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, flo
 	int e0, e1, e2, e3;
 	if (!pic)
 		pic = Draw_CachePic("white");
+	// make sure pic is loaded - we don't use the texture here, Mod_Mesh_GetTexture looks up the skinframe by name
+	Draw_GetPicTexture(pic);
 	if (width == 0)
 		width = pic->width;
 	if (height == 0)
@@ -785,6 +792,8 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	int e0, e1, e2, e3;
 	if (!pic)
 		pic = Draw_CachePic("white");
+	// make sure pic is loaded - we don't use the texture here, Mod_Mesh_GetTexture looks up the skinframe by name
+	Draw_GetPicTexture(pic);
 	if (width == 0)
 		width = pic->width;
 	if (height == 0)
@@ -1379,6 +1388,8 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	int e0, e1, e2, e3;
 	if (!pic)
 		pic = Draw_CachePic("white");
+	// make sure pic is loaded - we don't use the texture here, Mod_Mesh_GetTexture looks up the skinframe by name
+	Draw_GetPicTexture(pic);
 	if (width == 0)
 		width = pic->width;
 	if (height == 0)
