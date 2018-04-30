@@ -349,8 +349,8 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 
 	// LadyHavoc: use the CL_GetTagMatrix function on self to ensure consistent behavior (duplicate code would be bad)
 	// this also sets the custommodellight_origin for us
-	VectorCopy(modellight_origin, entrender->custommodellight_origin);
 	CL_GetTagMatrix(prog, &entrender->matrix, ed, 0, modellight_origin);
+	VectorCopy(modellight_origin, entrender->custommodellight_origin);
 
 	// set up the animation data
 	VM_GenerateFrameGroupBlend(prog, ed->priv.server->framegroupblend, ed);

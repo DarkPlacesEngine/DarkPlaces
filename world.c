@@ -185,6 +185,10 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	vec3_t paddedmins, paddedmaxs;
 	int igrid[3], igridmins[3], igridmaxs[3];
 
+	// avoid crash in showtex code on level change
+	if (prog == NULL || prog->num_edicts < 1)
+		return 0;
+
 	// LordHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
 	//VectorSet(paddedmins, requestmins[0] - 1.0f, requestmins[1] - 1.0f, requestmins[2] - 1.0f);
 	//VectorSet(paddedmaxs, requestmaxs[0] + 1.0f, requestmaxs[1] + 1.0f, requestmaxs[2] + 1.0f);
