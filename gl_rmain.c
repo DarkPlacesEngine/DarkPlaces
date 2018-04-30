@@ -4545,6 +4545,7 @@ void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *view
 		plane[1] = r_refdef.view.clipplane.normal[1];
 		plane[2] = r_refdef.view.clipplane.normal[2];
 		plane[3] = -dist;
+		customclipplane = plane;
 	}
 
 	//rtwidth = viewfbo ? R_TextureWidth(viewdepthtexture ? viewdepthtexture : viewcolortexture) : vid.width;
