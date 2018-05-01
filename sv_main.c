@@ -3913,7 +3913,7 @@ static void SV_VM_Setup(void)
 //		PRVM_ED_FindGlobalOffset_FromStruct(globalvars_t, SetChangeParms);
 	}
 	else
-		Con_DPrintf("%s: %s system vars have been modified (CRC %i != engine %i), will not load in other engines", prog->name, sv_progs.string, prog->progs_crc, PROGHEADER_CRC);
+		Con_DPrintf("%s: %s system vars have been modified (CRC %i != engine %i), will not load in other engines\n", prog->name, sv_progs.string, prog->progs_crc, PROGHEADER_CRC);
 
 	// OP_STATE is always supported on server because we add fields/globals for it
 	prog->flag |= PRVM_OP_STATE;
