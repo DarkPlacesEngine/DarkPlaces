@@ -4982,6 +4982,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			// reverse the cullface settings for this render
 			r_refdef.view.cullface_front = GL_FRONT;
 			r_refdef.view.cullface_back = GL_BACK;
+			// combined pvs (based on what can be seen from each surface center)
 			if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.num_pvsclusterbytes)
 			{
 				r_refdef.view.usecustompvs = true;
@@ -5027,6 +5028,16 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 					p->rt_camera = NULL;
 					continue;
 				}
+			}
+
+			// combined pvs (based on what can be seen from each surface center)
+			if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.num_pvsclusterbytes)
+			{
+				r_refdef.view.usecustompvs = true;
+				if (p->pvsvalid)
+					memcpy(r_refdef.viewcache.world_pvsbits, p->pvsbits, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
+				else
+					memset(r_refdef.viewcache.world_pvsbits, 0xFF, r_refdef.scene.worldmodel->brush.num_pvsclusterbytes);
 			}
 
 			r_fb.water.hideplayer = ((r_water_hideplayer.integer >= 1) && !chase_active.integer);
@@ -6782,7 +6793,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = rsurface.entity->alpha * t->basealpha;
-	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_novis.integer || r_trippy.integer))
+	if (t->basematerialflags & MATERIALFLAG_WATERALPHA && (model->brush.supportwateralpha || r_water.integer || r_novis.integer || r_trippy.integer))
 		t->currentalpha *= r_wateralpha.value;
 	if(t->basematerialflags & MATERIALFLAG_WATERSHADER && r_fb.water.enabled && !r_refdef.view.isoverlay)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW; // we apply wateralpha later
