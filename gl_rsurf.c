@@ -1383,7 +1383,12 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 	int i;
 	if (!model->brush.shadowmesh)
 		return;
-	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
+	// FIXME: the sidetotals code incorrectly assumes that static_meshchain is
+	// a single mesh - to prevent that from crashing (sideoffsets, sidetotals
+	// exceeding the number of triangles in a single mesh) we have to make sure
+	// that we make only a single mesh - so over-estimate the size of the mesh
+	// to match the model.
+	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles, NULL, NULL, NULL, false, false, true);
 	R_Shadow_PrepareShadowSides(model->brush.shadowmesh->numtriangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
