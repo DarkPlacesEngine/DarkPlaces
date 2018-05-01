@@ -816,21 +816,71 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 }
 #endif
 
-void Mod_ValidateElements(int *elements, int numtriangles, int firstvertex, int numverts, const char *filename, int fileline)
+qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline)
 {
-	int i, warned = false, endvertex = firstvertex + numverts;
-	for (i = 0;i < numtriangles * 3;i++)
+	int first = firstvertex, last = first + numvertices - 1, numelements = numtriangles * 3;
+	int i;
+	int invalidintcount = 0, invalidintexample = 0;
+	int invalidshortcount = 0, invalidshortexample = 0;
+	int invalidmismatchcount = 0, invalidmismatchexample = 0;
+	if (element3i)
 	{
-		if (elements[i] < firstvertex || elements[i] >= endvertex)
+		for (i = 0; i < numelements; i++)
 		{
-			if (!warned)
+			if (element3i[i] < first || element3i[i] > last)
 			{
-				warned = true;
-				Con_Printf("Mod_ValidateElements: out of bounds elements detected at %s:%d\n", filename, fileline);
+				invalidintcount++;
+				invalidintexample = i;
 			}
-			elements[i] = firstvertex;
 		}
 	}
+	if (element3s)
+	{
+		for (i = 0; i < numelements; i++)
+		{
+			if (element3s[i] < first || element3s[i] > last)
+			{
+				invalidintcount++;
+				invalidintexample = i;
+			}
+		}
+	}
+	if (element3i && element3s)
+	{
+		for (i = 0; i < numelements; i++)
+		{
+			if (element3s[i] != element3i[i])
+			{
+				invalidmismatchcount++;
+				invalidmismatchexample = i;
+			}
+		}
+	}
+	if (invalidintcount || invalidshortcount || invalidmismatchcount)
+	{
+		Con_Printf("Mod_ValidateElements(%i, %i, %i, %p, %p) called at %s:%d", numelements, first, last, element3i, element3s, filename, fileline);
+		Con_Printf(", %i elements are invalid in element3i (example: element3i[%i] == %i)", invalidintcount, invalidintexample, element3i ? element3i[invalidintexample] : 0);
+		Con_Printf(", %i elements are invalid in element3s (example: element3s[%i] == %i)", invalidshortcount, invalidshortexample, element3s ? element3s[invalidshortexample] : 0);
+		Con_Printf(", %i elements mismatch between element3i and element3s (example: element3s[%i] is %i and element3i[i] is %i)", invalidmismatchcount, invalidmismatchexample, element3i ? element3i[invalidmismatchexample] : 0, invalidmismatchexample, element3s ? element3s[invalidmismatchexample] : 0);
+		Con_Print(".  Please debug the engine code - these elements have been modified to not crash, but nothing more.\n");
+
+		// edit the elements to make them safer, as the driver will crash otherwise
+		if (element3i)
+			for (i = 0; i < numelements; i++)
+				if (element3i[i] < first || element3i[i] > last)
+					element3i[i] = first;
+		if (element3s)
+			for (i = 0; i < numelements; i++)
+				if (element3s[i] < first || element3s[i] > last)
+					element3s[i] = first;
+		if (element3i && element3s)
+			for (i = 0; i < numelements; i++)
+				if (element3s[i] != element3i[i])
+					element3s[i] = element3i[i];
+
+		return false;
+	}
+	return true;
 }
 
 // warning: this is an expensive function!
@@ -1213,6 +1263,9 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 {
 	if (!mesh->numverts)
 		return;
+
+	// make sure we don't crash inside the driver if something went wrong, as it's annoying to debug
+	Mod_ValidateElements(mesh->element3i, mesh->element3s, mesh->numtriangles, 0, mesh->numverts, __FILE__, __LINE__);
 
 	// build r_vertexmesh_t array
 	// (compressed interleaved array for D3D)
