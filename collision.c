@@ -16,7 +16,6 @@ cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1
 cvar_t collision_extendtracelinelength = {0, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
 cvar_t collision_debug_tracelineasbox = {0, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
 cvar_t collision_cache = {0, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
-//cvar_t collision_triangle_neighborsides = {0, "collision_triangle_neighborsides", "1", "override automatic side generation if triangle has neighbors with face planes that form a convex edge (perfect solution, but can not work for all edges)"};
 cvar_t collision_triangle_bevelsides = {0, "collision_triangle_bevelsides", "0", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
 cvar_t collision_triangle_axialsides = {0, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
 cvar_t collision_bih_fullrecursion = { 0, "collision_bih_fullrecursion", "0", "debugging option to disable the bih recursion optimizations by iterating the entire tree" };
@@ -31,7 +30,6 @@ void Collision_Init (void)
 	Cvar_RegisterVariable(&collision_extendtraceboxlength);
 	Cvar_RegisterVariable(&collision_debug_tracelineasbox);
 	Cvar_RegisterVariable(&collision_cache);
-//	Cvar_RegisterVariable(&collision_triangle_neighborsides);
 	Cvar_RegisterVariable(&collision_triangle_bevelsides);
 	Cvar_RegisterVariable(&collision_triangle_axialsides);
 	Cvar_RegisterVariable(&collision_bih_fullrecursion);

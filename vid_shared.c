@@ -633,26 +633,6 @@ static dllfunction_t texture3dextfuncs[] =
 	{NULL, NULL}
 };
 
-static dllfunction_t atiseparatestencilfuncs[] =
-{
-	{"glStencilOpSeparateATI", (void **) &qglStencilOpSeparate},
-	{"glStencilFuncSeparateATI", (void **) &qglStencilFuncSeparate},
-	{NULL, NULL}
-};
-
-static dllfunction_t gl2separatestencilfuncs[] =
-{
-	{"glStencilOpSeparate", (void **) &qglStencilOpSeparate},
-	{"glStencilFuncSeparate", (void **) &qglStencilFuncSeparate},
-	{NULL, NULL}
-};
-
-static dllfunction_t stenciltwosidefuncs[] =
-{
-	{"glActiveStencilFaceEXT", (void **) &qglActiveStencilFaceEXT},
-	{NULL, NULL}
-};
-
 static dllfunction_t blendequationfuncs[] =
 {
 	{"glBlendEquationEXT", (void **) &qglBlendEquationEXT},
@@ -955,7 +935,6 @@ void VID_CheckExtensions(void)
 	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
 	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
 	vid.support.arb_uniform_buffer_object = GL_CheckExtension("GL_ARB_uniform_buffer_object", ubofuncs, "-noubo", false);
-	vid.support.ati_separate_stencil = GL_CheckExtension("separatestencil", gl2separatestencilfuncs, "-noseparatestencil", true) || GL_CheckExtension("GL_ATI_separate_stencil", atiseparatestencilfuncs, "-noseparatestencil", false);
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 	vid.support.ext_blend_func_separate = GL_CheckExtension("GL_EXT_blend_func_separate", blendfuncseparatefuncs, "-noblendfuncseparate", false);
@@ -967,7 +946,6 @@ void VID_CheckExtensions(void)
 		vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", extfbofuncs, "-nofbo", false);
 
 	vid.support.ext_packed_depth_stencil = GL_CheckExtension("GL_EXT_packed_depth_stencil", NULL, "-nopackeddepthstencil", false);
-	vid.support.ext_stencil_two_side = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
 	vid.support.ext_texture_compression_s3tc = GL_CheckExtension("GL_EXT_texture_compression_s3tc", NULL, "-nos3tc", false);
 	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
@@ -994,9 +972,7 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -noocclusionquery disables GL_ARB_occlusion_query (which allows coronas to fade according to visibility, and potentially used for rendering optimizations)
 // COMMANDLINEOPTION: GL: -noquerybuffer disables GL_ARB_query_buffer_object (which allows corona fading without synchronous rendering)
 // COMMANDLINEOPTION: GL: -nos3tc disables GL_EXT_texture_compression_s3tc (which allows use of .dds texture caching)
-// COMMANDLINEOPTION: GL: -noseparatestencil disables use of OpenGL2.0 glStencilOpSeparate and GL_ATI_separate_stencil extensions (which accelerate shadow rendering)
 // COMMANDLINEOPTION: GL: -noshadow disables use of GL_ARB_shadow (required for hardware shadowmap filtering)
-// COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (which accelerate shadow rendering)
 // COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
 // COMMANDLINEOPTION: GL: -notexture4 disables GL_AMD_texture_texture4 (which provides fetch4 sampling)
 // COMMANDLINEOPTION: GL: -notexturecompression disables GL_ARB_texture_compression (which saves video memory if it is supported, but can also degrade image quality, see gl_texturecompression cvar documentation for more information)

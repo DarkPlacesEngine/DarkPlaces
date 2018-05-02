@@ -2058,11 +2058,8 @@ void R_ClearScreen(qboolean fogcolor)
 		VectorCopy(r_refdef.fogcolor, clearcolor);
 	}
 	// clear depth is 1.0
-	// LordHavoc: we use a stencil centered around 128 instead of 0,
-	// to avoid clamping interfering with strange shadow volume
-	// drawing orders
 	// clear the screen
-	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0), clearcolor, 1.0f, 128);
+	GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (vid.stencil ? GL_STENCIL_BUFFER_BIT : 0), clearcolor, 1.0f, 0);
 }
 
 int r_stereo_side;

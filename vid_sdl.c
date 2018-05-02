@@ -1892,7 +1892,6 @@ void GLES_Init(void)
 	vid.support.arb_texture_gather = false;
 	vid.support.arb_texture_non_power_of_two = strstr(gl_extensions, "GL_OES_texture_npot") != NULL;
 	vid.support.arb_vertex_buffer_object = true; // GLES2 core
-	vid.support.ati_separate_stencil = false;
 	vid.support.ext_blend_minmax = false;
 	vid.support.ext_blend_subtract = true; // GLES2 core
 	vid.support.ext_blend_func_separate = true; // GLES2 core
@@ -1907,7 +1906,6 @@ void GLES_Init(void)
 	vid.support.ext_framebuffer_object = true;
 
 	vid.support.ext_packed_depth_stencil = false;
-	vid.support.ext_stencil_two_side = false;
 	vid.support.ext_texture_3d = SDL_GL_ExtensionSupported("GL_OES_texture_3D") != 0;
 	vid.support.ext_texture_compression_s3tc = SDL_GL_ExtensionSupported("GL_EXT_texture_compression_s3tc") != 0;
 	vid.support.ext_texture_edge_clamp = true; // GLES2 core

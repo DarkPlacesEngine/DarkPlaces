@@ -2587,7 +2587,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		totaltris += numedges - 2;
 	}
 
-	Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false, false);
+	Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, false);
 
 	lightmaptexture = NULL;
 	deluxemaptexture = r_texture_blanknormalmap;
@@ -3866,13 +3866,11 @@ static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
 		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
 		numshadowmeshtriangles += surface->num_triangles;
 	}
-	mod->brush.shadowmesh = Mod_ShadowMesh_Begin(mod->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
+	mod->brush.shadowmesh = Mod_ShadowMesh_Begin(mod->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, true);
 	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
 		if (surface->num_triangles > 0)
 			Mod_ShadowMesh_AddMesh(mod->mempool, mod->brush.shadowmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, r_enableshadowvolumes.integer != 0, false);
-	if (mod->brush.shadowmesh && mod->brush.shadowmesh->neighbor3i)
-		Mod_BuildTriangleNeighbors(mod->brush.shadowmesh->neighbor3i, mod->brush.shadowmesh->element3i, mod->brush.shadowmesh->numtriangles);
+	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, false);
 
 	return numshadowmeshtriangles;
 }
@@ -3986,8 +3984,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
 
 // load into heap
@@ -4969,8 +4965,6 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
 
 // load into heap
@@ -5938,7 +5932,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	int i, oldi, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xtess, ytess, finalvertices, finaltriangles, firstvertex, firstelement, type, oldnumtriangles, oldnumtriangles2, meshvertices, meshtriangles, collisionvertices, collisiontriangles, numvertices, numtriangles, cxtess, cytess;
 	float lightmaptcbase[2], lightmaptcscale[2];
 	//int *originalelement3i;
-	//int *originalneighbor3i;
 	float *originalvertex3f;
 	//float *originalsvector3f;
 	//float *originaltvector3f;
@@ -6158,7 +6151,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	i = oldi;
 	in = oldin;
 	out = oldout;
-	Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true, false);
+	Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, true);
 	if (collisiontriangles)
 	{
 		loadmodel->brush.data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, collisionvertices * sizeof(float[3]));
@@ -7925,8 +7918,6 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
 
 	mod_base = (unsigned char *)header;
@@ -8246,8 +8237,6 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->GetLightInfo = R_Q1BSP_GetLightInfo;
 	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
 	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->CompileShadowVolume = R_Q1BSP_CompileShadowVolume;
-	loadmodel->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	loadmodel->DrawLight = R_Q1BSP_DrawLight;
 
 	skinfiles = Mod_LoadSkinFiles();
@@ -8583,14 +8572,12 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// allocate storage for final mesh data
 	loadmodel->num_textures = numtextures * loadmodel->numskins;
 	loadmodel->num_texturesperskin = numtextures;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + (r_enableshadowvolumes.integer ? numtriangles * sizeof(int[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
 	loadmodel->brush.submodels = (dp_model_t **)data;data += loadmodel->brush.numsubmodels * sizeof(dp_model_t *);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = numvertices;
 	loadmodel->surfmesh.num_triangles = numtriangles;
-	if (r_enableshadowvolumes.integer)
-		loadmodel->surfmesh.data_neighbor3i = (int *)data;data += numtriangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_vertex3f = (float *)data;data += numvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_svector3f = (float *)data;data += numvertices * sizeof(float[3]);
 	loadmodel->surfmesh.data_tvector3f = (float *)data;data += numvertices * sizeof(float[3]);
@@ -8636,8 +8623,6 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	if (!VectorLength2(loadmodel->surfmesh.data_normal3f))
 		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, r_smoothnormals_areaweighting.integer != 0);
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
-	if (loadmodel->surfmesh.data_neighbor3i)
-		Mod_BuildTriangleNeighbors(loadmodel->surfmesh.data_neighbor3i, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles);
 
 	// if this is a worldmodel and has no BSP tree, create a fake one for the purpose
 	loadmodel->brush.num_visleafs = 1;

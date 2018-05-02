@@ -271,8 +271,6 @@ rtlight_particle_t;
 
 typedef struct rtlight_s
 {
-	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...  they just use the origin
-
 	// note that the world to light matrices are inversely scaled (divided) by lightradius
 
 	// core properties
@@ -304,7 +302,7 @@ typedef struct rtlight_s
 	int flags;
 
 	// generated properties
-	/// used only for shadow volumes
+	/// used only for casting shadows
 	vec3_t shadoworigin;
 	/// culling
 	vec3_t cullmins;
@@ -360,9 +358,7 @@ typedef struct rtlight_s
 	int shadowmapatlasposition[2];
 	/// size of one side of this light in the shadowmap atlas (for omnidirectional shadowmaps this is the min corner of a 2x3 arrangement, or a 4x3 arrangement in the case of noselfshadow entities being present)
 	int shadowmapatlassidesize;
-	/// premade shadow volumes to render for world entity
-	shadowmesh_t *static_meshchain_shadow_zpass;
-	shadowmesh_t *static_meshchain_shadow_zfail;
+	/// optimized and culled mesh to render for world entity shadows
 	shadowmesh_t *static_meshchain_shadow_shadowmap;
 	/// used for visibility testing (more exact than bbox)
 	int static_numleafs;
@@ -1999,8 +1995,6 @@ typedef struct r_refdef_s
 	// whether to draw world lights realtime, dlights realtime, and their shadows
 	float polygonfactor;
 	float polygonoffset;
-	float shadowpolygonfactor;
-	float shadowpolygonoffset;
 
 	// how long R_RenderView took on the previous frame
 	double lastdrawscreentime;

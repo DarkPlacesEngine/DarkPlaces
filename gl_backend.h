@@ -40,7 +40,6 @@ void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_DepthFunc(int state);
 void GL_DepthRange(float nearfrac, float farfrac);
-void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int frontzfail, int frontzpass, int backfail, int backzfail, int backzpass, int frontcompare, int backcompare, int comparereference, int comparemask);
 void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask);
 void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);

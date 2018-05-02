@@ -1432,47 +1432,6 @@ void GL_DepthRange(float nearfrac, float farfrac)
 	}
 }
 
-void R_SetStencilSeparate(qboolean enable, int writemask, int frontfail, int frontzfail, int frontzpass, int backfail, int backzfail, int backzpass, int frontcompare, int backcompare, int comparereference, int comparemask)
-{
-	switch (vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		CHECKGLERROR
-		if (enable)
-		{
-			qglEnable(GL_STENCIL_TEST);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-		}
-		if (vid.support.ati_separate_stencil)
-		{
-			qglStencilMask(writemask);CHECKGLERROR
-			qglStencilOpSeparate(GL_FRONT, frontfail, frontzfail, frontzpass);CHECKGLERROR
-			qglStencilOpSeparate(GL_BACK, backfail, backzfail, backzpass);CHECKGLERROR
-			qglStencilFuncSeparate(GL_FRONT, frontcompare, comparereference, comparereference);CHECKGLERROR
-			qglStencilFuncSeparate(GL_BACK, backcompare, comparereference, comparereference);CHECKGLERROR
-		}
-		else if (vid.support.ext_stencil_two_side)
-		{
-#if defined(GL_STENCIL_TEST_TWO_SIDE_EXT) && !defined(USE_GLES2)
-			qglEnable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
-			qglActiveStencilFaceEXT(GL_FRONT);CHECKGLERROR
-			qglStencilMask(writemask);CHECKGLERROR
-			qglStencilOp(frontfail, frontzfail, frontzpass);CHECKGLERROR
-			qglStencilFunc(frontcompare, comparereference, comparemask);CHECKGLERROR
-			qglActiveStencilFaceEXT(GL_BACK);CHECKGLERROR
-			qglStencilMask(writemask);CHECKGLERROR
-			qglStencilOp(backfail, backzfail, backzpass);CHECKGLERROR
-			qglStencilFunc(backcompare, comparereference, comparemask);CHECKGLERROR
-#endif
-		}
-		break;
-	}
-}
-
 void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask)
 {
 	switch (vid.renderpath)
@@ -1487,12 +1446,6 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 		else
 		{
 			qglDisable(GL_STENCIL_TEST);CHECKGLERROR
-		}
-		if (vid.support.ext_stencil_two_side)
-		{
-#ifdef GL_STENCIL_TEST_TWO_SIDE_EXT
-			qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);CHECKGLERROR
-#endif
 		}
 		qglStencilMask(writemask);CHECKGLERROR
 		qglStencilOp(fail, zfail, zpass);CHECKGLERROR

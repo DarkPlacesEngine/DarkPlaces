@@ -1300,80 +1300,6 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		qsort(info.outsurfacelist, info.outnumsurfaces, sizeof(*info.outsurfacelist), R_Q1BSP_GetLightInfo_comparefunc);
 }
 
-void R_Q1BSP_CompileShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
-{
-	dp_model_t *model = ent->model;
-	msurface_t *surface;
-	int surfacelistindex;
-	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
-	// if triangle neighbors are disabled, shadowvolumes are disabled
-	if (!model->brush.shadowmesh->neighbor3i)
-		return;
-	r_shadow_compilingrtlight->static_meshchain_shadow_zfail = Mod_ShadowMesh_Begin(r_main_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
-	R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-	{
-		surface = model->data_surfaces + surfacelist[surfacelistindex];
-		if (surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW)
-			continue;
-		R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs);
-	}
-	R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
-	r_shadow_compilingrtlight->static_meshchain_shadow_zfail = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zfail, false, false, true);
-}
-
-extern cvar_t r_polygonoffset_submodel_factor;
-extern cvar_t r_polygonoffset_submodel_offset;
-void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
-{
-	dp_model_t *model = ent->model;
-	const msurface_t *surface;
-	int modelsurfacelistindex;
-	float projectdistance = relativelightdirection ? lightradius : lightradius + model->radius*2 + r_shadow_projectdistance.value;
-	// check the box in modelspace, it was already checked in worldspace
-	if (!BoxesOverlap(model->normalmins, model->normalmaxs, lightmins, lightmaxs))
-		return;
-	R_FrameData_SetMark();
-	if (ent->model->brush.submodel)
-		GL_PolygonOffset(r_refdef.shadowpolygonfactor + r_polygonoffset_submodel_factor.value, r_refdef.shadowpolygonoffset + r_polygonoffset_submodel_offset.value);
-	if (model->brush.shadowmesh)
-	{
-		// if triangle neighbors are disabled, shadowvolumes are disabled
-		if (!model->brush.shadowmesh->neighbor3i)
-			return;
-		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
-		{
-			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			if (R_GetCurrentTexture(surface->texture)->currentmaterialflags & MATERIALFLAG_NOSHADOW)
-				continue;
-			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
-		}
-		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
-	}
-	else
-	{
-		// if triangle neighbors are disabled, shadowvolumes are disabled
-		if (!model->surfmesh.data_neighbor3i)
-			return;
-		projectdistance = lightradius + model->radius*2;
-		R_Shadow_PrepareShadowMark(model->surfmesh.num_triangles);
-		// identify lit faces within the bounding box
-		for (modelsurfacelistindex = 0;modelsurfacelistindex < modelnumsurfaces;modelsurfacelistindex++)
-		{
-			surface = model->data_surfaces + modelsurfacelist[modelsurfacelistindex];
-			rsurface.texture = R_GetCurrentTexture(surface->texture);
-			if (rsurface.texture->currentmaterialflags & MATERIALFLAG_NOSHADOW)
-				continue;
-			R_Shadow_MarkVolumeFromBox(surface->num_firsttriangle, surface->num_triangles, rsurface.modelvertex3f, rsurface.modelelement3i, relativelightorigin, relativelightdirection, lightmins, lightmaxs, surface->mins, surface->maxs);
-		}
-		R_Shadow_VolumeFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, rsurface.modelvertex3f, model->surfmesh.data_element3i, model->surfmesh.data_neighbor3i, relativelightorigin, relativelightdirection, projectdistance, numshadowmark, shadowmarklist, ent->mins, ent->maxs);
-	}
-	if (ent->model->brush.submodel)
-		GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);
-	R_FrameData_ReturnToMark();
-}
-
 void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	dp_model_t *model = ent->model;
@@ -1388,7 +1314,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 	// exceeding the number of triangles in a single mesh) we have to make sure
 	// that we make only a single mesh - so over-estimate the size of the mesh
 	// to match the model.
-	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles, NULL, NULL, NULL, false, false, true);
+	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles, NULL, NULL, NULL, false, true);
 	R_Shadow_PrepareShadowSides(model->brush.shadowmesh->numtriangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
@@ -1396,7 +1322,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 		sidemasks |= R_Shadow_ChooseSidesFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW ? NULL : sidetotals);
 	}
 	R_Shadow_ShadowMapFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, numshadowsides, sidetotals, shadowsides, shadowsideslist);
-	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, false, false, true);
+	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, false, true);
 	r_shadow_compilingrtlight->static_shadowmap_receivers &= sidemasks;
 	for(i = 0;i<6;i++)
 		if(!sidetotals[i])
@@ -1464,7 +1390,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	// note: in practice this never actually receives batches
 	R_Shadow_RenderMode_Begin();
 	R_Shadow_RenderMode_ActiveLight(rtlight);
-	R_Shadow_RenderMode_Lighting(false, true, rtlight->shadowmapatlassidesize != 0, (ent->flags & RENDER_NOSELFSHADOW) != 0);
+	R_Shadow_RenderMode_Lighting(true, rtlight->shadowmapatlassidesize != 0, (ent->flags & RENDER_NOSELFSHADOW) != 0);
 	R_Shadow_SetupEntityLight(ent);
 	for (i = 0;i < numsurfaces;i = j)
 	{
