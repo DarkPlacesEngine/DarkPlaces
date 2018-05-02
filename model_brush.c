@@ -3852,29 +3852,6 @@ static void Mod_Q1BSP_RoundUpToHullSize(dp_model_t *cmodel, const vec3_t inmins,
 	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
-static int Mod_Q1BSP_CreateShadowMesh(dp_model_t *mod)
-{
-	int j;
-	int numshadowmeshtriangles = 0;
-	msurface_t *surface;
-	if (cls.state == ca_dedicated)
-		return 0;
-	// make a single combined shadow mesh to allow optimized shadow volume creation
-
-	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
-	{
-		surface->num_firstshadowmeshtriangle = numshadowmeshtriangles;
-		numshadowmeshtriangles += surface->num_triangles;
-	}
-	mod->brush.shadowmesh = Mod_ShadowMesh_Begin(mod->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, true);
-	for (j = 0, surface = mod->data_surfaces;j < mod->num_surfaces;j++, surface++)
-		if (surface->num_triangles > 0)
-			Mod_ShadowMesh_AddMesh(mod->mempool, mod->brush.shadowmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	mod->brush.shadowmesh = Mod_ShadowMesh_Finish(mod->mempool, mod->brush.shadowmesh, false, false);
-
-	return numshadowmeshtriangles;
-}
-
 void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -4038,9 +4015,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->numframes = 2;		// regular and alternate animation
 	mod->numskins = 1;
-
-	// make a single combined shadow mesh to allow optimized shadow volume creation
-	Mod_Q1BSP_CreateShadowMesh(loadmodel);
 
 	if (loadmodel->brush.numsubmodels)
 		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
@@ -5024,9 +4998,6 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->numframes = 0;		// q2bsp animations are kind of special, frame is unbounded...
 	mod->numskins = 1;
-
-	// make a single combined shadow mesh to allow optimized shadow volume creation
-	Mod_Q1BSP_CreateShadowMesh(loadmodel);
 
 	if (loadmodel->brush.numsubmodels)
 		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
@@ -7992,9 +7963,6 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// FIXME: shader alpha should replace r_wateralpha support in q3bsp
 	loadmodel->brush.supportwateralpha = true;
 
-	// make a single combined shadow mesh to allow optimized shadow volume creation
-	Mod_Q1BSP_CreateShadowMesh(loadmodel);
-
 	loadmodel->brush.num_leafs = 0;
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
 
@@ -8610,9 +8578,6 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mem_Free(obj_vn);
 	Mem_Free(vertexhashtable);
 	Mem_Free(vertexhashdata);
-
-	// make a single combined shadow mesh to allow optimized shadow volume creation
-	Mod_Q1BSP_CreateShadowMesh(loadmodel);
 
 	// compute all the mesh information that was not loaded from the file
 	if (loadmodel->surfmesh.data_element3s)
