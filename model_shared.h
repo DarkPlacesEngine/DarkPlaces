@@ -744,9 +744,6 @@ typedef struct msurface_s
 	int num_vertices; // number of vertices
 	int num_firstvertex; // first vertex
 
-	// shadow volume building information
-	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
-
 	// mesh information for collisions (only used by q3bsp curves)
 	int num_collisiontriangles; // q3bsp
 	int num_collisionvertices; // q3bsp

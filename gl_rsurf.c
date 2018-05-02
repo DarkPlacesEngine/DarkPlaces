@@ -900,11 +900,11 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 					if (!castshadow)
 						continue;
 					insidebox = BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs);
-					for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+					for (triangleindex = 0, t = surface->num_firsttriangle, e = info->model->surfmesh.data_element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 					{
-						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+						v[0] = info->model->surfmesh.data_vertex3f + e[0] * 3;
+						v[1] = info->model->surfmesh.data_vertex3f + e[1] * 3;
+						v[2] = info->model->surfmesh.data_vertex3f + e[2] * 3;
 						VectorCopy(v[0], v2[0]);
 						VectorCopy(v[1], v2[1]);
 						VectorCopy(v[2], v2[2]);
@@ -928,11 +928,11 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 					currentmaterialflags = R_GetCurrentTexture(surface->texture)->currentmaterialflags;
 					castshadow = !(currentmaterialflags & MATERIALFLAG_NOSHADOW);
 					insidebox = BoxInsideBox(surface->mins, surface->maxs, info->lightmins, info->lightmaxs);
-					for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = info->model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+					for (triangleindex = 0, t = surface->num_firsttriangle, e = info->model->surfmesh.data_element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 					{
-						v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-						v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-						v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+						v[0] = info->model->surfmesh.data_vertex3f + e[0] * 3;
+						v[1] = info->model->surfmesh.data_vertex3f + e[1] * 3;
+						v[2] = info->model->surfmesh.data_vertex3f + e[2] * 3;
 						VectorCopy(v[0], v2[0]);
 						VectorCopy(v[1], v2[1]);
 						VectorCopy(v[2], v2[2]);
@@ -1027,11 +1027,11 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 				surface = info->model->data_surfaces + surfaceindex;
 				currentmaterialflags = R_GetCurrentTexture(surface->texture)->currentmaterialflags;
 				castshadow = !(currentmaterialflags & MATERIALFLAG_NOSHADOW);
-				t = leaf->itemindex + surface->num_firstshadowmeshtriangle - surface->num_firsttriangle;
-				e = info->model->brush.shadowmesh->element3i + t * 3;
-				v[0] = info->model->brush.shadowmesh->vertex3f + e[0] * 3;
-				v[1] = info->model->brush.shadowmesh->vertex3f + e[1] * 3;
-				v[2] = info->model->brush.shadowmesh->vertex3f + e[2] * 3;
+				t = leaf->itemindex;
+				e = info->model->surfmesh.data_element3i + t * 3;
+				v[0] = info->model->surfmesh.data_vertex3f + e[0] * 3;
+				v[1] = info->model->surfmesh.data_vertex3f + e[1] * 3;
+				v[2] = info->model->surfmesh.data_vertex3f + e[2] * 3;
 				VectorCopy(v[0], v2[0]);
 				VectorCopy(v[1], v2[1]);
 				VectorCopy(v[2], v2[2]);
@@ -1142,10 +1142,7 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 		info->outnumsurfaces = 0;
 		memset(info->outleafpvs, 0, (info->model->brush.num_leafs + 7) >> 3);
 		memset(info->outsurfacepvs, 0, (info->model->nummodelsurfaces + 7) >> 3);
-		if (info->model->brush.shadowmesh)
-			memset(info->outshadowtrispvs, 0, (info->model->brush.shadowmesh->numtriangles + 7) >> 3);
-		else
-			memset(info->outshadowtrispvs, 0, (info->model->surfmesh.num_triangles + 7) >> 3);
+		memset(info->outshadowtrispvs, 0, (info->model->surfmesh.num_triangles + 7) >> 3);
 		memset(info->outlighttrispvs, 0, (info->model->surfmesh.num_triangles + 7) >> 3);
 	}
 	else
@@ -1251,10 +1248,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	memset(visitingleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outsurfacepvs, 0, (info.model->nummodelsurfaces + 7) >> 3);
-	if (info.model->brush.shadowmesh)
-		memset(outshadowtrispvs, 0, (info.model->brush.shadowmesh->numtriangles + 7) >> 3);
-	else
-		memset(outshadowtrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
+	memset(outshadowtrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	memset(outlighttrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	if (info.model->brush.GetPVS && !info.noocclusion)
 		info.pvs = info.model->brush.GetPVS(info.model, info.relativelightorigin);
@@ -1307,21 +1301,19 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 	int surfacelistindex;
 	int sidetotals[6] = { 0, 0, 0, 0, 0, 0 }, sidemasks = 0;
 	int i;
-	if (!model->brush.shadowmesh)
-		return;
 	// FIXME: the sidetotals code incorrectly assumes that static_meshchain is
 	// a single mesh - to prevent that from crashing (sideoffsets, sidetotals
 	// exceeding the number of triangles in a single mesh) we have to make sure
 	// that we make only a single mesh - so over-estimate the size of the mesh
 	// to match the model.
 	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles, NULL, NULL, NULL, false, true);
-	R_Shadow_PrepareShadowSides(model->brush.shadowmesh->numtriangles);
+	R_Shadow_PrepareShadowSides(model->surfmesh.num_triangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
 		surface = model->data_surfaces + surfacelist[surfacelistindex];
-		sidemasks |= R_Shadow_ChooseSidesFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW ? NULL : sidetotals);
+		sidemasks |= R_Shadow_ChooseSidesFromBox(surface->num_firsttriangle, surface->num_triangles, model->surfmesh.data_vertex3f, model->surfmesh.data_element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW ? NULL : sidetotals);
 	}
-	R_Shadow_ShadowMapFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, numshadowsides, sidetotals, shadowsides, shadowsideslist);
+	R_Shadow_ShadowMapFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, model->surfmesh.data_vertex3f, model->surfmesh.data_element3i, numshadowsides, sidetotals, shadowsides, shadowsideslist);
 	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, false, true);
 	r_shadow_compilingrtlight->static_shadowmap_receivers &= sidemasks;
 	for(i = 0;i<6;i++)
