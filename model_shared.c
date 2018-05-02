@@ -1029,7 +1029,7 @@ shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, 
 	return newmesh;
 }
 
-int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f)
+static int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f)
 {
 	int hashindex, vnum;
 	shadowmeshvertexhash_t *hash;
@@ -1057,7 +1057,7 @@ int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f)
 	return vnum;
 }
 
-void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, float *vertex14f)
+static void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, float *vertex14f)
 {
 	if (mesh->numtriangles == 0)
 	{
@@ -1289,47 +1289,6 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 		nextmesh = mesh->next;
 		Mem_Free(mesh);
 	}
-}
-
-void Mod_CreateCollisionMesh(dp_model_t *mod)
-{
-	int k, numcollisionmeshtriangles;
-	qboolean usesinglecollisionmesh = false;
-	const msurface_t *surface = NULL;
-
-	mempool_t *mempool = mod->mempool;
-	if (!mempool && mod->brush.parentmodel)
-		mempool = mod->brush.parentmodel->mempool;
-	// make a single combined collision mesh for physics engine use
-	// TODO rewrite this to use the collision brushes as source, to fix issues with e.g. common/caulk which creates no drawsurface
-	numcollisionmeshtriangles = 0;
-	for (k = 0;k < mod->nummodelsurfaces;k++)
-	{
-		surface = mod->data_surfaces + mod->firstmodelsurface + k;
-		if (!strcmp(surface->texture->name, "collision") || !strcmp(surface->texture->name, "collisionconvex")) // found collision mesh
-		{
-			usesinglecollisionmesh = true;
-			numcollisionmeshtriangles = surface->num_triangles;
-			break;
-		}
-		if (!(surface->texture->supercontents & SUPERCONTENTS_SOLID))
-			continue;
-		numcollisionmeshtriangles += surface->num_triangles;
-	}
-	mod->brush.collisionmesh = Mod_ShadowMesh_Begin(mempool, numcollisionmeshtriangles * 3, numcollisionmeshtriangles, NULL, NULL, NULL, false, true);
-	if (usesinglecollisionmesh)
-		Mod_ShadowMesh_AddMesh(mempool, mod->brush.collisionmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-	else
-	{
-		for (k = 0;k < mod->nummodelsurfaces;k++)
-		{
-			surface = mod->data_surfaces + mod->firstmodelsurface + k;
-			if (!(surface->texture->supercontents & SUPERCONTENTS_SOLID))
-				continue;
-			Mod_ShadowMesh_AddMesh(mempool, mod->brush.collisionmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
-		}
-	}
-	mod->brush.collisionmesh = Mod_ShadowMesh_Finish(mempool, mod->brush.collisionmesh, false, false);
 }
 
 #if 0
