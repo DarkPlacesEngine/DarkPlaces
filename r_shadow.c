@@ -1,139 +1,3 @@
-
-/*
-Terminology: Stencil Shadow Volume (sometimes called Stencil Shadows)
-An extrusion of the lit faces, beginning at the original geometry and ending
-further from the light source than the original geometry (presumably at least
-as far as the light's radius, if the light has a radius at all), capped at
-both front and back to avoid any problems (extrusion from dark faces also
-works but has a different set of problems)
-
-This is normally rendered using Carmack's Reverse technique, in which
-backfaces behind zbuffer (zfail) increment the stencil, and frontfaces behind
-zbuffer (zfail) decrement the stencil, the result is a stencil value of zero
-where shadows did not intersect the visible geometry, suitable as a stencil
-mask for rendering lighting everywhere but shadow.
-
-In our case to hopefully avoid the Creative Labs patent, we draw the backfaces
-as decrement and the frontfaces as increment, and we redefine the DepthFunc to
-GL_LESS (the patent uses GL_GEQUAL) which causes zfail when behind surfaces
-and zpass when infront (the patent draws where zpass with a GL_GEQUAL test),
-additionally we clear stencil to 128 to avoid the need for the unclamped
-incr/decr extension (not related to patent).
-
-Patent warning:
-This algorithm may be covered by Creative's patent (US Patent #6384822),
-however that patent is quite specific about increment on backfaces and
-decrement on frontfaces where zpass with GL_GEQUAL depth test, which is
-opposite this implementation and partially opposite Carmack's Reverse paper
-(which uses GL_LESS, but increments on backfaces and decrements on frontfaces).
-
-
-
-Terminology: Stencil Light Volume (sometimes called Light Volumes)
-Similar to a Stencil Shadow Volume, but inverted; rather than containing the
-areas in shadow it contains the areas in light, this can only be built
-quickly for certain limited cases (such as portal visibility from a point),
-but is quite useful for some effects (sunlight coming from sky polygons is
-one possible example, translucent occluders is another example).
-
-
-
-Terminology: Optimized Stencil Shadow Volume
-A Stencil Shadow Volume that has been processed sufficiently to ensure it has
-no duplicate coverage of areas (no need to shadow an area twice), often this
-greatly improves performance but is an operation too costly to use on moving
-lights (however completely optimal Stencil Light Volumes can be constructed
-in some ideal cases).
-
-
-
-Terminology: Per Pixel Lighting (sometimes abbreviated PPL)
-Per pixel evaluation of lighting equations, at a bare minimum this involves
-DOT3 shading of diffuse lighting (per pixel dotproduct of negated incidence
-vector and surface normal, using a texture of the surface bumps, called a
-NormalMap) if supported by hardware; in our case there is support for cards
-which are incapable of DOT3, the quality is quite poor however.  Additionally
-it is desirable to have specular evaluation per pixel, per vertex
-normalization of specular halfangle vectors causes noticable distortion but
-is unavoidable on hardware without GL_ARB_fragment_program or
-GL_ARB_fragment_shader.
-
-
-
-Terminology: Normalization CubeMap
-A cubemap containing normalized dot3-encoded (vectors of length 1 or less
-encoded as RGB colors) for any possible direction, this technique allows per
-pixel calculation of incidence vector for per pixel lighting purposes, which
-would not otherwise be possible per pixel without GL_ARB_fragment_program or
-GL_ARB_fragment_shader.
-
-
-
-Terminology: 2D+1D Attenuation Texturing
-A very crude approximation of light attenuation with distance which results
-in cylindrical light shapes which fade vertically as a streak (some games
-such as Doom3 allow this to be rotated to be less noticable in specific
-cases), the technique is simply modulating lighting by two 2D textures (which
-can be the same) on different axes of projection (XY and Z, typically), this
-is the second best technique available without 3D Attenuation Texturing,
-GL_ARB_fragment_program or GL_ARB_fragment_shader technology.
-
-
-
-Terminology: 2D+1D Inverse Attenuation Texturing
-A clever method described in papers on the Abducted engine, this has a squared
-distance texture (bright on the outside, black in the middle), which is used
-twice using GL_ADD blending, the result of this is used in an inverse modulate
-(GL_ONE_MINUS_DST_ALPHA, GL_ZERO) to implement the equation
-lighting*=(1-((X*X+Y*Y)+(Z*Z))) which is spherical (unlike 2D+1D attenuation
-texturing).
-
-
-
-Terminology: 3D Attenuation Texturing
-A slightly crude approximation of light attenuation with distance, its flaws
-are limited radius and resolution (performance tradeoffs).
-
-
-
-Terminology: 3D Attenuation-Normalization Texturing
-A 3D Attenuation Texture merged with a Normalization CubeMap, by making the
-vectors shorter the lighting becomes darker, a very effective optimization of
-diffuse lighting if 3D Attenuation Textures are already used.
-
-
-
-Terminology: Light Cubemap Filtering
-A technique for modeling non-uniform light distribution according to
-direction, for example a lantern may use a cubemap to describe the light
-emission pattern of the cage around the lantern (as well as soot buildup
-discoloring the light in certain areas), often also used for softened grate
-shadows and light shining through a stained glass window (done crudely by
-texturing the lighting with a cubemap), another good example would be a disco
-light.  This technique is used heavily in many games (Doom3 does not support
-this however).
-
-
-
-Terminology: Light Projection Filtering
-A technique for modeling shadowing of light passing through translucent
-surfaces, allowing stained glass windows and other effects to be done more
-elegantly than possible with Light Cubemap Filtering by applying an occluder
-texture to the lighting combined with a stencil light volume to limit the lit
-area, this technique is used by Doom3 for spotlights and flashlights, among
-other things, this can also be used more generally to render light passing
-through multiple translucent occluders in a scene (using a light volume to
-describe the area beyond the occluder, and thus mask off rendering of all
-other areas).
-
-
-
-Terminology: Doom3 Lighting
-A combination of Stencil Shadow Volume, Per Pixel Lighting, Normalization
-CubeMap, 2D+1D Attenuation Texturing, and Light Projection Filtering, as
-demonstrated by the game Doom3.
-*/
-
 #include "quakedef.h"
 #include "r_shadow.h"
 #include "cl_collision.h"
@@ -167,8 +31,6 @@ r_shadow_shadowmode_t;
 
 r_shadow_rendermode_t r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
 r_shadow_rendermode_t r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_NONE;
-r_shadow_rendermode_t r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_NONE;
-r_shadow_rendermode_t r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_NONE;
 int r_shadow_scenemaxlights;
 int r_shadow_scenenumlights;
 rtlight_t **r_shadow_scenelightlist; // includes both static lights and dlights, as filtered by appropriate flags
@@ -307,7 +169,7 @@ cvar_t r_shadow_realtime_world_compileshadow = {0, "r_shadow_realtime_world_comp
 cvar_t r_shadow_realtime_world_compilesvbsp = {0, "r_shadow_realtime_world_compilesvbsp", "1", "enables svbsp optimization during compilation (slower than compileportalculling but more exact)"};
 cvar_t r_shadow_realtime_world_compileportalculling = {0, "r_shadow_realtime_world_compileportalculling", "1", "enables portal-based culling optimization during compilation (overrides compilesvbsp)"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
-cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "1", "enables use of shadowmapping (depth texture sampling) instead of stencil shadow volumes"};
+cvar_t r_shadow_shadowmapping = {CVAR_SAVE, "r_shadow_shadowmapping", "1", "enables use of shadowmapping (shadow rendering by depth texture sampling)"};
 cvar_t r_shadow_shadowmapping_filterquality = {CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
 cvar_t r_shadow_shadowmapping_useshadowsampler = {CVAR_SAVE, "r_shadow_shadowmapping_useshadowsampler", "1", "whether to use sampler2DShadow if available"};
 cvar_t r_shadow_shadowmapping_depthbits = {CVAR_SAVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
@@ -324,8 +186,6 @@ cvar_t r_shadow_shadowmapping_bias = {CVAR_SAVE, "r_shadow_shadowmapping_bias", 
 cvar_t r_shadow_shadowmapping_polygonfactor = {CVAR_SAVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
 cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_SAVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
 cvar_t r_shadow_sortsurfaces = {0, "r_shadow_sortsurfaces", "1", "improve performance by sorting illuminated surfaces by texture"};
-cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0", "how much to enlarge shadow volume polygons when rendering (should be 0!)"};
-cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1", "how much to push shadow volumes into the distance when rendering, to reduce chances of zfighting artifacts (should not be less than 0)"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
 cvar_t r_shadow_culllights_pvs = {CVAR_SAVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
 cvar_t r_shadow_culllights_trace = {CVAR_SAVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
@@ -376,8 +236,6 @@ cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "0", "brightness of corona flare eff
 cvar_t r_coronas_occlusionsizescale = {CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
 cvar_t r_coronas_occlusionquery = {CVAR_SAVE, "r_coronas_occlusionquery", "0", "use GL_ARB_occlusion_query extension if supported (fades coronas according to visibility) - bad performance (synchronous rendering) - worse on multi-gpu!"};
 cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
-cvar_t gl_ext_separatestencil = {0, "gl_ext_separatestencil", "1", "make use of OpenGL 2.0 glStencilOpSeparate or GL_ATI_separate_stencil extension"};
-cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1", "make use of GL_EXT_stenciltwoside extension (NVIDIA only)"};
 cvar_t r_editlights = {0, "r_editlights", "0", "enables .rtlights file editing mode"};
 cvar_t r_editlights_cursordistance = {0, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
 cvar_t r_editlights_cursorpushback = {0, "r_editlights_cursorpushback", "0", "how far to pull the cursor back toward the eye"};
@@ -783,8 +641,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_sortsurfaces);
-	Cvar_RegisterVariable(&r_shadow_polygonfactor);
-	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_culllights_pvs);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace);
@@ -835,8 +691,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
 	Cvar_RegisterVariable(&gl_flashblend);
-	Cvar_RegisterVariable(&gl_ext_separatestencil);
-	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	R_Shadow_EditLights_Init();
 	Mem_ExpandableArray_NewArray(&r_shadow_worldlightsarray, r_main_mempool, sizeof(dlight_t), 128);
 	r_shadow_scenemaxlights = 0;
@@ -999,476 +853,6 @@ void R_Shadow_PrepareShadowSides(int numtris)
 		shadowsideslist = (int *)Mem_Alloc(r_main_mempool, maxshadowsides * sizeof(*shadowsideslist));
 	}
 	numshadowsides = 0;
-}
-
-static int R_Shadow_ConstructShadowVolume_ZFail(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
-{
-	int i, j;
-	int outtriangles = 0, outvertices = 0;
-	const int *element;
-	const float *vertex;
-	float ratio, direction[3], projectvector[3];
-
-	if (projectdirection)
-		VectorScale(projectdirection, projectdistance, projectvector);
-	else
-		VectorClear(projectvector);
-
-	// create the vertices
-	if (projectdirection)
-	{
-		for (i = 0;i < numshadowmarktris;i++)
-		{
-			element = inelement3i + shadowmarktris[i] * 3;
-			for (j = 0;j < 3;j++)
-			{
-				if (vertexupdate[element[j]] != vertexupdatenum)
-				{
-					vertexupdate[element[j]] = vertexupdatenum;
-					vertexremap[element[j]] = outvertices;
-					vertex = invertex3f + element[j] * 3;
-					// project one copy of the vertex according to projectvector
-					VectorCopy(vertex, outvertex3f);
-					VectorAdd(vertex, projectvector, (outvertex3f + 3));
-					outvertex3f += 6;
-					outvertices += 2;
-				}
-			}
-		}
-	}
-	else
-	{
-		for (i = 0;i < numshadowmarktris;i++)
-		{
-			element = inelement3i + shadowmarktris[i] * 3;
-			for (j = 0;j < 3;j++)
-			{
-				if (vertexupdate[element[j]] != vertexupdatenum)
-				{
-					vertexupdate[element[j]] = vertexupdatenum;
-					vertexremap[element[j]] = outvertices;
-					vertex = invertex3f + element[j] * 3;
-					// project one copy of the vertex to the sphere radius of the light
-					// (FIXME: would projecting it to the light box be better?)
-					VectorSubtract(vertex, projectorigin, direction);
-					ratio = projectdistance / VectorLength(direction);
-					VectorCopy(vertex, outvertex3f);
-					VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
-					outvertex3f += 6;
-					outvertices += 2;
-				}
-			}
-		}
-	}
-
-	if (r_shadow_frontsidecasting.integer)
-	{
-		for (i = 0;i < numshadowmarktris;i++)
-		{
-			int remappedelement[3];
-			int markindex;
-			const int *neighbortriangle;
-
-			markindex = shadowmarktris[i] * 3;
-			element = inelement3i + markindex;
-			neighbortriangle = inneighbor3i + markindex;
-			// output the front and back triangles
-			outelement3i[0] = vertexremap[element[0]];
-			outelement3i[1] = vertexremap[element[1]];
-			outelement3i[2] = vertexremap[element[2]];
-			outelement3i[3] = vertexremap[element[2]] + 1;
-			outelement3i[4] = vertexremap[element[1]] + 1;
-			outelement3i[5] = vertexremap[element[0]] + 1;
-
-			outelement3i += 6;
-			outtriangles += 2;
-			// output the sides (facing outward from this triangle)
-			if (shadowmark[neighbortriangle[0]] != shadowmarkcount)
-			{
-				remappedelement[0] = vertexremap[element[0]];
-				remappedelement[1] = vertexremap[element[1]];
-				outelement3i[0] = remappedelement[1];
-				outelement3i[1] = remappedelement[0];
-				outelement3i[2] = remappedelement[0] + 1;
-				outelement3i[3] = remappedelement[1];
-				outelement3i[4] = remappedelement[0] + 1;
-				outelement3i[5] = remappedelement[1] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-			if (shadowmark[neighbortriangle[1]] != shadowmarkcount)
-			{
-				remappedelement[1] = vertexremap[element[1]];
-				remappedelement[2] = vertexremap[element[2]];
-				outelement3i[0] = remappedelement[2];
-				outelement3i[1] = remappedelement[1];
-				outelement3i[2] = remappedelement[1] + 1;
-				outelement3i[3] = remappedelement[2];
-				outelement3i[4] = remappedelement[1] + 1;
-				outelement3i[5] = remappedelement[2] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-			if (shadowmark[neighbortriangle[2]] != shadowmarkcount)
-			{
-				remappedelement[0] = vertexremap[element[0]];
-				remappedelement[2] = vertexremap[element[2]];
-				outelement3i[0] = remappedelement[0];
-				outelement3i[1] = remappedelement[2];
-				outelement3i[2] = remappedelement[2] + 1;
-				outelement3i[3] = remappedelement[0];
-				outelement3i[4] = remappedelement[2] + 1;
-				outelement3i[5] = remappedelement[0] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-		}
-	}
-	else
-	{
-		for (i = 0;i < numshadowmarktris;i++)
-		{
-			int remappedelement[3];
-			int markindex;
-			const int *neighbortriangle;
-
-			markindex = shadowmarktris[i] * 3;
-			element = inelement3i + markindex;
-			neighbortriangle = inneighbor3i + markindex;
-			// output the front and back triangles
-			outelement3i[0] = vertexremap[element[2]];
-			outelement3i[1] = vertexremap[element[1]];
-			outelement3i[2] = vertexremap[element[0]];
-			outelement3i[3] = vertexremap[element[0]] + 1;
-			outelement3i[4] = vertexremap[element[1]] + 1;
-			outelement3i[5] = vertexremap[element[2]] + 1;
-
-			outelement3i += 6;
-			outtriangles += 2;
-			// output the sides (facing outward from this triangle)
-			if (shadowmark[neighbortriangle[0]] != shadowmarkcount)
-			{
-				remappedelement[0] = vertexremap[element[0]];
-				remappedelement[1] = vertexremap[element[1]];
-				outelement3i[0] = remappedelement[0];
-				outelement3i[1] = remappedelement[1];
-				outelement3i[2] = remappedelement[1] + 1;
-				outelement3i[3] = remappedelement[0];
-				outelement3i[4] = remappedelement[1] + 1;
-				outelement3i[5] = remappedelement[0] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-			if (shadowmark[neighbortriangle[1]] != shadowmarkcount)
-			{
-				remappedelement[1] = vertexremap[element[1]];
-				remappedelement[2] = vertexremap[element[2]];
-				outelement3i[0] = remappedelement[1];
-				outelement3i[1] = remappedelement[2];
-				outelement3i[2] = remappedelement[2] + 1;
-				outelement3i[3] = remappedelement[1];
-				outelement3i[4] = remappedelement[2] + 1;
-				outelement3i[5] = remappedelement[1] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-			if (shadowmark[neighbortriangle[2]] != shadowmarkcount)
-			{
-				remappedelement[0] = vertexremap[element[0]];
-				remappedelement[2] = vertexremap[element[2]];
-				outelement3i[0] = remappedelement[2];
-				outelement3i[1] = remappedelement[0];
-				outelement3i[2] = remappedelement[0] + 1;
-				outelement3i[3] = remappedelement[2];
-				outelement3i[4] = remappedelement[0] + 1;
-				outelement3i[5] = remappedelement[2] + 1;
-
-				outelement3i += 6;
-				outtriangles += 2;
-			}
-		}
-	}
-	if (outnumvertices)
-		*outnumvertices = outvertices;
-	return outtriangles;
-}
-
-static int R_Shadow_ConstructShadowVolume_ZPass(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, const float *projectdirection, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
-{
-	int i, j, k;
-	int outtriangles = 0, outvertices = 0;
-	const int *element;
-	const float *vertex;
-	float ratio, direction[3], projectvector[3];
-	qboolean side[4];
-
-	if (projectdirection)
-		VectorScale(projectdirection, projectdistance, projectvector);
-	else
-		VectorClear(projectvector);
-
-	for (i = 0;i < numshadowmarktris;i++)
-	{
-		int remappedelement[3];
-		int markindex;
-		const int *neighbortriangle;
-
-		markindex = shadowmarktris[i] * 3;
-		neighbortriangle = inneighbor3i + markindex;
-		side[0] = shadowmark[neighbortriangle[0]] == shadowmarkcount;
-		side[1] = shadowmark[neighbortriangle[1]] == shadowmarkcount;
-		side[2] = shadowmark[neighbortriangle[2]] == shadowmarkcount;
-		if (side[0] + side[1] + side[2] == 0)
-			continue;
-
-		side[3] = side[0];
-		element = inelement3i + markindex;
-
-		// create the vertices
-		for (j = 0;j < 3;j++)
-		{
-			if (side[j] + side[j+1] == 0)
-				continue;
-			k = element[j];
-			if (vertexupdate[k] != vertexupdatenum)
-			{
-				vertexupdate[k] = vertexupdatenum;
-				vertexremap[k] = outvertices;
-				vertex = invertex3f + k * 3;
-				VectorCopy(vertex, outvertex3f);
-				if (projectdirection)
-				{
-					// project one copy of the vertex according to projectvector
-					VectorAdd(vertex, projectvector, (outvertex3f + 3));
-				}
-				else
-				{
-					// project one copy of the vertex to the sphere radius of the light
-					// (FIXME: would projecting it to the light box be better?)
-					VectorSubtract(vertex, projectorigin, direction);
-					ratio = projectdistance / VectorLength(direction);
-					VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
-				}
-				outvertex3f += 6;
-				outvertices += 2;
-			}
-		}
-
-		// output the sides (facing outward from this triangle)
-		if (!side[0])
-		{
-			remappedelement[0] = vertexremap[element[0]];
-			remappedelement[1] = vertexremap[element[1]];
-			outelement3i[0] = remappedelement[1];
-			outelement3i[1] = remappedelement[0];
-			outelement3i[2] = remappedelement[0] + 1;
-			outelement3i[3] = remappedelement[1];
-			outelement3i[4] = remappedelement[0] + 1;
-			outelement3i[5] = remappedelement[1] + 1;
-
-			outelement3i += 6;
-			outtriangles += 2;
-		}
-		if (!side[1])
-		{
-			remappedelement[1] = vertexremap[element[1]];
-			remappedelement[2] = vertexremap[element[2]];
-			outelement3i[0] = remappedelement[2];
-			outelement3i[1] = remappedelement[1];
-			outelement3i[2] = remappedelement[1] + 1;
-			outelement3i[3] = remappedelement[2];
-			outelement3i[4] = remappedelement[1] + 1;
-			outelement3i[5] = remappedelement[2] + 1;
-
-			outelement3i += 6;
-			outtriangles += 2;
-		}
-		if (!side[2])
-		{
-			remappedelement[0] = vertexremap[element[0]];
-			remappedelement[2] = vertexremap[element[2]];
-			outelement3i[0] = remappedelement[0];
-			outelement3i[1] = remappedelement[2];
-			outelement3i[2] = remappedelement[2] + 1;
-			outelement3i[3] = remappedelement[0];
-			outelement3i[4] = remappedelement[2] + 1;
-			outelement3i[5] = remappedelement[0] + 1;
-
-			outelement3i += 6;
-			outtriangles += 2;
-		}
-	}
-	if (outnumvertices)
-		*outnumvertices = outvertices;
-	return outtriangles;
-}
-
-void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs)
-{
-	int t, tend;
-	const int *e;
-	const float *v[3];
-	float normal[3];
-	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
-		return;
-	tend = firsttriangle + numtris;
-	if (BoxInsideBox(surfacemins, surfacemaxs, lightmins, lightmaxs))
-	{
-		// surface box entirely inside light box, no box cull
-		if (projectdirection)
-		{
-			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
-			{
-				TriangleNormal(invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3, normal);
-				if (r_shadow_frontsidecasting.integer == (DotProduct(normal, projectdirection) < 0))
-					shadowmarklist[numshadowmark++] = t;
-			}
-		}
-		else
-		{
-			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
-				if (r_shadow_frontsidecasting.integer == PointInfrontOfTriangle(projectorigin, invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3))
-					shadowmarklist[numshadowmark++] = t;
-		}
-	}
-	else
-	{
-		// surface box not entirely inside light box, cull each triangle
-		if (projectdirection)
-		{
-			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
-			{
-				v[0] = invertex3f + e[0] * 3;
-				v[1] = invertex3f + e[1] * 3;
-				v[2] = invertex3f + e[2] * 3;
-				TriangleNormal(v[0], v[1], v[2], normal);
-				if (r_shadow_frontsidecasting.integer == (DotProduct(normal, projectdirection) < 0)
-				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
-					shadowmarklist[numshadowmark++] = t;
-			}
-		}
-		else
-		{
-			for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
-			{
-				v[0] = invertex3f + e[0] * 3;
-				v[1] = invertex3f + e[1] * 3;
-				v[2] = invertex3f + e[2] * 3;
-				if (r_shadow_frontsidecasting.integer == PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
-				 && TriangleBBoxOverlapsBox(v[0], v[1], v[2], lightmins, lightmaxs))
-					shadowmarklist[numshadowmark++] = t;
-			}
-		}
-	}
-}
-
-static qboolean R_Shadow_UseZPass(vec3_t mins, vec3_t maxs)
-{
-#if 1
-	return false;
-#else
-	if (r_shadow_compilingrtlight || !r_shadow_frontsidecasting.integer || !r_shadow_usezpassifpossible.integer)
-		return false;
-	// check if the shadow volume intersects the near plane
-	//
-	// a ray between the eye and light origin may intersect the caster,
-	// indicating that the shadow may touch the eye location, however we must
-	// test the near plane (a polygon), not merely the eye location, so it is
-	// easiest to enlarge the caster bounding shape slightly for this.
-	// TODO
-	return true;
-#endif
-}
-
-void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs)
-{
-	int i, tris, outverts;
-	if (projectdistance < 0.1)
-	{
-		Con_Printf("R_Shadow_Volume: projectdistance %f\n", projectdistance);
-		return;
-	}
-	if (!numverts || !nummarktris)
-		return;
-	// make sure shadowelements is big enough for this volume
-	if (maxshadowtriangles < nummarktris*8 || maxshadowvertices < numverts*2)
-		R_Shadow_ResizeShadowArrays(numverts, nummarktris, 2, 8);
-
-	if (maxvertexupdate < numverts)
-	{
-		maxvertexupdate = numverts;
-		if (vertexupdate)
-			Mem_Free(vertexupdate);
-		if (vertexremap)
-			Mem_Free(vertexremap);
-		vertexupdate = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
-		vertexremap = (int *)Mem_Alloc(r_main_mempool, maxvertexupdate * sizeof(int));
-		vertexupdatenum = 0;
-	}
-	vertexupdatenum++;
-	if (vertexupdatenum == 0)
-	{
-		vertexupdatenum = 1;
-		memset(vertexupdate, 0, maxvertexupdate * sizeof(int));
-		memset(vertexremap, 0, maxvertexupdate * sizeof(int));
-	}
-
-	for (i = 0;i < nummarktris;i++)
-		shadowmark[marktris[i]] = shadowmarkcount;
-
-	if (r_shadow_compilingrtlight)
-	{
-		// if we're compiling an rtlight, capture the mesh
-		//tris = R_Shadow_ConstructShadowVolume_ZPass(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		//Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zpass, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
-		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_zfail, NULL, NULL, NULL, shadowvertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
-	}
-	else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_VISIBLEVOLUMES)
-	{
-		tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL, 0);
-		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
-	}
-	else
-	{
-		// decide which type of shadow to generate and set stencil mode
-		R_Shadow_RenderMode_StencilShadowVolumes(R_Shadow_UseZPass(trismins, trismaxs));
-		// generate the sides or a solid volume, depending on type
-		if (r_shadow_rendermode >= R_SHADOW_RENDERMODE_ZPASS_STENCIL && r_shadow_rendermode <= R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE)
-			tris = R_Shadow_ConstructShadowVolume_ZPass(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		else
-			tris = R_Shadow_ConstructShadowVolume_ZFail(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, shadowvertex3f, projectorigin, projectdirection, projectdistance, nummarktris, marktris);
-		r_refdef.stats[r_stat_lights_dynamicshadowtriangles] += tris;
-		r_refdef.stats[r_stat_lights_shadowtriangles] += tris;
-		if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
-		{
-			// increment stencil if frontface is infront of depthbuffer
-			GL_CullFace(r_refdef.view.cullface_front);
-			R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_DECR, GL_ALWAYS, 128, 255);
-			R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
-			// decrement stencil if backface is infront of depthbuffer
-			GL_CullFace(r_refdef.view.cullface_back);
-			R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_INCR, GL_ALWAYS, 128, 255);
-		}
-		else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZFAIL_STENCIL)
-		{
-			// decrement stencil if backface is behind depthbuffer
-			GL_CullFace(r_refdef.view.cullface_front);
-			R_SetStencil(true, 255, GL_KEEP, GL_DECR, GL_KEEP, GL_ALWAYS, 128, 255);
-			R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
-			// increment stencil if frontface is behind depthbuffer
-			GL_CullFace(r_refdef.view.cullface_back);
-			R_SetStencil(true, 255, GL_KEEP, GL_INCR, GL_KEEP, GL_ALWAYS, 128, 255);
-		}
-		R_Mesh_PrepareVertices_Vertex3f(outverts, shadowvertex3f, NULL, 0);
-		R_Mesh_Draw(0, outverts, 0, tris, shadowelements, NULL, 0, NULL, NULL, 0);
-	}
 }
 
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias)
@@ -1997,10 +1381,6 @@ void R_Shadow_ValidateCvars(void)
 {
 	if (r_shadow_texture3d.integer && !vid.support.ext_texture_3d)
 		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
-	if (gl_ext_separatestencil.integer && !vid.support.ati_separate_stencil)
-		Cvar_SetValueQuick(&gl_ext_separatestencil, 0);
-	if (gl_ext_stenciltwoside.integer && !vid.support.ext_stencil_two_side)
-		Cvar_SetValueQuick(&gl_ext_stenciltwoside, 0);
 }
 
 void R_Shadow_RenderMode_Begin(void)
@@ -2028,23 +1408,6 @@ void R_Shadow_RenderMode_Begin(void)
 	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_NONE;
-
-	if (gl_ext_separatestencil.integer && vid.support.ati_separate_stencil)
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL;
-	}
-	else if (gl_ext_stenciltwoside.integer && vid.support.ext_stencil_two_side)
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE;
-	}
-	else
-	{
-		r_shadow_shadowingrendermode_zpass = R_SHADOW_RENDERMODE_ZPASS_STENCIL;
-		r_shadow_shadowingrendermode_zfail = R_SHADOW_RENDERMODE_ZFAIL_STENCIL;
-	}
-
 	r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_LIGHT_GLSL;
 
 	CHECKGLERROR
@@ -2082,40 +1445,12 @@ void R_Shadow_RenderMode_Reset(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	R_SetupShader_Generic_NoTexture(false, false);
 	r_shadow_usingshadowmap2d = false;
-	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
 }
 
 void R_Shadow_ClearStencil(void)
 {
-	GL_Clear(GL_STENCIL_BUFFER_BIT, NULL, 1.0f, 128);
+	GL_Clear(GL_STENCIL_BUFFER_BIT, NULL, 1.0f, 0);
 	r_refdef.stats[r_stat_lights_clears]++;
-}
-
-void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass)
-{
-	r_shadow_rendermode_t mode = zpass ? r_shadow_shadowingrendermode_zpass : r_shadow_shadowingrendermode_zfail;
-	if (r_shadow_rendermode == mode)
-		return;
-	R_Shadow_RenderMode_Reset();
-	GL_DepthFunc(GL_LESS);
-	GL_ColorMask(0, 0, 0, 0);
-	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
-	GL_CullFace(GL_NONE);
-	R_SetupShader_DepthOrShadow(false, false, false); // FIXME test if we have a skeletal model?
-	r_shadow_rendermode = mode;
-	switch(mode)
-	{
-	default:
-		break;
-	case R_SHADOW_RENDERMODE_ZPASS_STENCILTWOSIDE:
-	case R_SHADOW_RENDERMODE_ZPASS_SEPARATESTENCIL:
-		R_SetStencilSeparate(true, 255, GL_KEEP, GL_KEEP, GL_INCR, GL_KEEP, GL_KEEP, GL_DECR, GL_ALWAYS, GL_ALWAYS, 128, 255);
-		break;
-	case R_SHADOW_RENDERMODE_ZFAIL_STENCILTWOSIDE:
-	case R_SHADOW_RENDERMODE_ZFAIL_SEPARATESTENCIL:
-		R_SetStencilSeparate(true, 255, GL_KEEP, GL_INCR, GL_KEEP, GL_KEEP, GL_DECR, GL_KEEP, GL_ALWAYS, GL_ALWAYS, 128, 255);
-		break;
-	}
 }
 
 static void R_Shadow_MakeVSDCT(void)
@@ -2282,7 +1617,7 @@ static void R_Shadow_RenderMode_ShadowMap(int side, int size, int x, int y)
 	r_shadow_shadowmapside = side;
 }
 
-void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass)
+void R_Shadow_RenderMode_Lighting(qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass)
 {
 	R_Mesh_ResetTextureState();
 	if (transparent)
@@ -2303,12 +1638,6 @@ void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qb
 		GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 0);
 	r_shadow_usingshadowmap2d = shadowmapping;
 	r_shadow_rendermode = r_shadow_lightingrendermode;
-	// only draw light where this geometry was already rendered AND the
-	// stencil is 128 (values other than this mean shadow)
-	if (stenciltest)
-		R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_EQUAL, 128, 255);
-	else
-		R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
 }
 
 static const unsigned short bboxelements[36] =
@@ -2343,7 +1672,6 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping)
 	r_shadow_rendermode = r_shadow_lightingrendermode;
 	R_EntityMatrix(&identitymatrix);
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_EQUAL, 128, 255);
 	if (rsurface.rtlight->specularscale > 0 && r_shadow_gloss.integer > 0)
 		R_Mesh_SetRenderTargets(r_shadow_prepasslightingdiffusespecularfbo, r_shadow_prepassgeometrydepthbuffer, r_shadow_prepasslightingdiffusetexture, r_shadow_prepasslightingspeculartexture, NULL, NULL);
 	else
@@ -3561,19 +2889,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	}
 }
 
-void R_Shadow_RenderMode_VisibleShadowVolumes(void)
-{
-	R_Shadow_RenderMode_Reset();
-	GL_BlendFunc(GL_ONE, GL_ONE);
-	GL_DepthRange(0, 1);
-	GL_DepthTest(r_showshadowvolumes.integer < 2);
-	GL_Color(0.0, 0.0125 * r_refdef.view.colorscale, 0.1 * r_refdef.view.colorscale, 1);
-	GL_PolygonOffset(r_refdef.shadowpolygonfactor, r_refdef.shadowpolygonoffset);CHECKGLERROR
-	GL_CullFace(GL_NONE);
-	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLEVOLUMES;
-}
-
-void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent)
+void R_Shadow_RenderMode_VisibleLighting(qboolean transparent)
 {
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
@@ -3582,7 +2898,6 @@ void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transpar
 	GL_Color(0.1 * r_refdef.view.colorscale, 0.0125 * r_refdef.view.colorscale, 0, 1);
 	if (!transparent)
 		GL_DepthFunc(GL_EQUAL);
-	R_SetStencil(stenciltest, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_EQUAL, 128, 255);
 	r_shadow_rendermode = R_SHADOW_RENDERMODE_VISIBLELIGHTING;
 }
 
@@ -3741,11 +3056,10 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 {
 	int i;
 	int numsurfaces, numleafs, numleafpvsbytes, numshadowtrispvsbytes, numlighttrispvsbytes;
-	int lighttris, shadowtris, shadowzpasstris, shadowzfailtris;
+	int lighttris, shadowtris;
 	entity_render_t *ent = r_refdef.scene.worldentity;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	unsigned char *data;
-	shadowmesh_t *mesh;
 
 	// compile the light
 	rtlight->compiled = true;
@@ -3767,7 +3081,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 
 	if (model && model->GetLightInfo)
 	{
-		// this variable must be set for the CompileShadowVolume/CompileShadowMap code
+		// this variable must be set for the CompileShadowMap code
 		r_shadow_compilingrtlight = rtlight;
 		R_FrameData_SetMark();
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_leaflist, r_shadow_buffer_leafpvs, &numleafs, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces, r_shadow_buffer_shadowtrispvs, r_shadow_buffer_lighttrispvs, r_shadow_buffer_visitingleafpvs, 0, NULL, rtlight->shadow == 0);
@@ -3797,17 +3111,8 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		if (rtlight->static_numlighttrispvsbytes)
 			memcpy(rtlight->static_lighttrispvs, r_shadow_buffer_lighttrispvs, rtlight->static_numlighttrispvsbytes);
 		R_FrameData_SetMark();
-		switch (rtlight->shadowmode)
-		{
-		case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-			if (model->CompileShadowMap && rtlight->shadow)
-				model->CompileShadowMap(ent, rtlight->shadoworigin, NULL, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
-			break;
-		default:
-			if (model->CompileShadowVolume && rtlight->shadow)
-				model->CompileShadowVolume(ent, rtlight->shadoworigin, NULL, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
-			break;
-		}
+		if (model->CompileShadowMap && rtlight->shadow)
+			model->CompileShadowMap(ent, rtlight->shadoworigin, NULL, rtlight->radius, numsurfaces, r_shadow_buffer_surfacelist);
 		R_FrameData_ReturnToMark();
 		// now we're done compiling the rtlight
 		r_shadow_compilingrtlight = NULL;
@@ -3817,16 +3122,6 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	// use smallest available cullradius - box radius or light radius
 	//rtlight->cullradius = RadiusFromBoundsAndOrigin(rtlight->cullmins, rtlight->cullmaxs, rtlight->shadoworigin);
 	//rtlight->cullradius = min(rtlight->cullradius, rtlight->radius);
-
-	shadowzpasstris = 0;
-	if (rtlight->static_meshchain_shadow_zpass)
-		for (mesh = rtlight->static_meshchain_shadow_zpass;mesh;mesh = mesh->next)
-			shadowzpasstris += mesh->numtriangles;
-
-	shadowzfailtris = 0;
-	if (rtlight->static_meshchain_shadow_zfail)
-		for (mesh = rtlight->static_meshchain_shadow_zfail;mesh;mesh = mesh->next)
-			shadowzfailtris += mesh->numtriangles;
 
 	lighttris = 0;
 	if (rtlight->static_numlighttrispvsbytes)
@@ -3841,19 +3136,13 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 				shadowtris++;
 
 	if (developer_extra.integer)
-		Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles, %i zpass/%i zfail compiled shadow volume triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris, shadowzpasstris, shadowzfailtris);
+		Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i light triangles, %i shadow triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], lighttris, shadowtris);
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)
 {
 	if (rtlight->compiled)
 	{
-		if (rtlight->static_meshchain_shadow_zpass)
-			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow_zpass);
-		rtlight->static_meshchain_shadow_zpass = NULL;
-		if (rtlight->static_meshchain_shadow_zfail)
-			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow_zfail);
-		rtlight->static_meshchain_shadow_zfail = NULL;
 		if (rtlight->static_meshchain_shadow_shadowmap)
 			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow_shadowmap);
 		rtlight->static_meshchain_shadow_shadowmap = NULL;
@@ -4084,78 +3373,6 @@ static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
-static void R_Shadow_DrawWorldShadow_ShadowVolume(int numsurfaces, int *surfacelist, const unsigned char *trispvs)
-{
-	qboolean zpass = false;
-	shadowmesh_t *mesh;
-	int t, tend;
-	int surfacelistindex;
-	msurface_t *surface;
-
-	// if triangle neighbors are disabled, shadowvolumes are disabled
-	if (r_refdef.scene.worldmodel->brush.shadowmesh ? !r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i : !r_refdef.scene.worldmodel->surfmesh.data_neighbor3i)
-		return;
-
-	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
-
-	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
-	{
-		CHECKGLERROR
-		if (r_shadow_rendermode != R_SHADOW_RENDERMODE_VISIBLEVOLUMES)
-		{
-			zpass = R_Shadow_UseZPass(r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
-			R_Shadow_RenderMode_StencilShadowVolumes(zpass);
-		}
-		mesh = zpass ? rsurface.rtlight->static_meshchain_shadow_zpass : rsurface.rtlight->static_meshchain_shadow_zfail;
-		for (;mesh;mesh = mesh->next)
-		{
-			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->numtriangles;
-			R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer, mesh->vbooffset_vertex3f);
-			if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZPASS_STENCIL)
-			{
-				// increment stencil if frontface is infront of depthbuffer
-				GL_CullFace(r_refdef.view.cullface_back);
-				R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_INCR, GL_ALWAYS, 128, 255);
-				R_Mesh_Draw(0, mesh->numverts, 0, mesh->numtriangles, mesh->element3i, mesh->element3i_indexbuffer, mesh->element3i_bufferoffset, mesh->element3s, mesh->element3s_indexbuffer, mesh->element3s_bufferoffset);
-				// decrement stencil if backface is infront of depthbuffer
-				GL_CullFace(r_refdef.view.cullface_front);
-				R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_DECR, GL_ALWAYS, 128, 255);
-			}
-			else if (r_shadow_rendermode == R_SHADOW_RENDERMODE_ZFAIL_STENCIL)
-			{
-				// decrement stencil if backface is behind depthbuffer
-				GL_CullFace(r_refdef.view.cullface_front);
-				R_SetStencil(true, 255, GL_KEEP, GL_DECR, GL_KEEP, GL_ALWAYS, 128, 255);
-				R_Mesh_Draw(0, mesh->numverts, 0, mesh->numtriangles, mesh->element3i, mesh->element3i_indexbuffer, mesh->element3i_bufferoffset, mesh->element3s, mesh->element3s_indexbuffer, mesh->element3s_bufferoffset);
-				// increment stencil if frontface is behind depthbuffer
-				GL_CullFace(r_refdef.view.cullface_back);
-				R_SetStencil(true, 255, GL_KEEP, GL_INCR, GL_KEEP, GL_ALWAYS, 128, 255);
-			}
-			R_Mesh_Draw(0, mesh->numverts, 0, mesh->numtriangles, mesh->element3i, mesh->element3i_indexbuffer, mesh->element3i_bufferoffset, mesh->element3s, mesh->element3s_indexbuffer, mesh->element3s_bufferoffset);
-		}
-		CHECKGLERROR
-	}
-	else if (numsurfaces && r_refdef.scene.worldmodel->brush.shadowmesh)
-	{
-		// use the shadow trispvs calculated earlier by GetLightInfo to cull world triangles on this dynamic light
-		R_Shadow_PrepareShadowMark(r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles);
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-		{
-			surface = r_refdef.scene.worldmodel->data_surfaces + surfacelist[surfacelistindex];
-			for (t = surface->num_firstshadowmeshtriangle, tend = t + surface->num_triangles;t < tend;t++)
-				if (CHECKPVSBIT(trispvs, t))
-					shadowmarklist[numshadowmark++] = t;
-		}
-		R_Shadow_VolumeFromList(r_refdef.scene.worldmodel->brush.shadowmesh->numverts, r_refdef.scene.worldmodel->brush.shadowmesh->numtriangles, r_refdef.scene.worldmodel->brush.shadowmesh->vertex3f, r_refdef.scene.worldmodel->brush.shadowmesh->element3i, r_refdef.scene.worldmodel->brush.shadowmesh->neighbor3i, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius + r_refdef.scene.worldmodel->radius*2 + r_shadow_projectdistance.value, numshadowmark, shadowmarklist, r_refdef.scene.worldmodel->normalmins, r_refdef.scene.worldmodel->normalmaxs);
-	}
-	else if (numsurfaces)
-	{
-		r_refdef.scene.worldmodel->DrawShadowVolume(r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
-	}
-
-	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
-}
-
 static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 {
 	vec3_t relativeshadoworigin, relativeshadowmins, relativeshadowmaxs;
@@ -4170,15 +3387,7 @@ static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[0] = relativeshadoworigin[0] + relativeshadowradius;
 	relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
-	switch (r_shadow_rendermode)
-	{
-	case R_SHADOW_RENDERMODE_SHADOWMAP2D:
-		ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
-		break;
-	default:
-		ent->model->DrawShadowVolume(ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
-		break;
-	}
+	ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
@@ -4412,7 +3621,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 			// since it is lit, it probably also casts a shadow...
 			// about the VectorDistance2 - light emitting entities should not cast their own shadow
 			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-			if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
+			if ((ent->flags & RENDER_SHADOW) && model->DrawShadowMap && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 			{
 				// note: exterior models without the RENDER_NOSELFSHADOW
 				// flag still create a RENDER_NOSELFSHADOW shadow but
@@ -4436,7 +3645,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 				continue;
 			// about the VectorDistance2 - light emitting entities should not cast their own shadow
 			Matrix4x4_OriginFromMatrix(&ent->matrix, org);
-			if ((ent->flags & RENDER_SHADOW) && model->DrawShadowVolume && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
+			if ((ent->flags & RENDER_SHADOW) && model->DrawShadowMap && VectorDistance2(org, rtlight->shadoworigin) > 0.1)
 			{
 				if (ent->flags & (RENDER_NOSELFSHADOW | RENDER_EXTERIORMODEL))
 					shadowentities_noselfshadow[numshadowentities_noselfshadow++] = ent;
@@ -4717,25 +3926,11 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 	// make this the active rtlight for rendering purposes
 	R_Shadow_RenderMode_ActiveLight(rtlight);
 
-	if (r_showshadowvolumes.integer && r_refdef.view.showdebug && numsurfaces + numshadowentities + numshadowentities_noselfshadow && rtlight->shadow && (rtlight->isstatic ? r_refdef.scene.rtworldshadows : r_refdef.scene.rtdlightshadows))
-	{
-		// optionally draw visible shape of the shadow volumes
-		// for performance analysis by level designers
-		R_Shadow_RenderMode_VisibleShadowVolumes();
-		if (numsurfaces)
-			R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
-		for (i = 0;i < numshadowentities;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[i]);
-		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
-		R_Shadow_RenderMode_VisibleLighting(false, false);
-	}
-
 	if (r_showlighting.integer && r_refdef.view.showdebug && numsurfaces + numlightentities + numlightentities_noselfshadow)
 	{
 		// optionally draw the illuminated areas
 		// for performance analysis by level designers
-		R_Shadow_RenderMode_VisibleLighting(false, false);
+		R_Shadow_RenderMode_VisibleLighting(false);
 		if (numsurfaces)
 			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 		for (i = 0;i < numlightentities;i++)
@@ -4764,7 +3959,7 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 		// draw lighting in the unmasked areas
 		if (numsurfaces + numlightentities)
 		{
-			R_Shadow_RenderMode_Lighting(false, false, true, false);
+			R_Shadow_RenderMode_Lighting(false, true, false);
 			// draw lighting in the unmasked areas
 			if (numsurfaces)
 				R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
@@ -4774,7 +3969,7 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 		// offset to the noselfshadow part of the atlas and draw those too
 		if (numlightentities_noselfshadow)
 		{
-			R_Shadow_RenderMode_Lighting(false, false, true, true);
+			R_Shadow_RenderMode_Lighting(false, true, true);
 			for (i = 0; i < numlightentities_noselfshadow; i++)
 				R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
 		}
@@ -4783,41 +3978,10 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 		if (r_shadow_usingdeferredprepass)
 			R_Shadow_RenderMode_DrawDeferredLight(true);
 	}
-	else if (castshadows && vid.stencil)
-	{
-		// draw stencil shadow volumes to mask off pixels that are in shadow
-		// so that they won't receive lighting
-		GL_Scissor(r_shadow_lightscissor[0], r_shadow_lightscissor[1], r_shadow_lightscissor[2], r_shadow_lightscissor[3]);
-		R_Shadow_ClearStencil();
-
-		if (numsurfaces)
-			R_Shadow_DrawWorldShadow_ShadowVolume(numsurfaces, surfacelist, shadowtrispvs);
-		for (i = 0;i < numshadowentities;i++)
-			R_Shadow_DrawEntityShadow(shadowentities[i]);
-
-		// draw lighting in the unmasked areas
-		R_Shadow_RenderMode_Lighting(true, false, false, false);
-		for (i = 0;i < numlightentities_noselfshadow;i++)
-			R_Shadow_DrawEntityLight(lightentities_noselfshadow[i]);
-
-		for (i = 0;i < numshadowentities_noselfshadow;i++)
-			R_Shadow_DrawEntityShadow(shadowentities_noselfshadow[i]);
-
-		// draw lighting in the unmasked areas
-		R_Shadow_RenderMode_Lighting(true, false, false, false);
-		if (numsurfaces)
-			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
-		for (i = 0;i < numlightentities;i++)
-			R_Shadow_DrawEntityLight(lightentities[i]);
-
-		// rasterize the box when rendering deferred lighting - the regular surface lighting only applies to transparent surfaces
-		if (r_shadow_usingdeferredprepass)
-			R_Shadow_RenderMode_DrawDeferredLight(false);
-	}
 	else
 	{
 		// draw lighting in the unmasked areas
-		R_Shadow_RenderMode_Lighting(false, false, false, false);
+		R_Shadow_RenderMode_Lighting(false, false, false);
 		if (numsurfaces)
 			R_Shadow_DrawWorldLight(numsurfaces, surfacelist, lighttrispvs);
 		for (i = 0;i < numlightentities;i++)
@@ -5161,31 +4325,6 @@ void R_Shadow_PrepareModelShadows(void)
 	if (!r_refdef.scene.numentities || r_refdef.scene.lightmapintensity <= 0.0f || r_shadows.integer <= 0)
 		return;
 
-	switch (r_shadow_shadowmode)
-	{
-	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
-		if (r_shadows.integer >= 2)
-			break;
-		// fall through
-	case R_SHADOW_SHADOWMODE_STENCIL:
-		if (!vid.stencil)
-			return;
-		for (i = 0; i < r_refdef.scene.numentities; i++)
-		{
-			ent = r_refdef.scene.entities[i];
-			if (ent->model && ent->model->DrawShadowVolume != NULL && (!ent->model->brush.submodel || r_shadows_castfrombmodels.integer) && (ent->flags & RENDER_SHADOW))
-			{
-				if (r_shadow_nummodelshadows >= MAX_MODELSHADOWS)
-					break;
-				r_shadow_modelshadows[r_shadow_nummodelshadows++] = ent;
-				R_AnimCache_GetEntity(ent, false, false);
-			}
-		}
-		return;
-	default:
-		return;
-	}
-
 	size = r_shadow_shadowmaptexturesize / 4;
 	scale = r_shadow_shadowmapping_precision.value * r_shadows_shadowmapscale.value;
 	radius = 0.5f * size / scale;
@@ -5348,97 +4487,6 @@ static void R_Shadow_DrawModelShadowMaps(void)
 	Matrix4x4_AdjustOrigin(&scalematrix, 0, size, -0.5f * bias);
 	Matrix4x4_Concat(&texmatrix, &scalematrix, &shadowmatrix);
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
-}
-
-void R_Shadow_DrawModelShadows(void)
-{
-	int i;
-	float relativethrowdistance;
-	entity_render_t *ent;
-	vec3_t relativelightorigin;
-	vec3_t relativelightdirection;
-	vec3_t relativeshadowmins, relativeshadowmaxs;
-	vec3_t tmp, shadowdir;
-	prvm_vec3_t prvmshadowdir;
-
-	if (!r_shadow_nummodelshadows || (r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL && r_shadows.integer != 1))
-		return;
-
-	R_ResetViewRendering3D(r_shadow_viewfbo, r_shadow_viewdepthtexture, r_shadow_viewcolortexture, r_shadow_viewx, r_shadow_viewy, r_shadow_viewwidth, r_shadow_viewheight);
-	//GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
-	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
-	R_Shadow_RenderMode_Begin();
-	R_Shadow_RenderMode_ActiveLight(NULL);
-	r_shadow_lightscissor[0] = r_shadow_viewx;
-	r_shadow_lightscissor[1] = (r_shadow_viewfbo ? r_shadow_viewheight : vid.height) - r_shadow_viewy - r_shadow_viewheight;
-	r_shadow_lightscissor[2] = r_shadow_viewwidth;
-	r_shadow_lightscissor[3] = r_shadow_viewheight;
-	R_Shadow_RenderMode_StencilShadowVolumes(false);
-
-	// get shadow dir
-	if (r_shadows.integer == 2)
-	{
-		Math_atov(r_shadows_throwdirection.string, prvmshadowdir);
-		VectorCopy(prvmshadowdir, shadowdir);
-		VectorNormalize(shadowdir);
-	}
-
-	R_Shadow_ClearStencil();
-
-	for (i = 0;i < r_shadow_nummodelshadows;i++)
-	{
-		ent = r_shadow_modelshadows[i];
-
-		// cast shadows from anything of the map (submodels are optional)
-		relativethrowdistance = r_shadows_throwdistance.value * Matrix4x4_ScaleFromMatrix(&ent->inversematrix);
-		VectorSet(relativeshadowmins, -relativethrowdistance, -relativethrowdistance, -relativethrowdistance);
-		VectorSet(relativeshadowmaxs, relativethrowdistance, relativethrowdistance, relativethrowdistance);
-		if (r_shadows.integer == 2) // 2: simpler mode, throw shadows always in same direction
-			Matrix4x4_Transform3x3(&ent->inversematrix, shadowdir, relativelightdirection);
-		else
-		{
-			VectorNegate(ent->render_modellight_lightdir, tmp);
-			Matrix4x4_Transform3x3(&ent->inversematrix, tmp, relativelightdirection);
-		}
-
-		VectorScale(relativelightdirection, -relativethrowdistance, relativelightorigin);
-		RSurf_ActiveModelEntity(ent, false, false, false);
-		ent->model->DrawShadowVolume(ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, relativeshadowmins, relativeshadowmaxs);
-		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
-	}
-
-	// not really the right mode, but this will disable any silly stencil features
-	R_Shadow_RenderMode_End();
-
-	// set up ortho view for rendering this pass
-	//GL_Scissor(r_refdef.view.x, vid.height - r_refdef.view.height - r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
-	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	//GL_ScissorTest(true);
-	//R_EntityMatrix(&identitymatrix);
-	//R_Mesh_ResetTextureState();
-	R_ResetViewRendering2D(r_shadow_viewfbo, r_shadow_viewdepthtexture, r_shadow_viewcolortexture, r_shadow_viewx, r_shadow_viewy, r_shadow_viewwidth, r_shadow_viewheight);
-
-	// set up a darkening blend on shadowed areas
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//GL_DepthRange(0, 1);
-	//GL_DepthTest(false);
-	//GL_DepthMask(false);
-	//GL_PolygonOffset(0, 0);CHECKGLERROR
-	GL_Color(0, 0, 0, r_shadows_darken.value);
-	//GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
-	//GL_DepthFunc(GL_ALWAYS);
-	R_SetStencil(true, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_NOTEQUAL, 128, 255);
-
-	// apply the blend to the shadowed areas
-	R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, NULL);
-	R_SetupShader_Generic_NoTexture(false, true);
-	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-
-	// restore the viewport
-	R_SetViewport(&r_refdef.view.viewport);
-
-	// restore other state to normal
-	//R_Shadow_RenderMode_End();
 }
 
 static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)

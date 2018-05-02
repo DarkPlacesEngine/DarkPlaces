@@ -31,11 +31,7 @@ extern cvar_t r_shadow_realtime_world_compileshadow;
 extern cvar_t r_shadow_realtime_world_compilesvbsp;
 extern cvar_t r_shadow_realtime_world_compileportalculling;
 extern cvar_t r_shadow_scissor;
-extern cvar_t r_shadow_polygonfactor;
-extern cvar_t r_shadow_polygonoffset;
 extern cvar_t r_shadow_texture3d;
-extern cvar_t gl_ext_separatestencil;
-extern cvar_t gl_ext_stenciltwoside;
 
 // used by shader for bouncegrid feature
 typedef struct r_shadow_bouncegrid_settings_s
@@ -102,9 +98,7 @@ extern r_shadow_bouncegrid_state_t r_shadow_bouncegrid_state;
 
 void R_Shadow_Init(void);
 qboolean R_Shadow_ShadowMappingEnabled(void);
-void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, const vec3_t projectdirection, float projectdistance, int nummarktris, const int *marktris, vec3_t trismins, vec3_t trismaxs);
 void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, const int *elements, int numsidetris, const int *sidetotals, const unsigned char *sides, const int *sidetris);
-void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs);
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias);
 int R_Shadow_CalcSphereSideMask(const vec3_t p1, float radius, float bias);
 int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals);
@@ -112,11 +106,9 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
-void R_Shadow_RenderMode_StencilShadowVolumes(qboolean zpass);
-void R_Shadow_RenderMode_Lighting(qboolean stenciltest, qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
+void R_Shadow_RenderMode_Lighting(qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
 void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping);
-void R_Shadow_RenderMode_VisibleShadowVolumes(void);
-void R_Shadow_RenderMode_VisibleLighting(qboolean stenciltest, qboolean transparent);
+void R_Shadow_RenderMode_VisibleLighting(qboolean transparent);
 void R_Shadow_RenderMode_End(void);
 void R_Shadow_ClearStencil(void);
 void R_Shadow_SetupEntityLight(const entity_render_t *ent);
@@ -162,6 +154,5 @@ void R_Shadow_PrepareModelShadows(void);
 void R_CompleteLightPoint(float *ambient, float *diffuse, float *lightdir, const vec3_t p, const int flags, float lightmapintensity, float ambientintensity);
 
 void R_Shadow_DrawShadowMaps(void);
-void R_Shadow_DrawModelShadows(void);
 
 #endif

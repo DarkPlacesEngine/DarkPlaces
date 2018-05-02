@@ -439,21 +439,6 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_CLAMP_TO_EDGE 0x812F
 #endif
 
-//GL_ATI_separate_stencil
-#ifndef GL_STENCIL_BACK_FUNC
-#define GL_STENCIL_BACK_FUNC              0x8800
-#define GL_STENCIL_BACK_FAIL              0x8801
-#define GL_STENCIL_BACK_PASS_DEPTH_FAIL   0x8802
-#define GL_STENCIL_BACK_PASS_DEPTH_PASS   0x8803
-#endif
-extern void (GLAPIENTRY *qglStencilOpSeparate)(GLenum, GLenum, GLenum, GLenum);
-extern void (GLAPIENTRY *qglStencilFuncSeparate)(GLenum, GLenum, GLint, GLuint);
-
-//GL_EXT_stencil_two_side
-#define GL_STENCIL_TEST_TWO_SIDE_EXT      0x8910
-#define GL_ACTIVE_STENCIL_FACE_EXT        0x8911
-extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
-
 //GL_EXT_blend_minmax
 #ifndef GL_FUNC_ADD
 #define GL_FUNC_ADD                   0x8006 // also supplied by GL_blend_subtract

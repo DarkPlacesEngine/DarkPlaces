@@ -92,7 +92,6 @@ cvar_t r_showsurfaces = {0, "r_showsurfaces", "0", "1 shows surfaces as differen
 cvar_t r_showtris = {0, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_shownormals = {0, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
 cvar_t r_showlighting = {0, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
-cvar_t r_showshadowvolumes = {0, "r_showshadowvolumes", "0", "shows areas shadowed by lights, useful for finding out why some areas of a map render slowly (bright blue = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
 cvar_t r_showcollisionbrushes = {0, "r_showcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
 cvar_t r_showcollisionbrushes_polygonfactor = {0, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
 cvar_t r_showcollisionbrushes_polygonoffset = {0, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
@@ -3270,7 +3269,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_shownormals);
 	Cvar_RegisterVariable(&r_showlighting);
-	Cvar_RegisterVariable(&r_showshadowvolumes);
 	Cvar_RegisterVariable(&r_showcollisionbrushes);
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_showcollisionbrushes_polygonoffset);
@@ -3473,7 +3471,7 @@ void GL_Init (void)
 #endif
 
 	// clear to black (loading plaque will be seen over this)
-	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
+	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
 }
 #endif
 
@@ -4605,7 +4603,6 @@ void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rt
 	R_EntityMatrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
 	GL_PolygonOffset(0, 0);
-	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -4638,7 +4635,6 @@ void R_ResetViewRendering3D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_
 	R_EntityMatrix(&identitymatrix);
 	R_Mesh_ResetTextureState();
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
-	R_SetStencil(false, 255, GL_KEEP, GL_KEEP, GL_KEEP, GL_ALWAYS, 128, 255);
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
@@ -5307,7 +5303,7 @@ static void R_Bloom_MakeTexture(void)
 		x *= 2;
 		r = bound(0, r_bloom_colorexponent.value / x, 1); // always 0.5 to 1
 		if(x <= 2)
-			GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 128);
+			GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
 		GL_BlendFunc(GL_SRC_COLOR, GL_ZERO); // square it
 		GL_Color(1,1,1,1); // no fix factor supported here
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, prev->texcoord2f);
@@ -5610,8 +5606,6 @@ void R_UpdateVariables(void)
 		Cvar_SetValueQuick(&r_shadow_frontsidecasting, 1);
 	r_refdef.polygonfactor = 0;
 	r_refdef.polygonoffset = 0;
-	r_refdef.shadowpolygonfactor = r_refdef.polygonfactor + r_shadow_polygonfactor.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
-	r_refdef.shadowpolygonoffset = r_refdef.polygonoffset + r_shadow_polygonoffset.value * (r_shadow_frontsidecasting.integer ? 1 : -1);
 
 	r_refdef.scene.rtworld = r_shadow_realtime_world.integer != 0;
 	r_refdef.scene.rtworldshadows = r_shadow_realtime_world_shadows.integer && vid.stencil;
@@ -6045,16 +6039,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
 
-	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && !r_shadows_drawafterrtlighting.integer && r_refdef.scene.lightmapintensity > 0)
-	{
-		R_ResetViewRendering3D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
-		R_Shadow_DrawModelShadows();
-		R_ResetViewRendering3D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
-	}
-
 	if (!r_shadow_usingdeferredprepass)
 	{
 		R_Shadow_DrawLights();
@@ -6065,16 +6049,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 	// don't let sound skip if going slow
 	if (r_refdef.scene.extraupdate)
 		S_ExtraUpdate ();
-
-	if ((r_shadows.integer == 1 || (r_shadows.integer > 0 && !shadowmapping)) && r_shadows_drawafterrtlighting.integer && r_refdef.scene.lightmapintensity > 0)
-	{
-		R_ResetViewRendering3D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
-		R_Shadow_DrawModelShadows();
-		R_ResetViewRendering3D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
-	}
 
 	if (cl.csqc_vidvars.drawworld)
 	{

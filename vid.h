@@ -55,14 +55,12 @@ typedef struct viddef_support_s
 	qboolean arb_texture_non_power_of_two;
 	qboolean arb_vertex_buffer_object;
 	qboolean arb_uniform_buffer_object;
-	qboolean ati_separate_stencil;
 	qboolean ext_blend_minmax;
 	qboolean ext_blend_subtract;
 	qboolean ext_blend_func_separate;
 	qboolean ext_draw_range_elements;
 	qboolean ext_framebuffer_object;
 	qboolean ext_packed_depth_stencil;
-	qboolean ext_stencil_two_side;
 	qboolean ext_texture_3d;
 	qboolean ext_texture_compression_s3tc;
 	qboolean ext_texture_edge_clamp;

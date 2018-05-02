@@ -27,7 +27,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "polygon.h"
 
-cvar_t r_enableshadowvolumes = {CVAR_SAVE, "r_enableshadowvolumes", "1", "Enables use of Stencil Shadow Volume shadowing methods, saves some memory if turned off"};
 cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
 cvar_t r_mipnormalmaps = {CVAR_SAVE, "r_mipnormalmaps", "1", "mipmaps normalmaps (turning it off looks sharper but may have aliasing)"};
 cvar_t mod_generatelightmaps_unitspersample = {CVAR_SAVE, "mod_generatelightmaps_unitspersample", "8", "lightmap resolution"};
@@ -162,7 +161,6 @@ void Mod_Init (void)
 	Mod_AliasInit();
 	Mod_SpriteInit();
 
-	Cvar_RegisterVariable(&r_enableshadowvolumes);
 	Cvar_RegisterVariable(&r_mipskins);
 	Cvar_RegisterVariable(&r_mipnormalmaps);
 	Cvar_RegisterVariable(&mod_generatelightmaps_unitspersample);
@@ -703,119 +701,6 @@ int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, 
 	return count;
 }
 
-#if 1
-// fast way, using an edge hash
-#define TRIANGLEEDGEHASH 8192
-void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
-{
-	int i, j, p, e1, e2, *n, hashindex, count, match;
-	const int *e;
-	typedef struct edgehashentry_s
-	{
-		struct edgehashentry_s *next;
-		int triangle;
-		int element[2];
-	}
-	edgehashentry_t;
-	static edgehashentry_t **edgehash;
-	edgehashentry_t *edgehashentries, *hash;
-	if (!numtriangles)
-		return;
-	edgehash = (edgehashentry_t **)Mem_Alloc(tempmempool, TRIANGLEEDGEHASH * sizeof(*edgehash));
-	// if there are too many triangles for the stack array, allocate larger buffer
-	edgehashentries = (edgehashentry_t *)Mem_Alloc(tempmempool, numtriangles * 3 * sizeof(edgehashentry_t));
-	// find neighboring triangles
-	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
-	{
-		for (j = 0, p = 2;j < 3;p = j, j++)
-		{
-			e1 = e[p];
-			e2 = e[j];
-			// this hash index works for both forward and backward edges
-			hashindex = (unsigned int)(e1 + e2) % TRIANGLEEDGEHASH;
-			hash = edgehashentries + i * 3 + j;
-			hash->next = edgehash[hashindex];
-			edgehash[hashindex] = hash;
-			hash->triangle = i;
-			hash->element[0] = e1;
-			hash->element[1] = e2;
-		}
-	}
-	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
-	{
-		for (j = 0, p = 2;j < 3;p = j, j++)
-		{
-			e1 = e[p];
-			e2 = e[j];
-			// this hash index works for both forward and backward edges
-			hashindex = (unsigned int)(e1 + e2) % TRIANGLEEDGEHASH;
-			count = 0;
-			match = -1;
-			for (hash = edgehash[hashindex];hash;hash = hash->next)
-			{
-				if (hash->element[0] == e2 && hash->element[1] == e1)
-				{
-					if (hash->triangle != i)
-						match = hash->triangle;
-					count++;
-				}
-				else if ((hash->element[0] == e1 && hash->element[1] == e2))
-					count++;
-			}
-			// detect edges shared by three triangles and make them seams
-			if (count > 2)
-				match = -1;
-			n[p] = match;
-		}
-
-		// also send a keepalive here (this can take a while too!)
-		CL_KeepaliveMessage(false);
-	}
-	// free the allocated buffer
-	Mem_Free(edgehashentries);
-	Mem_Free(edgehash);
-}
-#else
-// very slow but simple way
-static int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore)
-{
-	int i, match, count;
-	count = 0;
-	match = -1;
-	for (i = 0;i < numtriangles;i++, elements += 3)
-	{
-		     if ((elements[0] == start && elements[1] == end)
-		      || (elements[1] == start && elements[2] == end)
-		      || (elements[2] == start && elements[0] == end))
-		{
-			if (i != ignore)
-				match = i;
-			count++;
-		}
-		else if ((elements[1] == start && elements[0] == end)
-		      || (elements[2] == start && elements[1] == end)
-		      || (elements[0] == start && elements[2] == end))
-			count++;
-	}
-	// detect edges shared by three triangles and make them seams
-	if (count > 2)
-		match = -1;
-	return match;
-}
-
-void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
-{
-	int i, *n;
-	const int *e;
-	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
-	{
-		n[0] = Mod_FindTriangleWithEdge(elements, numtriangles, e[1], e[0], i);
-		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1], i);
-		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2], i);
-	}
-}
-#endif
-
 qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline)
 {
 	int first = firstvertex, last = first + numvertices - 1, numelements = numtriangles * 3;
@@ -1051,10 +936,10 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 	}
 }
 
-void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
+void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors)
 {
 	unsigned char *data;
-	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0));
+	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0));
 	loadmodel->surfmesh.num_vertices = numvertices;
 	loadmodel->surfmesh.num_triangles = numtriangles;
 	if (loadmodel->surfmesh.num_vertices)
@@ -1073,14 +958,12 @@ void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qb
 	if (loadmodel->surfmesh.num_triangles)
 	{
 		loadmodel->surfmesh.data_element3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
-		if (neighbors)
-			loadmodel->surfmesh.data_neighbor3i = (int *)data, data += sizeof(int[3]) * loadmodel->surfmesh.num_triangles;
 		if (loadmodel->surfmesh.num_vertices <= 65536)
 			loadmodel->surfmesh.data_element3s = (unsigned short *)data, data += sizeof(unsigned short[3]) * loadmodel->surfmesh.num_triangles;
 	}
 }
 
-shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)
+shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int expandable)
 {
 	shadowmesh_t *newmesh;
 	unsigned char *data;
@@ -1092,8 +975,6 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 	size += maxtriangles * sizeof(int[3]);
 	if (maxverts <= 65536)
 		size += maxtriangles * sizeof(unsigned short[3]);
-	if (neighbors)
-		size += maxtriangles * sizeof(int[3]);
 	if (expandable)
 		size += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *) + maxverts * sizeof(shadowmeshvertexhash_t);
 	data = (unsigned char *)Mem_Alloc(mempool, size);
@@ -1117,10 +998,6 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 		newmesh->texcoord2f = (float *)data;data += maxverts * sizeof(float[2]);
 	}
 	newmesh->element3i = (int *)data;data += maxtriangles * sizeof(int[3]);
-	if (neighbors)
-	{
-		newmesh->neighbor3i = (int *)data;data += maxtriangles * sizeof(int[3]);
-	}
 	if (expandable)
 	{
 		newmesh->vertexhashtable = (shadowmeshvertexhash_t **)data;data += SHADOWMESHVERTEXHASH * sizeof(shadowmeshvertexhash_t *);
@@ -1131,10 +1008,10 @@ shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtria
 	return newmesh;
 }
 
-shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors)
+shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light)
 {
 	shadowmesh_t *newmesh;
-	newmesh = Mod_ShadowMesh_Alloc(mempool, oldmesh->numverts, oldmesh->numtriangles, oldmesh->map_diffuse, oldmesh->map_specular, oldmesh->map_normal, light, neighbors, false);
+	newmesh = Mod_ShadowMesh_Alloc(mempool, oldmesh->numverts, oldmesh->numtriangles, oldmesh->map_diffuse, oldmesh->map_specular, oldmesh->map_normal, light, false);
 	newmesh->numverts = oldmesh->numverts;
 	newmesh->numtriangles = oldmesh->numtriangles;
 	memcpy(newmesh->sideoffsets, oldmesh->sideoffsets, sizeof(oldmesh->sideoffsets));
@@ -1149,8 +1026,6 @@ shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, 
 		memcpy(newmesh->texcoord2f, oldmesh->texcoord2f, oldmesh->numverts * sizeof(float[2]));
 	}
 	memcpy(newmesh->element3i, oldmesh->element3i, oldmesh->numtriangles * sizeof(int[3]));
-	if (newmesh->neighbor3i && oldmesh->neighbor3i)
-		memcpy(newmesh->neighbor3i, oldmesh->neighbor3i, oldmesh->numtriangles * sizeof(int[3]));
 	return newmesh;
 }
 
@@ -1195,7 +1070,7 @@ void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, rtexture
 	while (mesh->map_diffuse != map_diffuse || mesh->map_specular != map_specular || mesh->map_normal != map_normal || mesh->numverts + 3 > mesh->maxverts || mesh->numtriangles + 1 > mesh->maxtriangles)
 	{
 		if (mesh->next == NULL)
-			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(mesh->maxverts, 300), max(mesh->maxtriangles, 100), map_diffuse, map_specular, map_normal, mesh->svector3f != NULL, mesh->neighbor3i != NULL, true);
+			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(mesh->maxverts, 300), max(mesh->maxtriangles, 100), map_diffuse, map_specular, map_normal, mesh->svector3f != NULL, true);
 		mesh = mesh->next;
 	}
 	mesh->element3i[mesh->numtriangles * 3 + 0] = Mod_ShadowMesh_AddVertex(mesh, vertex14f + 14 * 0);
@@ -1251,12 +1126,12 @@ void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *
 	CL_KeepaliveMessage(false);
 }
 
-shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int expandable)
 {
 	// the preparation before shadow mesh initialization can take a while, so let's do a keepalive here
 	CL_KeepaliveMessage(false);
 
-	return Mod_ShadowMesh_Alloc(mempool, maxverts, maxtriangles, map_diffuse, map_specular, map_normal, light, neighbors, expandable);
+	return Mod_ShadowMesh_Alloc(mempool, maxverts, maxtriangles, map_diffuse, map_specular, map_normal, light, expandable);
 }
 
 static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
@@ -1321,7 +1196,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh, mempool_t *mempool)
 	}
 }
 
-shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean neighbors, qboolean createvbo)
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean createvbo)
 {
 	shadowmesh_t *mesh, *newmesh, *nextmesh;
 	// reallocate meshs to conserve space
@@ -1330,7 +1205,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh,
 		nextmesh = mesh->next;
 		if (mesh->numverts >= 3 && mesh->numtriangles >= 1)
 		{
-			newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh, light, neighbors);
+			newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh, light);
 			newmesh->next = firstmesh;
 			firstmesh = newmesh;
 			if (newmesh->element3s)
@@ -1441,7 +1316,7 @@ void Mod_CreateCollisionMesh(dp_model_t *mod)
 			continue;
 		numcollisionmeshtriangles += surface->num_triangles;
 	}
-	mod->brush.collisionmesh = Mod_ShadowMesh_Begin(mempool, numcollisionmeshtriangles * 3, numcollisionmeshtriangles, NULL, NULL, NULL, false, false, true);
+	mod->brush.collisionmesh = Mod_ShadowMesh_Begin(mempool, numcollisionmeshtriangles * 3, numcollisionmeshtriangles, NULL, NULL, NULL, false, true);
 	if (usesinglecollisionmesh)
 		Mod_ShadowMesh_AddMesh(mempool, mod->brush.collisionmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 	else
@@ -1454,7 +1329,7 @@ void Mod_CreateCollisionMesh(dp_model_t *mod)
 			Mod_ShadowMesh_AddMesh(mempool, mod->brush.collisionmesh, NULL, NULL, NULL, mod->surfmesh.data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 		}
 	}
-	mod->brush.collisionmesh = Mod_ShadowMesh_Finish(mempool, mod->brush.collisionmesh, false, false, false);
+	mod->brush.collisionmesh = Mod_ShadowMesh_Finish(mempool, mod->brush.collisionmesh, false, false);
 }
 
 #if 0
@@ -1498,7 +1373,7 @@ static void Mod_GetTerrainVertexFromBGRA(const unsigned char *imagepixels, int i
 	VectorAdd(normal3f, nl, normal3f);
 }
 
-static void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+static void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
 {
 	int x, y, ix, iy, *e;
 	e = element3i;
@@ -1515,7 +1390,6 @@ static void Mod_ConstructTerrainPatchFromBGRA(const unsigned char *imagepixels, 
 			e += 6;
 		}
 	}
-	Mod_BuildTriangleNeighbors(neighbor3i, element3i, width*height*2);
 	for (y = 0, iy = y1;y < height + 1;y++, iy++)
 		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
 			Mod_GetTerrainVertexFromBGRA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
@@ -4384,7 +4258,7 @@ static void Mod_GenerateLightmaps_CreateLightmaps(dp_model_t *model)
 				// lightmap coordinates here are in pixels
 				// lightmap projections are snapped to pixel grid explicitly, such
 				// that two neighboring triangles sharing an edge and projection
-				// axis will have identical sampl espacing along their shared edge
+				// axis will have identical sample spacing along their shared edge
 				k = 0;
 				for (j = 0;j < 3;j++)
 				{
@@ -4650,7 +4524,6 @@ void Mod_Mesh_Create(dp_model_t *mod, const char *name)
 	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
 	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
 	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q1BSP_DrawLight;
 }
 

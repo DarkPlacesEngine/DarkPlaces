@@ -219,7 +219,6 @@ typedef struct rmesh_s
 	int maxtriangles;
 	int numtriangles;
 	int *element3i;
-	int *neighbor3i;
 	// snapping epsilon
 	float epsilon2;
 }
@@ -243,7 +242,6 @@ extern cvar_t r_showoverdraw;
 extern cvar_t r_showtris;
 extern cvar_t r_shownormals;
 extern cvar_t r_showlighting;
-extern cvar_t r_showshadowvolumes;
 extern cvar_t r_showcollisionbrushes;
 extern cvar_t r_showcollisionbrushes_polygonfactor;
 extern cvar_t r_showcollisionbrushes_polygonoffset;
