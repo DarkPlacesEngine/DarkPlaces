@@ -210,44 +210,29 @@ shadowmeshvertexhash_t;
 
 typedef struct shadowmesh_s
 {
-	// next mesh in chain
-	struct shadowmesh_s *next;
-	// used for light mesh (NULL on shadow mesh)
-	rtexture_t *map_diffuse;
-	rtexture_t *map_specular;
-	rtexture_t *map_normal;
-	// buffer sizes
-	int numverts, maxverts;
-	int numtriangles, maxtriangles;
-	// used always
+	mempool_t *mempool;
+
+	int numverts;
+	int maxverts;
 	float *vertex3f;
-	// used for light mesh (NULL on shadow mesh)
-	float *svector3f;
-	float *tvector3f;
-	float *normal3f;
-	float *texcoord2f;
-	// used always
+	r_meshbuffer_t *vbo_vertexbuffer;
+	int vbooffset_vertex3f;
+
+	int numtriangles;
+	int maxtriangles;
 	int *element3i;
 	r_meshbuffer_t *element3i_indexbuffer;
 	int element3i_bufferoffset;
 	unsigned short *element3s;
 	r_meshbuffer_t *element3s_indexbuffer;
 	int element3s_bufferoffset;
-	// vertex/index buffers for rendering
-	// (created by Mod_ShadowMesh_Finish if possible)
-	r_vertexmesh_t *vertexmesh; // usually NULL
+
 	// used for shadow mapping cubemap side partitioning
 	int sideoffsets[6], sidetotals[6];
+
 	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
 	// while building meshes
 	shadowmeshvertexhash_t **vertexhashtable, *vertexhashentries;
-	r_meshbuffer_t *vbo_vertexbuffer;
-	int vbooffset_vertex3f;
-	int vbooffset_svector3f;
-	int vbooffset_tvector3f;
-	int vbooffset_normal3f;
-	int vbooffset_texcoord2f;
-	int vbooffset_vertexmesh;
 }
 shadowmesh_t;
 
@@ -1156,13 +1141,15 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod);
 // automatically called after model loader returns
 void Mod_BuildVBOs(void);
 
-shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int expandable);
-shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light);
-void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, int numtris, const int *element3i);
-shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int expandable);
-shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, qboolean light, qboolean createvbo);
+shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles);
+int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, const float *vertex3f);
+void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtris, const int *element3i);
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles);
+shadowmesh_t *Mod_ShadowMesh_Finish(shadowmesh_t *firstmesh, qboolean createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
+
+void Mod_CreateCollisionMesh(dp_model_t *mod);
 
 void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);

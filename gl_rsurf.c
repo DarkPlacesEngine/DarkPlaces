@@ -1306,7 +1306,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 	// exceeding the number of triangles in a single mesh) we have to make sure
 	// that we make only a single mesh - so over-estimate the size of the mesh
 	// to match the model.
-	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles, NULL, NULL, NULL, false, true);
+	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Begin(r_main_mempool, model->surfmesh.num_vertices, model->surfmesh.num_triangles);
 	R_Shadow_PrepareShadowSides(model->surfmesh.num_triangles);
 	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 	{
@@ -1314,7 +1314,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 		sidemasks |= R_Shadow_ChooseSidesFromBox(surface->num_firsttriangle, surface->num_triangles, model->surfmesh.data_vertex3f, model->surfmesh.data_element3i, &r_shadow_compilingrtlight->matrix_worldtolight, relativelightorigin, relativelightdirection, r_shadow_compilingrtlight->cullmins, r_shadow_compilingrtlight->cullmaxs, surface->mins, surface->maxs, surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW ? NULL : sidetotals);
 	}
 	R_Shadow_ShadowMapFromList(model->surfmesh.num_vertices, model->surfmesh.num_triangles, model->surfmesh.data_vertex3f, model->surfmesh.data_element3i, numshadowsides, sidetotals, shadowsides, shadowsideslist);
-	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, false, true);
+	r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap = Mod_ShadowMesh_Finish(r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, true);
 	r_shadow_compilingrtlight->static_shadowmap_receivers &= sidemasks;
 	for(i = 0;i<6;i++)
 		if(!sidetotals[i])
