@@ -1190,8 +1190,8 @@ void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f
 			}
 		}
 	}
-			
-	Mod_ShadowMesh_AddMesh(r_main_mempool, r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, outtriangles, shadowelements);
+
+	Mod_ShadowMesh_AddMesh(r_shadow_compilingrtlight->static_meshchain_shadow_shadowmap, vertex3f, outtriangles, shadowelements);
 }
 
 static void R_Shadow_MakeTextures_MakeCorona(void)
@@ -3348,24 +3348,20 @@ static void R_Shadow_ComputeShadowCasterCullingPlanes(rtlight_t *rtlight)
 
 static void R_Shadow_DrawWorldShadow_ShadowMap(int numsurfaces, int *surfacelist, const unsigned char *trispvs, const unsigned char *surfacesides)
 {
-	shadowmesh_t *mesh;
-
 	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
 	if (rsurface.rtlight->compiled && r_shadow_realtime_world_compile.integer && r_shadow_realtime_world_compileshadow.integer)
 	{
-		CHECKGLERROR
-		GL_CullFace(GL_NONE);
-		mesh = rsurface.rtlight->static_meshchain_shadow_shadowmap;
-		for (;mesh;mesh = mesh->next)
+		shadowmesh_t *mesh = rsurface.rtlight->static_meshchain_shadow_shadowmap;
+		if (mesh->sidetotals[r_shadow_shadowmapside])
 		{
-			if (!mesh->sidetotals[r_shadow_shadowmapside])
-				continue;
+			CHECKGLERROR
+			GL_CullFace(GL_NONE);
 			r_refdef.stats[r_stat_lights_shadowtriangles] += mesh->sidetotals[r_shadow_shadowmapside];
 			R_Mesh_PrepareVertices_Vertex3f(mesh->numverts, mesh->vertex3f, mesh->vbo_vertexbuffer, mesh->vbooffset_vertex3f);
 			R_Mesh_Draw(0, mesh->numverts, mesh->sideoffsets[r_shadow_shadowmapside], mesh->sidetotals[r_shadow_shadowmapside], mesh->element3i, mesh->element3i_indexbuffer, mesh->element3i_bufferoffset, mesh->element3s, mesh->element3s_indexbuffer, mesh->element3s_bufferoffset);
+			CHECKGLERROR
 		}
-		CHECKGLERROR
 	}
 	else if (r_refdef.scene.worldentity->model)
 		r_refdef.scene.worldmodel->DrawShadowMap(r_shadow_shadowmapside, r_refdef.scene.worldentity, rsurface.rtlight->shadoworigin, NULL, rsurface.rtlight->radius, numsurfaces, surfacelist, surfacesides, rsurface.rtlight->cached_cullmins, rsurface.rtlight->cached_cullmaxs);
