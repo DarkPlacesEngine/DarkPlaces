@@ -3273,7 +3273,7 @@ string	precache_pic(string pic)
 void VM_precache_pic(prvm_prog_t *prog)
 {
 	const char	*s;
-	int flags = 0;
+	int flags = CACHEPICFLAG_FAILONMISSING;
 
 	VM_SAFEPARMCOUNTRANGE(1, 2, VM_precache_pic);
 
