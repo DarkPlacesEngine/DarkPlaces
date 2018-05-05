@@ -1129,7 +1129,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		for (j = 0;j < 3;j++)
 			loadmodel->surfmesh.data_element3i[i*3+j] = LittleLong(pintriangles[i].vertindex[j]);
 	// validate (note numverts is used because this is the original data)
-	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles, 0, numverts, __FILE__, __LINE__);
+	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, NULL, loadmodel->surfmesh.num_triangles, 0, numverts, __FILE__, __LINE__);
 	// now butcher the elements according to vertonseam and tri->facesfront
 	// and then compact the vertex set to remove duplicates
 	for (i = 0;i < loadmodel->surfmesh.num_triangles;i++)
@@ -2405,7 +2405,8 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_surfaces;i++, dpmmesh++)
 	{
 		const int *inelements;
-		int *outelements;
+		int *outelement3i;
+		unsigned short *outelement3s;
 		const float *intexcoord;
 		msurface_t *surface;
 
@@ -2420,15 +2421,20 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		meshtriangles += surface->num_triangles;
 
 		inelements = (int *) (pbase + BigLong(dpmmesh->ofs_indices));
-		outelements = loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3;
+		outelement3i = loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3;
+		outelement3s = loadmodel->surfmesh.data_element3s ? loadmodel->surfmesh.data_element3s + surface->num_firsttriangle * 3 : NULL;
 		for (j = 0;j < surface->num_triangles;j++)
 		{
 			// swap element order to flip triangles, because Quake uses clockwise (rare) and dpm uses counterclockwise (standard)
-			outelements[0] = surface->num_firstvertex + BigLong(inelements[2]);
-			outelements[1] = surface->num_firstvertex + BigLong(inelements[1]);
-			outelements[2] = surface->num_firstvertex + BigLong(inelements[0]);
-			inelements += 3;
-			outelements += 3;
+			outelement3i[j * 3 + 0] = surface->num_firstvertex + BigLong(inelements[j * 3 + 2]);
+			outelement3i[j * 3 + 1] = surface->num_firstvertex + BigLong(inelements[j * 3 + 1]);
+			outelement3i[j * 3 + 2] = surface->num_firstvertex + BigLong(inelements[j * 3 + 0]);
+			if (outelement3s)
+			{
+				outelement3s[j * 3 + 0] = outelement3i[j * 3 + 0];
+				outelement3s[j * 3 + 1] = outelement3i[j * 3 + 1];
+				outelement3s[j * 3 + 2] = outelement3i[j * 3 + 2];
+			}
 		}
 
 		intexcoord = (float *) (pbase + BigLong(dpmmesh->ofs_texcoords));
@@ -2516,9 +2522,6 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_MakeSortedSurfaces(loadmodel);
 
 	// compute all the mesh information that was not loaded from the file
-	if (loadmodel->surfmesh.data_element3s)
-		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
-			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	Mod_BuildBaseBonePoses();
 	Mod_BuildTextureVectorsFromNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_texcoordtexture2f, loadmodel->surfmesh.data_normal3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_svector3f, loadmodel->surfmesh.data_tvector3f, r_smoothnormals_areaweighting.integer != 0);
 	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
@@ -3791,6 +3794,9 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		outelements += 3;
 		inelements += 3;
 	}
+	if (loadmodel->surfmesh.data_element3s)
+		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
+			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	Mod_ValidateElements(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles, 0, header.num_vertexes, __FILE__, __LINE__);
 
 	// load vertex data
@@ -3928,9 +3934,6 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_MakeSortedSurfaces(loadmodel);
 
 	// compute all the mesh information that was not loaded from the file
-	if (loadmodel->surfmesh.data_element3s)
-		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
-			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	if (!vnormal)
 		Mod_BuildNormals(0, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->surfmesh.data_vertex3f, loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.data_normal3f, r_smoothnormals_areaweighting.integer != 0);
 	if (!vnormal || !vtangent)
