@@ -1725,7 +1725,12 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		meshtriangles += surface->num_triangles;
 
 		for (j = 0;j < surface->num_triangles * 3;j++)
-			loadmodel->surfmesh.data_element3i[j + surface->num_firsttriangle * 3] = surface->num_firstvertex + LittleLong(((int *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_elements)))[j]);
+		{
+			int e = surface->num_firstvertex + LittleLong(((int *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_elements)))[j]);
+			loadmodel->surfmesh.data_element3i[j + surface->num_firsttriangle * 3] = e;
+			if (loadmodel->surfmesh.data_element3s)
+				loadmodel->surfmesh.data_element3s[j + surface->num_firsttriangle * 3] = e;
+		}
 		for (j = 0;j < surface->num_vertices;j++)
 		{
 			loadmodel->surfmesh.data_texcoordtexture2f[(j + surface->num_firstvertex) * 2 + 0] = LittleFloat(((float *)((unsigned char *)pinmesh + LittleLong(pinmesh->lump_texcoords)))[j * 2 + 0]);
@@ -1749,9 +1754,6 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 		Mod_ValidateElements(loadmodel->surfmesh.data_element3i + surface->num_firsttriangle * 3, loadmodel->surfmesh.data_element3s + surface->num_firsttriangle * 3, surface->num_triangles, surface->num_firstvertex, surface->num_vertices, __FILE__, __LINE__);
 	}
-	if (loadmodel->surfmesh.data_element3s)
-		for (i = 0;i < loadmodel->surfmesh.num_triangles*3;i++)
-			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 	Mod_Alias_MorphMesh_CompileFrames();
 	loadmodel->surfmesh.isanimated = Mod_Alias_CalculateBoundingBox();
 	Mod_FreeSkinFiles(skinfiles);

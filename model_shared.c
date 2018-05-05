@@ -746,7 +746,7 @@ qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int num
 		Con_Printf("Mod_ValidateElements(%i, %i, %i, %p, %p) called at %s:%d", numelements, first, last, element3i, element3s, filename, fileline);
 		Con_Printf(", %i elements are invalid in element3i (example: element3i[%i] == %i)", invalidintcount, invalidintexample, element3i ? element3i[invalidintexample] : 0);
 		Con_Printf(", %i elements are invalid in element3s (example: element3s[%i] == %i)", invalidshortcount, invalidshortexample, element3s ? element3s[invalidshortexample] : 0);
-		Con_Printf(", %i elements mismatch between element3i and element3s (example: element3s[%i] is %i and element3i[i] is %i)", invalidmismatchcount, invalidmismatchexample, element3i ? element3i[invalidmismatchexample] : 0, invalidmismatchexample, element3s ? element3s[invalidmismatchexample] : 0);
+		Con_Printf(", %i elements mismatch between element3i and element3s (example: element3s[%i] is %i and element3i[%i] is %i)", invalidmismatchcount, invalidmismatchexample, element3s ? element3s[invalidmismatchexample] : 0, invalidmismatchexample, element3i ? element3i[invalidmismatchexample] : 0);
 		Con_Print(".  Please debug the engine code - these elements have been modified to not crash, but nothing more.\n");
 
 		// edit the elements to make them safer, as the driver will crash otherwise
