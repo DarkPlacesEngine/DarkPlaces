@@ -101,30 +101,6 @@ typedef struct blendweights_s
 }
 blendweights_t;
 
-typedef struct r_vertexgeneric_s
-{
-	// 36 bytes
-	float vertex3f[3];
-	float color4f[4];
-	float texcoord2f[2];
-}
-r_vertexgeneric_t;
-
-typedef struct r_vertexmesh_s
-{
-	// 88 bytes
-	float vertex3f[3];
-	float color4f[4];
-	float texcoordtexture2f[2];
-	float texcoordlightmap2f[2];
-	float svector3f[3];
-	float tvector3f[3];
-	float normal3f[3];
-	unsigned char skeletalindex4ub[4];
-	unsigned char skeletalweight4ub[4];
-}
-r_vertexmesh_t;
-
 typedef struct r_meshbuffer_s
 {
 	int bufferobject; // OpenGL
@@ -162,7 +138,6 @@ typedef struct surfmesh_s
 	unsigned char *data_skeletalindex4ub;
 	unsigned char *data_skeletalweight4ub;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
-	r_vertexmesh_t *data_vertexmesh; // interleaved arrays for D3D
 	// vertex buffer object (stores geometry in video memory)
 	r_meshbuffer_t *vbo_vertexbuffer;
 	int vbooffset_vertex3f;
@@ -174,7 +149,6 @@ typedef struct surfmesh_s
 	int vbooffset_lightmapcolor4f;
 	int vbooffset_skeletalindex4ub;
 	int vbooffset_skeletalweight4ub;
-	int vbooffset_vertexmesh;
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	struct md3vertex_s *data_morphmd3vertex;
@@ -189,9 +163,6 @@ typedef struct surfmesh_s
 	unsigned short *blends;
 	// set if there is some kind of animation on this model
 	qboolean isanimated;
-
-	// vertex and index buffers for rendering
-	r_meshbuffer_t *vertexmesh_vertexbuffer;
 
 	// dynamic mesh building support (Mod_Mesh_*)
 	int num_vertexhashsize; // always pow2 for simple masking

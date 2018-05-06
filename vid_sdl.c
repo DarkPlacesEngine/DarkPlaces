@@ -1969,7 +1969,6 @@ void GLES_Init(void)
 	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
 	Con_DPrintf("Using GLES2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
 	vid.renderpath = RENDERPATH_GLES2;
-	vid.useinterleavedarrays = false;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
 
