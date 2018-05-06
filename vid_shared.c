@@ -867,7 +867,6 @@ void VID_ClearExtensions(void)
 	vid.renderpath = RENDERPATH_GL20;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
-	vid.useinterleavedarrays = false;
 	vid.forcevbo = false;
 	vid.maxtexturesize_2d = 0;
 	vid.maxtexturesize_3d = 0;
@@ -1025,7 +1024,6 @@ void VID_CheckExtensions(void)
 		vid.renderpath = RENDERPATH_GL20;
 		vid.sRGBcapable2D = false;
 		vid.sRGBcapable3D = true;
-		vid.useinterleavedarrays = false;
 		Con_Printf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
 		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
 		vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1

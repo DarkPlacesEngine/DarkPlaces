@@ -231,8 +231,6 @@ typedef struct gl_state_s
 
 	void *preparevertices_tempdata;
 	size_t preparevertices_tempdatamaxsize;
-	r_vertexgeneric_t *preparevertices_vertexgeneric;
-	r_vertexmesh_t *preparevertices_vertexmesh;
 	int preparevertices_numvertices;
 
 	qboolean usevbo_staticvertex;
@@ -2409,8 +2407,6 @@ void R_Mesh_ResetTextureState(void)
 		R_Mesh_TexCoordPointer(unitnum, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 }
 
-
-
 void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
 {
 	// upload temporary vertexbuffer for this rendering
@@ -2418,326 +2414,121 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 		vertexbuffer = NULL;
 	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
 		vertexbuffer = R_BufferData_Store(numvertices * sizeof(float[3]), (void *)vertex3f, R_BUFFERDATA_VERTEX, &bufferoffset);
-	switch(vid.renderpath)
+	if (vertexbuffer)
 	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, bufferoffset);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		}
-		else
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		}
-		break;
+		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, bufferoffset);
+		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 	}
-}
-
-
-
-r_vertexgeneric_t *R_Mesh_PrepareVertices_Generic_Lock(int numvertices)
-{
-	size_t size;
-	size = sizeof(r_vertexgeneric_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
+	else
 	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
+		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
+		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 	}
-	gl_state.preparevertices_vertexgeneric = (r_vertexgeneric_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexgeneric;
-}
-
-qboolean R_Mesh_PrepareVertices_Generic_Unlock(void)
-{
-	R_Mesh_PrepareVertices_Generic(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexgeneric, NULL, 0);
-	gl_state.preparevertices_vertexgeneric = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
 }
 
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f)
 {
-	int i;
-	r_vertexgeneric_t *vertex;
-	switch(vid.renderpath)
+	if (gl_state.usevbo_dynamicvertex)
 	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (gl_state.usevbo_dynamicvertex)
-		{
-			r_meshbuffer_t *buffer_vertex3f = NULL;
-			r_meshbuffer_t *buffer_color4f = NULL;
-			r_meshbuffer_t *buffer_texcoord2f = NULL;
-			int bufferoffset_vertex3f = 0;
-			int bufferoffset_color4f = 0;
-			int bufferoffset_texcoord2f = 0;
-			buffer_color4f    = R_BufferData_Store(numvertices * sizeof(float[4]), color4f   , R_BUFFERDATA_VERTEX, &bufferoffset_color4f   );
-			buffer_vertex3f   = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f  , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f  );
-			buffer_texcoord2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoord2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoord2f);
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoord2f        , buffer_texcoord2f        , bufferoffset_texcoord2f        );
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-		}
-		else if (!vid.useinterleavedarrays)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoord2f, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	}
-
-	// no quick path for this case, convert to vertex structs
-	vertex = R_Mesh_PrepareVertices_Generic_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	if (color4f)
-	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(color4f + 4*i, vertex[i].color4f);
+		r_meshbuffer_t *buffer_vertex3f = NULL;
+		r_meshbuffer_t *buffer_color4f = NULL;
+		r_meshbuffer_t *buffer_texcoord2f = NULL;
+		int bufferoffset_vertex3f = 0;
+		int bufferoffset_color4f = 0;
+		int bufferoffset_texcoord2f = 0;
+		buffer_color4f    = R_BufferData_Store(numvertices * sizeof(float[4]), color4f   , R_BUFFERDATA_VERTEX, &bufferoffset_color4f   );
+		buffer_vertex3f   = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f  , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f  );
+		buffer_texcoord2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoord2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoord2f);
+		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
+		R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoord2f        , buffer_texcoord2f        , bufferoffset_texcoord2f        );
+		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
 	}
 	else
 	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(gl_state.color4f, vertex[i].color4f);
+		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
+		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoord2f, NULL, 0);
+		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 	}
-	if (texcoord2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoord2f + 2*i, vertex[i].texcoord2f);
-	R_Mesh_PrepareVertices_Generic_Unlock();
-	R_Mesh_PrepareVertices_Generic(numvertices, vertex, NULL, 0);
-}
-
-void R_Mesh_PrepareVertices_Generic(int numvertices, const r_vertexgeneric_t *vertex, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-		vertexbuffer = R_BufferData_Store(numvertices * sizeof(*vertex), (void *)vertex, R_BUFFERDATA_VERTEX, &bufferoffset);
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(*vertex), vertex->color4f           , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->color4f            - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->texcoord2f         - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		}
-		else
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(*vertex), vertex->color4f           , NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoord2f        , NULL, 0);
-			R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		}
-		break;
-	}
-}
-
-
-
-r_vertexmesh_t *R_Mesh_PrepareVertices_Mesh_Lock(int numvertices)
-{
-	size_t size;
-	size = sizeof(r_vertexmesh_t) * numvertices;
-	if (gl_state.preparevertices_tempdatamaxsize < size)
-	{
-		gl_state.preparevertices_tempdatamaxsize = size;
-		gl_state.preparevertices_tempdata = Mem_Realloc(r_main_mempool, gl_state.preparevertices_tempdata, gl_state.preparevertices_tempdatamaxsize);
-	}
-	gl_state.preparevertices_vertexmesh = (r_vertexmesh_t *)gl_state.preparevertices_tempdata;
-	gl_state.preparevertices_numvertices = numvertices;
-	return gl_state.preparevertices_vertexmesh;
-}
-
-qboolean R_Mesh_PrepareVertices_Mesh_Unlock(void)
-{
-	R_Mesh_PrepareVertices_Mesh(gl_state.preparevertices_numvertices, gl_state.preparevertices_vertexmesh, NULL, 0);
-	gl_state.preparevertices_vertexmesh = NULL;
-	gl_state.preparevertices_numvertices = 0;
-	return true;
 }
 
 void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f)
 {
-	int i;
-	r_vertexmesh_t *vertex;
-	switch(vid.renderpath)
+	if (gl_state.usevbo_dynamicvertex)
 	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (gl_state.usevbo_dynamicvertex)
-		{
-			r_meshbuffer_t *buffer_vertex3f = NULL;
-			r_meshbuffer_t *buffer_color4f = NULL;
-			r_meshbuffer_t *buffer_texcoordtexture2f = NULL;
-			r_meshbuffer_t *buffer_svector3f = NULL;
-			r_meshbuffer_t *buffer_tvector3f = NULL;
-			r_meshbuffer_t *buffer_normal3f = NULL;
-			r_meshbuffer_t *buffer_texcoordlightmap2f = NULL;
-			int bufferoffset_vertex3f = 0;
-			int bufferoffset_color4f = 0;
-			int bufferoffset_texcoordtexture2f = 0;
-			int bufferoffset_svector3f = 0;
-			int bufferoffset_tvector3f = 0;
-			int bufferoffset_normal3f = 0;
-			int bufferoffset_texcoordlightmap2f = 0;
-			buffer_color4f            = R_BufferData_Store(numvertices * sizeof(float[4]), color4f           , R_BUFFERDATA_VERTEX, &bufferoffset_color4f           );
-			buffer_vertex3f           = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f          , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f          );
-			buffer_svector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), svector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_svector3f         );
-			buffer_tvector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), tvector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_tvector3f         );
-			buffer_normal3f           = R_BufferData_Store(numvertices * sizeof(float[3]), normal3f          , R_BUFFERDATA_VERTEX, &bufferoffset_normal3f          );
-			buffer_texcoordtexture2f  = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordtexture2f , R_BUFFERDATA_VERTEX, &bufferoffset_texcoordtexture2f );
-			buffer_texcoordlightmap2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordlightmap2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoordlightmap2f);
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoordtexture2f , buffer_texcoordtexture2f , bufferoffset_texcoordtexture2f );
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , svector3f         , buffer_svector3f         , bufferoffset_svector3f         );
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , tvector3f         , buffer_tvector3f         , bufferoffset_tvector3f         );
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , normal3f          , buffer_normal3f          , bufferoffset_normal3f          );
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , texcoordlightmap2f, buffer_texcoordlightmap2f, bufferoffset_texcoordlightmap2f);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-		}
-		else if (!vid.useinterleavedarrays)
-		{
-			R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-			R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoordtexture2f, NULL, 0);
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), svector3f, NULL, 0);
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), tvector3f, NULL, 0);
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), normal3f, NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-			return;
-		}
-		break;
-	}
-
-	vertex = R_Mesh_PrepareVertices_Mesh_Lock(numvertices);
-	for (i = 0;i < numvertices;i++)
-		VectorCopy(vertex3f + 3*i, vertex[i].vertex3f);
-	if (svector3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(svector3f + 3*i, vertex[i].svector3f);
-	if (tvector3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(tvector3f + 3*i, vertex[i].tvector3f);
-	if (normal3f)
-		for (i = 0;i < numvertices;i++)
-			VectorCopy(normal3f + 3*i, vertex[i].normal3f);
-	if (color4f)
-	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(color4f + 4*i, vertex[i].color4f);
+		r_meshbuffer_t *buffer_vertex3f = NULL;
+		r_meshbuffer_t *buffer_color4f = NULL;
+		r_meshbuffer_t *buffer_texcoordtexture2f = NULL;
+		r_meshbuffer_t *buffer_svector3f = NULL;
+		r_meshbuffer_t *buffer_tvector3f = NULL;
+		r_meshbuffer_t *buffer_normal3f = NULL;
+		r_meshbuffer_t *buffer_texcoordlightmap2f = NULL;
+		int bufferoffset_vertex3f = 0;
+		int bufferoffset_color4f = 0;
+		int bufferoffset_texcoordtexture2f = 0;
+		int bufferoffset_svector3f = 0;
+		int bufferoffset_tvector3f = 0;
+		int bufferoffset_normal3f = 0;
+		int bufferoffset_texcoordlightmap2f = 0;
+		buffer_color4f            = R_BufferData_Store(numvertices * sizeof(float[4]), color4f           , R_BUFFERDATA_VERTEX, &bufferoffset_color4f           );
+		buffer_vertex3f           = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f          , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f          );
+		buffer_svector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), svector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_svector3f         );
+		buffer_tvector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), tvector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_tvector3f         );
+		buffer_normal3f           = R_BufferData_Store(numvertices * sizeof(float[3]), normal3f          , R_BUFFERDATA_VERTEX, &bufferoffset_normal3f          );
+		buffer_texcoordtexture2f  = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordtexture2f , R_BUFFERDATA_VERTEX, &bufferoffset_texcoordtexture2f );
+		buffer_texcoordlightmap2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordlightmap2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoordlightmap2f);
+		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
+		R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoordtexture2f , buffer_texcoordtexture2f , bufferoffset_texcoordtexture2f );
+		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , svector3f         , buffer_svector3f         , bufferoffset_svector3f         );
+		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , tvector3f         , buffer_tvector3f         , bufferoffset_tvector3f         );
+		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , normal3f          , buffer_normal3f          , bufferoffset_normal3f          );
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , texcoordlightmap2f, buffer_texcoordlightmap2f, bufferoffset_texcoordlightmap2f);
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
 	}
 	else
 	{
-		for (i = 0;i < numvertices;i++)
-			Vector4Copy(gl_state.color4f, vertex[i].color4f);
-	}
-	if (texcoordtexture2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoordtexture2f + 2*i, vertex[i].texcoordtexture2f);
-	if (texcoordlightmap2f)
-		for (i = 0;i < numvertices;i++)
-			Vector2Copy(texcoordlightmap2f + 2*i, vertex[i].texcoordlightmap2f);
-	R_Mesh_PrepareVertices_Mesh_Unlock();
-	R_Mesh_PrepareVertices_Mesh(numvertices, vertex, NULL, 0);
-}
-
-void R_Mesh_PrepareVertices_Mesh(int numvertices, const r_vertexmesh_t *vertex, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
-{
-	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
-		vertexbuffer = R_BufferData_Store(numvertices * sizeof(*vertex), (void *)vertex, R_BUFFERDATA_VERTEX, &bufferoffset);
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		if (vertexbuffer)
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->vertex3f           - (unsigned char *)vertex));
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(*vertex), vertex->color4f           , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->color4f            - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->texcoordtexture2f  - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->svector3f          - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->tvector3f          - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->normal3f           - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->texcoordlightmap2f - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(*vertex), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE | 0x80000000, sizeof(*vertex), vertex->skeletalindex4ub  , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->skeletalindex4ub   - (unsigned char *)vertex));
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->skeletalweight4ub , vertexbuffer, bufferoffset + (int)((unsigned char *)vertex->skeletalweight4ub  - (unsigned char *)vertex));
-		}
-		else
-		{
-			R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(*vertex), vertex->vertex3f          , NULL, 0);
-			R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(*vertex), vertex->color4f           , NULL, 0);
-			R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordtexture2f , NULL, 0);
-			R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(*vertex), vertex->svector3f         , NULL, 0);
-			R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(*vertex), vertex->tvector3f         , NULL, 0);
-			R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(*vertex), vertex->normal3f          , NULL, 0);
-			R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(*vertex), vertex->texcoordlightmap2f, NULL, 0);
-			R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(*vertex), NULL, NULL, 0);
-			R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE | 0x80000000, sizeof(*vertex), vertex->skeletalindex4ub  , NULL, 0);
-			R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(*vertex), vertex->skeletalweight4ub , NULL, 0);
-		}
-		break;
+		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
+		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
+		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoordtexture2f, NULL, 0);
+		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), svector3f, NULL, 0);
+		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), tvector3f, NULL, 0);
+		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), normal3f, NULL, 0);
+		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
+		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
+		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
 	}
 }
 

@@ -2901,32 +2901,6 @@ void Mod_BuildVBOs(void)
 		}
 	}
 
-	// build r_vertexmesh_t array
-	// (compressed interleaved array for D3D)
-	if (!loadmodel->surfmesh.data_vertexmesh && vid.useinterleavedarrays)
-	{
-		int vertexindex;
-		int numvertices = loadmodel->surfmesh.num_vertices;
-		r_vertexmesh_t *vertexmesh;
-		loadmodel->surfmesh.data_vertexmesh = vertexmesh = (r_vertexmesh_t*)Mem_Alloc(loadmodel->mempool, numvertices * sizeof(r_vertexmesh_t));
-		for (vertexindex = 0;vertexindex < numvertices;vertexindex++, vertexmesh++)
-		{
-			VectorCopy(loadmodel->surfmesh.data_vertex3f + 3*vertexindex, vertexmesh->vertex3f);
-			VectorScale(loadmodel->surfmesh.data_svector3f + 3*vertexindex, 1.0f, vertexmesh->svector3f);
-			VectorScale(loadmodel->surfmesh.data_tvector3f + 3*vertexindex, 1.0f, vertexmesh->tvector3f);
-			VectorScale(loadmodel->surfmesh.data_normal3f + 3*vertexindex, 1.0f, vertexmesh->normal3f);
-			if (loadmodel->surfmesh.data_lightmapcolor4f)
-				Vector4Copy(loadmodel->surfmesh.data_lightmapcolor4f + 4*vertexindex, vertexmesh->color4f);
-			Vector2Copy(loadmodel->surfmesh.data_texcoordtexture2f + 2*vertexindex, vertexmesh->texcoordtexture2f);
-			if (loadmodel->surfmesh.data_texcoordlightmap2f)
-				Vector2Scale(loadmodel->surfmesh.data_texcoordlightmap2f + 2*vertexindex, 1.0f, vertexmesh->texcoordlightmap2f);
-			if (loadmodel->surfmesh.data_skeletalindex4ub)
-				Vector4Copy(loadmodel->surfmesh.data_skeletalindex4ub + 4*vertexindex, vertexmesh->skeletalindex4ub);
-			if (loadmodel->surfmesh.data_skeletalweight4ub)
-				Vector4Copy(loadmodel->surfmesh.data_skeletalweight4ub + 4*vertexindex, vertexmesh->skeletalweight4ub);
-		}
-	}
-
 	// upload short indices as a buffer
 	if (loadmodel->surfmesh.data_element3s && !loadmodel->surfmesh.data_element3s_indexbuffer)
 		loadmodel->surfmesh.data_element3s_indexbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.data_element3s, loadmodel->surfmesh.num_triangles * sizeof(short[3]), loadmodel->name, true, false, false, true);
@@ -2941,12 +2915,11 @@ void Mod_BuildVBOs(void)
 	// is this wise?  the texcoordtexture2f array is used with dynamic
 	// vertex/svector/tvector/normal when rendering animated models, on the
 	// other hand animated models don't use a lot of vertices anyway...
-	if (!loadmodel->surfmesh.vbo_vertexbuffer && !vid.useinterleavedarrays)
+	if (!loadmodel->surfmesh.vbo_vertexbuffer)
 	{
 		int size;
 		unsigned char *mem;
 		size = 0;
-		loadmodel->surfmesh.vbooffset_vertexmesh         = size;if (loadmodel->surfmesh.data_vertexmesh        ) size += loadmodel->surfmesh.num_vertices * sizeof(r_vertexmesh_t);
 		loadmodel->surfmesh.vbooffset_vertex3f           = size;if (loadmodel->surfmesh.data_vertex3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 		loadmodel->surfmesh.vbooffset_svector3f          = size;if (loadmodel->surfmesh.data_svector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
 		loadmodel->surfmesh.vbooffset_tvector3f          = size;if (loadmodel->surfmesh.data_tvector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
@@ -2957,7 +2930,6 @@ void Mod_BuildVBOs(void)
 		loadmodel->surfmesh.vbooffset_skeletalindex4ub   = size;if (loadmodel->surfmesh.data_skeletalindex4ub  ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
 		loadmodel->surfmesh.vbooffset_skeletalweight4ub  = size;if (loadmodel->surfmesh.data_skeletalweight4ub ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
 		mem = (unsigned char *)Mem_Alloc(tempmempool, size);
-		if (loadmodel->surfmesh.data_vertexmesh        ) memcpy(mem + loadmodel->surfmesh.vbooffset_vertexmesh        , loadmodel->surfmesh.data_vertexmesh        , loadmodel->surfmesh.num_vertices * sizeof(r_vertexmesh_t));
 		if (loadmodel->surfmesh.data_vertex3f          ) memcpy(mem + loadmodel->surfmesh.vbooffset_vertex3f          , loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
 		if (loadmodel->surfmesh.data_svector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_svector3f         , loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
 		if (loadmodel->surfmesh.data_tvector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_tvector3f         , loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
