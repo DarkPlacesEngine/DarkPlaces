@@ -197,7 +197,6 @@
     <ClCompile Include="builddate.c" />
     <ClCompile Include="cap_avi.c" />
     <ClCompile Include="cap_ogg.c" />
-    <ClCompile Include="cd_sdl.c" />
     <ClCompile Include="cd_shared.c" />
     <ClCompile Include="cl_collision.c" />
     <ClCompile Include="cl_demo.c" />
