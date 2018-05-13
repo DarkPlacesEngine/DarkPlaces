@@ -38,7 +38,7 @@ SDLCONFIG_MACOSXSTATICLIBS=-F$(HOME)/Library/Frameworks/ -framework SDL2 -framew
 STRIP?=strip
 
 
-###### Sound and audio CD #####
+###### Sound #####
 
 OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
 
@@ -70,10 +70,6 @@ LIB_SND_WIN=
 OBJ_SND_3DRAS=snd_3dras.o
 LIB_SND_3DRAS=
 
-# CD objects
-OBJ_CD_COMMON=cd_shared.o
-OBJ_NOCD=cd_null.o
-
 
 ###### Common objects and flags #####
 
@@ -81,6 +77,7 @@ OBJ_NOCD=cd_null.o
 OBJ_COMMON= \
 	bih.o \
 	crypto.o \
+	cd_shared.o \
 	cl_collision.o \
 	cl_demo.o \
 	cl_input.o \
@@ -165,12 +162,12 @@ OBJ_MENU= \
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
 OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) snd_sdl.o $(OBJ_SDLCD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 
 # Compilation
 CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
-CFLAGS_CLIENT=-DCONFIG_MENU -DCONFIG_CD $(CFLAGS_VIDEO_CAPTURE)
+CFLAGS_CLIENT=-DCONFIG_MENU $(CFLAGS_VIDEO_CAPTURE)
 CFLAGS_SERVER=
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
@@ -205,20 +202,14 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 ##### UNIX specific variables #####
 
-OBJ_GLX= builddate.c sys_linux.o vid_glx.o thread_pthread.o keysym2ucs.o $(OBJ_MENU) $(OBJ_SOUND) $(OBJ_CD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
-
 LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
-LDFLAGS_UNIXCL=-L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm -pthread $(LIB_SOUND)
-LDFLAGS_UNIXCL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
 LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS)
-EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
-EXE_UNIXCLNEXUIZ=nexuiz-glx
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
 EXE_UNIXSDLNEXUIZ=nexuiz-sdl
 
@@ -230,36 +221,22 @@ CMD_UNIXMKDIR=mkdir -p
 ##### Linux specific variables #####
 
 # Link
-LDFLAGS_LINUXCL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl $(LDFLAGS_UNIXCL)
 LDFLAGS_LINUXSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl
 LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl $(LDFLAGS_UNIXSDL)
 
 
 ##### Mac OS X specific variables #####
 
-# No CD support available
-OBJ_MACOSXCD=$(OBJ_NOCD)
-
 # Link
-LDFLAGS_MACOSXCL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit -framework Carbon $(LIB_SOUND)
 LDFLAGS_MACOSXSV=$(LDFLAGS_UNIXCOMMON) -ldl
 LDFLAGS_MACOSXSDL=$(LDFLAGS_UNIXCOMMON) -ldl -framework IOKit $(SDLCONFIG_STATICLIBS) ../../../SDLMain.m
-
-OBJ_AGL= builddate.c sys_linux.o vid_agl.o thread_null.o $(OBJ_MENU) $(OBJ_SOUND) $(OBJ_CD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
-
-EXE_MACOSXCL=darkplaces-agl
-EXE_MACOSXCLNEXUIZ=nexuiz-agl
 
 
 ##### SunOS specific variables #####
 
-# No CD support available
-OBJ_SUNOSCD=$(OBJ_NOCD)
-
 CFLAGS_SUNOS=-I/usr/lib/oss/include -DBSD_COMP -DSUNOS
 
 # Link
-LDFLAGS_SUNOSCL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -lsocket -lnsl -R$(UNIX_X11LIBPATH) -L$(UNIX_X11LIBPATH) -lX11 -lXpm -lXext -lXxf86vm $(LIB_SOUND)
 LDFLAGS_SUNOSSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -lsocket -lnsl
 LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -lsocket -lnsl $(LDFLAGS_UNIXSDL)
 
@@ -267,7 +244,6 @@ LDFLAGS_SUNOSSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -lsocket -lnsl $(LDFLAGS_UNIXSD
 ##### BSD specific variables #####
 
 # Link
-LDFLAGS_BSDCL=$(LDFLAGS_UNIXCOMMON) -lutil $(LDFLAGS_UNIXCL)
 LDFLAGS_BSDSV=$(LDFLAGS_UNIXCOMMON) 
 LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 
@@ -276,17 +252,12 @@ LDFLAGS_BSDSDL=$(LDFLAGS_UNIXCOMMON) $(LDFLAGS_UNIXSDL)
 
 WINDRES ?= windres
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o thread_null.o $(OBJ_MENU) $(OBJ_SND_WIN) $(OBJ_WINCD) $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
-
 # Link
 # see LDFLAGS_WINCOMMON in makefile
-LDFLAGS_WINCL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mwindows -lwinmm -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32 -lws2_32 $(LDFLAGS_D3D) $(LIB_Z) $(LIB_JPEG)
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
 LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
-EXE_WINCL=darkplaces.exe
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
-EXE_WINCLNEXUIZ=nexuiz.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
 EXE_WINSDLNEXUIZ=nexuiz-sdl.exe
 
@@ -296,7 +267,6 @@ VPATH := ../../../
 
 .PHONY : clean clean-profile help \
 	 debug profile release \
-	 cl-debug cl-profile cl-release \
 	 sv-debug sv-profile sv-release \
 	 sdl-debug sdl-profile sdl-release
 
@@ -317,11 +287,6 @@ help:
 	@echo "                              previously compiled"
 	@echo "* $(MAKE) nexuiz               : make client and server binaries with nexuiz icon"
 	@echo "                              (release versions)"
-	@echo "* $(MAKE) cl-debug             : make client (debug version)"
-	@echo "* $(MAKE) cl-profile           : make client (profile version)"
-	@echo "* $(MAKE) cl-release-profile   : make client (release profile version)"
-	@echo "* $(MAKE) cl-release           : make client (release version)"
-	@echo "* $(MAKE) cl-nexuiz            : make client with nexuiz icon (release version)"
 	@echo "* $(MAKE) sv-debug             : make dedicated server (debug version)"
 	@echo "* $(MAKE) sv-profile           : make dedicated server (profile version)"
 	@echo "* $(MAKE) sv-release-profile   : make dedicated server (release profile version)"
@@ -350,79 +315,54 @@ release-profile :
 nexuiz :
 	$(MAKE) $(TARGETS_NEXUIZ)
 
-cl-debug :
-	$(MAKE) bin-debug \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
-
-cl-profile :
-	$(MAKE) bin-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
-
-cl-release :
-	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
-
-cl-release-profile :
-	$(MAKE) bin-release-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE='$(EXE_CL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
-
-cl-nexuiz :
-	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
-		EXE='$(EXE_CLNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' LDFLAGS_COMMON='$(LDFLAGS_CL)' LEVEL=1
-
 sv-debug :
 	$(MAKE) bin-debug \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-profile :
 	$(MAKE) bin-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-release :
 	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-release-profile :
 	$(MAKE) bin-release-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SV)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sv-nexuiz :
 	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SVNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_SERVER)' LDFLAGS_COMMON='$(LDFLAGS_SV)' LEVEL=1
 
 sdl-debug :
 	$(MAKE) bin-debug \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-profile :
 	$(MAKE) bin-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-release :
 	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-release-profile :
 	$(MAKE) bin-release-profile \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 sdl-nexuiz :
 	$(MAKE) bin-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_SDLNEXUIZ)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 bin-debug :
@@ -431,7 +371,7 @@ bin-debug :
 	@echo '========== $(EXE) (debug) =========='
 	$(MAKE) prepare BUILD_DIR=build-obj/debug/$(EXE)
 	$(MAKE) -C build-obj/debug/$(EXE) $(EXE) \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)'\
 		LDFLAGS='$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)' LEVEL=2
 
@@ -441,7 +381,7 @@ bin-profile :
 	@echo '========== $(EXE) (profile) =========='
 	$(MAKE) prepare BUILD_DIR=build-obj/profile/$(EXE)
 	$(MAKE) -C build-obj/profile/$(EXE) $(EXE) \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)' LEVEL=2
 
@@ -451,7 +391,7 @@ bin-release :
 	@echo '========== $(EXE) (release) =========='
 	$(MAKE) prepare BUILD_DIR=build-obj/release/$(EXE)
 	$(MAKE) -C build-obj/release/$(EXE) $(EXE) \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
@@ -462,7 +402,7 @@ bin-release-profile :
 	@echo '========== $(EXE) (release) =========='
 	$(MAKE) prepare BUILD_DIR=build-obj/release-profile/$(EXE)
 	$(MAKE) -C build-obj/release-profile/$(EXE) $(EXE) \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) DP_SOUND_API=$(DP_SOUND_API) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
@@ -509,19 +449,11 @@ nexuiz.o: %.o : %.rc
 	$(CHECKLEVEL2)
 	$(DO_CC)
 
-$(EXE_CL): $(OBJ_CL) $(OBJ_ICON)
-	$(CHECKLEVEL2)
-	$(DO_LD)
-
 $(EXE_SV): $(OBJ_SV) $(OBJ_ICON)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
 $(EXE_SDL): $(OBJ_SDL) $(OBJ_ICON)
-	$(CHECKLEVEL2)
-	$(DO_LD)
-
-$(EXE_CLNEXUIZ): $(OBJ_CL) $(OBJ_ICON_NEXUIZ)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
@@ -534,10 +466,8 @@ $(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
 	$(DO_LD)
 
 clean:
-	-$(CMD_RM) $(EXE_CL)
 	-$(CMD_RM) $(EXE_SV)
 	-$(CMD_RM) $(EXE_SDL)
-	-$(CMD_RM) $(EXE_CLNEXUIZ)
 	-$(CMD_RM) $(EXE_SVNEXUIZ)
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o

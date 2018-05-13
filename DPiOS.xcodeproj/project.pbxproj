@@ -12,7 +12,6 @@
 		28FD15000DC6FC520079059D /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD14FF0DC6FC520079059D /* OpenGLES.framework */; };
 		28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD15070DC6FC5B0079059D /* QuartzCore.framework */; };
 		74063A3E1751ADDB0015D12C /* mod_skeletal_animatevertices_sse.c in Sources */ = {isa = PBXBuildFile; fileRef = 74063A3C1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.c */; };
-		74063A401751B0250015D12C /* cd_null.c in Sources */ = {isa = PBXBuildFile; fileRef = 74063A3F1751B0250015D12C /* cd_null.c */; };
 		74063A421751B0AF0015D12C /* clvm_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = 74063A411751B0AF0015D12C /* clvm_cmds.c */; };
 		74063A491751B9B60015D12C /* libSDL2-ios-armv7.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74063A471751B9B60015D12C /* libSDL2-ios-armv7.a */; };
 		74063A4A1751B9B60015D12C /* libSDL2-ios-simulator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74063A481751B9B60015D12C /* libSDL2-ios-simulator.a */; };
@@ -23,7 +22,6 @@
 		7463B77C12F9CE6B00983F6A /* cd_shared.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6C812F9CE6B00983F6A /* cd_shared.c */; };
 		7463B77D12F9CE6B00983F6A /* cl_collision.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6CA12F9CE6B00983F6A /* cl_collision.c */; };
 		7463B77E12F9CE6B00983F6A /* cl_demo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6CC12F9CE6B00983F6A /* cl_demo.c */; };
-		7463B77F12F9CE6B00983F6A /* cl_dyntexture.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6CD12F9CE6B00983F6A /* cl_dyntexture.c */; };
 		7463B78112F9CE6B00983F6A /* cl_input.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6D112F9CE6B00983F6A /* cl_input.c */; };
 		7463B78212F9CE6B00983F6A /* cl_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6D212F9CE6B00983F6A /* cl_main.c */; };
 		7463B78312F9CE6B00983F6A /* cl_parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B6D312F9CE6B00983F6A /* cl_parse.c */; };
@@ -123,7 +121,6 @@
 		28FD15070DC6FC5B0079059D /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		74063A3C1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mod_skeletal_animatevertices_sse.c; sourceTree = "<group>"; };
 		74063A3D1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mod_skeletal_animatevertices_sse.h; sourceTree = "<group>"; };
-		74063A3F1751B0250015D12C /* cd_null.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cd_null.c; sourceTree = "<group>"; };
 		74063A411751B0AF0015D12C /* clvm_cmds.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = clvm_cmds.c; sourceTree = "<group>"; };
 		74063A471751B9B60015D12C /* libSDL2-ios-armv7.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSDL2-ios-armv7.a"; path = "lib/libSDL2-ios-armv7.a"; sourceTree = "<group>"; };
 		74063A481751B9B60015D12C /* libSDL2-ios-simulator.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSDL2-ios-simulator.a"; path = "lib/libSDL2-ios-simulator.a"; sourceTree = "<group>"; };
@@ -140,8 +137,6 @@
 		7463B6CA12F9CE6B00983F6A /* cl_collision.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_collision.c; sourceTree = "<group>"; };
 		7463B6CB12F9CE6B00983F6A /* cl_collision.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cl_collision.h; sourceTree = "<group>"; };
 		7463B6CC12F9CE6B00983F6A /* cl_demo.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_demo.c; sourceTree = "<group>"; };
-		7463B6CD12F9CE6B00983F6A /* cl_dyntexture.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_dyntexture.c; sourceTree = "<group>"; };
-		7463B6CE12F9CE6B00983F6A /* cl_dyntexture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cl_dyntexture.h; sourceTree = "<group>"; };
 		7463B6D112F9CE6B00983F6A /* cl_input.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_input.c; sourceTree = "<group>"; };
 		7463B6D212F9CE6B00983F6A /* cl_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_main.c; sourceTree = "<group>"; };
 		7463B6D312F9CE6B00983F6A /* cl_parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cl_parse.c; sourceTree = "<group>"; };
@@ -359,7 +354,6 @@
 			isa = PBXGroup;
 			children = (
 				74063A411751B0AF0015D12C /* clvm_cmds.c */,
-				74063A3F1751B0250015D12C /* cd_null.c */,
 				7463B6C012F9CE6B00983F6A /* bih.c */,
 				7463B6C112F9CE6B00983F6A /* bih.h */,
 				7463B6C212F9CE6B00983F6A /* bspfile.h */,
@@ -373,8 +367,6 @@
 				7463B6CA12F9CE6B00983F6A /* cl_collision.c */,
 				7463B6CB12F9CE6B00983F6A /* cl_collision.h */,
 				7463B6CC12F9CE6B00983F6A /* cl_demo.c */,
-				7463B6CD12F9CE6B00983F6A /* cl_dyntexture.c */,
-				7463B6CE12F9CE6B00983F6A /* cl_dyntexture.h */,
 				7463B6D112F9CE6B00983F6A /* cl_input.c */,
 				7463B6D212F9CE6B00983F6A /* cl_main.c */,
 				7463B6D312F9CE6B00983F6A /* cl_parse.c */,
@@ -649,7 +641,6 @@
 				7463B77C12F9CE6B00983F6A /* cd_shared.c in Sources */,
 				7463B77D12F9CE6B00983F6A /* cl_collision.c in Sources */,
 				7463B77E12F9CE6B00983F6A /* cl_demo.c in Sources */,
-				7463B77F12F9CE6B00983F6A /* cl_dyntexture.c in Sources */,
 				7463B78112F9CE6B00983F6A /* cl_input.c in Sources */,
 				7463B78212F9CE6B00983F6A /* cl_main.c in Sources */,
 				7463B78312F9CE6B00983F6A /* cl_parse.c in Sources */,
@@ -736,7 +727,6 @@
 				7463B7F012F9D17D00983F6A /* (null) in Sources */,
 				7487D481130102AA00AEE909 /* thread_sdl.c in Sources */,
 				74063A3E1751ADDB0015D12C /* mod_skeletal_animatevertices_sse.c in Sources */,
-				74063A401751B0250015D12C /* cd_null.c in Sources */,
 				74063A421751B0AF0015D12C /* clvm_cmds.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
