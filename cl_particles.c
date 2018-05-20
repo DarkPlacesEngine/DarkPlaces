@@ -2554,7 +2554,7 @@ static void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rt
 	// now render the decals all at once
 	// (this assumes they all use one particle font texture!)
 	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-	R_SetupShader_Generic(particletexture[63].texture, NULL, GL_MODULATE, 1, false, false, true);
+	R_SetupShader_Generic(particletexture[63].texture, false, false, true);
 	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
 	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, NULL, 0, particle_elements, NULL, 0);
 }
@@ -2884,7 +2884,7 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 		if (texture != particletexture[p->texnum].texture)
 		{
 			texture = particletexture[p->texnum].texture;
-			R_SetupShader_Generic(texture, NULL, GL_MODULATE, 1, false, false, false);
+			R_SetupShader_Generic(texture, false, false, false);
 		}
 
 		if (p->blendmode == PBLEND_INVMOD)

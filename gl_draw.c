@@ -1498,7 +1498,7 @@ void DrawQ_FlushUI(void)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		else
 			GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_SetupShader_Generic(tex->currentskinframe->base, NULL, GL_MODULATE, 1, (tex->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND) ? false : true, true, false);
+		R_SetupShader_Generic(tex->currentskinframe->base, (tex->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND) ? false : true, true, false);
 		R_Mesh_Draw(surf->num_firstvertex, surf->num_vertices, surf->num_firsttriangle, surf->num_triangles, mod->surfmesh.data_element3i, NULL, 0, mod->surfmesh.data_element3s, NULL, 0);
 	}
 

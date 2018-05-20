@@ -1470,28 +1470,18 @@ static void R_GLSL_DumpShader_f(void)
 	}
 }
 
-void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
+void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
 {
 	dpuint64 permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	permutation |= SHADERPERMUTATION_VIEWTINT;
-	if (first)
+	if (t)
 		permutation |= SHADERPERMUTATION_DIFFUSE;
-	if (second)
-		permutation |= SHADERPERMUTATION_SPECULAR;
-	if (texturemode == GL_MODULATE)
-		permutation |= SHADERPERMUTATION_COLORMAPPING;
-	else if (texturemode == GL_ADD)
-		permutation |= SHADERPERMUTATION_GLOW;
-	else if (texturemode == GL_DECAL)
-		permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
 	if (usegamma && v_glslgamma_2d.integer && !vid.sRGB2D && r_texture_gammaramps && !vid_gammatables_trivial)
 		permutation |= SHADERPERMUTATION_GAMMARAMPS;
 	if (suppresstexalpha)
 		permutation |= SHADERPERMUTATION_REFLECTCUBE;
-	if (!second)
-		texturemode = GL_MODULATE;
 	if (vid.allowalphatocoverage)
 		GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
@@ -1500,9 +1490,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, permutation);
 		if (r_glsl_permutation->tex_Texture_First >= 0)
-			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First , first );
-		if (r_glsl_permutation->tex_Texture_Second >= 0)
-			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second, second);
+			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First, t);
 		if (r_glsl_permutation->tex_Texture_GammaRamps >= 0)
 			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps);
 		break;
@@ -1511,7 +1499,7 @@ void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemod
 
 void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
 {
-	R_SetupShader_Generic(NULL, NULL, GL_MODULATE, 1, usegamma, notrippy, false);
+	R_SetupShader_Generic(NULL, usegamma, notrippy, false);
 }
 
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
@@ -5244,7 +5232,7 @@ static void R_Bloom_MakeTexture(void)
 	GL_Color(colorscale, colorscale, colorscale, 1);
 	R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, prev->texcoord2f);
 	// TODO: do boxfilter scale-down in shader?
-	R_SetupShader_Generic(prev->colortexture[0], NULL, GL_MODULATE, 1, false, true, true);
+	R_SetupShader_Generic(prev->colortexture[0], false, true, true);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 	r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 	// we now have a properly scaled bloom image
@@ -5263,7 +5251,7 @@ static void R_Bloom_MakeTexture(void)
 		GL_BlendFunc(GL_SRC_COLOR, GL_ZERO); // square it
 		GL_Color(1,1,1,1); // no fix factor supported here
 		R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, prev->texcoord2f);
-		R_SetupShader_Generic(prev->colortexture[0], NULL, GL_MODULATE, 1, false, true, false);
+		R_SetupShader_Generic(prev->colortexture[0], false, true, false);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 		r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 	}
@@ -5283,7 +5271,7 @@ static void R_Bloom_MakeTexture(void)
 		// TODO: do offset blends using GLSL
 		// TODO instead of changing the texcoords, change the target positions to prevent artifacts at edges
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		R_SetupShader_Generic(prev->colortexture[0], NULL, GL_MODULATE, 1, false, true, false);
+		R_SetupShader_Generic(prev->colortexture[0], false, true, false);
 		for (x = -range;x <= range;x++)
 		{
 			if (!dir){xoffset = 0;yoffset = x;}
@@ -5377,7 +5365,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 			GL_Color(1, 1, 1, cl.motionbluralpha);
 			R_CalcTexCoordsForView(0, 0, viewwidth, viewheight, viewwidth, viewheight, r_fb.ghosttexcoord2f);
 			R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.ghosttexcoord2f);
-			R_SetupShader_Generic(r_fb.ghosttexture, NULL, GL_MODULATE, 1, false, true, true);
+			R_SetupShader_Generic(r_fb.ghosttexture, false, true, true);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			r_refdef.stats[r_stat_bloom_drawpixels] += viewwidth * viewheight;
 		}
@@ -9826,7 +9814,7 @@ static void R_DrawModelDecals_Entity(entity_render_t *ent)
 		GL_DepthTest(true);
 		GL_CullFace(GL_NONE);
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-		R_SetupShader_Generic(decalskinframe->base, NULL, GL_MODULATE, 1, false, false, false);
+		R_SetupShader_Generic(decalskinframe->base, false, false, false);
 		R_Mesh_Draw(0, numtris * 3, 0, numtris, decalsystem->element3i, NULL, 0, decalsystem->element3s, NULL, 0);
 	}
 }
