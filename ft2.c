@@ -928,7 +928,7 @@ static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
 	memset(&temp, 0, sizeof(temp));
 	temp.size = size;
 	temp.glyphSize = size*2 + max(gpad_l + gpad_r, gpad_t + gpad_b);
-	if (!(r_font_nonpoweroftwo.integer && vid.support.arb_texture_non_power_of_two))
+	if (!r_font_nonpoweroftwo.integer)
 		temp.glyphSize = CeilPowerOf2(temp.glyphSize);
 	temp.sfx = (1.0/64.0)/(double)size;
 	temp.sfy = (1.0/64.0)/(double)size;

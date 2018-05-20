@@ -2273,17 +2273,8 @@ static void SCR_SetLoadingScreenTexture(void)
 
 	SCR_ClearLoadingScreenTexture();
 
-	if (vid.support.arb_texture_non_power_of_two)
-	{
-		w = vid.width; h = vid.height;
-		loadingscreentexture_w = loadingscreentexture_h = 1;
-	}
-	else
-	{
-		w = CeilPowerOf2(vid.width); h = CeilPowerOf2(vid.height);
-		loadingscreentexture_w = vid.width / (float) w;
-		loadingscreentexture_h = vid.height / (float) h;
-	}
+	w = vid.width; h = vid.height;
+	loadingscreentexture_w = loadingscreentexture_h = 1;
 
 	loadingscreentexture = R_LoadTexture2D(r_main_texturepool, "loadingscreentexture", w, h, NULL, TEXTYPE_COLORBUFFER, TEXF_RENDERTARGET | TEXF_FORCENEAREST | TEXF_CLAMP, -1, NULL);
 	R_Mesh_CopyToTexture(loadingscreentexture, 0, 0, 0, 0, vid.width, vid.height);

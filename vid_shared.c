@@ -234,7 +234,6 @@ void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
 void (GLAPIENTRY *qglDepthRangef)(GLclampf near_val, GLclampf far_val);
 void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
-void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 
@@ -260,25 +259,13 @@ void (GLAPIENTRY *qglHint)(GLenum target, GLenum mode);
 void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
 void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
 void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
-//void (GLAPIENTRY *qglPrioritizeTextures)(GLsizei n, const GLuint *textures, const GLclampf *priorities);
-//GLboolean (GLAPIENTRY *qglAreTexturesResident)(GLsizei n, const GLuint *textures, GLboolean *residences);
-//GLboolean (GLAPIENTRY *qglIsTexture)(GLuint texture);
-//void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+
 void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
-//void (GLAPIENTRY *qglTexImage1D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-//void (GLAPIENTRY *qglTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
-//void (GLAPIENTRY *qglCopyTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLint border);
 void (GLAPIENTRY *qglCopyTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
-//void (GLAPIENTRY *qglCopyTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLint x, GLint y, GLsizei width);
 void (GLAPIENTRY *qglCopyTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
-
-
-void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
-
-//void (GLAPIENTRY *qglColorTableEXT)(int, int, int, int, int, const void *);
 
 void (GLAPIENTRY *qglTexImage3D)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
@@ -290,10 +277,6 @@ void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 
-//void (GLAPIENTRY *qglClipPlane)(GLenum plane, const GLdouble *equation);
-//void (GLAPIENTRY *qglGetClipPlane)(GLenum plane, GLdouble *equation);
-
-//[515]: added on 29.07.2005
 void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 void (GLAPIENTRY *qglBlendEquationEXT)(GLenum);
@@ -304,7 +287,6 @@ void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
 void (GLAPIENTRY *qglDeleteShader)(GLuint obj);
 void (GLAPIENTRY *qglDeleteProgram)(GLuint obj);
-//GLuint (GLAPIENTRY *qglGetHandle)(GLenum pname);
 void (GLAPIENTRY *qglDetachShader)(GLuint containerObj, GLuint attachedObj);
 GLuint (GLAPIENTRY *qglCreateShader)(GLenum shaderType);
 void (GLAPIENTRY *qglShaderSource)(GLuint shaderObj, GLsizei count, const GLchar **string, const GLint *length);
@@ -393,14 +375,14 @@ void (GLAPIENTRY *qglGetVertexAttribiv)(GLuint index, GLenum pname, GLint *param
 void (GLAPIENTRY *qglGetVertexAttribPointerv)(GLuint index, GLenum pname, GLvoid **pointer);
 
 //GL_ARB_vertex_buffer_object
-void (GLAPIENTRY *qglBindBufferARB) (GLenum target, GLuint buffer);
-void (GLAPIENTRY *qglDeleteBuffersARB) (GLsizei n, const GLuint *buffers);
-void (GLAPIENTRY *qglGenBuffersARB) (GLsizei n, GLuint *buffers);
-GLboolean (GLAPIENTRY *qglIsBufferARB) (GLuint buffer);
-GLvoid* (GLAPIENTRY *qglMapBufferARB) (GLenum target, GLenum access);
-GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
-void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
-void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
+void (GLAPIENTRY *qglBindBuffer) (GLenum target, GLuint buffer);
+void (GLAPIENTRY *qglDeleteBuffers) (GLsizei n, const GLuint *buffers);
+void (GLAPIENTRY *qglGenBuffers) (GLsizei n, GLuint *buffers);
+GLboolean (GLAPIENTRY *qglIsBuffer) (GLuint buffer);
+GLvoid* (GLAPIENTRY *qglMapBuffer) (GLenum target, GLenum access);
+GLboolean (GLAPIENTRY *qglUnmapBuffer) (GLenum target);
+void (GLAPIENTRY *qglBufferData) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
+void (GLAPIENTRY *qglBufferSubData) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
 //GL_ARB_framebuffer_object
 GLboolean (GLAPIENTRY *qglIsRenderbuffer)(GLuint renderbuffer);
@@ -539,7 +521,8 @@ qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *fun
 }
 
 #ifndef USE_GLES2
-static dllfunction_t opengl110funcs[] =
+// functions we require from the driver - some of these are OpenGL 2.0, some are a bit newer
+static dllfunction_t openglfuncs[] =
 {
 	{"glClearColor", (void **) &qglClearColor},
 	{"glClear", (void **) &qglClear},
@@ -565,7 +548,6 @@ static dllfunction_t opengl110funcs[] =
 	{"glDrawElements", (void **) &qglDrawElements},
 	{"glDrawArrays", (void **) &qglDrawArrays},
 	{"glColorMask", (void **) &qglColorMask},
-//[515]: added on 29.07.2005
 	{"glPointSize", (void**) &qglPointSize},
 	{"glViewport", (void **) &qglViewport},
 	{"glReadPixels", (void **) &qglReadPixels},
@@ -582,68 +564,24 @@ static dllfunction_t opengl110funcs[] =
 	{"glGetTexLevelParameterfv", (void **) &qglGetTexLevelParameterfv},
 	{"glGetTexLevelParameteriv", (void **) &qglGetTexLevelParameteriv},
 	{"glHint", (void **) &qglHint},
-//	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},
 	{"glGenTextures", (void **) &qglGenTextures},
 	{"glDeleteTextures", (void **) &qglDeleteTextures},
 	{"glBindTexture", (void **) &qglBindTexture},
-//	{"glPrioritizeTextures", (void **) &qglPrioritizeTextures},
-//	{"glAreTexturesResident", (void **) &qglAreTexturesResident},
-//	{"glIsTexture", (void **) &qglIsTexture},
-//	{"glTexImage1D", (void **) &qglTexImage1D},
 	{"glTexImage2D", (void **) &qglTexImage2D},
-//	{"glTexSubImage1D", (void **) &qglTexSubImage1D},
 	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
-//	{"glCopyTexImage1D", (void **) &qglCopyTexImage1D},
 	{"glCopyTexImage2D", (void **) &qglCopyTexImage2D},
-//	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
 	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
 	{"glScissor", (void **) &qglScissor},
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{"glPolygonMode", (void **) &qglPolygonMode},
 	{"glPolygonStipple", (void **) &qglPolygonStipple},
-//	{"glClipPlane", (void **) &qglClipPlane},
-//	{"glGetClipPlane", (void **) &qglGetClipPlane},
-	{NULL, NULL}
-};
-
-static dllfunction_t drawrangeelementsfuncs[] =
-{
-	{"glDrawRangeElements", (void **) &qglDrawRangeElements},
-	{NULL, NULL}
-};
-
-static dllfunction_t drawrangeelementsextfuncs[] =
-{
-	{"glDrawRangeElementsEXT", (void **) &qglDrawRangeElementsEXT},
-	{NULL, NULL}
-};
-
-static dllfunction_t multitexturefuncs[] =
-{
-	{"glActiveTextureARB", (void **) &qglActiveTexture},
-	{NULL, NULL}
-};
-
-static dllfunction_t texture3dextfuncs[] =
-{
-	{"glTexImage3DEXT", (void **) &qglTexImage3D},
-	{"glTexSubImage3DEXT", (void **) &qglTexSubImage3D},
-	{"glCopyTexSubImage3DEXT", (void **) &qglCopyTexSubImage3D},
-	{NULL, NULL}
-};
-
-static dllfunction_t blendequationfuncs[] =
-{
-	{"glBlendEquationEXT", (void **) &qglBlendEquationEXT},
-	{NULL, NULL}
-};
-
-static dllfunction_t gl20shaderfuncs[] =
-{
+	{"glActiveTexture", (void **) &qglActiveTexture},
+	{"glTexImage3D", (void **) &qglTexImage3D},
+	{"glTexSubImage3D", (void **) &qglTexSubImage3D},
+	{"glCopyTexSubImage3D", (void **) &qglCopyTexSubImage3D},
 	{"glDeleteShader", (void **) &qglDeleteShader},
 	{"glDeleteProgram", (void **) &qglDeleteProgram},
-//	{"glGetHandle", (void **) &qglGetHandle},
 	{"glDetachShader", (void **) &qglDetachShader},
 	{"glCreateShader", (void **) &qglCreateShader},
 	{"glShaderSource", (void **) &qglShaderSource},
@@ -728,30 +666,34 @@ static dllfunction_t gl20shaderfuncs[] =
 	{"glGetVertexAttribfv", (void **) &qglGetVertexAttribfv},
 	{"glGetVertexAttribiv", (void **) &qglGetVertexAttribiv},
 	{"glGetVertexAttribPointerv", (void **) &qglGetVertexAttribPointerv},
-	{NULL, NULL}
-};
-
-static dllfunction_t glsl130funcs[] =
-{
-	{"glBindFragDataLocation", (void **) &qglBindFragDataLocation},
-	{NULL, NULL}
-};
-
-static dllfunction_t vbofuncs[] =
-{
-	{"glBindBufferARB"    , (void **) &qglBindBufferARB},
-	{"glDeleteBuffersARB" , (void **) &qglDeleteBuffersARB},
-	{"glGenBuffersARB"    , (void **) &qglGenBuffersARB},
-	{"glIsBufferARB"      , (void **) &qglIsBufferARB},
-	{"glMapBufferARB"     , (void **) &qglMapBufferARB},
-	{"glUnmapBufferARB"   , (void **) &qglUnmapBufferARB},
-	{"glBufferDataARB"    , (void **) &qglBufferDataARB},
-	{"glBufferSubDataARB" , (void **) &qglBufferSubDataARB},
-	{NULL, NULL}
-};
-
-static dllfunction_t ubofuncs[] =
-{
+	{"glBindBuffer"    , (void **) &qglBindBuffer},
+	{"glDeleteBuffers" , (void **) &qglDeleteBuffers},
+	{"glGenBuffers"    , (void **) &qglGenBuffers},
+	{"glIsBuffer"      , (void **) &qglIsBuffer},
+	{"glMapBuffer"     , (void **) &qglMapBuffer},
+	{"glUnmapBuffer"   , (void **) &qglUnmapBuffer},
+	{"glBufferData"    , (void **) &qglBufferData},
+	{"glBufferSubData" , (void **) &qglBufferSubData},
+	{"glIsRenderbuffer"                      , (void **) &qglIsRenderbuffer},
+	{"glBindRenderbuffer"                    , (void **) &qglBindRenderbuffer},
+	{"glDeleteRenderbuffers"                 , (void **) &qglDeleteRenderbuffers},
+	{"glGenRenderbuffers"                    , (void **) &qglGenRenderbuffers},
+	{"glRenderbufferStorage"                 , (void **) &qglRenderbufferStorage},
+	{"glRenderbufferStorageMultisample"      , (void **) &qglRenderbufferStorageMultisample},
+	{"glGetRenderbufferParameteriv"          , (void **) &qglGetRenderbufferParameteriv},
+	{"glIsFramebuffer"                       , (void **) &qglIsFramebuffer},
+	{"glBindFramebuffer"                     , (void **) &qglBindFramebuffer},
+	{"glDeleteFramebuffers"                  , (void **) &qglDeleteFramebuffers},
+	{"glGenFramebuffers"                     , (void **) &qglGenFramebuffers},
+	{"glCheckFramebufferStatus"              , (void **) &qglCheckFramebufferStatus},
+	{"glFramebufferTexture1D"                , (void **) &qglFramebufferTexture1D},
+	{"glFramebufferTexture2D"                , (void **) &qglFramebufferTexture2D},
+	{"glFramebufferTexture3D"                , (void **) &qglFramebufferTexture3D},
+	{"glFramebufferTextureLayer"             , (void **) &qglFramebufferTextureLayer},
+	{"glFramebufferRenderbuffer"             , (void **) &qglFramebufferRenderbuffer},
+	{"glGetFramebufferAttachmentParameteriv" , (void **) &qglGetFramebufferAttachmentParameteriv},
+	{"glBlitFramebuffer"                     , (void **) &qglBlitFramebuffer},
+	{"glGenerateMipmap"                      , (void **) &qglGenerateMipmap},
 	{"glGetUniformIndices"        , (void **) &qglGetUniformIndices},
 	{"glGetActiveUniformsiv"      , (void **) &qglGetActiveUniformsiv},
 	{"glGetActiveUniformName"     , (void **) &qglGetActiveUniformName},
@@ -765,50 +707,15 @@ static dllfunction_t ubofuncs[] =
 	{NULL, NULL}
 };
 
-static dllfunction_t arbfbofuncs[] =
+static dllfunction_t blendequationfuncs[] =
 {
-	{"glIsRenderbuffer"                      , (void **) &qglIsRenderbuffer},
-	{"glBindRenderbuffer"                    , (void **) &qglBindRenderbuffer},
-	{"glDeleteRenderbuffers"                 , (void **) &qglDeleteRenderbuffers},
-	{"glGenRenderbuffers"                    , (void **) &qglGenRenderbuffers},
-	{"glRenderbufferStorage"                 , (void **) &qglRenderbufferStorage},
-	{"glRenderbufferStorageMultisample"      , (void **) &qglRenderbufferStorageMultisample}, // not in GL_EXT_framebuffer_object
-	{"glGetRenderbufferParameteriv"          , (void **) &qglGetRenderbufferParameteriv},
-	{"glIsFramebuffer"                       , (void **) &qglIsFramebuffer},
-	{"glBindFramebuffer"                     , (void **) &qglBindFramebuffer},
-	{"glDeleteFramebuffers"                  , (void **) &qglDeleteFramebuffers},
-	{"glGenFramebuffers"                     , (void **) &qglGenFramebuffers},
-	{"glCheckFramebufferStatus"              , (void **) &qglCheckFramebufferStatus},
-	{"glFramebufferTexture1D"                , (void **) &qglFramebufferTexture1D},
-	{"glFramebufferTexture2D"                , (void **) &qglFramebufferTexture2D},
-	{"glFramebufferTexture3D"                , (void **) &qglFramebufferTexture3D},
-	{"glFramebufferTextureLayer"             , (void **) &qglFramebufferTextureLayer}, // not in GL_EXT_framebuffer_object
-	{"glFramebufferRenderbuffer"             , (void **) &qglFramebufferRenderbuffer},
-	{"glGetFramebufferAttachmentParameteriv" , (void **) &qglGetFramebufferAttachmentParameteriv},
-	{"glBlitFramebuffer"                     , (void **) &qglBlitFramebuffer}, // not in GL_EXT_framebuffer_object
-	{"glGenerateMipmap"                      , (void **) &qglGenerateMipmap},
+	{"glBlendEquationEXT", (void **) &qglBlendEquationEXT},
 	{NULL, NULL}
 };
 
-static dllfunction_t extfbofuncs[] =
+static dllfunction_t glsl130funcs[] =
 {
-	{"glIsRenderbufferEXT"                      , (void **) &qglIsRenderbuffer},
-	{"glBindRenderbufferEXT"                    , (void **) &qglBindRenderbuffer},
-	{"glDeleteRenderbuffersEXT"                 , (void **) &qglDeleteRenderbuffers},
-	{"glGenRenderbuffersEXT"                    , (void **) &qglGenRenderbuffers},
-	{"glRenderbufferStorageEXT"                 , (void **) &qglRenderbufferStorage},
-	{"glGetRenderbufferParameterivEXT"          , (void **) &qglGetRenderbufferParameteriv},
-	{"glIsFramebufferEXT"                       , (void **) &qglIsFramebuffer},
-	{"glBindFramebufferEXT"                     , (void **) &qglBindFramebuffer},
-	{"glDeleteFramebuffersEXT"                  , (void **) &qglDeleteFramebuffers},
-	{"glGenFramebuffersEXT"                     , (void **) &qglGenFramebuffers},
-	{"glCheckFramebufferStatusEXT"              , (void **) &qglCheckFramebufferStatus},
-	{"glFramebufferTexture1DEXT"                , (void **) &qglFramebufferTexture1D},
-	{"glFramebufferTexture2DEXT"                , (void **) &qglFramebufferTexture2D},
-	{"glFramebufferTexture3DEXT"                , (void **) &qglFramebufferTexture3D},
-	{"glFramebufferRenderbufferEXT"             , (void **) &qglFramebufferRenderbuffer},
-	{"glGetFramebufferAttachmentParameterivEXT" , (void **) &qglGetFramebufferAttachmentParameteriv},
-	{"glGenerateMipmapEXT"                      , (void **) &qglGenerateMipmap},
+	{"glBindFragDataLocation", (void **) &qglBindFragDataLocation},
 	{NULL, NULL}
 };
 
@@ -816,10 +723,8 @@ static dllfunction_t texturecompressionfuncs[] =
 {
 	{"glCompressedTexImage3DARB",    (void **) &qglCompressedTexImage3DARB},
 	{"glCompressedTexImage2DARB",    (void **) &qglCompressedTexImage2DARB},
-//	{"glCompressedTexImage1DARB",    (void **) &qglCompressedTexImage1DARB},
 	{"glCompressedTexSubImage3DARB", (void **) &qglCompressedTexSubImage3DARB},
 	{"glCompressedTexSubImage2DARB", (void **) &qglCompressedTexSubImage2DARB},
-//	{"glCompressedTexSubImage1DARB", (void **) &qglCompressedTexSubImage1DARB},
 	{"glGetCompressedTexImageARB",   (void **) &qglGetCompressedTexImageARB},
 	{NULL, NULL}
 };
@@ -867,7 +772,6 @@ void VID_ClearExtensions(void)
 	vid.renderpath = RENDERPATH_GL20;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
-	vid.forcevbo = false;
 	vid.maxtexturesize_2d = 0;
 	vid.maxtexturesize_3d = 0;
 	vid.maxtexturesize_cubemap = 0;
@@ -879,7 +783,6 @@ void VID_ClearExtensions(void)
 
 #ifndef USE_GLES2
 	// this is a complete list of all functions that are directly checked in the renderer
-	qglDrawRangeElements = NULL;
 	qglDrawBuffer = NULL;
 	qglPolygonStipple = NULL;
 	qglFlush = NULL;
@@ -893,61 +796,40 @@ void VID_ClearExtensions(void)
 #ifndef USE_GLES2
 void VID_CheckExtensions(void)
 {
-	if (!GL_CheckExtension("glbase", opengl110funcs, NULL, false))
-		Sys_Error("OpenGL 1.1.0 functions not found");
-	vid.support.gl20shaders = GL_CheckExtension("2.0", gl20shaderfuncs, "-noshaders", true);
+	char *s;
+	if (!GL_CheckExtension("glbase", openglfuncs, NULL, false))
+		Sys_Error("OpenGL driver/hardware lacks required features");
 
 	CHECKGLERROR
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
-	if (vid.support.gl20shaders)
-	{
-		char *s;
-		// detect what GLSL version is available, to enable features like r_glsl_skeletal and higher quality reliefmapping
+	// detect what GLSL version is available, to enable features like r_glsl_skeletal and higher quality reliefmapping
+	vid.support.glshaderversion = 100;
+	s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
+	if (s)
+		vid.support.glshaderversion = (int)(atof(s) * 100.0f + 0.5f);
+	if (vid.support.glshaderversion < 100)
 		vid.support.glshaderversion = 100;
-		s = (char *) qglGetString(GL_SHADING_LANGUAGE_VERSION);
-		if (s)
-			vid.support.glshaderversion = (int)(atof(s) * 100.0f + 0.5f);
-		if (vid.support.glshaderversion < 100)
-			vid.support.glshaderversion = 100;
-		Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
-		// get the glBindFragDataLocation function
-		if (vid.support.glshaderversion >= 130)
-			vid.support.gl20shaders130 = GL_CheckExtension("glshaders130", glsl130funcs, "-noglsl130", true);
-	}
+	Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
+	// get the glBindFragDataLocation function
+	if (vid.support.glshaderversion >= 130)
+		vid.support.gl20shaders130 = GL_CheckExtension("glshaders130", glsl130funcs, "-noglsl130", true);
 
 	// GL drivers generally prefer GL_BGRA
 	vid.forcetextype = GL_BGRA;
 
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", NULL, "-notexture4", false);
-	vid.support.arb_depth_texture = GL_CheckExtension("GL_ARB_depth_texture", NULL, "-nodepthtexture", false);
 	vid.support.arb_draw_buffers = GL_CheckExtension("GL_ARB_draw_buffers", drawbuffersfuncs, "-nodrawbuffers", false);
-	vid.support.arb_multitexture = GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false);
 	vid.support.arb_occlusion_query = GL_CheckExtension("GL_ARB_occlusion_query", occlusionqueryfuncs, "-noocclusionquery", false);
 	vid.support.arb_query_buffer_object = GL_CheckExtension("GL_ARB_query_buffer_object", NULL, "-noquerybuffer", true);
-	vid.support.arb_shadow = GL_CheckExtension("GL_ARB_shadow", NULL, "-noshadow", false);
 	vid.support.arb_texture_compression = GL_CheckExtension("GL_ARB_texture_compression", texturecompressionfuncs, "-notexturecompression", false);
-	vid.support.arb_texture_cube_map = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
-	vid.support.arb_texture_env_combine = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", NULL, "-notexturegather", false);
-	vid.support.arb_texture_non_power_of_two = GL_CheckExtension("GL_ARB_texture_non_power_of_two", NULL, "-notexturenonpoweroftwo", false);
-	vid.support.arb_vertex_buffer_object = GL_CheckExtension("GL_ARB_vertex_buffer_object", vbofuncs, "-novbo", false);
-	vid.support.arb_uniform_buffer_object = GL_CheckExtension("GL_ARB_uniform_buffer_object", ubofuncs, "-noubo", false);
 	vid.support.ext_blend_minmax = GL_CheckExtension("GL_EXT_blend_minmax", blendequationfuncs, "-noblendminmax", false);
 	vid.support.ext_blend_subtract = GL_CheckExtension("GL_EXT_blend_subtract", blendequationfuncs, "-noblendsubtract", false);
 	vid.support.ext_blend_func_separate = GL_CheckExtension("GL_EXT_blend_func_separate", blendfuncseparatefuncs, "-noblendfuncseparate", false);
-	vid.support.ext_draw_range_elements = GL_CheckExtension("drawrangeelements", drawrangeelementsfuncs, "-nodrawrangeelements", true) || GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
-	vid.support.arb_framebuffer_object = GL_CheckExtension("GL_ARB_framebuffer_object", arbfbofuncs, "-nofbo", false);
-	if (vid.support.arb_framebuffer_object)
-		vid.support.ext_framebuffer_object = true;
-	else
-		vid.support.ext_framebuffer_object = GL_CheckExtension("GL_EXT_framebuffer_object", extfbofuncs, "-nofbo", false);
-
 	vid.support.ext_packed_depth_stencil = GL_CheckExtension("GL_EXT_packed_depth_stencil", NULL, "-nopackeddepthstencil", false);
-	vid.support.ext_texture_3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
 	vid.support.ext_texture_compression_s3tc = GL_CheckExtension("GL_EXT_texture_compression_s3tc", NULL, "-nos3tc", false);
-	vid.support.ext_texture_edge_clamp = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 	vid.support.ext_texture_srgb = GL_CheckExtension("GL_EXT_texture_sRGB", NULL, "-nosrgb", false);
 	vid.support.arb_texture_float = GL_CheckExtension("GL_ARB_texture_float", NULL, "-notexturefloat", false);
@@ -984,52 +866,25 @@ void VID_CheckExtensions(void)
 	if (vid.support.arb_draw_buffers)
 		qglGetIntegerv(GL_MAX_DRAW_BUFFERS_ARB, (GLint*)&vid.maxdrawbuffers);
 
-	// disable non-power-of-two textures on Radeon X1600 and other cards that do not accelerate it with some filtering modes / repeat modes that we use
-	// we detect these cards by checking if the hardware supports vertex texture fetch (Geforce6 does, Radeon X1600 does not, all GL3-class hardware does)
-	if(vid.support.arb_texture_non_power_of_two && vid.support.gl20shaders)
-	{
-		int val = 0;
-		qglGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &val);CHECKGLERROR
-		if (val < 1)
-			vid.support.arb_texture_non_power_of_two = false;
-	}
-
-	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
-	if (qglDrawRangeElements == NULL)
-		qglDrawRangeElements = qglDrawRangeElementsEXT;
-
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
 	qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
 	qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
 	qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
-	// verify that 3d textures are really supported
-	if (vid.support.ext_texture_3d && vid.maxtexturesize_3d < 32)
-	{
-		vid.support.ext_texture_3d = false;
-		Con_Printf("GL_EXT_texture3D reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
-	}
-
 	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
 	qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-	if (vid.support.gl20shaders && vid.support.ext_framebuffer_object && vid.support.arb_texture_non_power_of_two)
-	{
-		qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-		qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
-		qglGetIntegerv(GL_MAX_TEXTURE_COORDS, (int *)&vid.texarrayunits);CHECKGLERROR
-		vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
-		vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
-		vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
-		Con_DPrintf("Using GL2.0+fbo rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
-		vid.renderpath = RENDERPATH_GL20;
-		vid.sRGBcapable2D = false;
-		vid.sRGBcapable3D = true;
-		Con_Printf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
-		Con_Printf("vid.support.gl20shaders %i\n", vid.support.gl20shaders);
-		vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
-	}
-	else
-		Sys_Error("OpenGL 2.0 and GL_EXT_framebuffer_object required");
+	qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
+	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
+	qglGetIntegerv(GL_MAX_TEXTURE_COORDS, (int *)&vid.texarrayunits);CHECKGLERROR
+	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
+	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
+	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
+	Con_DPrint("Using GL2+extensions rendering path\n");
+	vid.renderpath = RENDERPATH_GL20;
+	vid.sRGBcapable2D = false;
+	vid.sRGBcapable3D = true;
+	Con_DPrintf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
+	vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
 
 	// enable multisample antialiasing if possible
 	if(vid.support.arb_multisample)

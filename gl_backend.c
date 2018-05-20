@@ -75,7 +75,6 @@
 
 #define MAX_RENDERTARGETS 4
 
-cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1", "use glDrawRangeElements function if available instead of glDrawElements (for performance comparisons or bug testing)"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -84,9 +83,6 @@ cvar_t r_renderview = {0, "r_renderview", "1", "enables rendering 3D views (you 
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
 cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1", "enables OpenGL dithering (16bit looks bad with this off)"};
-cvar_t gl_vbo = {CVAR_SAVE, "gl_vbo", "3", "make use of GL_ARB_vertex_buffer_object extension to store static geometry in video memory for faster rendering, 0 disables VBO allocation or use, 1 enables VBOs for vertex and triangle data, 2 only for vertex data, 3 for vertex data and triangle data of simple meshes (ones with only one surface)"};
-cvar_t gl_vbo_dynamicvertex = {CVAR_SAVE, "gl_vbo_dynamicvertex", "0", "make use of GL_ARB_vertex_buffer_object extension when rendering dynamic (animated/procedural) geometry such as text and particles"};
-cvar_t gl_vbo_dynamicindex = {CVAR_SAVE, "gl_vbo_dynamicindex", "0", "make use of GL_ARB_vertex_buffer_object extension when rendering dynamic (animated/procedural) geometry such as text and particles"};
 cvar_t gl_fbo = {CVAR_SAVE, "gl_fbo", "1", "make use of GL_ARB_framebuffer_object extension to enable shadowmaps and other features using pixel formats different from the framebuffer"};
 
 cvar_t v_flipped = {0, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
@@ -233,11 +229,6 @@ typedef struct gl_state_s
 	size_t preparevertices_tempdatamaxsize;
 	int preparevertices_numvertices;
 
-	qboolean usevbo_staticvertex;
-	qboolean usevbo_staticindex;
-	qboolean usevbo_dynamicvertex;
-	qboolean usevbo_dynamicindex;
-
 	memexpandablearray_t meshbufferarray;
 
 	qboolean active;
@@ -313,25 +304,10 @@ static void GL_VBOStats_f(void)
 
 static void GL_Backend_ResetState(void);
 
-static void R_Mesh_SetUseVBO(void)
-{
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		gl_state.usevbo_staticvertex = (vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo;
-		gl_state.usevbo_staticindex = (vid.support.arb_vertex_buffer_object && (gl_vbo.integer == 1 || gl_vbo.integer == 3)) || vid.forcevbo;
-		gl_state.usevbo_dynamicvertex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicvertex.integer && gl_vbo.integer) || vid.forcevbo;
-		gl_state.usevbo_dynamicindex = (vid.support.arb_vertex_buffer_object && gl_vbo_dynamicindex.integer && gl_vbo.integer) || vid.forcevbo;
-		break;
-	}
-}
-
 static void gl_backend_start(void)
 {
 	memset(&gl_state, 0, sizeof(gl_state));
 
-	R_Mesh_SetUseVBO();
 	Mem_ExpandableArray_NewArray(&gl_state.meshbufferarray, r_main_mempool, sizeof(r_meshbuffer_t), 128);
 
 	Con_DPrintf("OpenGL backend started.\n");
@@ -345,8 +321,7 @@ static void gl_backend_start(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
-		if (vid.support.ext_framebuffer_object)
-			qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);
+		qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);
 		break;
 	}
 }
@@ -441,13 +416,8 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&v_flipped);
 	Cvar_RegisterVariable(&gl_dither);
-	Cvar_RegisterVariable(&gl_vbo);
-	Cvar_RegisterVariable(&gl_vbo_dynamicvertex);
-	Cvar_RegisterVariable(&gl_vbo_dynamicindex);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
-
-	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 
 	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -1018,7 +988,7 @@ static void GL_BindVBO(int bufferobject)
 	{
 		gl_state.vertexbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ARRAY_BUFFER, bufferobject);CHECKGLERROR
+		qglBindBuffer(GL_ARRAY_BUFFER, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -1028,7 +998,7 @@ static void GL_BindEBO(int bufferobject)
 	{
 		gl_state.elementbufferobject = bufferobject;
 		CHECKGLERROR
-		qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, bufferobject);CHECKGLERROR
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bufferobject);CHECKGLERROR
 	}
 }
 
@@ -1039,7 +1009,7 @@ static void GL_BindUBO(int bufferobject)
 		gl_state.uniformbufferobject = bufferobject;
 #ifdef GL_UNIFORM_BUFFER
 		CHECKGLERROR
-		qglBindBufferARB(GL_UNIFORM_BUFFER, bufferobject);CHECKGLERROR
+		qglBindBuffer(GL_UNIFORM_BUFFER, bufferobject);CHECKGLERROR
 #endif
 	}
 }
@@ -1047,135 +1017,76 @@ static void GL_BindUBO(int bufferobject)
 static const GLuint drawbuffers[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
 int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
 {
+	int temp;
+	GLuint status;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		if (vid.support.arb_framebuffer_object)
-		{
-			int temp;
-			GLuint status;
-			qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
-			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
-			// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
+		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
+		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
 #ifdef USE_GLES2
-			// FIXME: separate stencil attachment on GLES
-			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
-			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+		// FIXME: separate stencil attachment on GLES
+		if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+		if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
 #else
-			if (depthtexture  && depthtexture->texnum )
-			{
-				qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
-				if (depthtexture->glisdepthstencil) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
-			}
-			if (depthtexture  && depthtexture->renderbuffernum )
-			{
-				qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
-				if (depthtexture->glisdepthstencil) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
-			}
-#endif
-			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
-			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
-			if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
-			if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
-			if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
-			if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
-			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
-			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
-
-#ifndef USE_GLES2
-			if (colortexture4 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture3 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture2 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture && qglDrawBuffer)
-			{
-				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-			}
-			else if (qglDrawBuffer)
-			{
-				qglDrawBuffer(GL_NONE);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-#endif
-			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
-			if (status != GL_FRAMEBUFFER_COMPLETE)
-			{
-				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
-				gl_state.framebufferobject = 0; // GL unbinds it for us
-				qglDeleteFramebuffers(1, (GLuint*)&temp);
-				temp = 0;
-			}
-			return temp;
-		}
-		else if (vid.support.ext_framebuffer_object)
+		if (depthtexture  && depthtexture->texnum )
 		{
-			int temp;
-			GLuint status;
-			qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
-			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
-			// GL_EXT_framebuffer_object (GL2-class hardware) - no depth stencil attachment, let it break stencil
-			if (depthtexture  && depthtexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
-			if (depthtexture  && depthtexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
-			if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
-			if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
-			if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
-			if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
-			if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
-			if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
-			if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
-			if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
+			qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+			if (depthtexture->glisdepthstencil) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR
+		}
+		if (depthtexture  && depthtexture->renderbuffernum )
+		{
+			qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+			if (depthtexture->glisdepthstencil) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR
+		}
+#endif
+		if (colortexture  && colortexture->texnum ) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR
+		if (colortexture2 && colortexture2->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR
+		if (colortexture3 && colortexture3->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR
+		if (colortexture4 && colortexture4->texnum) qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , colortexture4->gltexturetypeenum, colortexture4->texnum, 0);CHECKGLERROR
+		if (colortexture  && colortexture->renderbuffernum ) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , GL_RENDERBUFFER, colortexture->renderbuffernum );CHECKGLERROR
+		if (colortexture2 && colortexture2->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , GL_RENDERBUFFER, colortexture2->renderbuffernum);CHECKGLERROR
+		if (colortexture3 && colortexture3->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , GL_RENDERBUFFER, colortexture3->renderbuffernum);CHECKGLERROR
+		if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
 
 #ifndef USE_GLES2
-			if (colortexture4 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture3 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture2 && qglDrawBuffersARB)
-			{
-				qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-			else if (colortexture && qglDrawBuffer)
-			{
-				qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-				qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
-			}
-			else if (qglDrawBuffer)
-			{
-				qglDrawBuffer(GL_NONE);CHECKGLERROR
-				qglReadBuffer(GL_NONE);CHECKGLERROR
-			}
-#endif
-			status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
-			if (status != GL_FRAMEBUFFER_COMPLETE)
-			{
-				Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
-				gl_state.framebufferobject = 0; // GL unbinds it for us
-				qglDeleteFramebuffers(1, (GLuint*)&temp);
-				temp = 0;
-			}
-			return temp;
+		if (colortexture4 && qglDrawBuffersARB)
+		{
+			qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
+			qglReadBuffer(GL_NONE);CHECKGLERROR
 		}
-		return 0;
+		else if (colortexture3 && qglDrawBuffersARB)
+		{
+			qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
+			qglReadBuffer(GL_NONE);CHECKGLERROR
+		}
+		else if (colortexture2 && qglDrawBuffersARB)
+		{
+			qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
+			qglReadBuffer(GL_NONE);CHECKGLERROR
+		}
+		else if (colortexture && qglDrawBuffer)
+		{
+			qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+			qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
+		}
+		else if (qglDrawBuffer)
+		{
+			qglDrawBuffer(GL_NONE);CHECKGLERROR
+			qglReadBuffer(GL_NONE);CHECKGLERROR
+		}
+#endif
+		status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
+		if (status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+			gl_state.framebufferobject = 0; // GL unbinds it for us
+			qglDeleteFramebuffers(1, (GLuint*)&temp);
+			temp = 0;
+		}
+		return temp;
 	}
 	return 0;
 }
@@ -1262,17 +1173,11 @@ static void GL_Backend_ResetState(void)
 		qglEnable(GL_DEPTH_TEST);CHECKGLERROR
 		qglDepthMask(gl_state.depthmask);CHECKGLERROR
 		qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
-		if (vid.support.arb_vertex_buffer_object)
-		{
-			qglBindBufferARB(GL_ARRAY_BUFFER, 0);
-			qglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER, 0);
-		}
-		if (vid.support.ext_framebuffer_object)
-			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
+		qglBindBuffer(GL_ARRAY_BUFFER, 0);
+		qglBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.defaultframebufferobject);
 		qglEnableVertexAttribArray(GLSLATTRIB_POSITION);
-		qglVertexAttribPointer(GLSLATTRIB_POSITION, 3, GL_FLOAT, false, sizeof(float[3]), NULL);CHECKGLERROR
 		qglDisableVertexAttribArray(GLSLATTRIB_COLOR);
-		qglVertexAttribPointer(GLSLATTRIB_COLOR, 4, GL_FLOAT, false, sizeof(float[4]), NULL);CHECKGLERROR
 		qglVertexAttrib4f(GLSLATTRIB_COLOR, 1, 1, 1, 1);
 		gl_state.unit = MAX_TEXTUREUNITS;
 		gl_state.clientunit = MAX_TEXTUREUNITS;
@@ -1280,19 +1185,12 @@ static void GL_Backend_ResetState(void)
 		{
 			GL_ActiveTexture(i);
 			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-			if (vid.support.ext_texture_3d)
-			{
-				qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
-			}
-			if (vid.support.arb_texture_cube_map)
-			{
-				qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);CHECKGLERROR
-			}
+			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);CHECKGLERROR
 		}
 		for (i = 0;i < vid.texarrayunits;i++)
 		{
 			GL_BindVBO(0);
-			qglVertexAttribPointer(i+GLSLATTRIB_TEXCOORD0, 2, GL_FLOAT, false, sizeof(float[2]), NULL);CHECKGLERROR
 			qglDisableVertexAttribArray(i+GLSLATTRIB_TEXCOORD0);CHECKGLERROR
 		}
 		CHECKGLERROR
@@ -1706,7 +1604,6 @@ void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
-	R_Mesh_SetUseVBO();
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
 		Con_Printf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
@@ -1819,7 +1716,6 @@ void GL_Backend_FreeProgram(unsigned int prog)
 }
 
 // renders triangles using vertices from the active arrays
-int paranoidblah = 0;
 void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, int element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, int element3s_bufferoffset)
 {
 	unsigned int numelements = numtriangles * 3;
@@ -1842,27 +1738,15 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		element3s += firsttriangle * 3;
 	if (element3s_indexbuffer)
 		element3s_bufferoffset += firsttriangle * 3 * sizeof(*element3s);
-	switch(vid.renderpath)
-	{
-	case RENDERPATH_GL20:
-	case RENDERPATH_GLES2:
-		// check if the user specified to ignore static index buffers
-		if (!gl_state.usevbo_staticindex || (gl_vbo.integer == 3 && !vid.forcevbo && (element3i_bufferoffset || element3s_bufferoffset)))
-		{
-			element3i_indexbuffer = NULL;
-			element3s_indexbuffer = NULL;
-		}
-		break;
-	}
 	// upload a dynamic index buffer if needed
 	if (element3s)
 	{
-		if (!element3s_indexbuffer && gl_state.usevbo_dynamicindex)
+		if (!element3s_indexbuffer)
 			element3s_indexbuffer = R_BufferData_Store(numelements * sizeof(*element3s), (void *)element3s, R_BUFFERDATA_INDEX16, &element3s_bufferoffset);
 	}
 	else if (element3i)
 	{
-		if (!element3i_indexbuffer && gl_state.usevbo_dynamicindex)
+		if (!element3i_indexbuffer)
 			element3i_indexbuffer = R_BufferData_Store(numelements * sizeof(*element3i), (void *)element3i, R_BUFFERDATA_INDEX32, &element3i_bufferoffset);
 	}
 	bufferobject3i = element3i_indexbuffer ? element3i_indexbuffer->bufferobject : 0;
@@ -1875,44 +1759,6 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	if (gl_paranoid.integer)
 	{
 		unsigned int i;
-		// LordHavoc: disabled this - it needs to be updated to handle components and gltype and stride in each array
-#if 0
-		unsigned int j, size;
-		const int *p;
-		// note: there's no validation done here on buffer objects because it
-		// is somewhat difficult to get at the data, and gl_paranoid can be
-		// used without buffer objects if the need arises
-		// (the data could be gotten using glMapBuffer but it would be very
-		//  slow due to uncachable video memory reads)
-		if (!qglIsEnabled(GL_VERTEX_ARRAY))
-			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
-		CHECKGLERROR
-		if (gl_state.pointer_vertex_pointer)
-			for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
-				paranoidblah += *p;
-		if (gl_state.pointer_color_enabled)
-		{
-			if (!qglIsEnabled(GL_COLOR_ARRAY))
-				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
-			CHECKGLERROR
-			if (gl_state.pointer_color && gl_state.pointer_color_enabled)
-				for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
-					paranoidblah += *p;
-		}
-		for (i = 0;i < vid.texarrayunits;i++)
-		{
-			if (gl_state.units[i].arrayenabled)
-			{
-				GL_ClientActiveTexture(i);
-				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
-					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
-				CHECKGLERROR
-				if (gl_state.units[i].pointer_texcoord && gl_state.units[i].arrayenabled)
-					for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = (int *)((float *)gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents);j < size;j++, p++)
-						paranoidblah += *p;
-			}
-		}
-#endif
 		if (element3i)
 		{
 			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
@@ -1941,107 +1787,21 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 		switch(vid.renderpath)
 		{
 		case RENDERPATH_GL20:
+		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (bufferobject3s)
 			{
 				GL_BindEBO(bufferobject3s);
-#ifndef USE_GLES2
-				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-				{
-					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
-					CHECKGLERROR
-				}
-				else
-#endif
-				{
-					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
-					CHECKGLERROR
-				}
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);CHECKGLERROR
 			}
 			else if (bufferobject3i)
 			{
 				GL_BindEBO(bufferobject3i);
-#ifndef USE_GLES2
-				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-				{
-					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
-					CHECKGLERROR
-				}
-				else
-#endif
-				{
-					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
-					CHECKGLERROR
-				}
-			}
-			else if (element3s)
-			{
-				GL_BindEBO(0);
-#ifndef USE_GLES2
-				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-				{
-					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_SHORT, element3s);
-					CHECKGLERROR
-				}
-				else
-#endif
-				{
-					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
-					CHECKGLERROR
-				}
-			}
-			else if (element3i)
-			{
-				GL_BindEBO(0);
-#ifndef USE_GLES2
-				if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-				{
-					qglDrawRangeElements(GL_TRIANGLES, firstvertex, firstvertex + numvertices - 1, numelements, GL_UNSIGNED_INT, element3i);
-					CHECKGLERROR
-				}
-				else
-#endif
-				{
-					qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
-					CHECKGLERROR
-				}
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);CHECKGLERROR
 			}
 			else
 			{
-				qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
-				CHECKGLERROR
-			}
-			break;
-		case RENDERPATH_GLES2:
-			// GLES does not have glDrawRangeElements so this is a bit shorter than the GL20 path
-			if (bufferobject3s)
-			{
-				GL_BindEBO(bufferobject3s);
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, (void *)bufferoffset3s);
-				CHECKGLERROR
-			}
-			else if (bufferobject3i)
-			{
-				GL_BindEBO(bufferobject3i);
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (void *)bufferoffset3i);
-				CHECKGLERROR
-			}
-			else if (element3s)
-			{
-				GL_BindEBO(0);
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_SHORT, element3s);
-				CHECKGLERROR
-			}
-			else if (element3i)
-			{
-				GL_BindEBO(0);
-				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, element3i);
-				CHECKGLERROR
-			}
-			else
-			{
-				qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);
-				CHECKGLERROR
+				qglDrawArrays(GL_TRIANGLES, firstvertex, numvertices);CHECKGLERROR
 			}
 			break;
 		}
@@ -2057,18 +1817,6 @@ void R_Mesh_Finish(void)
 r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isuniformbuffer, qboolean isdynamic, qboolean isindex16)
 {
 	r_meshbuffer_t *buffer;
-	if (isuniformbuffer)
-	{
-		if (!vid.support.arb_uniform_buffer_object)
-			return NULL;
-	}
-	else
-	{
-		if (!vid.support.arb_vertex_buffer_object)
-			return NULL;
-		if (!isdynamic && !(isindexbuffer ? gl_state.usevbo_staticindex : gl_state.usevbo_staticvertex))
-			return NULL;
-	}
 	buffer = (r_meshbuffer_t *)Mem_ExpandableArray_AllocRecord(&gl_state.meshbufferarray);
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->bufferobject = 0;
@@ -2104,7 +1852,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		if (!buffer->bufferobject)
-			qglGenBuffersARB(1, (GLuint *)&buffer->bufferobject);
+			qglGenBuffers(1, (GLuint *)&buffer->bufferobject);
 		if (buffer->isuniformbuffer)
 			GL_BindUBO(buffer->bufferobject);
 		else if (buffer->isindexbuffer)
@@ -2120,9 +1868,9 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 				buffertype = GL_UNIFORM_BUFFER;
 #endif
 			if (subdata)
-				qglBufferSubDataARB(buffertype, offset, size, data);
+				qglBufferSubData(buffertype, offset, size, data);
 			else
-				qglBufferDataARB(buffertype, size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+				qglBufferData(buffertype, size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
 		}
 		if (buffer->isuniformbuffer)
 			GL_BindUBO(0);
@@ -2145,7 +1893,7 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 			gl_state.vertexbufferobject = 0;
 		if (gl_state.elementbufferobject == buffer->bufferobject)
 			gl_state.elementbufferobject = 0;
-		qglDeleteBuffersARB(1, (GLuint *)&buffer->bufferobject);
+		qglDeleteBuffers(1, (GLuint *)&buffer->bufferobject);
 		break;
 	}
 	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
@@ -2209,6 +1957,8 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 		if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
 		{
 			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
+			if (!bufferobject && gl_paranoid.integer)
+				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, vertexbuffer, (unsigned int)bufferoffset);
 			gl_state.pointer_vertex_components = components;
 			gl_state.pointer_vertex_gltype = gltype;
 			gl_state.pointer_vertex_stride = stride;
@@ -2410,9 +2160,7 @@ void R_Mesh_ResetTextureState(void)
 void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
 {
 	// upload temporary vertexbuffer for this rendering
-	if (!gl_state.usevbo_staticvertex)
-		vertexbuffer = NULL;
-	if (!vertexbuffer && gl_state.usevbo_dynamicvertex)
+	if (!vertexbuffer)
 		vertexbuffer = R_BufferData_Store(numvertices * sizeof(float[3]), (void *)vertex3f, R_BUFFERDATA_VERTEX, &bufferoffset);
 	if (vertexbuffer)
 	{
@@ -2444,92 +2192,60 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f)
 {
-	if (gl_state.usevbo_dynamicvertex)
-	{
-		r_meshbuffer_t *buffer_vertex3f = NULL;
-		r_meshbuffer_t *buffer_color4f = NULL;
-		r_meshbuffer_t *buffer_texcoord2f = NULL;
-		int bufferoffset_vertex3f = 0;
-		int bufferoffset_color4f = 0;
-		int bufferoffset_texcoord2f = 0;
-		buffer_color4f    = R_BufferData_Store(numvertices * sizeof(float[4]), color4f   , R_BUFFERDATA_VERTEX, &bufferoffset_color4f   );
-		buffer_vertex3f   = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f  , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f  );
-		buffer_texcoord2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoord2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoord2f);
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
-		R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoord2f        , buffer_texcoord2f        , bufferoffset_texcoord2f        );
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-	}
-	else
-	{
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoord2f, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-	}
+	r_meshbuffer_t *buffer_vertex3f = NULL;
+	r_meshbuffer_t *buffer_color4f = NULL;
+	r_meshbuffer_t *buffer_texcoord2f = NULL;
+	int bufferoffset_vertex3f = 0;
+	int bufferoffset_color4f = 0;
+	int bufferoffset_texcoord2f = 0;
+	buffer_color4f    = R_BufferData_Store(numvertices * sizeof(float[4]), color4f   , R_BUFFERDATA_VERTEX, &bufferoffset_color4f   );
+	buffer_vertex3f   = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f  , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f  );
+	buffer_texcoord2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoord2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoord2f);
+	R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
+	R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
+	R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoord2f        , buffer_texcoord2f        , bufferoffset_texcoord2f        );
+	R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
 }
 
 void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *color4f, const float *texcoordtexture2f, const float *texcoordlightmap2f)
 {
-	if (gl_state.usevbo_dynamicvertex)
-	{
-		r_meshbuffer_t *buffer_vertex3f = NULL;
-		r_meshbuffer_t *buffer_color4f = NULL;
-		r_meshbuffer_t *buffer_texcoordtexture2f = NULL;
-		r_meshbuffer_t *buffer_svector3f = NULL;
-		r_meshbuffer_t *buffer_tvector3f = NULL;
-		r_meshbuffer_t *buffer_normal3f = NULL;
-		r_meshbuffer_t *buffer_texcoordlightmap2f = NULL;
-		int bufferoffset_vertex3f = 0;
-		int bufferoffset_color4f = 0;
-		int bufferoffset_texcoordtexture2f = 0;
-		int bufferoffset_svector3f = 0;
-		int bufferoffset_tvector3f = 0;
-		int bufferoffset_normal3f = 0;
-		int bufferoffset_texcoordlightmap2f = 0;
-		buffer_color4f            = R_BufferData_Store(numvertices * sizeof(float[4]), color4f           , R_BUFFERDATA_VERTEX, &bufferoffset_color4f           );
-		buffer_vertex3f           = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f          , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f          );
-		buffer_svector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), svector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_svector3f         );
-		buffer_tvector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), tvector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_tvector3f         );
-		buffer_normal3f           = R_BufferData_Store(numvertices * sizeof(float[3]), normal3f          , R_BUFFERDATA_VERTEX, &bufferoffset_normal3f          );
-		buffer_texcoordtexture2f  = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordtexture2f , R_BUFFERDATA_VERTEX, &bufferoffset_texcoordtexture2f );
-		buffer_texcoordlightmap2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordlightmap2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoordlightmap2f);
-		R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
-		R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoordtexture2f , buffer_texcoordtexture2f , bufferoffset_texcoordtexture2f );
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , svector3f         , buffer_svector3f         , bufferoffset_svector3f         );
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , tvector3f         , buffer_tvector3f         , bufferoffset_tvector3f         );
-		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , normal3f          , buffer_normal3f          , bufferoffset_normal3f          );
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , texcoordlightmap2f, buffer_texcoordlightmap2f, bufferoffset_texcoordlightmap2f);
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
-	}
-	else
-	{
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, NULL, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), color4f, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), texcoordtexture2f, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 3, GL_FLOAT, sizeof(float[3]), svector3f, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 3, GL_FLOAT, sizeof(float[3]), tvector3f, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 3, GL_FLOAT, sizeof(float[3]), normal3f, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), texcoordlightmap2f, NULL, 0);
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-	}
+	r_meshbuffer_t *buffer_vertex3f = NULL;
+	r_meshbuffer_t *buffer_color4f = NULL;
+	r_meshbuffer_t *buffer_texcoordtexture2f = NULL;
+	r_meshbuffer_t *buffer_svector3f = NULL;
+	r_meshbuffer_t *buffer_tvector3f = NULL;
+	r_meshbuffer_t *buffer_normal3f = NULL;
+	r_meshbuffer_t *buffer_texcoordlightmap2f = NULL;
+	int bufferoffset_vertex3f = 0;
+	int bufferoffset_color4f = 0;
+	int bufferoffset_texcoordtexture2f = 0;
+	int bufferoffset_svector3f = 0;
+	int bufferoffset_tvector3f = 0;
+	int bufferoffset_normal3f = 0;
+	int bufferoffset_texcoordlightmap2f = 0;
+	buffer_color4f            = R_BufferData_Store(numvertices * sizeof(float[4]), color4f           , R_BUFFERDATA_VERTEX, &bufferoffset_color4f           );
+	buffer_vertex3f           = R_BufferData_Store(numvertices * sizeof(float[3]), vertex3f          , R_BUFFERDATA_VERTEX, &bufferoffset_vertex3f          );
+	buffer_svector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), svector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_svector3f         );
+	buffer_tvector3f          = R_BufferData_Store(numvertices * sizeof(float[3]), tvector3f         , R_BUFFERDATA_VERTEX, &bufferoffset_tvector3f         );
+	buffer_normal3f           = R_BufferData_Store(numvertices * sizeof(float[3]), normal3f          , R_BUFFERDATA_VERTEX, &bufferoffset_normal3f          );
+	buffer_texcoordtexture2f  = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordtexture2f , R_BUFFERDATA_VERTEX, &bufferoffset_texcoordtexture2f );
+	buffer_texcoordlightmap2f = R_BufferData_Store(numvertices * sizeof(float[2]), texcoordlightmap2f, R_BUFFERDATA_VERTEX, &bufferoffset_texcoordlightmap2f);
+	R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f          , buffer_vertex3f          , bufferoffset_vertex3f          );
+	R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , color4f           , buffer_color4f           , bufferoffset_color4f           );
+	R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , texcoordtexture2f , buffer_texcoordtexture2f , bufferoffset_texcoordtexture2f );
+	R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , svector3f         , buffer_svector3f         , bufferoffset_svector3f         );
+	R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , tvector3f         , buffer_tvector3f         , bufferoffset_tvector3f         );
+	R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , normal3f          , buffer_normal3f          , bufferoffset_normal3f          );
+	R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , texcoordlightmap2f, buffer_texcoordlightmap2f, bufferoffset_texcoordlightmap2f);
+	R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
+	R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
 }
 
 void GL_BlendEquationSubtract(qboolean negated)

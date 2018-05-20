@@ -1331,12 +1331,10 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
 		if (p->loc_Texture_BounceGrid      >= 0) {p->tex_Texture_BounceGrid       = sampler;qglUniform1i(p->loc_Texture_BounceGrid      , sampler);sampler++;}
 		// get the uniform block indices so we can bind them
+		p->ubiloc_Skeletal_Transform12_UniformBlock = -1;
 #ifndef USE_GLES2 /* FIXME: GLES3 only */
-		if (vid.support.arb_uniform_buffer_object)
-			p->ubiloc_Skeletal_Transform12_UniformBlock = qglGetUniformBlockIndex(p->program, "Skeletal_Transform12_UniformBlock");
-		else
+		p->ubiloc_Skeletal_Transform12_UniformBlock = qglGetUniformBlockIndex(p->program, "Skeletal_Transform12_UniformBlock");
 #endif
-			p->ubiloc_Skeletal_Transform12_UniformBlock = -1;
 		// clear the uniform block bindings
 		p->ubibind_Skeletal_Transform12_UniformBlock = -1;
 		// bind the uniform blocks in use
@@ -3043,10 +3041,9 @@ static void gl_main_start(void)
 		r_loadgloss = true;
 		r_loadfog = false;
 #ifdef GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT
-		if (vid.support.arb_uniform_buffer_object)
-			qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &r_uniformbufferalignment);
+		qglGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &r_uniformbufferalignment);
 #endif
-			break;
+		break;
 	}
 
 	R_AnimCache_Free();
@@ -3071,11 +3068,8 @@ static void gl_main_start(void)
 	r_main_texturepool = R_AllocTexturePool();
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
-	if (vid.support.arb_texture_cube_map)
-	{
-		R_BuildWhiteCube();
-		R_BuildNormalizationCube();
-	}
+	R_BuildWhiteCube();
+	R_BuildNormalizationCube();
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
 	r_texture_gammaramps = NULL;
@@ -5124,9 +5118,6 @@ static void R_Bloom_StartFrame(void)
 		r_fb.usedepthtextures = r_usedepthtextures.integer != 0;
 		if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
 		if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
-		// for simplicity, bloom requires FBO render to texture, which basically all video drivers support now
-		if (!vid.support.ext_framebuffer_object)
-			return;
 		break;
 	case RENDERPATH_GLES2:
 		r_fb.usedepthtextures = false;
@@ -5577,7 +5568,7 @@ void R_UpdateVariables(void)
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL20:
-		r_gpuskeletal = vid.support.arb_uniform_buffer_object && r_glsl_skeletal.integer && !r_showsurfaces.integer; // FIXME add r_showsurfaces support to GLSL skeletal!
+		r_gpuskeletal = r_glsl_skeletal.integer && !r_showsurfaces.integer;
 	case RENDERPATH_GLES2:
 		if(!vid_gammatables_trivial)
 		{
@@ -7470,7 +7461,6 @@ static void RSurf_RenumberElements(const int *inelement3i, int *outelement3i, in
 }
 
 static const int quadedges[6][2] = {{0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 3}, {2, 3}};
-extern cvar_t gl_vbo;
 void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int deformindex;
@@ -7827,13 +7817,10 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 					rsurface.batchelement3s[i] = rsurface.batchelement3i[i];
 			}
 			// upload buffer data for the copytriangles batch
-			if (((r_batch_dynamicbuffer.integer || gl_vbo_dynamicindex.integer) && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
-			{
-				if (rsurface.batchelement3s)
-					rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
-				else if (rsurface.batchelement3i)
-					rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
-			}
+			if (rsurface.batchelement3s)
+				rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
+			else if (rsurface.batchelement3i)
+				rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
 		}
 		else
 		{
@@ -8560,31 +8547,28 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	}
 
 	// upload buffer data for the dynamic batch
-	if (((r_batch_dynamicbuffer.integer || gl_vbo_dynamicvertex.integer || gl_vbo_dynamicindex.integer) && vid.support.arb_vertex_buffer_object && gl_vbo.integer) || vid.forcevbo)
-	{
-		if (rsurface.batchvertex3f)
-			rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset);
-		if (rsurface.batchsvector3f)
-			rsurface.batchsvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchsvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchsvector3f_bufferoffset);
-		if (rsurface.batchtvector3f)
-			rsurface.batchtvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchtvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchtvector3f_bufferoffset);
-		if (rsurface.batchnormal3f)
-			rsurface.batchnormal3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f, R_BUFFERDATA_VERTEX, &rsurface.batchnormal3f_bufferoffset);
-		if (rsurface.batchlightmapcolor4f)
-			rsurface.batchlightmapcolor4f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[4]), rsurface.batchlightmapcolor4f, R_BUFFERDATA_VERTEX, &rsurface.batchlightmapcolor4f_bufferoffset);
-		if (rsurface.batchtexcoordtexture2f)
-			rsurface.batchtexcoordtexture2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordtexture2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordtexture2f_bufferoffset);
-		if (rsurface.batchtexcoordlightmap2f)
-			rsurface.batchtexcoordlightmap2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordlightmap2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordlightmap2f_bufferoffset);
-		if (rsurface.batchskeletalindex4ub)
-			rsurface.batchskeletalindex4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalindex4ub_bufferoffset);
-		if (rsurface.batchskeletalweight4ub)
-			rsurface.batchskeletalweight4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalweight4ub_bufferoffset);
-		if (rsurface.batchelement3s)
-			rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
-		else if (rsurface.batchelement3i)
-			rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
-	}
+	if (rsurface.batchvertex3f)
+		rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset);
+	if (rsurface.batchsvector3f)
+		rsurface.batchsvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchsvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchsvector3f_bufferoffset);
+	if (rsurface.batchtvector3f)
+		rsurface.batchtvector3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchtvector3f, R_BUFFERDATA_VERTEX, &rsurface.batchtvector3f_bufferoffset);
+	if (rsurface.batchnormal3f)
+		rsurface.batchnormal3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchnormal3f, R_BUFFERDATA_VERTEX, &rsurface.batchnormal3f_bufferoffset);
+	if (rsurface.batchlightmapcolor4f)
+		rsurface.batchlightmapcolor4f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[4]), rsurface.batchlightmapcolor4f, R_BUFFERDATA_VERTEX, &rsurface.batchlightmapcolor4f_bufferoffset);
+	if (rsurface.batchtexcoordtexture2f)
+		rsurface.batchtexcoordtexture2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordtexture2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordtexture2f_bufferoffset);
+	if (rsurface.batchtexcoordlightmap2f)
+		rsurface.batchtexcoordlightmap2f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[2]), rsurface.batchtexcoordlightmap2f, R_BUFFERDATA_VERTEX, &rsurface.batchtexcoordlightmap2f_bufferoffset);
+	if (rsurface.batchskeletalindex4ub)
+		rsurface.batchskeletalindex4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalindex4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalindex4ub_bufferoffset);
+	if (rsurface.batchskeletalweight4ub)
+		rsurface.batchskeletalweight4ub_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(unsigned char[4]), rsurface.batchskeletalweight4ub, R_BUFFERDATA_VERTEX, &rsurface.batchskeletalweight4ub_bufferoffset);
+	if (rsurface.batchelement3s)
+		rsurface.batchelement3s_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(short[3]), rsurface.batchelement3s, R_BUFFERDATA_INDEX16, &rsurface.batchelement3s_bufferoffset);
+	else if (rsurface.batchelement3i)
+		rsurface.batchelement3i_indexbuffer = R_BufferData_Store(rsurface.batchnumtriangles * sizeof(int[3]), rsurface.batchelement3i, R_BUFFERDATA_INDEX32, &rsurface.batchelement3i_bufferoffset);
 }
 
 void RSurf_DrawBatch(void)
