@@ -137,7 +137,7 @@ cvar_t gl_info_driver = {CVAR_READONLY, "gl_info_driver", "", "name of driver li
 cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480", "resolution"};
-cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32", "how many bits per pixel to render at (32 or 16, 32 is recommended)"};
+cvar_t vid_bitsperpixel = {CVAR_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
 cvar_t vid_samples = {CVAR_SAVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
 cvar_t vid_refreshrate = {CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
 cvar_t vid_userefreshrate = {CVAR_SAVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
@@ -1720,7 +1720,7 @@ const char *vidfallbacks[][2] =
 	{"vid_userefreshrate", "0"},
 	{"vid_width", "640"},
 	{"vid_height", "480"},
-	{"vid_bitsperpixel", "16"},
+	{"vid_bitsperpixel", "32"},
 	{NULL, NULL}
 };
 
@@ -1754,9 +1754,6 @@ void VID_Start(void)
 			Cvar_SetValueQuick(&vid_width, width);
 		if (height)
 			Cvar_SetValueQuick(&vid_height, height);
-// COMMANDLINEOPTION: Video: -bpp <bits> performs +vid_bitsperpixel <bits> (example -bpp 32 or -bpp 16)
-		if ((i = COM_CheckParm("-bpp")) != 0)
-			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 // COMMANDLINEOPTION: Video: -density <multiplier> performs +vid_touchscreen_density <multiplier> (example -density 1 or -density 1.5)
 		if ((i = COM_CheckParm("-density")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_density, com_argv[i+1]);
