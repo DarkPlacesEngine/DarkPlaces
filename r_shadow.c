@@ -104,8 +104,6 @@ unsigned char *r_shadow_buffer_lighttrispvs;
 
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuationgradienttexture;
-rtexture_t *r_shadow_attenuation2dtexture;
-rtexture_t *r_shadow_attenuation3dtexture;
 skinframe_t *r_shadow_lightcorona;
 rtexture_t *r_shadow_shadowmap2ddepthbuffer;
 rtexture_t *r_shadow_shadowmap2ddepthtexture;
@@ -186,7 +184,6 @@ cvar_t r_shadow_shadowmapping_bias = {CVAR_SAVE, "r_shadow_shadowmapping_bias", 
 cvar_t r_shadow_shadowmapping_polygonfactor = {CVAR_SAVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
 cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_SAVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
 cvar_t r_shadow_sortsurfaces = {0, "r_shadow_sortsurfaces", "1", "improve performance by sorting illuminated surfaces by texture"};
-cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1", "use 3D voxel textures for spherical attenuation rather than cylindrical (does not affect OpenGL 2.0 render path)"};
 cvar_t r_shadow_culllights_pvs = {CVAR_SAVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
 cvar_t r_shadow_culllights_trace = {CVAR_SAVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
 cvar_t r_shadow_culllights_trace_eyejitter = {CVAR_SAVE, "r_shadow_culllights_trace_eyejitter", "16", "offset eye location randomly by this much"};
@@ -287,7 +284,6 @@ void R_Shadow_LoadWorldLights(void);
 void R_Shadow_LoadLightsFile(void);
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void);
 void R_Shadow_EditLights_Reload_f(void);
-void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 
 #define EDLIGHTSPRSIZE			8
@@ -313,7 +309,7 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmapdepthtexture = r_fb.usedepthtextures;
-	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
+	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 	Mod_AllocLightmap_Init(&r_shadow_shadowmapatlas_state, r_main_mempool, r_shadow_shadowmaptexturesize, r_shadow_shadowmaptexturesize);
 	if ((r_shadow_shadowmapping.integer || r_shadow_deferred.integer) && vid.support.ext_framebuffer_object)
 	{
@@ -406,9 +402,7 @@ static void r_shadow_start(void)
 	// allocate vertex processing arrays
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
 	r_shadow_attenuationgradienttexture = NULL;
-	r_shadow_attenuation2dtexture = NULL;
-	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_STENCIL;
+	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 	r_shadow_shadowmap2ddepthtexture = NULL;
 	r_shadow_shadowmap2ddepthbuffer = NULL;
 	r_shadow_shadowmapvsdcttexture = NULL;
@@ -425,7 +419,6 @@ static void r_shadow_start(void)
 
 	r_shadow_texturepool = NULL;
 	r_shadow_filters_texturepool = NULL;
-	R_Shadow_ValidateCvars();
 	R_Shadow_MakeTextures();
 	r_shadow_scenemaxlights = 0;
 	r_shadow_scenenumlights = 0;
@@ -506,8 +499,6 @@ static void r_shadow_shutdown(void)
 	r_shadow_bouncegrid_state.maxsplatpaths = 0;
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
 	r_shadow_attenuationgradienttexture = NULL;
-	r_shadow_attenuation2dtexture = NULL;
-	r_shadow_attenuation3dtexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowtriangles = 0;
@@ -641,7 +632,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_shadowmapping_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_sortsurfaces);
-	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_culllights_pvs);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace);
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_eyejitter);
@@ -1226,7 +1216,7 @@ static unsigned int R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
 
 static void R_Shadow_MakeTextures(void)
 {
-	int x, y, z;
+	int x;
 	float intensity, dist;
 	unsigned int *data;
 	R_Shadow_FreeShadowMaps();
@@ -1246,22 +1236,6 @@ static void R_Shadow_MakeTextures(void)
 	for (x = 0;x < ATTEN1DSIZE;x++)
 		data[x] = R_Shadow_MakeTextures_SamplePoint((x + 0.5f) * (1.0f / ATTEN1DSIZE) * (1.0f / 0.9375), 0, 0);
 	r_shadow_attenuationgradienttexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation1d", ATTEN1DSIZE, 1, (unsigned char *)data, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
-	// 2D circle texture
-	for (y = 0;y < ATTEN2DSIZE;y++)
-		for (x = 0;x < ATTEN2DSIZE;x++)
-			data[y*ATTEN2DSIZE+x] = R_Shadow_MakeTextures_SamplePoint(((x + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), ((y + 0.5f) * (2.0f / ATTEN2DSIZE) - 1.0f) * (1.0f / 0.9375), 0);
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", ATTEN2DSIZE, ATTEN2DSIZE, (unsigned char *)data, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
-	// 3D sphere texture
-	if (r_shadow_texture3d.integer && vid.support.ext_texture_3d)
-	{
-		for (z = 0;z < ATTEN3DSIZE;z++)
-			for (y = 0;y < ATTEN3DSIZE;y++)
-				for (x = 0;x < ATTEN3DSIZE;x++)
-					data[(z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x] = R_Shadow_MakeTextures_SamplePoint(((x + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375), ((y + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375), ((z + 0.5f) * (2.0f / ATTEN3DSIZE) - 1.0f) * (1.0f / 0.9375));
-		r_shadow_attenuation3dtexture = R_LoadTexture3D(r_shadow_texturepool, "attenuation3d", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, (unsigned char *)data, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, -1, NULL);
-	}
-	else
-		r_shadow_attenuation3dtexture = NULL;
 	Mem_Free(data);
 
 	R_Shadow_MakeTextures_MakeCorona();
@@ -1377,23 +1351,14 @@ static void R_Shadow_MakeTextures(void)
 	, 16, 16, palette_bgra_embeddedpic, palette_bgra_embeddedpic);
 }
 
-void R_Shadow_ValidateCvars(void)
-{
-	if (r_shadow_texture3d.integer && !vid.support.ext_texture_3d)
-		Cvar_SetValueQuick(&r_shadow_texture3d, 0);
-}
-
 void R_Shadow_RenderMode_Begin(void)
 {
 #if 0
 	GLint drawbuffer;
 	GLint readbuffer;
 #endif
-	R_Shadow_ValidateCvars();
 
-	if (!r_shadow_attenuation2dtexture
-	 || (!r_shadow_attenuation3dtexture && r_shadow_texture3d.integer)
-	 || r_shadow_lightattenuationdividebias.value != r_shadow_attendividebias
+	if (r_shadow_lightattenuationdividebias.value != r_shadow_attendividebias
 	 || r_shadow_lightattenuationlinearscale.value != r_shadow_attenlinearscale)
 		R_Shadow_MakeTextures();
 
