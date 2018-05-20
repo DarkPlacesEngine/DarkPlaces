@@ -610,7 +610,7 @@ typedef enum rsurfacepass_e
 }
 rsurfacepass_t;
 
-void R_SetupShader_Generic(rtexture_t *first, rtexture_t *second, int texturemode, int rgbscale, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
+void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha);
 void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy);
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal);
 void R_SetupShader_Surface(const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qboolean notrippy);
