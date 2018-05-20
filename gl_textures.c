@@ -205,7 +205,6 @@ typedef struct gltexture_s
 	// palette if the texture is TEXTYPE_PALETTE
 	const unsigned int *palette;
 	// actual stored texture size after gl_picmip and gl_max_size are applied
-	// (power of 2 if vid.support.arb_texture_non_power_of_two is not supported)
 	int tilewidth, tileheight, tiledepth;
 	// 1 or 6 depending on texturetype
 	int sides;
@@ -517,21 +516,9 @@ static void GL_Texture_CalcImageSize(int texturetype, int flags, int miplevel, i
 		break;
 	}
 
-	if (vid.support.arb_texture_non_power_of_two)
-	{
-		width2 = min(inwidth >> picmip, maxsize);
-		height2 = min(inheight >> picmip, maxsize);
-		depth2 = min(indepth >> picmip, maxsize);
-	}
-	else
-	{
-		for (width2 = 1;width2 < inwidth;width2 <<= 1);
-		for (width2 >>= picmip;width2 > maxsize;width2 >>= 1);
-		for (height2 = 1;height2 < inheight;height2 <<= 1);
-		for (height2 >>= picmip;height2 > maxsize;height2 >>= 1);
-		for (depth2 = 1;depth2 < indepth;depth2 <<= 1);
-		for (depth2 >>= picmip;depth2 > maxsize;depth2 >>= 1);
-	}
+	width2 = min(inwidth >> picmip, maxsize);
+	height2 = min(inheight >> picmip, maxsize);
+	depth2 = min(indepth >> picmip, maxsize);
 
 	miplevels = 1;
 	if (flags & TEXF_MIPMAP)
@@ -1212,17 +1199,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 		}
 	}
 
-	if (texturetype == GLTEXTURETYPE_CUBEMAP && !vid.support.arb_texture_cube_map)
-	{
-		Con_Printf ("R_LoadTexture: cubemap texture not supported by driver\n");
-		return NULL;
-	}
-	if (texturetype == GLTEXTURETYPE_3D && !vid.support.ext_texture_3d)
-	{
-		Con_Printf ("R_LoadTexture: 3d texture not supported by driver\n");
-		return NULL;
-	}
-
 	texinfo = R_GetTexTypeInfo(textype, flags);
 	size = width * height * depth * sides * texinfo->inputbytesperpixel;
 	if (size < 1)
@@ -1598,7 +1574,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;
 	unsigned int ddssize;
-	qboolean force_swdecode, npothack;
+	qboolean force_swdecode;
 #ifdef __ANDROID__
 	// ELUAN: FIXME: separate this code
 	char vabuf[1024];
@@ -1919,17 +1895,9 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	}
 
 	force_swdecode = false;
-	npothack = 
-		(!vid.support.arb_texture_non_power_of_two &&
-			(
-				(dds_width & (dds_width - 1))
-				||
-				(dds_height & (dds_height - 1))
-			)
-		);
 	if(bytesperblock)
 	{
-		if(vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && !npothack)
+		if(vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc)
 		{
 			if(r_texture_dds_swdecode.integer > 1)
 				force_swdecode = true;
@@ -2207,12 +2175,6 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	glt->tiledepth = 1;
 	glt->miplevels = dds_miplevels;
 
-	if(npothack)
-	{
-		for (glt->tilewidth = 1;glt->tilewidth < mipwidth;glt->tilewidth <<= 1);
-		for (glt->tileheight = 1;glt->tileheight < mipheight;glt->tileheight <<= 1);
-	}
-
 	// texture uploading can take a while, so make sure we're sending keepalives
 	CL_KeepaliveMessage(false);
 
@@ -2241,19 +2203,6 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		mipsize = bytesperblock ? ((mipwidth+3)/4)*((mipheight+3)/4)*bytesperblock : mipwidth*mipheight*bytesperpixel;
 		if (mippixels + mipsize > mippixels_start + mipsize_total)
 			break;
-		if(npothack)
-		{
-			upload_mipwidth = (glt->tilewidth >> mip);
-			upload_mipheight = (glt->tileheight >> mip);
-			if(upload_mipwidth != mipwidth || upload_mipheight != mipheight)
-			// I _think_ they always mismatch, but I was too lazy
-			// to properly check, and this test here is really
-			// harmless
-			{
-				upload_mippixels = (unsigned char *) Mem_Alloc(tempmempool, 4 * upload_mipwidth * upload_mipheight);
-				Image_Resample32(mippixels, mipwidth, mipheight, 1, upload_mippixels, upload_mipwidth, upload_mipheight, 1, r_lerpimages.integer);
-			}
-		}
 		switch(vid.renderpath)
 		{
 		case RENDERPATH_GL20:

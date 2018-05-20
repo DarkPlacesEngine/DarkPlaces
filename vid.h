@@ -37,33 +37,19 @@ renderpath_t;
 
 typedef struct viddef_support_s
 {
-	qboolean gl20shaders;
 	qboolean gl20shaders130; // indicates glBindFragDataLocation is available
 	int glshaderversion; // typical values: 100 110 120 130 140 ...
 	qboolean amd_texture_texture4;
-	qboolean arb_depth_texture;
 	qboolean arb_draw_buffers;
-	qboolean arb_framebuffer_object;
-	qboolean arb_multitexture;
 	qboolean arb_occlusion_query;
 	qboolean arb_query_buffer_object;
-	qboolean arb_shadow;
 	qboolean arb_texture_compression;
-	qboolean arb_texture_cube_map;
-	qboolean arb_texture_env_combine;
 	qboolean arb_texture_gather;
-	qboolean arb_texture_non_power_of_two;
-	qboolean arb_vertex_buffer_object;
-	qboolean arb_uniform_buffer_object;
 	qboolean ext_blend_minmax;
 	qboolean ext_blend_subtract;
 	qboolean ext_blend_func_separate;
-	qboolean ext_draw_range_elements;
-	qboolean ext_framebuffer_object;
 	qboolean ext_packed_depth_stencil;
-	qboolean ext_texture_3d;
 	qboolean ext_texture_compression_s3tc;
-	qboolean ext_texture_edge_clamp;
 	qboolean ext_texture_filter_anisotropic;
 	qboolean ext_texture_srgb;
 	qboolean arb_texture_float;
@@ -106,7 +92,6 @@ typedef struct viddef_s
 	qboolean sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath)
 
 	renderpath_t renderpath;
-	qboolean forcevbo; // some renderpaths can not operate without it
 	qboolean allowalphatocoverage; // indicates the GL_AlphaToCoverage function works on this renderpath and framebuffer
 
 	unsigned int texunits;

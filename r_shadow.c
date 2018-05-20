@@ -24,7 +24,6 @@ r_shadow_rendermode_t;
 
 typedef enum r_shadow_shadowmode_e
 {
-	R_SHADOW_SHADOWMODE_STENCIL,
 	R_SHADOW_SHADOWMODE_SHADOWMAP2D
 }
 r_shadow_shadowmode_t;
@@ -311,7 +310,7 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapdepthtexture = r_fb.usedepthtextures;
 	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 	Mod_AllocLightmap_Init(&r_shadow_shadowmapatlas_state, r_main_mempool, r_shadow_shadowmaptexturesize, r_shadow_shadowmaptexturesize);
-	if ((r_shadow_shadowmapping.integer || r_shadow_deferred.integer) && vid.support.ext_framebuffer_object)
+	if (r_shadow_shadowmapping.integer || r_shadow_deferred.integer)
 	{
 		switch(vid.renderpath)
 		{
@@ -320,7 +319,7 @@ static void R_Shadow_SetShadowMode(void)
 			{
 				if (!r_fb.usedepthtextures)
 					r_shadow_shadowmappcf = 1;
-				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && vid.support.arb_shadow && r_shadow_shadowmapshadowsampler)
+				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && r_shadow_shadowmapshadowsampler)
 				{
 					r_shadow_shadowmapsampler = true;
 					r_shadow_shadowmappcf = 1;
@@ -330,11 +329,11 @@ static void R_Shadow_SetShadowMode(void)
 				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa"))
 					r_shadow_shadowmappcf = 1;
 				else
-					r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
+					r_shadow_shadowmapsampler = r_shadow_shadowmapshadowsampler;
 			}
 			else
 			{
-                r_shadow_shadowmapsampler = vid.support.arb_shadow && r_shadow_shadowmapshadowsampler;
+                r_shadow_shadowmapsampler = r_shadow_shadowmapshadowsampler;
 				switch (r_shadow_shadowmapfilterquality)
 				{
 				case 1:
@@ -462,11 +461,11 @@ static void r_shadow_start(void)
 	{
 	case RENDERPATH_GL20:
 		r_shadow_bouncegrid_state.allowdirectionalshading = true;
-		r_shadow_bouncegrid_state.capable = vid.support.ext_texture_3d;
+		r_shadow_bouncegrid_state.capable = true;
 		break;
 	case RENDERPATH_GLES2:
 		// for performance reasons, do not use directional shading on GLES devices
-		r_shadow_bouncegrid_state.capable = vid.support.ext_texture_3d;
+		r_shadow_bouncegrid_state.capable = true;
 		break;
 	}
 }
@@ -1926,21 +1925,9 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	c[1] = (int)floor(size[1] / spacing[1] + 0.5f);
 	c[2] = (int)floor(size[2] / spacing[2] + 0.5f);
 	// figure out the exact texture size (honoring power of 2 if required)
-	c[0] = bound(4, c[0], (int)vid.maxtexturesize_3d);
-	c[1] = bound(4, c[1], (int)vid.maxtexturesize_3d);
-	c[2] = bound(4, c[2], (int)vid.maxtexturesize_3d);
-	if (vid.support.arb_texture_non_power_of_two)
-	{
-		resolution[0] = c[0];
-		resolution[1] = c[1];
-		resolution[2] = c[2];
-	}
-	else
-	{
-		for (resolution[0] = 4;resolution[0] < c[0];resolution[0]*=2) ;
-		for (resolution[1] = 4;resolution[1] < c[1];resolution[1]*=2) ;
-		for (resolution[2] = 4;resolution[2] < c[2];resolution[2]*=2) ;
-	}
+	resolution[0] = bound(4, c[0], (int)vid.maxtexturesize_3d);
+	resolution[1] = bound(4, c[1], (int)vid.maxtexturesize_3d);
+	resolution[2] = bound(4, c[2], (int)vid.maxtexturesize_3d);
 	size[0] = spacing[0] * resolution[0];
 	size[1] = spacing[1] * resolution[1];
 	size[2] = spacing[2] * resolution[2];
@@ -1953,22 +1940,10 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 		c[0] = r_shadow_bouncegrid_dynamic_x.integer;
 		c[1] = r_shadow_bouncegrid_dynamic_y.integer;
 		c[2] = r_shadow_bouncegrid_dynamic_z.integer;
-		// now we can calculate the texture size (power of 2 if required)
-		c[0] = bound(4, c[0], (int)vid.maxtexturesize_3d);
-		c[1] = bound(4, c[1], (int)vid.maxtexturesize_3d);
-		c[2] = bound(4, c[2], (int)vid.maxtexturesize_3d);
-		if (vid.support.arb_texture_non_power_of_two)
-		{
-			resolution[0] = c[0];
-			resolution[1] = c[1];
-			resolution[2] = c[2];
-		}
-		else
-		{
-			for (resolution[0] = 4;resolution[0] < c[0];resolution[0]*=2) ;
-			for (resolution[1] = 4;resolution[1] < c[1];resolution[1]*=2) ;
-			for (resolution[2] = 4;resolution[2] < c[2];resolution[2]*=2) ;
-		}
+		// now we can calculate the texture size
+		resolution[0] = bound(4, c[0], (int)vid.maxtexturesize_3d);
+		resolution[1] = bound(4, c[1], (int)vid.maxtexturesize_3d);
+		resolution[2] = bound(4, c[2], (int)vid.maxtexturesize_3d);
 		size[0] = spacing[0] * resolution[0];
 		size[1] = spacing[1] * resolution[1];
 		size[2] = spacing[2] * resolution[2];
@@ -4071,10 +4046,10 @@ void R_Shadow_PrepareLights(void)
 	int shadowmapmaxsize = bound(shadowmapborder+2, r_shadow_shadowmapping_maxsize.integer, shadowmaptexturesize / 8);
 
 	if (r_shadow_shadowmaptexturesize != shadowmaptexturesize ||
-		(r_shadow_shadowmode != R_SHADOW_SHADOWMODE_STENCIL) != (r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
+		!(r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20) ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer ||
-		r_shadow_shadowmapshadowsampler != (vid.support.arb_shadow && r_shadow_shadowmapping_useshadowsampler.integer) ||
+		r_shadow_shadowmapshadowsampler != r_shadow_shadowmapping_useshadowsampler.integer ||
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer ||
 		r_shadow_shadowmapborder != shadowmapborder ||
 		r_shadow_shadowmapmaxsize != shadowmapmaxsize ||
@@ -4087,7 +4062,7 @@ void R_Shadow_PrepareLights(void)
 	{
 	case RENDERPATH_GL20:
 #ifndef USE_GLES2
-		if (!r_shadow_deferred.integer || r_shadow_shadowmode == R_SHADOW_SHADOWMODE_STENCIL || !vid.support.ext_framebuffer_object || vid.maxdrawbuffers < 2)
+		if (!r_shadow_deferred.integer || vid.maxdrawbuffers < 2)
 		{
 			r_shadow_usingdeferredprepass = false;
 			if (r_shadow_prepass_width)
@@ -4517,11 +4492,11 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 			if (vid.support.arb_query_buffer_object) {
 #define BUFFER_OFFSET(i)    ((GLint *)((unsigned char*)NULL + (i)))
 				if (!r_shadow_occlusion_buf) {
-					qglGenBuffersARB(1, &r_shadow_occlusion_buf);
-					qglBindBufferARB(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
-					qglBufferDataARB(GL_QUERY_BUFFER_ARB, 8, NULL, GL_DYNAMIC_COPY);
+					qglGenBuffers(1, &r_shadow_occlusion_buf);
+					qglBindBuffer(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
+					qglBufferData(GL_QUERY_BUFFER_ARB, 8, NULL, GL_DYNAMIC_COPY);
 				} else {
-					qglBindBufferARB(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
+					qglBindBuffer(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
 				}
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(0));
 				qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(4));

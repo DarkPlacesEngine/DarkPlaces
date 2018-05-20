@@ -491,14 +491,14 @@ extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_bl
 #define GL_BUFFER_MAPPED              0x88BC
 #define GL_BUFFER_MAP_POINTER         0x88BD
 #endif
-extern void (GLAPIENTRY *qglBindBufferARB) (GLenum target, GLuint buffer);
-extern void (GLAPIENTRY *qglDeleteBuffersARB) (GLsizei n, const GLuint *buffers);
-extern void (GLAPIENTRY *qglGenBuffersARB) (GLsizei n, GLuint *buffers);
-extern GLboolean (GLAPIENTRY *qglIsBufferARB) (GLuint buffer);
-extern GLvoid* (GLAPIENTRY *qglMapBufferARB) (GLenum target, GLenum access);
-extern GLboolean (GLAPIENTRY *qglUnmapBufferARB) (GLenum target);
-extern void (GLAPIENTRY *qglBufferDataARB) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
-extern void (GLAPIENTRY *qglBufferSubDataARB) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
+extern void (GLAPIENTRY *qglBindBuffer) (GLenum target, GLuint buffer);
+extern void (GLAPIENTRY *qglDeleteBuffers) (GLsizei n, const GLuint *buffers);
+extern void (GLAPIENTRY *qglGenBuffers) (GLsizei n, GLuint *buffers);
+extern GLboolean (GLAPIENTRY *qglIsBuffer) (GLuint buffer);
+extern GLvoid* (GLAPIENTRY *qglMapBuffer) (GLenum target, GLenum access);
+extern GLboolean (GLAPIENTRY *qglUnmapBuffer) (GLenum target);
+extern void (GLAPIENTRY *qglBufferData) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
+extern void (GLAPIENTRY *qglBufferSubData) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
 
 //GL_ARB_framebuffer_object
 // (slight differences from GL_EXT_framebuffer_object as this integrates GL_EXT_packed_depth_stencil)
@@ -742,7 +742,6 @@ extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
 extern void (GLAPIENTRY *qglDepthRangef)(GLclampf near_val, GLclampf far_val);
 extern void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
-extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 
@@ -1099,7 +1098,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 //#define qglBeginQueryARB glBeginQuery
 #define qglBindAttribLocation glBindAttribLocation
 //#define qglBindFragDataLocation glBindFragDataLocation
-#define qglBindBufferARB glBindBuffer
+#define qglBindBuffer glBindBuffer
 #define qglBindFramebuffer glBindFramebuffer
 #define qglBindRenderbuffer glBindRenderbuffer
 #define qglBindTexture glBindTexture
@@ -1122,7 +1121,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglCopyTexSubImage2D glCopyTexSubImage2D
 #define qglCopyTexSubImage3D glCopyTexSubImage3D
 #define qglCullFace glCullFace
-#define qglDeleteBuffersARB glDeleteBuffers
+#define qglDeleteBuffers glDeleteBuffers
 #define qglDeleteFramebuffers glDeleteFramebuffers
 #define qglDeleteProgram glDeleteProgram
 #define qglDeleteShader glDeleteShader
@@ -1139,7 +1138,6 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 //#define qglDrawBuffer glDrawBuffer
 //#define qglDrawBuffersARB glDrawBuffers
 #define qglDrawElements glDrawElements
-//#define qglDrawRangeElements glDrawRangeElements
 #define qglEnable glEnable
 #define qglEnableVertexAttribArray glEnableVertexAttribArray
 //#define qglEndQueryARB glEndQuery
@@ -1148,7 +1146,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglFramebufferRenderbuffer glFramebufferRenderbuffer
 #define qglFramebufferTexture2D glFramebufferTexture2D
 #define qglFramebufferTexture3DEXT glFramebufferTexture3D
-#define qglGenBuffersARB glGenBuffers
+#define qglGenBuffers glGenBuffers
 #define qglGenFramebuffers glGenFramebuffers
 //#define qglGenQueriesARB glGenQueries
 #define qglGenRenderbuffers glGenRenderbuffers

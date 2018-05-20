@@ -1358,8 +1358,6 @@ void wrapglDrawArrays(GLenum mode, GLint first, GLsizei count) {PRECALL;glDrawAr
 void wrapglDrawBuffer(GLenum mode) {PRECALL;Con_Printf("glDrawBuffer(mode)\n");POSTCALL;}
 void wrapglDrawBuffers(GLsizei n, const GLenum *bufs) {PRECALL;Con_Printf("glDrawBuffers(n, bufs)\n");POSTCALL;}
 void wrapglDrawElements(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices) {PRECALL;glDrawElements(mode, count, type, indices);POSTCALL;}
-//void wrapglDrawRangeElements(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices) {PRECALL;glDrawRangeElements(mode, start, end, count, type, indices);POSTCALL;}
-//void wrapglDrawRangeElementsEXT(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices) {PRECALL;glDrawRangeElements(mode, start, end, count, type, indices);POSTCALL;}
 void wrapglEnable(GLenum cap) {PRECALL;glEnable(cap);POSTCALL;}
 void wrapglEnableVertexAttribArray(GLuint index) {PRECALL;glEnableVertexAttribArray(index);POSTCALL;}
 //void wrapglEndQuery(GLenum target) {PRECALL;glEndQuery(target);POSTCALL;}
@@ -1508,7 +1506,7 @@ void GLES_Init(void)
 //	qglGetHandleARB = wrapglGetHandle;
 	qglGetAttribLocation = wrapglGetAttribLocation;
 	qglGetUniformLocation = wrapglGetUniformLocation;
-//	qglMapBufferARB = wrapglMapBuffer;
+//	qglMapBuffer = wrapglMapBuffer;
 	qglGetString = wrapglGetString;
 //	qglActiveStencilFaceEXT = wrapglActiveStencilFace;
 	qglActiveTexture = wrapglActiveTexture;
@@ -1517,7 +1515,7 @@ void GLES_Init(void)
 //	qglBeginQueryARB = wrapglBeginQuery;
 	qglBindAttribLocation = wrapglBindAttribLocation;
 //	qglBindFragDataLocation = wrapglBindFragDataLocation;
-	qglBindBufferARB = wrapglBindBuffer;
+	qglBindBuffer = wrapglBindBuffer;
 	qglBindFramebuffer = wrapglBindFramebuffer;
 	qglBindRenderbuffer = wrapglBindRenderbuffer;
 	qglBindTexture = wrapglBindTexture;
@@ -1539,7 +1537,7 @@ void GLES_Init(void)
 	qglCopyTexSubImage2D = wrapglCopyTexSubImage2D;
 	qglCopyTexSubImage3D = wrapglCopyTexSubImage3D;
 	qglCullFace = wrapglCullFace;
-	qglDeleteBuffersARB = wrapglDeleteBuffers;
+	qglDeleteBuffers = wrapglDeleteBuffers;
 	qglDeleteFramebuffers = wrapglDeleteFramebuffers;
 	qglDeleteProgram = wrapglDeleteProgram;
 	qglDeleteShader = wrapglDeleteShader;
@@ -1556,7 +1554,6 @@ void GLES_Init(void)
 //	qglDrawBuffer = wrapglDrawBuffer;
 //	qglDrawBuffersARB = wrapglDrawBuffers;
 	qglDrawElements = wrapglDrawElements;
-//	qglDrawRangeElements = wrapglDrawRangeElements;
 	qglEnable = wrapglEnable;
 	qglEnableVertexAttribArray = wrapglEnableVertexAttribArray;
 //	qglEndQueryARB = wrapglEndQuery;
@@ -1565,7 +1562,7 @@ void GLES_Init(void)
 	qglFramebufferRenderbufferEXT = wrapglFramebufferRenderbuffer;
 	qglFramebufferTexture2DEXT = wrapglFramebufferTexture2D;
 	qglFramebufferTexture3DEXT = wrapglFramebufferTexture3D;
-	qglGenBuffersARB = wrapglGenBuffers;
+	qglGenBuffers = wrapglGenBuffers;
 	qglGenFramebuffers = wrapglGenFramebuffers;
 //	qglGenQueriesARB = wrapglGenQueries;
 	qglGenRenderbuffers = wrapglGenRenderbuffers;
@@ -1711,37 +1708,18 @@ void GLES_Init(void)
 	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
 	vid.forcetextype = TEXTYPE_RGBA;
 	
-	vid.support.gl20shaders = true;
 	vid.support.amd_texture_texture4 = false;
-	vid.support.arb_depth_texture = SDL_GL_ExtensionSupported("GL_OES_depth_texture") != 0; // renderbuffer used anyway on gles2?
 	vid.support.arb_draw_buffers = false;
-	vid.support.arb_multitexture = false;
 	vid.support.arb_occlusion_query = false;
 	vid.support.arb_query_buffer_object = false;
-	vid.support.arb_shadow = false;
 	vid.support.arb_texture_compression = false; // different (vendor-specific) formats than on desktop OpenGL...
-	vid.support.arb_texture_cube_map = SDL_GL_ExtensionSupported("GL_OES_texture_cube_map") != 0;
-	vid.support.arb_texture_env_combine = false;
 	vid.support.arb_texture_gather = false;
-	vid.support.arb_texture_non_power_of_two = strstr(gl_extensions, "GL_OES_texture_npot") != NULL;
-	vid.support.arb_vertex_buffer_object = true; // GLES2 core
 	vid.support.ext_blend_minmax = false;
 	vid.support.ext_blend_subtract = true; // GLES2 core
 	vid.support.ext_blend_func_separate = true; // GLES2 core
-	vid.support.ext_draw_range_elements = false;
-
-	/*	ELUAN:
-		Note: "In OS 2.1, the functions in GL_OES_framebuffer_object were not usable from the Java API.
-		Calling them just threw an exception. Android developer relations confirmed that they forgot to implement these. (yeah...)
-		It's apparently been fixed in 2.2, though I haven't tested."
-	*/
-	// LadyHavoc: Android 2.1 is way old now, enabling this again, it's going to be required soon.
-	vid.support.ext_framebuffer_object = true;
 
 	vid.support.ext_packed_depth_stencil = false;
-	vid.support.ext_texture_3d = SDL_GL_ExtensionSupported("GL_OES_texture_3D") != 0;
 	vid.support.ext_texture_compression_s3tc = SDL_GL_ExtensionSupported("GL_EXT_texture_compression_s3tc") != 0;
-	vid.support.ext_texture_edge_clamp = true; // GLES2 core
 	vid.support.ext_texture_filter_anisotropic = false; // probably don't want to use it...
 	vid.support.ext_texture_srgb = false;
 	vid.support.arb_texture_float = SDL_GL_ExtensionSupported("GL_OES_texture_float") != 0;
@@ -1794,13 +1772,11 @@ void GLES_Init(void)
 	vid.texunits = 4;
 	vid.teximageunits = 8;
 	vid.texarrayunits = 5;
-	//qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
 	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (GLint*)&vid.teximageunits);CHECKGLERROR
-	//qglGetIntegerv(GL_MAX_TEXTURE_COORDS, (GLint*)&vid.texarrayunits);CHECKGLERROR
 	vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
 	vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
 	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
-	Con_DPrintf("Using GLES2.0 rendering path - %i texture matrix, %i texture images, %i texcoords%s\n", vid.texunits, vid.teximageunits, vid.texarrayunits, vid.support.ext_framebuffer_object ? ", shadowmapping supported" : "");
+	Con_DPrint("Using GLES2 rendering path\n");
 	vid.renderpath = RENDERPATH_GLES2;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
