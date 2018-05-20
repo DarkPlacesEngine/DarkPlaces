@@ -22,13 +22,8 @@
 
 #ifdef WIN32
 #ifdef _MSC_VER
-#if SDL_MAJOR_VERSION == 1
-#pragma comment(lib, "sdl.lib")
-#pragma comment(lib, "sdlmain.lib")
-#else
 #pragma comment(lib, "sdl2.lib")
 #pragma comment(lib, "sdl2main.lib")
-#endif
 #endif
 #endif
 
@@ -173,7 +168,6 @@ char *Sys_ConsoleInput(void)
 
 char *Sys_GetClipboardData (void)
 {
-#if SDL_MAJOR_VERSION != 1
 	char *data = NULL;
 	char *cliptext;
 
@@ -187,31 +181,6 @@ char *Sys_GetClipboardData (void)
 	}
 
 	return data;
-#elif defined(WIN32)
-	char *data = NULL;
-	char *cliptext;
-
-	if (OpenClipboard (NULL) != 0)
-	{
-		HANDLE hClipboardData;
-
-		if ((hClipboardData = GetClipboardData (CF_TEXT)) != 0)
-		{
-			if ((cliptext = (char *)GlobalLock (hClipboardData)) != 0)
-			{
-				size_t allocsize;
-				allocsize = GlobalSize (hClipboardData) + 1;
-				data = (char *)Z_Malloc (allocsize);
-				strlcpy (data, cliptext, allocsize);
-				GlobalUnlock (hClipboardData);
-			}
-		}
-		CloseClipboard ();
-	}
-	return data;
-#else
-	return NULL;
-#endif
 }
 
 void Sys_InitConsole (void)
