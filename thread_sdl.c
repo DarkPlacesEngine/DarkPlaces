@@ -100,11 +100,7 @@ int _Thread_CondWait(void *cond, void *mutex, const char *filename, int fileline
 
 void *_Thread_CreateThread(int (*fn)(void *), void *data, const char *filename, int fileline)
 {
-#if SDL_MAJOR_VERSION == 1
-	void *thread = (void *)SDL_CreateThread(fn, data);
-#else
 	void *thread = (void *)SDL_CreateThread(fn, filename, data);
-#endif
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p thread create %s:%i\n"   , thread, filename, fileline);
 #endif

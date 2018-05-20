@@ -70,9 +70,7 @@ static qboolean vid_usingmouse_relativeworks = false; // SDL2 workaround for uni
 static qboolean vid_usinghidecursor = false;
 static qboolean vid_hasfocus = false;
 static qboolean vid_isfullscreen;
-#if SDL_MAJOR_VERSION != 1
 static qboolean vid_usingvsync = false;
-#endif
 static SDL_Joystick *vid_sdljoystick = NULL;
 // GAME_STEELSTORM specific
 static cvar_t *steelstorm_showing_map = NULL; // detect but do not create the cvar
@@ -82,38 +80,15 @@ static int win_half_width = 50;
 static int win_half_height = 50;
 static int video_bpp;
 
-#if SDL_MAJOR_VERSION == 1
-static SDL_Surface *video_screen;
-static int video_flags;
-#else
 static SDL_GLContext context;
 static SDL_Window *window;
 static int window_flags;
-#endif
 static vid_mode_t desktop_mode;
 
-/////////////////////////
 // Input handling
-////
-//TODO: Add error checking
 
 #ifndef SDLK_PERCENT
 #define SDLK_PERCENT '%'
-#if SDL_MAJOR_VERSION == 1
-#define SDLK_PRINTSCREEN SDLK_PRINT
-#define SDLK_SCROLLLOCK SDLK_SCROLLOCK
-#define SDLK_NUMLOCKCLEAR SDLK_NUMLOCK
-#define SDLK_KP_1 SDLK_KP1
-#define SDLK_KP_2 SDLK_KP2
-#define SDLK_KP_3 SDLK_KP3
-#define SDLK_KP_4 SDLK_KP4
-#define SDLK_KP_5 SDLK_KP5
-#define SDLK_KP_6 SDLK_KP6
-#define SDLK_KP_7 SDLK_KP7
-#define SDLK_KP_8 SDLK_KP8
-#define SDLK_KP_9 SDLK_KP9
-#define SDLK_KP_0 SDLK_KP0
-#endif
 #endif
 
 static int MapKey( unsigned int sdlkey )
@@ -336,7 +311,6 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_RALT:               return K_ALT;
 //	case SDLK_RGUI:               return K_RGUI;
 //	case SDLK_MODE:               return K_MODE;
-#if SDL_MAJOR_VERSION != 1
 //	case SDLK_AUDIONEXT:          return K_AUDIONEXT;
 //	case SDLK_AUDIOPREV:          return K_AUDIOPREV;
 //	case SDLK_AUDIOSTOP:          return K_AUDIOSTOP;
@@ -362,22 +336,16 @@ static int MapKey( unsigned int sdlkey )
 //	case SDLK_KBDILLUMUP:         return K_KBDILLUMUP;
 //	case SDLK_EJECT:              return K_EJECT;
 //	case SDLK_SLEEP:              return K_SLEEP;
-#endif
 	}
 }
 
 qboolean VID_HasScreenKeyboardSupport(void)
 {
-#if SDL_MAJOR_VERSION != 1
 	return SDL_HasScreenKeyboardSupport() != SDL_FALSE;
-#else
-	return false;
-#endif
 }
 
 void VID_ShowKeyboard(qboolean show)
 {
-#if SDL_MAJOR_VERSION != 1
 	if (!SDL_HasScreenKeyboardSupport())
 		return;
 
@@ -391,16 +359,11 @@ void VID_ShowKeyboard(qboolean show)
 		if (SDL_IsTextInputActive())
 			SDL_StopTextInput();
 	}
-#endif
 }
 
 qboolean VID_ShowingKeyboard(void)
 {
-#if SDL_MAJOR_VERSION != 1
 	return SDL_IsTextInputActive() != 0;
-#else
-	return false;
-#endif
 }
 
 void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
@@ -415,12 +378,8 @@ void VID_SetMouse(qboolean fullscreengrab, qboolean relative, qboolean hidecurso
 	{
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
-#if SDL_MAJOR_VERSION == 1
-		SDL_WM_GrabInput( relative ? SDL_GRAB_ON : SDL_GRAB_OFF );
-#else
 		vid_usingmouse_relativeworks = SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE) == 0;
 //		Con_Printf("VID_SetMouse(%i, %i, %i) relativeworks = %i\n", (int)fullscreengrab, (int)relative, (int)hidecursor, (int)vid_usingmouse_relativeworks);
-#endif
 #ifdef MACOSX
 		if(relative)
 		{
@@ -1010,11 +969,7 @@ void IN_Move( void )
 				// we need 2 frames to initialize the center position
 				if(!stuck)
 				{
-#if SDL_MAJOR_VERSION == 1
-					SDL_WarpMouse(win_half_width, win_half_height);
-#else
 					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
-#endif
 					SDL_GetMouseState(&x, &y);
 					SDL_GetRelativeMouseState(&x, &y);
 					++stuck;
@@ -1025,11 +980,7 @@ void IN_Move( void )
 					SDL_GetMouseState(&x, &y);
 					old_x = x - win_half_width;
 					old_y = y - win_half_height;
-#if SDL_MAJOR_VERSION == 1
-					SDL_WarpMouse(win_half_width, win_half_height);
-#else
 					SDL_WarpMouseInWindow(window, win_half_width, win_half_height);
-#endif
 				}
 			} else {
 				SDL_GetRelativeMouseState( &x, &y );
@@ -1070,14 +1021,6 @@ static keynum_t buttonremap[] =
 	K_MOUSE1,
 	K_MOUSE3,
 	K_MOUSE2,
-#if SDL_MAJOR_VERSION == 1
-	// TODO Find out how SDL maps these buttons. It looks like we should
-	// still include these for sdl2? At least the button indexes don't
-	// differ between SDL1 and SDL2 for me, thus this array should stay the
-	// same (in X11 button order).
-	K_MWHEELUP,
-	K_MWHEELDOWN,
-#endif
 	K_MOUSE4,
 	K_MOUSE5,
 	K_MOUSE6,
@@ -1092,111 +1035,6 @@ static keynum_t buttonremap[] =
 	K_MOUSE15,
 	K_MOUSE16,
 };
-
-#if SDL_MAJOR_VERSION == 1
-// SDL
-void Sys_SendKeyEvents( void )
-{
-	static qboolean sound_active = true;
-	int keycode;
-	SDL_Event event;
-
-	VID_EnableJoystick(true);
-
-	while( SDL_PollEvent( &event ) )
-		switch( event.type ) {
-			case SDL_QUIT:
-				Sys_Quit(0);
-				break;
-			case SDL_KEYDOWN:
-			case SDL_KEYUP:
-				keycode = MapKey(event.key.keysym.sym);
-				if (!VID_JoyBlockEmulatedKeys(keycode))
-				{
-					if(keycode == K_NUMLOCK || keycode == K_CAPSLOCK)
-					{
-						// simulate down followed by up
-						Key_Event(keycode, event.key.keysym.unicode, true);
-						Key_Event(keycode, event.key.keysym.unicode, false);
-						break;
-					}
-					Key_Event(keycode, event.key.keysym.unicode, (event.key.state == SDL_PRESSED));
-				}
-				break;
-			case SDL_ACTIVEEVENT:
-				if( event.active.state & SDL_APPACTIVE )
-				{
-					if( event.active.gain )
-						vid_hidden = false;
-					else
-						vid_hidden = true;
-				}
-				break;
-			case SDL_MOUSEBUTTONDOWN:
-			case SDL_MOUSEBUTTONUP:
-				if (!vid_touchscreen.integer)
-				if (event.button.button > 0 && event.button.button <= ARRAY_SIZE(buttonremap))
-					Key_Event( buttonremap[event.button.button - 1], 0, event.button.state == SDL_PRESSED );
-				break;
-			case SDL_JOYBUTTONDOWN:
-			case SDL_JOYBUTTONUP:
-			case SDL_JOYAXISMOTION:
-			case SDL_JOYBALLMOTION:
-			case SDL_JOYHATMOTION:
-				break;
-			case SDL_VIDEOEXPOSE:
-				break;
-			case SDL_VIDEORESIZE:
-				if(vid_resizable.integer < 2 || vid_isfullscreen)
-				{
-					vid.width = event.resize.w;
-					vid.height = event.resize.h;
-					if (!vid_isfullscreen)
-						video_screen = SDL_SetVideoMode(vid.width, vid.height, video_bpp, video_flags);
-#ifdef SDL_R_RESTART
-					// better not call R_Modules_Restart from here directly, as this may wreak havoc...
-					// so, let's better queue it for next frame
-					if(!sdl_needs_restart)
-					{
-						Cbuf_AddText("\nr_restart\n");
-						sdl_needs_restart = true;
-					}
-#endif
-				}
-				break;
-#if SDL_MAJOR_VERSION != 1
-			case SDL_TEXTEDITING:
-				break;
-			case SDL_TEXTINPUT:
-				break;
-#endif
-			case SDL_MOUSEMOTION:
-				break;
-			default:
-				Con_DPrintf("Received unrecognized SDL_Event type 0x%x\n", event.type);
-				break;
-		}
-
-	// enable/disable sound on focus gain/loss
-	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
-	{
-		if (!sound_active)
-		{
-			S_UnblockSound ();
-			sound_active = true;
-		}
-	}
-	else
-	{
-		if (sound_active)
-		{
-			S_BlockSound ();
-			sound_active = false;
-		}
-	}
-}
-
-#else
 
 //#define DEBUGSDLEVENTS
 
@@ -1442,7 +1280,6 @@ void Sys_SendKeyEvents( void )
 		}
 	}
 }
-#endif
 
 /////////////////
 // Video system
@@ -1653,10 +1490,6 @@ void wrapglVertexAttrib4fv(GLuint index, const GLfloat *v) {PRECALL;glVertexAttr
 void wrapglGetVertexAttribfv(GLuint index, GLenum pname, GLfloat *params) {PRECALL;glGetVertexAttribfv(index, pname, params);POSTCALL;}
 void wrapglGetVertexAttribiv(GLuint index, GLenum pname, GLint *params) {PRECALL;glGetVertexAttribiv(index, pname, params);POSTCALL;}
 void wrapglGetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer) {PRECALL;glGetVertexAttribPointerv(index, pname, pointer);POSTCALL;}
-#endif
-
-#if SDL_MAJOR_VERSION == 1
-#define SDL_GL_ExtensionSupported(x) (strstr(gl_extensions, x) || strstr(gl_platformextensions, x))
 #endif
 
 void GLES_Init(void)
@@ -2051,11 +1884,7 @@ void VID_EnableJoystick(qboolean enable)
 			vid_sdljoystick = SDL_JoystickOpen(sdlindex);
 			if (vid_sdljoystick)
 			{
-#if SDL_MAJOR_VERSION == 1
-				const char *joystickname = SDL_JoystickName(sdlindex);
-#else
 				const char *joystickname = SDL_JoystickName(vid_sdljoystick);
-#endif
 				Con_Printf("Joystick %i opened (SDL_Joystick %i is \"%s\" with %i axes, %i buttons, %i balls)\n", index, sdlindex, joystickname, (int)SDL_JoystickNumAxes(vid_sdljoystick), (int)SDL_JoystickNumButtons(vid_sdljoystick), (int)SDL_JoystickNumBalls(vid_sdljoystick));
 			}
 			else
@@ -2073,297 +1902,10 @@ void VID_EnableJoystick(qboolean enable)
 		Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
 }
 
-#if SDL_MAJOR_VERSION == 1
-// set the icon (we dont use SDL here since it would be too much a PITA)
-#ifdef WIN32
-#include "resource.h"
-#include <SDL_syswm.h>
-static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
-{
-	SDL_Surface *screen = NULL;
-	SDL_SysWMinfo info;
-	HICON icon;
-	SDL_WM_SetCaption( gamename, NULL );
-	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
-	if (screen)
-	{
-		// get the HWND handle
-		SDL_VERSION( &info.version );
-		if (SDL_GetWMInfo(&info))
-		{
-			icon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
-#ifndef _W64 //If Windows 64bit data types don't exist
-#ifndef SetClassLongPtr
-#define SetClassLongPtr SetClassLong
-#endif
-#ifndef GCLP_HICON
-#define GCLP_HICON GCL_HICON
-#endif
-#ifndef LONG_PTR
-#define LONG_PTR LONG
-#endif
-#endif
-			SetClassLongPtr( info.window, GCLP_HICON, (LONG_PTR)icon );
-		}
-	}
-	return screen;
-}
-#elif defined(MACOSX)
-static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
-{
-	SDL_Surface *screen = NULL;
-	SDL_WM_SetCaption( gamename, NULL );
-	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
-	// we don't use SDL_WM_SetIcon here because the icon in the .app should be used
-	return screen;
-}
-#else
-// Adding the OS independent XPM version --blub
-#include "darkplaces.xpm"
-#include "nexuiz.xpm"
-#if SDL_MAJOR_VERSION == 1
-#if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
-#include <SDL_syswm.h>
-#endif
-#endif
-static SDL_Surface *icon = NULL;
-static SDL_Surface *VID_WrapSDL_SetVideoMode(int screenwidth, int screenheight, int screenbpp, int screenflags)
-{
-	/*
-	 * Somewhat restricted XPM reader. Only supports XPMs saved by GIMP 2.4 at
-	 * default settings with less than 91 colors and transparency.
-	 */
-
-	int width, height, colors, isize, i, j;
-	int thenone = -1;
-	static SDL_Color palette[256];
-	unsigned short palenc[256]; // store color id by char
-	char *xpm;
-	char **idata, *data;
-	const SDL_version *version;
-	SDL_Surface *screen = NULL;
-
-	if (icon)
-		SDL_FreeSurface(icon);
-	icon = NULL;
-	version = SDL_Linked_Version();
-	// only use non-XPM icon support in SDL v1.3 and higher
-	// SDL v1.2 does not support "smooth" transparency, and thus is better
-	// off the xpm way
-	if(version->major >= 2 || (version->major == 1 && version->minor >= 3))
-	{
-		data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
-		if(data)
-		{
-			unsigned int red = 0x00FF0000;
-			unsigned int green = 0x0000FF00;
-			unsigned int blue = 0x000000FF;
-			unsigned int alpha = 0xFF000000;
-			width = image_width;
-			height = image_height;
-
-			// reallocate with malloc, as this is in tempmempool (do not want)
-			xpm = data;
-			data = (char *) malloc(width * height * 4);
-			memcpy(data, xpm, width * height * 4);
-			Mem_Free(xpm);
-			xpm = NULL;
-
-			icon = SDL_CreateRGBSurface(SDL_SRCALPHA, width, height, 32, LittleLong(red), LittleLong(green), LittleLong(blue), LittleLong(alpha));
-
-			if (icon)
-				icon->pixels = data;
-			else
-			{
-				Con_Printf(	"Failed to create surface for the window Icon!\n"
-						"%s\n", SDL_GetError());
-				free(data);
-			}
-		}
-	}
-
-	// we only get here if non-XPM icon was missing, or SDL version is not
-	// sufficient for transparent non-XPM icons
-	if(!icon)
-	{
-		xpm = (char *) FS_LoadFile("darkplaces-icon.xpm", tempmempool, false, NULL);
-		idata = NULL;
-		if(xpm)
-			idata = XPM_DecodeString(xpm);
-		if(!idata)
-			idata = ENGINE_ICON;
-		if(xpm)
-			Mem_Free(xpm);
-
-		data = idata[0];
-
-		if(sscanf(data, "%i %i %i %i", &width, &height, &colors, &isize) == 4)
-		{
-			if(isize == 1)
-			{
-				for(i = 0; i < colors; ++i)
-				{
-					unsigned int r, g, b;
-					char idx;
-
-					if(sscanf(idata[i+1], "%c c #%02x%02x%02x", &idx, &r, &g, &b) != 4)
-					{
-						char foo[2];
-						if(sscanf(idata[i+1], "%c c Non%1[e]", &idx, foo) != 2) // I take the DailyWTF credit for this. --div0
-							break;
-						else
-						{
-							palette[i].r = 255; // color key
-							palette[i].g = 0;
-							palette[i].b = 255;
-							thenone = i; // weeeee
-							palenc[(unsigned char) idx] = i;
-						}
-					}
-					else
-					{
-						palette[i].r = r - (r == 255 && g == 0 && b == 255); // change 255/0/255 pink to 254/0/255 for color key
-						palette[i].g = g;
-						palette[i].b = b;
-						palenc[(unsigned char) idx] = i;
-					}
-				}
-
-				if (i == colors)
-				{
-					// allocate the image data
-					data = (char*) malloc(width*height);
-
-					for(j = 0; j < height; ++j)
-					{
-						for(i = 0; i < width; ++i)
-						{
-							// casting to the safest possible datatypes ^^
-							data[j * width + i] = palenc[((unsigned char*)idata[colors+j+1])[i]];
-						}
-					}
-
-					if(icon != NULL)
-					{
-						// SDL_FreeSurface should free the data too
-						// but for completeness' sake...
-						if(icon->flags & SDL_PREALLOC)
-						{
-							free(icon->pixels);
-							icon->pixels = NULL; // safety
-						}
-						SDL_FreeSurface(icon);
-					}
-
-					icon = SDL_CreateRGBSurface(SDL_SRCCOLORKEY, width, height, 8, 0,0,0,0);// rmask, gmask, bmask, amask); no mask needed
-					// 8 bit surfaces get an empty palette allocated according to the docs
-					// so it's a palette image for sure :) no endian check necessary for the mask
-
-					if(icon)
-					{
-						icon->pixels = data;
-						SDL_SetPalette(icon, SDL_PHYSPAL|SDL_LOGPAL, palette, 0, colors);
-						SDL_SetColorKey(icon, SDL_SRCCOLORKEY, thenone);
-					}
-					else
-					{
-						Con_Printf(	"Failed to create surface for the window Icon!\n"
-								"%s\n", SDL_GetError());
-						free(data);
-					}
-				}
-				else
-				{
-					Con_Printf("This XPM's palette looks odd. Can't continue.\n");
-				}
-			}
-			else
-			{
-				// NOTE: Only 1-char colornames are supported
-				Con_Printf("This XPM's palette is either huge or idiotically unoptimized. It's key size is %i\n", isize);
-			}
-		}
-		else
-		{
-			// NOTE: Only 1-char colornames are supported
-			Con_Printf("Sorry, but this does not even look similar to an XPM.\n");
-		}
-	}
-
-	if (icon)
-		SDL_WM_SetIcon(icon, NULL);
-
-	SDL_WM_SetCaption( gamename, NULL );
-	screen = SDL_SetVideoMode(screenwidth, screenheight, screenbpp, screenflags);
-
-#if SDL_MAJOR_VERSION == 1
-// LordHavoc: info.info.x11.lock_func and accompanying code do not seem to compile with SDL 1.3
-#if SDL_VIDEO_DRIVER_X11 && !SDL_VIDEO_DRIVER_QUARTZ
-
-	version = SDL_Linked_Version();
-	// only use non-XPM icon support in SDL v1.3 and higher
-	// SDL v1.2 does not support "smooth" transparency, and thus is better
-	// off the xpm way
-	if(screen && (!(version->major >= 2 || (version->major == 1 && version->minor >= 3))))
-	{
-		// in this case, we did not set the good icon yet
-		SDL_SysWMinfo info;
-		SDL_VERSION(&info.version);
-		if(SDL_GetWMInfo(&info) == 1 && info.subsystem == SDL_SYSWM_X11)
-		{
-			data = (char *) loadimagepixelsbgra("darkplaces-icon", false, false, false, NULL);
-			if(data)
-			{
-				// use _NET_WM_ICON too
-				static long netwm_icon[MAX_NETWM_ICON];
-				int pos = 0;
-				int i = 1;
-				char vabuf[1024];
-
-				while(data)
-				{
-					if(pos + 2 * image_width * image_height < MAX_NETWM_ICON)
-					{
-						netwm_icon[pos++] = image_width;
-						netwm_icon[pos++] = image_height;
-						for(i = 0; i < image_height; ++i)
-							for(j = 0; j < image_width; ++j)
-								netwm_icon[pos++] = BuffLittleLong((unsigned char *) &data[(i*image_width+j)*4]);
-					}
-					else
-					{
-						Con_Printf("Skipping NETWM icon #%d because there is no space left\n", i);
-					}
-					++i;
-					Mem_Free(data);
-					data = (char *) loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "darkplaces-icon%d", i), false, false, false, NULL);
-				}
-
-				info.info.x11.lock_func();
-				{
-					Atom net_wm_icon = XInternAtom(info.info.x11.display, "_NET_WM_ICON", false);
-					XChangeProperty(info.info.x11.display, info.info.x11.wmwindow, net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (const unsigned char *) netwm_icon, pos);
-				}
-				info.info.x11.unlock_func();
-			}
-		}
-	}
-#endif
-#endif
-	return screen;
-}
-
-#endif
-#endif
-
 static void VID_OutputVersion(void)
 {
 	SDL_version version;
-#if SDL_MAJOR_VERSION == 1
-	version = *SDL_Linked_Version();
-#else
 	SDL_GetVersion(&version);
-#endif
 	Con_Printf(	"Linked against SDL version %d.%d.%d\n"
 					"Using SDL library version %d.%d.%d\n",
 					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
@@ -2416,14 +1958,9 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
-#if SDL_MAJOR_VERSION == 1
-	static int notfirstvideomode = false;
-	int flags = SDL_OPENGL;
-#else
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	int xPos = SDL_WINDOWPOS_UNDEFINED;
 	int yPos = SDL_WINDOWPOS_UNDEFINED;
-#endif
 #ifndef USE_GLES2
 	int i;
 	const char *drivername;
@@ -2433,24 +1970,9 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
-#if SDL_MAJOR_VERSION == 1
-		flags |= SDL_RESIZABLE;
-#else
 		windowflags |= SDL_WINDOW_RESIZABLE;
-#endif
 
 	VID_OutputVersion();
-
-#if SDL_MAJOR_VERSION == 1
-	/*
-	SDL 1.2 Hack
-		We cant switch from one OpenGL video mode to another.
-		Thus we first switch to some stupid 2D mode and then back to OpenGL.
-	*/
-	if (notfirstvideomode)
-		SDL_SetVideoMode( 0, 0, 0, 0 );
-	notfirstvideomode = true;
-#endif
 
 #ifndef USE_GLES2
 	// SDL usually knows best
@@ -2485,26 +2007,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
-#if SDL_MAJOR_VERSION == 1
-	{
-		const SDL_VideoInfo *vi = SDL_GetVideoInfo();
-		desktop_mode.width = vi->current_w;
-		desktop_mode.height = vi->current_h;
-		desktop_mode.bpp = vi->vfmt->BitsPerPixel;
-		desktop_mode.pixelheight_num = 1;
-		desktop_mode.pixelheight_denom = 1; // SDL does not provide this
-		if (mode->fullscreen) {
-			if (vid_desktopfullscreen.integer)
-			{
-				mode->width = vi->current_w;
-				mode->height = vi->current_h;
-				mode->bitsperpixel = vi->vfmt->BitsPerPixel;
-			}
-			flags |= SDL_FULLSCREEN;
-			vid_isfullscreen = true;
-		}
-	}
-#else
 	{
 		if (mode->fullscreen) {
 			if (vid_desktopfullscreen.integer)
@@ -2527,7 +2029,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 #endif
 		}
 	}
-#endif
 	//flags |= SDL_HWSURFACE;
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
@@ -2545,32 +2046,16 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLESAMPLES, mode->samples);
 	}
 
-#if SDL_MAJOR_VERSION == 1
-	if (vid_vsync.integer)
-		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 1);
-	else
-		SDL_GL_SetAttribute (SDL_GL_SWAP_CONTROL, 0);
-#else
 #ifdef USE_GLES2
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute (SDL_GL_RETAINED_BACKING, 1);
-#endif
+#else
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 #endif
 
 	video_bpp = mode->bitsperpixel;
-#if SDL_MAJOR_VERSION == 1
-	video_flags = flags;
-	video_screen = VID_WrapSDL_SetVideoMode(mode->width, mode->height, mode->bitsperpixel, flags);
-	if (video_screen == NULL)
-	{
-		Con_Printf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
-		VID_Shutdown();
-		return false;
-	}
-	mode->width = video_screen->w;
-	mode->height = video_screen->h;
-#else
 	window_flags = windowflags;
 	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
@@ -2587,19 +2072,9 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		VID_Shutdown();
 		return false;
 	}
-#endif
 
-#if SDL_MAJOR_VERSION == 1
-	// init keyboard
-	SDL_EnableUNICODE( SDL_ENABLE );
-	// enable key repeat since everyone expects it
-	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
-#endif
-
-#if SDL_MAJOR_VERSION != 1
-	SDL_GL_SetSwapInterval(vid_vsync.integer != 0);
+	SDL_GL_SetSwapInterval(bound(-1, vid_vsync.integer, 1));
 	vid_usingvsync = (vid_vsync.integer != 0);
-#endif
 
 	gl_platform = "SDL";
 	gl_platformextensions = "";
@@ -2616,9 +2091,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingmouse = false;
 	vid_usinghidecursor = false;
 		
-#if SDL_MAJOR_VERSION == 1
-	SDL_WM_GrabInput(SDL_GRAB_OFF);
-#endif
 	return true;
 }
 
@@ -2638,9 +2110,7 @@ qboolean VID_InitMode(viddef_mode_t *mode)
 	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 
-#if SDL_MAJOR_VERSION != 1
 	Cvar_SetValueQuick(&vid_touchscreen_supportshowkeyboard, SDL_HasScreenKeyboardSupport() ? 1 : 0);
-#endif
 	return VID_InitModeGL(mode);
 }
 
@@ -2649,20 +2119,8 @@ void VID_Shutdown (void)
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false, false);
 
-#if SDL_MAJOR_VERSION == 1
-#ifndef WIN32
-#ifndef MACOSX
-	if (icon)
-		SDL_FreeSurface(icon);
-	icon = NULL;
-#endif
-#endif
-#endif
-
-#if SDL_MAJOR_VERSION != 1
 	SDL_DestroyWindow(window);
 	window = NULL;
-#endif
 
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 
@@ -2674,15 +2132,7 @@ void VID_Shutdown (void)
 
 void VID_Finish (void)
 {
-#if SDL_MAJOR_VERSION == 1
-	Uint8 appstate;
-
-	//react on appstate changes
-	appstate = SDL_GetAppState();
-
-	vid_hidden = !(appstate & SDL_APPACTIVE);
-	vid_hasfocus = (appstate & SDL_APPINPUTFOCUS) != 0;
-#endif
+	qboolean vid_usevsync;
 	vid_activewindow = !vid_hidden && vid_hasfocus;
 
 	VID_UpdateGamma();
@@ -2697,25 +2147,16 @@ void VID_Finish (void)
 			if (r_speeds.integer == 2 || gl_finish.integer)
 				GL_Finish();
 
-#if SDL_MAJOR_VERSION != 1
-{
-	qboolean vid_usevsync;
-	vid_usevsync = (vid_vsync.integer && !cls.timedemo);
-	if (vid_usingvsync != vid_usevsync)
-	{
-		vid_usingvsync = vid_usevsync;
-		if (SDL_GL_SetSwapInterval(vid_usevsync != 0) >= 0)
-			Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
-		else
-			Con_DPrintf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
-	}
-}
-#endif
-#if SDL_MAJOR_VERSION == 1
-			SDL_GL_SwapBuffers();
-#else
+			vid_usevsync = (vid_vsync.integer && !cls.timedemo);
+			if (vid_usingvsync != vid_usevsync)
+			{
+				vid_usingvsync = vid_usevsync;
+				if (SDL_GL_SetSwapInterval(vid_usevsync != 0) >= 0)
+					Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
+				else
+					Con_DPrintf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
+			}
 			SDL_GL_SwapWindow(window);
-#endif
 			break;
 		}
 	}
@@ -2723,7 +2164,6 @@ void VID_Finish (void)
 
 vid_mode_t *VID_GetDesktopMode(void)
 {
-#if SDL_MAJOR_VERSION != 1
 	SDL_DisplayMode mode;
 	int bpp;
 	Uint32 rmask, gmask, bmask, amask;
@@ -2738,35 +2178,12 @@ vid_mode_t *VID_GetDesktopMode(void)
 	// TODO check whether this actually works, or whether we do still need
 	// a read-window-size-after-entering-desktop-fullscreen hack for
 	// multiscreen setups.
-#endif
 	return &desktop_mode;
 }
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	size_t k = 0;
-#if SDL_MAJOR_VERSION == 1
-	SDL_Rect **vidmodes;
-	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
-#ifdef WIN64
-	SDL_Rect **ENDRECT = (SDL_Rect**)-1LL;
-#else
-	SDL_Rect **ENDRECT = (SDL_Rect**)-1;
-#endif
-
-	for(vidmodes = SDL_ListModes(NULL, SDL_FULLSCREEN|SDL_HWSURFACE); vidmodes && vidmodes != ENDRECT && *vidmodes; ++vidmodes)
-	{
-		if(k >= maxcount)
-			break;
-		modes[k].width = (*vidmodes)->w;
-		modes[k].height = (*vidmodes)->h;
-		modes[k].bpp = bpp;
-		modes[k].refreshrate = 60; // no support for refresh rate in SDL
-		modes[k].pixelheight_num = 1;
-		modes[k].pixelheight_denom = 1; // SDL does not provide this
-		++k;
-	}
-#else
 	int modenum;
 	int nummodes = SDL_GetNumDisplayModes(0);
 	SDL_DisplayMode mode;
@@ -2784,6 +2201,5 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 		modes[k].pixelheight_denom = 1; // SDL does not provide this
 		k++;
 	}
-#endif
 	return k;
 }
