@@ -2531,22 +2531,12 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	//flags |= SDL_HWSURFACE;
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
-	if (mode->bitsperpixel >= 32)
-	{
-		SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
-		SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 8);
-		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 8);
-		SDL_GL_SetAttribute (SDL_GL_ALPHA_SIZE, 8);
-		SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 24);
-		SDL_GL_SetAttribute (SDL_GL_STENCIL_SIZE, 8);
-	}
-	else
-	{
-		SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 5);
-		SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 5);
-		SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 5);
-		SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 16);
-	}
+	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
+	SDL_GL_SetAttribute (SDL_GL_GREEN_SIZE, 8);
+	SDL_GL_SetAttribute (SDL_GL_BLUE_SIZE, 8);
+	SDL_GL_SetAttribute (SDL_GL_ALPHA_SIZE, 8);
+	SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 24);
+	SDL_GL_SetAttribute (SDL_GL_STENCIL_SIZE, 8);
 	if (mode->stereobuffer)
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
 	if (mode->samples > 1)
