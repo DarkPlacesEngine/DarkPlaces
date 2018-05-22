@@ -533,25 +533,12 @@ void CL_DrawVideo(void)
 	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
 		DrawQ_Fill(0, 0, vid_conwidth.integer, vid_conheight.integer, 0, 0, 0, 1, 0);
 
-#ifndef USE_GLES2
 	// enable video-only polygon stipple (of global stipple is not active)
-	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
+	if (!scr_stipple.integer && cl_video_stipple.integer)
 	{
-		GLubyte stipple[128];
-		int s, width, parts;
-	
-		s = cl_video_stipple.integer;
-		parts = (s & 007);
-		width = (s & 070) >> 3;
-		qglEnable(GL_POLYGON_STIPPLE);CHECKGLERROR // 0x0B42
-		for(i = 0; i < 128; ++i)
-		{
-			int line = i/4;
-			stipple[i] = ((line >> width) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
-		}
-		qglPolygonStipple(stipple);CHECKGLERROR
+		Con_Print("FIXME: cl_video_stipple not implemented\n");
+		Cvar_SetValueQuick(&cl_video_stipple, 0);
 	}
-#endif
 
 	// draw video
 	if (v_glslgamma_video.value >= 1)
@@ -562,14 +549,6 @@ void CL_DrawVideo(void)
 		if (v_glslgamma_video.value > 0.0)
 			DrawQ_SuperPic(px, py, video->cachepic, sx, sy, st[0], st[1], b, b, b, v_glslgamma_video.value, st[2], st[3], b, b, b, v_glslgamma_video.value, st[4], st[5], b, b, b, v_glslgamma_video.value, st[6], st[7], b, b, b, v_glslgamma_video.value, 0);
 	}
-
-#ifndef USE_GLES2
-	// disable video-only stipple
-	if (qglPolygonStipple && !scr_stipple.integer && cl_video_stipple.integer)
-	{
-		qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
-	}
-#endif
 
 	// VorteX: draw subtitle_text
 	if (!video->subtitles || !cl_video_subtitles.integer)

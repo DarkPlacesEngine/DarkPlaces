@@ -275,7 +275,6 @@ void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
-void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 
 void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
@@ -575,7 +574,6 @@ static dllfunction_t openglfuncs[] =
 	{"glScissor", (void **) &qglScissor},
 	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{"glPolygonMode", (void **) &qglPolygonMode},
-	{"glPolygonStipple", (void **) &qglPolygonStipple},
 	{"glActiveTexture", (void **) &qglActiveTexture},
 	{"glTexImage3D", (void **) &qglTexImage3D},
 	{"glTexSubImage3D", (void **) &qglTexSubImage3D},
@@ -784,7 +782,6 @@ void VID_ClearExtensions(void)
 #ifndef USE_GLES2
 	// this is a complete list of all functions that are directly checked in the renderer
 	qglDrawBuffer = NULL;
-	qglPolygonStipple = NULL;
 	qglFlush = NULL;
 	qglActiveTexture = NULL;
 	qglGetCompressedTexImageARB = NULL;
