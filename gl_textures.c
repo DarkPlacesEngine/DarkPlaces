@@ -351,7 +351,7 @@ void R_FreeTexture(rtexture_t *rt)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (glt->texnum)
 		{
@@ -461,7 +461,7 @@ static void GL_TextureMode_f (void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// change all the existing mipmap texture objects
 		// FIXME: force renderer(/client/something?) restart instead?
@@ -620,7 +620,7 @@ static void r_textures_start(void)
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// LordHavoc: allow any alignment
 		CHECKGLERROR
@@ -675,7 +675,7 @@ static void r_textures_devicelost(void)
 			continue;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			break;
 		}
@@ -694,7 +694,7 @@ static void r_textures_devicerestored(void)
 			continue;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			break;
 		}
@@ -772,7 +772,7 @@ void R_Textures_Frame (void)
 
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			// ignore the first difference, any textures loaded by now probably had the same aniso value
 			if (first_time_aniso)
@@ -934,7 +934,7 @@ static void R_UploadPartialTexture(gltexture_t *glt, const unsigned char *data, 
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		{
 			int oldbindtexnum;
@@ -1020,7 +1020,7 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 	// do the appropriate upload type...
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (glt->texnum) // not renderbuffers
 		{
@@ -1316,7 +1316,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	// data may be NULL (blank texture for dynamic rendering)
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenTextures(1, (GLuint *)&glt->texnum);CHECKGLERROR
@@ -1403,7 +1403,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	// data may be NULL (blank texture for dynamic rendering)
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenRenderbuffers(1, (GLuint *)&glt->renderbuffernum);CHECKGLERROR
@@ -2181,7 +2181,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	// create the texture object
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		GL_ActiveTexture(0);
@@ -2205,7 +2205,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 			break;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			if (bytesperblock)
 			{
@@ -2234,7 +2234,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	// after upload we have to set some parameters...
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 #ifdef GL_TEXTURE_MAX_LEVEL
 		if (dds_miplevels >= 1 && !mipcomplete)

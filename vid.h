@@ -30,7 +30,7 @@ extern int cl_available;
 
 typedef enum renderpath_e
 {
-	RENDERPATH_GL20,
+	RENDERPATH_GL32,
 	RENDERPATH_GLES2
 }
 renderpath_t;

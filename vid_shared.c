@@ -767,7 +767,7 @@ void VID_ClearExtensions(void)
 
 	// clear the extension flags
 	memset(&vid.support, 0, sizeof(vid.support));
-	vid.renderpath = RENDERPATH_GL20;
+	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
 	vid.maxtexturesize_2d = 0;
@@ -875,8 +875,8 @@ void VID_CheckExtensions(void)
 	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
 	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
 	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
-	Con_DPrint("Using GL2+extensions rendering path\n");
-	vid.renderpath = RENDERPATH_GL20;
+	Con_DPrint("Using GL3 rendering path\n");
+	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = true;
 	Con_DPrintf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
@@ -1470,7 +1470,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 #ifdef GL_STEREO
 			{
 				GLboolean stereo;

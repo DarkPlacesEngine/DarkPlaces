@@ -1442,7 +1442,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	ih = (int)(0.5 + height * ((float)r_refdef.view.height / vid_conheight.integer));
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		GL_Scissor(ix, vid.height - iy - ih, iw, ih);
 		break;
