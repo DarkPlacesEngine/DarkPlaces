@@ -1407,7 +1407,7 @@ void R_GLSL_Restart_f(void)
 	unsigned int i, limit;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		{
 			r_glsl_permutation_t *p;
@@ -1484,7 +1484,7 @@ void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, 
 		GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_GENERIC, permutation);
 		if (r_glsl_permutation->tex_Texture_First >= 0)
@@ -1514,7 +1514,7 @@ void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean 
 		GL_AlphaToCoverage(false);
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(SHADERMODE_DEPTH_OR_SHADOW, permutation);
 #ifndef USE_GLES2 /* FIXME: GLES3 only */
@@ -1860,7 +1860,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		permutation |= SHADERPERMUTATION_FOGALPHAHACK;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | (rsurface.modellightmapcolor4f ? BATCHNEED_ARRAY_VERTEXCOLOR : 0) | BATCHNEED_ARRAY_TEXCOORD | (rsurface.uselightmaptexture ? BATCHNEED_ARRAY_LIGHTMAP : 0) | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 		R_Mesh_VertexPointer(     3, GL_FLOAT, sizeof(float[3]), rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
@@ -2076,7 +2076,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	Matrix4x4_ToArrayFloatGL(&viewtolight, viewtolight16f);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		R_SetupShader_SetPermutationGLSL(mode, permutation);
 		if (r_glsl_permutation->loc_LightPosition             >= 0) qglUniform3f(       r_glsl_permutation->loc_LightPosition            , viewlightorigin[0], viewlightorigin[1], viewlightorigin[2]);
@@ -3032,7 +3032,7 @@ static void gl_main_start(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
 		Cvar_SetValueQuick(&gl_combine, 1);
@@ -3120,7 +3120,7 @@ static void gl_main_shutdown(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 		if (r_maxqueries)
@@ -4510,7 +4510,7 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 		CHECKGLERROR
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewProjectionMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewProjectionMatrix, 1, false, gl_modelviewprojection16f);
 			if (r_glsl_permutation && r_glsl_permutation->loc_ModelViewMatrix >= 0) qglUniformMatrix4fv(r_glsl_permutation->loc_ModelViewMatrix, 1, false, gl_modelview16f);
@@ -4543,7 +4543,7 @@ void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rt
 	GL_PolygonOffset(0, 0);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
@@ -4575,7 +4575,7 @@ void R_ResetViewRendering3D(int viewfbo, rtexture_t *viewdepthtexture, rtexture_
 	GL_PolygonOffset(r_refdef.polygonfactor, r_refdef.polygonoffset);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		qglEnable(GL_POLYGON_OFFSET_FILL);CHECKGLERROR
 		break;
@@ -5114,7 +5114,7 @@ static void R_Bloom_StartFrame(void)
 
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 		r_fb.usedepthtextures = r_usedepthtextures.integer != 0;
 		if (r_viewfbo.integer == 2) textype = TEXTYPE_COLORBUFFER16F;
 		if (r_viewfbo.integer == 3) textype = TEXTYPE_COLORBUFFER32F;
@@ -5419,7 +5419,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 	R_Mesh_PrepareVertices_Mesh_Arrays(4, r_screenvertex3f, NULL, NULL, NULL, NULL, r_fb.rt_screen->texcoord2f, bloomtexture ? r_fb.rt_bloom->texcoord2f : NULL);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		permutation =
 			(r_fb.bloomwidth ? SHADERPERMUTATION_BLOOM : 0)
@@ -5576,7 +5576,7 @@ void R_UpdateVariables(void)
 	r_gpuskeletal = false;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 		r_gpuskeletal = r_glsl_skeletal.integer && !r_showsurfaces.integer;
 	case RENDERPATH_GLES2:
 		if(!vid_gammatables_trivial)
@@ -8897,7 +8897,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	}
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
 		break;

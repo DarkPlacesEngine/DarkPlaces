@@ -301,7 +301,7 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapborder = bound(1, r_shadow_shadowmapping_bordersize.integer, 16);
 	r_shadow_shadowmaptexturesize = bound(256, r_shadow_shadowmapping_texturesize.integer, (int)vid.maxtexturesize_2d);
 	r_shadow_shadowmapmaxsize = bound(r_shadow_shadowmapborder+2, r_shadow_shadowmapping_maxsize.integer, r_shadow_shadowmaptexturesize / 8);
-	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20;
+	r_shadow_shadowmapvsdct = r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL32;
 	r_shadow_shadowmapfilterquality = r_shadow_shadowmapping_filterquality.integer;
 	r_shadow_shadowmapshadowsampler = r_shadow_shadowmapping_useshadowsampler.integer != 0;
 	r_shadow_shadowmapdepthbits = r_shadow_shadowmapping_depthbits.integer;
@@ -314,7 +314,7 @@ static void R_Shadow_SetShadowMode(void)
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 			if(r_shadow_shadowmapfilterquality < 0)
 			{
 				if (!r_fb.usedepthtextures)
@@ -459,7 +459,7 @@ static void r_shadow_start(void)
 	// these out per frame...
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 		r_shadow_bouncegrid_state.allowdirectionalshading = true;
 		r_shadow_bouncegrid_state.capable = true;
 		break;
@@ -1496,7 +1496,7 @@ void R_Shadow_ClearShadowMapTexture(void)
 		GL_ColorMask(0, 0, 0, 0);
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
 		break;
@@ -1571,7 +1571,7 @@ static void R_Shadow_RenderMode_ShadowMap(int side, int size, int x, int y)
 		GL_ColorMask(0,0,0,0);
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		GL_CullFace(r_refdef.view.cullface_back);
 		break;
@@ -4047,7 +4047,7 @@ void R_Shadow_PrepareLights(void)
 
 	if (r_shadow_shadowmaptexturesize != shadowmaptexturesize ||
 		!(r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
-		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL20) ||
+		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL32) ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer ||
 		r_shadow_shadowmapshadowsampler != r_shadow_shadowmapping_useshadowsampler.integer ||
 		r_shadow_shadowmapdepthbits != r_shadow_shadowmapping_depthbits.integer ||
@@ -4060,7 +4060,7 @@ void R_Shadow_PrepareLights(void)
 
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 #ifndef USE_GLES2
 		if (!r_shadow_deferred.integer || vid.maxdrawbuffers < 2)
 		{
@@ -4447,7 +4447,7 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 			CHECKGLERROR
@@ -4485,7 +4485,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
 			// See if we can use the GPU-side method to prevent implicit sync
@@ -4566,7 +4566,7 @@ void R_Shadow_DrawCoronas(void)
 	r_numqueries = 0;
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
 #if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)

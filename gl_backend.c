@@ -318,7 +318,7 @@ static void gl_backend_start(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
 		CHECKGLERROR
@@ -333,7 +333,7 @@ static void gl_backend_shutdown(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		break;
 	}
@@ -356,7 +356,7 @@ static void gl_backend_devicelost(void)
 	r_meshbuffer_t *buffer;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		break;
 	}
@@ -368,7 +368,7 @@ static void gl_backend_devicelost(void)
 			continue;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			break;
 		}
@@ -379,7 +379,7 @@ static void gl_backend_devicerestored(void)
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		break;
 	}
@@ -447,7 +447,7 @@ void GL_Finish(void)
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglFinish();CHECKGLERROR
@@ -587,7 +587,7 @@ qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 	// D3D Y coordinate is top to bottom, OpenGL is bottom to top, fix the D3D one
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		break;
 	}
@@ -654,7 +654,7 @@ void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int 
 	m[15] = 1;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		break;
 	}
@@ -954,7 +954,7 @@ void R_SetViewport(const r_viewport_t *v)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglViewport(v->x, v->y, v->width, v->height);CHECKGLERROR
@@ -1010,7 +1010,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	GLuint status;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
@@ -1085,7 +1085,7 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (fbo)
 		{
@@ -1114,7 +1114,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 	// set up framebuffer object or render targets for the active rendering API
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (gl_state.framebufferobject != fbo)
 		{
@@ -1151,7 +1151,7 @@ static void GL_Backend_ResetState(void)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
@@ -1195,7 +1195,7 @@ void GL_ActiveTexture(unsigned int num)
 		gl_state.unit = num;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglActiveTexture(GL_TEXTURE0 + gl_state.unit);CHECKGLERROR
@@ -1214,7 +1214,7 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 		blendenable = (gl_state.blendfunc1 != GL_ONE || gl_state.blendfunc2 != GL_ZERO);
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (qglBlendFuncSeparate)
@@ -1249,7 +1249,7 @@ void GL_DepthMask(int state)
 		gl_state.depthmask = state;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglDepthMask(gl_state.depthmask);CHECKGLERROR
@@ -1265,7 +1265,7 @@ void GL_DepthTest(int state)
 		gl_state.depthtest = state;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (gl_state.depthtest)
@@ -1288,7 +1288,7 @@ void GL_DepthFunc(int state)
 		gl_state.depthfunc = state;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglDepthFunc(gl_state.depthfunc);CHECKGLERROR
@@ -1305,7 +1305,7 @@ void GL_DepthRange(float nearfrac, float farfrac)
 		gl_state.depthrange[1] = farfrac;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 #ifdef USE_GLES2
@@ -1322,7 +1322,7 @@ void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass
 {
 	switch (vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (enable)
@@ -1349,7 +1349,7 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 		gl_state.polygonoffset[1] = depthoffset;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);CHECKGLERROR
@@ -1371,7 +1371,7 @@ void GL_SetMirrorState(qboolean state)
 			return;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglCullFace(gl_state.cullface);CHECKGLERROR
@@ -1392,7 +1392,7 @@ void GL_CullFace(int state)
 
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 
@@ -1430,7 +1430,7 @@ void GL_AlphaToCoverage(qboolean state)
 		{
 		case RENDERPATH_GLES2:
 			break;
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 #ifdef GL_SAMPLE_ALPHA_TO_COVERAGE_ARB
 			// alpha to coverage turns the alpha value of the pixel into 0%, 25%, 50%, 75% or 100% by masking the multisample fragments accordingly
 			CHECKGLERROR
@@ -1459,7 +1459,7 @@ void GL_ColorMask(int r, int g, int b, int a)
 		gl_state.colormask = state;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
@@ -1478,7 +1478,7 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		gl_state.color4f[3] = ca;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			qglVertexAttrib4f(GLSLATTRIB_COLOR, cr, cg, cb, ca);CHECKGLERROR
 			break;
@@ -1490,7 +1490,7 @@ void GL_Scissor (int x, int y, int width, int height)
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglScissor(x, y,width,height);CHECKGLERROR
@@ -1505,7 +1505,7 @@ void GL_ScissorTest(int state)
 		gl_state.scissortest = state;
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if(gl_state.scissortest)
@@ -1532,7 +1532,7 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 	}
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (mask & GL_COLOR_BUFFER_BIT)
@@ -1560,7 +1560,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 #ifndef GL_BGRA
@@ -1778,7 +1778,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
 			if (bufferobject3s)
@@ -1841,7 +1841,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 		buffer->size = size;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (!buffer->bufferobject)
 			qglGenBuffers(1, (GLuint *)&buffer->bufferobject);
@@ -1879,7 +1879,7 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 		return;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// GL clears the binding if we delete something bound
 		if (gl_state.uniformbufferobject == buffer->bufferobject)
@@ -1948,7 +1948,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (gl_state.pointer_vertex_components != components || gl_state.pointer_vertex_gltype != gltype || gl_state.pointer_vertex_stride != stride || gl_state.pointer_vertex_pointer != pointer || gl_state.pointer_vertex_vertexbuffer != vertexbuffer || gl_state.pointer_vertex_offset != bufferoffset)
 		{
@@ -1976,7 +1976,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 	// the pointer only.
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (pointer)
@@ -2027,7 +2027,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 	// that involve a valid bufferobject also supply a texcoord array
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		if (pointer)
@@ -2084,7 +2084,7 @@ void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int w
 {
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		R_Mesh_TexBind(0, tex);
 		GL_ActiveTexture(0);CHECKGLERROR
@@ -2120,7 +2120,7 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 		return;
 	switch(vid.renderpath)
 	{
-	case RENDERPATH_GL20:
+	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		if (!tex)
 		{
@@ -2251,7 +2251,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT);CHECKGLERROR
 			break;
@@ -2261,7 +2261,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 	{
 		switch(vid.renderpath)
 		{
-		case RENDERPATH_GL20:
+		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
 			qglBlendEquationEXT(GL_FUNC_ADD);CHECKGLERROR
 			break;
