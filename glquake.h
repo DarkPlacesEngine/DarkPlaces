@@ -1,25 +1,7 @@
-/*
-Copyright (C) 1996-1997 Id Software, Inc.
-
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
-*/
-
 #ifndef GLQUAKE_H
 #define GLQUAKE_H
+
+#include <stddef.h>
 
 #ifdef USE_GLES2
 #ifdef __IPHONEOS__
@@ -27,35 +9,29 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #else
 #include <SDL_opengles2.h>
 #endif
-// used in R_SetupShader_Generic calls, not actually passed to GL
-#ifndef GL_MODULATE
-#define GL_MODULATE				0x2100
-#define GL_DECAL                          0x2101
-#define GL_ADD                            0x0104
-#endif
 #endif
 
 // disable data conversion warnings
 
 #ifdef _MSC_VER
-#pragma warning(disable : 4310) // LordHavoc: MSVC++ 2008 x86: cast truncates constant value
-#pragma warning(disable : 4245) // LordHavoc: MSVC++ 2008 x86: 'initializing' : conversion from 'int' to 'unsigned char', signed/unsigned mismatch
-#pragma warning(disable : 4204) // LordHavoc: MSVC++ 2008 x86: nonstandard extension used : non-constant aggregate initializer
-//#pragma warning(disable : 4267) // LordHavoc: MSVC++ 2008 x64, conversion from 'size_t' to 'int', possible loss of data
-//#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
-//#pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
-//#pragma warning(disable : 4706)		// LordHavoc: MSVC++ 2008 x86, assignment within conditional expression
-//#pragma warning(disable : 4127)		// LordHavoc: MSVC++ 2008 x86, conditional expression is constant
-//#pragma warning(disable : 4100)		// LordHavoc: MSVC++ 2008 x86, unreferenced formal parameter
-//#pragma warning(disable : 4055)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from data pointer   to function pointer
-//#pragma warning(disable : 4054)		// LordHavoc: MSVC++ 2008 x86, 'type cast' from function pointer   to data pointer
+#pragma warning(disable : 4310) // LadyHavoc: MSVC++ 2008 x86: cast truncates constant value
+#pragma warning(disable : 4245) // LadyHavoc: MSVC++ 2008 x86: 'initializing' : conversion from 'int' to 'unsigned char', signed/unsigned mismatch
+#pragma warning(disable : 4204) // LadyHavoc: MSVC++ 2008 x86: nonstandard extension used : non-constant aggregate initializer
+//#pragma warning(disable : 4267) // LadyHavoc: MSVC++ 2008 x64, conversion from 'size_t' to 'int', possible loss of data
+//#pragma warning(disable : 4244) // LadyHavoc: MSVC++ 4 x86, double/float
+//#pragma warning(disable : 4305) // LadyHavoc: MSVC++ 6 x86, double/float
+//#pragma warning(disable : 4706) // LadyHavoc: MSVC++ 2008 x86, assignment within conditional expression
+//#pragma warning(disable : 4127) // LadyHavoc: MSVC++ 2008 x86, conditional expression is constant
+//#pragma warning(disable : 4100) // LadyHavoc: MSVC++ 2008 x86, unreferenced formal parameter
+//#pragma warning(disable : 4055) // LadyHavoc: MSVC++ 2008 x86, 'type cast' from data pointer   to function pointer
+//#pragma warning(disable : 4054) // LadyHavoc: MSVC++ 2008 x86, 'type cast' from function pointer   to data pointer
 #endif
 
 
 //====================================================
 
 #ifndef USE_GLES2
-// wgl uses APIENTRY
+// on Windows this is WINAPI
 #ifndef APIENTRY
 #define APIENTRY
 #endif
@@ -65,60 +41,32 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GLAPIENTRY APIENTRY
 #endif
 
-#ifndef GL_PROJECTION
-#include <stddef.h>
-
+#ifndef GL_ZERO
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
 typedef unsigned int GLbitfield;
 typedef void GLvoid;
-// 1-byte signed
 typedef signed char GLbyte;
-// 2-byte signed
 typedef short GLshort;
-// 4-byte signed
 typedef int GLint;
-// 1-byte unsigned
 typedef unsigned char GLubyte;
-// 2-byte unsigned
 typedef unsigned short GLushort;
-// 4-byte unsigned
 typedef unsigned int GLuint;
-// 4-byte signed
 typedef int GLsizei;
-// single precision float
 typedef float GLfloat;
-// single precision float in [0,1]
 typedef float GLclampf;
-// double precision float
 typedef double GLdouble;
-// double precision float in [0,1]
 typedef double GLclampd;
-// int whose size is the same as a pointer (?)
 typedef ptrdiff_t GLintptrARB;
-// int whose size is the same as a pointer (?)
 typedef ptrdiff_t GLsizeiptrARB;
 
 #define GL_STEREO					0x0C33
-
-#define GL_MODELVIEW				0x1700
-#define GL_PROJECTION				0x1701
-#define GL_TEXTURE				0x1702
-#define GL_MATRIX_MODE				0x0BA0
-#define GL_MODELVIEW_MATRIX			0x0BA6
-#define GL_PROJECTION_MATRIX			0x0BA7
-#define GL_TEXTURE_MATRIX			0x0BA8
-
 #define GL_DONT_CARE				0x1100
 #define GL_FASTEST					0x1101
 #define GL_NICEST					0x1102
-
 #define GL_DEPTH_TEST				0x0B71
-
 #define GL_CULL_FACE				0x0B44
-
 #define GL_BLEND				0x0BE2
-#define GL_ALPHA_TEST			0x0BC0
 
 #define GL_ZERO					0x0
 #define GL_ONE					0x1
@@ -136,24 +84,15 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_CONSTANT_ALPHA			0x8003
 #define GL_ONE_MINUS_CONSTANT_ALPHA		0x8004
 
-#define GL_TEXTURE_ENV				0x2300
-#define GL_TEXTURE_ENV_MODE			0x2200
-#define GL_TEXTURE_1D				0x0DE0
 #define GL_TEXTURE_2D				0x0DE1
 #define GL_TEXTURE_WRAP_S			0x2802
 #define GL_TEXTURE_WRAP_T			0x2803
 #define GL_TEXTURE_WRAP_R			0x8072
-#define GL_TEXTURE_BORDER_COLOR			0x1004
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
 #define GL_PACK_ALIGNMENT			0x0D05
 #define GL_UNPACK_ALIGNMENT			0x0CF5
-#define GL_TEXTURE_BINDING_1D                   0x8068
-#define GL_TEXTURE_BINDING_2D                   0x8069
 #define GL_TEXTURE_INTERNAL_FORMAT		0x1003
-#define GL_TEXTURE_MIN_LOD			0x813A
-#define GL_TEXTURE_MAX_LOD			0x813B
-#define GL_TEXTURE_BASE_LEVEL			0x813C
 #define GL_TEXTURE_MAX_LEVEL			0x813D
 
 #define GL_NEAREST				0x2600
@@ -166,23 +105,10 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_LINE					0x1B01
 #define GL_FILL					0x1B02
 
-#define GL_ADD					0x0104
-#define GL_DECAL				0x2101
-#define GL_MODULATE				0x2100
-
 #define GL_REPEAT				0x2901
 #define GL_CLAMP				0x2900
 
-#define GL_POINTS				0x0000
-#define GL_LINES				0x0001
-#define GL_LINE_LOOP			0x0002
-#define GL_LINE_STRIP			0x0003
 #define GL_TRIANGLES			0x0004
-#define GL_TRIANGLE_STRIP		0x0005
-#define GL_TRIANGLE_FAN			0x0006
-#define GL_QUADS				0x0007
-#define GL_QUAD_STRIP			0x0008
-#define GL_POLYGON				0x0009
 
 #define GL_FALSE				0x0
 #define GL_TRUE					0x1
@@ -195,16 +121,6 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_UNSIGNED_INT				0x1405
 #define GL_FLOAT				0x1406
 #define GL_DOUBLE				0x140A
-#define GL_2_BYTES				0x1407
-#define GL_3_BYTES				0x1408
-#define GL_4_BYTES				0x1409
-
-#define GL_VERTEX_ARRAY				0x8074
-#define GL_NORMAL_ARRAY				0x8075
-#define GL_COLOR_ARRAY				0x8076
-//#define GL_INDEX_ARRAY				0x8077
-#define GL_TEXTURE_COORD_ARRAY			0x8078
-//#define GL_EDGE_FLAG_ARRAY			0x8079
 
 #define GL_NONE					0
 #define GL_FRONT_LEFT			0x0400
@@ -216,10 +132,6 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_LEFT					0x0406
 #define GL_RIGHT				0x0407
 #define GL_FRONT_AND_BACK		0x0408
-#define GL_AUX0					0x0409
-#define GL_AUX1					0x040A
-#define GL_AUX2					0x040B
-#define GL_AUX3					0x040C
 
 #define GL_VENDOR				0x1F00
 #define GL_RENDERER				0x1F01
@@ -251,13 +163,7 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_ALWAYS				0x0207
 #define GL_DEPTH_TEST				0x0B71
 
-#define GL_RED_SCALE				0x0D14
-#define GL_GREEN_SCALE				0x0D18
-#define GL_BLUE_SCALE				0x0D1A
-#define GL_ALPHA_SCALE				0x0D1C
-
 #define GL_DEPTH_BUFFER_BIT			0x00000100
-#define GL_ACCUM_BUFFER_BIT			0x00000200
 #define GL_STENCIL_BUFFER_BIT			0x00000400
 #define GL_COLOR_BUFFER_BIT			0x00004000
 
@@ -272,12 +178,6 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_POLYGON_OFFSET_POINT           0x2A01
 #define GL_POLYGON_OFFSET_LINE            0x2A02
 #define GL_POLYGON_OFFSET_FILL            0x8037
-
-#define GL_POINT_SMOOTH                         0x0B10
-#define GL_LINE_SMOOTH                          0x0B20
-#define GL_POLYGON_SMOOTH                       0x0B41
-
-#define GL_POLYGON_STIPPLE                0x0B42
 
 #define GL_CLIP_PLANE0                    0x3000
 #define GL_CLIP_PLANE1                    0x3001
@@ -307,7 +207,7 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_DEPTH_COMPONENT24_ARB          0x81A6
 #define GL_DEPTH_COMPONENT32_ARB          0x81A7
 #define GL_TEXTURE_DEPTH_SIZE_ARB         0x884A
-#define GL_DEPTH_TEXTURE_MODE_ARB         0x884B
+//#define GL_DEPTH_TEXTURE_MODE_ARB         0x884B
 #endif
 
 // GL_ARB_shadow
@@ -356,32 +256,6 @@ extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 #define GL_TEXTURE31				0x84DF
 #endif
 
-// GL_ARB_texture_env_combine
-#ifndef GL_COMBINE
-#define GL_COMBINE					0x8570
-#define GL_COMBINE_RGB				0x8571
-#define GL_COMBINE_ALPHA			0x8572
-#define GL_SOURCE0_RGB				0x8580
-#define GL_SOURCE1_RGB				0x8581
-#define GL_SOURCE2_RGB				0x8582
-#define GL_SOURCE0_ALPHA			0x8588
-#define GL_SOURCE1_ALPHA			0x8589
-#define GL_SOURCE2_ALPHA			0x858A
-#define GL_OPERAND0_RGB				0x8590
-#define GL_OPERAND1_RGB				0x8591
-#define GL_OPERAND2_RGB				0x8592
-#define GL_OPERAND0_ALPHA			0x8598
-#define GL_OPERAND1_ALPHA			0x8599
-#define GL_OPERAND2_ALPHA			0x859A
-#define GL_RGB_SCALE				0x8573
-#define GL_ADD_SIGNED				0x8574
-#define GL_INTERPOLATE				0x8575
-#define GL_SUBTRACT					0x84E7
-#define GL_CONSTANT					0x8576
-#define GL_PRIMARY_COLOR			0x8577
-#define GL_PREVIOUS					0x8578
-#endif
-
 #ifndef GL_MAX_ELEMENTS_VERTICES
 #define GL_MAX_ELEMENTS_VERTICES		0x80E8
 #endif
@@ -426,7 +300,7 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_DEPTH_COMPONENT24_ARB       0x81A6
 #define GL_DEPTH_COMPONENT32_ARB       0x81A7
 #define GL_TEXTURE_DEPTH_SIZE_ARB      0x884A
-#define GL_DEPTH_TEXTURE_MODE_ARB      0x884B
+//#define GL_DEPTH_TEXTURE_MODE_ARB      0x884B
 #endif
 
 #ifndef GL_SCISSOR_TEST
