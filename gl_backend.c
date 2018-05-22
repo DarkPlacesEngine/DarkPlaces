@@ -321,7 +321,8 @@ static void gl_backend_start(void)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
-		qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);
+		CHECKGLERROR
+		qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);CHECKGLERROR
 		break;
 	}
 }
@@ -448,7 +449,8 @@ void GL_Finish(void)
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
-		qglFinish();
+		CHECKGLERROR
+		qglFinish();CHECKGLERROR
 		break;
 	}
 }
@@ -609,19 +611,6 @@ static void R_Viewport_ApplyNearClipPlaneFloatGL(const r_viewport_t *v, float *m
 	Matrix4x4_Transform(&v->viewmatrix, v3, v4);
 	// FIXME: LordHavoc: I think this can be done more efficiently somehow but I can't remember the technique
 	clipPlane[3] = -DotProduct(v4, clipPlane);
-
-#if 0
-{
-	// testing code for comparing results
-	float clipPlane2[4];
-	VectorCopy4(clipPlane, clipPlane2);
-	R_EntityMatrix(&identitymatrix);
-	VectorSet(q, normal[0], normal[1], normal[2], -dist);
-	qglClipPlane(GL_CLIP_PLANE0, q);
-	qglGetClipPlane(GL_CLIP_PLANE0, q);
-	VectorCopy4(q, clipPlane);
-}
-#endif
 
 	// Calculate the clip-space corner point opposite the clipping plane
 	// as (sgn(clipPlane.x), sgn(clipPlane.y), 1, 1) and
@@ -1023,6 +1012,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	{
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
+		CHECKGLERROR
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
 		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
@@ -1083,7 +1073,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 		{
 			Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
 			gl_state.framebufferobject = 0; // GL unbinds it for us
-			qglDeleteFramebuffers(1, (GLuint*)&temp);
+			qglDeleteFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
 			temp = 0;
 		}
 		return temp;
@@ -1102,7 +1092,7 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 			// GL clears the binding if we delete something bound
 			if (gl_state.framebufferobject == fbo)
 				gl_state.framebufferobject = 0;
-			qglDeleteFramebuffers(1, (GLuint*)&fbo);
+			qglDeleteFramebuffers(1, (GLuint*)&fbo);CHECKGLERROR
 		}
 		break;
 	}
@@ -1129,7 +1119,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 		if (gl_state.framebufferobject != fbo)
 		{
 			gl_state.framebufferobject = fbo;
-			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);
+			qglBindFramebuffer(GL_FRAMEBUFFER, gl_state.framebufferobject ? gl_state.framebufferobject : gl_state.defaultframebufferobject);CHECKGLERROR
 		}
 		break;
 	}
@@ -1208,8 +1198,7 @@ void GL_ActiveTexture(unsigned int num)
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
 			CHECKGLERROR
-			qglActiveTexture(GL_TEXTURE0 + gl_state.unit);
-			CHECKGLERROR
+			qglActiveTexture(GL_TEXTURE0 + gl_state.unit);CHECKGLERROR
 			break;
 		}
 	}
@@ -1318,10 +1307,11 @@ void GL_DepthRange(float nearfrac, float farfrac)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
+			CHECKGLERROR
 #ifdef USE_GLES2
-			qglDepthRangef(gl_state.depthrange[0], gl_state.depthrange[1]);
+			qglDepthRangef(gl_state.depthrange[0], gl_state.depthrange[1]);CHECKGLERROR
 #else
-			qglDepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);
+			qglDepthRange(gl_state.depthrange[0], gl_state.depthrange[1]);CHECKGLERROR
 #endif
 			break;
 		}
@@ -1361,7 +1351,8 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);
+			CHECKGLERROR
+			qglPolygonOffset(gl_state.polygonoffset[0], gl_state.polygonoffset[1]);CHECKGLERROR
 			break;
 		}
 	}
@@ -1382,6 +1373,7 @@ void GL_SetMirrorState(qboolean state)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
+			CHECKGLERROR
 			qglCullFace(gl_state.cullface);CHECKGLERROR
 			break;
 		}
@@ -1488,7 +1480,7 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			qglVertexAttrib4f(GLSLATTRIB_COLOR, cr, cg, cb, ca);
+			qglVertexAttrib4f(GLSLATTRIB_COLOR, cr, cg, cb, ca);CHECKGLERROR
 			break;
 		}
 	}
@@ -1501,8 +1493,7 @@ void GL_Scissor (int x, int y, int width, int height)
 	case RENDERPATH_GL20:
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
-		qglScissor(x, y,width,height);
-		CHECKGLERROR
+		qglScissor(x, y,width,height);CHECKGLERROR
 		break;
 	}
 }
@@ -1667,6 +1658,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	if(vid.support.gl20shaders130)
 		qglBindFragDataLocation(programobject, 0, "dp_FragColor");
 #endif
+	CHECKGLERROR
 
 	if (vertexstrings_count && !GL_Backend_CompileShader(programobject, GL_VERTEX_SHADER, "vertex", vertexstrings_count, vertexstrings_list))
 		goto cleanup;
@@ -1853,6 +1845,7 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 	case RENDERPATH_GLES2:
 		if (!buffer->bufferobject)
 			qglGenBuffers(1, (GLuint *)&buffer->bufferobject);
+		CHECKGLERROR
 		if (buffer->isuniformbuffer)
 			GL_BindUBO(buffer->bufferobject);
 		else if (buffer->isindexbuffer)
@@ -1867,10 +1860,12 @@ void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t si
 			if (buffer->isuniformbuffer)
 				buffertype = GL_UNIFORM_BUFFER;
 #endif
+			CHECKGLERROR
 			if (subdata)
 				qglBufferSubData(buffertype, offset, size, data);
 			else
 				qglBufferData(buffertype, size, data, buffer->isdynamic ? GL_STREAM_DRAW : GL_STATIC_DRAW);
+			CHECKGLERROR
 		}
 		if (buffer->isuniformbuffer)
 			GL_BindUBO(0);
@@ -1893,7 +1888,8 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 			gl_state.vertexbufferobject = 0;
 		if (gl_state.elementbufferobject == buffer->bufferobject)
 			gl_state.elementbufferobject = 0;
-		qglDeleteBuffers(1, (GLuint *)&buffer->bufferobject);
+		CHECKGLERROR
+		qglDeleteBuffers(1, (GLuint *)&buffer->bufferobject);CHECKGLERROR
 		break;
 	}
 	Mem_ExpandableArray_FreeRecord(&gl_state.meshbufferarray, (void *)buffer);
@@ -2250,13 +2246,14 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 
 void GL_BlendEquationSubtract(qboolean negated)
 {
+	CHECKGLERROR
 	if(negated)
 	{
 		switch(vid.renderpath)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT);
+			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT);CHECKGLERROR
 			break;
 		}
 	}
@@ -2266,7 +2263,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 		{
 		case RENDERPATH_GL20:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_ADD);
+			qglBlendEquationEXT(GL_FUNC_ADD);CHECKGLERROR
 			break;
 		}
 	}
