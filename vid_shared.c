@@ -867,19 +867,12 @@ void VID_CheckExtensions(void)
 	qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
 	qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
-	vid.texunits = vid.teximageunits = vid.texarrayunits = 1;
-	qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-	qglGetIntegerv(GL_MAX_TEXTURE_UNITS, (GLint*)&vid.texunits);
-	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (int *)&vid.teximageunits);CHECKGLERROR
-	qglGetIntegerv(GL_MAX_TEXTURE_COORDS, (int *)&vid.texarrayunits);CHECKGLERROR
-	vid.texunits = bound(4, vid.texunits, MAX_TEXTUREUNITS);
-	vid.teximageunits = bound(16, vid.teximageunits, MAX_TEXTUREUNITS);
-	vid.texarrayunits = bound(8, vid.texarrayunits, MAX_TEXTUREUNITS);
-	Con_DPrint("Using GL3 rendering path\n");
+	vid.texunits = 4;
+	vid.teximageunits = 32;
+	vid.texarrayunits = 10;
 	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = true;
-	Con_DPrintf("vid.support.arb_multisample %i\n", vid.support.arb_multisample);
 	vid.allowalphatocoverage = true; // but see below, it may get turned to false again if GL_SAMPLES_ARB is <= 1
 
 	// enable multisample antialiasing if possible

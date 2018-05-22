@@ -897,13 +897,11 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 	case TEXTYPE_SHADOWMAP24_COMP:
 		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
 		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE);CHECKGLERROR
 		break;
 	case TEXTYPE_SHADOWMAP16_RAW:
 	case TEXTYPE_SHADOWMAP24_RAW:
 		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
 		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_DEPTH_TEXTURE_MODE_ARB, GL_LUMINANCE);CHECKGLERROR
 		break;
 	default:
 		break;
