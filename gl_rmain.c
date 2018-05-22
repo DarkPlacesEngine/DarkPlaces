@@ -5246,6 +5246,7 @@ static void R_Bloom_MakeTexture(void)
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 		r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
 	}
+	CHECKGLERROR
 
 	range = r_bloom_blur.integer * r_fb.bloomwidth / 320;
 	brighten = r_bloom_brighten.value;
@@ -5261,8 +5262,11 @@ static void R_Bloom_MakeTexture(void)
 		// blend on at multiple vertical offsets to achieve a vertical blur
 		// TODO: do offset blends using GLSL
 		// TODO instead of changing the texcoords, change the target positions to prevent artifacts at edges
+		CHECKGLERROR
 		GL_BlendFunc(GL_ONE, GL_ZERO);
+		CHECKGLERROR
 		R_SetupShader_Generic(prev->colortexture[0], false, true, false);
+		CHECKGLERROR
 		for (x = -range;x <= range;x++)
 		{
 			if (!dir){xoffset = 0;yoffset = x;}
@@ -5288,11 +5292,16 @@ static void R_Bloom_MakeTexture(void)
 				r *= (1 - x*x/(float)((range+1)*(range+1)));
 			if (r <= 0)
 				continue;
+			CHECKGLERROR
 			GL_Color(r, r, r, 1);
+			CHECKGLERROR
 			R_Mesh_PrepareVertices_Generic_Arrays(4, r_screenvertex3f, NULL, r_fb.offsettexcoord2f);
+			CHECKGLERROR
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 			r_refdef.stats[r_stat_bloom_drawpixels] += r_fb.bloomwidth * r_fb.bloomheight;
+			CHECKGLERROR
 			GL_BlendFunc(GL_ONE, GL_ONE);
+			CHECKGLERROR
 		}
 	}
 

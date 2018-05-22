@@ -783,7 +783,6 @@ void VID_ClearExtensions(void)
 	// this is a complete list of all functions that are directly checked in the renderer
 	qglDrawBuffer = NULL;
 	qglFlush = NULL;
-	qglActiveTexture = NULL;
 	qglGetCompressedTexImageARB = NULL;
 	qglFramebufferTexture2D = NULL;
 	qglDrawBuffersARB = NULL;
