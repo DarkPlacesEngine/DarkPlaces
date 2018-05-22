@@ -109,8 +109,16 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 			{
 				// reload the pic if texflags changed in important ways
 				// ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
-				if (!pic->skinframe || !pic->skinframe->base || ((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP)))
+				if ((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP))
+				{
+					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic due to mismatch on flags\n", path);
 					goto reload;
+				}
+				if (!pic->skinframe || !pic->skinframe->base)
+				{
+					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic\n", pic);
+					goto reload;
+				}
 				if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
 					pic->autoload = false; // caller is making this pic persistent
 			}
@@ -123,10 +131,11 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
-		Con_Printf ("Draw_CachePic: numcachepics == MAX_CACHED_PICS\n");
+		Con_Printf ("Draw_CachePic(\"%s\"): numcachepics == MAX_CACHED_PICS\n", path);
 		// FIXME: support NULL in callers?
 		return cachepics; // return the first one
 	}
+	Con_DPrintf("Draw_CachePic(\"%s\"): loading pic\n", path);
 	pic = cachepics + (numcachepics++);
 	memset(pic, 0, sizeof(*pic));
 	strlcpy (pic->name, path, sizeof(pic->name));
@@ -222,7 +231,7 @@ void Draw_Frame(void)
 		return;
 	nextpurgetime = realtime + 0.05;
 	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
-		if (pic->autoload && pic->skinframe && pic->skinframe->base && pic->lastusedframe < draw_frame)
+		if (pic->autoload && pic->skinframe && pic->skinframe->base && pic->lastusedframe < draw_frame - 3)
 			R_SkinFrame_PurgeSkinFrame(pic->skinframe);
 	draw_frame++;
 }
