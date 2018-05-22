@@ -2818,34 +2818,11 @@ void CL_UpdateScreen(void)
 	// calculate r_refdef.view.quality
 	r_refdef.view.quality = cl_updatescreen_quality;
 
-#ifndef USE_GLES2
-	if (qglPolygonStipple)
+	if(scr_stipple.integer)
 	{
-		if(scr_stipple.integer)
-		{
-			GLubyte stipple[128];
-			int i, s, width, parts;
-			static int frame = 0;
-			++frame;
-	
-			s = scr_stipple.integer;
-			parts = (s & 007);
-			width = (s & 070) >> 3;
-	
-			qglEnable(GL_POLYGON_STIPPLE);CHECKGLERROR // 0x0B42
-			for(i = 0; i < 128; ++i)
-			{
-				int line = i/4;
-				stipple[i] = (((line >> width) + frame) & ((1 << parts) - 1)) ? 0x00 : 0xFF;
-			}
-			qglPolygonStipple(stipple);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_POLYGON_STIPPLE);CHECKGLERROR
-		}
+		Con_Print("FIXME: scr_stipple not implemented\n");
+		Cvar_SetValueQuick(&scr_stipple, 0);
 	}
-#endif
 
 #ifndef USE_GLES2
 	if (R_Stereo_Active())

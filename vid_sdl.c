@@ -1599,7 +1599,6 @@ void GLES_Init(void)
 	qglPointSize = wrapglPointSize;
 //	qglPolygonMode = wrapglPolygonMode;
 	qglPolygonOffset = wrapglPolygonOffset;
-//	qglPolygonStipple = wrapglPolygonStipple;
 	qglReadBuffer = wrapglReadBuffer;
 	qglReadPixels = wrapglReadPixels;
 	qglRenderbufferStorage = wrapglRenderbufferStorage;

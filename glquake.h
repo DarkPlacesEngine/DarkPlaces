@@ -837,7 +837,6 @@ extern void (GLAPIENTRY *qglGetActiveUniform)(GLuint programObj, GLuint index, G
 extern void (GLAPIENTRY *qglGetUniformfv)(GLuint programObj, GLint location, GLfloat *params);
 extern void (GLAPIENTRY *qglGetUniformiv)(GLuint programObj, GLint location, GLint *params);
 extern void (GLAPIENTRY *qglGetShaderSource)(GLuint obj, GLsizei maxLength, GLsizei *length, GLchar *source);
-extern void (GLAPIENTRY *qglPolygonStipple)(const GLubyte *mask);
 #ifndef GL_PROGRAM_OBJECT
 #define GL_PROGRAM_OBJECT					0x8B40
 #define GL_DELETE_STATUS					0x8B80
@@ -1183,7 +1182,6 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglPointSize glPointSize
 //#define qglPolygonMode glPolygonMode
 #define qglPolygonOffset glPolygonOffset
-//#define qglPolygonStipple glPolygonStipple
 #define qglReadBuffer glReadBuffer
 #define qglReadPixels glReadPixels
 #define qglRenderbufferStorage glRenderbufferStorage
