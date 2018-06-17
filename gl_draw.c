@@ -116,7 +116,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 				}
 				if (!pic->skinframe || !pic->skinframe->base)
 				{
-					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic\n", pic);
+					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic\n", path);
 					goto reload;
 				}
 				if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
