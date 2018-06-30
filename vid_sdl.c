@@ -1768,13 +1768,6 @@ void GLES_Init(void)
 		Con_Printf("GL_OES_texture_3d reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
 	}
 
-	vid.texunits = 4;
-	vid.teximageunits = 8;
-	vid.texarrayunits = 5;
-	qglGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, (GLint*)&vid.teximageunits);CHECKGLERROR
-	vid.texunits = bound(1, vid.texunits, MAX_TEXTUREUNITS);
-	vid.teximageunits = bound(1, vid.teximageunits, MAX_TEXTUREUNITS);
-	vid.texarrayunits = bound(1, vid.texarrayunits, MAX_TEXTUREUNITS);
 	Con_DPrint("Using GLES2 rendering path\n");
 	vid.renderpath = RENDERPATH_GLES2;
 	vid.sRGBcapable2D = false;

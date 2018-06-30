@@ -39,7 +39,6 @@ typedef enum cachepicflags_e
 }
 cachepicflags_t;
 
-void Draw_Init (void);
 void Draw_Frame (void);
 cachepic_t *Draw_CachePic_Flags (const char *path, unsigned int cachepicflags);
 cachepic_t *Draw_CachePic (const char *path); // standard function with no options, used throughout engine

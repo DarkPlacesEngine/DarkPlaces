@@ -1108,7 +1108,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 	// unbind any matching textures immediately, otherwise D3D will complain about a bound texture being used as a render target
 	for (j = 0;j < 5;j++)
 		if (textures[j])
-			for (i = 0;i < vid.teximageunits;i++)
+			for (i = 0;i < MAX_TEXTUREUNITS;i++)
 				if (gl_state.units[i].texture == textures[j])
 					R_Mesh_TexBind(i, NULL);
 	// set up framebuffer object or render targets for the active rendering API
@@ -1127,7 +1127,6 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 
 static void GL_Backend_ResetState(void)
 {
-	unsigned int i;
 	gl_state.active = true;
 	gl_state.depthtest = true;
 	gl_state.alphatest = false;
@@ -1171,18 +1170,6 @@ static void GL_Backend_ResetState(void)
 		qglVertexAttrib4f(GLSLATTRIB_COLOR, 1, 1, 1, 1);
 		gl_state.unit = MAX_TEXTUREUNITS;
 		gl_state.clientunit = MAX_TEXTUREUNITS;
-		for (i = 0;i < vid.teximageunits;i++)
-		{
-			GL_ActiveTexture(i);
-			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
-			qglBindTexture(GL_TEXTURE_3D, 0);CHECKGLERROR
-			qglBindTexture(GL_TEXTURE_CUBE_MAP, 0);CHECKGLERROR
-		}
-		for (i = 0;i < vid.texarrayunits;i++)
-		{
-			GL_BindVBO(0);
-			qglDisableVertexAttribArray(i+GLSLATTRIB_TEXCOORD0);CHECKGLERROR
-		}
 		CHECKGLERROR
 		break;
 	}
@@ -2021,6 +2008,8 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, size_t stride, const void *pointer, const r_meshbuffer_t *vertexbuffer, size_t bufferoffset)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
+	if (unitnum >= MAX_TEXTUREUNITS)
+		Sys_Error("R_Mesh_TexCoordPointer: unitnum %i > max units %i\n", unitnum, MAX_TEXTUREUNITS);
 	// update array settings
 	// note: there is no need to check bufferobject here because all cases
 	// that involve a valid bufferobject also supply a texcoord array
@@ -2068,8 +2057,8 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 int R_Mesh_TexBound(unsigned int unitnum, int id)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
-	if (unitnum >= vid.teximageunits)
-		return 0;
+	if (unitnum >= MAX_TEXTUREUNITS)
+		Sys_Error("R_Mesh_TexCoordPointer: unitnum %i > max units %i\n", unitnum, MAX_TEXTUREUNITS);
 	if (id == GL_TEXTURE_2D)
 		return unit->t2d;
 	if (id == GL_TEXTURE_3D)
@@ -2096,16 +2085,12 @@ void R_Mesh_ClearBindingsForTexture(int texnum)
 {
 	gltextureunit_t *unit;
 	unsigned int unitnum;
-	// this doesn't really unbind the texture, but it does prevent a mistaken "do nothing" behavior on the next time this same texnum is bound on the same unit as the same type (this mainly affects r_shadow_bouncegrid because 3D textures are so rarely used)
-	for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
+	// unbind the texture from any units it is bound on - this prevents accidental reuse of certain textures whose bindings can linger far too long otherwise (e.g. bouncegrid which is a 3D texture) and confuse the driver later.
+	for (unitnum = 0; unitnum < MAX_TEXTUREUNITS; unitnum++)
 	{
 		unit = gl_state.units + unitnum;
-		if (unit->t2d == texnum)
-			unit->t2d = -1;
-		if (unit->t3d == texnum)
-			unit->t3d = -1;
-		if (unit->tcubemap == texnum)
-			unit->tcubemap = -1;
+		if (unit->texture && unit->texture->texnum == texnum)
+			R_Mesh_TexBind(unitnum, NULL);
 	}
 }
 
@@ -2113,8 +2098,8 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 {
 	gltextureunit_t *unit = gl_state.units + unitnum;
 	int texnum;
-	if (unitnum >= vid.teximageunits)
-		return;
+	if (unitnum >= MAX_TEXTUREUNITS)
+		Sys_Error("R_Mesh_TexBind: unitnum %i > max units %i\n", unitnum, MAX_TEXTUREUNITS);
 	if (unit->texture == tex)
 		return;
 	switch(vid.renderpath)
@@ -2146,9 +2131,9 @@ void R_Mesh_ResetTextureState(void)
 
 	BACKENDACTIVECHECK
 
-	for (unitnum = 0;unitnum < vid.teximageunits;unitnum++)
+	for (unitnum = 0;unitnum < MAX_TEXTUREUNITS;unitnum++)
 		R_Mesh_TexBind(unitnum, NULL);
-	for (unitnum = 0;unitnum < vid.texarrayunits;unitnum++)
+	for (unitnum = 0;unitnum < MAX_TEXTUREUNITS;unitnum++)
 		R_Mesh_TexCoordPointer(unitnum, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 }
 
