@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int cl_available;
 
-#define MAX_TEXTUREUNITS 16
+#define MAX_TEXTUREUNITS 32
 
 typedef enum renderpath_e
 {
@@ -94,9 +94,6 @@ typedef struct viddef_s
 	renderpath_t renderpath;
 	qboolean allowalphatocoverage; // indicates the GL_AlphaToCoverage function works on this renderpath and framebuffer
 
-	unsigned int texunits;
-	unsigned int teximageunits;
-	unsigned int texarrayunits;
 	unsigned int drawrangeelements_maxvertices;
 	unsigned int drawrangeelements_maxindices;
 

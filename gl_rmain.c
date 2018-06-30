@@ -3034,7 +3034,7 @@ static void gl_main_start(void)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		Cvar_SetValueQuick(&r_textureunits, vid.texunits);
+		Cvar_SetValueQuick(&r_textureunits, MAX_TEXTUREUNITS);
 		Cvar_SetValueQuick(&gl_combine, 1);
 		Cvar_SetValueQuick(&r_glsl, 1);
 		r_loadnormalmap = true;

@@ -111,12 +111,12 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 				// ignore TEXF_COMPRESS when comparing, because fallback pics remove the flag, and ignore TEXF_MIPMAP because QC specifies that
 				if ((pic->texflags ^ texflags) & ~(TEXF_COMPRESS | TEXF_MIPMAP))
 				{
-					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic due to mismatch on flags\n", path);
+					Con_DPrintf("Draw_CachePic(\"%s\"): frame %i: reloading pic due to mismatch on flags\n", path, draw_frame);
 					goto reload;
 				}
 				if (!pic->skinframe || !pic->skinframe->base)
 				{
-					Con_DPrintf("Draw_CachePic(\"%s\"): reloading pic\n", path);
+					Con_DPrintf("Draw_CachePic(\"%s\"): frame %i: reloading pic\n", path, draw_frame);
 					goto reload;
 				}
 				if (!(cachepicflags & CACHEPICFLAG_NOTPERSISTENT))
@@ -131,11 +131,11 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 
 	if (numcachepics == MAX_CACHED_PICS)
 	{
-		Con_Printf ("Draw_CachePic(\"%s\"): numcachepics == MAX_CACHED_PICS\n", path);
+		Con_Printf ("Draw_CachePic(\"%s\"): frame %i: numcachepics == MAX_CACHED_PICS\n", path, draw_frame);
 		// FIXME: support NULL in callers?
 		return cachepics; // return the first one
 	}
-	Con_DPrintf("Draw_CachePic(\"%s\"): loading pic\n", path);
+	Con_DPrintf("Draw_CachePic(\"%s\"): frame %i: loading pic%s\n", path, draw_frame, (cachepicflags & CACHEPICFLAG_NOTPERSISTENT) ? " notpersist" : "");
 	pic = cachepics + (numcachepics++);
 	memset(pic, 0, sizeof(*pic));
 	strlcpy (pic->name, path, sizeof(pic->name));
@@ -207,7 +207,10 @@ qboolean Draw_IsPicLoaded(cachepic_t *pic)
 	if (pic == NULL)
 		return false;
 	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
+	{
+		Con_DPrintf("Draw_IsPicLoaded(\"%s\"): Loading external skin\n", pic->name);
 		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags | TEXF_FORCE_RELOAD, false, true);
+	}
 	// skinframe will only be NULL if the pic was created with CACHEPICFLAG_FAILONMISSING and not found
 	return pic->skinframe != NULL && pic->skinframe->base != NULL;
 }
@@ -217,7 +220,10 @@ rtexture_t *Draw_GetPicTexture(cachepic_t *pic)
 	if (pic == NULL)
 		return NULL;
 	if (pic->autoload && (!pic->skinframe || !pic->skinframe->base))
+	{
+		Con_DPrintf("Draw_GetPicTexture(\"%s\"): Loading external skin\n", pic->name);
 		pic->skinframe = R_SkinFrame_LoadExternal(pic->name, pic->texflags | TEXF_FORCE_RELOAD, false, true);
+	}
 	pic->lastusedframe = draw_frame;
 	return pic->skinframe ? pic->skinframe->base : NULL;
 }
@@ -231,8 +237,13 @@ void Draw_Frame(void)
 		return;
 	nextpurgetime = realtime + 0.05;
 	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
+	{
 		if (pic->autoload && pic->skinframe && pic->skinframe->base && pic->lastusedframe < draw_frame - 3)
+		{
+			Con_DPrintf("Draw_Frame(%i): Unloading \"%s\"\n", draw_frame, pic->name);
 			R_SkinFrame_PurgeSkinFrame(pic->skinframe);
+		}
+	}
 	draw_frame++;
 }
 
@@ -251,20 +262,23 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 	{
 		if (pic->flags & CACHEPICFLAG_NEWPIC && pic->skinframe && pic->skinframe->base && pic->width == width && pic->height == height)
 		{
+			Con_DPrintf("Draw_NewPic(\"%s\"): frame %i: updating texture\n", picname, draw_frame);
 			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1);
 			R_SkinFrame_MarkUsed(pic->skinframe);
 			pic->lastusedframe = draw_frame;
 			return pic;
 		}
+		Con_Printf("Draw_NewPic(\"%s\"): frame %i: reloading pic because flags/size changed\n", picname, draw_frame);
 	}
 	else
 	{
 		if (numcachepics == MAX_CACHED_PICS)
 		{
-			Con_Printf ("Draw_NewPic: numcachepics == MAX_CACHED_PICS\n");
+			Con_Printf ("Draw_NewPic(\"%s\"): frame %i: numcachepics == MAX_CACHED_PICS\n", picname, draw_frame);
 			// FIXME: support NULL in callers?
 			return cachepics; // return the first one
 		}
+		Con_Printf("Draw_NewPic(\"%s\"): frame %i: creating new cachepic\n", picname, draw_frame);
 		pic = cachepics + (numcachepics++);
 		memset(pic, 0, sizeof(*pic));
 		strlcpy (pic->name, picname, sizeof(pic->name));
@@ -298,9 +312,8 @@ void Draw_FreePic(const char *picname)
 	{
 		if (!strcmp (picname, pic->name) && pic->skinframe)
 		{
+			Con_DPrintf("Draw_FreePic(\"%s\"): frame %i: freeing pic\n", picname, draw_frame);
 			R_SkinFrame_PurgeSkinFrame(pic->skinframe);
-			pic->width = 0;
-			pic->height = 0;
 			return;
 		}
 	}
