@@ -2405,7 +2405,7 @@ static void CL_MeshEntities_Init(void)
 		ent = cl_meshentities + i;
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
-		ent->render.alpha = 1;
+		ent->render.alpha = 0.999999f; // not quite 1 so that MATERIALFLAG_ALPHA is always set.
 		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
 		ent->render.frameblend[0].lerp = 1;
@@ -2414,6 +2414,18 @@ static void CL_MeshEntities_Init(void)
 		VectorSet(ent->render.custommodellight_ambient, 1, 1, 1);
 		VectorSet(ent->render.custommodellight_diffuse, 0, 0, 0);
 		VectorSet(ent->render.custommodellight_lightdir, 0, 0, 1);
+		VectorSet(ent->render.render_fullbright, 1, 1, 1);
+		VectorSet(ent->render.render_glowmod, 0, 0, 0);
+		VectorSet(ent->render.render_modellight_ambient, 1, 1, 1);
+		VectorSet(ent->render.render_modellight_diffuse, 0, 0, 0);
+		VectorSet(ent->render.render_modellight_specular, 0, 0, 0);
+		VectorSet(ent->render.render_modellight_lightdir, 0, 0, 1);
+		VectorSet(ent->render.render_lightmap_ambient, 0, 0, 0);
+		VectorSet(ent->render.render_lightmap_diffuse, 1, 1, 1);
+		VectorSet(ent->render.render_lightmap_specular, 1, 1, 1);
+		VectorSet(ent->render.render_rtlight_diffuse, 1, 1, 1);
+		VectorSet(ent->render.render_rtlight_specular, 1, 1, 1);
+
 		Matrix4x4_CreateIdentity(&ent->render.matrix);
 		CL_UpdateRenderEntity(&ent->render);
 	}

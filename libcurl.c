@@ -615,7 +615,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 
 		pixels = decode_image(di, content_type);
 		if(pixels)
-			R_SkinFrame_LoadInternalBGRA(p, TEXF_FORCE_RELOAD | TEXF_MIPMAP | TEXF_ALPHA, pixels, image_width, image_height, false); // TODO what sRGB argument to put here?
+			R_SkinFrame_LoadInternalBGRA(p, TEXF_FORCE_RELOAD | TEXF_MIPMAP | TEXF_ALPHA, pixels, image_width, image_height, 0, 0, 0, false); // TODO what sRGB argument to put here?
 		else
 			CLEAR_AND_RETRY();
 	}
