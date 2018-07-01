@@ -235,7 +235,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 						}
 						else //if (version == SPRITEHL_VERSION || version == SPRITE_VERSION)
 							Image_Copy8bitBGRA(datapointer, pixels, width*height, palette ? palette : palette_bgra_transparent);
-						skinframe = R_SkinFrame_LoadInternalBGRA(name, texflags, pixels, width, height, false);
+						skinframe = R_SkinFrame_LoadInternalBGRA(name, texflags, pixels, width, height, 0, 0, 0, false);
 						// texflags |= TEXF_COMPRESS;
 						Mem_Free(pixels);
 					}

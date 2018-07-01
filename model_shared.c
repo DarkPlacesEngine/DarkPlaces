@@ -2404,7 +2404,7 @@ nothing                GL_ZERO GL_ONE
 				firstpostlayer = rgbgenvertexlayer + 1;
 				// special case for rgbgen vertex if MATERIALFLAG_VERTEXCOLOR is expected on this material
 				if (defaultmaterialflags & MATERIALFLAG_VERTEXCOLOR)
-					texture->basematerialflags |= MATERIALFLAG_VERTEXCOLOR;
+					texture->basematerialflags |= MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX;
 			}
 			else if (rgbgendiffuselayer >= 0)
 			{

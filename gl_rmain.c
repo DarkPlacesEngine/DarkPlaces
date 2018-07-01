@@ -42,7 +42,7 @@ __declspec(dllexport) DWORD NvOptimusEnablement = 0x00000001;
 mempool_t *r_main_mempool;
 rtexturepool_t *r_main_texturepool;
 
-static int r_textureframe = 0; ///< used only by R_GetCurrentTexture
+int r_textureframe = 0; ///< used only by R_GetCurrentTexture, incremented per view and per UI render
 
 static qboolean r_loadnormalmap;
 static qboolean r_loadgloss;
@@ -2185,6 +2185,7 @@ skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name ) {
 skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add)
 {
 	skinframe_t *item;
+	int compareflags = textureflags & TEXF_IMPORTANTBITS;
 	int hashindex;
 	char basename[MAX_QPATH];
 
@@ -2192,7 +2193,11 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 
 	hashindex = CRC_Block((unsigned char *)basename, strlen(basename)) & (SKINFRAME_HASH - 1);
 	for (item = r_skinframe.hash[hashindex];item;item = item->next)
-		if (!strcmp(item->basename, basename) && (comparecrc < 0 || (item->textureflags == textureflags && item->comparewidth == comparewidth && item->compareheight == compareheight && item->comparecrc == comparecrc)))
+		if (!strcmp(item->basename, basename) &&
+			item->textureflags == compareflags &&
+			item->comparewidth == comparewidth &&
+			item->compareheight == compareheight &&
+			item->comparecrc == comparecrc)
 			break;
 
 	if (!item)
@@ -2202,7 +2207,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		item = (skinframe_t *)Mem_ExpandableArray_AllocRecord(&r_skinframe.array);
 		memset(item, 0, sizeof(*item));
 		strlcpy(item->basename, basename, sizeof(item->basename));
-		item->textureflags = textureflags & ~TEXF_FORCE_RELOAD;
+		item->textureflags = compareflags;
 		item->comparewidth = comparewidth;
 		item->compareheight = compareheight;
 		item->comparecrc = comparecrc;
@@ -2210,11 +2215,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		r_skinframe.hash[hashindex] = item;
 	}
 	else if (textureflags & TEXF_FORCE_RELOAD)
-	{
-		if (!add)
-			return NULL;
 		R_SkinFrame_PurgeSkinFrame(item);
-	}
 
 	R_SkinFrame_MarkUsed(item);
 	return item;
@@ -2263,12 +2264,11 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 		return NULL;
 
 	// return an existing skinframe if already loaded
-	// if loading of the first image fails, don't make a new skinframe as it
-	// would cause all future lookups of this to be missing
-	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, -1, false);
+	skinframe = R_SkinFrame_Find(name, textureflags, 0, 0, 0, false);
 	if (skinframe && skinframe->base)
 		return skinframe;
 
+	// if the skinframe doesn't exist this will create it
 	return R_SkinFrame_LoadExternal_SkinFrame(skinframe, name, textureflags, complain, fallbacknotexture);
 }
 
@@ -2487,8 +2487,7 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	return skinframe;
 }
 
-// this is only used by .spr32 sprites, HL .spr files, HL .bsp files
-skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, qboolean sRGB)
+skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qboolean sRGB)
 {
 	int i;
 	skinframe_t *skinframe;
@@ -2498,7 +2497,7 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (!(textureflags & TEXF_FORCE_RELOAD) && skindata) ? CRC_Block(skindata, width*height*4) : -1, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, comparewidth, compareheight, comparecrc, true);
 	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
@@ -2568,7 +2567,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 		return NULL;
 
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (!(textureflags & TEXF_FORCE_RELOAD) && skindata) ? CRC_Block(skindata, width*height) : -1, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, skindata ? CRC_Block(skindata, width*height) : 0, true);
 	if (skinframe->base)
 		return skinframe;
 	//textureflags &= ~TEXF_FORCE_RELOAD;
@@ -2807,7 +2806,7 @@ skinframe_t *R_SkinFrame_LoadNoTexture(void)
 		}
 	}
 
-	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, pix[0][0], 16, 16, false);
+	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, pix[0][0], 16, 16, 0, 0, 0, false);
 }
 
 skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
@@ -2816,7 +2815,7 @@ skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int texturef
 	if (cls.state == ca_dedicated)
 		return NULL;
 	// if already loaded just return it, otherwise make a new skinframe
-	skinframe = R_SkinFrame_Find(name, textureflags, width, height, (textureflags & TEXF_FORCE_RELOAD) ? -1 : 0, true);
+	skinframe = R_SkinFrame_Find(name, textureflags, width, height, 0, true);
 	if (skinframe->base)
 		return skinframe;
 	textureflags &= ~TEXF_FORCE_RELOAD;
@@ -9048,10 +9047,12 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 	RSurf_DrawBatch();
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
 {
 	CHECKGLERROR
-	if (depthonly)
+	if (ui)
+		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+	else if (depthonly)
 		R_DrawTextureSurfaceList_DepthOnly(texturenumsurfaces, texturesurfacelist);
 	else if (prepass)
 	{
@@ -9080,7 +9081,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	CHECKGLERROR
 }
 
-static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass)
+static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
 {
 	int i, j;
 	texture_t *texture;
@@ -9121,7 +9122,7 @@ static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const
 				;
 		}
 		// render the range of surfaces
-		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, prepass);
+		R_ProcessModelTextureSurfaceList(j - i, surfacelist + i, writedepth, depthonly, prepass, ui);
 	}
 	R_FrameData_ReturnToMark();
 }
@@ -10069,7 +10070,7 @@ static void R_DrawDebugModel(void)
 
 int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass)
+void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass, qboolean ui)
 {
 	int i, j, endj, flagsmask;
 	dp_model_t *model = ent->model;
@@ -10141,6 +10142,12 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 				r_surfacelist[numsurfacelist++] = surfaces + j;
 		}
 	}
+	else if (ui)
+	{
+		// for ui we have to preserve the order of surfaces
+		for (i = 0; i < model->nummodelsurfaces; i++)
+			r_surfacelist[numsurfacelist++] = surfaces + model->firstmodelsurface + i;
+	}
 	else
 	{
 		// add all surfaces
@@ -10167,7 +10174,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		}
 	}
 
-	R_QueueModelSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, prepass);
+	R_QueueModelSurfaceList(ent, numsurfacelist, r_surfacelist, flagsmask, writedepth, depthonly, prepass, ui);
 
 	// add to stats if desired
 	if (r_speeds.integer && !skysurfaces && !depthonly)
@@ -10214,7 +10221,7 @@ void R_DebugLine(vec3_t start, vec3_t end)
 		offsetx = 0.5f * width * vid_conwidth.value / vid.width;
 		offsety = 0;
 	}
-	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_VERTEXCOLOR), true);
+	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX), true);
 	e0 = Mod_Mesh_IndexForVertex(mod, surf, x1 - offsetx, y1 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r1, g1, b1, alpha1);
 	e1 = Mod_Mesh_IndexForVertex(mod, surf, x2 - offsetx, y2 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r2, g2, b2, alpha2);
 	e2 = Mod_Mesh_IndexForVertex(mod, surf, x2 + offsetx, y2 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r2, g2, b2, alpha2);

@@ -3319,7 +3319,7 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 	// we need to remember whether this is a 2D or 3D mesh we're adding to
 	mod = draw2d ? CL_Mesh_UI() : CL_Mesh_CSQC();
 	prog->polygonbegin_model = mod;
-	Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, texname, drawflags, TEXF_ALPHA, MATERIALFLAG_VERTEXCOLOR), draw2d);
+	Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, texname, drawflags, TEXF_ALPHA, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX), draw2d);
 }
 
 //void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex

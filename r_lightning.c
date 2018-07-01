@@ -74,8 +74,8 @@ static void CL_Beams_SetupBuiltinTexture(void)
 		}
 	}
 
-	skinframe = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, texwidth, texheight, false);
-	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_VERTEXCOLOR, skinframe);
+	skinframe = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, texwidth, texheight, 0, 0, 0, false);
+	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX, skinframe);
 	Mem_Free(data);
 }
 

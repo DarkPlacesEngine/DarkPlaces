@@ -604,7 +604,7 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	R_DrawModelSurfaces(ent, true, true, false, false, false);
+	R_DrawModelSurfaces(ent, true, true, false, false, false, false);
 }
 
 void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
@@ -652,7 +652,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	R_DrawModelSurfaces(ent, false, true, false, false, false);
+	R_DrawModelSurfaces(ent, false, true, false, false, false, false);
 }
 
 void R_Q1BSP_DrawDepth(entity_render_t *ent)
@@ -666,7 +666,7 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 //	R_Mesh_ResetTextureState();
-	R_DrawModelSurfaces(ent, false, false, true, false, false);
+	R_DrawModelSurfaces(ent, false, false, true, false, false, false);
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
@@ -674,7 +674,7 @@ void R_Q1BSP_DrawDebug(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	R_DrawModelSurfaces(ent, false, false, false, true, false);
+	R_DrawModelSurfaces(ent, false, false, false, true, false, false);
 }
 
 void R_Q1BSP_DrawPrepass(entity_render_t *ent)
@@ -682,7 +682,7 @@ void R_Q1BSP_DrawPrepass(entity_render_t *ent)
 	dp_model_t *model = ent->model;
 	if (model == NULL)
 		return;
-	R_DrawModelSurfaces(ent, false, true, false, false, true);
+	R_DrawModelSurfaces(ent, false, true, false, false, true, false);
 }
 
 typedef struct r_q1bsp_getlightinfo_s
