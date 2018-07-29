@@ -1367,7 +1367,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 		{
 			if (!r_glsl_permutation->compiled)
 			{
-				Con_DPrintf("Compiling shader mode %u permutation %u\n", mode, permutation);
+				Con_DPrintf("Compiling shader mode %u permutation %llx\n", mode, permutation);
 				R_GLSL_CompilePermutation(perm, mode, permutation);
 			}
 			if (!r_glsl_permutation->program)
