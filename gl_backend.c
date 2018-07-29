@@ -200,12 +200,6 @@ typedef struct gltextureunit_s
 	rtexture_t *texture;
 	int t2d, t3d, tcubemap;
 	int arrayenabled;
-	int rgbscale, alphascale;
-	int combine;
-	int combinergb, combinealpha;
-	// texmatrixenabled exists only to avoid unnecessary texmatrix compares
-	int texmatrixenabled;
-	matrix4x4_t matrix;
 }
 gltextureunit_t;
 
@@ -222,13 +216,9 @@ typedef struct gl_state_s
 	int depthfunc;
 	float depthrange[2];
 	float polygonoffset[2];
-	int alphatest;
-	int alphafunc;
-	float alphafuncvalue;
 	qboolean alphatocoverage;
 	int scissortest;
 	unsigned int unit;
-	unsigned int clientunit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
 	float color4f[4];
 	int lockrange_first;
@@ -1158,9 +1148,6 @@ static void GL_Backend_ResetState(void)
 {
 	gl_state.active = true;
 	gl_state.depthtest = true;
-	gl_state.alphatest = false;
-	gl_state.alphafunc = GL_GEQUAL;
-	gl_state.alphafuncvalue = 0.5f;
 	gl_state.alphatocoverage = false;
 	gl_state.blendfunc1 = GL_ONE;
 	gl_state.blendfunc2 = GL_ZERO;
@@ -1181,6 +1168,25 @@ static void GL_Backend_ResetState(void)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
+		// set up debug output early
+		if (vid.support.arb_debug_output)
+		{
+			GLuint unused = 0;
+			CHECKGLERROR
+			if (gl_debug.integer >= 1)
+				qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
+			if (gl_debug.integer >= 3)
+				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, gl_debug.integer >= 3 ? GL_TRUE : GL_FALSE);
+			else if (gl_debug.integer >= 1)
+			{
+				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW_ARB, 0, &unused, gl_debug.integer >= 3 ? GL_TRUE : GL_FALSE);
+				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM_ARB, 0, &unused, gl_debug.integer >= 2 ? GL_TRUE : GL_FALSE);
+				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH_ARB, 0, &unused, gl_debug.integer >= 1 ? GL_TRUE : GL_FALSE);
+			}
+			else
+				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, GL_FALSE);
+			qglDebugMessageCallbackARB(GL_DebugOutputCallback, NULL);
+		}
 		CHECKGLERROR
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
@@ -1198,7 +1204,6 @@ static void GL_Backend_ResetState(void)
 		qglDisableVertexAttribArray(GLSLATTRIB_COLOR);
 		qglVertexAttrib4f(GLSLATTRIB_COLOR, 1, 1, 1, 1);
 		gl_state.unit = MAX_TEXTUREUNITS;
-		gl_state.clientunit = MAX_TEXTUREUNITS;
 		CHECKGLERROR
 		break;
 	}
@@ -2162,8 +2167,6 @@ void R_Mesh_ResetTextureState(void)
 
 	for (unitnum = 0;unitnum < MAX_TEXTUREUNITS;unitnum++)
 		R_Mesh_TexBind(unitnum, NULL);
-	for (unitnum = 0;unitnum < MAX_TEXTUREUNITS;unitnum++)
-		R_Mesh_TexCoordPointer(unitnum, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
 }
 
 void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
@@ -2171,32 +2174,16 @@ void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, con
 	// upload temporary vertexbuffer for this rendering
 	if (!vertexbuffer)
 		vertexbuffer = R_BufferData_Store(numvertices * sizeof(float[3]), (void *)vertex3f, R_BUFFERDATA_VERTEX, &bufferoffset);
-	if (vertexbuffer)
-	{
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, bufferoffset);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-	}
-	else
-	{
-		R_Mesh_VertexPointer(3, GL_FLOAT, sizeof(float[3]), vertex3f, vertexbuffer, 0);
-		R_Mesh_ColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(0, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(1, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(2, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(3, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(4, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(5, 2, GL_FLOAT, sizeof(float[2]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-		R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL, NULL, 0);
-	}
+	R_Mesh_VertexPointer(     3, GL_FLOAT        , sizeof(float[3])        , vertex3f  , vertexbuffer     , bufferoffset           );
+	R_Mesh_ColorPointer(      4, GL_FLOAT        , sizeof(float[4])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(0, 2, GL_FLOAT        , sizeof(float[2])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(1, 3, GL_FLOAT        , sizeof(float[3])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(2, 3, GL_FLOAT        , sizeof(float[3])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(3, 3, GL_FLOAT        , sizeof(float[3])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(4, 2, GL_FLOAT        , sizeof(float[2])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(5, 2, GL_FLOAT        , sizeof(float[2])        , NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(6, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL      , NULL             , 0                      );
+	R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL      , NULL             , 0                      );
 }
 
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f)

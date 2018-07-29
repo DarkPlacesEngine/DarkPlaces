@@ -40,12 +40,10 @@ void GL_DepthRange(float nearfrac, float farfrac);
 void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask);
 void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
-void GL_AlphaTest(int state);
 void GL_AlphaToCoverage(qboolean state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ActiveTexture(unsigned int num);
-void GL_ClientActiveTexture(unsigned int num);
 void GL_Scissor(int x, int y, int width, int height);
 void GL_ScissorTest(int state);
 void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilvalue);
@@ -57,6 +55,7 @@ void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colo
 unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int geometrystrings_count, const char **geometrystrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
 void GL_Backend_FreeProgram(unsigned int prog);
 
+extern cvar_t gl_debug;
 extern cvar_t gl_paranoid;
 extern cvar_t gl_printcheckerror;
 
@@ -95,10 +94,6 @@ int R_Mesh_TexBound(unsigned int unitnum, int id);
 void R_Mesh_CopyToTexture(rtexture_t *tex, int tx, int ty, int sx, int sy, int width, int height);
 // bind a given texture to a given image unit
 void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex);
-// sets the texcoord matrix for a texenv unit, can be NULL or blank (will use identity)
-void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
-// sets the combine state for a texenv unit
-void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale);
 // set up a blank texture state (unbinds all textures, texcoord pointers, and resets combine settings)
 void R_Mesh_ResetTextureState(void);
 // before a texture is freed, make sure there are no references to it
