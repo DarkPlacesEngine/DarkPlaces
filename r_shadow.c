@@ -2923,7 +2923,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 	VectorMultiply(specularcolor, rsurface.rtlight->currentcolor, specularcolor);
 	if (VectorLength2(ambientcolor) + VectorLength2(diffusecolor) + VectorLength2(specularcolor) < (1.0f / 1048576.0f))
 		return;
-	negated = (rsurface.rtlight->currentcolor[0] + rsurface.rtlight->currentcolor[1] + rsurface.rtlight->currentcolor[2] < 0) && vid.support.ext_blend_subtract;
+	negated = (rsurface.rtlight->currentcolor[0] + rsurface.rtlight->currentcolor[1] + rsurface.rtlight->currentcolor[2] < 0);
 	if(negated)
 	{
 		VectorNegate(ambientcolor, ambientcolor);
@@ -4529,7 +4529,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	if (VectorLength(color) > (1.0f / 256.0f))
 	{
 		float vertex3f[12];
-		qboolean negated = (color[0] + color[1] + color[2] < 0) && vid.support.ext_blend_subtract;
+		qboolean negated = (color[0] + color[1] + color[2] < 0);
 		if(negated)
 		{
 			VectorNegate(color, color);
