@@ -1153,6 +1153,9 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 	geomstrings_list[geomstrings_count++] = sourcestring;
 	fragstrings_list[fragstrings_count++] = sourcestring;
 
+	// we don't currently use geometry shaders for anything, so just empty the list
+	geomstrings_count = 0;
+
 	// compile the shader program
 	if (vertstrings_count + geomstrings_count + fragstrings_count)
 		p->program = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, geomstrings_count, geomstrings_list, fragstrings_count, fragstrings_list);
