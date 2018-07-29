@@ -1136,6 +1136,12 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglGetVertexAttribfv glGetVertexAttribfv
 #define qglGetVertexAttribiv glGetVertexAttribiv
 #define qglGetVertexAttribPointerv glGetVertexAttribPointerv
+
+extern GLuint(GLAPIENTRY *qglGetDebugMessageLogARB)(GLuint count, GLsizei bufSize, GLenum* sources, GLenum* types, GLuint* ids, GLenum* severities, GLsizei* lengths, GLchar* messageLog);
+extern void (GLAPIENTRY *qglDebugMessageCallbackARB)(GLDEBUGPROCARB callback, const GLvoid* userParam);
+extern void (GLAPIENTRY *qglDebugMessageControlARB)(GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
+extern void (GLAPIENTRY *qglDebugMessageInsertARB)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* buf);
+typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam);
 #endif
 
 #endif

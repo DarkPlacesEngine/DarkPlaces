@@ -75,6 +75,7 @@
 
 #define MAX_RENDERTARGETS 4
 
+cvar_t gl_debug = {0, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -150,6 +151,36 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber)
 		Con_Printf("GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
 		break;
 	}
+}
+
+static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam)
+{
+	const char *sev = "ENUM?", *typ = "ENUM?", *src = "ENUM?";
+	switch (severity)
+	{
+	case GL_DEBUG_SEVERITY_LOW_ARB: sev = "LOW"; break;
+	case GL_DEBUG_SEVERITY_MEDIUM_ARB: sev = "MED"; break;
+	case GL_DEBUG_SEVERITY_HIGH_ARB: sev = "HIGH"; break;
+	}
+	switch (type)
+	{
+	case GL_DEBUG_TYPE_ERROR_ARB: typ = "ERROR"; break;
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: typ = "DEPRECATED"; break;
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB: typ = "UNDEFINED"; break;
+	case GL_DEBUG_TYPE_PORTABILITY_ARB: typ = "PORTABILITY"; break;
+	case GL_DEBUG_TYPE_PERFORMANCE_ARB: typ = "PERFORMANCE"; break;
+	case GL_DEBUG_TYPE_OTHER_ARB: typ = "OTHER"; break;
+	}
+	switch (source)
+	{
+	case GL_DEBUG_SOURCE_API_ARB: src = "API"; break;
+	case GL_DEBUG_SOURCE_SHADER_COMPILER_ARB: src = "SHADER"; break;
+	case GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB: src = "WIN"; break;
+	case GL_DEBUG_SOURCE_THIRD_PARTY_ARB: src = "THIRDPARTY"; break;
+	case GL_DEBUG_SOURCE_APPLICATION_ARB: src = "APP"; break;
+	case GL_DEBUG_SOURCE_OTHER_ARB: src = "OTHER"; break;
+	}
+	Con_Printf("GLDEBUG: %s %s %s: %u: %s\n", sev, typ, src, (unsigned int)id, message);
 }
 #endif
 
@@ -414,7 +445,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&r_waterwarp);
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&v_flipped);
-	Cvar_RegisterVariable(&gl_dither);
+	Cvar_RegisterVariable(&gl_debug);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 

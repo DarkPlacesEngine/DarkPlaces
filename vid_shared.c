@@ -438,6 +438,11 @@ void (GLAPIENTRY *qglGetIntegeri_v)(GLenum target, GLuint index, GLint* data);
 void (GLAPIENTRY *qglUniformBlockBinding)(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
 
 void (GLAPIENTRY *qglBlendFuncSeparate)(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
+
+GLuint (GLAPIENTRY *qglGetDebugMessageLogARB)(GLuint count, GLsizei bufSize, GLenum* sources, GLenum* types, GLuint* ids, GLenum* severities, GLsizei* lengths, GLchar* messageLog);
+void (GLAPIENTRY *qglDebugMessageCallbackARB)(GLDEBUGPROCARB callback, const GLvoid* userParam);
+void (GLAPIENTRY *qglDebugMessageControlARB)(GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
+void (GLAPIENTRY *qglDebugMessageInsertARB)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* buf);
 #endif
 
 #if _MSC_VER >= 1400
@@ -758,6 +763,16 @@ static dllfunction_t blendfuncseparatefuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t debugoutputfuncs[] =
+{
+	{"glDebugMessageControlARB", (void **)&qglDebugMessageControlARB},
+	{"glDebugMessageInsertARB", (void **)&qglDebugMessageInsertARB},
+	{"glDebugMessageCallbackARB", (void **)&qglDebugMessageCallbackARB},
+	{"glGetDebugMessageLogARB", (void **)&qglGetDebugMessageLogARB},
+	{"glGetPointerv", (void **)&qglGetPointerv},
+	{NULL, NULL}
+};
+
 #endif
 
 void VID_ClearExtensions(void)
@@ -829,6 +844,7 @@ void VID_CheckExtensions(void)
 	vid.support.arb_half_float_pixel = GL_CheckExtension("GL_ARB_half_float_pixel", NULL, "-nohalffloatpixel", false);
 	vid.support.arb_half_float_vertex = GL_CheckExtension("GL_ARB_half_float_vertex", NULL, "-nohalffloatvertex", false);
 	vid.support.arb_multisample = GL_CheckExtension("GL_ARB_multisample", multisamplefuncs, "-nomultisample", false);
+	vid.support.arb_debug_output = GL_CheckExtension("GL_ARB_debug_output", debugoutputfuncs, "-nogldebugoutput", false);
 	vid.allowalphatocoverage = false;
 
 // COMMANDLINEOPTION: GL: -noshaders disables use of OpenGL 2.0 shaders (which allow pixel shader effects, can improve per pixel lighting performance and capabilities)

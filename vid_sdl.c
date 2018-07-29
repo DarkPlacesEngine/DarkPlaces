@@ -2018,6 +2018,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute (SDL_GL_RETAINED_BACKING, 1);
+#else
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, (gl_debug.integer > 0 ? SDL_GL_CONTEXT_DEBUG_FLAG : 0));
 #endif
 
 	video_bpp = mode->bitsperpixel;
