@@ -548,6 +548,7 @@ void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatri
 #define BATCHNEED_ALWAYSCOPY                  (1<< 9) // force vertex copying unconditionally - useful if you want to modify colors
 #define BATCHNEED_ALLOWMULTIDRAW              (1<<10) // allow multiple draws
 void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const msurface_t **texturesurfacelist);
+void RSurf_UploadBuffersForBatch(void);
 void RSurf_DrawBatch(void);
 
 void R_DecalSystem_SplatEntities(const vec3_t org, const vec3_t normal, float r, float g, float b, float a, float s1, float t1, float s2, float t2, float size);
