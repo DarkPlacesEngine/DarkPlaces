@@ -2792,15 +2792,6 @@ void CL_UpdateScreen(void)
 	{
 		CHECKGLERROR
 		qglDrawBuffer(GL_BACK);CHECKGLERROR
-		// set dithering mode
-		if (gl_dither.integer)
-		{
-			qglEnable(GL_DITHER);CHECKGLERROR
-		}
-		else
-		{
-			qglDisable(GL_DITHER);CHECKGLERROR
-		}
 	}
 #endif
 
