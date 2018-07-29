@@ -312,7 +312,6 @@ extern cvar_t r_glsl_offsetmapping_lod_distance;
 extern cvar_t r_glsl_deluxemapping;
 
 extern cvar_t gl_polyblend;
-extern cvar_t gl_dither;
 
 extern cvar_t cl_deathfade;
 
