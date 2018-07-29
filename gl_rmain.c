@@ -3027,7 +3027,7 @@ static void gl_main_start(void)
 	r_uniformbufferalignment = 32;
 
 	r_loaddds = r_texture_dds_load.integer != 0;
-	r_savedds = vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
+	r_savedds = vid.support.ext_texture_compression_s3tc && r_texture_dds_save.integer;
 
 	switch(vid.renderpath)
 	{

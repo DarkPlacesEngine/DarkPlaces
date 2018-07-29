@@ -1030,7 +1030,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 			qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 #ifndef USE_GLES2
-#ifdef GL_TEXTURE_COMPRESSION_HINT_ARB
 			if (qglGetCompressedTexImageARB)
 			{
 				if (gl_texturecompression.integer >= 2)
@@ -1039,7 +1038,6 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
 				CHECKGLERROR
 			}
-#endif
 #endif
 			switch(glt->texturetype)
 			{
@@ -1895,7 +1893,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	force_swdecode = false;
 	if(bytesperblock)
 	{
-		if(vid.support.arb_texture_compression && vid.support.ext_texture_compression_s3tc)
+		if(vid.support.ext_texture_compression_s3tc)
 		{
 			if(r_texture_dds_swdecode.integer > 1)
 				force_swdecode = true;

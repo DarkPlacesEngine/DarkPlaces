@@ -2976,7 +2976,7 @@ static void M_Video_Draw (void)
 	M_DrawSlider(220, video_cursor_table[t], gl_picmip.value, 3, 0);
 	t++;
 
-	M_ItemPrint(16, video_cursor_table[t], "   Texture Compression", vid.support.arb_texture_compression);
+	M_ItemPrint(16, video_cursor_table[t], "   Texture Compression", true);
 	M_DrawCheckbox(220, video_cursor_table[t], gl_texturecompression.integer);
 	t++;
 
