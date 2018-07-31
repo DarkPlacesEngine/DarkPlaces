@@ -95,9 +95,6 @@ typedef struct viddef_s
 	renderpath_t renderpath;
 	qboolean allowalphatocoverage; // indicates the GL_AlphaToCoverage function works on this renderpath and framebuffer
 
-	unsigned int drawrangeelements_maxvertices;
-	unsigned int drawrangeelements_maxindices;
-
 	unsigned int maxtexturesize_2d;
 	unsigned int maxtexturesize_3d;
 	unsigned int maxtexturesize_cubemap;
