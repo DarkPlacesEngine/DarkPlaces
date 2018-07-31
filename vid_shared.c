@@ -239,6 +239,7 @@ void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
 
 void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
 
+void (GLAPIENTRY *qglGetPointerv)(GLenum pname, GLvoid** params);
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
 void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
