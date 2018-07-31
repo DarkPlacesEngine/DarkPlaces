@@ -97,9 +97,6 @@ float gl_modelview16f[16];
 float gl_modelviewprojection16f[16];
 qboolean gl_modelmatrixchanged;
 
-int gl_maxdrawrangeelementsvertices;
-int gl_maxdrawrangeelementsindices;
-
 #ifdef DEBUGGL
 int gl_errornumber = 0;
 

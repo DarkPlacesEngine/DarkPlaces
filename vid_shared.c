@@ -847,7 +847,6 @@ void VID_CheckExtensions(void)
 	vid.support.arb_debug_output = GL_CheckExtension("GL_ARB_debug_output", debugoutputfuncs, "-nogldebugoutput", false);
 	vid.allowalphatocoverage = false;
 
-// COMMANDLINEOPTION: GL: -noshaders disables use of OpenGL 2.0 shaders (which allow pixel shader effects, can improve per pixel lighting performance and capabilities)
 // COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
 // COMMANDLINEOPTION: GL: -noblendminmax disables GL_EXT_blend_minmax
 // COMMANDLINEOPTION: GL: -noblendsubtract disables GL_EXT_blend_subtract
@@ -855,7 +854,6 @@ void VID_CheckExtensions(void)
 // COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 // COMMANDLINEOPTION: GL: -nodepthtexture disables use of GL_ARB_depth_texture (required for shadowmapping)
 // COMMANDLINEOPTION: GL: -nodrawbuffers disables use of GL_ARB_draw_buffers (required for r_shadow_deferredprepass)
-// COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
 // COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
 // COMMANDLINEOPTION: GL: -nofbo disables GL_EXT_framebuffer_object (which accelerates rendering), only used if GL_ARB_fragment_shader is also available
 // COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
