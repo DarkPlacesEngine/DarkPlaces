@@ -121,11 +121,7 @@ typedef struct surfmesh_s
 	// triangle data in system memory
 	int num_triangles; // number of triangles in the mesh
 	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
-	r_meshbuffer_t *data_element3i_indexbuffer;
-	int data_element3i_bufferoffset;
-	unsigned short *data_element3s; // unsigned short[tris*3] triangles of the mesh in unsigned short format (NULL if num_vertices > 65536)
-	r_meshbuffer_t *data_element3s_indexbuffer;
-	int data_element3s_bufferoffset;
+
 	// vertex data in system memory
 	int num_vertices; // number of vertices in the mesh
 	float *data_vertex3f; // float[verts*3] vertex locations
@@ -138,17 +134,31 @@ typedef struct surfmesh_s
 	unsigned char *data_skeletalindex4ub;
 	unsigned char *data_skeletalweight4ub;
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
-	// vertex buffer object (stores geometry in video memory)
-	r_meshbuffer_t *vbo_vertexbuffer;
-	int vbooffset_vertex3f;
-	int vbooffset_svector3f;
-	int vbooffset_tvector3f;
-	int vbooffset_normal3f;
-	int vbooffset_texcoordtexture2f;
-	int vbooffset_texcoordlightmap2f;
-	int vbooffset_lightmapcolor4f;
-	int vbooffset_skeletalindex4ub;
-	int vbooffset_skeletalweight4ub;
+	// index buffer - only one of these will be non-NULL
+	r_meshbuffer_t *data_element3i_indexbuffer;
+	int data_element3i_bufferoffset;
+	unsigned short *data_element3s; // unsigned short[tris*3] triangles of the mesh in unsigned short format (NULL if num_vertices > 65536)
+	r_meshbuffer_t *data_element3s_indexbuffer;
+	int data_element3s_bufferoffset;
+	// vertex buffers
+	r_meshbuffer_t *data_vertex3f_vertexbuffer;
+	int data_vertex3f_bufferoffset;
+	r_meshbuffer_t *data_svector3f_vertexbuffer;
+	int data_svector3f_bufferoffset;
+	r_meshbuffer_t *data_tvector3f_vertexbuffer;
+	int data_tvector3f_bufferoffset;
+	r_meshbuffer_t *data_normal3f_vertexbuffer;
+	int data_normal3f_bufferoffset;
+	r_meshbuffer_t *data_texcoordtexture2f_vertexbuffer;
+	int data_texcoordtexture2f_bufferoffset;
+	r_meshbuffer_t *data_texcoordlightmap2f_vertexbuffer;
+	int data_texcoordlightmap2f_bufferoffset;
+	r_meshbuffer_t *data_lightmapcolor4f_vertexbuffer;
+	int data_lightmapcolor4f_bufferoffset;
+	r_meshbuffer_t *data_skeletalindex4ub_vertexbuffer;
+	int data_skeletalindex4ub_bufferoffset;
+	r_meshbuffer_t *data_skeletalweight4ub_vertexbuffer;
+	int data_skeletalweight4ub_bufferoffset;
 	// morph blending, these are zero if model is skeletal or static
 	int num_morphframes;
 	struct md3vertex_s *data_morphmd3vertex;
@@ -1211,6 +1221,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchwithprevioussurface);
 int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(dp_model_t *mod, msurface_t *surf, int e0, int e1, int e2);
+void Mod_Mesh_Validate(dp_model_t *mod);
 void Mod_Mesh_Finalize(dp_model_t *mod);
 
 // Collision optimization using Bounding Interval Hierarchy
