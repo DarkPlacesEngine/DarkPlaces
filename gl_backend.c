@@ -1058,27 +1058,27 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 		if (colortexture4 && colortexture4->renderbuffernum) qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3 , GL_RENDERBUFFER, colortexture4->renderbuffernum);CHECKGLERROR
 
 #ifndef USE_GLES2
-		if (colortexture4 && qglDrawBuffersARB)
+		if (colortexture4)
 		{
-			qglDrawBuffersARB(4, drawbuffers);CHECKGLERROR
+			qglDrawBuffers(4, drawbuffers);CHECKGLERROR
 			qglReadBuffer(GL_NONE);CHECKGLERROR
 		}
-		else if (colortexture3 && qglDrawBuffersARB)
+		else if (colortexture3)
 		{
-			qglDrawBuffersARB(3, drawbuffers);CHECKGLERROR
+			qglDrawBuffers(3, drawbuffers);CHECKGLERROR
 			qglReadBuffer(GL_NONE);CHECKGLERROR
 		}
-		else if (colortexture2 && qglDrawBuffersARB)
+		else if (colortexture2)
 		{
-			qglDrawBuffersARB(2, drawbuffers);CHECKGLERROR
+			qglDrawBuffers(2, drawbuffers);CHECKGLERROR
 			qglReadBuffer(GL_NONE);CHECKGLERROR
 		}
-		else if (colortexture && qglDrawBuffer)
+		else if (colortexture)
 		{
 			qglDrawBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
 			qglReadBuffer(GL_COLOR_ATTACHMENT0);CHECKGLERROR
 		}
-		else if (qglDrawBuffer)
+		else
 		{
 			qglDrawBuffer(GL_NONE);CHECKGLERROR
 			qglReadBuffer(GL_NONE);CHECKGLERROR
@@ -1449,18 +1449,18 @@ void GL_AlphaToCoverage(qboolean state)
 		case RENDERPATH_GLES2:
 			break;
 		case RENDERPATH_GL32:
-#ifdef GL_SAMPLE_ALPHA_TO_COVERAGE_ARB
+#ifndef USE_GLES2
 			// alpha to coverage turns the alpha value of the pixel into 0%, 25%, 50%, 75% or 100% by masking the multisample fragments accordingly
 			CHECKGLERROR
 			if (gl_state.alphatocoverage)
 			{
-				qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
-//				qglEnable(GL_MULTISAMPLE_ARB);CHECKGLERROR
+				qglEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);CHECKGLERROR
+//				qglEnable(GL_MULTISAMPLE);CHECKGLERROR
 			}
 			else
 			{
-				qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE_ARB);CHECKGLERROR
-//				qglDisable(GL_MULTISAMPLE_ARB);CHECKGLERROR
+				qglDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);CHECKGLERROR
+//				qglDisable(GL_MULTISAMPLE);CHECKGLERROR
 			}
 #endif
 			break;
@@ -2250,7 +2250,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 		{
 		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_REVERSE_SUBTRACT);CHECKGLERROR
+			qglBlendEquation(GL_FUNC_REVERSE_SUBTRACT);CHECKGLERROR
 			break;
 		}
 	}
@@ -2260,7 +2260,7 @@ void GL_BlendEquationSubtract(qboolean negated)
 		{
 		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
-			qglBlendEquationEXT(GL_FUNC_ADD);CHECKGLERROR
+			qglBlendEquation(GL_FUNC_ADD);CHECKGLERROR
 			break;
 		}
 	}

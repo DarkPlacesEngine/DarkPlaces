@@ -79,7 +79,7 @@ static textypeinfo_t textype_depth16                     = {"depth16",          
 static textypeinfo_t textype_depth24                     = {"depth24",                  TEXTYPE_DEPTHBUFFER24        ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_depth24stencil8             = {"depth24stencil8",          TEXTYPE_DEPTHBUFFER24STENCIL8,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
 static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER          ,  2,  2,  2.0f, GL_RGB565                         , GL_RGBA           , GL_UNSIGNED_SHORT_5_6_5};
-static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F       ,  2,  2,  2.0f, GL_RGBA16F                        , GL_RGBA           , GL_HALF_FLOAT_ARB};
+static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F       ,  2,  2,  2.0f, GL_RGBA16F                        , GL_RGBA           , GL_HALF_FLOAT};
 static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F       ,  2,  2,  2.0f, GL_RGBA32F                        , GL_RGBA           , GL_FLOAT};
 
 // image formats:
@@ -95,16 +95,16 @@ static textypeinfo_t textype_etc1                        = {"etc1",             
 #endif
 #else
 // framebuffer texture formats
-static textypeinfo_t textype_shadowmap16_comp            = {"shadowmap16_comp",         TEXTYPE_SHADOWMAP16_COMP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
-static textypeinfo_t textype_shadowmap16_raw             = {"shadowmap16_raw",          TEXTYPE_SHADOWMAP16_RAW      ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
-static textypeinfo_t textype_shadowmap24_comp            = {"shadowmap24_comp",         TEXTYPE_SHADOWMAP24_COMP     ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
-static textypeinfo_t textype_shadowmap24_raw             = {"shadowmap24_raw",          TEXTYPE_SHADOWMAP24_RAW      ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
-static textypeinfo_t textype_depth16                     = {"depth16",                  TEXTYPE_DEPTHBUFFER16        ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
-static textypeinfo_t textype_depth24                     = {"depth24",                  TEXTYPE_DEPTHBUFFER24        ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24_ARB          , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
-static textypeinfo_t textype_depth24stencil8             = {"depth24stencil8",          TEXTYPE_DEPTHBUFFER24STENCIL8,  4,  4,  4.0f, GL_DEPTH24_STENCIL8_EXT           , GL_DEPTH_STENCIL_EXT, GL_UNSIGNED_INT_24_8_EXT};
-static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER          ,  4,  4,  4.0f, GL_RGBA                               , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F       ,  8,  8,  8.0f, GL_RGBA16F_ARB                        , GL_RGBA           , GL_HALF_FLOAT_ARB};
-static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F       , 16, 16, 16.0f, GL_RGBA32F_ARB                        , GL_RGBA           , GL_FLOAT         };
+static textypeinfo_t textype_shadowmap16_comp            = {"shadowmap16_comp",         TEXTYPE_SHADOWMAP16_COMP     ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_shadowmap16_raw             = {"shadowmap16_raw",          TEXTYPE_SHADOWMAP16_RAW      ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_shadowmap24_comp            = {"shadowmap24_comp",         TEXTYPE_SHADOWMAP24_COMP     ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24              , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
+static textypeinfo_t textype_shadowmap24_raw             = {"shadowmap24_raw",          TEXTYPE_SHADOWMAP24_RAW      ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24              , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
+static textypeinfo_t textype_depth16                     = {"depth16",                  TEXTYPE_DEPTHBUFFER16        ,  2,  2,  2.0f, GL_DEPTH_COMPONENT16              , GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT};
+static textypeinfo_t textype_depth24                     = {"depth24",                  TEXTYPE_DEPTHBUFFER24        ,  4,  4,  4.0f, GL_DEPTH_COMPONENT24              , GL_DEPTH_COMPONENT, GL_UNSIGNED_INT  };
+static textypeinfo_t textype_depth24stencil8             = {"depth24stencil8",          TEXTYPE_DEPTHBUFFER24STENCIL8,  4,  4,  4.0f, GL_DEPTH24_STENCIL8               , GL_DEPTH_STENCIL  , GL_UNSIGNED_INT_24_8};
+static textypeinfo_t textype_colorbuffer                 = {"colorbuffer",              TEXTYPE_COLORBUFFER          ,  4,  4,  4.0f, GL_RGBA                           , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_colorbuffer16f              = {"colorbuffer16f",           TEXTYPE_COLORBUFFER16F       ,  8,  8,  8.0f, GL_RGBA16F                        , GL_RGBA           , GL_HALF_FLOAT    };
+static textypeinfo_t textype_colorbuffer32f              = {"colorbuffer32f",           TEXTYPE_COLORBUFFER32F       , 16, 16, 16.0f, GL_RGBA32F                        , GL_RGBA           , GL_FLOAT         };
 
 // image formats:
 static textypeinfo_t textype_alpha                       = {"alpha",                    TEXTYPE_ALPHA         ,  1,  4,  4.0f, GL_ALPHA                              , GL_ALPHA          , GL_UNSIGNED_BYTE };
@@ -122,14 +122,14 @@ static textypeinfo_t textype_dxt1                        = {"dxt1",             
 static textypeinfo_t textype_dxt1a                       = {"dxt1a",                    TEXTYPE_DXT1A         ,  4,  0,  0.5f, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT      , 0                 , 0                };
 static textypeinfo_t textype_dxt3                        = {"dxt3",                     TEXTYPE_DXT3          ,  4,  0,  1.0f, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT      , 0                 , 0                };
 static textypeinfo_t textype_dxt5                        = {"dxt5",                     TEXTYPE_DXT5          ,  4,  0,  1.0f, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT      , 0                 , 0                };
-static textypeinfo_t textype_sRGB_palette                = {"sRGB_palette",             TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_SRGB_EXT                           , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_sRGB_palette_alpha          = {"sRGB_palette_alpha",       TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_SRGB_ALPHA_EXT                     , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_sRGB_rgba                   = {"sRGB_rgba",                TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_SRGB_EXT                           , GL_RGBA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_sRGB_rgba_alpha             = {"sRGB_rgba_alpha",          TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_SRGB_ALPHA_EXT                     , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_palette                = {"sRGB_palette",             TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_SRGB                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_palette_alpha          = {"sRGB_palette_alpha",       TEXTYPE_PALETTE       ,  1,  4,  4.0f, GL_SRGB_ALPHA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_rgba                   = {"sRGB_rgba",                TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_SRGB                               , GL_RGBA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_rgba_alpha             = {"sRGB_rgba_alpha",          TEXTYPE_RGBA          ,  4,  4,  4.0f, GL_SRGB_ALPHA                         , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_sRGB_rgba_compress          = {"sRGB_rgba_compress",       TEXTYPE_RGBA          ,  4,  4,  0.5f, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT      , GL_RGBA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_sRGB_rgba_alpha_compress    = {"sRGB_rgba_alpha_compress", TEXTYPE_RGBA          ,  4,  4,  1.0f, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, GL_RGBA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_sRGB_bgra                   = {"sRGB_bgra",                TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_SRGB_EXT                           , GL_BGRA           , GL_UNSIGNED_BYTE };
-static textypeinfo_t textype_sRGB_bgra_alpha             = {"sRGB_bgra_alpha",          TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_SRGB_ALPHA_EXT                     , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_bgra                   = {"sRGB_bgra",                TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_SRGB                               , GL_BGRA           , GL_UNSIGNED_BYTE };
+static textypeinfo_t textype_sRGB_bgra_alpha             = {"sRGB_bgra_alpha",          TEXTYPE_BGRA          ,  4,  4,  4.0f, GL_SRGB_ALPHA                         , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_sRGB_bgra_compress          = {"sRGB_bgra_compress",       TEXTYPE_BGRA          ,  4,  4,  0.5f, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT      , GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_sRGB_bgra_alpha_compress    = {"sRGB_bgra_alpha_compress", TEXTYPE_BGRA          ,  4,  4,  1.0f, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, GL_BGRA           , GL_UNSIGNED_BYTE };
 static textypeinfo_t textype_sRGB_dxt1                   = {"sRGB_dxt1",                TEXTYPE_DXT1          ,  4,  0,  0.5f, GL_COMPRESSED_SRGB_S3TC_DXT1_EXT      , 0                 , 0                };
@@ -890,18 +890,18 @@ static void GL_SetupTextureParameters(int flags, textype_t textype, int texturet
 		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
 	}
 
-#ifdef GL_TEXTURE_COMPARE_MODE_ARB
+#ifndef USE_GLES2
 	switch(textype)
 	{
 	case TEXTYPE_SHADOWMAP16_COMP:
 	case TEXTYPE_SHADOWMAP24_COMP:
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_R_TO_TEXTURE);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);CHECKGLERROR
 		break;
 	case TEXTYPE_SHADOWMAP16_RAW:
 	case TEXTYPE_SHADOWMAP24_RAW:
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE_ARB, GL_NONE);CHECKGLERROR
-		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_MODE, GL_NONE);CHECKGLERROR
+		qglTexParameteri(textureenum, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);CHECKGLERROR
 		break;
 	default:
 		break;
@@ -1030,14 +1030,11 @@ static void R_UploadFullTexture(gltexture_t *glt, const unsigned char *data)
 			qglBindTexture(gltexturetypeenums[glt->texturetype], glt->texnum);CHECKGLERROR
 
 #ifndef USE_GLES2
-			if (qglGetCompressedTexImageARB)
-			{
-				if (gl_texturecompression.integer >= 2)
-					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_NICEST);
-				else
-					qglHint(GL_TEXTURE_COMPRESSION_HINT_ARB, GL_FASTEST);
-				CHECKGLERROR
-			}
+			if (gl_texturecompression.integer >= 2)
+				qglHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
+			else
+				qglHint(GL_TEXTURE_COMPRESSION_HINT, GL_FASTEST);
+			CHECKGLERROR
 #endif
 			switch(glt->texturetype)
 			{
@@ -1526,7 +1523,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 		memcpy(dds+84, ddsfourcc, 4);
 		for (mip = 0;mip < mipmaps;mip++)
 		{
-			qglGetCompressedTexImageARB(gltexturetypeenums[glt->texturetype], mip, dds + mipinfo[mip][3]);CHECKGLERROR
+			qglGetCompressedTexImage(gltexturetypeenums[glt->texturetype], mip, dds + mipinfo[mip][3]);CHECKGLERROR
 		}
 	}
 	else
@@ -2205,7 +2202,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		case RENDERPATH_GLES2:
 			if (bytesperblock)
 			{
-				qglCompressedTexImage2DARB(GL_TEXTURE_2D, mip, glt->glinternalformat, upload_mipwidth, upload_mipheight, 0, mipsize, upload_mippixels);CHECKGLERROR
+				qglCompressedTexImage2D(GL_TEXTURE_2D, mip, glt->glinternalformat, upload_mipwidth, upload_mipheight, 0, mipsize, upload_mippixels);CHECKGLERROR
 			}
 			else
 			{
