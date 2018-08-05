@@ -7458,6 +7458,7 @@ float RSurf_FogVertex(const float *v)
 void RSurf_UploadBuffersForBatch(void)
 {
 	// upload buffer data for generated vertex data (dynamicvertex case) or index data (copytriangles case) and models that lack it to begin with (e.g. DrawQ_FlushUI)
+	// note that if rsurface.batchvertex3f_vertexbuffer is NULL, dynamicvertex is forced as we don't account for the proper base vertex here.
 	if (rsurface.batchvertex3f && !rsurface.batchvertex3f_vertexbuffer)
 		rsurface.batchvertex3f_vertexbuffer = R_BufferData_Store(rsurface.batchnumvertices * sizeof(float[3]), rsurface.batchvertex3f, R_BUFFERDATA_VERTEX, &rsurface.batchvertex3f_bufferoffset);
 	if (rsurface.batchsvector3f && !rsurface.batchsvector3f_vertexbuffer)
@@ -7569,6 +7570,14 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 
 	// check if any dynamic vertex processing must occur
 	dynamicvertex = false;
+
+	// we must use vertexbuffers for rendering, we can upload vertex buffers
+	// easily enough but if the basevertex is non-zero it becomes more
+	// difficult, so force dynamicvertex path in that case - it's suboptimal
+	// but the most optimal case is to have the geometry sources provide their
+	// own anyway.
+	if (!rsurface.modelvertex3f_vertexbuffer && firstvertex != 0)
+		dynamicvertex = true;
 
 	// a cvar to force the dynamic vertex path to be taken, for debugging
 	if (r_batch_debugdynamicvertexpath.integer)
