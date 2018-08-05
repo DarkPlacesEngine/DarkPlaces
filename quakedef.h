@@ -155,7 +155,7 @@ extern char engineversion[128];
 #define	SAVEGAME_COMMENT_LENGTH	39 ///< max comment length of savegame in menu
 #define	MAX_CLIENTNETWORKEYES	16 ///< max number of locations that can be added to pvs when culling network entities (must be at least 2 for prediction)
 #define	MAX_LEVELNETWORKEYES	512 ///< max number of locations that can be added to pvs when culling network entities (must be at least 2 for prediction)
-#define	MAX_OCCLUSION_QUERIES	4096 ///< max number of GL_ARB_occlusion_query objects that can be used in one frame
+#define	MAX_OCCLUSION_QUERIES	4096 ///< max number of query objects that can be used in one frame
 
 #define CRYPTO_HOSTKEY_HASHSIZE 8192 ///< number of hash buckets for accelerating host key lookups
 #define MAX_NETWM_ICON 352822 // 16x16, 22x22, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256, 512x512
