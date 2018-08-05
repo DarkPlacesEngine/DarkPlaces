@@ -199,15 +199,23 @@ void Mod_UnloadModel (dp_model_t *mod)
 	used = mod->used;
 	if (mod->mempool)
 	{
-		if (mod->surfmesh.data_element3i_indexbuffer)
+		if (mod->surfmesh.data_element3i_indexbuffer && !mod->surfmesh.data_element3i_indexbuffer->isdynamic)
 			R_Mesh_DestroyMeshBuffer(mod->surfmesh.data_element3i_indexbuffer);
 		mod->surfmesh.data_element3i_indexbuffer = NULL;
-		if (mod->surfmesh.data_element3s_indexbuffer)
+		if (mod->surfmesh.data_element3s_indexbuffer && !mod->surfmesh.data_element3s_indexbuffer->isdynamic)
 			R_Mesh_DestroyMeshBuffer(mod->surfmesh.data_element3s_indexbuffer);
 		mod->surfmesh.data_element3s_indexbuffer = NULL;
-		if (mod->surfmesh.vbo_vertexbuffer)
-			R_Mesh_DestroyMeshBuffer(mod->surfmesh.vbo_vertexbuffer);
-		mod->surfmesh.vbo_vertexbuffer = NULL;
+		if (mod->surfmesh.data_vertex3f_vertexbuffer && !mod->surfmesh.data_vertex3f_vertexbuffer->isdynamic)
+			R_Mesh_DestroyMeshBuffer(mod->surfmesh.data_vertex3f_vertexbuffer);
+		mod->surfmesh.data_vertex3f_vertexbuffer = NULL;
+		mod->surfmesh.data_svector3f_vertexbuffer = NULL;
+		mod->surfmesh.data_tvector3f_vertexbuffer = NULL;
+		mod->surfmesh.data_normal3f_vertexbuffer = NULL;
+		mod->surfmesh.data_texcoordtexture2f_vertexbuffer = NULL;
+		mod->surfmesh.data_texcoordlightmap2f_vertexbuffer = NULL;
+		mod->surfmesh.data_lightmapcolor4f_vertexbuffer = NULL;
+		mod->surfmesh.data_skeletalindex4ub_vertexbuffer = NULL;
+		mod->surfmesh.data_skeletalweight4ub_vertexbuffer = NULL;
 	}
 	// free textures/memory attached to the model
 	R_FreeTexturePool(&mod->texturepool);
@@ -2910,36 +2918,40 @@ void Mod_BuildVBOs(void)
 		loadmodel->surfmesh.data_element3i_indexbuffer = R_Mesh_CreateMeshBuffer(loadmodel->surfmesh.data_element3i, loadmodel->surfmesh.num_triangles * sizeof(int[3]), loadmodel->name, true, false, false, false);
 
 	// only build a vbo if one has not already been created (this is important for brush models which load specially)
-	// vertex buffer is several arrays and we put them in the same buffer
-	//
-	// is this wise?  the texcoordtexture2f array is used with dynamic
-	// vertex/svector/tvector/normal when rendering animated models, on the
-	// other hand animated models don't use a lot of vertices anyway...
-	if (!loadmodel->surfmesh.vbo_vertexbuffer)
+	// we put several vertex data streams in the same buffer
+	if (!loadmodel->surfmesh.data_vertex3f_vertexbuffer)
 	{
 		int size;
 		unsigned char *mem;
 		size = 0;
-		loadmodel->surfmesh.vbooffset_vertex3f           = size;if (loadmodel->surfmesh.data_vertex3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
-		loadmodel->surfmesh.vbooffset_svector3f          = size;if (loadmodel->surfmesh.data_svector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
-		loadmodel->surfmesh.vbooffset_tvector3f          = size;if (loadmodel->surfmesh.data_tvector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
-		loadmodel->surfmesh.vbooffset_normal3f           = size;if (loadmodel->surfmesh.data_normal3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
-		loadmodel->surfmesh.vbooffset_texcoordtexture2f  = size;if (loadmodel->surfmesh.data_texcoordtexture2f ) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
-		loadmodel->surfmesh.vbooffset_texcoordlightmap2f = size;if (loadmodel->surfmesh.data_texcoordlightmap2f) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
-		loadmodel->surfmesh.vbooffset_lightmapcolor4f    = size;if (loadmodel->surfmesh.data_lightmapcolor4f   ) size += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
-		loadmodel->surfmesh.vbooffset_skeletalindex4ub   = size;if (loadmodel->surfmesh.data_skeletalindex4ub  ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
-		loadmodel->surfmesh.vbooffset_skeletalweight4ub  = size;if (loadmodel->surfmesh.data_skeletalweight4ub ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
+		loadmodel->surfmesh.data_vertex3f_bufferoffset           = size;if (loadmodel->surfmesh.data_vertex3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.data_svector3f_bufferoffset          = size;if (loadmodel->surfmesh.data_svector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.data_tvector3f_bufferoffset          = size;if (loadmodel->surfmesh.data_tvector3f         ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.data_normal3f_bufferoffset           = size;if (loadmodel->surfmesh.data_normal3f          ) size += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+		loadmodel->surfmesh.data_texcoordtexture2f_bufferoffset  = size;if (loadmodel->surfmesh.data_texcoordtexture2f ) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+		loadmodel->surfmesh.data_texcoordlightmap2f_bufferoffset = size;if (loadmodel->surfmesh.data_texcoordlightmap2f) size += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
+		loadmodel->surfmesh.data_lightmapcolor4f_bufferoffset    = size;if (loadmodel->surfmesh.data_lightmapcolor4f   ) size += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
+		loadmodel->surfmesh.data_skeletalindex4ub_bufferoffset   = size;if (loadmodel->surfmesh.data_skeletalindex4ub  ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
+		loadmodel->surfmesh.data_skeletalweight4ub_bufferoffset  = size;if (loadmodel->surfmesh.data_skeletalweight4ub ) size += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
 		mem = (unsigned char *)Mem_Alloc(tempmempool, size);
-		if (loadmodel->surfmesh.data_vertex3f          ) memcpy(mem + loadmodel->surfmesh.vbooffset_vertex3f          , loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
-		if (loadmodel->surfmesh.data_svector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_svector3f         , loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
-		if (loadmodel->surfmesh.data_tvector3f         ) memcpy(mem + loadmodel->surfmesh.vbooffset_tvector3f         , loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
-		if (loadmodel->surfmesh.data_normal3f          ) memcpy(mem + loadmodel->surfmesh.vbooffset_normal3f          , loadmodel->surfmesh.data_normal3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
-		if (loadmodel->surfmesh.data_texcoordtexture2f ) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordtexture2f , loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));
-		if (loadmodel->surfmesh.data_texcoordlightmap2f) memcpy(mem + loadmodel->surfmesh.vbooffset_texcoordlightmap2f, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));
-		if (loadmodel->surfmesh.data_lightmapcolor4f   ) memcpy(mem + loadmodel->surfmesh.vbooffset_lightmapcolor4f   , loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));
-		if (loadmodel->surfmesh.data_skeletalindex4ub  ) memcpy(mem + loadmodel->surfmesh.vbooffset_skeletalindex4ub  , loadmodel->surfmesh.data_skeletalindex4ub  , loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]));
-		if (loadmodel->surfmesh.data_skeletalweight4ub ) memcpy(mem + loadmodel->surfmesh.vbooffset_skeletalweight4ub , loadmodel->surfmesh.data_skeletalweight4ub , loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]));
-		loadmodel->surfmesh.vbo_vertexbuffer = R_Mesh_CreateMeshBuffer(mem, size, loadmodel->name, false, false, false, false);
+		if (loadmodel->surfmesh.data_vertex3f          ) memcpy(mem + loadmodel->surfmesh.data_vertex3f_bufferoffset          , loadmodel->surfmesh.data_vertex3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_svector3f         ) memcpy(mem + loadmodel->surfmesh.data_svector3f_bufferoffset         , loadmodel->surfmesh.data_svector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_tvector3f         ) memcpy(mem + loadmodel->surfmesh.data_tvector3f_bufferoffset         , loadmodel->surfmesh.data_tvector3f         , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_normal3f          ) memcpy(mem + loadmodel->surfmesh.data_normal3f_bufferoffset          , loadmodel->surfmesh.data_normal3f          , loadmodel->surfmesh.num_vertices * sizeof(float[3]));
+		if (loadmodel->surfmesh.data_texcoordtexture2f ) memcpy(mem + loadmodel->surfmesh.data_texcoordtexture2f_bufferoffset , loadmodel->surfmesh.data_texcoordtexture2f , loadmodel->surfmesh.num_vertices * sizeof(float[2]));
+		if (loadmodel->surfmesh.data_texcoordlightmap2f) memcpy(mem + loadmodel->surfmesh.data_texcoordlightmap2f_bufferoffset, loadmodel->surfmesh.data_texcoordlightmap2f, loadmodel->surfmesh.num_vertices * sizeof(float[2]));
+		if (loadmodel->surfmesh.data_lightmapcolor4f   ) memcpy(mem + loadmodel->surfmesh.data_lightmapcolor4f_bufferoffset   , loadmodel->surfmesh.data_lightmapcolor4f   , loadmodel->surfmesh.num_vertices * sizeof(float[4]));
+		if (loadmodel->surfmesh.data_skeletalindex4ub  ) memcpy(mem + loadmodel->surfmesh.data_skeletalindex4ub_bufferoffset  , loadmodel->surfmesh.data_skeletalindex4ub  , loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]));
+		if (loadmodel->surfmesh.data_skeletalweight4ub ) memcpy(mem + loadmodel->surfmesh.data_skeletalweight4ub_bufferoffset , loadmodel->surfmesh.data_skeletalweight4ub , loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]));
+		loadmodel->surfmesh.data_vertex3f_vertexbuffer = R_Mesh_CreateMeshBuffer(mem, size, loadmodel->name, false, false, false, false);
+		loadmodel->surfmesh.data_svector3f_vertexbuffer = loadmodel->surfmesh.data_svector3f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_tvector3f_vertexbuffer = loadmodel->surfmesh.data_tvector3f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_normal3f_vertexbuffer = loadmodel->surfmesh.data_normal3f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_texcoordtexture2f_vertexbuffer = loadmodel->surfmesh.data_texcoordtexture2f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_texcoordlightmap2f_vertexbuffer = loadmodel->surfmesh.data_texcoordlightmap2f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_lightmapcolor4f_vertexbuffer = loadmodel->surfmesh.data_lightmapcolor4f ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_skeletalindex4ub_vertexbuffer = loadmodel->surfmesh.data_skeletalindex4ub ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
+		loadmodel->surfmesh.data_skeletalweight4ub_vertexbuffer = loadmodel->surfmesh.data_skeletalweight4ub ? loadmodel->surfmesh.data_vertex3f_vertexbuffer : NULL;
 		Mem_Free(mem);
 	}
 }
@@ -3913,15 +3925,23 @@ static void Mod_GenerateLightmaps_UnweldTriangles(dp_model_t *model)
 	if (model->surfmesh.num_vertices > 65536)
 		model->surfmesh.data_element3s = NULL;
 
-	if (model->surfmesh.data_element3i_indexbuffer)
+	if (model->surfmesh.data_element3i_indexbuffer && !model->surfmesh.data_element3i_indexbuffer->isdynamic)
 		R_Mesh_DestroyMeshBuffer(model->surfmesh.data_element3i_indexbuffer);
 	model->surfmesh.data_element3i_indexbuffer = NULL;
-	if (model->surfmesh.data_element3s_indexbuffer)
+	if (model->surfmesh.data_element3s_indexbuffer && !model->surfmesh.data_element3s_indexbuffer->isdynamic)
 		R_Mesh_DestroyMeshBuffer(model->surfmesh.data_element3s_indexbuffer);
 	model->surfmesh.data_element3s_indexbuffer = NULL;
-	if (model->surfmesh.vbo_vertexbuffer)
-		R_Mesh_DestroyMeshBuffer(model->surfmesh.vbo_vertexbuffer);
-	model->surfmesh.vbo_vertexbuffer = 0;
+	if (model->surfmesh.data_vertex3f_vertexbuffer && !model->surfmesh.data_vertex3f_vertexbuffer->isdynamic)
+		R_Mesh_DestroyMeshBuffer(model->surfmesh.data_vertex3f_vertexbuffer);
+	model->surfmesh.data_vertex3f_vertexbuffer = NULL;
+	model->surfmesh.data_svector3f_vertexbuffer = NULL;
+	model->surfmesh.data_tvector3f_vertexbuffer = NULL;
+	model->surfmesh.data_normal3f_vertexbuffer = NULL;
+	model->surfmesh.data_texcoordtexture2f_vertexbuffer = NULL;
+	model->surfmesh.data_texcoordlightmap2f_vertexbuffer = NULL;
+	model->surfmesh.data_lightmapcolor4f_vertexbuffer = NULL;
+	model->surfmesh.data_skeletalindex4ub_vertexbuffer = NULL;
+	model->surfmesh.data_skeletalweight4ub_vertexbuffer = NULL;
 
 	// convert all triangles to unique vertex data
 	outvertexindex = 0;
@@ -4638,9 +4658,51 @@ void Mod_Mesh_ComputeBounds(dp_model_t *mod)
 	}
 }
 
+void Mod_Mesh_Validate(dp_model_t *mod)
+{
+	int i;
+	qboolean warned = false;
+	for (i = 0; i < mod->num_surfaces; i++)
+	{
+		msurface_t *surf = mod->data_surfaces + i;
+		int *e = mod->surfmesh.data_element3i + surf->num_firsttriangle * 3;
+		int first = surf->num_firstvertex;
+		int end = surf->num_firstvertex + surf->num_vertices;
+		int j;
+		for (j = 0;j < surf->num_triangles * 3;j++)
+		{
+			if (e[j] < first || e[j] >= end)
+			{
+				if (!warned)
+					Con_DPrintf("Mod_Mesh_Validate: detected corrupt surface - debug me!\n");
+				warned = true;
+				e[j] = first;
+			}
+		}
+	}
+}
+
+void Mod_Mesh_UploadDynamicBuffers(dp_model_t *mod)
+{
+	mod->surfmesh.data_element3s_indexbuffer = mod->surfmesh.data_element3s ? R_BufferData_Store(mod->surfmesh.num_triangles * sizeof(short[3]), mod->surfmesh.data_element3s, R_BUFFERDATA_INDEX16, &mod->surfmesh.data_element3s_bufferoffset) : NULL;
+	mod->surfmesh.data_element3i_indexbuffer = mod->surfmesh.data_element3i ? R_BufferData_Store(mod->surfmesh.num_triangles * sizeof(int[3]), mod->surfmesh.data_element3i, R_BUFFERDATA_INDEX32, &mod->surfmesh.data_element3i_bufferoffset) : NULL;
+	mod->surfmesh.data_vertex3f_vertexbuffer = mod->surfmesh.data_vertex3f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[3]), mod->surfmesh.data_vertex3f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_vertex3f_bufferoffset) : NULL;
+	mod->surfmesh.data_svector3f_vertexbuffer = mod->surfmesh.data_svector3f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[3]), mod->surfmesh.data_svector3f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_svector3f_bufferoffset) : NULL;
+	mod->surfmesh.data_tvector3f_vertexbuffer = mod->surfmesh.data_tvector3f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[3]), mod->surfmesh.data_tvector3f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_tvector3f_bufferoffset) : NULL;
+	mod->surfmesh.data_normal3f_vertexbuffer = mod->surfmesh.data_normal3f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[3]), mod->surfmesh.data_normal3f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_normal3f_bufferoffset) : NULL;
+	mod->surfmesh.data_texcoordtexture2f_vertexbuffer = mod->surfmesh.data_texcoordtexture2f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[2]), mod->surfmesh.data_texcoordtexture2f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_texcoordtexture2f_bufferoffset) : NULL;
+	mod->surfmesh.data_texcoordlightmap2f_vertexbuffer = mod->surfmesh.data_texcoordlightmap2f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[2]), mod->surfmesh.data_texcoordlightmap2f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_texcoordlightmap2f_bufferoffset) : NULL;
+	mod->surfmesh.data_lightmapcolor4f_vertexbuffer = mod->surfmesh.data_lightmapcolor4f ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(float[4]), mod->surfmesh.data_lightmapcolor4f, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_lightmapcolor4f_bufferoffset) : NULL;
+	mod->surfmesh.data_skeletalindex4ub_vertexbuffer = mod->surfmesh.data_skeletalindex4ub ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(unsigned char[4]), mod->surfmesh.data_skeletalindex4ub, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_skeletalindex4ub_bufferoffset) : NULL;
+	mod->surfmesh.data_skeletalweight4ub_vertexbuffer = mod->surfmesh.data_skeletalweight4ub ? R_BufferData_Store(mod->surfmesh.num_vertices * sizeof(unsigned char[4]), mod->surfmesh.data_skeletalweight4ub, R_BUFFERDATA_VERTEX, &mod->surfmesh.data_skeletalweight4ub_bufferoffset) : NULL;
+}
+
 void Mod_Mesh_Finalize(dp_model_t *mod)
 {
+	if (gl_paranoid.integer)
+		Mod_Mesh_Validate(mod);
 	Mod_Mesh_ComputeBounds(mod);
 	Mod_Mesh_MakeSortedSurfaces(mod);
 	Mod_BuildTextureVectorsFromNormals(0, mod->surfmesh.num_vertices, mod->surfmesh.num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_texcoordtexture2f, mod->surfmesh.data_normal3f, mod->surfmesh.data_element3i, mod->surfmesh.data_svector3f, mod->surfmesh.data_tvector3f, true);
+	Mod_Mesh_UploadDynamicBuffers(mod);
 }
