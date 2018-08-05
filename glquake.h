@@ -57,8 +57,8 @@ typedef float GLfloat;
 typedef float GLclampf;
 typedef double GLdouble;
 typedef double GLclampd;
-typedef ptrdiff_t GLintptrARB;
-typedef ptrdiff_t GLsizeiptrARB;
+typedef ptrdiff_t GLintptr;
+typedef ptrdiff_t GLsizeiptr;
 
 #define GL_STEREO					0x0C33
 #define GL_DONT_CARE				0x1100
@@ -202,19 +202,19 @@ typedef ptrdiff_t GLsizeiptrARB;
 #endif
 
 // GL_ARB_depth_texture
-#ifndef GL_DEPTH_COMPONENT32_ARB
-#define GL_DEPTH_COMPONENT16_ARB          0x81A5
-#define GL_DEPTH_COMPONENT24_ARB          0x81A6
-#define GL_DEPTH_COMPONENT32_ARB          0x81A7
-#define GL_TEXTURE_DEPTH_SIZE_ARB         0x884A
-//#define GL_DEPTH_TEXTURE_MODE_ARB         0x884B
+#ifndef GL_DEPTH_COMPONENT32
+#define GL_DEPTH_COMPONENT16          0x81A5
+#define GL_DEPTH_COMPONENT24          0x81A6
+#define GL_DEPTH_COMPONENT32          0x81A7
+#define GL_TEXTURE_DEPTH_SIZE         0x884A
+//#define GL_DEPTH_TEXTURE_MODE         0x884B
 #endif
 
 // GL_ARB_shadow
-#ifndef GL_TEXTURE_COMPARE_MODE_ARB
-#define GL_TEXTURE_COMPARE_MODE_ARB       0x884C
-#define GL_TEXTURE_COMPARE_FUNC_ARB       0x884D
-#define GL_COMPARE_R_TO_TEXTURE_ARB       0x884E
+#ifndef GL_TEXTURE_COMPARE_MODE
+#define GL_TEXTURE_COMPARE_MODE       0x884C
+#define GL_TEXTURE_COMPARE_FUNC       0x884D
+#define GL_COMPARE_R_TO_TEXTURE       0x884E
 #endif
 
 // GL_ARB_multitexture
@@ -295,12 +295,12 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_MAX_CUBE_MAP_TEXTURE_SIZE		0x851C
 #endif
 
-#ifndef GL_DEPTH_COMPONENT16_ARB
-#define GL_DEPTH_COMPONENT16_ARB       0x81A5
-#define GL_DEPTH_COMPONENT24_ARB       0x81A6
-#define GL_DEPTH_COMPONENT32_ARB       0x81A7
-#define GL_TEXTURE_DEPTH_SIZE_ARB      0x884A
-//#define GL_DEPTH_TEXTURE_MODE_ARB      0x884B
+#ifndef GL_DEPTH_COMPONENT16
+#define GL_DEPTH_COMPONENT16       0x81A5
+#define GL_DEPTH_COMPONENT24       0x81A6
+#define GL_DEPTH_COMPONENT32       0x81A7
+#define GL_TEXTURE_DEPTH_SIZE      0x884A
+//#define GL_DEPTH_TEXTURE_MODE      0x884B
 #endif
 
 #ifndef GL_SCISSOR_TEST
@@ -319,14 +319,14 @@ extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint
 #define GL_MIN                        0x8007
 #define GL_MAX                        0x8008
 #define GL_BLEND_EQUATION             0x8009 // also supplied by GL_blend_subtract
-extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_blend_subtract
+extern void (GLAPIENTRY *qglBlendEquation)(GLenum); // also supplied by GL_blend_subtract
 #endif
 
 //GL_EXT_blend_subtract
 #ifndef GL_FUNC_SUBTRACT
 #define GL_FUNC_SUBTRACT              0x800A
 #define GL_FUNC_REVERSE_SUBTRACT      0x800B
-extern void (GLAPIENTRY *qglBlendEquationEXT)(GLenum); // also supplied by GL_blend_subtract
+extern void (GLAPIENTRY *qglBlendEquation)(GLenum); // also supplied by GL_blend_subtract
 #endif
 
 //GL_ARB_texture_non_power_of_two
@@ -371,8 +371,8 @@ extern void (GLAPIENTRY *qglGenBuffers) (GLsizei n, GLuint *buffers);
 extern GLboolean (GLAPIENTRY *qglIsBuffer) (GLuint buffer);
 extern GLvoid* (GLAPIENTRY *qglMapBuffer) (GLenum target, GLenum access);
 extern GLboolean (GLAPIENTRY *qglUnmapBuffer) (GLenum target);
-extern void (GLAPIENTRY *qglBufferData) (GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage);
-extern void (GLAPIENTRY *qglBufferSubData) (GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data);
+extern void (GLAPIENTRY *qglBufferData) (GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage);
+extern void (GLAPIENTRY *qglBufferSubData) (GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data);
 
 //GL_ARB_framebuffer_object
 // (slight differences from GL_EXT_framebuffer_object as this integrates GL_EXT_packed_depth_stencil)
@@ -474,63 +474,63 @@ extern GLvoid (GLAPIENTRY *qglBlitFramebuffer)(GLint srcX0, GLint srcY0, GLint s
 extern GLvoid (GLAPIENTRY *qglGenerateMipmap)(GLenum target);
 
 // GL_ARB_draw_buffers
-#ifndef GL_MAX_DRAW_BUFFERS_ARB
-#define GL_MAX_DRAW_BUFFERS_ARB                              0x8824
-#define GL_DRAW_BUFFER0_ARB                                  0x8825
-#define GL_DRAW_BUFFER1_ARB                                  0x8826
-#define GL_DRAW_BUFFER2_ARB                                  0x8827
-#define GL_DRAW_BUFFER3_ARB                                  0x8828
-#define GL_DRAW_BUFFER4_ARB                                  0x8829
-#define GL_DRAW_BUFFER5_ARB                                  0x882A
-#define GL_DRAW_BUFFER6_ARB                                  0x882B
-#define GL_DRAW_BUFFER7_ARB                                  0x882C
-#define GL_DRAW_BUFFER8_ARB                                  0x882D
-#define GL_DRAW_BUFFER9_ARB                                  0x882E
-#define GL_DRAW_BUFFER10_ARB                                 0x882F
-#define GL_DRAW_BUFFER11_ARB                                 0x8830
-#define GL_DRAW_BUFFER12_ARB                                 0x8831
-#define GL_DRAW_BUFFER13_ARB                                 0x8832
-#define GL_DRAW_BUFFER14_ARB                                 0x8833
-#define GL_DRAW_BUFFER15_ARB                                 0x8834
+#ifndef GL_MAX_DRAW_BUFFERS
+#define GL_MAX_DRAW_BUFFERS                              0x8824
+#define GL_DRAW_BUFFER0                                  0x8825
+#define GL_DRAW_BUFFER1                                  0x8826
+#define GL_DRAW_BUFFER2                                  0x8827
+#define GL_DRAW_BUFFER3                                  0x8828
+#define GL_DRAW_BUFFER4                                  0x8829
+#define GL_DRAW_BUFFER5                                  0x882A
+#define GL_DRAW_BUFFER6                                  0x882B
+#define GL_DRAW_BUFFER7                                  0x882C
+#define GL_DRAW_BUFFER8                                  0x882D
+#define GL_DRAW_BUFFER9                                  0x882E
+#define GL_DRAW_BUFFER10                                 0x882F
+#define GL_DRAW_BUFFER11                                 0x8830
+#define GL_DRAW_BUFFER12                                 0x8831
+#define GL_DRAW_BUFFER13                                 0x8832
+#define GL_DRAW_BUFFER14                                 0x8833
+#define GL_DRAW_BUFFER15                                 0x8834
 #endif
-extern void (GLAPIENTRY *qglDrawBuffersARB)(GLsizei n, const GLenum *bufs);
+extern void (GLAPIENTRY *qglDrawBuffers)(GLsizei n, const GLenum *bufs);
 
 // GL_ARB_texture_float
-#ifndef GL_RGBA32F_ARB
-#define GL_RGBA32F_ARB                                       0x8814
-#define GL_RGB32F_ARB                                        0x8815
-#define GL_ALPHA32F_ARB                                      0x8816
-#define GL_INTENSITY32F_ARB                                  0x8817
-#define GL_LUMINANCE32F_ARB                                  0x8818
-#define GL_LUMINANCE_ALPHA32F_ARB                            0x8819
-#define GL_RGBA16F_ARB                                       0x881A
-#define GL_RGB16F_ARB                                        0x881B
-#define GL_ALPHA16F_ARB                                      0x881C
-#define GL_INTENSITY16F_ARB                                  0x881D
-#define GL_LUMINANCE16F_ARB                                  0x881E
-#define GL_LUMINANCE_ALPHA16F_ARB                            0x881F
+#ifndef GL_RGBA32F
+#define GL_RGBA32F                                       0x8814
+#define GL_RGB32F                                        0x8815
+#define GL_ALPHA32F                                      0x8816
+#define GL_INTENSITY32F                                  0x8817
+#define GL_LUMINANCE32F                                  0x8818
+#define GL_LUMINANCE_ALPHA32F                            0x8819
+#define GL_RGBA16F                                       0x881A
+#define GL_RGB16F                                        0x881B
+#define GL_ALPHA16F                                      0x881C
+#define GL_INTENSITY16F                                  0x881D
+#define GL_LUMINANCE16F                                  0x881E
+#define GL_LUMINANCE_ALPHA16F                            0x881F
 #endif
 
 // GL_ARB_half_float_pixel
-#ifndef GL_HALF_FLOAT_ARB
-typedef unsigned short GLhalfARB;
-#define GL_HALF_FLOAT_ARB                                    0x140B
+#ifndef GL_HALF_FLOAT
+typedef unsigned short GLhalf;
+#define GL_HALF_FLOAT                                    0x140B
 #endif
 
 // GL_EXT_texture_sRGB
-#ifndef GL_SRGB_EXT
-#define GL_SRGB_EXT                                          0x8C40
-#define GL_SRGB8_EXT                                         0x8C41
-#define GL_SRGB_ALPHA_EXT                                    0x8C42
-#define GL_SRGB8_ALPHA8_EXT                                  0x8C43
-#define GL_SLUMINANCE_ALPHA_EXT                              0x8C44
-#define GL_SLUMINANCE8_ALPHA8_EXT                            0x8C45
-#define GL_SLUMINANCE_EXT                                    0x8C46
-#define GL_SLUMINANCE8_EXT                                   0x8C47
-#define GL_COMPRESSED_SRGB_EXT                               0x8C48
-#define GL_COMPRESSED_SRGB_ALPHA_EXT                         0x8C49
-#define GL_COMPRESSED_SLUMINANCE_EXT                         0x8C4A
-#define GL_COMPRESSED_SLUMINANCE_ALPHA_EXT                   0x8C4B
+#ifndef GL_SRGB8_ALPHA8
+#define GL_SRGB                                          0x8C40
+#define GL_SRGB8                                         0x8C41
+#define GL_SRGB_ALPHA                                    0x8C42
+#define GL_SRGB8_ALPHA8                                  0x8C43
+#define GL_SLUMINANCE_ALPHA                              0x8C44
+#define GL_SLUMINANCE8_ALPHA8                            0x8C45
+#define GL_SLUMINANCE                                    0x8C46
+#define GL_SLUMINANCE8                                   0x8C47
+#define GL_COMPRESSED_SRGB                               0x8C48
+#define GL_COMPRESSED_SRGB_ALPHA                         0x8C49
+#define GL_COMPRESSED_SLUMINANCE                         0x8C4A
+#define GL_COMPRESSED_SLUMINANCE_ALPHA                   0x8C4B
 #define GL_COMPRESSED_SRGB_S3TC_DXT1_EXT                     0x8C4C
 #define GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT               0x8C4D
 #define GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT               0x8C4E
@@ -579,7 +579,7 @@ extern void (GLAPIENTRY *qglGetActiveUniformName)(GLuint program, GLuint uniform
 extern GLuint (GLAPIENTRY *qglGetUniformBlockIndex)(GLuint program, const char* uniformBlockName);
 extern void (GLAPIENTRY *qglGetActiveUniformBlockiv)(GLuint program, GLuint uniformBlockIndex, GLenum pname,  GLint* params);
 extern void (GLAPIENTRY *qglGetActiveUniformBlockName)(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei* length, char* uniformBlockName);
-extern void (GLAPIENTRY *qglBindBufferRange)(GLenum target, GLuint index, GLuint buffer, GLintptrARB offset, GLsizeiptrARB size);
+extern void (GLAPIENTRY *qglBindBufferRange)(GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 extern void (GLAPIENTRY *qglBindBufferBase)(GLenum target, GLuint index, GLuint buffer);
 extern void (GLAPIENTRY *qglGetIntegeri_v)(GLenum target, GLuint index, GLint* data);
 extern void (GLAPIENTRY *qglUniformBlockBinding)(GLuint program, GLuint uniformBlockIndex, GLuint uniformBlockBinding);
@@ -841,25 +841,25 @@ extern void (GLAPIENTRY *qglGetVertexAttribPointerv)(GLuint index, GLenum pname,
 #endif
 
 // GL_ARB_texture_compression
-extern void (GLAPIENTRY *qglCompressedTexImage3DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
-extern void (GLAPIENTRY *qglCompressedTexImage2DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
-//extern void (GLAPIENTRY *qglCompressedTexImage1DARB)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
-extern void (GLAPIENTRY *qglCompressedTexSubImage3DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
-extern void (GLAPIENTRY *qglCompressedTexSubImage2DARB)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
-//extern void (GLAPIENTRY *qglCompressedTexSubImage1DARB)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
-extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, void *img);
-#ifndef GL_COMPRESSED_RGB_ARB
-#define GL_COMPRESSED_ALPHA_ARB						0x84E9
-#define GL_COMPRESSED_LUMINANCE_ARB					0x84EA
-#define GL_COMPRESSED_LUMINANCE_ALPHA_ARB			0x84EB
-#define GL_COMPRESSED_INTENSITY_ARB					0x84EC
-#define GL_COMPRESSED_RGB_ARB						0x84ED
-#define GL_COMPRESSED_RGBA_ARB						0x84EE
-#define GL_TEXTURE_COMPRESSION_HINT_ARB				0x84EF
-#define GL_TEXTURE_COMPRESSED_IMAGE_SIZE_ARB		0x86A0
-#define GL_TEXTURE_COMPRESSED_ARB					0x86A1
-#define GL_NUM_COMPRESSED_TEXTURE_FORMATS_ARB		0x86A2
-#define GL_COMPRESSED_TEXTURE_FORMATS_ARB			0x86A3
+extern void (GLAPIENTRY *qglCompressedTexImage3D)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexImage2D)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border,  GLsizei imageSize, const void *data);
+//extern void (GLAPIENTRY *qglCompressedTexImage1D)(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLint border, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglCompressedTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
+//extern void (GLAPIENTRY *qglCompressedTexSubImage1D)(GLenum target, GLint level, GLint xoffset, GLsizei width, GLenum format, GLsizei imageSize, const void *data);
+extern void (GLAPIENTRY *qglGetCompressedTexImage)(GLenum target, GLint lod, void *img);
+#ifndef GL_COMPRESSED_RGB
+#define GL_COMPRESSED_ALPHA						0x84E9
+#define GL_COMPRESSED_LUMINANCE					0x84EA
+#define GL_COMPRESSED_LUMINANCE_ALPHA			0x84EB
+#define GL_COMPRESSED_INTENSITY					0x84EC
+#define GL_COMPRESSED_RGB						0x84ED
+#define GL_COMPRESSED_RGBA						0x84EE
+#define GL_TEXTURE_COMPRESSION_HINT				0x84EF
+#define GL_TEXTURE_COMPRESSED_IMAGE_SIZE		0x86A0
+#define GL_TEXTURE_COMPRESSED					0x86A1
+#define GL_NUM_COMPRESSED_TEXTURE_FORMATS		0x86A2
+#define GL_COMPRESSED_TEXTURE_FORMATS			0x86A3
 #endif
 
 // GL_EXT_texture_compression_s3tc
@@ -871,28 +871,28 @@ extern void (GLAPIENTRY *qglGetCompressedTexImageARB)(GLenum target, GLint lod, 
 #endif
 
 // GL_ARB_occlusion_query
-extern void (GLAPIENTRY *qglGenQueriesARB)(GLsizei n, GLuint *ids);
-extern void (GLAPIENTRY *qglDeleteQueriesARB)(GLsizei n, const GLuint *ids);
-extern GLboolean (GLAPIENTRY *qglIsQueryARB)(GLuint qid);
-extern void (GLAPIENTRY *qglBeginQueryARB)(GLenum target, GLuint qid);
-extern void (GLAPIENTRY *qglEndQueryARB)(GLenum target);
-extern void (GLAPIENTRY *qglGetQueryivARB)(GLenum target, GLenum pname, GLint *params);
-extern void (GLAPIENTRY *qglGetQueryObjectivARB)(GLuint qid, GLenum pname, GLint *params);
-extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLuint *params);
-#ifndef GL_SAMPLES_PASSED_ARB
-#define GL_SAMPLES_PASSED_ARB                             0x8914
-#define GL_QUERY_COUNTER_BITS_ARB                         0x8864
-#define GL_CURRENT_QUERY_ARB                              0x8865
-#define GL_QUERY_RESULT_ARB                               0x8866
-#define GL_QUERY_RESULT_AVAILABLE_ARB                     0x8867
+extern void (GLAPIENTRY *qglGenQueries)(GLsizei n, GLuint *ids);
+extern void (GLAPIENTRY *qglDeleteQueries)(GLsizei n, const GLuint *ids);
+extern GLboolean (GLAPIENTRY *qglIsQuery)(GLuint qid);
+extern void (GLAPIENTRY *qglBeginQuery)(GLenum target, GLuint qid);
+extern void (GLAPIENTRY *qglEndQuery)(GLenum target);
+extern void (GLAPIENTRY *qglGetQueryiv)(GLenum target, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetQueryObjectiv)(GLuint qid, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetQueryObjectuiv)(GLuint qid, GLenum pname, GLuint *params);
+#ifndef GL_SAMPLES_PASSED
+#define GL_SAMPLES_PASSED                             0x8914
+#define GL_QUERY_COUNTER_BITS                         0x8864
+#define GL_CURRENT_QUERY                              0x8865
+#define GL_QUERY_RESULT                               0x8866
+#define GL_QUERY_RESULT_AVAILABLE                     0x8867
 #endif
 
 // GL_ARB_query_buffer_object
-#ifndef GL_QUERY_BUFFER_ARB
-#define GL_QUERY_BUFFER_ARB                               0x9192
-#define GL_QUERY_BUFFER_BINDING_ARB                       0x9193
-#define GL_QUERY_RESULT_NO_WAIT_ARB                       0x9194
-#define GL_QUERY_BUFFER_BARRIER_BIT_ARB                   0x00008000
+#ifndef GL_QUERY_BUFFER
+#define GL_QUERY_BUFFER                               0x9192
+#define GL_QUERY_BUFFER_BINDING                       0x9193
+#define GL_QUERY_RESULT_NO_WAIT                       0x9194
+#define GL_QUERY_BUFFER_BARRIER_BIT                   0x00008000
 #endif
 
 // GL_EXT_bgr
@@ -906,23 +906,23 @@ extern void (GLAPIENTRY *qglGetQueryObjectuivARB)(GLuint qid, GLenum pname, GLui
 //GL_ARB_texture_gather
 
 //GL_ARB_multisample
-#define GL_MULTISAMPLE_ARB              0x809D
-#define GL_SAMPLE_ALPHA_TO_COVERAGE_ARB 0x809E
-#define GL_SAMPLE_ALPHA_TO_ONE_ARB      0x809F
-#define GL_SAMPLE_COVERAGE_ARB          0x80A0
-#define GL_SAMPLE_BUFFERS_ARB           0x80A8
-#define GL_SAMPLES_ARB                  0x80A9
-#define GL_SAMPLE_COVERAGE_VALUE_ARB    0x80AA
-#define GL_SAMPLE_COVERAGE_INVERT_ARB   0x80AB
-#define GL_MULTISAMPLE_BIT_ARB          0x20000000
-extern void (GLAPIENTRY *qglSampleCoverageARB)(GLclampf value, GLboolean invert);
+#define GL_MULTISAMPLE              0x809D
+#define GL_SAMPLE_ALPHA_TO_COVERAGE 0x809E
+#define GL_SAMPLE_ALPHA_TO_ONE      0x809F
+#define GL_SAMPLE_COVERAGE          0x80A0
+#define GL_SAMPLE_BUFFERS           0x80A8
+#define GL_SAMPLES                  0x80A9
+#define GL_SAMPLE_COVERAGE_VALUE    0x80AA
+#define GL_SAMPLE_COVERAGE_INVERT   0x80AB
+#define GL_MULTISAMPLE_BIT          0x20000000
+extern void (GLAPIENTRY *qglSampleCoverage)(GLclampf value, GLboolean invert);
 
 extern void (GLAPIENTRY *qglPointSize)(GLfloat size);
 
 //GL_EXT_packed_depth_stencil
-#define GL_DEPTH_STENCIL_EXT            0x84F9
-#define GL_UNSIGNED_INT_24_8_EXT        0x84FA
-#define GL_DEPTH24_STENCIL8_EXT         0x88F0
+#define GL_DEPTH_STENCIL            0x84F9
+#define GL_UNSIGNED_INT_24_8        0x84FA
+#define GL_DEPTH24_STENCIL8         0x88F0
 
 //GL_EXT_blend_func_separate
 #ifndef GL_BLEND_DST_RGB
@@ -981,46 +981,46 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #endif
 
 #ifdef USE_GLES2
-#define qglIsBufferARB glIsBuffer
+#define qglIsBuffer glIsBuffer
 #define qglIsEnabled glIsEnabled
-#define qglIsFramebufferEXT glIsFramebuffer
-//#define qglIsQueryARB glIsQuery
-#define qglIsRenderbufferEXT glIsRenderbuffer
-//#define qglUnmapBufferARB glUnmapBuffer
+#define qglIsFramebuffer glIsFramebuffer
+//#define qglIsQuery glIsQuery
+#define qglIsRenderbuffer glIsRenderbuffer
+//#define qglUnmapBuffer glUnmapBuffer
 #define qglCheckFramebufferStatus glCheckFramebufferStatus
 #define qglGetError glGetError
 #define qglCreateProgram glCreateProgram
 #define qglCreateShader glCreateShader
-//#define qglGetHandleARB glGetHandle
+//#define qglGetHandle glGetHandle
 #define qglGetAttribLocation glGetAttribLocation
 #define qglGetUniformLocation glGetUniformLocation
-//#define qglMapBufferARB glMapBuffer
+//#define qglMapBuffer glMapBuffer
 #define qglGetString glGetString
-//#define qglActiveStencilFaceEXT glActiveStencilFace
+//#define qglActiveStencilFace glActiveStencilFace
 #define qglActiveTexture glActiveTexture
 #define qglAttachShader glAttachShader
-//#define qglBeginQueryARB glBeginQuery
+//#define qglBeginQuery glBeginQuery
 #define qglBindAttribLocation glBindAttribLocation
 //#define qglBindFragDataLocation glBindFragDataLocation
 #define qglBindBuffer glBindBuffer
 #define qglBindFramebuffer glBindFramebuffer
 #define qglBindRenderbuffer glBindRenderbuffer
 #define qglBindTexture glBindTexture
-#define qglBlendEquationEXT glBlendEquation
+#define qglBlendEquation glBlendEquation
 #define qglBlendFunc glBlendFunc
 #define qglBlendFuncSeparate glBlendFuncSeparate
-#define qglBufferDataARB glBufferData
-#define qglBufferSubDataARB glBufferSubData
+#define qglBufferData glBufferData
+#define qglBufferSubData glBufferSubData
 #define qglClear glClear
 #define qglClearColor glClearColor
 #define qglClearDepthf glClearDepthf
 #define qglClearStencil glClearStencil
 #define qglColorMask glColorMask
 #define qglCompileShader glCompileShader
-#define qglCompressedTexImage2DARB glCompressedTexImage2D
-#define qglCompressedTexImage3DARB glCompressedTexImage3D
-#define qglCompressedTexSubImage2DARB glCompressedTexSubImage2D
-#define qglCompressedTexSubImage3DARB glCompressedTexSubImage3D
+#define qglCompressedTexImage2D glCompressedTexImage2D
+#define qglCompressedTexImage3D glCompressedTexImage3D
+#define qglCompressedTexSubImage2D glCompressedTexSubImage2D
+#define qglCompressedTexSubImage3D glCompressedTexSubImage3D
 #define qglCopyTexImage2D glCopyTexImage2D
 #define qglCopyTexSubImage2D glCopyTexSubImage2D
 #define qglCopyTexSubImage3D glCopyTexSubImage3D
@@ -1029,7 +1029,7 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglDeleteFramebuffers glDeleteFramebuffers
 #define qglDeleteProgram glDeleteProgram
 #define qglDeleteShader glDeleteShader
-//#define qglDeleteQueriesARB glDeleteQueries
+//#define qglDeleteQueries glDeleteQueries
 #define qglDeleteRenderbuffers glDeleteRenderbuffers
 #define qglDeleteTextures glDeleteTextures
 #define qglDepthFunc glDepthFunc
@@ -1040,11 +1040,11 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglDisableVertexAttribArray glDisableVertexAttribArray
 #define qglDrawArrays glDrawArrays
 //#define qglDrawBuffer glDrawBuffer
-//#define qglDrawBuffersARB glDrawBuffers
+//#define qglDrawBuffers glDrawBuffers
 #define qglDrawElements glDrawElements
 #define qglEnable glEnable
 #define qglEnableVertexAttribArray glEnableVertexAttribArray
-//#define qglEndQueryARB glEndQuery
+//#define qglEndQuery glEndQuery
 #define qglFinish glFinish
 #define qglFlush glFlush
 #define qglFramebufferRenderbuffer glFramebufferRenderbuffer
@@ -1052,27 +1052,27 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #define qglFramebufferTexture3DEXT glFramebufferTexture3D
 #define qglGenBuffers glGenBuffers
 #define qglGenFramebuffers glGenFramebuffers
-//#define qglGenQueriesARB glGenQueries
+//#define qglGenQueries glGenQueries
 #define qglGenRenderbuffers glGenRenderbuffers
 #define qglGenTextures glGenTextures
-#define qglGenerateMipmapEXT glGenerateMipmap
+#define qglGenerateMipmap glGenerateMipmap
 #define qglGetActiveAttrib glGetActiveAttrib
 #define qglGetActiveUniform glGetActiveUniform
 #define qglGetAttachedShaders glGetAttachedShaders
 #define qglGetBooleanv glGetBooleanv
-//#define qglGetCompressedTexImageARB glGetCompressedTexImage
+//#define qglGetCompressedTexImage glGetCompressedTexImage
 #define qglGetDoublev glGetDoublev
 #define qglGetFloatv glGetFloatv
-#define qglGetFramebufferAttachmentParameterivEXT glGetFramebufferAttachmentParameteriv
+#define qglGetFramebufferAttachmentParameteriv glGetFramebufferAttachmentParameteriv
 #define qglGetProgramInfoLog glGetProgramInfoLog
 #define qglGetShaderInfoLog glGetShaderInfoLog
 #define qglGetIntegerv glGetIntegerv
 #define qglGetShaderiv glGetShaderiv
 #define qglGetProgramiv glGetProgramiv
-//#define qglGetQueryObjectivARB glGetQueryObjectiv
-//#define qglGetQueryObjectuivARB glGetQueryObjectuiv
-//#define qglGetQueryivARB glGetQueryiv
-#define qglGetRenderbufferParameterivEXT glGetRenderbufferParameteriv
+//#define qglGetQueryObjectiv glGetQueryObjectiv
+//#define qglGetQueryObjectuiv glGetQueryObjectuiv
+//#define qglGetQueryiv glGetQueryiv
+#define qglGetRenderbufferParameteriv glGetRenderbufferParameteriv
 #define qglGetShaderSource glGetShaderSource
 #define qglGetTexImage glGetTexImage
 #define qglGetTexLevelParameterfv glGetTexLevelParameterfv

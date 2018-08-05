@@ -2590,10 +2590,9 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	SCR_DrawLoadingScreen(clear);
 #else
-	if (qglDrawBuffer)
-		qglDrawBuffer(GL_BACK);
+	qglDrawBuffer(GL_BACK);
 	SCR_DrawLoadingScreen_SharedSetup(clear);
-	if (vid.stereobuffer && qglDrawBuffer)
+	if (vid.stereobuffer)
 	{
 		qglDrawBuffer(GL_BACK_LEFT);
 		SCR_DrawLoadingScreen(clear);
@@ -2602,8 +2601,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	}
 	else
 	{
-		if (qglDrawBuffer)
-			qglDrawBuffer(GL_BACK);
+		qglDrawBuffer(GL_BACK);
 		SCR_DrawLoadingScreen(clear);
 	}
 #endif
@@ -2788,11 +2786,8 @@ void CL_UpdateScreen(void)
 	SCR_SetUpToDrawConsole();
 
 #ifndef USE_GLES2
-	if (qglDrawBuffer)
-	{
-		CHECKGLERROR
-		qglDrawBuffer(GL_BACK);CHECKGLERROR
-	}
+	CHECKGLERROR
+	qglDrawBuffer(GL_BACK);CHECKGLERROR
 #endif
 
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
@@ -2859,8 +2854,7 @@ void CL_UpdateScreen(void)
 	SCR_CaptureVideo();
 #endif
 
-	if (qglFlush)
-		qglFlush(); // FIXME: should we really be using qglFlush here?
+	qglFlush(); // ensure that the commands are submitted to the GPU before we do other things
 
 	if (!vid_activewindow)
 		VID_SetMouse(false, false, false);

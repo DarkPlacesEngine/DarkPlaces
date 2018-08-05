@@ -1324,8 +1324,8 @@ void wrapglBindRenderbuffer(GLenum target, GLuint renderbuffer) {PRECALL;glBindR
 void wrapglBindTexture(GLenum target, GLuint texture) {PRECALL;glBindTexture(target, texture);POSTCALL;}
 void wrapglBlendEquation(GLenum e) {PRECALL;glBlendEquation(e);POSTCALL;}
 void wrapglBlendFunc(GLenum sfactor, GLenum dfactor) {PRECALL;glBlendFunc(sfactor, dfactor);POSTCALL;}
-void wrapglBufferData(GLenum target, GLsizeiptrARB size, const GLvoid *data, GLenum usage) {PRECALL;glBufferData(target, size, data, usage);POSTCALL;}
-void wrapglBufferSubData(GLenum target, GLintptrARB offset, GLsizeiptrARB size, const GLvoid *data) {PRECALL;glBufferSubData(target, offset, size, data);POSTCALL;}
+void wrapglBufferData(GLenum target, GLsizeiptr size, const GLvoid *data, GLenum usage) {PRECALL;glBufferData(target, size, data, usage);POSTCALL;}
+void wrapglBufferSubData(GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid *data) {PRECALL;glBufferSubData(target, offset, size, data);POSTCALL;}
 void wrapglClear(GLbitfield mask) {PRECALL;glClear(mask);POSTCALL;}
 void wrapglClearColor(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha) {PRECALL;glClearColor(red, green, blue, alpha);POSTCALL;}
 void wrapglClearDepth(GLclampd depth) {PRECALL;/*Con_Printf("glClearDepth(%f)\n", depth);glClearDepthf((float)depth);*/POSTCALL;}
@@ -1493,46 +1493,46 @@ void wrapglGetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer)
 void GLES_Init(void)
 {
 #ifndef qglClear
-	qglIsBufferARB = wrapglIsBuffer;
+	qglIsBuffer = wrapglIsBuffer;
 	qglIsEnabled = wrapglIsEnabled;
-	qglIsFramebufferEXT = wrapglIsFramebuffer;
-//	qglIsQueryARB = wrapglIsQuery;
-	qglIsRenderbufferEXT = wrapglIsRenderbuffer;
-//	qglUnmapBufferARB = wrapglUnmapBuffer;
+	qglIsFramebuffer = wrapglIsFramebuffer;
+//	qglIsQuery = wrapglIsQuery;
+	qglIsRenderbuffer = wrapglIsRenderbuffer;
+//	qglUnmapBuffer = wrapglUnmapBuffer;
 	qglCheckFramebufferStatus = wrapglCheckFramebufferStatus;
 	qglGetError = wrapglGetError;
 	qglCreateProgram = wrapglCreateProgram;
 	qglCreateShader = wrapglCreateShader;
-//	qglGetHandleARB = wrapglGetHandle;
+//	qglGetHandle = wrapglGetHandle;
 	qglGetAttribLocation = wrapglGetAttribLocation;
 	qglGetUniformLocation = wrapglGetUniformLocation;
 //	qglMapBuffer = wrapglMapBuffer;
 	qglGetString = wrapglGetString;
-//	qglActiveStencilFaceEXT = wrapglActiveStencilFace;
+//	qglActiveStencilFace = wrapglActiveStencilFace;
 	qglActiveTexture = wrapglActiveTexture;
 	qglArrayElement = wrapglArrayElement;
 	qglAttachShader = wrapglAttachShader;
-//	qglBeginQueryARB = wrapglBeginQuery;
+//	qglBeginQuery = wrapglBeginQuery;
 	qglBindAttribLocation = wrapglBindAttribLocation;
 //	qglBindFragDataLocation = wrapglBindFragDataLocation;
 	qglBindBuffer = wrapglBindBuffer;
 	qglBindFramebuffer = wrapglBindFramebuffer;
 	qglBindRenderbuffer = wrapglBindRenderbuffer;
 	qglBindTexture = wrapglBindTexture;
-	qglBlendEquationEXT = wrapglBlendEquation;
+	qglBlendEquation = wrapglBlendEquation;
 	qglBlendFunc = wrapglBlendFunc;
-	qglBufferDataARB = wrapglBufferData;
-	qglBufferSubDataARB = wrapglBufferSubData;
+	qglBufferData = wrapglBufferData;
+	qglBufferSubData = wrapglBufferSubData;
 	qglClear = wrapglClear;
 	qglClearColor = wrapglClearColor;
 	qglClearDepth = wrapglClearDepth;
 	qglClearStencil = wrapglClearStencil;
 	qglColorMask = wrapglColorMask;
 	qglCompileShader = wrapglCompileShader;
-	qglCompressedTexImage2DARB = wrapglCompressedTexImage2D;
-	qglCompressedTexImage3DARB = wrapglCompressedTexImage3D;
-	qglCompressedTexSubImage2DARB = wrapglCompressedTexSubImage2D;
-	qglCompressedTexSubImage3DARB = wrapglCompressedTexSubImage3D;
+	qglCompressedTexImage2D = wrapglCompressedTexImage2D;
+	qglCompressedTexImage3D = wrapglCompressedTexImage3D;
+	qglCompressedTexSubImage2D = wrapglCompressedTexSubImage2D;
+	qglCompressedTexSubImage3D = wrapglCompressedTexSubImage3D;
 	qglCopyTexImage2D = wrapglCopyTexImage2D;
 	qglCopyTexSubImage2D = wrapglCopyTexSubImage2D;
 	qglCopyTexSubImage3D = wrapglCopyTexSubImage3D;
@@ -1541,7 +1541,7 @@ void GLES_Init(void)
 	qglDeleteFramebuffers = wrapglDeleteFramebuffers;
 	qglDeleteProgram = wrapglDeleteProgram;
 	qglDeleteShader = wrapglDeleteShader;
-//	qglDeleteQueriesARB = wrapglDeleteQueries;
+//	qglDeleteQueries = wrapglDeleteQueries;
 	qglDeleteRenderbuffers = wrapglDeleteRenderbuffers;
 	qglDeleteTextures = wrapglDeleteTextures;
 	qglDepthFunc = wrapglDepthFunc;
@@ -1552,39 +1552,39 @@ void GLES_Init(void)
 	qglDisableVertexAttribArray = wrapglDisableVertexAttribArray;
 	qglDrawArrays = wrapglDrawArrays;
 //	qglDrawBuffer = wrapglDrawBuffer;
-//	qglDrawBuffersARB = wrapglDrawBuffers;
+//	qglDrawBuffers = wrapglDrawBuffers;
 	qglDrawElements = wrapglDrawElements;
 	qglEnable = wrapglEnable;
 	qglEnableVertexAttribArray = wrapglEnableVertexAttribArray;
-//	qglEndQueryARB = wrapglEndQuery;
+//	qglEndQuery = wrapglEndQuery;
 	qglFinish = wrapglFinish;
 	qglFlush = wrapglFlush;
-	qglFramebufferRenderbufferEXT = wrapglFramebufferRenderbuffer;
-	qglFramebufferTexture2DEXT = wrapglFramebufferTexture2D;
-	qglFramebufferTexture3DEXT = wrapglFramebufferTexture3D;
+	qglFramebufferRenderbuffer = wrapglFramebufferRenderbuffer;
+	qglFramebufferTexture2D = wrapglFramebufferTexture2D;
+	qglFramebufferTexture3D = wrapglFramebufferTexture3D;
 	qglGenBuffers = wrapglGenBuffers;
 	qglGenFramebuffers = wrapglGenFramebuffers;
-//	qglGenQueriesARB = wrapglGenQueries;
+//	qglGenQueries = wrapglGenQueries;
 	qglGenRenderbuffers = wrapglGenRenderbuffers;
 	qglGenTextures = wrapglGenTextures;
-	qglGenerateMipmapEXT = wrapglGenerateMipmap;
+	qglGenerateMipmap = wrapglGenerateMipmap;
 	qglGetActiveAttrib = wrapglGetActiveAttrib;
 	qglGetActiveUniform = wrapglGetActiveUniform;
 	qglGetAttachedShaders = wrapglGetAttachedShaders;
 	qglGetBooleanv = wrapglGetBooleanv;
-//	qglGetCompressedTexImageARB = wrapglGetCompressedTexImage;
+//	qglGetCompressedTexImage = wrapglGetCompressedTexImage;
 	qglGetDoublev = wrapglGetDoublev;
 	qglGetFloatv = wrapglGetFloatv;
-	qglGetFramebufferAttachmentParameterivEXT = wrapglGetFramebufferAttachmentParameteriv;
+	qglGetFramebufferAttachmentParameteriv = wrapglGetFramebufferAttachmentParameteriv;
 	qglGetProgramInfoLog = wrapglGetProgramInfoLog;
 	qglGetShaderInfoLog = wrapglGetShaderInfoLog;
 	qglGetIntegerv = wrapglGetIntegerv;
 	qglGetShaderiv = wrapglGetShaderiv;
 	qglGetProgramiv = wrapglGetProgramiv;
-//	qglGetQueryObjectivARB = wrapglGetQueryObjectiv;
-//	qglGetQueryObjectuivARB = wrapglGetQueryObjectuiv;
-//	qglGetQueryivARB = wrapglGetQueryiv;
-	qglGetRenderbufferParameterivEXT = wrapglGetRenderbufferParameteriv;
+//	qglGetQueryObjectiv = wrapglGetQueryObjectiv;
+//	qglGetQueryObjectuiv = wrapglGetQueryObjectuiv;
+//	qglGetQueryiv = wrapglGetQueryiv;
+	qglGetRenderbufferParameteriv = wrapglGetRenderbufferParameteriv;
 	qglGetShaderSource = wrapglGetShaderSource;
 	qglGetTexImage = wrapglGetTexImage;
 	qglGetTexLevelParameterfv = wrapglGetTexLevelParameterfv;

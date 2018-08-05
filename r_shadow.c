@@ -4429,7 +4429,7 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 {
 	float zdist;
 	vec3_t centerorigin;
-#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
+#ifndef USE_GLES2
 	float vertex3f[12];
 #endif
 	// if it's too close, skip it
@@ -4449,21 +4449,21 @@ static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequer
 		{
 		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
-#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
+#ifndef USE_GLES2
 			CHECKGLERROR
 			// NOTE: GL_DEPTH_TEST must be enabled or ATI won't count samples, so use GL_DepthFunc instead
-			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_allpixels);
+			qglBeginQuery(GL_SAMPLES_PASSED, rtlight->corona_queryindex_allpixels);
 			GL_DepthFunc(GL_ALWAYS);
 			R_CalcSprite_Vertex3f(vertex3f, centerorigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
 			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL, 0);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
+			qglEndQuery(GL_SAMPLES_PASSED);
 			GL_DepthFunc(GL_LEQUAL);
-			qglBeginQueryARB(GL_SAMPLES_PASSED_ARB, rtlight->corona_queryindex_visiblepixels);
+			qglBeginQuery(GL_SAMPLES_PASSED, rtlight->corona_queryindex_visiblepixels);
 			R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
 			R_Mesh_PrepareVertices_Vertex3f(4, vertex3f, NULL, 0);
 			R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-			qglEndQueryARB(GL_SAMPLES_PASSED_ARB);
+			qglEndQuery(GL_SAMPLES_PASSED);
 			CHECKGLERROR
 #endif
 			break;
@@ -4478,7 +4478,6 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 {
 	vec3_t color;
 	unsigned int occlude = 0;
-	GLint allpixels = 0, visiblepixels = 0;
 
 	// now we have to check the query result
 	if (rtlight->corona_queryindex_visiblepixels)
@@ -4487,31 +4486,22 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		{
 		case RENDERPATH_GL32:
 		case RENDERPATH_GLES2:
-#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
-			// See if we can use the GPU-side method to prevent implicit sync
-			if (vid.support.arb_query_buffer_object) {
+#ifndef USE_GLES2
+			// store the pixel counts into a uniform buffer for the shader to
+			// use - we'll never know the results on the cpu without
+			// synchronizing and we don't want that
 #define BUFFER_OFFSET(i)    ((GLint *)((unsigned char*)NULL + (i)))
-				if (!r_shadow_occlusion_buf) {
-					qglGenBuffers(1, &r_shadow_occlusion_buf);
-					qglBindBuffer(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
-					qglBufferData(GL_QUERY_BUFFER_ARB, 8, NULL, GL_DYNAMIC_COPY);
-				} else {
-					qglBindBuffer(GL_QUERY_BUFFER_ARB, r_shadow_occlusion_buf);
-				}
-				qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(0));
-				qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, BUFFER_OFFSET(4));
-				qglBindBufferBase(GL_UNIFORM_BUFFER, 0, r_shadow_occlusion_buf);
-				occlude = MATERIALFLAG_OCCLUDE;
-				cscale *= rtlight->corona_visibility;
-				CHECKGLERROR
-				break;
+			if (!r_shadow_occlusion_buf) {
+				qglGenBuffers(1, &r_shadow_occlusion_buf);
+				qglBindBuffer(GL_QUERY_BUFFER, r_shadow_occlusion_buf);
+				qglBufferData(GL_QUERY_BUFFER, 8, NULL, GL_DYNAMIC_COPY);
+			} else {
+				qglBindBuffer(GL_QUERY_BUFFER, r_shadow_occlusion_buf);
 			}
-			CHECKGLERROR
-			qglGetQueryObjectivARB(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT_ARB, &visiblepixels);
-			qglGetQueryObjectivARB(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT_ARB, &allpixels);
-			if (visiblepixels < 1 || allpixels < 1)
-				return;
-			rtlight->corona_visibility *= bound(0, (float)visiblepixels / (float)allpixels, 1);
+			qglGetQueryObjectiv(rtlight->corona_queryindex_visiblepixels, GL_QUERY_RESULT, BUFFER_OFFSET(0));
+			qglGetQueryObjectiv(rtlight->corona_queryindex_allpixels, GL_QUERY_RESULT, BUFFER_OFFSET(4));
+			qglBindBufferBase(GL_UNIFORM_BUFFER, 0, r_shadow_occlusion_buf);
+			occlude = MATERIALFLAG_OCCLUDE;
 			cscale *= rtlight->corona_visibility;
 			CHECKGLERROR
 			break;
@@ -4560,16 +4550,14 @@ void R_Shadow_DrawCoronas(void)
 
 	range = Mem_ExpandableArray_IndexRange(&r_shadow_worldlightsarray); // checked
 
-	// check occlusion of coronas
-	// use GL_ARB_occlusion_query if available
-	// otherwise use raytraces
+	// check occlusion of coronas, using occlusion queries or raytraces
 	r_numqueries = 0;
 	switch (vid.renderpath)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		usequery = vid.support.arb_occlusion_query && r_coronas_occlusionquery.integer;
-#if defined(GL_SAMPLES_PASSED_ARB) && !defined(USE_GLES2)
+		usequery = r_coronas_occlusionquery.integer;
+#ifndef USE_GLES2
 		if (usequery)
 		{
 			GL_ColorMask(0,0,0,0);
@@ -4580,7 +4568,7 @@ void R_Shadow_DrawCoronas(void)
 				r_maxqueries = ((unsigned int)range + r_refdef.scene.numlights) * 4;
 				r_maxqueries = min(r_maxqueries, MAX_OCCLUSION_QUERIES);
 				CHECKGLERROR
-				qglGenQueriesARB(r_maxqueries - i, r_queries + i);
+				qglGenQueries(r_maxqueries - i, r_queries + i);
 				CHECKGLERROR
 			}
 			RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);

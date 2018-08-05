@@ -1635,7 +1635,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 			}
 			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), w, h, data);
 #ifndef USE_GLES2
-			if (r_font_compress.integer && qglGetCompressedTexImageARB && Draw_IsPicLoaded(map->pic))
+			if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
 				R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
 #endif
 		}
