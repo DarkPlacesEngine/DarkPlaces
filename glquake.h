@@ -86,6 +86,7 @@ extern void (GLAPIENTRY *qglBindBufferBase)(GLenum target, GLuint index, GLuint 
 extern void (GLAPIENTRY *qglBindBufferRange)(GLenum target, GLuint index, GLuint buffer, GLintptr offset, GLsizeiptr size);
 extern void (GLAPIENTRY *qglBindFragDataLocation)(GLuint programObj, GLuint index, const GLchar *name);
 extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
+extern void (GLAPIENTRY *qglBindVertexArray)(GLuint array);
 extern void (GLAPIENTRY *qglBlendEquation)(GLenum); // also supplied by GL_blend_subtract
 extern void (GLAPIENTRY *qglBlendFunc)(GLenum sfactor, GLenum dfactor);
 extern void (GLAPIENTRY *qglBlendFuncSeparate)(GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
@@ -113,6 +114,7 @@ extern void (GLAPIENTRY *qglDeleteProgram)(GLuint obj);
 extern void (GLAPIENTRY *qglDeleteQueries)(GLsizei n, const GLuint *ids);
 extern void (GLAPIENTRY *qglDeleteShader)(GLuint obj);
 extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+extern void (GLAPIENTRY *qglDeleteVertexArrays)(GLsizei n, const GLuint *arrays);
 extern void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 extern void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
 extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
@@ -132,6 +134,7 @@ extern void (GLAPIENTRY *qglFlush)(void);
 extern void (GLAPIENTRY *qglGenBuffers) (GLsizei n, GLuint *buffers);
 extern void (GLAPIENTRY *qglGenQueries)(GLsizei n, GLuint *ids);
 extern void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
+extern void (GLAPIENTRY *qglGenVertexArrays)(GLsizei n, GLuint *arrays);
 extern void (GLAPIENTRY *qglGetActiveAttrib)(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
 extern void (GLAPIENTRY *qglGetActiveUniform)(GLuint programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
 extern void (GLAPIENTRY *qglGetActiveUniformBlockName)(GLuint program, GLuint uniformBlockIndex, GLsizei bufSize, GLsizei* length, char* uniformBlockName);

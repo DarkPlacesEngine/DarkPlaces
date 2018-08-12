@@ -3403,45 +3403,6 @@ void Render_Init(void)
 	Mod_RenderInit();
 }
 
-/*
-===============
-GL_Init
-===============
-*/
-#ifndef USE_GLES2
-extern char *ENGINE_EXTENSIONS;
-void GL_Init (void)
-{
-	gl_renderer = (const char *)qglGetString(GL_RENDERER);
-	gl_vendor = (const char *)qglGetString(GL_VENDOR);
-	gl_version = (const char *)qglGetString(GL_VERSION);
-	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
-
-	if (!gl_extensions)
-		gl_extensions = "";
-	if (!gl_platformextensions)
-		gl_platformextensions = "";
-
-	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
-	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
-	Con_Printf("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
-
-	VID_CheckExtensions();
-
-	// LordHavoc: report supported extensions
-#ifdef CONFIG_MENU
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
-#else
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\n", vm_sv_extensions );
-#endif
-
-	// clear to black (loading plaque will be seen over this)
-	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
-}
-#endif
-
 int R_CullBox(const vec3_t mins, const vec3_t maxs)
 {
 	int i;
