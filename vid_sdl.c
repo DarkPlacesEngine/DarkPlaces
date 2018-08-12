@@ -1285,117 +1285,16 @@ void Sys_SendKeyEvents( void )
 // Video system
 ////
 
-#ifdef USE_GLES2
-
-void GLES_Init(void)
-{
-	gl_renderer = (const char *)qglGetString(GL_RENDERER);
-	gl_vendor = (const char *)qglGetString(GL_VENDOR);
-	gl_version = (const char *)qglGetString(GL_VERSION);
-	gl_extensions = (const char *)qglGetString(GL_EXTENSIONS);
-	
-	if (!gl_extensions)
-		gl_extensions = "";
-	if (!gl_platformextensions)
-		gl_platformextensions = "";
-	
-	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
-	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
-	Con_Printf("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
-	
-	// LordHavoc: report supported extensions
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions );
-
-	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
-	vid.forcetextype = TEXTYPE_RGBA;
-	
-	vid.support.amd_texture_texture4 = false;
-	vid.support.arb_draw_buffers = false;
-	vid.support.arb_occlusion_query = false;
-	vid.support.arb_query_buffer_object = false;
-	vid.support.arb_texture_compression = false; // different (vendor-specific) formats than on desktop OpenGL...
-	vid.support.arb_texture_gather = false;
-	vid.support.ext_blend_minmax = false;
-	vid.support.ext_blend_subtract = true; // GLES2 core
-	vid.support.ext_blend_func_separate = true; // GLES2 core
-
-	vid.support.ext_packed_depth_stencil = false;
-	vid.support.ext_texture_compression_s3tc = SDL_GL_ExtensionSupported("GL_EXT_texture_compression_s3tc") != 0;
-	vid.support.ext_texture_filter_anisotropic = false; // probably don't want to use it...
-	vid.support.ext_texture_srgb = false;
-	vid.support.arb_texture_float = SDL_GL_ExtensionSupported("GL_OES_texture_float") != 0;
-	vid.support.arb_half_float_pixel = SDL_GL_ExtensionSupported("GL_OES_texture_half_float") != 0;
-	vid.support.arb_half_float_vertex = SDL_GL_ExtensionSupported("GL_OES_vertex_half_float") != 0;
-
-	// NOTE: On some devices, a value of 512 gives better FPS than the maximum.
-	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
-
-#ifdef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
-	if (vid.support.ext_texture_filter_anisotropic)
-		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
-#endif
-	if (vid.support.arb_texture_cube_map)
-		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
-#ifdef GL_MAX_3D_TEXTURE_SIZE
-	if (vid.support.ext_texture_3d)
-		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
-#endif
-	Con_Printf("GL_MAX_CUBE_MAP_TEXTURE_SIZE = %i\n", vid.maxtexturesize_cubemap);
-	Con_Printf("GL_MAX_3D_TEXTURE_SIZE = %i\n", vid.maxtexturesize_3d);
-	{
-#define GL_ALPHA_BITS                           0x0D55
-#define GL_RED_BITS                             0x0D52
-#define GL_GREEN_BITS                           0x0D53
-#define GL_BLUE_BITS                            0x0D54
-#define GL_DEPTH_BITS                           0x0D56
-#define GL_STENCIL_BITS                         0x0D57
-		int fb_r = -1, fb_g = -1, fb_b = -1, fb_a = -1, fb_d = -1, fb_s = -1;
-		qglGetIntegerv(GL_RED_BITS    , &fb_r);
-		qglGetIntegerv(GL_GREEN_BITS  , &fb_g);
-		qglGetIntegerv(GL_BLUE_BITS   , &fb_b);
-		qglGetIntegerv(GL_ALPHA_BITS  , &fb_a);
-		qglGetIntegerv(GL_DEPTH_BITS  , &fb_d);
-		qglGetIntegerv(GL_STENCIL_BITS, &fb_s);
-		Con_Printf("Framebuffer depth is R%iG%iB%iA%iD%iS%i\n", fb_r, fb_g, fb_b, fb_a, fb_d, fb_s);
-	}
-
-	// verify that cubemap textures are really supported
-	if (vid.support.arb_texture_cube_map && vid.maxtexturesize_cubemap < 256)
-		vid.support.arb_texture_cube_map = false;
-	
-	// verify that 3d textures are really supported
-	if (vid.support.ext_texture_3d && vid.maxtexturesize_3d < 32)
-	{
-		vid.support.ext_texture_3d = false;
-		Con_Printf("GL_OES_texture_3d reported bogus GL_MAX_3D_TEXTURE_SIZE, disabled\n");
-	}
-
-	Con_DPrint("Using GLES2 rendering path\n");
-	vid.renderpath = RENDERPATH_GLES2;
-	vid.sRGBcapable2D = false;
-	vid.sRGBcapable3D = false;
-
-	// VorteX: set other info (maybe place them in VID_InitMode?)
-	extern cvar_t gl_info_vendor;
-	extern cvar_t gl_info_renderer;
-	extern cvar_t gl_info_version;
-	extern cvar_t gl_info_platform;
-	extern cvar_t gl_info_driver;
-	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
-	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
-	Cvar_SetQuick(&gl_info_version, gl_version);
-	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
-	Cvar_SetQuick(&gl_info_driver, gl_driver);
-}
-#endif
-
 void *GL_GetProcAddress(const char *name)
 {
 	void *p = NULL;
 	p = SDL_GL_GetProcAddress(name);
 	return p;
+}
+
+qboolean GL_ExtensionSupported(const char *name)
+{
+	return SDL_GL_ExtensionSupported(name);
 }
 
 static qboolean vid_sdl_initjoysticksystem = false;
@@ -1567,16 +1466,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// hide the menu with SDL_WINDOW_BORDERLESS
 	windowflags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
 #endif
-#ifndef USE_GLES2
-	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
-	{
-		VID_Shutdown();
-		Con_Print("Required OpenGL function glGetString not found\n");
-		return false;
-	}
-#endif
-
-	// Knghtbrd: should do platform-specific extension string function here
 
 	vid_isfullscreen = false;
 	{
@@ -1648,13 +1537,30 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	vid_usingvsync = (vid_vsync.integer != 0);
 
 	gl_platform = "SDL";
-	gl_platformextensions = "";
 
-#ifdef USE_GLES2
-	GLES_Init();
+	GL_Setup();
+
+	// VorteX: set other info
+	extern cvar_t gl_info_vendor;
+	extern cvar_t gl_info_renderer;
+	extern cvar_t gl_info_version;
+	extern cvar_t gl_info_platform;
+	extern cvar_t gl_info_driver;
+	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
+	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
+	Cvar_SetQuick(&gl_info_version, gl_version);
+	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
+	Cvar_SetQuick(&gl_info_driver, gl_driver);
+
+	// LordHavoc: report supported extensions
+#ifdef CONFIG_MENU
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions);
 #else
-	GL_Init();
+	Con_DPrintf("\nQuakeC extensions for server and client: %s\n", vm_sv_extensions);
 #endif
+
+	// clear to black (loading plaque will be seen over this)
+	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
 
 	vid_hidden = false;
 	vid_activewindow = false;
@@ -1698,7 +1604,6 @@ void VID_Shutdown (void)
 	gl_driver[0] = 0;
 	gl_extensions = "";
 	gl_platform = "";
-	gl_platformextensions = "";
 }
 
 void VID_Finish (void)

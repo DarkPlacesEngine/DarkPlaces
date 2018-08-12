@@ -192,21 +192,18 @@ extern const char *gl_version;
 extern const char *gl_extensions;
 // WGL, GLX, or AGL
 extern const char *gl_platform;
-// another extensions list, containing platform-specific extensions that are
-// not in the main list
-extern const char *gl_platformextensions;
 // name of driver library (opengl32.dll, libGL.so.1, or whatever)
 extern char gl_driver[256];
 
 void *GL_GetProcAddress(const char *name);
-qboolean GL_CheckExtension(const char *minglver_or_ext, const dllfunction_t *funcs, const char *disableparm, int silent);
+qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent);
+qboolean GL_ExtensionSupported(const char *name);
 
 void VID_Shared_Init(void);
 
-void GL_Init (void);
+void GL_Setup(void);
 
 void VID_ClearExtensions(void);
-void VID_CheckExtensions(void);
 
 void VID_Init (void);
 // Called at startup
