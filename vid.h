@@ -39,22 +39,10 @@ typedef struct viddef_support_s
 {
 	int glshaderversion; // this is at least 150 (GL 3.2)
 	qboolean amd_texture_texture4;
-	qboolean arb_draw_buffers;
-	qboolean arb_occlusion_query;
-	qboolean arb_query_buffer_object;
-	qboolean arb_texture_compression;
 	qboolean arb_texture_gather;
-	qboolean ext_blend_minmax;
-	qboolean ext_blend_subtract;
-	qboolean ext_blend_func_separate;
-	qboolean ext_packed_depth_stencil;
 	qboolean ext_texture_compression_s3tc;
 	qboolean ext_texture_filter_anisotropic;
 	qboolean ext_texture_srgb;
-	qboolean arb_texture_float;
-	qboolean arb_half_float_pixel;
-	qboolean arb_half_float_vertex;
-	qboolean arb_multisample;
 	qboolean arb_debug_output;
 }
 viddef_support_t;

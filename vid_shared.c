@@ -754,15 +754,7 @@ void GL_Setup(void)
 #endif
 
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", "-notexture4", false);
-	vid.support.arb_draw_buffers = true;
-	vid.support.arb_occlusion_query = true;
-	vid.support.arb_query_buffer_object = true;
-	vid.support.arb_texture_compression = true;
 	vid.support.arb_texture_gather = GL_CheckExtension("GL_ARB_texture_gather", "-notexturegather", false);
-	vid.support.ext_blend_minmax = true;
-	vid.support.ext_blend_subtract = true;
-	vid.support.ext_blend_func_separate = true;
-	vid.support.ext_packed_depth_stencil = true;
 	vid.support.ext_texture_compression_s3tc = GL_CheckExtension("GL_EXT_texture_compression_s3tc", "-nos3tc", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", "-noanisotropy", false);
 #ifndef USE_GLES2
@@ -777,13 +769,33 @@ void GL_Setup(void)
 // COMMANDLINEOPTION: GL: -notexturegather disables GL_ARB_texture_gather (which provides fetch4 sampling)
 // COMMANDLINEOPTION: GL: -nogldebugoutput disables GL_ARB_debug_output (which provides the gl_debug feature, if enabled)
 
-	if (vid.support.arb_draw_buffers)
-		qglGetIntegerv(GL_MAX_DRAW_BUFFERS, (GLint*)&vid.maxdrawbuffers);
-
+#ifdef GL_MAX_DRAW_BUFFERS
+	qglGetIntegerv(GL_MAX_DRAW_BUFFERS, (GLint*)&vid.maxdrawbuffers);
+	CHECKGLERROR
+#endif
 	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_2d);
-	qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
-	qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
-	qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
+	CHECKGLERROR
+#ifdef GL_MAX_CUBE_MAP_TEXTURE_SIZE
+#ifdef USE_GLES2
+	if (GL_CheckExtension("GL_ARB_texture_cube_map", "-nocubemap", false))
+#endif
+	{
+		qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
+		Con_DPrintf("GL_MAX_CUBE_MAP_TEXTURE_SIZE = %i\n", vid.maxtexturesize_cubemap);
+	}
+	CHECKGLERROR
+#endif
+#ifdef GL_MAX_3D_TEXTURE_SIZE
+#ifdef USE_GLES2
+	if (GL_CheckExtension("GL_EXT_texture3D", "-notexture3d", false)
+	 || GL_CheckExtension("GL_OES_texture3D", "-notexture3d", false))
+#endif
+	{
+		qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
+		Con_DPrintf("GL_MAX_3D_TEXTURE_SIZE = %i\n", vid.maxtexturesize_3d);
+	}
+#endif
+	CHECKGLERROR
 
 #ifdef USE_GLES2
 	Con_DPrint("Using GLES2 rendering path\n");
