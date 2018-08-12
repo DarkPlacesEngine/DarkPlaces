@@ -37,8 +37,7 @@ renderpath_t;
 
 typedef struct viddef_support_s
 {
-	qboolean gl20shaders130; // indicates glBindFragDataLocation is available
-	int glshaderversion; // typical values: 100 110 120 130 140 ...
+	int glshaderversion; // this is at least 150 (GL 3.2)
 	qboolean amd_texture_texture4;
 	qboolean arb_draw_buffers;
 	qboolean arb_occlusion_query;

@@ -744,10 +744,14 @@ void GL_Setup(void)
 	if (vid.support.glshaderversion < 100)
 		vid.support.glshaderversion = 100;
 	Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
-	vid.support.gl20shaders130 = true;
 
+#ifdef USE_GLES2
+	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
+	vid.forcetextype = TEXTYPE_RGBA;
+#else
 	// GL drivers generally prefer GL_BGRA
 	vid.forcetextype = GL_BGRA;
+#endif
 
 	vid.support.amd_texture_texture4 = GL_CheckExtension("GL_AMD_texture_texture4", "-notexture4", false);
 	vid.support.arb_draw_buffers = true;
@@ -761,11 +765,9 @@ void GL_Setup(void)
 	vid.support.ext_packed_depth_stencil = true;
 	vid.support.ext_texture_compression_s3tc = GL_CheckExtension("GL_EXT_texture_compression_s3tc", "-nos3tc", false);
 	vid.support.ext_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", "-noanisotropy", false);
-	vid.support.ext_texture_srgb = true;
-	vid.support.arb_texture_float = true;
-	vid.support.arb_half_float_pixel = true;
-	vid.support.arb_half_float_vertex = true;
-	vid.support.arb_multisample = true;
+#ifndef USE_GLES2
+	vid.support.ext_texture_srgb = true; // GL3 core, but not GLES2
+#endif
 	vid.support.arb_debug_output = GL_CheckExtension("GL_ARB_debug_output", "-nogldebugoutput", false);
 	vid.allowalphatocoverage = false;
 
@@ -783,6 +785,13 @@ void GL_Setup(void)
 	qglGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_cubemap);
 	qglGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, (GLint*)&vid.maxtexturesize_3d);
 
+#ifdef USE_GLES2
+	Con_DPrint("Using GLES2 rendering path\n");
+	vid.renderpath = RENDERPATH_GLES2;
+	vid.sRGBcapable2D = false;
+	vid.sRGBcapable3D = false;
+#else
+	Con_DPrint("Using GL32 rendering path\n");
 	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = true;
@@ -797,6 +806,14 @@ void GL_Setup(void)
 		else
 			vid.allowalphatocoverage = false;
 	}
+#endif
+	CHECKGLERROR
+
+#ifdef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+	if (vid.support.ext_texture_filter_anisotropic)
+		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, (GLint*)&vid.max_anisotropy);
+#endif
+	CHECKGLERROR
 }
 
 float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float fsensitivity, float deadzone)
