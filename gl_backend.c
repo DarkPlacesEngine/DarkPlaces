@@ -156,6 +156,9 @@ typedef struct gl_state_s
 	int defaultframebufferobject; // deal with platforms that use a non-zero default fbo
 	qboolean pointer_color_enabled;
 
+	// GL3.2 Core requires that we have a GL_VERTEX_ARRAY_OBJECT, but... just one.
+	unsigned int defaultvao;
+
 	int pointer_vertex_components;
 	int pointer_vertex_gltype;
 	size_t pointer_vertex_stride;
@@ -259,17 +262,21 @@ static void gl_backend_start(void)
 
 	CHECKGLERROR
 
-	GL_Backend_ResetState();
-
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL32:
+		// GL3.2 Core requires that we have a VAO bound - but using more than one has no performance benefit so this is just placeholder
+		qglGenVertexArrays(1, &gl_state.defaultvao);
+		qglBindVertexArray(gl_state.defaultvao);
+		// fall through
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
 		CHECKGLERROR
 		qglGetIntegerv(GL_FRAMEBUFFER_BINDING, &gl_state.defaultframebufferobject);CHECKGLERROR
 		break;
 	}
+
+	GL_Backend_ResetState();
 }
 
 static void gl_backend_shutdown(void)
