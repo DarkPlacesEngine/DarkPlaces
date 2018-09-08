@@ -2153,6 +2153,9 @@ static void SCR_DrawScreen (void)
 		}
 	}
 
+	// Don't apply debugging stuff like r_showsurfaces to the UI
+	r_refdef.view.showdebug = false;
+
 	if (!r_stereo_sidebyside.integer && !r_stereo_horizontal.integer && !r_stereo_vertical.integer)
 	{
 		r_refdef.view.width = vid.width;
