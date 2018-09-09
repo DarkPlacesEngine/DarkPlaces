@@ -49,7 +49,8 @@ cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "
 cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
 cvar_t scr_loadingscreen_maxfps = {0, "scr_loadingscreen_maxfps", "10", "restrict maximal FPS for loading screen so it will not update very often (this will make lesser loading times on a maps loading large number of models)"};
 cvar_t scr_infobar_height = {0, "scr_infobar_height", "8", "the height of the infobar items"};
-cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system"};
+cvar_t vid_conwidthauto = { CVAR_SAVE, "vid_conwidthauto", "1", "automatically update vid_conwidth to match aspect ratio" };
+cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
@@ -1308,6 +1309,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_conwidth);
 	Cvar_RegisterVariable (&vid_conheight);
 	Cvar_RegisterVariable (&vid_pixelheight);
+	Cvar_RegisterVariable (&vid_conwidthauto);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&scr_screenshot_png);
@@ -2536,6 +2538,8 @@ static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
 
 static double loadingscreen_lastupdate;
 
+static void SCR_UpdateVars(void);
+
 void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 {
 	keydest_t	old_key_dest;
@@ -2553,6 +2557,8 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 			return;
 		loadingscreen_lastupdate = t;
 	}
+
+	SCR_UpdateVars();
 
 	// set up the r_texture_gammaramps texture which we need for rendering the loadingscreenpic
 	VID_UpdateGamma();
@@ -2630,6 +2636,43 @@ qboolean R_Stereo_Active(void)
 	return (vid.stereobuffer || r_stereo_sidebyside.integer || r_stereo_horizontal.integer || r_stereo_vertical.integer || R_Stereo_ColorMasking());
 }
 
+void SCR_UpdateVars(void)
+{
+	float conwidth = bound(160, vid_conwidth.value, 32768);
+	float conheight = bound(90, vid_conheight.value, 24576);
+	if (vid_conwidthauto.integer)
+		conwidth = floor(conheight * vid.width / (vid.height * vid_pixelheight.value));
+	if (vid_conwidth.value != conwidth)
+		Cvar_SetValue("vid_conwidth", conwidth);
+	if (vid_conheight.value != conheight)
+		Cvar_SetValue("vid_conheight", conheight);
+
+	// bound viewsize
+	if (scr_viewsize.value < 30)
+		Cvar_Set("viewsize", "30");
+	if (scr_viewsize.value > 120)
+		Cvar_Set("viewsize", "120");
+
+	// bound field of view
+	if (scr_fov.value < 1)
+		Cvar_Set("fov", "1");
+	if (scr_fov.value > 170)
+		Cvar_Set("fov", "170");
+
+	// intermission is always full screen
+	if (cl.intermission)
+		sb_lines = 0;
+	else
+	{
+		if (scr_viewsize.value >= 120)
+			sb_lines = 0;		// no status bar at all
+		else if (scr_viewsize.value >= 110)
+			sb_lines = 24;		// no inventory
+		else
+			sb_lines = 24 + 16 + 8;
+	}
+}
+
 extern cvar_t cl_minfps;
 extern cvar_t cl_minfps_fade;
 extern cvar_t cl_minfps_qualitymax;
@@ -2644,7 +2687,6 @@ void CL_UpdateScreen(void)
 	vec3_t vieworigin;
 	static double drawscreenstart = 0.0;
 	double drawscreendelta;
-	float conwidth, conheight;
 	r_viewport_t viewport;
 
 	if(drawscreenstart)
@@ -2744,37 +2786,7 @@ void CL_UpdateScreen(void)
 		return;
 	}
 
-	conwidth = bound(160, vid_conwidth.value, 32768);
-	conheight = bound(90, vid_conheight.value, 24576);
-	if (vid_conwidth.value != conwidth)
-		Cvar_SetValue("vid_conwidth", conwidth);
-	if (vid_conheight.value != conheight)
-		Cvar_SetValue("vid_conheight", conheight);
-
-	// bound viewsize
-	if (scr_viewsize.value < 30)
-		Cvar_Set ("viewsize","30");
-	if (scr_viewsize.value > 120)
-		Cvar_Set ("viewsize","120");
-
-	// bound field of view
-	if (scr_fov.value < 1)
-		Cvar_Set ("fov","1");
-	if (scr_fov.value > 170)
-		Cvar_Set ("fov","170");
-
-	// intermission is always full screen
-	if (cl.intermission)
-		sb_lines = 0;
-	else
-	{
-		if (scr_viewsize.value >= 120)
-			sb_lines = 0;		// no status bar at all
-		else if (scr_viewsize.value >= 110)
-			sb_lines = 24;		// no inventory
-		else
-			sb_lines = 24+16+8;
-	}
+	SCR_UpdateVars();
 
 	R_FrameData_NewFrame();
 	R_BufferData_NewFrame();
