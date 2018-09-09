@@ -329,7 +329,6 @@ void (GLAPIENTRY *qglPointSize)(GLfloat size);
 void (GLAPIENTRY *qglPolygonMode)(GLenum face, GLenum mode);
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
-void (GLAPIENTRY *qglGetPointerv)(GLenum pname, GLvoid** params);
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 void (GLAPIENTRY *qglSampleCoverage)(GLclampf value, GLboolean invert);
 void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
