@@ -95,3 +95,8 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	return 0;
 }
+
+qboolean GL_ExtensionSupported(const char *name)
+{
+	return false;
+}
