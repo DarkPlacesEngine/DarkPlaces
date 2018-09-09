@@ -841,7 +841,6 @@ extern void (GLAPIENTRY *qglVertexAttrib4uiv)(GLuint index, const GLuint *v);
 extern void (GLAPIENTRY *qglVertexAttrib4usv)(GLuint index, const GLushort *v);
 extern void (GLAPIENTRY *qglVertexAttribPointer)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
 extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
-typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam);
 #else
 #define qglActiveTexture glActiveTexture
 #define qglAttachShader glAttachShader
