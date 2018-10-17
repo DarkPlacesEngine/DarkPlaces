@@ -36,7 +36,7 @@ for os in "$@"; do
           LIB_ODE="../../../${deps}/lib/libode.a -lstdc++"
         DP_LINK_ZLIB=shared'
       maketargets='release'
-      outputs='darkplaces-glx:darkplaces-linux32-glx darkplaces-sdl:darkplaces-linux32-sdl darkplaces-dedicated:darkplaces-linux32-dedicated'
+      outputs='darkplaces-sdl:darkplaces-linux32-sdl darkplaces-dedicated:darkplaces-linux32-dedicated'
       ;;
     linux64)
       chroot=
@@ -53,7 +53,7 @@ for os in "$@"; do
           LIB_ODE="../../../${deps}/lib/libode.a -lstdc++"
         DP_LINK_ZLIB=shared'
       maketargets='release'
-      outputs='darkplaces-glx:darkplaces-linux64-glx darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
+      outputs='darkplaces-sdl:darkplaces-linux64-sdl darkplaces-dedicated:darkplaces-linux64-dedicated'
       ;;
     win32)
       chroot=
@@ -73,7 +73,7 @@ for os in "$@"; do
         DP_LINK_ODE=dlopen
         DP_LINK_ZLIB=dlopen'
       maketargets='release'
-      outputs='darkplaces.exe:darkplaces-x86-wgl.exe darkplaces-sdl.exe:darkplaces-x86.exe darkplaces-dedicated.exe:darkplaces-x86-dedicated.exe'
+      outputs='darkplaces-sdl.exe:darkplaces-x86.exe darkplaces-dedicated.exe:darkplaces-x86-dedicated.exe'
       ;;
     win64)
       chroot=
@@ -91,7 +91,7 @@ for os in "$@"; do
         DP_LINK_ODE=dlopen
         DP_LINK_ZLIB=dlopen'
       maketargets='release'
-      outputs='darkplaces.exe:darkplaces-wgl.exe darkplaces-sdl.exe:darkplaces.exe darkplaces-dedicated.exe:darkplaces-dedicated.exe'
+      outputs='darkplaces-sdl.exe:darkplaces.exe darkplaces-dedicated.exe:darkplaces-dedicated.exe'
       ;;
     osx)
       chroot=
