@@ -25,9 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_ogg.h"
 #include "csprogs.h"
 #include "cl_collision.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 
 
 #define SND_MIN_SPEED 8000
@@ -1820,10 +1818,8 @@ void S_StopAllSounds (void)
 	if (snd_renderbuffer == NULL)
 		return;
 
-#ifdef CONFIG_CD
 	// stop CD audio because it may be using a faketrack
 	CDAudio_Stop();
-#endif
 
 	if (simsound || SndSys_LockRenderBuffer ())
 	{
