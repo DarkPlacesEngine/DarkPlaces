@@ -18,27 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-typedef struct cl_cdstate_s
-{
-	qboolean Valid;
-	qboolean Playing;
-	qboolean PlayLooping;
-	unsigned char PlayTrack;
-}
-cl_cdstate_t;
-
-//extern cl_cdstate_t cd;
-
-extern qboolean cdValid;
-extern qboolean cdPlaying;
-extern qboolean cdPlayLooping;
-extern unsigned char cdPlayTrack;
-
 extern cvar_t cdaudioinitialized;
 
 int CDAudio_Init(void);
-void CDAudio_Open(void);
-void CDAudio_Close(void);
 void CDAudio_Play(int track, qboolean looping);
 void CDAudio_Stop(void);
 void CDAudio_Pause(void);
@@ -47,4 +29,3 @@ int CDAudio_Startup(void);
 void CDAudio_Shutdown(void);
 void CDAudio_Update(void);
 float CDAudio_GetPosition(void);
-void CDAudio_StartPlaylist(qboolean resume);

@@ -95,12 +95,9 @@ static filename_t remap[MAXTRACKS];
 #endif
 static int faketrack = -1;
 
-// exported variables
-qboolean cdPlaying = false;
-qboolean cdPlayLooping = false;
-unsigned char cdPlayTrack;
-
-cl_cdstate_t cd;
+static qboolean cdPlaying = false;
+static qboolean cdPlayLooping = false;
+static unsigned char cdPlayTrack;
 
 static void CDAudio_Eject (void)
 {
@@ -447,7 +444,7 @@ static void CDAudio_StopPlaylistTrack(void)
 	music_playlist_playing = 0; // not playing
 }
 
-void CDAudio_StartPlaylist(qboolean resume)
+static void CDAudio_StartPlaylist(qboolean resume)
 {
 	const char *list;
 	const char *t;
