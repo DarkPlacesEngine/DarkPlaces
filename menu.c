@@ -18,9 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "quakedef.h"
-#ifdef CONFIG_CD
 #include "cdaudio.h"
-#endif
 #include "image.h"
 #include "progsvm.h"
 
@@ -1624,9 +1622,7 @@ static void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&v_contrast, bound(1, v_contrast.value + dir * 0.0625, 4));
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&v_gamma, bound(0.5, v_gamma.value + dir * 0.0625, 3));
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&volume, bound(0, volume.value + dir * 0.0625, 1));
-#ifdef CONFIG_CD
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&bgmvolume, bound(0, bgmvolume.value + dir * 0.0625, 1));
-#endif
 }
 
 static int m_optnum;
@@ -1703,9 +1699,7 @@ static void M_Options_Draw (void)
 	M_Options_PrintSlider(  "            Brightness", true, v_contrast.value, 1, 2);
 	M_Options_PrintSlider(  "                 Gamma", true, v_gamma.value, 0.5, 3);
 	M_Options_PrintSlider(  "          Sound Volume", snd_initialized.integer, volume.value, 0, 1);
-#ifdef CONFIG_CD
 	M_Options_PrintSlider(  "          Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
-#endif
 	M_Options_PrintCommand( "     Customize Effects", true);
 	M_Options_PrintCommand( "       Effects:  Quake", true);
 	M_Options_PrintCommand( "       Effects: Normal", true);
