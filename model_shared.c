@@ -2893,6 +2893,9 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 
 void Mod_BuildVBOs(void)
 {
+	if(cls.state == ca_dedicated)
+		return;
+
 	if (!loadmodel->surfmesh.num_vertices)
 		return;
 
