@@ -40,7 +40,6 @@ int CDAudio_Init(void);
 void CDAudio_Open(void);
 void CDAudio_Close(void);
 void CDAudio_Play(int track, qboolean looping);
-void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryreal, float startposition);
 void CDAudio_Stop(void);
 void CDAudio_Pause(void);
 void CDAudio_Resume(void);

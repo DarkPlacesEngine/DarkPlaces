@@ -116,7 +116,10 @@ static int CDAudio_GetAudioDiskInfo (void)
 	return -1;
 }
 
-void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryreal, float startposition)
+// Helper for CDAudio_Play, the "cd" command, and the music_playlist system.
+// Does _not_ act as NOP when a playlist is active, simply because this is used
+// _by_ playlist code. So beware when calling this.
+static void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryreal, float startposition)
 {
 	unsigned int track;
 	sfx_t* sfx;
