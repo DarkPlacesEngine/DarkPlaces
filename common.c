@@ -2035,16 +2035,20 @@ char *InfoString_GetValue(const char *buffer, const char *key, char *value, size
 	}
 	while (buffer[pos] == '\\')
 	{
-		if (!memcmp(buffer + pos+1, key, keylength))
+		if (!memcmp(buffer + pos+1, key, keylength) &&
+				(buffer[pos+1 + keylength] == 0 ||
+				 buffer[pos+1 + keylength] == '\\'))
 		{
-			for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
-			pos++;
+			pos += 1 + keylength;           // Skip \key
+			if (buffer[pos] == '\\') pos++; // Skip \ before value.
 			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < (int)valuelength - 1;j++)
 				value[j] = buffer[pos+j];
 			value[j] = 0;
 			return value;
 		}
+		if (buffer[pos] == '\\') pos++; // Skip \ before value.
 		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+		if (buffer[pos] == '\\') pos++; // Skip \ before value.
 		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
 	}
 	// if we reach this point the key was not found
@@ -2077,17 +2081,22 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	}
 	while (buffer[pos] == '\\')
 	{
-		if (!memcmp(buffer + pos+1, key, keylength))
+		if (!memcmp(buffer + pos+1, key, keylength) &&
+				(buffer[pos+1 + keylength] == 0 ||
+				 buffer[pos+1 + keylength] == '\\'))
 			break;
-		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
-		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
+		if (buffer[pos] == '\\') pos++; // Skip \ before value.
+		for (;buffer[pos] && buffer[pos] != '\\';pos++);
+		if (buffer[pos] == '\\') pos++; // Skip \ before value.
+		for (;buffer[pos] && buffer[pos] != '\\';pos++);
 	}
 	// if we found the key, find the end of it because we will be replacing it
 	pos2 = pos;
 	if (buffer[pos] == '\\')
 	{
-		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
-		for (pos2++;buffer[pos2] && buffer[pos2] != '\\';pos2++);
+		pos2 += 1 + keylength;  // Skip \key
+		if (buffer[pos2] == '\\') pos2++; // Skip \ before value.
+		for (;buffer[pos2] && buffer[pos2] != '\\';pos2++);
 	}
 	if (bufferlength <= pos + 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
 	{
