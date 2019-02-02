@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 static unsigned int sdlaudiotime = 0;
+static int audio_device = 0;
 
 
 // Note: SDL calls SDL_LockAudio() right before this function, so no need to lock the audio data here
@@ -124,7 +125,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 				"\tSamples   : %i\n",
 				wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples);
 
-	if( SDL_OpenAudio( &wantspec, &obtainspec ) )
+	if ((audio_device = SDL_OpenAudioDevice(NULL, 0, &wantspec, &obtainspec, 0)) == 0)
 	{
 		Con_Printf( "Failed to open the audio device! (%s)\n", SDL_GetError() );
 		return false;
@@ -142,7 +143,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		wantspec.format != obtainspec.format ||
 		wantspec.channels != obtainspec.channels)
 	{
-		SDL_CloseAudio();
+		SDL_CloseAudioDevice(audio_device);
 
 		// Pass the obtained format as a suggested format
 		if (suggested != NULL)
@@ -163,7 +164,7 @@ qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested)
 		Cvar_SetValueQuick (&snd_channellayout, SND_CHANNELLAYOUT_STANDARD);
 
 	sdlaudiotime = 0;
-	SDL_PauseAudio( false );
+	SDL_PauseAudioDevice(audio_device, 0);
 
 	return true;
 }
@@ -178,8 +179,10 @@ Stop the sound card, delete "snd_renderbuffer" and free its other resources
 */
 void SndSys_Shutdown(void)
 {
-	SDL_CloseAudio();
-
+	if (audio_device > 0) {
+		SDL_CloseAudioDevice(audio_device);
+		audio_device = 0;
+	}
 	if (snd_renderbuffer != NULL)
 	{
 		Mem_Free(snd_renderbuffer->ring);
@@ -224,7 +227,7 @@ Get the exclusive lock on "snd_renderbuffer"
 */
 qboolean SndSys_LockRenderBuffer (void)
 {
-	SDL_LockAudio();
+	SDL_LockAudioDevice(audio_device);
 	return true;
 }
 
@@ -238,7 +241,7 @@ Release the exclusive lock on "snd_renderbuffer"
 */
 void SndSys_UnlockRenderBuffer (void)
 {
-	SDL_UnlockAudio();
+	SDL_UnlockAudioDevice(audio_device);
 }
 
 /*
