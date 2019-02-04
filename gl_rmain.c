@@ -117,10 +117,6 @@ cvar_t r_sortentities = {0, "r_sortentities", "0", "sort entities before drawing
 cvar_t r_speeds = {0, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
 cvar_t r_fullbright = {0, "r_fullbright","0", "makes map very bright and renders faster"};
 
-cvar_t r_fakelight = {0, "r_fakelight","0", "render 'fake' lighting instead of real lightmaps (DEPRECATED)"};
-cvar_t r_fakelight_intensity = {0, "r_fakelight_intensity","0.75", "fakelight intensity modifier (DEPRECATED)"};
-#define FAKELIGHT_ENABLED (r_fakelight.integer >= 2 || (r_fakelight.integer && r_refdef.scene.worldmodel && !r_refdef.scene.worldmodel->lit))
-
 cvar_t r_fullbright_directed = {0, "r_fullbright_directed", "0", "render fullbright things (unlit worldmodel and EF_FULLBRIGHT entities, but not fullbright shaders) using a constant light direction instead to add more depth while keeping uniform brightness"};
 cvar_t r_fullbright_directed_ambient = {0, "r_fullbright_directed_ambient", "0.5", "ambient light multiplier for directed fullbright"};
 cvar_t r_fullbright_directed_diffuse = {0, "r_fullbright_directed_diffuse", "0.75", "diffuse light multiplier for directed fullbright"};
@@ -698,7 +694,6 @@ shadermodeinfo_t shadermodeinfo[SHADERLANGUAGE_COUNT][SHADERMODE_COUNT] =
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_FLATCOLOR\n", " flatcolor"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_VERTEXCOLOR\n", " vertexcolor"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTMAP\n", " lightmap"},
-		{"combined", "glsl", builtinshaderstrings, "#define MODE_FAKELIGHT\n", " fakelight"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_MODELSPACE\n", " lightdirectionmap_modelspace"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
@@ -1797,15 +1792,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (t->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (FAKELIGHT_ENABLED)
-		{
-			// fake lightmapping (q1bsp, q3bsp, fullbright map)
-			mode = SHADERMODE_FAKELIGHT;
-			permutation |= SHADERPERMUTATION_DIFFUSE;
-			if (VectorLength2(t->render_lightmap_specular) > 0)
-				permutation |= SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_DIFFUSE;
-		}
-		else if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
+		if (r_glsl_deluxemapping.integer >= 1 && rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping)
 		{
 			// deluxemapping (light direction texture)
 			if (rsurface.uselightmaptexture && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brushq3.deluxemapping && r_refdef.scene.worldmodel->brushq3.deluxemapping_modelspace)
@@ -3262,8 +3249,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_fullbrights);
 	Cvar_RegisterVariable(&r_wateralpha);
 	Cvar_RegisterVariable(&r_dynamic);
-	Cvar_RegisterVariable(&r_fakelight);
-	Cvar_RegisterVariable(&r_fakelight_intensity);
 	Cvar_RegisterVariable(&r_fullbright_directed);
 	Cvar_RegisterVariable(&r_fullbright_directed_ambient);
 	Cvar_RegisterVariable(&r_fullbright_directed_diffuse);
@@ -5510,11 +5495,7 @@ void R_UpdateVariables(void)
 	r_refdef.scene.rtdlight = r_shadow_realtime_dlight.integer != 0 && !gl_flashblend.integer && r_dynamic.integer;
 	r_refdef.scene.rtdlightshadows = r_refdef.scene.rtdlight && r_shadow_realtime_dlight_shadows.integer && vid.stencil;
 	r_refdef.scene.lightmapintensity = r_refdef.scene.rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
-	if (FAKELIGHT_ENABLED)
-	{
-		r_refdef.scene.lightmapintensity *= r_fakelight_intensity.value;
-	}
-	else if (r_refdef.scene.worldmodel)
+	if (r_refdef.scene.worldmodel)
 	{
 		r_refdef.scene.lightmapintensity *= r_refdef.scene.worldmodel->lightmapscale;
 	}
@@ -6706,24 +6687,6 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			t->render_modellight_lightdir[q] = q == 2;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
-			t->render_lightmap_ambient[q] = 0;
-			t->render_lightmap_diffuse[q] = 0;
-			t->render_lightmap_specular[q] = 0;
-			t->render_rtlight_diffuse[q] = 0;
-			t->render_rtlight_specular[q] = 0;
-		}
-	}
-	else if (FAKELIGHT_ENABLED)
-	{
-		// no modellight if using fakelight for the map
-		t->currentmaterialflags = (t->currentmaterialflags | MATERIALFLAG_NORTLIGHT) & ~(MATERIALFLAG_MODELLIGHT);
-		for (q = 0; q < 3; q++)
-		{
-			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = rsurface.entity->render_modellight_lightdir[q];
-			t->render_modellight_ambient[q] = rsurface.entity->render_modellight_ambient[q] * r_refdef.view.colorscale;
-			t->render_modellight_diffuse[q] = rsurface.entity->render_modellight_diffuse[q] * r_refdef.view.colorscale;
-			t->render_modellight_specular[q] = rsurface.entity->render_modellight_specular[q] * r_refdef.view.colorscale;
 			t->render_lightmap_ambient[q] = 0;
 			t->render_lightmap_diffuse[q] = 0;
 			t->render_lightmap_specular[q] = 0;
@@ -8944,21 +8907,6 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 		endsurface = min(i + MESHQUEUE_TRANSPARENT_BATCHSIZE, numsurfaces);
 		texturenumsurfaces = 0;
 		texturesurfacelist[texturenumsurfaces++] = surface;
-		if(FAKELIGHT_ENABLED)
-		{
-			rsurface.lightmaptexture = NULL;
-			rsurface.deluxemaptexture = NULL;
-			rsurface.uselightmaptexture = false;
-			for (;j < endsurface;j++)
-			{
-				surface = rsurface.modelsurfaces + surfacelist[j];
-				if (texture != surface->texture)
-					break;
-				texturesurfacelist[texturenumsurfaces++] = surface;
-			}
-		}
-		else
-		{
 			rsurface.lightmaptexture = surface->lightmaptexture;
 			rsurface.deluxemaptexture = surface->deluxemaptexture;
 			rsurface.uselightmaptexture = surface->lightmaptexture != NULL;
@@ -8969,7 +8917,6 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 					break;
 				texturesurfacelist[texturenumsurfaces++] = surface;
 			}
-		}
 		// render the range of surfaces
 		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false, false);
 	}
@@ -9077,7 +9024,7 @@ static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const
 				;
 			continue;
 		}
-		if(FAKELIGHT_ENABLED || depthonly || prepass)
+		if(depthonly || prepass)
 		{
 			rsurface.lightmaptexture = NULL;
 			rsurface.deluxemaptexture = NULL;
