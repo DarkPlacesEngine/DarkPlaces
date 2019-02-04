@@ -69,12 +69,6 @@ cvar_t r_motionblur_mousefactor = {CVAR_SAVE, "r_motionblur_mousefactor", "2", "
 cvar_t r_motionblur_mousefactor_minspeed = {CVAR_SAVE, "r_motionblur_mousefactor_minspeed", "0", "lower value of mouse acceleration when it starts to factor into blur equation"};
 cvar_t r_motionblur_mousefactor_maxspeed = {CVAR_SAVE, "r_motionblur_mousefactor_maxspeed", "50", "upper value of mouse acceleration when it reaches the peak factor into blur equation"};
 
-// TODO do we want a r_equalize_entities cvar that works on all ents, or would that be a cheat?
-cvar_t r_equalize_entities_fullbright = {CVAR_SAVE, "r_equalize_entities_fullbright", "0", "render fullbright entities by equalizing their lightness, not by not rendering light (DEPRECATED)"};
-cvar_t r_equalize_entities_minambient = {CVAR_SAVE, "r_equalize_entities_minambient", "0.5", "light equalizing: ensure at least this ambient/diffuse ratio (DEPRECATED)"};
-cvar_t r_equalize_entities_by = {CVAR_SAVE, "r_equalize_entities_by", "0.7", "light equalizing: exponent of dynamics compression (0 = no compression, 1 = full compression) (DEPRECATED)"};
-cvar_t r_equalize_entities_to = {CVAR_SAVE, "r_equalize_entities_to", "0.8", "light equalizing: target light level (DEPRECATED)"};
-
 cvar_t r_depthfirst = {CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
 cvar_t r_useinfinitefarclip = {CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
 cvar_t r_farclip_base = {0, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
@@ -3202,10 +3196,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_motionblur_mousefactor);
 	Cvar_RegisterVariable(&r_motionblur_mousefactor_minspeed);
 	Cvar_RegisterVariable(&r_motionblur_mousefactor_maxspeed);
-	Cvar_RegisterVariable(&r_equalize_entities_fullbright);
-	Cvar_RegisterVariable(&r_equalize_entities_minambient);
-	Cvar_RegisterVariable(&r_equalize_entities_by);
-	Cvar_RegisterVariable(&r_equalize_entities_to);
 	Cvar_RegisterVariable(&r_depthfirst);
 	Cvar_RegisterVariable(&r_useinfinitefarclip);
 	Cvar_RegisterVariable(&r_farclip_base);

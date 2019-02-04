@@ -93,8 +93,6 @@ cvar_t cl_deathnoviewmodel = {0, "cl_deathnoviewmodel", "1", "hides gun model wh
 cvar_t cl_locs_enable = {CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
 cvar_t cl_locs_show = {0, "locs_show", "0", "shows defined locations for editing purposes"};
 
-extern cvar_t r_equalize_entities_fullbright;
-
 client_static_t	cls;
 client_state_t	cl;
 
@@ -1166,8 +1164,6 @@ static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean int
 	{
 		if (!(e->render.effects & EF_FULLBRIGHT))
 			e->render.flags |= RENDER_LIGHT;
-		else if(r_equalize_entities_fullbright.integer)
-			e->render.flags |= RENDER_LIGHT | RENDER_EQUALIZE;
 	}
 	// hide player shadow during intermission or nehahra movie
 	if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
@@ -1607,8 +1603,6 @@ static void CL_RelinkStaticEntities(void)
 		{
 			if (!(e->render.effects & EF_FULLBRIGHT))
 				e->render.flags |= RENDER_LIGHT;
-			else if(r_equalize_entities_fullbright.integer)
-				e->render.flags |= RENDER_LIGHT | RENDER_EQUALIZE;
 		}
 		// hide player shadow during intermission or nehahra movie
 		if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (e->render.alpha >= 1))
@@ -2469,9 +2463,6 @@ extern cvar_t r_fullbright_directed_pitch;
 extern cvar_t r_fullbright_directed_ambient;
 extern cvar_t r_fullbright_directed_diffuse;
 extern cvar_t r_fullbright_directed;
-extern cvar_t r_equalize_entities_minambient;
-extern cvar_t r_equalize_entities_to;
-extern cvar_t r_equalize_entities_by;
 extern cvar_t r_hdr_glowintensity;
 
 static void CL_UpdateEntityShading_GetDirectedFullbright(vec3_t ambient, vec3_t diffuse, vec3_t worldspacenormal)
@@ -2589,56 +2580,6 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 			CL_UpdateEntityShading_GetDirectedFullbright(a, c, dir);
 		else
 			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
-
-		if (ent->flags & RENDER_EQUALIZE)
-		{
-			// first fix up ambient lighting...
-			if (r_equalize_entities_minambient.value > 0)
-			{
-				fd = 0.299f * ent->render_modellight_diffuse[0] + 0.587f * ent->render_modellight_diffuse[1] + 0.114f * ent->render_modellight_diffuse[2];
-				if (fd > 0)
-				{
-					fa = (0.299f * ent->render_modellight_ambient[0] + 0.587f * ent->render_modellight_ambient[1] + 0.114f * ent->render_modellight_ambient[2]);
-					if (fa < r_equalize_entities_minambient.value * fd)
-					{
-						// solve:
-						//   fa'/fd' = minambient
-						//   fa'+0.25*fd' = fa+0.25*fd
-						//   ...
-						//   fa' = fd' * minambient
-						//   fd'*(0.25+minambient) = fa+0.25*fd
-						//   ...
-						//   fd' = (fa+0.25*fd) * 1 / (0.25+minambient)
-						//   fa' = (fa+0.25*fd) * minambient / (0.25+minambient)
-						//   ...
-						fdd = (fa + 0.25f * fd) / (0.25f + r_equalize_entities_minambient.value);
-						f = fdd / fd; // f>0 because all this is additive; f<1 because fdd<fd because this follows from fa < r_equalize_entities_minambient.value * fd
-						for (q = 0; q < 3; q++)
-						{
-							a[q] = (1 - f)*0.25f * c[q];
-							c[q] *= f;
-						}
-					}
-				}
-			}
-
-			if (r_equalize_entities_to.value > 0 && r_equalize_entities_by.value != 0)
-			{
-				fa = 0.299f * a[0] + 0.587f * a[1] + 0.114f * a[2];
-				fd = 0.299f * c[0] + 0.587f * c[1] + 0.114f * c[2];
-				f = fa + 0.25 * fd;
-				if (f > 0)
-				{
-					// adjust brightness and saturation to target
-					float l2 = r_equalize_entities_by.value, l1 = 1 - l2;
-					for (q = 0; q < 3; q++)
-					{
-						a[q] = l1 * a[q] + l2 * (fa / f);
-						c[q] = l1 * c[q] + l2 * (fd / f);
-					}
-				}
-			}
-		}
 	}
 
 	for (q = 0; q < 3; q++)

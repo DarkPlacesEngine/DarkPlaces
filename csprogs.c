@@ -286,7 +286,6 @@ void CSQC_Think (prvm_edict_t *ed)
 }
 
 extern cvar_t cl_noplayershadow;
-extern cvar_t r_equalize_entities_fullbright;
 qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 {
 	prvm_prog_t *prog = CLVM_prog;
@@ -396,8 +395,6 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	{
 		if (!(entrender->effects & EF_FULLBRIGHT) && !(renderflags & RF_FULLBRIGHT))
 			entrender->flags |= RENDER_LIGHT;
-		else if(r_equalize_entities_fullbright.integer)
-			entrender->flags |= RENDER_LIGHT | RENDER_EQUALIZE;
 	}
 	// hide player shadow during intermission or nehahra movie
 	if (!(entrender->effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST))
