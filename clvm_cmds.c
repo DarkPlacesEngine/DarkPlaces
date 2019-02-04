@@ -21,7 +21,6 @@
 //4 feature darkplaces csqc: add builtins to clientside qc for gl calls
 
 extern cvar_t v_flipped;
-extern cvar_t r_equalize_entities_fullbright;
 
 r_refdef_view_t csqc_original_r_refdef_view;
 r_refdef_view_t csqc_main_r_refdef_view;
@@ -1811,8 +1810,6 @@ static void VM_CL_makestatic (prvm_prog_t *prog)
 		{
 			if (!(staticent->render.effects & EF_FULLBRIGHT))
 				staticent->render.flags |= RENDER_LIGHT;
-			else if(r_equalize_entities_fullbright.integer)
-				staticent->render.flags |= RENDER_LIGHT | RENDER_EQUALIZE;
 		}
 		// turn off shadows from transparent objects
 		if (!(staticent->render.effects & (EF_NOSHADOW | EF_ADDITIVE | EF_NODEPTHTEST)) && (staticent->render.alpha >= 1))

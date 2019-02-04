@@ -340,7 +340,6 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_LIGHT 131072 // receive light
 #define RENDER_NOSELFSHADOW 262144 // render lighting on this entity before its own shadow is added to the scene
 // (note: all RENDER_NOSELFSHADOW entities are grouped together and rendered in a batch before their shadows are rendered, so they can not shadow eachother either)
-#define RENDER_EQUALIZE 524288 // (subflag of RENDER_LIGHT) equalize the light from the light grid hitting this ent (less invasive EF_FULLBRIGHT implementation)
 #define RENDER_NODEPTHTEST 1048576
 #define RENDER_ADDITIVE 2097152
 #define RENDER_DOUBLESIDED 4194304
