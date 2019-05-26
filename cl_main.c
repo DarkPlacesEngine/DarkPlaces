@@ -2488,7 +2488,7 @@ static void CL_UpdateEntityShading_GetDirectedFullbright(vec3_t ambient, vec3_t 
 
 static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 {
-	float shadingorigin[3], f, fa, fd, fdd, a[3], c[3], dir[3];
+	float shadingorigin[3], a[3], c[3], dir[3];
 	int q;
 
 	for (q = 0; q < 3; q++)
