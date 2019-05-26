@@ -237,10 +237,10 @@ static cvar_t ambient_fade = {0, "ambient_fade", "100", "rate of volume fading w
 static cvar_t snd_noextraupdate = {0, "snd_noextraupdate", "0", "disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates"};
 static cvar_t snd_show = {0, "snd_show", "0", "shows some statistics about sound mixing"};
 
-// Default sound format is 48KHz, 16-bit, stereo
+// Default sound format is 48KHz, 32bit float, stereo
 // (48KHz because a lot of onboard sound cards sucks at any other speed)
 static cvar_t snd_speed = {CVAR_SAVE, "snd_speed", "48000", "sound output frequency, in hertz"};
-static cvar_t snd_width = {CVAR_SAVE, "snd_width", "2", "sound output precision, in bytes (1 and 2 supported)"};
+static cvar_t snd_width = {CVAR_SAVE, "snd_width", "4", "sound output precision, in bytes - 1 = 8bit, 2 = 16bit, 4 = 32bit float"};
 static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
 
 static cvar_t snd_startloopingsounds = {0, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
@@ -368,77 +368,6 @@ int S_GetSoundRate(void)
 int S_GetSoundChannels(void)
 {
 	return snd_renderbuffer ? snd_renderbuffer->format.channels : 0;
-}
-
-
-static qboolean S_ChooseCheaperFormat (snd_format_t* format, qboolean fixed_speed, qboolean fixed_width, qboolean fixed_channels)
-{
-	static const snd_format_t thresholds [] =
-	{
-		// speed			width			channels
-		{ SND_MIN_SPEED,	SND_MIN_WIDTH,	SND_MIN_CHANNELS },
-		{ 11025,			1,				2 },
-		{ 22050,			2,				2 },
-		{ 44100,			2,				2 },
-		{ 48000,			2,				6 },
-		{ 96000,			2,				6 },
-		{ SND_MAX_SPEED,	SND_MAX_WIDTH,	SND_MAX_CHANNELS },
-	};
-	const unsigned int nb_thresholds = sizeof(thresholds) / sizeof(thresholds[0]);
-	unsigned int speed_level, width_level, channels_level;
-
-	// If we have reached the minimum values, there's nothing more we can do
-	if ((format->speed == thresholds[0].speed || fixed_speed) &&
-		(format->width == thresholds[0].width || fixed_width) &&
-		(format->channels == thresholds[0].channels || fixed_channels))
-		return false;
-
-	// Check the min and max values
-	#define CHECK_BOUNDARIES(param)								\
-	if (format->param < thresholds[0].param)					\
-	{															\
-		format->param = thresholds[0].param;					\
-		return true;											\
-	}															\
-	if (format->param > thresholds[nb_thresholds - 1].param)	\
-	{															\
-		format->param = thresholds[nb_thresholds - 1].param;	\
-		return true;											\
-	}
-	CHECK_BOUNDARIES(speed);
-	CHECK_BOUNDARIES(width);
-	CHECK_BOUNDARIES(channels);
-	#undef CHECK_BOUNDARIES
-
-	// Find the level of each parameter
-	#define FIND_LEVEL(param)									\
-	param##_level = 0;											\
-	while (param##_level < nb_thresholds - 1)					\
-	{															\
-		if (format->param <= thresholds[param##_level].param)	\
-			break;												\
-																\
-		param##_level++;										\
-	}
-	FIND_LEVEL(speed);
-	FIND_LEVEL(width);
-	FIND_LEVEL(channels);
-	#undef FIND_LEVEL
-
-	// Decrease the parameter with the highest level to the previous level
-	if (channels_level >= speed_level && channels_level >= width_level && !fixed_channels)
-	{
-		format->channels = thresholds[channels_level - 1].channels;
-		return true;
-	}
-	if (speed_level >= width_level && !fixed_speed)
-	{
-		format->speed = thresholds[speed_level - 1].speed;
-		return true;
-	}
-
-	format->width = thresholds[width_level - 1].width;
-	return true;
 }
 
 
@@ -615,7 +544,7 @@ void S_Startup (void)
 		chosen_fmt.speed = atoi (com_argv[i + 1]);
 		fixed_speed = true;
 	}
-// COMMANDLINEOPTION: Sound: -sndbits <bits> chooses 8 bit or 16 bit sound output
+// COMMANDLINEOPTION: Sound: -sndbits <bits> chooses 8 bit or 16 bit or 32bit float sound output
 	i = COM_CheckParm ("-sndbits");
 	if (0 < i && i < com_argc - 1)
 	{
@@ -655,6 +584,11 @@ void S_Startup (void)
 		chosen_fmt.width = SND_MIN_WIDTH;
 		fixed_width = false;
 	}
+    else if (chosen_fmt.width == 3)
+	{
+		chosen_fmt.width = 4;
+		fixed_width = false;
+	}
 	else if (chosen_fmt.width > SND_MAX_WIDTH)
 	{
 		chosen_fmt.width = SND_MAX_WIDTH;
@@ -675,39 +609,12 @@ void S_Startup (void)
 	// create the sound buffer used for sumitting the samples to the plaform-dependent module
 	if (!simsound)
 	{
-		snd_format_t suggest_fmt;
-		qboolean accepted;
+		Con_Printf("S_Startup: initializing sound output format: %dHz, %d bit, %d channels...\n",
+					chosen_fmt.speed,
+					chosen_fmt.width,
+					chosen_fmt.channels);
 
-		accepted = false;
-		do
-		{
-			Con_Printf("S_Startup: initializing sound output format: %dHz, %d bit, %d channels...\n",
-						chosen_fmt.speed, chosen_fmt.width * 8,
-						chosen_fmt.channels);
-
-			memset(&suggest_fmt, 0, sizeof(suggest_fmt));
-			accepted = SndSys_Init(&chosen_fmt, &suggest_fmt);
-
-			if (!accepted)
-			{
-				Con_Printf("S_Startup: sound output initialization FAILED\n");
-
-				// If the module is suggesting another one
-				if (suggest_fmt.speed != 0)
-				{
-					memcpy(&chosen_fmt, &suggest_fmt, sizeof(chosen_fmt));
-					Con_Printf ("           Driver has suggested %dHz, %d bit, %d channels. Retrying...\n",
-								suggest_fmt.speed, suggest_fmt.width * 8,
-								suggest_fmt.channels);
-				}
-				// Else, try to find a less resource-demanding format
-				else if (!S_ChooseCheaperFormat (&chosen_fmt, fixed_speed, fixed_width, fixed_channels))
-					break;
-			}
-		} while (!accepted);
-
-		// If we haven't found a suitable format
-		if (!accepted)
+		if (!SndSys_Init(&chosen_fmt))
 		{
 			Con_Print("S_Startup: SndSys_Init failed.\n");
 			sound_spatialized = false;

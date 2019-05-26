@@ -153,9 +153,6 @@ void S_MixToBuffer(void *stream, unsigned int frames);
 
 qboolean S_LoadSound (sfx_t *sfx, qboolean complain);
 
-snd_buffer_t *Snd_CreateSndBuffer (const unsigned char *samples, unsigned int sampleframes, const snd_format_t* in_format, unsigned int sb_speed);
-qboolean Snd_AppendToSndBuffer (snd_buffer_t* sb, const unsigned char *samples, unsigned int sampleframes, const snd_format_t* format);
-
 // If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
 // (if "sampleframes" is 0, the function chooses the size).
 snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int sampleframes, void* buffer);
@@ -165,9 +162,9 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 //         Architecture-dependent functions
 // ====================================================================
 
-// Create "snd_renderbuffer" with the proper sound format if the call is successful
-// May return a suggested format if the requested format isn't available
-qboolean SndSys_Init (const snd_format_t* requested, snd_format_t* suggested);
+// Create "snd_renderbuffer", attempting to use the chosen sound format, but accepting if the driver wants to change it (e.g. 7.1 to stereo or lowering the speed)
+// Note: SDL automatically converts all formats, so this only fails if there is no audio
+qboolean SndSys_Init (snd_format_t* fmt);
 
 // Stop the sound card, delete "snd_renderbuffer" and free its other resources
 void SndSys_Shutdown (void);
