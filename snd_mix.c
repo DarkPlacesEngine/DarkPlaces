@@ -128,6 +128,7 @@ static void S_SoftClipPaintBuffer(portable_sampleframe_t *painted_ptr, int nbfra
 static void S_ConvertPaintBuffer(portable_sampleframe_t *painted_ptr, void *rb_ptr, int nbframes, int width, int nchannels)
 {
 	int i;
+	float val;
 	if (width == 4)  // 32bit float
 	{
 		float *snd_out = (float*)rb_ptr;
