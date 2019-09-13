@@ -16,7 +16,8 @@ for os in "$@"; do
       (
       cd SDL2-2.0.10
       export CC="gcc -m32"
-      i386 ./configure --enable-static --disable-shared --prefix="$USRLOCAL" || cat config.log
+      i386 ./configure --enable-static --disable-shared --prefix="$USRLOCAL" \
+        --enable-video-x11-xinput --enable-video-x11-xrandr ||\ cat config.log
       i386 make
       i386 make install
       )
@@ -26,7 +27,8 @@ for os in "$@"; do
       tar xf SDL2-2.0.10.tar.gz
       (
       cd SDL2-2.0.10
-      ./configure --enable-static --disable-shared --prefix="$USRLOCAL"
+      ./configure --enable-static --disable-shared --prefix="$USRLOCAL" \
+        --enable-video-x11-xinput --enable-video-x11-xrandr ||\ cat config.log
       make
       make install
       )
