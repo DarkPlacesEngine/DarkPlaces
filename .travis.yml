@@ -22,6 +22,8 @@ matrix:
           - libpulse-dev:i386
           - libslang2-dev:i386
           - libxext-dev:i386
+          - libxi-dev:i386
+          - libxrandr-dev:i386
   - os: linux
     env: PROJECT=xonotic OS="linux64"
     compiler: gcc
@@ -31,6 +33,8 @@ matrix:
         packages:
           - libxpm-dev
           - libsdl1.2-dev
+          - libxi-dev
+          - libxrandr-dev
           - libxxf86vm-dev
   - os: linux
     env: PROJECT=xonotic OS="win32"
