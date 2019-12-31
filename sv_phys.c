@@ -755,26 +755,26 @@ static void RotateBBox(const vec3_t mins, const vec3_t maxs, const vec3_t angles
 	v[0] = mins[0]; v[1] = mins[1]; v[2] = mins[2]; Matrix4x4_Transform(&m, v, u);
 		VectorCopy(u, rotatedmins); VectorCopy(u, rotatedmaxs);
 	v[0] = maxs[0]; v[1] = mins[1]; v[2] = mins[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = mins[0]; v[1] = maxs[1]; v[2] = mins[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = maxs[0]; v[1] = maxs[1]; v[2] = mins[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = mins[0]; v[1] = mins[1]; v[2] = maxs[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = maxs[0]; v[1] = mins[1]; v[2] = maxs[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = mins[0]; v[1] = maxs[1]; v[2] = maxs[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 	v[0] = maxs[0]; v[1] = maxs[1]; v[2] = maxs[2]; Matrix4x4_Transform(&m, v, u);
-		if(rotatedmins[0] > u[0]) rotatedmins[0] = u[0]; if(rotatedmins[1] > u[1]) rotatedmins[1] = u[1]; if(rotatedmins[2] > u[2]) rotatedmins[2] = u[2];
-		if(rotatedmaxs[0] < u[0]) rotatedmaxs[0] = u[0]; if(rotatedmaxs[1] < u[1]) rotatedmaxs[1] = u[1]; if(rotatedmaxs[2] < u[2]) rotatedmaxs[2] = u[2];
+		if(rotatedmins[0] > u[0]) { rotatedmins[0] = u[0]; } if(rotatedmins[1] > u[1]) { rotatedmins[1] = u[1]; } if(rotatedmins[2] > u[2]) { rotatedmins[2] = u[2]; }
+		if(rotatedmaxs[0] < u[0]) { rotatedmaxs[0] = u[0]; } if(rotatedmaxs[1] < u[1]) { rotatedmaxs[1] = u[1]; } if(rotatedmaxs[2] < u[2]) { rotatedmaxs[2] = u[2]; }
 }
 
 /*
