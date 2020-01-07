@@ -439,12 +439,20 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 			dpsnprintf (line, linelength, "entity %i", n);
 		break;
 	case ev_function:
-		f = prog->functions + val->function;
-		dpsnprintf (line, linelength, "%s()", PRVM_GetString(prog, f->s_name));
+		if ((unsigned int)val->function < prog->progs_numfunctions)
+		{
+			f = prog->functions + val->function;
+			dpsnprintf (line, linelength, "%s()", PRVM_GetString(prog, f->s_name));
+		}
+		else
+			dpsnprintf (line, linelength, "function%i() (invalid!)", val->function);
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( prog, val->_int );
-		dpsnprintf (line, linelength, ".%s", PRVM_GetString(prog, def->s_name));
+		if (def != NULL)
+			dpsnprintf (line, linelength, ".%s", PRVM_GetString(prog, def->s_name));
+		else
+			dpsnprintf (line, linelength, "field%i (invalid!)", val->_int );
 		break;
 	case ev_void:
 		dpsnprintf (line, linelength, "void");
@@ -525,12 +533,20 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		dpsnprintf (line, linelength, "%i", i);
 		break;
 	case ev_function:
-		f = prog->functions + val->function;
-		strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
+		if ((unsigned int)val->function < prog->progs_numfunctions)
+		{
+			f = prog->functions + val->function;
+			strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
+		}
+		else
+			dpsnprintf (line, linelength, "bad function %i (invalid!)", val->function);
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( prog, val->_int );
-		dpsnprintf (line, linelength, ".%s", PRVM_GetString(prog, def->s_name));
+		if (def != NULL)
+			dpsnprintf (line, linelength, ".%s", PRVM_GetString(prog, def->s_name));
+		else
+			dpsnprintf (line, linelength, "field%i (invalid!)", val->_int );
 		break;
 	case ev_void:
 		dpsnprintf (line, linelength, "void");
