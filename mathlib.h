@@ -55,7 +55,7 @@ extern vec3_t vec3_origin;
 #define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
-/// LordHavoc: this function never returns exactly MIN or exactly MAX, because
+/// LadyHavoc: this function never returns exactly MIN or exactly MAX, because
 /// of a QuakeC bug in id1 where the line
 /// self.nextthink = self.nexthink + random() * 0.5;
 /// can result in 0 (self.nextthink is 0 at this point in the code to begin
@@ -187,10 +187,10 @@ int PointInfrontOfTriangle(const float *p, const float *a, const float *b, const
 #define VectorLehmerRandom(seed,v) do{(v)[0] = Math_crandomf(seed);(v)[1] = Math_crandomf(seed);(v)[2] = Math_crandomf(seed);}while(DotProduct(v, v) > 1)
 
 /*
-// LordHavoc: quaternion math, untested, don't know if these are correct,
+// LadyHavoc: quaternion math, untested, don't know if these are correct,
 // need to add conversion to/from matrices
-// LordHavoc: later note: the matrix faq is useful: http://skal.planet-d.net/demo/matrixfaq.htm
-// LordHavoc: these are probably very wrong and I'm not sure I care, not used by anything
+// LadyHavoc: later note: the matrix faq is useful: http://skal.planet-d.net/demo/matrixfaq.htm
+// LadyHavoc: these are probably very wrong and I'm not sure I care, not used by anything
 
 // returns length of quaternion
 #define qlen(a) ((float) sqrt((a)[0]*(a)[0]+(a)[1]*(a)[1]+(a)[2]*(a)[2]+(a)[3]*(a)[3]))
@@ -251,16 +251,16 @@ void R_ConcatRotations (const float in1[3*3], const float in2[3*3], float out[3*
 void R_ConcatTransforms (const float in1[3*4], const float in2[3*4], float out[3*4]);
 
 void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
-/// LordHavoc: proper matrix version of AngleVectors
+/// LadyHavoc: proper matrix version of AngleVectors
 void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
 /// divVerent: improper matrix version of AngleVectors
 void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up, double maxShearAngle);
-/// LordHavoc: builds a [3][4] matrix
+/// LadyHavoc: builds a [3][4] matrix
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
-/// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
+/// LadyHavoc: calculates pitch/yaw/roll angles from forward and up vectors
 void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
 
-/// LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
+/// LadyHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 void VectorVectorsDouble(const double *forward, double *right, double *up);
 
@@ -275,7 +275,7 @@ void BoxPlaneCornerDistances_Separate(const vec3_t emins, const vec3_t emaxs, co
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
 
-/// LordHavoc: minimal plane structure
+/// LadyHavoc: minimal plane structure
 typedef struct tinyplane_s
 {
 	float normal[3], dist;

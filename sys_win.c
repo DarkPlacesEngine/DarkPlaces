@@ -240,11 +240,11 @@ void Sys_InitConsole (void)
 	houtput = GetStdHandle (STD_OUTPUT_HANDLE);
 	hinput = GetStdHandle (STD_INPUT_HANDLE);
 
-	// LordHavoc: can't check cls.state because it hasn't been initialized yet
+	// LadyHavoc: can't check cls.state because it hasn't been initialized yet
 	// if (cls.state == ca_dedicated)
 	if (COM_CheckParm("-dedicated"))
 	{
-		//if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE)) // LordHavoc: on Windows XP this is never 0 or invalid, but hinput is invalid
+		//if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE)) // LadyHavoc: on Windows XP this is never 0 or invalid, but hinput is invalid
 		{
 			if (!AllocConsole ())
 				Sys_Error ("Couldn't create dedicated server console (error code %x)", (unsigned int)GetLastError());

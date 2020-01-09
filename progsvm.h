@@ -504,7 +504,7 @@ typedef struct prvm_prog_s
 	ddef_t				*globaldefs;
 	mstatement_t		*statements;
 	int					entityfields;			// number of vec_t fields in progs (some variables are 3)
-	int					entityfieldsarea;		// LordHavoc: equal to max_edicts * entityfields (for bounds checking)
+	int					entityfieldsarea;		// LadyHavoc: equal to max_edicts * entityfields (for bounds checking)
 
 	// loaded values from the disk format
 	int					progs_version;

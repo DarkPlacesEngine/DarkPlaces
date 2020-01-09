@@ -1,5 +1,5 @@
 
-// This code written in 2010 by Forest Hale (darkplacesengine gmail com), and placed into public domain.
+// This code written in 2010 by Ashley Rose Hale (LadyHavoc) (darkplacesengine gmail com), and placed into public domain.
 
 #include <stdlib.h>
 #include <string.h>

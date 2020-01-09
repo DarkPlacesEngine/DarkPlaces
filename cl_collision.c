@@ -248,7 +248,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;
@@ -466,7 +466,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;
@@ -700,7 +700,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;

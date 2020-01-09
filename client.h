@@ -477,7 +477,7 @@ typedef struct frameblend_s
 }
 frameblend_t;
 
-// LordHavoc: this struct is intended for the renderer but some fields are
+// LadyHavoc: this struct is intended for the renderer but some fields are
 // used by the client.
 //
 // The renderer should not rely on any changes to this struct to be persistent
@@ -836,7 +836,7 @@ typedef struct client_static_s
 	// -1 = use normal cd track
 	int forcetrack;
 	qfile_t *demofile;
-	// realtime at second frame of timedemo (LordHavoc: changed to double)
+	// realtime at second frame of timedemo (LadyHavoc: changed to double)
 	double td_starttime;
 	int td_frames; // total frames parsed
 	double td_onesecondnexttime;
@@ -846,7 +846,7 @@ typedef struct client_static_s
 	double td_onesecondmaxfps;
 	double td_onesecondavgfps;
 	int td_onesecondavgcount;
-	// LordHavoc: pausedemo
+	// LadyHavoc: pausedemo
 	qboolean demopaused;
 
 	// sound mixer statistics for showsound display

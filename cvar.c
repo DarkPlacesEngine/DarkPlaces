@@ -251,7 +251,7 @@ const char **Cvar_CompleteBuildList (const char *partial)
 	return buf;
 }
 
-// written by LordHavoc
+// written by LadyHavoc
 void Cvar_CompleteCvarPrint (const char *partial)
 {
 	cvar_t *cvar;
@@ -342,11 +342,11 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	char vabuf[1024];
 
 	changed = strcmp(var->string, value) != 0;
-	// LordHavoc: don't reallocate when there is no change
+	// LadyHavoc: don't reallocate when there is no change
 	if (!changed)
 		return;
 
-	// LordHavoc: don't reallocate when the buffer is the same size
+	// LadyHavoc: don't reallocate when the buffer is the same size
 	valuelen = strlen(value);
 	if (!var->string || strlen(var->string) != valuelen)
 	{

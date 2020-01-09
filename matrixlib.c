@@ -4,8 +4,8 @@
 #include "matrixlib.h"
 
 #ifdef _MSC_VER
-#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
-#pragma warning(disable : 4305)         // LordHavoc: MSVC++ 6 x86, double/float
+#pragma warning(disable : 4244)     // LadyHavoc: MSVC++ 4 x86, double/float
+#pragma warning(disable : 4305)         // LadyHavoc: MSVC++ 6 x86, double/float
 #endif
 
 const matrix4x4_t identitymatrix =
@@ -1579,7 +1579,7 @@ void Matrix4x4_ToOrigin3Quat4Float(const matrix4x4_t *m, float *origin, float *q
 #endif
 }
 
-// LordHavoc: I got this code from:
+// LadyHavoc: I got this code from:
 //http://www.doom3world.org/phpbb2/viewtopic.php?t=2884
 void Matrix4x4_FromDoom3Joint(matrix4x4_t *m, double ox, double oy, double oz, double x, double y, double z)
 {

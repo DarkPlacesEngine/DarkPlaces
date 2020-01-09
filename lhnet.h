@@ -1,5 +1,5 @@
 
-// Written by Forest Hale 2003-06-15 and placed into public domain.
+// Written by Ashley Rose Hale (LadyHavoc) 2003-06-15 and placed into public domain.
 
 #ifndef LHNET_H
 #define LHNET_H

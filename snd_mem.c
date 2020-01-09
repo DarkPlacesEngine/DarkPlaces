@@ -104,7 +104,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 
 	SCR_PushLoadingScreen(true, sfx->name, 1);
 
-	// LordHavoc: if the sound filename does not begin with sound/, try adding it
+	// LadyHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(sfx->name, "sound/", 6))
 	{
 		dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", sfx->name);
@@ -122,7 +122,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		}
 	}
 
-	// LordHavoc: then try without the added sound/ as wav and ogg
+	// LadyHavoc: then try without the added sound/ as wav and ogg
 	dpsnprintf (namebuffer, sizeof(namebuffer), "%s", sfx->name);
 	len = strlen(namebuffer);
 	// request foo.wav: tries foo.wav, then foo.ogg

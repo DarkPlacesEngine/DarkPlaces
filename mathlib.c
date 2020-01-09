@@ -145,7 +145,7 @@ void ByteToNormal(unsigned char num, vec3_t n)
 // assumes "src" is normalized
 void PerpendicularVector( vec3_t dst, const vec3_t src )
 {
-	// LordHavoc: optimized to death and beyond
+	// LadyHavoc: optimized to death and beyond
 	int pos;
 	float minelem;
 
@@ -195,7 +195,7 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 #endif
 
 
-// LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
+// LadyHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 {
 	// NOTE: this is consistent to AngleVectors applied to AnglesFromVectors
@@ -646,7 +646,7 @@ void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, ve
 	}
 }
 
-// LordHavoc: calculates pitch/yaw/roll angles from forward and up vectors
+// LadyHavoc: calculates pitch/yaw/roll angles from forward and up vectors
 void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch)
 {
 	if (forward[0] == 0 && forward[1] == 0)
@@ -759,7 +759,7 @@ void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]
 #endif
 
 
-// LordHavoc: renamed this to Length, and made the normal one a #define
+// LadyHavoc: renamed this to Length, and made the normal one a #define
 float VectorNormalizeLength (vec3_t v)
 {
 	float length, ilength;
@@ -841,7 +841,7 @@ void Mathlib_Init(void)
 {
 	int a;
 
-	// LordHavoc: setup 1.0f / N table for quick recipricols of integers
+	// LadyHavoc: setup 1.0f / N table for quick recipricols of integers
 	ixtable[0] = 0;
 	for (a = 1;a < 4096;a++)
 		ixtable[a] = 1.0f / a;
@@ -894,7 +894,7 @@ void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f)
 	}
 }
 
-// LordHavoc: this has to be done right or you get severe precision breakdown
+// LadyHavoc: this has to be done right or you get severe precision breakdown
 int LoopingFrameNumberFromDouble(double t, int loopframes)
 {
 	if (loopframes)

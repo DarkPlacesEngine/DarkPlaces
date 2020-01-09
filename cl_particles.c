@@ -2572,7 +2572,7 @@ void R_DrawDecals (void)
 	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
 	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
 
-	// LordHavoc: early out conditions
+	// LadyHavoc: early out conditions
 	if (!cl.num_decals)
 		return;
 
@@ -2935,7 +2935,7 @@ void R_DrawParticles (void)
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
 	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);
 
-	// LordHavoc: early out conditions
+	// LadyHavoc: early out conditions
 	if (!cl.num_particles)
 		return;
 

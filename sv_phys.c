@@ -146,7 +146,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;
@@ -295,7 +295,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;
@@ -462,7 +462,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 	if (type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now -= 15
+		// LadyHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
 			clipmins2[i] -= 15;
@@ -658,7 +658,7 @@ int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_e
 	vec3_t paddedmins, paddedmaxs;
 	if (maxedicts < 1 || resultedicts == NULL)
 		return 0;
-	// LordHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
+	// LadyHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
 	//VectorSet(paddedmins, mins[0] - 10, mins[1] - 10, mins[2] - 1);
 	//VectorSet(paddedmaxs, maxs[0] + 10, maxs[1] + 10, maxs[2] + 1);
 	VectorCopy(mins, paddedmins);
@@ -1034,13 +1034,13 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 		}
 	}
 
-	// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
+	// LadyHavoc: a hack to ensure that the (rather silly) id1 quakec
 	// player_run/player_stand1 does not horribly malfunction if the
 	// velocity becomes a denormalized float
 	if (VectorLength2(PRVM_serveredictvector(ent, velocity)) < 0.0000001)
 		VectorClear(PRVM_serveredictvector(ent, velocity));
 
-	// LordHavoc: max velocity fix, inspired by Maddes's source fixes, but this is faster
+	// LadyHavoc: max velocity fix, inspired by Maddes's source fixes, but this is faster
 	wishspeed = DotProduct(PRVM_serveredictvector(ent, velocity), PRVM_serveredictvector(ent, velocity));
 	if (wishspeed > sv_maxvelocity.value * sv_maxvelocity.value)
 	{
@@ -1372,7 +1372,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 				break;
 			}
 			CrossProduct(planes[0], planes[1], dir);
-			// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
+			// LadyHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
 			VectorNormalize(dir);
 			d = DotProduct(dir, PRVM_serveredictvector(ent, velocity));
 			VectorScale(dir, d, PRVM_serveredictvector(ent, velocity));
@@ -1392,13 +1392,13 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	/*
 	if ((blocked & 1) == 0 && bumpcount > 1)
 	{
-		// LordHavoc: fix the 'fall to your death in a wedge corner' glitch
+		// LadyHavoc: fix the 'fall to your death in a wedge corner' glitch
 		// flag ONGROUND if there's ground under it
 		trace = SV_TraceBox(PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), end, MOVE_NORMAL, ent, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 	}
 	*/
 
-	// LordHavoc: this came from QW and allows you to get out of water more easily
+	// LadyHavoc: this came from QW and allows you to get out of water more easily
 	if (sv_gameplayfix_easierwaterjump.integer && ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP) && !(blocked & 8))
 		VectorCopy(primal_velocity, PRVM_serveredictvector(ent, velocity));
 
@@ -1678,13 +1678,13 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 	switch ((int) PRVM_serveredictfloat(pusher, solid))
 	{
-	// LordHavoc: valid pusher types
+	// LadyHavoc: valid pusher types
 	case SOLID_BSP:
 	case SOLID_BBOX:
 	case SOLID_SLIDEBOX:
-	case SOLID_CORPSE: // LordHavoc: this would be weird...
+	case SOLID_CORPSE: // LadyHavoc: this would be weird...
 		break;
-	// LordHavoc: no collisions
+	// LadyHavoc: no collisions
 	case SOLID_NOT:
 	case SOLID_TRIGGER:
 		VectorMA (PRVM_serveredictvector(pusher, origin), movetime, PRVM_serveredictvector(pusher, velocity), PRVM_serveredictvector(pusher, origin));
@@ -2448,7 +2448,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 		// this has been disabled so that you can't jump when you are stepping
 		// up while already jumping (also known as the Quake2 double jump bug)
 #if 0
-		// LordHavoc: disabled this check so you can walk on monsters/players
+		// LadyHavoc: disabled this check so you can walk on monsters/players
 		//if (PRVM_serveredictfloat(ent, solid) == SOLID_BSP)
 		{
 			//Con_Printf("onground\n");
@@ -2490,7 +2490,7 @@ static void SV_Physics_Follow (prvm_edict_t *ent)
 	vec3_t vf, vr, vu, angles, v;
 	prvm_edict_t *e;
 
-	// LordHavoc: implemented rotation on MOVETYPE_FOLLOW objects
+	// LadyHavoc: implemented rotation on MOVETYPE_FOLLOW objects
 	e = PRVM_PROG_TO_EDICT(PRVM_serveredictedict(ent, aiment));
 	if (PRVM_serveredictvector(e, angles)[0] == PRVM_serveredictvector(ent, punchangle)[0] && PRVM_serveredictvector(e, angles)[1] == PRVM_serveredictvector(ent, punchangle)[1] && PRVM_serveredictvector(e, angles)[2] == PRVM_serveredictvector(ent, punchangle)[2])
 	{
@@ -2537,7 +2537,7 @@ static void SV_CheckWaterTransition (prvm_edict_t *ent)
 {
 	vec3_t entorigin;
 	prvm_prog_t *prog = SVVM_prog;
-	// LordHavoc: bugfixes in this function are keyed to the sv_gameplayfix_bugfixedcheckwatertransition cvar - if this cvar is 0 then all the original bugs should be reenabled for compatibility
+	// LadyHavoc: bugfixes in this function are keyed to the sv_gameplayfix_bugfixedcheckwatertransition cvar - if this cvar is 0 then all the original bugs should be reenabled for compatibility
 	int cont;
 	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
 	cont = Mod_Q1BSP_NativeContentsFromSuperContents(SV_PointSuperContents(entorigin));
@@ -2680,7 +2680,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			ent_gravity = PRVM_serveredictfloat(ent, gravity);
 			if (!ent_gravity)
 				ent_gravity = 1.0f;
-			// LordHavoc: fixed grenades not bouncing when fired down a slope
+			// LadyHavoc: fixed grenades not bouncing when fired down a slope
 			if (sv_gameplayfix_grenadebouncedownslopes.integer)
 				d = fabs(DotProduct(trace.plane.normal, PRVM_serveredictvector(ent, velocity)));
 			else
@@ -2832,7 +2832,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 		SV_Physics_Pusher (ent);
 		break;
 	case MOVETYPE_NONE:
-		// LordHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
+		// LadyHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
 		if (PRVM_serveredictfloat(ent, nextthink) > 0 && PRVM_serveredictfloat(ent, nextthink) <= sv.time + sv.frametime)
 			SV_RunThink (ent);
 		break;
@@ -3068,7 +3068,7 @@ static void SV_Physics_ClientEntity(prvm_edict_t *ent)
 		SV_Physics_Pusher (ent);
 		break;
 	case MOVETYPE_NONE:
-		// LordHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
+		// LadyHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
 		if (PRVM_serveredictfloat(ent, nextthink) > 0 && PRVM_serveredictfloat(ent, nextthink) <= sv.time + sv.frametime)
 			SV_RunThink (ent);
 		break;
@@ -3214,7 +3214,7 @@ void SV_Physics (void)
 	if (PRVM_serverglobalfloat(force_retouch) > 0)
 		PRVM_serverglobalfloat(force_retouch) = max(0, PRVM_serverglobalfloat(force_retouch) - 1);
 
-	// LordHavoc: endframe support
+	// LadyHavoc: endframe support
 	if (PRVM_serverfunction(EndFrame))
 	{
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(prog->edicts);

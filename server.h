@@ -112,12 +112,12 @@ typedef struct server_s
 	char worldnamenoextension[MAX_QPATH]; // maps/%s
 	struct model_s *worldmodel;
 	// NULL terminated
-	// LordHavoc: precaches are now MAX_QPATH rather than a pointer
+	// LadyHavoc: precaches are now MAX_QPATH rather than a pointer
 	// updated by SV_ModelIndex
 	char model_precache[MAX_MODELS][MAX_QPATH];
 	struct model_s *models[MAX_MODELS];
 	// NULL terminated
-	// LordHavoc: precaches are now MAX_QPATH rather than a pointer
+	// LadyHavoc: precaches are now MAX_QPATH rather than a pointer
 	// updated by SV_SoundIndex
 	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char lightstyles[MAX_LIGHTSTYLES][64];
@@ -132,7 +132,7 @@ typedef struct server_s
 	unsigned char reliable_datagram_buf[NET_MAXMESSAGE];
 
 	sizebuf_t signon;
-	/// LordHavoc: increased signon message buffer from 8192
+	/// LadyHavoc: increased signon message buffer from 8192
 	unsigned char signon_buf[NET_MAXMESSAGE];
 
 	/// connection flood blocking
@@ -230,7 +230,7 @@ typedef struct client_s
 	/// ping_times[num_pings%NUM_PING_TIMES]
 	int num_pings;
 #endif
-	/// LordHavoc: can be used for prediction or whatever...
+	/// LadyHavoc: can be used for prediction or whatever...
 	float ping;
 
 	/// this is used by sv_clmovement_minping code
@@ -344,9 +344,9 @@ typedef struct client_s
 #define	SOLID_BBOX				2		///< touch on edge, block
 #define	SOLID_SLIDEBOX			3		///< touch on edge, but not an onground
 #define	SOLID_BSP				4		///< bsp clip, touch on edge, block
-// LordHavoc: corpse code
+// LadyHavoc: corpse code
 #define	SOLID_CORPSE			5		///< same as SOLID_BBOX, except it behaves as SOLID_NOT against SOLID_SLIDEBOX objects (players/monsters)
-// LordHavoc: physics
+// LadyHavoc: physics
 // VorteX: now these fields are deprecated, as geomtype is more flexible
 #define	SOLID_PHYSICS_BOX		32		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)
 #define	SOLID_PHYSICS_SPHERE	33		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)

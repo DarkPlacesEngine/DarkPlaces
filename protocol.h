@@ -49,21 +49,21 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define EF_ADDITIVE				32
 #define EF_BLUE					64
 #define EF_RED					128
-#define EF_NOGUNBOB				256			// LordHavoc: when used with .viewmodelforclient this makes the entity attach to the view without gun bobbing and such effects, it also works on the player entity to disable gun bobbing of the engine-managed .viewmodel (without affecting any .viewmodelforclient entities attached to the player)
-#define EF_FULLBRIGHT			512			// LordHavoc: fullbright
-#define EF_FLAME				1024		// LordHavoc: on fire
-#define EF_STARDUST				2048		// LordHavoc: showering sparks
-#define EF_NOSHADOW				4096		// LordHavoc: does not cast a shadow
-#define EF_NODEPTHTEST			8192		// LordHavoc: shows through walls
-#define EF_SELECTABLE			16384		// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
+#define EF_NOGUNBOB				256			// LadyHavoc: when used with .viewmodelforclient this makes the entity attach to the view without gun bobbing and such effects, it also works on the player entity to disable gun bobbing of the engine-managed .viewmodel (without affecting any .viewmodelforclient entities attached to the player)
+#define EF_FULLBRIGHT			512			// LadyHavoc: fullbright
+#define EF_FLAME				1024		// LadyHavoc: on fire
+#define EF_STARDUST				2048		// LadyHavoc: showering sparks
+#define EF_NOSHADOW				4096		// LadyHavoc: does not cast a shadow
+#define EF_NODEPTHTEST			8192		// LadyHavoc: shows through walls
+#define EF_SELECTABLE			16384		// LadyHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
 #define EF_DOUBLESIDED			32768		//[515]: disable cull face for this entity
-#define EF_NOSELFSHADOW			65536		// LordHavoc: does not cast a shadow on itself (or any other EF_NOSELFSHADOW entities)
+#define EF_NOSELFSHADOW			65536		// LadyHavoc: does not cast a shadow on itself (or any other EF_NOSELFSHADOW entities)
 #define EF_DYNAMICMODELLIGHT			131072
 #define EF_UNUSED18				262144
 #define EF_UNUSED19				524288
 #define EF_RESTARTANIM_BIT		1048576     // div0: restart animation bit (like teleport bit, but lerps between end and start of the anim, and doesn't stop player lerping)
 #define EF_TELEPORT_BIT			2097152		// div0: teleport bit (toggled when teleporting, prevents lerping when the bit has changed)
-#define EF_LOWPRECISION			4194304		// LordHavoc: entity is low precision (integer coordinates) to save network bandwidth  (serverside only)
+#define EF_LOWPRECISION			4194304		// LadyHavoc: entity is low precision (integer coordinates) to save network bandwidth  (serverside only)
 #define EF_NOMODELFLAGS			8388608		// indicates the model's .effects should be ignored (allows overriding them)
 #define EF_ROCKET				16777216	// leave a trail
 #define EF_GRENADE				33554432	// leave a trail
@@ -89,7 +89,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define U_ORIGIN2		(1<<2)
 #define U_ORIGIN3		(1<<3)
 #define U_ANGLE2		(1<<4)
-// LordHavoc: U_NOLERP was only ever used for monsters, so I renamed it U_STEP
+// LadyHavoc: U_NOLERP was only ever used for monsters, so I renamed it U_STEP
 #define U_STEP			(1<<5)
 #define U_FRAME			(1<<6)
 // just differentiates from other updates
@@ -103,9 +103,9 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define U_EFFECTS		(1<<13)
 #define U_LONGENTITY	(1<<14)
 
-// LordHavoc: protocol extension
+// LadyHavoc: protocol extension
 #define U_EXTEND1		(1<<15)
-// LordHavoc: first extend byte
+// LadyHavoc: first extend byte
 #define U_DELTA			(1<<16) // no data, while this is set the entity is delta compressed (uses previous frame as a baseline, meaning only things that have changed from the previous frame are sent, except for the forced full update every half second)
 #define U_ALPHA			(1<<17) // 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
 #define U_SCALE			(1<<18) // 1 byte, scale / 16 positive, not sent if 1.0
@@ -114,7 +114,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
 #define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
 #define U_EXTEND2		(1<<23) // another byte to follow
-// LordHavoc: second extend byte
+// LadyHavoc: second extend byte
 #define U_GLOWTRAIL		(1<<24) // leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
 #define U_VIEWMODEL		(1<<25) // attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
 #define U_FRAME2		(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
@@ -239,7 +239,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	svc_hidelmp			36		// [string] slotname
 #define	svc_skybox			37		// [string] skyname
 
-// LordHavoc: my svc_ range, 50-69
+// LadyHavoc: my svc_ range, 50-69
 #define svc_downloaddata	50		// [int] start [short] size
 #define svc_updatestatubyte	51		// [byte] stat [byte] value
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
@@ -264,7 +264,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	clc_move		3			// [usercmd_t]
 #define	clc_stringcmd	4		// [string] message
 
-// LordHavoc: my clc_ range, 50-59
+// LadyHavoc: my clc_ range, 50-59
 #define clc_ackframe	50		// [int] framenumber
 #define clc_ackdownloaddata	51	// [int] start [short] size   (note: exact echo of latest values received in svc_downloaddata, packet-loss handling is in the server)
 #define clc_unusedlh2 	52
@@ -301,7 +301,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define	TE_EXPLOSION3		16 // [vector] origin [coord] red [coord] green [coord] blue
 #define TE_LIGHTNING4NEH	17 // [string] model [entity] entity [vector] start [vector] end
 
-// LordHavoc: added some TE_ codes (block1 - 50-60)
+// LadyHavoc: added some TE_ codes (block1 - 50-60)
 #define	TE_BLOOD			50 // [vector] origin [byte] xvel [byte] yvel [byte] zvel [byte] count
 #define	TE_SPARK			51 // [vector] origin [byte] xvel [byte] yvel [byte] zvel [byte] count
 #define	TE_BLOODSHOWER		52 // [vector] min [vector] max [coord] explosionspeed [short] count
@@ -312,14 +312,14 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define TE_GUNSHOTQUAD		57 // [vector] origin
 #define TE_SPIKEQUAD		58 // [vector] origin
 #define TE_SUPERSPIKEQUAD	59 // [vector] origin
-// LordHavoc: block2 - 70-80
+// LadyHavoc: block2 - 70-80
 #define TE_EXPLOSIONQUAD	70 // [vector] origin
 #define	TE_UNUSED1			71 // unused
 #define TE_SMALLFLASH		72 // [vector] origin
 #define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
 #define TE_PLASMABURN		75 // [vector] origin
-// LordHavoc: Tei grabbed these codes
+// LadyHavoc: Tei grabbed these codes
 #define TE_TEI_G3			76 // [vector] start [vector] end [vector] angles
 #define TE_TEI_SMOKE		77 // [vector] origin [vector] dir [byte] count
 #define TE_TEI_BIGEXPLOSION	78 // [vector] origin
@@ -411,7 +411,7 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	unsigned char glowmod[3];
-	// LordHavoc: very big data here :(
+	// LadyHavoc: very big data here :(
 	framegroupblend_t framegroupblend[4];
 	skeleton_t skeletonobject;
 }
@@ -544,7 +544,7 @@ typedef struct entityframe_database_s
 }
 entityframe_database_t;
 
-// LordHavoc: these are in approximately sorted order, according to cost and
+// LadyHavoc: these are in approximately sorted order, according to cost and
 // likelyhood of being used for numerous objects in a frame
 
 // note that the bytes are not written/read in this order, this is only the

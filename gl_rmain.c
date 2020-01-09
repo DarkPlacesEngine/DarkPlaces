@@ -575,7 +575,7 @@ static void R_BuildFogHeightTexture(void)
 	r_refdef.fog_height_table2d = (unsigned char *)Mem_Alloc(r_main_mempool, size * size * 4);
 	memcpy(r_refdef.fog_height_table1d, inpixels, size * 4);
 	Mem_Free(inpixels);
-	// LordHavoc: now the magic - what is that table2d for?  it is a cooked
+	// LadyHavoc: now the magic - what is that table2d for?  it is a cooked
 	// average fog color table accounting for every fog layer between a point
 	// and the camera.  (Note: attenuation is handled separately!)
 	for (y = 0;y < size;y++)
@@ -3478,7 +3478,7 @@ int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, c
 
 //==================================================================================
 
-// LordHavoc: this stores temporary data used within the same frame
+// LadyHavoc: this stores temporary data used within the same frame
 
 typedef struct r_framedata_mem_s
 {
@@ -3751,7 +3751,7 @@ r_meshbuffer_t *R_BufferData_Store(size_t datasize, const void *data, r_bufferda
 
 //==================================================================================
 
-// LordHavoc: animcache originally written by Echon, rewritten since then
+// LadyHavoc: animcache originally written by Echon, rewritten since then
 
 /**
  * Animation cache prevents re-generating mesh data for an animated model
@@ -4338,7 +4338,7 @@ static void R_View_SetFrustum(const int *scissor)
 	for (i = 0;i < r_refdef.view.numfrustumplanes;i++)
 		PlaneClassify(r_refdef.view.frustum + i);
 
-	// LordHavoc: note to all quake engine coders, Quake had a special case
+	// LadyHavoc: note to all quake engine coders, Quake had a special case
 	// for 90 degrees which assumed a square view (wrong), so I removed it,
 	// Quake2 has it disabled as well.
 
@@ -6754,7 +6754,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
 	else if (t->currentalpha < 1)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
-	// LordHavoc: prevent bugs where code checks add or alpha at higher priority than customblend by clearing these flags
+	// LadyHavoc: prevent bugs where code checks add or alpha at higher priority than customblend by clearing these flags
 	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
 		t->currentmaterialflags &= ~(MATERIALFLAG_ADD | MATERIALFLAG_ALPHA);
 	if (rsurface.ent_flags & RENDER_DOUBLESIDED)

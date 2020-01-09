@@ -1556,7 +1556,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 
-	// LordHavoc: report supported extensions
+	// LadyHavoc: report supported extensions
 #ifdef CONFIG_MENU
 	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions);
 #else

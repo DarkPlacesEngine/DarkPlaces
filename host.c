@@ -46,7 +46,7 @@ Memory is cleared / released when a server or client begins, not when they end.
 // how many frames have occurred
 // (checked by Host_Error and Host_SaveConfig_f)
 int host_framecount = 0;
-// LordHavoc: set when quit is executed
+// LadyHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
 // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
@@ -130,7 +130,7 @@ void Host_Error (const char *error, ...)
 
 	Con_Printf("Host_Error: %s\n", hosterrorstring1);
 
-	// LordHavoc: if crashing very early, or currently shutting down, do
+	// LadyHavoc: if crashing very early, or currently shutting down, do
 	// Sys_Error instead
 	if (host_framecount < 3 || host_shuttingdown)
 		Sys_Error ("Host_Error: %s", hosterrorstring1);
@@ -281,7 +281,7 @@ static void Host_SaveConfig_to(const char *file)
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
-	// LordHavoc: don't save a config if it crashed in startup
+	// LadyHavoc: don't save a config if it crashed in startup
 	if (host_framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark") && !COM_CheckParm("-capturedemo"))
 	{
 		f = FS_OpenRealFile(file, "wb", false);
@@ -474,7 +474,7 @@ void SV_DropClient(qboolean crash)
 		// tell the client to be gone
 		if (!crash)
 		{
-			// LordHavoc: no opportunity for resending, so use unreliable 3 times
+			// LadyHavoc: no opportunity for resending, so use unreliable 3 times
 			unsigned char bufdata[8];
 			sizebuf_t buf;
 			memset(&buf, 0, sizeof(buf));
@@ -488,7 +488,7 @@ void SV_DropClient(qboolean crash)
 	}
 
 	// call qc ClientDisconnect function
-	// LordHavoc: don't call QC if server is dead (avoids recursive
+	// LadyHavoc: don't call QC if server is dead (avoids recursive
 	// Host_Error in some mods when they run out of edicts)
 	if (host_client->clientconnectcalled && sv.active && host_client->edict)
 	{
@@ -1166,15 +1166,15 @@ static void Host_Init (void)
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 
-	// LordHavoc: quake never seeded the random number generator before... heh
+	// LadyHavoc: quake never seeded the random number generator before... heh
 	if (COM_CheckParm("-benchmark"))
 		srand(0); // predictable random sequence for -benchmark
 	else
 		srand((unsigned int)time(NULL));
 
 	// FIXME: this is evil, but possibly temporary
-	// LordHavoc: doesn't seem very temporary...
-	// LordHavoc: made this a saved cvar
+	// LadyHavoc: doesn't seem very temporary...
+	// LadyHavoc: made this a saved cvar
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
 	if (COM_CheckParm("-developer"))
 	{

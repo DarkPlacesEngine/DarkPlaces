@@ -364,7 +364,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 		unsigned char		buf[4];
 		countdownmsg = 5;
 		// write out a nop
-		// LordHavoc: must use unreliable because reliable could kill the sigon message!
+		// LadyHavoc: must use unreliable because reliable could kill the sigon message!
 		Con_Print("--> client to server keepalive\n");
 		memset(&msg, 0, sizeof(msg));
 		msg.data = buf;
@@ -381,8 +381,8 @@ void CL_ParseEntityLump(char *entdata)
 	qboolean loadedsky = false;
 	const char *data;
 	char key[128], value[MAX_INPUTLINE];
-	FOG_clear(); // LordHavoc: no fog until set
-	// LordHavoc: default to the map's sky (q3 shader parsing sets this)
+	FOG_clear(); // LadyHavoc: no fog until set
+	// LadyHavoc: default to the map's sky (q3 shader parsing sets this)
 	R_SetSkyBox(cl.worldmodel->brush.skybox);
 	data = entdata;
 	if (!data)
@@ -1631,11 +1631,11 @@ static void CL_SignonReply (void)
 	case 2:
 		if (cls.netcon)
 		{
-			// LordHavoc: quake sent the player info here but due to downloads
+			// LadyHavoc: quake sent the player info here but due to downloads
 			// it is sent earlier instead
 			// CL_SendPlayerInfo();
 
-			// LordHavoc: changed to begin a loading stage and issue this when done
+			// LadyHavoc: changed to begin a loading stage and issue this when done
 			MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString (&cls.netcon->message, "spawn");
 		}
@@ -2202,7 +2202,7 @@ static void CL_ParseClientdata (void)
 		}
 	}
 
-	// LordHavoc: hipnotic demos don't have this bit set but should
+	// LadyHavoc: hipnotic demos don't have this bit set but should
 	if (bits & SU_ITEMS || cls.protocol == PROTOCOL_QUAKE || cls.protocol == PROTOCOL_QUAKEDP || cls.protocol == PROTOCOL_NEHAHRAMOVIE || cls.protocol == PROTOCOL_NEHAHRABJP || cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 || cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3 || cls.protocol == PROTOCOL_DARKPLACES4 || cls.protocol == PROTOCOL_DARKPLACES5)
 		cl.stats[STAT_ITEMS] = MSG_ReadLong(&cl_message);
 
@@ -2655,7 +2655,7 @@ static void CL_ParseTempEntity(void)
 					S_StartSound(-1, 0, cl.sfx_ric3, pos, 1, 1);
 			}
 			break;
-			// LordHavoc: added for improved blood splatters
+			// LadyHavoc: added for improved blood splatters
 		case TE_BLOOD:
 			// blood puff
 			MSG_ReadVector(&cl_message, pos, cls.protocol);
@@ -2681,7 +2681,7 @@ static void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 4);
 			CL_ParticleEffect(EFFECT_TE_PLASMABURN, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			break;
-			// LordHavoc: added for improved gore
+			// LadyHavoc: added for improved gore
 		case TE_BLOODSHOWER:
 			// vaporized body
 			MSG_ReadVector(&cl_message, pos, cls.protocol); // mins
@@ -2870,7 +2870,7 @@ static void CL_ParseTempEntity(void)
 			break;
 	// PGM 01/21/97
 
-	// LordHavoc: for compatibility with the Nehahra movie...
+	// LadyHavoc: for compatibility with the Nehahra movie...
 		case TE_LIGHTNING4NEH:
 			CL_ParseBeam(Mod_ForName(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), true, false, NULL), false);
 			break;
@@ -3399,7 +3399,7 @@ void CL_ParseServerMessage(void)
 	qboolean	strip_pqc;
 	char vabuf[1024];
 
-	// LordHavoc: moved demo message writing from before the packet parse to
+	// LadyHavoc: moved demo message writing from before the packet parse to
 	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
 	// code in CL_ParseServerinfo
 	//if (cls.demorecording)
@@ -3459,7 +3459,7 @@ void CL_ParseServerMessage(void)
 			cmdlogname[cmdindex] = qw_svc_strings[cmd];
 			if (!cmdlogname[cmdindex])
 			{
-				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				// LadyHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
 				const char *d = "<unknown>";
 				cmdlogname[cmdindex] = d;
 			}
@@ -3802,7 +3802,7 @@ void CL_ParseServerMessage(void)
 			// if the high bit of the command byte is set, it is a fast update
 			if (cmd & 128)
 			{
-				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				// LadyHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
 				temp = "entity";
 				cmdlogname[cmdindex] = temp;
 				SHOWNET("fast update");
@@ -3820,7 +3820,7 @@ void CL_ParseServerMessage(void)
 			cmdlogname[cmdindex] = svc_strings[cmd];
 			if (!cmdlogname[cmdindex])
 			{
-				// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
+				// LadyHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
 				const char *d = "<unknown>";
 				cmdlogname[cmdindex] = d;
 			}
@@ -3960,7 +3960,7 @@ void CL_ParseServerMessage(void)
 					Host_Error("svc_setview >= MAX_EDICTS");
 				if (cl.viewentity >= cl.max_entities)
 					CL_ExpandEntities(cl.viewentity);
-				// LordHavoc: assume first setview recieved is the real player entity
+				// LadyHavoc: assume first setview recieved is the real player entity
 				if (!cl.realplayerentity)
 					cl.realplayerentity = cl.viewentity;
 				// update cl.playerentity to this one if it is a valid player
@@ -4099,7 +4099,7 @@ void CL_ParseServerMessage(void)
 
 			case svc_signonnum:
 				i = MSG_ReadByte(&cl_message);
-				// LordHavoc: it's rude to kick off the client if they missed the
+				// LadyHavoc: it's rude to kick off the client if they missed the
 				// reconnect somehow, so allow signon 1 even if at signon 1
 				if (i <= cls.signon && i != 1)
 					Host_Error ("Received signon %i when at %i", i, cls.signon);
@@ -4252,7 +4252,7 @@ void CL_ParseServerMessage(void)
 
 	parsingerror = false;
 
-	// LordHavoc: this was at the start of the function before cl_autodemo was
+	// LadyHavoc: this was at the start of the function before cl_autodemo was
 	// implemented
 	if (cls.demorecording)
 	{

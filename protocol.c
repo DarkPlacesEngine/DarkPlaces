@@ -54,7 +54,7 @@ entity_state_t defaultstate =
 	{32, 32, 32},//unsigned char glowmod[3];
 };
 
-// LordHavoc: I own protocol ranges 96, 97, 3500-3599
+// LadyHavoc: I own protocol ranges 96, 97, 3500-3599
 
 struct protocolversioninfo_s
 {
@@ -212,10 +212,10 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_VIEWMODEL)	s.flags |= RENDER_VIEWMODEL;
 	if (bits & U_EXTERIORMODEL)	s.flags |= RENDER_EXTERIORMODEL;
 
-	// LordHavoc: to allow playback of the Nehahra movie
+	// LadyHavoc: to allow playback of the Nehahra movie
 	if (cls.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
 	{
-		// LordHavoc: evil format
+		// LadyHavoc: evil format
 		int i = (int)MSG_ReadFloat(&cl_message);
 		int j = (int)(MSG_ReadFloat(&cl_message) * 255.0f);
 		if (i == 2)
@@ -735,7 +735,7 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 		if (s->flags & RENDER_EXTERIORMODEL)
 			bits |= U_EXTERIORMODEL;
 
-		// LordHavoc: old stuff, but rewritten to have more exact tolerances
+		// LadyHavoc: old stuff, but rewritten to have more exact tolerances
 		baseline = prog->edicts[s->number].priv.server->baseline;
 		if (baseline.origin[0] != s->origin[0])
 			bits |= U_ORIGIN1;
@@ -962,7 +962,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 	}
 	else
 	{
-		// LordHavoc: have to write flags first, as they can modify protocol
+		// LadyHavoc: have to write flags first, as they can modify protocol
 		if (bits & E_FLAGS)
 			MSG_WriteByte(msg, ent->flags);
 		if (ent->flags & RENDER_LOWPRECISION)

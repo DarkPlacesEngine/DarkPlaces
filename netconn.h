@@ -1,6 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
-Copyright (C) 2003 Forest Hale
+Copyright (C) 2003 Ashley Rose Hale (LadyHavoc)
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License

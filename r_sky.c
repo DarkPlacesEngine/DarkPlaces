@@ -162,7 +162,7 @@ int R_SetSkyBox(const char *sky)
 	return R_LoadSkyBox();
 }
 
-// LordHavoc: added LoadSky console command
+// LadyHavoc: added LoadSky console command
 static void LoadSky_f (void)
 {
 	switch (Cmd_Argc())

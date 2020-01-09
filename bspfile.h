@@ -278,7 +278,7 @@ typedef struct dedge_s
 /*
 typedef struct dface_s
 {
-	// LordHavoc: changed from short to unsigned short for q2 support
+	// LadyHavoc: changed from short to unsigned short for q2 support
 	unsigned short	planenum;
 	short		side;
 

@@ -618,7 +618,7 @@ static void r_textures_start(void)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		// LordHavoc: allow any alignment
+		// LadyHavoc: allow any alignment
 		CHECKGLERROR
 		qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);CHECKGLERROR
 		qglPixelStorei(GL_PACK_ALIGNMENT, 1);CHECKGLERROR
@@ -1768,7 +1768,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	else if (!memcmp(dds+84, "DXT1", 4))
 	{
 		// we need to find out if this is DXT1 (opaque) or DXT1A (transparent)
-		// LordHavoc: it is my belief that this does not infringe on the
+		// LadyHavoc: it is my belief that this does not infringe on the
 		// patent because it is not decoding pixels...
 		textype = TEXTYPE_DXT1;
 		bytesperblock = 8;

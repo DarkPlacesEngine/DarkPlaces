@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2006  Serge "(515)" Ziryukin, Forest "LordHavoc" Hale
+	Copyright (C) 2006  Serge "(515)" Ziryukin, Ashley Rose Hale (LadyHavoc)
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -24,7 +24,7 @@
 //[515]: png implemented into DP ONLY FOR TESTING 2d stuff with csqc
 // so delete this bullshit :D
 //
-//LordHavoc: rewrote most of this.
+//LadyHavoc: rewrote most of this.
 
 #include "quakedef.h"
 #include "image.h"
@@ -254,7 +254,7 @@ static struct
 	qfile_t *outfile;
 } my_png;
 
-//LordHavoc: removed __cdecl prefix, added overrun protection, and rewrote this to be more efficient
+//LadyHavoc: removed __cdecl prefix, added overrun protection, and rewrote this to be more efficient
 static void PNG_fReadData(void *png, unsigned char *data, size_t length)
 {
 	size_t l;

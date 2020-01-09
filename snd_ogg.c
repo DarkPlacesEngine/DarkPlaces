@@ -472,7 +472,7 @@ static void OGG_GetSamplesFloat (channel_t *ch, sfx_t *sfx, int firstsampleframe
 		ret = qov_pcm_seek(&per_ch->vf, (ogg_int64_t)firstsampleframe);
 		if (ret != 0)
 		{
-			// LordHavoc: we can't Con_Printf here, not thread safe...
+			// LadyHavoc: we can't Con_Printf here, not thread safe...
 			//Con_Printf("OGG_FetchSound: qov_pcm_seek(..., %d) returned %d\n", firstsampleframe, ret);
 			return;
 		}

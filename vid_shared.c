@@ -70,9 +70,9 @@ qboolean in_client_mouse = true;
 float in_mouse_x, in_mouse_y;
 float in_windowmouse_x, in_windowmouse_y;
 
-// LordHavoc: if window is hidden, don't update screen
+// LadyHavoc: if window is hidden, don't update screen
 qboolean vid_hidden = true;
-// LordHavoc: if window is not the active window, don't hog as much CPU time,
+// LadyHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 qboolean vid_activewindow = true;
 
@@ -1110,7 +1110,7 @@ void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 			ramps[i] = (int)floor(bound(0.0f, Image_sRGBFloatFromLinearFloat(ramps[i] / 65535.0f), 1.0f) * 65535.0f + 0.5f);
 	}
 
-	// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
+	// LadyHavoc: this code came from Ben Winslow and Zinx Verituse, I have
 	// immensely butchered it to work with variable framerates and fit in with
 	// the rest of darkplaces.
 	//

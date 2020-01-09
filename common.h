@@ -235,7 +235,7 @@ extern int dpsnprintf (char *buffer, size_t buffersize, const char *format, ...)
 extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list args);
 
 // A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)
-// LordHavoc: added #undef lines here to avoid warnings in Linux
+// LadyHavoc: added #undef lines here to avoid warnings in Linux
 #undef strcat
 #define strcat DO_NOT_USE_STRCAT__USE_STRLCAT_OR_MEMCPY
 #undef strncat

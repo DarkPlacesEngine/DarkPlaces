@@ -97,7 +97,7 @@ typedef struct edict_engineprivate_s
 	// baseline values
 	entity_state_t baseline;
 
-	// LordHavoc: gross hack to make floating items still work
+	// LadyHavoc: gross hack to make floating items still work
 	int suspendedinairflag;
 
 	// cached position to avoid redundant SV_CheckWaterTransition calls on monsters

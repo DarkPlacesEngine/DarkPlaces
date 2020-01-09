@@ -460,7 +460,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	
 	SCR_PushLoadingScreen(true, mod->name, 1);
 
-	// LordHavoc: unload the existing model in this slot (if there is one)
+	// LadyHavoc: unload the existing model in this slot (if there is one)
 	if (mod->loaded || mod->mempool)
 		Mod_UnloadModel(mod);
 
@@ -527,7 +527,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	}
 	else if (crash)
 	{
-		// LordHavoc: Sys_Error was *ANNOYING*
+		// LadyHavoc: Sys_Error was *ANNOYING*
 		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
 	}
 

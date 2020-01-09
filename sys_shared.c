@@ -310,7 +310,7 @@ double Sys_DirtyTime(void)
 #if HAVE_QUERYPERFORMANCECOUNTER
 	if (sys_usequeryperformancecounter.integer)
 	{
-		// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
+		// LadyHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 		// QueryPerformanceCounter
 		// platform:
 		// Windows 95/98/ME/NT/2000/XP
