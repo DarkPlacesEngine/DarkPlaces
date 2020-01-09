@@ -53,7 +53,7 @@ kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
 kbutton_t	in_strafe, in_speed, in_jump, in_attack, in_use;
 kbutton_t	in_up, in_down;
-// LordHavoc: added 6 new buttons
+// LadyHavoc: added 6 new buttons
 kbutton_t	in_button3, in_button4, in_button5, in_button6, in_button7, in_button8;
 //even more
 kbutton_t	in_button9, in_button10, in_button11, in_button12, in_button13, in_button14, in_button15, in_button16;
@@ -162,7 +162,7 @@ static void IN_AttackUp(void) {KeyUp(&in_attack);}
 static void IN_UseDown(void) {KeyDown(&in_use);}
 static void IN_UseUp(void) {KeyUp(&in_use);}
 
-// LordHavoc: added 6 new buttons
+// LadyHavoc: added 6 new buttons
 static void IN_Button3Down(void) {KeyDown(&in_button3);}
 static void IN_Button3Up(void) {KeyUp(&in_button3);}
 static void IN_Button4Down(void) {KeyDown(&in_button4);}
@@ -975,7 +975,7 @@ static void CL_ClientMovement_Move(cl_clientmovement_state_t *s)
 			break;
 
 		// this is only really needed for nogravityonground combined with gravityunaffectedbyticrate
-		// <LordHavoc> I'm pretty sure I commented it out solely because it seemed redundant
+		// <LadyHavoc> I'm pretty sure I commented it out solely because it seemed redundant
 		// this got commented out in a change that supposedly makes the code match QW better
 		// so if this is broken, maybe put it in an if(cls.protocol != PROTOCOL_QUAKEWORLD) block
 		if (trace.plane.normal[2] > 0.7)
@@ -1770,7 +1770,7 @@ void CL_SendMove(void)
 	cl.cmd.sequence = cls.netcon->outgoing_unreliable_sequence;
 
 	// set button bits
-	// LordHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
+	// LadyHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
 	bits = 0;
 	if (in_attack.state   & 3) bits |=   1;
 	if (in_jump.state     & 3) bits |=   2;
@@ -2193,11 +2193,11 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
 	Cmd_AddCommand ("-mlook", IN_MLookUp, "deactivate mouse looking mode");
 
-	// LordHavoc: added use button
+	// LadyHavoc: added use button
 	Cmd_AddCommand ("+use", IN_UseDown, "use something (may be used by some mods)");
 	Cmd_AddCommand ("-use", IN_UseUp, "stop using something");
 
-	// LordHavoc: added 6 new buttons
+	// LadyHavoc: added 6 new buttons
 	Cmd_AddCommand ("+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
 	Cmd_AddCommand ("-button3", IN_Button3Up, "deactivate button3");
 	Cmd_AddCommand ("+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
@@ -2227,7 +2227,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
 	Cmd_AddCommand ("-button16", IN_Button16Up, "deactivate button16");
 
-	// LordHavoc: added bestweapon command
+	// LadyHavoc: added bestweapon command
 	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
 #if 0
 	Cmd_AddCommand ("cycleweapon", IN_CycleWeapon, "send an impulse number to server to select the next usable weapon out of several (example: 9 4 8) if you are holding one of these, and choose the first one if you are holding none of these");

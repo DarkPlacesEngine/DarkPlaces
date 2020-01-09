@@ -561,7 +561,7 @@ static void R_Viewport_ApplyNearClipPlaneFloatGL(const r_viewport_t *v, float *m
 	Matrix4x4_Transform3x3(&v->viewmatrix, normal, clipPlane);
 	VectorScale(normal, -dist, v3);
 	Matrix4x4_Transform(&v->viewmatrix, v3, v4);
-	// FIXME: LordHavoc: I think this can be done more efficiently somehow but I can't remember the technique
+	// FIXME: LadyHavoc: I think this can be done more efficiently somehow but I can't remember the technique
 	clipPlane[3] = -DotProduct(v4, clipPlane);
 
 	// Calculate the clip-space corner point opposite the clipping plane
@@ -1916,7 +1916,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 			gl_state.pointer_vertex_offset = bufferoffset;
 			CHECKGLERROR
 			GL_BindVBO(bufferobject);
-			// LordHavoc: special flag added to gltype for unnormalized types
+			// LadyHavoc: special flag added to gltype for unnormalized types
 			qglVertexAttribPointer(GLSLATTRIB_POSITION, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 		}
 		break;
@@ -1952,7 +1952,7 @@ void R_Mesh_ColorPointer(int components, int gltype, size_t stride, const void *
 				gl_state.pointer_color_offset = bufferoffset;
 				CHECKGLERROR
 				GL_BindVBO(bufferobject);
-				// LordHavoc: special flag added to gltype for unnormalized types
+				// LadyHavoc: special flag added to gltype for unnormalized types
 				qglVertexAttribPointer(GLSLATTRIB_COLOR, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}
@@ -2004,7 +2004,7 @@ void R_Mesh_TexCoordPointer(unsigned int unitnum, int components, int gltype, si
 				unit->pointer_texcoord_vertexbuffer = vertexbuffer;
 				unit->pointer_texcoord_offset = bufferoffset;
 				GL_BindVBO(bufferobject);
-				// LordHavoc: special flag added to gltype for unnormalized types
+				// LadyHavoc: special flag added to gltype for unnormalized types
 				qglVertexAttribPointer(unitnum+GLSLATTRIB_TEXCOORD0, components, gltype & ~0x80000000, (gltype & 0x80000000) == 0, (GLsizei)stride, bufferobject ? (void *)bufferoffset : pointer);CHECKGLERROR
 			}
 		}

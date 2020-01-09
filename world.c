@@ -189,7 +189,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	if (prog == NULL || prog->num_edicts < 1)
 		return 0;
 
-	// LordHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
+	// LadyHavoc: discovered this actually causes its own bugs (dm6 teleporters being too close to info_teleport_destination)
 	//VectorSet(paddedmins, requestmins[0] - 1.0f, requestmins[1] - 1.0f, requestmins[2] - 1.0f);
 	//VectorSet(paddedmaxs, requestmaxs[0] + 1.0f, requestmaxs[1] + 1.0f, requestmaxs[2] + 1.0f);
 	VectorCopy(requestmins, paddedmins);
@@ -366,7 +366,7 @@ cvar_t physics_ode_printstats = {0, "physics_ode_printstats", "0", "print ODE st
 
 cvar_t physics_ode = {0, "physics_ode", "0", "run ODE physics (VERY experimental and potentially buggy)"};
 
-// LordHavoc: this large chunk of definitions comes from the ODE library
+// LadyHavoc: this large chunk of definitions comes from the ODE library
 // include files.
 
 #ifdef LINK_TO_LIBODE

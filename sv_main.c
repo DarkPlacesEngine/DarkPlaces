@@ -583,7 +583,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&scratch4);
 	Cvar_RegisterVariable (&temp1);
 
-	// LordHavoc: Nehahra uses these to pass data around cutscene demos
+	// LadyHavoc: Nehahra uses these to pass data around cutscene demos
 	Cvar_RegisterVariable (&nehx00);
 	Cvar_RegisterVariable (&nehx01);
 	Cvar_RegisterVariable (&nehx02);
@@ -893,7 +893,7 @@ void SV_SendServerinfo (client_t *client)
 	client->weaponmodel[0] = 0;
 	client->weaponmodelindex = 0;
 
-	// LordHavoc: clear entityframe tracking
+	// LadyHavoc: clear entityframe tracking
 	client->latestframenum = 0;
 
 	// initialize the movetime, so a speedhack can't make use of the time before this client joined
@@ -1190,7 +1190,7 @@ static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *c
 	effects = (unsigned)PRVM_serveredictfloat(ent, effects);
 
 	// we can omit invisible entities with no effects that are not clients
-	// LordHavoc: this could kill tags attached to an invisible entity, I
+	// LadyHavoc: this could kill tags attached to an invisible entity, I
 	// just hope we never have to support that case
 	i = (int)PRVM_serveredictfloat(ent, modelindex);
 	modelindex = (i >= 1 && i < MAX_MODELS && PRVM_serveredictstring(ent, model) && *PRVM_GetString(prog, PRVM_serveredictstring(ent, model)) && sv.models[i]) ? i : 0;
@@ -1660,7 +1660,7 @@ static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			return;
 		if (s->effects & EF_NODRAW)
 			return;
-		// LordHavoc: only send entities with a model or important effects
+		// LadyHavoc: only send entities with a model or important effects
 		if (!s->modelindex && s->specialvisibilityradius == 0)
 			return;
 
@@ -1857,7 +1857,7 @@ static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, size
 	sv.writeentitiestoclient_numeyes = 0;
 
 	// get eye location
-	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
+	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LadyHavoc: for comparison purposes
 	camera = PRVM_EDICT_NUM( client->clientcamera );
 	VectorAdd(PRVM_serveredictvector(camera, origin), PRVM_serveredictvector(clent, view_ofs), eye);
 	sv.writeentitiestoclient_pvsbytes = 0;
@@ -3113,13 +3113,13 @@ static void SV_CreateBaseline (void)
 	int i, entnum, large;
 	prvm_edict_t *svent;
 
-	// LordHavoc: clear *all* baselines (not just active ones)
+	// LadyHavoc: clear *all* baselines (not just active ones)
 	for (entnum = 0;entnum < prog->max_edicts;entnum++)
 	{
 		// get the current server version
 		svent = PRVM_EDICT_NUM(entnum);
 
-		// LordHavoc: always clear state values, whether the entity is in use or not
+		// LadyHavoc: always clear state values, whether the entity is in use or not
 		svent->priv.server->baseline = defaultstate;
 
 		if (svent->priv.server->free)
@@ -3371,7 +3371,7 @@ void SV_SpawnServer (const char *server)
 //
 	if (coop.integer)
 		Cvar_SetValue ("deathmatch", 0);
-	// LordHavoc: it can be useful to have skills outside the range 0-3...
+	// LadyHavoc: it can be useful to have skills outside the range 0-3...
 	//current_skill = bound(0, (int)(skill.value + 0.5), 3);
 	//Cvar_SetValue ("skill", (float)current_skill);
 	current_skill = (int)(skill.value + 0.5);
@@ -3513,11 +3513,11 @@ void SV_SpawnServer (const char *server)
 		PRVM_ED_LoadFromFile(prog, sv.worldmodel->brush.entities);
 
 
-	// LordHavoc: clear world angles (to fix e3m3.bsp)
+	// LadyHavoc: clear world angles (to fix e3m3.bsp)
 	VectorClear(PRVM_serveredictvector(prog->edicts, angles));
 
 // all setup is completed, any further precache statements are errors
-//	sv.state = ss_active; // LordHavoc: workaround for svc_precache bug
+//	sv.state = ss_active; // LadyHavoc: workaround for svc_precache bug
 	prog->allowworldwrites = false;
 
 // run two frames to allow everything to settle
@@ -3538,7 +3538,7 @@ void SV_SpawnServer (const char *server)
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 		SV_CreateBaseline ();
 
-	sv.state = ss_active; // LordHavoc: workaround for svc_precache bug
+	sv.state = ss_active; // LadyHavoc: workaround for svc_precache bug
 
 // send serverinfo to all connected clients, and set up botclients coming back from a level change
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
@@ -3603,7 +3603,7 @@ static void SVVM_end_increase_edicts(prvm_prog_t *prog)
 
 static void SVVM_init_edict(prvm_prog_t *prog, prvm_edict_t *e)
 {
-	// LordHavoc: for consistency set these here
+	// LadyHavoc: for consistency set these here
 	int num = PRVM_NUM_FOR_EDICT(e) - 1;
 
 	e->priv.server->move = false; // don't move on first frame
@@ -4018,7 +4018,7 @@ static int SV_ThreadFunc(void *voiddata)
 
 			if(advancetime > 0)
 			{
-				offset = sv_timer + (Sys_DirtyTime() - sv_realtime); // LordHavoc: FIXME: I don't understand this line
+				offset = sv_timer + (Sys_DirtyTime() - sv_realtime); // LadyHavoc: FIXME: I don't understand this line
 				++svs.perf_acc_offset_samples;
 				svs.perf_acc_offset += offset;
 				svs.perf_acc_offset_squared += offset * offset;

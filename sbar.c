@@ -727,7 +727,7 @@ Sbar_DrawScoreboard
 static void Sbar_DrawScoreboard (void)
 {
 	Sbar_SoloScoreboard ();
-	// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+	// LadyHavoc: changed to draw the deathmatch overlays in any multiplayer mode
 	//if (cl.gametype == GAME_DEATHMATCH)
 	if (!cl.islocalgame)
 		Sbar_DeathmatchOverlay ();
@@ -1657,7 +1657,7 @@ void Sbar_Draw (void)
 		{
 			sbar_x = (vid_conwidth.integer - 320)/2;
 			sbar_y = vid_conheight.integer - SBAR_HEIGHT;
-			// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+			// LadyHavoc: changed to draw the deathmatch overlays in any multiplayer mode
 			//if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
 
 			if (sb_lines > 24)
@@ -1758,7 +1758,7 @@ void Sbar_Draw (void)
 
 				Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
 
-				// LordHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+				// LadyHavoc: changed to draw the deathmatch overlays in any multiplayer mode
 				if ((!cl.islocalgame || cl.gametype != GAME_COOP))
 				{
 					if (gamemode == GAME_TRANSFUSION)

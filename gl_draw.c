@@ -840,8 +840,8 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 static const vec4_t string_colors[] =
 {
 	// Quake3 colors
-	// LordHavoc: why on earth is cyan before magenta in Quake3?
-	// LordHavoc: note: Doom3 uses white for [0] and [7]
+	// LadyHavoc: why on earth is cyan before magenta in Quake3?
+	// LadyHavoc: note: Doom3 uses white for [0] and [7]
 	{0.0, 0.0, 0.0, 1.0}, // black
 	{1.0, 0.0, 0.0, 1.0}, // red
 	{0.0, 1.0, 0.0, 1.0}, // green

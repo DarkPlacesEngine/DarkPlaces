@@ -38,8 +38,8 @@ typedef bool qboolean;
 typedef long long dpint64;
 typedef unsigned long long dpuint64;
 
-// LordHavoc: upgrade the prvm to double precision for better time values
-// LordHavoc: to be enabled when bugs are worked out...
+// LadyHavoc: upgrade the prvm to double precision for better time values
+// LadyHavoc: to be enabled when bugs are worked out...
 #define PRVM_64
 #ifdef PRVM_64
 typedef double prvm_vec_t;

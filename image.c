@@ -20,7 +20,7 @@ static void Image_CopyAlphaFromBlueBGRA(unsigned char *outpixels, const unsigned
 }
 
 #if 1
-// written by LordHavoc in a readable way, optimized by Vic, further optimized by LordHavoc (the non-special index case), readable version preserved below this
+// written by LadyHavoc in a readable way, optimized by Vic, further optimized by LadyHavoc (the non-special index case), readable version preserved below this
 void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
@@ -210,7 +210,7 @@ static unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize, int *m
 	memcpy(&pcx, fin, sizeof(pcx));
 	fin += sizeof(pcx);
 
-	// LordHavoc: big-endian support ported from QF newtree
+	// LadyHavoc: big-endian support ported from QF newtree
 	pcx.xmax = LittleShort (pcx.xmax);
 	pcx.xmin = LittleShort (pcx.xmin);
 	pcx.ymax = LittleShort (pcx.ymax);
@@ -300,7 +300,7 @@ qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pix
 	memcpy(&pcx, fin, sizeof(pcx));
 	fin += sizeof(pcx);
 
-	// LordHavoc: big-endian support ported from QF newtree
+	// LadyHavoc: big-endian support ported from QF newtree
 	pcx.xmax = LittleShort (pcx.xmax);
 	pcx.xmin = LittleShort (pcx.xmin);
 	pcx.ymax = LittleShort (pcx.ymax);

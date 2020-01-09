@@ -238,7 +238,7 @@ static void CSQC_SetGlobals (double frametime)
 		VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 		VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
 
-		// LordHavoc: Spike says not to do this, but without pmove_org the
+		// LadyHavoc: Spike says not to do this, but without pmove_org the
 		// CSQC is useless as it can't alter the view origin without
 		// completely replacing it
 		Matrix4x4_OriginFromMatrix(&cl.entities[cl.viewentity].render.matrix, pmove_org);
@@ -828,7 +828,7 @@ void CSQC_ReadEntities (void)
 				}
 				else
 				{
-					// LordHavoc: removing an entity that is already gone on
+					// LadyHavoc: removing an entity that is already gone on
 					// the csqc side is possible for legitimate reasons (such
 					// as a repeat of the remove message), so no warning is
 					// needed

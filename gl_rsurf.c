@@ -377,7 +377,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	R_Mesh_Draw(0, numpoints, 0, numpoints - 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
 }
 
-// LordHavoc: this is just a nice debugging tool, very slow
+// LadyHavoc: this is just a nice debugging tool, very slow
 void R_DrawPortals(void)
 {
 	int i, leafnum;

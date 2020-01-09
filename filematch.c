@@ -7,7 +7,7 @@
 
 #include "quakedef.h"
 
-// LordHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
+// LadyHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
 
 int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 {

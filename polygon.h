@@ -3,7 +3,7 @@
 #define POLYGON_H
 
 /*
-Polygon clipping routines written by Forest Hale and placed into public domain.
+Polygon clipping routines written by Ashley Rose Hale (LadyHavoc) and placed into public domain.
 */
 
 void PolygonF_QuadForPlane(float *outpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float quadsize);

@@ -899,7 +899,7 @@ void M_Menu_Save_f (void)
 	if (!sv.active)
 		return;
 #if 1
-	// LordHavoc: allow saving multiplayer games
+	// LadyHavoc: allow saving multiplayer games
 	if (cl.islocalgame && cl.intermission)
 		return;
 #else
@@ -1360,7 +1360,7 @@ static void M_Setup_Draw (void)
 	M_DrawTextBox (64, 140-8, 14, 1);
 	M_Print(72, 140, "Accept Changes");
 
-	// LordHavoc: rewrote this code greatly
+	// LadyHavoc: rewrote this code greatly
 	if (menuplyr_load)
 	{
 		unsigned char *f;
@@ -2635,7 +2635,7 @@ static void M_Keys_Draw (void)
 
 		Key_FindKeysForCommand (bindnames[i][0], keys, NUMKEYS, 0);
 
-		// LordHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
+		// LadyHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
 		if (keys[0] == -1)
 			strlcpy(keystring, "???", sizeof(keystring));
 		else

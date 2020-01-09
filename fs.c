@@ -688,7 +688,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		// 1st uint8  : general purpose bit flag
 		//    Check bits 0 (encryption), 3 (data descriptor after the file), and 5 (compressed patched data (?))
 		//
-		// LordHavoc: bit 3 would be a problem if we were scanning the archive
+		// LadyHavoc: bit 3 would be a problem if we were scanning the archive
 		// but is not a problem in the central directory where the values are
 		// always real.
 		//
@@ -1448,7 +1448,7 @@ void FS_Rescan (void)
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
-	// LordHavoc: now supports multiple -game directories
+	// LadyHavoc: now supports multiple -game directories
 	// set the com_modname (reported in server info)
 	*gamedirbuf = 0;
 	for (i = 0;i < fs_numgamedirs;i++)
@@ -2149,7 +2149,7 @@ void FS_Init (void)
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
-	// LordHavoc: now supports multiple -game directories
+	// LadyHavoc: now supports multiple -game directories
 	for (i = 1;i < com_argc && fs_numgamedirs < MAX_GAMEDIRS;i++)
 	{
 		if (!com_argv[i])
@@ -2370,7 +2370,7 @@ static qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	}
 #endif
 
-	// LordHavoc: FILEDESC_SEEK affects all duplicates of a handle so we do it before
+	// LadyHavoc: FILEDESC_SEEK affects all duplicates of a handle so we do it before
 	// the dup() call to avoid having to close the dup_handle on error here
 	if (FILEDESC_SEEK (pack->handle, pfile->offset, SEEK_SET) == -1)
 	{
@@ -2843,7 +2843,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 	FS_Purge (file);
 
 	// Write the buffer and update the position
-	// LordHavoc: to hush a warning about passing size_t to an unsigned int parameter on Win64 we do this as multiple writes if the size would be too big for an integer (we never write that big in one go, but it's a theory)
+	// LadyHavoc: to hush a warning about passing size_t to an unsigned int parameter on Win64 we do this as multiple writes if the size would be too big for an integer (we never write that big in one go, but it's a theory)
 	while (written < (fs_offset_t)datasize)
 	{
 		// figure out how much to write in one chunk

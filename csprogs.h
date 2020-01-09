@@ -1,7 +1,7 @@
 #ifndef CSPROGS_H
 #define CSPROGS_H
 
-// LordHavoc: changed to match MAX_EDICTS
+// LadyHavoc: changed to match MAX_EDICTS
 #define CL_MAX_EDICTS MAX_EDICTS
 
 #define ENTMASK_ENGINE				1

@@ -284,7 +284,7 @@ static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, float *min, float
 VM_SV_setsize
 
 the size box is rotated by the current angle
-LordHavoc: no it isn't...
+LadyHavoc: no it isn't...
 
 setsize (entity, minvector, maxvector)
 =================
@@ -377,7 +377,7 @@ static void VM_SV_sprint(prvm_prog_t *prog)
 	VM_VarString(prog, 1, string, sizeof(string));
 
 	entnum = PRVM_G_EDICTNUM(OFS_PARM0);
-	// LordHavoc: div0 requested that sprintto world  operate like print
+	// LadyHavoc: div0 requested that sprintto world  operate like print
 	if (entnum == 0)
 	{
 		Con_Print(string);
@@ -558,7 +558,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 	}
 	else
 	{
-		// LordHavoc: we only let the qc set certain flags, others are off-limits
+		// LadyHavoc: we only let the qc set certain flags, others are off-limits
 		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED | CHANNELFLAG_FULLVOLUME);
 	}
 
@@ -673,7 +673,7 @@ if the tryents flag is set.
 tracebox (vector1, vector mins, vector maxs, vector2, tryents)
 =================
 */
-// LordHavoc: added this for my own use, VERY useful, similar to traceline
+// LadyHavoc: added this for my own use, VERY useful, similar to traceline
 static void VM_SV_tracebox(prvm_prog_t *prog)
 {
 	vec3_t v1, v2, m1, m2;
@@ -721,7 +721,7 @@ static trace_t SV_Trace_Toss(prvm_prog_t *prog, prvm_edict_t *tossent, prvm_edic
 		gravity = 1.0f;
 	gravity *= sv_gravity.value * 0.025;
 
-	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
+	for (i = 0;i < 200;i++) // LadyHavoc: sanity check; never trace more than 10 seconds
 	{
 		SV_CheckVelocity (tossent);
 		PRVM_serveredictvector(tossent, velocity)[2] -= gravity;
@@ -1027,7 +1027,7 @@ static void VM_SV_findradius(prvm_prog_t *prog)
 		// (note: this is the reason you can't blow up fallen zombies)
 		if (PRVM_serveredictfloat(ent, solid) == SOLID_NOT && !sv_gameplayfix_blowupfallenzombies.integer)
 			continue;
-		// LordHavoc: compare against bounding box rather than center so it
+		// LadyHavoc: compare against bounding box rather than center so it
 		// doesn't miss large objects, and use DotProduct instead of Length
 		// for a major speedup
 		VectorSubtract(org, PRVM_serveredictvector(ent, origin), eorg);
@@ -2327,7 +2327,7 @@ static void VM_SV_te_flamejet(prvm_prog_t *prog)
 }
 
 //void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
-//this function originally written by KrimZon, made shorter by LordHavoc
+//this function originally written by KrimZon, made shorter by LadyHavoc
 static void VM_SV_clientcommand(prvm_prog_t *prog)
 {
 	client_t *temp_client;
@@ -2533,9 +2533,9 @@ static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *e
 		if (PRVM_serveredictfloat(ent, health) > 0 && cl_bob.value && cl_bobcycle.value)
 		{
 			double bob, cycle;
-			// LordHavoc: this code is *weird*, but not replacable (I think it
+			// LadyHavoc: this code is *weird*, but not replacable (I think it
 			// should be done in QC on the server, but oh well, quake is quake)
-			// LordHavoc: figured out bobup: the time at which the sin is at 180
+			// LadyHavoc: figured out bobup: the time at which the sin is at 180
 			// degrees (which allows lengthening or squishing the peak or valley)
 			cycle = sv.time/cl_bobcycle.value;
 			cycle -= (int)cycle;
@@ -3590,7 +3590,7 @@ NULL,							// #396
 NULL,							// #397
 NULL,							// #398
 NULL,							// #399
-// LordHavoc's range #400-#499
+// LadyHavoc's range #400-#499
 VM_SV_copyentity,				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
 VM_SV_setcolor,					// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
 VM_findchain,					// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)

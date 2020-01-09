@@ -30,9 +30,9 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 prvm_eval_t prvm_badvalue; // used only for error returns
 
 cvar_t prvm_language = {CVAR_SAVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
-// LordHavoc: prints every opcode as it executes - warning: this is significant spew
+// LadyHavoc: prints every opcode as it executes - warning: this is significant spew
 cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
-// LordHavoc: counts usage of each QuakeC statement
+// LadyHavoc: counts usage of each QuakeC statement
 cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
 cvar_t prvm_timeprofiling = {0, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
 cvar_t prvm_coverage = {0, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
@@ -458,11 +458,11 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 		dpsnprintf (line, linelength, "void");
 		break;
 	case ev_float:
-		// LordHavoc: changed from %5.1f to %10.4f
+		// LadyHavoc: changed from %5.1f to %10.4f
 		dpsnprintf (line, linelength, FLOAT_LOSSLESS_FORMAT, val->_float);
 		break;
 	case ev_vector:
-		// LordHavoc: changed from %5.1f to %10.4f
+		// LadyHavoc: changed from %5.1f to %10.4f
 		dpsnprintf (line, linelength, "'" VECTOR_LOSSLESS_FORMAT "'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
@@ -626,8 +626,8 @@ PRVM_ED_Print
 For debugging
 =============
 */
-// LordHavoc: optimized this to print out much more quickly (tempstring)
-// LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
+// LadyHavoc: optimized this to print out much more quickly (tempstring)
+// LadyHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
 void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fieldname)
 {
 	size_t	l;
@@ -2100,13 +2100,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		prog->numfielddefs++;
 	}
 
-	// LordHavoc: TODO: reorder globals to match engine struct
-	// LordHavoc: TODO: reorder fields to match engine struct
+	// LadyHavoc: TODO: reorder globals to match engine struct
+	// LadyHavoc: TODO: reorder fields to match engine struct
 #define remapglobal(index) (index)
 #define remapfield(index) (index)
 
 	// copy globals
-	// FIXME: LordHavoc: this uses a crude way to identify integer constants, rather than checking for matching globaldefs and checking their type
+	// FIXME: LadyHavoc: this uses a crude way to identify integer constants, rather than checking for matching globaldefs and checking their type
 	for (i = 0;i < prog->progs_numglobals;i++)
 	{
 		u.i = LittleLong(inglobals[i]);
@@ -2127,7 +2127,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 	}
 
-	// LordHavoc: TODO: support 32bit progs statement formats
+	// LadyHavoc: TODO: support 32bit progs statement formats
 	// copy, remap globals in statements, bounds check
 	for (i = 0;i < prog->progs_numstatements;i++)
 	{
@@ -2965,7 +2965,7 @@ void PRVM_Prog_Init(prvm_prog_t *prog)
 	prog->leaktest_active = prvm_leaktest.integer != 0;
 }
 
-// LordHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons
+// LadyHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons
 unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char *filename, int fileline)
 {
 	prog->error_cmd("PRVM_EDICT_NUM: %s: bad number %i (called at %s:%i)", prog->name, n, filename, fileline);

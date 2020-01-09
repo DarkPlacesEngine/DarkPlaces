@@ -1,7 +1,7 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
 Copyright (C) 2002 Mathieu Olivier
-Copyright (C) 2003 Forest Hale
+Copyright (C) 2003 Ashley Rose Hale (LadyHavoc)
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -44,7 +44,7 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master2", "", "user-chosen master server 2"},
 	{CVAR_SAVE, "sv_master3", "", "user-chosen master server 3"},
 	{CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
-	{0, "sv_masterextra1", "ghdigital.com", "ghdigital.com - default master server 1 (admin: LordHavoc)"}, // admin: LordHavoc
+	{0, "sv_masterextra1", "ghdigital.com", "ghdigital.com - default master server 1 (admin: LadyHavoc)"}, // admin: LadyHavoc
 	{0, "sv_masterextra2", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 2 (admin: Willis)"}, // admin: Willis
 	{0, "sv_masterextra3", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 3 (admin: tChr)"}, // admin: tChr
 	{0, NULL, NULL, NULL}
@@ -1107,7 +1107,7 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn->message.data = conn->messagedata;
 	conn->message.maxsize = sizeof(conn->messagedata);
 	conn->message.cursize = 0;
-	// LordHavoc: (inspired by ProQuake) use a short connect timeout to
+	// LadyHavoc: (inspired by ProQuake) use a short connect timeout to
 	// reduce effectiveness of connection request floods
 	conn->timeout = realtime + net_connecttimeout.value;
 	LHNETADDRESS_ToString(&conn->peeraddress, conn->address, sizeof(conn->address), true);
@@ -2276,7 +2276,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			if (developer_extra.integer)
 				Con_DPrintf("Datagram_ParseConnectionless: received CCREP_SERVER_INFO from %s.\n", addressstring2);
 #ifdef CONFIG_MENU
-			// LordHavoc: because the quake server may report weird addresses
+			// LadyHavoc: because the quake server may report weird addresses
 			// we just ignore it and keep the real address
 			MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 			// search the cache for this server and update it

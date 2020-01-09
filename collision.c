@@ -1200,7 +1200,7 @@ void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const ve
 //pseudocode for detecting line/sphere overlap without calculating an impact point
 //linesphereorigin = sphereorigin - linestart;linediff = lineend - linestart;linespherefrac = DotProduct(linesphereorigin, linediff) / DotProduct(linediff, linediff);return VectorLength2(linesphereorigin - bound(0, linespherefrac, 1) * linediff) >= sphereradius*sphereradius;
 
-// LordHavoc: currently unused, but tested
+// LadyHavoc: currently unused, but tested
 // note: this can be used for tracing a moving sphere vs a stationary sphere,
 // by simply adding the moving sphere's radius to the sphereradius parameter,
 // all the results are correct (impactpoint, impactnormal, and fraction)

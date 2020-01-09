@@ -60,7 +60,7 @@ daliashdr_t;
 ========================================================================
 */
 
-// LordHavoc: grabbed this from the Q2 utility source,
+// LadyHavoc: grabbed this from the Q2 utility source,
 // renamed a things to avoid conflicts
 
 #define MD2ALIAS_VERSION	8

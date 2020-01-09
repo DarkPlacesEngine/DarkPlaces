@@ -372,7 +372,7 @@ void MSG_WriteVector (sizebuf_t *sb, const vec3_t v, protocolversion_t protocol)
 	MSG_WriteCoord (sb, v[2], protocol);
 }
 
-// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
+// LadyHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 void MSG_WriteAngle8i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
@@ -552,7 +552,7 @@ void MSG_ReadVector (sizebuf_t *sb, vec3_t v, protocolversion_t protocol)
 	v[2] = MSG_ReadCoord(sb, protocol);
 }
 
-// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
+// LadyHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 float MSG_ReadAngle8i (sizebuf_t *sb)
 {
 	return (signed char) MSG_ReadByte (sb) * (360.0/256.0);
@@ -612,7 +612,7 @@ void SZ_Write (sizebuf_t *buf, const unsigned char *data, int length)
 	memcpy (SZ_GetSpace(buf,length),data,length);
 }
 
-// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
+// LadyHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
 // attention, it has been eradicated from here, its only (former) use in
 // all of darkplaces.
 

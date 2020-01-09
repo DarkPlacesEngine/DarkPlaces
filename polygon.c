@@ -1,6 +1,6 @@
 
 /*
-Polygon clipping routines written by Forest Hale and placed into public domain.
+Polygon clipping routines written by Ashley Rose Hale (LadyHavoc) and placed into public domain.
 */
 
 #include <math.h>

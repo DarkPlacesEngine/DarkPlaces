@@ -815,7 +815,7 @@ struct codepair {
   { 0x20ac, 0x20ac }, /*                    EuroSign € EURO SIGN */
 };
 
-extern long keysym2ucs(KeySym keysym); // LordHavoc: suppress warning just in this case, it's not worth having a header file for this...
+extern long keysym2ucs(KeySym keysym); // LadyHavoc: suppress warning just in this case, it's not worth having a header file for this...
 long keysym2ucs(KeySym keysym)
 {
     int min = 0;

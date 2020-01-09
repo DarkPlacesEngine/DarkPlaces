@@ -561,7 +561,7 @@
 				}
 				DISPATCH_OPCODE();
 
-// LordHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
+// LadyHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
 /*
 			HANDLE_OPCODE(OP_ADD_I):
 				OPC->_int = OPA->_int + OPB->_int;

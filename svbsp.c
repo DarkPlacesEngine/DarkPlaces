@@ -1,7 +1,7 @@
 
-// Shadow Volume BSP code written by Forest "LordHavoc" Hale on 2003-11-06 and placed into public domain.
-// Modified by LordHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
-// Optimized by LordHavoc on 2009-12-24 and 2009-12-25
+// Shadow Volume BSP code written by Ashley Rose Hale (LadyHavoc) on 2003-11-06 and placed into public domain.
+// Modified by LadyHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
+// Optimized by LadyHavoc on 2009-12-24 and 2009-12-25
 
 #include <math.h>
 #include <string.h>

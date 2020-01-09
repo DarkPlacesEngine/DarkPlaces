@@ -1,6 +1,6 @@
 
-// Shadow Volume BSP code written by Forest "LordHavoc" Hale on 2003-11-06 and placed into public domain.
-// Modified by LordHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
+// Shadow Volume BSP code written by Ashley Rose Hale (LadyHavoc) on 2003-11-06 and placed into public domain.
+// Modified by LadyHavoc (to make it work and other nice things like that) on 2007-01-24 and 2007-01-25
 
 #ifndef SVBSP_H
 #define SVBSP_H

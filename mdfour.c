@@ -162,10 +162,10 @@ void mdfour_update(struct mdfour *md, const unsigned char *in, int n)
 {
 	uint32 M[16];
 
-// start of edit by Forest 'LordHavoc' Hale
+// start of edit by Ashley Rose Hale (LadyHavoc)
 // commented out to prevent crashing when length is 0
 //	if (n == 0) mdfour_tail(in, n);
-// end of edit by Forest 'LordHavoc' Hale
+// end of edit by Ashley Rose Hale (LadyHavoc)
 
 	while (n >= 64) {
 		copy64(M, in);

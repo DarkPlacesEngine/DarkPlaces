@@ -106,7 +106,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	if (loadmodel->numframes < 1)
 		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d", loadmodel->numframes);
 
-	// LordHavoc: hack to allow sprites to be non-fullbright
+	// LadyHavoc: hack to allow sprites to be non-fullbright
 	fullbright = true;
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
 		if (loadmodel->name[i] == '!')
@@ -407,7 +407,7 @@ void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->sprite.sprnum_type = SPR_VP_PARALLEL;
 	loadmodel->synctype = ST_SYNC;
 
-	// LordHavoc: hack to allow sprites to be non-fullbright
+	// LadyHavoc: hack to allow sprites to be non-fullbright
 	fullbright = true;
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
 		if (loadmodel->name[i] == '!')

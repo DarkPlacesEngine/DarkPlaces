@@ -779,9 +779,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 						bob_limit *= min(trace1fraction, trace2fraction);
 					}
 
-					// LordHavoc: this code is *weird*, but not replacable (I think it
+					// LadyHavoc: this code is *weird*, but not replacable (I think it
 					// should be done in QC on the server, but oh well, quake is quake)
-					// LordHavoc: figured out bobup: the time at which the sin is at 180
+					// LadyHavoc: figured out bobup: the time at which the sin is at 180
 					// degrees (which allows lengthening or squishing the peak or valley)
 					cycle = cl.time / cl_bobcycle.value;
 					cycle -= (int) cycle;
@@ -1130,7 +1130,7 @@ void V_CalcViewBlend(void)
 		cl.cshifts[CSHIFT_VCSHIFT].destcolor[2] = v_cshift.destcolor[2];
 		cl.cshifts[CSHIFT_VCSHIFT].percent = v_cshift.percent;
 
-		// LordHavoc: fixed V_CalcBlend
+		// LadyHavoc: fixed V_CalcBlend
 		for (j = 0;j < NUM_CSHIFTS;j++)
 		{
 			a2 = bound(0.0f, cl.cshifts[j].percent * (1.0f / 255.0f), 1.0f);

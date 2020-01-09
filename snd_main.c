@@ -553,7 +553,7 @@ void S_Startup (void)
 	}
 
 #if 0
-	// LordHavoc: now you can with the resampler...
+	// LadyHavoc: now you can with the resampler...
 	// You can't change sound speed after start time (not yet supported)
 	if (prev_render_format.speed != 0)
 	{
@@ -1362,7 +1362,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 	ch->mixspeed = mixspeed;
 
 	// anything coming from the view entity will always be full volume
-	// LordHavoc: make sounds with ATTN_NONE have no spatialization
+	// LadyHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->entnum == CL_VM_GetViewEntity() || ch->distfade == 0)
 	{
 		ch->prologic_invert = 1;

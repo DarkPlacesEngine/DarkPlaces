@@ -1886,7 +1886,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 
 	// model bbox
-	// LordHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
+	// LadyHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
 	modelradius = pheader->radius;
 	for (i = 0;i < 3;i++)
 	{
@@ -2246,7 +2246,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->AnimateVertices = Mod_Skeletal_AnimateVertices;
 
 	// model bbox
-	// LordHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
+	// LadyHavoc: actually we blow this away later with Mod_Alias_CalculateBoundingBox()
 	for (i = 0;i < 3;i++)
 	{
 		loadmodel->normalmins[i] = pheader->mins[i];
@@ -3259,7 +3259,7 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		Host_Error ("Mod_INTERQUAKEMODEL_Load: %s is not an Inter-Quake Model %d", loadmodel->name, (int)(pend - pbase));
 
 	// copy struct (otherwise it may be misaligned)
-	// LordHavoc: okay it's definitely not misaligned here, but for consistency...
+	// LadyHavoc: okay it's definitely not misaligned here, but for consistency...
 	memcpy(&header, pbase, sizeof(iqmheader_t));
 
 	if (memcmp(header.id, "INTERQUAKEMODEL", 16))

@@ -1892,7 +1892,7 @@ void SHOWLMP_decodeshow(void)
 	float x, y;
 	strlcpy (lmplabel,MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (lmplabel));
 	strlcpy (picname, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (picname));
-	if (gamemode == GAME_NEHAHRA) // LordHavoc: nasty old legacy junk
+	if (gamemode == GAME_NEHAHRA) // LadyHavoc: nasty old legacy junk
 	{
 		x = MSG_ReadByte(&cl_message);
 		y = MSG_ReadByte(&cl_message);
@@ -2127,8 +2127,8 @@ static void SCR_DrawScreen (void)
 			r_refdef.view.z = 0;
 		}
 
-		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-		// LordHavoc: this is designed to produce widescreen fov values
+		// LadyHavoc: viewzoom (zoom in for sniper rifles, etc)
+		// LadyHavoc: this is designed to produce widescreen fov values
 		// when the screen is wider than 4/3 width/height aspect, to do
 		// this it simply assumes the requested fov is the vertical fov
 		// for a 4x3 display, if the ratio is not 4x3 this makes the fov

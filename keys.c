@@ -679,7 +679,7 @@ Interactive line editing and console scrollback
 static void
 Key_Console (int key, int unicode)
 {
-	// LordHavoc: copied most of this from Q2 to improve keyboard handling
+	// LadyHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
 	{
 	case K_KP_SLASH:

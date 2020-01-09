@@ -178,13 +178,13 @@ static void Host_Status_f (void)
 		{
 			if (sv.protocol == PROTOCOL_QUAKE && svs.maxclients <= 99)
 			{
-				// LordHavoc: this is very touchy because we must maintain ProQuake compatible status output
+				// LadyHavoc: this is very touchy because we must maintain ProQuake compatible status output
 				print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
 				print ("   %s\n", ip);
 			}
 			else
 			{
-				// LordHavoc: no real restrictions here, not a ProQuake-compatible protocol anyway...
+				// LadyHavoc: no real restrictions here, not a ProQuake-compatible protocol anyway...
 				print ("#%-3u %-16.16s %4i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
 				print ("   %s\n", ip);
 			}
@@ -588,7 +588,7 @@ void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 	else
 		dpsnprintf(comment, sizeof(comment), "(crash dump of %s progs)", prog->name);
 	// convert space to _ to make stdio happy
-	// LordHavoc: convert control characters to _ as well
+	// LadyHavoc: convert control characters to _ as well
 	for (i=0 ; i<SAVEGAME_COMMENT_LENGTH ; i++)
 		if (ISWHITESPACEORCONTROL(comment[i]))
 			comment[i] = '_';
@@ -1372,7 +1372,7 @@ static void Host_Say(qboolean teamonly)
 	int j, quoted;
 	const char *p1;
 	char *p2;
-	// LordHavoc: long say messages
+	// LadyHavoc: long say messages
 	char text[1024];
 	qboolean fromServer = false;
 
@@ -1454,7 +1454,7 @@ static void Host_Tell_f(void)
 	client_t *save;
 	int j;
 	const char *p1, *p2;
-	char text[MAX_INPUTLINE]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
+	char text[MAX_INPUTLINE]; // LadyHavoc: FIXME: temporary buffer overflow fix (was 64)
 	qboolean fromServer = false;
 
 	if (cmd_source == src_command)
@@ -1593,7 +1593,7 @@ static void Host_Color(int changetop, int changebottom)
 
 	top &= 15;
 	bottom &= 15;
-	// LordHavoc: allowing skin colormaps 14 and 15 by commenting this out
+	// LadyHavoc: allowing skin colormaps 14 and 15 by commenting this out
 	//if (top > 13)
 	//	top = 13;
 	//if (bottom > 13)
@@ -1807,8 +1807,8 @@ static void Host_Pause_f (void)
 /*
 ======================
 Host_PModel_f
-LordHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
-LordHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
+LadyHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
+LadyHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
 cvar_t cl_pmodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
@@ -1897,8 +1897,8 @@ static void Host_Spawn_f (void)
 	// again in the first 5 seconds after connecting
 	host_client->nametime = 0;
 
-	// LordHavoc: moved this above the QC calls at FrikaC's request
-	// LordHavoc: commented this out
+	// LadyHavoc: moved this above the QC calls at FrikaC's request
+	// LadyHavoc: commented this out
 	//if (host_client->netconnection)
 	//	SZ_Clear (&host_client->netconnection->message);
 
@@ -2031,7 +2031,7 @@ static void Host_Begin_f (void)
 	}
 	host_client->begun = true;
 
-	// LordHavoc: note: this code also exists in SV_DropClient
+	// LadyHavoc: note: this code also exists in SV_DropClient
 	if (sv.loadgame)
 	{
 		int i;
@@ -2429,7 +2429,7 @@ static void Host_Startdemos_f (void)
 	for (i=1 ; i<c+1 ; i++)
 		strlcpy (cls.demos[i-1], Cmd_Argv(i), sizeof (cls.demos[i-1]));
 
-	// LordHavoc: clear the remaining slots
+	// LadyHavoc: clear the remaining slots
 	for (;i <= MAX_DEMOS;i++)
 		cls.demos[i-1][0] = 0;
 
@@ -2489,7 +2489,7 @@ static void Host_SendCvar_f (void)
 	if (cls.state == ca_connected)
 	{
 		c = Cvar_FindVar(cvarname);
-		// LordHavoc: if there is no such cvar or if it is private, send a
+		// LadyHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
 			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));

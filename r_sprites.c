@@ -381,7 +381,7 @@ static void R_Model_Sprite_Draw_TransparentCallback(const entity_render_t *ent, 
 		break;
 	}
 
-	// LordHavoc: interpolated sprite rendering
+	// LadyHavoc: interpolated sprite rendering
 	for (i = 0;i < MAX_FRAMEBLENDS;i++)
 	{
 		if (ent->frameblend[i].lerp >= 0.01f)

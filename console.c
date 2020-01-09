@@ -781,7 +781,7 @@ void Con_CheckResize (void)
 }
 
 //[515]: the simplest command ever
-//LordHavoc: not so simple after I made it print usage...
+//LadyHavoc: not so simple after I made it print usage...
 static void Con_Maps_f (void)
 {
 	if (Cmd_Argc() > 2)
@@ -1825,7 +1825,7 @@ void Con_DrawNotify (void)
 		char charbuf16[16];
 		cursor = u8_encodech(0xE00A + ((int)(realtime * con_cursorspeed)&1), NULL, charbuf16);
 
-		// LordHavoc: speedup, and other improvements
+		// LadyHavoc: speedup, and other improvements
 		if (chat_mode < 0)
 			dpsnprintf(temptext, sizeof(temptext), "]%s%s", chat_buffer, cursor);
 		else if(chat_mode)
@@ -2076,9 +2076,9 @@ Prints not only map filename, but also
 its format (q1/q2/q3/hl) and even its message
 */
 //[515]: here is an ugly hack.. two gotos... oh my... *but it works*
-//LordHavoc: rewrote bsp type detection, rewrote message extraction to do proper worldspawn parsing
-//LordHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
-//LordHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
+//LadyHavoc: rewrote bsp type detection, rewrote message extraction to do proper worldspawn parsing
+//LadyHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
+//LadyHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
 qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
 {
 	fssearch_t	*t;

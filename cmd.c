@@ -283,7 +283,7 @@ void Cbuf_Execute (void)
 	qboolean quotes;
 	char *comment;
 
-	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
+	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cmd_tokenizebufferpos = 0;
 
 	while (cmd_text.cursize)
@@ -1783,7 +1783,7 @@ const char **Cmd_CompleteBuildList (const char *partial)
 	return buf;
 }
 
-// written by LordHavoc
+// written by LadyHavoc
 void Cmd_CompleteCommandPrint (const char *partial)
 {
 	cmd_function_t *cmd;
@@ -1821,7 +1821,7 @@ const char *Cmd_CompleteAlias (const char *partial)
 	return NULL;
 }
 
-// written by LordHavoc
+// written by LadyHavoc
 void Cmd_CompleteAliasPrint (const char *partial)
 {
 	cmdalias_t *alias;
@@ -2013,7 +2013,7 @@ void Cmd_ForwardStringToServer (const char *s)
 	if (!cls.netcon)
 		return;
 
-	// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
+	// LadyHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)

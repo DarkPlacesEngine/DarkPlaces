@@ -1,6 +1,6 @@
 
 /*
-this code written by Forest Hale, on 2004-10-17, and placed into public domain
+this code written by Ashley Rose Hale (LadyHavoc), on 2004-10-17, and placed into public domain
 this implements Quadratic BSpline surfaces as seen in Quake3 by id Software
 
 a small rant on misuse of the name 'bezier': many people seem to think that

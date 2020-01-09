@@ -45,7 +45,7 @@ void *mem_mutex = NULL;
 # define FILE_BACKED_MALLOC 0
 #endif
 
-// LordHavoc: enables our own low-level allocator (instead of malloc)
+// LadyHavoc: enables our own low-level allocator (instead of malloc)
 #ifndef MEMCLUMPING
 # define MEMCLUMPING 0
 #endif

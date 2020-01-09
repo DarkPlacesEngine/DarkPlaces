@@ -78,7 +78,7 @@ CL_StopPlayback
 Called when a demo file runs out, or the user starts a game
 ==============
 */
-// LordHavoc: now called only by CL_Disconnect
+// LadyHavoc: now called only by CL_Disconnect
 void CL_StopPlayback (void)
 {
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -115,7 +115,7 @@ void CL_WriteDemoMessage (sizebuf_t *message)
 	int		i;
 	float	f;
 
-	if (cls.demopaused) // LordHavoc: pausedemo
+	if (cls.demopaused) // LadyHavoc: pausedemo
 		return;
 
 	len = LittleLong (message->cursize);
@@ -194,7 +194,7 @@ void CL_ReadDemoMessage(void)
 	if (!cls.demoplayback)
 		return;
 
-	// LordHavoc: pausedemo
+	// LadyHavoc: pausedemo
 	if (cls.demopaused)
 		return;
 
@@ -312,7 +312,7 @@ void CL_Stop_f (void)
 	}
 
 // write a disconnect message to the demo file
-	// LordHavoc: don't replace the cl_message when doing this
+	// LadyHavoc: don't replace the cl_message when doing this
 	buf.data = bufdata;
 	buf.maxsize = sizeof(bufdata);
 	SZ_Clear(&buf);
@@ -507,7 +507,7 @@ static void CL_FinishTimeDemo (void)
 	fpsmin = cls.td_onesecondminfps;
 	fpsavg = cls.td_onesecondavgcount ? cls.td_onesecondavgfps / cls.td_onesecondavgcount : 0;
 	fpsmax = cls.td_onesecondmaxfps;
-	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
+	// LadyHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | run %d | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, benchmark_runs + 1, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	if (COM_CheckParm("-benchmark"))
