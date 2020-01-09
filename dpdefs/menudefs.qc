@@ -434,7 +434,7 @@ float CVAR_TYPEFLAG_READONLY = 32;
 
 //DP_QC_STRINGBUFFERS
 //idea: ??
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //functions to manage string buffer objects - that is, arbitrary length string arrays that are handled by the engine
 float() buf_create = #440;
 void(float bufhandle) buf_del = #441;
@@ -450,7 +450,7 @@ void(float bufhandle, string pattern, string antipattern) buf_cvarlist = #517;
 
 //DP_QC_STRING_CASE_FUNCTIONS
 //idea: Dresk
-//darkplaces implementation: LordHavoc / Dresk
+//darkplaces implementation: LadyHavoc / Dresk
 //builtin definitions:
 string(string s) strtolower = #480; // returns the passed in string in pure lowercase form
 string(string s) strtoupper = #481; // returns the passed in string in pure uppercase form

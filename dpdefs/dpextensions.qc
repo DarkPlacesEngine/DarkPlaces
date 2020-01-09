@@ -9,7 +9,7 @@ float MOVE_MISSILE = 2; // save as movement with .movetype == MOVETYPE_FLYMISSIL
 
 //checkextension function
 //idea: expected by almost everyone
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 float(string s) checkextension = #99;
 //description:
 //check if (cvar("pr_checkextension")) before calling this, this is the only
@@ -24,14 +24,14 @@ float(string s) checkextension = #99;
 
 //BX_WAL_SUPPORT
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //indicates the engine supports .wal textures for filenames in the textures/ directory
 //(note: DarkPlaces has supported this since 2001 or 2002, but did not advertise it as an extension, then I noticed Betwix was advertising it and added the extension accordingly)
 
 //DP_BUTTONCHAT
 //idea: Vermeulen
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float buttonchat;
 //description:
@@ -39,7 +39,7 @@ float(string s) checkextension = #99;
 
 //DP_BUTTONUSE
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float buttonuse;
 //client console commands:
@@ -49,8 +49,8 @@ float(string s) checkextension = #99;
 //made +use and -use commands work, they now control the .buttonuse field (.button1 was used by many mods for other purposes).
 
 //DP_CL_LOADSKY
-//idea: Nehahra, LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: Nehahra, LadyHavoc
+//darkplaces implementation: LadyHavoc
 //client console commands:
 //"loadsky" (parameters: "basename", example: "mtnsun_" would load "mtnsun_up.tga" and "mtnsun_rt.tga" and similar names, use "" to revert to quake sky, note: this is the same as Quake2 skybox naming)
 //description:
@@ -58,13 +58,13 @@ float(string s) checkextension = #99;
 
 //DP_CON_SET
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //indicates this engine supports the "set" console command which creates or sets a non-archived cvar (not saved to config.cfg on exit), it is recommended that set and seta commands be placed in default.cfg for mod-specific cvars.
 
 //DP_CON_SETA
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //indicates this engine supports the "seta" console command which creates or sets an archived cvar (saved to config.cfg on exit), it is recommended that set and seta commands be placed in default.cfg for mod-specific cvars.
 
@@ -81,14 +81,14 @@ float(string s) checkextension = #99;
 //indicates this engine supports console commandlines containing $cvarname which will expand to the contents of that cvar as a parameter, for instance say my fov is $fov, will say "my fov is 90", or similar.
 
 //DP_CON_STARTMAP
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //adds two engine-called aliases named startmap_sp and startmap_dm which are called when the engine tries to start a singleplayer game from the menu (startmap_sp) or the -listen or -dedicated options are used or the engine is a dedicated server (uses startmap_dm), these allow a mod or game to specify their own map instead of start, and also distinguish between singleplayer and -listen/-dedicated, also these need not be a simple "map start" command, they can do other things if desired, startmap_sp and startmap_dm both default to "map start".
 
 //DP_EF_ADDITIVE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_ADDITIVE     = 32;
 //description:
@@ -96,15 +96,15 @@ float   EF_ADDITIVE     = 32;
 
 //DP_EF_BLUE
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_BLUE         = 64;
 //description:
 //entity emits blue light (used for quad)
 
 //DP_EF_DOUBLESIDED
-//idea: LordHavoc
-//darkplaces implementation: [515] and LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: [515] and LadyHavoc
 //effects bit:
 float EF_DOUBLESIDED = 32768;
 //description:
@@ -119,16 +119,16 @@ float   EF_DYNAMICMODELLIGHT     = 131072;
 //force dynamic model light on the entity, even if it's a BSP model (or anything else with lightmaps or light colors)
 
 //DP_EF_FLAME
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_FLAME        = 1024;
 //description:
 //entity is on fire
 
 //DP_EF_FULLBRIGHT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_FULLBRIGHT   = 512;
 //description:
@@ -136,7 +136,7 @@ float   EF_FULLBRIGHT   = 512;
 
 //DP_EF_NODEPTHTEST
 //idea: Supa
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_NODEPTHTEST       = 8192;
 //description:
@@ -144,7 +144,7 @@ float   EF_NODEPTHTEST       = 8192;
 
 //DP_EF_NODRAW
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_NODRAW       = 16;
 //description:
@@ -152,7 +152,7 @@ float   EF_NODRAW       = 16;
 
 //DP_EF_NOGUNBOB
 //idea: Chris Page, Dresk
-//darkplaces implementation: LordHAvoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_NOGUNBOB     = 256;
 //description:
@@ -165,8 +165,8 @@ float   EF_NOGUNBOB     = 256;
 //disabling gun bobbing on view-relative models meant to be part of the heads up display.  (note: if fov is changed these entities may be off-screen, or too near the center of the screen, so use fov 90 in this case)
 
 //DP_EF_NOSHADOW
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_NOSHADOW     = 4096;
 //description:
@@ -174,7 +174,7 @@ float   EF_NOSHADOW     = 4096;
 
 //DP_EF_RED
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_RED          = 128;
 //description:
@@ -192,7 +192,7 @@ float   EF_RESTARTANIM_BIT = 1048576;
 
 //DP_EF_STARDUST
 //idea: MythWorks Inc
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float   EF_STARDUST     = 2048;
 //description:
@@ -210,31 +210,31 @@ float   EF_TELEPORT_BIT = 2097152;
 
 //DP_ENT_ALPHA
 //idea: Nehahra
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //fields:
 .float alpha;
 //description:
 //controls opacity of the entity, 0.0 is forced to be 1.0 (otherwise everything would be invisible), use -1 if you want to make something invisible, 1.0 is solid (like normal).
 
 //DP_ENT_COLORMOD
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definition:
 .vector colormod;
 //description:
 //controls color of the entity, '0 0 0', is forced to be '1 1 1' (otherwise everything would be black), used for tinting objects, for instance using '1 0.6 0.4' on an ogre would give you an orange ogre (order is red green blue), note the colors can go up to '8 8 8' (8x as bright as normal).
 
 //DP_ENT_CUSTOMCOLORMAP
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //if .colormap is set to 1024 + pants + shirt * 16, those colors will be used for colormapping the entity, rather than looking up a colormap by player number.
 
 /*
 //NOTE: no longer supported by darkplaces because all entities are delta compressed now
 //DP_ENT_DELTACOMPRESS // no longer supported
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float EF_DELTA = 8388608;
 //description:
@@ -242,16 +242,16 @@ float EF_DELTA = 8388608;
 */
 
 //DP_ENT_EXTERIORMODELTOCLIENT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //fields:
 .entity exteriormodeltoclient;
 //description:
 //the entity is visible to all clients with one exception: if the specified client is using first person view (not using chase_active) the entity will not be shown.  Also if tag attachments are supported any entities attached to the player entity will not be drawn in first person.
 
 //DP_ENT_GLOW
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float glow_color;
 .float glow_size;
@@ -260,32 +260,32 @@ float EF_DELTA = 8388608;
 //customizable glowing light effect on the entity, glow_color is a paletted (8bit) color in the range 0-255 (note: 0 and 254 are white), glow_size is 0 or higher (up to the engine what limit to cap it to, darkplaces imposes a 1020 limit), if glow_trail is true it will leave a trail of particles of the same color as the light.
 
 //DP_ENT_GLOWMOD
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definition:
 .vector glowmod;
 //description:
 //controls color of the entity's glow texture (fullbrights), '0 0 0', is forced to be '1 1 1' (otherwise everything would be black), used for tinting objects, see colormod (same color restrictions apply).
 
 //DP_ENT_LOWPRECISION
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float EF_LOWPRECISION = 4194304;
 //description:
 //uses low quality origin coordinates, reducing network traffic compared to the default high precision, intended for numerous objects (projectiles/gibs/bullet holes/etc).
 
 //DP_ENT_SCALE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float scale;
 //description:
 //controls rendering scale of the object, 0 is forced to be 1, darkplaces uses 1/16th accuracy and a limit of 15.9375, can be used to make an object larger or smaller.
 
 //DP_ENT_TRAILEFFECTNUM
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float traileffectnum;
 //description:
@@ -294,16 +294,16 @@ float EF_LOWPRECISION = 4194304;
 //this will do both the dlight and particle trail as described in the effect, basically equivalent to trailparticles() in CSQC but performed on a server entity.
 
 //DP_ENT_VIEWMODEL
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .entity viewmodelforclient;
 //description:
 //this is a very special capability, attachs the entity to the view of the client specified, origin and angles become relative to the view of that client, all effects can be used (multiple skins on a weapon model etc)...  the entity is not visible to any other client.
 
 //DP_GFX_EXTERNALTEXTURES
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //loads external textures found in various directories (tenebrae compatible)...
 /*
@@ -361,7 +361,7 @@ game/gfx/conchars.tga
 
 //DP_GFX_EXTERNALTEXTURES_PERMAPTEXTURES
 //idea: Fuh?
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //Q1BSP and HLBSP map loading loads external textures found in textures/<mapname>/ as well as textures/.
 //Where mapname is the bsp filename minus the extension (typically .bsp) and minus maps/ if it is in maps/ (any other path is not removed)
@@ -372,8 +372,8 @@ game/gfx/conchars.tga
 //progs/something/blah.bsp uses textures in the directory textures/progs/something/blah/ and falls back to textures/
 
 //DP_GFX_FOG
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //worldspawn fields:
 //"fog" (parameters: "density red green blue", example: "0.1 0.3 0.3 0.3")
 //description:
@@ -381,7 +381,7 @@ game/gfx/conchars.tga
 
 //DP_GFX_QUAKE3MODELTAGS
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .entity tag_entity; // entity this is attached to (call setattachment to set this)
 .float tag_index; // which tag on that entity (0 is relative to the entity, > 0 is an index into the tags on the model if it has any) (call setattachment to set this)
@@ -395,8 +395,8 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 //note 5: if an entity is attached to the player entity it will not be drawn in first person.
 
 //DP_GFX_SKINFILES
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //alias models (mdl, md2, md3) can have .skin files to replace conventional texture naming, these have a naming format such as:
 //progs/test.md3_0.skin
@@ -421,8 +421,8 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 //other commands might be added someday but it is not expected.
 
 //DP_GFX_SKYBOX
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //worldspawn fields:
 //"sky" (parameters: "basename", example: "mtnsun_" would load "mtnsun_up.tga" and "mtnsun_rt.tga" and similar names, note: "sky" is also used the same way by Quake2)
 //description:
@@ -439,28 +439,28 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 // note: beware that str2chr() could return value bigger than 255 once utf8 is enabled
 
 //DP_HALFLIFE_MAP
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //simply indicates that the engine supports HalfLife maps (BSP version 30, NOT the QER RGBA ones which are also version 30).
 
 //DP_HALFLIFE_MAP_CVAR
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //cvars:
 //halflifebsp 0/1
 //description:
 //engine sets this cvar when loading a map to indicate if it is halflife format or not.
 
 //DP_HALFLIFE_SPRITE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //simply indicates that the engine supports HalfLife sprites.
 
 //DP_INPUTBUTTONS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float button3;
 .float button4;
@@ -499,21 +499,21 @@ void(entity e, entity tagentity, string tagname) setattachment = #443; // attach
 // that other engines (which do not support this extension) could connect to a game and misunderstand this kind of lightstyle syntax
 
 //DP_LITSPRITES
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //indicates this engine supports lighting on sprites, any sprite with ! in its filename (both on disk and in the qc) will be lit rather than having forced EF_FULLBRIGHT (EF_FULLBRIGHT on the entity can still force these sprites to not be lit).
 
 //DP_LITSUPPORT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //indicates this engine loads .lit files for any quake1 format .bsp files it loads to enhance maps with colored lighting.
 //implementation description: these files begin with the header QLIT followed by version number 1 (as little endian 32bit), the rest of the file is a replacement lightmaps lump, except being 3x as large as the lightmaps lump of the map it matches up with (and yes the between-lightmap padding is expanded 3x to keep this consistent), so the lightmap offset in each surface is simply multiplied by 3 during loading to properly index the lit data, and the lit file is loaded instead of the lightmap lump, other renderer changes are needed to display these of course...  see the litsupport.zip sample code (almost a tutorial) at http://icculus.org/twilight/darkplaces for more information.
 
 //DP_MONSTERWALK
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //MOVETYPE_WALK is permitted on non-clients, so bots can move smoothly, run off ledges, etc, just like a real player.
 
@@ -543,8 +543,8 @@ float MOVETYPE_FLY_WORLDONLY = 33;
 //networked. useful for shared CSQC entities.
 
 //DP_MOVETYPEFOLLOW
-//idea: id Software, LordHavoc (redesigned)
-//darkplaces implementation: LordHavoc
+//idea: id Software, LadyHavoc (redesigned)
+//darkplaces implementation: LadyHavoc
 //movetype definitions:
 float MOVETYPE_FOLLOW = 12;
 //description:
@@ -563,7 +563,7 @@ float MOVETYPE_FOLLOW = 12;
 
 //DP_QC_ASINACOSATANATAN2TAN
 //idea: Urre
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //constant definitions:
 float DEG2RAD = 0.0174532925199432957692369076848861271344287188854172545609719144;
 float RAD2DEG = 57.2957795130823208767981548141051703324054724665643215491602438612;
@@ -621,8 +621,8 @@ void(entity ent) changepitch = #63;
 //equivalent to changeyaw, ent is normally self. (this was a Q2 builtin)
 
 //DP_QC_COPYENTITY
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(entity from, entity to) copyentity = #400;
 //description:
@@ -636,8 +636,8 @@ void(entity from, entity to) copyentity = #400;
 float(float caseinsensitive, string s, ...) crc16 = #494;
 
 //DP_QC_CVAR_DEFSTRING
-//idea: id Software (Doom3), LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: id Software (Doom3), LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 string(string s) cvar_defstring = #482;
 //description:
@@ -653,7 +653,7 @@ string(string name) cvar_description = #518;
 
 //DP_QC_CVAR_STRING
 //idea: VorteX
-//DarkPlaces implementation: VorteX, LordHavoc
+//DarkPlaces implementation: VorteX, LadyHavoc
 //builtin definitions:
 string(string s) cvar_string = #448;
 //description:
@@ -691,7 +691,7 @@ string(string digest, string data, ...) digest_hex = #639;
 
 //DP_QC_EDICT_NUM
 //idea: 515
-//DarkPlaces implementation: LordHavoc
+//DarkPlaces implementation: LadyHavoc
 //builtin definitions:
 entity(float entnum) edict_num = #459;
 float(entity ent) wasfreed = #353; // same as in EXT_CSQC extension
@@ -752,8 +752,8 @@ string(void) getextresponse = #624;
 //listening port.
 
 //DP_QC_FINDCHAIN
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 entity(.string fld, string match) findchain = #402;
 //description:
@@ -773,15 +773,15 @@ entity(.string fld, float match, .entity tofield) findchainfloat_tofield = #403;
 
 //DP_QC_FINDCHAINFLAGS
 //idea: Sajt
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 entity(.float fld, float match) findchainflags = #450;
 //description:
 //similar to findflags() but returns a chain of entities like findradius.
 
 //DP_QC_FINDCHAINFLOAT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 entity(.entity fld, entity match) findchainentity = #403;
 entity(.float fld, float match) findchainfloat = #403;
@@ -790,15 +790,15 @@ entity(.float fld, float match) findchainfloat = #403;
 
 //DP_QC_FINDFLAGS
 //idea: Sajt
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 entity(entity start, .float fld, float match) findflags = #449;
 //description:
 //finds an entity with the specified flag set in the field, similar to find()
 
 //DP_QC_FINDFLOAT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 entity(entity start, .entity fld, entity match) findentity = #98;
 entity(entity start, .float fld, float match) findfloat = #98;
@@ -820,16 +820,16 @@ string(float handle, float num) search_getfilename = #447;
 //search_getfilename returns a filename from the search.
 
 //DP_QC_GETLIGHT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 vector(vector org) getlight = #92;
 //description:
 //returns the lighting at the requested location (in color), 0-255 range (can exceed 255).
 
 //DP_QC_GETSURFACE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(entity e, float s) getsurfacenumpoints = #434;
 vector(entity e, float s, float n) getsurfacepoint = #435;
@@ -867,7 +867,7 @@ vector(entity e, float s, float n) getsurfacetriangle = #629;
 //function to query triangles of a surface
 
 //DP_QC_GETTAGINFO
-//idea: VorteX, LordHavoc
+//idea: VorteX, LadyHavoc
 //DarkPlaces implementation: VorteX
 //builtin definitions:
 float(entity ent, string tagname) gettagindex = #451;
@@ -947,8 +947,8 @@ float log(float f) = #532;
 //logarithm
 
 //DP_QC_MINMAXBOUND
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(float a, float b, ...) min = #94;
 float(float a, float b, float c) min3 = #94;
@@ -971,8 +971,8 @@ float(float minimum, float val, float maximum) bound = #96;
 //bound clamps the value to the range and returns it.
 
 //DP_QC_MULTIPLETEMPSTRINGS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //this extension makes all builtins returning tempstrings (ftos for example)
 //cycle through a pool of multiple tempstrings (at least 16), allowing
@@ -992,16 +992,16 @@ float(float minimum, float val, float maximum) bound = #96;
 float(entity num) num_for_edict = #512;
 
 //DP_QC_RANDOMVEC
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 vector() randomvec = #91;
 //description:
 //returns a vector of length < 1, much quicker version of this QC: do {v_x = random()*2-1;v_y = random()*2-1;v_z = random()*2-1;} while(vlen(v) > 1)
 
 //DP_QC_SINCOSSQRTPOW
-//idea: id Software, LordHavoc
-//darkplaces implementation: id Software, LordHavoc
+//idea: id Software, LadyHavoc
+//darkplaces implementation: id Software, LadyHavoc
 //builtin definitions:
 float(float val) sin = #60;
 float(float val) cos = #61;
@@ -1039,8 +1039,8 @@ string(string format, ...) sprintf = #627;
 //      the + flag.
 
 //DP_QC_STRFTIME
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 string(float uselocaltime, string format, ...) strftime = #478;
 //description:
@@ -1070,7 +1070,7 @@ string(string s) strdecolorize = #477; // returns a string minus the color codes
 
 //DP_QC_STRING_CASE_FUNCTIONS
 //idea: Dresk
-//darkplaces implementation: LordHavoc / Dresk
+//darkplaces implementation: LadyHavoc / Dresk
 //builtin definitions:
 string(string s) strtolower = #480; // returns the passed in string in pure lowercase form
 string(string s) strtoupper = #481; // returns the passed in string in pure uppercase form
@@ -1078,8 +1078,8 @@ string(string s) strtoupper = #481; // returns the passed in string in pure uppe
 //provides simple string uppercase and lowercase functions
 
 //DP_QC_TOKENIZEBYSEPARATOR
-//idea: Electro, SavageX, LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: Electro, SavageX, LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(string s, string separator1, ...) tokenizebyseparator = #479;
 //description:
@@ -1117,16 +1117,16 @@ void(entity ent, entity ignore) tracetoss = #64;
 //simulates movement of the entity as if it is MOVETYPE_TOSS and starting with it's current state (location, velocity, etc), returns relevant trace_ variables (trace_fraction is always 0, all other values are supported - trace_ent, trace_endpos, trace_plane_normal), does not actually alter the entity.
 
 //DP_QC_TRACE_MOVETYPE_HITMODEL
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //constant definitions:
 float MOVE_HITMODEL = 4;
 //description:
 //allows traces to hit alias models (not sprites!) instead of entity boxes, use as the nomonsters parameter to trace functions, note that you can hit invisible model entities (alpha < 0 or EF_NODRAW or model "", it only checks modelindex)
 
 //DP_QC_TRACE_MOVETYPE_WORLDONLY
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //constant definitions:
 float MOVE_WORLDONLY = 3;
 //description:
@@ -1134,7 +1134,7 @@ float MOVE_WORLDONLY = 3;
 
 //DP_QC_UNLIMITEDTEMPSTRINGS
 //idea: divVerent
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //this extension alters Quake behavior such that instead of reusing a single
 //tempstring (or multiple) there are an unlimited number of tempstrings, which
@@ -1158,8 +1158,8 @@ float MOVE_WORLDONLY = 3;
 //this is basically a poor man's garbage collection system for strings.
 
 //DP_QC_VECTOANGLES_WITH_ROLL
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 vector(vector forward, vector up) vectoangles2 = #51; // same number as vectoangles
 //description:
@@ -1167,8 +1167,8 @@ vector(vector forward, vector up) vectoangles2 = #51; // same number as vectoang
 //note: just like normal vectoangles you need to negate the pitch of the returned angles if you want to feed them to makevectors or assign to self.v_angle
 
 //DP_QC_VECTORVECTORS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector dir) vectorvectors = #432;
 //description:
@@ -1216,8 +1216,8 @@ float(string url, float id, string content_type, string data) uri_post = #513;
 float(string url, float id, string content_type, string delim, float buf) uri_postbuf = #513;
 
 //DP_SKELETONOBJECTS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //this extension indicates that FTE_CSQC_SKELETONOBJECTS functionality is available in server QC (as well as CSQC).
 
@@ -1231,31 +1231,31 @@ float(string url, float id, string content_type, string delim, float buf) uri_po
 
 //DP_QUAKE2_MODEL
 //idea: quake community
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //shows that the engine supports Quake2 .md2 files.
 
 //DP_QUAKE2_SPRITE
-//idea: LordHavoc
+//idea: LadyHavoc
 //darkplaces implementation: Elric
 //description:
 //shows that the engine supports Quake2 .sp2 files.
 
 //DP_QUAKE3_MAP
 //idea: quake community
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //shows that the engine supports Quake3 .bsp files.
 
 //DP_QUAKE3_MODEL
 //idea: quake community
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //shows that the engine supports Quake3 .md3 files.
 
 //DP_REGISTERCVAR
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(string name, string value) registercvar = #93;
 //description:
@@ -1263,8 +1263,8 @@ float(string name, string value) registercvar = #93;
 //NOTE: DP_CON_SET is much better.
 
 //DP_SND_DIRECTIONLESSATTNNONE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //make sounds with ATTN_NONE have no spatialization (enabling easy use as music sources).
 
@@ -1312,8 +1312,8 @@ float SOUNDFLAG_RELIABLE = 1;
 //the engine supports loading Ogg Vorbis sound files.  Use either the .ogg filename directly, or a .wav of the same name (will try to load the .wav first and then .ogg).
 
 //DP_SND_STEREOWAV
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //the engine supports stereo WAV files.  (useful with DP_SND_DIRECTIONLESSATTNNONE for music)
 
@@ -1333,8 +1333,8 @@ float(string sample) soundlength = #534; // returns length of sound sample in se
 //  - subtitles
 
 //DP_VIDEO_DPV
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //console commands:
 //  playvideo <videoname> - start playing video
 //  stopvideo - stops current video
@@ -1368,22 +1368,22 @@ float(string sample) soundlength = #534; // returns length of sound sample in se
 //   18	7	"I'll hack you from crotch to gizzard and feed what's left of you to your brides..."
 
 //DP_SOLIDCORPSE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //solid definitions:
 float SOLID_CORPSE = 5;
 //description:
 //the entity will not collide with SOLID_CORPSE and SOLID_SLIDEBOX entities (and likewise they will not collide with it), this is useful if you want dead bodies that are shootable but do not obstruct movement by players and monsters, note that if you traceline with a SOLID_SLIDEBOX entity as the ignoreent, it will ignore SOLID_CORPSE entities, this is desirable for visibility and movement traces, but not for bullets, for the traceline to hit SOLID_CORPSE you must temporarily force the player (or whatever) to SOLID_BBOX and then restore to SOLID_SLIDEBOX after the traceline.
 
 //DP_SPRITE32
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //the engine supports .spr32 sprites.
 
 //DP_SV_BOTCLIENT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //constants:
 float CLIENTTYPE_DISCONNECTED = 0;
 float CLIENTTYPE_REAL = 1;
@@ -1443,7 +1443,7 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //allows qc to customize MOVETYPE_BOUNCE a bit
 
 //DP_SV_CLIENTCAMERA
-//idea: LordHavoc, others
+//idea: LadyHavoc, others
 //darkplaces implementation: Black
 //field definitions:
 .entity clientcamera; // override camera entity
@@ -1451,22 +1451,22 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //allows another entity to be the camera for a client, for example a remote camera, this is similar to sending svc_setview manually except that it also changes the network culling appropriately.
 
 //DP_SV_CLIENTCOLORS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float clientcolors; // colors of the client (format: pants + shirt * 16)
 //description:
 //allows qc to read and modify the client colors associated with a client entity (not particularly useful on other entities), and automatically sends out any appropriate network updates if changed
 
 //DP_SV_CLIENTNAME
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //allows qc to modify the client's .netname, and automatically sends out any appropriate network updates if changed
 
 //DP_SV_CUSTOMIZEENTITYFORCLIENT
-//idea: LordHavoc
-//darkplaces implementation: [515] and LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: [515] and LadyHavoc
 //field definitions:
 .float() customizeentityforclient; // self = this entity, other = client entity
 //description:
@@ -1482,8 +1482,8 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //entity customization is done before per-client culling (visibility for instance) because the entity may be doing setorigin to display itself in different locations on different clients, may be altering its .modelindex, .effects and other fields important to culling, so customized entities increase cpu usage (non-customized entities can use all the early culling they want however, as they are not changing on a per client basis).
 
 //DP_SV_DISABLECLIENTPREDICTION
-//idea: LordHavoc, Mario
-//darkplaces implementation: LordHavoc, Mario
+//idea: LadyHavoc, Mario
+//darkplaces implementation: LadyHavoc, Mario
 //field definitions:
 .float disableclientprediction;
 //description:
@@ -1524,8 +1524,8 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 //  discarding demos is enabled (the cvar sv_autodemo_perclient_discardable is set)
 
 //DP_SV_DRAWONLYTOCLIENT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .entity drawonlytoclient;
 //description:
@@ -1533,15 +1533,15 @@ float(entity clent) clienttype = #455; // returns one of the CLIENTTYPE_* consta
 
 //DP_SV_DROPCLIENT
 //idea: FrikaC
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(entity clent) dropclient = #453;
 //description:
 //causes the server to immediately drop the client, more reliable than stuffcmd(clent, "disconnect\n"); which could be intentionally ignored by the client engine
 
 //DP_SV_EFFECT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, string modelname, float startframe, float endframe, float framerate) effect = #404;
 //SVC definitions:
@@ -1603,8 +1603,8 @@ void(vector origin, string sample, float volume, float attenuation) pointsound =
 // SV_OnEntityPostSpawnFunction is called ONLY after its spawn function or SV_OnEntityNoSpawnFunction was called, and skipped if the entity got removed by either.
 
 //DP_SV_MODELFLAGS_AS_EFFECTS
-//idea: LordHavoc, Dresk
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc, Dresk
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float modelflags;
 //constant definitions:
@@ -1639,24 +1639,24 @@ float MF_TRACER3 = 128; // purple trail
 // provides the netaddress of the associated entity (ie. 127.0.0.1) and "null/botclient" if the netconnection of the entity is invalid
 
 //DP_SV_NODRAWTOCLIENT
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .entity nodrawtoclient;
 //description:
 //the entity is not visible to the specified client.
 
 //DP_SV_PING
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float ping;
 //description:
 //continuously updated field indicating client's ping (based on average of last 16 packet time differences).
 
 //DP_SV_PING_PACKETLOSS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float ping_packetloss;
 .float ping_movementloss;
@@ -1665,7 +1665,7 @@ float MF_TRACER3 = 128; // purple trail
 
 //DP_SV_POINTPARTICLES
 //idea: Spike
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //function definitions:
 float(string effectname) particleeffectnum = #335; // same as in CSQC
 void(entity ent, float effectnum, vector start, vector end) trailparticles = #336; // same as in CSQC
@@ -1680,16 +1680,16 @@ void(float effectnum, vector org, vector vel, float howmany) pointparticles = #3
 //warning: server must have same order of effects in effectinfo.txt as client does or the numbers would not match up, except for standard quake effects which are always the same numbers.
 
 //DP_SV_PUNCHVECTOR
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .vector punchvector;
 //description:
 //offsets client view in worldspace, similar to view_ofs but all 3 components are used and are sent with at least 8 bits of fraction, this allows the view to be kicked around by damage or hard landings or whatever else, note that unlike punchangle this is not faded over time, it is up to the mod to fade it (see also DP_SV_PLAYERPHYSICS).
 
 //DP_SV_PLAYERPHYSICS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .vector movement;
 //cvar definitions:
@@ -1700,8 +1700,8 @@ void(float effectnum, vector org, vector vel, float howmany) pointparticles = #3
 //.movement vector contains the movement input from the player, allowing QC to do as it wishs with the input, and SV_PlayerPhysics will completely replace the player physics if present (works for all MOVETYPE's), see darkplaces mod source for example of this function (in playermovement.qc, adds HalfLife ladders support, as well as acceleration/deceleration while airborn (rather than the quake sudden-stop while airborn), and simplifies the physics a bit)
 
 //DP_PHYSICS_ODE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //globals:
 //new movetypes:
 const float MOVETYPE_PHYSICS = 32; // need to be set before any physics_* builtins applied
@@ -1779,14 +1779,14 @@ void(entity e, vector torque) physics_addtorque = #542; // deprecated, add relat
 
 //DP_SV_PRINT
 //idea: id Software (QuakeWorld Server)
-//darkplaces implementation: Black, LordHavoc
+//darkplaces implementation: Black, LadyHavoc
 void(string s, ...) print = #339; // same number as in EXT_CSQC
 //description:
 //this is identical to dprint except that it always prints regardless of the developer cvar.
 
 //DP_SV_PRECACHEANYTIME
 //idea: id Software (Quake2)
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //this extension allows precache_model and precache_sound (and any variants) to be used during the game (with automatic messages to clients to precache the new model/sound indices), also setmodel/sound/ambientsound can be called without precaching first (they will cause an automatic precache).
 
@@ -1805,14 +1805,14 @@ string worldstatus;
 
 //DP_SV_ROTATINGBMODEL
 //idea: id Software
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //this extension merely indicates that MOVETYPE_PUSH supports avelocity, allowing rotating brush models to be created, they rotate around their origin (needs rotation supporting qbsp/light utilities because id ones expected bmodel entity origins to be '0 0 0', recommend setting "origin" key in the entity fields in the map before compiling, there may be other methods depending on your qbsp, most are more complicated however).
 //tip: level designers can create a func_wall with an origin, and avelocity (for example "avelocity" "0 90 0"), and "nextthink" "99999999" to make a rotating bmodel without any qc modifications, such entities will be solid in stock quake but will not rotate)
 
 //DP_SV_SETCOLOR
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(entity ent, float colors) setcolor = #401;
 //engine called QC functions (optional):
@@ -1823,8 +1823,8 @@ void(entity ent, float colors) setcolor = #401;
 //the color format is pants + shirt * 16 (0-255 potentially)
 
 //DP_SV_SLOWMO
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //cvars:
 //"slowmo" (0+, default 1)
 //description:
@@ -1853,11 +1853,11 @@ void(float to, string s, float sz) WritePicture = #501;
 void(float to, string s) WriteUnterminatedString = #456;
 //description:
 //like WriteString, but does not write a terminating 0 after the string. This means you can include things like a player's netname in the middle of a string sent over the network. Just be sure to end it up with either a call to WriteString (which includes the trailing 0) or WriteByte(0) to terminate it yourself.
-//A historical note: this extension was suggested by FrikaC years ago, more recently Shadowalker has been badmouthing LordHavoc and Spike for stealing 'his' extension writestring2 which does exactly the same thing but uses a different builtin number and name and extension string, this argument hinges on the idea that it was his idea in the first place, which is incorrect as FrikaC first suggested it and used a rough equivalent of it in his FrikBot mod years ago involving WriteByte calls on each character.
+//A historical note: this extension was suggested by FrikaC years ago, more recently Shadowalker has been badmouthing LadyHavoc and Spike for stealing 'his' extension writestring2 which does exactly the same thing but uses a different builtin number and name and extension string, this argument hinges on the idea that it was his idea in the first place, which is incorrect as FrikaC first suggested it and used a rough equivalent of it in his FrikBot mod years ago involving WriteByte calls on each character.
 
 //DP_TE_BLOOD
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, vector velocity, float howmany) te_blood = #405;
 //temp entity definitions:
@@ -1872,8 +1872,8 @@ float TE_BLOOD = 50;
 //creates a blood effect.
 
 //DP_TE_BLOODSHOWER
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te_bloodshower = #406;
 //temp entity definitions:
@@ -1887,8 +1887,8 @@ void(vector mincorner, vector maxcorner, float explosionspeed, float howmany) te
 //creates an exploding shower of blood, for making gibbings more convincing.
 
 //DP_TE_CUSTOMFLASH
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, float radius, float lifetime, vector color) te_customflash = #417;
 //temp entity definitions:
@@ -1904,8 +1904,8 @@ void(vector org, float radius, float lifetime, vector color) te_customflash = #4
 //creates a customized light flash.
 
 //DP_TE_EXPLOSIONRGB
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, vector color) te_explosionrgb = #407;
 //temp entity definitions:
@@ -1919,8 +1919,8 @@ void(vector org, vector color) te_explosionrgb = #407;
 //creates a colored explosion effect.
 
 //DP_TE_FLAMEJET
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, vector vel, float howmany) te_flamejet = #457;
 //temp entity definitions:
@@ -1933,8 +1933,8 @@ void(vector org, vector vel, float howmany) te_flamejet = #457;
 //creates a single puff of flame particles.  (not very useful really)
 
 //DP_TE_PARTICLECUBE
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color, float gravityflag, float randomveljitter) te_particlecube = #408;
 //temp entity definitions:
@@ -1951,8 +1951,8 @@ void(vector mincorner, vector maxcorner, vector vel, float howmany, float color,
 //creates a cloud of particles, useful for forcefields but quite customizable.
 
 //DP_TE_PARTICLERAIN
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlerain = #409;
 //temp entity definitions:
@@ -1967,8 +1967,8 @@ void(vector mincorner, vector maxcorner, vector vel, float howmany, float color)
 //creates a shower of rain, the rain will appear either at the top (if falling down) or bottom (if falling up) of the cube.
 
 //DP_TE_PARTICLESNOW
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector mincorner, vector maxcorner, vector vel, float howmany, float color) te_particlesnow = #410;
 //temp entity definitions:
@@ -1983,8 +1983,8 @@ void(vector mincorner, vector maxcorner, vector vel, float howmany, float color)
 //creates a shower of snow, the snow will appear either at the top (if falling down) or bottom (if falling up) of the cube, low velocities are advisable for convincing snow.
 
 //DP_TE_PLASMABURN
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org) te_plasmaburn = #433;
 //temp entity definitions:
@@ -1995,8 +1995,8 @@ void(vector org) te_plasmaburn = #433;
 //creates a small light flash (radius 200, time 0.2) and marks the walls.
 
 //DP_TE_QUADEFFECTS1
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org) te_gunshotquad = #412;
 void(vector org) te_spikequad = #413;
@@ -2013,8 +2013,8 @@ void(vector org) te_explosionquad = #415;
 //all of these just take a location, and are equivalent in function (but not appearance :) to the original TE_GUNSHOT, etc.
 
 //DP_TE_SMALLFLASH
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org) te_smallflash = #416;
 //temp entity definitions:
@@ -2025,8 +2025,8 @@ void(vector org) te_smallflash = #416;
 //creates a small light flash (radius 200, time 0.2).
 
 //DP_TE_SPARK
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org, vector vel, float howmany) te_spark = #411;
 //temp entity definitions:
@@ -2041,8 +2041,8 @@ void(vector org, vector vel, float howmany) te_spark = #411;
 //creates a shower of sparks and a smoke puff.
 
 //DP_TE_STANDARDEFFECTBUILTINS
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 void(vector org) te_gunshot = #418;
 void(vector org) te_spike = #419;
@@ -2062,8 +2062,8 @@ void(entity own, vector start, vector end) te_beam = #431;
 //to make life easier on mod coders.
 
 //DP_TRACE_HITCONTENTSMASK_SURFACEINFO
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //globals:
 .float dphitcontentsmask; // if non-zero on the entity passed to traceline/tracebox/tracetoss this will override the normal collidable contents rules and instead hit these contents values (for example AI can use tracelines that hit DONOTENTER if it wants to, by simply changing this field on the entity passed to traceline), this affects normal movement as well as trace calls
 float trace_dpstartcontents; // DPCONTENTS_ value at start position of trace
@@ -2114,8 +2114,8 @@ float Q3SURFACEFLAG_NONSOLID = 16384; // compiler hint (not important to qc)
 //little information in the trace_ variables as it was not moving at the time)
 
 //DP_VIEWZOOM
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //field definitions:
 .float viewzoom;
 //description:
@@ -2132,7 +2132,7 @@ float(float number, float quantity) bitshift = #218;
 
 //FRIK_FILE
 //idea: FrikaC
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(string s) stof = #81; // get numerical value from a string
 float(string filename, float mode) fopen = #110; // opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE), returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
@@ -2159,8 +2159,8 @@ float FILE_WRITE = 2;
 //NOTE: substring is upgraded by FTE_STRINGS extension with negative start/length handling identical to php 5.2.0
 
 //FTE_CSQC_SKELETONOBJECTS
-//idea: Spike, LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: Spike, LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 // all skeleton numbers are 1-based (0 being no skeleton)
 // all bone numbers are 1-based (0 being invalid)
@@ -2345,7 +2345,7 @@ void() example_skel_player_delete =
 
 //KRIMZON_SV_PARSECLIENTCOMMAND
 //idea: KrimZon
-//darkplaces implementation: KrimZon, LordHavoc
+//darkplaces implementation: KrimZon, LadyHavoc
 //engine-called QC prototypes:
 //void(string s) SV_ParseClientCommand;
 //builtin definitions:
@@ -2357,13 +2357,13 @@ string(float n) argv = #442;
 
 //NEH_CMD_PLAY2
 //idea: Nehahra
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //shows that the engine supports the "play2" console command (plays a sound without spatialization).
 
 //NEH_RESTOREGAME
 //idea: Nehahra
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //engine-called QC prototypes:
 //void() RestoreGame;
 //description:
@@ -2383,13 +2383,13 @@ string(float n) argv = #442;
 
 //NXQ_GFX_LETTERBOX
 //idea: nxQuake
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //description:
 //shows that the engine supports the "r_letterbox" console variable, set to values in the range 0-100 this restricts the view vertically (and turns off sbar and crosshair), value is a 0-100 percentage of how much to constrict the view, <=0 = normal view height, 25 = 75% of normal view height, 50 = 50%, 75 = 25%, >=100 = no view
 
 //PRYDON_CLIENTCURSOR
 //idea: FrikaC
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //effects bit:
 float EF_SELECTABLE = 16384; // allows cursor to highlight entity (brighten)
 //field definitions:
@@ -2409,7 +2409,7 @@ float EF_SELECTABLE = 16384; // allows cursor to highlight entity (brighten)
 
 //TENEBRAE_GFX_DLIGHTS
 //idea: Tenebrae
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //fields:
 .float light_lev; // radius (does not affect brightness), typical value 350
 .vector color; // color (does not affect radius), typical value '1 1 1' (bright white), can be up to '255 255 255' (nuclear blast)
@@ -2430,7 +2430,7 @@ float PFLAGS_FULLDYNAMIC = 128; // light enable (without this set no light is pr
 
 //TW_SV_STEPCONTROL
 //idea: Transfusion
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //cvars:
 //sv_jumpstep (0/1, default 1)
 //sv_stepheight (default 18)
@@ -2498,7 +2498,7 @@ float(string s1, string s2, float len) strncasecmp = #230; // same as strcasecmp
 
 //DP_QC_STRINGBUFFERS
 //idea: ??
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //functions to manage string buffer objects - that is, arbitrary length string arrays that are handled by the engine
 float() buf_create = #460;
 void(float bufhandle) buf_del = #461;
