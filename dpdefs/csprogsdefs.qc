@@ -521,7 +521,7 @@ float() ReadAngle = #365;
 string() ReadString = #366;
 float() ReadFloat = #367;
 
-// LordHavoc's range #400-#499
+// LadyHavoc's range #400-#499
 void(entity from, entity to) copyentity = #400;
 
 entity(.string fld, string match) findchain = #402;
@@ -955,7 +955,7 @@ vector(entity e, float s, float n) getsurfacetriangle = #629;
 
 //DP_QC_ASINACOSATANATAN2TAN
 //idea: Urre
-//darkplaces implementation: LordHavoc
+//darkplaces implementation: LadyHavoc
 //constant definitions:
 float DEG2RAD = 0.0174532925199432957692369076848861271344287188854172545609719144;
 float RAD2DEG = 57.2957795130823208767981548141051703324054724665643215491602438612;
@@ -1019,8 +1019,8 @@ float GETTIME_CDTRACK = 4;
 //see DP_END_GETSOUNDTIME for similar functionality but for entity sound channels
 
 //DP_QC_TOKENIZEBYSEPARATOR
-//idea: Electro, SavageX, LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: Electro, SavageX, LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 float(string s, string separator1, ...) tokenizebyseparator = #479;
 //description:
@@ -1080,8 +1080,8 @@ float PRECACHE_PIC_MIPMAP = 8; // mipmap the texture for possibly better downsca
 //notes: these constants are given as optional second argument to precache_pic()
 
 //DP_QC_TRACE_MOVETYPE_WORLDONLY
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //constant definitions:
 float MOVE_WORLDONLY = 3;
 //description:
@@ -1109,8 +1109,8 @@ float(string sample) soundlength = #534; // returns length of sound sample in se
 float(entity num) num_for_edict = #512;
 
 //DP_TRACE_HITCONTENTSMASK_SURFACEINFO
-//idea: LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: LadyHavoc
+//darkplaces implementation: LadyHavoc
 //globals:
 .float dphitcontentsmask; // if non-zero on the entity passed to traceline/tracebox/tracetoss this will override the normal collidable contents rules and instead hit these contents values (for example AI can use tracelines that hit DONOTENTER if it wants to, by simply changing this field on the entity passed to traceline), this affects normal movement as well as trace calls
 float trace_dpstartcontents; // DPCONTENTS_ value at start position of trace
@@ -1212,8 +1212,8 @@ float log(float f) = #532;
 //logarithm
 
 //FTE_CSQC_SKELETONOBJECTS
-//idea: Spike, LordHavoc
-//darkplaces implementation: LordHavoc
+//idea: Spike, LadyHavoc
+//darkplaces implementation: LadyHavoc
 //builtin definitions:
 // all skeleton numbers are 1-based (0 being no skeleton)
 // all bone numbers are 1-based (0 being invalid)
