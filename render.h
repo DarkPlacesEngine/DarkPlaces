@@ -532,8 +532,8 @@ void RSurf_SetupDepthAndCulling(void);
 extern int r_textureframe; ///< used only by R_GetCurrentTexture, incremented per view and per UI render
 texture_t *R_GetCurrentTexture(texture_t *t);
 void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass, qboolean ui);
-void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
-void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass);
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui);
+void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui);
 
 #define BATCHNEED_ARRAY_VERTEX                (1<< 0) // set up rsurface.batchvertex3f
 #define BATCHNEED_ARRAY_NORMAL                (1<< 1) // set up rsurface.batchnormal3f
