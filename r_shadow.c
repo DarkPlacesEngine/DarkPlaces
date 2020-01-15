@@ -194,7 +194,6 @@ cvar_t r_shadow_culllights_trace_tempsamples = {CVAR_SAVE, "r_shadow_culllights_
 cvar_t r_shadow_culllights_trace_delay = {CVAR_SAVE, "r_shadow_culllights_trace_delay", "1", "light will be considered visible for this many seconds after any trace connects"};
 cvar_t r_shadow_bouncegrid = {CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
 cvar_t r_shadow_bouncegrid_blur = {CVAR_SAVE, "r_shadow_bouncegrid_blur", "0", "apply a 1-radius blur on bouncegrid to denoise it and deal with boundary issues with surfaces"};
-cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
 cvar_t r_shadow_bouncegrid_dynamic_bounceminimumintensity = { CVAR_SAVE, "r_shadow_bouncegrid_dynamic_bounceminimumintensity", "0.05", "stop bouncing once intensity drops below this fraction of the original particle color" };
 cvar_t r_shadow_bouncegrid_dynamic_culllightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_culllightpaths", "1", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
 cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "1", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
@@ -642,7 +641,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_culllights_trace_delay);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_blur);
-	Cvar_RegisterVariable(&r_shadow_bouncegrid_bounceanglediffuse);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_bounceminimumintensity);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_culllightpaths);
 	Cvar_RegisterVariable(&r_shadow_bouncegrid_dynamic_directionalshading);
@@ -1793,7 +1791,6 @@ static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t 
 	settings->blur                          = r_shadow_bouncegrid_blur.integer != 0;
 	settings->floatcolors                   = bound(0, r_shadow_bouncegrid_floatcolors.integer, 2);
 	settings->lightpathsize                 = bound(0.0f, r_shadow_bouncegrid_lightpathsize.value, 1024.0f);
-	settings->bounceanglediffuse            = r_shadow_bouncegrid_bounceanglediffuse.integer != 0;
 	settings->directionalshading            = (s ? r_shadow_bouncegrid_static_directionalshading.integer != 0 : r_shadow_bouncegrid_dynamic_directionalshading.integer != 0) && r_shadow_bouncegrid_state.allowdirectionalshading;
 	settings->dlightparticlemultiplier      = s ? 0 : r_shadow_bouncegrid_dynamic_dlightparticlemultiplier.value;
 	settings->hitmodels                     = s ? false : r_shadow_bouncegrid_dynamic_hitmodels.integer != 0;
@@ -2514,7 +2511,6 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 
 static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t settings, unsigned int range, unsigned int range1, unsigned int range2, int flag)
 {
-	vec3_t bouncerandom[10];
 	dlight_t *light;
 	int bouncecount;
 	int hitsupercontentsmask;
@@ -2620,21 +2616,9 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 			default:
 			case 0:
 				VectorLehmerRandom(&randomseed, clipend);
-				if (settings.bounceanglediffuse)
-				{
-					// we want random to be stable, so we still have to do all the random we would have done
-					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
-						VectorLehmerRandom(&randomseed, bouncerandom[bouncecount]);
-				}
 				break;
 			case 1:
 				VectorCheeseRandom(seed, clipend);
-				if (settings.bounceanglediffuse)
-				{
-					// we want random to be stable, so we still have to do all the random we would have done
-					for (bouncecount = 0; bouncecount < maxbounce; bouncecount++)
-						VectorCheeseRandom(seed, bouncerandom[bouncecount]);
-				}
 				break;
 			}
 
@@ -2691,20 +2675,9 @@ static void R_Shadow_BounceGrid_TracePhotons(r_shadow_bouncegrid_settings_t sett
 				if (VectorLength2(shotcolor) <= bounceminimumintensity2)
 					break;
 				r_refdef.stats[r_stat_bouncegrid_bounces]++;
-				if (settings.bounceanglediffuse)
-				{
-					// random direction, primarily along plane normal
-					s = VectorDistance(cliptrace.endpos, clipend);
-					VectorMA(cliptrace.plane.normal, 0.95f, bouncerandom[bouncecount], clipend);
-					VectorNormalize(clipend);
-					VectorScale(clipend, s, clipend);
-				}
-				else
-				{
-					// reflect the remaining portion of the line across plane normal
-					VectorSubtract(clipend, cliptrace.endpos, clipdiff);
-					VectorReflect(clipdiff, 1.0, cliptrace.plane.normal, clipend);
-				}
+				// reflect the remaining portion of the line across plane normal
+				VectorSubtract(clipend, cliptrace.endpos, clipdiff);
+				VectorReflect(clipdiff, 1.0, cliptrace.plane.normal, clipend);
 				// calculate the new line start and end
 				VectorCopy(cliptrace.endpos, clipstart);
 				VectorAdd(clipstart, clipend, clipend);
