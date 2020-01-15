@@ -36,7 +36,6 @@ extern cvar_t r_shadow_scissor;
 typedef struct r_shadow_bouncegrid_settings_s
 {
 	qboolean staticmode;
-	qboolean bounceanglediffuse;
 	qboolean directionalshading;
 	qboolean includedirectlighting;
 	qboolean blur;
