@@ -197,11 +197,11 @@ cvar_t r_shadow_bouncegrid_blur = {CVAR_SAVE, "r_shadow_bouncegrid_blur", "0", "
 cvar_t r_shadow_bouncegrid_bounceanglediffuse = {CVAR_SAVE, "r_shadow_bouncegrid_bounceanglediffuse", "0", "use random bounce direction rather than true reflection, makes some corner areas dark"};
 cvar_t r_shadow_bouncegrid_dynamic_bounceminimumintensity = { CVAR_SAVE, "r_shadow_bouncegrid_dynamic_bounceminimumintensity", "0.05", "stop bouncing once intensity drops below this fraction of the original particle color" };
 cvar_t r_shadow_bouncegrid_dynamic_culllightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_culllightpaths", "1", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
-cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "0", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
+cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "1", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
 cvar_t r_shadow_bouncegrid_dynamic_dlightparticlemultiplier = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_dlightparticlemultiplier", "1", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
 cvar_t r_shadow_bouncegrid_dynamic_hitmodels = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
-cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "2", "maximum number of bounces for a particle (minimum is 0)"};
+cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0)"};
 cvar_t r_shadow_bouncegrid_dynamic_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by energyperphoton"};
 cvar_t r_shadow_bouncegrid_dynamic_quality = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_quality", "1", "amount of photons that should be fired (this is multiplied by spacing^2 to make it adaptive with spacing changes)"};
 cvar_t r_shadow_bouncegrid_dynamic_spacing = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_spacing", "64", "unit size of bouncegrid pixel"};
@@ -211,7 +211,7 @@ cvar_t r_shadow_bouncegrid_dynamic_y = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_
 cvar_t r_shadow_bouncegrid_dynamic_z = {CVAR_SAVE, "r_shadow_bouncegrid_dynamic_z", "32", "maximum texture size of bouncegrid on Z axis"};
 cvar_t r_shadow_bouncegrid_floatcolors = {CVAR_SAVE, "r_shadow_bouncegrid_floatcolors", "1", "upload texture as RGBA16F (or RGBA32F when set to 2) rather than RGBA8 format - this gives more dynamic range and accuracy"};
 cvar_t r_shadow_bouncegrid_includedirectlighting = {CVAR_SAVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
-cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_intensity = {CVAR_SAVE, "r_shadow_bouncegrid_intensity", "1", "overall brightness of bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_lightpathsize_conespread = {CVAR_SAVE, "r_shadow_bouncegrid_lightpathsize_conespread", "0.015625", "increase lightpathsize over distance at this rate per grid cell"};
 cvar_t r_shadow_bouncegrid_lightpathsize_initial = {CVAR_SAVE, "r_shadow_bouncegrid_lightpathsize_initial", "0.5", "width (in grid cells) of the light path for accumulation of light in the bouncegrid texture"};
 cvar_t r_shadow_bouncegrid_normalizevectors = { CVAR_SAVE, "r_shadow_bouncegrid_normalizevectors", "1", "normalize random vectors (otherwise their length can vary, which dims the lighting further from the light)" };
@@ -223,7 +223,7 @@ cvar_t r_shadow_bouncegrid_sortlightpaths = {CVAR_SAVE, "r_shadow_bouncegrid_sor
 cvar_t r_shadow_bouncegrid_static = {CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
 cvar_t r_shadow_bouncegrid_static_bounceminimumintensity = { CVAR_SAVE, "r_shadow_bouncegrid_static_bounceminimumintensity", "0.01", "stop bouncing once intensity drops below this fraction of the original particle color" };
 cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
-cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "2", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
+cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxbounce = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
 cvar_t r_shadow_bouncegrid_static_maxphotons = {CVAR_SAVE, "r_shadow_bouncegrid_static_maxphotons", "250000", "upper bound on photons in static mode"};
 cvar_t r_shadow_bouncegrid_static_quality = { CVAR_SAVE, "r_shadow_bouncegrid_static_quality", "16", "amount of photons that should be fired (this is multiplied by spacing^2 to make it adaptive with spacing changes)" };
@@ -2080,7 +2080,7 @@ static void R_Shadow_BounceGrid_AssignPhotons(r_shadow_bouncegrid_settings_t *se
 				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
 					rtlight->trace_timer = realtime;
 				if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
-					return;
+					continue;
 			}
 			// skip if expanded light box is offscreen
 			if (R_CullBox(cullmins, cullmaxs))
@@ -2805,21 +2805,27 @@ void R_Shadow_UpdateBounceGridTexture(void)
 
 	// calculate weighting factors for distributing photons among the lights
 	R_Shadow_BounceGrid_AssignPhotons(&settings, range, range1, range2, flag);
+	R_TimeReport("bouncegrid_assignphotons");
 
 	// trace the photons from lights and accumulate illumination
 	R_Shadow_BounceGrid_TracePhotons(settings, range, range1, range2, flag);
+	R_TimeReport("bouncegrid_tracephotons");
 
 	// clear the texture
 	R_Shadow_BounceGrid_ClearPixels();
-	
+	R_TimeReport("bouncegrid_cleartex");
+
 	// accumulate the light splatting into texture
 	R_Shadow_BounceGrid_PerformSplats();
+	R_TimeReport("bouncegrid_lighttex");
 
 	// apply a mild blur filter to the texture
 	R_Shadow_BounceGrid_BlurPixels();
+	R_TimeReport("bouncegrid_blurtex");
 
 	// convert the pixels to lower precision and upload the texture
 	R_Shadow_BounceGrid_ConvertPixelsAndUpload();
+	R_TimeReport("bouncegrid_uploadtex");
 
 	// after we compute the static lighting we don't need to keep the highpixels array around
 	if (settings.staticmode)
@@ -4532,7 +4538,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 		}
 		R_CalcSprite_Vertex3f(vertex3f, rtlight->shadoworigin, r_refdef.view.right, r_refdef.view.up, scale, -scale, -scale, scale);
 		RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, RENDER_NODEPTHTEST, 0, color[0], color[1], color[2], 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
-		R_DrawCustomSurface(r_shadow_lightcorona, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NODEPTHTEST | occlude, 0, 4, 0, 2, false, false);
+		R_DrawCustomSurface(r_shadow_lightcorona, &identitymatrix, MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NODEPTHTEST | occlude, 0, 4, 0, 2, false, false, false);
 		if(negated)
 			GL_BlendEquationSubtract(false);
 	}
@@ -4727,7 +4733,7 @@ static void R_Shadow_DrawCursor_TransparentCallback(const entity_render_t *ent, 
 	float vertex3f[12];
 	R_CalcSprite_Vertex3f(vertex3f, r_editlights_cursorlocation, r_refdef.view.right, r_refdef.view.up, EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, -EDLIGHTSPRSIZE, EDLIGHTSPRSIZE);
 	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, 1, 1, 1, 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
-	R_DrawCustomSurface(r_editlights_sprcursor, &identitymatrix, MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false);
+	R_DrawCustomSurface(r_editlights_sprcursor, &identitymatrix, MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false, false);
 }
 
 static void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
@@ -4763,13 +4769,13 @@ static void R_Shadow_DrawLightSprite_TransparentCallback(const entity_render_t *
 		skinframe = r_editlights_sprlight;
 
 	RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, spritecolor[0], spritecolor[1], spritecolor[2], 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
-	R_DrawCustomSurface(skinframe, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false);
+	R_DrawCustomSurface(skinframe, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false, false);
 
 	// draw selection sprite if light is selected
 	if (light->selected)
 	{
 		RSurf_ActiveCustomEntity(&identitymatrix, &identitymatrix, 0, 0, 1, 1, 1, 1, 4, vertex3f, spritetexcoord2f, NULL, NULL, NULL, NULL, 2, polygonelement3i, polygonelement3s, false, false);
-		R_DrawCustomSurface(r_editlights_sprselection, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false);
+		R_DrawCustomSurface(r_editlights_sprselection, &identitymatrix, MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_FULLBRIGHT | MATERIALFLAG_NOCULLFACE, 0, 4, 0, 2, false, false, false);
 		// VorteX todo: add normalmode/realtime mode light overlay sprites?
 	}
 }
@@ -4898,7 +4904,7 @@ void R_Shadow_LoadWorldLights(void)
 #endif
 			a = sscanf(t, "%f %f %f %f %f %f %f %d %127s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname
 #if _MSC_VER >= 1400
-, sizeof(cubemapname)
+, (unsigned int)sizeof(cubemapname)
 #endif
 , &corona, &angles[0], &angles[1], &angles[2], &coronasizescale, &ambientscale, &diffusescale, &specularscale, &flags);
 			*s = tempchar;

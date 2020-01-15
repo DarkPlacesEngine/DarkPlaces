@@ -1729,7 +1729,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
 		if (t->reflectmasktexture)
 			permutation |= SHADERPERMUTATION_REFLECTCUBE;
-		if (r_shadow_bouncegrid_state.texture && cl.csqc_vidvars.drawworld)
+		if (r_shadow_bouncegrid_state.texture && cl.csqc_vidvars.drawworld && !notrippy)
 		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 			if (r_shadow_bouncegrid_state.directional)
@@ -1818,7 +1818,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			// ordinary vertex coloring (q3bsp)
 			mode = SHADERMODE_VERTEXCOLOR;
 		}
-		if (r_shadow_bouncegrid_state.texture && cl.csqc_vidvars.drawworld)
+		if (r_shadow_bouncegrid_state.texture && cl.csqc_vidvars.drawworld && !notrippy)
 		{
 			permutation |= SHADERPERMUTATION_BOUNCEGRID;
 			if (r_shadow_bouncegrid_state.directional)
@@ -4530,8 +4530,8 @@ void R_RenderView_UpdateViewVectors(void)
 
 void R_RenderTarget_FreeUnused(qboolean force)
 {
-	int i, j, end;
-	end = Mem_ExpandableArray_IndexRange(&r_fb.rendertargets);
+	unsigned int i, j, end;
+	end = (unsigned int)Mem_ExpandableArray_IndexRange(&r_fb.rendertargets); // checked
 	for (i = 0; i < end; i++)
 	{
 		r_rendertarget_t *r = (r_rendertarget_t *)Mem_ExpandableArray_RecordAtIndex(&r_fb.rendertargets, i);
@@ -4571,11 +4571,11 @@ static void R_CalcTexCoordsForView(float x, float y, float w, float h, float tw,
 
 r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qboolean depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3)
 {
-	int i, j, end;
+	unsigned int i, j, end;
 	r_rendertarget_t *r = NULL;
 	char vabuf[256];
 	// first try to reuse an existing slot if possible
-	end = Mem_ExpandableArray_IndexRange(&r_fb.rendertargets);
+	end = (unsigned int)Mem_ExpandableArray_IndexRange(&r_fb.rendertargets); // checked
 	for (i = 0; i < end; i++)
 	{
 		r = (r_rendertarget_t *)Mem_ExpandableArray_RecordAtIndex(&r_fb.rendertargets, i);
@@ -5735,8 +5735,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 		R_TimeReport("animcache");
 
 	R_Shadow_UpdateBounceGridTexture();
-	if (r_timereport_active && r_shadow_bouncegrid.integer)
-		R_TimeReport("bouncegrid");
+	// R_Shadow_UpdateBounceGridTexture called R_TimeReport a few times internally, so we don't need to do that here.
 
 	r_fb.water.numwaterplanes = 0;
 	if (r_fb.water.enabled)
@@ -8720,7 +8719,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
-static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass)
+static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
 {
 	if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 		return;
@@ -8776,7 +8775,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0);
+	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0 || ui);
 	RSurf_DrawBatch();
 }
 
@@ -8812,7 +8811,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	RSurf_DrawBatch();
 }
 
-static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass)
+static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -8825,7 +8824,7 @@ static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+		R_DrawTextureSurfaceList_GL20(texturenumsurfaces, texturesurfacelist, writedepth, prepass, ui);
 		break;
 	}
 	CHECKGLERROR
@@ -8908,7 +8907,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				texturesurfacelist[texturenumsurfaces++] = surface;
 			}
 		// render the range of surfaces
-		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false, false);
+		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, false, false, false);
 	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
@@ -8962,7 +8961,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 {
 	CHECKGLERROR
 	if (ui)
-		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass, ui);
 	else if (depthonly)
 		R_DrawTextureSurfaceList_DepthOnly(texturenumsurfaces, texturesurfacelist);
 	else if (prepass)
@@ -8972,7 +8971,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
 		else
-			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass);
+			R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth, prepass, ui);
 	}
 	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && (!r_showsurfaces.integer || r_showsurfaces.integer == 3))
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
@@ -8987,7 +8986,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	else
 	{
 		// the alphatest check is to make sure we write depth for anything we skipped on the depth-only pass earlier
-		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST), prepass);
+		R_DrawModelTextureSurfaceList(texturenumsurfaces, texturesurfacelist, writedepth || (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST), prepass, ui);
 	}
 	CHECKGLERROR
 }
@@ -10143,7 +10142,7 @@ void R_DebugLine(vec3_t start, vec3_t end)
 }
 
 
-void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass)
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
 {
 	int q;
 	static texture_t texture;
@@ -10191,10 +10190,10 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	rsurface.lightmaptexture = NULL;
 	rsurface.deluxemaptexture = NULL;
 	rsurface.uselightmaptexture = false;
-	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass);
+	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass, ui);
 }
 
-void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass)
+void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
 {
 	static msurface_t surface;
 	const msurface_t *surfacelist = &surface;
@@ -10211,5 +10210,5 @@ void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatri
 	rsurface.lightmaptexture = NULL;
 	rsurface.deluxemaptexture = NULL;
 	rsurface.uselightmaptexture = false;
-	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass);
+	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass, ui);
 }
