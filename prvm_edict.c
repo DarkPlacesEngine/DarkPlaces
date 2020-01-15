@@ -439,7 +439,7 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 			dpsnprintf (line, linelength, "entity %i", n);
 		break;
 	case ev_function:
-		if ((unsigned int)val->function < prog->progs_numfunctions)
+		if ((unsigned int)val->function < (unsigned int)prog->progs_numfunctions)
 		{
 			f = prog->functions + val->function;
 			dpsnprintf (line, linelength, "%s()", PRVM_GetString(prog, f->s_name));
@@ -533,7 +533,7 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		dpsnprintf (line, linelength, "%i", i);
 		break;
 	case ev_function:
-		if ((unsigned int)val->function < prog->progs_numfunctions)
+		if ((unsigned int)val->function < (unsigned int)prog->progs_numfunctions)
 		{
 			f = prog->functions + val->function;
 			strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);

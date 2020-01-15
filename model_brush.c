@@ -1700,7 +1700,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		}
 
 		// bump it back to where we started parsing
-		sb->readcount = watermark;
+		sb->readcount = (int)watermark;
 
 		firstskynoshadowtexture = loadmodel->num_textures;
 		loadmodel->num_textures += numsky;

@@ -2039,7 +2039,7 @@ char *InfoString_GetValue(const char *buffer, const char *key, char *value, size
 				(buffer[pos+1 + keylength] == 0 ||
 				 buffer[pos+1 + keylength] == '\\'))
 		{
-			pos += 1 + keylength;           // Skip \key
+			pos += 1 + (int)keylength;           // Skip \key
 			if (buffer[pos] == '\\') pos++; // Skip \ before value.
 			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < (int)valuelength - 1;j++)
 				value[j] = buffer[pos+j];
@@ -2094,7 +2094,7 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	pos2 = pos;
 	if (buffer[pos] == '\\')
 	{
-		pos2 += 1 + keylength;  // Skip \key
+		pos2 += 1 + (int)keylength;  // Skip \key
 		if (buffer[pos2] == '\\') pos2++; // Skip \ before value.
 		for (;buffer[pos2] && buffer[pos2] != '\\';pos2++);
 	}
