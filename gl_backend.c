@@ -2067,39 +2067,52 @@ void R_Mesh_TexBind(unsigned int unitnum, rtexture_t *tex)
 	int texnum;
 	if (unitnum >= MAX_TEXTUREUNITS)
 		Sys_Error("R_Mesh_TexBind: unitnum %i > max units %i\n", unitnum, MAX_TEXTUREUNITS);
-	if (unit->texture == tex)
-		return;
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		if (!tex)
+		if (tex)
 		{
-			tex = r_texture_white;
-			// not initialized enough yet...
-			if (!tex)
-				return;
+			texnum = R_GetTexture(tex);
+			switch (tex->gltexturetypeenum)
+			{
+			case GL_TEXTURE_2D:
+				if (unit->t2d != texnum) { GL_ActiveTexture(unitnum);qglBindTexture(GL_TEXTURE_2D, texnum); CHECKGLERROR unit->t2d = texnum; }
+				if (unit->t3d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_3D, 0); CHECKGLERROR unit->t3d = 0; }
+				if (unit->tcubemap) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_CUBE_MAP, 0); CHECKGLERROR unit->tcubemap = 0; }
+				break;
+			case GL_TEXTURE_3D:
+				if (unit->t2d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_2D, 0); CHECKGLERROR unit->t2d = 0; }
+				if (unit->t3d != texnum) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_3D, texnum); CHECKGLERROR unit->t3d = texnum; }
+				if (unit->tcubemap) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_CUBE_MAP, 0); CHECKGLERROR unit->tcubemap = 0; }
+				break;
+			case GL_TEXTURE_CUBE_MAP:
+				if (unit->t2d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_2D, 0); CHECKGLERROR unit->t2d = 0; }
+				if (unit->t3d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_3D, 0); CHECKGLERROR unit->t3d = 0; }
+				if (unit->tcubemap != texnum) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_CUBE_MAP, texnum); CHECKGLERROR unit->tcubemap = texnum; }
+				break;
+			}
 		}
-		unit->texture = tex;
-		texnum = R_GetTexture(tex);
-		switch(tex->gltexturetypeenum)
+		else
 		{
-		case GL_TEXTURE_2D: if (unit->t2d != texnum) {GL_ActiveTexture(unitnum);unit->t2d = texnum;qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR}break;
-		case GL_TEXTURE_3D: if (unit->t3d != texnum) {GL_ActiveTexture(unitnum);unit->t3d = texnum;qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR}break;
-		case GL_TEXTURE_CUBE_MAP: if (unit->tcubemap != texnum) {GL_ActiveTexture(unitnum);unit->tcubemap = texnum;qglBindTexture(GL_TEXTURE_CUBE_MAP, unit->tcubemap);CHECKGLERROR}break;
+			if (unit->t2d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_2D, 0); CHECKGLERROR unit->t2d = 0; }
+			if (unit->t3d) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_3D, 0); CHECKGLERROR unit->t3d = 0; }
+			if (unit->tcubemap) { GL_ActiveTexture(unitnum); qglBindTexture(GL_TEXTURE_CUBE_MAP, 0); CHECKGLERROR unit->tcubemap = 0; }
 		}
-		break;
 	}
+	unit->texture = tex;
 }
 
 void R_Mesh_ResetTextureState(void)
 {
+#if 0
 	unsigned int unitnum;
-
+	
 	BACKENDACTIVECHECK
 
 	for (unitnum = 0;unitnum < MAX_TEXTUREUNITS;unitnum++)
 		R_Mesh_TexBind(unitnum, NULL);
+#endif
 }
 
 void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *vertexbuffer, int bufferoffset)
