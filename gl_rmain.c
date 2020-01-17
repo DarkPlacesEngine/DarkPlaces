@@ -3955,7 +3955,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 			end[0] = boxmins[0] + (boxmaxs[0] - boxmins[0]) * positions[i][0];
 			end[1] = boxmins[1] + (boxmaxs[1] - boxmins[1]) * positions[i][1];
 			end[2] = boxmins[2] + (boxmaxs[2] - boxmins[2]) * positions[i][2];
-			//trace_t trace = CL_TraceLine(start, end, MOVE_NOMONSTERS, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, 0.0f, true, false, NULL, true, true);
+			//trace_t trace = CL_TraceLine(start, end, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, MATERIALFLAGMASK_TRANSLUCENT, 0.0f, true, false, NULL, true, true);
 			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
 			// not picky - if the trace ended anywhere in the box we're good
 			if (BoxesOverlap(trace.endpos, trace.endpos, padmins, padmaxs))
@@ -3972,7 +3972,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 		VectorSet(end, lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));
 		if (r_cullentities_trace_entityocclusion.integer)
 		{
-			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
+			trace_t trace = CL_TraceLine(start, end, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, MATERIALFLAGMASK_TRANSLUCENT, 0.0f, true, false, NULL, true, true);
 			// not picky - if the trace ended anywhere in the box we're good
 			if (BoxesOverlap(trace.endpos, trace.endpos, padmins, padmaxs))
 				return true;
