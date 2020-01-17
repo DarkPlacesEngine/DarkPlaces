@@ -632,6 +632,7 @@ typedef struct texture_s
 	vec4_t reflectcolor4f; // color tint of reflection (including alpha factor)
 	float r_water_wateralpha; // additional wateralpha to apply when r_water is active
 	float r_water_waterscroll[2]; // scale and speed
+	float refractive_index; // used by r_shadow_bouncegrid for bending photons for refracted light
 	int camera_entity; // entity number for use by cameras
 
 	// offsetmapping
@@ -1095,6 +1096,16 @@ extern unsigned char *mod_base;
 //extern cvar_t gl_subdivide_size;
 // texture fullbrights
 extern cvar_t r_fullbrights;
+
+extern cvar_t mod_noshader_default_offsetmapping;
+extern cvar_t mod_q3shader_default_offsetmapping;
+extern cvar_t mod_q3shader_default_offsetmapping_scale;
+extern cvar_t mod_q3shader_default_offsetmapping_bias;
+extern cvar_t mod_q3shader_default_polygonoffset;
+extern cvar_t mod_q3shader_default_polygonfactor;
+extern cvar_t mod_q3shader_default_refractive_index;
+extern cvar_t mod_q3shader_force_addalpha;
+extern cvar_t mod_q3shader_force_terrain_alphaflag;
 
 void Mod_Init (void);
 void Mod_Reload (void);

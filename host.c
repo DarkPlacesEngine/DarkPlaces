@@ -745,6 +745,8 @@ void Host_Main(void)
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValue("host_framerate", 0);
 
+		TaskQueue_Frame(false);
+
 		// keep the random time dependent, but not when playing demos/benchmarking
 		if(!*sv_random_seed.string && !cls.demoplayback)
 			rand();

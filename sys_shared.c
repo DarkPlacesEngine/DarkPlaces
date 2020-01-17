@@ -47,6 +47,7 @@ void Sys_Quit (int returnvalue)
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
 	Cbuf_UnlockThreadMutex();
 	SV_UnlockThreadMutex();
+	TaskQueue_Frame(true);
 
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);

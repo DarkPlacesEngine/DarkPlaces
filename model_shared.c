@@ -1431,14 +1431,6 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
 }
 
-extern cvar_t mod_noshader_default_offsetmapping;
-extern cvar_t mod_q3shader_default_offsetmapping;
-extern cvar_t mod_q3shader_default_offsetmapping_scale;
-extern cvar_t mod_q3shader_default_offsetmapping_bias;
-extern cvar_t mod_q3shader_default_polygonoffset;
-extern cvar_t mod_q3shader_default_polygonfactor;
-extern cvar_t mod_q3shader_force_addalpha;
-extern cvar_t mod_q3shader_force_terrain_alphaflag;
 void Mod_LoadQ3Shaders(void)
 {
 	int j;
@@ -2473,6 +2465,7 @@ nothing                GL_ZERO GL_ONE
 		texture->specularscalemod = shader->specularscalemod;
 		texture->specularpowermod = shader->specularpowermod;
 		texture->rtlightambient = shader->rtlightambient;
+		texture->refractive_index = mod_q3shader_default_refractive_index.value;
 		if (shader->dpreflectcube[0])
 			texture->reflectcubetexture = R_GetCubemap(shader->dpreflectcube);
 
