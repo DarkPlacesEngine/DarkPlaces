@@ -57,6 +57,7 @@ cvar_t mod_q3shader_default_offsetmapping_scale = {CVAR_SAVE, "mod_q3shader_defa
 cvar_t mod_q3shader_default_offsetmapping_bias = {CVAR_SAVE, "mod_q3shader_default_offsetmapping_bias", "0", "default bias used for offsetmapping"};
 cvar_t mod_q3shader_default_polygonfactor = {0, "mod_q3shader_default_polygonfactor", "0", "biases depth values of 'polygonoffset' shaders to prevent z-fighting artifacts"};
 cvar_t mod_q3shader_default_polygonoffset = {0, "mod_q3shader_default_polygonoffset", "-2", "biases depth values of 'polygonoffset' shaders to prevent z-fighting artifacts"};
+cvar_t mod_q3shader_default_refractive_index = { 0, "mod_q3shader_default_refractive_index", "1.33", "angle of refraction specified as n to apply when a photon is refracted, example values are: 1.0003 = air, water = 1.333, crown glass = 1.517, flint glass = 1.655, diamond = 2.417" };
 cvar_t mod_q3shader_force_addalpha = {0, "mod_q3shader_force_addalpha", "0", "treat GL_ONE GL_ONE (or add) blendfunc as GL_SRC_ALPHA GL_ONE for compatibility with older DarkPlaces releases"};
 cvar_t mod_q3shader_force_terrain_alphaflag = {0, "mod_q3shader_force_terrain_alphaflag", "0", "for multilayered terrain shaders force TEXF_ALPHA flag on both layers"};
 
@@ -105,6 +106,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping_bias);
 	Cvar_RegisterVariable(&mod_q3shader_default_polygonfactor);
 	Cvar_RegisterVariable(&mod_q3shader_default_polygonoffset);
+	Cvar_RegisterVariable(&mod_q3shader_default_refractive_index);
 	Cvar_RegisterVariable(&mod_q3shader_force_addalpha);
 	Cvar_RegisterVariable(&mod_q3shader_force_terrain_alphaflag);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
@@ -1745,6 +1747,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		// clear water settings
 		tx->reflectmin = 0;
 		tx->reflectmax = 1;
+		tx->refractive_index = mod_q3shader_default_refractive_index.value;
 		tx->refractfactor = 1;
 		Vector4Set(tx->refractcolor4f, 1, 1, 1, 1);
 		tx->reflectfactor = 1;

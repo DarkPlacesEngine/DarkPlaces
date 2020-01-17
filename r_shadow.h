@@ -2,6 +2,8 @@
 #ifndef R_SHADOW_H
 #define R_SHADOW_H
 
+#include "thread.h"
+
 #define R_SHADOW_SHADOWMAP_NUMCUBEMAPS 8
 
 extern cvar_t r_shadow_bumpscale_basetexture;
@@ -54,8 +56,34 @@ typedef struct r_shadow_bouncegrid_settings_s
 	int rng_type;
 	int rng_seed;
 	float bounceminimumintensity2;
+	int subsamples;
 }
 r_shadow_bouncegrid_settings_t;
+
+#define PHOTON_MAX_PATHS 11
+
+typedef struct r_shadow_bouncegrid_photon_path_s
+{
+	vec3_t start;
+	vec3_t end;
+	vec3_t color;
+}
+r_shadow_bouncegrid_photon_path_t;
+
+typedef struct r_shadow_bouncegrid_photon_s
+{
+	// parameters for tracing this photon
+	vec3_t start;
+	vec3_t end;
+	float color[3];
+	float bounceminimumintensity2;
+	float startrefractiveindex;
+
+	// results
+	int numpaths;
+	r_shadow_bouncegrid_photon_path_t paths[PHOTON_MAX_PATHS];
+}
+r_shadow_bouncegrid_photon_t;
 
 typedef struct r_shadow_bouncegrid_state_s
 {
@@ -78,16 +106,27 @@ typedef struct r_shadow_bouncegrid_state_s
 	vec3_t mins;
 	vec3_t maxs;
 	vec3_t size;
-	int maxsplatpaths;
 
 	// per-frame data that is very temporary
-	int numsplatpaths;
-	struct r_shadow_bouncegrid_splatpath_s *splatpaths;
 	int highpixels_index; // which one is active - this toggles when doing blur
 	float *highpixels; // equals blurpixels[highpixels_index]
 	float *blurpixels[2];
 	unsigned char *u8pixels; // temporary processing buffer when outputting to rgba8 format
 	unsigned short *fp16pixels; // temporary processing buffer when outputting to rgba16f format
+								// describe the photons we intend to shoot for threaded dispatch
+	int numphotons; // number of photons to shoot this frame, always <= settings.maxphotons
+	r_shadow_bouncegrid_photon_t *photons; // describes the photons being shot this frame
+
+	// tasks
+	taskqueue_task_t cleartex_task; // clears the highpixels array
+	taskqueue_task_t assignphotons_task; // sets the photon counts on lights, etc
+	taskqueue_task_t enqueuephotons_task; // enqueues tasks to shoot the photons
+	taskqueue_task_t *photons_tasks; // [maxphotons] taskqueue entries to perform the photon shots
+	taskqueue_task_t photons_done_task; // checks that all photon shots are completed
+	taskqueue_task_t enqueue_slices_task; // enqueues slice tasks to render the light accumulation into the texture
+	taskqueue_task_t *slices_tasks; // [resolution[1]] taskqueue entries to perform the light path accumulation into the texture
+	taskqueue_task_t slices_done_task; // checks that light accumulation in the texture is done
+	taskqueue_task_t blurpixels_task; // blurs the highpixels array
 }
 r_shadow_bouncegrid_state_t;
 
