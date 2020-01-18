@@ -1273,6 +1273,7 @@ static void Host_Init (void)
 	Host_ServerOptions();
 
 	Thread_Init();
+	TaskQueue_Init();
 
 	if (cls.state == ca_dedicated)
 		Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
