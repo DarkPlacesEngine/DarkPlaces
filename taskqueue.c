@@ -2,7 +2,6 @@
 #include "taskqueue.h"
 
 cvar_t taskqueue_maxthreads = { CVAR_SAVE, "taskqueue_maxthreads", "32", "how many threads to use for executing tasks" };
-cvar_t taskqueue_linkedlist = { CVAR_SAVE, "taskqueue_linkedlist", "1", "whether to use a doubly linked list or an array for the FIFO queue" };
 
 typedef struct taskqueue_state_thread_s
 {
@@ -14,11 +13,6 @@ typedef struct taskqueue_state_s
 {
 	int numthreads;
 	taskqueue_state_thread_t threads[1024];
-
-	// we can enqueue this many tasks before execution of them must proceed
-	int queue_used;
-	int queue_max; // size of queue array
-	taskqueue_task_t **queue_tasks;
 
 	// command 
 	Thread_SpinLock command_lock;
@@ -32,23 +26,18 @@ taskqueue_state_t;
 
 static taskqueue_state_t taskqueue_state;
 
-int TaskQueue_Init(void)
+void TaskQueue_Init(void)
 {
 	Cvar_RegisterVariable(&taskqueue_maxthreads);
-	Cvar_RegisterVariable(&taskqueue_linkedlist);
 	// initialize the doubly-linked list header
 	taskqueue_state.list.next = &taskqueue_state.list;
 	taskqueue_state.list.prev = &taskqueue_state.list;
-	return 0;
 }
 
 void TaskQueue_Shutdown(void)
 {
 	if (taskqueue_state.numthreads)
 		TaskQueue_Frame(true);
-	if (taskqueue_state.queue_tasks)
-		Mem_Free(taskqueue_state.queue_tasks);
-	taskqueue_state.queue_tasks = NULL;
 }
 
 static taskqueue_task_t *TaskQueue_GetPending(void)
@@ -61,16 +50,6 @@ static taskqueue_task_t *TaskQueue_GetPending(void)
 		t->next->prev = t->prev;
 		t->prev->next = t->next;
 		t->prev = t->next = NULL;
-	}
-	if (t == NULL)
-	{
-		if (taskqueue_state.queue_used > 0)
-		{
-			t = taskqueue_state.queue_tasks[0];
-			taskqueue_state.queue_used--;
-			memmove(taskqueue_state.queue_tasks, taskqueue_state.queue_tasks + 1, taskqueue_state.queue_used * sizeof(taskqueue_task_t *));
-			taskqueue_state.queue_tasks[taskqueue_state.queue_used] = NULL;
-		}
 	}
 	return t;
 }
@@ -136,25 +115,11 @@ void TaskQueue_Enqueue(int numtasks, taskqueue_task_t *tasks)
 	for (i = 0; i < numtasks; i++)
 	{
 		taskqueue_task_t *t = &tasks[i];
-		if (taskqueue_linkedlist.integer)
-		{
-			// push to list.prev
-			t->next = &taskqueue_state.list;
-			t->prev = taskqueue_state.list.prev;
-			t->next->prev = t;
-			t->prev->next = t;
-		}
-		else
-		{
-			if (taskqueue_state.queue_used >= taskqueue_state.queue_max)
-			{
-				taskqueue_state.queue_max *= 2;
-				if (taskqueue_state.queue_max < 1024)
-					taskqueue_state.queue_max = 1024;
-				taskqueue_state.queue_tasks = (taskqueue_task_t **)Mem_Realloc(cls.permanentmempool, taskqueue_state.queue_tasks, taskqueue_state.queue_max * sizeof(taskqueue_task_t *));
-			}
-			taskqueue_state.queue_tasks[taskqueue_state.queue_used++] = t;
-		}
+		// push to list.prev
+		t->next = &taskqueue_state.list;
+		t->prev = taskqueue_state.list.prev;
+		t->next->prev = t;
+		t->prev->next = t;
 	}
 	Thread_AtomicUnlock(&taskqueue_state.command_lock);
 }

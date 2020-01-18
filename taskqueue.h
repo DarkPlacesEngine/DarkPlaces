@@ -44,9 +44,6 @@ qboolean TaskQueue_IsDone(taskqueue_task_t *t);
 // polls for status of task and waits for it to be done
 void TaskQueue_WaitForTaskDone(taskqueue_task_t *t);
 
-// updates thread count based on the cvar.
-void TaskQueue_Frame(qboolean shutdown);
-
 // convenience function for setting up a task structure.  Does not do the Enqueue, just fills in the struct.
 void TaskQueue_Setup(taskqueue_task_t *t, taskqueue_task_t *preceding, void(*func)(taskqueue_task_t *), size_t i0, size_t i1, void *p0, void *p1);
 
@@ -54,5 +51,9 @@ void TaskQueue_Setup(taskqueue_task_t *t, taskqueue_task_t *preceding, void(*fun
 // t->i[0] = number of tasks in array
 // t->p[0] = array of taskqueue_task_t to check
 void TaskQueue_Task_CheckTasksDone(taskqueue_task_t *t);
+
+void TaskQueue_Init(void);
+void TaskQueue_Shutdown(void);
+void TaskQueue_Frame(qboolean shutdown);
 
 #endif
