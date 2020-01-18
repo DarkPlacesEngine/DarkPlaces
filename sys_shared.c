@@ -5,6 +5,7 @@
 #endif
 
 #include "quakedef.h"
+#include "taskqueue.h"
 #include "thread.h"
 
 #define SUPPORTDLL
