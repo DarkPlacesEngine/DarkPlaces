@@ -1445,6 +1445,7 @@ void Host_Shutdown(void)
 	}
 
 	SV_StopThread();
+	TaskQueue_Shutdown();
 	Thread_Shutdown();
 	Cmd_Shutdown();
 	Key_Shutdown();
