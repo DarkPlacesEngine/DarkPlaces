@@ -148,6 +148,7 @@ OBJ_COMMON= \
 	svbsp.o \
 	svvm_cmds.o \
 	sys_shared.o \
+	taskqueue.o \
 	vid_shared.o \
 	view.o \
 	wad.o \
