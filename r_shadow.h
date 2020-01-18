@@ -2,7 +2,7 @@
 #ifndef R_SHADOW_H
 #define R_SHADOW_H
 
-#include "thread.h"
+#include "taskqueue.h"
 
 #define R_SHADOW_SHADOWMAP_NUMCUBEMAPS 8
 

@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "sv_demo.h"
 #include "snd_main.h"
+#include "taskqueue.h"
 #include "thread.h"
 #include "utf8lib.h"
 

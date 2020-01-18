@@ -281,6 +281,7 @@
     <ClCompile Include="svvm_cmds.c" />
     <ClCompile Include="sys_sdl.c" />
     <ClCompile Include="sys_shared.c" />
+    <ClCompile Include="taskqueue.c" />
     <ClCompile Include="thread_sdl.c" />
     <ClCompile Include="utf8lib.c" />
     <ClCompile Include="vid_sdl.c" />
@@ -379,6 +380,7 @@
     <ClInclude Include="sv_demo.h" />
     <ClInclude Include="svbsp.h" />
     <ClInclude Include="sys.h" />
+    <ClInclude Include="taskqueue.h" />
     <ClInclude Include="thread.h" />
     <ClInclude Include="timing.h" />
     <ClInclude Include="utf8lib.h" />
