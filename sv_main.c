@@ -25,9 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "thread.h"
 
-static void SV_SaveEntFile_f(void);
-static void SV_StartDownload_f(void);
-static void SV_Download_f(void);
+static void SV_SaveEntFile_f(cmd_state_t *cmd);
+static void SV_StartDownload_f(cmd_state_t *cmd);
+static void SV_Download_f(cmd_state_t *cmd);
 static void SV_VM_Setup(void);
 extern cvar_t net_connecttimeout;
 
@@ -417,7 +417,7 @@ prvm_required_field_t sv_reqglobals[] =
 
 //============================================================================
 
-static void SV_AreaStats_f(void)
+static void SV_AreaStats_f(cmd_state_t *cmd)
 {
 	World_PrintAreaStats(&sv.world, "server");
 }
@@ -446,10 +446,12 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_progsize);
 	Cvar_RegisterVariable (&csqc_usedemoprogs);
 
-	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
-	Cmd_AddCommand("sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
-	Cmd_AddCommand_WithClientCommand("sv_startdownload", NULL, SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
-	Cmd_AddCommand_WithClientCommand("download", NULL, SV_Download_f, "downloads a specified file from the server");
+	Cmd_AddCommand(&cmd_server, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
+	Cmd_AddCommand(&cmd_server, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
+	Cmd_AddCommand(&cmd_serverfromclient, "sv_startdownload", SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
+	Cmd_AddCommand(&cmd_serverfromclient, "download", SV_Download_f, "downloads a specified file from the server");
+	Cmd_AddCommand(&cmd_client, "sv_startdownload", Cmd_ForwardToServer_f, "begins sending a file to the client (network protocol use only)");
+	Cmd_AddCommand(&cmd_client, "download", Cmd_ForwardToServer_f, "downloads a specified file from the server");
 
 	Cvar_RegisterVariable (&sv_disablenotify);
 	Cvar_RegisterVariable (&coop);
@@ -617,7 +619,7 @@ void SV_Init (void)
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
 
-static void SV_SaveEntFile_f(void)
+static void SV_SaveEntFile_f(cmd_state_t *cmd)
 {
 	char vabuf[1024];
 	if (!sv.active || !sv.worldmodel)
@@ -2639,7 +2641,7 @@ void SV_SendClientMessages(void)
 	SV_CleanupEnts();
 }
 
-static void SV_StartDownload_f(void)
+static void SV_StartDownload_f(cmd_state_t *cmd)
 {
 	if (host_client->download_file)
 		host_client->download_started = true;
@@ -2670,17 +2672,17 @@ static void SV_StartDownload_f(void)
  *       assume this extension is not supported!
  */
 
-static void Download_CheckExtensions(void)
+static void Download_CheckExtensions(cmd_state_t *cmd)
 {
 	int i;
-	int argc = Cmd_Argc();
+	int argc = Cmd_Argc(cmd);
 
 	// first reset them all
 	host_client->download_deflate = false;
 	
 	for(i = 2; i < argc; ++i)
 	{
-		if(!strcmp(Cmd_Argv(i), "deflate"))
+		if(!strcmp(Cmd_Argv(cmd, i), "deflate"))
 		{
 			host_client->download_deflate = true;
 			break;
@@ -2688,21 +2690,21 @@ static void Download_CheckExtensions(void)
 	}
 }
 
-static void SV_Download_f(void)
+static void SV_Download_f(cmd_state_t *cmd)
 {
 	const char *whichpack, *whichpack2, *extension;
 	qboolean is_csqc; // so we need to check only once
 
-	if (Cmd_Argc() < 2)
+	if (Cmd_Argc(cmd) < 2)
 	{
 		SV_ClientPrintf("usage: download <filename> {<extensions>}*\n");
 		SV_ClientPrintf("       supported extensions: deflate\n");
 		return;
 	}
 
-	if (FS_CheckNastyPath(Cmd_Argv(1), false))
+	if (FS_CheckNastyPath(Cmd_Argv(cmd, 1), false))
 	{
-		SV_ClientPrintf("Download rejected: nasty filename \"%s\"\n", Cmd_Argv(1));
+		SV_ClientPrintf("Download rejected: nasty filename \"%s\"\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
@@ -2720,7 +2722,7 @@ static void SV_Download_f(void)
 		host_client->download_started = false;
 	}
 
-	is_csqc = (sv.csqc_progname[0] && strcmp(Cmd_Argv(1), sv.csqc_progname) == 0);
+	is_csqc = (sv.csqc_progname[0] && strcmp(Cmd_Argv(cmd, 1), sv.csqc_progname) == 0);
 	
 	if (!sv_allowdownloads.integer && !is_csqc)
 	{
@@ -2729,9 +2731,9 @@ static void SV_Download_f(void)
 		return;
 	}
 
-	Download_CheckExtensions();
+	Download_CheckExtensions(cmd);
 
-	strlcpy(host_client->download_name, Cmd_Argv(1), sizeof(host_client->download_name));
+	strlcpy(host_client->download_name, Cmd_Argv(cmd, 1), sizeof(host_client->download_name));
 	extension = FS_FileExtension(host_client->download_name);
 
 	// host_client is asking to download a specified file

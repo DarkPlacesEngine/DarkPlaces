@@ -420,14 +420,14 @@ static glmode_t modes[6] =
 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
 };
 
-static void GL_TextureMode_f (void)
+static void GL_TextureMode_f(cmd_state_t *cmd)
 {
 	int i;
 	GLint oldbindtexnum;
 	gltexture_t *glt;
 	gltexturepool_t *pool;
 
-	if (Cmd_Argc() == 1)
+	if (Cmd_Argc(cmd) == 1)
 	{
 		Con_Printf("Texture mode is %sforced\n", gl_filter_force ? "" : "not ");
 		for (i = 0;i < 6;i++)
@@ -443,7 +443,7 @@ static void GL_TextureMode_f (void)
 	}
 
 	for (i = 0;i < (int)(sizeof(modes)/sizeof(*modes));i++)
-		if (!strcasecmp (modes[i].name, Cmd_Argv(1) ) )
+		if (!strcasecmp (modes[i].name, Cmd_Argv(cmd, 1) ) )
 			break;
 	if (i == 6)
 	{
@@ -453,7 +453,7 @@ static void GL_TextureMode_f (void)
 
 	gl_filter_min = modes[i].minification;
 	gl_filter_mag = modes[i].magnification;
-	gl_filter_force = ((Cmd_Argc() > 2) && !strcasecmp(Cmd_Argv(2), "force"));
+	gl_filter_force = ((Cmd_Argc(cmd) > 2) && !strcasecmp(Cmd_Argv(cmd, 2), "force"));
 
 	switch(vid.renderpath)
 	{
@@ -607,7 +607,7 @@ void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean print
 		Con_Printf("textures total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", sumtotal, sumtotalt / 1048576.0, sumtotalp / 1048576.0, sumloaded, sumloadedt / 1048576.0, sumloadedp / 1048576.0, sumtotal - sumloaded, (sumtotalt - sumloadedt) / 1048576.0, (sumtotalp - sumloadedp) / 1048576.0);
 }
 
-static void R_TextureStats_f(void)
+static void R_TextureStats_f(cmd_state_t *cmd)
 {
 	R_TextureStats_Print(true, true, true);
 }
@@ -700,8 +700,8 @@ static void r_textures_devicerestored(void)
 
 void R_Textures_Init (void)
 {
-	Cmd_AddCommand("gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
-	Cmd_AddCommand("r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
+	Cmd_AddCommand(&cmd_client, "gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
+	Cmd_AddCommand(&cmd_client, "r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&gl_picmip_world);

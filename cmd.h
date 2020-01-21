@@ -37,36 +37,107 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 #ifndef CMD_H
 #define CMD_H
 
-extern void *cmd_text_mutex;
-#define Cbuf_LockThreadMutex() (void)(cmd_text_mutex ? Thread_LockMutex(cmd_text_mutex) : 0)
-#define Cbuf_UnlockThreadMutex() (void)(cmd_text_mutex ? Thread_UnlockMutex(cmd_text_mutex) : 0)
+#include "thread.h"
 
-/// allocates an initial text buffer that will grow as needed
-void Cbuf_Init (void);
+struct cmd_state_s;
 
-void Cmd_Init_Commands (void);
+typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
-void Cbuf_Shutdown (void);
+typedef enum
+{
+	src_client,		///< came in over a net connection as a clc_stringcmd
+					///< host_client will be valid during this state.
+	src_command		///< from the command buffer
+} cmd_source_t;
+
+typedef struct cmdalias_s
+{
+	struct cmdalias_s *next;
+	char name[MAX_ALIAS_NAME];
+	char *value;
+	qboolean initstate; // indicates this command existed at init
+	char *initialvalue; // backup copy of value at init
+} cmdalias_t;
+
+typedef struct cmd_function_s
+{
+	struct cmd_function_s *next;
+	const char *name;
+	const char *description;
+	xcommand_t function;
+	qboolean csqcfunc;
+	qboolean initstate; // indicates this command existed at init
+} cmd_function_t;
+
+typedef struct cmddeferred_s
+{
+	struct cmddeferred_s *next;
+	char *value;
+	double delay;
+} cmddeferred_t;
+
+typedef struct cmd_state_s
+{
+	cmdalias_t *alias;
+
+	qboolean wait;
+
+	mempool_t *mempool;
+
+	char tokenizebuffer[CMD_TOKENIZELENGTH];
+	int tokenizebufferpos;
+
+	cmddeferred_t *deferred_list;
+
+	sizebuf_t text;
+	unsigned char text_buf[CMDBUFSIZE];
+	Thread_SpinLock text_lock;
+
+	int argc;
+	const char *argv[MAX_ARGS];
+	const char *null_string;
+	const char *args;
+	cmd_source_t source;
+
+	cmd_function_t *functions;		// possible commands to execute
+}
+cmd_state_t;
+
+// command interpreter for client commands injected by CSQC, MQC or client engine code
+extern cmd_state_t cmd_client;
+// command interpreter for client commands received over network from server
+extern cmd_state_t cmd_clientfromserver;
+// command interpreter for server commands injected by MQC, SVQC, menu engine code or server engine code
+extern cmd_state_t cmd_server;
+// command interpreter for server commands received over network from clients
+extern cmd_state_t cmd_serverfromclient;
+
+extern qboolean host_stuffcmdsrun;
+
+void Cbuf_Lock(cmd_state_t *cmd);
+void Cbuf_Unlock(cmd_state_t *cmd);
+
+void Cmd_Init_Commands(qboolean dedicated_server);
 
 /*! as new commands are generated from the console or keybindings,
  * the text is added to the end of the command buffer.
  */
-void Cbuf_AddText (const char *text);
+void Cbuf_AddText (cmd_state_t *cmd, const char *text);
 
 /*! when a command wants to issue other commands immediately, the text is
  * inserted at the beginning of the buffer, before any remaining unexecuted
  * commands.
  */
-void Cbuf_InsertText (const char *text);
+void Cbuf_InsertText (cmd_state_t *cmd, const char *text);
 
 /*! Pulls off terminated lines of text from the command buffer and sends
  * them through Cmd_ExecuteString.  Stops when the buffer is empty.
  * Normally called once per frame, but may be explicitly invoked.
  * \note Do not call inside a command function!
  */
-void Cbuf_Execute (void);
+void Cbuf_Execute (cmd_state_t *cmd);
 /*! Performs deferred commands and runs Cbuf_Execute, called by Host_Main */
-void Cbuf_Frame (void);
+void Cbuf_Frame (cmd_state_t *cmd);
 
 //===========================================================================
 
@@ -81,66 +152,54 @@ not apropriate.
 
 */
 
-typedef void (*xcommand_t) (void);
-
-typedef enum
-{
-	src_client,		///< came in over a net connection as a clc_stringcmd
-					///< host_client will be valid during this state.
-	src_command		///< from the command buffer
-} cmd_source_t;
-
-extern cmd_source_t cmd_source;
-
-void Cmd_Init (void);
-void Cmd_Shutdown (void);
+void Cmd_Init(void);
+void Cmd_Shutdown(void);
 
 // called by Host_Init, this marks cvars, commands and aliases with their init values
-void Cmd_SaveInitState (void);
+void Cmd_SaveInitState(void);
 // called by FS_GameDir_f, this restores cvars, commands and aliases to init values
-void Cmd_RestoreInitState (void);
+void Cmd_RestoreInitState(void);
 
-void Cmd_AddCommand_WithClientCommand (const char *cmd_name, xcommand_t consolefunction, xcommand_t clientfunction, const char *description);
-void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description);
+void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function, const char *description);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 
 /// used by the cvar code to check for cvar / command name overlap
-qboolean Cmd_Exists (const char *cmd_name);
+qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
 
 /// attempts to match a partial command for automatic command line completion
 /// returns NULL if nothing fits
-const char *Cmd_CompleteCommand (const char *partial);
+const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial);
 
-int Cmd_CompleteAliasCountPossible (const char *partial);
+int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial);
 
-const char **Cmd_CompleteAliasBuildList (const char *partial);
+const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial);
 
-int Cmd_CompleteCountPossible (const char *partial);
+int Cmd_CompleteCountPossible (cmd_state_t *cmd, const char *partial);
 
-const char **Cmd_CompleteBuildList (const char *partial);
+const char **Cmd_CompleteBuildList (cmd_state_t *cmd, const char *partial);
 
-void Cmd_CompleteCommandPrint (const char *partial);
+void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial);
 
-const char *Cmd_CompleteAlias (const char *partial);
+const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial);
 
-void Cmd_CompleteAliasPrint (const char *partial);
+void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial);
 
 // Enhanced console completion by Fett erich@heintz.com
 
 // Added by EvilTypeGuy eviltypeguy@qeradiant.com
 
-int Cmd_Argc (void);
-const char *Cmd_Argv (int arg);
-const char *Cmd_Args (void);
+int Cmd_Argc (cmd_state_t *cmd);
+const char *Cmd_Argv (cmd_state_t *cmd, int arg);
+const char *Cmd_Args (cmd_state_t *cmd);
 // The functions that execute commands get their parameters with these
-// functions. Cmd_Argv () will return an empty string, not a NULL
+// functions. Cmd_Argv(cmd, ) will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
 
 /// Returns the position (1 to argc-1) in the command's argument list
 /// where the given parameter apears, or 0 if not present
-int Cmd_CheckParm (const char *parm);
+int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 
 //void Cmd_TokenizeString (char *text);
 // Takes a null terminated string.  Does not need to be /n terminated.
@@ -148,7 +207,7 @@ int Cmd_CheckParm (const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex);
+void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex);
 
 /// adds the string as a clc_stringcmd to the client message.
 /// (used when there is no reason to generate a local command to do it)
@@ -157,11 +216,7 @@ void Cmd_ForwardStringToServer (const char *s);
 /// adds the current command line as a clc_stringcmd to the client message.
 /// things like godmode, noclip, etc, are commands directed to the server,
 /// so when they are typed in at the console, they will need to be forwarded.
-void Cmd_ForwardToServer (void);
-
-/// used by command functions to send output to either the graphics console or
-/// passed as a print message to the client
-void Cmd_Print(const char *text);
+void Cmd_ForwardToServer_f (cmd_state_t *cmd);
 
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies
@@ -171,7 +226,7 @@ void Cmd_Print(const char *text);
 /// enclosing quote marks are also put.
 qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
 
-void Cmd_ClearCsqcFuncs (void);
+void Cmd_ClearCsqcFuncs (cmd_state_t *cmd);
 
 #endif
 

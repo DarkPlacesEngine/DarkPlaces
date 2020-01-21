@@ -112,7 +112,7 @@ static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint
 
 #define BACKENDACTIVECHECK if (!gl_state.active) Sys_Error("GL backend function called when backend is not active");
 
-void SCR_ScreenShot_f (void);
+void SCR_ScreenShot_f(cmd_state_t *cmd);
 
 typedef struct gltextureunit_s
 {
@@ -245,7 +245,7 @@ unsigned short polygonelement3s[(POLYGONELEMENTS_MAXPOINTS-2)*3];
 int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
-static void GL_VBOStats_f(void)
+static void GL_VBOStats_f(cmd_state_t *cmd)
 {
 	GL_Mesh_ListVBOs(true);
 }
@@ -372,7 +372,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 
-	Cmd_AddCommand("gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
+	Cmd_AddCommand(&cmd_client, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, gl_backend_devicelost, gl_backend_devicerestored);
 }

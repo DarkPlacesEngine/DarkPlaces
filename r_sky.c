@@ -163,9 +163,9 @@ int R_SetSkyBox(const char *sky)
 }
 
 // LadyHavoc: added LoadSky console command
-static void LoadSky_f (void)
+static void LoadSky_f(cmd_state_t *cmd)
 {
-	switch (Cmd_Argc())
+	switch (Cmd_Argc(cmd))
 	{
 	case 1:
 		if (skyname[0])
@@ -174,7 +174,7 @@ static void LoadSky_f (void)
 			Con_Print("no skybox has been set\n");
 		break;
 	case 2:
-		if (R_SetSkyBox(Cmd_Argv(1)))
+		if (R_SetSkyBox(Cmd_Argv(cmd, 1)))
 		{
 			if (skyname[0])
 				Con_Printf("skybox set to %s\n", skyname);
@@ -182,7 +182,7 @@ static void LoadSky_f (void)
 				Con_Print("skybox disabled\n");
 		}
 		else
-			Con_Printf("failed to load skybox %s\n", Cmd_Argv(1));
+			Con_Printf("failed to load skybox %s\n", Cmd_Argv(cmd, 1));
 		break;
 	default:
 		Con_Print("usage: loadsky skyname\n");
@@ -463,7 +463,7 @@ static void r_sky_newmap(void)
 
 void R_Sky_Init(void)
 {
-	Cmd_AddCommand ("loadsky", &LoadSky_f, "load a skybox by basename (for example loadsky mtnsun_ loads mtnsun_ft.tga and so on)");
+	Cmd_AddCommand(&cmd_client, "loadsky", &LoadSky_f, "load a skybox by basename (for example loadsky mtnsun_ loads mtnsun_ft.tga and so on)");
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);

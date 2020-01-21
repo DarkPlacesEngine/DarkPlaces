@@ -1193,7 +1193,7 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	SV_UnlockThreadMutex();
 }
 
-static void Crypto_KeyGen_f(void)
+static void Crypto_KeyGen_f(cmd_state_t *cmd)
 {
 	int i;
 	const char *p[1];
@@ -1211,14 +1211,14 @@ static void Crypto_KeyGen_f(void)
 		Con_Print("libd0_blind_id DLL not found, this command is inactive.\n");
 		return;
 	}
-	if(Cmd_Argc() != 3)
+	if(Cmd_Argc(cmd) != 3)
 	{
-		Con_Printf("usage:\n%s id url\n", Cmd_Argv(0));
+		Con_Printf("usage:\n%s id url\n", Cmd_Argv(cmd, 0));
 		return;
 	}
 	SV_LockThreadMutex();
 	Crypto_LoadKeys();
-	i = atoi(Cmd_Argv(1));
+	i = atoi(Cmd_Argv(cmd, 1));
 	if(!pubkeys[i])
 	{
 		Con_Printf("there is no public key %d\n", i);
@@ -1318,8 +1318,8 @@ static void Crypto_KeyGen_f(void)
 		SV_UnlockThreadMutex();
 		return;
 	}
-	buf2pos = strlen(Cmd_Argv(2));
-	memcpy(buf2, Cmd_Argv(2), buf2pos);
+	buf2pos = strlen(Cmd_Argv(cmd, 2));
+	memcpy(buf2, Cmd_Argv(cmd, 2), buf2pos);
 	if(!(buf2l = Crypto_UnParsePack(buf2 + buf2pos, sizeof(buf2) - buf2pos - 1, FOURCC_D0IQ, p, l, 1)))
 	{
 		Con_Printf("Crypto_UnParsePack failed\n");
@@ -1349,14 +1349,14 @@ static void Crypto_KeyGen_f(void)
 // end
 
 // console commands
-static void Crypto_Reload_f(void)
+static void Crypto_Reload_f(cmd_state_t *cmd)
 {
 	Crypto_ClearHostKeys();
 	Crypto_UnloadKeys();
 	Crypto_LoadKeys();
 }
 
-static void Crypto_Keys_f(void)
+static void Crypto_Keys_f(cmd_state_t *cmd)
 {
 	int i;
 	if(!d0_blind_id_dll)
@@ -1379,7 +1379,7 @@ static void Crypto_Keys_f(void)
 	}
 }
 
-static void Crypto_HostKeys_f(void)
+static void Crypto_HostKeys_f(cmd_state_t *cmd)
 {
 	int i;
 	crypto_storedhostkey_t *hk;
@@ -1404,7 +1404,7 @@ static void Crypto_HostKeys_f(void)
 	}
 }
 
-static void Crypto_HostKey_Clear_f(void)
+static void Crypto_HostKey_Clear_f(cmd_state_t *cmd)
 {
 	lhnetaddress_t addr;
 	int i;
@@ -1415,12 +1415,12 @@ static void Crypto_HostKey_Clear_f(void)
 		return;
 	}
 
-	for(i = 1; i < Cmd_Argc(); ++i)
+	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		LHNETADDRESS_FromString(&addr, Cmd_Argv(i), 26000);
+		LHNETADDRESS_FromString(&addr, Cmd_Argv(cmd, i), 26000);
 		if(Crypto_ClearHostKey(&addr))
 		{
-			Con_Printf("cleared host key for %s\n", Cmd_Argv(i));
+			Con_Printf("cleared host key for %s\n", Cmd_Argv(cmd, i));
 		}
 	}
 }
@@ -1429,11 +1429,18 @@ void Crypto_Init_Commands(void)
 {
 	if(d0_blind_id_dll)
 	{
-		Cmd_AddCommand("crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
-		Cmd_AddCommand("crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
-		Cmd_AddCommand("crypto_keys", Crypto_Keys_f, "lists the loaded keys");
-		Cmd_AddCommand("crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
-		Cmd_AddCommand("crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
+		Cmd_AddCommand(&cmd_client, "crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
+		Cmd_AddCommand(&cmd_client, "crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
+		Cmd_AddCommand(&cmd_client, "crypto_keys", Crypto_Keys_f, "lists the loaded keys");
+		Cmd_AddCommand(&cmd_client, "crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
+		Cmd_AddCommand(&cmd_client, "crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
+
+		Cmd_AddCommand(&cmd_server, "crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
+		Cmd_AddCommand(&cmd_server, "crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
+		Cmd_AddCommand(&cmd_server, "crypto_keys", Crypto_Keys_f, "lists the loaded keys");
+		Cmd_AddCommand(&cmd_server, "crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
+		Cmd_AddCommand(&cmd_server, "crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
+
 		Cvar_RegisterVariable(&crypto_developer);
 		if(d0_rijndael_dll)
 			Cvar_RegisterVariable(&crypto_aeslevel);

@@ -1488,7 +1488,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surface
 }
 
 //Made by [515]
-static void R_ReplaceWorldTexture (void)
+static void R_ReplaceWorldTexture_f(cmd_state_t *cmd)
 {
 	dp_model_t		*m;
 	texture_t	*t;
@@ -1502,7 +1502,7 @@ static void R_ReplaceWorldTexture (void)
 	}
 	m = r_refdef.scene.worldmodel;
 
-	if(Cmd_Argc() < 2)
+	if(Cmd_Argc(cmd) < 2)
 	{
 		Con_Print("r_replacemaptexture <texname> <newtexname> - replaces texture\n");
 		Con_Print("r_replacemaptexture <texname> - switch back to default texture\n");
@@ -1513,8 +1513,8 @@ static void R_ReplaceWorldTexture (void)
 		Con_Print("This command works only in singleplayer\n");
 		return;
 	}
-	r = Cmd_Argv(1);
-	newt = Cmd_Argv(2);
+	r = Cmd_Argv(cmd, 1);
+	newt = Cmd_Argv(cmd, 2);
 	if(!newt[0])
 		newt = r;
 	for(i=0,t=m->data_textures;i<m->num_textures;i++,t++)
@@ -1537,7 +1537,7 @@ static void R_ReplaceWorldTexture (void)
 }
 
 //Made by [515]
-static void R_ListWorldTextures (void)
+static void R_ListWorldTextures_f(cmd_state_t *cmd)
 {
 	dp_model_t		*m;
 	texture_t	*t;
@@ -1587,8 +1587,8 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_vis_trace_surfaces);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
-	Cmd_AddCommand ("r_replacemaptexture", R_ReplaceWorldTexture, "override a map texture for testing purposes");
-	Cmd_AddCommand ("r_listmaptextures", R_ListWorldTextures, "list all textures used by the current map");
+	Cmd_AddCommand(&cmd_client, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
+	Cmd_AddCommand(&cmd_client, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
 
 	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

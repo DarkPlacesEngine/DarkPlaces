@@ -845,16 +845,16 @@ void Mem_PrintList(size_t minallocationsize)
 	}
 }
 
-static void MemList_f(void)
+static void MemList_f(cmd_state_t *cmd)
 {
-	switch(Cmd_Argc())
+	switch(Cmd_Argc(cmd))
 	{
 	case 1:
 		Mem_PrintList(1<<30);
 		Mem_PrintStats();
 		break;
 	case 2:
-		Mem_PrintList(atoi(Cmd_Argv(1)) * 1024);
+		Mem_PrintList(atoi(Cmd_Argv(cmd, 1)) * 1024);
 		Mem_PrintStats();
 		break;
 	default:
@@ -863,7 +863,7 @@ static void MemList_f(void)
 	}
 }
 
-static void MemStats_f(void)
+static void MemStats_f(cmd_state_t *cmd)
 {
 	Mem_CheckSentinelsGlobal();
 	R_TextureStats_Print(false, false, true);
@@ -916,8 +916,12 @@ void Memory_Shutdown (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand ("memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand ("memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+	Cmd_AddCommand(&cmd_client, "memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand(&cmd_client, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+
+	Cmd_AddCommand(&cmd_server, "memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand(&cmd_server, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);
 	Cvar_RegisterVariable (&developer_memoryreportlargerthanmb);

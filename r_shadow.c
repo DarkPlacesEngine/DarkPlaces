@@ -281,7 +281,7 @@ void R_Shadow_SaveWorldLights(void);
 void R_Shadow_LoadWorldLights(void);
 void R_Shadow_LoadLightsFile(void);
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void);
-void R_Shadow_EditLights_Reload_f(void);
+void R_Shadow_EditLights_Reload_f(cmd_state_t *cmd);
 static void R_Shadow_MakeTextures(void);
 
 #define EDLIGHTSPRSIZE			8
@@ -358,7 +358,7 @@ static void R_Shadow_SetShadowMode(void)
 	}
 
 	if(R_CompileShader_CheckStaticParms())
-		R_GLSL_Restart_f();
+		R_GLSL_Restart_f(&cmd_client);
 }
 
 qboolean R_Shadow_ShadowMappingEnabled(void)
@@ -580,7 +580,7 @@ static void r_shadow_newmap(void)
 	if (r_editlights_sprcubemapnoshadowlight) { R_SkinFrame_MarkUsed(r_editlights_sprcubemapnoshadowlight); }
 	if (r_editlights_sprselection)            { R_SkinFrame_MarkUsed(r_editlights_sprselection); }
 	if (strncmp(cl.worldname, r_shadow_mapname, sizeof(r_shadow_mapname)))
-		R_Shadow_EditLights_Reload_f();
+		R_Shadow_EditLights_Reload_f(&cmd_client);
 }
 
 void R_Shadow_Init(void)
@@ -5356,12 +5356,12 @@ void R_Shadow_UpdateWorldLightSelection(void)
 		R_Shadow_SelectLight(NULL);
 }
 
-static void R_Shadow_EditLights_Clear_f(void)
+static void R_Shadow_EditLights_Clear_f(cmd_state_t *cmd)
 {
 	R_Shadow_ClearWorldLights();
 }
 
-void R_Shadow_EditLights_Reload_f(void)
+void R_Shadow_EditLights_Reload_f(cmd_state_t *cmd)
 {
 	if (!cl.worldmodel)
 		return;
@@ -5380,26 +5380,26 @@ void R_Shadow_EditLights_Reload_f(void)
 	}
 }
 
-static void R_Shadow_EditLights_Save_f(void)
+static void R_Shadow_EditLights_Save_f(cmd_state_t *cmd)
 {
 	if (!cl.worldmodel)
 		return;
 	R_Shadow_SaveWorldLights();
 }
 
-static void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(void)
+static void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(cmd_state_t *cmd)
 {
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
 }
 
-static void R_Shadow_EditLights_ImportLightsFile_f(void)
+static void R_Shadow_EditLights_ImportLightsFile_f(cmd_state_t *cmd)
 {
 	R_Shadow_ClearWorldLights();
 	R_Shadow_LoadLightsFile();
 }
 
-static void R_Shadow_EditLights_Spawn_f(void)
+static void R_Shadow_EditLights_Spawn_f(cmd_state_t *cmd)
 {
 	vec3_t color;
 	if (!r_editlights.integer)
@@ -5407,7 +5407,7 @@ static void R_Shadow_EditLights_Spawn_f(void)
 		Con_Print("Cannot spawn light when not in editing mode.  Set r_editlights to 1.\n");
 		return;
 	}
-	if (Cmd_Argc() != 1)
+	if (Cmd_Argc(cmd) != 1)
 	{
 		Con_Print("r_editlights_spawn does not take parameters\n");
 		return;
@@ -5416,7 +5416,7 @@ static void R_Shadow_EditLights_Spawn_f(void)
 	R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), r_editlights_cursorlocation, vec3_origin, color, 200, 0, 0, true, NULL, 0.25, 0, 1, 1, LIGHTFLAG_REALTIMEMODE);
 }
 
-static void R_Shadow_EditLights_Edit_f(void)
+static void R_Shadow_EditLights_Edit_f(cmd_state_t *cmd)
 {
 	vec3_t origin, angles, color;
 	vec_t radius, corona, coronasizescale, ambientscale, diffusescale, specularscale;
@@ -5450,273 +5450,273 @@ static void R_Shadow_EditLights_Edit_f(void)
 	flags = r_shadow_selectedlight->flags;
 	normalmode = (flags & LIGHTFLAG_NORMALMODE) != 0;
 	realtimemode = (flags & LIGHTFLAG_REALTIMEMODE) != 0;
-	if (!strcmp(Cmd_Argv(1), "origin"))
+	if (!strcmp(Cmd_Argv(cmd, 1), "origin"))
 	{
-		if (Cmd_Argc() != 5)
+		if (Cmd_Argc(cmd) != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[0] = atof(Cmd_Argv(2));
-		origin[1] = atof(Cmd_Argv(3));
-		origin[2] = atof(Cmd_Argv(4));
+		origin[0] = atof(Cmd_Argv(cmd, 2));
+		origin[1] = atof(Cmd_Argv(cmd, 3));
+		origin[2] = atof(Cmd_Argv(cmd, 4));
 	}
-	else if (!strcmp(Cmd_Argv(1), "originscale"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "originscale"))
 	{
-		if (Cmd_Argc() != 5)
+		if (Cmd_Argc(cmd) != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[0] *= atof(Cmd_Argv(2));
-		origin[1] *= atof(Cmd_Argv(3));
-		origin[2] *= atof(Cmd_Argv(4));
+		origin[0] *= atof(Cmd_Argv(cmd, 2));
+		origin[1] *= atof(Cmd_Argv(cmd, 3));
+		origin[2] *= atof(Cmd_Argv(cmd, 4));
 	}
-	else if (!strcmp(Cmd_Argv(1), "originx"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "originx"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[0] = atof(Cmd_Argv(2));
+		origin[0] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "originy"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "originy"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[1] = atof(Cmd_Argv(2));
+		origin[1] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "originz"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "originz"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[2] = atof(Cmd_Argv(2));
+		origin[2] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "move"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "move"))
 	{
-		if (Cmd_Argc() != 5)
+		if (Cmd_Argc(cmd) != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[0] += atof(Cmd_Argv(2));
-		origin[1] += atof(Cmd_Argv(3));
-		origin[2] += atof(Cmd_Argv(4));
+		origin[0] += atof(Cmd_Argv(cmd, 2));
+		origin[1] += atof(Cmd_Argv(cmd, 3));
+		origin[2] += atof(Cmd_Argv(cmd, 4));
 	}
-	else if (!strcmp(Cmd_Argv(1), "movex"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "movex"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[0] += atof(Cmd_Argv(2));
+		origin[0] += atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "movey"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "movey"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[1] += atof(Cmd_Argv(2));
+		origin[1] += atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "movez"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "movez"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		origin[2] += atof(Cmd_Argv(2));
+		origin[2] += atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "angles"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "angles"))
 	{
-		if (Cmd_Argc() != 5)
+		if (Cmd_Argc(cmd) != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		angles[0] = atof(Cmd_Argv(2));
-		angles[1] = atof(Cmd_Argv(3));
-		angles[2] = atof(Cmd_Argv(4));
+		angles[0] = atof(Cmd_Argv(cmd, 2));
+		angles[1] = atof(Cmd_Argv(cmd, 3));
+		angles[2] = atof(Cmd_Argv(cmd, 4));
 	}
-	else if (!strcmp(Cmd_Argv(1), "anglesx"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "anglesx"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		angles[0] = atof(Cmd_Argv(2));
+		angles[0] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "anglesy"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "anglesy"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		angles[1] = atof(Cmd_Argv(2));
+		angles[1] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "anglesz"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "anglesz"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		angles[2] = atof(Cmd_Argv(2));
+		angles[2] = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "color"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "color"))
 	{
-		if (Cmd_Argc() != 5)
+		if (Cmd_Argc(cmd) != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s red green blue\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s red green blue\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		color[0] = atof(Cmd_Argv(2));
-		color[1] = atof(Cmd_Argv(3));
-		color[2] = atof(Cmd_Argv(4));
+		color[0] = atof(Cmd_Argv(cmd, 2));
+		color[1] = atof(Cmd_Argv(cmd, 3));
+		color[2] = atof(Cmd_Argv(cmd, 4));
 	}
-	else if (!strcmp(Cmd_Argv(1), "radius"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "radius"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		radius = atof(Cmd_Argv(2));
+		radius = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "colorscale"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "colorscale"))
 	{
-		if (Cmd_Argc() == 3)
+		if (Cmd_Argc(cmd) == 3)
 		{
-			double scale = atof(Cmd_Argv(2));
+			double scale = atof(Cmd_Argv(cmd, 2));
 			color[0] *= scale;
 			color[1] *= scale;
 			color[2] *= scale;
 		}
 		else
 		{
-			if (Cmd_Argc() != 5)
+			if (Cmd_Argc(cmd) != 5)
 			{
-				Con_Printf("usage: r_editlights_edit %s red green blue  (OR grey instead of red green blue)\n", Cmd_Argv(1));
+				Con_Printf("usage: r_editlights_edit %s red green blue  (OR grey instead of red green blue)\n", Cmd_Argv(cmd, 1));
 				return;
 			}
-			color[0] *= atof(Cmd_Argv(2));
-			color[1] *= atof(Cmd_Argv(3));
-			color[2] *= atof(Cmd_Argv(4));
+			color[0] *= atof(Cmd_Argv(cmd, 2));
+			color[1] *= atof(Cmd_Argv(cmd, 3));
+			color[2] *= atof(Cmd_Argv(cmd, 4));
 		}
 	}
-	else if (!strcmp(Cmd_Argv(1), "radiusscale") || !strcmp(Cmd_Argv(1), "sizescale"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "radiusscale") || !strcmp(Cmd_Argv(cmd, 1), "sizescale"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		radius *= atof(Cmd_Argv(2));
+		radius *= atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "style"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "style"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		style = atoi(Cmd_Argv(2));
+		style = atoi(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "cubemap"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "cubemap"))
 	{
-		if (Cmd_Argc() > 3)
+		if (Cmd_Argc(cmd) > 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		if (Cmd_Argc() == 3)
-			strlcpy(cubemapname, Cmd_Argv(2), sizeof(cubemapname));
+		if (Cmd_Argc(cmd) == 3)
+			strlcpy(cubemapname, Cmd_Argv(cmd, 2), sizeof(cubemapname));
 		else
 			cubemapname[0] = 0;
 	}
-	else if (!strcmp(Cmd_Argv(1), "shadows"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "shadows"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		shadows = Cmd_Argv(2)[0] == 'y' || Cmd_Argv(2)[0] == 'Y' || Cmd_Argv(2)[0] == 't' || atoi(Cmd_Argv(2));
+		shadows = Cmd_Argv(cmd, 2)[0] == 'y' || Cmd_Argv(cmd, 2)[0] == 'Y' || Cmd_Argv(cmd, 2)[0] == 't' || atoi(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "corona"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "corona"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		corona = atof(Cmd_Argv(2));
+		corona = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "coronasize"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "coronasize"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		coronasizescale = atof(Cmd_Argv(2));
+		coronasizescale = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "ambient"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "ambient"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		ambientscale = atof(Cmd_Argv(2));
+		ambientscale = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "diffuse"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "diffuse"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		diffusescale = atof(Cmd_Argv(2));
+		diffusescale = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "specular"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "specular"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		specularscale = atof(Cmd_Argv(2));
+		specularscale = atof(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "normalmode"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "normalmode"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		normalmode = Cmd_Argv(2)[0] == 'y' || Cmd_Argv(2)[0] == 'Y' || Cmd_Argv(2)[0] == 't' || atoi(Cmd_Argv(2));
+		normalmode = Cmd_Argv(cmd, 2)[0] == 'y' || Cmd_Argv(cmd, 2)[0] == 'Y' || Cmd_Argv(cmd, 2)[0] == 't' || atoi(Cmd_Argv(cmd, 2));
 	}
-	else if (!strcmp(Cmd_Argv(1), "realtimemode"))
+	else if (!strcmp(Cmd_Argv(cmd, 1), "realtimemode"))
 	{
-		if (Cmd_Argc() != 3)
+		if (Cmd_Argc(cmd) != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(cmd, 1));
 			return;
 		}
-		realtimemode = Cmd_Argv(2)[0] == 'y' || Cmd_Argv(2)[0] == 'Y' || Cmd_Argv(2)[0] == 't' || atoi(Cmd_Argv(2));
+		realtimemode = Cmd_Argv(cmd, 2)[0] == 'y' || Cmd_Argv(cmd, 2)[0] == 'Y' || Cmd_Argv(cmd, 2)[0] == 't' || atoi(Cmd_Argv(cmd, 2));
 	}
 	else
 	{
@@ -5742,7 +5742,7 @@ static void R_Shadow_EditLights_Edit_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, origin, angles, color, radius, corona, style, shadows, cubemapname, coronasizescale, ambientscale, diffusescale, specularscale, flags);
 }
 
-static void R_Shadow_EditLights_EditAll_f(void)
+static void R_Shadow_EditLights_EditAll_f(cmd_state_t *cmd)
 {
 	size_t lightindex;
 	dlight_t *light, *oldselected;
@@ -5763,7 +5763,7 @@ static void R_Shadow_EditLights_EditAll_f(void)
 		if (!light)
 			continue;
 		R_Shadow_SelectLight(light);
-		R_Shadow_EditLights_Edit_f();
+		R_Shadow_EditLights_Edit_f(&cmd_client);
 	}
 	// return to old selected (to not mess editing once selection is locked)
 	R_Shadow_SelectLight(oldselected);
@@ -5853,7 +5853,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	dpsnprintf(temp, sizeof(temp), "BG stats     : %i traces %i hits\n", r_shadow_selectedlight->rtlight.bouncegrid_traces, r_shadow_selectedlight->rtlight.bouncegrid_hits); DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0, NULL, true, FONT_DEFAULT); y += 8;
 }
 
-static void R_Shadow_EditLights_ToggleShadow_f(void)
+static void R_Shadow_EditLights_ToggleShadow_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -5868,7 +5868,7 @@ static void R_Shadow_EditLights_ToggleShadow_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname, r_shadow_selectedlight->coronasizescale, r_shadow_selectedlight->ambientscale, r_shadow_selectedlight->diffusescale, r_shadow_selectedlight->specularscale, r_shadow_selectedlight->flags);
 }
 
-static void R_Shadow_EditLights_ToggleCorona_f(void)
+static void R_Shadow_EditLights_ToggleCorona_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -5883,7 +5883,7 @@ static void R_Shadow_EditLights_ToggleCorona_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname, r_shadow_selectedlight->coronasizescale, r_shadow_selectedlight->ambientscale, r_shadow_selectedlight->diffusescale, r_shadow_selectedlight->specularscale, r_shadow_selectedlight->flags);
 }
 
-static void R_Shadow_EditLights_Remove_f(void)
+static void R_Shadow_EditLights_Remove_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -5899,7 +5899,7 @@ static void R_Shadow_EditLights_Remove_f(void)
 	r_shadow_selectedlight = NULL;
 }
 
-static void R_Shadow_EditLights_Help_f(void)
+static void R_Shadow_EditLights_Help_f(cmd_state_t *cmd)
 {
 	Con_Print(
 "Documentation on r_editlights system:\n"
@@ -5956,7 +5956,7 @@ static void R_Shadow_EditLights_Help_f(void)
 	);
 }
 
-static void R_Shadow_EditLights_CopyInfo_f(void)
+static void R_Shadow_EditLights_CopyInfo_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -5985,7 +5985,7 @@ static void R_Shadow_EditLights_CopyInfo_f(void)
 	r_shadow_bufferlight.flags = r_shadow_selectedlight->flags;
 }
 
-static void R_Shadow_EditLights_PasteInfo_f(void)
+static void R_Shadow_EditLights_PasteInfo_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -6000,7 +6000,7 @@ static void R_Shadow_EditLights_PasteInfo_f(void)
 	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname, r_shadow_bufferlight.coronasizescale, r_shadow_bufferlight.ambientscale, r_shadow_bufferlight.diffusescale, r_shadow_bufferlight.specularscale, r_shadow_bufferlight.flags);
 }
 
-static void R_Shadow_EditLights_Lock_f(void)
+static void R_Shadow_EditLights_Lock_f(cmd_state_t *cmd)
 {
 	if (!r_editlights.integer)
 	{
@@ -6043,21 +6043,21 @@ static void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_current_specular);
 	Cvar_RegisterVariable(&r_editlights_current_normalmode);
 	Cvar_RegisterVariable(&r_editlights_current_realtimemode);
-	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
-	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
-	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
-	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
-	Cmd_AddCommand("r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
-	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
-	Cmd_AddCommand("r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
-	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
-	Cmd_AddCommand("r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
-	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
-	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
-	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
-	Cmd_AddCommand("r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
-	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
-	Cmd_AddCommand("r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
+	Cmd_AddCommand(&cmd_client, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
+	Cmd_AddCommand(&cmd_client, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
+	Cmd_AddCommand(&cmd_client, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
+	Cmd_AddCommand(&cmd_client, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
+	Cmd_AddCommand(&cmd_client, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
+	Cmd_AddCommand(&cmd_client, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
+	Cmd_AddCommand(&cmd_client, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
+	Cmd_AddCommand(&cmd_client, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
+	Cmd_AddCommand(&cmd_client, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
 }
 
 

@@ -454,14 +454,14 @@ void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_SleepMicroseconds(int microseconds);
 void NetConn_Heartbeat(int priority);
-void Net_Stats_f(void);
+void Net_Stats_f(cmd_state_t *cmd);
 
 #ifdef CONFIG_MENU
 void NetConn_QueryMasters(qboolean querydp, qboolean queryqw);
 void NetConn_QueryQueueFrame(void);
-void Net_Slist_f(void);
-void Net_SlistQW_f(void);
-void Net_Refresh_f(void);
+void Net_Slist_f(cmd_state_t *cmd);
+void Net_SlistQW_f(cmd_state_t *cmd);
+void Net_Refresh_f(cmd_state_t *cmd);
 
 /// ServerList interface (public)
 /// manually refresh the view set, do this after having changed the mask or any other flag

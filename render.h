@@ -752,6 +752,6 @@ void Mod_RenderInit(void);
 void Font_Init(void);
 
 qboolean R_CompileShader_CheckStaticParms(void);
-void R_GLSL_Restart_f(void);
+void R_GLSL_Restart_f(cmd_state_t *cmd);
 
 #endif

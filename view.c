@@ -186,6 +186,11 @@ void V_StartPitchDrift (void)
 	}
 }
 
+void V_StartPitchDrift_f(cmd_state_t *cmd)
+{
+	V_StartPitchDrift();
+}
+
 void V_StopPitchDrift (void)
 {
 	cl.laststop = cl.time;
@@ -346,12 +351,12 @@ static cshift_t v_cshift;
 V_cshift_f
 ==================
 */
-static void V_cshift_f (void)
+static void V_cshift_f(cmd_state_t *cmd)
 {
-	v_cshift.destcolor[0] = atof(Cmd_Argv(1));
-	v_cshift.destcolor[1] = atof(Cmd_Argv(2));
-	v_cshift.destcolor[2] = atof(Cmd_Argv(3));
-	v_cshift.percent = atof(Cmd_Argv(4));
+	v_cshift.destcolor[0] = atof(Cmd_Argv(cmd, 1));
+	v_cshift.destcolor[1] = atof(Cmd_Argv(cmd, 2));
+	v_cshift.destcolor[2] = atof(Cmd_Argv(cmd, 3));
+	v_cshift.percent = atof(Cmd_Argv(cmd, 4));
 }
 
 
@@ -362,9 +367,9 @@ V_BonusFlash_f
 When you run over an item, the server sends this command
 ==================
 */
-static void V_BonusFlash_f (void)
+static void V_BonusFlash_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc() == 1)
+	if(Cmd_Argc(cmd) == 1)
 	{
 		cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
 		cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
@@ -372,17 +377,17 @@ static void V_BonusFlash_f (void)
 		cl.cshifts[CSHIFT_BONUS].percent = 50;
 		cl.cshifts[CSHIFT_BONUS].alphafade = 100;
 	}
-	else if(Cmd_Argc() >= 4 && Cmd_Argc() <= 6)
+	else if(Cmd_Argc(cmd) >= 4 && Cmd_Argc(cmd) <= 6)
 	{
-		cl.cshifts[CSHIFT_BONUS].destcolor[0] = atof(Cmd_Argv(1)) * 255;
-		cl.cshifts[CSHIFT_BONUS].destcolor[1] = atof(Cmd_Argv(2)) * 255;
-		cl.cshifts[CSHIFT_BONUS].destcolor[2] = atof(Cmd_Argv(3)) * 255;
-		if(Cmd_Argc() >= 5)
-			cl.cshifts[CSHIFT_BONUS].percent = atof(Cmd_Argv(4)) * 255; // yes, these are HEXADECIMAL percent ;)
+		cl.cshifts[CSHIFT_BONUS].destcolor[0] = atof(Cmd_Argv(cmd, 1)) * 255;
+		cl.cshifts[CSHIFT_BONUS].destcolor[1] = atof(Cmd_Argv(cmd, 2)) * 255;
+		cl.cshifts[CSHIFT_BONUS].destcolor[2] = atof(Cmd_Argv(cmd, 3)) * 255;
+		if(Cmd_Argc(cmd) >= 5)
+			cl.cshifts[CSHIFT_BONUS].percent = atof(Cmd_Argv(cmd, 4)) * 255; // yes, these are HEXADECIMAL percent ;)
 		else
 			cl.cshifts[CSHIFT_BONUS].percent = 50;
-		if(Cmd_Argc() >= 6)
-			cl.cshifts[CSHIFT_BONUS].alphafade = atof(Cmd_Argv(5)) * 255;
+		if(Cmd_Argc(cmd) >= 6)
+			cl.cshifts[CSHIFT_BONUS].alphafade = atof(Cmd_Argv(cmd, 5)) * 255;
 		else
 			cl.cshifts[CSHIFT_BONUS].alphafade = 100;
 	}
@@ -1195,9 +1200,12 @@ V_Init
 */
 void V_Init (void)
 {
-	Cmd_AddCommand ("v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand ("bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
-	Cmd_AddCommand ("centerview", V_StartPitchDrift, "gradually recenter view (stop looking up/down)");
+	Cmd_AddCommand(&cmd_client, "v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand(&cmd_client, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
+	Cmd_AddCommand(&cmd_client, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
+
+	Cmd_AddCommand(&cmd_clientfromserver, "v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand(&cmd_clientfromserver, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
 
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);

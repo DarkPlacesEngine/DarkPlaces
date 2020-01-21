@@ -677,7 +677,7 @@ CONSOLE
 Con_ToggleConsole_f
 ================
 */
-void Con_ToggleConsole_f (void)
+void Con_ToggleConsole_f(cmd_state_t *cmd)
 {
 	if (COM_CheckParm ("-noconsole"))
 		if (!(key_consoleactive & KEY_CONSOLEACTIVE_USER))
@@ -707,13 +707,13 @@ void Con_ClearNotify (void)
 Con_MessageMode_f
 ================
 */
-static void Con_MessageMode_f (void)
+static void Con_MessageMode_f(cmd_state_t *cmd)
 {
 	key_dest = key_message;
 	chat_mode = 0; // "say"
-	if(Cmd_Argc() > 1)
+	if(Cmd_Argc(cmd) > 1)
 	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
+		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
 		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 }
@@ -724,13 +724,13 @@ static void Con_MessageMode_f (void)
 Con_MessageMode2_f
 ================
 */
-static void Con_MessageMode2_f (void)
+static void Con_MessageMode2_f(cmd_state_t *cmd)
 {
 	key_dest = key_message;
 	chat_mode = 1; // "say_team"
-	if(Cmd_Argc() > 1)
+	if(Cmd_Argc(cmd) > 1)
 	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
+		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
 		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 }
@@ -740,12 +740,12 @@ static void Con_MessageMode2_f (void)
 Con_CommandMode_f
 ================
 */
-static void Con_CommandMode_f (void)
+static void Con_CommandMode_f(cmd_state_t *cmd)
 {
 	key_dest = key_message;
-	if(Cmd_Argc() > 1)
+	if(Cmd_Argc(cmd) > 1)
 	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args());
+		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
 		chat_bufferlen = (unsigned int)strlen(chat_buffer);
 	}
 	chat_mode = -1; // command
@@ -782,32 +782,32 @@ void Con_CheckResize (void)
 
 //[515]: the simplest command ever
 //LadyHavoc: not so simple after I made it print usage...
-static void Con_Maps_f (void)
+static void Con_Maps_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc() > 2)
+	if (Cmd_Argc(cmd) > 2)
 	{
 		Con_Printf("usage: maps [mapnameprefix]\n");
 		return;
 	}
-	else if (Cmd_Argc() == 2)
-		GetMapList(Cmd_Argv(1), NULL, 0);
+	else if (Cmd_Argc(cmd) == 2)
+		GetMapList(Cmd_Argv(cmd, 1), NULL, 0);
 	else
 		GetMapList("", NULL, 0);
 }
 
-static void Con_ConDump_f (void)
+static void Con_ConDump_f(cmd_state_t *cmd)
 {
 	int i;
 	qfile_t *file;
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Printf("usage: condump <filename>\n");
 		return;
 	}
-	file = FS_OpenRealFile(Cmd_Argv(1), "w", false);
+	file = FS_OpenRealFile(Cmd_Argv(cmd, 1), "w", false);
 	if (!file)
 	{
-		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(1));
+		Con_Printf("condump: unable to write file \"%s\"\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 	if (con_mutex) Thread_LockMutex(con_mutex);
@@ -833,7 +833,7 @@ static void Con_ConDump_f (void)
 	FS_Close(file);
 }
 
-void Con_Clear_f (void)
+void Con_Clear_f(cmd_state_t *cmd)
 {
 	if (con_mutex) Thread_LockMutex(con_mutex);
 	ConBuffer_Clear(&con);
@@ -896,13 +896,16 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&condump_stripcolors);
 
 	// register our commands
-	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
-	Cmd_AddCommand ("messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
-	Cmd_AddCommand ("messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
-	Cmd_AddCommand ("commandmode", Con_CommandMode_f, "input a console command");
-	Cmd_AddCommand ("clear", Con_Clear_f, "clear console history");
-	Cmd_AddCommand ("maps", Con_Maps_f, "list information about available maps");
-	Cmd_AddCommand ("condump", Con_ConDump_f, "output console history to a file (see also log_file)");
+	Cmd_AddCommand(&cmd_client, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
+	Cmd_AddCommand(&cmd_client, "messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
+	Cmd_AddCommand(&cmd_client, "messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
+	Cmd_AddCommand(&cmd_client, "commandmode", Con_CommandMode_f, "input a console command");
+	Cmd_AddCommand(&cmd_client, "clear", Con_Clear_f, "clear console history");
+	Cmd_AddCommand(&cmd_client, "maps", Con_Maps_f, "list information about available maps");
+	Cmd_AddCommand(&cmd_client, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
+
+	Cmd_AddCommand(&cmd_server, "maps", Con_Maps_f, "list information about available maps");
+	Cmd_AddCommand(&cmd_server, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
 	Con_DPrint("Console initialized.\n");
@@ -2737,9 +2740,9 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 	Enhanced to tab-complete map names by [515]
 
 */
-void Con_CompleteCommandLine (void)
+void Con_CompleteCommandLine (cmd_state_t *cmd)
 {
-	const char *cmd = "";
+	const char *text = "";
 	char *s;
 	const char **list[4] = {0, 0, 0, 0};
 	char s2[512];
@@ -2939,11 +2942,11 @@ void Con_CompleteCommandLine (void)
 	}
 
 	// Count number of possible matches and print them
-	c = Cmd_CompleteCountPossible(s);
+	c = Cmd_CompleteCountPossible(cmd, s);
 	if (c)
 	{
 		Con_Printf("\n%i possible command%s\n", c, (c > 1) ? "s: " : ":");
-		Cmd_CompleteCommandPrint(s);
+		Cmd_CompleteCommandPrint(cmd, s);
 	}
 	v = Cvar_CompleteCountPossible(s);
 	if (v)
@@ -2951,11 +2954,11 @@ void Con_CompleteCommandLine (void)
 		Con_Printf("\n%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
 		Cvar_CompleteCvarPrint(s);
 	}
-	a = Cmd_CompleteAliasCountPossible(s);
+	a = Cmd_CompleteAliasCountPossible(cmd, s);
 	if (a)
 	{
 		Con_Printf("\n%i possible alias%s\n", a, (a > 1) ? "es: " : ":");
-		Cmd_CompleteAliasPrint(s);
+		Cmd_CompleteAliasPrint(cmd, s);
 	}
 	n = Nicks_CompleteCountPossible(key_line, key_linepos, s, true);
 	if (n)
@@ -2972,13 +2975,13 @@ void Con_CompleteCommandLine (void)
 	}
 
 	if (c)
-		cmd = *(list[0] = Cmd_CompleteBuildList(s));
+		text = *(list[0] = Cmd_CompleteBuildList(cmd, s));
 	if (v)
-		cmd = *(list[1] = Cvar_CompleteBuildList(s));
+		text = *(list[1] = Cvar_CompleteBuildList(s));
 	if (a)
-		cmd = *(list[2] = Cmd_CompleteAliasBuildList(s));
+		text = *(list[2] = Cmd_CompleteAliasBuildList(cmd, s));
 	if (n)
-		cmd = *(list[3] = Nicks_CompleteBuildList(n));
+		text = *(list[3] = Nicks_CompleteBuildList(n));
 
 	for (cmd_len = (int)strlen(s);;cmd_len++)
 	{
@@ -2986,10 +2989,10 @@ void Con_CompleteCommandLine (void)
 		for (i = 0; i < 3; i++)
 			if (list[i])
 				for (l = list[i];*l;l++)
-					if ((*l)[cmd_len] != cmd[cmd_len])
+					if ((*l)[cmd_len] != text[cmd_len])
 						goto done;
 		// all possible matches share this character, so we continue...
-		if (!cmd[cmd_len])
+		if (!text[cmd_len])
 		{
 			// if all matches ended at the same position, stop
 			// (this means there is only one match)
@@ -3000,10 +3003,10 @@ done:
 
 	// prevent a buffer overrun by limiting cmd_len according to remaining space
 	cmd_len = min(cmd_len, (int)sizeof(key_line) - 1 - pos);
-	if (cmd)
+	if (text)
 	{
 		key_linepos = pos;
-		memcpy(&key_line[key_linepos], cmd, cmd_len);
+		memcpy(&key_line[key_linepos], text, cmd_len);
 		key_linepos += cmd_len;
 		// if there is only one match, add a space after it
 		if (c + v + a + n == 1 && key_linepos < (int)sizeof(key_line) - 1)

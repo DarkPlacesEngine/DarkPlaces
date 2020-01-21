@@ -1394,7 +1394,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 	CHECKGLERROR
 }
 
-void R_GLSL_Restart_f(void)
+void R_GLSL_Restart_f(cmd_state_t *cmd)
 {
 	unsigned int i, limit;
 	switch(vid.renderpath)
@@ -1419,7 +1419,7 @@ void R_GLSL_Restart_f(void)
 	}
 }
 
-static void R_GLSL_DumpShader_f(void)
+static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 {
 	int i, language, mode, dupe;
 	char *text;
@@ -3131,7 +3131,7 @@ static void gl_main_shutdown(void)
 	r_texture_numcubemaps = 0;
 	//r_texture_fogintensity = NULL;
 	memset(&r_fb, 0, sizeof(r_fb));
-	R_GLSL_Restart_f();
+	R_GLSL_Restart_f(&cmd_client);
 
 	r_glsl_permutation = NULL;
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
@@ -3170,8 +3170,8 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 	R_InitShaderModeInfo();
 
-	Cmd_AddCommand("r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
-	Cmd_AddCommand("r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
+	Cmd_AddCommand(&cmd_client, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
+	Cmd_AddCommand(&cmd_client, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
 	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -5630,7 +5630,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 
 	if(R_CompileShader_CheckStaticParms())
-		R_GLSL_Restart_f();
+		R_GLSL_Restart_f(&cmd_client);
 
 	if (!r_drawentities.integer)
 		r_refdef.scene.numentities = 0;

@@ -538,7 +538,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 // check for overlap with a command
-	if (Cmd_Exists (variable->name))
+	if (Cmd_Exists(&cmd_client, variable->name) || Cmd_Exists(&cmd_server, variable->name))
 	{
 		Con_Printf("Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
@@ -618,7 +618,7 @@ cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *ne
 	}
 
 // check for overlap with a command
-	if (Cmd_Exists (name))
+	if (Cmd_Exists(&cmd_client, name) || Cmd_Exists(&cmd_server, name))
 	{
 		Con_Printf("Cvar_Get: %s is a command\n", name);
 		return NULL;
@@ -670,17 +670,17 @@ Cvar_Command
 Handles variable inspection and changing from the console
 ============
 */
-qboolean	Cvar_Command (void)
+qboolean	Cvar_Command (cmd_state_t *cmd)
 {
 	cvar_t			*v;
 
 // check variables
-	v = Cvar_FindVar (Cmd_Argv(0));
+	v = Cvar_FindVar (Cmd_Argv(cmd, 0));
 	if (!v)
 		return false;
 
 // perform a variable print or set
-	if (Cmd_Argc() == 1)
+	if (Cmd_Argc(cmd) == 1)
 	{
 		Con_Printf("\"%s\" is \"%s\" [\"%s\"]\n", v->name, ((v->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : v->string), v->defstring);
 		return true;
@@ -694,7 +694,7 @@ qboolean	Cvar_Command (void)
 		Con_Printf("%s is read-only\n", v->name);
 		return true;
 	}
-	Cvar_Set (v->name, Cmd_Argv(1));
+	Cvar_Set (v->name, Cmd_Argv(cmd, 1));
 	if (developer_extra.integer)
 		Con_DPrint("\n");
 	return true;
@@ -710,7 +710,7 @@ void Cvar_UnlockDefaults (void)
 }
 
 
-void Cvar_LockDefaults_f (void)
+void Cvar_LockDefaults_f(cmd_state_t *cmd)
 {
 	cvar_t *var;
 	// lock in the default values of all cvars
@@ -822,7 +822,7 @@ void Cvar_RestoreInitState(void)
 	}
 }
 
-void Cvar_ResetToDefaults_All_f (void)
+void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd)
 {
 	cvar_t *var;
 	// restore the default values of all cvars
@@ -832,7 +832,7 @@ void Cvar_ResetToDefaults_All_f (void)
 }
 
 
-void Cvar_ResetToDefaults_NoSaveOnly_f (void)
+void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd)
 {
 	cvar_t *var;
 	// restore the default values of all cvars
@@ -842,7 +842,7 @@ void Cvar_ResetToDefaults_NoSaveOnly_f (void)
 }
 
 
-void Cvar_ResetToDefaults_SaveOnly_f (void)
+void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd)
 {
 	cvar_t *var;
 	// restore the default values of all cvars
@@ -883,7 +883,7 @@ void Cvar_WriteVariables (qfile_t *f)
 Cvar_List
 =========
 */
-void Cvar_List_f (void)
+void Cvar_List_f(cmd_state_t *cmd)
 {
 	cvar_t *cvar;
 	const char *partial;
@@ -891,9 +891,9 @@ void Cvar_List_f (void)
 	int count;
 	qboolean ispattern;
 
-	if (Cmd_Argc() > 1)
+	if (Cmd_Argc(cmd) > 1)
 	{
-		partial = Cmd_Argv (1);
+		partial = Cmd_Argv(cmd, 1);
 		len = strlen(partial);
 		ispattern = (strchr(partial, '*') || strchr(partial, '?'));
 	}
@@ -926,19 +926,19 @@ void Cvar_List_f (void)
 }
 // 2000-01-09 CvarList command by Maddes
 
-void Cvar_Set_f (void)
+void Cvar_Set_f(cmd_state_t *cmd)
 {
 	cvar_t *cvar;
 
 	// make sure it's the right number of parameters
-	if (Cmd_Argc() < 3)
+	if (Cmd_Argc(cmd) < 3)
 	{
 		Con_Printf("Set: wrong number of parameters, usage: set <variablename> <value> [<description>]\n");
 		return;
 	}
 
 	// check if it's read-only
-	cvar = Cvar_FindVar(Cmd_Argv(1));
+	cvar = Cvar_FindVar(Cmd_Argv(cmd, 1));
 	if (cvar && cvar->flags & CVAR_READONLY)
 	{
 		Con_Printf("Set: %s is read-only\n", cvar->name);
@@ -949,22 +949,22 @@ void Cvar_Set_f (void)
 		Con_DPrint("Set: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), 0, Cmd_Argc() > 3 ? Cmd_Argv(3) : NULL);
+	Cvar_Get(Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), 0, Cmd_Argc(cmd) > 3 ? Cmd_Argv(cmd, 3) : NULL);
 }
 
-void Cvar_SetA_f (void)
+void Cvar_SetA_f(cmd_state_t *cmd)
 {
 	cvar_t *cvar;
 
 	// make sure it's the right number of parameters
-	if (Cmd_Argc() < 3)
+	if (Cmd_Argc(cmd) < 3)
 	{
 		Con_Printf("SetA: wrong number of parameters, usage: seta <variablename> <value> [<description>]\n");
 		return;
 	}
 
 	// check if it's read-only
-	cvar = Cvar_FindVar(Cmd_Argv(1));
+	cvar = Cvar_FindVar(Cmd_Argv(cmd, 1));
 	if (cvar && cvar->flags & CVAR_READONLY)
 	{
 		Con_Printf("SetA: %s is read-only\n", cvar->name);
@@ -975,25 +975,25 @@ void Cvar_SetA_f (void)
 		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(Cmd_Argv(1), Cmd_Argv(2), CVAR_SAVE, Cmd_Argc() > 3 ? Cmd_Argv(3) : NULL);
+	Cvar_Get(Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), CVAR_SAVE, Cmd_Argc(cmd) > 3 ? Cmd_Argv(cmd, 3) : NULL);
 }
 
-void Cvar_Del_f (void)
+void Cvar_Del_f(cmd_state_t *cmd)
 {
 	int i;
 	cvar_t *cvar, *parent, **link, *prev;
 
-	if(Cmd_Argc() < 2)
+	if(Cmd_Argc(cmd) < 2)
 	{
 		Con_Printf("Del: wrong number of parameters, useage: unset <variablename1> [<variablename2> ...]\n");
 		return;
 	}
-	for(i = 1; i < Cmd_Argc(); ++i)
+	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		cvar = Cvar_FindVarLink(Cmd_Argv(i), &parent, &link, &prev);
+		cvar = Cvar_FindVarLink(Cmd_Argv(cmd, i), &parent, &link, &prev);
 		if(!cvar)
 		{
-			Con_Printf("Del: %s is not defined\n", Cmd_Argv(i));
+			Con_Printf("Del: %s is not defined\n", Cmd_Argv(cmd, i));
 			continue;
 		}
 		if(cvar->flags & CVAR_READONLY)
@@ -1033,19 +1033,19 @@ void Cvar_Del_f (void)
 }
 
 #ifdef FILLALLCVARSWITHRUBBISH
-void Cvar_FillAll_f()
+void Cvar_FillAll_f(cmd_state_t *cmd)
 {
 	char *buf, *p, *q;
 	int n, i;
 	cvar_t *var;
 	qboolean verify;
-	if(Cmd_Argc() != 2)
+	if(Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf("Usage: %s length to plant rubbish\n", Cmd_Argv(0));
-		Con_Printf("Usage: %s -length to verify that the rubbish is still there\n", Cmd_Argv(0));
+		Con_Printf("Usage: %s length to plant rubbish\n", Cmd_Argv(cmd, 0));
+		Con_Printf("Usage: %s -length to verify that the rubbish is still there\n", Cmd_Argv(cmd, 0));
 		return;
 	}
-	n = atoi(Cmd_Argv(1));
+	n = atoi(Cmd_Argv(cmd, 1));
 	verify = (n < 0);
 	if(verify)
 		n = -n;

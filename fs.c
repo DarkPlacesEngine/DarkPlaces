@@ -343,9 +343,9 @@ FUNCTION PROTOTYPES
 =============================================================================
 */
 
-void FS_Dir_f(void);
-void FS_Ls_f(void);
-void FS_Which_f(void);
+void FS_Dir_f(cmd_state_t *cmd);
+void FS_Ls_f(cmd_state_t *cmd);
+void FS_Which_f(cmd_state_t *cmd);
 
 static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
@@ -976,7 +976,7 @@ FS_Path_f
 
 ============
 */
-static void FS_Path_f (void)
+static void FS_Path_f(cmd_state_t *cmd)
 {
 	searchpath_t *s;
 
@@ -1513,7 +1513,7 @@ void FS_Rescan (void)
 	W_UnloadAll();
 }
 
-static void FS_Rescan_f(void)
+static void FS_Rescan_f(cmd_state_t *cmd)
 {
 	FS_Rescan();
 }
@@ -1574,19 +1574,19 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 
 	if (cls.demoplayback)
 	{
-		CL_Disconnect_f();
+		CL_Disconnect_f(&cmd_client);
 		cls.demonum = 0;
 	}
 
 	// unload all sounds so they will be reloaded from the new files as needed
-	S_UnloadAllSounds_f();
+	S_UnloadAllSounds_f(&cmd_client);
 
 	// close down the video subsystem, it will start up again when the config finishes...
 	VID_Stop();
 	vid_opened = false;
 
 	// restart the video subsystem after the config is executed
-	Cbuf_InsertText("\nloadconfig\nvid_restart\n\n");
+	Cbuf_InsertText(&cmd_client, "\nloadconfig\nvid_restart\n\n");
 
 	return true;
 }
@@ -1596,13 +1596,13 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 FS_GameDir_f
 ================
 */
-static void FS_GameDir_f (void)
+static void FS_GameDir_f(cmd_state_t *cmd)
 {
 	int i;
 	int numgamedirs;
 	char gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
-	if (Cmd_Argc() < 2)
+	if (Cmd_Argc(cmd) < 2)
 	{
 		Con_Printf("gamedirs active:");
 		for (i = 0;i < fs_numgamedirs;i++)
@@ -1611,7 +1611,7 @@ static void FS_GameDir_f (void)
 		return;
 	}
 
-	numgamedirs = Cmd_Argc() - 1;
+	numgamedirs = Cmd_Argc(cmd) - 1;
 	if (numgamedirs > MAX_GAMEDIRS)
 	{
 		Con_Printf("Too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
@@ -1619,7 +1619,7 @@ static void FS_GameDir_f (void)
 	}
 
 	for (i = 0;i < numgamedirs;i++)
-		strlcpy(gamedirs[i], Cmd_Argv(i+1), sizeof(gamedirs[i]));
+		strlcpy(gamedirs[i], Cmd_Argv(cmd, i+1), sizeof(gamedirs[i]));
 
 	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
 	{
@@ -2181,12 +2181,19 @@ void FS_Init_Commands(void)
 	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
 	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
-	Cmd_AddCommand ("gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
-	Cmd_AddCommand ("fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
-	Cmd_AddCommand ("path", FS_Path_f, "print searchpath (game directories and archives)");
-	Cmd_AddCommand ("dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
-	Cmd_AddCommand ("ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
-	Cmd_AddCommand ("which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+	Cmd_AddCommand(&cmd_client, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(&cmd_client, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
+	Cmd_AddCommand(&cmd_client, "path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand(&cmd_client, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand(&cmd_client, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand(&cmd_client, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+
+	Cmd_AddCommand(&cmd_server, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(&cmd_server, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
+	Cmd_AddCommand(&cmd_server, "path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand(&cmd_server, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand(&cmd_server, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand(&cmd_server, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
 }
 
 /*
@@ -3829,43 +3836,43 @@ static int FS_ListDirectory(const char *pattern, int oneperline)
 	return (int)numfiles;
 }
 
-static void FS_ListDirectoryCmd (const char* cmdname, int oneperline)
+static void FS_ListDirectoryCmd (cmd_state_t *cmd, const char* cmdname, int oneperline)
 {
 	const char *pattern;
-	if (Cmd_Argc() >= 3)
+	if (Cmd_Argc(cmd) >= 3)
 	{
 		Con_Printf("usage:\n%s [path/pattern]\n", cmdname);
 		return;
 	}
-	if (Cmd_Argc() == 2)
-		pattern = Cmd_Argv(1);
+	if (Cmd_Argc(cmd) == 2)
+		pattern = Cmd_Argv(cmd, 1);
 	else
 		pattern = "*";
 	if (!FS_ListDirectory(pattern, oneperline))
 		Con_Print("No files found.\n");
 }
 
-void FS_Dir_f(void)
+void FS_Dir_f(cmd_state_t *cmd)
 {
-	FS_ListDirectoryCmd("dir", true);
+	FS_ListDirectoryCmd(cmd, "dir", true);
 }
 
-void FS_Ls_f(void)
+void FS_Ls_f(cmd_state_t *cmd)
 {
-	FS_ListDirectoryCmd("ls", false);
+	FS_ListDirectoryCmd(cmd, "ls", false);
 }
 
-void FS_Which_f(void)
+void FS_Which_f(cmd_state_t *cmd)
 {
 	const char *filename;
 	int index;
 	searchpath_t *sp;
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf("usage:\n%s <file>\n", Cmd_Argv(0));
+		Con_Printf("usage:\n%s <file>\n", Cmd_Argv(cmd, 0));
 		return;
 	}  
-	filename = Cmd_Argv(1);
+	filename = Cmd_Argv(cmd, 1);
 	sp = FS_FindFile(filename, &index, true);
 	if (!sp) {
 		Con_Printf("%s isn't anywhere\n", filename);

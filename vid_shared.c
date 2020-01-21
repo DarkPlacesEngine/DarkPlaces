@@ -1062,7 +1062,7 @@ int VID_Shared_SetJoystick(int index)
 }
 
 
-static void Force_CenterView_f (void)
+static void Force_CenterView_f(cmd_state_t *cmd)
 {
 	cl.viewangles[PITCH] = 0;
 }
@@ -1348,8 +1348,8 @@ void VID_Shared_Init(void)
 	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
 #endif
 
-	Cmd_AddCommand("force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
-	Cmd_AddCommand("vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+	Cmd_AddCommand(&cmd_client, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
+	Cmd_AddCommand(&cmd_client, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
 static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
@@ -1453,7 +1453,7 @@ static void VID_CloseSystems(void)
 qboolean vid_commandlinecheck = true;
 extern qboolean vid_opened;
 
-void VID_Restart_f(void)
+void VID_Restart_f(cmd_state_t *cmd)
 {
 	char vabuf[1024];
 	char vabuf2[1024];

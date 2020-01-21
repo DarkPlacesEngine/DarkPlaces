@@ -368,7 +368,7 @@ void CL_Disconnect(void)
 		sizebuf_t buf;
 		unsigned char bufdata[8];
 		if (cls.demorecording)
-			CL_Stop_f();
+			CL_Stop_f(&cmd_client);
 
 		// send disconnect message 3 times to improve chances of server
 		// receiving it (but it still fails sometimes)
@@ -399,7 +399,7 @@ void CL_Disconnect(void)
 	cls.signon = 0;
 }
 
-void CL_Disconnect_f(void)
+void CL_Disconnect_f(cmd_state_t *cmd)
 {
 	CL_Disconnect ();
 	if (sv.active)
@@ -452,8 +452,8 @@ void CL_EstablishConnection(const char *host, int firstarg)
 		{
 			int i;
 			*cls.connect_userinfo = 0;
-			for(i = firstarg; i+2 <= Cmd_Argc(); i += 2)
-				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(i), Cmd_Argv(i+1));
+			for(i = firstarg; i+2 <= Cmd_Argc(&cmd_client); i += 2)
+				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(&cmd_client, i), Cmd_Argv(&cmd_client, i+1));
 		}
 		else if(firstarg < -1)
 		{
@@ -480,7 +480,7 @@ void CL_EstablishConnection(const char *host, int firstarg)
 CL_PrintEntities_f
 ==============
 */
-static void CL_PrintEntities_f(void)
+static void CL_PrintEntities_f(cmd_state_t *cmd)
 {
 	entity_t *ent;
 	int i;
@@ -507,7 +507,7 @@ CL_ModelIndexList_f
 List information on all models in the client modelindex
 ===============
 */
-static void CL_ModelIndexList_f(void)
+static void CL_ModelIndexList_f(cmd_state_t *cmd)
 {
 	int i;
 	dp_model_t *model;
@@ -535,7 +535,7 @@ CL_SoundIndexList_f
 List all sounds in the client soundindex
 ===============
 */
-static void CL_SoundIndexList_f(void)
+static void CL_SoundIndexList_f(cmd_state_t *cmd)
 {
 	int i = 1;
 
@@ -1953,7 +1953,7 @@ void CL_UpdateWorld(void)
 }
 
 // LadyHavoc: pausedemo command
-static void CL_PauseDemo_f (void)
+static void CL_PauseDemo_f(cmd_state_t *cmd)
 {
 	cls.demopaused = !cls.demopaused;
 	if (cls.demopaused)
@@ -1967,32 +1967,32 @@ static void CL_PauseDemo_f (void)
 CL_Fog_f
 ======================
 */
-static void CL_Fog_f (void)
+static void CL_Fog_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc () == 1)
+	if (Cmd_Argc (cmd) == 1)
 	{
 		Con_Printf("\"fog\" is \"%f %f %f %f %f %f %f %f %f\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end, r_refdef.fog_height, r_refdef.fog_fadedepth);
 		return;
 	}
 	FOG_clear(); // so missing values get good defaults
-	if(Cmd_Argc() > 1)
-		r_refdef.fog_density = atof(Cmd_Argv(1));
-	if(Cmd_Argc() > 2)
-		r_refdef.fog_red = atof(Cmd_Argv(2));
-	if(Cmd_Argc() > 3)
-		r_refdef.fog_green = atof(Cmd_Argv(3));
-	if(Cmd_Argc() > 4)
-		r_refdef.fog_blue = atof(Cmd_Argv(4));
-	if(Cmd_Argc() > 5)
-		r_refdef.fog_alpha = atof(Cmd_Argv(5));
-	if(Cmd_Argc() > 6)
-		r_refdef.fog_start = atof(Cmd_Argv(6));
-	if(Cmd_Argc() > 7)
-		r_refdef.fog_end = atof(Cmd_Argv(7));
-	if(Cmd_Argc() > 8)
-		r_refdef.fog_height = atof(Cmd_Argv(8));
-	if(Cmd_Argc() > 9)
-		r_refdef.fog_fadedepth = atof(Cmd_Argv(9));
+	if(Cmd_Argc(cmd) > 1)
+		r_refdef.fog_density = atof(Cmd_Argv(cmd, 1));
+	if(Cmd_Argc(cmd) > 2)
+		r_refdef.fog_red = atof(Cmd_Argv(cmd, 2));
+	if(Cmd_Argc(cmd) > 3)
+		r_refdef.fog_green = atof(Cmd_Argv(cmd, 3));
+	if(Cmd_Argc(cmd) > 4)
+		r_refdef.fog_blue = atof(Cmd_Argv(cmd, 4));
+	if(Cmd_Argc(cmd) > 5)
+		r_refdef.fog_alpha = atof(Cmd_Argv(cmd, 5));
+	if(Cmd_Argc(cmd) > 6)
+		r_refdef.fog_start = atof(Cmd_Argv(cmd, 6));
+	if(Cmd_Argc(cmd) > 7)
+		r_refdef.fog_end = atof(Cmd_Argv(cmd, 7));
+	if(Cmd_Argc(cmd) > 8)
+		r_refdef.fog_height = atof(Cmd_Argv(cmd, 8));
+	if(Cmd_Argc(cmd) > 9)
+		r_refdef.fog_fadedepth = atof(Cmd_Argv(cmd, 9));
 }
 
 /*
@@ -2000,24 +2000,24 @@ static void CL_Fog_f (void)
 CL_FogHeightTexture_f
 ======================
 */
-static void CL_Fog_HeightTexture_f (void)
+static void CL_Fog_HeightTexture_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc () < 11)
+	if (Cmd_Argc (cmd) < 11)
 	{
 		Con_Printf("\"fog_heighttexture\" is \"%f %f %f %f %f %f %f %f %f %s\"\n", r_refdef.fog_density, r_refdef.fog_red, r_refdef.fog_green, r_refdef.fog_blue, r_refdef.fog_alpha, r_refdef.fog_start, r_refdef.fog_end, r_refdef.fog_height, r_refdef.fog_fadedepth, r_refdef.fog_height_texturename);
 		return;
 	}
 	FOG_clear(); // so missing values get good defaults
-	r_refdef.fog_density = atof(Cmd_Argv(1));
-	r_refdef.fog_red = atof(Cmd_Argv(2));
-	r_refdef.fog_green = atof(Cmd_Argv(3));
-	r_refdef.fog_blue = atof(Cmd_Argv(4));
-	r_refdef.fog_alpha = atof(Cmd_Argv(5));
-	r_refdef.fog_start = atof(Cmd_Argv(6));
-	r_refdef.fog_end = atof(Cmd_Argv(7));
-	r_refdef.fog_height = atof(Cmd_Argv(8));
-	r_refdef.fog_fadedepth = atof(Cmd_Argv(9));
-	strlcpy(r_refdef.fog_height_texturename, Cmd_Argv(10), sizeof(r_refdef.fog_height_texturename));
+	r_refdef.fog_density = atof(Cmd_Argv(cmd, 1));
+	r_refdef.fog_red = atof(Cmd_Argv(cmd, 2));
+	r_refdef.fog_green = atof(Cmd_Argv(cmd, 3));
+	r_refdef.fog_blue = atof(Cmd_Argv(cmd, 4));
+	r_refdef.fog_alpha = atof(Cmd_Argv(cmd, 5));
+	r_refdef.fog_start = atof(Cmd_Argv(cmd, 6));
+	r_refdef.fog_end = atof(Cmd_Argv(cmd, 7));
+	r_refdef.fog_height = atof(Cmd_Argv(cmd, 8));
+	r_refdef.fog_fadedepth = atof(Cmd_Argv(cmd, 9));
+	strlcpy(r_refdef.fog_height_texturename, Cmd_Argv(cmd, 10), sizeof(r_refdef.fog_height_texturename));
 }
 
 
@@ -2028,7 +2028,7 @@ CL_TimeRefresh_f
 For program optimization
 ====================
 */
-static void CL_TimeRefresh_f (void)
+static void CL_TimeRefresh_f(cmd_state_t *cmd)
 {
 	int i;
 	double timestart, timedelta;
@@ -2047,7 +2047,7 @@ static void CL_TimeRefresh_f (void)
 	Con_Printf("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
-static void CL_AreaStats_f(void)
+static void CL_AreaStats_f(cmd_state_t *cmd)
 {
 	World_PrintAreaStats(&cl.world, "client");
 }
@@ -2122,29 +2122,29 @@ static void CL_Locs_AddNode(vec3_t mins, vec3_t maxs, const char *name)
 	*pointer = node;
 }
 
-static void CL_Locs_Add_f(void)
+static void CL_Locs_Add_f(cmd_state_t *cmd)
 {
 	vec3_t mins, maxs;
-	if (Cmd_Argc() != 5 && Cmd_Argc() != 8)
+	if (Cmd_Argc(cmd) != 5 && Cmd_Argc(cmd) != 8)
 	{
-		Con_Printf("usage: %s x y z[ x y z] name\n", Cmd_Argv(0));
+		Con_Printf("usage: %s x y z[ x y z] name\n", Cmd_Argv(cmd, 0));
 		return;
 	}
-	mins[0] = atof(Cmd_Argv(1));
-	mins[1] = atof(Cmd_Argv(2));
-	mins[2] = atof(Cmd_Argv(3));
-	if (Cmd_Argc() == 8)
+	mins[0] = atof(Cmd_Argv(cmd, 1));
+	mins[1] = atof(Cmd_Argv(cmd, 2));
+	mins[2] = atof(Cmd_Argv(cmd, 3));
+	if (Cmd_Argc(cmd) == 8)
 	{
-		maxs[0] = atof(Cmd_Argv(4));
-		maxs[1] = atof(Cmd_Argv(5));
-		maxs[2] = atof(Cmd_Argv(6));
-		CL_Locs_AddNode(mins, maxs, Cmd_Argv(7));
+		maxs[0] = atof(Cmd_Argv(cmd, 4));
+		maxs[1] = atof(Cmd_Argv(cmd, 5));
+		maxs[2] = atof(Cmd_Argv(cmd, 6));
+		CL_Locs_AddNode(mins, maxs, Cmd_Argv(cmd, 7));
 	}
 	else
-		CL_Locs_AddNode(mins, mins, Cmd_Argv(4));
+		CL_Locs_AddNode(mins, mins, Cmd_Argv(cmd, 4));
 }
 
-static void CL_Locs_RemoveNearest_f(void)
+static void CL_Locs_RemoveNearest_f(cmd_state_t *cmd)
 {
 	cl_locnode_t *loc;
 	loc = CL_Locs_FindNearest(r_refdef.view.origin);
@@ -2154,13 +2154,13 @@ static void CL_Locs_RemoveNearest_f(void)
 		Con_Printf("no loc point or box found for your location\n");
 }
 
-static void CL_Locs_Clear_f(void)
+static void CL_Locs_Clear_f(cmd_state_t *cmd)
 {
 	while (cl.locnodes)
 		CL_Locs_FreeNode(cl.locnodes);
 }
 
-static void CL_Locs_Save_f(void)
+static void CL_Locs_Save_f(cmd_state_t *cmd)
 {
 	cl_locnode_t *loc;
 	qfile_t *outfile;
@@ -2233,7 +2233,7 @@ static void CL_Locs_Save_f(void)
 	FS_Close(outfile);
 }
 
-void CL_Locs_Reload_f(void)
+void CL_Locs_Reload_f(cmd_state_t *cmd)
 {
 	int i, linenumber, limit, len;
 	const char *s;
@@ -2249,7 +2249,7 @@ void CL_Locs_Reload_f(void)
 		return;
 	}
 
-	CL_Locs_Clear_f();
+	CL_Locs_Clear_f(cmd);
 
 	// try maps/something.loc first (LadyHavoc: where I think they should be)
 	dpsnprintf(locfilename, sizeof(locfilename), "%s.loc", cl.worldnamenoextension);
@@ -2687,29 +2687,29 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_itembobspeed);
 	Cvar_RegisterVariable (&cl_itembobheight);
 
-	Cmd_AddCommand ("entities", CL_PrintEntities_f, "print information on network entities known to client");
-	Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-	Cmd_AddCommand ("record", CL_Record_f, "record a demo");
-	Cmd_AddCommand ("stop", CL_Stop_f, "stop recording or playing a demo");
-	Cmd_AddCommand ("playdemo", CL_PlayDemo_f, "watch a demo file");
-	Cmd_AddCommand ("timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+	Cmd_AddCommand(&cmd_client, "entities", CL_PrintEntities_f, "print information on network entities known to client");
+	Cmd_AddCommand(&cmd_client, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	Cmd_AddCommand(&cmd_client, "record", CL_Record_f, "record a demo");
+	Cmd_AddCommand(&cmd_client, "stop", CL_Stop_f, "stop recording or playing a demo");
+	Cmd_AddCommand(&cmd_client, "playdemo", CL_PlayDemo_f, "watch a demo file");
+	Cmd_AddCommand(&cmd_client, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
 	// Support Client-side Model Index List
-	Cmd_AddCommand ("cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
+	Cmd_AddCommand(&cmd_client, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 	// Support Client-side Sound Index List
-	Cmd_AddCommand ("cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
+	Cmd_AddCommand(&cmd_client, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 	Cvar_RegisterVariable (&cl_autodemo_delete);
 
-	Cmd_AddCommand ("fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
-	Cmd_AddCommand ("fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
+	Cmd_AddCommand(&cmd_client, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+	Cmd_AddCommand(&cmd_client, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
 	// LadyHavoc: added pausedemo
-	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+	Cmd_AddCommand(&cmd_client, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 
-	Cmd_AddCommand ("cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
+	Cmd_AddCommand(&cmd_client, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions_alpha_start);
@@ -2736,15 +2736,15 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&qport);
 	Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
-	Cmd_AddCommand("timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+	Cmd_AddCommand(&cmd_client, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
 	Cvar_RegisterVariable(&cl_locs_enable);
 	Cvar_RegisterVariable(&cl_locs_show);
-	Cmd_AddCommand("locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
-	Cmd_AddCommand("locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
-	Cmd_AddCommand("locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
-	Cmd_AddCommand("locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
-	Cmd_AddCommand("locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+	Cmd_AddCommand(&cmd_client, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+	Cmd_AddCommand(&cmd_client, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+	Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+	Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+	Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 	CL_Parse_Init();
 	CL_Particles_Init();

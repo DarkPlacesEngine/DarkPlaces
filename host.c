@@ -229,14 +229,16 @@ static void Host_ServerOptions (void)
 Host_InitLocal
 ======================
 */
-void Host_SaveConfig_f(void);
-void Host_LoadConfig_f(void);
+void Host_SaveConfig_f(cmd_state_t *cmd);
+void Host_LoadConfig_f(cmd_state_t *cmd);
 extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
 static void Host_InitLocal (void)
 {
-	Cmd_AddCommand("saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
-	Cmd_AddCommand("loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
+	Cmd_AddCommand(&cmd_client, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
+	Cmd_AddCommand(&cmd_client, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
+	Cmd_AddCommand(&cmd_server, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
+	Cmd_AddCommand(&cmd_server, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
@@ -302,30 +304,30 @@ void Host_SaveConfig(void)
 {
 	Host_SaveConfig_to(CONFIGFILENAME);
 }
-void Host_SaveConfig_f(void)
+void Host_SaveConfig_f(cmd_state_t *cmd)
 {
 	const char *file = CONFIGFILENAME;
 
-	if(Cmd_Argc() >= 2) {
-		file = Cmd_Argv(1);
+	if(Cmd_Argc(cmd) >= 2) {
+		file = Cmd_Argv(cmd, 1);
 		Con_Printf("Saving to %s\n", file);
 	}
 
 	Host_SaveConfig_to(file);
 }
 
-static void Host_AddConfigText(void)
+static void Host_AddConfigText(cmd_state_t *cmd)
 {
 	// set up the default startmap_sp and startmap_dm aliases (mods can
 	// override these) and then execute the quake.rc startup script
 	if (gamemode == GAME_NEHAHRA)
-		Cbuf_InsertText("alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec " STARTCONFIGFILENAME "\n");
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec " STARTCONFIGFILENAME "\n");
 	else if (gamemode == GAME_TRANSFUSION)
-		Cbuf_InsertText("alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec " STARTCONFIGFILENAME "\n");
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec " STARTCONFIGFILENAME "\n");
 	else if (gamemode == GAME_TEU)
-		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
-		Cbuf_InsertText("alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
 }
 
 /*
@@ -335,16 +337,16 @@ Host_LoadConfig_f
 Resets key bindings and cvars to defaults and then reloads scripts
 ===============
 */
-void Host_LoadConfig_f(void)
+void Host_LoadConfig_f(cmd_state_t *cmd)
 {
 	// reset all cvars, commands and aliases to init values
 	Cmd_RestoreInitState();
 #ifdef CONFIG_MENU
 	// prepend a menu restart command to execute after the config
-	Cbuf_InsertText("\nmenu_restart\n");
+	Cbuf_InsertText(&cmd_client, "\nmenu_restart\n");
 #endif
 	// reset cvars to their defaults, and then exec startup scripts again
-	Host_AddConfigText();
+	Host_AddConfigText(&cmd_client);
 }
 
 /*
@@ -632,14 +634,14 @@ Add them exactly as if they had been typed at the console
 */
 static void Host_GetConsoleCommands (void)
 {
-	char *cmd;
+	char *line;
 
-	while (1)
+	while ((line = Sys_ConsoleInput()))
 	{
-		cmd = Sys_ConsoleInput ();
-		if (!cmd)
-			break;
-		Cbuf_AddText (cmd);
+		if (cls.state == ca_dedicated)
+			Cbuf_AddText(&cmd_server, line);
+		else
+			Cbuf_AddText(&cmd_client, line);
 	}
 }
 
@@ -779,7 +781,8 @@ void Host_Main(void)
 			// process console commands
 //			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
-			Cbuf_Frame();
+			Cbuf_Frame(&cmd_client);
+			Cbuf_Frame(&cmd_server);
 //			R_TimeReport("console");
 		}
 
@@ -1094,8 +1097,6 @@ char engineversion[128];
 
 qboolean sys_nostdout = false;
 
-extern qboolean host_stuffcmdsrun;
-
 static qfile_t *locksession_fh = NULL;
 static qboolean locksession_run = false;
 static void Host_InitSession(void)
@@ -1165,6 +1166,8 @@ static void Host_Init (void)
 	int i;
 	const char* os;
 	char vabuf[1024];
+	qboolean dedicated_server = COM_CheckParm("-dedicated") || !cl_available;
+	cmd_state_t *cmd = &cmd_client;
 
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -1215,6 +1218,8 @@ static void Host_Init (void)
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
 
+	Cmd_Init_Commands(dedicated_server);
+
 	// initialize memory subsystem cvars/commands
 	Memory_Init_Commands();
 
@@ -1224,7 +1229,6 @@ static void Host_Init (void)
 	// initialize various cvars that could not be initialized earlier
 	u8_Init();
 	Curl_Init_Commands();
-	Cmd_Init_Commands();
 	Sys_Init_Commands();
 	COM_Init_Commands();
 	FS_Init_Commands();
@@ -1276,7 +1280,10 @@ static void Host_Init (void)
 	TaskQueue_Init();
 
 	if (cls.state == ca_dedicated)
-		Cmd_AddCommand ("disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	{
+		cmd = &cmd_server;
+		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	}
 	else
 	{
 		Con_DPrintf("Initializing client\n");
@@ -1307,14 +1314,14 @@ static void Host_Init (void)
 		return;
 	}
 
-	Host_AddConfigText();
-	Cbuf_Execute();
+	Host_AddConfigText(cmd);
+	Cbuf_Execute(cmd);
 
 	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
 	if (!host_stuffcmdsrun)
 	{
-		Cbuf_AddText("exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\nstuffcmds\n");
-		Cbuf_Execute();
+		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\nstuffcmds\n");
+		Cbuf_Execute(cmd);
 	}
 
 	// put up the loading image so the user doesn't stare at a black screen...
@@ -1333,8 +1340,8 @@ static void Host_Init (void)
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(va(vabuf, sizeof(vabuf), "timedemo %s\n", com_argv[i + 1]));
-		Cbuf_Execute();
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", com_argv[i + 1]));
+		Cbuf_Execute(&cmd_client);
 	}
 
 	// check for special demo mode
@@ -1343,8 +1350,8 @@ static void Host_Init (void)
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(va(vabuf, sizeof(vabuf), "playdemo %s\n", com_argv[i + 1]));
-		Cbuf_Execute();
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\n", com_argv[i + 1]));
+		Cbuf_Execute(&cmd_client);
 	}
 
 // COMMANDLINEOPTION: Client: -capturedemo <demoname> captures a playdemo and quits
@@ -1352,23 +1359,23 @@ static void Host_Init (void)
 	if (i && i + 1 < com_argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", com_argv[i + 1]));
-		Cbuf_Execute();
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", com_argv[i + 1]));
+		Cbuf_Execute(&cmd_client);
 	}
 
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText("startmap_dm\n");
-		Cbuf_Execute();
+		Cbuf_AddText(&cmd_client, "startmap_dm\n");
+		Cbuf_Execute(&cmd_client);
 	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
 #ifdef CONFIG_MENU
-		Cbuf_AddText("togglemenu 1\n");
+		Cbuf_AddText(&cmd_client, "togglemenu 1\n");
 #endif
-		Cbuf_Execute();
+		Cbuf_Execute(&cmd_client);
 	}
 
 	Con_DPrint("========Initialized=========\n");

@@ -46,7 +46,10 @@ extern qboolean host_shuttingdown;
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	Cbuf_UnlockThreadMutex();
+	if (cmd_client.text_lock)
+		Cbuf_Unlock(&cmd_client);
+	if (cmd_server.text_lock)
+		Cbuf_Unlock(&cmd_server);
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 

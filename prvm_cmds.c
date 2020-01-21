@@ -604,7 +604,7 @@ void VM_break(prvm_prog_t *prog)
 
 /*
 =================
-VM_localcmd
+VM_localcmd_client
 
 Sends text over to the client's execution buffer
 
@@ -612,12 +612,30 @@ Sends text over to the client's execution buffer
 cmd (string, ...)
 =================
 */
-void VM_localcmd(prvm_prog_t *prog)
+void VM_localcmd_client(prvm_prog_t *prog)
 {
 	char string[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
 	VM_VarString(prog, 0, string, sizeof(string));
-	Cbuf_AddText(string);
+	Cbuf_AddText(&cmd_client, string);
+}
+
+/*
+=================
+VM_localcmd_server
+
+Sends text over to the server's execution buffer
+
+[localcmd (string, ...) or]
+cmd (string, ...)
+=================
+*/
+void VM_localcmd_server(prvm_prog_t *prog)
+{
+	char string[VM_STRINGTEMP_LENGTH];
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
+	VM_VarString(prog, 0, string, sizeof(string));
+	Cbuf_AddText(&cmd_server, string);
 }
 
 static qboolean PRVM_Cvar_ReadOk(const char *string)
@@ -1326,11 +1344,12 @@ coredump()
 */
 void VM_coredump(prvm_prog_t *prog)
 {
+	cmd_state_t *cmd = cls.state == ca_dedicated ? &cmd_server : &cmd_client;
 	VM_SAFEPARMCOUNT(0,VM_coredump);
 
-	Cbuf_AddText("prvm_edicts ");
-	Cbuf_AddText(prog->name);
-	Cbuf_AddText("\n");
+	Cbuf_AddText(cmd, "prvm_edicts ");
+	Cbuf_AddText(cmd, prog->name);
+	Cbuf_AddText(cmd, "\n");
 }
 
 /*
@@ -1511,7 +1530,7 @@ void VM_changelevel(prvm_prog_t *prog)
 		return;
 	svs.changelevel_issued = true;
 
-	Cbuf_AddText(va(vabuf, sizeof(vabuf), "changelevel %s\n",PRVM_G_STRING(OFS_PARM0)));
+	Cbuf_AddText(&cmd_server, va(vabuf, sizeof(vabuf), "changelevel %s\n", PRVM_G_STRING(OFS_PARM0)));
 }
 
 /*
@@ -1659,7 +1678,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 
 // check for overlap with a command
-	if (Cmd_Exists (name))
+	if (Cmd_Exists(&cmd_client, name) || Cmd_Exists(&cmd_server, name))
 	{
 		VM_Warning(prog, "VM_registercvar: %s is a command\n", name);
 		return;
@@ -2571,7 +2590,7 @@ void VM_clcommand (prvm_prog_t *prog)
 
 	temp_client = host_client;
 	host_client = svs.clients + i;
-	Cmd_ExecuteString (PRVM_G_STRING(OFS_PARM1), src_client, true);
+	Cmd_ExecuteString (&cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
 	host_client = temp_client;
 }
 

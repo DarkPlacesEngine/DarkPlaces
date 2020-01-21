@@ -378,6 +378,7 @@ void Key_Shutdown(void);
 void Key_Init_Cvars(void);
 void Key_Event(int key, int ascii, qboolean down);
 void Key_ReleaseAll (void);
+void Key_ReleaseAll_f(cmd_state_t *cmd);
 void Key_EventQueue_Block(void);
 void Key_EventQueue_Unblock(void);
 

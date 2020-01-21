@@ -148,10 +148,10 @@ static void mod_newmap(void)
 Mod_Init
 ===============
 */
-static void Mod_Print(void);
-static void Mod_Precache (void);
-static void Mod_Decompile_f(void);
-static void Mod_GenerateLightmaps_f(void);
+static void Mod_Print_f(cmd_state_t *cmd);
+static void Mod_Precache_f(cmd_state_t *cmd);
+static void Mod_Decompile_f(cmd_state_t *cmd);
+static void Mod_GenerateLightmaps_f(cmd_state_t *cmd);
 void Mod_Init (void)
 {
 	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
@@ -174,10 +174,10 @@ void Mod_Init (void)
 	Cvar_RegisterVariable(&mod_generatelightmaps_vertexradius);
 	Cvar_RegisterVariable(&mod_generatelightmaps_gridradius);
 
-	Cmd_AddCommand ("modellist", Mod_Print, "prints a list of loaded models");
-	Cmd_AddCommand ("modelprecache", Mod_Precache, "load a model");
-	Cmd_AddCommand ("modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
-	Cmd_AddCommand ("mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
+	Cmd_AddCommand(&cmd_client, "modellist", Mod_Print_f, "prints a list of loaded models");
+	Cmd_AddCommand(&cmd_client, "modelprecache", Mod_Precache_f, "load a model");
+	Cmd_AddCommand(&cmd_client, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
+	Cmd_AddCommand(&cmd_client, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
 }
 
 void Mod_RenderInit(void)
@@ -663,7 +663,7 @@ unsigned char *mod_base;
 Mod_Print
 ================
 */
-static void Mod_Print(void)
+static void Mod_Print_f(cmd_state_t *cmd)
 {
 	int i;
 	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
@@ -687,10 +687,10 @@ static void Mod_Print(void)
 Mod_Precache
 ================
 */
-static void Mod_Precache(void)
+static void Mod_Precache_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc() == 2)
-		Mod_ForName(Cmd_Argv(1), false, true, Cmd_Argv(1)[0] == '*' ? cl.model_name[1] : NULL);
+	if (Cmd_Argc(cmd) == 2)
+		Mod_ForName(Cmd_Argv(cmd, 1), false, true, Cmd_Argv(cmd, 1)[0] == '*' ? cl.model_name[1] : NULL);
 	else
 		Con_Print("usage: modelprecache <filename>\n");
 }
@@ -3238,7 +3238,7 @@ Mod_Decompile_f
 decompiles a model to editable files
 ================
 */
-static void Mod_Decompile_f(void)
+static void Mod_Decompile_f(cmd_state_t *cmd)
 {
 	int i, j, k, l, first, count;
 	dp_model_t *mod;
@@ -3256,13 +3256,13 @@ static void Mod_Decompile_f(void)
 	int framegroupstextsize = 0;
 	char vabuf[1024];
 
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("usage: modeldecompile <filename>\n");
 		return;
 	}
 
-	strlcpy(inname, Cmd_Argv(1), sizeof(inname));
+	strlcpy(inname, Cmd_Argv(cmd, 1), sizeof(inname));
 	FS_StripExtension(inname, basename, sizeof(basename));
 
 	mod = Mod_ForName(inname, false, true, inname[0] == '*' ? cl.model_name[1] : NULL);
@@ -4347,9 +4347,9 @@ static void Mod_GenerateLightmaps(dp_model_t *model)
 	loadmodel = oldloadmodel;
 }
 
-static void Mod_GenerateLightmaps_f(void)
+static void Mod_GenerateLightmaps_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc() != 1)
+	if (Cmd_Argc(cmd) != 1)
 	{
 		Con_Printf("usage: mod_generatelightmaps\n");
 		return;

@@ -610,7 +610,7 @@ void CL_VideoStop(void)
 	CL_CloseVideo( cl_videos );
 }
 
-static void CL_PlayVideo_f(void)
+static void CL_PlayVideo_f(cmd_state_t *cmd)
 {
 	char name[MAX_QPATH], subtitlesfile[MAX_QPATH];
 	const char *extension;
@@ -620,27 +620,27 @@ static void CL_PlayVideo_f(void)
 	if (COM_CheckParm("-benchmark"))
 		return;
 
-	if (Cmd_Argc() < 2)
+	if (Cmd_Argc(cmd) < 2)
 	{
 		Con_Print("usage: playvideo <videoname> [custom_subtitles_file]\nplays video named video/<videoname>.dpv\nif custom subtitles file is not presented\nit tries video/<videoname>.sub");
 		return;
 	}
 
-	extension = FS_FileExtension(Cmd_Argv(1));
+	extension = FS_FileExtension(Cmd_Argv(cmd, 1));
 	if (extension[0])
-		dpsnprintf(name, sizeof(name), "video/%s", Cmd_Argv(1));
+		dpsnprintf(name, sizeof(name), "video/%s", Cmd_Argv(cmd, 1));
 	else
-		dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(1));
-	if ( Cmd_Argc() > 2)
-		CL_VideoStart(name, Cmd_Argv(2));
+		dpsnprintf(name, sizeof(name), "video/%s.dpv", Cmd_Argv(cmd, 1));
+	if ( Cmd_Argc(cmd) > 2)
+		CL_VideoStart(name, Cmd_Argv(cmd, 2));
 	else
 	{
-		dpsnprintf(subtitlesfile, sizeof(subtitlesfile), "video/%s.dpsubs", Cmd_Argv(1));
+		dpsnprintf(subtitlesfile, sizeof(subtitlesfile), "video/%s.dpsubs", Cmd_Argv(cmd, 1));
 		CL_VideoStart(name, subtitlesfile);
 	}
 }
 
-static void CL_StopVideo_f(void)
+static void CL_StopVideo_f(cmd_state_t *cmd)
 {
 	CL_VideoStop();
 }
@@ -689,8 +689,8 @@ void CL_Video_Init( void )
 	bgra.i = 0;bgra.b[1] = 0xFF;cl_videogmask = bgra.i;
 	bgra.i = 0;bgra.b[2] = 0xFF;cl_videormask = bgra.i;
 
-	Cmd_AddCommand( "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
-	Cmd_AddCommand( "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
+	Cmd_AddCommand(&cmd_client, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
+	Cmd_AddCommand(&cmd_client, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
 
 	Cvar_RegisterVariable(&cl_video_subtitles);
 	Cvar_RegisterVariable(&cl_video_subtitles_lines);

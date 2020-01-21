@@ -1625,17 +1625,17 @@ static void VM_CL_registercmd (prvm_prog_t *prog)
 {
 	char *t;
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
-	if(!Cmd_Exists(PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(&cmd_client, PRVM_G_STRING(OFS_PARM0)))
 	{
 		size_t alloclen;
 
 		alloclen = strlen(PRVM_G_STRING(OFS_PARM0)) + 1;
 		t = (char *)Z_Malloc(alloclen);
 		memcpy(t, PRVM_G_STRING(OFS_PARM0), alloclen);
-		Cmd_AddCommand(t, NULL, "console command created by QuakeC");
+		Cmd_AddCommand(&cmd_client, t, NULL, "console command created by QuakeC");
 	}
 	else
-		Cmd_AddCommand(PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+		Cmd_AddCommand(&cmd_client, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 
 }
 
@@ -4157,7 +4157,7 @@ NULL,							// #42 (QUAKE)
 VM_fabs,						// #43 float(float f) fabs (QUAKE)
 NULL,							// #44 vector(entity e, float speed) aim (QUAKE)
 VM_cvar,						// #45 float(string s) cvar (QUAKE)
-VM_localcmd,					// #46 void(string s) localcmd (QUAKE)
+VM_localcmd_client,				// #46 void(string s) localcmd (QUAKE)
 VM_nextent,						// #47 entity(entity e) nextent (QUAKE)
 VM_CL_particle,					// #48 void(vector o, vector d, float color, float count) particle (QUAKE)
 VM_changeyaw,					// #49 void() ChangeYaw (QUAKE)

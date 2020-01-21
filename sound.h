@@ -63,7 +63,7 @@ void S_Terminate (void);
 
 void S_Startup (void);
 void S_Shutdown (void);
-void S_UnloadAllSounds_f (void);
+void S_UnloadAllSounds_f(cmd_state_t *cmd);
 
 void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
@@ -102,6 +102,7 @@ qboolean S_LocalSound (const char *s);
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds (void);
+void S_StopAllSounds_f(cmd_state_t *cmd);
 void S_PauseGameSounds (qboolean toggle);
 
 void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx);
