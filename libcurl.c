@@ -331,16 +331,16 @@ static void Curl_CheckCommandWhenDone(void)
 		if(numdownloads_fail == 0)
 		{
 			Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
-			Cbuf_AddText("\n");
-			Cbuf_AddText(command_when_done);
-			Cbuf_AddText("\n");
+			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(&cmd_client, command_when_done);
+			Cbuf_AddText(&cmd_client, "\n");
 		}
 		else
 		{
 			Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
-			Cbuf_AddText("\n");
-			Cbuf_AddText(command_when_error);
-			Cbuf_AddText("\n");
+			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(&cmd_client, command_when_error);
+			Cbuf_AddText(&cmd_client, "\n");
 		}
 		Curl_Clear_forthismap();
 	}
@@ -1333,7 +1333,7 @@ prints the download list
 ====================
 */
 // TODO rewrite using Curl_GetDownloadInfo?
-static void Curl_Info_f(void)
+static void Curl_Info_f(cmd_state_t *cmd)
 {
 	downloadinfo *di;
 	char urlbuf[1024];
@@ -1388,7 +1388,7 @@ curl --finish_autodownload
 	once the last download completes successfully, reconnect to the current server
 ====================
 */
-static void Curl_Curl_f(void)
+static void Curl_Curl_f(cmd_state_t *cmd)
 {
 	double maxspeed = 0;
 	int i;
@@ -1410,21 +1410,21 @@ static void Curl_Curl_f(void)
 		return;
 	}
 
-	if(Cmd_Argc() < 2)
+	if(Cmd_Argc(cmd) < 2)
 	{
 		Con_Print("usage:\ncurl --info, curl --cancel [filename], curl url\n");
 		return;
 	}
 
-	url = Cmd_Argv(Cmd_Argc() - 1);
-	end = Cmd_Argc();
+	url = Cmd_Argv(cmd, Cmd_Argc(cmd) - 1);
+	end = Cmd_Argc(cmd);
 
 	for(i = 1; i != end; ++i)
 	{
-		const char *a = Cmd_Argv(i);
+		const char *a = Cmd_Argv(cmd, i);
 		if(!strcmp(a, "--info"))
 		{
-			Curl_Info_f();
+			Curl_Info_f(cmd);
 			return;
 		}
 		else if(!strcmp(a, "--cancel"))
@@ -1457,7 +1457,7 @@ static void Curl_Curl_f(void)
 		{
 			for(i = i + 1; i != end - 1; ++i)
 			{
-				if(!FS_FileExists(Cmd_Argv(i)))
+				if(!FS_FileExists(Cmd_Argv(cmd, i)))
 					goto needthefile; // why can't I have a "double break"?
 			}
 			// if we get here, we have all the files...
@@ -1472,7 +1472,7 @@ static void Curl_Curl_f(void)
 			if(i < end - 1)
 			{
 				++i;
-				name = Cmd_Argv(i);
+				name = Cmd_Argv(cmd, i);
 			}
 		}
 		else if(!strcmp(a, "--clear_autodownload"))
@@ -1526,10 +1526,10 @@ static void curl_curlcat_callback(int code, size_t length_received, unsigned cha
 	Z_Free(buffer);
 }
 
-void Curl_CurlCat_f(void)
+void Curl_CurlCat_f(cmd_state_t *cmd)
 {
 	unsigned char *buf;
-	const char *url = Cmd_Argv(1);
+	const char *url = Cmd_Argv(cmd, 1);
 	buf = Z_Malloc(16384);
 	Curl_Begin_ToMemory(url, buf, 16384, curl_curlcat_callback, NULL);
 }
@@ -1552,8 +1552,8 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
-	Cmd_AddCommand ("curl", Curl_Curl_f, "download data from an URL and add to search path");
-	//Cmd_AddCommand ("curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
+	Cmd_AddCommand(&cmd_client, "curl", Curl_Curl_f, "download data from an URL and add to search path");
+	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
 /*

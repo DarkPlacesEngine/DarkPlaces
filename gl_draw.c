@@ -536,7 +536,7 @@ static float snap_to_pixel_y(float y, float roundUpAt)
 	*/
 }
 
-static void LoadFont_f(void)
+static void LoadFont_f(cmd_state_t *cmd)
 {
 	dp_font_t *f;
 	int i, sizes;
@@ -544,7 +544,7 @@ static void LoadFont_f(void)
 	float sz, scale, voffset;
 	char mainfont[MAX_QPATH];
 
-	if(Cmd_Argc() < 2)
+	if(Cmd_Argc(cmd) < 2)
 	{
 		Con_Printf("Available font commands:\n");
 		for(i = 0; i < dp_fonts.maxsize; ++i)
@@ -564,17 +564,17 @@ static void LoadFont_f(void)
 			);
 		return;
 	}
-	f = FindFont(Cmd_Argv(1), true);
+	f = FindFont(Cmd_Argv(cmd, 1), true);
 	if(f == NULL)
 	{
 		Con_Printf("font function not found\n");
 		return;
 	}
 
-	if(Cmd_Argc() < 3)
+	if(Cmd_Argc(cmd) < 3)
 		filelist = "gfx/conchars";
 	else
-		filelist = Cmd_Argv(2);
+		filelist = Cmd_Argv(cmd, 2);
 
 	memset(f->fallbacks, 0, sizeof(f->fallbacks));
 	memset(f->fallback_faces, 0, sizeof(f->fallback_faces));
@@ -633,23 +633,23 @@ static void LoadFont_f(void)
 
 	scale = 1;
 	voffset = 0;
-	if(Cmd_Argc() >= 4)
+	if(Cmd_Argc(cmd) >= 4)
 	{
-		for(sizes = 0, i = 3; i < Cmd_Argc(); ++i)
+		for(sizes = 0, i = 3; i < Cmd_Argc(cmd); ++i)
 		{
 			// special switches
-			if (!strcmp(Cmd_Argv(i), "scale"))
+			if (!strcmp(Cmd_Argv(cmd, i), "scale"))
 			{
 				i++;
-				if (i < Cmd_Argc())
-					scale = atof(Cmd_Argv(i));
+				if (i < Cmd_Argc(cmd))
+					scale = atof(Cmd_Argv(cmd, i));
 				continue;
 			}
-			if (!strcmp(Cmd_Argv(i), "voffset"))
+			if (!strcmp(Cmd_Argv(cmd, i), "voffset"))
 			{
 				i++;
-				if (i < Cmd_Argc())
-					voffset = atof(Cmd_Argv(i));
+				if (i < Cmd_Argc(cmd))
+					voffset = atof(Cmd_Argv(cmd, i));
 				continue;
 			}
 
@@ -657,7 +657,7 @@ static void LoadFont_f(void)
 				continue; // no slot for other sizes
 
 			// parse one of sizes
-			sz = atof(Cmd_Argv(i));
+			sz = atof(Cmd_Argv(cmd, i));
 			if (sz > 0.001f && sz < 1000.0f) // do not use crap sizes
 			{
 				// search for duplicated sizes
@@ -769,7 +769,7 @@ void GL_Draw_Init (void)
 		if(!FONT_USER(i)->title[0])
 			dpsnprintf(FONT_USER(i)->title, sizeof(FONT_USER(i)->title), "user%d", j++);
 
-	Cmd_AddCommand ("loadfont",LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
+	Cmd_AddCommand(&cmd_client, "loadfont", LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap, NULL, NULL);
 }
 

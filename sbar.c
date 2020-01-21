@@ -127,7 +127,7 @@ Sbar_ShowScores
 Tab key down
 ===============
 */
-static void Sbar_ShowScores (void)
+static void Sbar_ShowScores_f(cmd_state_t *cmd)
 {
 	if (sb_showscores)
 		return;
@@ -142,7 +142,7 @@ Sbar_DontShowScores
 Tab key up
 ===============
 */
-static void Sbar_DontShowScores (void)
+static void Sbar_DontShowScores_f(cmd_state_t *cmd)
 {
 	sb_showscores = false;
 	CL_VM_UpdateShowingScoresState(sb_showscores);
@@ -357,8 +357,8 @@ static void sbar_newmap(void)
 
 void Sbar_Init (void)
 {
-	Cmd_AddCommand("+showscores", Sbar_ShowScores, "show scoreboard");
-	Cmd_AddCommand("-showscores", Sbar_DontShowScores, "hide scoreboard");
+	Cmd_AddCommand(&cmd_client, "+showscores", Sbar_ShowScores_f, "show scoreboard");
+	Cmd_AddCommand(&cmd_client, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
 	Cvar_RegisterVariable(&showfps);
 	Cvar_RegisterVariable(&showsound);
 	Cvar_RegisterVariable(&showblur);

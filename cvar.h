@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // cvar.h
 
+struct cmd_state_s;
+typedef struct cmd_state_s cmd_state_t;
+
 /*
 
 cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly
@@ -188,8 +191,8 @@ const char *Cvar_CompleteVariable (const char *partial);
 
 void Cvar_CompleteCvarPrint (const char *partial);
 
-qboolean Cvar_Command (void);
-// called by Cmd_ExecuteString when Cmd_Argv(0) doesn't match a known
+qboolean Cvar_Command (cmd_state_t *cmd);
+// called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
@@ -197,10 +200,10 @@ void Cvar_SaveInitState(void);
 void Cvar_RestoreInitState(void);
 
 void Cvar_UnlockDefaults (void);
-void Cvar_LockDefaults_f (void);
-void Cvar_ResetToDefaults_All_f (void);
-void Cvar_ResetToDefaults_NoSaveOnly_f (void);
-void Cvar_ResetToDefaults_SaveOnly_f (void);
+void Cvar_LockDefaults_f(cmd_state_t *cmd);
+void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd);
+void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd);
+void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd);
 
 void Cvar_WriteVariables (qfile_t *f);
 // Writes lines containing "set variable value" for all variables
@@ -219,11 +222,11 @@ const char **Cvar_CompleteBuildList (const char *partial);
 /// Referenced in cmd.c in Cmd_Init hence it's inclusion here.
 /// Added by EvilTypeGuy eviltypeguy@qeradiant.com
 /// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
-void Cvar_List_f (void);
+void Cvar_List_f(cmd_state_t *cmd);
 
-void Cvar_Set_f (void);
-void Cvar_SetA_f (void);
-void Cvar_Del_f (void);
+void Cvar_Set_f(cmd_state_t *cmd);
+void Cvar_SetA_f(cmd_state_t *cmd);
+void Cvar_Del_f(cmd_state_t *cmd);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 
@@ -237,7 +240,7 @@ extern cvar_t *cvar_vars; // used to list all cvars
 void Cvar_UpdateAllAutoCvars(void); // updates ALL autocvars of the active prog to the cvar values (savegame loading)
 
 #ifdef FILLALLCVARSWITHRUBBISH
-void Cvar_FillAll_f();
+void Cvar_FillAll_f(cmd_state_t *cmd);
 #endif /* FILLALLCVARSWITHRUBBISH */
 
 #endif

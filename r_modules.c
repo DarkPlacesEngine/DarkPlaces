@@ -19,7 +19,7 @@ rendermodule_t rendermodule[MAXRENDERMODULES];
 
 void R_Modules_Init(void)
 {
-	Cmd_AddCommand("r_restart", R_Modules_Restart, "restarts renderer");
+	Cmd_AddCommand(&cmd_client, "r_restart", R_Modules_Restart_f, "restarts renderer");
 }
 
 void R_RegisterModule(const char *name, void(*start)(void), void(*shutdown)(void), void(*newmap)(void), void(*devicelost)(void), void(*devicerestored)(void))
@@ -78,7 +78,7 @@ void R_Modules_Shutdown(void)
 	}
 }
 
-void R_Modules_Restart(void)
+void R_Modules_Restart_f(cmd_state_t *cmd)
 {
 	Host_StartVideo();
 	Con_Print("restarting renderer\n");

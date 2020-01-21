@@ -22,25 +22,40 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "thread.h"
 
-typedef struct cmdalias_s
-{
-	struct cmdalias_s *next;
-	char name[MAX_ALIAS_NAME];
-	char *value;
-	qboolean initstate; // indicates this command existed at init
-	char *initialvalue; // backup copy of value at init
-} cmdalias_t;
+cmd_state_t cmd_client;
+cmd_state_t cmd_clientfromserver;
+cmd_state_t cmd_server;
+cmd_state_t cmd_serverfromclient;
 
-static cmdalias_t *cmd_alias;
+typedef struct cmd_iter_s {
+	cmd_state_t *cmd;
+}
+cmd_iter_t;
 
-static qboolean cmd_wait;
+static cmd_iter_t cmd_iter_all[] = {
+	{&cmd_client},
+	{&cmd_clientfromserver},
+	{&cmd_server},
+	{&cmd_serverfromclient},
+	{NULL},
+};
 
-static mempool_t *cmd_mempool;
 
-static char cmd_tokenizebuffer[CMD_TOKENIZELENGTH];
-static int cmd_tokenizebufferpos = 0;
+// we only run the +whatever commandline arguments once
+qboolean host_stuffcmdsrun = false;
 
 //=============================================================================
+
+void Cbuf_Lock(cmd_state_t *cmd)
+{
+	Thread_AtomicLock(&cmd->text_lock);
+}
+
+void Cbuf_Unlock(cmd_state_t *cmd)
+{
+	Thread_AtomicUnlock(&cmd->text_lock);
+}
+
 
 /*
 ============
@@ -51,19 +66,10 @@ next frame.  This allows commands like:
 bind g "impulse 5 ; +attack ; wait ; -attack ; impulse 2"
 ============
 */
-static void Cmd_Wait_f (void)
+static void Cmd_Wait_f (cmd_state_t *cmd)
 {
-	cmd_wait = true;
+	cmd->wait = true;
 }
-
-typedef struct cmddeferred_s
-{
-	struct cmddeferred_s *next;
-	char *value;
-	double delay;
-} cmddeferred_t;
-
-static cmddeferred_t *cmd_deferred_list = NULL;
 
 /*
 ============
@@ -72,11 +78,11 @@ Cmd_Defer_f
 Cause a command to be executed after a delay.
 ============
 */
-static void Cmd_Defer_f (void)
+static void Cmd_Defer_f (cmd_state_t *cmd)
 {
-	if(Cmd_Argc() == 1)
+	if(Cmd_Argc(cmd) == 1)
 	{
-		cmddeferred_t *next = cmd_deferred_list;
+		cmddeferred_t *next = cmd->deferred_list;
 		if(!next)
 			Con_Printf("No commands are pending.\n");
 		while(next)
@@ -84,34 +90,34 @@ static void Cmd_Defer_f (void)
 			Con_Printf("-> In %9.2f: %s\n", next->delay, next->value);
 			next = next->next;
 		}
-	} else if(Cmd_Argc() == 2 && !strcasecmp("clear", Cmd_Argv(1)))
+	} else if(Cmd_Argc(cmd) == 2 && !strcasecmp("clear", Cmd_Argv(cmd, 1)))
 	{
-		while(cmd_deferred_list)
+		while(cmd->deferred_list)
 		{
-			cmddeferred_t *cmd = cmd_deferred_list;
-			cmd_deferred_list = cmd->next;
-			Mem_Free(cmd->value);
-			Mem_Free(cmd);
+			cmddeferred_t *defcmd = cmd->deferred_list;
+			cmd->deferred_list = defcmd->next;
+			Mem_Free(defcmd->value);
+			Mem_Free(defcmd);
 		}
-	} else if(Cmd_Argc() == 3)
+	} else if(Cmd_Argc(cmd) == 3)
 	{
-		const char *value = Cmd_Argv(2);
+		const char *value = Cmd_Argv(cmd, 2);
 		cmddeferred_t *defcmd = (cmddeferred_t*)Mem_Alloc(tempmempool, sizeof(*defcmd));
 		size_t len = strlen(value);
 
-		defcmd->delay = atof(Cmd_Argv(1));
+		defcmd->delay = atof(Cmd_Argv(cmd, 1));
 		defcmd->value = (char*)Mem_Alloc(tempmempool, len+1);
 		memcpy(defcmd->value, value, len+1);
 		defcmd->next = NULL;
 
-		if(cmd_deferred_list)
+		if(cmd->deferred_list)
 		{
-			cmddeferred_t *next = cmd_deferred_list;
+			cmddeferred_t *next = cmd->deferred_list;
 			while(next->next)
 				next = next->next;
 			next->next = defcmd;
 		} else
-			cmd_deferred_list = defcmd;
+			cmd->deferred_list = defcmd;
 		/* Stupid me... this changes the order... so commands with the same delay go blub :S
 		  defcmd->next = cmd_deferred_list;
 		  cmd_deferred_list = defcmd;*/
@@ -129,18 +135,18 @@ Cmd_Centerprint_f
 Print something to the center of the screen using SCR_Centerprint
 ============
 */
-static void Cmd_Centerprint_f (void)
+static void Cmd_Centerprint_f (cmd_state_t *cmd)
 {
 	char msg[MAX_INPUTLINE];
 	unsigned int i, c, p;
-	c = Cmd_Argc();
+	c = Cmd_Argc(cmd);
 	if(c >= 2)
 	{
-		strlcpy(msg, Cmd_Argv(1), sizeof(msg));
+		strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
 		for(i = 2; i < c; ++i)
 		{
 			strlcat(msg, " ", sizeof(msg));
-			strlcat(msg, Cmd_Argv(i), sizeof(msg));
+			strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
 		}
 		c = (unsigned int)strlen(msg);
 		for(p = 0, i = 0; i < c; ++i)
@@ -173,10 +179,6 @@ static void Cmd_Centerprint_f (void)
 =============================================================================
 */
 
-static sizebuf_t	cmd_text;
-static unsigned char		cmd_text_buf[CMDBUFSIZE];
-void *cmd_text_mutex = NULL;
-
 /*
 ============
 Cbuf_AddText
@@ -184,18 +186,18 @@ Cbuf_AddText
 Adds command text at the end of the buffer
 ============
 */
-void Cbuf_AddText (const char *text)
+void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 {
 	int		l;
 
 	l = (int)strlen(text);
 
-	Cbuf_LockThreadMutex();
-	if (cmd_text.cursize + l >= cmd_text.maxsize)
+	Cbuf_Lock(cmd);
+	if (cmd->text.cursize + l >= (size_t)cmd->text.maxsize)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
-		SZ_Write(&cmd_text, (const unsigned char *)text, l);
-	Cbuf_UnlockThreadMutex();
+		SZ_Write(&cmd->text, (const unsigned char *)text, l);
+	Cbuf_Unlock(cmd);
 }
 
 
@@ -208,21 +210,21 @@ Adds a \n to the text
 FIXME: actually change the command buffer to do less copying
 ============
 */
-void Cbuf_InsertText (const char *text)
+void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 {
 	size_t l = strlen(text);
-	Cbuf_LockThreadMutex();
+	Cbuf_Lock(cmd);
 	// we need to memmove the existing text and stuff this in before it...
-	if (cmd_text.cursize + l >= (size_t)cmd_text.maxsize)
+	if (cmd->text.cursize + l >= (size_t)cmd->text.maxsize)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
 		// we don't have a SZ_Prepend, so...
-		memmove(cmd_text.data + l, cmd_text.data, cmd_text.cursize);
-		cmd_text.cursize += (int)l;
-		memcpy(cmd_text.data, text, l);
+		memmove(cmd->text.data + l, cmd->text.data, cmd->text.cursize);
+		cmd->text.cursize += (int)l;
+		memcpy(cmd->text.data, text, l);
 	}
-	Cbuf_UnlockThreadMutex();
+	Cbuf_Unlock(cmd);
 }
 
 /*
@@ -230,10 +232,10 @@ void Cbuf_InsertText (const char *text)
 Cbuf_Execute_Deferred --blub
 ============
 */
-static void Cbuf_Execute_Deferred (void)
+static void Cbuf_Execute_Deferred (cmd_state_t *cmd)
 {
 	static double oldrealtime = 0;
-	cmddeferred_t *cmd, *prev;
+	cmddeferred_t *defcmd, *prev;
 	double eat;
 	if (realtime - oldrealtime < 0 || realtime - oldrealtime > 1800) oldrealtime = realtime;
 	eat = realtime - oldrealtime;
@@ -241,29 +243,29 @@ static void Cbuf_Execute_Deferred (void)
 		return;
 	oldrealtime = realtime;
 	prev = NULL;
-	cmd = cmd_deferred_list;
-	while(cmd)
+	defcmd = cmd->deferred_list;
+	while(defcmd)
 	{
-		cmd->delay -= eat;
-		if(cmd->delay <= 0)
+		defcmd->delay -= eat;
+		if(defcmd->delay <= 0)
 		{
-			Cbuf_AddText(cmd->value);
-			Cbuf_AddText(";\n");
-			Mem_Free(cmd->value);
+			Cbuf_AddText(cmd, defcmd->value);
+			Cbuf_AddText(cmd, ";\n");
+			Mem_Free(defcmd->value);
 
 			if(prev) {
-				prev->next = cmd->next;
-				Mem_Free(cmd);
-				cmd = prev->next;
+				prev->next = defcmd->next;
+				Mem_Free(defcmd);
+				defcmd = prev->next;
 			} else {
-				cmd_deferred_list = cmd->next;
-				Mem_Free(cmd);
-				cmd = cmd_deferred_list;
+				cmd->deferred_list = defcmd->next;
+				Mem_Free(defcmd);
+				defcmd = cmd->deferred_list;
 			}
 			continue;
 		}
-		prev = cmd;
-		cmd = cmd->next;
+		prev = defcmd;
+		defcmd = defcmd->next;
 	}
 }
 
@@ -272,8 +274,8 @@ static void Cbuf_Execute_Deferred (void)
 Cbuf_Execute
 ============
 */
-static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
-void Cbuf_Execute (void)
+static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
+void Cbuf_Execute (cmd_state_t *cmd)
 {
 	int i;
 	char *text;
@@ -284,16 +286,16 @@ void Cbuf_Execute (void)
 	char *comment;
 
 	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
-	cmd_tokenizebufferpos = 0;
+	cmd->tokenizebufferpos = 0;
 
-	while (cmd_text.cursize)
+	while (cmd->text.cursize)
 	{
 // find a \n or ; line break
-		text = (char *)cmd_text.data;
+		text = (char *)cmd->text.data;
 
 		quotes = false;
 		comment = NULL;
-		for (i=0 ; i < cmd_text.cursize ; i++)
+		for (i=0 ; i < cmd->text.cursize ; i++)
 		{
 			if(!comment)
 			{
@@ -304,7 +306,7 @@ void Cbuf_Execute (void)
 				{
 					// make sure i doesn't get > cursize which causes a negative
 					// size in memmove, which is fatal --blub
-					if (i < (cmd_text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
+					if (i < (cmd->text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
 						i++;
 				}
 				else
@@ -336,13 +338,13 @@ void Cbuf_Execute (void)
 // this is necessary because commands (exec, alias) can insert data at the
 // beginning of the text buffer
 
-		if (i == cmd_text.cursize)
-			cmd_text.cursize = 0;
+		if (i == cmd->text.cursize)
+			cmd->text.cursize = 0;
 		else
 		{
 			i++;
-			cmd_text.cursize -= i;
-			memmove (cmd_text.data, text+i, cmd_text.cursize);
+			cmd->text.cursize -= i;
+			memmove (cmd->text.data, text+i, cmd->text.cursize);
 		}
 
 // execute the command line
@@ -357,30 +359,30 @@ void Cbuf_Execute (void)
 			(strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7]))
 		)
 		{
-			if(Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL ))
-				Cmd_ExecuteString (preprocessed, src_command, false);
+			if(Cmd_PreprocessString( cmd, line, preprocessed, sizeof(preprocessed), NULL ))
+				Cmd_ExecuteString (cmd, preprocessed, src_command, false);
 		}
 		else
 		{
-			Cmd_ExecuteString (line, src_command, false);
+			Cmd_ExecuteString (cmd, line, src_command, false);
 		}
 
-		if (cmd_wait)
+		if (cmd->wait)
 		{	// skip out while text still remains in buffer, leaving it
 			// for next frame
-			cmd_wait = false;
+			cmd->wait = false;
 			break;
 		}
 	}
 }
 
-void Cbuf_Frame(void)
+void Cbuf_Frame(cmd_state_t *cmd)
 {
-	Cbuf_Execute_Deferred();
-	if (cmd_text.cursize)
+	Cbuf_Execute_Deferred(cmd);
+	if (cmd->text.cursize)
 	{
 		SV_LockThreadMutex();
-		Cbuf_Execute();
+		Cbuf_Execute(cmd);
 		SV_UnlockThreadMutex();
 	}
 }
@@ -403,14 +405,13 @@ quake +prog jctest.qp +cmd amlev1
 quake -nosound +cmd amlev1
 ===============
 */
-qboolean host_stuffcmdsrun = false;
-static void Cmd_StuffCmds_f (void)
+static void Cmd_StuffCmds_f (cmd_state_t *cmd)
 {
 	int		i, j, l;
 	// this is for all commandline options combined (and is bounds checked)
 	char	build[MAX_INPUTLINE];
 
-	if (Cmd_Argc () != 1)
+	if (Cmd_Argc (cmd) != 1)
 	{
 		Con_Print("stuffcmds : execute command line parameters\n");
 		return;
@@ -454,10 +455,10 @@ static void Cmd_StuffCmds_f (void)
 	// now terminate the combined string and prepend it to the command buffer
 	// we already reserved space for the terminator
 	build[l++] = 0;
-	Cbuf_InsertText (build);
+	Cbuf_InsertText (cmd, build);
 }
 
-static void Cmd_Exec(const char *filename)
+static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 {
 	char *f;
 	size_t filenameLen = strlen(filename);
@@ -484,12 +485,12 @@ static void Cmd_Exec(const char *filename)
 	// it may seem backwards to insert this text BEFORE the default.cfg
 	// but Cbuf_InsertText inserts before, so this actually ends up after it.
 	if (isdefaultcfg)
-		Cbuf_InsertText("\ncvar_lockdefaults\n");
+		Cbuf_InsertText(cmd, "\ncvar_lockdefaults\n");
 
 	// insert newline after the text to make sure the last line is terminated (some text editors omit the trailing newline)
 	// (note: insertion order here is backwards from execution order, so this adds it after the text, by calling it before...)
-	Cbuf_InsertText ("\n");
-	Cbuf_InsertText (f);
+	Cbuf_InsertText (cmd, "\n");
+	Cbuf_InsertText (cmd, f);
 	Mem_Free(f);
 
 	if (isdefaultcfg)
@@ -500,7 +501,7 @@ static void Cmd_Exec(const char *filename)
 		switch(gamemode)
 		{
 		case GAME_NORMAL:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"
@@ -524,7 +525,7 @@ static void Cmd_Exec(const char *filename)
 				);
 			break;
 		case GAME_NEHAHRA:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"
@@ -552,7 +553,7 @@ static void Cmd_Exec(const char *filename)
 		// hipnotic mission pack has issues in their proximity mine sticking code, which causes them to bounce off.
 		case GAME_HIPNOTIC:
 		case GAME_QUOTH:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"
@@ -577,7 +578,7 @@ static void Cmd_Exec(const char *filename)
 			break;
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
 		case GAME_ROGUE:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"
@@ -601,7 +602,7 @@ static void Cmd_Exec(const char *filename)
 				);
 			break;
 		case GAME_TENEBRAE:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"
@@ -625,7 +626,7 @@ static void Cmd_Exec(const char *filename)
 				);
 			break;
 		case GAME_NEXUIZ:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 1\n"
 "sv_gameplayfix_findradiusdistancetobox 1\n"
 "sv_gameplayfix_grenadebouncedownslopes 1\n"
@@ -650,7 +651,7 @@ static void Cmd_Exec(const char *filename)
 			break;
 		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
 		case GAME_STEELSTORM:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 1\n"
 "sv_gameplayfix_findradiusdistancetobox 1\n"
 "sv_gameplayfix_grenadebouncedownslopes 1\n"
@@ -673,7 +674,7 @@ static void Cmd_Exec(const char *filename)
 				);
 			break;
 		default:
-			Cbuf_InsertText("\n"
+			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 1\n"
 "sv_gameplayfix_findradiusdistancetobox 1\n"
 "sv_gameplayfix_grenadebouncedownslopes 1\n"
@@ -703,26 +704,26 @@ static void Cmd_Exec(const char *filename)
 Cmd_Exec_f
 ===============
 */
-static void Cmd_Exec_f (void)
+static void Cmd_Exec_f (cmd_state_t *cmd)
 {
 	fssearch_t *s;
 	int i;
 
-	if (Cmd_Argc () != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("exec <filename> : execute a script file\n");
 		return;
 	}
 
-	s = FS_Search(Cmd_Argv(1), true, true);
+	s = FS_Search(Cmd_Argv(cmd, 1), true, true);
 	if(!s || !s->numfilenames)
 	{
-		Con_Printf("couldn't exec %s\n",Cmd_Argv(1));
+		Con_Printf("couldn't exec %s\n",Cmd_Argv(cmd, 1));
 		return;
 	}
 
 	for(i = 0; i < s->numfilenames; ++i)
-		Cmd_Exec(s->filenames[i]);
+		Cmd_Exec(cmd, s->filenames[i]);
 
 	FS_FreeSearch(s);
 }
@@ -735,12 +736,12 @@ Cmd_Echo_f
 Just prints the rest of the line to the console
 ===============
 */
-static void Cmd_Echo_f (void)
+static void Cmd_Echo_f (cmd_state_t *cmd)
 {
 	int		i;
 
-	for (i=1 ; i<Cmd_Argc() ; i++)
-		Con_Printf("%s ",Cmd_Argv(i));
+	for (i=1 ; i<Cmd_Argc(cmd) ; i++)
+		Con_Printf("%s ",Cmd_Argv(cmd, i));
 	Con_Print("\n");
 }
 
@@ -753,10 +754,10 @@ Cmd_Toggle_f
 Toggles a specified console variable amongst the values specified (default is 0 and 1)
 ===============
 */
-static void Cmd_Toggle_f(void)
+static void Cmd_Toggle_f(cmd_state_t *cmd)
 {
 	// Acquire Number of Arguments
-	int nNumArgs = Cmd_Argc();
+	int nNumArgs = Cmd_Argc(cmd);
 
 	if(nNumArgs == 1)
 		// No Arguments Specified; Print Usage
@@ -764,7 +765,7 @@ static void Cmd_Toggle_f(void)
 	else
 	{ // Correct Arguments Specified
 		// Acquire Potential CVar
-		cvar_t* cvCVar = Cvar_FindVar( Cmd_Argv(1) );
+		cvar_t* cvCVar = Cvar_FindVar( Cmd_Argv(cmd, 1) );
 
 		if(cvCVar != NULL)
 		{ // Valid CVar
@@ -778,13 +779,13 @@ static void Cmd_Toggle_f(void)
 			else
 			if(nNumArgs == 3)
 			{ // 0 and Specified Usage
-				if(cvCVar->integer == atoi(Cmd_Argv(2) ) )
+				if(cvCVar->integer == atoi(Cmd_Argv(cmd, 2) ) )
 					// CVar is Specified Value; // Reset to 0
 					Cvar_SetValueQuick(cvCVar, 0);
 				else
 				if(cvCVar->integer == 0)
 					// CVar is 0; Specify Value
-					Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+					Cvar_SetQuick(cvCVar, Cmd_Argv(cmd, 2) );
 				else
 					// CVar does not match; Reset to 0
 					Cvar_SetValueQuick(cvCVar, 0);
@@ -796,14 +797,14 @@ static void Cmd_Toggle_f(void)
 
 				for(nCnt = 2; nCnt < nNumArgs; nCnt++)
 				{ // Cycle through Values
-					if( strcmp(cvCVar->string, Cmd_Argv(nCnt) ) == 0)
+					if( strcmp(cvCVar->string, Cmd_Argv(cmd, nCnt) ) == 0)
 					{ // Current Value Located; Increment to Next
 						if( (nCnt + 1) == nNumArgs)
 							// Max Value Reached; Reset
-							Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+							Cvar_SetQuick(cvCVar, Cmd_Argv(cmd, 2) );
 						else
 							// Next Value
-							Cvar_SetQuick(cvCVar, Cmd_Argv(nCnt + 1) );
+							Cvar_SetQuick(cvCVar, Cmd_Argv(cmd, nCnt + 1) );
 
 						// End Loop
 						nCnt = nNumArgs;
@@ -813,13 +814,13 @@ static void Cmd_Toggle_f(void)
 				}
 				if(!bFound)
 					// Value not Found; Reset to Original
-					Cvar_SetQuick(cvCVar, Cmd_Argv(2) );
+					Cvar_SetQuick(cvCVar, Cmd_Argv(cmd, 2) );
 			}
 
 		}
 		else
 		{ // Invalid CVar
-			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(1) );
+			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(cmd, 1) );
 		}
 	}
 }
@@ -831,23 +832,23 @@ Cmd_Alias_f
 Creates a new command that executes a command string (possibly ; seperated)
 ===============
 */
-static void Cmd_Alias_f (void)
+static void Cmd_Alias_f (cmd_state_t *cmd)
 {
 	cmdalias_t	*a;
-	char		cmd[MAX_INPUTLINE];
+	char		line[MAX_INPUTLINE];
 	int			i, c;
 	const char		*s;
 	size_t		alloclen;
 
-	if (Cmd_Argc() == 1)
+	if (Cmd_Argc(cmd) == 1)
 	{
 		Con_Print("Current alias commands:\n");
-		for (a = cmd_alias ; a ; a=a->next)
+		for (a = cmd->alias ; a ; a=a->next)
 			Con_Printf("%s : %s", a->name, a->value);
 		return;
 	}
 
-	s = Cmd_Argv(1);
+	s = Cmd_Argv(cmd, 1);
 	if (strlen(s) >= MAX_ALIAS_NAME)
 	{
 		Con_Print("Alias name is too long\n");
@@ -855,7 +856,7 @@ static void Cmd_Alias_f (void)
 	}
 
 	// if the alias already exists, reuse it
-	for (a = cmd_alias ; a ; a=a->next)
+	for (a = cmd->alias ; a ; a=a->next)
 	{
 		if (!strcmp(s, a->name))
 		{
@@ -871,33 +872,33 @@ static void Cmd_Alias_f (void)
 		a = (cmdalias_t *)Z_Malloc (sizeof(cmdalias_t));
 		strlcpy (a->name, s, sizeof (a->name));
 		// insert it at the right alphanumeric position
-		for( prev = NULL, current = cmd_alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
+		for( prev = NULL, current = cmd->alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
 			;
 		if( prev ) {
 			prev->next = a;
 		} else {
-			cmd_alias = a;
+			cmd->alias = a;
 		}
 		a->next = current;
 	}
 
 
 // copy the rest of the command line
-	cmd[0] = 0;		// start out with a null string
-	c = Cmd_Argc();
+	line[0] = 0;		// start out with a null string
+	c = Cmd_Argc(cmd);
 	for (i=2 ; i < c ; i++)
 	{
 		if (i != 2)
-			strlcat (cmd, " ", sizeof (cmd));
-		strlcat (cmd, Cmd_Argv(i), sizeof (cmd));
+			strlcat (line, " ", sizeof (line));
+		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 	}
-	strlcat (cmd, "\n", sizeof (cmd));
+	strlcat (line, "\n", sizeof (line));
 
-	alloclen = strlen (cmd) + 1;
+	alloclen = strlen (line) + 1;
 	if(alloclen >= 2)
-		cmd[alloclen - 2] = '\n'; // to make sure a newline is appended even if too long
+		line[alloclen - 2] = '\n'; // to make sure a newline is appended even if too long
 	a->value = (char *)Z_Malloc (alloclen);
-	memcpy (a->value, cmd, alloclen);
+	memcpy (a->value, line, alloclen);
 }
 
 /*
@@ -907,30 +908,30 @@ Cmd_UnAlias_f
 Remove existing aliases.
 ===============
 */
-static void Cmd_UnAlias_f (void)
+static void Cmd_UnAlias_f (cmd_state_t *cmd)
 {
 	cmdalias_t	*a, *p;
 	int i;
 	const char *s;
 
-	if(Cmd_Argc() == 1)
+	if(Cmd_Argc(cmd) == 1)
 	{
 		Con_Print("unalias: Usage: unalias alias1 [alias2 ...]\n");
 		return;
 	}
 
-	for(i = 1; i < Cmd_Argc(); ++i)
+	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		s = Cmd_Argv(i);
+		s = Cmd_Argv(cmd, i);
 		p = NULL;
-		for(a = cmd_alias; a; p = a, a = a->next)
+		for(a = cmd->alias; a; p = a, a = a->next)
 		{
 			if(!strcmp(s, a->name))
 			{
 				if (a->initstate) // we can not remove init aliases
 					continue;
-				if(a == cmd_alias)
-					cmd_alias = a->next;
+				if(a == cmd->alias)
+					cmd->alias = a->next;
 				if(p)
 					p->next = a->next;
 				Z_Free(a->value);
@@ -951,27 +952,7 @@ static void Cmd_UnAlias_f (void)
 =============================================================================
 */
 
-typedef struct cmd_function_s
-{
-	struct cmd_function_s *next;
-	const char *name;
-	const char *description;
-	xcommand_t consolefunction;
-	xcommand_t clientfunction;
-	qboolean csqcfunc;
-	qboolean initstate; // indicates this command existed at init
-} cmd_function_t;
-
-static int cmd_argc;
-static const char *cmd_argv[MAX_ARGS];
-static const char *cmd_null_string = "";
-static const char *cmd_args;
-cmd_source_t cmd_source;
-
-
-static cmd_function_t *cmd_functions;		// possible commands to execute
-
-static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias, qboolean *is_multiple)
+static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname, cmdalias_t *alias, qboolean *is_multiple)
 {
 	cvar_t *cvar;
 	long argno;
@@ -990,11 +971,11 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 		{
 			if(is_multiple)
 				*is_multiple = true;
-			return Cmd_Args();
+			return Cmd_Args(cmd);
 		}
 		else if(!strcmp(varname, "#"))
 		{
-			return va(vabuf, sizeof(vabuf), "%d", Cmd_Argc());
+			return va(vabuf, sizeof(vabuf), "%d", Cmd_Argc(cmd));
 		}
 		else if(varname[strlen(varname) - 1] == '-')
 		{
@@ -1002,7 +983,7 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 			if(endptr == varname + strlen(varname) - 1)
 			{
 				// whole string is a number, apart from the -
-				const char *p = Cmd_Args();
+				const char *p = Cmd_Args(cmd);
 				for(; argno > 1; --argno)
 					if(!COM_ParseToken_Console(&p))
 						break;
@@ -1026,8 +1007,8 @@ static const char *Cmd_GetDirectCvarValue(const char *varname, cmdalias_t *alias
 			{
 				// whole string is a number
 				// NOTE: we already made sure we don't have an empty cvar name!
-				if(argno >= 0 && argno < Cmd_Argc())
-					return Cmd_Argv(argno);
+				if(argno >= 0 && argno < Cmd_Argc(cmd))
+					return Cmd_Argv(cmd, argno);
 			}
 		}
 	}
@@ -1097,7 +1078,7 @@ fail:
 	return false;
 }
 
-static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *alias)
+static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t varlen, cmdalias_t *alias)
 {
 	static char varname[MAX_INPUTLINE]; // cmd_mutex
 	static char varval[MAX_INPUTLINE]; // cmd_mutex
@@ -1155,12 +1136,12 @@ static const char *Cmd_GetCvarValue(const char *var, size_t varlen, cmdalias_t *
 	}
 
 	if(varname[0] == '$')
-		varstr = Cmd_GetDirectCvarValue(Cmd_GetDirectCvarValue(varname + 1, alias, NULL), alias, NULL);
+		varstr = Cmd_GetDirectCvarValue(cmd, Cmd_GetDirectCvarValue(cmd, varname + 1, alias, NULL), alias, NULL);
 	else
 	{
 		qboolean is_multiple = false;
 		// Exception: $* and $n- don't use the quoted form by default
-		varstr = Cmd_GetDirectCvarValue(varname, alias, &is_multiple);
+		varstr = Cmd_GetDirectCvarValue(cmd, varname, alias, &is_multiple);
 		if(is_multiple)
 			if(!varfunc)
 				varfunc = asis;
@@ -1213,7 +1194,7 @@ Cmd_PreprocessString
 
 Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
 */
-static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
+static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
 	const char *in;
 	size_t eat, varlen;
 	unsigned outlen;
@@ -1292,7 +1273,7 @@ static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigne
 				varlen = strcspn(in + 1, "}");
 				if(in[varlen + 1] == '}')
 				{
-					val = Cmd_GetCvarValue(in + 1, varlen, alias);
+					val = Cmd_GetCvarValue(cmd, in + 1, varlen, alias);
 					if(!val)
 						return false;
 					eat = varlen + 2;
@@ -1305,7 +1286,7 @@ static qboolean Cmd_PreprocessString( const char *intext, char *outtext, unsigne
 				}
 			} else {
 				varlen = strspn(in, "#*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
-				val = Cmd_GetCvarValue(in, varlen, alias);
+				val = Cmd_GetCvarValue(cmd, in, varlen, alias);
 				if(!val)
 					return false;
 				eat = varlen;
@@ -1342,11 +1323,11 @@ Cmd_ExecuteAlias
 Called for aliases and fills in the alias into the cbuffer
 ============
 */
-static void Cmd_ExecuteAlias (cmdalias_t *alias)
+static void Cmd_ExecuteAlias (cmd_state_t *cmd, cmdalias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE ]; // cmd_mutex
 	static char buffer2[ MAX_INPUTLINE ]; // cmd_mutex
-	qboolean ret = Cmd_PreprocessString( alias->value, buffer, sizeof(buffer) - 2, alias );
+	qboolean ret = Cmd_PreprocessString( cmd, alias->value, buffer, sizeof(buffer) - 2, alias );
 	if(!ret)
 		return;
 	// insert at start of command buffer, so that aliases execute in order
@@ -1356,7 +1337,7 @@ static void Cmd_ExecuteAlias (cmdalias_t *alias)
 	// have to make sure that no second variable expansion takes place, otherwise
 	// alias parameters containing dollar signs can have bad effects.
 	Cmd_QuoteString(buffer2, sizeof(buffer2), buffer, "$", false);
-	Cbuf_InsertText( buffer2 );
+	Cbuf_InsertText(cmd, buffer2);
 }
 
 /*
@@ -1368,17 +1349,17 @@ Cmd_List
 
 ========
 */
-static void Cmd_List_f (void)
+static void Cmd_List_f (cmd_state_t *cmd)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	const char *partial;
 	size_t len;
 	int count;
 	qboolean ispattern;
 
-	if (Cmd_Argc() > 1)
+	if (Cmd_Argc(cmd) > 1)
 	{
-		partial = Cmd_Argv (1);
+		partial = Cmd_Argv(cmd, 1);
 		len = strlen(partial);
 		ispattern = (strchr(partial, '*') || strchr(partial, '?'));
 	}
@@ -1390,11 +1371,11 @@ static void Cmd_List_f (void)
 	}
 
 	count = 0;
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
+	for (func = cmd->functions; func; func = func->next)
 	{
-		if (partial && (ispattern ? !matchpattern_with_separator(cmd->name, partial, false, "", false) : strncmp(partial, cmd->name, len)))
+		if (partial && (ispattern ? !matchpattern_with_separator(func->name, partial, false, "", false) : strncmp(partial, func->name, len)))
 			continue;
-		Con_Printf("%s : %s\n", cmd->name, cmd->description);
+		Con_Printf("%s : %s\n", func->name, func->description);
 		count++;
 	}
 
@@ -1409,9 +1390,9 @@ static void Cmd_List_f (void)
 		Con_Printf("%i Command%s\n\n", count, (count > 1) ? "s" : "");
 }
 
-static void Cmd_Apropos_f(void)
+static void Cmd_Apropos_f(cmd_state_t *cmd)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	cvar_t *cvar;
 	cmdalias_t *alias;
 	const char *partial;
@@ -1419,8 +1400,8 @@ static void Cmd_Apropos_f(void)
 	qboolean ispattern;
 	char vabuf[1024];
 
-	if (Cmd_Argc() > 1)
-		partial = Cmd_Args();
+	if (Cmd_Argc(cmd) > 1)
+		partial = Cmd_Args(cmd);
 	else
 	{
 		Con_Printf("usage: apropos <string>\n");
@@ -1440,15 +1421,15 @@ static void Cmd_Apropos_f(void)
 		Con_Printf ("cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 		count++;
 	}
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
+	for (func = cmd->functions; func; func = func->next)
 	{
-		if (!matchpattern_with_separator(cmd->name, partial, true, "", false))
-		if (!matchpattern_with_separator(cmd->description, partial, true, "", false))
+		if (!matchpattern_with_separator(func->name, partial, true, "", false))
+		if (!matchpattern_with_separator(func->description, partial, true, "", false))
 			continue;
-		Con_Printf("command ^2%s^7: %s\n", cmd->name, cmd->description);
+		Con_Printf("command ^2%s^7: %s\n", func->name, func->description);
 		count++;
 	}
-	for (alias = cmd_alias; alias; alias = alias->next)
+	for (alias = cmd->alias; alias; alias = alias->next)
 	{
 		// procede here a bit differently as an alias value always got a final \n
 		if (!matchpattern_with_separator(alias->name, partial, true, "", false))
@@ -1465,54 +1446,88 @@ static void Cmd_Apropos_f(void)
 Cmd_Init
 ============
 */
-void Cmd_Init (void)
+void Cmd_Init(void)
 {
-	cmd_mempool = Mem_AllocPool("commands", 0, NULL);
-	// space for commands and script files
-	cmd_text.data = cmd_text_buf;
-	cmd_text.maxsize = sizeof(cmd_text_buf);
-	cmd_text.cursize = 0;
-
-	if (Thread_HasThreads())
-		cmd_text_mutex = Thread_CreateMutex();
+	cmd_iter_t *cmd_iter;
+	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
+	{
+		cmd_state_t *cmd = cmd_iter->cmd;
+		cmd->mempool = Mem_AllocPool("commands", 0, NULL);
+		// space for commands and script files
+		cmd->text.data = cmd->text_buf;
+		cmd->text.maxsize = sizeof(cmd->text_buf);
+		cmd->text.cursize = 0;
+		cmd->null_string = "";
+	}
 }
 
-void Cmd_Init_Commands (void)
+void Cmd_Init_Commands(qboolean dedicated_server)
 {
 //
 // register our commands
 //
-	Cmd_AddCommand ("stuffcmds",Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
-	Cmd_AddCommand ("exec",Cmd_Exec_f, "execute a script file");
-	Cmd_AddCommand ("echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
-	Cmd_AddCommand ("alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
-	Cmd_AddCommand ("unalias",Cmd_UnAlias_f, "remove an alias");
-	Cmd_AddCommand ("cmd", Cmd_ForwardToServer, "send a console commandline to the server (used by some mods)");
-	Cmd_AddCommand ("wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
-	Cmd_AddCommand ("set", Cvar_Set_f, "create or change the value of a console variable");
-	Cmd_AddCommand ("seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
-	Cmd_AddCommand ("unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
+	// client-only commands
+	Cmd_AddCommand(&cmd_client, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
+	Cmd_AddCommand(&cmd_client, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
+	Cmd_AddCommand(&cmd_client, "cprint", Cmd_Centerprint_f, "print something at the screen center");
+
+	// maintenance commands used for upkeep of cvars and saved configs
+	Cmd_AddCommand(&cmd_client, "stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
+	Cmd_AddCommand(&cmd_client, "cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
+	Cmd_AddCommand(&cmd_client, "cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
+	Cmd_AddCommand(&cmd_client, "cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
+	Cmd_AddCommand(&cmd_client, "cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
+	Cmd_AddCommand(&cmd_server, "stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
+	Cmd_AddCommand(&cmd_server, "cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
+	Cmd_AddCommand(&cmd_server, "cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
+	Cmd_AddCommand(&cmd_server, "cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
+	Cmd_AddCommand(&cmd_server, "cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
+
+	// general console commands used in multiple environments
+	Cmd_AddCommand(&cmd_client, "exec", Cmd_Exec_f, "execute a script file");
+	Cmd_AddCommand(&cmd_client, "echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
+	Cmd_AddCommand(&cmd_client, "alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
+	Cmd_AddCommand(&cmd_client, "unalias",Cmd_UnAlias_f, "remove an alias");
+	Cmd_AddCommand(&cmd_client, "set", Cvar_Set_f, "create or change the value of a console variable");
+	Cmd_AddCommand(&cmd_client, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+	Cmd_AddCommand(&cmd_client, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
+	Cmd_AddCommand(&cmd_clientfromserver, "exec", Cmd_Exec_f, "execute a script file");
+	Cmd_AddCommand(&cmd_clientfromserver, "echo", Cmd_Echo_f, "print a message to the console (useful in scripts)");
+	Cmd_AddCommand(&cmd_clientfromserver, "alias", Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
+	Cmd_AddCommand(&cmd_clientfromserver, "unalias", Cmd_UnAlias_f, "remove an alias");
+	Cmd_AddCommand(&cmd_clientfromserver, "set", Cvar_Set_f, "create or change the value of a console variable");
+	Cmd_AddCommand(&cmd_clientfromserver, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+	Cmd_AddCommand(&cmd_clientfromserver, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
+	Cmd_AddCommand(&cmd_server, "exec", Cmd_Exec_f, "execute a script file");
+	Cmd_AddCommand(&cmd_server, "echo", Cmd_Echo_f, "print a message to the console (useful in scripts)");
+	Cmd_AddCommand(&cmd_server, "alias", Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
+	Cmd_AddCommand(&cmd_server, "unalias", Cmd_UnAlias_f, "remove an alias");
+	Cmd_AddCommand(&cmd_server, "set", Cvar_Set_f, "create or change the value of a console variable");
+	Cmd_AddCommand(&cmd_server, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+	Cmd_AddCommand(&cmd_server, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
+
 #ifdef FILLALLCVARSWITHRUBBISH
-	Cmd_AddCommand ("fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
+	Cmd_AddCommand(&cmd_client, "fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
+	Cmd_AddCommand(&cmd_server, "fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
 #endif /* FILLALLCVARSWITHRUBBISH */
 
 	// 2000-01-09 CmdList, CvarList commands By Matthias "Maddes" Buecher
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
-	Cmd_AddCommand ("cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
-	Cmd_AddCommand ("cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
-	Cmd_AddCommand ("apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
+	Cmd_AddCommand(&cmd_client, "cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(&cmd_client, "cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(&cmd_client, "apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
+	Cmd_AddCommand(&cmd_server, "cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(&cmd_server, "cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(&cmd_server, "apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
 
-	Cmd_AddCommand ("cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
-	Cmd_AddCommand ("cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
-	Cmd_AddCommand ("cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
-	Cmd_AddCommand ("cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
-
-	Cmd_AddCommand ("cprint", Cmd_Centerprint_f, "print something at the screen center");
-	Cmd_AddCommand ("defer", Cmd_Defer_f, "execute a command in the future");
+	Cmd_AddCommand(&cmd_client, "defer", Cmd_Defer_f, "execute a command in the future");
+	Cmd_AddCommand(&cmd_server, "defer", Cmd_Defer_f, "execute a command in the future");
 
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command
-	Cmd_AddCommand( "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
+	Cmd_AddCommand(&cmd_client, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
+	Cmd_AddCommand(&cmd_server, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
+	Cmd_AddCommand(&cmd_clientfromserver, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
 }
 
 /*
@@ -1522,15 +1537,19 @@ Cmd_Shutdown
 */
 void Cmd_Shutdown(void)
 {
-	if (cmd_text_mutex)
+	cmd_iter_t *cmd_iter;
+	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
 	{
-		// we usually have this locked when we get here from Host_Quit_f
-		Cbuf_UnlockThreadMutex();
-		Thread_DestroyMutex(cmd_text_mutex);
-	}
-	cmd_text_mutex = NULL;
+		cmd_state_t *cmd = cmd_iter->cmd;
 
-	Mem_FreePool(&cmd_mempool);
+		if (cmd->text_lock)
+		{
+			// we usually have this locked when we get here from Host_Quit_f
+			Cbuf_Unlock(cmd);
+		}
+
+		Mem_FreePool(&cmd->mempool);
+	}
 }
 
 /*
@@ -1538,9 +1557,9 @@ void Cmd_Shutdown(void)
 Cmd_Argc
 ============
 */
-int		Cmd_Argc (void)
+int		Cmd_Argc (cmd_state_t *cmd)
 {
-	return cmd_argc;
+	return cmd->argc;
 }
 
 /*
@@ -1548,11 +1567,11 @@ int		Cmd_Argc (void)
 Cmd_Argv
 ============
 */
-const char *Cmd_Argv (int arg)
+const char *Cmd_Argv(cmd_state_t *cmd, int arg)
 {
-	if (arg >= cmd_argc )
-		return cmd_null_string;
-	return cmd_argv[arg];
+	if (arg >= cmd->argc )
+		return cmd->null_string;
+	return cmd->argv[arg];
 }
 
 /*
@@ -1560,9 +1579,9 @@ const char *Cmd_Argv (int arg)
 Cmd_Args
 ============
 */
-const char *Cmd_Args (void)
+const char *Cmd_Args (cmd_state_t *cmd)
 {
-	return cmd_args;
+	return cmd->args;
 }
 
 
@@ -1574,12 +1593,12 @@ Parses the given string into command line tokens.
 ============
 */
 // AK: This function should only be called from ExcuteString because the current design is a bit of an hack
-static void Cmd_TokenizeString (const char *text)
+static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 {
 	int l;
 
-	cmd_argc = 0;
-	cmd_args = NULL;
+	cmd->argc = 0;
+	cmd->args = NULL;
 
 	while (1)
 	{
@@ -1603,24 +1622,24 @@ static void Cmd_TokenizeString (const char *text)
 		if (!*text)
 			return;
 
-		if (cmd_argc == 1)
-			cmd_args = text;
+		if (cmd->argc == 1)
+			cmd->args = text;
 
 		if (!COM_ParseToken_Console(&text))
 			return;
 
-		if (cmd_argc < MAX_ARGS)
+		if (cmd->argc < MAX_ARGS)
 		{
 			l = (int)strlen(com_token) + 1;
-			if (cmd_tokenizebufferpos + l > CMD_TOKENIZELENGTH)
+			if (cmd->tokenizebufferpos + l > CMD_TOKENIZELENGTH)
 			{
 				Con_Printf("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
 				break;
 			}
-			memcpy (cmd_tokenizebuffer + cmd_tokenizebufferpos, com_token, l);
-			cmd_argv[cmd_argc] = cmd_tokenizebuffer + cmd_tokenizebufferpos;
-			cmd_tokenizebufferpos += l;
-			cmd_argc++;
+			memcpy (cmd->tokenizebuffer + cmd->tokenizebufferpos, com_token, l);
+			cmd->argv[cmd->argc] = cmd->tokenizebuffer + cmd->tokenizebufferpos;
+			cmd->tokenizebufferpos += l;
+			cmd->argc++;
 		}
 	}
 }
@@ -1631,9 +1650,9 @@ static void Cmd_TokenizeString (const char *text)
 Cmd_AddCommand
 ============
 */
-void Cmd_AddCommand_WithClientCommand (const char *cmd_name, xcommand_t consolefunction, xcommand_t clientfunction, const char *description)
+void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function, const char *description)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	cmd_function_t *prev, *current;
 
 // fail if the command is a variable name
@@ -1643,47 +1662,40 @@ void Cmd_AddCommand_WithClientCommand (const char *cmd_name, xcommand_t consolef
 		return;
 	}
 
-// fail if the command already exists
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+	// fail if the command already exists in this interpreter
+	for (func = cmd->functions; func; func = func->next)
+		if (!strcmp(cmd_name, func->name))
+			break;
+
+	if (func)
 	{
-		if (!strcmp (cmd_name, cmd->name))
-		{
-			if (consolefunction || clientfunction)
-			{
-				Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-				return;
-			}
-			else	//[515]: csqc
-			{
-				cmd->csqcfunc = true;
-				return;
-			}
+		// command already defined...
+		if (function)
+			Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
+		else	//[515]: csqc
+			func->csqcfunc = true;
+	}
+	else
+	{
+		func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
+		func->name = cmd_name;
+		func->function = function;
+		func->description = description;
+		if (!function)			//[515]: csqc
+			func->csqcfunc = true;
+		func->next = cmd->functions;
+
+		// insert it at the right alphanumeric position
+		for (prev = NULL, current = cmd->functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+			;
+		if (prev) {
+			prev->next = func;
 		}
+		else {
+			cmd->functions = func;
+		}
+		func->next = current;
 	}
-
-	cmd = (cmd_function_t *)Mem_Alloc(cmd_mempool, sizeof(cmd_function_t));
-	cmd->name = cmd_name;
-	cmd->consolefunction = consolefunction;
-	cmd->clientfunction = clientfunction;
-	cmd->description = description;
-	if(!consolefunction && !clientfunction)			//[515]: csqc
-		cmd->csqcfunc = true;
-	cmd->next = cmd_functions;
-
-// insert it at the right alphanumeric position
-	for( prev = NULL, current = cmd_functions ; current && strcmp( current->name, cmd->name ) < 0 ; prev = current, current = current->next )
-		;
-	if( prev ) {
-		prev->next = cmd;
-	} else {
-		cmd_functions = cmd;
-	}
-	cmd->next = current;
-}
-
-void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *description)
-{
-	Cmd_AddCommand_WithClientCommand (cmd_name, function, NULL, description);
 }
 
 /*
@@ -1691,12 +1703,12 @@ void Cmd_AddCommand (const char *cmd_name, xcommand_t function, const char *desc
 Cmd_Exists
 ============
 */
-qboolean Cmd_Exists (const char *cmd_name)
+qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
 {
-	cmd_function_t	*cmd;
+	cmd_function_t	*func;
 
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
-		if (!strcmp (cmd_name,cmd->name))
+	for (func=cmd->functions ; func ; func=func->next)
+		if (!strcmp (cmd_name,func->name))
 			return true;
 
 	return false;
@@ -1708,9 +1720,9 @@ qboolean Cmd_Exists (const char *cmd_name)
 Cmd_CompleteCommand
 ============
 */
-const char *Cmd_CompleteCommand (const char *partial)
+const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	size_t len;
 
 	len = strlen(partial);
@@ -1719,9 +1731,9 @@ const char *Cmd_CompleteCommand (const char *partial)
 		return NULL;
 
 // check functions
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
-		if (!strncasecmp(partial, cmd->name, len))
-			return cmd->name;
+	for (func = cmd->functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			return func->name;
 
 	return NULL;
 }
@@ -1735,9 +1747,9 @@ const char *Cmd_CompleteCommand (const char *partial)
 	Thanks to taniwha
 
 */
-int Cmd_CompleteCountPossible (const char *partial)
+int Cmd_CompleteCountPossible (cmd_state_t *cmd, const char *partial)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	size_t len;
 	int h;
 
@@ -1748,8 +1760,8 @@ int Cmd_CompleteCountPossible (const char *partial)
 		return 0;
 
 	// Loop through the command list and count all partial matches
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
-		if (!strncasecmp(partial, cmd->name, len))
+	for (func = cmd->functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
 			h++;
 
 	return h;
@@ -1764,34 +1776,34 @@ int Cmd_CompleteCountPossible (const char *partial)
 	Thanks to taniwha
 
 */
-const char **Cmd_CompleteBuildList (const char *partial)
+const char **Cmd_CompleteBuildList (cmd_state_t *cmd, const char *partial)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	size_t len = 0;
 	size_t bpos = 0;
-	size_t sizeofbuf = (Cmd_CompleteCountPossible (partial) + 1) * sizeof (const char *);
+	size_t sizeofbuf = (Cmd_CompleteCountPossible (cmd, partial) + 1) * sizeof (const char *);
 	const char **buf;
 
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
-		if (!strncasecmp(partial, cmd->name, len))
-			buf[bpos++] = cmd->name;
+	for (func = cmd->functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			buf[bpos++] = func->name;
 
 	buf[bpos] = NULL;
 	return buf;
 }
 
 // written by LadyHavoc
-void Cmd_CompleteCommandPrint (const char *partial)
+void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial)
 {
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	size_t len = strlen(partial);
 	// Loop through the command list and print all matches
-	for (cmd = cmd_functions; cmd; cmd = cmd->next)
-		if (!strncasecmp(partial, cmd->name, len))
-			Con_Printf("^2%s^7: %s\n", cmd->name, cmd->description);
+	for (func = cmd->functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			Con_Printf("^2%s^7: %s\n", func->name, func->description);
 }
 
 /*
@@ -1803,7 +1815,7 @@ void Cmd_CompleteCommandPrint (const char *partial)
 	Thanks to taniwha
 
 */
-const char *Cmd_CompleteAlias (const char *partial)
+const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial)
 {
 	cmdalias_t *alias;
 	size_t len;
@@ -1814,7 +1826,7 @@ const char *Cmd_CompleteAlias (const char *partial)
 		return NULL;
 
 	// Check functions
-	for (alias = cmd_alias; alias; alias = alias->next)
+	for (alias = cmd->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			return alias->name;
 
@@ -1822,12 +1834,12 @@ const char *Cmd_CompleteAlias (const char *partial)
 }
 
 // written by LadyHavoc
-void Cmd_CompleteAliasPrint (const char *partial)
+void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial)
 {
 	cmdalias_t *alias;
 	size_t len = strlen(partial);
 	// Loop through the alias list and print all matches
-	for (alias = cmd_alias; alias; alias = alias->next)
+	for (alias = cmd->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			Con_Printf("^5%s^7: %s", alias->name, alias->value);
 }
@@ -1842,7 +1854,7 @@ void Cmd_CompleteAliasPrint (const char *partial)
 	Thanks to taniwha
 
 */
-int Cmd_CompleteAliasCountPossible (const char *partial)
+int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial)
 {
 	cmdalias_t	*alias;
 	size_t		len;
@@ -1856,7 +1868,7 @@ int Cmd_CompleteAliasCountPossible (const char *partial)
 		return 0;
 
 	// Loop through the command list and count all partial matches
-	for (alias = cmd_alias; alias; alias = alias->next)
+	for (alias = cmd->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			h++;
 
@@ -1872,18 +1884,18 @@ int Cmd_CompleteAliasCountPossible (const char *partial)
 	Thanks to taniwha
 
 */
-const char **Cmd_CompleteAliasBuildList (const char *partial)
+const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 {
 	cmdalias_t *alias;
 	size_t len = 0;
 	size_t bpos = 0;
-	size_t sizeofbuf = (Cmd_CompleteAliasCountPossible (partial) + 1) * sizeof (const char *);
+	size_t sizeofbuf = (Cmd_CompleteAliasCountPossible (cmd, partial) + 1) * sizeof (const char *);
 	const char **buf;
 
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
-	for (alias = cmd_alias; alias; alias = alias->next)
+	for (alias = cmd->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			buf[bpos++] = alias->name;
 
@@ -1891,11 +1903,11 @@ const char **Cmd_CompleteAliasBuildList (const char *partial)
 	return buf;
 }
 
-void Cmd_ClearCsqcFuncs (void)
+void Cmd_ClearCsqcFuncs (cmd_state_t *cmd)
 {
-	cmd_function_t *cmd;
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
-		cmd->csqcfunc = false;
+	cmd_function_t *func;
+	for (func = cmd->functions; func; func = func->next)
+		func->csqcfunc = false;
 }
 
 /*
@@ -1906,91 +1918,73 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void Cmd_ExecuteString (const char *text, cmd_source_t src, qboolean lockmutex)
+void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex)
 {
 	int oldpos;
-	int found;
-	cmd_function_t *cmd;
+	cmd_function_t *func;
 	cmdalias_t *a;
 	if (lockmutex)
-		Cbuf_LockThreadMutex();
-	oldpos = cmd_tokenizebufferpos;
-	cmd_source = src;
-	found = false;
+		Cbuf_Lock(cmd);
+	oldpos = cmd->tokenizebufferpos;
+	cmd->source = src;
 
-	Cmd_TokenizeString (text);
+	Cmd_TokenizeString (cmd, text);
 
 // execute the command line
-	if (!Cmd_Argc())
+	if (!Cmd_Argc(cmd))
 		goto done; // no tokens
 
 // check functions
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+	for (func = cmd->functions; func; func=func->next)
 	{
-		if (!strcasecmp (cmd_argv[0],cmd->name))
+		if (!strcasecmp (cmd->argv[0], func->name))
 		{
-			if (cmd->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
+			if (func->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
 				goto done;
 			switch (src)
 			{
 			case src_command:
-				if (cmd->consolefunction)
-					cmd->consolefunction ();
-				else if (cmd->clientfunction)
-				{
-					if (cls.state == ca_connected)
-					{
-						// forward remote commands to the server for execution
-						Cmd_ForwardToServer();
-					}
-					else
-						Con_Printf("Can not send command \"%s\", not connected.\n", Cmd_Argv(0));
-				}
+				if (func->function)
+					func->function(cmd);
 				else
-					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(0));
-				found = true;
-				goto command_found;
+					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+				goto done;
 			case src_client:
-				if (cmd->clientfunction)
+				if (func->function)
 				{
-					cmd->clientfunction ();
+					func->function(cmd);
 					goto done;
 				}
-				break;
 			}
 			break;
 		}
 	}
-command_found:
 
 	// if it's a client command and no command was found, say so.
-	if (cmd_source == src_client)
+	if (cmd->source == src_client)
 	{
 		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
 		goto done;
 	}
 
 // check alias
-	for (a=cmd_alias ; a ; a=a->next)
+	for (a=cmd->alias ; a ; a=a->next)
 	{
-		if (!strcasecmp (cmd_argv[0], a->name))
+		if (!strcasecmp (cmd->argv[0], a->name))
 		{
-			Cmd_ExecuteAlias(a);
+			Cmd_ExecuteAlias(cmd, a);
 			goto done;
 		}
 	}
 
-	if(found) // if the command was hooked and found, all is good
-		goto done;
-
 // check cvars
-	if (!Cvar_Command () && host_framecount > 0)
-		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(0));
+	if (!Cvar_Command (cmd) && host_framecount > 0)
+		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 
 done:
-	cmd_tokenizebufferpos = oldpos;
+	cmd->tokenizebufferpos = oldpos;
 	if (lockmutex)
-		Cbuf_UnlockThreadMutex();
+		Cbuf_Unlock(cmd);
 }
 
 
@@ -2128,19 +2122,19 @@ Cmd_ForwardToServer
 Sends the entire command line over to the server
 ===================
 */
-void Cmd_ForwardToServer (void)
+void Cmd_ForwardToServer_f (cmd_state_t *cmd)
 {
 	const char *s;
 	char vabuf[1024];
-	if (!strcasecmp(Cmd_Argv(0), "cmd"))
+	if (!strcasecmp(Cmd_Argv(cmd, 0), "cmd"))
 	{
 		// we want to strip off "cmd", so just send the args
-		s = Cmd_Argc() > 1 ? Cmd_Args() : "";
+		s = Cmd_Argc(cmd) > 1 ? Cmd_Args(cmd) : "";
 	}
 	else
 	{
-		// we need to keep the command name, so send Cmd_Argv(0), a space and then Cmd_Args()
-		s = va(vabuf, sizeof(vabuf), "%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
+		// we need to keep the command name, so send Cmd_Argv(cmd, 0), a space and then Cmd_Args(cmd)
+		s = va(vabuf, sizeof(vabuf), "%s %s", Cmd_Argv(cmd, 0), Cmd_Argc(cmd) > 1 ? Cmd_Args(cmd) : "");
 	}
 	// don't send an empty forward message if the user tries "cmd" by itself
 	if (!s || !*s)
@@ -2158,7 +2152,7 @@ where the given parameter apears, or 0 if not present
 ================
 */
 
-int Cmd_CheckParm (const char *parm)
+int Cmd_CheckParm (cmd_state_t *cmd, const char *parm)
 {
 	int i;
 
@@ -2168,8 +2162,8 @@ int Cmd_CheckParm (const char *parm)
 		return 0;
 	}
 
-	for (i = 1; i < Cmd_Argc (); i++)
-		if (!strcasecmp (parm, Cmd_Argv (i)))
+	for (i = 1; i < Cmd_Argc (cmd); i++)
+		if (!strcasecmp (parm, Cmd_Argv(cmd, i)))
 			return i;
 
 	return 0;
@@ -2179,56 +2173,66 @@ int Cmd_CheckParm (const char *parm)
 
 void Cmd_SaveInitState(void)
 {
-	cmd_function_t *f;
-	cmdalias_t *a;
-	for (f = cmd_functions;f;f = f->next)
-		f->initstate = true;
-	for (a = cmd_alias;a;a = a->next)
+	cmd_iter_t *cmd_iter;
+	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
 	{
-		a->initstate = true;
-		a->initialvalue = Mem_strdup(zonemempool, a->value);
+		cmd_state_t *cmd = cmd_iter->cmd;
+		cmd_function_t *f;
+		cmdalias_t *a;
+		for (f = cmd->functions; f; f = f->next)
+			f->initstate = true;
+		for (a = cmd->alias; a; a = a->next)
+		{
+			a->initstate = true;
+			a->initialvalue = Mem_strdup(zonemempool, a->value);
+		}
 	}
 	Cvar_SaveInitState();
 }
 
 void Cmd_RestoreInitState(void)
 {
-	cmd_function_t *f, **fp;
-	cmdalias_t *a, **ap;
-	for (fp = &cmd_functions;(f = *fp);)
+	cmd_iter_t *cmd_iter;
+	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
 	{
-		if (f->initstate)
-			fp = &f->next;
-		else
+		cmd_state_t *cmd = cmd_iter->cmd;
+		cmd_function_t *f, **fp;
+		cmdalias_t *a, **ap;
+		for (fp = &cmd->functions; (f = *fp);)
 		{
-			// destroy this command, it didn't exist at init
-			Con_DPrintf("Cmd_RestoreInitState: Destroying command %s\n", f->name);
-			*fp = f->next;
-			Z_Free(f);
-		}
-	}
-	for (ap = &cmd_alias;(a = *ap);)
-	{
-		if (a->initstate)
-		{
-			// restore this alias, it existed at init
-			if (strcmp(a->value ? a->value : "", a->initialvalue ? a->initialvalue : ""))
+			if (f->initstate)
+				fp = &f->next;
+			else
 			{
-				Con_DPrintf("Cmd_RestoreInitState: Restoring alias %s\n", a->name);
+				// destroy this command, it didn't exist at init
+				Con_DPrintf("Cmd_RestoreInitState: Destroying command %s\n", f->name);
+				*fp = f->next;
+				Z_Free(f);
+			}
+		}
+		for (ap = &cmd->alias; (a = *ap);)
+		{
+			if (a->initstate)
+			{
+				// restore this alias, it existed at init
+				if (strcmp(a->value ? a->value : "", a->initialvalue ? a->initialvalue : ""))
+				{
+					Con_DPrintf("Cmd_RestoreInitState: Restoring alias %s\n", a->name);
+					if (a->value)
+						Z_Free(a->value);
+					a->value = Mem_strdup(zonemempool, a->initialvalue);
+				}
+				ap = &a->next;
+			}
+			else
+			{
+				// free this alias, it didn't exist at init...
+				Con_DPrintf("Cmd_RestoreInitState: Destroying alias %s\n", a->name);
+				*ap = a->next;
 				if (a->value)
 					Z_Free(a->value);
-				a->value = Mem_strdup(zonemempool, a->initialvalue);
+				Z_Free(a);
 			}
-			ap = &a->next;
-		}
-		else
-		{
-			// free this alias, it didn't exist at init...
-			Con_DPrintf("Cmd_RestoreInitState: Destroying alias %s\n", a->name);
-			*ap = a->next;
-			if (a->value)
-				Z_Free(a->value);
-			Z_Free(a);
 		}
 	}
 	Cvar_RestoreInitState();

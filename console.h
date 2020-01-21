@@ -56,12 +56,12 @@ void Con_DPrint(const char *msg);
 
 /// A Con_Printf that only shows up if the "developer" cvar is set
 void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
-void Con_Clear_f (void);
+void Con_Clear_f(cmd_state_t *cmd);
 void Con_DrawNotify (void);
 
 /// Clear all notify lines.
 void Con_ClearNotify (void);
-void Con_ToggleConsole_f (void);
+void Con_ToggleConsole_f(cmd_state_t *cmd);
 
 int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
 
@@ -71,7 +71,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 /// or to list possible matches grouped by type
 /// (i.e. will display possible variables, aliases, commands
 /// that match what they've typed so far)
-void Con_CompleteCommandLine(void);
+void Con_CompleteCommandLine(cmd_state_t *cmd);
 
 /// Generic libs/util/console.c function to display a list
 /// formatted in columns on the console

@@ -199,19 +199,19 @@ PRVM_PrintFunction_f
 
 ============
 */
-void PRVM_PrintFunction_f (void)
+void PRVM_PrintFunction_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
-	if (Cmd_Argc() != 3)
+	if (Cmd_Argc(cmd) != 3)
 	{
 		Con_Printf("usage: prvm_printfunction <program name> <function name>\n");
 		return;
 	}
 
-	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(cmd, 1))))
 		return;
 
-	PRVM_PrintFunctionStatements(prog, Cmd_Argv(2));
+	PRVM_PrintFunctionStatements(prog, Cmd_Argv(cmd, 2));
 }
 
 /*
@@ -433,16 +433,16 @@ PRVM_CallProfile_f
 
 ============
 */
-void PRVM_CallProfile_f (void)
+void PRVM_CallProfile_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("prvm_callprofile <program name>\n");
 		return;
 	}
 
-	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(cmd, 1))))
 		return;
 
 	PRVM_CallProfile(prog);
@@ -454,7 +454,7 @@ PRVM_Profile_f
 
 ============
 */
-void PRVM_Profile_f (void)
+void PRVM_Profile_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
 	int howmany;
@@ -466,21 +466,21 @@ void PRVM_Profile_f (void)
 	}
 
 	howmany = 1<<30;
-	if (Cmd_Argc() == 3)
-		howmany = atoi(Cmd_Argv(2));
-	else if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) == 3)
+		howmany = atoi(Cmd_Argv(cmd, 2));
+	else if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("prvm_profile <program name>\n");
 		return;
 	}
 
-	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(cmd, 1))))
 		return;
 
 	PRVM_Profile(prog, howmany, 0, 0);
 }
 
-void PRVM_ChildProfile_f (void)
+void PRVM_ChildProfile_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
 	int howmany;
@@ -492,15 +492,15 @@ void PRVM_ChildProfile_f (void)
 	}
 
 	howmany = 1<<30;
-	if (Cmd_Argc() == 3)
-		howmany = atoi(Cmd_Argv(2));
-	else if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) == 3)
+		howmany = atoi(Cmd_Argv(cmd, 2));
+	else if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("prvm_childprofile <program name>\n");
 		return;
 	}
 
-	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(1))))
+	if (!(prog = PRVM_FriendlyProgFromString(Cmd_Argv(cmd, 1))))
 		return;
 
 	PRVM_Profile(prog, howmany, 0, 1);

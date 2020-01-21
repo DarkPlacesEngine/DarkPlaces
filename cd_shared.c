@@ -264,7 +264,7 @@ void CDAudio_Resume (void)
 	cdPlaying = true;
 }
 
-static void CD_f (void)
+static void CD_f(cmd_state_t *cmd)
 {
 	const char *command;
 #ifdef MAXTRACKS
@@ -272,7 +272,7 @@ static void CD_f (void)
 	int n;
 #endif
 
-	command = Cmd_Argv (1);
+	command = Cmd_Argv(cmd, 1);
 
 	if (strcasecmp(command, "remap") != 0)
 		Host_StartVideo();
@@ -312,7 +312,7 @@ static void CD_f (void)
 	if (strcasecmp(command, "remap") == 0)
 	{
 #ifdef MAXTRACKS
-		ret = Cmd_Argc() - 2;
+		ret = Cmd_Argc(cmd) - 2;
 		if (ret <= 0)
 		{
 			for (n = 1; n < MAXTRACKS; n++)
@@ -321,7 +321,7 @@ static void CD_f (void)
 			return;
 		}
 		for (n = 1; n <= ret; n++)
-			strlcpy(remap[n], Cmd_Argv (n+1), sizeof(*remap));
+			strlcpy(remap[n], Cmd_Argv(cmd, n+1), sizeof(*remap));
 #endif
 		return;
 	}
@@ -336,7 +336,7 @@ static void CD_f (void)
 	{
 		if (music_playlist_index.integer >= 0)
 			return;
-		CDAudio_Play_byName(Cmd_Argv (2), false, true, (Cmd_Argc() > 3) ? atof( Cmd_Argv(3) ) : 0);
+		CDAudio_Play_byName(Cmd_Argv(cmd, 2), false, true, (Cmd_Argc(cmd) > 3) ? atof( Cmd_Argv(cmd, 3) ) : 0);
 		return;
 	}
 
@@ -344,7 +344,7 @@ static void CD_f (void)
 	{
 		if (music_playlist_index.integer >= 0)
 			return;
-		CDAudio_Play_byName(Cmd_Argv (2), true, true, (Cmd_Argc() > 3) ? atof( Cmd_Argv(3) ) : 0);
+		CDAudio_Play_byName(Cmd_Argv(cmd, 2), true, true, (Cmd_Argc(cmd) > 3) ? atof( Cmd_Argv(cmd, 3) ) : 0);
 		return;
 	}
 
@@ -570,7 +570,8 @@ int CDAudio_Init (void)
 		Cvar_RegisterVariable(&music_playlist_sampleposition[i]);
 	}
 
-	Cmd_AddCommand("cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
+	Cmd_AddCommand(&cmd_client, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
+	Cmd_AddCommand(&cmd_clientfromserver, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
 
 	return 0;
 }

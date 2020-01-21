@@ -757,10 +757,10 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 #define PRVM_Free(buffer) Mem_Free(buffer)
 
 void PRVM_Profile (prvm_prog_t *prog, int maxfunctions, double mintime, int sortby);
-void PRVM_Profile_f (void);
-void PRVM_ChildProfile_f (void);
-void PRVM_CallProfile_f (void);
-void PRVM_PrintFunction_f (void);
+void PRVM_Profile_f(cmd_state_t *cmd);
+void PRVM_ChildProfile_f(cmd_state_t *cmd);
+void PRVM_CallProfile_f(cmd_state_t *cmd);
+void PRVM_PrintFunction_f(cmd_state_t *cmd);
 
 void PRVM_PrintState(prvm_prog_t *prog, int stack_index);
 void PRVM_Crash(prvm_prog_t *prog);
@@ -830,7 +830,7 @@ extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-p
 
 void PRVM_Init_Exec(prvm_prog_t *prog);
 
-void PRVM_ED_PrintEdicts_f (void);
+void PRVM_ED_PrintEdicts_f(cmd_state_t *cmd);
 void PRVM_ED_PrintNum (prvm_prog_t *prog, int ent, const char *wildcard_fieldname);
 
 const char *PRVM_GetString(prvm_prog_t *prog, int num);

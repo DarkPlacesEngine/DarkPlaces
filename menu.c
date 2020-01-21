@@ -36,28 +36,28 @@ static int NehGameType;
 enum m_state_e m_state;
 char m_return_reason[128];
 
-void M_Menu_Main_f (void);
-	void M_Menu_SinglePlayer_f (void);
-		void M_Menu_Transfusion_Episode_f (void);
-			void M_Menu_Transfusion_Skill_f (void);
-		void M_Menu_Load_f (void);
-		void M_Menu_Save_f (void);
-	void M_Menu_MultiPlayer_f (void);
-		void M_Menu_Setup_f (void);
-	void M_Menu_Options_f (void);
-	void M_Menu_Options_Effects_f (void);
-	void M_Menu_Options_Graphics_f (void);
-	void M_Menu_Options_ColorControl_f (void);
-		void M_Menu_Keys_f (void);
-		void M_Menu_Reset_f (void);
-		void M_Menu_Video_f (void);
-	void M_Menu_Help_f (void);
-	void M_Menu_Credits_f (void);
-	void M_Menu_Quit_f (void);
-void M_Menu_LanConfig_f (void);
-void M_Menu_GameOptions_f (void);
-void M_Menu_ServerList_f (void);
-void M_Menu_ModList_f (void);
+void M_Menu_Main_f(cmd_state_t *cmd);
+	void M_Menu_SinglePlayer_f(cmd_state_t *cmd);
+		void M_Menu_Transfusion_Episode_f(cmd_state_t *cmd);
+			void M_Menu_Transfusion_Skill_f(cmd_state_t *cmd);
+		void M_Menu_Load_f(cmd_state_t *cmd);
+		void M_Menu_Save_f(cmd_state_t *cmd);
+	void M_Menu_MultiPlayer_f(cmd_state_t *cmd);
+		void M_Menu_Setup_f(cmd_state_t *cmd);
+	void M_Menu_Options_f(cmd_state_t *cmd);
+	void M_Menu_Options_Effects_f(cmd_state_t *cmd);
+	void M_Menu_Options_Graphics_f(cmd_state_t *cmd);
+	void M_Menu_Options_ColorControl_f(cmd_state_t *cmd);
+		void M_Menu_Keys_f(cmd_state_t *cmd);
+		void M_Menu_Reset_f(cmd_state_t *cmd);
+		void M_Menu_Video_f(cmd_state_t *cmd);
+	void M_Menu_Help_f(cmd_state_t *cmd);
+	void M_Menu_Credits_f(cmd_state_t *cmd);
+	void M_Menu_Quit_f(cmd_state_t *cmd);
+void M_Menu_LanConfig_f(cmd_state_t *cmd);
+void M_Menu_GameOptions_f(cmd_state_t *cmd);
+void M_Menu_ServerList_f(cmd_state_t *cmd);
+void M_Menu_ModList_f(cmd_state_t *cmd);
 
 static void M_Main_Draw (void);
 	static void M_SinglePlayer_Draw (void);
@@ -83,28 +83,28 @@ static void M_ServerList_Draw (void);
 static void M_ModList_Draw (void);
 
 
-static void M_Main_Key (int key, int ascii);
-	static void M_SinglePlayer_Key (int key, int ascii);
-		static void M_Transfusion_Episode_Key (int key, int ascii);
-			static void M_Transfusion_Skill_Key (int key, int ascii);
-		static void M_Load_Key (int key, int ascii);
-		static void M_Save_Key (int key, int ascii);
-	static void M_MultiPlayer_Key (int key, int ascii);
-		static void M_Setup_Key (int key, int ascii);
-	static void M_Options_Key (int key, int ascii);
-	static void M_Options_Effects_Key (int key, int ascii);
-	static void M_Options_Graphics_Key (int key, int ascii);
-	static void M_Options_ColorControl_Key (int key, int ascii);
-		static void M_Keys_Key (int key, int ascii);
-		static void M_Reset_Key (int key, int ascii);
-		static void M_Video_Key (int key, int ascii);
-	static void M_Help_Key (int key, int ascii);
-	static void M_Credits_Key (int key, int ascii);
-	static void M_Quit_Key (int key, int ascii);
-static void M_LanConfig_Key (int key, int ascii);
-static void M_GameOptions_Key (int key, int ascii);
-static void M_ServerList_Key (int key, int ascii);
-static void M_ModList_Key (int key, int ascii);
+static void M_Main_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_SinglePlayer_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Transfusion_Episode_Key(cmd_state_t *cmd, int key, int ascii);
+			static void M_Transfusion_Skill_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Load_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Save_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_MultiPlayer_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Setup_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Options_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Options_Effects_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Options_Graphics_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Options_ColorControl_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Keys_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Reset_Key(cmd_state_t *cmd, int key, int ascii);
+		static void M_Video_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Help_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Credits_Key(cmd_state_t *cmd, int key, int ascii);
+	static void M_Quit_Key(cmd_state_t *cmd, int key, int ascii);
+static void M_LanConfig_Key(cmd_state_t *cmd, int key, int ascii);
+static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii);
+static void M_ServerList_Key(cmd_state_t *cmd, int key, int ascii);
+static void M_ModList_Key(cmd_state_t *cmd, int key, int ascii);
 
 static qboolean	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
 
@@ -282,7 +282,7 @@ static void M_ToggleMenu(int mode)
 	{
 		if(mode == 0)
 			return; // the menu is off, and we want it off
-		M_Menu_Main_f ();
+		M_Menu_Main_f (&cmd_client);
 	}
 	else
 	{
@@ -309,7 +309,7 @@ static void M_Demo_Draw (void)
 }
 
 
-static void M_Menu_Demos_f (void)
+static void M_Menu_Demos_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_demo;
@@ -317,20 +317,20 @@ static void M_Menu_Demos_f (void)
 }
 
 
-static void M_Demo_Key (int k, int ascii)
+static void M_Demo_Key (cmd_state_t *cmd, int k, int ascii)
 {
 	char vabuf[1024];
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f (cmd);
 		break;
 
 	case K_ENTER:
 		S_LocalSound ("sound/misc/menu2.wav");
 		m_state = m_none;
 		key_dest = key_game;
-		Cbuf_AddText (va(vabuf, sizeof(vabuf), "playdemo %s\n", NehahraDemos[demo_cursor].name));
+		Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "playdemo %s\n", NehahraDemos[demo_cursor].name));
 		return;
 
 	case K_UPARROW:
@@ -360,7 +360,7 @@ static qboolean m_missingdata = false;
 static int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
 
-void M_Menu_Main_f (void)
+void M_Menu_Main_f(cmd_state_t *cmd)
 {
 	const char *s;
 	s = "gfx/mainmenu";
@@ -497,7 +497,7 @@ static void M_Main_Draw (void)
 }
 
 
-static void M_Main_Key (int key, int ascii)
+static void M_Main_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
@@ -534,10 +534,10 @@ static void M_Main_Key (int key, int ascii)
 					m_state = m_none;
 					key_dest = key_game;
 				}
-				Con_ToggleConsole_f ();
+				Con_ToggleConsole_f(cmd);
 				break;
 			case 1:
-				M_Menu_Quit_f ();
+				M_Menu_Quit_f(cmd);
 				break;
 			}
 		}
@@ -549,30 +549,30 @@ static void M_Main_Key (int key, int ascii)
 				switch (m_main_cursor)
 				{
 				case 0:
-					M_Menu_SinglePlayer_f ();
+					M_Menu_SinglePlayer_f(cmd);
 					break;
 
 				case 1:
-					M_Menu_Demos_f ();
+					M_Menu_Demos_f(cmd);
 					break;
 
 				case 2:
-					M_Menu_MultiPlayer_f ();
+					M_Menu_MultiPlayer_f(cmd);
 					break;
 
 				case 3:
-					M_Menu_Options_f ();
+					M_Menu_Options_f(cmd);
 					break;
 
 				case 4:
 					key_dest = key_game;
 					if (sv.active)
-						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo endcred\n");
+						Cbuf_AddText (cmd, "disconnect\n");
+					Cbuf_AddText (cmd, "playdemo endcred\n");
 					break;
 
 				case 5:
-					M_Menu_Quit_f ();
+					M_Menu_Quit_f(cmd);
 					break;
 				}
 				break;
@@ -580,26 +580,26 @@ static void M_Main_Key (int key, int ascii)
 				switch (m_main_cursor)
 				{
 				case 0:
-					M_Menu_SinglePlayer_f ();
+					M_Menu_SinglePlayer_f(cmd);
 					break;
 
 				case 1:
-					M_Menu_MultiPlayer_f ();
+					M_Menu_MultiPlayer_f(cmd);
 					break;
 
 				case 2:
-					M_Menu_Options_f ();
+					M_Menu_Options_f(cmd);
 					break;
 
 				case 3:
 					key_dest = key_game;
 					if (sv.active)
-						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo endcred\n");
+						Cbuf_AddText (cmd, "disconnect\n");
+					Cbuf_AddText (cmd, "playdemo endcred\n");
 					break;
 
 				case 4:
-					M_Menu_Quit_f ();
+					M_Menu_Quit_f(cmd);
 					break;
 				}
 				break;
@@ -607,22 +607,22 @@ static void M_Main_Key (int key, int ascii)
 				switch (m_main_cursor)
 				{
 				case 0:
-					M_Menu_Demos_f ();
+					M_Menu_Demos_f(cmd);
 					break;
 
 				case 1:
 					key_dest = key_game;
 					if (sv.active)
-						Cbuf_AddText ("disconnect\n");
-					Cbuf_AddText ("playdemo endcred\n");
+						Cbuf_AddText (cmd, "disconnect\n");
+					Cbuf_AddText (cmd, "playdemo endcred\n");
 					break;
 
 				case 2:
-					M_Menu_Options_f ();
+					M_Menu_Options_f(cmd);
 					break;
 
 				case 3:
-					M_Menu_Quit_f ();
+					M_Menu_Quit_f(cmd);
 					break;
 				}
 				break;
@@ -634,31 +634,31 @@ static void M_Main_Key (int key, int ascii)
 				switch (m_main_cursor)
 				{
 				case 0:
-					M_Menu_Transfusion_Episode_f ();
+					M_Menu_Transfusion_Episode_f(cmd);
 					break;
 
 				case 1:
-					M_Menu_MultiPlayer_f ();
+					M_Menu_MultiPlayer_f(cmd);
 					break;
 
 				case 2:
-					M_Menu_Options_f ();
+					M_Menu_Options_f(cmd);
 					break;
 
 				case 3:
-					M_Menu_Load_f ();
+					M_Menu_Load_f(cmd);
 					break;
 
 				case 4:
-					M_Menu_Help_f ();
+					M_Menu_Help_f(cmd);
 					break;
 
 				case 5:
-					M_Menu_Credits_f ();
+					M_Menu_Credits_f(cmd);
 					break;
 
 				case 6:
-					M_Menu_Quit_f ();
+					M_Menu_Quit_f(cmd);
 					break;
 				}
 			}
@@ -667,35 +667,35 @@ static void M_Main_Key (int key, int ascii)
 				switch (m_main_cursor)
 				{
 				case 0:
-					M_Menu_Transfusion_Episode_f ();
+					M_Menu_Transfusion_Episode_f(cmd);
 					break;
 
 				case 1:
-					M_Menu_MultiPlayer_f ();
+					M_Menu_MultiPlayer_f(cmd);
 					break;
 
 				case 2:
-					M_Menu_Options_f ();
+					M_Menu_Options_f(cmd);
 					break;
 
 				case 3:
-					M_Menu_Save_f ();
+					M_Menu_Save_f(cmd);
 					break;
 
 				case 4:
-					M_Menu_Load_f ();
+					M_Menu_Load_f(cmd);
 					break;
 
 				case 5:
-					M_Menu_Help_f ();
+					M_Menu_Help_f(cmd);
 					break;
 
 				case 6:
-					M_Menu_Credits_f ();
+					M_Menu_Credits_f(cmd);
 					break;
 
 				case 7:
-					M_Menu_Quit_f ();
+					M_Menu_Quit_f(cmd);
 					break;
 				}
 			}
@@ -705,23 +705,23 @@ static void M_Main_Key (int key, int ascii)
 			switch (m_main_cursor)
 			{
 			case 0:
-				M_Menu_SinglePlayer_f ();
+				M_Menu_SinglePlayer_f(cmd);
 				break;
 
 			case 1:
-				M_Menu_MultiPlayer_f ();
+				M_Menu_MultiPlayer_f(cmd);
 				break;
 
 			case 2:
-				M_Menu_Options_f ();
+				M_Menu_Options_f(cmd);
 				break;
 
 			case 3:
-				M_Menu_Help_f ();
+				M_Menu_Help_f(cmd);
 				break;
 
 			case 4:
-				M_Menu_Quit_f ();
+				M_Menu_Quit_f(cmd);
 				break;
 			}
 		}
@@ -735,7 +735,7 @@ static int	m_singleplayer_cursor;
 #define	SINGLEPLAYER_ITEMS	3
 
 
-void M_Menu_SinglePlayer_f (void)
+void M_Menu_SinglePlayer_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_singleplayer;
@@ -779,7 +779,7 @@ static void M_SinglePlayer_Draw (void)
 }
 
 
-static void M_SinglePlayer_Key (int key, int ascii)
+static void M_SinglePlayer_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	if (gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
@@ -791,7 +791,7 @@ static void M_SinglePlayer_Key (int key, int ascii)
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 		break;
 
 	case K_DOWNARROW:
@@ -814,25 +814,25 @@ static void M_SinglePlayer_Key (int key, int ascii)
 		case 0:
 			key_dest = key_game;
 			if (sv.active)
-				Cbuf_AddText ("disconnect\n");
-			Cbuf_AddText ("maxplayers 1\n");
-			Cbuf_AddText ("deathmatch 0\n");
-			Cbuf_AddText ("coop 0\n");
+				Cbuf_AddText(cmd, "disconnect\n");
+			Cbuf_AddText(cmd, "maxplayers 1\n");
+			Cbuf_AddText(cmd, "deathmatch 0\n");
+			Cbuf_AddText(cmd, "coop 0\n");
 			if (gamemode == GAME_TRANSFUSION)
 			{
 				key_dest = key_menu;
-				M_Menu_Transfusion_Episode_f ();
+				M_Menu_Transfusion_Episode_f(cmd);
 				break;
 			}
-			Cbuf_AddText ("startmap_sp\n");
+			Cbuf_AddText(cmd, "startmap_sp\n");
 			break;
 
 		case 1:
-			M_Menu_Load_f ();
+			M_Menu_Load_f(cmd);
 			break;
 
 		case 2:
-			M_Menu_Save_f ();
+			M_Menu_Save_f(cmd);
 			break;
 		}
 	}
@@ -885,7 +885,7 @@ static void M_ScanSaves (void)
 	}
 }
 
-void M_Menu_Load_f (void)
+void M_Menu_Load_f(cmd_state_t *cmd)
 {
 	m_entersound = true;
 	m_state = m_load;
@@ -894,7 +894,7 @@ void M_Menu_Load_f (void)
 }
 
 
-void M_Menu_Save_f (void)
+void M_Menu_Save_f(cmd_state_t *cmd)
 {
 	if (!sv.active)
 		return;
@@ -951,16 +951,16 @@ static void M_Save_Draw (void)
 }
 
 
-static void M_Load_Key (int k, int ascii)
+static void M_Load_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	char vabuf[1024];
 	switch (k)
 	{
 	case K_ESCAPE:
 		if (gamemode == GAME_TRANSFUSION)
-			M_Menu_Main_f ();
+			M_Menu_Main_f(cmd);
 		else
-			M_Menu_SinglePlayer_f ();
+			M_Menu_SinglePlayer_f(cmd);
 		break;
 
 	case K_ENTER:
@@ -971,7 +971,7 @@ static void M_Load_Key (int k, int ascii)
 		key_dest = key_game;
 
 		// issue the load command
-		Cbuf_AddText (va(vabuf, sizeof(vabuf), "load s%i\n", load_cursor) );
+		Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "load s%i\n", load_cursor) );
 		return;
 
 	case K_UPARROW:
@@ -993,22 +993,22 @@ static void M_Load_Key (int k, int ascii)
 }
 
 
-static void M_Save_Key (int k, int ascii)
+static void M_Save_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	char vabuf[1024];
 	switch (k)
 	{
 	case K_ESCAPE:
 		if (gamemode == GAME_TRANSFUSION)
-			M_Menu_Main_f ();
+			M_Menu_Main_f(cmd);
 		else
-			M_Menu_SinglePlayer_f ();
+			M_Menu_SinglePlayer_f(cmd);
 		break;
 
 	case K_ENTER:
 		m_state = m_none;
 		key_dest = key_game;
-		Cbuf_AddText (va(vabuf, sizeof(vabuf), "save s%i\n", load_cursor));
+		Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "save s%i\n", load_cursor));
 		return;
 
 	case K_UPARROW:
@@ -1035,7 +1035,7 @@ static void M_Save_Key (int k, int ascii)
 static int	m_episode_cursor;
 #define	EPISODE_ITEMS	6
 
-void M_Menu_Transfusion_Episode_f (void)
+void M_Menu_Transfusion_Episode_f(cmd_state_t *cmd)
 {
 	m_entersound = true;
 	m_state = m_transfusion_episode;
@@ -1058,12 +1058,12 @@ static void M_Transfusion_Episode_Draw (void)
 	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va(vabuf, sizeof(vabuf), "gfx/menu/episode%iselected", m_episode_cursor + 1));
 }
 
-static void M_Transfusion_Episode_Key (int key, int ascii)
+static void M_Transfusion_Episode_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 		break;
 
 	case K_DOWNARROW:
@@ -1081,9 +1081,9 @@ static void M_Transfusion_Episode_Key (int key, int ascii)
 		break;
 
 	case K_ENTER:
-		Cbuf_AddText ("deathmatch 0\n");
+		Cbuf_AddText(cmd, "deathmatch 0\n");
 		m_entersound = true;
-		M_Menu_Transfusion_Skill_f ();
+		M_Menu_Transfusion_Skill_f(cmd);
 	}
 }
 
@@ -1093,7 +1093,7 @@ static void M_Transfusion_Episode_Key (int key, int ascii)
 static int	m_skill_cursor = 2;
 #define	SKILL_ITEMS	5
 
-void M_Menu_Transfusion_Skill_f (void)
+void M_Menu_Transfusion_Skill_f(cmd_state_t *cmd)
 {
 	m_entersound = true;
 	m_state = m_transfusion_skill;
@@ -1117,12 +1117,12 @@ static void M_Transfusion_Skill_Draw (void)
 	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va(vabuf, sizeof(vabuf), "gfx/menu/difficulty%iselected", m_skill_cursor + 1));
 }
 
-static void M_Transfusion_Skill_Key (int key, int ascii)
+static void M_Transfusion_Skill_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Transfusion_Episode_f ();
+		M_Menu_Transfusion_Episode_f(cmd);
 		break;
 
 	case K_DOWNARROW:
@@ -1144,46 +1144,46 @@ static void M_Transfusion_Skill_Key (int key, int ascii)
 		switch (m_skill_cursor)
 		{
 		case 0:
-			Cbuf_AddText ("skill 1\n");
+			Cbuf_AddText(cmd, "skill 1\n");
 			break;
 		case 1:
-			Cbuf_AddText ("skill 2\n");
+			Cbuf_AddText(cmd, "skill 2\n");
 			break;
 		case 2:
-			Cbuf_AddText ("skill 3\n");
+			Cbuf_AddText(cmd, "skill 3\n");
 			break;
 		case 3:
-			Cbuf_AddText ("skill 4\n");
+			Cbuf_AddText(cmd, "skill 4\n");
 			break;
 		case 4:
-			Cbuf_AddText ("skill 5\n");
+			Cbuf_AddText(cmd, "skill 5\n");
 			break;
 		}
 		key_dest = key_game;
 		if (sv.active)
-			Cbuf_AddText ("disconnect\n");
-		Cbuf_AddText ("maxplayers 1\n");
-		Cbuf_AddText ("deathmatch 0\n");
-		Cbuf_AddText ("coop 0\n");
+			Cbuf_AddText(cmd, "disconnect\n");
+		Cbuf_AddText(cmd, "maxplayers 1\n");
+		Cbuf_AddText(cmd, "deathmatch 0\n");
+		Cbuf_AddText(cmd, "coop 0\n");
 		switch (m_episode_cursor)
 		{
 		case 0:
-			Cbuf_AddText ("map e1m1\n");
+			Cbuf_AddText(cmd, "map e1m1\n");
 			break;
 		case 1:
-			Cbuf_AddText ("map e2m1\n");
+			Cbuf_AddText(cmd, "map e2m1\n");
 			break;
 		case 2:
-			Cbuf_AddText ("map e3m1\n");
+			Cbuf_AddText(cmd, "map e3m1\n");
 			break;
 		case 3:
-			Cbuf_AddText ("map e4m1\n");
+			Cbuf_AddText(cmd, "map e4m1\n");
 			break;
 		case 4:
-			Cbuf_AddText ("map e6m1\n");
+			Cbuf_AddText(cmd, "map e6m1\n");
 			break;
 		case 5:
-			Cbuf_AddText ("map cp01\n");
+			Cbuf_AddText(cmd, "map cp01\n");
 			break;
 		}
 	}
@@ -1195,7 +1195,7 @@ static int	m_multiplayer_cursor;
 #define	MULTIPLAYER_ITEMS	3
 
 
-void M_Menu_MultiPlayer_f (void)
+void M_Menu_MultiPlayer_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_multiplayer;
@@ -1232,12 +1232,12 @@ static void M_MultiPlayer_Draw (void)
 }
 
 
-static void M_MultiPlayer_Key (int key, int ascii)
+static void M_MultiPlayer_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 		break;
 
 	case K_DOWNARROW:
@@ -1258,11 +1258,11 @@ static void M_MultiPlayer_Key (int key, int ascii)
 		{
 		case 0:
 		case 1:
-			M_Menu_LanConfig_f ();
+			M_Menu_LanConfig_f(cmd);
 			break;
 
 		case 2:
-			M_Menu_Setup_f ();
+			M_Menu_Setup_f(cmd);
 			break;
 		}
 	}
@@ -1284,7 +1284,7 @@ static int		setup_oldrate;
 
 #define	NUM_SETUP_CMDS	5
 
-void M_Menu_Setup_f (void)
+void M_Menu_Setup_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_setup;
@@ -1426,7 +1426,7 @@ static void M_Setup_Draw (void)
 }
 
 
-static void M_Setup_Key (int k, int ascii)
+static void M_Setup_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	int			l;
 	char vabuf[1024];
@@ -1434,7 +1434,7 @@ static void M_Setup_Key (int k, int ascii)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_MultiPlayer_f ();
+		M_Menu_MultiPlayer_f(cmd);
 		break;
 
 	case K_UPARROW:
@@ -1494,14 +1494,14 @@ forward:
 
 		// setup_cursor == 4 (Accept changes)
 		if (strcmp(cl_name.string, setup_myname) != 0)
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "name \"%s\"\n", setup_myname) );
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "name \"%s\"\n", setup_myname) );
 		if (setup_top != setup_oldtop || setup_bottom != setup_oldbottom)
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "color %i %i\n", setup_top, setup_bottom) );
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "color %i %i\n", setup_top, setup_bottom) );
 		if (setup_rate != setup_oldrate)
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "rate %i\n", setup_rate));
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "rate %i\n", setup_rate));
 
 		m_entersound = true;
-		M_Menu_MultiPlayer_f ();
+		M_Menu_MultiPlayer_f(cmd);
 		break;
 
 	case K_BACKSPACE:
@@ -1574,7 +1574,7 @@ static void M_DrawCheckbox (int x, int y, int on)
 
 static int options_cursor;
 
-void M_Menu_Options_f (void)
+void M_Menu_Options_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_options;
@@ -1713,12 +1713,12 @@ static void M_Options_Draw (void)
 }
 
 
-static void M_Options_Key (int k, int ascii)
+static void M_Options_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 		break;
 
 	case K_ENTER:
@@ -1726,51 +1726,51 @@ static void M_Options_Key (int k, int ascii)
 		switch (options_cursor)
 		{
 		case 0:
-			M_Menu_Keys_f ();
+			M_Menu_Keys_f(cmd);
 			break;
 		case 1:
 			m_state = m_none;
 			key_dest = key_game;
-			Con_ToggleConsole_f ();
+			Con_ToggleConsole_f(cmd);
 			break;
 		case 2:
-			M_Menu_Reset_f ();
+			M_Menu_Reset_f(cmd);
 			break;
 		case 3:
-			M_Menu_Video_f ();
+			M_Menu_Video_f(cmd);
 			break;
 		case 11:
-			M_Menu_Options_ColorControl_f ();
+			M_Menu_Options_ColorControl_f(cmd);
 			break;
 		case 17: // Customize Effects
-			M_Menu_Options_Effects_f ();
+			M_Menu_Options_Effects_f(cmd);
 			break;
 		case 18: // Effects: Quake
-			Cbuf_AddText("cl_particles 1;cl_particles_quake 1;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 0;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 0;cl_beams_polygons 0;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			Cbuf_AddText(cmd, "cl_particles 1;cl_particles_quake 1;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 0;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 0;cl_beams_polygons 0;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
 			break;
 		case 19: // Effects: Normal
-			Cbuf_AddText("cl_particles 1;cl_particles_quake 0;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			Cbuf_AddText(cmd, "cl_particles 1;cl_particles_quake 0;cl_particles_quality 1;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 0;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
 			break;
 		case 20: // Effects: High
-			Cbuf_AddText("cl_particles 1;cl_particles_quake 0;cl_particles_quality 2;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 1;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
+			Cbuf_AddText(cmd, "cl_particles 1;cl_particles_quake 0;cl_particles_quality 2;cl_particles_explosions_shell 0;r_explosionclip 1;cl_stainmaps 1;cl_stainmaps_clearonload 1;cl_decals 1;cl_particles_bulletimpacts 1;cl_particles_smoke 1;cl_particles_sparks 1;cl_particles_bubbles 1;cl_particles_blood 1;cl_particles_blood_alpha 1;cl_particles_blood_bloodhack 1;cl_beams_polygons 1;cl_beams_instantaimhack 0;cl_beams_quakepositionhack 1;cl_beams_lightatend 0;r_lerpmodels 1;r_lerpsprites 1;r_lerplightstyles 0;gl_polyblend 1;r_skyscroll1 1;r_skyscroll2 2;r_waterwarp 1;r_wateralpha 1;r_waterscroll 1\n");
 			break;
 		case 21:
-			M_Menu_Options_Graphics_f ();
+			M_Menu_Options_Graphics_f(cmd);
 			break;
 		case 22: // Lighting: Flares
-			Cbuf_AddText("r_coronas 1;gl_flashblend 1;r_shadow_gloss 0;r_shadow_realtime_dlight 0;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0");
+			Cbuf_AddText(cmd, "r_coronas 1;gl_flashblend 1;r_shadow_gloss 0;r_shadow_realtime_dlight 0;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0");
 			break;
 		case 23: // Lighting: Normal
-			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0");
+			Cbuf_AddText(cmd, "r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 0;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 0");
 			break;
 		case 24: // Lighting: High
-			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1");
+			Cbuf_AddText(cmd, "r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 0;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1");
 			break;
 		case 25: // Lighting: Full
-			Cbuf_AddText("r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1");
+			Cbuf_AddText(cmd, "r_coronas 1;gl_flashblend 0;r_shadow_gloss 1;r_shadow_realtime_dlight 1;r_shadow_realtime_dlight_shadows 1;r_shadow_realtime_world 1;r_shadow_realtime_world_lightmaps 0;r_shadow_realtime_world_shadows 1;r_bloom 1");
 			break;
 		case 26:
-			M_Menu_ModList_f ();
+			M_Menu_ModList_f(cmd);
 			break;
 		default:
 			M_Menu_Options_AdjustSliders (1);
@@ -1806,7 +1806,7 @@ static void M_Options_Key (int k, int ascii)
 
 static int options_effects_cursor;
 
-void M_Menu_Options_Effects_f (void)
+void M_Menu_Options_Effects_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_options_effects;
@@ -1928,12 +1928,12 @@ static void M_Options_Effects_Draw (void)
 }
 
 
-static void M_Options_Effects_Key (int k, int ascii)
+static void M_Options_Effects_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Options_f ();
+		M_Menu_Options_f(cmd);
 		break;
 
 	case K_ENTER:
@@ -1969,7 +1969,7 @@ static void M_Options_Effects_Key (int k, int ascii)
 
 static int options_graphics_cursor;
 
-void M_Menu_Options_Graphics_f (void)
+void M_Menu_Options_Graphics_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_options_graphics;
@@ -1993,7 +1993,7 @@ extern cvar_t r_hdr_scenebrightness;
 extern cvar_t r_hdr_glowintensity;
 extern cvar_t gl_picmip;
 
-static void M_Menu_Options_Graphics_AdjustSliders (int dir)
+static void M_Menu_Options_Graphics_AdjustSliders (cmd_state_t *cmd, int dir)
 {
 	int optnum;
 	S_LocalSound ("sound/misc/menu3.wav");
@@ -2017,7 +2017,7 @@ static void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_brighten,                        bound(1, r_bloom_brighten.value + dir * 0.0625, 4));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_blur,                            bound(1, r_bloom_blur.value + dir * 1, 16));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_bloom_resolution,                      bound(64, r_bloom_resolution.value + dir * 64, 2048));
-	else if (options_graphics_cursor == optnum++) Cbuf_AddText ("r_restart\n");
+	else if (options_graphics_cursor == optnum++) Cbuf_AddText(cmd, "r_restart\n");
 }
 
 
@@ -2058,16 +2058,16 @@ static void M_Options_Graphics_Draw (void)
 }
 
 
-static void M_Options_Graphics_Key (int k, int ascii)
+static void M_Options_Graphics_Key (cmd_state_t *cmd, int k, int ascii)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Options_f ();
+		M_Menu_Options_f(cmd);
 		break;
 
 	case K_ENTER:
-		M_Menu_Options_Graphics_AdjustSliders (1);
+		M_Menu_Options_Graphics_AdjustSliders (cmd, 1);
 		break;
 
 	case K_UPARROW:
@@ -2085,11 +2085,11 @@ static void M_Options_Graphics_Key (int k, int ascii)
 		break;
 
 	case K_LEFTARROW:
-		M_Menu_Options_Graphics_AdjustSliders (-1);
+		M_Menu_Options_Graphics_AdjustSliders(cmd, -1);
 		break;
 
 	case K_RIGHTARROW:
-		M_Menu_Options_Graphics_AdjustSliders (1);
+		M_Menu_Options_Graphics_AdjustSliders(cmd, 1);
 		break;
 	}
 }
@@ -2102,7 +2102,7 @@ static int		options_colorcontrol_cursor;
 // intensity value to match up to 50% dither to 'correct' quake
 static cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
 
-void M_Menu_Options_ColorControl_f (void)
+void M_Menu_Options_ColorControl_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_options_colorcontrol;
@@ -2286,12 +2286,12 @@ static void M_Options_ColorControl_Draw (void)
 }
 
 
-static void M_Options_ColorControl_Key (int k, int ascii)
+static void M_Options_ColorControl_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Options_f ();
+		M_Menu_Options_f(cmd);
 		break;
 
 	case K_ENTER:
@@ -2548,7 +2548,7 @@ static void M_DefaultBinds (void)
 static int		keys_cursor;
 static int		bind_grab;
 
-void M_Menu_Keys_f (void)
+void M_Menu_Keys_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu_grabbed;
 	m_state = m_keys;
@@ -2662,9 +2662,9 @@ static void M_Keys_Draw (void)
 }
 
 
-static void M_Keys_Key (int k, int ascii)
+static void M_Keys_Key(cmd_state_t *cmd, int k, int ascii)
 {
-	char	cmd[80];
+	char	line[80];
 	int		keys[NUMKEYS];
 	char	tinystr[2];
 
@@ -2677,8 +2677,8 @@ static void M_Keys_Key (int k, int ascii)
 		}
 		else //if (k != '`')
 		{
-			dpsnprintf (cmd, sizeof(cmd), "bind \"%s\" \"%s\"\n", Key_KeynumToString (k, tinystr, sizeof(tinystr)), bindnames[keys_cursor][0]);
-			Cbuf_InsertText (cmd);
+			dpsnprintf(line, sizeof(line), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k, tinystr, sizeof(tinystr)), bindnames[keys_cursor][0]);
+			Cbuf_InsertText (cmd, line);
 		}
 
 		bind_grab = false;
@@ -2688,7 +2688,7 @@ static void M_Keys_Key (int k, int ascii)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Options_f ();
+		M_Menu_Options_f(cmd);
 		break;
 
 	case K_LEFTARROW:
@@ -2731,7 +2731,7 @@ static void M_Keys_Key (int k, int ascii)
 	}
 }
 
-void M_Menu_Reset_f (void)
+void M_Menu_Reset_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_reset;
@@ -2739,13 +2739,13 @@ void M_Menu_Reset_f (void)
 }
 
 
-static void M_Reset_Key (int key, int ascii)
+static void M_Reset_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
 	case 'Y':
 	case 'y':
-		Cbuf_AddText ("cvar_resettodefaults_all;exec default.cfg\n");
+		Cbuf_AddText(cmd, "cvar_resettodefaults_all;exec default.cfg\n");
 		// no break here since we also exit the menu
 
 	case K_ESCAPE:
@@ -2895,7 +2895,7 @@ static void M_Menu_Video_FindResolution(int w, int h, float a)
 	}
 }
 
-void M_Menu_Video_f (void)
+void M_Menu_Video_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_video;
@@ -3024,7 +3024,7 @@ static void M_Menu_Video_AdjustSliders (int dir)
 }
 
 
-static void M_Video_Key (int key, int ascii)
+static void M_Video_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
@@ -3038,7 +3038,7 @@ static void M_Video_Key (int key, int ascii)
 			Cvar_SetValueQuick(&vid_userefreshrate, vid.userefreshrate);
 
 			S_LocalSound ("sound/misc/menu1.wav");
-			M_Menu_Options_f ();
+			M_Menu_Options_f(cmd);
 			break;
 
 		case K_ENTER:
@@ -3051,8 +3051,8 @@ static void M_Video_Key (int key, int ascii)
 					Cvar_SetValueQuick (&vid_conwidth, menu_video_resolutions[menu_video_resolution].conwidth);
 					Cvar_SetValueQuick (&vid_conheight, menu_video_resolutions[menu_video_resolution].conheight);
 					Cvar_SetValueQuick (&vid_pixelheight, menu_video_resolutions[menu_video_resolution].pixelheight);
-					Cbuf_AddText ("vid_restart\n");
-					M_Menu_Options_f ();
+					Cbuf_AddText(cmd, "vid_restart\n");
+					M_Menu_Options_f(cmd);
 					break;
 				default:
 					M_Menu_Video_AdjustSliders (1);
@@ -3090,7 +3090,7 @@ static int		help_page;
 #define	NUM_HELP_PAGES	6
 
 
-void M_Menu_Help_f (void)
+void M_Menu_Help_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_help;
@@ -3108,12 +3108,12 @@ static void M_Help_Draw (void)
 }
 
 
-static void M_Help_Key (int key, int ascii)
+static void M_Help_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 		break;
 
 	case K_UPARROW:
@@ -3136,7 +3136,7 @@ static void M_Help_Key (int key, int ascii)
 //=============================================================================
 /* CEDITS MENU */
 
-void M_Menu_Credits_f (void)
+void M_Menu_Credits_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_credits;
@@ -3155,9 +3155,9 @@ static void M_Credits_Draw (void)
 }
 
 
-static void M_Credits_Key (int key, int ascii)
+static void M_Credits_Key(cmd_state_t *cmd, int key, int ascii)
 {
-		M_Menu_Main_f ();
+		M_Menu_Main_f(cmd);
 }
 
 //=============================================================================
@@ -3246,7 +3246,7 @@ static int M_ChooseQuitMessage(int request)
 	return 0;
 }
 
-void M_Menu_Quit_f (void)
+void M_Menu_Quit_f(cmd_state_t *cmd)
 {
 	int n;
 	if (m_state == m_quit)
@@ -3263,7 +3263,7 @@ void M_Menu_Quit_f (void)
 }
 
 
-static void M_Quit_Key (int key, int ascii)
+static void M_Quit_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	switch (key)
 	{
@@ -3284,7 +3284,7 @@ static void M_Quit_Key (int key, int ascii)
 
 	case 'Y':
 	case 'y':
-		Host_Quit_f ();
+		Host_Quit_f(cmd);
 		break;
 
 	default:
@@ -3326,7 +3326,7 @@ static int 	lanConfig_port;
 static char	lanConfig_portname[6];
 static char	lanConfig_joinname[40];
 
-void M_Menu_LanConfig_f (void)
+void M_Menu_LanConfig_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_lanconfig;
@@ -3399,7 +3399,7 @@ static void M_LanConfig_Draw (void)
 }
 
 
-static void M_LanConfig_Key (int key, int ascii)
+static void M_LanConfig_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	int		l;
 	char vabuf[1024];
@@ -3407,7 +3407,7 @@ static void M_LanConfig_Key (int key, int ascii)
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_MultiPlayer_f ();
+		M_Menu_MultiPlayer_f(cmd);
 		break;
 
 	case K_UPARROW:
@@ -3436,7 +3436,7 @@ static void M_LanConfig_Key (int key, int ascii)
 
 		m_entersound = true;
 
-		Cbuf_AddText ("stopdemo\n");
+		Cbuf_AddText(cmd, "stopdemo\n");
 
 		Cvar_SetValue("port", lanConfig_port);
 
@@ -3444,15 +3444,15 @@ static void M_LanConfig_Key (int key, int ascii)
 		{
 			if (StartingGame)
 			{
-				M_Menu_GameOptions_f ();
+				M_Menu_GameOptions_f(cmd);
 				break;
 			}
-			M_Menu_ServerList_f();
+			M_Menu_ServerList_f(cmd);
 			break;
 		}
 
 		if (lanConfig_cursor == 3)
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "connect \"%s\"\n", lanConfig_joinname) );
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "connect \"%s\"\n", lanConfig_joinname) );
 		break;
 
 	case K_BACKSPACE:
@@ -3949,7 +3949,7 @@ static int maxplayers;
 static qboolean m_serverInfoMessage = false;
 static double m_serverInfoMessageTime;
 
-void M_Menu_GameOptions_f (void)
+void M_Menu_GameOptions_f(cmd_state_t *cmd)
 {
 	int i;
 	key_dest = key_menu;
@@ -4293,7 +4293,7 @@ static void M_NetStart_Change (int dir)
 	}
 }
 
-static void M_GameOptions_Key (int key, int ascii)
+static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 {
 	int l;
 	char hostnamebuf[128];
@@ -4302,7 +4302,7 @@ static void M_GameOptions_Key (int key, int ascii)
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_MultiPlayer_f ();
+		M_Menu_MultiPlayer_f(cmd);
 		break;
 
 	case K_UPARROW:
@@ -4338,10 +4338,10 @@ static void M_GameOptions_Key (int key, int ascii)
 		if (gameoptions_cursor == 0)
 		{
 			if (sv.active)
-				Cbuf_AddText("disconnect\n");
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "maxplayers %u\n", maxplayers) );
+				Cbuf_AddText(cmd, "disconnect\n");
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "maxplayers %u\n", maxplayers) );
 
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "map %s\n", gameoptions_levels->levels[gameoptions_levels->episodes[startepisode].firstLevel + startlevel].name) );
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "map %s\n", gameoptions_levels->levels[gameoptions_levels->episodes[startepisode].firstLevel + startlevel].name) );
 			return;
 		}
 
@@ -4384,7 +4384,7 @@ static void M_GameOptions_Key (int key, int ascii)
 
 static int slist_cursor;
 
-void M_Menu_ServerList_f (void)
+void M_Menu_ServerList_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_slist;
@@ -4392,9 +4392,9 @@ void M_Menu_ServerList_f (void)
 	slist_cursor = 0;
 	M_Update_Return_Reason("");
 	if (lanConfig_cursor == 2)
-		Net_SlistQW_f();
+		Net_SlistQW_f(cmd);
 	else
-		Net_Slist_f();
+		Net_Slist_f(cmd);
 }
 
 
@@ -4450,20 +4450,20 @@ static void M_ServerList_Draw (void)
 }
 
 
-static void M_ServerList_Key(int k, int ascii)
+static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	char vabuf[1024];
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_LanConfig_f();
+		M_Menu_LanConfig_f(cmd);
 		break;
 
 	case K_SPACE:
 		if (lanConfig_cursor == 2)
-			Net_SlistQW_f();
+			Net_SlistQW_f(cmd);
 		else
-			Net_Slist_f();
+			Net_Slist_f(cmd);
 		break;
 
 	case K_UPARROW:
@@ -4485,7 +4485,7 @@ static void M_ServerList_Key(int k, int ascii)
 	case K_ENTER:
 		S_LocalSound ("sound/misc/menu2.wav");
 		if (serverlist_viewcount)
-			Cbuf_AddText(va(vabuf, sizeof(vabuf), "connect \"%s\"\n", ServerList_GetViewEntry(slist_cursor)->info.cname));
+			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "connect \"%s\"\n", ServerList_GetViewEntry(slist_cursor)->info.cname));
 		break;
 
 	default:
@@ -4593,7 +4593,7 @@ static void ModList_Enable (void)
 	FS_ChangeGameDirs (modlist_numenabled, gamedirs, true, true);
 }
 
-void M_Menu_ModList_f (void)
+void M_Menu_ModList_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_modlist;
@@ -4675,13 +4675,13 @@ static void M_ModList_Draw (void)
 	}
 }
 
-static void M_ModList_Key(int k, int ascii)
+static void M_ModList_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
 		ModList_Enable ();
-		M_Menu_Options_f();
+		M_Menu_Options_f(cmd);
 		break;
 
 	case K_SPACE:
@@ -4735,25 +4735,25 @@ static void M_Init (void)
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
-	Cmd_AddCommand ("menu_main", M_Menu_Main_f, "open the main menu");
-	Cmd_AddCommand ("menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
-	Cmd_AddCommand ("menu_load", M_Menu_Load_f, "open the loadgame menu");
-	Cmd_AddCommand ("menu_save", M_Menu_Save_f, "open the savegame menu");
-	Cmd_AddCommand ("menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
-	Cmd_AddCommand ("menu_setup", M_Menu_Setup_f, "open the player setup menu");
-	Cmd_AddCommand ("menu_options", M_Menu_Options_f, "open the options menu");
-	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
-	Cmd_AddCommand ("menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
-	Cmd_AddCommand ("menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
-	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f, "open the key binding menu");
-	Cmd_AddCommand ("menu_video", M_Menu_Video_f, "open the video options menu");
-	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
-	Cmd_AddCommand ("menu_mods", M_Menu_ModList_f, "open the mods browser menu");
-	Cmd_AddCommand ("help", M_Menu_Help_f, "open the help menu");
-	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f, "open the quit menu");
-	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
-	Cmd_AddCommand ("menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
-	Cmd_AddCommand ("menu_credits", M_Menu_Credits_f, "open the credits menu");
+	Cmd_AddCommand(&cmd_client, "menu_main", M_Menu_Main_f, "open the main menu");
+	Cmd_AddCommand(&cmd_client, "menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
+	Cmd_AddCommand(&cmd_client, "menu_load", M_Menu_Load_f, "open the loadgame menu");
+	Cmd_AddCommand(&cmd_client, "menu_save", M_Menu_Save_f, "open the savegame menu");
+	Cmd_AddCommand(&cmd_client, "menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
+	Cmd_AddCommand(&cmd_client, "menu_setup", M_Menu_Setup_f, "open the player setup menu");
+	Cmd_AddCommand(&cmd_client, "menu_options", M_Menu_Options_f, "open the options menu");
+	Cmd_AddCommand(&cmd_client, "menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
+	Cmd_AddCommand(&cmd_client, "menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
+	Cmd_AddCommand(&cmd_client, "menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
+	Cmd_AddCommand(&cmd_client, "menu_keys", M_Menu_Keys_f, "open the key binding menu");
+	Cmd_AddCommand(&cmd_client, "menu_video", M_Menu_Video_f, "open the video options menu");
+	Cmd_AddCommand(&cmd_client, "menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
+	Cmd_AddCommand(&cmd_client, "menu_mods", M_Menu_ModList_f, "open the mods browser menu");
+	Cmd_AddCommand(&cmd_client, "help", M_Menu_Help_f, "open the help menu");
+	Cmd_AddCommand(&cmd_client, "menu_quit", M_Menu_Quit_f, "open the quit menu");
+	Cmd_AddCommand(&cmd_client, "menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
+	Cmd_AddCommand(&cmd_client, "menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
+	Cmd_AddCommand(&cmd_client, "menu_credits", M_Menu_Credits_f, "open the credits menu");
 }
 
 void M_Draw (void)
@@ -4907,6 +4907,7 @@ void M_Draw (void)
 
 void M_KeyEvent (int key, int ascii, qboolean downevent)
 {
+	cmd_state_t *cmd = &cmd_client;
 	if (!downevent)
 		return;
 	switch (m_state)
@@ -4915,95 +4916,95 @@ void M_KeyEvent (int key, int ascii, qboolean downevent)
 		return;
 
 	case m_main:
-		M_Main_Key (key, ascii);
+		M_Main_Key(cmd, key, ascii);
 		return;
 
 	case m_demo:
-		M_Demo_Key (key, ascii);
+		M_Demo_Key(cmd, key, ascii);
 		return;
 
 	case m_singleplayer:
-		M_SinglePlayer_Key (key, ascii);
+		M_SinglePlayer_Key(cmd, key, ascii);
 		return;
 
 	case m_transfusion_episode:
-		M_Transfusion_Episode_Key (key, ascii);
+		M_Transfusion_Episode_Key(cmd, key, ascii);
 		return;
 
 	case m_transfusion_skill:
-		M_Transfusion_Skill_Key (key, ascii);
+		M_Transfusion_Skill_Key(cmd, key, ascii);
 		return;
 
 	case m_load:
-		M_Load_Key (key, ascii);
+		M_Load_Key(cmd, key, ascii);
 		return;
 
 	case m_save:
-		M_Save_Key (key, ascii);
+		M_Save_Key(cmd, key, ascii);
 		return;
 
 	case m_multiplayer:
-		M_MultiPlayer_Key (key, ascii);
+		M_MultiPlayer_Key(cmd, key, ascii);
 		return;
 
 	case m_setup:
-		M_Setup_Key (key, ascii);
+		M_Setup_Key(cmd, key, ascii);
 		return;
 
 	case m_options:
-		M_Options_Key (key, ascii);
+		M_Options_Key(cmd, key, ascii);
 		return;
 
 	case m_options_effects:
-		M_Options_Effects_Key (key, ascii);
+		M_Options_Effects_Key(cmd, key, ascii);
 		return;
 
 	case m_options_graphics:
-		M_Options_Graphics_Key (key, ascii);
+		M_Options_Graphics_Key(cmd, key, ascii);
 		return;
 
 	case m_options_colorcontrol:
-		M_Options_ColorControl_Key (key, ascii);
+		M_Options_ColorControl_Key(cmd, key, ascii);
 		return;
 
 	case m_keys:
-		M_Keys_Key (key, ascii);
+		M_Keys_Key(cmd, key, ascii);
 		return;
 
 	case m_reset:
-		M_Reset_Key (key, ascii);
+		M_Reset_Key(cmd, key, ascii);
 		return;
 
 	case m_video:
-		M_Video_Key (key, ascii);
+		M_Video_Key(cmd, key, ascii);
 		return;
 
 	case m_help:
-		M_Help_Key (key, ascii);
+		M_Help_Key(cmd, key, ascii);
 		return;
 
 	case m_credits:
-		M_Credits_Key (key, ascii);
+		M_Credits_Key(cmd, key, ascii);
 		return;
 
 	case m_quit:
-		M_Quit_Key (key, ascii);
+		M_Quit_Key(cmd, key, ascii);
 		return;
 
 	case m_lanconfig:
-		M_LanConfig_Key (key, ascii);
+		M_LanConfig_Key(cmd, key, ascii);
 		return;
 
 	case m_gameoptions:
-		M_GameOptions_Key (key, ascii);
+		M_GameOptions_Key(cmd, key, ascii);
 		return;
 
 	case m_slist:
-		M_ServerList_Key (key, ascii);
+		M_ServerList_Key(cmd, key, ascii);
 		return;
 
 	case m_modlist:
-		M_ModList_Key (key, ascii);
+		M_ModList_Key(cmd, key, ascii);
 		return;
 	}
 
@@ -5449,10 +5450,15 @@ void MR_Restart(void)
 	MR_SetRouting (FALSE);
 }
 
-static void Call_MR_ToggleMenu_f(void)
+static void MR_Restart_f(cmd_state_t *cmd)
+{
+	MR_Restart();
+}
+
+static void Call_MR_ToggleMenu_f(cmd_state_t *cmd)
 {
 	int m;
-	m = ((Cmd_Argc() < 2) ? -1 : atoi(Cmd_Argv(1)));
+	m = ((Cmd_Argc(cmd) < 2) ? -1 : atoi(Cmd_Argv(cmd, 1)));
 	Host_StartVideo();
 	if(MR_ToggleMenu)
 		MR_ToggleMenu(m);
@@ -5464,8 +5470,8 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cvar_RegisterVariable (&menu_progs);
-	Cmd_AddCommand ("menu_restart",MR_Restart, "restart menu system (reloads menu.dat)");
-	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
+	Cmd_AddCommand(&cmd_client, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
+	Cmd_AddCommand(&cmd_client, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
 
 void MR_Init(void)

@@ -571,9 +571,9 @@ static void CL_Particles_LoadEffectInfo(const char *customfile)
 	}
 }
 
-static void CL_Particles_LoadEffectInfo_f(void)
+static void CL_Particles_LoadEffectInfo_f(cmd_state_t *cmd)
 {
-	CL_Particles_LoadEffectInfo(Cmd_Argc() > 1 ? Cmd_Argv(1) : NULL);
+	CL_Particles_LoadEffectInfo(Cmd_Argc(cmd) > 1 ? Cmd_Argv(cmd, 1) : NULL);
 }
 
 /*
@@ -581,11 +581,11 @@ static void CL_Particles_LoadEffectInfo_f(void)
 CL_InitParticles
 ===============
 */
-void CL_ReadPointFile_f (void);
+void CL_ReadPointFile_f(cmd_state_t *cmd);
 void CL_Particles_Init (void)
 {
-	Cmd_AddCommand ("pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
-	Cmd_AddCommand ("cl_particles_reloadeffects", CL_Particles_LoadEffectInfo_f, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map) if parameter is given, loads from custom file (no levelname_effectinfo are loaded in this case)");
+	Cmd_AddCommand(&cmd_client, "pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
+	Cmd_AddCommand(&cmd_client, "cl_particles_reloadeffects", CL_Particles_LoadEffectInfo_f, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map) if parameter is given, loads from custom file (no levelname_effectinfo are loaded in this case)");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);
@@ -1728,7 +1728,7 @@ void CL_EntityParticles (const entity_t *ent)
 }
 
 
-void CL_ReadPointFile_f (void)
+void CL_ReadPointFile_f(cmd_state_t *cmd)
 {
 	double org[3], leakorg[3];
 	vec3_t vecorg;

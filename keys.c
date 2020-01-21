@@ -295,21 +295,21 @@ static void Key_History_Find_All(void)
 	Con_Printf("%i result%s\n\n", count, (count != 1) ? "s" : "");
 }
 
-static void Key_History_f(void)
+static void Key_History_f(cmd_state_t *cmd)
 {
 	char *errchar = NULL;
 	int i = 0;
 	char vabuf[1024];
 	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 
-	if (Cmd_Argc () > 1)
+	if (Cmd_Argc (cmd) > 1)
 	{
-		if (!strcmp(Cmd_Argv (1), "-c"))
+		if (!strcmp(Cmd_Argv(cmd, 1), "-c"))
 		{
 			ConBuffer_Clear(&history);
 			return;
 		}
-		i = strtol(Cmd_Argv (1), &errchar, 0);
+		i = strtol(Cmd_Argv(cmd, 1), &errchar, 0);
 		if ((i < 0) || (i > CONBUFFER_LINES_COUNT(&history)) || (errchar && *errchar))
 			i = 0;
 		else
@@ -677,7 +677,7 @@ Interactive line editing and console scrollback
 ====================
 */
 static void
-Key_Console (int key, int unicode)
+Key_Console (cmd_state_t *cmd, int key, int unicode)
 {
 	// LadyHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
@@ -765,7 +765,7 @@ Key_Console (int key, int unicode)
 
 	if (key == 'l' && keydown[K_CTRL])
 	{
-		Cbuf_AddText ("clear\n");
+		Cbuf_AddText (cmd, "clear\n");
 		return;
 	}
 
@@ -790,8 +790,8 @@ Key_Console (int key, int unicode)
 
 	if (key == K_ENTER || key == K_KP_ENTER)
 	{
-		Cbuf_AddText (key_line+1);	// skip the ]
-		Cbuf_AddText ("\n");
+		Cbuf_AddText (cmd, key_line+1);	// skip the ]
+		Cbuf_AddText (cmd, "\n");
 		Key_History_Push();
 		key_line[0] = ']';
 		key_line[1] = 0;	// EvilTypeGuy: null terminate
@@ -858,7 +858,7 @@ Key_Console (int key, int unicode)
 		// Enhanced command completion
 		// by EvilTypeGuy eviltypeguy@qeradiant.com
 		// Thanks to Fett, Taniwha
-		Con_CompleteCommandLine();
+		Con_CompleteCommandLine(cmd);
 		return;
 	}
 
@@ -1195,13 +1195,13 @@ char		chat_buffer[MAX_INPUTLINE];
 unsigned int	chat_bufferlen = 0;
 
 static void
-Key_Message (int key, int ascii)
+Key_Message (cmd_state_t *cmd, int key, int ascii)
 {
 	char vabuf[1024];
 	if (key == K_ENTER || key == K_KP_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
-			Cmd_ExecuteString(chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
+			Cmd_ExecuteString(cmd, chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
 		else
 			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
@@ -1362,25 +1362,25 @@ qboolean Key_SetBindMap(int fg, int bg)
 }
 
 static void
-Key_In_Unbind_f (void)
+Key_In_Unbind_f(cmd_state_t *cmd)
 {
 	int         b, m;
 	char *errchar = NULL;
 
-	if (Cmd_Argc () != 3) {
+	if (Cmd_Argc (cmd) != 3) {
 		Con_Print("in_unbind <bindmap> <key> : remove commands from a key\n");
 		return;
 	}
 
-	m = strtol(Cmd_Argv (1), &errchar, 0);
+	m = strtol(Cmd_Argv(cmd, 1), &errchar, 0);
 	if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
-		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
-	b = Key_StringToKeynum (Cmd_Argv (2));
+	b = Key_StringToKeynum (Cmd_Argv(cmd, 2));
 	if (b == -1) {
-		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (2));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv(cmd, 2));
 		return;
 	}
 
@@ -1389,72 +1389,72 @@ Key_In_Unbind_f (void)
 }
 
 static void
-Key_In_Bind_f (void)
+Key_In_Bind_f(cmd_state_t *cmd)
 {
 	int         i, c, b, m;
-	char        cmd[MAX_INPUTLINE];
+	char        line[MAX_INPUTLINE];
 	char *errchar = NULL;
 
-	c = Cmd_Argc ();
+	c = Cmd_Argc (cmd);
 
 	if (c != 3 && c != 4) {
 		Con_Print("in_bind <bindmap> <key> [command] : attach a command to a key\n");
 		return;
 	}
 
-	m = strtol(Cmd_Argv (1), &errchar, 0);
+	m = strtol(Cmd_Argv(cmd, 1), &errchar, 0);
 	if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
-		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
-	b = Key_StringToKeynum (Cmd_Argv (2));
+	b = Key_StringToKeynum (Cmd_Argv(cmd, 2));
 	if (b == -1 || b >= MAX_KEYS) {
-		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (2));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv(cmd, 2));
 		return;
 	}
 
 	if (c == 3) {
 		if (keybindings[m][b])
-			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv (2), keybindings[m][b]);
+			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv(cmd, 2), keybindings[m][b]);
 		else
-			Con_Printf("\"%s\" is not bound\n", Cmd_Argv (2));
+			Con_Printf("\"%s\" is not bound\n", Cmd_Argv(cmd, 2));
 		return;
 	}
 // copy the rest of the command line
-	cmd[0] = 0;							// start out with a null string
+	line[0] = 0;							// start out with a null string
 	for (i = 3; i < c; i++) {
-		strlcat (cmd, Cmd_Argv (i), sizeof (cmd));
+		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 		if (i != (c - 1))
-			strlcat (cmd, " ", sizeof (cmd));
+			strlcat (line, " ", sizeof (line));
 	}
 
-	if(!Key_SetBinding (b, m, cmd))
+	if(!Key_SetBinding (b, m, line))
 		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
 static void
-Key_In_Bindmap_f (void)
+Key_In_Bindmap_f(cmd_state_t *cmd)
 {
 	int         m1, m2, c;
 	char *errchar = NULL;
 
-	c = Cmd_Argc ();
+	c = Cmd_Argc (cmd);
 
 	if (c != 3) {
 		Con_Print("in_bindmap <bindmap> <fallback>: set current bindmap and fallback\n");
 		return;
 	}
 
-	m1 = strtol(Cmd_Argv (1), &errchar, 0);
+	m1 = strtol(Cmd_Argv(cmd, 1), &errchar, 0);
 	if ((m1 < 0) || (m1 >= MAX_BINDMAPS) || (errchar && *errchar)) {
-		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
-	m2 = strtol(Cmd_Argv (2), &errchar, 0);
+	m2 = strtol(Cmd_Argv(cmd, 2), &errchar, 0);
 	if ((m2 < 0) || (m2 >= MAX_BINDMAPS) || (errchar && *errchar)) {
-		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(2));
+		Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(cmd, 2));
 		return;
 	}
 
@@ -1463,18 +1463,18 @@ Key_In_Bindmap_f (void)
 }
 
 static void
-Key_Unbind_f (void)
+Key_Unbind_f(cmd_state_t *cmd)
 {
 	int         b;
 
-	if (Cmd_Argc () != 2) {
+	if (Cmd_Argc (cmd) != 2) {
 		Con_Print("unbind <key> : remove commands from a key\n");
 		return;
 	}
 
-	b = Key_StringToKeynum (Cmd_Argv (1));
+	b = Key_StringToKeynum (Cmd_Argv(cmd, 1));
 	if (b == -1) {
-		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (1));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
@@ -1483,7 +1483,7 @@ Key_Unbind_f (void)
 }
 
 static void
-Key_Unbindall_f (void)
+Key_Unbindall_f(cmd_state_t *cmd)
 {
 	int         i, j;
 
@@ -1516,16 +1516,16 @@ Key_PrintBindList(int j)
 }
 
 static void
-Key_In_BindList_f (void)
+Key_In_BindList_f(cmd_state_t *cmd)
 {
 	int m;
 	char *errchar = NULL;
 
-	if(Cmd_Argc() >= 2)
+	if(Cmd_Argc(cmd) >= 2)
 	{
-		m = strtol(Cmd_Argv(1), &errchar, 0);
+		m = strtol(Cmd_Argv(cmd, 1), &errchar, 0);
 		if ((m < 0) || (m >= MAX_BINDMAPS) || (errchar && *errchar)) {
-			Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(1));
+			Con_Printf("%s isn't a valid bindmap\n", Cmd_Argv(cmd, 1));
 			return;
 		}
 		Key_PrintBindList(m);
@@ -1538,45 +1538,45 @@ Key_In_BindList_f (void)
 }
 
 static void
-Key_BindList_f (void)
+Key_BindList_f(cmd_state_t *cmd)
 {
 	Key_PrintBindList(0);
 }
 
 static void
-Key_Bind_f (void)
+Key_Bind_f(cmd_state_t *cmd)
 {
 	int         i, c, b;
-	char        cmd[MAX_INPUTLINE];
+	char        line[MAX_INPUTLINE];
 
-	c = Cmd_Argc ();
+	c = Cmd_Argc (cmd);
 
 	if (c != 2 && c != 3) {
 		Con_Print("bind <key> [command] : attach a command to a key\n");
 		return;
 	}
-	b = Key_StringToKeynum (Cmd_Argv (1));
+	b = Key_StringToKeynum (Cmd_Argv(cmd, 1));
 	if (b == -1 || b >= MAX_KEYS) {
-		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (1));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
 	if (c == 2) {
 		if (keybindings[0][b])
-			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv (1), keybindings[0][b]);
+			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv(cmd, 1), keybindings[0][b]);
 		else
-			Con_Printf("\"%s\" is not bound\n", Cmd_Argv (1));
+			Con_Printf("\"%s\" is not bound\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 // copy the rest of the command line
-	cmd[0] = 0;							// start out with a null string
+	line[0] = 0;							// start out with a null string
 	for (i = 2; i < c; i++) {
-		strlcat (cmd, Cmd_Argv (i), sizeof (cmd));
+		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 		if (i != (c - 1))
-			strlcat (cmd, " ", sizeof (cmd));
+			strlcat (line, " ", sizeof (line));
 	}
 
-	if(!Key_SetBinding (b, 0, cmd))
+	if(!Key_SetBinding (b, 0, line))
 		Con_Printf("Key_SetBinding failed for unknown reason\n");
 }
 
@@ -1622,18 +1622,18 @@ Key_Init (void)
 //
 // register our functions
 //
-	Cmd_AddCommand ("in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
-	Cmd_AddCommand ("in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
-	Cmd_AddCommand ("in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
-	Cmd_AddCommand ("in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
-	Cmd_AddCommand ("in_releaseall", Key_ReleaseAll, "releases all currently pressed keys (debug command)");
+	Cmd_AddCommand(&cmd_client, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
+	Cmd_AddCommand(&cmd_client, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand(&cmd_client, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
+	Cmd_AddCommand(&cmd_client, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
+	Cmd_AddCommand(&cmd_client, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
 
-	Cmd_AddCommand ("bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
-	Cmd_AddCommand ("unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
-	Cmd_AddCommand ("bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
-	Cmd_AddCommand ("unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+	Cmd_AddCommand(&cmd_client, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
+	Cmd_AddCommand(&cmd_client, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand(&cmd_client, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
+	Cmd_AddCommand(&cmd_client, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
-	Cmd_AddCommand ("history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
+	Cmd_AddCommand(&cmd_client, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }
@@ -1742,6 +1742,7 @@ void Key_EventQueue_Unblock(void)
 void
 Key_Event (int key, int ascii, qboolean down)
 {
+	cmd_state_t *cmd = &cmd_client;
 	const char *bind;
 	qboolean q;
 	keydest_t keydest = key_dest;
@@ -1819,7 +1820,7 @@ Key_Event (int key, int ascii, qboolean down)
 		{
 			if(down)
 			{
-				Con_ToggleConsole_f ();
+				Con_ToggleConsole_f(&cmd_client);
 				tbl_keydest[key] = key_void; // esc release should go nowhere (especially not to key_menu or key_game)
 			}
 			return;
@@ -1838,13 +1839,13 @@ Key_Event (int key, int ascii, qboolean down)
 #endif
 					}
 					else
-						Con_ToggleConsole_f();
+						Con_ToggleConsole_f(&cmd_client);
 				}
 				break;
 
 			case key_message:
 				if (down)
-					Key_Message (key, ascii); // that'll close the message input
+					Key_Message (cmd, key, ascii); // that'll close the message input
 				break;
 
 			case key_menu:
@@ -1880,14 +1881,14 @@ Key_Event (int key, int ascii, qboolean down)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')
-					Cbuf_AddText (va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
+					Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 				else
 				{
-					Cbuf_AddText (bind);
-					Cbuf_AddText ("\n");
+					Cbuf_AddText (cmd, bind);
+					Cbuf_AddText (cmd, "\n");
 				}
 			} else if(bind[0] == '+' && !down && keydown[key] == 0)
-				Cbuf_AddText(va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+				Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 		}
 		return;
 	}
@@ -1902,14 +1903,14 @@ Key_Event (int key, int ascii, qboolean down)
 		// (special exemption for german keyboard layouts)
 		if (con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && (key_consoleactive & KEY_CONSOLEACTIVE_USER) && (con_closeontoggleconsole.integer >= ((ascii != STRING_COLOR_TAG) ? 2 : 3) || key_linepos == 1))
 		{
-			Con_ToggleConsole_f ();
+			Con_ToggleConsole_f(&cmd_client);
 			return;
 		}
 
 		if (COM_CheckParm ("-noconsole"))
 			return; // only allow the key bind to turn off console
 
-		Key_Console (key, ascii);
+		Key_Console (cmd, key, ascii);
 		return;
 	}
 
@@ -1918,7 +1919,7 @@ Key_Event (int key, int ascii, qboolean down)
 	{
 		if (down && con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && ascii != STRING_COLOR_TAG)
 		{
-			Cbuf_AddText("toggleconsole\n");  // Deferred to next frame so we're not sending the text event to the console.
+			Cbuf_AddText(cmd, "toggleconsole\n");  // Deferred to next frame so we're not sending the text event to the console.
 			tbl_keydest[key] = key_void; // key release should go nowhere (especially not to key_menu or key_game)
 			return;
 		}
@@ -1944,7 +1945,7 @@ Key_Event (int key, int ascii, qboolean down)
 	{
 		case key_message:
 			if (down)
-				Key_Message (key, ascii);
+				Key_Message (cmd, key, ascii);
 			break;
 		case key_menu:
 		case key_menu_grabbed:
@@ -1961,14 +1962,14 @@ Key_Event (int key, int ascii, qboolean down)
 				{
 					// button commands add keynum as a parm
 					if (bind[0] == '+')
-						Cbuf_AddText (va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
+						Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 					else
 					{
-						Cbuf_AddText (bind);
-						Cbuf_AddText ("\n");
+						Cbuf_AddText (cmd, bind);
+						Cbuf_AddText (cmd, "\n");
 					}
 				} else if(bind[0] == '+' && !down && keydown[key] == 0)
-					Cbuf_AddText(va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+					Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 			}
 			break;
 		default:
@@ -1989,4 +1990,9 @@ Key_ReleaseAll (void)
 			Key_Event(key, 0, false);
 	// now all keys are guaranteed down (once the event queue is unblocked)
 	// and only future events count
+}
+
+void Key_ReleaseAll_f(cmd_state_t *cmd)
+{
+	Key_ReleaseAll();
 }

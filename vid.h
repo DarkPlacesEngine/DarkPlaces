@@ -217,7 +217,7 @@ qboolean VID_ShowingKeyboard(void);
 void VID_SetMouse (qboolean fullscreengrab, qboolean relative, qboolean hidecursor);
 void VID_Finish (void);
 
-void VID_Restart_f(void);
+void VID_Restart_f(cmd_state_t *cmd);
 
 void VID_Start(void);
 void VID_Stop(void);

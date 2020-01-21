@@ -944,7 +944,7 @@ VM_vlen,								//   #9
 VM_vectoyaw,						//  #10
 VM_vectoangles,					//  #11
 VM_random,							//  #12
-VM_localcmd,						//  #13
+VM_localcmd_client,						//  #13
 VM_cvar,								//  #14
 VM_cvar_set,						//  #15
 VM_dprint,							//  #16

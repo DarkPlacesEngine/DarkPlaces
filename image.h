@@ -56,7 +56,7 @@ void Image_MipReduce32(const unsigned char *in, unsigned char *out, int *width, 
 void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
 // console command to fix the colors of transparent pixels (to prevent weird borders)
-void Image_FixTransparentPixels_f(void);
+void Image_FixTransparentPixels_f(cmd_state_t *cmd);
 extern cvar_t r_fixtrans_auto;
 
 #define Image_LinearFloatFromsRGBFloat(c) (((c) <= 0.04045f) ? (c) * (1.0f / 12.92f) : (float)pow(((c) + 0.055f)*(1.0f/1.055f), 2.4f))

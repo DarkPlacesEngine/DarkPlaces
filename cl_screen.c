@@ -125,8 +125,8 @@ int			scr_con_margin_bottom;
 
 extern int	con_vislines;
 
-static void SCR_ScreenShot_f (void);
-static void R_Envmap_f (void);
+static void SCR_ScreenShot_f(cmd_state_t *cmd);
+static void R_Envmap_f(cmd_state_t *cmd);
 
 // backend
 void R_ClearScreen(qboolean fogcolor);
@@ -649,12 +649,12 @@ static int SCR_InfobarHeight(void)
 SCR_InfoBar_f
 ==============
 */
-static void SCR_InfoBar_f(void)
+static void SCR_InfoBar_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc() == 3)
+	if(Cmd_Argc(cmd) == 3)
 	{
-		scr_infobartime_off = atof(Cmd_Argv(1));
-		strlcpy(scr_infobarstring, Cmd_Argv(2), sizeof(scr_infobarstring));
+		scr_infobartime_off = atof(Cmd_Argv(cmd, 1));
+		strlcpy(scr_infobarstring, Cmd_Argv(cmd, 2), sizeof(scr_infobarstring));
 	}
 	else
 	{
@@ -1241,7 +1241,7 @@ SCR_SizeUp_f
 Keybinding command
 =================
 */
-static void SCR_SizeUp_f (void)
+static void SCR_SizeUp_f(cmd_state_t *cmd)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
 }
@@ -1254,7 +1254,7 @@ SCR_SizeDown_f
 Keybinding command
 =================
 */
-static void SCR_SizeDown_f (void)
+static void SCR_SizeDown_f(cmd_state_t *cmd)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
 }
@@ -1362,11 +1362,11 @@ void CL_Screen_Init(void)
 	if (COM_CheckParm ("-noconsole"))
 		Cvar_SetQuick(&scr_conforcewhiledisconnected, "0");
 
-	Cmd_AddCommand ("sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
-	Cmd_AddCommand ("sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
-	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
-	Cmd_AddCommand ("envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
-	Cmd_AddCommand ("infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
+	Cmd_AddCommand(&cmd_client, "sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
+	Cmd_AddCommand(&cmd_client, "sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
+	Cmd_AddCommand(&cmd_client, "screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
+	Cmd_AddCommand(&cmd_client, "envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
+	Cmd_AddCommand(&cmd_client, "infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
 
 #ifdef CONFIG_VIDEO_CAPTURE
 	SCR_CaptureVideo_Ogg_Init();
@@ -1380,7 +1380,7 @@ void CL_Screen_Init(void)
 SCR_ScreenShot_f
 ==================
 */
-void SCR_ScreenShot_f (void)
+void SCR_ScreenShot_f(cmd_state_t *cmd)
 {
 	static int shotnumber;
 	static char old_prefix_name[MAX_QPATH];
@@ -1392,10 +1392,10 @@ void SCR_ScreenShot_f (void)
 	qboolean png = (scr_screenshot_png.integer != 0) && !jpeg;
 	char vabuf[1024];
 
-	if (Cmd_Argc() == 2)
+	if (Cmd_Argc(cmd) == 2)
 	{
 		const char *ext;
-		strlcpy(filename, Cmd_Argv(1), sizeof(filename));
+		strlcpy(filename, Cmd_Argv(cmd, 1), sizeof(filename));
 		ext = FS_FileExtension(filename);
 		if (!strcasecmp(ext, "jpg"))
 		{
@@ -1800,7 +1800,7 @@ envmapinfo[12] =
 	{{ 90, 180, 0}, "nz", false, false,  true}
 };
 
-static void R_Envmap_f (void)
+static void R_Envmap_f(cmd_state_t *cmd)
 {
 	int j, size;
 	char filename[MAX_QPATH], basename[MAX_QPATH];
@@ -1808,14 +1808,14 @@ static void R_Envmap_f (void)
 	unsigned char *buffer2;
 	r_rendertarget_t *rt;
 
-	if (Cmd_Argc() != 3)
+	if (Cmd_Argc(cmd) != 3)
 	{
 		Con_Print("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
 		return;
 	}
 
-	strlcpy (basename, Cmd_Argv(1), sizeof (basename));
-	size = atoi(Cmd_Argv(2));
+	strlcpy (basename, Cmd_Argv(cmd, 1), sizeof (basename));
+	size = atoi(Cmd_Argv(cmd, 2));
 	if (size != 128 && size != 256 && size != 512 && size != 1024)
 	{
 		Con_Print("envmap: size must be one of 128, 256, 512, or 1024\n");

@@ -2921,7 +2921,7 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(s, src_command, true);
+				Cmd_ExecuteString(&cmd_server, s, src_command, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
@@ -3793,7 +3793,7 @@ void NetConn_Heartbeat(int priority)
 	}
 }
 
-static void Net_Heartbeat_f(void)
+static void Net_Heartbeat_f(cmd_state_t *cmd)
 {
 	if (sv.active)
 		NetConn_Heartbeat(2);
@@ -3818,7 +3818,7 @@ static void PrintStats(netconn_t *conn)
 	Con_Printf("droppedDatagrams           = %i\n", conn->droppedDatagrams);
 }
 
-void Net_Stats_f(void)
+void Net_Stats_f(cmd_state_t *cmd)
 {
 	netconn_t *conn;
 	Con_Print("connections                =\n");
@@ -3827,7 +3827,7 @@ void Net_Stats_f(void)
 }
 
 #ifdef CONFIG_MENU
-void Net_Refresh_f(void)
+void Net_Refresh_f(cmd_state_t *cmd)
 {
 	if (m_state != m_slist) {
 		Con_Print("Sending new requests to master servers\n");
@@ -3837,7 +3837,7 @@ void Net_Refresh_f(void)
 		ServerList_QueryList(false, true, false, false);
 }
 
-void Net_Slist_f(void)
+void Net_Slist_f(cmd_state_t *cmd)
 {
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
@@ -3850,7 +3850,7 @@ void Net_Slist_f(void)
 		ServerList_QueryList(true, true, false, false);
 }
 
-void Net_SlistQW_f(void)
+void Net_SlistQW_f(cmd_state_t *cmd)
 {
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
@@ -3870,13 +3870,14 @@ void NetConn_Init(void)
 	int i;
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
-	Cmd_AddCommand("net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand(&cmd_client, "net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand(&cmd_server, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
-	Cmd_AddCommand("net_slist", Net_Slist_f, "query dp master servers and print all server information");
-	Cmd_AddCommand("net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
-	Cmd_AddCommand("net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
+	Cmd_AddCommand(&cmd_client, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
+	Cmd_AddCommand(&cmd_client, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
+	Cmd_AddCommand(&cmd_client, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
 #endif
-	Cmd_AddCommand("heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
+	Cmd_AddCommand(&cmd_server, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_test);
 	Cvar_RegisterVariable(&net_usesizelimit);
 	Cvar_RegisterVariable(&net_burstreserve);

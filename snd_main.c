@@ -261,17 +261,17 @@ static const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/amb
 
 void S_FreeSfx (sfx_t *sfx, qboolean force);
 
-static void S_Play_Common (float fvol, float attenuation)
+static void S_Play_Common (cmd_state_t *cmd, float fvol, float attenuation)
 {
 	int i, ch_ind;
 	char name [MAX_QPATH];
 	sfx_t *sfx;
 
 	i = 1;
-	while (i < Cmd_Argc ())
+	while (i < Cmd_Argc (cmd))
 	{
 		// Get the name, and appends ".wav" as an extension if there's none
-		strlcpy (name, Cmd_Argv (i), sizeof (name));
+		strlcpy (name, Cmd_Argv(cmd, i), sizeof (name));
 		if (!strrchr (name, '.'))
 			strlcat (name, ".wav", sizeof (name));
 		i++;
@@ -279,7 +279,7 @@ static void S_Play_Common (float fvol, float attenuation)
 		// If we need to get the volume from the command line
 		if (fvol == -1.0f)
 		{
-			fvol = atof (Cmd_Argv (i));
+			fvol = atof (Cmd_Argv(cmd, i));
 			i++;
 		}
 
@@ -297,22 +297,22 @@ static void S_Play_Common (float fvol, float attenuation)
 	}
 }
 
-static void S_Play_f(void)
+static void S_Play_f(cmd_state_t *cmd)
 {
-	S_Play_Common (1.0f, 1.0f);
+	S_Play_Common(cmd, 1.0f, 1.0f);
 }
 
-static void S_Play2_f(void)
+static void S_Play2_f(cmd_state_t *cmd)
 {
-	S_Play_Common (1.0f, 0.0f);
+	S_Play_Common(cmd, 1.0f, 0.0f);
 }
 
-static void S_PlayVol_f(void)
+static void S_PlayVol_f(cmd_state_t *cmd)
 {
-	S_Play_Common (-1.0f, 0.0f);
+	S_Play_Common(cmd, -1.0f, 0.0f);
 }
 
-static void S_SoundList_f (void)
+static void S_SoundList_f(cmd_state_t *cmd)
 {
 	unsigned int i;
 	sfx_t *sfx;
@@ -344,7 +344,7 @@ static void S_SoundList_f (void)
 }
 
 
-static void S_SoundInfo_f(void)
+static void S_SoundInfo_f(cmd_state_t *cmd)
 {
 	if (snd_renderbuffer == NULL)
 	{
@@ -683,7 +683,7 @@ void S_Shutdown(void)
 	sound_spatialized = false;
 }
 
-static void S_Restart_f(void)
+static void S_Restart_f(cmd_state_t *cmd)
 {
 	// NOTE: we can't free all sounds if we are running a map (this frees sfx_t that are still referenced by precaches)
 	// So, refuse to do this if we are connected.
@@ -779,8 +779,8 @@ void S_Init(void)
 	if (COM_CheckParm("-nosound"))
 	{
 		// dummy out Play and Play2 because mods stuffcmd that
-		Cmd_AddCommand("play", Host_NoOperation_f, "does nothing because -nosound was specified");
-		Cmd_AddCommand("play2", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(&cmd_client, "play", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(&cmd_client, "play2", Host_NoOperation_f, "does nothing because -nosound was specified");
 		return;
 	}
 
@@ -790,14 +790,14 @@ void S_Init(void)
 	if (COM_CheckParm("-simsound"))
 		simsound = true;
 
-	Cmd_AddCommand("play", S_Play_f, "play a sound at your current location (not heard by anyone else)");
-	Cmd_AddCommand("play2", S_Play2_f, "play a sound globally throughout the level (not heard by anyone else)");
-	Cmd_AddCommand("playvol", S_PlayVol_f, "play a sound at the specified volume level at your current location (not heard by anyone else)");
-	Cmd_AddCommand("stopsound", S_StopAllSounds, "silence");
-	Cmd_AddCommand("soundlist", S_SoundList_f, "list loaded sounds");
-	Cmd_AddCommand("soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
-	Cmd_AddCommand("snd_restart", S_Restart_f, "restart sound system");
-	Cmd_AddCommand("snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
+	Cmd_AddCommand(&cmd_client, "play", S_Play_f, "play a sound at your current location (not heard by anyone else)");
+	Cmd_AddCommand(&cmd_client, "play2", S_Play2_f, "play a sound globally throughout the level (not heard by anyone else)");
+	Cmd_AddCommand(&cmd_client, "playvol", S_PlayVol_f, "play a sound at the specified volume level at your current location (not heard by anyone else)");
+	Cmd_AddCommand(&cmd_client, "stopsound", S_StopAllSounds_f, "silence");
+	Cmd_AddCommand(&cmd_client, "soundlist", S_SoundList_f, "list loaded sounds");
+	Cmd_AddCommand(&cmd_client, "soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
+	Cmd_AddCommand(&cmd_client, "snd_restart", S_Restart_f, "restart sound system");
+	Cmd_AddCommand(&cmd_client, "snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
@@ -850,7 +850,7 @@ void S_Terminate (void)
 S_UnloadAllSounds_f
 ==================
 */
-void S_UnloadAllSounds_f (void)
+void S_UnloadAllSounds_f(cmd_state_t *cmd)
 {
 	int i;
 
@@ -1717,7 +1717,7 @@ void S_StopSound(int entnum, int entchannel)
 		}
 }
 
-void S_StopAllSounds (void)
+void S_StopAllSounds(void)
 {
 	unsigned int i;
 
@@ -1749,6 +1749,12 @@ void S_StopAllSounds (void)
 			SndSys_UnlockRenderBuffer ();
 	}
 }
+
+void S_StopAllSounds_f(cmd_state_t *cmd)
+{
+	S_StopAllSounds();
+}
+
 
 void S_PauseGameSounds (qboolean toggle)
 {

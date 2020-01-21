@@ -1370,19 +1370,19 @@ int fixtransparentpixels(unsigned char *data, int w, int h)
 	return changedPixels;
 }
 
-void Image_FixTransparentPixels_f(void)
+void Image_FixTransparentPixels_f(cmd_state_t *cmd)
 {
 	const char *filename, *filename_pattern;
 	fssearch_t *search;
 	int i, n;
 	char outfilename[MAX_QPATH], buf[MAX_QPATH];
 	unsigned char *data;
-	if(Cmd_Argc() != 2)
+	if(Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf("Usage: %s imagefile\n", Cmd_Argv(0));
+		Con_Printf("Usage: %s imagefile\n", Cmd_Argv(cmd, 0));
 		return;
 	}
-	filename_pattern = Cmd_Argv(1);
+	filename_pattern = Cmd_Argv(cmd, 1);
 	search = FS_Search(filename_pattern, true, true);
 	if(!search)
 		return;

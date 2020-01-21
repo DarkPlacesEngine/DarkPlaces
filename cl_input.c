@@ -62,12 +62,12 @@ int			in_impulse;
 
 
 
-static void KeyDown (kbutton_t *b)
+static void KeyDown (cmd_state_t *cmd, kbutton_t *b)
 {
 	int k;
 	const char *c;
 
-	c = Cmd_Argv(1);
+	c = Cmd_Argv(cmd, 1);
 	if (c[0])
 		k = atoi(c);
 	else
@@ -91,12 +91,12 @@ static void KeyDown (kbutton_t *b)
 	b->state |= 1 + 2;	// down + impulse down
 }
 
-static void KeyUp (kbutton_t *b)
+static void KeyUp (cmd_state_t *cmd, kbutton_t *b)
 {
 	int k;
 	const char *c;
 
-	c = Cmd_Argv(1);
+	c = Cmd_Argv(cmd, 1);
 	if (c[0])
 		k = atoi(c);
 	else
@@ -121,82 +121,82 @@ static void KeyUp (kbutton_t *b)
 	b->state |= 4; 		// impulse up
 }
 
-static void IN_KLookDown (void) {KeyDown(&in_klook);}
-static void IN_KLookUp (void) {KeyUp(&in_klook);}
-static void IN_MLookDown (void) {KeyDown(&in_mlook);}
-static void IN_MLookUp (void)
+static void IN_KLookDown(cmd_state_t *cmd) {KeyDown(cmd, &in_klook);}
+static void IN_KLookUp(cmd_state_t *cmd) {KeyUp(cmd, &in_klook);}
+static void IN_MLookDown(cmd_state_t *cmd) {KeyDown(cmd, &in_mlook);}
+static void IN_MLookUp(cmd_state_t *cmd)
 {
-	KeyUp(&in_mlook);
+	KeyUp(cmd, &in_mlook);
 	if ( !(in_mlook.state&1) && lookspring.value)
-		V_StartPitchDrift();
+		V_StartPitchDrift_f(cmd);
 }
-static void IN_UpDown(void) {KeyDown(&in_up);}
-static void IN_UpUp(void) {KeyUp(&in_up);}
-static void IN_DownDown(void) {KeyDown(&in_down);}
-static void IN_DownUp(void) {KeyUp(&in_down);}
-static void IN_LeftDown(void) {KeyDown(&in_left);}
-static void IN_LeftUp(void) {KeyUp(&in_left);}
-static void IN_RightDown(void) {KeyDown(&in_right);}
-static void IN_RightUp(void) {KeyUp(&in_right);}
-static void IN_ForwardDown(void) {KeyDown(&in_forward);}
-static void IN_ForwardUp(void) {KeyUp(&in_forward);}
-static void IN_BackDown(void) {KeyDown(&in_back);}
-static void IN_BackUp(void) {KeyUp(&in_back);}
-static void IN_LookupDown(void) {KeyDown(&in_lookup);}
-static void IN_LookupUp(void) {KeyUp(&in_lookup);}
-static void IN_LookdownDown(void) {KeyDown(&in_lookdown);}
-static void IN_LookdownUp(void) {KeyUp(&in_lookdown);}
-static void IN_MoveleftDown(void) {KeyDown(&in_moveleft);}
-static void IN_MoveleftUp(void) {KeyUp(&in_moveleft);}
-static void IN_MoverightDown(void) {KeyDown(&in_moveright);}
-static void IN_MoverightUp(void) {KeyUp(&in_moveright);}
+static void IN_UpDown(cmd_state_t *cmd) {KeyDown(cmd, &in_up);}
+static void IN_UpUp(cmd_state_t *cmd) {KeyUp(cmd, &in_up);}
+static void IN_DownDown(cmd_state_t *cmd) {KeyDown(cmd, &in_down);}
+static void IN_DownUp(cmd_state_t *cmd) {KeyUp(cmd, &in_down);}
+static void IN_LeftDown(cmd_state_t *cmd) {KeyDown(cmd, &in_left);}
+static void IN_LeftUp(cmd_state_t *cmd) {KeyUp(cmd, &in_left);}
+static void IN_RightDown(cmd_state_t *cmd) {KeyDown(cmd, &in_right);}
+static void IN_RightUp(cmd_state_t *cmd) {KeyUp(cmd, &in_right);}
+static void IN_ForwardDown(cmd_state_t *cmd) {KeyDown(cmd, &in_forward);}
+static void IN_ForwardUp(cmd_state_t *cmd) {KeyUp(cmd, &in_forward);}
+static void IN_BackDown(cmd_state_t *cmd) {KeyDown(cmd, &in_back);}
+static void IN_BackUp(cmd_state_t *cmd) {KeyUp(cmd, &in_back);}
+static void IN_LookupDown(cmd_state_t *cmd) {KeyDown(cmd, &in_lookup);}
+static void IN_LookupUp(cmd_state_t *cmd) {KeyUp(cmd, &in_lookup);}
+static void IN_LookdownDown(cmd_state_t *cmd) {KeyDown(cmd, &in_lookdown);}
+static void IN_LookdownUp(cmd_state_t *cmd) {KeyUp(cmd, &in_lookdown);}
+static void IN_MoveleftDown(cmd_state_t *cmd) {KeyDown(cmd, &in_moveleft);}
+static void IN_MoveleftUp(cmd_state_t *cmd) {KeyUp(cmd, &in_moveleft);}
+static void IN_MoverightDown(cmd_state_t *cmd) {KeyDown(cmd, &in_moveright);}
+static void IN_MoverightUp(cmd_state_t *cmd) {KeyUp(cmd, &in_moveright);}
 
-static void IN_SpeedDown(void) {KeyDown(&in_speed);}
-static void IN_SpeedUp(void) {KeyUp(&in_speed);}
-static void IN_StrafeDown(void) {KeyDown(&in_strafe);}
-static void IN_StrafeUp(void) {KeyUp(&in_strafe);}
+static void IN_SpeedDown(cmd_state_t *cmd) {KeyDown(cmd, &in_speed);}
+static void IN_SpeedUp(cmd_state_t *cmd) {KeyUp(cmd, &in_speed);}
+static void IN_StrafeDown(cmd_state_t *cmd) {KeyDown(cmd, &in_strafe);}
+static void IN_StrafeUp(cmd_state_t *cmd) {KeyUp(cmd, &in_strafe);}
 
-static void IN_AttackDown(void) {KeyDown(&in_attack);}
-static void IN_AttackUp(void) {KeyUp(&in_attack);}
+static void IN_AttackDown(cmd_state_t *cmd) {KeyDown(cmd, &in_attack);}
+static void IN_AttackUp(cmd_state_t *cmd) {KeyUp(cmd, &in_attack);}
 
-static void IN_UseDown(void) {KeyDown(&in_use);}
-static void IN_UseUp(void) {KeyUp(&in_use);}
+static void IN_UseDown(cmd_state_t *cmd) {KeyDown(cmd, &in_use);}
+static void IN_UseUp(cmd_state_t *cmd) {KeyUp(cmd, &in_use);}
 
 // LadyHavoc: added 6 new buttons
-static void IN_Button3Down(void) {KeyDown(&in_button3);}
-static void IN_Button3Up(void) {KeyUp(&in_button3);}
-static void IN_Button4Down(void) {KeyDown(&in_button4);}
-static void IN_Button4Up(void) {KeyUp(&in_button4);}
-static void IN_Button5Down(void) {KeyDown(&in_button5);}
-static void IN_Button5Up(void) {KeyUp(&in_button5);}
-static void IN_Button6Down(void) {KeyDown(&in_button6);}
-static void IN_Button6Up(void) {KeyUp(&in_button6);}
-static void IN_Button7Down(void) {KeyDown(&in_button7);}
-static void IN_Button7Up(void) {KeyUp(&in_button7);}
-static void IN_Button8Down(void) {KeyDown(&in_button8);}
-static void IN_Button8Up(void) {KeyUp(&in_button8);}
+static void IN_Button3Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button3);}
+static void IN_Button3Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button3);}
+static void IN_Button4Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button4);}
+static void IN_Button4Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button4);}
+static void IN_Button5Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button5);}
+static void IN_Button5Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button5);}
+static void IN_Button6Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button6);}
+static void IN_Button6Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button6);}
+static void IN_Button7Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button7);}
+static void IN_Button7Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button7);}
+static void IN_Button8Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button8);}
+static void IN_Button8Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button8);}
 
-static void IN_Button9Down(void) {KeyDown(&in_button9);}
-static void IN_Button9Up(void) {KeyUp(&in_button9);}
-static void IN_Button10Down(void) {KeyDown(&in_button10);}
-static void IN_Button10Up(void) {KeyUp(&in_button10);}
-static void IN_Button11Down(void) {KeyDown(&in_button11);}
-static void IN_Button11Up(void) {KeyUp(&in_button11);}
-static void IN_Button12Down(void) {KeyDown(&in_button12);}
-static void IN_Button12Up(void) {KeyUp(&in_button12);}
-static void IN_Button13Down(void) {KeyDown(&in_button13);}
-static void IN_Button13Up(void) {KeyUp(&in_button13);}
-static void IN_Button14Down(void) {KeyDown(&in_button14);}
-static void IN_Button14Up(void) {KeyUp(&in_button14);}
-static void IN_Button15Down(void) {KeyDown(&in_button15);}
-static void IN_Button15Up(void) {KeyUp(&in_button15);}
-static void IN_Button16Down(void) {KeyDown(&in_button16);}
-static void IN_Button16Up(void) {KeyUp(&in_button16);}
+static void IN_Button9Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button9);}
+static void IN_Button9Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button9);}
+static void IN_Button10Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button10);}
+static void IN_Button10Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button10);}
+static void IN_Button11Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button11);}
+static void IN_Button11Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button11);}
+static void IN_Button12Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button12);}
+static void IN_Button12Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button12);}
+static void IN_Button13Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button13);}
+static void IN_Button13Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button13);}
+static void IN_Button14Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button14);}
+static void IN_Button14Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button14);}
+static void IN_Button15Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button15);}
+static void IN_Button15Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button15);}
+static void IN_Button16Down(cmd_state_t *cmd) {KeyDown(cmd, &in_button16);}
+static void IN_Button16Up(cmd_state_t *cmd) {KeyUp(cmd, &in_button16);}
 
-static void IN_JumpDown (void) {KeyDown(&in_jump);}
-static void IN_JumpUp (void) {KeyUp(&in_jump);}
+static void IN_JumpDown(cmd_state_t *cmd) {KeyDown(cmd, &in_jump);}
+static void IN_JumpUp(cmd_state_t *cmd) {KeyUp(cmd, &in_jump);}
 
-static void IN_Impulse (void) {in_impulse=atoi(Cmd_Argv(1));}
+static void IN_Impulse(cmd_state_t *cmd) {in_impulse=atoi(Cmd_Argv(cmd, 1));}
 
 in_bestweapon_info_t in_bestweapon_info[IN_BESTWEAPON_MAX];
 
@@ -241,45 +241,45 @@ void IN_BestWeapon_ResetData (void)
 	IN_BestWeapon_Register("h", 226, HIT_MJOLNIR, HIT_MJOLNIR, STAT_CELLS, 0); // hipnotic mjolnir hammer
 }
 
-static void IN_BestWeapon_Register_f (void)
+static void IN_BestWeapon_Register_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc() == 7)
+	if(Cmd_Argc(cmd) == 7)
 	{
 		IN_BestWeapon_Register(
-			Cmd_Argv(1),
-			atoi(Cmd_Argv(2)),
-			atoi(Cmd_Argv(3)),
-			atoi(Cmd_Argv(4)),
-			atoi(Cmd_Argv(5)),
-			atoi(Cmd_Argv(6))
+			Cmd_Argv(cmd, 1),
+			atoi(Cmd_Argv(cmd, 2)),
+			atoi(Cmd_Argv(cmd, 3)),
+			atoi(Cmd_Argv(cmd, 4)),
+			atoi(Cmd_Argv(cmd, 5)),
+			atoi(Cmd_Argv(cmd, 6))
 		);
 	}
-	else if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "clear"))
+	else if(Cmd_Argc(cmd) == 2 && !strcmp(Cmd_Argv(cmd, 1), "clear"))
 	{
 		memset(in_bestweapon_info, 0, sizeof(in_bestweapon_info));
 	}
-	else if(Cmd_Argc() == 2 && !strcmp(Cmd_Argv(1), "quake"))
+	else if(Cmd_Argc(cmd) == 2 && !strcmp(Cmd_Argv(cmd, 1), "quake"))
 	{
 		IN_BestWeapon_ResetData();
 	}
 	else
 	{
-		Con_Printf("Usage: %s weaponshortname impulse itemcode activeweaponcode ammostat ammomin; %s clear; %s quake\n", Cmd_Argv(0), Cmd_Argv(0), Cmd_Argv(0));
+		Con_Printf("Usage: %s weaponshortname impulse itemcode activeweaponcode ammostat ammomin; %s clear; %s quake\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, 0), Cmd_Argv(cmd, 0));
 	}
 }
 
-static void IN_BestWeapon (void)
+static void IN_BestWeapon_f(cmd_state_t *cmd)
 {
 	int i, n;
 	const char *t;
-	if (Cmd_Argc() < 2)
+	if (Cmd_Argc(cmd) < 2)
 	{
 		Con_Printf("bestweapon requires 1 or more parameters\n");
 		return;
 	}
-	for (i = 1;i < Cmd_Argc();i++)
+	for (i = 1;i < Cmd_Argc(cmd);i++)
 	{
-		t = Cmd_Argv(i);
+		t = Cmd_Argv(cmd, i);
 		// figure out which weapon this character refers to
 		for (n = 0;n < IN_BESTWEAPON_MAX && in_bestweapon_info[n].impulse;n++)
 		{
@@ -301,55 +301,6 @@ static void IN_BestWeapon (void)
 	}
 	// if we couldn't find any of the weapons, there's nothing more we can do...
 }
-
-#if 0
-void IN_CycleWeapon (void)
-{
-	int i, n;
-	int first = -1;
-	qboolean found = false;
-	const char *t;
-	if (Cmd_Argc() < 2)
-	{
-		Con_Printf("bestweapon requires 1 or more parameters\n");
-		return;
-	}
-	for (i = 1;i < Cmd_Argc();i++)
-	{
-		t = Cmd_Argv(i);
-		// figure out which weapon this character refers to
-		for (n = 0;n < IN_BESTWEAPON_MAX && in_bestweapon_info[n].impulse;n++)
-		{
-			if (!strcmp(in_bestweapon_info[n].name, t))
-			{
-				// we found out what weapon this character refers to
-				// check if the inventory contains the weapon and enough ammo
-				if ((cl.stats[STAT_ITEMS] & in_bestweapon_info[n].weaponbit) && (cl.stats[in_bestweapon_info[n].ammostat] >= in_bestweapon_info[n].ammomin))
-				{
-					// we found one of the weapons the player wanted
-					if(first == -1)
-						first = n;
-					if(found)
-					{
-						in_impulse = in_bestweapon_info[n].impulse;
-						return;
-					}
-					if(cl.stats[STAT_ACTIVEWEAPON] == in_bestweapon_info[n].activeweaponcode)
-						found = true;
-				}
-				break;
-			}
-		}
-		// if we couldn't identify the weapon we just ignore it and continue checking for other weapons
-	}
-	if(first != -1)
-	{
-		in_impulse = in_bestweapon_info[first].impulse;
-		return;
-	}
-	// if we couldn't find any of the weapons, there's nothing more we can do...
-}
-#endif
 
 /*
 ===============
@@ -2159,80 +2110,75 @@ CL_InitInput
 */
 void CL_InitInput (void)
 {
-	Cmd_AddCommand ("+moveup",IN_UpDown, "swim upward");
-	Cmd_AddCommand ("-moveup",IN_UpUp, "stop swimming upward");
-	Cmd_AddCommand ("+movedown",IN_DownDown, "swim downward");
-	Cmd_AddCommand ("-movedown",IN_DownUp, "stop swimming downward");
-	Cmd_AddCommand ("+left",IN_LeftDown, "turn left");
-	Cmd_AddCommand ("-left",IN_LeftUp, "stop turning left");
-	Cmd_AddCommand ("+right",IN_RightDown, "turn right");
-	Cmd_AddCommand ("-right",IN_RightUp, "stop turning right");
-	Cmd_AddCommand ("+forward",IN_ForwardDown, "move forward");
-	Cmd_AddCommand ("-forward",IN_ForwardUp, "stop moving forward");
-	Cmd_AddCommand ("+back",IN_BackDown, "move backward");
-	Cmd_AddCommand ("-back",IN_BackUp, "stop moving backward");
-	Cmd_AddCommand ("+lookup", IN_LookupDown, "look upward");
-	Cmd_AddCommand ("-lookup", IN_LookupUp, "stop looking upward");
-	Cmd_AddCommand ("+lookdown", IN_LookdownDown, "look downward");
-	Cmd_AddCommand ("-lookdown", IN_LookdownUp, "stop looking downward");
-	Cmd_AddCommand ("+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)");
-	Cmd_AddCommand ("-strafe", IN_StrafeUp, "deactivate strafing mode");
-	Cmd_AddCommand ("+moveleft", IN_MoveleftDown, "strafe left");
-	Cmd_AddCommand ("-moveleft", IN_MoveleftUp, "stop strafing left");
-	Cmd_AddCommand ("+moveright", IN_MoverightDown, "strafe right");
-	Cmd_AddCommand ("-moveright", IN_MoverightUp, "stop strafing right");
-	Cmd_AddCommand ("+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
-	Cmd_AddCommand ("-speed", IN_SpeedUp, "deactivate run mode");
-	Cmd_AddCommand ("+attack", IN_AttackDown, "begin firing");
-	Cmd_AddCommand ("-attack", IN_AttackUp, "stop firing");
-	Cmd_AddCommand ("+jump", IN_JumpDown, "jump");
-	Cmd_AddCommand ("-jump", IN_JumpUp, "end jump (so you can jump again)");
-	Cmd_AddCommand ("impulse", IN_Impulse, "send an impulse number to server (select weapon, use item, etc)");
-	Cmd_AddCommand ("+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
-	Cmd_AddCommand ("-klook", IN_KLookUp, "deactivate keyboard looking mode");
-	Cmd_AddCommand ("+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
-	Cmd_AddCommand ("-mlook", IN_MLookUp, "deactivate mouse looking mode");
+	Cmd_AddCommand(&cmd_client, "+moveup",IN_UpDown, "swim upward");
+	Cmd_AddCommand(&cmd_client, "-moveup",IN_UpUp, "stop swimming upward");
+	Cmd_AddCommand(&cmd_client, "+movedown",IN_DownDown, "swim downward");
+	Cmd_AddCommand(&cmd_client, "-movedown",IN_DownUp, "stop swimming downward");
+	Cmd_AddCommand(&cmd_client, "+left",IN_LeftDown, "turn left");
+	Cmd_AddCommand(&cmd_client, "-left",IN_LeftUp, "stop turning left");
+	Cmd_AddCommand(&cmd_client, "+right",IN_RightDown, "turn right");
+	Cmd_AddCommand(&cmd_client, "-right",IN_RightUp, "stop turning right");
+	Cmd_AddCommand(&cmd_client, "+forward",IN_ForwardDown, "move forward");
+	Cmd_AddCommand(&cmd_client, "-forward",IN_ForwardUp, "stop moving forward");
+	Cmd_AddCommand(&cmd_client, "+back",IN_BackDown, "move backward");
+	Cmd_AddCommand(&cmd_client, "-back",IN_BackUp, "stop moving backward");
+	Cmd_AddCommand(&cmd_client, "+lookup", IN_LookupDown, "look upward");
+	Cmd_AddCommand(&cmd_client, "-lookup", IN_LookupUp, "stop looking upward");
+	Cmd_AddCommand(&cmd_client, "+lookdown", IN_LookdownDown, "look downward");
+	Cmd_AddCommand(&cmd_client, "-lookdown", IN_LookdownUp, "stop looking downward");
+	Cmd_AddCommand(&cmd_client, "+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)");
+	Cmd_AddCommand(&cmd_client, "-strafe", IN_StrafeUp, "deactivate strafing mode");
+	Cmd_AddCommand(&cmd_client, "+moveleft", IN_MoveleftDown, "strafe left");
+	Cmd_AddCommand(&cmd_client, "-moveleft", IN_MoveleftUp, "stop strafing left");
+	Cmd_AddCommand(&cmd_client, "+moveright", IN_MoverightDown, "strafe right");
+	Cmd_AddCommand(&cmd_client, "-moveright", IN_MoverightUp, "stop strafing right");
+	Cmd_AddCommand(&cmd_client, "+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
+	Cmd_AddCommand(&cmd_client, "-speed", IN_SpeedUp, "deactivate run mode");
+	Cmd_AddCommand(&cmd_client, "+attack", IN_AttackDown, "begin firing");
+	Cmd_AddCommand(&cmd_client, "-attack", IN_AttackUp, "stop firing");
+	Cmd_AddCommand(&cmd_client, "+jump", IN_JumpDown, "jump");
+	Cmd_AddCommand(&cmd_client, "-jump", IN_JumpUp, "end jump (so you can jump again)");
+	Cmd_AddCommand(&cmd_client, "impulse", IN_Impulse, "send an impulse number to server (select weapon, use item, etc)");
+	Cmd_AddCommand(&cmd_client, "+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
+	Cmd_AddCommand(&cmd_client, "-klook", IN_KLookUp, "deactivate keyboard looking mode");
+	Cmd_AddCommand(&cmd_client, "+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
+	Cmd_AddCommand(&cmd_client, "-mlook", IN_MLookUp, "deactivate mouse looking mode");
 
-	// LadyHavoc: added use button
-	Cmd_AddCommand ("+use", IN_UseDown, "use something (may be used by some mods)");
-	Cmd_AddCommand ("-use", IN_UseUp, "stop using something");
-
-	// LadyHavoc: added 6 new buttons
-	Cmd_AddCommand ("+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
-	Cmd_AddCommand ("-button3", IN_Button3Up, "deactivate button3");
-	Cmd_AddCommand ("+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
-	Cmd_AddCommand ("-button4", IN_Button4Up, "deactivate button4");
-	Cmd_AddCommand ("+button5", IN_Button5Down, "activate button5 (behavior depends on mod)");
-	Cmd_AddCommand ("-button5", IN_Button5Up, "deactivate button5");
-	Cmd_AddCommand ("+button6", IN_Button6Down, "activate button6 (behavior depends on mod)");
-	Cmd_AddCommand ("-button6", IN_Button6Up, "deactivate button6");
-	Cmd_AddCommand ("+button7", IN_Button7Down, "activate button7 (behavior depends on mod)");
-	Cmd_AddCommand ("-button7", IN_Button7Up, "deactivate button7");
-	Cmd_AddCommand ("+button8", IN_Button8Down, "activate button8 (behavior depends on mod)");
-	Cmd_AddCommand ("-button8", IN_Button8Up, "deactivate button8");
-	Cmd_AddCommand ("+button9", IN_Button9Down, "activate button9 (behavior depends on mod)");
-	Cmd_AddCommand ("-button9", IN_Button9Up, "deactivate button9");
-	Cmd_AddCommand ("+button10", IN_Button10Down, "activate button10 (behavior depends on mod)");
-	Cmd_AddCommand ("-button10", IN_Button10Up, "deactivate button10");
-	Cmd_AddCommand ("+button11", IN_Button11Down, "activate button11 (behavior depends on mod)");
-	Cmd_AddCommand ("-button11", IN_Button11Up, "deactivate button11");
-	Cmd_AddCommand ("+button12", IN_Button12Down, "activate button12 (behavior depends on mod)");
-	Cmd_AddCommand ("-button12", IN_Button12Up, "deactivate button12");
-	Cmd_AddCommand ("+button13", IN_Button13Down, "activate button13 (behavior depends on mod)");
-	Cmd_AddCommand ("-button13", IN_Button13Up, "deactivate button13");
-	Cmd_AddCommand ("+button14", IN_Button14Down, "activate button14 (behavior depends on mod)");
-	Cmd_AddCommand ("-button14", IN_Button14Up, "deactivate button14");
-	Cmd_AddCommand ("+button15", IN_Button15Down, "activate button15 (behavior depends on mod)");
-	Cmd_AddCommand ("-button15", IN_Button15Up, "deactivate button15");
-	Cmd_AddCommand ("+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
-	Cmd_AddCommand ("-button16", IN_Button16Up, "deactivate button16");
+	// LadyHavoc: added lots of buttons
+	Cmd_AddCommand(&cmd_client, "+use", IN_UseDown, "use something (may be used by some mods)");
+	Cmd_AddCommand(&cmd_client, "-use", IN_UseUp, "stop using something");
+	Cmd_AddCommand(&cmd_client, "+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button3", IN_Button3Up, "deactivate button3");
+	Cmd_AddCommand(&cmd_client, "+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button4", IN_Button4Up, "deactivate button4");
+	Cmd_AddCommand(&cmd_client, "+button5", IN_Button5Down, "activate button5 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button5", IN_Button5Up, "deactivate button5");
+	Cmd_AddCommand(&cmd_client, "+button6", IN_Button6Down, "activate button6 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button6", IN_Button6Up, "deactivate button6");
+	Cmd_AddCommand(&cmd_client, "+button7", IN_Button7Down, "activate button7 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button7", IN_Button7Up, "deactivate button7");
+	Cmd_AddCommand(&cmd_client, "+button8", IN_Button8Down, "activate button8 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button8", IN_Button8Up, "deactivate button8");
+	Cmd_AddCommand(&cmd_client, "+button9", IN_Button9Down, "activate button9 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button9", IN_Button9Up, "deactivate button9");
+	Cmd_AddCommand(&cmd_client, "+button10", IN_Button10Down, "activate button10 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button10", IN_Button10Up, "deactivate button10");
+	Cmd_AddCommand(&cmd_client, "+button11", IN_Button11Down, "activate button11 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button11", IN_Button11Up, "deactivate button11");
+	Cmd_AddCommand(&cmd_client, "+button12", IN_Button12Down, "activate button12 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button12", IN_Button12Up, "deactivate button12");
+	Cmd_AddCommand(&cmd_client, "+button13", IN_Button13Down, "activate button13 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button13", IN_Button13Up, "deactivate button13");
+	Cmd_AddCommand(&cmd_client, "+button14", IN_Button14Down, "activate button14 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button14", IN_Button14Up, "deactivate button14");
+	Cmd_AddCommand(&cmd_client, "+button15", IN_Button15Down, "activate button15 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button15", IN_Button15Up, "deactivate button15");
+	Cmd_AddCommand(&cmd_client, "+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
+	Cmd_AddCommand(&cmd_client, "-button16", IN_Button16Up, "deactivate button16");
 
 	// LadyHavoc: added bestweapon command
-	Cmd_AddCommand ("bestweapon", IN_BestWeapon, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
-#if 0
-	Cmd_AddCommand ("cycleweapon", IN_CycleWeapon, "send an impulse number to server to select the next usable weapon out of several (example: 9 4 8) if you are holding one of these, and choose the first one if you are holding none of these");
-#endif
-	Cmd_AddCommand ("register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
+	Cmd_AddCommand(&cmd_client, "bestweapon", IN_BestWeapon_f, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
+	Cmd_AddCommand(&cmd_client, "register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
 
 	Cvar_RegisterVariable(&cl_movecliptokeyboard);
 	Cvar_RegisterVariable(&cl_movement);

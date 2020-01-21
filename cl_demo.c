@@ -67,7 +67,7 @@ void CL_NextDemo (void)
 	}
 
 	dpsnprintf (str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
-	Cbuf_InsertText (str);
+	Cbuf_InsertText(&cmd_client, str);
 	cls.demonum++;
 }
 
@@ -98,7 +98,7 @@ void CL_StopPlayback (void)
 
 	if (!cls.demostarting) // only quit if not starting another demo
 		if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
-			Host_Quit_f();
+			Host_Quit_f(&cmd_client);
 
 }
 
@@ -275,7 +275,7 @@ void CL_ReadDemoMessage(void)
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
-				Cbuf_Execute(); // immediately execute svc_stufftext if in the demo before connect!
+				Cbuf_Execute(&cmd_client); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
@@ -300,7 +300,7 @@ CL_Stop_f
 stop recording a demo
 ====================
 */
-void CL_Stop_f (void)
+void CL_Stop_f(cmd_state_t *cmd)
 {
 	sizebuf_t buf;
 	unsigned char bufdata[64];
@@ -339,20 +339,20 @@ CL_Record_f
 record <demoname> <map> [cd track]
 ====================
 */
-void CL_Record_f (void)
+void CL_Record_f(cmd_state_t *cmd)
 {
 	int c, track;
 	char name[MAX_OSPATH];
 	char vabuf[1024];
 
-	c = Cmd_Argc();
+	c = Cmd_Argc(cmd);
 	if (c != 2 && c != 3 && c != 4)
 	{
 		Con_Print("record <demoname> [<map> [cd track]]\n");
 		return;
 	}
 
-	if (strstr(Cmd_Argv(1), ".."))
+	if (strstr(Cmd_Argv(cmd, 1), ".."))
 	{
 		Con_Print("Relative pathnames are not allowed.\n");
 		return;
@@ -370,19 +370,19 @@ void CL_Record_f (void)
 	// write the forced cd track number, or -1
 	if (c == 4)
 	{
-		track = atoi(Cmd_Argv(3));
+		track = atoi(Cmd_Argv(cmd, 3));
 		Con_Printf("Forcing CD track to %i\n", cls.forcetrack);
 	}
 	else
 		track = -1;
 
 	// get the demo name
-	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(2)), src_command, false);
+		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_command, false);
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
@@ -410,21 +410,21 @@ CL_PlayDemo_f
 play [demoname]
 ====================
 */
-void CL_PlayDemo_f (void)
+void CL_PlayDemo_f(cmd_state_t *cmd)
 {
 	char	name[MAX_QPATH];
 	int c;
 	qboolean neg = false;
 	qfile_t *f;
 
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("play <demoname> : plays a demo\n");
 		return;
 	}
 
 	// open the demo file
-	strlcpy (name, Cmd_Argv(1), sizeof (name));
+	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
@@ -530,7 +530,7 @@ static void CL_FinishTimeDemo (void)
 			if(atoi(com_argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
-				Cbuf_AddText(va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
+				Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
 				// cannot execute here
 			}
 			else
@@ -579,11 +579,11 @@ static void CL_FinishTimeDemo (void)
 				}
 				Z_Free(history);
 				history = NULL;
-				Host_Quit_f();
+				Host_Quit_f(&cmd_client);
 			}
 		}
 		else
-			Host_Quit_f();
+			Host_Quit_f(&cmd_client);
 	}
 }
 
@@ -594,9 +594,9 @@ CL_TimeDemo_f
 timedemo [demoname]
 ====================
 */
-void CL_TimeDemo_f (void)
+void CL_TimeDemo_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc() != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("timedemo <demoname> : gets demo speeds\n");
 		return;
@@ -604,7 +604,7 @@ void CL_TimeDemo_f (void)
 
 	srand(0); // predictable random sequence for benchmarking
 
-	CL_PlayDemo_f ();
+	CL_PlayDemo_f (cmd);
 
 // cls.td_starttime will be grabbed at the second frame of the demo, so
 // all the loading time doesn't get counted
