@@ -100,7 +100,7 @@ static cvar_t gameversion_min = {CVAR_CLIENT, "gameversion_min", "-1", "minimum 
 static cvar_t gameversion_max = {CVAR_CLIENT, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
 static cvar_t rcon_restricted_password = {CVAR_SERVER | CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
 static cvar_t rcon_restricted_commands = {CVAR_SERVER, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
-static cvar_t rcon_secure_maxdiff = {CVAR_SERVER | CVAR_SAVE, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
+static cvar_t rcon_secure_maxdiff = {CVAR_SERVER, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
 extern cvar_t rcon_secure;
 extern cvar_t rcon_secure_challengetimeout;
 
