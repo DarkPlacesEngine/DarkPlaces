@@ -485,27 +485,6 @@ typedef struct texture_shaderpass_s
 }
 texture_shaderpass_t;
 
-typedef enum texturelayertype_e
-{
-	TEXTURELAYERTYPE_INVALID,
-	TEXTURELAYERTYPE_LITTEXTURE,
-	TEXTURELAYERTYPE_TEXTURE,
-	TEXTURELAYERTYPE_FOG
-}
-texturelayertype_t;
-
-typedef struct texturelayer_s
-{
-	texturelayertype_t type;
-	qboolean depthmask;
-	int blendfunc1;
-	int blendfunc2;
-	rtexture_t *texture;
-	matrix4x4_t texmatrix;
-	vec4_t color;
-}
-texturelayer_t;
-
 typedef struct texture_s
 {
 	// q1bsp
@@ -547,6 +526,12 @@ typedef struct texture_s
 	void *update_lastrenderentity;
 	// the current alpha of this texture (may be affected by r_wateralpha, also basealpha, and ent->alpha)
 	float currentalpha;
+	// current value of blendfunc - one of:
+	// {GL_SRC_ALPHA, GL_ONE}
+	// {GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA}
+	// {customblendfunc[0], customblendfunc[1]}
+	// {GL_ONE, GL_ZERO}
+	int currentblendfunc[2];
 	// the current texture frame in animation
 	struct texture_s *currentframe;
 	// current texture transform matrix (used for water scrolling)
@@ -603,9 +588,6 @@ typedef struct texture_s
 
 	// from q3 shaders
 	int customblendfunc[2];
-
-	int currentnumlayers;
-	texturelayer_t currentlayers[16];
 
 	// q3bsp
 	char name[64];
