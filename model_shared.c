@@ -4398,9 +4398,10 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 {
 	int i;
 	texture_t *t;
-	for (i = 0; i < mod->num_textures; i++)
-		if (!strcmp(mod->data_textures[i].name, name))
-			return mod->data_textures + i;
+	int drawflag = defaultdrawflags & DRAWFLAG_MASK;
+	for (i = 0, t = mod->data_textures; i < mod->num_textures; i++, t++)
+		if (!strcmp(t->name, name) && t->drawflag == drawflag)
+			return t;
 	if (mod->max_textures <= mod->num_textures)
 	{
 		texture_t *oldtextures = mod->data_textures;
@@ -4412,6 +4413,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 	}
 	t = &mod->data_textures[mod->num_textures++];
 	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags, defaultmaterialflags);
+	t->drawflag = drawflag;
 	switch (defaultdrawflags & DRAWFLAG_MASK)
 	{
 	case DRAWFLAG_ADDITIVE:

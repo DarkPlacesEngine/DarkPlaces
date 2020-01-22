@@ -631,6 +631,9 @@ typedef struct texture_s
 
 	// diffuse and ambient
 	float rtlightambient;
+
+	// used by Mod_Mesh_GetTexture for drawflag overrides, to disambiguate the same texture with different drawflags
+	int drawflag;
 }
  texture_t;
 
