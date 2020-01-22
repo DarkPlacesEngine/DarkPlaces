@@ -361,56 +361,56 @@ float CL_KeyState (kbutton_t *key)
 
 //==========================================================================
 
-cvar_t cl_upspeed = {CVAR_SAVE, "cl_upspeed","400","vertical movement speed (while swimming or flying)"};
-cvar_t cl_forwardspeed = {CVAR_SAVE, "cl_forwardspeed","400","forward movement speed"};
-cvar_t cl_backspeed = {CVAR_SAVE, "cl_backspeed","400","backward movement speed"};
-cvar_t cl_sidespeed = {CVAR_SAVE, "cl_sidespeed","350","strafe movement speed"};
+cvar_t cl_upspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_upspeed","400","vertical movement speed (while swimming or flying)"};
+cvar_t cl_forwardspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_forwardspeed","400","forward movement speed"};
+cvar_t cl_backspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_backspeed","400","backward movement speed"};
+cvar_t cl_sidespeed = {CVAR_CLIENT | CVAR_SAVE, "cl_sidespeed","350","strafe movement speed"};
 
-cvar_t cl_movespeedkey = {CVAR_SAVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
-cvar_t cl_movecliptokeyboard = {0, "cl_movecliptokeyboard", "0", "if set to 1, any move is clipped to the nine keyboard states; if set to 2, only the direction is clipped, not the amount"};
+cvar_t cl_movespeedkey = {CVAR_CLIENT | CVAR_SAVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
+cvar_t cl_movecliptokeyboard = {CVAR_CLIENT, "cl_movecliptokeyboard", "0", "if set to 1, any move is clipped to the nine keyboard states; if set to 2, only the direction is clipped, not the amount"};
 
-cvar_t cl_yawspeed = {CVAR_SAVE, "cl_yawspeed","140","keyboard yaw turning speed"};
-cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
+cvar_t cl_yawspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_yawspeed","140","keyboard yaw turning speed"};
+cvar_t cl_pitchspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
 
-cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
+cvar_t cl_anglespeedkey = {CVAR_CLIENT | CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
-cvar_t cl_movement = {CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement on DP servers (use cl_nopred for QWSV servers)"};
-cvar_t cl_movement_replay = {0, "cl_movement_replay", "1", "use engine prediction"};
-cvar_t cl_movement_nettimeout = {CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
-cvar_t cl_movement_minping = {CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
-cvar_t cl_movement_track_canjump = {CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
-cvar_t cl_movement_maxspeed = {0, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
-cvar_t cl_movement_maxairspeed = {0, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
-cvar_t cl_movement_stopspeed = {0, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
-cvar_t cl_movement_friction = {0, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
-cvar_t cl_movement_wallfriction = {0, "cl_movement_wallfriction", "1", "how fast you slow down while sliding along a wall (should match sv_wallfriction)"};
-cvar_t cl_movement_waterfriction = {0, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_waterfriction), if less than 0 the cl_movement_friction variable is used instead"};
-cvar_t cl_movement_edgefriction = {0, "cl_movement_edgefriction", "1", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
-cvar_t cl_movement_stepheight = {0, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
-cvar_t cl_movement_accelerate = {0, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
-cvar_t cl_movement_airaccelerate = {0, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
-cvar_t cl_movement_wateraccelerate = {0, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
-cvar_t cl_movement_jumpvelocity = {0, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
-cvar_t cl_movement_airaccel_qw = {0, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
-cvar_t cl_movement_airaccel_sideways_friction = {0, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
-cvar_t cl_nopred = {CVAR_SAVE, "cl_nopred", "0", "(QWSV only) disables player movement prediction when playing on QWSV servers (this setting is separate from cl_movement because player expectations are different when playing on DP vs QW servers)"};
+cvar_t cl_movement = {CVAR_CLIENT | CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement on DP servers (use cl_nopred for QWSV servers)"};
+cvar_t cl_movement_replay = {CVAR_CLIENT, "cl_movement_replay", "1", "use engine prediction"};
+cvar_t cl_movement_nettimeout = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
+cvar_t cl_movement_minping = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
+cvar_t cl_movement_track_canjump = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
+cvar_t cl_movement_maxspeed = {CVAR_CLIENT, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
+cvar_t cl_movement_maxairspeed = {CVAR_CLIENT, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
+cvar_t cl_movement_stopspeed = {CVAR_CLIENT, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
+cvar_t cl_movement_friction = {CVAR_CLIENT, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
+cvar_t cl_movement_wallfriction = {CVAR_CLIENT, "cl_movement_wallfriction", "1", "how fast you slow down while sliding along a wall (should match sv_wallfriction)"};
+cvar_t cl_movement_waterfriction = {CVAR_CLIENT, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_waterfriction), if less than 0 the cl_movement_friction variable is used instead"};
+cvar_t cl_movement_edgefriction = {CVAR_CLIENT, "cl_movement_edgefriction", "1", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
+cvar_t cl_movement_stepheight = {CVAR_CLIENT, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
+cvar_t cl_movement_accelerate = {CVAR_CLIENT, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
+cvar_t cl_movement_airaccelerate = {CVAR_CLIENT, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
+cvar_t cl_movement_wateraccelerate = {CVAR_CLIENT, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
+cvar_t cl_movement_jumpvelocity = {CVAR_CLIENT, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
+cvar_t cl_movement_airaccel_qw = {CVAR_CLIENT, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
+cvar_t cl_movement_airaccel_sideways_friction = {CVAR_CLIENT, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
+cvar_t cl_nopred = {CVAR_CLIENT | CVAR_SAVE, "cl_nopred", "0", "(QWSV only) disables player movement prediction when playing on QWSV servers (this setting is separate from cl_movement because player expectations are different when playing on DP vs QW servers)"};
 
-cvar_t in_pitch_min = {0, "in_pitch_min", "-90", "how far you can aim upward (quake used -70)"};
-cvar_t in_pitch_max = {0, "in_pitch_max", "90", "how far you can aim downward (quake used 80)"};
+cvar_t in_pitch_min = {CVAR_CLIENT, "in_pitch_min", "-90", "how far you can aim upward (quake used -70)"};
+cvar_t in_pitch_max = {CVAR_CLIENT, "in_pitch_max", "90", "how far you can aim downward (quake used 80)"};
 
-cvar_t m_filter = {CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
-cvar_t m_accelerate = {CVAR_SAVE, "m_accelerate","1", "mouse acceleration factor (try 2)"};
-cvar_t m_accelerate_minspeed = {CVAR_SAVE, "m_accelerate_minspeed","5000", "below this speed, no acceleration is done"};
-cvar_t m_accelerate_maxspeed = {CVAR_SAVE, "m_accelerate_maxspeed","10000", "above this speed, full acceleration is done"};
-cvar_t m_accelerate_filter = {CVAR_SAVE, "m_accelerate_filter","0.1", "mouse acceleration factor filtering"};
+cvar_t m_filter = {CVAR_CLIENT | CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"};
+cvar_t m_accelerate = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate","1", "mouse acceleration factor (try 2)"};
+cvar_t m_accelerate_minspeed = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_minspeed","5000", "below this speed, no acceleration is done"};
+cvar_t m_accelerate_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_maxspeed","10000", "above this speed, full acceleration is done"};
+cvar_t m_accelerate_filter = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_filter","0.1", "mouse acceleration factor filtering"};
 
-cvar_t cl_netfps = {CVAR_SAVE, "cl_netfps","72", "how many input packets to send to server each second"};
-cvar_t cl_netrepeatinput = {CVAR_SAVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
-cvar_t cl_netimmediatebuttons = {CVAR_SAVE, "cl_netimmediatebuttons", "1", "sends extra packets whenever your buttons change or an impulse is used (basically: whenever you click fire or change weapon)"};
+cvar_t cl_netfps = {CVAR_CLIENT | CVAR_SAVE, "cl_netfps","72", "how many input packets to send to server each second"};
+cvar_t cl_netrepeatinput = {CVAR_CLIENT | CVAR_SAVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
+cvar_t cl_netimmediatebuttons = {CVAR_CLIENT | CVAR_SAVE, "cl_netimmediatebuttons", "1", "sends extra packets whenever your buttons change or an impulse is used (basically: whenever you click fire or change weapon)"};
 
-cvar_t cl_nodelta = {0, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
+cvar_t cl_nodelta = {CVAR_CLIENT, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
-cvar_t cl_csqc_generatemousemoveevents = {0, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
+cvar_t cl_csqc_generatemousemoveevents = {CVAR_CLIENT, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
 
 extern cvar_t v_flipped;
 

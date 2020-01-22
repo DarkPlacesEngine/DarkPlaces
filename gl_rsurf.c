@@ -25,20 +25,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "image.h"
 
-cvar_t r_ambient = {0, "r_ambient", "0", "brightens map, value is 0-128"};
-cvar_t r_lockpvs = {0, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
-cvar_t r_lockvisibility = {0, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
-cvar_t r_useportalculling = {0, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
-cvar_t r_usesurfaceculling = {0, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
-cvar_t r_vis_trace = {0, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
-cvar_t r_vis_trace_samples = {0, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
-cvar_t r_vis_trace_delay = {0, "r_vis_trace_delay", "1", "keep a portal visible for this many seconds"};
-cvar_t r_vis_trace_eyejitter = {0, "r_vis_trace_eyejitter", "8", "use a random offset of this much on the start of each traceline"};
-cvar_t r_vis_trace_enlarge = {0, "r_vis_trace_enlarge", "0", "make portal bounds bigger for tests by (1+this)*size"};
-cvar_t r_vis_trace_expand = {0, "r_vis_trace_expand", "0", "make portal bounds bigger for tests by this many units"};
-cvar_t r_vis_trace_pad = {0, "r_vis_trace_pad", "8", "accept traces that hit within this many units of the portal"};
-cvar_t r_vis_trace_surfaces = {0, "r_vis_trace_surfaces", "0", "also use tracelines to cull surfaces"};
-cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
+cvar_t r_ambient = {CVAR_CLIENT, "r_ambient", "0", "brightens map, value is 0-128"};
+cvar_t r_lockpvs = {CVAR_CLIENT, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
+cvar_t r_lockvisibility = {CVAR_CLIENT, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
+cvar_t r_useportalculling = {CVAR_CLIENT, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
+cvar_t r_usesurfaceculling = {CVAR_CLIENT, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
+cvar_t r_vis_trace = {CVAR_CLIENT, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
+cvar_t r_vis_trace_samples = {CVAR_CLIENT, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
+cvar_t r_vis_trace_delay = {CVAR_CLIENT, "r_vis_trace_delay", "1", "keep a portal visible for this many seconds"};
+cvar_t r_vis_trace_eyejitter = {CVAR_CLIENT, "r_vis_trace_eyejitter", "8", "use a random offset of this much on the start of each traceline"};
+cvar_t r_vis_trace_enlarge = {CVAR_CLIENT, "r_vis_trace_enlarge", "0", "make portal bounds bigger for tests by (1+this)*size"};
+cvar_t r_vis_trace_expand = {CVAR_CLIENT, "r_vis_trace_expand", "0", "make portal bounds bigger for tests by this many units"};
+cvar_t r_vis_trace_pad = {CVAR_CLIENT, "r_vis_trace_pad", "8", "accept traces that hit within this many units of the portal"};
+cvar_t r_vis_trace_surfaces = {CVAR_CLIENT, "r_vis_trace_surfaces", "0", "also use tracelines to cull surfaces"};
+cvar_t r_q3bsp_renderskydepth = {CVAR_CLIENT, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
 /*
 ===============

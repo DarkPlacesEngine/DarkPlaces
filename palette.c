@@ -2,7 +2,7 @@
 #include "quakedef.h"
 #include "image.h"
 
-cvar_t r_colormap_palette = {0, "r_colormap_palette", "gfx/colormap_palette.lmp", "name of a palette lmp file to override the shirt/pants colors of player models. It consists of 16 shirt colors, 16 scoreboard shirt colors, 16 pants colors and 16 scoreboard pants colors"};
+cvar_t r_colormap_palette = {CVAR_CLIENT, "r_colormap_palette", "gfx/colormap_palette.lmp", "name of a palette lmp file to override the shirt/pants colors of player models. It consists of 16 shirt colors, 16 scoreboard shirt colors, 16 pants colors and 16 scoreboard pants colors"};
 
 unsigned char palette_rgb[256][3];
 unsigned char palette_rgb_pantscolormap[16][3];

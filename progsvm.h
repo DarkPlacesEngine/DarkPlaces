@@ -593,6 +593,7 @@ typedef struct prvm_prog_s
 	fssearch_t			*opensearches[PRVM_MAX_OPENSEARCHES];
 	const char *         opensearches_origin[PRVM_MAX_OPENSEARCHES];
 	skeleton_t			*skeletons[MAX_EDICTS];
+	cmd_state_t			*console_cmd; // points to the relevant console command interpreter for this vm (&cmd_client or &cmd_server), also used to access cvars
 
 	// buffer for storing all tempstrings created during one invocation of ExecuteProgram
 	sizebuf_t			tempstringsbuf;
@@ -855,7 +856,7 @@ Set up the fields marked with [INIT] in the prog struct
 Load a program with LoadProgs
 */
 // Load expects to be called right after Reset
-void PRVM_Prog_Init(prvm_prog_t *prog);
+void PRVM_Prog_Init(prvm_prog_t *prog, cmd_state_t *cmd);
 void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
 void PRVM_Prog_Reset(prvm_prog_t *prog);
 

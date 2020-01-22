@@ -29,21 +29,21 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 
 prvm_eval_t prvm_badvalue; // used only for error returns
 
-cvar_t prvm_language = {CVAR_SAVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
+cvar_t prvm_language = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
 // LadyHavoc: prints every opcode as it executes - warning: this is significant spew
-cvar_t prvm_traceqc = {0, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
+cvar_t prvm_traceqc = {CVAR_CLIENT | CVAR_SERVER, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LadyHavoc: counts usage of each QuakeC statement
-cvar_t prvm_statementprofiling = {0, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
-cvar_t prvm_timeprofiling = {0, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
-cvar_t prvm_coverage = {0, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
-cvar_t prvm_backtraceforwarnings = {0, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
-cvar_t prvm_leaktest = {0, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
-cvar_t prvm_leaktest_follow_targetname = {0, "prvm_leaktest_follow_targetname", "0", "if set, target/targetname links are considered when leak testing; this should normally not be required, as entities created during startup - e.g. info_notnull - are never considered leaky"};
-cvar_t prvm_leaktest_ignore_classnames = {0, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
-cvar_t prvm_errordump = {0, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
-cvar_t prvm_breakpointdump = {0, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
-cvar_t prvm_reuseedicts_startuptime = {0, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
-cvar_t prvm_reuseedicts_neverinsameframe = {0, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
+cvar_t prvm_statementprofiling = {CVAR_CLIENT | CVAR_SERVER, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
+cvar_t prvm_timeprofiling = {CVAR_CLIENT | CVAR_SERVER, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
+cvar_t prvm_coverage = {CVAR_CLIENT | CVAR_SERVER, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
+cvar_t prvm_backtraceforwarnings = {CVAR_CLIENT | CVAR_SERVER, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
+cvar_t prvm_leaktest = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
+cvar_t prvm_leaktest_follow_targetname = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest_follow_targetname", "0", "if set, target/targetname links are considered when leak testing; this should normally not be required, as entities created during startup - e.g. info_notnull - are never considered leaky"};
+cvar_t prvm_leaktest_ignore_classnames = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
+cvar_t prvm_errordump = {CVAR_CLIENT | CVAR_SERVER, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
+cvar_t prvm_breakpointdump = {CVAR_CLIENT | CVAR_SERVER, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
+cvar_t prvm_reuseedicts_startuptime = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
+cvar_t prvm_reuseedicts_neverinsameframe = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
 
 static double prvm_reuseedicts_always_allow = 0;
 qboolean prvm_runawaycheck = true;
@@ -1159,13 +1159,13 @@ static void PRVM_ED_EdictGet_f(cmd_state_t *cmd)
 	s = PRVM_UglyValueString(prog, (etype_t)key->type, v, valuebuf, sizeof(valuebuf));
 	if(Cmd_Argc(cmd) == 5)
 	{
-		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(cmd, 4));
+		cvar_t *cvar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 4), cmd->cvars_flagsmask);
 		if (cvar && cvar->flags & CVAR_READONLY)
 		{
 			Con_Printf("prvm_edictget: %s is read-only\n", cvar->name);
 			goto fail;
 		}
-		Cvar_Get(Cmd_Argv(cmd, 4), s, 0, NULL);
+		Cvar_Get(cmd->cvars, Cmd_Argv(cmd, 4), s, cmd->cvars_flagsmask, NULL);
 	}
 	else
 		Con_Printf("%s\n", s);
@@ -1202,13 +1202,13 @@ static void PRVM_ED_GlobalGet_f(cmd_state_t *cmd)
 	s = PRVM_UglyValueString(prog, (etype_t)key->type, v, valuebuf, sizeof(valuebuf));
 	if(Cmd_Argc(cmd) == 4)
 	{
-		cvar_t *cvar = Cvar_FindVar(Cmd_Argv(cmd, 3));
+		cvar_t *cvar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 3), cmd->cvars_flagsmask);
 		if (cvar && cvar->flags & CVAR_READONLY)
 		{
 			Con_Printf("prvm_globalget: %s is read-only\n", cvar->name);
 			goto fail;
 		}
-		Cvar_Get(Cmd_Argv(cmd, 3), s, 0, NULL);
+		Cvar_Get(cmd->cvars, Cmd_Argv(cmd, 3), s, cmd->cvars_flagsmask, NULL);
 	}
 	else
 		Con_Printf("%s\n", s);
@@ -2371,7 +2371,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 	}
 
-	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+	for (cvar = prog->console_cmd->cvars->vars; cvar; cvar = cvar->next)
 		cvar->globaldefindex[prog - prvm_prog_list] = -1;
 
 	for (i=0 ; i<prog->numglobaldefs ; i++)
@@ -2385,7 +2385,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		)
 		{
 			prvm_eval_t *val = PRVM_GLOBALFIELDVALUE(prog->globaldefs[i].ofs);
-			cvar = Cvar_FindVar(name + 9);
+			cvar = Cvar_FindVar(prog->console_cmd->cvars, name + 9, prog->console_cmd->cvars_flagsmask);
 			//Con_Printf("PRVM_LoadProgs: autocvar global %s in %s, processing...\n", name, prog->name);
 			if(!cvar)
 			{
@@ -2411,7 +2411,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, prog->name);
 						goto fail;
 				}
-				cvar = Cvar_Get(name + 9, value, 0, NULL);
+				cvar = Cvar_Get(prog->console_cmd->cvars, name + 9, value, prog->console_cmd->cvars_flagsmask, NULL);
 				if((prog->globaldefs[i].type & ~DEF_SAVEGLOBAL) == ev_string)
 				{
 					val->string = PRVM_SetEngineString(prog, cvar->string);
@@ -2979,10 +2979,11 @@ void PRVM_Init (void)
 PRVM_InitProg
 ===============
 */
-void PRVM_Prog_Init(prvm_prog_t *prog)
+void PRVM_Prog_Init(prvm_prog_t *prog, cmd_state_t *cmd)
 {
 	PRVM_Prog_Reset(prog);
 	prog->leaktest_active = prvm_leaktest.integer != 0;
+	prog->console_cmd = cmd;
 }
 
 // LadyHavoc: turned PRVM_EDICT_NUM into a #define for speed reasons

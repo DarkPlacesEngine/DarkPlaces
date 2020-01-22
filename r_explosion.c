@@ -55,9 +55,9 @@ static rtexture_t	*explosiontexture;
 static rtexturepool_t	*explosiontexturepool;
 #endif
 
-cvar_t r_explosionclip = {CVAR_SAVE, "r_explosionclip", "1", "enables collision detection for explosion shell (so that it flattens against walls and floors)"};
+cvar_t r_explosionclip = {CVAR_CLIENT | CVAR_SAVE, "r_explosionclip", "1", "enables collision detection for explosion shell (so that it flattens against walls and floors)"};
 #ifdef MAX_EXPLOSIONS
-static cvar_t r_drawexplosions = {0, "r_drawexplosions", "1", "enables rendering of explosion shells (see also cl_particles_explosions_shell)"};
+static cvar_t r_drawexplosions = {CVAR_CLIENT, "r_drawexplosions", "1", "enables rendering of explosion shells (see also cl_particles_explosions_shell)"};
 
 //extern qboolean r_loadfog;
 static void r_explosion_start(void)

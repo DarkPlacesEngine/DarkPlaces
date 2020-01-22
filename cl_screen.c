@@ -15,101 +15,101 @@
 // we have to include snd_main.h here only to get access to snd_renderbuffer->format.speed when writing the AVI headers
 #include "snd_main.h"
 
-cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
-cvar_t scr_fov = {CVAR_SAVE, "fov","90", "field of vision, 1-170 degrees, default 90, some players use 110-130"};
-cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1", "opacity of console background gfx/conback"};
-cvar_t scr_conalphafactor = {CVAR_SAVE, "scr_conalphafactor", "1", "opacity of console background gfx/conback relative to scr_conalpha; when 0, gfx/conback is not drawn"};
-cvar_t scr_conalpha2factor = {CVAR_SAVE, "scr_conalpha2factor", "0", "opacity of console background gfx/conback2 relative to scr_conalpha; when 0, gfx/conback2 is not drawn"};
-cvar_t scr_conalpha3factor = {CVAR_SAVE, "scr_conalpha3factor", "0", "opacity of console background gfx/conback3 relative to scr_conalpha; when 0, gfx/conback3 is not drawn"};
-cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "1", "brightness of console background (0 = black, 1 = image)"};
-cvar_t scr_conforcewhiledisconnected = {0, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
-cvar_t scr_conscroll_x = {CVAR_SAVE, "scr_conscroll_x", "0", "scroll speed of gfx/conback in x direction"};
-cvar_t scr_conscroll_y = {CVAR_SAVE, "scr_conscroll_y", "0", "scroll speed of gfx/conback in y direction"};
-cvar_t scr_conscroll2_x = {CVAR_SAVE, "scr_conscroll2_x", "0", "scroll speed of gfx/conback2 in x direction"};
-cvar_t scr_conscroll2_y = {CVAR_SAVE, "scr_conscroll2_y", "0", "scroll speed of gfx/conback2 in y direction"};
-cvar_t scr_conscroll3_x = {CVAR_SAVE, "scr_conscroll3_x", "0", "scroll speed of gfx/conback3 in x direction"};
-cvar_t scr_conscroll3_y = {CVAR_SAVE, "scr_conscroll3_y", "0", "scroll speed of gfx/conback3 in y direction"};
+cvar_t scr_viewsize = {CVAR_CLIENT | CVAR_SAVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
+cvar_t scr_fov = {CVAR_CLIENT | CVAR_SAVE, "fov","90", "field of vision, 1-170 degrees, default 90, some players use 110-130"};
+cvar_t scr_conalpha = {CVAR_CLIENT | CVAR_SAVE, "scr_conalpha", "1", "opacity of console background gfx/conback"};
+cvar_t scr_conalphafactor = {CVAR_CLIENT | CVAR_SAVE, "scr_conalphafactor", "1", "opacity of console background gfx/conback relative to scr_conalpha; when 0, gfx/conback is not drawn"};
+cvar_t scr_conalpha2factor = {CVAR_CLIENT | CVAR_SAVE, "scr_conalpha2factor", "0", "opacity of console background gfx/conback2 relative to scr_conalpha; when 0, gfx/conback2 is not drawn"};
+cvar_t scr_conalpha3factor = {CVAR_CLIENT | CVAR_SAVE, "scr_conalpha3factor", "0", "opacity of console background gfx/conback3 relative to scr_conalpha; when 0, gfx/conback3 is not drawn"};
+cvar_t scr_conbrightness = {CVAR_CLIENT | CVAR_SAVE, "scr_conbrightness", "1", "brightness of console background (0 = black, 1 = image)"};
+cvar_t scr_conforcewhiledisconnected = {CVAR_CLIENT, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
+cvar_t scr_conscroll_x = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll_x", "0", "scroll speed of gfx/conback in x direction"};
+cvar_t scr_conscroll_y = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll_y", "0", "scroll speed of gfx/conback in y direction"};
+cvar_t scr_conscroll2_x = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll2_x", "0", "scroll speed of gfx/conback2 in x direction"};
+cvar_t scr_conscroll2_y = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll2_y", "0", "scroll speed of gfx/conback2 in y direction"};
+cvar_t scr_conscroll3_x = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll3_x", "0", "scroll speed of gfx/conback3 in x direction"};
+cvar_t scr_conscroll3_y = {CVAR_CLIENT | CVAR_SAVE, "scr_conscroll3_y", "0", "scroll speed of gfx/conback3 in y direction"};
 #ifdef CONFIG_MENU
-cvar_t scr_menuforcewhiledisconnected = {0, "scr_menuforcewhiledisconnected", "0", "forces menu while disconnected"};
+cvar_t scr_menuforcewhiledisconnected = {CVAR_CLIENT, "scr_menuforcewhiledisconnected", "0", "forces menu while disconnected"};
 #endif
-cvar_t scr_centertime = {0, "scr_centertime","2", "how long centerprint messages show"};
-cvar_t scr_showram = {CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
-cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low"};
-cvar_t scr_showpause = {CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
-cvar_t scr_showbrand = {0, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
-cvar_t scr_printspeed = {0, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
-cvar_t scr_loadingscreen_background = {0, "scr_loadingscreen_background","1", "show the last visible background during loading screen (costs one screenful of video memory)"};
-cvar_t scr_loadingscreen_scale = {0, "scr_loadingscreen_scale","1", "scale factor of the background"};
-cvar_t scr_loadingscreen_scale_base = {0, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
-cvar_t scr_loadingscreen_scale_limit = {0, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
-cvar_t scr_loadingscreen_picture = {CVAR_SAVE, "scr_loadingscreen_picture", "gfx/loading", "picture shown during loading"};
-cvar_t scr_loadingscreen_count = {0, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
-cvar_t scr_loadingscreen_firstforstartup = {0, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
-cvar_t scr_loadingscreen_barcolor = {0, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
-cvar_t scr_loadingscreen_barheight = {0, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
-cvar_t scr_loadingscreen_maxfps = {0, "scr_loadingscreen_maxfps", "10", "restrict maximal FPS for loading screen so it will not update very often (this will make lesser loading times on a maps loading large number of models)"};
-cvar_t scr_infobar_height = {0, "scr_infobar_height", "8", "the height of the infobar items"};
-cvar_t vid_conwidthauto = { CVAR_SAVE, "vid_conwidthauto", "1", "automatically update vid_conwidth to match aspect ratio" };
-cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
-cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
-cvar_t vid_pixelheight = {CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
-cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
-cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
-cvar_t scr_screenshot_png = {CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
-cvar_t scr_screenshot_gammaboost = {CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
-cvar_t scr_screenshot_alpha = {0, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
-cvar_t scr_screenshot_timestamp = {CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
+cvar_t scr_centertime = {CVAR_CLIENT, "scr_centertime","2", "how long centerprint messages show"};
+cvar_t scr_showram = {CVAR_CLIENT | CVAR_SAVE, "showram","1", "show ram icon if low on surface cache memory (not used)"};
+cvar_t scr_showturtle = {CVAR_CLIENT | CVAR_SAVE, "showturtle","0", "show turtle icon when framerate is too low"};
+cvar_t scr_showpause = {CVAR_CLIENT | CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
+cvar_t scr_showbrand = {CVAR_CLIENT, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
+cvar_t scr_printspeed = {CVAR_CLIENT, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
+cvar_t scr_loadingscreen_background = {CVAR_CLIENT, "scr_loadingscreen_background","1", "show the last visible background during loading screen (costs one screenful of video memory)"};
+cvar_t scr_loadingscreen_scale = {CVAR_CLIENT, "scr_loadingscreen_scale","1", "scale factor of the background"};
+cvar_t scr_loadingscreen_scale_base = {CVAR_CLIENT, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
+cvar_t scr_loadingscreen_scale_limit = {CVAR_CLIENT, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
+cvar_t scr_loadingscreen_picture = {CVAR_CLIENT | CVAR_SAVE, "scr_loadingscreen_picture", "gfx/loading", "picture shown during loading"};
+cvar_t scr_loadingscreen_count = {CVAR_CLIENT, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
+cvar_t scr_loadingscreen_firstforstartup = {CVAR_CLIENT, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
+cvar_t scr_loadingscreen_barcolor = {CVAR_CLIENT, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
+cvar_t scr_loadingscreen_barheight = {CVAR_CLIENT, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
+cvar_t scr_loadingscreen_maxfps = {CVAR_CLIENT, "scr_loadingscreen_maxfps", "10", "restrict maximal FPS for loading screen so it will not update very often (this will make lesser loading times on a maps loading large number of models)"};
+cvar_t scr_infobar_height = {CVAR_CLIENT, "scr_infobar_height", "8", "the height of the infobar items"};
+cvar_t vid_conwidthauto = {CVAR_CLIENT | CVAR_SAVE, "vid_conwidthauto", "1", "automatically update vid_conwidth to match aspect ratio"};
+cvar_t vid_conwidth = {CVAR_CLIENT | CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
+cvar_t vid_conheight = {CVAR_CLIENT | CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
+cvar_t vid_pixelheight = {CVAR_CLIENT | CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
+cvar_t scr_screenshot_jpeg = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
+cvar_t scr_screenshot_jpeg_quality = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
+cvar_t scr_screenshot_png = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
+cvar_t scr_screenshot_gammaboost = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_gammaboost","1", "gamma correction on saved screenshots and videos, 1.0 saves unmodified images"};
+cvar_t scr_screenshot_alpha = {CVAR_CLIENT, "scr_screenshot_alpha","0", "try to write an alpha channel to screenshots (debugging feature)"};
+cvar_t scr_screenshot_timestamp = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_timestamp", "1", "use a timestamp based number of the type YYYYMMDDHHMMSSsss instead of sequential numbering"};
 // scr_screenshot_name is defined in fs.c
 #ifdef CONFIG_VIDEO_CAPTURE
-cvar_t cl_capturevideo = {0, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
-cvar_t cl_capturevideo_demo_stop = {CVAR_SAVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
-cvar_t cl_capturevideo_printfps = {CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
-cvar_t cl_capturevideo_width = {CVAR_SAVE, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
-cvar_t cl_capturevideo_height = {CVAR_SAVE, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
-cvar_t cl_capturevideo_realtime = {0, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
-cvar_t cl_capturevideo_fps = {CVAR_SAVE, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
-cvar_t cl_capturevideo_nameformat = {CVAR_SAVE, "cl_capturevideo_nameformat", "dpvideo", "prefix for saved videos (the date is encoded using strftime escapes)"};
-cvar_t cl_capturevideo_number = {CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
-cvar_t cl_capturevideo_ogg = {CVAR_SAVE, "cl_capturevideo_ogg", "1", "save captured video data as Ogg/Vorbis/Theora streams"};
-cvar_t cl_capturevideo_framestep = {CVAR_SAVE, "cl_capturevideo_framestep", "1", "when set to n >= 1, render n frames to capture one (useful for motion blur like effects)"};
+cvar_t cl_capturevideo = {CVAR_CLIENT, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
+cvar_t cl_capturevideo_demo_stop = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
+cvar_t cl_capturevideo_printfps = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
+cvar_t cl_capturevideo_width = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
+cvar_t cl_capturevideo_height = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
+cvar_t cl_capturevideo_realtime = {CVAR_CLIENT, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
+cvar_t cl_capturevideo_fps = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_fps", "30", "how many frames per second to save (29.97 for NTSC, 30 for typical PC video, 15 can be useful)"};
+cvar_t cl_capturevideo_nameformat = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_nameformat", "dpvideo", "prefix for saved videos (the date is encoded using strftime escapes)"};
+cvar_t cl_capturevideo_number = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_number", "1", "number to append to video filename, incremented each time a capture begins"};
+cvar_t cl_capturevideo_ogg = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg", "1", "save captured video data as Ogg/Vorbis/Theora streams"};
+cvar_t cl_capturevideo_framestep = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_framestep", "1", "when set to n >= 1, render n frames to capture one (useful for motion blur like effects)"};
 #endif
-cvar_t r_letterbox = {0, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
-cvar_t r_stereo_separation = {0, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
-cvar_t r_stereo_sidebyside = {0, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
-cvar_t r_stereo_horizontal = {0, "r_stereo_horizontal", "0", "aspect skewed side by side view for special decoder/display hardware"};
-cvar_t r_stereo_vertical = {0, "r_stereo_vertical", "0", "aspect skewed top and bottom view for special decoder/display hardware"};
-cvar_t r_stereo_redblue = {0, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
-cvar_t r_stereo_redcyan = {0, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
-cvar_t r_stereo_redgreen = {0, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
-cvar_t r_stereo_angle = {0, "r_stereo_angle", "0", "separation angle of eyes (makes the views look different directions, as an example, 90 gives a 90 degree separation where the views are 45 degrees left and 45 degrees right)"};
-cvar_t scr_stipple = {0, "scr_stipple", "0", "interlacing-like stippling of the display"};
-cvar_t scr_refresh = {0, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
-cvar_t scr_screenshot_name_in_mapdir = {CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
-cvar_t shownetgraph = {CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
-cvar_t cl_demo_mousegrab = {0, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
-cvar_t timedemo_screenshotframelist = {0, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
-cvar_t vid_touchscreen_outlinealpha = {0, "vid_touchscreen_outlinealpha", "0", "opacity of touchscreen area outlines"};
-cvar_t vid_touchscreen_overlayalpha = {0, "vid_touchscreen_overlayalpha", "0.25", "opacity of touchscreen area icons"};
-cvar_t r_speeds_graph = {CVAR_SAVE, "r_speeds_graph", "0", "display a graph of renderer statistics "};
+cvar_t r_letterbox = {CVAR_CLIENT, "r_letterbox", "0", "reduces vertical height of view to simulate a letterboxed movie effect (can be used by mods for cutscenes)"};
+cvar_t r_stereo_separation = {CVAR_CLIENT, "r_stereo_separation", "4", "separation distance of eyes in the world (negative values are only useful for cross-eyed viewing)"};
+cvar_t r_stereo_sidebyside = {CVAR_CLIENT, "r_stereo_sidebyside", "0", "side by side views for those who can't afford glasses but can afford eye strain (note: use a negative r_stereo_separation if you want cross-eyed viewing)"};
+cvar_t r_stereo_horizontal = {CVAR_CLIENT, "r_stereo_horizontal", "0", "aspect skewed side by side view for special decoder/display hardware"};
+cvar_t r_stereo_vertical = {CVAR_CLIENT, "r_stereo_vertical", "0", "aspect skewed top and bottom view for special decoder/display hardware"};
+cvar_t r_stereo_redblue = {CVAR_CLIENT, "r_stereo_redblue", "0", "red/blue anaglyph stereo glasses (note: most of these glasses are actually red/cyan, try that one too)"};
+cvar_t r_stereo_redcyan = {CVAR_CLIENT, "r_stereo_redcyan", "0", "red/cyan anaglyph stereo glasses, the kind given away at drive-in movies like Creature From The Black Lagoon In 3D"};
+cvar_t r_stereo_redgreen = {CVAR_CLIENT, "r_stereo_redgreen", "0", "red/green anaglyph stereo glasses (for those who don't mind yellow)"};
+cvar_t r_stereo_angle = {CVAR_CLIENT, "r_stereo_angle", "0", "separation angle of eyes (makes the views look different directions, as an example, 90 gives a 90 degree separation where the views are 45 degrees left and 45 degrees right)"};
+cvar_t scr_stipple = {CVAR_CLIENT, "scr_stipple", "0", "interlacing-like stippling of the display"};
+cvar_t scr_refresh = {CVAR_CLIENT, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
+cvar_t scr_screenshot_name_in_mapdir = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
+cvar_t shownetgraph = {CVAR_CLIENT | CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
+cvar_t cl_demo_mousegrab = {CVAR_CLIENT, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
+cvar_t timedemo_screenshotframelist = {CVAR_CLIENT, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
+cvar_t vid_touchscreen_outlinealpha = {CVAR_CLIENT, "vid_touchscreen_outlinealpha", "0", "opacity of touchscreen area outlines"};
+cvar_t vid_touchscreen_overlayalpha = {CVAR_CLIENT, "vid_touchscreen_overlayalpha", "0.25", "opacity of touchscreen area icons"};
+cvar_t r_speeds_graph = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph", "0", "display a graph of renderer statistics "};
 cvar_t r_speeds_graph_filter[8] =
 {
-	{CVAR_SAVE, "r_speeds_graph_filter_r", "timedelta", "Red - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_g", "batch_batches", "Green - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_b", "batch_triangles", "Blue - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_y", "fast_triangles", "Yellow - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_c", "copytriangles_triangles", "Cyan - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_m", "dynamic_triangles", "Magenta - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_w", "animcache_shade_vertices", "White - display the specified renderer statistic"},
-	{CVAR_SAVE, "r_speeds_graph_filter_o", "animcache_shape_vertices", "Orange - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_r", "timedelta", "Red - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_g", "batch_batches", "Green - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_b", "batch_triangles", "Blue - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_y", "fast_triangles", "Yellow - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_c", "copytriangles_triangles", "Cyan - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_m", "dynamic_triangles", "Magenta - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_w", "animcache_shade_vertices", "White - display the specified renderer statistic"},
+	{CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_filter_o", "animcache_shape_vertices", "Orange - display the specified renderer statistic"},
 };
-cvar_t r_speeds_graph_length = {CVAR_SAVE, "r_speeds_graph_length", "1024", "number of frames in statistics graph, can be from 4 to 8192"};
-cvar_t r_speeds_graph_seconds = {CVAR_SAVE, "r_speeds_graph_seconds", "2", "number of seconds in graph, can be from 0.1 to 120"};
-cvar_t r_speeds_graph_x = {CVAR_SAVE, "r_speeds_graph_x", "0", "position of graph"};
-cvar_t r_speeds_graph_y = {CVAR_SAVE, "r_speeds_graph_y", "0", "position of graph"};
-cvar_t r_speeds_graph_width = {CVAR_SAVE, "r_speeds_graph_width", "256", "size of graph"};
-cvar_t r_speeds_graph_height = {CVAR_SAVE, "r_speeds_graph_height", "128", "size of graph"};
-cvar_t r_speeds_graph_maxtimedelta = {CVAR_SAVE, "r_speeds_graph_maxtimedelta", "16667", "maximum timedelta to display in the graph (this value will be the top line)"};
-cvar_t r_speeds_graph_maxdefault = {CVAR_SAVE, "r_speeds_graph_maxdefault", "100", "if the minimum and maximum observed values are closer than this, use this value as the graph range (keeps small numbers from being big graphs)"};
+cvar_t r_speeds_graph_length = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_length", "1024", "number of frames in statistics graph, can be from 4 to 8192"};
+cvar_t r_speeds_graph_seconds = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_seconds", "2", "number of seconds in graph, can be from 0.1 to 120"};
+cvar_t r_speeds_graph_x = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_x", "0", "position of graph"};
+cvar_t r_speeds_graph_y = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_y", "0", "position of graph"};
+cvar_t r_speeds_graph_width = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_width", "256", "size of graph"};
+cvar_t r_speeds_graph_height = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_height", "128", "size of graph"};
+cvar_t r_speeds_graph_maxtimedelta = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_maxtimedelta", "16667", "maximum timedelta to display in the graph (this value will be the top line)"};
+cvar_t r_speeds_graph_maxdefault = {CVAR_CLIENT | CVAR_SAVE, "r_speeds_graph_maxdefault", "100", "if the minimum and maximum observed values are closer than this, use this value as the graph range (keeps small numbers from being big graphs)"};
 
 
 
@@ -1243,7 +1243,7 @@ Keybinding command
 */
 static void SCR_SizeUp_f(cmd_state_t *cmd)
 {
-	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
+	Cvar_SetValueQuick(&scr_viewsize, scr_viewsize.value + 10);
 }
 
 
@@ -1256,7 +1256,7 @@ Keybinding command
 */
 static void SCR_SizeDown_f(cmd_state_t *cmd)
 {
-	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
+	Cvar_SetValueQuick(&scr_viewsize, scr_viewsize.value - 10);
 }
 
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -2643,21 +2643,21 @@ void SCR_UpdateVars(void)
 	if (vid_conwidthauto.integer)
 		conwidth = floor(conheight * vid.width / (vid.height * vid_pixelheight.value));
 	if (vid_conwidth.value != conwidth)
-		Cvar_SetValue("vid_conwidth", conwidth);
+		Cvar_SetValueQuick(&vid_conwidth, conwidth);
 	if (vid_conheight.value != conheight)
-		Cvar_SetValue("vid_conheight", conheight);
+		Cvar_SetValueQuick(&vid_conheight, conheight);
 
 	// bound viewsize
 	if (scr_viewsize.value < 30)
-		Cvar_Set("viewsize", "30");
+		Cvar_SetValueQuick(&scr_viewsize, 30);
 	if (scr_viewsize.value > 120)
-		Cvar_Set("viewsize", "120");
+		Cvar_SetValueQuick(&scr_viewsize, 120);
 
 	// bound field of view
 	if (scr_fov.value < 1)
-		Cvar_Set("fov", "1");
+		Cvar_SetValueQuick(&scr_fov, 1);
 	if (scr_fov.value > 170)
-		Cvar_Set("fov", "170");
+		Cvar_SetValueQuick(&scr_fov, 170);
 
 	// intermission is always full screen
 	if (cl.intermission)

@@ -638,10 +638,10 @@ void VM_localcmd_server(prvm_prog_t *prog)
 	Cbuf_AddText(&cmd_server, string);
 }
 
-static qboolean PRVM_Cvar_ReadOk(const char *string)
+static qboolean PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
 {
 	cvar_t *cvar;
-	cvar = Cvar_FindVar(string);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
 	return ((cvar) && ((cvar->flags & CVAR_PRIVATE) == 0));
 }
 
@@ -658,7 +658,7 @@ void VM_cvar(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	PRVM_G_FLOAT(OFS_RETURN) = PRVM_Cvar_ReadOk(string) ? Cvar_VariableValue(string) : 0;
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_Cvar_ReadOk(prog, string) ? Cvar_VariableValue(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask) : 0;
 }
 
 /*
@@ -683,7 +683,7 @@ void VM_cvar_type(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	cvar = Cvar_FindVar(string);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
 
 
 	if(!cvar)
@@ -720,7 +720,7 @@ void VM_cvar_string(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_string);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_Cvar_ReadOk(string) ? Cvar_VariableString(string) : "");
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_Cvar_ReadOk(prog, string) ? Cvar_VariableString(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask) : "");
 }
 
 
@@ -737,7 +737,7 @@ void VM_cvar_defstring(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_defstring);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDefString(string));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDefString(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask));
 }
 
 /*
@@ -753,7 +753,7 @@ void VM_cvar_description(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_description);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDescription(string));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDescription(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask));
 }
 /*
 =================
@@ -770,7 +770,7 @@ void VM_cvar_set(prvm_prog_t *prog)
 	VM_VarString(prog, 1, string, sizeof(string));
 	name = PRVM_G_STRING(OFS_PARM0);
 	VM_CheckEmptyString(prog, name);
-	Cvar_Set(name, string);
+	Cvar_Set(prog->console_cmd->cvars, name, string);
 }
 
 /*
@@ -1674,7 +1674,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 
 // first check to see if it has already been defined
-	if (Cvar_FindVar (name))
+	if (Cvar_FindVar (prog->console_cmd->cvars, name, prog->console_cmd->cvars_flagsmask))
 		return;
 
 // check for overlap with a command
@@ -1684,7 +1684,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 	}
 
-	Cvar_Get(name, value, flags, NULL);
+	Cvar_Get(prog->console_cmd->cvars, name, value, prog->console_cmd->cvars_flagsmask | flags, NULL);
 
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }
@@ -5519,7 +5519,7 @@ void VM_buf_cvarlist(prvm_prog_t *prog)
 	antiispattern = antipartial && (strchr(antipartial, '*') || strchr(antipartial, '?'));
 
 	n = 0;
-	for(cvar = cvar_vars; cvar; cvar = cvar->next)
+	for(cvar = prog->console_cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
 		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;
@@ -5535,7 +5535,7 @@ void VM_buf_cvarlist(prvm_prog_t *prog)
 		stringbuffer->strings = (char **)Mem_Alloc(prog->progs_mempool, sizeof(stringbuffer->strings[0]) * stringbuffer->max_strings);
 	
 	n = 0;
-	for(cvar = cvar_vars; cvar; cvar = cvar->next)
+	for(cvar = prog->console_cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
 		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;

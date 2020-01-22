@@ -765,7 +765,7 @@ static void Cmd_Toggle_f(cmd_state_t *cmd)
 	else
 	{ // Correct Arguments Specified
 		// Acquire Potential CVar
-		cvar_t* cvCVar = Cvar_FindVar( Cmd_Argv(cmd, 1) );
+		cvar_t* cvCVar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 1), cmd->cvars_flagsmask);
 
 		if(cvCVar != NULL)
 		{ // Valid CVar
@@ -1013,7 +1013,7 @@ static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname,
 		}
 	}
 
-	if((cvar = Cvar_FindVar(varname)) && !(cvar->flags & CVAR_PRIVATE))
+	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask)) && !(cvar->flags & CVAR_PRIVATE))
 		return cvar->string;
 
 	return NULL;
@@ -1413,7 +1413,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	count = 0;
-	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+	for (cvar = cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
 		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
 		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
@@ -1459,6 +1459,18 @@ void Cmd_Init(void)
 		cmd->text.cursize = 0;
 		cmd->null_string = "";
 	}
+	// client console can see server cvars because the user may start a server
+	cmd_client.cvars = &cvars_all;
+	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
+	// stuffcmd from server has access to the reasonable client things, but it probably doesn't need to access the client's server-only cvars
+	cmd_clientfromserver.cvars = &cvars_all;
+	cmd_clientfromserver.cvars_flagsmask = CVAR_CLIENT;
+	// dedicated server console can only see server cvars, there is no client
+	cmd_server.cvars = &cvars_all;
+	cmd_server.cvars_flagsmask = CVAR_SERVER;
+	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
+	cmd_serverfromclient.cvars = &cvars_null;
+	cmd_serverfromclient.cvars_flagsmask = 0;
 }
 
 void Cmd_Init_Commands(qboolean dedicated_server)
@@ -1656,7 +1668,7 @@ void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function,
 	cmd_function_t *prev, *current;
 
 // fail if the command is a variable name
-	if (Cvar_FindVar( cmd_name ))
+	if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 	{
 		Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 		return;
@@ -1978,7 +1990,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	}
 
 // check cvars
-	if (!Cvar_Command (cmd) && host_framecount > 0)
+	if (!Cvar_Command(cmd) && host_framecount > 0)
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 
 done:
@@ -2187,7 +2199,7 @@ void Cmd_SaveInitState(void)
 			a->initialvalue = Mem_strdup(zonemempool, a->value);
 		}
 	}
-	Cvar_SaveInitState();
+	Cvar_SaveInitState(&cvars_all);
 }
 
 void Cmd_RestoreInitState(void)
@@ -2235,5 +2247,5 @@ void Cmd_RestoreInitState(void)
 			}
 		}
 	}
-	Cvar_RestoreInitState();
+	Cvar_RestoreInitState(&cvars_all);
 }

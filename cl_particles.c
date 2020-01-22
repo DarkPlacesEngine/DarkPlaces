@@ -274,41 +274,41 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	{0.0f, 360.0f, 0.0f, 0.0f}, //float rotate[4]; // min/max base angle, min/max rotation over time
 };
 
-cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1", "enables particle effects"};
-cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles"};
-cvar_t cl_particles_alpha = {CVAR_SAVE, "cl_particles_alpha", "1", "multiplies opacity of particles"};
-cvar_t cl_particles_size = {CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
-cvar_t cl_particles_quake = {CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
-cvar_t cl_particles_blood = {CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
-cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "1", "opacity of blood, does not affect decals"};
-cvar_t cl_particles_blood_decal_alpha = {CVAR_SAVE, "cl_particles_blood_decal_alpha", "1", "opacity of blood decal"};
-cvar_t cl_particles_blood_decal_scalemin = {CVAR_SAVE, "cl_particles_blood_decal_scalemin", "1.5", "minimal random scale of decal"};
-cvar_t cl_particles_blood_decal_scalemax = {CVAR_SAVE, "cl_particles_blood_decal_scalemax", "2", "maximal random scale of decal"};
-cvar_t cl_particles_blood_bloodhack = {CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
-cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
-cvar_t cl_particles_explosions_sparks = {CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
-cvar_t cl_particles_explosions_shell = {CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
-cvar_t cl_particles_rain = {CVAR_SAVE, "cl_particles_rain", "1", "enables rain effects"};
-cvar_t cl_particles_snow = {CVAR_SAVE, "cl_particles_snow", "1", "enables snow effects"};
-cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1", "enables smoke (used by multiple effects)"};
-cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5", "smoke brightness"};
-cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
-cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
-cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
-cvar_t cl_particles_visculling = {CVAR_SAVE, "cl_particles_visculling", "0", "perform a costly check if each particle is visible before drawing"};
-cvar_t cl_particles_collisions = {CVAR_SAVE, "cl_particles_collisions", "1", "allow costly collision detection on particles (sparks that bounce, particles not going through walls, blood hitting surfaces, etc)"};
-cvar_t cl_particles_forcetraileffects = {0, "cl_particles_forcetraileffects", "0", "force trails to be displayed even if a non-trail draw primitive was used (debug/compat feature)"};
-cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
-cvar_t cl_decals_visculling = {CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
-cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
-cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
-cvar_t cl_decals_newsystem = {CVAR_SAVE, "cl_decals_newsystem", "1", "enables new advanced decal system"};
-cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
-cvar_t cl_decals_newsystem_immediatebloodstain = {CVAR_SAVE, "cl_decals_newsystem_immediatebloodstain", "2", "0: no on-spawn blood stains; 1: on-spawn blood stains for pt_blood; 2: always use on-spawn blood stains"};
-cvar_t cl_decals_newsystem_bloodsmears = {CVAR_SAVE, "cl_decals_newsystem_bloodsmears", "1", "enable use of particle velocity as decal projection direction rather than surface normal"};
-cvar_t cl_decals_models = {CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
-cvar_t cl_decals_bias = {CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
-cvar_t cl_decals_max = {CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
+cvar_t cl_particles = {CVAR_CLIENT | CVAR_SAVE, "cl_particles", "1", "enables particle effects"};
+cvar_t cl_particles_quality = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_quality", "1", "multiplies number of particles"};
+cvar_t cl_particles_alpha = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_alpha", "1", "multiplies opacity of particles"};
+cvar_t cl_particles_size = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_size", "1", "multiplies particle size"};
+cvar_t cl_particles_quake = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
+cvar_t cl_particles_blood = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood", "1", "enables blood effects"};
+cvar_t cl_particles_blood_alpha = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood_alpha", "1", "opacity of blood, does not affect decals"};
+cvar_t cl_particles_blood_decal_alpha = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood_decal_alpha", "1", "opacity of blood decal"};
+cvar_t cl_particles_blood_decal_scalemin = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood_decal_scalemin", "1.5", "minimal random scale of decal"};
+cvar_t cl_particles_blood_decal_scalemax = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood_decal_scalemax", "2", "maximal random scale of decal"};
+cvar_t cl_particles_blood_bloodhack = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_blood_bloodhack", "1", "make certain quake particle() calls create blood effects instead"};
+cvar_t cl_particles_bulletimpacts = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_bulletimpacts", "1", "enables bulletimpact effects"};
+cvar_t cl_particles_explosions_sparks = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_explosions_sparks", "1", "enables sparks from explosions"};
+cvar_t cl_particles_explosions_shell = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_explosions_shell", "0", "enables polygonal shell from explosions"};
+cvar_t cl_particles_rain = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_rain", "1", "enables rain effects"};
+cvar_t cl_particles_snow = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_snow", "1", "enables snow effects"};
+cvar_t cl_particles_smoke = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_smoke", "1", "enables smoke (used by multiple effects)"};
+cvar_t cl_particles_smoke_alpha = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_smoke_alpha", "0.5", "smoke brightness"};
+cvar_t cl_particles_smoke_alphafade = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55", "brightness fade per second"};
+cvar_t cl_particles_sparks = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_sparks", "1", "enables sparks (used by multiple effects)"};
+cvar_t cl_particles_bubbles = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_bubbles", "1", "enables bubbles (used by multiple effects)"};
+cvar_t cl_particles_visculling = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_visculling", "0", "perform a costly check if each particle is visible before drawing"};
+cvar_t cl_particles_collisions = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_collisions", "1", "allow costly collision detection on particles (sparks that bounce, particles not going through walls, blood hitting surfaces, etc)"};
+cvar_t cl_particles_forcetraileffects = {CVAR_CLIENT, "cl_particles_forcetraileffects", "0", "force trails to be displayed even if a non-trail draw primitive was used (debug/compat feature)"};
+cvar_t cl_decals = {CVAR_CLIENT | CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
+cvar_t cl_decals_visculling = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
+cvar_t cl_decals_time = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
+cvar_t cl_decals_fadetime = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
+cvar_t cl_decals_newsystem = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem", "1", "enables new advanced decal system"};
+cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
+cvar_t cl_decals_newsystem_immediatebloodstain = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_immediatebloodstain", "2", "0: no on-spawn blood stains; 1: on-spawn blood stains for pt_blood; 2: always use on-spawn blood stains"};
+cvar_t cl_decals_newsystem_bloodsmears = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_bloodsmears", "1", "enable use of particle velocity as decal projection direction rather than surface normal"};
+cvar_t cl_decals_models = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
+cvar_t cl_decals_bias = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
+cvar_t cl_decals_max = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
 
 
 static void CL_Particles_ParseEffectInfo(const char *textstart, const char *textend, const char *filename)
@@ -2007,12 +2007,12 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	}
 }
 
-cvar_t r_drawparticles = {0, "r_drawparticles", "1", "enables drawing of particles"};
-static cvar_t r_drawparticles_drawdistance = {CVAR_SAVE, "r_drawparticles_drawdistance", "2000", "particles further than drawdistance*size will not be drawn"};
-static cvar_t r_drawparticles_nearclip_min = {CVAR_SAVE, "r_drawparticles_nearclip_min", "4", "particles closer than drawnearclip_min will not be drawn"};
-static cvar_t r_drawparticles_nearclip_max = {CVAR_SAVE, "r_drawparticles_nearclip_max", "4", "particles closer than drawnearclip_min will be faded"};
-cvar_t r_drawdecals = {0, "r_drawdecals", "1", "enables drawing of decals"};
-static cvar_t r_drawdecals_drawdistance = {CVAR_SAVE, "r_drawdecals_drawdistance", "500", "decals further than drawdistance*size will not be drawn"};
+cvar_t r_drawparticles = {CVAR_CLIENT, "r_drawparticles", "1", "enables drawing of particles"};
+static cvar_t r_drawparticles_drawdistance = {CVAR_CLIENT | CVAR_SAVE, "r_drawparticles_drawdistance", "2000", "particles further than drawdistance*size will not be drawn"};
+static cvar_t r_drawparticles_nearclip_min = {CVAR_CLIENT | CVAR_SAVE, "r_drawparticles_nearclip_min", "4", "particles closer than drawnearclip_min will not be drawn"};
+static cvar_t r_drawparticles_nearclip_max = {CVAR_CLIENT | CVAR_SAVE, "r_drawparticles_nearclip_max", "4", "particles closer than drawnearclip_min will be faded"};
+cvar_t r_drawdecals = {CVAR_CLIENT, "r_drawdecals", "1", "enables drawing of decals"};
+static cvar_t r_drawdecals_drawdistance = {CVAR_CLIENT | CVAR_SAVE, "r_drawdecals_drawdistance", "500", "decals further than drawdistance*size will not be drawn"};
 
 #define PARTICLETEXTURESIZE 64
 #define PARTICLEFONTSIZE (PARTICLETEXTURESIZE*8)

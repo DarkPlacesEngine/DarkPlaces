@@ -25,7 +25,7 @@
 #include "utf8lib.h"
 #include "csprogs.h"
 
-cvar_t con_closeontoggleconsole = {CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
+cvar_t con_closeontoggleconsole = {CVAR_CLIENT | CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
 
 /*
 key up events are sent even if in console mode
@@ -835,7 +835,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 			key_linepos += cvar_len;
 			
 			// save the content of the variable in cvar_str
-			cvar_str = Cvar_VariableString(cvar);
+			cvar_str = Cvar_VariableString(&cvars_all, cvar, CVAR_CLIENT | CVAR_SERVER);
 			cvar_str_len = (int)strlen(cvar_str);
 			if (cvar_str_len==0)
 				return;
@@ -1131,7 +1131,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		// text zoom reset
 		if (key == '0' || key == K_KP_INS)
 		{
-			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString("con_textsize")));
+			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CVAR_CLIENT | CVAR_SERVER)));
 			return;
 		}
 	}

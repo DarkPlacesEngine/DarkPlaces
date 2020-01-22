@@ -1059,7 +1059,7 @@ void CL_VM_Init (void)
 		return;
 	}
 
-	PRVM_Prog_Init(prog);
+	PRVM_Prog_Init(prog, &cmd_client);
 
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);

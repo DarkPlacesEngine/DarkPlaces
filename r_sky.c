@@ -3,10 +3,10 @@
 #include "image.h"
 
 // FIXME: fix skybox after vid_restart
-cvar_t r_sky = {CVAR_SAVE, "r_sky", "1", "enables sky rendering (black otherwise)"};
-cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1", "speed at which upper clouds layer scrolls in quake sky"};
-cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clouds layer scrolls in quake sky"};
-cvar_t r_sky_scissor = {0, "r_sky_scissor", "1", "limit rendering of sky to approximately the area of the sky surfaces"};
+cvar_t r_sky = {CVAR_CLIENT | CVAR_SAVE, "r_sky", "1", "enables sky rendering (black otherwise)"};
+cvar_t r_skyscroll1 = {CVAR_CLIENT | CVAR_SAVE, "r_skyscroll1", "1", "speed at which upper clouds layer scrolls in quake sky"};
+cvar_t r_skyscroll2 = {CVAR_CLIENT | CVAR_SAVE, "r_skyscroll2", "2", "speed at which lower clouds layer scrolls in quake sky"};
+cvar_t r_sky_scissor = {CVAR_CLIENT, "r_sky_scissor", "1", "limit rendering of sky to approximately the area of the sky surfaces"};
 int skyrenderlater;
 int skyrendermasked;
 int skyscissor[4];

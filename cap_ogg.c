@@ -8,16 +8,16 @@
 #include "cap_ogg.h"
 
 // video capture cvars
-static cvar_t cl_capturevideo_ogg_theora_vp3compat = {CVAR_SAVE, "cl_capturevideo_ogg_theora_vp3compat", "1", "make VP3 compatible theora streams"};
-static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "48", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better; setting both to -1 achieves unlimited quality"};
-static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better; setting both to -1 achieves unlimited quality"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_maxinterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_maxinterval", "64", "maximum keyframe interval (1 to 1000)"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_mininterval = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mininterval", "8", "minimum keyframe interval (1 to 1000)"};
-static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_auto_threshold", "80", "threshold for key frame decision (0 to 100)"};
-static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CVAR_SAVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
-static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_SAVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
-static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "3", "audio quality (-1 to 10); higher is better"};
+static cvar_t cl_capturevideo_ogg_theora_vp3compat = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_vp3compat", "1", "make VP3 compatible theora streams"};
+static cvar_t cl_capturevideo_ogg_theora_quality = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_quality", "48", "video quality factor (0 to 63), or -1 to use bitrate only; higher is better; setting both to -1 achieves unlimited quality"};
+static cvar_t cl_capturevideo_ogg_theora_bitrate = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_bitrate", "-1", "video bitrate (45 to 2000 kbps), or -1 to use quality only; higher is better; setting both to -1 achieves unlimited quality"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_bitrate_multiplier", "1.5", "how much more bit rate to use for keyframes, specified as a factor of at least 1"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_maxinterval = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_maxinterval", "64", "maximum keyframe interval (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_mininterval = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_mininterval", "8", "minimum keyframe interval (1 to 1000)"};
+static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_keyframe_auto_threshold", "80", "threshold for key frame decision (0 to 100)"};
+static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
+static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
+static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "3", "audio quality (-1 to 10); higher is better"};
 
 // ogg.h stuff
 #ifdef _MSC_VER
