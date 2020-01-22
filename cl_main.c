@@ -2423,6 +2423,7 @@ static void CL_MeshEntities_Init(void)
 		Matrix4x4_CreateIdentity(&ent->render.matrix);
 		CL_UpdateRenderEntity(&ent->render);
 	}
+	cl_meshentities[MESH_UI].render.flags = RENDER_NOSELFSHADOW;
 	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
