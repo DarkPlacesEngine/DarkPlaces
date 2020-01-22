@@ -1735,8 +1735,8 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			if (r_shadow_bouncegrid_state.directional)
 				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
 		}
-		GL_BlendFunc(t->currentlayers[0].blendfunc1, t->currentlayers[0].blendfunc2);
-		blendfuncflags = R_BlendFuncFlags(t->currentlayers[0].blendfunc1, t->currentlayers[0].blendfunc2);
+		GL_BlendFunc(t->currentblendfunc[0], t->currentblendfunc[1]);
+		blendfuncflags = R_BlendFuncFlags(t->currentblendfunc[0], t->currentblendfunc[1]);
 		// when using alphatocoverage, we don't need alphakill
 		if (vid.allowalphatocoverage)
 		{
@@ -1824,8 +1824,8 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			if (r_shadow_bouncegrid_state.directional)
 				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
 		}
-		GL_BlendFunc(t->currentlayers[0].blendfunc1, t->currentlayers[0].blendfunc2);
-		blendfuncflags = R_BlendFuncFlags(t->currentlayers[0].blendfunc1, t->currentlayers[0].blendfunc2);
+		GL_BlendFunc(t->currentblendfunc[0], t->currentblendfunc[1]);
+		blendfuncflags = R_BlendFuncFlags(t->currentblendfunc[0], t->currentblendfunc[1]);
 		// when using alphatocoverage, we don't need alphakill
 		if (vid.allowalphatocoverage)
 		{
@@ -6396,22 +6396,6 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
-static void R_Texture_AddLayer(texture_t *t, qboolean depthmask, int blendfunc1, int blendfunc2, texturelayertype_t type, rtexture_t *texture, const matrix4x4_t *matrix, float r, float g, float b, float a)
-{
-	texturelayer_t *layer;
-	layer = t->currentlayers + t->currentnumlayers++;
-	layer->type = type;
-	layer->depthmask = depthmask;
-	layer->blendfunc1 = blendfunc1;
-	layer->blendfunc2 = blendfunc2;
-	layer->texture = texture;
-	layer->texmatrix = *matrix;
-	layer->color[0] = r;
-	layer->color[1] = g;
-	layer->color[2] = b;
-	layer->color[3] = a;
-}
-
 static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	if(parms[0] == 0 && parms[1] == 0)
@@ -6650,7 +6634,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND && !(R_BlendFuncFlags(t->customblendfunc[0], t->customblendfunc[1]) & BLENDFUNC_ALLOWS_COLORMOD))
 	{
 		// some CUSTOMBLEND blendfuncs are too weird, we have to ignore colormod and view colorscale
-		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_NORTLIGHT;
+		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_MODELLIGHT | MATERIALFLAG_NORTLIGHT;
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->glowmod[q];
@@ -6888,78 +6872,22 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		}
 	}
 
-	t->currentnumlayers = 0;
-	if (t->currentmaterialflags & MATERIALFLAG_WALL)
+	t->currentblendfunc[0] = GL_ONE;
+	t->currentblendfunc[1] = GL_ZERO;
+	if (t->currentmaterialflags & MATERIALFLAG_ADD)
 	{
-		int blendfunc1, blendfunc2;
-		qboolean depthmask;
-		if (t->currentmaterialflags & MATERIALFLAG_ADD)
-		{
-			blendfunc1 = GL_SRC_ALPHA;
-			blendfunc2 = GL_ONE;
-		}
-		else if (t->currentmaterialflags & MATERIALFLAG_ALPHA)
-		{
-			blendfunc1 = GL_SRC_ALPHA;
-			blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		}
-		else if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
-		{
-			blendfunc1 = t->customblendfunc[0];
-			blendfunc2 = t->customblendfunc[1];
-		}
-		else
-		{
-			blendfunc1 = GL_ONE;
-			blendfunc2 = GL_ZERO;
-		}
-		depthmask = !(t->currentmaterialflags & MATERIALFLAG_BLENDED);
-		if (t->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
-		{
-			// basic lit geometry
-			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, 2, 2, 2, t->currentalpha);
-			// add pants/shirt if needed
-			if (VectorLength2(t->render_colormap_pants) >= (1.0f / 1048576.0f) && t->pantstexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->pantstexture, &t->currenttexmatrix, 2 * t->render_colormap_pants[0], 2 * t->render_colormap_pants[1], 2 * t->render_colormap_pants[2], t->currentalpha);
-			if (VectorLength2(t->render_colormap_shirt) >= (1.0f / 1048576.0f) && t->shirttexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->shirttexture, &t->currenttexmatrix, 2 * t->render_colormap_shirt[0], 2 * t->render_colormap_shirt[1], 2 * t->render_colormap_shirt[2], t->currentalpha);
-		}
-		else
-		{
-			// basic lit geometry
-			R_Texture_AddLayer(t, depthmask, blendfunc1, blendfunc2, TEXTURELAYERTYPE_LITTEXTURE, t->basetexture, &t->currenttexmatrix, t->render_lightmap_diffuse[0], t->render_lightmap_diffuse[1], t->render_lightmap_diffuse[2], t->currentalpha);
-			// add pants/shirt if needed
-			if (VectorLength2(t->render_colormap_pants) >= (1.0f / 1048576.0f) && t->pantstexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->pantstexture, &t->currenttexmatrix, t->render_colormap_pants[0] * t->render_lightmap_diffuse[0], t->render_colormap_pants[1] * t->render_lightmap_diffuse[1], t->render_colormap_pants[2]  * t->render_lightmap_diffuse[2], t->currentalpha);
-			if (VectorLength2(t->render_colormap_shirt) >= (1.0f / 1048576.0f) && t->shirttexture)
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_LITTEXTURE, t->shirttexture, &t->currenttexmatrix, t->render_colormap_shirt[0] * t->render_lightmap_diffuse[0], t->render_colormap_shirt[1] * t->render_lightmap_diffuse[1], t->render_colormap_shirt[2] * t->render_lightmap_diffuse[2], t->currentalpha);
-			// now add ambient passes if needed
-			if (VectorLength2(t->render_lightmap_ambient) >= (1.0f/1048576.0f))
-			{
-				R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->basetexture, &t->currenttexmatrix, t->render_lightmap_ambient[0], t->render_lightmap_ambient[1], t->render_lightmap_ambient[2], t->currentalpha);
-				if (VectorLength2(t->render_colormap_pants) >= (1.0f / 1048576.0f) && t->pantstexture)
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->pantstexture, &t->currenttexmatrix, t->render_colormap_pants[0] * t->render_lightmap_ambient[0], t->render_colormap_pants[1] * t->render_lightmap_ambient[1], t->render_colormap_pants[2] * t->render_lightmap_ambient[2], t->currentalpha);
-				if (VectorLength2(t->render_colormap_shirt) >= (1.0f / 1048576.0f) && t->shirttexture)
-					R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->shirttexture, &t->currenttexmatrix, t->render_colormap_shirt[0] * t->render_lightmap_ambient[0], t->render_colormap_shirt[1] * t->render_lightmap_ambient[1], t->render_colormap_shirt[2] * t->render_lightmap_ambient[2], t->currentalpha);
-			}
-		}
-		if (t->glowtexture != NULL && !gl_lightmaps.integer)
-			R_Texture_AddLayer(t, false, GL_SRC_ALPHA, GL_ONE, TEXTURELAYERTYPE_TEXTURE, t->glowtexture, &t->currenttexmatrix, t->render_glowmod[0], t->render_glowmod[1], t->render_glowmod[2], t->currentalpha);
-		if (r_refdef.fogenabled && !(t->currentmaterialflags & MATERIALFLAG_ADD))
-		{
-			// if this is opaque use alpha blend which will darken the earlier
-			// passes cheaply.
-			//
-			// if this is an alpha blended material, all the earlier passes
-			// were darkened by fog already, so we only need to add the fog
-			// color ontop through the fog mask texture
-			//
-			// if this is an additive blended material, all the earlier passes
-			// were darkened by fog already, and we should not add fog color
-			// (because the background was not darkened, there is no fog color
-			// that was lost behind it).
-			R_Texture_AddLayer(t, false, GL_SRC_ALPHA, (t->currentmaterialflags & MATERIALFLAG_BLENDED) ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, TEXTURELAYERTYPE_FOG, t->fogtexture, &t->currenttexmatrix, r_refdef.fogcolor[0], r_refdef.fogcolor[1], r_refdef.fogcolor[2], t->currentalpha);
-		}
+		t->currentblendfunc[0] = GL_SRC_ALPHA;
+		t->currentblendfunc[1] = GL_ONE;
+	}
+	else if (t->currentmaterialflags & MATERIALFLAG_ALPHA)
+	{
+		t->currentblendfunc[0] = GL_SRC_ALPHA;
+		t->currentblendfunc[1] = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND)
+	{
+		t->currentblendfunc[0] = t->customblendfunc[0];
+		t->currentblendfunc[1] = t->customblendfunc[1];
 	}
 
 	return t;
@@ -8966,7 +8894,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 		R_DrawTextureSurfaceList_DepthOnly(texturenumsurfaces, texturesurfacelist);
 	else if (prepass)
 	{
-		if (!rsurface.texture->currentnumlayers)
+		if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_WALL))
 			return;
 		if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 			R_ProcessTransparentTextureSurfaceList(texturenumsurfaces, texturesurfacelist);
@@ -8975,7 +8903,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	}
 	else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) && (!r_showsurfaces.integer || r_showsurfaces.integer == 3))
 		R_DrawTextureSurfaceList_Sky(texturenumsurfaces, texturesurfacelist);
-	else if (!rsurface.texture->currentnumlayers)
+	else if (!(rsurface.texture->currentmaterialflags & MATERIALFLAG_WALL))
 		return;
 	else if (((rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED) || (r_showsurfaces.integer == 3 && (rsurface.texture->currentmaterialflags & MATERIALFLAG_ALPHATEST))))
 	{
@@ -9788,7 +9716,7 @@ static void R_DrawDebugModel(void)
 			{
 				RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, 1, &surface);
 				GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
-				if (!rsurface.texture->currentlayers->depthmask)
+				if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 					GL_Color(c, 0, 0, 1.0f);
 				else if (ent == r_refdef.scene.worldentity)
 					GL_Color(c, c, c, 1.0f);
@@ -9881,7 +9809,7 @@ static void R_DrawDebugModel(void)
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
 				RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_NORMAL | BATCHNEED_ARRAY_VECTOR | BATCHNEED_NOGAPS, 1, &surface);
-				if (!rsurface.texture->currentlayers->depthmask)
+				if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED))
 					GL_Color(r_refdef.view.colorscale, 0, 0, r_showtris.value);
 				else if (ent == r_refdef.scene.worldentity)
 					GL_Color(r_refdef.view.colorscale, r_refdef.view.colorscale, r_refdef.view.colorscale, r_showtris.value);
