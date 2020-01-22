@@ -690,7 +690,9 @@ static void SCR_SetUpToDrawConsole (void)
 		framecounter = 0;
 #endif
 
-	if (scr_conforcewhiledisconnected.integer && key_dest == key_game && cls.signon != SIGNONS)
+	if (scr_conforcewhiledisconnected.integer >= 2 && key_dest == key_game && cls.signon != SIGNONS)
+		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
+	else if (scr_conforcewhiledisconnected.integer >= 1 && key_dest == key_game && cls.signon != SIGNONS && !sv.active)
 		key_consoleactive |= KEY_CONSOLEACTIVE_FORCED;
 	else
 		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
@@ -2061,6 +2063,7 @@ int r_stereo_side;
 extern cvar_t v_isometric;
 extern cvar_t v_isometric_verticalfov;
 
+static void SCR_DrawLoadingScreen(qboolean clear);
 static void SCR_DrawScreen (void)
 {
 	Draw_Frame();
@@ -2153,6 +2156,19 @@ static void SCR_DrawScreen (void)
 			CL_UpdateEntityShading();
 			R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		}
+	}
+	else if (key_dest == key_game && key_consoleactive == 0 && (cls.state == ca_connected || cls.connect_trying))
+	{
+		// draw the loading screen for a while if we're still connecting and not forcing the console or menu to show up
+		char temp[64];
+		if (cls.signon > 0)
+			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Signon stage %i of %i", cls.signon, SIGNONS), 1.0);
+		else if (cls.connect_remainingtries > 0)
+			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Trying...  %i", cls.connect_remainingtries), 1.0);
+		else
+			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries), 1.0);
+		SCR_DrawLoadingScreen(true);
+		SCR_PopLoadingScreen(false);
 	}
 
 	// Don't apply debugging stuff like r_showsurfaces to the UI
