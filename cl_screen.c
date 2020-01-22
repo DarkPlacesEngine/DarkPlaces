@@ -38,7 +38,7 @@ cvar_t scr_showturtle = {CVAR_CLIENT | CVAR_SAVE, "showturtle","0", "show turtle
 cvar_t scr_showpause = {CVAR_CLIENT | CVAR_SAVE, "showpause","1", "show pause icon when game is paused"};
 cvar_t scr_showbrand = {CVAR_CLIENT, "showbrand","0", "shows gfx/brand.tga in a corner of the screen (different values select different positions, including centered)"};
 cvar_t scr_printspeed = {CVAR_CLIENT, "scr_printspeed","0", "speed of intermission printing (episode end texts), a value of 0 disables the slow printing"};
-cvar_t scr_loadingscreen_background = {CVAR_CLIENT, "scr_loadingscreen_background","1", "show the last visible background during loading screen (costs one screenful of video memory)"};
+cvar_t scr_loadingscreen_background = {CVAR_CLIENT, "scr_loadingscreen_background","0", "show the last visible background during loading screen (costs one screenful of video memory)"};
 cvar_t scr_loadingscreen_scale = {CVAR_CLIENT, "scr_loadingscreen_scale","1", "scale factor of the background"};
 cvar_t scr_loadingscreen_scale_base = {CVAR_CLIENT, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
 cvar_t scr_loadingscreen_scale_limit = {CVAR_CLIENT, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
