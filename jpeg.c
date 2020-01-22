@@ -27,8 +27,8 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-cvar_t sv_writepicture_quality = {CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
-cvar_t r_texture_jpeg_fastpicmip = {CVAR_SAVE, "r_texture_jpeg_fastpicmip", "1", "perform gl_picmip during decompression for JPEG files (faster)"};
+cvar_t sv_writepicture_quality = {CVAR_SERVER | CVAR_SAVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
+cvar_t r_texture_jpeg_fastpicmip = {CVAR_CLIENT | CVAR_SAVE, "r_texture_jpeg_fastpicmip", "1", "perform gl_picmip during decompression for JPEG files (faster)"};
 
 // jboolean is unsigned char instead of int on Win32
 #ifdef WIN32

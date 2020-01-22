@@ -70,10 +70,14 @@ interface from being ambiguous.
 #define CVAR_PRIVATE 32
 // this means that this cvar should update a userinfo key but the name does not correspond directly to the userinfo key to update, and may require additional conversion ("_cl_color" for example should update "topcolor" and "bottomcolor")
 #define CVAR_NQUSERINFOHACK 64
-// used to determine if flags is valid
-#define CVAR_NORESETTODEFAULTS 128
 // for engine-owned cvars that must not be reset on gametype switch (e.g. scr_screenshot_name, which otherwise isn't set to the mod name properly)
-#define CVAR_MAXFLAGSVAL 255
+#define CVAR_NORESETTODEFAULTS 128
+// cvar is accessible in client
+#define CVAR_CLIENT 256
+// cvar is accessible in dedicated server
+#define CVAR_SERVER 512
+// used to determine if flags is valid
+#define CVAR_MAXFLAGSVAL 1023
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
@@ -145,6 +149,16 @@ typedef struct cvar_s
 	struct cvar_s *nextonhashchain;
 } cvar_t;
 
+typedef struct cvar_state_s
+{
+	cvar_t *vars;
+	cvar_t *hashtable[CVAR_HASHSIZE];
+}
+cvar_state_t;
+
+extern cvar_state_t cvars_all;
+extern cvar_state_t cvars_null; // used by cmd_serverfromclient which intentionally has no cvars available
+
 /*
 void Cvar_MenuSlider(cvar_t *variable, int menu, float slider_min, float slider_max, float slider_step);
 void Cvar_MenuBool(cvar_t *variable, int menu, const char *name_false, const char *name_true);
@@ -156,64 +170,64 @@ void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name
 
 /// registers a cvar that already has the name, string, and optionally the
 /// archive elements set.
-void Cvar_RegisterVariable (cvar_t *variable);
+void Cvar_RegisterVariable(cvar_t *variable);
 
 /// equivelant to "<name> <variable>" typed at the console
-void Cvar_Set (const char *var_name, const char *value);
+void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
 
 /// expands value to a string and calls Cvar_Set
-void Cvar_SetValue (const char *var_name, float value);
+void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, float value);
 
 void Cvar_SetQuick (cvar_t *var, const char *value);
 void Cvar_SetValueQuick (cvar_t *var, float value);
 
-float Cvar_VariableValueOr (const char *var_name, float def);
+float Cvar_VariableValueOr (cvar_state_t *cvars, const char *var_name, float def, int neededflags);
 // returns def if not defined
 
-float Cvar_VariableValue (const char *var_name);
+float Cvar_VariableValue (cvar_state_t *cvars, const char *var_name, int neededflags);
 // returns 0 if not defined or non numeric
 
-const char *Cvar_VariableStringOr (const char *var_name, const char *def);
+const char *Cvar_VariableStringOr (cvar_state_t *cvars, const char *var_name, const char *def, int neededflags);
 // returns def if not defined
 
-const char *Cvar_VariableString (const char *var_name);
+const char *Cvar_VariableString (cvar_state_t *cvars, const char *var_name, int neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_VariableDefString (const char *var_name);
+const char *Cvar_VariableDefString (cvar_state_t *cvars, const char *var_name, int neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_VariableDescription (const char *var_name);
+const char *Cvar_VariableDescription (cvar_state_t *cvars, const char *var_name, int neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_CompleteVariable (const char *partial);
+const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, int neededflags);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
-void Cvar_CompleteCvarPrint (const char *partial);
+void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
 
 qboolean Cvar_Command (cmd_state_t *cmd);
 // called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
-void Cvar_SaveInitState(void);
-void Cvar_RestoreInitState(void);
+void Cvar_SaveInitState(cvar_state_t *cvars);
+void Cvar_RestoreInitState(cvar_state_t *cvars);
 
-void Cvar_UnlockDefaults (void);
+void Cvar_UnlockDefaults(cmd_state_t *cmd);
 void Cvar_LockDefaults_f(cmd_state_t *cmd);
 void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd);
 void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd);
 void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd);
 
-void Cvar_WriteVariables (qfile_t *f);
+void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
-cvar_t *Cvar_FindVar (const char *var_name);
-cvar_t *Cvar_FindVarAfter (const char *prev_var_name, int neededflags);
+cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags);
+cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int neededflags);
 
-int Cvar_CompleteCountPossible (const char *partial);
-const char **Cvar_CompleteBuildList (const char *partial);
+int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int neededflags);
+const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, int neededflags);
 // Added by EvilTypeGuy - functions for tab completion system
 // Thanks to Fett erich@heintz.com
 // Thanks to taniwha
@@ -232,12 +246,11 @@ void Cvar_Del_f(cmd_state_t *cmd);
 
 /// allocates a cvar by name and returns its address,
 /// or merely sets its value if it already exists.
-cvar_t *Cvar_Get (const char *name, const char *value, int flags, const char *newdescription);
+cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int flags, const char *newdescription);
 
 extern const char *cvar_dummy_description; // ALWAYS the same pointer
-extern cvar_t *cvar_vars; // used to list all cvars
 
-void Cvar_UpdateAllAutoCvars(void); // updates ALL autocvars of the active prog to the cvar values (savegame loading)
+void Cvar_UpdateAllAutoCvars(cvar_state_t *cvars); // updates ALL autocvars of the active prog to the cvar values (savegame loading)
 
 #ifdef FILLALLCVARSWITHRUBBISH
 void Cvar_FillAll_f(cmd_state_t *cmd);

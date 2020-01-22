@@ -28,8 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "utf8lib.h"
 
-cvar_t registered = {0, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
-cvar_t cmdline = {0, "cmdline","0", "contains commandline the engine was launched with"};
+cvar_t registered = {CVAR_CLIENT | CVAR_SERVER, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
+cvar_t cmdline = {CVAR_CLIENT | CVAR_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
 
 char com_token[MAX_INPUTLINE];
 int com_argc;
@@ -1645,7 +1645,7 @@ void COM_Init_Commands (void)
 			break;
 	}
 	com_cmdline[n] = 0;
-	Cvar_Set ("cmdline", com_cmdline);
+	Cvar_SetQuick(&cmdline, com_cmdline);
 }
 
 /*

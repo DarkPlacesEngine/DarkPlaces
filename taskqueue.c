@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "taskqueue.h"
 
-cvar_t taskqueue_maxthreads = { CVAR_SAVE, "taskqueue_maxthreads", "32", "how many threads to use for executing tasks" };
+cvar_t taskqueue_maxthreads = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "taskqueue_maxthreads", "32", "how many threads to use for executing tasks"};
 
 typedef struct taskqueue_state_thread_s
 {

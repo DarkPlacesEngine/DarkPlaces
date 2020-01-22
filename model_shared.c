@@ -27,17 +27,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "polygon.h"
 
-cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
-cvar_t r_mipnormalmaps = {CVAR_SAVE, "r_mipnormalmaps", "1", "mipmaps normalmaps (turning it off looks sharper but may have aliasing)"};
-cvar_t mod_generatelightmaps_unitspersample = {CVAR_SAVE, "mod_generatelightmaps_unitspersample", "8", "lightmap resolution"};
-cvar_t mod_generatelightmaps_borderpixels = {CVAR_SAVE, "mod_generatelightmaps_borderpixels", "2", "extra space around polygons to prevent sampling artifacts"};
-cvar_t mod_generatelightmaps_texturesize = {CVAR_SAVE, "mod_generatelightmaps_texturesize", "1024", "size of lightmap textures"};
-cvar_t mod_generatelightmaps_lightmapsamples = {CVAR_SAVE, "mod_generatelightmaps_lightmapsamples", "16", "number of shadow tests done per lightmap pixel"};
-cvar_t mod_generatelightmaps_vertexsamples = {CVAR_SAVE, "mod_generatelightmaps_vertexsamples", "16", "number of shadow tests done per vertex"};
-cvar_t mod_generatelightmaps_gridsamples = {CVAR_SAVE, "mod_generatelightmaps_gridsamples", "64", "number of shadow tests done per lightgrid cell"};
-cvar_t mod_generatelightmaps_lightmapradius = {CVAR_SAVE, "mod_generatelightmaps_lightmapradius", "16", "sampling area around each lightmap pixel"};
-cvar_t mod_generatelightmaps_vertexradius = {CVAR_SAVE, "mod_generatelightmaps_vertexradius", "16", "sampling area around each vertex"};
-cvar_t mod_generatelightmaps_gridradius = {CVAR_SAVE, "mod_generatelightmaps_gridradius", "64", "sampling area around each lightgrid cell center"};
+cvar_t r_mipskins = {CVAR_CLIENT | CVAR_SAVE, "r_mipskins", "0", "mipmaps model skins so they render faster in the distance and do not display noise artifacts, can cause discoloration of skins if they contain undesirable border colors"};
+cvar_t r_mipnormalmaps = {CVAR_CLIENT | CVAR_SAVE, "r_mipnormalmaps", "1", "mipmaps normalmaps (turning it off looks sharper but may have aliasing)"};
+cvar_t mod_generatelightmaps_unitspersample = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_unitspersample", "8", "lightmap resolution"};
+cvar_t mod_generatelightmaps_borderpixels = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_borderpixels", "2", "extra space around polygons to prevent sampling artifacts"};
+cvar_t mod_generatelightmaps_texturesize = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_texturesize", "1024", "size of lightmap textures"};
+cvar_t mod_generatelightmaps_lightmapsamples = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_lightmapsamples", "16", "number of shadow tests done per lightmap pixel"};
+cvar_t mod_generatelightmaps_vertexsamples = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_vertexsamples", "16", "number of shadow tests done per vertex"};
+cvar_t mod_generatelightmaps_gridsamples = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_gridsamples", "64", "number of shadow tests done per lightgrid cell"};
+cvar_t mod_generatelightmaps_lightmapradius = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_lightmapradius", "16", "sampling area around each lightmap pixel"};
+cvar_t mod_generatelightmaps_vertexradius = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_vertexradius", "16", "sampling area around each vertex"};
+cvar_t mod_generatelightmaps_gridradius = {CVAR_CLIENT | CVAR_SAVE, "mod_generatelightmaps_gridradius", "64", "sampling area around each lightgrid cell center"};
 
 dp_model_t *loadmodel;
 
@@ -1962,7 +1962,7 @@ void Mod_LoadQ3Shaders(void)
 				// this sets dpshaderkill to true if dpshaderkillifcvarzero was used, and to false if dpnoshaderkillifcvarzero was used
 				else if (((dpshaderkill = !strcasecmp(parameter[0], "dpshaderkillifcvarzero")) || !strcasecmp(parameter[0], "dpnoshaderkillifcvarzero")) && numparameters >= 2)
 				{
-					if (Cvar_VariableValue(parameter[1]) == 0.0f)
+					if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) == 0.0f)
 						shader.dpshaderkill = dpshaderkill;
 				}
 				// this sets dpshaderkill to true if dpshaderkillifcvar was used, and to false if dpnoshaderkillifcvar was used
@@ -1973,37 +1973,37 @@ void Mod_LoadQ3Shaders(void)
 						op = parameter[2];
 					if(!op)
 					{
-						if (Cvar_VariableValue(parameter[1]) != 0.0f)
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) != 0.0f)
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, "=="))
 					{
-						if (Cvar_VariableValue(parameter[1]) == atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) == atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, "!="))
 					{
-						if (Cvar_VariableValue(parameter[1]) != atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) != atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, ">"))
 					{
-						if (Cvar_VariableValue(parameter[1]) > atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) > atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, "<"))
 					{
-						if (Cvar_VariableValue(parameter[1]) < atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) < atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, ">="))
 					{
-						if (Cvar_VariableValue(parameter[1]) >= atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) >= atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else if (numparameters >= 4 && !strcmp(op, "<="))
 					{
-						if (Cvar_VariableValue(parameter[1]) <= atof(parameter[3]))
+						if (Cvar_VariableValue(&cvars_all, parameter[1], ~0) <= atof(parameter[3]))
 							shader.dpshaderkill = dpshaderkill;
 					}
 					else

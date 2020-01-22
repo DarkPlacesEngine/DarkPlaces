@@ -100,6 +100,9 @@ typedef struct cmd_state_s
 	cmd_source_t source;
 
 	cmd_function_t *functions;		// possible commands to execute
+
+	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
+	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
 }
 cmd_state_t;
 

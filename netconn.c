@@ -33,33 +33,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DPMASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
-cvar_t sv_public = {0, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
-cvar_t sv_public_rejectreason = {0, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
-static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
+cvar_t sv_public = {CVAR_SERVER, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
+cvar_t sv_public_rejectreason = {CVAR_SERVER, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
+static cvar_t sv_heartbeatperiod = {CVAR_SERVER | CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 extern cvar_t sv_status_privacy;
 
 static cvar_t sv_masters [] =
 {
-	{CVAR_SAVE, "sv_master1", "", "user-chosen master server 1"},
-	{CVAR_SAVE, "sv_master2", "", "user-chosen master server 2"},
-	{CVAR_SAVE, "sv_master3", "", "user-chosen master server 3"},
-	{CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
-	{0, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"}, // admin: Willis
-	{0, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"}, // admin: tChr
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master1", "", "user-chosen master server 1"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master2", "", "user-chosen master server 2"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master3", "", "user-chosen master server 3"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
+	{CVAR_CLIENT | CVAR_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"}, // admin: Willis
+	{CVAR_CLIENT | CVAR_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"}, // admin: tChr
 	{0, NULL, NULL, NULL}
 };
 
 #ifdef CONFIG_MENU
 static cvar_t sv_qwmasters [] =
 {
-	{CVAR_SAVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
-	{CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
-	{CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
-	{CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{0, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
-	{0, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
+	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
+	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
+	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
+	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
+	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 #endif
@@ -73,34 +73,34 @@ static unsigned char sv_message_buf[NET_MAXMESSAGE];
 char cl_readstring[MAX_INPUTLINE];
 char sv_readstring[MAX_INPUTLINE];
 
-cvar_t net_test = {0, "net_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
-cvar_t net_usesizelimit = {0, "net_usesizelimit", "2", "use packet size limiting (0: never, 1: in non-CSQC mode, 2: always)"};
-cvar_t net_burstreserve = {0, "net_burstreserve", "0.3", "how much of the burst time to reserve for packet size spikes"};
-cvar_t net_messagetimeout = {0, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
-cvar_t net_connecttimeout = {0, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
-cvar_t net_connectfloodblockingtimeout = {0, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
-cvar_t net_challengefloodblockingtimeout = {0, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
-cvar_t net_getstatusfloodblockingtimeout = {0, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
-cvar_t net_sourceaddresscheck = {0, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
-cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
-cvar_t developer_networking = {0, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
+cvar_t net_test = {CVAR_CLIENT | CVAR_SERVER, "net_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
+cvar_t net_usesizelimit = {CVAR_SERVER, "net_usesizelimit", "2", "use packet size limiting (0: never, 1: in non-CSQC mode, 2: always)"};
+cvar_t net_burstreserve = {CVAR_SERVER, "net_burstreserve", "0.3", "how much of the burst time to reserve for packet size spikes"};
+cvar_t net_messagetimeout = {CVAR_CLIENT | CVAR_SERVER, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
+cvar_t net_connecttimeout = {CVAR_CLIENT | CVAR_SERVER, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
+cvar_t net_connectfloodblockingtimeout = {CVAR_SERVER, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
+cvar_t net_challengefloodblockingtimeout = {CVAR_SERVER, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
+cvar_t net_getstatusfloodblockingtimeout = {CVAR_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
+cvar_t net_sourceaddresscheck = {CVAR_CLIENT, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
+cvar_t hostname = {CVAR_SERVER | CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
+cvar_t developer_networking = {CVAR_CLIENT | CVAR_SERVER, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
-cvar_t cl_netlocalping = {0, "cl_netlocalping","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
-static cvar_t cl_netpacketloss_send = {0, "cl_netpacketloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
-static cvar_t cl_netpacketloss_receive = {0, "cl_netpacketloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
-static cvar_t net_slist_queriespersecond = {0, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
-static cvar_t net_slist_queriesperframe = {0, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
-static cvar_t net_slist_timeout = {0, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
-static cvar_t net_slist_pause = {0, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
-static cvar_t net_slist_maxtries = {0, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
-static cvar_t net_slist_favorites = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
-static cvar_t net_tos_dscp = {CVAR_SAVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
-static cvar_t gameversion = {0, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
-static cvar_t gameversion_min = {0, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
-static cvar_t gameversion_max = {0, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
-static cvar_t rcon_restricted_password = {CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-static cvar_t rcon_restricted_commands = {0, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
-static cvar_t rcon_secure_maxdiff = {0, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
+cvar_t cl_netlocalping = {CVAR_CLIENT, "cl_netlocalping","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
+static cvar_t cl_netpacketloss_send = {CVAR_CLIENT, "cl_netpacketloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
+static cvar_t cl_netpacketloss_receive = {CVAR_CLIENT, "cl_netpacketloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
+static cvar_t net_slist_queriespersecond = {CVAR_CLIENT, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
+static cvar_t net_slist_queriesperframe = {CVAR_CLIENT, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
+static cvar_t net_slist_timeout = {CVAR_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
+static cvar_t net_slist_pause = {CVAR_CLIENT, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
+static cvar_t net_slist_maxtries = {CVAR_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
+static cvar_t net_slist_favorites = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
+static cvar_t net_tos_dscp = {CVAR_CLIENT | CVAR_SAVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
+static cvar_t gameversion = {CVAR_SERVER, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
+static cvar_t gameversion_min = {CVAR_CLIENT, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
+static cvar_t gameversion_max = {CVAR_CLIENT, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
+static cvar_t rcon_restricted_password = {CVAR_SERVER | CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
+static cvar_t rcon_restricted_commands = {CVAR_SERVER, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
+static cvar_t rcon_secure_maxdiff = {CVAR_SERVER | CVAR_SAVE, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
 extern cvar_t rcon_secure;
 extern cvar_t rcon_secure_challengetimeout;
 
@@ -131,10 +131,10 @@ netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;
 void *netconn_mutex = NULL;
 
-cvar_t cl_netport = {0, "cl_port", "0", "forces client to use chosen port number if not 0"};
-cvar_t sv_netport = {0, "port", "26000", "server port for players to connect to"};
-cvar_t net_address = {0, "net_address", "", "network address to open ipv4 ports on (if empty, use default interfaces)"};
-cvar_t net_address_ipv6 = {0, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
+cvar_t cl_netport = {CVAR_CLIENT, "cl_port", "0", "forces client to use chosen port number if not 0"};
+cvar_t sv_netport = {CVAR_SERVER, "port", "26000", "server port for players to connect to"};
+cvar_t net_address = {CVAR_CLIENT | CVAR_SERVER, "net_address", "", "network address to open ipv4 ports on (if empty, use default interfaces)"};
+cvar_t net_address_ipv6 = {CVAR_CLIENT | CVAR_SERVER, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
 
 char cl_net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int cl_net_extresponse_count = 0;
@@ -3545,7 +3545,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 				// find the search start location
 				prevCvarName = MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring));
-				var = Cvar_FindVarAfter(prevCvarName, CVAR_NOTIFY);
+				var = Cvar_FindVarAfter(&cvars_all, prevCvarName, CVAR_NOTIFY);
 
 				// send the response
 				SZ_Clear(&sv_message);

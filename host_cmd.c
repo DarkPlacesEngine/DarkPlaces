@@ -31,19 +31,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <time.h>
 
 int current_skill;
-cvar_t sv_cheats = {0, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
-cvar_t sv_adminnick = {CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
-cvar_t sv_status_privacy = {CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
-cvar_t sv_status_show_qcstatus = {CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
-cvar_t sv_namechangetimer = {CVAR_SAVE, "sv_namechangetimer", "5", "how often to allow name changes, in seconds (prevents people from using animated names and other tricks"};
-cvar_t rcon_password = {CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-cvar_t rcon_secure = {CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure_challengetimeout = {0, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
-cvar_t rcon_address = {0, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
-cvar_t team = {CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
-cvar_t skin = {CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
-cvar_t noaim = {CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
-cvar_t r_fixtrans_auto = {0, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
+cvar_t sv_cheats = {CVAR_SERVER, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
+cvar_t sv_adminnick = {CVAR_SERVER | CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
+cvar_t sv_status_privacy = {CVAR_SERVER | CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
+cvar_t sv_status_show_qcstatus = {CVAR_SERVER | CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
+cvar_t sv_namechangetimer = {CVAR_SERVER | CVAR_SAVE, "sv_namechangetimer", "5", "how often to allow name changes, in seconds (prevents people from using animated names and other tricks"};
+cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
+cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER | CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
+cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+cvar_t team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
+cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
+cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 qboolean allowcheats = false;
 
 extern qboolean host_shuttingdown;
@@ -107,7 +107,7 @@ static void Host_Status_f(cmd_state_t *cmd)
 	for (players = 0, i = 0;i < svs.maxclients;i++)
 		if (svs.clients[i].active)
 			players++;
-	print ("host:     %s\n", Cvar_VariableString ("hostname"));
+	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CVAR_SERVER));
 	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
@@ -360,7 +360,7 @@ static void Host_Map_f(cmd_state_t *cmd)
 
 	// GAME_DELUXEQUAKE - clear warpmark (used by QC)
 	if (gamemode == GAME_DELUXEQUAKE)
-		Cvar_Set("warpmark", "");
+		Cvar_Set(&cvars_all, "warpmark", "");
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
@@ -833,7 +833,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	COM_ParseToken_Simple(&t, false, false, true);
 // this silliness is so we can load 1.06 save files, which have float skill values
 	current_skill = (int)(atof(com_token) + 0.5);
-	Cvar_SetValue ("skill", (float)current_skill);
+	Cvar_SetValue (&cvars_all, "skill", (float)current_skill);
 
 	if(developer_entityparsing.integer)
 		Con_Printf("Host_Loadgame_f: loading mapname\n");
@@ -937,7 +937,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 			PRVM_ED_ParseGlobals (prog, start);
 
 			// restore the autocvar globals
-			Cvar_UpdateAllAutoCvars();
+			Cvar_UpdateAllAutoCvars(prog->console_cmd->cvars);
 		}
 		else
 		{
@@ -1106,7 +1106,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 Host_Name_f
 ======================
 */
-cvar_t cl_name = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
+cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
 static void Host_Name_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -1133,7 +1133,7 @@ static void Host_Name_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_Set ("_cl_name", newName);
+		Cvar_Set (&cvars_all, "_cl_name", newName);
 		if (strlen(newNameSource) >= sizeof(newName)) // overflowed
 		{
 			Con_Printf("Your name is longer than %i chars! It has been truncated.\n", (int) (sizeof(newName) - 1));
@@ -1237,7 +1237,7 @@ static void Host_Name_f(cmd_state_t *cmd)
 Host_Playermodel_f
 ======================
 */
-cvar_t cl_playermodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz/Xonotic (changed by playermodel command)"};
+cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz/Xonotic (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
 static void Host_Playermodel_f(cmd_state_t *cmd)
 {
@@ -1266,7 +1266,7 @@ static void Host_Playermodel_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_Set ("_cl_playermodel", newPath);
+		Cvar_Set (&cvars_all, "_cl_playermodel", newPath);
 		return;
 	}
 
@@ -1298,7 +1298,7 @@ static void Host_Playermodel_f(cmd_state_t *cmd)
 Host_Playerskin_f
 ======================
 */
-cvar_t cl_playerskin = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz/Xonotic (changed by playerskin command)"};
+cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz/Xonotic (changed by playerskin command)"};
 static void Host_Playerskin_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -1326,7 +1326,7 @@ static void Host_Playerskin_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_Set ("_cl_playerskin", newPath);
+		Cvar_Set (&cvars_all, "_cl_playerskin", newPath);
 		return;
 	}
 
@@ -1575,7 +1575,7 @@ static void Host_Tell_f(cmd_state_t *cmd)
 Host_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
+cvar_t cl_color = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 static void Host_Color(cmd_state_t *cmd, int changetop, int changebottom)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -1686,8 +1686,8 @@ static void Host_BottomColor_f(cmd_state_t *cmd)
 	Host_Color(cmd, -1, atoi(Cmd_Argv(cmd, 1)));
 }
 
-cvar_t cl_rate = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
-cvar_t cl_rate_burstsize = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
+cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
+cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
 static void Host_Rate_f(cmd_state_t *cmd)
 {
 	int rate;
@@ -1706,7 +1706,7 @@ static void Host_Rate_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_SetValue ("_cl_rate", max(NET_MINRATE, rate));
+		Cvar_SetValue (&cvars_all, "_cl_rate", max(NET_MINRATE, rate));
 		return;
 	}
 
@@ -1727,7 +1727,7 @@ static void Host_Rate_BurstSize_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_SetValue ("_cl_rate_burstsize", rate_burstsize);
+		Cvar_SetValue (&cvars_all, "_cl_rate_burstsize", rate_burstsize);
 		return;
 	}
 
@@ -1806,7 +1806,7 @@ LadyHavoc: only supported for Nehahra, I personally think this is dumb, but Mind
 LadyHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
-cvar_t cl_pmodel = {CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
+cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
 static void Host_PModel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -1826,7 +1826,7 @@ static void Host_PModel_f(cmd_state_t *cmd)
 	{
 		if (cl_pmodel.integer == i)
 			return;
-		Cvar_SetValue ("_cl_pmodel", i);
+		Cvar_SetValue (&cvars_all, "_cl_pmodel", i);
 		if (cls.state == ca_connected)
 			Cmd_ForwardToServer_f(cmd);
 		return;
@@ -2483,7 +2483,7 @@ static void Host_SendCvar_f(cmd_state_t *cmd)
 	cvarname = Cmd_Argv(cmd, 1);
 	if (cls.state == ca_connected)
 	{
-		c = Cvar_FindVar(cvarname);
+		c = Cvar_FindVar(&cvars_all, cvarname, CVAR_CLIENT | CVAR_SERVER);
 		// LadyHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
@@ -2531,9 +2531,9 @@ static void MaxPlayers_f(cmd_state_t *cmd)
 
 	svs.maxclients_next = n;
 	if (n == 1)
-		Cvar_Set ("deathmatch", "0");
+		Cvar_Set (&cvars_all, "deathmatch", "0");
 	else
-		Cvar_Set ("deathmatch", "1");
+		Cvar_Set (&cvars_all, "deathmatch", "1");
 }
 
 /*

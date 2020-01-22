@@ -159,96 +159,96 @@ typedef enum { SPATIAL_NONE, SPATIAL_LOG, SPATIAL_POW, SPATIAL_THRESH } spatialm
 spatialmethod_t spatialmethod;
 
 // Cvars declared in sound.h (part of the sound API)
-cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
-cvar_t mastervolume = {CVAR_SAVE, "mastervolume", "0.7", "master volume"};
-cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
-cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
-cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
-cvar_t snd_soundradius = {CVAR_SAVE, "snd_soundradius", "1200", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
-cvar_t snd_attenuation_exponent = {CVAR_SAVE, "snd_attenuation_exponent", "1", "Exponent of (1-radius) in sound attenuation formula"};
-cvar_t snd_attenuation_decibel = {CVAR_SAVE, "snd_attenuation_decibel", "0", "Decibel sound attenuation per sound radius distance"};
-cvar_t snd_spatialization_min_radius = {CVAR_SAVE, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
-cvar_t snd_spatialization_max_radius = {CVAR_SAVE, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
-cvar_t snd_spatialization_min = {CVAR_SAVE, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
-cvar_t snd_spatialization_max = {CVAR_SAVE, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
-cvar_t snd_spatialization_power = {CVAR_SAVE, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
-cvar_t snd_spatialization_control = {CVAR_SAVE, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
-cvar_t snd_spatialization_prologic = {CVAR_SAVE, "snd_spatialization_prologic", "0", "use dolby prologic (I, II or IIx) encoding (snd_channels must be 2)"};
-cvar_t snd_spatialization_prologic_frontangle = {CVAR_SAVE, "snd_spatialization_prologic_frontangle", "30", "the angle between the front speakers and the center speaker"};
-cvar_t snd_spatialization_occlusion = {CVAR_SAVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world; 1 enables PVS method, 2 enables LineOfSight method, 3 enables both"};
+cvar_t bgmvolume = {CVAR_CLIENT | CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
+cvar_t mastervolume = {CVAR_CLIENT | CVAR_SAVE, "mastervolume", "0.7", "master volume"};
+cvar_t volume = {CVAR_CLIENT | CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
+cvar_t snd_initialized = {CVAR_CLIENT | CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+cvar_t snd_staticvolume = {CVAR_CLIENT | CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
+cvar_t snd_soundradius = {CVAR_CLIENT | CVAR_SAVE, "snd_soundradius", "1200", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
+cvar_t snd_attenuation_exponent = {CVAR_CLIENT | CVAR_SAVE, "snd_attenuation_exponent", "1", "Exponent of (1-radius) in sound attenuation formula"};
+cvar_t snd_attenuation_decibel = {CVAR_CLIENT | CVAR_SAVE, "snd_attenuation_decibel", "0", "Decibel sound attenuation per sound radius distance"};
+cvar_t snd_spatialization_min_radius = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_min_radius", "10000", "use minimum spatialization above to this radius"};
+cvar_t snd_spatialization_max_radius = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_max_radius", "100", "use maximum spatialization below this radius"};
+cvar_t snd_spatialization_min = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_min", "0.70", "minimum spatializazion of sounds"};
+cvar_t snd_spatialization_max = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_max", "0.95", "maximum spatialization of sounds"};
+cvar_t snd_spatialization_power = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_power", "0", "exponent of the spatialization falloff curve (0: logarithmic)"};
+cvar_t snd_spatialization_control = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_control", "0", "enable spatialization control (headphone friendly mode)"};
+cvar_t snd_spatialization_prologic = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_prologic", "0", "use dolby prologic (I, II or IIx) encoding (snd_channels must be 2)"};
+cvar_t snd_spatialization_prologic_frontangle = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_prologic_frontangle", "30", "the angle between the front speakers and the center speaker"};
+cvar_t snd_spatialization_occlusion = {CVAR_CLIENT | CVAR_SAVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world; 1 enables PVS method, 2 enables LineOfSight method, 3 enables both"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
-cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
-cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
-cvar_t snd_streaming_length = { CVAR_SAVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
-cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
+cvar_t _snd_mixahead = {CVAR_CLIENT | CVAR_SAVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
+cvar_t snd_streaming = {CVAR_CLIENT | CVAR_SAVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
+cvar_t snd_streaming_length = {CVAR_CLIENT | CVAR_SAVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
+cvar_t snd_swapstereo = {CVAR_CLIENT | CVAR_SAVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 extern cvar_t v_flipped;
-cvar_t snd_channellayout = {0, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
-cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
-cvar_t snd_maxchannelvolume = {CVAR_SAVE, "snd_maxchannelvolume", "10", "maximum volume of a single sound"};
-cvar_t snd_softclip = {CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping. Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
-//cvar_t snd_softclip = {CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping (when set to 2, use it even if output is floating point). Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
-cvar_t snd_entchannel0volume = {CVAR_SAVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel1volume = {CVAR_SAVE, "snd_entchannel1volume", "1", "volume multiplier of the 1st entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel2volume = {CVAR_SAVE, "snd_entchannel2volume", "1", "volume multiplier of the 2nd entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel3volume = {CVAR_SAVE, "snd_entchannel3volume", "1", "volume multiplier of the 3rd entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel4volume = {CVAR_SAVE, "snd_entchannel4volume", "1", "volume multiplier of the 4th entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel5volume = {CVAR_SAVE, "snd_entchannel5volume", "1", "volume multiplier of the 5th entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel6volume = {CVAR_SAVE, "snd_entchannel6volume", "1", "volume multiplier of the 6th entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_entchannel7volume = {CVAR_SAVE, "snd_entchannel7volume", "1", "volume multiplier of the 7th entity channel of regular entities (DEPRECATED)"};
-cvar_t snd_playerchannel0volume = {CVAR_SAVE, "snd_playerchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel1volume = {CVAR_SAVE, "snd_playerchannel1volume", "1", "volume multiplier of the 1st entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel2volume = {CVAR_SAVE, "snd_playerchannel2volume", "1", "volume multiplier of the 2nd entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel3volume = {CVAR_SAVE, "snd_playerchannel3volume", "1", "volume multiplier of the 3rd entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel4volume = {CVAR_SAVE, "snd_playerchannel4volume", "1", "volume multiplier of the 4th entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel5volume = {CVAR_SAVE, "snd_playerchannel5volume", "1", "volume multiplier of the 5th entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel6volume = {CVAR_SAVE, "snd_playerchannel6volume", "1", "volume multiplier of the 6th entity channel of player entities (DEPRECATED)"};
-cvar_t snd_playerchannel7volume = {CVAR_SAVE, "snd_playerchannel7volume", "1", "volume multiplier of the 7th entity channel of player entities (DEPRECATED)"};
-cvar_t snd_worldchannel0volume = {CVAR_SAVE, "snd_worldchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel1volume = {CVAR_SAVE, "snd_worldchannel1volume", "1", "volume multiplier of the 1st entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel2volume = {CVAR_SAVE, "snd_worldchannel2volume", "1", "volume multiplier of the 2nd entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel3volume = {CVAR_SAVE, "snd_worldchannel3volume", "1", "volume multiplier of the 3rd entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel4volume = {CVAR_SAVE, "snd_worldchannel4volume", "1", "volume multiplier of the 4th entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel5volume = {CVAR_SAVE, "snd_worldchannel5volume", "1", "volume multiplier of the 5th entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel6volume = {CVAR_SAVE, "snd_worldchannel6volume", "1", "volume multiplier of the 6th entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_worldchannel7volume = {CVAR_SAVE, "snd_worldchannel7volume", "1", "volume multiplier of the 7th entity channel of the world entity (DEPRECATED)"};
-cvar_t snd_csqcchannel0volume = {CVAR_SAVE, "snd_csqcchannel0volume", "1", "volume multiplier of the auto-allocate entity channel CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel1volume = {CVAR_SAVE, "snd_csqcchannel1volume", "1", "volume multiplier of the 1st entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel2volume = {CVAR_SAVE, "snd_csqcchannel2volume", "1", "volume multiplier of the 2nd entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel3volume = {CVAR_SAVE, "snd_csqcchannel3volume", "1", "volume multiplier of the 3rd entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel4volume = {CVAR_SAVE, "snd_csqcchannel4volume", "1", "volume multiplier of the 4th entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel5volume = {CVAR_SAVE, "snd_csqcchannel5volume", "1", "volume multiplier of the 5th entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel6volume = {CVAR_SAVE, "snd_csqcchannel6volume", "1", "volume multiplier of the 6th entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_csqcchannel7volume = {CVAR_SAVE, "snd_csqcchannel7volume", "1", "volume multiplier of the 7th entity channel of CSQC entities (DEPRECATED)"};
-cvar_t snd_channel0volume = {CVAR_SAVE, "snd_channel0volume", "1", "volume multiplier of the auto-allocate entity channel"};
-cvar_t snd_channel1volume = {CVAR_SAVE, "snd_channel1volume", "1", "volume multiplier of the 1st entity channel"};
-cvar_t snd_channel2volume = {CVAR_SAVE, "snd_channel2volume", "1", "volume multiplier of the 2nd entity channel"};
-cvar_t snd_channel3volume = {CVAR_SAVE, "snd_channel3volume", "1", "volume multiplier of the 3rd entity channel"};
-cvar_t snd_channel4volume = {CVAR_SAVE, "snd_channel4volume", "1", "volume multiplier of the 4th entity channel"};
-cvar_t snd_channel5volume = {CVAR_SAVE, "snd_channel5volume", "1", "volume multiplier of the 5th entity channel"};
-cvar_t snd_channel6volume = {CVAR_SAVE, "snd_channel6volume", "1", "volume multiplier of the 6th entity channel"};
-cvar_t snd_channel7volume = {CVAR_SAVE, "snd_channel7volume", "1", "volume multiplier of the 7th entity channel"};
+cvar_t snd_channellayout = {CVAR_CLIENT, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
+cvar_t snd_mutewhenidle = {CVAR_CLIENT | CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
+cvar_t snd_maxchannelvolume = {CVAR_CLIENT | CVAR_SAVE, "snd_maxchannelvolume", "10", "maximum volume of a single sound"};
+cvar_t snd_softclip = {CVAR_CLIENT | CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping. Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
+//cvar_t snd_softclip = {CVAR_CLIENT | CVAR_SAVE, "snd_softclip", "0", "Use soft-clipping (when set to 2, use it even if output is floating point). Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
+cvar_t snd_entchannel0volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel1volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel1volume", "1", "volume multiplier of the 1st entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel2volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel2volume", "1", "volume multiplier of the 2nd entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel3volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel3volume", "1", "volume multiplier of the 3rd entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel4volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel4volume", "1", "volume multiplier of the 4th entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel5volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel5volume", "1", "volume multiplier of the 5th entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel6volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel6volume", "1", "volume multiplier of the 6th entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_entchannel7volume = {CVAR_CLIENT | CVAR_SAVE, "snd_entchannel7volume", "1", "volume multiplier of the 7th entity channel of regular entities (DEPRECATED)"};
+cvar_t snd_playerchannel0volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel1volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel1volume", "1", "volume multiplier of the 1st entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel2volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel2volume", "1", "volume multiplier of the 2nd entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel3volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel3volume", "1", "volume multiplier of the 3rd entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel4volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel4volume", "1", "volume multiplier of the 4th entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel5volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel5volume", "1", "volume multiplier of the 5th entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel6volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel6volume", "1", "volume multiplier of the 6th entity channel of player entities (DEPRECATED)"};
+cvar_t snd_playerchannel7volume = {CVAR_CLIENT | CVAR_SAVE, "snd_playerchannel7volume", "1", "volume multiplier of the 7th entity channel of player entities (DEPRECATED)"};
+cvar_t snd_worldchannel0volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel1volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel1volume", "1", "volume multiplier of the 1st entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel2volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel2volume", "1", "volume multiplier of the 2nd entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel3volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel3volume", "1", "volume multiplier of the 3rd entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel4volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel4volume", "1", "volume multiplier of the 4th entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel5volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel5volume", "1", "volume multiplier of the 5th entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel6volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel6volume", "1", "volume multiplier of the 6th entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_worldchannel7volume = {CVAR_CLIENT | CVAR_SAVE, "snd_worldchannel7volume", "1", "volume multiplier of the 7th entity channel of the world entity (DEPRECATED)"};
+cvar_t snd_csqcchannel0volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel0volume", "1", "volume multiplier of the auto-allocate entity channel CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel1volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel1volume", "1", "volume multiplier of the 1st entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel2volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel2volume", "1", "volume multiplier of the 2nd entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel3volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel3volume", "1", "volume multiplier of the 3rd entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel4volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel4volume", "1", "volume multiplier of the 4th entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel5volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel5volume", "1", "volume multiplier of the 5th entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel6volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel6volume", "1", "volume multiplier of the 6th entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_csqcchannel7volume = {CVAR_CLIENT | CVAR_SAVE, "snd_csqcchannel7volume", "1", "volume multiplier of the 7th entity channel of CSQC entities (DEPRECATED)"};
+cvar_t snd_channel0volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel0volume", "1", "volume multiplier of the auto-allocate entity channel"};
+cvar_t snd_channel1volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel1volume", "1", "volume multiplier of the 1st entity channel"};
+cvar_t snd_channel2volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel2volume", "1", "volume multiplier of the 2nd entity channel"};
+cvar_t snd_channel3volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel3volume", "1", "volume multiplier of the 3rd entity channel"};
+cvar_t snd_channel4volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel4volume", "1", "volume multiplier of the 4th entity channel"};
+cvar_t snd_channel5volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel5volume", "1", "volume multiplier of the 5th entity channel"};
+cvar_t snd_channel6volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel6volume", "1", "volume multiplier of the 6th entity channel"};
+cvar_t snd_channel7volume = {CVAR_CLIENT | CVAR_SAVE, "snd_channel7volume", "1", "volume multiplier of the 7th entity channel"};
 
 // Local cvars
-static cvar_t nosound = {0, "nosound", "0", "disables sound"};
-static cvar_t snd_precache = {0, "snd_precache", "1", "loads sounds before they are used"};
-static cvar_t ambient_level = {0, "ambient_level", "0.3", "volume of environment noises (water and wind)"};
-static cvar_t ambient_fade = {0, "ambient_fade", "100", "rate of volume fading when moving from one environment to another"};
-static cvar_t snd_noextraupdate = {0, "snd_noextraupdate", "0", "disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates"};
-static cvar_t snd_show = {0, "snd_show", "0", "shows some statistics about sound mixing"};
+static cvar_t nosound = {CVAR_CLIENT, "nosound", "0", "disables sound"};
+static cvar_t snd_precache = {CVAR_CLIENT, "snd_precache", "1", "loads sounds before they are used"};
+static cvar_t ambient_level = {CVAR_CLIENT, "ambient_level", "0.3", "volume of environment noises (water and wind)"};
+static cvar_t ambient_fade = {CVAR_CLIENT, "ambient_fade", "100", "rate of volume fading when moving from one environment to another"};
+static cvar_t snd_noextraupdate = {CVAR_CLIENT, "snd_noextraupdate", "0", "disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates"};
+static cvar_t snd_show = {CVAR_CLIENT, "snd_show", "0", "shows some statistics about sound mixing"};
 
 // Default sound format is 48KHz, 32bit float, stereo
 // (48KHz because a lot of onboard sound cards sucks at any other speed)
-static cvar_t snd_speed = {CVAR_SAVE, "snd_speed", "48000", "sound output frequency, in hertz"};
-static cvar_t snd_width = {CVAR_SAVE, "snd_width", "4", "sound output precision, in bytes - 1 = 8bit, 2 = 16bit, 4 = 32bit float"};
-static cvar_t snd_channels = {CVAR_SAVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
+static cvar_t snd_speed = {CVAR_CLIENT | CVAR_SAVE, "snd_speed", "48000", "sound output frequency, in hertz"};
+static cvar_t snd_width = {CVAR_CLIENT | CVAR_SAVE, "snd_width", "4", "sound output precision, in bytes - 1 = 8bit, 2 = 16bit, 4 = 32bit float"};
+static cvar_t snd_channels = {CVAR_CLIENT | CVAR_SAVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
 
-static cvar_t snd_startloopingsounds = {0, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
-static cvar_t snd_startnonloopingsounds = {0, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
+static cvar_t snd_startloopingsounds = {CVAR_CLIENT, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
+static cvar_t snd_startnonloopingsounds = {CVAR_CLIENT, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
 
 // randomization
-static cvar_t snd_identicalsoundrandomization_time = {0, "snd_identicalsoundrandomization_time", "0.1", "how much seconds to randomly skip (positive) or delay (negative) sounds when multiple identical sounds are started on the same frame"};
-static cvar_t snd_identicalsoundrandomization_tics = {0, "snd_identicalsoundrandomization_tics", "0", "if nonzero, how many tics to limit sound randomization as defined by snd_identicalsoundrandomization_time"};
+static cvar_t snd_identicalsoundrandomization_time = {CVAR_CLIENT, "snd_identicalsoundrandomization_time", "0.1", "how much seconds to randomly skip (positive) or delay (negative) sounds when multiple identical sounds are started on the same frame"};
+static cvar_t snd_identicalsoundrandomization_tics = {CVAR_CLIENT, "snd_identicalsoundrandomization_tics", "0", "if nonzero, how many tics to limit sound randomization as defined by snd_identicalsoundrandomization_time"};
 
 // Ambient sounds
 static sfx_t* ambient_sfxs [2] = { NULL, NULL };
@@ -1319,7 +1319,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qboolean isstatic, sfx_t *sfx)
 			case 5:  mastervol *= snd_channel5volume.value; break;
 			case 6:  mastervol *= snd_channel6volume.value; break;
 			case 7:  mastervol *= snd_channel7volume.value; break;
-			default: mastervol *= Cvar_VariableValueOr(va(vabuf, sizeof(vabuf), "snd_channel%dvolume", CHAN_ENGINE2CVAR(ch->entchannel)), 1.0); break;
+			default: mastervol *= Cvar_VariableValueOr(&cvars_all, va(vabuf, sizeof(vabuf), "snd_channel%dvolume", CHAN_ENGINE2CVAR(ch->entchannel)), 1.0, ~0); break;
 		}
 	}
 

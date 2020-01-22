@@ -61,35 +61,35 @@ client_t *host_client;
 jmp_buf host_abortframe;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
-cvar_t host_framerate = {0, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
-cvar_t cl_maxphysicsframesperserverframe = {0, "cl_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
+cvar_t host_framerate = {CVAR_CLIENT | CVAR_SERVER, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
+cvar_t cl_maxphysicsframesperserverframe = {CVAR_CLIENT, "cl_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
 // shows time used by certain subsystems
-cvar_t host_speeds = {0, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
-cvar_t host_maxwait = {0, "host_maxwait","1000", "maximum sleep time requested from the operating system in millisecond. Larger sleeps will be done using multiple host_maxwait length sleeps. Lowering this value will increase CPU load, but may help working around problems with accuracy of sleep times."};
-cvar_t cl_minfps = {CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
-cvar_t cl_minfps_fade = {CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
-cvar_t cl_minfps_qualitymax = {CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
-cvar_t cl_minfps_qualitymin = {CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
-cvar_t cl_minfps_qualitymultiply = {CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
-cvar_t cl_minfps_qualityhysteresis = {CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
-cvar_t cl_minfps_qualitystepmax = {CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
-cvar_t cl_minfps_force = {0, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
-cvar_t cl_maxfps = {CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
-cvar_t cl_maxfps_alwayssleep = {0, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
-cvar_t cl_maxidlefps = {CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
+cvar_t host_speeds = {CVAR_CLIENT | CVAR_SERVER, "host_speeds","0", "reports how much time is used in server/graphics/sound"};
+cvar_t host_maxwait = {CVAR_CLIENT | CVAR_SERVER, "host_maxwait","1000", "maximum sleep time requested from the operating system in millisecond. Larger sleeps will be done using multiple host_maxwait length sleeps. Lowering this value will increase CPU load, but may help working around problems with accuracy of sleep times."};
+cvar_t cl_minfps = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
+cvar_t cl_minfps_fade = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
+cvar_t cl_minfps_qualitymax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymin = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymultiply = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
+cvar_t cl_minfps_qualityhysteresis = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
+cvar_t cl_minfps_qualitystepmax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
+cvar_t cl_minfps_force = {CVAR_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
+cvar_t cl_maxfps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
+cvar_t cl_maxidlefps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
-cvar_t developer = {CVAR_SAVE, "developer","0", "shows debugging messages and information (recommended for all developers and level designers); the value -1 also suppresses buffering and logging these messages"};
-cvar_t developer_extra = {0, "developer_extra", "0", "prints additional debugging messages, often very verbose!"};
-cvar_t developer_insane = {0, "developer_insane", "0", "prints huge streams of information about internal workings, entire contents of files being read/written, etc.  Not recommended!"};
-cvar_t developer_loadfile = {0, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
-cvar_t developer_loading = {0, "developer_loading","0", "prints information about files as they are loaded or unloaded successfully"};
-cvar_t developer_entityparsing = {0, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
+cvar_t developer = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "developer","0", "shows debugging messages and information (recommended for all developers and level designers); the value -1 also suppresses buffering and logging these messages"};
+cvar_t developer_extra = {CVAR_CLIENT | CVAR_SERVER, "developer_extra", "0", "prints additional debugging messages, often very verbose!"};
+cvar_t developer_insane = {CVAR_CLIENT | CVAR_SERVER, "developer_insane", "0", "prints huge streams of information about internal workings, entire contents of files being read/written, etc.  Not recommended!"};
+cvar_t developer_loadfile = {CVAR_CLIENT | CVAR_SERVER, "developer_loadfile","0", "prints name and size of every file loaded via the FS_LoadFile function (which is almost everything)"};
+cvar_t developer_loading = {CVAR_CLIENT | CVAR_SERVER, "developer_loading","0", "prints information about files as they are loaded or unloaded successfully"};
+cvar_t developer_entityparsing = {CVAR_CLIENT, "developer_entityparsing", "0", "prints detailed network entities information each time a packet is received"};
 
-cvar_t timestamps = {CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
-cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%Y-%m-%d %H:%M:%S] ", "time format to use on timestamped console messages"};
+cvar_t timestamps = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "timestamps", "0", "prints timestamps on console messages"};
+cvar_t timeformat = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "timeformat", "[%Y-%m-%d %H:%M:%S] ", "time format to use on timestamped console messages"};
 
-cvar_t sessionid = {CVAR_READONLY, "sessionid", "", "ID of the current session (use the -sessionid parameter to set it); this is always either empty or begins with a dot (.)"};
-cvar_t locksession = {0, "locksession", "0", "Lock the session? 0 = no, 1 = yes and abort on failure, 2 = yes and continue on failure"};
+cvar_t sessionid = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY, "sessionid", "", "ID of the current session (use the -sessionid parameter to set it); this is always either empty or begins with a dot (.)"};
+cvar_t locksession = {CVAR_CLIENT | CVAR_SERVER, "locksession", "0", "Lock the session? 0 = no, 1 = yes and abort on failure, 2 = yes and continue on failure"};
 
 /*
 ================
@@ -195,7 +195,7 @@ static void Host_ServerOptions (void)
 		if (COM_CheckParm ("-listen"))
 			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
-		Cvar_SetValue("sv_public", 1);
+		Cvar_SetValue(&cvars_all, "sv_public", 1);
 	}
 	else if (cl_available)
 	{
@@ -295,7 +295,7 @@ static void Host_SaveConfig_to(const char *file)
 		}
 
 		Key_WriteBindings (f);
-		Cvar_WriteVariables (f);
+		Cvar_WriteVariables (&cvars_all, f);
 
 		FS_Close (f);
 	}
@@ -744,9 +744,9 @@ void Host_Main(void)
 		}
 
 		if (slowmo.value < 0.00001 && slowmo.value != 0)
-			Cvar_SetValue("slowmo", 0);
+			Cvar_SetValueQuick(&slowmo, 0);
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
-			Cvar_SetValue("host_framerate", 0);
+			Cvar_SetValueQuick(&host_framerate, 0);
 
 		TaskQueue_Frame(false);
 

@@ -382,9 +382,9 @@ char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 gamedir_t *fs_all_gamedirs = NULL;
 int fs_all_gamedirs_count = 0;
 
-cvar_t scr_screenshot_name = {CVAR_NORESETTODEFAULTS, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
-cvar_t fs_empty_files_in_pack_mark_deletions = {0, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
-cvar_t cvar_fs_gamedir = {CVAR_READONLY | CVAR_NORESETTODEFAULTS, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
+cvar_t scr_screenshot_name = {CVAR_CLIENT | CVAR_NORESETTODEFAULTS, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
+cvar_t fs_empty_files_in_pack_mark_deletions = {CVAR_CLIENT | CVAR_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
+cvar_t cvar_fs_gamedir = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY | CVAR_NORESETTODEFAULTS, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
 
 
 /*
@@ -1483,7 +1483,7 @@ void FS_Rescan (void)
 
 	// look for the pop.lmp file and set registered to true if it is found
 	if (FS_FileExists("gfx/pop.lmp"))
-		Cvar_Set ("registered", "1");
+		Cvar_SetValueQuick(&registered, 1);
 	switch(gamemode)
 	{
 	case GAME_NORMAL:

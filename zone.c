@@ -93,11 +93,11 @@ static memclump_t *clumpchain = NULL;
 #endif
 
 
-cvar_t developer_memory = {0, "developer_memory", "0", "prints debugging information about memory allocations"};
-cvar_t developer_memorydebug = {0, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
-cvar_t developer_memoryreportlargerthanmb = {0, "developer_memorylargerthanmb", "16", "prints debugging information about memory allocations over this size"};
-cvar_t sys_memsize_physical = {CVAR_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
-cvar_t sys_memsize_virtual = {CVAR_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
+cvar_t developer_memory = {CVAR_CLIENT | CVAR_SERVER, "developer_memory", "0", "prints debugging information about memory allocations"};
+cvar_t developer_memorydebug = {CVAR_CLIENT | CVAR_SERVER, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
+cvar_t developer_memoryreportlargerthanmb = {CVAR_CLIENT | CVAR_SERVER, "developer_memorylargerthanmb", "16", "prints debugging information about memory allocations over this size"};
+cvar_t sys_memsize_physical = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
+cvar_t sys_memsize_virtual = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
 
 static mempool_t *poolchain = NULL;
 

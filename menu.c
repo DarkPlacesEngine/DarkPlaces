@@ -28,8 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
-static cvar_t forceqmenu = { 0, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)" };
-static cvar_t menu_progs = { 0, "menu_progs", "menu.dat", "name of quakec menu.dat file" };
+static cvar_t forceqmenu = {CVAR_CLIENT, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)"};
+static cvar_t menu_progs = {CVAR_CLIENT, "menu_progs", "menu.dat", "name of quakec menu.dat file"};
 
 static int NehGameType;
 
@@ -2100,7 +2100,7 @@ static void M_Options_Graphics_Key (cmd_state_t *cmd, int k, int ascii)
 static int		options_colorcontrol_cursor;
 
 // intensity value to match up to 50% dither to 'correct' quake
-static cvar_t menu_options_colorcontrol_correctionvalue = {0, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
+static cvar_t menu_options_colorcontrol_correctionvalue = {CVAR_CLIENT, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
 
 void M_Menu_Options_ColorControl_f(cmd_state_t *cmd)
 {
@@ -3438,7 +3438,7 @@ static void M_LanConfig_Key(cmd_state_t *cmd, int key, int ascii)
 
 		Cbuf_AddText(cmd, "stopdemo\n");
 
-		Cvar_SetValue("port", lanConfig_port);
+		Cvar_SetValue(&cvars_all, "port", lanConfig_port);
 
 		if (lanConfig_cursor == 1 || lanConfig_cursor == 2)
 		{
@@ -3995,7 +3995,7 @@ void M_GameOptions_Draw (void)
 		if (gamemode == GAME_TRANSFUSION)
 		{
 			if (!coop.integer && !deathmatch.integer)
-				Cvar_SetValue("deathmatch", 1);
+				Cvar_SetValue(&cvars_all, "deathmatch", 1);
 			if (deathmatch.integer == 0)
 				M_Print(160, 64, "Cooperative");
 			else if (deathmatch.integer == 2)
@@ -4006,7 +4006,7 @@ void M_GameOptions_Draw (void)
 		else if (gamemode == GAME_BATTLEMECH)
 		{
 			if (!deathmatch.integer)
-				Cvar_SetValue("deathmatch", 1);
+				Cvar_SetValue(&cvars_all, "deathmatch", 1);
 			if (deathmatch.integer == 2)
 				M_Print(160, 64, "Rambo Match");
 			else
@@ -4015,7 +4015,7 @@ void M_GameOptions_Draw (void)
 		else
 		{
 			if (!coop.integer && !deathmatch.integer)
-				Cvar_SetValue("deathmatch", 1);
+				Cvar_SetValue(&cvars_all, "deathmatch", 1);
 			if (coop.integer)
 				M_Print(160, 64, "Cooperative");
 			else
@@ -4357,7 +4357,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 				l = min(l - 1, 37);
 				memcpy(hostnamebuf, hostname.string, l);
 				hostnamebuf[l] = 0;
-				Cvar_Set("hostname", hostnamebuf);
+				Cvar_Set(&cvars_all, "hostname", hostnamebuf);
 			}
 		}
 		break;
@@ -4373,7 +4373,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 				memcpy(hostnamebuf, hostname.string, l);
 				hostnamebuf[l] = ascii;
 				hostnamebuf[l+1] = 0;
-				Cvar_Set("hostname", hostnamebuf);
+				Cvar_Set(&cvars_all, "hostname", hostnamebuf);
 			}
 		}
 	}
@@ -5367,7 +5367,7 @@ static void MP_Shutdown (void)
 static void MP_Init (void)
 {
 	prvm_prog_t *prog = MVM_prog;
-	PRVM_Prog_Init(prog);
+	PRVM_Prog_Init(prog, &cmd_client);
 
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = "menu";

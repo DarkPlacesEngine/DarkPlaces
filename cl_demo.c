@@ -83,7 +83,7 @@ void CL_StopPlayback (void)
 {
 #ifdef CONFIG_VIDEO_CAPTURE
 	if (cl_capturevideo_demo_stop.integer)
-		Cvar_Set("cl_capturevideo", "0");
+		Cvar_Set(&cvars_all, "cl_capturevideo", "0");
 #endif
 
 	if (!cls.demoplayback)

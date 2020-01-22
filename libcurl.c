@@ -7,14 +7,14 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-static cvar_t cl_curl_maxdownloads = {CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t cl_curl_maxspeed = {CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
-static cvar_t sv_curl_defaulturl = {CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
-static cvar_t sv_curl_serverpackages = {CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
-static cvar_t sv_curl_maxspeed = {CVAR_SAVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
-static cvar_t cl_curl_enabled = {CVAR_SAVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
-static cvar_t cl_curl_useragent = {0, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
-static cvar_t cl_curl_useragent_append = {0, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
+static cvar_t cl_curl_maxdownloads = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
+static cvar_t cl_curl_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
+static cvar_t sv_curl_defaulturl = {CVAR_SERVER | CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
+static cvar_t sv_curl_serverpackages = {CVAR_SERVER | CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
+static cvar_t sv_curl_maxspeed = {CVAR_SERVER | CVAR_SAVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
+static cvar_t cl_curl_enabled = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
+static cvar_t cl_curl_useragent = {CVAR_CLIENT, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
+static cvar_t cl_curl_useragent_append = {CVAR_CLIENT, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
 
 /*
 =================================================================

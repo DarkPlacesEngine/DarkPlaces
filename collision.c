@@ -10,15 +10,15 @@
 #define COLLISION_SNAP2 (2.0f / COLLISION_SNAPSCALE)
 #define COLLISION_PLANE_DIST_EPSILON (2.0f / COLLISION_SNAPSCALE)
 
-cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
-cvar_t collision_extendmovelength = {0, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
-cvar_t collision_extendtraceboxlength = {0, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
-cvar_t collision_extendtracelinelength = {0, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
-cvar_t collision_debug_tracelineasbox = {0, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
-cvar_t collision_cache = {0, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
-cvar_t collision_triangle_bevelsides = {0, "collision_triangle_bevelsides", "0", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
-cvar_t collision_triangle_axialsides = {0, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
-cvar_t collision_bih_fullrecursion = { 0, "collision_bih_fullrecursion", "0", "debugging option to disable the bih recursion optimizations by iterating the entire tree" };
+cvar_t collision_impactnudge = {CVAR_CLIENT | CVAR_SERVER, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
+cvar_t collision_extendmovelength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
+cvar_t collision_extendtraceboxlength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
+cvar_t collision_extendtracelinelength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
+cvar_t collision_debug_tracelineasbox = {CVAR_CLIENT | CVAR_SERVER, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
+cvar_t collision_cache = {CVAR_CLIENT | CVAR_SERVER, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
+cvar_t collision_triangle_bevelsides = {CVAR_CLIENT | CVAR_SERVER, "collision_triangle_bevelsides", "0", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
+cvar_t collision_triangle_axialsides = {CVAR_CLIENT | CVAR_SERVER, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
+cvar_t collision_bih_fullrecursion = {CVAR_CLIENT | CVAR_SERVER, "collision_bih_fullrecursion", "0", "debugging option to disable the bih recursion optimizations by iterating the entire tree"};
 
 mempool_t *collision_mempool;
 

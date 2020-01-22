@@ -6,12 +6,12 @@
 #include "hmac.h"
 #include "libcurl.h"
 
-cvar_t crypto_developer = {CVAR_SAVE, "crypto_developer", "0", "print extra info about crypto handshake"};
-cvar_t crypto_aeslevel = {CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required)"};
+cvar_t crypto_developer = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "crypto_developer", "0", "print extra info about crypto handshake"};
+cvar_t crypto_aeslevel = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "crypto_aeslevel", "1", "whether to support AES encryption in authenticated connections (0 = no, 1 = supported, 2 = requested, 3 = required)"};
 
-cvar_t crypto_servercpupercent = {CVAR_SAVE, "crypto_servercpupercent", "10", "allowed crypto CPU load in percent for server operation (0 = no limit, faster)"};
-cvar_t crypto_servercpumaxtime = {CVAR_SAVE, "crypto_servercpumaxtime", "0.01", "maximum allowed crypto CPU time per frame (0 = no limit)"};
-cvar_t crypto_servercpudebug = {CVAR_SAVE, "crypto_servercpudebug", "0", "print statistics about time usage by crypto"};
+cvar_t crypto_servercpupercent = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "crypto_servercpupercent", "10", "allowed crypto CPU load in percent for server operation (0 = no limit, faster)"};
+cvar_t crypto_servercpumaxtime = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "crypto_servercpumaxtime", "0.01", "maximum allowed crypto CPU time per frame (0 = no limit)"};
+cvar_t crypto_servercpudebug = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "crypto_servercpudebug", "0", "print statistics about time usage by crypto"};
 static double crypto_servercpu_accumulator = 0;
 static double crypto_servercpu_lastrealtime = 0;
 
