@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "taskqueue.h"
 
-cvar_t taskqueue_maxthreads = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "taskqueue_maxthreads", "32", "how many threads to use for executing tasks"};
+cvar_t taskqueue_maxthreads = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "taskqueue_maxthreads", "4", "how many threads to use for executing tasks"};
 
 typedef struct taskqueue_state_thread_s
 {
@@ -162,7 +162,7 @@ void TaskQueue_Frame(qboolean shutdown)
 		Thread_AtomicLock(&taskqueue_state.command_lock);
 		taskqueue_state.threads_quit = 1;
 		Thread_AtomicUnlock(&taskqueue_state.command_lock);
-		for (i = 0; i < taskqueue_state.numthreads; i++)
+		for (i = numthreads; i < taskqueue_state.numthreads; i++)
 		{
 			if (taskqueue_state.threads[i].handle)
 				Thread_WaitThread(taskqueue_state.threads[i].handle, 0);
@@ -172,7 +172,7 @@ void TaskQueue_Frame(qboolean shutdown)
 		taskqueue_state.threads_quit = 0;
 		Thread_AtomicUnlock(&taskqueue_state.command_lock);
 		taskqueue_state.numthreads = numthreads;
-		for (i = 0; i < taskqueue_state.numthreads; i++)
+		for (i = taskqueue_state.numthreads; i < numthreads; i++)
 			taskqueue_state.threads[i].handle = Thread_CreateThread(TaskQueue_ThreadFunc, &taskqueue_state.threads[i]);
 		// if there are still pending tasks (e.g. no threads), execute them on main thread now
 		TaskQueue_Execute(true);
