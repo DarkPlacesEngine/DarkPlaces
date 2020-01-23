@@ -171,9 +171,9 @@ void TaskQueue_Frame(qboolean shutdown)
 		Thread_AtomicLock(&taskqueue_state.command_lock);
 		taskqueue_state.threads_quit = 0;
 		Thread_AtomicUnlock(&taskqueue_state.command_lock);
-		taskqueue_state.numthreads = numthreads;
 		for (i = taskqueue_state.numthreads; i < numthreads; i++)
 			taskqueue_state.threads[i].handle = Thread_CreateThread(TaskQueue_ThreadFunc, &taskqueue_state.threads[i]);
+		taskqueue_state.numthreads = numthreads;
 		// if there are still pending tasks (e.g. no threads), execute them on main thread now
 		TaskQueue_Execute(true);
 	}
