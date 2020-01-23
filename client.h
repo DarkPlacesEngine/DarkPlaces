@@ -986,29 +986,6 @@ typedef enum ptype_e
 }
 ptype_t;
 
-typedef struct decal_s
-{
-	// fields used by rendering:  (44 bytes)
-	unsigned short	typeindex;
-	unsigned short	texnum;
-	unsigned int	decalsequence;
-	vec3_t			org;
-	vec3_t			normal;
-	float			size;
-	float			alpha; // 0-255
-	unsigned char	color[3];
-	unsigned char	unused1;
-	int				clusterindex; // cheap culling by pvs
-
-	// fields not used by rendering: (36 bytes in 32bit, 40 bytes in 64bit)
-	float			time2; // used for decal fade
-	unsigned int	owner; // decal stuck to this entity
-	dp_model_t			*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
-	vec3_t			relativeorigin; // decal at this location in entity's coordinate space
-	vec3_t			relativenormal; // decal oriented this way relative to entity's coordinate space
-}
-decal_t;
-
 typedef struct particle_s
 {
 	// for faster batch rendering, particles are rendered in groups by effect (resulting in less perfect sorting but far less state changes)
@@ -1325,7 +1302,6 @@ typedef struct client_state_s
 	int max_lightstyle;
 	int max_brushmodel_entities;
 	int max_particles;
-	int max_decals;
 	int max_showlmps;
 
 	entity_t *entities;
@@ -1338,7 +1314,6 @@ typedef struct client_state_s
 	lightstyle_t *lightstyle;
 	int *brushmodel_entities;
 	particle_t *particles;
-	decal_t *decals;
 	showlmp_t *showlmps;
 
 	int num_entities;

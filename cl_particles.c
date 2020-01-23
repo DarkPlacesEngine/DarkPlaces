@@ -299,14 +299,12 @@ cvar_t cl_particles_visculling = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_viscull
 cvar_t cl_particles_collisions = {CVAR_CLIENT | CVAR_SAVE, "cl_particles_collisions", "1", "allow costly collision detection on particles (sparks that bounce, particles not going through walls, blood hitting surfaces, etc)"};
 cvar_t cl_particles_forcetraileffects = {CVAR_CLIENT, "cl_particles_forcetraileffects", "0", "force trails to be displayed even if a non-trail draw primitive was used (debug/compat feature)"};
 cvar_t cl_decals = {CVAR_CLIENT | CVAR_SAVE, "cl_decals", "1", "enables decals (bullet holes, blood, etc)"};
-cvar_t cl_decals_visculling = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_visculling", "1", "perform a very cheap check if each decal is visible before drawing"};
 cvar_t cl_decals_time = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_time", "20", "how long before decals start to fade away"};
 cvar_t cl_decals_fadetime = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_fadetime", "1", "how long decals take to fade away"};
-cvar_t cl_decals_newsystem = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem", "1", "enables new advanced decal system"};
 cvar_t cl_decals_newsystem_intensitymultiplier = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_intensitymultiplier", "2", "boosts intensity of decals (because the distance fade can make them hard to see otherwise)"};
 cvar_t cl_decals_newsystem_immediatebloodstain = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_immediatebloodstain", "2", "0: no on-spawn blood stains; 1: on-spawn blood stains for pt_blood; 2: always use on-spawn blood stains"};
 cvar_t cl_decals_newsystem_bloodsmears = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_newsystem_bloodsmears", "1", "enable use of particle velocity as decal projection direction rather than surface normal"};
-cvar_t cl_decals_models = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models (if newsystem is also 1)"};
+cvar_t cl_decals_models = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_models", "0", "enables decals on animated models"};
 cvar_t cl_decals_bias = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_bias", "0.125", "distance to bias decals from surface to prevent depth fighting"};
 cvar_t cl_decals_max = {CVAR_CLIENT | CVAR_SAVE, "cl_decals_max", "4096", "maximum number of decals allowed to exist in the world at once"};
 
@@ -612,10 +610,8 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_collisions);
 	Cvar_RegisterVariable (&cl_particles_forcetraileffects);
 	Cvar_RegisterVariable (&cl_decals);
-	Cvar_RegisterVariable (&cl_decals_visculling);
 	Cvar_RegisterVariable (&cl_decals_time);
 	Cvar_RegisterVariable (&cl_decals_fadetime);
-	Cvar_RegisterVariable (&cl_decals_newsystem);
 	Cvar_RegisterVariable (&cl_decals_newsystem_intensitymultiplier);
 	Cvar_RegisterVariable (&cl_decals_newsystem_immediatebloodstain);
 	Cvar_RegisterVariable (&cl_decals_newsystem_bloodsmears);
@@ -810,7 +806,7 @@ static void CL_ImmediateBloodStain(particle_t *part)
 	int staintex;
 
 	// blood creates a splash at spawn, not just at impact, this makes monsters bloody where they are shot
-	if (part->staintexnum >= 0 && cl_decals_newsystem.integer && cl_decals.integer)
+	if (part->staintexnum >= 0 && cl_decals.integer)
 	{
 		VectorCopy(part->vel, v);
 		VectorNormalize(v);
@@ -819,7 +815,7 @@ static void CL_ImmediateBloodStain(particle_t *part)
 	}
 
 	// blood creates a splash at spawn, not just at impact, this makes monsters bloody where they are shot
-	if (part->typeindex == pt_blood && cl_decals_newsystem.integer && cl_decals.integer)
+	if (part->typeindex == pt_blood && cl_decals.integer)
 	{
 		VectorCopy(part->vel, v);
 		VectorNormalize(v);
@@ -831,7 +827,6 @@ static void CL_ImmediateBloodStain(particle_t *part)
 void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t normal, int color1, int color2, int texnum, float size, float alpha)
 {
 	int l1, l2;
-	decal_t *decal;
 	entity_render_t *ent = &cl.entities[hitent].render;
 	unsigned char color[3];
 	if (!cl_decals.integer)
@@ -845,57 +840,10 @@ void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t 
 	color[1] = ((((color1 >>  8) & 0xFF) * l1 + ((color2 >>  8) & 0xFF) * l2) >> 8) & 0xFF;
 	color[2] = ((((color1 >>  0) & 0xFF) * l1 + ((color2 >>  0) & 0xFF) * l2) >> 8) & 0xFF;
 
-	if (cl_decals_newsystem.integer)
-	{
-		if (vid.sRGB3D)
-			R_DecalSystem_SplatEntities(org, normal, Image_LinearFloatFromsRGB(color[0]), Image_LinearFloatFromsRGB(color[1]), Image_LinearFloatFromsRGB(color[2]), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
-		else
-			R_DecalSystem_SplatEntities(org, normal, color[0]*(1.0f/255.0f), color[1]*(1.0f/255.0f), color[2]*(1.0f/255.0f), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
-		return;
-	}
-
-	for (;cl.free_decal < cl.max_decals && cl.decals[cl.free_decal].typeindex;cl.free_decal++);
-	if (cl.free_decal >= cl.max_decals)
-		return;
-	decal = &cl.decals[cl.free_decal++];
-	if (cl.num_decals < cl.free_decal)
-		cl.num_decals = cl.free_decal;
-	memset(decal, 0, sizeof(*decal));
-	decal->decalsequence = cl.decalsequence++;
-	decal->typeindex = pt_decal;
-	decal->texnum = texnum;
-	VectorMA(org, cl_decals_bias.value, normal, decal->org);
-	VectorCopy(normal, decal->normal);
-	decal->size = size;
-	decal->alpha = alpha;
-	decal->time2 = cl.time;
-	decal->color[0] = color[0];
-	decal->color[1] = color[1];
-	decal->color[2] = color[2];
 	if (vid.sRGB3D)
-	{
-		decal->color[0] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[0]) * 256.0f);
-		decal->color[1] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[1]) * 256.0f);
-		decal->color[2] = (unsigned char)(Image_LinearFloatFromsRGB(decal->color[2]) * 256.0f);
-	}
-	decal->owner = hitent;
-	decal->clusterindex = -1000; // no vis culling unless we're sure
-	if (hitent)
-	{
-		// these relative things are only used to regenerate p->org and p->vel if decal->owner is not world (0)
-		decal->ownermodel = cl.entities[decal->owner].render.model;
-		Matrix4x4_Transform(&cl.entities[decal->owner].render.inversematrix, org, decal->relativeorigin);
-		Matrix4x4_Transform3x3(&cl.entities[decal->owner].render.inversematrix, normal, decal->relativenormal);
-	}
+		R_DecalSystem_SplatEntities(org, normal, Image_LinearFloatFromsRGB(color[0]), Image_LinearFloatFromsRGB(color[1]), Image_LinearFloatFromsRGB(color[2]), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
 	else
-	{
-		if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.PointInLeaf)
-		{
-			mleaf_t *leaf = r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, decal->org);
-			if(leaf)
-				decal->clusterindex = leaf->clusterindex;
-		}
-	}
+		R_DecalSystem_SplatEntities(org, normal, color[0]*(1.0f/255.0f), color[1]*(1.0f/255.0f), color[2]*(1.0f/255.0f), alpha*(1.0f/255.0f), particletexture[texnum].s1, particletexture[texnum].t1, particletexture[texnum].s2, particletexture[texnum].t2, size);
 }
 
 void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, float alpha, int texnum, int color1, int color2)
@@ -2484,157 +2432,6 @@ void R_Particles_Init (void)
 	Cvar_RegisterVariable(&r_drawdecals);
 	Cvar_RegisterVariable(&r_drawdecals_drawdistance);
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap, NULL, NULL);
-}
-
-static void R_DrawDecal_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)
-{
-	int surfacelistindex;
-	const decal_t *d;
-	float *v3f, *t2f, *c4f;
-	particletexture_t *tex;
-	vec_t right[3], up[3], size, ca;
-	float alphascale = (1.0f / 65536.0f) * cl_particles_alpha.value;
-
-	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
-
-	r_refdef.stats[r_stat_drawndecals] += numsurfaces;
-//	R_Mesh_ResetTextureState();
-	GL_DepthMask(false);
-	GL_DepthRange(0, 1);
-	GL_PolygonOffset(0, 0);
-	GL_DepthTest(true);
-	GL_CullFace(GL_NONE);
-
-	// generate all the vertices at once
-	for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-	{
-		d = cl.decals + surfacelist[surfacelistindex];
-
-		// calculate color
-		c4f = particle_color4f + 16*surfacelistindex;
-		ca = d->alpha * alphascale;
-		// ensure alpha multiplier saturates properly
-		if (ca > 1.0f / 256.0f)
-			ca = 1.0f / 256.0f;	
-		if (r_refdef.fogenabled)
-			ca *= RSurf_FogVertex(d->org);
-		Vector4Set(c4f, d->color[0] * ca, d->color[1] * ca, d->color[2] * ca, 1);
-		Vector4Copy(c4f, c4f + 4);
-		Vector4Copy(c4f, c4f + 8);
-		Vector4Copy(c4f, c4f + 12);
-
-		// calculate vertex positions
-		size = d->size * cl_particles_size.value;
-		VectorVectors(d->normal, right, up);
-		VectorScale(right, size, right);
-		VectorScale(up, size, up);
-		v3f = particle_vertex3f + 12*surfacelistindex;
-		v3f[ 0] = d->org[0] - right[0] - up[0];
-		v3f[ 1] = d->org[1] - right[1] - up[1];
-		v3f[ 2] = d->org[2] - right[2] - up[2];
-		v3f[ 3] = d->org[0] - right[0] + up[0];
-		v3f[ 4] = d->org[1] - right[1] + up[1];
-		v3f[ 5] = d->org[2] - right[2] + up[2];
-		v3f[ 6] = d->org[0] + right[0] + up[0];
-		v3f[ 7] = d->org[1] + right[1] + up[1];
-		v3f[ 8] = d->org[2] + right[2] + up[2];
-		v3f[ 9] = d->org[0] + right[0] - up[0];
-		v3f[10] = d->org[1] + right[1] - up[1];
-		v3f[11] = d->org[2] + right[2] - up[2];
-
-		// calculate texcoords
-		tex = &particletexture[d->texnum];
-		t2f = particle_texcoord2f + 8*surfacelistindex;
-		t2f[0] = tex->s1;t2f[1] = tex->t2;
-		t2f[2] = tex->s1;t2f[3] = tex->t1;
-		t2f[4] = tex->s2;t2f[5] = tex->t1;
-		t2f[6] = tex->s2;t2f[7] = tex->t2;
-	}
-
-	// now render the decals all at once
-	// (this assumes they all use one particle font texture!)
-	GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-	R_SetupShader_Generic(particletexture[63].texture, false, false, true);
-	R_Mesh_PrepareVertices_Generic_Arrays(numsurfaces * 4, particle_vertex3f, particle_color4f, particle_texcoord2f);
-	R_Mesh_Draw(0, numsurfaces * 4, 0, numsurfaces * 2, NULL, NULL, 0, particle_elements, NULL, 0);
-}
-
-void R_DrawDecals (void)
-{
-	int i;
-	int drawdecals = r_drawdecals.integer;
-	decal_t *decal;
-	float frametime;
-	float decalfade;
-	float drawdist2;
-	unsigned int killsequence = cl.decalsequence - bound(0, (unsigned int) cl_decals_max.integer, cl.decalsequence);
-
-	frametime = bound(0, cl.time - cl.decals_updatetime, 1);
-	cl.decals_updatetime = bound(cl.time - 1, cl.decals_updatetime + frametime, cl.time + 1);
-
-	// LadyHavoc: early out conditions
-	if (!cl.num_decals)
-		return;
-
-	decalfade = frametime * 256 / cl_decals_fadetime.value;
-	drawdist2 = r_drawdecals_drawdistance.value * r_refdef.view.quality;
-	drawdist2 = drawdist2*drawdist2;
-
-	for (i = 0, decal = cl.decals;i < cl.num_decals;i++, decal++)
-	{
-		if (!decal->typeindex)
-			continue;
-
-		if (killsequence > decal->decalsequence)
-			goto killdecal;
-
-		if (cl.time > decal->time2 + cl_decals_time.value)
-		{
-			decal->alpha -= decalfade;
-			if (decal->alpha <= 0)
-				goto killdecal;
-		}
-
-		if (decal->owner)
-		{
-			if (cl.entities[decal->owner].render.model == decal->ownermodel)
-			{
-				Matrix4x4_Transform(&cl.entities[decal->owner].render.matrix, decal->relativeorigin, decal->org);
-				Matrix4x4_Transform3x3(&cl.entities[decal->owner].render.matrix, decal->relativenormal, decal->normal);
-			}
-			else
-				goto killdecal;
-		}
-
-		if(cl_decals_visculling.integer && decal->clusterindex > -1000 && !CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, decal->clusterindex))
-			continue;
-
-		if (!drawdecals)
-			continue;
-
-		if (!r_refdef.view.useperspective || (DotProduct(r_refdef.view.origin, decal->normal) > DotProduct(decal->org, decal->normal) && VectorDistance2(decal->org, r_refdef.view.origin) < drawdist2 * (decal->size * decal->size)))
-			R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, decal->org, R_DrawDecal_TransparentCallback, NULL, i, NULL);
-		continue;
-killdecal:
-		decal->typeindex = 0;
-		if (cl.free_decal > i)
-			cl.free_decal = i;
-	}
-
-	// reduce cl.num_decals if possible
-	while (cl.num_decals > 0 && cl.decals[cl.num_decals - 1].typeindex == 0)
-		cl.num_decals--;
-
-	if (cl.num_decals == cl.max_decals && cl.max_decals < MAX_DECALS)
-	{
-		decal_t *olddecals = cl.decals;
-		cl.max_decals = min(cl.max_decals * 2, MAX_DECALS);
-		cl.decals = (decal_t *) Mem_Alloc(cls.levelmempool, cl.max_decals * sizeof(decal_t));
-		memcpy(cl.decals, olddecals, cl.num_decals * sizeof(decal_t));
-		Mem_Free(olddecals);
-	}
-
-	r_refdef.stats[r_stat_totaldecals] = cl.num_decals;
 }
 
 static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const rtlight_t *rtlight, int numsurfaces, int *surfacelist)

@@ -114,8 +114,6 @@ extern char engineversion[128];
 #define	MAX_BINDMAPS			8
 #define	MAX_PARTICLES_INITIAL	8192
 #define	MAX_PARTICLES			8192
-#define	MAX_DECALS_INITIAL		1024
-#define	MAX_DECALS				1024
 #define	MAX_ENITIES_INITIAL		256
 #define	MAX_STATICENTITIES		256
 #define	MAX_EFFECTS				16
@@ -186,8 +184,6 @@ extern char engineversion[128];
 #define	MAX_BINDMAPS			8
 #define	MAX_PARTICLES_INITIAL	8192 ///< initial allocation for cl.particles
 #define	MAX_PARTICLES			1048576 ///< upper limit on cl.particles size
-#define	MAX_DECALS_INITIAL		8192 ///< initial allocation for cl.decals
-#define	MAX_DECALS				1048576 ///< upper limit on cl.decals size
 #define	MAX_ENITIES_INITIAL		256 ///< initial size of cl.entities
 #define	MAX_STATICENTITIES		1024 ///< limit on size of cl.static_entities
 #define	MAX_EFFECTS				256 ///< limit on size of cl.effects
