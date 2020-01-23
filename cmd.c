@@ -843,7 +843,7 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) == 1)
 	{
 		Con_Print("Current alias commands:\n");
-		for (a = cmd->alias ; a ; a=a->next)
+		for (a = cmd->userdefined->alias ; a ; a=a->next)
 			Con_Printf("%s : %s", a->name, a->value);
 		return;
 	}
@@ -856,7 +856,7 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 	}
 
 	// if the alias already exists, reuse it
-	for (a = cmd->alias ; a ; a=a->next)
+	for (a = cmd->userdefined->alias ; a ; a=a->next)
 	{
 		if (!strcmp(s, a->name))
 		{
@@ -872,12 +872,12 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 		a = (cmdalias_t *)Z_Malloc (sizeof(cmdalias_t));
 		strlcpy (a->name, s, sizeof (a->name));
 		// insert it at the right alphanumeric position
-		for( prev = NULL, current = cmd->alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
+		for( prev = NULL, current = cmd->userdefined->alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
 			;
 		if( prev ) {
 			prev->next = a;
 		} else {
-			cmd->alias = a;
+			cmd->userdefined->alias = a;
 		}
 		a->next = current;
 	}
@@ -924,14 +924,14 @@ static void Cmd_UnAlias_f (cmd_state_t *cmd)
 	{
 		s = Cmd_Argv(cmd, i);
 		p = NULL;
-		for(a = cmd->alias; a; p = a, a = a->next)
+		for(a = cmd->userdefined->alias; a; p = a, a = a->next)
 		{
 			if(!strcmp(s, a->name))
 			{
 				if (a->initstate) // we can not remove init aliases
 					continue;
-				if(a == cmd->alias)
-					cmd->alias = a->next;
+				if(a == cmd->userdefined->alias)
+					cmd->userdefined->alias = a->next;
 				if(p)
 					p->next = a->next;
 				Z_Free(a->value);
@@ -1371,7 +1371,14 @@ static void Cmd_List_f (cmd_state_t *cmd)
 	}
 
 	count = 0;
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	{
+		if (partial && (ispattern ? !matchpattern_with_separator(func->name, partial, false, "", false) : strncmp(partial, func->name, len)))
+			continue;
+		Con_Printf("%s : %s\n", func->name, func->description);
+		count++;
+	}
+	for (func = cmd->engine_functions; func; func = func->next)
 	{
 		if (partial && (ispattern ? !matchpattern_with_separator(func->name, partial, false, "", false) : strncmp(partial, func->name, len)))
 			continue;
@@ -1421,7 +1428,15 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		Con_Printf ("cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
 		count++;
 	}
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	{
+		if (!matchpattern_with_separator(func->name, partial, true, "", false))
+			if (!matchpattern_with_separator(func->description, partial, true, "", false))
+				continue;
+		Con_Printf("command ^2%s^7: %s\n", func->name, func->description);
+		count++;
+	}
+	for (func = cmd->engine_functions; func; func = func->next)
 	{
 		if (!matchpattern_with_separator(func->name, partial, true, "", false))
 		if (!matchpattern_with_separator(func->description, partial, true, "", false))
@@ -1429,7 +1444,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		Con_Printf("command ^2%s^7: %s\n", func->name, func->description);
 		count++;
 	}
-	for (alias = cmd->alias; alias; alias = alias->next)
+	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
 	{
 		// procede here a bit differently as an alias value always got a final \n
 		if (!matchpattern_with_separator(alias->name, partial, true, "", false))
@@ -1462,15 +1477,19 @@ void Cmd_Init(void)
 	// client console can see server cvars because the user may start a server
 	cmd_client.cvars = &cvars_all;
 	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
+	cmd_client.userdefined = &cmd_userdefined_all;
 	// stuffcmd from server has access to the reasonable client things, but it probably doesn't need to access the client's server-only cvars
 	cmd_clientfromserver.cvars = &cvars_all;
 	cmd_clientfromserver.cvars_flagsmask = CVAR_CLIENT;
+	cmd_clientfromserver.userdefined = &cmd_userdefined_all;
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
 	cmd_server.cvars_flagsmask = CVAR_SERVER;
+	cmd_server.userdefined = &cmd_userdefined_all;
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
+	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
 }
 
 void Cmd_Init_Commands(qboolean dedicated_server)
@@ -1674,37 +1693,63 @@ void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function,
 		return;
 	}
 
-	// fail if the command already exists in this interpreter
-	for (func = cmd->functions; func; func = func->next)
-		if (!strcmp(cmd_name, func->name))
-			break;
+	if (function)
+	{
+		// fail if the command already exists in this interpreter
+		for (func = cmd->engine_functions; func; func = func->next)
+		{
+			if (!strcmp(cmd_name, func->name))
+			{
+				Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
+				return;
+			}
+		}
 
-	if (func)
-	{
-		// command already defined...
-		if (function)
-			Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-		else	//[515]: csqc
-			func->csqcfunc = true;
-	}
-	else
-	{
 		func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
 		func->name = cmd_name;
 		func->function = function;
 		func->description = description;
-		if (!function)			//[515]: csqc
-			func->csqcfunc = true;
-		func->next = cmd->functions;
+		func->next = cmd->engine_functions;
 
 		// insert it at the right alphanumeric position
-		for (prev = NULL, current = cmd->functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+		for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
 			;
 		if (prev) {
 			prev->next = func;
 		}
 		else {
-			cmd->functions = func;
+			cmd->engine_functions = func;
+		}
+		func->next = current;
+	}
+	else
+	{
+		// mark csqcfunc if the function already exists in the csqc_functions list
+		for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		{
+			if (!strcmp(cmd_name, func->name))
+			{
+				func->csqcfunc = true; //[515]: csqc
+				return;
+			}
+		}
+
+
+		func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
+		func->name = cmd_name;
+		func->function = function;
+		func->description = description;
+		func->csqcfunc = true; //[515]: csqc
+		func->next = cmd->userdefined->csqc_functions;
+
+		// insert it at the right alphanumeric position
+		for (prev = NULL, current = cmd->userdefined->csqc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+			;
+		if (prev) {
+			prev->next = func;
+		}
+		else {
+			cmd->userdefined->csqc_functions = func;
 		}
 		func->next = current;
 	}
@@ -1719,7 +1764,11 @@ qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
 {
 	cmd_function_t	*func;
 
-	for (func=cmd->functions ; func ; func=func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!strcmp(cmd_name, func->name))
+			return true;
+
+	for (func=cmd->engine_functions ; func ; func=func->next)
 		if (!strcmp (cmd_name,func->name))
 			return true;
 
@@ -1743,7 +1792,11 @@ const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial)
 		return NULL;
 
 // check functions
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			return func->name;
+
+	for (func = cmd->engine_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			return func->name;
 
@@ -1772,7 +1825,11 @@ int Cmd_CompleteCountPossible (cmd_state_t *cmd, const char *partial)
 		return 0;
 
 	// Loop through the command list and count all partial matches
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			h++;
+
+	for (func = cmd->engine_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			h++;
 
@@ -1798,8 +1855,11 @@ const char **Cmd_CompleteBuildList (cmd_state_t *cmd, const char *partial)
 
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
-	// Loop through the alias list and print all matches
-	for (func = cmd->functions; func; func = func->next)
+	// Loop through the functions lists and print all matches
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			buf[bpos++] = func->name;
+	for (func = cmd->engine_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			buf[bpos++] = func->name;
 
@@ -1813,7 +1873,10 @@ void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial)
 	cmd_function_t *func;
 	size_t len = strlen(partial);
 	// Loop through the command list and print all matches
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!strncasecmp(partial, func->name, len))
+			Con_Printf("^2%s^7: %s\n", func->name, func->description);
+	for (func = cmd->engine_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			Con_Printf("^2%s^7: %s\n", func->name, func->description);
 }
@@ -1838,7 +1901,7 @@ const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial)
 		return NULL;
 
 	// Check functions
-	for (alias = cmd->alias; alias; alias = alias->next)
+	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			return alias->name;
 
@@ -1851,7 +1914,7 @@ void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial)
 	cmdalias_t *alias;
 	size_t len = strlen(partial);
 	// Loop through the alias list and print all matches
-	for (alias = cmd->alias; alias; alias = alias->next)
+	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			Con_Printf("^5%s^7: %s", alias->name, alias->value);
 }
@@ -1880,7 +1943,7 @@ int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial)
 		return 0;
 
 	// Loop through the command list and count all partial matches
-	for (alias = cmd->alias; alias; alias = alias->next)
+	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			h++;
 
@@ -1907,7 +1970,7 @@ const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
-	for (alias = cmd->alias; alias; alias = alias->next)
+	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
 			buf[bpos++] = alias->name;
 
@@ -1918,7 +1981,7 @@ const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 void Cmd_ClearCsqcFuncs (cmd_state_t *cmd)
 {
 	cmd_function_t *func;
-	for (func = cmd->functions; func; func = func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
 		func->csqcfunc = false;
 }
 
@@ -1947,12 +2010,20 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		goto done; // no tokens
 
 // check functions
-	for (func = cmd->functions; func; func=func->next)
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	{
+		if (!strcasecmp(cmd->argv[0], func->name))
+		{
+			if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
+				goto done;
+			break;
+		}
+	}
+
+	for (func = cmd->engine_functions; func; func=func->next)
 	{
 		if (!strcasecmp (cmd->argv[0], func->name))
 		{
-			if (func->csqcfunc && CL_VM_ConsoleCommand (text))	//[515]: csqc
-				goto done;
 			switch (src)
 			{
 			case src_command:
@@ -1980,7 +2051,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	}
 
 // check alias
-	for (a=cmd->alias ; a ; a=a->next)
+	for (a=cmd->userdefined->alias ; a ; a=a->next)
 	{
 		if (!strcasecmp (cmd->argv[0], a->name))
 		{
@@ -2191,9 +2262,11 @@ void Cmd_SaveInitState(void)
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f;
 		cmdalias_t *a;
-		for (f = cmd->functions; f; f = f->next)
+		for (f = cmd->userdefined->csqc_functions; f; f = f->next)
 			f->initstate = true;
-		for (a = cmd->alias; a; a = a->next)
+		for (f = cmd->engine_functions; f; f = f->next)
+			f->initstate = true;
+		for (a = cmd->userdefined->alias; a; a = a->next)
 		{
 			a->initstate = true;
 			a->initialvalue = Mem_strdup(zonemempool, a->value);
@@ -2210,7 +2283,7 @@ void Cmd_RestoreInitState(void)
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f, **fp;
 		cmdalias_t *a, **ap;
-		for (fp = &cmd->functions; (f = *fp);)
+		for (fp = &cmd->userdefined->csqc_functions; (f = *fp);)
 		{
 			if (f->initstate)
 				fp = &f->next;
@@ -2222,7 +2295,19 @@ void Cmd_RestoreInitState(void)
 				Z_Free(f);
 			}
 		}
-		for (ap = &cmd->alias; (a = *ap);)
+		for (fp = &cmd->engine_functions; (f = *fp);)
+		{
+			if (f->initstate)
+				fp = &f->next;
+			else
+			{
+				// destroy this command, it didn't exist at init
+				Con_DPrintf("Cmd_RestoreInitState: Destroying command %s\n", f->name);
+				*fp = f->next;
+				Z_Free(f);
+			}
+		}
+		for (ap = &cmd->userdefined->alias; (a = *ap);)
 		{
 			if (a->initstate)
 			{
