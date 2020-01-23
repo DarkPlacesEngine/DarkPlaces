@@ -76,10 +76,20 @@ typedef struct cmddeferred_s
 	double delay;
 } cmddeferred_t;
 
+/// container for user-defined QC functions and aliases, shared between different command interpreters
+typedef struct cmd_userdefined_s
+{
+	// csqc functions - this is a mess
+	cmd_function_t *csqc_functions;
+
+	// aliases
+	cmdalias_t *alias;
+}
+cmd_userdefined_t;
+
+/// command interpreter state - the tokenizing and execution of commands, as well as pointers to which cvars and aliases they can access
 typedef struct cmd_state_s
 {
-	cmdalias_t *alias;
-
 	qboolean wait;
 
 	mempool_t *mempool;
@@ -99,20 +109,29 @@ typedef struct cmd_state_s
 	const char *args;
 	cmd_source_t source;
 
-	cmd_function_t *functions;		// possible commands to execute
+	cmd_userdefined_t *userdefined; // possible csqc functions and aliases to execute
+
+	cmd_function_t *engine_functions;
 
 	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
 	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
 }
 cmd_state_t;
 
+extern cmd_userdefined_t cmd_userdefined_all; // aliases and csqc functions
+extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
+
 // command interpreter for client commands injected by CSQC, MQC or client engine code
+// uses cmddefs_all
 extern cmd_state_t cmd_client;
 // command interpreter for client commands received over network from server
+// uses cmddefs_all
 extern cmd_state_t cmd_clientfromserver;
 // command interpreter for server commands injected by MQC, SVQC, menu engine code or server engine code
+// uses cmddefs_all
 extern cmd_state_t cmd_server;
 // command interpreter for server commands received over network from clients
+// uses cmddefs_null
 extern cmd_state_t cmd_serverfromclient;
 
 extern qboolean host_stuffcmdsrun;
