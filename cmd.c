@@ -27,6 +27,9 @@ cmd_state_t cmd_clientfromserver;
 cmd_state_t cmd_server;
 cmd_state_t cmd_serverfromclient;
 
+cmd_userdefined_t cmd_userdefined_all;
+cmd_userdefined_t cmd_userdefined_null;
+
 typedef struct cmd_iter_s {
 	cmd_state_t *cmd;
 }
