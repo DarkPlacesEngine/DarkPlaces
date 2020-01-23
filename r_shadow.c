@@ -1948,8 +1948,6 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 	randomseed_t randomseed;
 	vec3_t baseshotcolor;
 
-	t->started = 1;
-
 	normalphotonscaling = 1.0f / max(0.0000001f, r_shadow_bouncegrid_state.settings.energyperphoton);
 	for (lightindex = 0;lightindex < range2;lightindex++)
 	{
@@ -2333,7 +2331,6 @@ static void R_Shadow_BounceGrid_Slice(int zi)
 
 static void R_Shadow_BounceGrid_Slice_Task(taskqueue_task_t *t)
 {
-	t->started = 1;
 	R_Shadow_BounceGrid_Slice((int)t->i[0]);
 	t->done = 1;
 }
@@ -2347,7 +2344,6 @@ static void R_Shadow_BounceGrid_EnqueueSlices_Task(taskqueue_task_t *t)
 		TaskQueue_Yield(t);
 		return;
 	}
-	t->started = 1;
 	slices = r_shadow_bouncegrid_state.resolution[2] - 2;
 	for (i = 0; i < slices; i++)
 		TaskQueue_Setup(r_shadow_bouncegrid_state.slices_tasks + i, NULL, R_Shadow_BounceGrid_Slice_Task, i + 1, 0, NULL, NULL);
@@ -2393,7 +2389,6 @@ static void R_Shadow_BounceGrid_BlurPixels_Task(taskqueue_task_t *t)
 {
 	float *pixels[4];
 	unsigned int resolution[3];
-	t->started = 1;
 	if (r_shadow_bouncegrid_state.settings.blur)
 	{
 		VectorCopy(r_shadow_bouncegrid_state.resolution, resolution);
@@ -2593,7 +2588,6 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 
 void R_Shadow_BounceGrid_ClearTex_Task(taskqueue_task_t *t)
 {
-	t->started = 1;
 	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
 	t->done = 1;
 }
@@ -2730,7 +2724,6 @@ static void R_Shadow_BounceGrid_TracePhotons_Shot(r_shadow_bouncegrid_photon_t *
 static void R_Shadow_BounceGrid_TracePhotons_ShotTask(taskqueue_task_t *t)
 {
 	r_shadow_bouncegrid_photon_t *p = (r_shadow_bouncegrid_photon_t *)t->p[0];
-	t->started = 1;
 	R_Shadow_BounceGrid_TracePhotons_Shot(p, r_shadow_bouncegrid_state.settings.maxbounce, p->start, p->end, p->color, p->bounceminimumintensity2, p->startrefractiveindex);
 	t->done = 1;
 }
@@ -2738,7 +2731,6 @@ static void R_Shadow_BounceGrid_TracePhotons_ShotTask(taskqueue_task_t *t)
 static void R_Shadow_BounceGrid_EnqueuePhotons_Task(taskqueue_task_t *t)
 {
 	int i;
-	t->started = 1;
 	for (i = 0; i < r_shadow_bouncegrid_state.numphotons; i++)
 		TaskQueue_Setup(r_shadow_bouncegrid_state.photons_tasks + i, NULL, R_Shadow_BounceGrid_TracePhotons_ShotTask, 0, 0, r_shadow_bouncegrid_state.photons + i, NULL);
 	TaskQueue_Setup(&r_shadow_bouncegrid_state.photons_done_task, NULL, TaskQueue_Task_CheckTasksDone, r_shadow_bouncegrid_state.numphotons, 0, r_shadow_bouncegrid_state.photons_tasks, NULL);
