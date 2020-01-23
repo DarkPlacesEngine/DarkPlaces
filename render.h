@@ -239,7 +239,6 @@ skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int texturef
 rtexture_t *R_GetCubemap(const char *basename);
 
 void R_View_WorldVisibility(qboolean forcenovis);
-void R_DrawDecals(void);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 

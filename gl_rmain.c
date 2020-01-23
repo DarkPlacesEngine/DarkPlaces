@@ -5793,7 +5793,6 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(prvm_prog_t *prog);
 static void R_DrawModelDecals(void);
-extern cvar_t cl_decals_newsystem;
 extern qboolean r_shadow_usingdeferredprepass;
 extern int r_shadow_shadowmapatlas_modelshadows_size;
 void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
@@ -5920,18 +5919,9 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 
 	if (cl.csqc_vidvars.drawworld)
 	{
-		if (cl_decals_newsystem.integer)
-		{
-			R_DrawModelDecals();
-			if (r_timereport_active)
-				R_TimeReport("modeldecals");
-		}
-		else
-		{
-			R_DrawDecals();
-			if (r_timereport_active)
-				R_TimeReport("decals");
-		}
+		R_DrawModelDecals();
+		if (r_timereport_active)
+			R_TimeReport("modeldecals");
 
 		R_DrawParticles();
 		if (r_timereport_active)
@@ -9389,9 +9379,6 @@ static void R_DecalSystem_ApplySplatEntities(const vec3_t worldorigin, const vec
 	float worldmaxs[3];
 	entity_render_t *ent;
 
-	if (!cl_decals_newsystem.integer)
-		return;
-
 	worldmins[0] = worldorigin[0] - worldsize;
 	worldmins[1] = worldorigin[1] - worldsize;
 	worldmins[2] = worldorigin[2] - worldsize;
@@ -9429,7 +9416,7 @@ void R_DecalSystem_SplatEntities(const vec3_t worldorigin, const vec3_t worldnor
 {
 	r_decalsystem_splatqueue_t *queue;
 
-	if (!cl_decals_newsystem.integer || r_decalsystem_numqueued == MAX_DECALSYSTEM_QUEUE)
+	if (r_decalsystem_numqueued == MAX_DECALSYSTEM_QUEUE)
 		return;
 
 	queue = &r_decalsystem_queue[r_decalsystem_numqueued++];
@@ -9673,7 +9660,7 @@ static void R_DrawModelDecals(void)
 
 	r_refdef.stats[r_stat_totaldecals] += numdecals;
 
-	if (r_showsurfaces.integer)
+	if (r_showsurfaces.integer || !r_drawdecals.integer)
 		return;
 
 	R_DrawModelDecals_Entity(r_refdef.scene.worldentity);

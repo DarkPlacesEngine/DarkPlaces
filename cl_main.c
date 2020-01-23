@@ -141,7 +141,6 @@ void CL_ClearState(void)
 	cl.max_lightstyle = MAX_LIGHTSTYLES;
 	cl.max_brushmodel_entities = MAX_EDICTS;
 	cl.max_particles = MAX_PARTICLES_INITIAL; // grows dynamically
-	cl.max_decals = MAX_DECALS_INITIAL; // grows dynamically
 	cl.max_showlmps = 0;
 
 	cl.num_dlights = 0;
@@ -158,7 +157,6 @@ void CL_ClearState(void)
 	cl.lightstyle = (lightstyle_t *)Mem_Alloc(cls.levelmempool, cl.max_lightstyle * sizeof(lightstyle_t));
 	cl.brushmodel_entities = (int *)Mem_Alloc(cls.levelmempool, cl.max_brushmodel_entities * sizeof(int));
 	cl.particles = (particle_t *) Mem_Alloc(cls.levelmempool, cl.max_particles * sizeof(particle_t));
-	cl.decals = (decal_t *) Mem_Alloc(cls.levelmempool, cl.max_decals * sizeof(decal_t));
 	cl.showlmps = NULL;
 
 	// LadyHavoc: have to set up the baseline info for alpha and other stuff
