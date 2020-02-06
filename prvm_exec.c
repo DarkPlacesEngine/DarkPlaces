@@ -746,7 +746,7 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	double tm, starttm;
 	prvm_vec_t tempfloat;
 	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
 	unsigned int cached_entityfields = prog->entityfields;
 	unsigned int cached_entityfields_3 = prog->entityfields - 3;
 	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
@@ -853,7 +853,7 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double tm, starttm;
 	prvm_vec_t tempfloat;
 	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
 	unsigned int cached_entityfields = prog->entityfields;
 	unsigned int cached_entityfields_3 = prog->entityfields - 3;
 	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
@@ -964,7 +964,7 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double tm, starttm;
 	prvm_vec_t tempfloat;
 	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields;
+	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
 	unsigned int cached_entityfields = prog->entityfields;
 	unsigned int cached_entityfields_3 = prog->entityfields - 3;
 	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;

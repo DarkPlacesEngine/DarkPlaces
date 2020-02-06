@@ -485,6 +485,8 @@ qboolean CL_VM_UpdateView (double frametime)
 		r_refdef.scene.numlights = 0;
 		// polygonbegin without draw2d arg has to guess
 		prog->polygonbegin_guess2d = false;
+		// free memory for resources that are no longer referenced
+		PRVM_GarbageCollection(prog);
 		// pass in width and height as parameters (EXT_CSQC_1)
 		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
 		PRVM_G_FLOAT(OFS_PARM1) = vid.height;

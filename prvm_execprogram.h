@@ -281,10 +281,17 @@
 			HANDLE_OPCODE(OP_STORE_F):
 			HANDLE_OPCODE(OP_STORE_ENT):
 			HANDLE_OPCODE(OP_STORE_FLD):		// integers
-			HANDLE_OPCODE(OP_STORE_S):
 			HANDLE_OPCODE(OP_STORE_FNC):		// pointers
 				OPB->_int = OPA->_int;
 				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_STORE_S):
+				// refresh the garbage collection on the string - this guards
+				// against a certain sort of repeated migration to earlier
+				// points in the scan that could otherwise result in the string
+				// being freed for being unused
+				PRVM_GetString(prog, OPA->_int);
+				OPB->_int = OPA->_int;
+			DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_V):
 				OPB->ivector[0] = OPA->ivector[0];
 				OPB->ivector[1] = OPA->ivector[1];
@@ -294,7 +301,6 @@
 			HANDLE_OPCODE(OP_STOREP_F):
 			HANDLE_OPCODE(OP_STOREP_ENT):
 			HANDLE_OPCODE(OP_STOREP_FLD):		// integers
-			HANDLE_OPCODE(OP_STOREP_S):
 			HANDLE_OPCODE(OP_STOREP_FNC):		// pointers
 				if ((prvm_uint_t)OPB->_int - cached_entityfields >= cached_entityfieldsarea_entityfields)
 				{
@@ -310,6 +316,29 @@
 						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
+				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+				ptr->_int = OPA->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_STOREP_S):
+				if ((prvm_uint_t)OPB->_int - cached_entityfields >= cached_entityfieldsarea_entityfields)
+				{
+					if ((prvm_uint_t)OPB->_int >= cached_entityfieldsarea)
+					{
+						PRE_ERROR();
+						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+						goto cleanup;
+					}
+					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
+					{
+						PRE_ERROR();
+						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+					}
+				}
+				// refresh the garbage collection on the string - this guards
+				// against a certain sort of repeated migration to earlier
+				// points in the scan that could otherwise result in the string
+				// being freed for being unused
+				PRVM_GetString(prog, OPA->_int);
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
@@ -361,7 +390,6 @@
 			HANDLE_OPCODE(OP_LOAD_F):
 			HANDLE_OPCODE(OP_LOAD_FLD):
 			HANDLE_OPCODE(OP_LOAD_ENT):
-			HANDLE_OPCODE(OP_LOAD_S):
 			HANDLE_OPCODE(OP_LOAD_FNC):
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
@@ -377,6 +405,27 @@
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
 				OPC->_int = ((prvm_eval_t *)(ed->fields.ip + OPB->_int))->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOAD_S):
+				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
+					goto cleanup;
+				}
+				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
+					goto cleanup;
+				}
+				ed = PRVM_PROG_TO_EDICT(OPA->edict);
+				OPC->_int = ((prvm_eval_t *)(ed->fields.ip + OPB->_int))->_int;
+				// refresh the garbage collection on the string - this guards
+				// against a certain sort of repeated migration to earlier
+				// points in the scan that could otherwise result in the string
+				// being freed for being unused
+				PRVM_GetString(prog, OPC->_int);
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_LOAD_V):
@@ -501,7 +550,7 @@
 						starttm = tm;
 #endif
 						// builtins may cause ED_Alloc() to be called, update cached variables
-						cached_edictsfields = prog->edictsfields;
+						cached_edictsfields = prog->edictsfields.fp;
 						cached_entityfields = prog->entityfields;
 						cached_entityfields_3 = prog->entityfields - 3;
 						cached_entityfieldsarea = prog->entityfieldsarea;
