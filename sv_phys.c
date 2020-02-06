@@ -3148,6 +3148,9 @@ void SV_Physics (void)
 	int i;
 	prvm_edict_t *ent;
 
+	// free memory for resources that are no longer referenced
+	PRVM_GarbageCollection(prog);
+
 // let the progs know that a new frame has started
 	PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(prog->edicts);
 	PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(prog->edicts);

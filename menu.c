@@ -5306,6 +5306,9 @@ static void MP_Draw (void)
 	// TODO: this needs to be exposed to R_SetView (or something similar) ASAP [2/5/2008 Andreas]
 	r_refdef.scene.time = realtime;
 
+	// free memory for resources that are no longer referenced
+	PRVM_GarbageCollection(prog);
+
 	// FIXME: this really shouldnt error out lest we have a very broken refdef state...?
 	// or does it kill the server too?
 	PRVM_G_FLOAT(OFS_PARM0) = vid.width;

@@ -489,6 +489,31 @@ typedef struct prvm_stringbuffer_s
 }
 prvm_stringbuffer_t;
 
+// flags for knownstrings
+#define KNOWNSTRINGFLAG_ENGINE 1
+#define KNOWNSTRINGFLAG_GCMARK 2
+#define KNOWNSTRINGFLAG_GCPRUNE 4 // cleared by GCMARK code, string is freed if prune remains after two sweeps
+
+typedef enum prvm_prog_garbagecollection_state_stage_e
+{
+	PRVM_GC_START = 0,
+	PRVM_GC_GLOBALS_MARK,
+	PRVM_GC_FIELDS_MARK,
+	PRVM_GC_KNOWNSTRINGS_SWEEP,
+	PRVM_GC_RESET,
+}
+prvm_prog_garbagecollection_state_stage_t;
+
+typedef struct prvm_prog_garbagecollection_state_s
+{
+	prvm_prog_garbagecollection_state_stage_t stage;
+	int globals_mark_progress;
+	int fields_mark_progress;
+	int fields_mark_progress_entity;
+	int knownstrings_sweep_progress;
+}
+prvm_prog_garbagecollection_state_t;
+
 // [INIT] variables flagged with this token can be initialized by 'you'
 // NOTE: external code has to create and free the mempools but everything else is done by prvm !
 typedef struct prvm_prog_s
@@ -547,11 +572,14 @@ typedef struct prvm_prog_s
 	// (simple optimization of the free string search)
 	int					firstfreeknownstring;
 	const char			**knownstrings;
-	unsigned char		*knownstrings_freeable;
+	unsigned char		*knownstrings_flags;
 	const char          **knownstrings_origin;
 	const char			***stringshash;
 
 	memexpandablearray_t	stringbuffersarray;
+
+	// garbage collection status
+	prvm_prog_garbagecollection_state_t gc;
 
 	// all memory allocations related to this vm_prog (code, edicts, strings)
 	mempool_t			*progs_mempool; // [INIT]
@@ -621,7 +649,11 @@ typedef struct prvm_prog_s
 	int					reserved_edicts; // [INIT]
 
 	prvm_edict_t		*edicts;
-	prvm_vec_t		*edictsfields;
+	union
+	{
+		prvm_vec_t *fp;
+		prvm_int_t *ip;
+	} edictsfields;
 	void				*edictprivate;
 
 	// size of the engine private struct
@@ -767,6 +799,7 @@ void PRVM_PrintState(prvm_prog_t *prog, int stack_index);
 void PRVM_Crash(prvm_prog_t *prog);
 void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize);
 const char *PRVM_AllocationOrigin(prvm_prog_t *prog);
+void PRVM_GarbageCollection(prvm_prog_t *prog);
 
 ddef_t *PRVM_ED_FindField(prvm_prog_t *prog, const char *name);
 ddef_t *PRVM_ED_FindGlobal(prvm_prog_t *prog, const char *name);

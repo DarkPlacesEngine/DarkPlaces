@@ -44,6 +44,10 @@ cvar_t prvm_errordump = {CVAR_CLIENT | CVAR_SERVER, "prvm_errordump", "0", "writ
 cvar_t prvm_breakpointdump = {CVAR_CLIENT | CVAR_SERVER, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
 cvar_t prvm_reuseedicts_startuptime = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
 cvar_t prvm_reuseedicts_neverinsameframe = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
+cvar_t prvm_garbagecollection_enable = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_enable", "1", "automatically scan for and free resources that are not referenced by the code being executed in the VM"};
+cvar_t prvm_garbagecollection_notify = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection"};
+cvar_t prvm_garbagecollection_scan_limit = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_scan_limit", "10000", "scan this many fields or resources per frame to free up unreferenced resources"};
+cvar_t prvm_garbagecollection_strings = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
 
 static double prvm_reuseedicts_always_allow = 0;
 qboolean prvm_runawaycheck = true;
@@ -76,13 +80,13 @@ static void PRVM_MEM_Alloc(prvm_prog_t *prog)
 
 	// alloc edict fields
 	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
-	prog->edictsfields = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, prog->entityfieldsarea * sizeof(prvm_vec_t));
+	prog->edictsfields.fp = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, prog->entityfieldsarea * sizeof(prvm_vec_t));
 
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.fp = prog->edictsfields + i * prog->entityfields;
+		prog->edicts[i].fields.fp = prog->edictsfields.fp + i * prog->entityfields;
 	}
 }
 
@@ -104,14 +108,14 @@ void PRVM_MEM_IncreaseEdicts(prvm_prog_t *prog)
 	prog->max_edicts = min(prog->max_edicts + 256, prog->limit_edicts);
 
 	prog->entityfieldsarea = prog->entityfields * prog->max_edicts;
-	prog->edictsfields = (prvm_vec_t*)Mem_Realloc(prog->progs_mempool, (void *)prog->edictsfields, prog->entityfieldsarea * sizeof(prvm_vec_t));
+	prog->edictsfields.fp = (prvm_vec_t*)Mem_Realloc(prog->progs_mempool, (void *)prog->edictsfields.fp, prog->entityfieldsarea * sizeof(prvm_vec_t));
 	prog->edictprivate = (void *)Mem_Realloc(prog->progs_mempool, (void *)prog->edictprivate, prog->max_edicts * prog->edictprivate_size);
 
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
 		prog->edicts[i].priv.required  = (prvm_edict_private_t *)((unsigned char  *)prog->edictprivate + i * prog->edictprivate_size);
-		prog->edicts[i].fields.fp = prog->edictsfields + i * prog->entityfields;
+		prog->edicts[i].fields.fp = prog->edictsfields.fp + i * prog->entityfields;
 	}
 
 	prog->end_increase_edicts(prog);
@@ -2021,7 +2025,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	prog->numknownstrings = 0;
 	prog->maxknownstrings = 0;
 	prog->knownstrings = NULL;
-	prog->knownstrings_freeable = NULL;
+	prog->knownstrings_flags = NULL;
 
 	Mem_ExpandableArray_NewArray(&prog->stringbuffersarray, prog->progs_mempool, sizeof(prvm_stringbuffer_t), 64);
 
@@ -2967,6 +2971,10 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_breakpointdump);
 	Cvar_RegisterVariable (&prvm_reuseedicts_startuptime);
 	Cvar_RegisterVariable (&prvm_reuseedicts_neverinsameframe);
+	Cvar_RegisterVariable (&prvm_garbagecollection_enable);
+	Cvar_RegisterVariable (&prvm_garbagecollection_notify);
+	Cvar_RegisterVariable (&prvm_garbagecollection_scan_limit);
+	Cvar_RegisterVariable (&prvm_garbagecollection_strings);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !COM_CheckParm("-norunaway");
@@ -3031,6 +3039,11 @@ const char *PRVM_GetString(prvm_prog_t *prog, int num)
 				VM_Warning(prog, "PRVM_GetString: Invalid zone-string offset (%i has been freed)\n", num);
 				return "";
 			}
+			// refresh the garbage collection on the string - this guards
+			// against a certain sort of repeated migration to earlier
+			// points in the scan that could otherwise result in the string
+			// being freed for being unused
+			prog->knownstrings_flags[num] = (prog->knownstrings_flags[num] & ~KNOWNSTRINGFLAG_GCPRUNE) | KNOWNSTRINGFLAG_GCMARK;
 			return prog->knownstrings[num];
 		}
 		else
@@ -3051,11 +3064,45 @@ const char *PRVM_ChangeEngineString(prvm_prog_t *prog, int i, const char *s)
 {
 	const char *old;
 	i = i - PRVM_KNOWNSTRINGBASE;
-	if(i < 0 || i >= prog->numknownstrings)
-		prog->error_cmd("PRVM_ChangeEngineString: s is not an engine string");
+	if (i < 0 || i >= prog->numknownstrings)
+		prog->error_cmd("PRVM_ChangeEngineString: string index %i is out of bounds", i);
+	else if ((prog->knownstrings_flags[i] & KNOWNSTRINGFLAG_ENGINE) == 0)
+		prog->error_cmd("PRVM_ChangeEngineString: string index %i is not an engine string", i);
 	old = prog->knownstrings[i];
 	prog->knownstrings[i] = s;
 	return old;
+}
+
+static void PRVM_NewKnownString(prvm_prog_t *prog, int i, int flags, const char *s)
+{
+	if (i >= prog->numknownstrings)
+	{
+		if (i >= prog->maxknownstrings)
+		{
+			const char **oldstrings = prog->knownstrings;
+			const unsigned char *oldstrings_flags = prog->knownstrings_flags;
+			const char **oldstrings_origin = prog->knownstrings_origin;
+			prog->maxknownstrings += 128;
+			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			prog->knownstrings_flags = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
+			if (prog->leaktest_active)
+				prog->knownstrings_origin = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
+			if (prog->numknownstrings)
+			{
+				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
+				memcpy((char **)prog->knownstrings_flags, oldstrings_flags, prog->numknownstrings * sizeof(unsigned char));
+				if (prog->leaktest_active)
+					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
+			}
+		}
+		prog->numknownstrings++;
+	}
+	prog->firstfreeknownstring = i + 1;
+	prog->knownstrings[i] = s;
+	// it's in use right now, spare it until the next gc pass - that said, it is not freeable so this is probably moot
+	prog->knownstrings_flags[i] = flags;
+	if (prog->leaktest_active)
+		prog->knownstrings_origin[i] = NULL;
 }
 
 int PRVM_SetEngineString(prvm_prog_t *prog, const char *s)
@@ -3079,33 +3126,7 @@ int PRVM_SetEngineString(prvm_prog_t *prog, const char *s)
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
-	if (i >= prog->numknownstrings)
-	{
-		if (i >= prog->maxknownstrings)
-		{
-			const char **oldstrings = prog->knownstrings;
-			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
-			const char **oldstrings_origin = prog->knownstrings_origin;
-			prog->maxknownstrings += 128;
-			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
-			if(prog->leaktest_active)
-				prog->knownstrings_origin = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			if (prog->numknownstrings)
-			{
-				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
-				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
-				if(prog->leaktest_active)
-					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
-			}
-		}
-		prog->numknownstrings++;
-	}
-	prog->firstfreeknownstring = i + 1;
-	prog->knownstrings[i] = s;
-	prog->knownstrings_freeable[i] = false;
-	if(prog->leaktest_active)
-		prog->knownstrings_origin[i] = NULL;
+	PRVM_NewKnownString(prog, i, KNOWNSTRINGFLAG_GCMARK | KNOWNSTRINGFLAG_ENGINE, s);
 	return PRVM_KNOWNSTRINGBASE + i;
 }
 
@@ -3156,6 +3177,7 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
 int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 {
 	int i;
+	char *s;
 	if (!bufferlength)
 	{
 		if (pointer)
@@ -3165,37 +3187,8 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
-	if (i >= prog->numknownstrings)
-	{
-		if (i >= prog->maxknownstrings)
-		{
-			const char **oldstrings = prog->knownstrings;
-			const unsigned char *oldstrings_freeable = prog->knownstrings_freeable;
-			const char **oldstrings_origin = prog->knownstrings_origin;
-			prog->maxknownstrings += 128;
-			prog->knownstrings = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			prog->knownstrings_freeable = (unsigned char *)PRVM_Alloc(prog->maxknownstrings * sizeof(unsigned char));
-			if(prog->leaktest_active)
-				prog->knownstrings_origin = (const char **)PRVM_Alloc(prog->maxknownstrings * sizeof(char *));
-			if (prog->numknownstrings)
-			{
-				memcpy((char **)prog->knownstrings, oldstrings, prog->numknownstrings * sizeof(char *));
-				memcpy((char **)prog->knownstrings_freeable, oldstrings_freeable, prog->numknownstrings * sizeof(unsigned char));
-				if(prog->leaktest_active)
-					memcpy((char **)prog->knownstrings_origin, oldstrings_origin, prog->numknownstrings * sizeof(char *));
-			}
-			if (oldstrings)
-				Mem_Free((char **)oldstrings);
-			if (oldstrings_freeable)
-				Mem_Free((unsigned char *)oldstrings_freeable);
-			if (oldstrings_origin)
-				Mem_Free((char **)oldstrings_origin);
-		}
-		prog->numknownstrings++;
-	}
-	prog->firstfreeknownstring = i + 1;
-	prog->knownstrings[i] = (char *)PRVM_Alloc(bufferlength);
-	prog->knownstrings_freeable[i] = true;
+	s = PRVM_Alloc(bufferlength);
+	PRVM_NewKnownString(prog, i, KNOWNSTRINGFLAG_GCMARK, s);
 	if(prog->leaktest_active)
 		prog->knownstrings_origin[i] = PRVM_AllocationOrigin(prog);
 	if (pointer)
@@ -3214,14 +3207,14 @@ void PRVM_FreeString(prvm_prog_t *prog, int num)
 		num = num - PRVM_KNOWNSTRINGBASE;
 		if (!prog->knownstrings[num])
 			prog->error_cmd("PRVM_FreeString: attempt to free a non-existent or already freed string");
-		if (!prog->knownstrings_freeable[num])
+		if (!prog->knownstrings_flags[num])
 			prog->error_cmd("PRVM_FreeString: attempt to free a string owned by the engine");
 		PRVM_Free((char *)prog->knownstrings[num]);
 		if(prog->leaktest_active)
 			if(prog->knownstrings_origin[num])
 				PRVM_Free((char *)prog->knownstrings_origin[num]);
 		prog->knownstrings[num] = NULL;
-		prog->knownstrings_freeable[num] = false;
+		prog->knownstrings_flags[num] = 0;
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
@@ -3416,7 +3409,7 @@ void PRVM_LeakTest(prvm_prog_t *prog)
 	for (i = 0; i < prog->numknownstrings; ++i)
 	{
 		if(prog->knownstrings[i])
-		if(prog->knownstrings_freeable[i])
+		if(prog->knownstrings_flags[i])
 		if(prog->knownstrings_origin[i])
 		if(!PRVM_IsStringReferenced(prog, PRVM_KNOWNSTRINGBASE + i))
 		{
@@ -3477,4 +3470,128 @@ void PRVM_LeakTest(prvm_prog_t *prog)
 
 	if(!leaked)
 		Con_Printf("Congratulations. No leaks found.\n");
+}
+
+void PRVM_GarbageCollection(prvm_prog_t *prog)
+{
+	int limit = prvm_garbagecollection_scan_limit.integer;
+	prvm_prog_garbagecollection_state_t *gc = &prog->gc;
+	if (!prvm_garbagecollection_enable.integer)
+		return;
+	// philosophy:
+	// we like to limit how much scanning we do so it doesn't put a significant
+	// burden on the cpu, so each of these are not complete scans, we also like
+	// to have consistent cpu usage so we do a bit of work on each category of
+	// leaked object every frame
+	switch (gc->stage)
+	{
+	case PRVM_GC_START:
+		gc->stage++;
+		break;
+	case PRVM_GC_GLOBALS_MARK:
+		for (; gc->globals_mark_progress < prog->numglobaldefs && (limit--) > 0; gc->globals_mark_progress++)
+		{
+			ddef_t *d = &prog->globaldefs[gc->globals_mark_progress];
+			switch (d->type)
+			{
+			case ev_string:
+				{
+					prvm_int_t s = prog->globals.ip[d->ofs];
+					if (s & PRVM_KNOWNSTRINGBASE)
+					{
+						prvm_int_t num = s - PRVM_KNOWNSTRINGBASE;
+						if (!prog->knownstrings[num])
+						{
+							// invalid
+							Con_DPrintf("PRVM_GarbageCollection: Found bogus strzone reference in global %i (global name: \"%s\"), erasing reference", d->ofs, PRVM_GetString(prog, d->s_name));
+							prog->globals.ip[d->ofs] = 0;
+							continue;
+						}
+						prog->knownstrings_flags[num] = (prog->knownstrings_flags[num] | KNOWNSTRINGFLAG_GCMARK) & ~KNOWNSTRINGFLAG_GCPRUNE;
+					}
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		if (gc->globals_mark_progress >= prog->numglobaldefs)
+			gc->stage++;
+		break;
+	case PRVM_GC_FIELDS_MARK:
+		for (; gc->fields_mark_progress < prog->numfielddefs && limit > 0;)
+		{
+			ddef_t *d = &prog->fielddefs[gc->fields_mark_progress];
+			switch (d->type)
+			{
+			case ev_string:
+				//for (gc-> entityindex = 0; entityindex < prog->num_edicts; entityindex++)
+				for (;gc->fields_mark_progress_entity < prog->num_edicts && (limit--) > 0;gc->fields_mark_progress_entity++)
+				{
+					int entityindex = gc->fields_mark_progress_entity;
+					prvm_int_t s = prog->edictsfields.ip[entityindex * prog->entityfields + d->ofs];
+					if (s & PRVM_KNOWNSTRINGBASE)
+					{
+						prvm_int_t num = s - PRVM_KNOWNSTRINGBASE;
+						if (!prog->knownstrings[num])
+						{
+							// invalid
+							Con_DPrintf("PRVM_GarbageCollection: Found bogus strzone reference in edict %i field %i (field name: \"%s\"), erasing reference", entityindex, d->ofs, PRVM_GetString(prog, d->s_name));
+							prog->edictsfields.ip[entityindex * prog->entityfields + d->ofs] = 0;
+							continue;
+						}
+						prog->knownstrings_flags[num] = (prog->knownstrings_flags[num] | KNOWNSTRINGFLAG_GCMARK) & ~KNOWNSTRINGFLAG_GCPRUNE;
+					}
+				}
+				if (gc->fields_mark_progress_entity >= prog->num_edicts)
+				{
+					gc->fields_mark_progress_entity = 0;
+					gc->fields_mark_progress++;
+				}
+				break;
+			default:
+				gc->fields_mark_progress_entity = 0;
+				gc->fields_mark_progress++;
+				break;
+			}
+		}
+		if (gc->fields_mark_progress >= prog->numfielddefs)
+			gc->stage++;
+		break;
+	case PRVM_GC_KNOWNSTRINGS_SWEEP:
+		// free any strzone'd strings that are not marked
+		if (!prvm_garbagecollection_strings.integer)
+		{
+			gc->stage++;
+			break;
+		}
+		for (;gc->knownstrings_sweep_progress < prog->numknownstrings && (limit--) > 0;gc->knownstrings_sweep_progress++)
+		{
+			int num = gc->knownstrings_sweep_progress;
+			if (prog->knownstrings[num] && (prog->knownstrings_flags[num] & (KNOWNSTRINGFLAG_GCMARK | KNOWNSTRINGFLAG_ENGINE)) == 0)
+			{
+				if (prog->knownstrings_flags[num] & KNOWNSTRINGFLAG_GCPRUNE)
+				{
+					// string has been marked for pruning two passes in a row
+					if (prvm_garbagecollection_notify.integer)
+						Con_DPrintf("prvm_garbagecollection_notify: %s: freeing unreferenced string %i: \"%s\"\n", prog->name, num, prog->knownstrings[num]);
+					Mem_Free((char *)prog->knownstrings[num]);
+					prog->knownstrings[num] = NULL;
+					prog->knownstrings_flags[num] = 0;
+					prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
+				}
+				else
+				{
+					// mark it for pruning next pass
+					prog->knownstrings_flags[num] |= KNOWNSTRINGFLAG_GCPRUNE;
+				}
+			}
+		}
+		if (gc->knownstrings_sweep_progress >= prog->numknownstrings)
+			gc->stage++;
+		break;
+	case PRVM_GC_RESET:
+	default:
+		memset(gc, 0, sizeof(*gc));
+	}
 }
