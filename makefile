@@ -200,7 +200,7 @@ ifeq ($(WIN32RELEASE), 1)
 #	TARGET=i686-pc-mingw32
 #	CC=$(TARGET)-g++
 #	WINDRES=$(TARGET)-windres
-	CPUOPTIMIZATIONS=-march=pentium3 -mfpmath=sse -fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math
+	CPUOPTIMIZATIONS=-march=pentium3 -mfpmath=sse -fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
 #       CPUOPTIMIZATIONS+=-DUSE_WSPIAPI_H -DSUPPORTIPV6
 	LDFLAGS_WINCOMMON=-Wl,--large-address-aware
 else
