@@ -20,10 +20,11 @@ CC?=gcc
 # No specific CPU (386 compatible)
 #CPUOPTIMIZATIONS?=
 # Experimental
-#CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
+#CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
 # Normal
-CPUOPTIMIZATIONS?=-fno-math-errno -ffinite-math-only -fno-rounding-math -fno-signaling-nans -fno-trapping-math
+CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
+# Also, since gcc 5, -ffinite-math-only makes NaN and zero compare equal inside engine code but not inside QC, which causes error spam for seemingly valid QC code like if (x != 0) return 1 / x;
 
 SDL_CONFIG?=sdl2-config
 SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
@@ -190,11 +191,12 @@ endif # ifeq ($(DP_SSE),1)
 
 OPTIM_DEBUG=$(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -ffast-math -funroll-loops $(CPUOPTIMIZATIONS)
-#OPTIM_RELEASE=-O2 -fno-strict-aliasing -fno-math-errno -fno-trapping-math -ffinite-math-only -fno-signaling-nans -fcx-limited-range -funroll-loops $(CPUOPTIMIZATIONS)
+#OPTIM_RELEASE=-O2 -fno-strict-aliasing -fno-math-errno -fno-trapping-math -fno-signaling-nans -fcx-limited-range -funroll-loops $(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing -funroll-loops $(CPUOPTIMIZATIONS)
 #OPTIM_RELEASE=-O2 -fno-strict-aliasing $(CPUOPTIMIZATIONS)
 OPTIM_RELEASE=-O3 -fno-strict-aliasing $(CPUOPTIMIZATIONS)
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
+# Also, since gcc 5, -ffinite-math-only makes NaN and zero compare equal inside engine code but not inside QC, which causes error spam for seemingly valid QC code like if (x != 0) return 1 / x;
 
 DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
