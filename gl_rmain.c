@@ -7113,6 +7113,24 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
 {
 	rsurface.entity = r_refdef.scene.worldentity;
+	if (r != 1.0f || g != 1.0f || b != 1.0f || a != 1.0f) {
+		// HACK to provide a valid entity with modded colors to R_GetCurrentTexture.
+		// A better approach could be making this copy only once per frame.
+		static entity_render_t custom_entity;
+		int q;
+		custom_entity = *rsurface.entity;
+		for (q = 0; q < 3; ++q) {
+			float colormod = q == 0 ? r : q == 1 ? g : b;
+			custom_entity.render_fullbright[q] *= colormod;
+			custom_entity.render_modellight_ambient[q] *= colormod;
+			custom_entity.render_modellight_diffuse[q] *= colormod;
+			custom_entity.render_lightmap_ambient[q] *= colormod;
+			custom_entity.render_lightmap_diffuse[q] *= colormod;
+			custom_entity.render_rtlight_diffuse[q] *= colormod;
+		}
+		custom_entity.alpha *= a;
+		rsurface.entity = &custom_entity;
+	}
 	rsurface.skeleton = NULL;
 	rsurface.ent_skinnum = 0;
 	rsurface.ent_qwskin = -1;
