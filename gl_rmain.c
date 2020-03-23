@@ -10076,36 +10076,8 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	texture.specularscalemod = 1;
 	texture.specularpowermod = 1;
 	texture.transparentsort = TRANSPARENTSORT_DISTANCE;
-	// WHEN ADDING DEFAULTS HERE, REMEMBER TO PUT DEFAULTS IN ALL LOADERS
-	// JUST GREP FOR "specularscalemod = 1".
 
-	for (q = 0; q < 3; q++)
-	{
-		texture.render_glowmod[q] = r_refdef.view.colorscale * r_hdr_glowintensity.value;
-		texture.render_modellight_lightdir[q] = q == 2;
-		texture.render_modellight_ambient[q] = r_refdef.view.colorscale * r_refdef.scene.ambientintensity;
-		texture.render_modellight_diffuse[q] = r_refdef.view.colorscale;
-		texture.render_modellight_specular[q] = r_refdef.view.colorscale;
-		texture.render_lightmap_ambient[q] = r_refdef.view.colorscale * r_refdef.scene.ambientintensity;
-		texture.render_lightmap_diffuse[q] = r_refdef.view.colorscale * r_refdef.scene.lightmapintensity;
-		texture.render_lightmap_specular[q] = r_refdef.view.colorscale;
-		texture.render_rtlight_diffuse[q] = r_refdef.view.colorscale;
-		texture.render_rtlight_specular[q] = r_refdef.view.colorscale;
-	}
-	texture.currentalpha = 1.0f;
-
-	surface.texture = &texture;
-	surface.num_triangles = numtriangles;
-	surface.num_firsttriangle = firsttriangle;
-	surface.num_vertices = numvertices;
-	surface.num_firstvertex = firstvertex;
-
-	// now render it
-	rsurface.texture = R_GetCurrentTexture(surface.texture);
-	rsurface.lightmaptexture = NULL;
-	rsurface.deluxemaptexture = NULL;
-	rsurface.uselightmaptexture = false;
-	R_DrawModelTextureSurfaceList(1, &surfacelist, writedepth, prepass, ui);
+	R_DrawCustomSurface_Texture(&texture, texmatrix, materialflags, firstvertex, numvertices, firsttriangle, numtriangles, writedepth, prepass, ui);
 }
 
 void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
