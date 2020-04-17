@@ -1502,6 +1502,7 @@ void Cmd_Init_Commands(qboolean dedicated_server)
 //
 	// client-only commands
 	Cmd_AddCommand(&cmd_client, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
+	Cmd_AddCommand(&cmd_clientfromserver, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand(&cmd_client, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand(&cmd_client, "cprint", Cmd_Centerprint_f, "print something at the screen center");
 
