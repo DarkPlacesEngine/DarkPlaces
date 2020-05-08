@@ -282,7 +282,7 @@ typedef struct serverlist_info_s
 	/// qc-defined short status string
 	char qcstatus[128];
 	/// frags/ping/name list (if they fit in the packet)
-	char players[1400];
+	char players[2800];
 	/// max client number
 	int maxplayers;
 	/// number of currently connected players (including bots)

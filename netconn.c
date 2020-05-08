@@ -2940,7 +2940,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 {
 	int i, ret, clientnum, best;
 	double besttime;
-	char *string, response[1400], addressstring2[128];
+	char *string, response[2800], addressstring2[128];
 	static char stringbuf[16384]; // server only
 	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
