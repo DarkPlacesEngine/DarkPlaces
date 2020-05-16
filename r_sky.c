@@ -86,7 +86,7 @@ static void R_UnloadSkyBox(void)
 	{
 		if (skyboxskinframe[i])
 		{
-			// TODO: make a R_SkinFrame_Purge for single skins...
+			R_SkinFrame_PurgeSkinFrame(skyboxskinframe[i]);
 			c++;
 		}
 		skyboxskinframe[i] = NULL;
@@ -440,7 +440,7 @@ void R_Sky(void)
 void R_ResetSkyBox(void)
 {
 	R_UnloadSkyBox();
-	skyname[0] = 0;
+	memset(skyname,0,MAX_QPATH);
 	R_LoadSkyBox();
 }
 
