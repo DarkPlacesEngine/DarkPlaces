@@ -2094,7 +2094,7 @@ unsigned char *Image_GetEmbeddedPicBGRA(const char *name)
 			return data;
 		}
 	}
-	if (!strcmp(name, "white"))
+	if (!strcmp(name, "white") || !strcmp(name, "#white"))
 		return Image_GenerateWhite();
 	if (!strcmp(name, "gfx/conchars"))
 		return Image_GenerateConChars();
