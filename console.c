@@ -1956,6 +1956,7 @@ void Con_DrawConsole (int lines)
 	int mask_must = 0;
 	int mask_mustnot = (developer.integer>0) ? 0 : CON_MASK_DEVELOPER;
 	cachepic_t *conbackpic;
+	unsigned int conbackflags;
 
 	if (lines <= 0)
 		return;
@@ -1975,7 +1976,10 @@ void Con_DrawConsole (int lines)
 	{
 		sx = scr_conscroll_x.value;
 		sy = scr_conscroll_y.value;
-		conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic_Flags("gfx/conback", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0) : NULL;
+		conbackflags = CACHEPICFLAG_FAILONMISSING; // So console is readable when game content is missing
+		if (sx != 0 || sy != 0)
+			conbackflags &= CACHEPICFLAG_NOCLAMP;
+		conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic_Flags("gfx/conback", conbackflags) : NULL;
 		sx *= realtime; sy *= realtime;
 		sx -= floor(sx); sy -= floor(sy);
 		if (Draw_IsPicLoaded(conbackpic))
