@@ -72,6 +72,8 @@ static qboolean vid_hasfocus = false;
 static qboolean vid_isfullscreen;
 static qboolean vid_usingvsync = false;
 static SDL_Joystick *vid_sdljoystick = NULL;
+static SDL_GameController *vid_sdlgamecontroller = NULL;
+static cvar_t joy_sdl2_trigger_deadzone = {CVAR_SAVE | CVAR_CLIENT, "joy_sdl2_trigger_deadzone", "0.5", "deadzone for triggers to be registered as key presses"};
 // GAME_STEELSTORM specific
 static cvar_t *steelstorm_showing_map = NULL; // detect but do not create the cvar
 static cvar_t *steelstorm_showing_mousecursor = NULL; // detect but do not create the cvar
@@ -692,14 +694,31 @@ void VID_BuildJoyState(vid_joystate_t *joystate)
 	{
 		SDL_Joystick *joy = vid_sdljoystick;
 		int j;
-		int numaxes;
-		int numbuttons;
-		numaxes = SDL_JoystickNumAxes(joy);
-		for (j = 0;j < numaxes;j++)
-			joystate->axis[j] = SDL_JoystickGetAxis(joy, j) * (1.0f / 32767.0f);
-		numbuttons = SDL_JoystickNumButtons(joy);
-		for (j = 0;j < numbuttons;j++)
-			joystate->button[j] = SDL_JoystickGetButton(joy, j);
+
+		if (vid_sdlgamecontroller)
+		{
+			for (j = 0; j <= SDL_CONTROLLER_AXIS_MAX; ++j)
+			{
+				joystate->axis[j] = SDL_GameControllerGetAxis(vid_sdlgamecontroller, j) * (1.0f / 32767.0f);
+			}
+			for (j = 0; j < SDL_CONTROLLER_BUTTON_MAX; ++j)
+				joystate->button[j] = SDL_GameControllerGetButton(vid_sdlgamecontroller, j);
+			// emulate joy buttons for trigger "axes"
+			joystate->button[SDL_CONTROLLER_BUTTON_MAX] = VID_JoyState_GetAxis(joystate, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 1, joy_sdl2_trigger_deadzone.value) > 0.0f;
+			joystate->button[SDL_CONTROLLER_BUTTON_MAX+1] = VID_JoyState_GetAxis(joystate, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 1, joy_sdl2_trigger_deadzone.value) > 0.0f;
+		}
+		else
+
+		{
+			int numaxes;
+			int numbuttons;
+			numaxes = SDL_JoystickNumAxes(joy);
+			for (j = 0;j < numaxes;j++)
+				joystate->axis[j] = SDL_JoystickGetAxis(joy, j) * (1.0f / 32767.0f);
+			numbuttons = SDL_JoystickNumButtons(joy);
+			for (j = 0;j < numbuttons;j++)
+				joystate->button[j] = SDL_JoystickGetButton(joy, j);
+		}
 	}
 
 	VID_Shared_BuildJoyState_Finish(joystate);
@@ -1309,6 +1328,7 @@ void VID_Init (void)
 #ifdef DP_MOBILETOUCH
 	Cvar_SetValueQuick(&vid_touchscreen, 1);
 #endif
+	Cvar_RegisterVariable(&joy_sdl2_trigger_deadzone);
 
 #ifdef SDL_R_RESTART
 	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
@@ -1317,7 +1337,7 @@ void VID_Init (void)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	vid_sdl_initjoysticksystem = SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0;
-	if (vid_sdl_initjoysticksystem)
+	if (!vid_sdl_initjoysticksystem)
 		Con_Printf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
 }
@@ -1348,14 +1368,26 @@ void VID_EnableJoystick(qboolean enable)
 		vid_sdljoystickindex = sdlindex;
 		// close SDL joystick if active
 		if (vid_sdljoystick)
+		{
 			SDL_JoystickClose(vid_sdljoystick);
-		vid_sdljoystick = NULL;
+			vid_sdljoystick = NULL;
+		}
+		if (vid_sdlgamecontroller)
+		{
+			SDL_GameControllerClose(vid_sdlgamecontroller);
+			vid_sdlgamecontroller = NULL;
+		}
 		if (sdlindex >= 0)
 		{
 			vid_sdljoystick = SDL_JoystickOpen(sdlindex);
 			if (vid_sdljoystick)
 			{
 				const char *joystickname = SDL_JoystickName(vid_sdljoystick);
+				if (SDL_IsGameController(vid_sdljoystickindex))
+				{
+					vid_sdlgamecontroller = SDL_GameControllerOpen(vid_sdljoystickindex);
+					Con_DPrintf("Using SDL GameController mappings for Joystick %i\n", index);
+				}
 				Con_Printf("Joystick %i opened (SDL_Joystick %i is \"%s\" with %i axes, %i buttons, %i balls)\n", index, sdlindex, joystickname, (int)SDL_JoystickNumAxes(vid_sdljoystick), (int)SDL_JoystickNumButtons(vid_sdljoystick), (int)SDL_JoystickNumBalls(vid_sdljoystick));
 			}
 			else
