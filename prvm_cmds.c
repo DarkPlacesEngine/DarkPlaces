@@ -3307,7 +3307,7 @@ void VM_precache_pic(prvm_prog_t *prog)
 			flags |= CACHEPICFLAG_MIPMAP;
 	}
 
-	if( !Draw_IsPicLoaded(Draw_CachePic_Flags(s, flags)) )
+	if( !Draw_IsPicLoaded(Draw_CachePic_Flags(s, flags | CACHEPICFLAG_QUIET)) )
 		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 }
 
@@ -3990,7 +3990,7 @@ void VM_getimagesize(prvm_prog_t *prog)
 	p = PRVM_G_STRING(OFS_PARM0);
 	VM_CheckEmptyString(prog, p);
 
-	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_NOTPERSISTENT);
+	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOTPERSISTENT);
 	if (!Draw_IsPicLoaded(pic))
 	{
 		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
