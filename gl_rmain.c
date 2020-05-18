@@ -190,6 +190,7 @@ cvar_t r_glsl_postprocess_uservec1_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_po
 cvar_t r_glsl_postprocess_uservec2_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec2_enable", "1", "enables postprocessing uservec2 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec3_enable", "1", "enables postprocessing uservec3 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec4_enable", "1", "enables postprocessing uservec4 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_colorfringe = {CVAR_CLIENT | CVAR_SAVE, "r_colorfringe", "0", "Chromatic aberration. Values higher than 0.025 will noticeably distort the image"};
 
 cvar_t r_water = {CVAR_CLIENT | CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_cameraentitiesonly = {CVAR_CLIENT | CVAR_SAVE, "r_water_cameraentitiesonly", "0", "whether to only show QC-defined reflections/refractions (typically used for camera- or portal-like effects)"};
@@ -817,6 +818,7 @@ typedef struct r_glsl_permutation_s
 	int loc_UserVec2;
 	int loc_UserVec3;
 	int loc_UserVec4;
+	int loc_ColorFringe;
 	int loc_ViewTintColor;
 	int loc_ViewToLight;
 	int loc_ModelToLight;
@@ -1247,6 +1249,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_UserVec2                   = qglGetUniformLocation(p->program, "UserVec2");
 		p->loc_UserVec3                   = qglGetUniformLocation(p->program, "UserVec3");
 		p->loc_UserVec4                   = qglGetUniformLocation(p->program, "UserVec4");
+		p->loc_ColorFringe                = qglGetUniformLocation(p->program, "ColorFringe");
 		p->loc_ViewTintColor              = qglGetUniformLocation(p->program, "ViewTintColor");
 		p->loc_ViewToLight                = qglGetUniformLocation(p->program, "ViewToLight");
 		p->loc_ModelToLight               = qglGetUniformLocation(p->program, "ModelToLight");
@@ -3317,6 +3320,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_lerplightstyles);
 	Cvar_RegisterVariable(&r_waterscroll);
 	Cvar_RegisterVariable(&r_bloom);
+	Cvar_RegisterVariable(&r_colorfringe);
 	Cvar_RegisterVariable(&r_bloom_colorscale);
 	Cvar_RegisterVariable(&r_bloom_brighten);
 	Cvar_RegisterVariable(&r_bloom_blur);
@@ -5367,6 +5371,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		if (r_glsl_permutation->loc_Saturation              >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord   >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 		if (r_glsl_permutation->loc_BloomColorSubtract      >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
+		if (r_glsl_permutation->loc_ColorFringe             >= 0) qglUniform1f(r_glsl_permutation->loc_ColorFringe, r_colorfringe.value );
 		break;
 	}
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
