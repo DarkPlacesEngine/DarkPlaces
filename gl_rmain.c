@@ -6124,9 +6124,9 @@ static void R_DrawEntityBBoxes(prvm_prog_t *prog)
 		if (edict->priv.server->free)
 			continue;
 		// exclude the following for now, as they don't live in world coordinate space and can't be solid:
-		if (PRVM_serveredictedict(edict, tag_entity) != 0)
+		if (PRVM_gameedictedict(edict, tag_entity) != 0)
 			continue;
-		if (PRVM_serveredictedict(edict, viewmodelforclient) != 0)
+		if (prog == SVVM_prog && PRVM_serveredictedict(edict, viewmodelforclient) != 0)
 			continue;
 		VectorLerp(edict->priv.server->areamins, 0.5f, edict->priv.server->areamaxs, center);
 		R_MeshQueue_AddTransparent(TRANSPARENTSORT_DISTANCE, center, R_DrawEntityBBoxes_Callback, (entity_render_t *)NULL, i, (rtlight_t *)prog);
