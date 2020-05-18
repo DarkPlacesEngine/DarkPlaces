@@ -456,7 +456,6 @@ static void S_SetChannelLayout (void)
 
 void S_Startup (void)
 {
-	qboolean fixed_speed, fixed_width, fixed_channels;
 	snd_format_t chosen_fmt;
 	static snd_format_t prev_render_format = {0, 0, 0};
 	char* env;
@@ -467,10 +466,6 @@ void S_Startup (void)
 
 	if (!snd_initialized.integer)
 		return;
-
-	fixed_speed = false;
-	fixed_width = false;
-	fixed_channels = false;
 
 	// Get the starting sound format from the cvars
 	chosen_fmt.speed = snd_speed.integer;
@@ -489,7 +484,6 @@ void S_Startup (void)
 #if _MSC_VER >= 1400
 		free(env);
 #endif
-		fixed_channels = true;
 	}
 #if _MSC_VER >= 1400
 	_dupenv_s(&env, &envlen, "QUAKE_SOUND_SPEED");
@@ -502,7 +496,6 @@ void S_Startup (void)
 #if _MSC_VER >= 1400
 		free(env);
 #endif
-		fixed_speed = true;
 	}
 #if _MSC_VER >= 1400
 	_dupenv_s(&env, &envlen, "QUAKE_SOUND_SAMPLEBITS");
@@ -515,7 +508,6 @@ void S_Startup (void)
 #if _MSC_VER >= 1400
 		free(env);
 #endif
-		fixed_width = true;
 	}
 
 	// Parse the command line to see if the player wants a particular sound format
@@ -523,33 +515,28 @@ void S_Startup (void)
 	if (COM_CheckParm ("-sndquad") != 0)
 	{
 		chosen_fmt.channels = 4;
-		fixed_channels = true;
 	}
 // COMMANDLINEOPTION: Sound: -sndstereo sets sound output to stereo
 	else if (COM_CheckParm ("-sndstereo") != 0)
 	{
 		chosen_fmt.channels = 2;
-		fixed_channels = true;
 	}
 // COMMANDLINEOPTION: Sound: -sndmono sets sound output to mono
 	else if (COM_CheckParm ("-sndmono") != 0)
 	{
 		chosen_fmt.channels = 1;
-		fixed_channels = true;
 	}
 // COMMANDLINEOPTION: Sound: -sndspeed <hz> chooses sound output rate (supported values are 48000, 44100, 32000, 24000, 22050, 16000, 11025 (quake), 8000)
 	i = COM_CheckParm ("-sndspeed");
 	if (0 < i && i < com_argc - 1)
 	{
 		chosen_fmt.speed = atoi (com_argv[i + 1]);
-		fixed_speed = true;
 	}
 // COMMANDLINEOPTION: Sound: -sndbits <bits> chooses 8 bit or 16 bit or 32bit float sound output
 	i = COM_CheckParm ("-sndbits");
 	if (0 < i && i < com_argc - 1)
 	{
 		chosen_fmt.width = atoi (com_argv[i + 1]) / 8;
-		fixed_width = true;
 	}
 
 #if 0
@@ -557,7 +544,6 @@ void S_Startup (void)
 	// You can't change sound speed after start time (not yet supported)
 	if (prev_render_format.speed != 0)
 	{
-		fixed_speed = true;
 		if (chosen_fmt.speed != prev_render_format.speed)
 		{
 			Con_Printf("S_Startup: sound speed has changed! This is NOT supported yet. Falling back to previous speed (%u Hz)\n",
@@ -571,39 +557,32 @@ void S_Startup (void)
 	if (chosen_fmt.speed < SND_MIN_SPEED)
 	{
 		chosen_fmt.speed = SND_MIN_SPEED;
-		fixed_speed = false;
 	}
 	else if (chosen_fmt.speed > SND_MAX_SPEED)
 	{
 		chosen_fmt.speed = SND_MAX_SPEED;
-		fixed_speed = false;
 	}
 
 	if (chosen_fmt.width < SND_MIN_WIDTH)
 	{
 		chosen_fmt.width = SND_MIN_WIDTH;
-		fixed_width = false;
 	}
     else if (chosen_fmt.width == 3)
 	{
 		chosen_fmt.width = 4;
-		fixed_width = false;
 	}
 	else if (chosen_fmt.width > SND_MAX_WIDTH)
 	{
 		chosen_fmt.width = SND_MAX_WIDTH;
-		fixed_width = false;
 	}
 
 	if (chosen_fmt.channels < SND_MIN_CHANNELS)
 	{
 		chosen_fmt.channels = SND_MIN_CHANNELS;
-		fixed_channels = false;
 	}
 	else if (chosen_fmt.channels > SND_MAX_CHANNELS)
 	{
 		chosen_fmt.channels = SND_MAX_CHANNELS;
-		fixed_channels = false;
 	}
 
 	// create the sound buffer used for sumitting the samples to the plaform-dependent module
