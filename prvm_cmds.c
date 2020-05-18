@@ -5386,7 +5386,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 	int matchrule, matchlen, i, step;
 	const char *match;
-	
+
 	VM_SAFEPARMCOUNTRANGE(3, 5, VM_bufstr_find);
 
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
@@ -5401,7 +5401,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 
 	// get pattern/rule
 	matchrule = (int)PRVM_G_FLOAT(OFS_PARM2);
-	if (matchrule < 0 && matchrule > 5)
+	if (matchrule < 0 || matchrule > 5)
 	{
 		VM_Warning(prog, "VM_bufstr_find: invalid match rule %i in %s\n", matchrule, prog->name);
 		return;
@@ -5447,9 +5447,9 @@ void VM_matchpattern(prvm_prog_t *prog)
 
 	// get pattern/rule
 	matchrule = (int)PRVM_G_FLOAT(OFS_PARM2);
-	if (matchrule < 0 && matchrule > 5)
+	if (matchrule < 0 || matchrule > 5)
 	{
-		VM_Warning(prog, "VM_bufstr_find: invalid match rule %i in %s\n", matchrule, prog->name);
+		VM_Warning(prog, "VM_matchpattern: invalid match rule %i in %s\n", matchrule, prog->name);
 		return;
 	}
 	if (matchrule)
