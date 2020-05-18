@@ -3102,22 +3102,16 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(&cmd_serverfromclient, "playerskin", Host_Playerskin_f, "change your player skin number");
 
 	// client commands that require a connection and are simply forwarded to server
-	Cmd_AddCommand(&cmd_client, "status", Cmd_ForwardToServer_f, "print server status information");
 	Cmd_AddCommand(&cmd_client, "god", Cmd_ForwardToServer_f, "god mode (invulnerability)");
 	Cmd_AddCommand(&cmd_client, "notarget", Cmd_ForwardToServer_f, "notarget mode (monsters do not see you)");
 	Cmd_AddCommand(&cmd_client, "fly", Cmd_ForwardToServer_f, "fly mode (flight)");
 	Cmd_AddCommand(&cmd_client, "noclip", Cmd_ForwardToServer_f, "noclip mode (flight without collisions, move through walls)");
 	Cmd_AddCommand(&cmd_client, "give", Cmd_ForwardToServer_f, "alter inventory");
-	Cmd_AddCommand(&cmd_client, "say", Cmd_ForwardToServer_f, "send a chat message to everyone on the server");
 	Cmd_AddCommand(&cmd_client, "say_team", Cmd_ForwardToServer_f, "send a chat message to your team on the server");
-	Cmd_AddCommand(&cmd_client, "tell", Cmd_ForwardToServer_f, "send a chat message to only one person on the server");
 	Cmd_AddCommand(&cmd_client, "kill", Cmd_ForwardToServer_f, "die instantly");
-	Cmd_AddCommand(&cmd_client, "pause", Cmd_ForwardToServer_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(&cmd_client, "ping", Cmd_ForwardToServer_f, "print ping times of all players on the server");
 
 	Cmd_AddCommand(&cmd_client, "connect", Host_Connect_f, "connect to a server by IP address or hostname");
 	Cmd_AddCommand(&cmd_client, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
-	Cmd_AddCommand(&cmd_client, "version", Host_Version_f, "print engine version");
 	Cmd_AddCommand(&cmd_client, "startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
 	Cmd_AddCommand(&cmd_client, "demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
 	Cmd_AddCommand(&cmd_client, "stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
