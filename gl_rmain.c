@@ -198,7 +198,7 @@ cvar_t r_water_resolutionmultiplier = {CVAR_CLIENT | CVAR_SAVE, "r_water_resolut
 cvar_t r_water_refractdistort = {CVAR_CLIENT | CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
 cvar_t r_water_reflectdistort = {CVAR_CLIENT | CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
 cvar_t r_water_scissormode = {CVAR_CLIENT, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
-cvar_t r_water_lowquality = {CVAR_CLIENT, "r_water_lowquality", "0", "special option to accelerate water rendering, 1 disables shadows and particles, 2 disables all dynamic lights"};
+cvar_t r_water_lowquality = {CVAR_CLIENT, "r_water_lowquality", "0", "special option to accelerate water rendering: 1 disables all dynamic lights, 2 disables particles too"};
 cvar_t r_water_hideplayer = {CVAR_CLIENT | CVAR_SAVE, "r_water_hideplayer", "0", "if set to 1 then player will be hidden in refraction views, if set to 2 then player will also be hidden in reflection views, player is always visible in camera views"};
 
 cvar_t r_lerpsprites = {CVAR_CLIENT | CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
