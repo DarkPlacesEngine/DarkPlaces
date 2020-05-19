@@ -1,3 +1,4 @@
+extern cvar_t prvm_garbagecollection_enable;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
 	prog->xfunction->profile += (st - startst); \
@@ -289,7 +290,8 @@
 				// against a certain sort of repeated migration to earlier
 				// points in the scan that could otherwise result in the string
 				// being freed for being unused
-				PRVM_GetString(prog, OPA->_int);
+				if(prvm_garbagecollection_enable.integer)
+					PRVM_GetString(prog, OPA->_int);
 				OPB->_int = OPA->_int;
 			DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_V):
@@ -338,7 +340,8 @@
 				// against a certain sort of repeated migration to earlier
 				// points in the scan that could otherwise result in the string
 				// being freed for being unused
-				PRVM_GetString(prog, OPA->_int);
+				if(prvm_garbagecollection_enable.integer)
+					PRVM_GetString(prog, OPA->_int);
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
