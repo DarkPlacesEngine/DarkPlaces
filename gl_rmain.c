@@ -3085,6 +3085,8 @@ static void gl_main_start(void)
 #endif
 }
 
+extern unsigned int r_shadow_occlusion_buf;
+
 static void gl_main_shutdown(void)
 {
 	R_RenderTarget_FreeUnused(true);
@@ -3105,7 +3107,7 @@ static void gl_main_shutdown(void)
 #endif
 		break;
 	}
-
+	r_shadow_occlusion_buf = 0;
 	r_numqueries = 0;
 	r_maxqueries = 0;
 	memset(r_queries, 0, sizeof(r_queries));
