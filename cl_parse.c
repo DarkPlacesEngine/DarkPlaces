@@ -4311,6 +4311,7 @@ void CL_Parse_Init(void)
 	Cmd_AddCommand(&cmd_client, "nextul", QW_CL_NextUpload_f, "sends next fragment of current upload buffer (screenshot for example)");
 	Cmd_AddCommand(&cmd_client, "stopul", QW_CL_StopUpload_f, "aborts current upload (screenshot for example)");
 	Cmd_AddCommand(&cmd_client, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
+	Cmd_AddCommand(&cmd_clientfromserver, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
 	Cmd_AddCommand(&cmd_client, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
 	Cmd_AddCommand(&cmd_client, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
 	Cmd_AddCommand(&cmd_client, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
