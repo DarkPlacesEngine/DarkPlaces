@@ -427,14 +427,12 @@ void CL_EstablishConnection(const char *host, int firstarg)
 #ifdef CONFIG_MENU
 	M_Update_Return_Reason("");
 #endif
-	cls.demonum = -1;
-
-	// stop demo loop in case this fails
-	if (cls.demoplayback)
-		CL_StopPlayback();
 
 	// if downloads are running, cancel their finishing action
 	Curl_Clear_forthismap();
+
+	// Disconnect from the current server, or stop a running demo.
+	CL_Disconnect();
 
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();

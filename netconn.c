@@ -1513,8 +1513,6 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 #ifdef CONFIG_MENU
 	M_Update_Return_Reason("");
 #endif
-	// the connection request succeeded, stop current connection and set up a new connection
-	CL_Disconnect();
 	// if we're connecting to a remote server, shut down any local server
 	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
 	{
