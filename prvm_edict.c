@@ -48,6 +48,7 @@ cvar_t prvm_garbagecollection_enable = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbage
 cvar_t prvm_garbagecollection_notify = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection"};
 cvar_t prvm_garbagecollection_scan_limit = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_scan_limit", "10000", "scan this many fields or resources per frame to free up unreferenced resources"};
 cvar_t prvm_garbagecollection_strings = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
+cvar_t prvm_stringdebug = {CVAR_CLIENT | CVAR_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
 
 static double prvm_reuseedicts_always_allow = 0;
 qboolean prvm_runawaycheck = true;
@@ -2975,6 +2976,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_garbagecollection_notify);
 	Cvar_RegisterVariable (&prvm_garbagecollection_scan_limit);
 	Cvar_RegisterVariable (&prvm_garbagecollection_strings);
+	Cvar_RegisterVariable (&prvm_stringdebug);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !COM_CheckParm("-norunaway");
@@ -3008,7 +3010,8 @@ const char *PRVM_GetString(prvm_prog_t *prog, int num)
 	if (num < 0)
 	{
 		// invalid
-		VM_Warning(prog, "PRVM_GetString: Invalid string offset (%i < 0)\n", num);
+		if (prvm_stringdebug.integer)
+			VM_Warning(prog, "PRVM_GetString: Invalid string offset (%i < 0)\n", num);
 		return "";
 	}
 	else if (num < prog->stringssize)
@@ -3024,7 +3027,8 @@ const char *PRVM_GetString(prvm_prog_t *prog, int num)
 			return (char *)prog->tempstringsbuf.data + num;
 		else
 		{
-			VM_Warning(prog, "PRVM_GetString: Invalid temp-string offset (%i >= %i prog->tempstringsbuf.cursize)\n", num, prog->tempstringsbuf.cursize);
+			if (prvm_stringdebug.integer)
+				VM_Warning(prog, "PRVM_GetString: Invalid temp-string offset (%i >= %i prog->tempstringsbuf.cursize)\n", num, prog->tempstringsbuf.cursize);
 			return "";
 		}
 	}
@@ -3036,7 +3040,8 @@ const char *PRVM_GetString(prvm_prog_t *prog, int num)
 		{
 			if (!prog->knownstrings[num])
 			{
-				VM_Warning(prog, "PRVM_GetString: Invalid zone-string offset (%i has been freed)\n", num);
+				if (prvm_stringdebug.integer)
+					VM_Warning(prog, "PRVM_GetString: Invalid zone-string offset (%i has been freed)\n", num);
 				return "";
 			}
 			// refresh the garbage collection on the string - this guards
@@ -3048,14 +3053,16 @@ const char *PRVM_GetString(prvm_prog_t *prog, int num)
 		}
 		else
 		{
-			VM_Warning(prog, "PRVM_GetString: Invalid zone-string offset (%i >= %i)\n", num, prog->numknownstrings);
+			if (prvm_stringdebug.integer)
+				VM_Warning(prog, "PRVM_GetString: Invalid zone-string offset (%i >= %i)\n", num, prog->numknownstrings);
 			return "";
 		}
 	}
 	else
 	{
 		// invalid string offset
-		VM_Warning(prog, "PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)\n", num, prog->stringssize);
+		if (prvm_stringdebug.integer)
+			VM_Warning(prog, "PRVM_GetString: Invalid constant-string offset (%i >= %i prog->stringssize)\n", num, prog->stringssize);
 		return "";
 	}
 }
