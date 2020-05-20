@@ -495,9 +495,9 @@ void Host_Reconnect_f(cmd_state_t *cmd)
 
 		S_StopAllSounds();
 
-		if (cls.state == ca_connected && cls.signon < SIGNONS)
+		if (cls.state == ca_connected)
 		{
-			Con_Printf("reconnecting...\n");
+			Con_Printf("Server is changing level...\n");
 			MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, "new");
 		}
