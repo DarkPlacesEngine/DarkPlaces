@@ -2050,7 +2050,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	// if it's a client command and no command was found, say so.
 	if (cmd->source == src_client)
 	{
-		Con_Printf("player \"%s\" tried to %s\n", host_client->name, text);
+		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
 		goto done;
 	}
 
@@ -2065,9 +2065,13 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	}
 
 // check cvars
-	if (!Cvar_Command(cmd) && host_framecount > 0)
-		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
-
+	if (!Cvar_Command(cmd) && host_framecount > 0) {
+		if (cmd == &cmd_clientfromserver) {
+			Con_Printf("Server tried to execute \"%s\"\n", Cmd_Argv(cmd, 0));
+		} else {
+			Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
+		}
+	}
 done:
 	cmd->tokenizebufferpos = oldpos;
 	if (lockmutex)
