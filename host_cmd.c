@@ -3112,6 +3112,7 @@ void Host_InitCommands (void)
 
 	Cmd_AddCommand(&cmd_client, "connect", Host_Connect_f, "connect to a server by IP address or hostname");
 	Cmd_AddCommand(&cmd_client, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
+	Cmd_AddCommand(&cmd_clientfromserver, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
 	Cmd_AddCommand(&cmd_client, "startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
 	Cmd_AddCommand(&cmd_client, "demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
 	Cmd_AddCommand(&cmd_client, "stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
@@ -3122,6 +3123,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(&cmd_client, "fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand(&cmd_client, "setinfo", Host_SetInfo_f, "modifies your userinfo");
 	Cmd_AddCommand(&cmd_client, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
+	Cmd_AddCommand(&cmd_clientfromserver, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(&cmd_client, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
 	Cmd_AddCommand(&cmd_client, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
 	Cmd_AddCommand(&cmd_client, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
