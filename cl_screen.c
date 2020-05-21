@@ -2162,11 +2162,11 @@ static void SCR_DrawScreen (void)
 		// draw the loading screen for a while if we're still connecting and not forcing the console or menu to show up
 		char temp[64];
 		if (cls.signon > 0)
-			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Signon stage %i of %i", cls.signon, SIGNONS), 1.0);
+			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Signon stage %i of %i", cls.signon, SIGNONS), 1.0);
 		else if (cls.connect_remainingtries > 0)
-			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Trying...  %i", cls.connect_remainingtries), 1.0);
+			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Trying...  %i", cls.connect_remainingtries), 1.0);
 		else
-			SCR_PushLoadingScreen(false, va(temp, sizeof(temp), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries), 1.0);
+			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries), 1.0);
 		SCR_DrawLoadingScreen(true);
 		SCR_PopLoadingScreen(false);
 	}
@@ -2313,11 +2313,10 @@ static void SCR_SetLoadingScreenTexture(void)
 
 void SCR_UpdateLoadingScreenIfShown(void)
 {
-	if(loadingscreendone)
 		SCR_UpdateLoadingScreen(loadingscreencleared, false);
 }
 
-void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_parent)
+void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 {
 	loadingscreenstack_t *s = (loadingscreenstack_t *) Z_Malloc(sizeof(loadingscreenstack_t));
 	s->prev = loadingscreenstack;
@@ -2339,7 +2338,6 @@ void SCR_PushLoadingScreen (qboolean redraw, const char *msg, float len_in_paren
 		s->absolute_loading_amount_len = 1;
 	}
 
-	if(redraw)
 		SCR_UpdateLoadingScreenIfShown();
 }
 
@@ -2545,13 +2543,6 @@ static void SCR_DrawLoadingScreen (qboolean clear)
 	SCR_DrawLoadingStack();
 }
 
-static void SCR_DrawLoadingScreen_SharedFinish (qboolean clear)
-{
-	R_Mesh_Finish();
-	// refresh
-	VID_Finish();
-}
-
 static double loadingscreen_lastupdate;
 
 static void SCR_UpdateVars(void);
@@ -2574,10 +2565,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 		loadingscreen_lastupdate = t;
 	}
 
-	SCR_UpdateVars();
-
 	// set up the r_texture_gammaramps texture which we need for rendering the loadingscreenpic
-	VID_UpdateGamma();
 	R_UpdateVariables();
 
 	if(!scr_loadingscreen_background.integer)
@@ -2630,7 +2618,11 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 		SCR_DrawLoadingScreen(clear);
 	}
 #endif
-	SCR_DrawLoadingScreen_SharedFinish(clear);
+
+	R_Mesh_Finish();
+	DrawQ_Finish();
+	// refresh
+	VID_Finish();
 
 	// this goes into the event loop, and should prevent unresponsive cursor on vista
 	old_key_dest = key_dest;

@@ -2395,6 +2395,7 @@ static void CL_MeshEntities_Init(void)
 		ent = cl_meshentities + i;
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
+		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);	
 		ent->render.alpha = 0.999999f; // not quite 1 so that MATERIALFLAG_ALPHA is always set.
 		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
