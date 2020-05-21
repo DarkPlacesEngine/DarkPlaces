@@ -1095,7 +1095,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 	// if we got here...
 	// curl is done, so let's start with the business
 	if(!cl.loadbegun)
-		SCR_PushLoadingScreen(false, "Loading precaches", 1);
+		SCR_PushLoadingScreen("Loading precaches", 1);
 	cl.loadbegun = true;
 
 	// if already downloading something from the previous level, don't stop it
@@ -1130,7 +1130,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 		if(cl.loadmodel_current == 1)
 		{
 			// worldmodel counts as 16 models (15 + world model setup), for better progress bar
-			SCR_PushLoadingScreen(false, "Loading precached models",
+			SCR_PushLoadingScreen("Loading precached models",
 				(
 					(cl.loadmodel_total - 1) * LOADPROGRESSWEIGHT_MODEL
 				+	LOADPROGRESSWEIGHT_WORLDMODEL
@@ -1142,11 +1142,10 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				+	cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				)
 			);
-			SCR_BeginLoadingPlaque(false);
 		}
 		for (;cl.loadmodel_current < cl.loadmodel_total;cl.loadmodel_current++)
 		{
-			SCR_PushLoadingScreen(false, cl.model_name[cl.loadmodel_current],
+			SCR_PushLoadingScreen(cl.model_name[cl.loadmodel_current],
 				(
 					(cl.loadmodel_current == 1) ? LOADPROGRESSWEIGHT_WORLDMODEL : LOADPROGRESSWEIGHT_MODEL
 				) / (
@@ -1160,7 +1159,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				SCR_PopLoadingScreen(false);
 				if(cl.loadmodel_current == 1)
 				{
-					SCR_PushLoadingScreen(false, cl.model_name[cl.loadmodel_current], 1.0 / cl.loadmodel_total);
+					SCR_PushLoadingScreen(cl.model_name[cl.loadmodel_current], 1.0 / cl.loadmodel_total);
 					SCR_PopLoadingScreen(false);
 				}
 				continue;
@@ -1183,7 +1182,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.model_precache[cl.loadmodel_current] && cl.model_precache[cl.loadmodel_current]->Draw && cl.loadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
-				SCR_PushLoadingScreen(true, "world model setup",
+				SCR_PushLoadingScreen("world model setup",
 					(
 						LOADPROGRESSWEIGHT_WORLDMODEL_INIT
 					) / (
@@ -1211,7 +1210,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 	{
 		// loading sounds
 		if(cl.loadsound_current == 1)
-			SCR_PushLoadingScreen(false, "Loading precached sounds",
+			SCR_PushLoadingScreen("Loading precached sounds",
 				(
 					cl.loadsound_total * LOADPROGRESSWEIGHT_SOUND
 				) / (
@@ -1223,7 +1222,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			);
 		for (;cl.loadsound_current < cl.loadsound_total;cl.loadsound_current++)
 		{
-			SCR_PushLoadingScreen(false, cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
+			SCR_PushLoadingScreen(cl.sound_name[cl.loadsound_current], 1.0 / cl.loadsound_total);
 			if (cl.sound_precache[cl.loadsound_current] && S_IsSoundPrecached(cl.sound_precache[cl.loadsound_current]))
 			{
 				SCR_PopLoadingScreen(false);

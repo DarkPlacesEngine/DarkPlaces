@@ -102,7 +102,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	if (developer_loading.integer)
 		Con_Printf("loading sound %s\n", sfx->name);
 
-	SCR_PushLoadingScreen(true, sfx->name, 1);
+	SCR_PushLoadingScreen(sfx->name, 1);
 
 	// LadyHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(sfx->name, "sound/", 6))

@@ -65,7 +65,7 @@ static void mod_start(void)
 	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
-	SCR_PushLoadingScreen(false, "Loading models", 1.0);
+	SCR_PushLoadingScreen("Loading models", 1.0);
 	count = 0;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
@@ -75,7 +75,7 @@ static void mod_start(void)
 		if ((mod = (dp_model_t*) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*')
 			if (mod->used)
 			{
-				SCR_PushLoadingScreen(true, mod->name, 1.0 / count);
+				SCR_PushLoadingScreen(mod->name, 1.0 / count);
 				Mod_LoadModel(mod, true, false);
 				SCR_PopLoadingScreen(false);
 			}
@@ -458,7 +458,7 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 	if (developer_loading.integer)
 		Con_Printf("loading model %s\n", mod->name);
 	
-	SCR_PushLoadingScreen(true, mod->name, 1);
+	SCR_PushLoadingScreen(mod->name, 1);
 
 	// LadyHavoc: unload the existing model in this slot (if there is one)
 	if (mod->loaded || mod->mempool)
@@ -638,7 +638,7 @@ void Mod_Reload(void)
 	int nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 	dp_model_t *mod;
 
-	SCR_PushLoadingScreen(false, "Reloading models", 1.0);
+	SCR_PushLoadingScreen("Reloading models", 1.0);
 	count = 0;
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
@@ -646,7 +646,7 @@ void Mod_Reload(void)
 	for (i = 0;i < nummodels;i++)
 		if ((mod = (dp_model_t *) Mem_ExpandableArray_RecordAtIndex(&models, i)) && mod->name[0] && mod->name[0] != '*' && mod->used)
 		{
-			SCR_PushLoadingScreen(true, mod->name, 1.0 / count);
+			SCR_PushLoadingScreen(mod->name, 1.0 / count);
 			Mod_LoadModel(mod, true, true);
 			SCR_PopLoadingScreen(false);
 		}
