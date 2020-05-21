@@ -60,10 +60,10 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf ("Quake Error: %s\n", string);
+	Con_Printf ("Engine Error: %s\n", string);
 
 #ifdef WIN32
-	MessageBox(NULL, string, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+	MessageBox(NULL, string, "Engine Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 #endif
 
 	Host_Shutdown ();

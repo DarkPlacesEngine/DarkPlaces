@@ -64,7 +64,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
-	Con_Printf ("Quake Error: %s\n", text);
+	Con_Printf ("Engine Error: %s\n", text);
 
 	// close video so the message box is visible, unless we already tried that
 	if (!in_sys_error0 && cls.state != ca_dedicated)
@@ -76,7 +76,7 @@ void Sys_Error (const char *error, ...)
 	if (!in_sys_error3 && cls.state != ca_dedicated)
 	{
 		in_sys_error3 = true;
-		MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+		MessageBox(NULL, text, "Engine Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 	}
 
 	if (!in_sys_error1)
