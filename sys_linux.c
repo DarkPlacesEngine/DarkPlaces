@@ -39,7 +39,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf ("Quake Error: %s\n", string);
+	Con_Printf ("Engine Error: %s\n", string);
 
 	Host_Shutdown ();
 	exit (1);
