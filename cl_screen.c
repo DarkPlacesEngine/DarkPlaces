@@ -2313,6 +2313,7 @@ static void SCR_SetLoadingScreenTexture(void)
 
 void SCR_UpdateLoadingScreenIfShown(void)
 {
+	if(loadingscreendone)
 		SCR_UpdateLoadingScreen(loadingscreencleared, false);
 }
 
