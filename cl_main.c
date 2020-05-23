@@ -395,6 +395,7 @@ void CL_Disconnect(void)
 
 	cls.demoplayback = cls.timedemo = false;
 	cls.signon = 0;
+	Con_Printf("Disconnected\n");
 }
 
 void CL_Disconnect_f(cmd_state_t *cmd)
