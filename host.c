@@ -1335,6 +1335,8 @@ static void Host_Init (void)
 		Cbuf_Execute(cmd);
 	}
 
+	Log_Start();
+	
 	// put up the loading image so the user doesn't stare at a black screen...
 	SCR_BeginLoadingPlaque(true);
 
