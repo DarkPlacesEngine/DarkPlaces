@@ -389,6 +389,7 @@ void CL_Disconnect(void)
 		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
+		Con_Printf("Disconnected\n");
 	}
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
@@ -398,8 +399,6 @@ void CL_Disconnect(void)
 
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
 	SCR_ClearLoadingScreen(false);
-
-	Con_Printf("Disconnected\n");
 }
 
 void CL_Disconnect_f(cmd_state_t *cmd)
