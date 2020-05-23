@@ -428,9 +428,6 @@ void CL_EstablishConnection(const char *host, int firstarg)
 	M_Update_Return_Reason("");
 #endif
 
-	// if downloads are running, cancel their finishing action
-	Curl_Clear_forthismap();
-
 	// Disconnect from the current server, or stop a running demo.
 	CL_Disconnect();
 
