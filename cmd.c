@@ -1982,11 +1982,18 @@ const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 	return buf;
 }
 
-void Cmd_ClearCsqcFuncs (cmd_state_t *cmd)
+// TODO: Make this more generic?
+void Cmd_ClearCSQCCommands (cmd_state_t *cmd)
 {
 	cmd_function_t *func;
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
-		func->csqcfunc = false;
+	cmd_function_t **next = &cmd->userdefined->csqc_functions;
+	
+	while(*next)
+	{
+		func = *next;
+		*next = func->next;
+		Z_Free(func);
+	}
 }
 
 /*

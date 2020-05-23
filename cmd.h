@@ -248,7 +248,7 @@ void Cmd_ForwardToServer_f (cmd_state_t *cmd);
 /// enclosing quote marks are also put.
 qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
 
-void Cmd_ClearCsqcFuncs (cmd_state_t *cmd);
+void Cmd_ClearCSQCCommands (cmd_state_t *cmd);
 
 #endif
 
