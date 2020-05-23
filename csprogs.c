@@ -1163,7 +1163,7 @@ void CL_VM_Init (void)
 void CL_VM_ShutDown (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	Cmd_ClearCsqcFuncs(&cmd_client);
+	Cmd_ClearCSQCCommands(&cmd_client);
 	//Cvar_SetValueQuick(&csqc_progcrc, -1);
 	//Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!cl.csqc_loaded)
