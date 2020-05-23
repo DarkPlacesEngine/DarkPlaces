@@ -395,6 +395,10 @@ void CL_Disconnect(void)
 
 	cls.demoplayback = cls.timedemo = false;
 	cls.signon = 0;
+
+	// If we're dropped mid-connection attempt, it won't clear otherwise.
+	SCR_ClearLoadingScreen(false);
+
 	Con_Printf("Disconnected\n");
 }
 

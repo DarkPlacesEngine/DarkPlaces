@@ -725,6 +725,8 @@ void SCR_DrawConsole (void)
 		con_vislines = 0;
 }
 
+qboolean scr_loading = false;
+
 /*
 ===============
 SCR_BeginLoadingPlaque
@@ -733,11 +735,13 @@ SCR_BeginLoadingPlaque
 */
 void SCR_BeginLoadingPlaque (qboolean startup)
 {
-	// save console log up to this point to log_file if it was set by configs
-	Log_Start();
-
-	Host_StartVideo();
+	scr_loading = true;
 	SCR_UpdateLoadingScreen(false, startup);
+}
+
+void SCR_EndLoadingPlaque(void)
+{
+	scr_loading = false;
 }
 
 //=============================================================================
@@ -2063,7 +2067,25 @@ int r_stereo_side;
 extern cvar_t v_isometric;
 extern cvar_t v_isometric_verticalfov;
 
-static void SCR_DrawLoadingScreen(qboolean clear);
+typedef struct loadingscreenstack_s
+{
+	struct loadingscreenstack_s *prev;
+	char msg[MAX_QPATH];
+	float absolute_loading_amount_min; // this corresponds to relative completion 0 of this item
+	float absolute_loading_amount_len; // this corresponds to relative completion 1 of this item
+	float relative_completion; // 0 .. 1
+}
+loadingscreenstack_t;
+static loadingscreenstack_t *loadingscreenstack = NULL;
+static qboolean loadingscreendone = false;
+static qboolean loadingscreencleared = false;
+static float loadingscreenheight = 0;
+rtexture_t *loadingscreentexture = NULL;
+static float loadingscreentexture_vertex3f[12];
+static float loadingscreentexture_texcoord2f[8];
+static int loadingscreenpic_number = 0;
+
+static void SCR_DrawLoadingScreen(void);
 static void SCR_DrawScreen (void)
 {
 	Draw_Frame();
@@ -2167,7 +2189,7 @@ static void SCR_DrawScreen (void)
 			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Trying...  %i", cls.connect_remainingtries), 1.0);
 		else
 			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries), 1.0);
-		SCR_DrawLoadingScreen(true);
+		SCR_DrawLoadingScreen();
 		SCR_PopLoadingScreen(false);
 	}
 
@@ -2218,8 +2240,13 @@ static void SCR_DrawScreen (void)
 	}
 
 	// draw 2D stuff
+
+	// Don't flicker when starting a local server.
+	if(scr_loading && !loadingscreenstack && ((!cls.signon && !sv.active) || (cls.signon == SIGNONS)))
+		SCR_EndLoadingPlaque();
+
 	if(!scr_con_current && !(key_consoleactive & KEY_CONSOLEACTIVE_FORCED))
-		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value)
+		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value && !scr_loading)
 			Con_DrawNotify ();	// only draw notify in game
 
 	if (cls.signon == SIGNONS)
@@ -2234,49 +2261,34 @@ static void SCR_DrawScreen (void)
 	}
 	SCR_DrawNetGraph ();
 #ifdef CONFIG_MENU
-	MR_Draw();
+	if(!scr_loading)
+		MR_Draw();
 #endif
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
+	if(!scr_loading) {
+		SCR_DrawConsole();
 
-	SCR_DrawConsole();
+		SCR_DrawBrand();
 
-	SCR_DrawBrand();
+		SCR_DrawInfobar();
 
-	SCR_DrawInfobar();
-
-	SCR_DrawTouchscreenOverlay();
-
+		SCR_DrawTouchscreenOverlay();
+	}
 	if (r_timereport_active)
 		R_TimeReport("2d");
 
 	R_TimeReport_EndFrame();
 	R_TimeReport_BeginFrame();
-	Sbar_ShowFPS();
+	
+	if(!scr_loading)
+		Sbar_ShowFPS();
 
 	DrawQ_Finish();
 
 	R_Mesh_Finish();
 	R_RenderTarget_FreeUnused(false);
 }
-
-typedef struct loadingscreenstack_s
-{
-	struct loadingscreenstack_s *prev;
-	char msg[MAX_QPATH];
-	float absolute_loading_amount_min; // this corresponds to relative completion 0 of this item
-	float absolute_loading_amount_len; // this corresponds to relative completion 1 of this item
-	float relative_completion; // 0 .. 1
-}
-loadingscreenstack_t;
-static loadingscreenstack_t *loadingscreenstack = NULL;
-static qboolean loadingscreendone = false;
-static qboolean loadingscreencleared = false;
-static float loadingscreenheight = 0;
-rtexture_t *loadingscreentexture = NULL;
-static float loadingscreentexture_vertex3f[12];
-static float loadingscreentexture_texcoord2f[8];
-static int loadingscreenpic_number = 0;
 
 static void SCR_ClearLoadingScreenTexture(void)
 {
@@ -2523,7 +2535,7 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
 }
 
-static void SCR_DrawLoadingScreen (qboolean clear)
+static void SCR_DrawLoadingScreen (void)
 {
 	// we only need to draw the image if it isn't already there
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -2604,24 +2616,23 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	SCR_DrawLoadingScreen(clear);
 #else
-	qglDrawBuffer(GL_BACK);
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
 	{
 		qglDrawBuffer(GL_BACK_LEFT);
-		SCR_DrawLoadingScreen(clear);
+		SCR_DrawLoadingScreen();
 		qglDrawBuffer(GL_BACK_RIGHT);
-		SCR_DrawLoadingScreen(clear);
+		SCR_DrawLoadingScreen();
 	}
 	else
 	{
 		qglDrawBuffer(GL_BACK);
-		SCR_DrawLoadingScreen(clear);
+		SCR_DrawLoadingScreen();
 	}
 #endif
 
-	R_Mesh_Finish();
 	DrawQ_Finish();
+	R_Mesh_Finish();
 	// refresh
 	VID_Finish();
 
