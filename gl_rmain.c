@@ -142,7 +142,7 @@ cvar_t r_transparent_sortmindist = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sort
 cvar_t r_transparent_sortmaxdist = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
 cvar_t r_transparent_sortarraysize = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
 cvar_t r_celshading = {CVAR_CLIENT | CVAR_SAVE, "r_celshading", "0", "cartoon-style light shading (OpenGL 2.x only)"}; // FIXME remove OpenGL 2.x only once implemented for DX9
-cvar_t r_celoutlines = {CVAR_CLIENT | CVAR_SAVE, "r_celoutlines", "0", "cartoon-style outlines (requires r_shadow_deferred; OpenGL 2.x only)"}; // FIXME remove OpenGL 2.x only once implemented for DX9
+cvar_t r_celoutlines = {CVAR_CLIENT | CVAR_SAVE, "r_celoutlines", "0", "cartoon-style outlines (requires r_shadow_deferred)"};
 
 cvar_t gl_fogenable = {CVAR_CLIENT, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
 cvar_t gl_fogdensity = {CVAR_CLIENT, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
