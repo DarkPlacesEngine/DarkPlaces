@@ -1553,6 +1553,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
 	Cmd_AddCommand(&cmd_client, "curl", Curl_Curl_f, "download data from an URL and add to search path");
+	Cmd_AddCommand(&cmd_clientfromserver, "curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
