@@ -343,8 +343,6 @@ typedef struct rtlight_s
 	int isstatic;
 	/// true if this is a compiled world light, cleared if the light changes
 	int compiled;
-	/// the shadowing mode used to compile this light
-	int shadowmode;
 	/// the size that this light should have (assuming no scene LOD kicking in to reduce it)
 	int shadowmapsidesize;
 	/// position of this light in the shadowmap atlas

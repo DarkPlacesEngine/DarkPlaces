@@ -24,6 +24,7 @@ r_shadow_rendermode_t;
 
 typedef enum r_shadow_shadowmode_e
 {
+	R_SHADOW_SHADOWMODE_DISABLED,
 	R_SHADOW_SHADOWMODE_SHADOWMAP2D
 }
 r_shadow_shadowmode_t;
@@ -46,6 +47,8 @@ int r_shadow_readbuffer;
 #endif
 int r_shadow_cullface_front, r_shadow_cullface_back;
 GLuint r_shadow_fbo2d;
+int r_shadow_shadowmode_shadowmapping; // cached value of r_shadow_shadowmapping cvar
+int r_shadow_shadowmode_deferred; // cached value of r_shadow_deferred cvar
 r_shadow_shadowmode_t r_shadow_shadowmode;
 int r_shadow_shadowmapfilterquality;
 int r_shadow_shadowmapdepthbits;
@@ -297,6 +300,8 @@ static void R_Shadow_MakeShadowMap(int texturesize);
 static void R_Shadow_MakeVSDCT(void);
 static void R_Shadow_SetShadowMode(void)
 {
+	r_shadow_shadowmode_shadowmapping = r_shadow_shadowmapping.integer;
+	r_shadow_shadowmode_deferred = r_shadow_deferred.integer;
 	r_shadow_shadowmapborder = bound(1, r_shadow_shadowmapping_bordersize.integer, 16);
 	r_shadow_shadowmaptexturesize = bound(256, r_shadow_shadowmapping_texturesize.integer, (int)vid.maxtexturesize_2d);
 	r_shadow_shadowmapmaxsize = bound(r_shadow_shadowmapborder+2, r_shadow_shadowmapping_maxsize.integer, r_shadow_shadowmaptexturesize / 8);
@@ -307,32 +312,31 @@ static void R_Shadow_SetShadowMode(void)
 	r_shadow_shadowmapsampler = false;
 	r_shadow_shadowmappcf = 0;
 	r_shadow_shadowmapdepthtexture = r_fb.usedepthtextures;
-	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
-	Mod_AllocLightmap_Init(&r_shadow_shadowmapatlas_state, r_main_mempool, r_shadow_shadowmaptexturesize, r_shadow_shadowmaptexturesize);
-	if (r_shadow_shadowmapping.integer || r_shadow_deferred.integer)
+	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_DISABLED;
+	if (r_shadow_shadowmode_shadowmapping || r_shadow_shadowmode_deferred)
 	{
-		switch(vid.renderpath)
+		switch (vid.renderpath)
 		{
 		case RENDERPATH_GL32:
-			if(r_shadow_shadowmapfilterquality < 0)
+			if (r_shadow_shadowmapfilterquality < 0)
 			{
 				if (!r_fb.usedepthtextures)
 					r_shadow_shadowmappcf = 1;
-				else if((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && r_shadow_shadowmapshadowsampler)
+				else if ((strstr(gl_vendor, "NVIDIA") || strstr(gl_renderer, "Radeon HD")) && r_shadow_shadowmapshadowsampler)
 				{
 					r_shadow_shadowmapsampler = true;
 					r_shadow_shadowmappcf = 1;
 				}
-				else if(vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
+				else if (vid.support.amd_texture_texture4 || vid.support.arb_texture_gather)
 					r_shadow_shadowmappcf = 1;
-				else if((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa"))
+				else if ((strstr(gl_vendor, "ATI") || strstr(gl_vendor, "Advanced Micro Devices")) && !strstr(gl_renderer, "Mesa") && !strstr(gl_version, "Mesa"))
 					r_shadow_shadowmappcf = 1;
 				else
 					r_shadow_shadowmapsampler = r_shadow_shadowmapshadowsampler;
 			}
 			else
 			{
-                r_shadow_shadowmapsampler = r_shadow_shadowmapshadowsampler;
+				r_shadow_shadowmapsampler = r_shadow_shadowmapshadowsampler;
 				switch (r_shadow_shadowmapfilterquality)
 				{
 				case 1:
@@ -353,8 +357,18 @@ static void R_Shadow_SetShadowMode(void)
 			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			break;
 		case RENDERPATH_GLES2:
+			r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
 			break;
 		}
+	}
+
+	switch (r_shadow_shadowmode)
+	{
+	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
+		Mod_AllocLightmap_Init(&r_shadow_shadowmapatlas_state, r_main_mempool, r_shadow_shadowmaptexturesize, r_shadow_shadowmaptexturesize);
+		break;
+	case R_SHADOW_SHADOWMODE_DISABLED:
+		break;
 	}
 
 	if(R_CompileShader_CheckStaticParms())
@@ -367,13 +381,16 @@ qboolean R_Shadow_ShadowMappingEnabled(void)
 	{
 	case R_SHADOW_SHADOWMODE_SHADOWMAP2D:
 		return true;
-	default:
+	case R_SHADOW_SHADOWMODE_DISABLED:
 		return false;
 	}
+	return false;
 }
 
 static void R_Shadow_FreeShadowMaps(void)
 {
+	R_Shadow_UncompileWorldLights();
+
 	Mod_AllocLightmap_Free(&r_shadow_shadowmapatlas_state);
 
 	R_Shadow_SetShadowMode();
@@ -393,6 +410,7 @@ static void R_Shadow_FreeShadowMaps(void)
 	if (r_shadow_shadowmapvsdcttexture)
 		R_FreeTexture(r_shadow_shadowmapvsdcttexture);
 	r_shadow_shadowmapvsdcttexture = NULL;
+
 }
 
 static void r_shadow_start(void)
@@ -400,7 +418,7 @@ static void r_shadow_start(void)
 	// allocate vertex processing arrays
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
 	r_shadow_attenuationgradienttexture = NULL;
-	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_SHADOWMAP2D;
+	r_shadow_shadowmode = R_SHADOW_SHADOWMODE_DISABLED;
 	r_shadow_shadowmap2ddepthtexture = NULL;
 	r_shadow_shadowmap2ddepthbuffer = NULL;
 	r_shadow_shadowmapvsdcttexture = NULL;
@@ -473,7 +491,6 @@ static void R_Shadow_FreeDeferred(void);
 static void r_shadow_shutdown(void)
 {
 	CHECKGLERROR
-	R_Shadow_UncompileWorldLights();
 
 	R_Shadow_FreeShadowMaps();
 
@@ -1457,8 +1474,8 @@ static void R_Shadow_MakeShadowMap(int texturesize)
 			r_shadow_fbo2d = R_Mesh_CreateFramebufferObject(r_shadow_shadowmap2ddepthbuffer, r_shadow_shadowmap2ddepthtexture, NULL, NULL, NULL);
 		}
 		break;
-	default:
-		return;
+	case R_SHADOW_SHADOWMODE_DISABLED:
+		break;
 	}
 }
 
@@ -3041,7 +3058,6 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 
 	// compile the light
 	rtlight->compiled = true;
-	rtlight->shadowmode = rtlight->shadow ? (int)r_shadow_shadowmode : -1;
 	rtlight->static_numleafs = 0;
 	rtlight->static_numleafpvsbytes = 0;
 	rtlight->static_leaflist = NULL;
@@ -3450,12 +3466,8 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	// all at once at the start of a level, not when it stalls gameplay.
 	// (especially important to benchmarks)
 	// compile light
-	if (rtlight->isstatic && !nolight && (!rtlight->compiled || (rtlight->shadow && rtlight->shadowmode != (int)r_shadow_shadowmode)) && r_shadow_realtime_world_compile.integer)
-	{
-		if (rtlight->compiled)
-			R_RTLight_Uncompile(rtlight);
+	if (rtlight->isstatic && !nolight && !rtlight->compiled && r_shadow_realtime_world_compile.integer)
 		R_RTLight_Compile(rtlight);
-	}
 
 	// load cubemap
 	rtlight->currentcubemap = rtlight->cubemapname[0] ? R_GetCubemap(rtlight->cubemapname) : r_texture_whitecube;
@@ -4073,8 +4085,9 @@ void R_Shadow_PrepareLights(void)
 	int shadowmaptexturesize = bound(256, r_shadow_shadowmapping_texturesize.integer, (int)vid.maxtexturesize_2d);
 	int shadowmapmaxsize = bound(shadowmapborder+2, r_shadow_shadowmapping_maxsize.integer, shadowmaptexturesize / 8);
 
-	if (r_shadow_shadowmaptexturesize != shadowmaptexturesize ||
-		!(r_shadow_shadowmapping.integer || r_shadow_deferred.integer) ||
+	if (r_shadow_shadowmode_shadowmapping != r_shadow_shadowmapping.integer ||
+		r_shadow_shadowmode_deferred != r_shadow_deferred.integer ||
+	    r_shadow_shadowmaptexturesize != shadowmaptexturesize ||
 		r_shadow_shadowmapvsdct != (r_shadow_shadowmapping_vsdct.integer != 0 && vid.renderpath == RENDERPATH_GL32) ||
 		r_shadow_shadowmapfilterquality != r_shadow_shadowmapping_filterquality.integer ||
 		r_shadow_shadowmapshadowsampler != r_shadow_shadowmapping_useshadowsampler.integer ||
