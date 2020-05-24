@@ -196,7 +196,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 	l = (int)strlen(text);
 
 	Cbuf_Lock(cmd);
-	if (cmd->text.cursize + l >= (size_t)cmd->text.maxsize)
+	if (cmd->text.maxsize - cmd->text.cursize <= l)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 		SZ_Write(&cmd->text, (const unsigned char *)text, l);
