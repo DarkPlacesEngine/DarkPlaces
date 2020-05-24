@@ -3249,9 +3249,9 @@ int FS_Seek (qfile_t* file, fs_offset_t offset, int whence)
 	buffer = (unsigned char *)Mem_Alloc (tempmempool, buffersize);
 
 	// Skip all data until we reach the requested offset
-	while (offset > file->position)
+	while (offset > (file->position - file->buff_len + file->buff_ind))
 	{
-		fs_offset_t diff = offset - file->position;
+		fs_offset_t diff = offset - (file->position - file->buff_len + file->buff_ind);
 		fs_offset_t count, len;
 
 		count = (diff > buffersize) ? buffersize : diff;
