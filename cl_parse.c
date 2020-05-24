@@ -1279,12 +1279,8 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			CL_KeepaliveMessage(true);
 			if (cl.model_name[cl.downloadmodel_current][0] != '*' && strcmp(cl.model_name[cl.downloadmodel_current], "null") && !FS_FileExists(cl.model_name[cl.downloadmodel_current]))
 			{
-				if (cl.downloadmodel_current == 1) {
-					// No way any game is playable without the map.
+				if (cl.downloadmodel_current == 1)
 					Con_Printf("Map %s not found\n", cl.model_name[cl.downloadmodel_current]);
-					CL_Disconnect();
-					return;
-				}
 				else
 					Con_Printf("Model %s not found\n", cl.model_name[cl.downloadmodel_current]);
 				// regarding the * check: don't try to download submodels
@@ -1306,6 +1302,8 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			if (cl.downloadmodel_current == 1)
 			{
 				// we now have the worldmodel so we can set up the game world
+				// or maybe we do not have it (cl_serverextension_download 0)
+				// then we need to continue loading ANYWAY!
 				CL_SetupWorldModel();
 				if (!cl.loadfinished && cl_joinbeforedownloadsfinish.integer)
 				{
