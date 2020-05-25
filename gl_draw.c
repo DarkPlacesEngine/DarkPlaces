@@ -1506,7 +1506,7 @@ void DrawQ_FlushUI(void)
 		return;
 	}
 
-	// TODO: render the mesh using R_Q1BSP_Draw or similar, for full material support.
+	// this is roughly equivalent to R_Q1BSP_Draw, so the UI can use full material feature set
 	r_refdef.view.colorscale = 1;
 	r_textureframe++; // used only by R_GetCurrentTexture
 	GL_DepthMask(false);

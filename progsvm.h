@@ -626,8 +626,13 @@ typedef struct prvm_prog_s
 	// buffer for storing all tempstrings created during one invocation of ExecuteProgram
 	sizebuf_t			tempstringsbuf;
 
-	// in csqc the polygonbegin,polygonvertex,polygonend sequencing is
-	// stateful, so this tracks the last polygonbegin's choice of
+	// polygonbegin, polygonvertex, polygonend state
+	// the polygon is buffered here until polygonend commits it to the relevant
+	// CL_Mesh entity, because important decisions depend on the vertex data
+	// provided (e.g. whether the polygon is transparent), we can't really do much
+	// with it until we have all of the data...
+
+	// this tracks the last polygonbegin's choice of
 	// CL_Mesh_CSQC or CL_Mesh_UI for this polygon
 	dp_model_t			*polygonbegin_model;
 	// indicates if polygonbegin should be interpreted as 2d
@@ -637,6 +642,13 @@ typedef struct prvm_prog_s
 	// where the behavior is always 3D unless DRAWFLAG_2D is passed, but
 	// DRAWFLAG_2D conflicts with our DRAWFLAG_SCREEN.
 	qboolean			polygonbegin_guess2d;
+	// the texture name and drawflags provided to polygonbegin
+	char				polygonbegin_texname[MAX_QPATH];
+	int					polygonbegin_drawflags;
+	// the vertex data
+	int					polygonbegin_numvertices;
+	int					polygonbegin_maxvertices;
+	float				*polygonbegin_vertexdata;
 
 	// copies of some vars that were former read from sv
 	int					num_edicts;

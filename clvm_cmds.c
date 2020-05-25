@@ -743,6 +743,8 @@ static void VM_CL_R_ClearScene (prvm_prog_t *prog)
 	cl.csqc_vidvars.drawenginesbar = false;
 	cl.csqc_vidvars.drawcrosshair = false;
 	CSQC_R_RecalcView();
+	// clear the CL_Mesh_Scene() used for CSQC polygons and engine effects, they will be added by CSQC_RelinkAllEntities and manually created by CSQC
+	CL_MeshEntities_Scene_Clear();
 }
 
 //#301 void(float mask) addentities (EXT_CSQC)
@@ -3251,16 +3253,16 @@ static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 		csqc_main_r_refdef_view = r_refdef.view;
 	}
 
+	// now after all of the predraw we know the geometry in the scene mesh and can finalize it for rendering
+	CL_MeshEntities_Scene_FinalizeRenderEntity();
+
 	// we need to update any RENDER_VIEWMODEL entities at this point because
 	// csqc supplies its own view matrix
 	CL_UpdateViewEntities();
-	CL_MeshEntities_AddToScene();
 	CL_UpdateEntityShading();
 
 	// now draw stuff!
 	R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
-
-	Mod_Mesh_Reset(CL_Mesh_CSQC());
 
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView
 	t = Sys_DirtyTime() - t;if (t < 0 || t >= 1800) t = 0;
@@ -3303,9 +3305,11 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 	}
 
 	// we need to remember whether this is a 2D or 3D mesh we're adding to
-	mod = draw2d ? CL_Mesh_UI() : CL_Mesh_CSQC();
+	mod = draw2d ? CL_Mesh_UI() : CL_Mesh_Scene();
 	prog->polygonbegin_model = mod;
-	Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, texname, drawflags, TEXF_ALPHA, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX), false);
+	strlcpy(prog->polygonbegin_texname, texname, sizeof(prog->polygonbegin_texname));
+	prog->polygonbegin_drawflags = drawflags;
+	prog->polygonbegin_numvertices = 0;
 }
 
 //void(vector org, vector texcoords, vector rgb, float alpha) R_PolygonVertex
@@ -3315,47 +3319,87 @@ static void VM_CL_R_PolygonVertex (prvm_prog_t *prog)
 	const prvm_vec_t *tc = PRVM_G_VECTOR(OFS_PARM1);
 	const prvm_vec_t *c = PRVM_G_VECTOR(OFS_PARM2);
 	const prvm_vec_t a = PRVM_G_FLOAT(OFS_PARM3);
+	float *o;
 	dp_model_t *mod = prog->polygonbegin_model;
-	int e0, e1, e2;
-	msurface_t *surf;
 
 	VM_SAFEPARMCOUNT(4, VM_CL_R_PolygonVertex);
 
-	if (!mod || mod->num_surfaces == 0)
+	if (!mod)
 	{
 		VM_Warning(prog, "VM_CL_R_PolygonVertex: VM_CL_R_PolygonBegin wasn't called\n");
 		return;
 	}
 
-	surf = &mod->data_surfaces[mod->num_surfaces - 1];
-	e2 = Mod_Mesh_IndexForVertex(mod, surf, v[0], v[1], v[2], 0, 0, 0, tc[0], tc[1], 0, 0, c[0], c[1], c[2], a);
-	if (surf->num_vertices >= 3)
+	if (prog->polygonbegin_maxvertices <= prog->polygonbegin_numvertices)
 	{
-		// the first element is the start of the triangle fan
-		e0 = surf->num_firstvertex;
-		// the second element is the previous vertex
-		e1 = e0 + 1;
-		if (surf->num_triangles > 0)
-			e1 = mod->surfmesh.data_element3i[(surf->num_firsttriangle + surf->num_triangles) * 3 - 1];
-		Mod_Mesh_AddTriangle(mod, surf, e0, e1, e2);
+		prog->polygonbegin_maxvertices = max(16, prog->polygonbegin_maxvertices * 2);
+		prog->polygonbegin_vertexdata = (float *)Mem_Realloc(prog->progs_mempool, prog->polygonbegin_vertexdata, prog->polygonbegin_maxvertices * sizeof(float[10]));
 	}
+	o = prog->polygonbegin_vertexdata + prog->polygonbegin_numvertices++ * 10;
+
+	o[0] = v[0];
+	o[1] = v[1];
+	o[2] = v[2];
+	o[3] = tc[0];
+	o[4] = tc[1];
+	o[5] = tc[2];
+	o[6] = c[0];
+	o[7] = c[1];
+	o[8] = c[2];
+	o[9] = a;
 }
 
 //void() R_EndPolygon
 static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 {
+	int i;
+	qboolean hascolor;
+	qboolean hasalpha;
+	int e0 = 0, e1 = 0, e2 = 0;
+	float *o;
 	dp_model_t *mod = prog->polygonbegin_model;
 	msurface_t *surf;
 
 	VM_SAFEPARMCOUNT(0, VM_CL_R_PolygonEnd);
-	if (!mod || mod->num_surfaces == 0)
+	if (!mod)
 	{
 		VM_Warning(prog, "VM_CL_R_PolygonEnd: VM_CL_R_PolygonBegin wasn't called\n");
 		return;
 	}
-	surf = &mod->data_surfaces[mod->num_surfaces - 1];
+
+	// determine if vertex alpha is being used so we can provide that hint to GetTexture...
+	hascolor = false;
+	hasalpha = false;
+	for (i = 0; i < prog->polygonbegin_numvertices; i++)
+	{
+		o = prog->polygonbegin_vertexdata + 10 * i;
+		if (o[6] != 1.0f || o[7] != 1.0f || o[8] != 1.0f)
+			hascolor = true;
+		if (o[9] != 1.0f)
+			hasalpha = true;
+	}
+
+	// create the surface, looking up the best matching texture/shader
+	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, prog->polygonbegin_texname, prog->polygonbegin_drawflags, TEXF_ALPHA, MATERIALFLAG_WALL | (hascolor ? MATERIALFLAG_VERTEXCOLOR : 0) | (hasalpha ? MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW : 0)), false);
+	// create triangle fan
+	for (i = 0; i < prog->polygonbegin_numvertices; i++)
+	{
+		o = prog->polygonbegin_vertexdata + 10 * i;
+		e2 = Mod_Mesh_IndexForVertex(mod, surf, o[0], o[1], o[2], 0, 0, 0, o[3], o[4], 0, 0, o[6], o[7], o[8], o[9]);
+		if (i >= 2)
+			Mod_Mesh_AddTriangle(mod, surf, e0, e1, e2);
+		else if (i == 0)
+			e0 = e2;
+		e1 = e2;
+	}
+	// build normals (since they are not provided)
 	Mod_BuildNormals(surf->num_firstvertex, surf->num_vertices, surf->num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_element3i + 3 * surf->num_firsttriangle, mod->surfmesh.data_normal3f, true);
+
+	// reset state
 	prog->polygonbegin_model = NULL;
+	prog->polygonbegin_texname[0] = 0;
+	prog->polygonbegin_drawflags = 0;
+	prog->polygonbegin_numvertices = 0;
 }
 
 /*
