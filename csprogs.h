@@ -76,6 +76,7 @@
 extern cvar_t csqc_progname;	//[515]: csqc crc check and right csprogs name according to progs.dat
 extern cvar_t csqc_progcrc;
 extern cvar_t csqc_progsize;
+extern cvar_t csqc_polygons_defaultmaterial_nocullface;
 
 void CL_VM_PreventInformationLeaks(void);
 
