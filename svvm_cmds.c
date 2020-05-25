@@ -1626,19 +1626,18 @@ static void VM_SV_getlight(prvm_prog_t *prog)
 
 typedef struct
 {
-	unsigned char	type;	// 1/2/8 or other value if isn't used
+	unsigned char	type;	// 1/2/8 or 0 to indicate unused
 	int		fieldoffset;
 }customstat_t;
 
-static customstat_t *vm_customstats = NULL;	//[515]: it starts from 0, not 32
+static customstat_t vm_customstats[MAX_CL_STATS]; // matches the regular stat numbers, but only MIN_VM_STAT to MAX_VM_STAT range is used if things are working properly (can register stats from MAX_VM_STAT to MAX_CL_STATS but will warn)
 static int vm_customstats_last;
 
 void VM_CustomStats_Clear (void)
 {
 	if(vm_customstats)
 	{
-		Z_Free(vm_customstats);
-		vm_customstats = NULL;
+		memset(vm_customstats, 0, sizeof(vm_customstats));
 		vm_customstats_last = -1;
 	}
 }
@@ -1653,10 +1652,7 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 		float f;
 	} u;
 
-	if(!vm_customstats)
-		return;
-
-	for(i=0; i<vm_customstats_last+1 ;i++)
+	for(i=MIN_VM_STAT; i<=vm_customstats_last ;i++)
 	{
 		if(!vm_customstats[i].type)
 			continue;
@@ -1666,20 +1662,20 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 		case 1:
 			memset(s, 0, 17);
 			strlcpy(s, PRVM_E_STRING(ent, vm_customstats[i].fieldoffset), 16);
-			stats[i+32] = s[ 0] + s[ 1] * 256 + s[ 2] * 65536 + s[ 3] * 16777216;
-			stats[i+33] = s[ 4] + s[ 5] * 256 + s[ 6] * 65536 + s[ 7] * 16777216;
-			stats[i+34] = s[ 8] + s[ 9] * 256 + s[10] * 65536 + s[11] * 16777216;
-			stats[i+35] = s[12] + s[13] * 256 + s[14] * 65536 + s[15] * 16777216;
+			stats[i] = s[ 0] + s[ 1] * 256 + s[ 2] * 65536 + s[ 3] * 16777216;
+			stats[i+1] = s[ 4] + s[ 5] * 256 + s[ 6] * 65536 + s[ 7] * 16777216;
+			stats[i+2] = s[ 8] + s[ 9] * 256 + s[10] * 65536 + s[11] * 16777216;
+			stats[i+3] = s[12] + s[13] * 256 + s[14] * 65536 + s[15] * 16777216;
 			break;
 		//float field sent as-is
 		case 8:
 			// can't directly use PRVM_E_INT on the field because it may be PRVM_64 and a double is not the representation we want to send
 			u.f = PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
-			stats[i+32] = u.i;
+			stats[i] = u.i;
 			break;
 		//integer value of float field
 		case 2:
-			stats[i+32] = (int)PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
+			stats[i] = (int)PRVM_E_FLOAT(ent, vm_customstats[i].fieldoffset);
 			break;
 		default:
 			break;
@@ -1696,40 +1692,51 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 //          8: integer (one stat, not converted to an int, so this can be used to transport floats as floats - what a unique idea!)
 static void VM_SV_AddStat(prvm_prog_t *prog)
 {
-	int		off, i;
-	unsigned char	type;
+	int		off, i, type;
 
 	VM_SAFEPARMCOUNT(3, VM_SV_AddStat);
 
-	if(!vm_customstats)
-	{
-		vm_customstats = (customstat_t *)Z_Malloc((MAX_CL_STATS-32) * sizeof(customstat_t));
-		if(!vm_customstats)
-		{
-			VM_Warning(prog, "PF_SV_AddStat: not enough memory\n");
-			return;
-		}
-	}
 	i		= (int)PRVM_G_FLOAT(OFS_PARM0);
 	type	= (int)PRVM_G_FLOAT(OFS_PARM1);
 	off		= PRVM_G_INT  (OFS_PARM2);
-	i -= 32;
 
-	if(i < 0)
+	switch (type)
 	{
-		VM_Warning(prog, "PF_SV_AddStat: index may not be less than 32\n");
+	case 1:
+	case 2:
+	case 8:
+		break;
+	default:
+		VM_Warning(prog, "PF_SV_AddStat: unrecognized type %i - supported types are 1 (string up to 16 bytes, takes 4 stat slots), 2 (truncate to int32), 8 (send as float)", type);
 		return;
 	}
-	if(i >= (MAX_CL_STATS-32))
+
+	if (i < 0)
 	{
-		VM_Warning(prog, "PF_SV_AddStat: index >= MAX_CL_STATS\n");
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) may not be less than %i\n", i, MIN_VM_STAT);
 		return;
 	}
-	if(i > (MAX_CL_STATS-32-4) && type == 1)
+
+	if (i >= MAX_CL_STATS)
 	{
-		VM_Warning(prog, "PF_SV_AddStat: index > (MAX_CL_STATS-4) with string\n");
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_CL_STATS (%i), not supported by protocol, and AddStat beyond MAX_VM_STAT conflicts with engine MOVEVARS\n", i, MAX_CL_STATS, MAX_VM_STAT);
 		return;
 	}
+
+	if (i > (MAX_CL_STATS - 4) && type == 1)
+	{
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) > (MAX_CL_STATS-4) with string type won't fit in the protocol, and AddStat beyond MAX_VM_STAT conflicts with engine MOVEVARS\n", i, MAX_CL_STATS);
+		return;
+	}
+
+	// these are hazardous to override but sort of allowed if one wants to be adventurous...  and enjoys warnings.
+	if (i < MIN_VM_STAT)
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) < MIN_VM_STAT (%i) may conflict with engine stats - allowed, but this may break things\n", i, MIN_VM_STAT);
+	else if (i >= MAX_VM_STAT)
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_VM_STAT (%i) conflicts with engine stats - allowed, but this may break slowmo and stuff\n", i, MAX_VM_STAT);
+	else if (i > (MAX_VM_STAT - 4) && type == 1)
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_VM_STAT (%i) - 4 with string type won't fit within MAX_VM_STAT, thus conflicting with engine stats - allowed, but this may break slowmo and stuff\n", i, MAX_VM_STAT);
+
 	vm_customstats[i].type		= type;
 	vm_customstats[i].fieldoffset	= off;
 	if(vm_customstats_last < i)
