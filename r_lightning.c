@@ -21,7 +21,7 @@ static void r_lightningbeams_start(void)
 
 static void CL_Beams_SetupExternalTexture(void)
 {
-	if (Mod_LoadTextureFromQ3Shader(r_main_mempool, "r_lightning.c", &cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE))
+	if (Mod_LoadTextureFromQ3Shader(r_main_mempool, "r_lightning.c", &cl_beams_externaltexture, "textures/particles/lightning", false, false, TEXF_ALPHA | TEXF_FORCELINEAR, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NOSHADOW | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX))
 		Cvar_SetValueQuick(&r_lightningbeam_qmbtexture, false);
 }
 
@@ -75,7 +75,7 @@ static void CL_Beams_SetupBuiltinTexture(void)
 	}
 
 	skinframe = R_SkinFrame_LoadInternalBGRA("lightningbeam", TEXF_FORCELINEAR, data, texwidth, texheight, 0, 0, 0, false);
-	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX, skinframe);
+	Mod_LoadCustomMaterial(r_main_mempool, &cl_beams_builtintexture, "cl_beams_builtintexture", 0, MATERIALFLAG_WALL | MATERIALFLAG_ADD | MATERIALFLAG_BLENDED | MATERIALFLAG_NOCULLFACE | MATERIALFLAG_NOSHADOW | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX, skinframe);
 	Mem_Free(data);
 }
 
@@ -180,7 +180,7 @@ void CL_Beam_AddPolygons(const beam_t *b)
 	// (and realize that the whole polygon assembly orients itself to face
 	//  the viewer)
 
-	mod = &cl_meshentitymodels[MESH_PARTICLES];
+	mod = CL_Mesh_Scene();
 	surf = Mod_Mesh_AddSurface(mod, r_lightningbeam_qmbtexture.integer ? &cl_beams_externaltexture : &cl_beams_builtintexture, false);
 	// polygon 1
 	VectorM(r_lightningbeam_thickness.value, right, offset);
