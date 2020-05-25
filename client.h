@@ -2010,21 +2010,18 @@ void CL_ClientMovement_PlayerMove_Frame(cl_clientmovement_state_t *s);
 void CL_RotateMoves(const matrix4x4_t *m);
 
 typedef enum meshname_e {
-	MESH_DEBUG,
-	MESH_CSQCPOLYGONS,
-	MESH_PARTICLES,
+	MESH_SCENE, // CSQC R_PolygonBegin, potentially also engine particles and debug stuff
 	MESH_UI,
 	NUM_MESHENTITIES,
 } meshname_t;
 extern entity_t cl_meshentities[NUM_MESHENTITIES];
 extern dp_model_t cl_meshentitymodels[NUM_MESHENTITIES];
 extern const char *cl_meshentitynames[NUM_MESHENTITIES];
-#define CL_Mesh_Debug() (&cl_meshentitymodels[MESH_DEBUG])
-#define CL_Mesh_CSQC() (&cl_meshentitymodels[MESH_CSQCPOLYGONS])
-#define CL_Mesh_Particles() (&cl_meshentitymodels[MESH_PARTICLES])
+#define CL_Mesh_Scene() (&cl_meshentitymodels[MESH_SCENE])
 #define CL_Mesh_UI() (&cl_meshentitymodels[MESH_UI])
-void CL_MeshEntities_AddToScene(void);
-void CL_MeshEntities_Reset(void);
+void CL_MeshEntities_Scene_Clear(void);
+void CL_MeshEntities_Scene_AddRenderEntity(void);
+void CL_MeshEntities_Scene_FinalizeRenderEntity(void);
 void CL_UpdateEntityShading(void);
 
 void CL_NewFrameReceived(int num);

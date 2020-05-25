@@ -2555,6 +2555,7 @@ nothing                GL_ZERO GL_ONE
 	{
 		if (developer_extra.integer)
 			Con_DPrintf("^1%s:^7 using fallback noshader material for ^3\"%s\"\n", modelname, name);
+		texture->basematerialflags = defaultmaterialflags;
 		texture->supercontents = SUPERCONTENTS_SOLID | SUPERCONTENTS_OPAQUE;
 	}
 	else if (!strcmp(texture->name, "common/nodraw") || !strcmp(texture->name, "textures/common/nodraw"))
@@ -4400,7 +4401,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 	texture_t *t;
 	int drawflag = defaultdrawflags & DRAWFLAG_MASK;
 	for (i = 0, t = mod->data_textures; i < mod->num_textures; i++, t++)
-		if (!strcmp(t->name, name) && t->drawflag == drawflag)
+		if (!strcmp(t->name, name) && t->mesh_drawflag == drawflag && t->mesh_defaulttexflags == defaulttexflags && t->mesh_defaultmaterialflags == defaultmaterialflags)
 			return t;
 	if (mod->max_textures <= mod->num_textures)
 	{
@@ -4413,7 +4414,9 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 	}
 	t = &mod->data_textures[mod->num_textures++];
 	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags, defaultmaterialflags);
-	t->drawflag = drawflag;
+	t->mesh_drawflag = drawflag;
+	t->mesh_defaulttexflags = defaulttexflags;
+	t->mesh_defaultmaterialflags = defaultmaterialflags;
 	switch (defaultdrawflags & DRAWFLAG_MASK)
 	{
 	case DRAWFLAG_ADDITIVE:

@@ -1873,6 +1873,8 @@ void CSQC_RelinkAllEntities (int drawmask)
 {
 	// link stuff
 	CL_RelinkWorld();
+	// the scene mesh is added first for easier debugging (consistent spot in render entities list)
+	CL_MeshEntities_Scene_AddRenderEntity();
 	CL_RelinkStaticEntities();
 	CL_RelinkBeams();
 	CL_RelinkEffects();
@@ -1889,8 +1891,6 @@ void CSQC_RelinkAllEntities (int drawmask)
 
 	// update view blend
 	V_CalcViewBlend();
-
-	CL_MeshEntities_AddToScene();
 }
 
 /*
@@ -1941,7 +1941,12 @@ void CL_UpdateWorld(void)
 
 		// when csqc is loaded, it will call this in CSQC_UpdateView
 		if (!cl.csqc_loaded)
+		{
+			// clear the CL_Mesh_Scene() used for some engine effects
+			CL_MeshEntities_Scene_Clear();
+			// add engine entities and effects
 			CSQC_RelinkAllEntities(ENTMASK_ENGINE | ENTMASK_ENGINEVIEWMODELS);
+		}
 
 		// decals, particles, and explosions will be updated during rneder
 	}
@@ -2370,9 +2375,7 @@ entity_t cl_meshentities[NUM_MESHENTITIES];
 dp_model_t cl_meshentitymodels[NUM_MESHENTITIES];
 const char *cl_meshentitynames[NUM_MESHENTITIES] =
 {
-	"MESH_DEBUG",
-	"MESH_CSQC_POLYGONS",
-	"MESH_PARTICLES",
+	"MESH_SCENE",
 	"MESH_UI",
 };
 
@@ -2397,7 +2400,7 @@ static void CL_MeshEntities_Init(void)
 		ent->state_current.active = true;
 		ent->render.model = cl_meshentitymodels + i;
 		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);	
-		ent->render.alpha = 0.999999f; // not quite 1 so that MATERIALFLAG_ALPHA is always set.
+		ent->render.alpha = 1;
 		ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 		ent->render.framegroupblend[0].lerp = 1;
 		ent->render.frameblend[0].lerp = 1;
@@ -2425,30 +2428,25 @@ static void CL_MeshEntities_Init(void)
 	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
-void CL_MeshEntities_AddToScene(void)
+void CL_MeshEntities_Scene_Clear(void)
 {
-	int i;
-	entity_t *ent;
-	for (i = 0; i < NUM_MESHENTITIES && r_refdef.scene.numentities < r_refdef.scene.maxentities; i++)
+	Mod_Mesh_Reset(CL_Mesh_Scene());
+}
+
+void CL_MeshEntities_Scene_AddRenderEntity(void)
+{
+	entity_t* ent = &cl_meshentities[MESH_SCENE];
+	r_refdef.scene.entities[r_refdef.scene.numentities++] = &ent->render;
+}
+
+void CL_MeshEntities_Scene_FinalizeRenderEntity(void)
+{
+	entity_t *ent = &cl_meshentities[MESH_SCENE];
+	if (ent->render.model->num_surfaces)
 	{
-		ent = cl_meshentities + i;
-		if (ent->render.model->num_surfaces == 0)
-			continue;
 		Mod_Mesh_Finalize(ent->render.model);
 		VectorCopy(ent->render.model->normalmins, ent->render.mins);
 		VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
-		r_refdef.scene.entities[r_refdef.scene.numentities++] = &ent->render;
-	}
-}
-
-void CL_MeshEntities_Reset(void)
-{
-	int i;
-	entity_t *ent;
-	for (i = 0; i < NUM_MESHENTITIES && r_refdef.scene.numentities < r_refdef.scene.maxentities; i++)
-	{
-		ent = cl_meshentities + i;
-		Mod_Mesh_Reset(ent->render.model);
 	}
 }
 
