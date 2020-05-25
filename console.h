@@ -51,6 +51,14 @@ void Con_Print(const char *txt);
 /// Prints to all appropriate console targets.
 void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
+/// Prints warnings
+void Con_Warn(const char *msg);
+void Con_Warnf(const char *fmt, ...);
+
+/// Prints errors
+void Con_Error(const char *msg);
+void Con_Errorf(const char *fmt, ...);
+
 /// A Con_Print that only shows up if the "developer" cvar is set.
 void Con_DPrint(const char *msg);
 

@@ -1869,7 +1869,7 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 static void VM_CL_effect (prvm_prog_t *prog)
 {
 #if 1
-	Con_Printf("WARNING: VM_CL_effect not implemented\n"); // FIXME: this needs to take modelname not modelindex, the csqc defs has it as string and so it shall be
+	Con_Warnf("WARNING: VM_CL_effect not implemented\n"); // FIXME: this needs to take modelname not modelindex, the csqc defs has it as string and so it shall be
 #else
 	vec3_t org;
 	VM_SAFEPARMCOUNT(5, VM_CL_effect);

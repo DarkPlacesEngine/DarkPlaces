@@ -328,7 +328,7 @@ void Cbuf_Execute (cmd_state_t *cmd)
 		// better than CRASHING on overlong input lines that may SOMEHOW enter the buffer
 		if(i >= MAX_INPUTLINE)
 		{
-			Con_Printf("Warning: console input buffer had an overlong line. Ignored.\n");
+			Con_Warnf("Warning: console input buffer had an overlong line. Ignored.\n");
 			line[0] = 0;
 		}
 		else
@@ -1122,9 +1122,9 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 	{
 		// empty cvar name?
 		if(alias)
-			Con_Printf("Warning: Could not expand $ in alias %s\n", alias->name);
+			Con_Warnf("Warning: Could not expand $ in alias %s\n", alias->name);
 		else
-			Con_Printf("Warning: Could not expand $\n");
+			Con_Warnf("Warning: Could not expand $\n");
 		return "$";
 	}
 
@@ -1170,9 +1170,9 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 		if(required)
 		{
 			if(alias)
-				Con_Printf("Error: Could not expand $%s in alias %s\n", varname, alias->name);
+				Con_Errorf("Error: Could not expand $%s in alias %s\n", varname, alias->name);
 			else
-				Con_Printf("Error: Could not expand $%s\n", varname);
+				Con_Errorf("Error: Could not expand $%s\n", varname);
 			return NULL;
 		}
 		else if(optional)
@@ -1182,9 +1182,9 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 		else
 		{
 			if(alias)
-				Con_Printf("Warning: Could not expand $%s in alias %s\n", varname, alias->name);
+				Con_Warnf("Warning: Could not expand $%s in alias %s\n", varname, alias->name);
 			else
-				Con_Printf("Warning: Could not expand $%s\n", varname);
+				Con_Warnf("Warning: Could not expand $%s\n", varname);
 			dpsnprintf(varval, sizeof(varval), "$%s", varname);
 			return varval;
 		}

@@ -1458,7 +1458,7 @@ static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 				Con_Printf("%s written\n", modeinfo[mode].filename);
 			}
 			else
-				Con_Printf("failed to write to %s\n", modeinfo[mode].filename);
+				Con_Errorf("failed to write to %s\n", modeinfo[mode].filename);
 		}
 	}
 }
