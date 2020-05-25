@@ -815,6 +815,8 @@ void GL_Setup(void)
 		else
 			vid.allowalphatocoverage = false;
 	}
+	// currently MSAA antialiasing is not implemented for fbo viewports, so we actually have to force this off anyway.
+	vid.allowalphatocoverage = false;
 #endif
 	CHECKGLERROR
 
