@@ -35,6 +35,7 @@ cvar_t csqc_progname = {CVAR_CLIENT | CVAR_SERVER, "csqc_progname","csprogs.dat"
 cvar_t csqc_progcrc = {CVAR_CLIENT | CVAR_READONLY, "csqc_progcrc","-1","CRC of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
 cvar_t csqc_progsize = {CVAR_CLIENT | CVAR_READONLY, "csqc_progsize","-1","file size of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
 cvar_t csqc_usedemoprogs = {CVAR_CLIENT, "csqc_usedemoprogs","1","use csprogs stored in demos"};
+cvar_t csqc_polygons_defaultmaterial_nocullface = {CVAR_CLIENT, "csqc_polygons_defaultmaterial_nocullface", "0", "use 'cull none' behavior in the default shader for rendering R_PolygonBegin - warning: enabling this is not consistent with FTEQW behavior on this feature"};
 
 cvar_t cl_shownet = {CVAR_CLIENT, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
 cvar_t cl_nolerp = {CVAR_CLIENT, "cl_nolerp", "0","network update smoothing"};
@@ -2442,12 +2443,9 @@ void CL_MeshEntities_Scene_AddRenderEntity(void)
 void CL_MeshEntities_Scene_FinalizeRenderEntity(void)
 {
 	entity_t *ent = &cl_meshentities[MESH_SCENE];
-	if (ent->render.model->num_surfaces)
-	{
-		Mod_Mesh_Finalize(ent->render.model);
-		VectorCopy(ent->render.model->normalmins, ent->render.mins);
-		VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
-	}
+	Mod_Mesh_Finalize(ent->render.model);
+	VectorCopy(ent->render.model->normalmins, ent->render.mins);
+	VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
 }
 
 static void CL_MeshEntities_Shutdown(void)
@@ -2742,6 +2740,8 @@ void CL_Init (void)
 	Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
 	Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
 	Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+
+	Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
 
 	CL_Parse_Init();
 	CL_Particles_Init();

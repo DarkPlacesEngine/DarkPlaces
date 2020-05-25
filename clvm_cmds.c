@@ -3307,6 +3307,8 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 	// we need to remember whether this is a 2D or 3D mesh we're adding to
 	mod = draw2d ? CL_Mesh_UI() : CL_Mesh_Scene();
 	prog->polygonbegin_model = mod;
+	if (texname == NULL || texname[0] == 0)
+		texname = "$whiteimage";
 	strlcpy(prog->polygonbegin_texname, texname, sizeof(prog->polygonbegin_texname));
 	prog->polygonbegin_drawflags = drawflags;
 	prog->polygonbegin_numvertices = 0;
@@ -3359,6 +3361,8 @@ static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 	float *o;
 	dp_model_t *mod = prog->polygonbegin_model;
 	msurface_t *surf;
+	texture_t *tex;
+	int materialflags;
 
 	VM_SAFEPARMCOUNT(0, VM_CL_R_PolygonEnd);
 	if (!mod)
@@ -3380,7 +3384,15 @@ static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 	}
 
 	// create the surface, looking up the best matching texture/shader
-	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, prog->polygonbegin_texname, prog->polygonbegin_drawflags, TEXF_ALPHA, MATERIALFLAG_WALL | (hascolor ? MATERIALFLAG_VERTEXCOLOR : 0) | (hasalpha ? MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW : 0)), false);
+	materialflags = MATERIALFLAG_WALL;
+	if (csqc_polygons_defaultmaterial_nocullface.integer)
+		materialflags |= MATERIALFLAG_NOCULLFACE;
+	if (hascolor)
+		materialflags |= MATERIALFLAG_VERTEXCOLOR;
+	if (hasalpha)
+		materialflags |= MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+	tex = Mod_Mesh_GetTexture(mod, prog->polygonbegin_texname, prog->polygonbegin_drawflags, TEXF_ALPHA, materialflags);
+	surf = Mod_Mesh_AddSurface(mod, tex, false);
 	// create triangle fan
 	for (i = 0; i < prog->polygonbegin_numvertices; i++)
 	{

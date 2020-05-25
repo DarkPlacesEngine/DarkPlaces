@@ -1215,7 +1215,7 @@ void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *
 void Mod_Mesh_Create(dp_model_t *mod, const char *name);
 void Mod_Mesh_Destroy(dp_model_t *mod);
 void Mod_Mesh_Reset(dp_model_t *mod);
-texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int addmaterialflags);
+texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
 msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchwithprevioussurface);
 int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(dp_model_t *mod, msurface_t *surf, int e0, int e1, int e2);
