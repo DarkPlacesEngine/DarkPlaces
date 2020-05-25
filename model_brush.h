@@ -123,7 +123,7 @@ mplane_t;
 #define MATERIALFLAG_CAMERA 0x02000000
 // disable rtlight on surface - does not disable other types of lighting (LIGHTMAP, MODELLIGHT)
 #define MATERIALFLAG_NORTLIGHT 0x04000000
-// alphagen vertex
+// alphagen vertex - should always be used with MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW (or MATERIALFLAG_ADD instead of MATERIALFLAG_ALPHA)
 #define MATERIALFLAG_ALPHAGEN_VERTEX 0x08000000
 // use occlusion buffer for corona
 #define MATERIALFLAG_OCCLUDE 0x10000000
