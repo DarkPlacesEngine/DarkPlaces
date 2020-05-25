@@ -1065,6 +1065,7 @@ qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_
 	{
 		*size = i->compressed_size;
 		*buf = i->compressed;
+        return (*buf != NULL);
 	}
 
 	// load the image
