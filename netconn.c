@@ -1943,141 +1943,144 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			return true;
 		}
 #ifdef CONFIG_MENU
-		if (length >= 15 && !memcmp(string, "statusResponse\x0A", 15))
+		if(key_dest != key_game)
 		{
-			serverlist_info_t *info;
-			char *p;
-			int n;
-
-			string += 15;
-			// search the cache for this server and update it
-			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
-			if (n < 0)
-				return true;
-
-			info = &serverlist_cache[n].info;
-			info->game[0] = 0;
-			info->mod[0]  = 0;
-			info->map[0]  = 0;
-			info->name[0] = 0;
-			info->qcstatus[0] = 0;
-			info->players[0] = 0;
-			info->protocol = -1;
-			info->numplayers = 0;
-			info->numbots = -1;
-			info->maxplayers  = 0;
-			info->gameversion = 0;
-
-			p = strchr(string, '\n');
-			if(p)
+			if (length >= 15 && !memcmp(string, "statusResponse\x0A", 15))
 			{
-				*p = 0; // cut off the string there
-				++p;
-			}
-			else
-				Con_Printf("statusResponse without players block?\n");
+				serverlist_info_t *info;
+				char *p;
+				int n;
 
-			if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->game, s, sizeof (info->game));
-			if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
-			if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->map , s, sizeof (info->map ));
-			if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->name, s, sizeof (info->name));
-			if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
-			if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
-			if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
-			if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
-			if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-			if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
-			if (p                                                                                         != NULL) strlcpy(info->players, p, sizeof(info->players));
-			info->numhumans = info->numplayers - max(0, info->numbots);
-			info->freeslots = info->maxplayers - info->numplayers;
+				string += 15;
+				// search the cache for this server and update it
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+				if (n < 0)
+					return true;
 
-			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
+				info = &serverlist_cache[n].info;
+				info->game[0] = 0;
+				info->mod[0]  = 0;
+				info->map[0]  = 0;
+				info->name[0] = 0;
+				info->qcstatus[0] = 0;
+				info->players[0] = 0;
+				info->protocol = -1;
+				info->numplayers = 0;
+				info->numbots = -1;
+				info->maxplayers  = 0;
+				info->gameversion = 0;
 
-			return true;
-		}
-		if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
-		{
-			serverlist_info_t *info;
-			int n;
-
-			string += 13;
-			// search the cache for this server and update it
-			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
-			if (n < 0)
-				return true;
-
-			info = &serverlist_cache[n].info;
-			info->game[0] = 0;
-			info->mod[0]  = 0;
-			info->map[0]  = 0;
-			info->name[0] = 0;
-			info->qcstatus[0] = 0;
-			info->players[0] = 0;
-			info->protocol = -1;
-			info->numplayers = 0;
-			info->numbots = -1;
-			info->maxplayers  = 0;
-			info->gameversion = 0;
-
-			if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->game, s, sizeof (info->game));
-			if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
-			if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->map , s, sizeof (info->map ));
-			if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->name, s, sizeof (info->name));
-			if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
-			if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
-			if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
-			if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
-			if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-			if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
-			info->numhumans = info->numplayers - max(0, info->numbots);
-			info->freeslots = info->maxplayers - info->numplayers;
-
-			NetConn_ClientParsePacket_ServerList_UpdateCache(n);
-
-			return true;
-		}
-		if (!strncmp(string, "getserversResponse\\", 19) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
-		{
-			// Extract the IP addresses
-			data += 18;
-			length -= 18;
-			NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, false);
-			return true;
-		}
-		if (!strncmp(string, "getserversExtResponse", 21) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
-		{
-			// Extract the IP addresses
-			data += 21;
-			length -= 21;
-			NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, true);
-			return true;
-		}
-		if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
-		{
-			// Extract the IP addresses
-			data += 2;
-			length -= 2;
-			masterreplycount++;
-			if (serverlist_consoleoutput)
-				Con_Printf("received QuakeWorld server list from %s...\n", addressstring2);
-			while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
-			{
-				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
-				if (serverlist_consoleoutput && developer_networking.integer)
-					Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
-				
-				if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, ipstring, false ) ) {
-					break;
+				p = strchr(string, '\n');
+				if(p)
+				{
+					*p = 0; // cut off the string there
+					++p;
 				}
+				else
+					Con_Printf("statusResponse without players block?\n");
 
-				// move on to next address in packet
-				data += 6;
-				length -= 6;
+				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->game, s, sizeof (info->game));
+				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
+				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->map , s, sizeof (info->map ));
+				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->name, s, sizeof (info->name));
+				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
+				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
+				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
+				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
+				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
+				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+				if (p                                                                                         != NULL) strlcpy(info->players, p, sizeof(info->players));
+				info->numhumans = info->numplayers - max(0, info->numbots);
+				info->freeslots = info->maxplayers - info->numplayers;
+
+				NetConn_ClientParsePacket_ServerList_UpdateCache(n);
+
+				return true;
 			}
-			// begin or resume serverlist queries
-			serverlist_querysleep = false;
-			serverlist_querywaittime = realtime + 3;
-			return true;
+			if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
+			{
+				serverlist_info_t *info;
+				int n;
+
+				string += 13;
+				// search the cache for this server and update it
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+				if (n < 0)
+					return true;
+
+				info = &serverlist_cache[n].info;
+				info->game[0] = 0;
+				info->mod[0]  = 0;
+				info->map[0]  = 0;
+				info->name[0] = 0;
+				info->qcstatus[0] = 0;
+				info->players[0] = 0;
+				info->protocol = -1;
+				info->numplayers = 0;
+				info->numbots = -1;
+				info->maxplayers  = 0;
+				info->gameversion = 0;
+
+				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->game, s, sizeof (info->game));
+				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));
+				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->map , s, sizeof (info->map ));
+				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->name, s, sizeof (info->name));
+				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
+				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
+				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
+				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
+				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
+				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+				info->numhumans = info->numplayers - max(0, info->numbots);
+				info->freeslots = info->maxplayers - info->numplayers;
+
+				NetConn_ClientParsePacket_ServerList_UpdateCache(n);
+
+				return true;
+			}
+			if (!strncmp(string, "getserversResponse\\", 19) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
+			{
+				// Extract the IP addresses
+				data += 18;
+				length -= 18;
+				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, false);
+				return true;
+			}
+			if (!strncmp(string, "getserversExtResponse", 21) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
+			{
+				// Extract the IP addresses
+				data += 21;
+				length -= 21;
+				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, true);
+				return true;
+			}
+			if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
+			{
+				// Extract the IP addresses
+				data += 2;
+				length -= 2;
+				masterreplycount++;
+				if (serverlist_consoleoutput)
+					Con_Printf("received QuakeWorld server list from %s...\n", addressstring2);
+				while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
+				{
+					dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
+					if (serverlist_consoleoutput && developer_networking.integer)
+						Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
+					
+					if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, ipstring, false ) ) {
+						break;
+					}
+
+					// move on to next address in packet
+					data += 6;
+					length -= 6;
+				}
+				// begin or resume serverlist queries
+				serverlist_querysleep = false;
+				serverlist_querywaittime = realtime + 3;
+				return true;
+			}
 		}
 #endif
 		if (!strncmp(string, "extResponse ", 12))
