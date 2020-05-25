@@ -4392,14 +4392,6 @@ static void R_View_Update(void)
 
 float viewscalefpsadjusted = 1.0f;
 
-static void R_GetScaledViewSize(int width, int height, int *outwidth, int *outheight)
-{
-	float scale = r_viewscale.value * sqrt(viewscalefpsadjusted);
-	scale = bound(0.03125f, scale, 1.0f);
-	*outwidth = (int)ceil(width * scale);
-	*outheight = (int)ceil(height * scale);
-}
-
 void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
 	const float *customclipplane = NULL;
@@ -4619,7 +4611,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 	return r;
 }
 
-static void R_Water_StartFrame(void)
+static void R_Water_StartFrame(int viewwidth, int viewheight)
 {
 	int waterwidth, waterheight;
 
@@ -4628,9 +4620,8 @@ static void R_Water_StartFrame(void)
 
 	// set waterwidth and waterheight to the water resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	waterwidth = (int)bound(1, r_refdef.view.width * r_water_resolutionmultiplier.value, r_refdef.view.width);
-	waterheight = (int)bound(1, r_refdef.view.height * r_water_resolutionmultiplier.value, r_refdef.view.height);
-	R_GetScaledViewSize(waterwidth, waterheight, &waterwidth, &waterheight);
+	waterwidth = (int)bound(16, viewwidth * r_water_resolutionmultiplier.value, viewwidth);
+	waterheight = (int)bound(16, viewheight * r_water_resolutionmultiplier.value, viewheight);
 
 	if (!r_water.integer || r_showsurfaces.integer)
 		waterwidth = waterheight = 0;
@@ -5040,8 +5031,8 @@ finish:
 static void R_Bloom_StartFrame(void)
 {
 	int screentexturewidth, screentextureheight;
-	int viewwidth, viewheight;
 	textype_t textype = TEXTYPE_COLORBUFFER;
+	double scale;
 
 	// clear the pointers to rendertargets from last frame as they're stale
 	r_fb.rt_screen = NULL;
@@ -5069,26 +5060,34 @@ static void R_Bloom_StartFrame(void)
 		adjust = (targetframetime - actualframetime) * r_viewscale_fpsscaling_multiply.value;
 		adjust = bound(-r_viewscale_fpsscaling_stepmax.value, adjust, r_viewscale_fpsscaling_stepmax.value);
 		if (r_viewscale_fpsscaling_stepsize.value > 0)
-			adjust = (int)(adjust / r_viewscale_fpsscaling_stepsize.value) * r_viewscale_fpsscaling_stepsize.value;
+		{
+			if (adjust > 0)
+				adjust = floor(adjust / r_viewscale_fpsscaling_stepsize.value) * r_viewscale_fpsscaling_stepsize.value;
+			else
+				adjust = ceil(adjust / r_viewscale_fpsscaling_stepsize.value) * r_viewscale_fpsscaling_stepsize.value;
+		}
 		viewscalefpsadjusted += adjust;
 		viewscalefpsadjusted = bound(r_viewscale_fpsscaling_min.value, viewscalefpsadjusted, 1.0f);
 	}
 	else
 		viewscalefpsadjusted = 1.0f;
 
-	R_GetScaledViewSize(r_refdef.view.width, r_refdef.view.height, &viewwidth, &viewheight);
+	scale = r_viewscale.value * sqrt(viewscalefpsadjusted);
+	if (vid.samples)
+		scale *= sqrt(vid.samples); // supersampling
+	scale = bound(0.03125f, scale, 4.0f);
+	screentexturewidth = (int)ceil(r_refdef.view.width * scale);
+	screentextureheight = (int)ceil(r_refdef.view.height * scale);
+	screentexturewidth = bound(1, screentexturewidth, (int)vid.maxtexturesize_2d);
+	screentextureheight = bound(1, screentextureheight, (int)vid.maxtexturesize_2d);
 
 	// set bloomwidth and bloomheight to the bloom resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, vid.width);
-	r_fb.bloomheight = r_fb.bloomwidth * vid.height / vid.width;
-	r_fb.bloomheight = bound(1, r_fb.bloomheight, vid.height);
+	r_fb.bloomheight = bound(1, r_bloom_resolution.value * 0.75f, vid.height * 4);
+	r_fb.bloomwidth = r_fb.bloomheight * vid.width / vid.height;
+	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, vid.width * 4);
 	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, (int)vid.maxtexturesize_2d);
 	r_fb.bloomheight = bound(1, r_fb.bloomheight, (int)vid.maxtexturesize_2d);
-
-	// calculate desired texture sizes
-	screentexturewidth = viewwidth;
-	screentextureheight = viewheight;
 
 	if ((r_bloom.integer || (!R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0))) && ((r_bloom_resolution.integer < 4 || r_bloom_blur.value < 1 || r_bloom_blur.value >= 512) || r_refdef.view.width > (int)vid.maxtexturesize_2d || r_refdef.view.height > (int)vid.maxtexturesize_2d))
 	{
@@ -5096,6 +5095,8 @@ static void R_Bloom_StartFrame(void)
 		Cvar_SetValueQuick(&r_motionblur, 0);
 		Cvar_SetValueQuick(&r_damageblur, 0);
 	}
+	if (!r_bloom.integer)
+		r_fb.bloomwidth = r_fb.bloomheight = 0;
 
 	// allocate motionblur ghost texture if needed - this is the only persistent texture and is only useful on the main view
 	if (r_refdef.view.ismain && (r_fb.screentexturewidth != screentexturewidth || r_fb.screentextureheight != screentextureheight || r_fb.textype != textype))
@@ -5115,16 +5116,6 @@ static void R_Bloom_StartFrame(void)
 			r_fb.ghosttexture_valid = false;
 		}
 	}
-
-	if (r_bloom.integer)
-	{
-		// bloom texture is a different resolution
-		r_fb.bloomwidth = bound(1, r_bloom_resolution.integer, r_refdef.view.width);
-		r_fb.bloomheight = r_fb.bloomwidth * r_refdef.view.height / r_refdef.view.width;
-		r_fb.bloomheight = bound(1, r_fb.bloomheight, r_refdef.view.height);
-	}
-	else
-		r_fb.bloomwidth = r_fb.bloomheight = 0;
 
 	r_fb.rt_screen = R_RenderTarget_Get(screentexturewidth, screentextureheight, TEXTYPE_DEPTHBUFFER24STENCIL8, true, textype, TEXTYPE_UNUSED, TEXTYPE_UNUSED, TEXTYPE_UNUSED);
 
@@ -5707,11 +5698,11 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 		viewcolortexture = r_fb.rt_screen->colortexture[0];
 		viewx = 0;
 		viewy = 0;
-		viewwidth = width;
-		viewheight = height;
+		viewwidth = r_fb.rt_screen->texturewidth;
+		viewheight = r_fb.rt_screen->textureheight;
 	}
 
-	R_Water_StartFrame();
+	R_Water_StartFrame(viewwidth, viewheight);
 
 	CHECKGLERROR
 	if (r_timereport_active)
