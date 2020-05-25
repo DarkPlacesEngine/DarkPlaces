@@ -970,11 +970,11 @@ static void NetConn_OpenClientPort(const char *addressstring, lhnetaddresstype_t
 		else
 		{
 			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-			Con_Printf("Client failed to open a socket on address %s\n", addressstring2);
+			Con_Errorf("Client failed to open a socket on address %s\n", addressstring2);
 		}
 	}
 	else
-		Con_Printf("Client unable to parse address %s\n", addressstring);
+		Con_Errorf("Client unable to parse address %s\n", addressstring);
 }
 
 void NetConn_OpenClientPorts(void)
@@ -1034,12 +1034,12 @@ static qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddressty
 			else
 			{
 				LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-				Con_Printf("Server failed to open socket on address %s\n", addressstring2);
+				Con_Errorf("Server failed to open socket on address %s\n", addressstring2);
 			}
 		}
 		else
 		{
-			Con_Printf("Server unable to parse address %s\n", addressstring);
+			Con_Errorf("Server unable to parse address %s\n", addressstring);
 			// if it cant parse one address, it wont be able to parse another for sure
 			return false;
 		}
@@ -2737,7 +2737,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	long t1, t2;
 
 	if (!password[0]) {
-		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2758,7 +2758,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	int i;
 
 	if (!password[0]) {
-		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2789,7 +2789,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 static qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	if (!password[0]) {
-		Con_Print("^4LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2937,7 +2937,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 {
 	int i, ret, clientnum, best;
 	double besttime;
-	char *string, response[1400], addressstring2[128];
+	char *string, response[2800], addressstring2[128];
 	static char stringbuf[16384]; // server only
 	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
@@ -3754,7 +3754,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	}
 	if (!masterquerycount)
 	{
-		Con_Print("Unable to query master servers, no suitable network sockets active.\n");
+		Con_Error("Unable to query master servers, no suitable network sockets active.\n");
 		M_Update_Return_Reason("No network");
 	}
 }
@@ -3922,7 +3922,7 @@ void NetConn_Init(void)
 			Cvar_SetQuick(&net_address, com_argv[i + 1]);
 		}
 		else
-			Con_Printf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
+			Con_Errorf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
 	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < com_argc)
@@ -3934,7 +3934,7 @@ void NetConn_Init(void)
 			Cvar_SetValueQuick(&sv_netport, i);
 		}
 		else
-			Con_Printf("-port option used, but %i is not a valid port number\n", i);
+			Con_Errorf("-port option used, but %i is not a valid port number\n", i);
 	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;

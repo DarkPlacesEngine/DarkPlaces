@@ -1489,7 +1489,7 @@ void SCR_ScreenShot_f(cmd_state_t *cmd)
 		Con_Printf("Wrote %s\n", filename);
 	else
 	{
-		Con_Printf("Unable to write %s\n", filename);
+		Con_Errorf("Unable to write %s\n", filename);
 		if(jpeg || png)
 		{
 			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer != 0))

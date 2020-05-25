@@ -1212,7 +1212,7 @@ static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, 
 	}
 	else
 	{
-		Con_Printf("unable to load pak \"%s\"\n", pakfile);
+		Con_Errorf("unable to load pak \"%s\"\n", pakfile);
 		return false;
 	}
 }
@@ -2138,13 +2138,13 @@ void FS_Init (void)
 
 	p = FS_CheckGameDir(gamedirname1);
 	if(!p || p == fs_checkgamedir_missing)
-		Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
+		Con_Warnf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
 
 	if(gamedirname2)
 	{
 		p = FS_CheckGameDir(gamedirname2);
 		if(!p || p == fs_checkgamedir_missing)
-			Con_Printf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
+			Con_Warnf("WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
 	}
 
 	// -game <gamedir>
@@ -2161,7 +2161,7 @@ void FS_Init (void)
 			if(!p)
 				Sys_Error("Nasty -game name rejected: %s", com_argv[i]);
 			if(p == fs_checkgamedir_missing)
-				Con_Printf("WARNING: -game %s%s/ not found!\n", fs_basedir, com_argv[i]);
+				Con_Warnf("WARNING: -game %s%s/ not found!\n", fs_basedir, com_argv[i]);
 			// add the gamedir to the list of active gamedirs
 			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
 			fs_numgamedirs++;
@@ -2243,7 +2243,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 			opt = O_CREAT | O_APPEND;
 			break;
 		default:
-			Con_Printf ("FS_SysOpen(%s, %s): invalid mode\n", filepath, mode);
+			Con_Errorf ("FS_SysOpen(%s, %s): invalid mode\n", filepath, mode);
 			return FILEDESC_INVALID;
 	}
 	for (ind = 1; mode[ind] != '\0'; ind++)
@@ -2260,7 +2260,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 				dolock = true;
 				break;
 			default:
-				Con_Printf ("FS_SysOpen(%s, %s): unknown character in mode (%c)\n",
+				Con_Errorf ("FS_SysOpen(%s, %s): unknown character in mode (%c)\n",
 							filepath, mode, mode[ind]);
 		}
 	}
@@ -2370,7 +2370,7 @@ static qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	// No Zlib DLL = no compressed files
 	if (!zlib_dll && (pfile->flags & PACKFILE_FLAG_DEFLATED))
 	{
-		Con_Printf("WARNING: can't open the compressed file %s\n"
+		Con_Warnf("WARNING: can't open the compressed file %s\n"
 					"You need the Zlib DLL to use compressed files\n",
 					pfile->name);
 		return NULL;
@@ -2842,7 +2842,7 @@ fs_offset_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 	{
 		if (FILEDESC_SEEK (file->handle, file->buff_ind - file->buff_len, SEEK_CUR) == -1)
 		{
-			Con_Printf("WARNING: could not seek in %s.\n", file->filename);
+			Con_Warnf("WARNING: could not seek in %s.\n", file->filename);
 		}
 	}
 
