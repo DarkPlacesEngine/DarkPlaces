@@ -525,6 +525,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.01388889\n"
 "r_shadow_gloss 1\n"
 "r_shadow_bumpscale_basetexture 0\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		case GAME_NEHAHRA:
@@ -549,6 +550,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.01388889\n"
 "r_shadow_gloss 1\n"
 "r_shadow_bumpscale_basetexture 0\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		// hipnotic mission pack has issues in their 'friendly monster' ai, which seem to attempt to attack themselves for some reason when findradius() returns non-solid entities.
@@ -577,6 +579,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.02\n"
 "r_shadow_gloss 1\n"
 "r_shadow_bumpscale_basetexture 0\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
@@ -602,6 +605,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.01388889\n"
 "r_shadow_gloss 1\n"
 "r_shadow_bumpscale_basetexture 0\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		case GAME_TENEBRAE:
@@ -626,6 +630,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.01388889\n"
 "r_shadow_gloss 2\n"
 "r_shadow_bumpscale_basetexture 4\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		case GAME_NEXUIZ:
@@ -650,6 +655,14 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sys_ticrate 0.01388889\n"
 "sv_gameplayfix_q2airaccelerate 1\n"
 "sv_gameplayfix_stepmultipletimes 1\n"
+"csqc_polygons_defaultmaterial_nocullface 1\n"
+				);
+			break;
+		case GAME_XONOTIC:
+		case GAME_VORETOURNAMENT:
+			// compatibility for versions prior to 2020-05-25, this can be overridden in newer versions to get the default behavior and be consistent with FTEQW engine
+			Cbuf_InsertText(cmd, "\n"
+"csqc_polygons_defaultmaterial_nocullface 1\n"
 				);
 			break;
 		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
@@ -674,6 +687,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sv_gameplayfix_downtracesupportsongroundflag 1\n"
 "sys_ticrate 0.01388889\n"
 "cl_csqc_generatemousemoveevents 0\n"
+"csqc_polygons_defaultmaterial_nocullface 1\n"
 				);
 			break;
 		default:
@@ -696,6 +710,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sv_gameplayfix_swiminbmodels 1\n"
 "sv_gameplayfix_downtracesupportsongroundflag 1\n"
 "sys_ticrate 0.01388889\n"
+"csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
 		}
