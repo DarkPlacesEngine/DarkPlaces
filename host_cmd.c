@@ -44,7 +44,6 @@ cvar_t team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team
 cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
 cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
-qboolean allowcheats = false;
 
 extern qboolean host_shuttingdown;
 extern cvar_t developer_entityparsing;
@@ -211,9 +210,9 @@ Sets client to godmode
 static void Host_God_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!allowcheats)
+	if (!sv_cheats.integer)
 	{
-		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
 		return;
 	}
 
@@ -227,9 +226,9 @@ static void Host_God_f(cmd_state_t *cmd)
 static void Host_Notarget_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!allowcheats)
+	if (!sv_cheats.integer)
 	{
-		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
 		return;
 	}
 
@@ -245,9 +244,9 @@ qboolean noclip_anglehack;
 static void Host_Noclip_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!allowcheats)
+	if (!sv_cheats.integer)
 	{
-		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
 		return;
 	}
 
@@ -275,9 +274,9 @@ Sets client to flymode
 static void Host_Fly_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!allowcheats)
+	if (!sv_cheats.integer)
 	{
-		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
 		return;
 	}
 
@@ -383,7 +382,6 @@ static void Host_Map_f(cmd_state_t *cmd)
 	key_dest = key_game;
 
 	svs.serverflags = 0;			// haven't completed an episode yet
-	allowcheats = sv_cheats.integer != 0;
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
@@ -420,7 +418,6 @@ static void Host_Changelevel_f(cmd_state_t *cmd)
 	key_dest = key_game;
 
 	SV_SaveSpawnparms ();
-	allowcheats = sv_cheats.integer != 0;
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
@@ -456,7 +453,6 @@ static void Host_Restart_f(cmd_state_t *cmd)
 #endif
 	key_dest = key_game;
 
-	allowcheats = sv_cheats.integer != 0;
 	strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
 	if (sv.active && cls.state == ca_disconnected)
@@ -848,8 +844,6 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	// time
 	COM_ParseToken_Simple(&t, false, false, true);
 	time = atof(com_token);
-
-	allowcheats = sv_cheats.integer != 0;
 
 	if(developer_entityparsing.integer)
 		Con_Printf("Host_Loadgame_f: spawning server\n");
@@ -2141,7 +2135,7 @@ static void Host_Give_f(cmd_state_t *cmd)
 	const char *t;
 	int v;
 
-	if (!allowcheats)
+	if (!sv_cheats.integer)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
 		return;
