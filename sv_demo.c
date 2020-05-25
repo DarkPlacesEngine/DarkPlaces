@@ -22,7 +22,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 	client->sv_demo_file = FS_OpenRealFile(name, "wb", false);
 	if(!client->sv_demo_file)
 	{
-		Con_Print("ERROR: couldn't open.\n");
+		Con_Error("ERROR: couldn't open.\n");
 		return;
 	}
 

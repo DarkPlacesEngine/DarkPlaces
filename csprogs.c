@@ -1033,7 +1033,7 @@ void CL_VM_Init (void)
 		{
 			if (cls.demoplayback)
 			{
-				Con_Printf("^1Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
+				Con_Warnf("Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				// Mem_Free(csprogsdata);
 				// return;
 				// We WANT to continue here, and play the demo with different csprogs!
@@ -1042,7 +1042,7 @@ void CL_VM_Init (void)
 			else
 			{
 				Mem_Free(csprogsdata);
-				Con_Printf("^1Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
+				Con_Errorf("Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				CL_Disconnect();
 				return;
 			}
@@ -1053,9 +1053,9 @@ void CL_VM_Init (void)
 		if (requiredcrc >= 0)
 		{
 			if (cls.demoplayback)
-				Con_Printf("CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+				Con_Errorf("CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
 			else
-				Con_Printf("CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+				Con_Errorf("CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
 			CL_Disconnect();
 		}
 		return;
@@ -1093,7 +1093,7 @@ void CL_VM_Init (void)
 
 	if (!prog->loaded)
 	{
-		Host_Error("CSQC %s ^2failed to load\n", csprogsfn);
+		Host_Error("CSQC %s failed to load\n", csprogsfn);
 		if(!sv.active)
 			CL_Disconnect();
 		Mem_Free(csprogsdata);

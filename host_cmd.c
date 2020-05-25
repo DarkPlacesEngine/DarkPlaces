@@ -730,7 +730,7 @@ static void Host_Savegame_f(cmd_state_t *cmd)
 		}
 	}
 	else
-		Con_Print("Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
+		Con_Warn("Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
 
 	if (Cmd_Argc(cmd) != 2)
 	{
@@ -1041,7 +1041,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 							if (COM_ParseToken_Simple(&t, false, false, true))
 								k |= atoi(com_token);
 							if (!BufStr_FindCreateReplace(prog, i, k, "string"))
-								Con_Printf("failed to create stringbuffer %i\n", i);
+								Con_Errorf("failed to create stringbuffer %i\n", i);
 						}
 						else
 							Con_Printf("unsupported stringbuffer index %i \"%s\"\n", i, com_token);
@@ -1071,7 +1071,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 								Con_Printf("unexpected end of line when parsing sv.bufstr (expected strindex)\n");
 						}
 						else
-							Con_Printf("failed to create stringbuffer %i \"%s\"\n", i, com_token);
+							Con_Errorf("failed to create stringbuffer %i \"%s\"\n", i, com_token);
 					}
 				}	
 				// skip any trailing text or unrecognized commands
