@@ -235,6 +235,8 @@ extern char engineversion[128];
 //#define STAT_TIME			17 ///< FTE
 //#define STAT_VIEW2		20 ///< FTE
 #define STAT_VIEWZOOM		21 ///< DP
+#define MIN_VM_STAT         32 ///< stat range available to VM_SV_AddStat
+#define MAX_VM_STAT         220 ///< stat range available to VM_SV_AddStat
 #define STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR 220 ///< DP
 #define STAT_MOVEVARS_AIRCONTROL_PENALTY					221 ///< DP
 #define STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW 222 ///< DP
