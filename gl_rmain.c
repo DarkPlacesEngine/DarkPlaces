@@ -2399,9 +2399,10 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	}
 
 	// _luma is supported only for tenebrae compatibility
+	// _blend and .blend are supported only for Q3 & QL compatibility, this hack can be removed if better Q3 shader support is implemented
 	// _glow is the preferred name
 	mymiplevel = savemiplevel;
-	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_glow",  skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_luma", skinframe->basename), false, false, false, &mymiplevel))))
+	if (skinframe->glow == NULL && ((pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_glow", skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s.blend", skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_blend", skinframe->basename), false, false, false, &mymiplevel)) || (pixels = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s_luma", skinframe->basename), false, false, false, &mymiplevel))))
 	{
 		skinframe->glow = R_LoadTexture2D (r_main_texturepool, va(vabuf, sizeof(vabuf), "%s_glow", skinframe->basename), image_width, image_height, pixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, textureflags & (gl_texturecompression_glow.integer && gl_texturecompression.integer ? ~0 : ~TEXF_COMPRESS), mymiplevel, NULL);
 #ifndef USE_GLES2
