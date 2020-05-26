@@ -45,7 +45,7 @@ void Sys_Shutdown (void)
 	SDL_Quit();
 }
 
-
+static qboolean nocrashdialog;
 void Sys_Error (const char *error, ...)
 {
 	va_list argptr;
@@ -61,10 +61,9 @@ void Sys_Error (const char *error, ...)
 	va_end (argptr);
 
 	Con_Errorf ("Engine Error: %s\n", string);
-
-#ifdef WIN32
-	MessageBox(NULL, string, "Engine Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
-#endif
+	
+	if(!nocrashdialog)
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Quake Error", string, NULL);
 
 	Host_Shutdown ();
 	exit (1);
@@ -197,8 +196,16 @@ int main (int argc, char *argv[])
 
 	com_argc = argc;
 	com_argv = (const char **)argv;
+
+	// Sys_Error this early in startup might screw with automated
+	// workflows or something if we show the dialog by default.
+	nocrashdialog = true;
+
 	Sys_ProvideSelfFD();
 
+	// COMMANDLINEOPTION: -nocrashdialog disables "Engine Error" crash dialog boxes
+	if(!COM_CheckParm("-nocrashdialog"))
+		nocrashdialog = false;
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
 	if(COM_CheckParm("-noterminal"))
 		outfd = -1;
