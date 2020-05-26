@@ -227,6 +227,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
+	int clipgroup;
 
 	if (hitnetworkentity)
 		*hitnetworkentity = 0;
@@ -279,6 +280,8 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	passedictprog = prog != NULL ? PRVM_EDICT_TO_PROG(passedict) : 0;
 	// precalculate passedict's owner edict pointer for comparisons
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
+
+	clipgroup = passedict ? (int)PRVM_clientedictfloat(passedict, clipgroup) : 0;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -381,6 +384,9 @@ skipnetworkplayers:
 			// don't clip owner against owned entities
 			if (passedictprog == PRVM_clientedictedict(touch, owner))
 				continue;
+			// don't clip against any entities in the same clipgroup (DP_RM_CLIPGROUP)
+			if (clipgroup && clipgroup == (int)PRVM_clientedictfloat(touch, clipgroup))
+				continue;
 			// don't clip points against points (they can't collide)
 			if (VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
 				continue;
@@ -442,6 +448,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
+	int clipgroup;
 	if (VectorCompare(start, end))
 		return CL_TracePoint(start, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities);
 
@@ -497,6 +504,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	passedictprog = prog != NULL ? PRVM_EDICT_TO_PROG(passedict) : 0;
 	// precalculate passedict's owner edict pointer for comparisons
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
+
+	clipgroup = passedict ? (int)PRVM_clientedictfloat(passedict, clipgroup) : 0;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -599,6 +608,9 @@ skipnetworkplayers:
 			// don't clip owner against owned entities
 			if (passedictprog == PRVM_clientedictedict(touch, owner))
 				continue;
+			// don't clip against any entities in the same clipgroup (DP_RM_CLIPGROUP)
+			if (clipgroup && clipgroup == (int)PRVM_clientedictfloat(touch, clipgroup))
+				continue;
 			// don't clip points against points (they can't collide)
 			if (VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
 				continue;
@@ -664,6 +676,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
+	int clipgroup;
 	if (VectorCompare(mins, maxs))
 	{
 		vec3_t shiftstart, shiftend;
@@ -742,6 +755,8 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	pointtrace = VectorCompare(clipmins, clipmaxs);
 	// precalculate passedict's owner edict pointer for comparisons
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
+
+	clipgroup = passedict ? (int)PRVM_clientedictfloat(passedict, clipgroup) : 0;
 
 	// collide against network entities
 	if (hitnetworkbrushmodels)
@@ -843,6 +858,9 @@ skipnetworkplayers:
 				continue;
 			// don't clip owner against owned entities
 			if (passedictprog == PRVM_clientedictedict(touch, owner))
+				continue;
+			// don't clip against any entities in the same clipgroup (DP_RM_CLIPGROUP)
+			if (clipgroup && clipgroup == (int)PRVM_clientedictfloat(touch, clipgroup))
 				continue;
 			// don't clip points against points (they can't collide)
 			if (pointtrace && VectorCompare(PRVM_clientedictvector(touch, mins), PRVM_clientedictvector(touch, maxs)) && (type != MOVE_MISSILE || !((int)PRVM_clientedictfloat(touch, flags) & FL_MONSTER)))
