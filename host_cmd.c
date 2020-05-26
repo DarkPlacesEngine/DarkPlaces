@@ -2923,7 +2923,7 @@ Host_Pings_f
 Send back ping and packet loss update for all current players to this player
 ====================
 */
-void Host_Pings_f(cmd_state_t *cmd)
+static void Host_Pings_f(cmd_state_t *cmd)
 {
 	int		i, j, ping, packetloss, movementloss;
 	char temp[128];

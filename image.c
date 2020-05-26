@@ -878,7 +878,7 @@ static unsigned char* LoadLMP_BGRA(const unsigned char *f, int filesize, int *mi
 }
 
 // gfx/conchars is a raw 128x128 image with 0 as transparent color rather than 255
-unsigned char *LoadConChars_BGRA(const unsigned char *f, int filesize, int *miplevel)
+static unsigned char *LoadConChars_BGRA(const unsigned char *f, int filesize, int *miplevel)
 {
 	unsigned char *image_buffer;
 	int i;
@@ -1044,6 +1044,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
+	int mymiplevel;
 	unsigned char *f, *data = NULL, *data2 = NULL;
 	char basename[MAX_QPATH], name[MAX_QPATH], name2[MAX_QPATH], path[MAX_QPATH], afterpath[MAX_QPATH], *c;
 	char vabuf[1024];
@@ -1086,7 +1087,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 		f = FS_LoadFile(name, tempmempool, true, &filesize);
 		if (f)
 		{
-			int mymiplevel = miplevel ? *miplevel : 0;
+			mymiplevel = miplevel ? *miplevel : 0;
 			image_width = 0;
 			image_height = 0;
 			data = format->loadfunc(f, (int)filesize, &mymiplevel);
@@ -1152,7 +1153,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 			if (developer_loading.integer)
 				Con_Printf("loading gfx.wad lump \"%s\"\n", afterpath);
 
-			int mymiplevel = miplevel ? *miplevel : 0;
+			mymiplevel = miplevel ? *miplevel : 0;
 			if (!strcmp(afterpath, "conchars"))
 			{
 				// conchars is a raw image and with color 0 as transparent instead of 255

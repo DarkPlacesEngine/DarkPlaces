@@ -1459,6 +1459,12 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 }
 #endif
 
+extern cvar_t gl_info_vendor;
+extern cvar_t gl_info_renderer;
+extern cvar_t gl_info_version;
+extern cvar_t gl_info_platform;
+extern cvar_t gl_info_driver;
+
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
@@ -1577,11 +1583,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	GL_Setup();
 
 	// VorteX: set other info
-	extern cvar_t gl_info_vendor;
-	extern cvar_t gl_info_renderer;
-	extern cvar_t gl_info_version;
-	extern cvar_t gl_info_platform;
-	extern cvar_t gl_info_driver;
 	Cvar_SetQuick(&gl_info_vendor, gl_vendor);
 	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
 	Cvar_SetQuick(&gl_info_version, gl_version);

@@ -2042,6 +2042,9 @@ void V_FadeViewFlashs(void);
 void V_CalcViewBlend(void);
 void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qboolean teleported, qboolean clonground, qboolean clcmdjump, float clstatsviewheight, qboolean cldead, qboolean clintermission, const vec3_t clvelocity);
 void V_CalcRefdef(void);
+void V_MakeViewIsometric(void);
+void V_MakeViewIsometric(void);
+void V_StartPitchDrift(void);
 void CL_Locs_Reload_f(cmd_state_t *cmd);
 
 #endif
