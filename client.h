@@ -585,10 +585,12 @@ typedef struct entity_render_s
 	// rtlights use these colors for the materials on this entity
 	float render_rtlight_diffuse[3];
 	float render_rtlight_specular[3];
-	// ignore lightmap and use lightgrid on this entity (e.g. FULLBRIGHT)
+	// ignore lightmap and use fixed lighting settings on this entity (e.g. FULLBRIGHT)
 	qboolean render_modellight_forced;
 	// do not process per pixel lights on this entity at all (like MATERIALFLAG_NORTLIGHT)
 	qboolean render_rtlight_disabled;
+	// use the 3D lightmap from q3bsp on this entity
+	qboolean render_lightgrid;
 
 	// storage of decals on this entity
 	// (note: if allowdecals is set, be sure to call R_DecalSystem_Reset on removal!)

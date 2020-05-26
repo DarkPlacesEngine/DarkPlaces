@@ -693,6 +693,7 @@ shadermodeinfo_t shadermodeinfo[SHADERLANGUAGE_COUNT][SHADERMODE_COUNT] =
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_TANGENTSPACE\n", " lightdirectionmap_tangentspace"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_LIGHTMAP\n", " lightdirectionmap_forced_lightmap"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTIONMAP_FORCED_VERTEXCOLOR\n", " lightdirectionmap_forced_vertexcolor"},
+		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTGRID\n", " lightgrid"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTDIRECTION\n", " lightdirection"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_LIGHTSOURCE\n", " lightsource"},
 		{"combined", "glsl", builtinshaderstrings, "#define MODE_REFRACTION\n", " refraction"},
@@ -730,6 +731,7 @@ typedef struct r_glsl_permutation_s
 	int tex_Texture_Shirt;
 	int tex_Texture_FogHeightTexture;
 	int tex_Texture_FogMask;
+	int tex_Texture_LightGrid;
 	int tex_Texture_Lightmap;
 	int tex_Texture_Deluxemap;
 	int tex_Texture_Attenuation;
@@ -760,6 +762,7 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_Shirt;
 	int loc_Texture_FogHeightTexture;
 	int loc_Texture_FogMask;
+	int loc_Texture_LightGrid;
 	int loc_Texture_Lightmap;
 	int loc_Texture_Deluxemap;
 	int loc_Texture_Attenuation;
@@ -797,6 +800,8 @@ typedef struct r_glsl_permutation_s
 	int loc_FogRangeRecip;
 	int loc_LightColor;
 	int loc_LightDir;
+	int loc_LightGridMatrix;
+	int loc_LightGridNormalMatrix;
 	int loc_LightPosition;
 	int loc_OffsetMapping_ScaleSteps;
 	int loc_OffsetMapping_LodDistance;
@@ -1192,6 +1197,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_Shirt              = qglGetUniformLocation(p->program, "Texture_Shirt");
 		p->loc_Texture_FogHeightTexture   = qglGetUniformLocation(p->program, "Texture_FogHeightTexture");
 		p->loc_Texture_FogMask            = qglGetUniformLocation(p->program, "Texture_FogMask");
+		p->loc_Texture_LightGrid          = qglGetUniformLocation(p->program, "Texture_LightGrid");
 		p->loc_Texture_Lightmap           = qglGetUniformLocation(p->program, "Texture_Lightmap");
 		p->loc_Texture_Deluxemap          = qglGetUniformLocation(p->program, "Texture_Deluxemap");
 		p->loc_Texture_Attenuation        = qglGetUniformLocation(p->program, "Texture_Attenuation");
@@ -1228,6 +1234,8 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_FogPlaneViewDist           = qglGetUniformLocation(p->program, "FogPlaneViewDist");
 		p->loc_FogRangeRecip              = qglGetUniformLocation(p->program, "FogRangeRecip");
 		p->loc_LightColor                 = qglGetUniformLocation(p->program, "LightColor");
+		p->loc_LightGridMatrix            = qglGetUniformLocation(p->program, "LightGridMatrix");
+		p->loc_LightGridNormalMatrix      = qglGetUniformLocation(p->program, "LightGridNormalMatrix");
 		p->loc_LightDir                   = qglGetUniformLocation(p->program, "LightDir");
 		p->loc_LightPosition              = qglGetUniformLocation(p->program, "LightPosition");
 		p->loc_OffsetMapping_ScaleSteps   = qglGetUniformLocation(p->program, "OffsetMapping_ScaleSteps");
@@ -1280,6 +1288,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->tex_Texture_Shirt = -1;
 		p->tex_Texture_FogHeightTexture = -1;
 		p->tex_Texture_FogMask = -1;
+		p->tex_Texture_LightGrid = -1;
 		p->tex_Texture_Lightmap = -1;
 		p->tex_Texture_Deluxemap = -1;
 		p->tex_Texture_Attenuation = -1;
@@ -1311,6 +1320,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_Shirt           >= 0) {p->tex_Texture_Shirt            = sampler;qglUniform1i(p->loc_Texture_Shirt           , sampler);sampler++;}
 		if (p->loc_Texture_FogHeightTexture>= 0) {p->tex_Texture_FogHeightTexture = sampler;qglUniform1i(p->loc_Texture_FogHeightTexture, sampler);sampler++;}
 		if (p->loc_Texture_FogMask         >= 0) {p->tex_Texture_FogMask          = sampler;qglUniform1i(p->loc_Texture_FogMask         , sampler);sampler++;}
+		if (p->loc_Texture_LightGrid       >= 0) {p->tex_Texture_LightGrid        = sampler;qglUniform1i(p->loc_Texture_LightGrid       , sampler);sampler++;}
 		if (p->loc_Texture_Lightmap        >= 0) {p->tex_Texture_Lightmap         = sampler;qglUniform1i(p->loc_Texture_Lightmap        , sampler);sampler++;}
 		if (p->loc_Texture_Deluxemap       >= 0) {p->tex_Texture_Deluxemap        = sampler;qglUniform1i(p->loc_Texture_Deluxemap       , sampler);sampler++;}
 		if (p->loc_Texture_Attenuation     >= 0) {p->tex_Texture_Attenuation      = sampler;qglUniform1i(p->loc_Texture_Attenuation     , sampler);sampler++;}
@@ -1690,6 +1700,67 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		if (vid.allowalphatocoverage)
 			GL_AlphaToCoverage(false);
 	}
+	else if (t->currentmaterialflags & MATERIALFLAG_LIGHTGRID)
+	{
+		if (r_glsl_offsetmapping.integer && ((R_TextureFlags(t->nmaptexture) & TEXF_ALPHA) || t->offsetbias != 0.0f))
+		{
+			switch(t->offsetmapping)
+			{
+			case OFFSETMAPPING_LINEAR: permutation |= SHADERPERMUTATION_OFFSETMAPPING;break;
+			case OFFSETMAPPING_RELIEF: permutation |= SHADERPERMUTATION_OFFSETMAPPING | SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_DEFAULT: permutation |= SHADERPERMUTATION_OFFSETMAPPING;if (r_glsl_offsetmapping_reliefmapping.integer) permutation |= SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING;break;
+			case OFFSETMAPPING_OFF: break;
+			}
+		}
+		if (t->currentmaterialflags & MATERIALFLAG_VERTEXTEXTUREBLEND)
+			permutation |= SHADERPERMUTATION_VERTEXTEXTUREBLEND;
+		if (t->currentmaterialflags & MATERIALFLAG_ALPHAGEN_VERTEX)
+			permutation |= SHADERPERMUTATION_ALPHAGEN_VERTEX;
+		// directional model lighting
+		mode = SHADERMODE_LIGHTGRID;
+		if ((t->glowtexture || t->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
+			permutation |= SHADERPERMUTATION_GLOW;
+		permutation |= SHADERPERMUTATION_DIFFUSE;
+		if (t->glosstexture || t->backgroundglosstexture)
+			permutation |= SHADERPERMUTATION_SPECULAR;
+		if (r_refdef.fogenabled)
+			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
+		if (t->colormapping)
+			permutation |= SHADERPERMUTATION_COLORMAPPING;
+		if (r_shadow_usingshadowmaportho && !(rsurface.ent_flags & RENDER_NOSELFSHADOW))
+		{
+			permutation |= SHADERPERMUTATION_SHADOWMAPORTHO;
+			permutation |= SHADERPERMUTATION_SHADOWMAP2D;
+
+			if (r_shadow_shadowmap2ddepthbuffer)
+				permutation |= SHADERPERMUTATION_DEPTHRGB;
+		}
+		if (t->currentmaterialflags & MATERIALFLAG_REFLECTION)
+			permutation |= SHADERPERMUTATION_REFLECTION;
+		if (r_shadow_usingdeferredprepass && !(t->currentmaterialflags & MATERIALFLAG_BLENDED))
+			permutation |= SHADERPERMUTATION_DEFERREDLIGHTMAP;
+		if (t->reflectmasktexture)
+			permutation |= SHADERPERMUTATION_REFLECTCUBE;
+		if (r_shadow_bouncegrid_state.texture && cl.csqc_vidvars.drawworld && !notrippy)
+		{
+			permutation |= SHADERPERMUTATION_BOUNCEGRID;
+			if (r_shadow_bouncegrid_state.directional)
+				permutation |= SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL;
+		}
+		GL_BlendFunc(t->currentblendfunc[0], t->currentblendfunc[1]);
+		blendfuncflags = R_BlendFuncFlags(t->currentblendfunc[0], t->currentblendfunc[1]);
+		// when using alphatocoverage, we don't need alphakill
+		if (vid.allowalphatocoverage)
+		{
+			if (r_transparent_alphatocoverage.integer)
+			{
+				GL_AlphaToCoverage((t->currentmaterialflags & MATERIALFLAG_ALPHATEST) != 0);
+				permutation &= ~SHADERPERMUTATION_ALPHAKILL;
+			}
+			else
+				GL_AlphaToCoverage(false);
+		}
+	}
 	else if (t->currentmaterialflags & MATERIALFLAG_MODELLIGHT)
 	{
 		if (r_glsl_offsetmapping.integer && ((R_TextureFlags(t->nmaptexture) & TEXF_ALPHA) || t->offsetbias != 0.0f))
@@ -1879,6 +1950,13 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			{
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, t->render_modellight_ambient[0], t->render_modellight_ambient[1], t->render_modellight_ambient[2]);
 			}
+			else if (mode == SHADERMODE_LIGHTGRID)
+			{
+				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, t->render_lightmap_ambient[0], t->render_lightmap_ambient[1], t->render_lightmap_ambient[2]);
+				if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, t->render_lightmap_diffuse[0], t->render_lightmap_diffuse[1], t->render_lightmap_diffuse[2]);
+				if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, t->render_lightmap_specular[0], t->render_lightmap_specular[1], t->render_lightmap_specular[2]);
+				// other LightGrid uniforms handled below
+			}
 			else if (mode == SHADERMODE_LIGHTDIRECTION)
 			{
 				if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, t->render_modellight_ambient[0], t->render_modellight_ambient[1], t->render_modellight_ambient[2]);
@@ -1962,6 +2040,19 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
 		if (r_glsl_permutation->loc_BounceGridMatrix >= 0) {Matrix4x4_Concat(&tempmatrix, &r_shadow_bouncegrid_state.matrix, &rsurface.matrix);Matrix4x4_ToArrayFloatGL(&tempmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BounceGridMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BounceGridIntensity >= 0) qglUniform1f(r_glsl_permutation->loc_BounceGridIntensity, r_shadow_bouncegrid_state.intensity*r_refdef.view.colorscale);
+		if (r_glsl_permutation->loc_LightGridMatrix >= 0 && r_refdef.scene.worldmodel)
+		{
+			float m9f[9];
+			Matrix4x4_Concat(&tempmatrix, &r_refdef.scene.worldmodel->brushq3.lightgridworldtotexturematrix, &rsurface.matrix);
+			Matrix4x4_ToArrayFloatGL(&tempmatrix, m16f);
+			qglUniformMatrix4fv(r_glsl_permutation->loc_LightGridMatrix, 1, false, m16f);
+			Matrix4x4_Normalize3(&tempmatrix, &rsurface.matrix);
+			Matrix4x4_ToArrayFloatGL(&tempmatrix, m16f);
+			m9f[0] = m16f[0];m9f[1] = m16f[1];m9f[2] = m16f[2];
+			m9f[3] = m16f[4];m9f[4] = m16f[5];m9f[5] = m16f[6];
+			m9f[6] = m16f[8];m9f[7] = m16f[9];m9f[8] = m16f[10];
+			qglUniformMatrix3fv(r_glsl_permutation->loc_LightGridNormalMatrix, 1, false, m9f);
+		}
 
 		if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First            , r_texture_white                                     );
 		if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second           , r_texture_white                                     );
@@ -2006,6 +2097,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			}
 		}
 		if (r_glsl_permutation->tex_Texture_BounceGrid  >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_BounceGrid, r_shadow_bouncegrid_state.texture);
+		if (r_glsl_permutation->tex_Texture_LightGrid   >= 0 && r_refdef.scene.worldmodel) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_LightGrid, r_refdef.scene.worldmodel->brushq3.lightgridtexture);
 		CHECKGLERROR
 		break;
 	}
@@ -6618,10 +6710,12 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		t->currentmaterialflags |= MATERIALFLAG_MODELLIGHT;
 	if (rsurface.entity->render_rtlight_disabled)
 		t->currentmaterialflags |= MATERIALFLAG_NORTLIGHT;
+	if (rsurface.entity->render_lightgrid)
+		t->currentmaterialflags |= MATERIALFLAG_LIGHTGRID;
 	if (t->currentmaterialflags & MATERIALFLAG_CUSTOMBLEND && !(R_BlendFuncFlags(t->customblendfunc[0], t->customblendfunc[1]) & BLENDFUNC_ALLOWS_COLORMOD))
 	{
 		// some CUSTOMBLEND blendfuncs are too weird, we have to ignore colormod and view colorscale
-		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_MODELLIGHT | MATERIALFLAG_NORTLIGHT;
+		t->currentmaterialflags = (t->currentmaterialflags | MATERIALFLAG_MODELLIGHT | MATERIALFLAG_NORTLIGHT) & ~MATERIALFLAG_LIGHTGRID;
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->glowmod[q];
@@ -6639,7 +6733,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	else if ((t->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || !(rsurface.ent_flags & RENDER_LIGHT))
 	{
 		// fullbright is basically MATERIALFLAG_MODELLIGHT but with ambient locked to 1,1,1 and no shading
-		t->currentmaterialflags = t->currentmaterialflags | MATERIALFLAG_NORTLIGHT | MATERIALFLAG_MODELLIGHT;
+		t->currentmaterialflags = (t->currentmaterialflags | MATERIALFLAG_NORTLIGHT | MATERIALFLAG_MODELLIGHT) & ~MATERIALFLAG_LIGHTGRID;
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
@@ -6654,10 +6748,27 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 			t->render_rtlight_specular[q] = 0;
 		}
 	}
+	else if (t->currentmaterialflags & MATERIALFLAG_LIGHTGRID)
+	{
+		t->currentmaterialflags &= ~MATERIALFLAG_MODELLIGHT;
+		for (q = 0; q < 3; q++)
+		{
+			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
+			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_ambient[q] = 0;
+			t->render_modellight_diffuse[q] = 0;
+			t->render_modellight_specular[q] = 0;
+			t->render_lightmap_ambient[q] = rsurface.entity->render_lightmap_ambient[q] * r_refdef.view.colorscale;
+			t->render_lightmap_diffuse[q] = rsurface.entity->render_lightmap_diffuse[q] * 2 * r_refdef.view.colorscale;
+			t->render_lightmap_specular[q] = rsurface.entity->render_lightmap_specular[q] * 2 * r_refdef.view.colorscale;
+			t->render_rtlight_diffuse[q] = rsurface.entity->render_rtlight_diffuse[q] * r_refdef.view.colorscale;
+			t->render_rtlight_specular[q] = rsurface.entity->render_rtlight_specular[q] * r_refdef.view.colorscale;
+		}
+	}
 	else if ((rsurface.ent_flags & (RENDER_DYNAMICMODELLIGHT | RENDER_CUSTOMIZEDMODELLIGHT)) || rsurface.modeltexcoordlightmap2f == NULL)
 	{
 		// ambient + single direction light (modellight)
-		t->currentmaterialflags |= MATERIALFLAG_MODELLIGHT;
+		t->currentmaterialflags = (t->currentmaterialflags | MATERIALFLAG_MODELLIGHT) & ~MATERIALFLAG_LIGHTGRID;
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
@@ -6698,7 +6809,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		//
 		// FIXME: this is fine for effects but CSQC polygons should be subject
 		// to lighting.
-		t->currentmaterialflags &= ~MATERIALFLAG_MODELLIGHT;
+		t->currentmaterialflags &= ~(MATERIALFLAG_MODELLIGHT | MATERIALFLAG_LIGHTGRID);
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;

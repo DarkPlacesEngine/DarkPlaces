@@ -2489,6 +2489,7 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 	for (q = 0; q < 3; q++)
 		a[q] = c[q] = dir[q] = 0;
 
+	ent->render_lightgrid = false;
 	ent->render_modellight_forced = false;
 	ent->render_rtlight_disabled = false;
 
@@ -2568,6 +2569,12 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP | LP_RTWORLD | LP_DYNLIGHT, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);
 			ent->render_modellight_forced = true;
 			ent->render_rtlight_disabled = true;
+		}
+		else if (((ent->model && !ent->model->lit) || (ent->model == r_refdef.scene.worldmodel ? mod_q3bsp_lightgrid_world_surfaces.integer : mod_q3bsp_lightgrid_bsp_surfaces.integer))
+			&& r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brushq3.lightgridtexture && mod_q3bsp_lightgrid_texture.integer)
+		{
+			ent->render_lightgrid = true;
+			// no need to call R_CompleteLightPoint as we base it on render_lightmap_*
 		}
 		else if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->lit && r_refdef.scene.worldmodel->brush.LightPoint)
 			R_CompleteLightPoint(a, c, dir, shadingorigin, LP_LIGHTMAP, r_refdef.scene.lightmapintensity, r_refdef.scene.ambientintensity);

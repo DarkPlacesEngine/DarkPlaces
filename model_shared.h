@@ -919,7 +919,7 @@ typedef struct model_brushq3_s
 	rtexture_t **data_lightmaps;
 	rtexture_t **data_deluxemaps;
 
-	// voxel light data with directional shading
+	// voxel light data with directional shading - data for cpu sampling of it...
 	int num_lightgrid;
 	q3dlightgrid_t *data_lightgrid;
 	// size of each cell (may vary by map, typically 64 64 128)
@@ -932,6 +932,10 @@ typedef struct model_brushq3_s
 	int num_lightgrid_isize[3];
 	// transform modelspace coordinates to lightgrid index
 	matrix4x4_t num_lightgrid_indexfromworld;
+	// parameters for fragment shader to sample the texture version of it:
+	int lightgridtexturesize[3]; // 3 layers tall (ambient, lightcolor, lightdir)
+	matrix4x4_t lightgridworldtotexturematrix;
+	rtexture_t *lightgridtexture;
 
 	// true if this q3bsp file has been detected as using deluxemapping
 	// (lightmap texture pairs, every odd one is never directly refernced,
@@ -1093,6 +1097,9 @@ extern cvar_t mod_q3shader_default_polygonfactor;
 extern cvar_t mod_q3shader_default_refractive_index;
 extern cvar_t mod_q3shader_force_addalpha;
 extern cvar_t mod_q3shader_force_terrain_alphaflag;
+extern cvar_t mod_q3bsp_lightgrid_texture;
+extern cvar_t mod_q3bsp_lightgrid_world_surfaces;
+extern cvar_t mod_q3bsp_lightgrid_bsp_surfaces;
 
 void Mod_Init (void);
 void Mod_Reload (void);
