@@ -1636,11 +1636,8 @@ static int vm_customstats_last;
 
 void VM_CustomStats_Clear (void)
 {
-	if(vm_customstats)
-	{
-		memset(vm_customstats, 0, sizeof(vm_customstats));
-		vm_customstats_last = -1;
-	}
+	memset(vm_customstats, 0, sizeof(vm_customstats));
+	vm_customstats_last = -1;
 }
 
 void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats)
