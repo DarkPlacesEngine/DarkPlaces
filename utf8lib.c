@@ -800,7 +800,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 		{
 			case 0:
 				if(valid)
-					*valid = TRUE;
+					*valid = true;
 				return len;
 			case STRING_COLOR_TAG:
 				++s;
@@ -820,7 +820,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 					case 0: // ends with unfinished color code!
 						++len;
 						if(valid)
-							*valid = FALSE;
+							*valid = false;
 						return len;
 					case STRING_COLOR_TAG: // escaped ^
 						++len;
@@ -858,7 +858,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 		{
 			// we CAN end up here, if an invalid char is between this one and the end of the string
 			if(valid)
-				*valid = TRUE;
+				*valid = true;
 			return len;
 		}
 
@@ -866,7 +866,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
 		{
 			// string length exceeded by new character
 			if(valid)
-				*valid = TRUE;
+				*valid = true;
 			return len;
 		}
 

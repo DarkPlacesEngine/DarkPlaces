@@ -1879,7 +1879,7 @@ COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
 		{
 			case 0:
 				if(valid)
-					*valid = TRUE;
+					*valid = true;
 				return len;
 			case STRING_COLOR_TAG:
 				++s;
@@ -1899,7 +1899,7 @@ COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
 					case 0: // ends with unfinished color code!
 						++len;
 						if(valid)
-							*valid = FALSE;
+							*valid = false;
 						return len;
 					case STRING_COLOR_TAG: // escaped ^
 						++len;
@@ -1945,17 +1945,17 @@ all characters until the zero terminator.
 qboolean
 COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets)
 {
-#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return FALSE; } } while(0)
+#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return false; } } while(0)
 	const char *end = size_in ? (in + size_in) : NULL;
 	if(size_out < 1)
-		return FALSE;
+		return false;
 	for(;;)
 	{
 		switch((in == end) ? 0 : *in)
 		{
 			case 0:
 				*out++ = 0;
-				return TRUE;
+				return true;
 			case STRING_COLOR_TAG:
 				++in;
 				switch((in == end) ? 0 : *in)
@@ -1979,7 +1979,7 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 						if(escape_carets)
 							APPEND(STRING_COLOR_TAG);
 						*out++ = 0;
-						return TRUE;
+						return true;
 					case STRING_COLOR_TAG: // escaped ^
 						APPEND(STRING_COLOR_TAG);
 						// append a ^ twice when escaping

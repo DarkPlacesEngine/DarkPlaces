@@ -53,7 +53,7 @@ int _Thread_UnlockMutex(void *mutex, const char *filename, int fileline)
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p mutex unlock %s:%i\n" , mutex, filename, fileline);
 #endif
-	return (ReleaseMutex(mutex) == FALSE) ? -1 : 0;
+	return (ReleaseMutex(mutex) == false) ? -1 : 0;
 }
 
 typedef struct thread_semaphore_s
