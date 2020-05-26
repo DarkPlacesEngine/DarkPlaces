@@ -884,7 +884,7 @@ static void CLVM_end_increase_edicts(prvm_prog_t *prog)
 
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
-		if (!ent->priv.server->free)
+		if (!ent->priv.server->free && !VectorCompare(PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
 			CL_LinkEdict(ent);
 }
 
