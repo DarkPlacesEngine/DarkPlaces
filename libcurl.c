@@ -228,7 +228,7 @@ downloadinfo;
 static downloadinfo *downloads = NULL;
 static int numdownloads = 0;
 
-static qboolean noclear = FALSE;
+static qboolean noclear = false;
 
 static int numdownloads_fail = 0;
 static int numdownloads_success = 0;
@@ -1130,7 +1130,7 @@ void Curl_Run(void)
 	double maxspeed;
 	downloadinfo *di;
 
-	noclear = FALSE;
+	noclear = false;
 
 	if(!cl_curl_enabled.integer)
 		return;
@@ -1493,9 +1493,9 @@ static void Curl_Curl_f(cmd_state_t *cmd)
 					{
 						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
 						Curl_CommandWhenDone(donecommand);
-						noclear = TRUE;
+						noclear = true;
 						CL_Disconnect();
-						noclear = FALSE;
+						noclear = false;
 						Curl_CheckCommandWhenDone();
 					}
 					else
