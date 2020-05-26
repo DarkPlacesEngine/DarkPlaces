@@ -52,6 +52,9 @@ cvar_t mod_q3bsp_lightmapmergepower = {CVAR_CLIENT | CVAR_SAVE, "mod_q3bsp_light
 cvar_t mod_q3bsp_nolightmaps = {CVAR_CLIENT | CVAR_SAVE, "mod_q3bsp_nolightmaps", "0", "do not load lightmaps in Q3BSP maps (to save video RAM, but be warned: it looks ugly)"};
 cvar_t mod_q3bsp_tracelineofsight_brushes = {CVAR_CLIENT | CVAR_SERVER, "mod_q3bsp_tracelineofsight_brushes", "0", "enables culling of entities behind detail brushes, curves, etc"};
 cvar_t mod_q3bsp_sRGBlightmaps = {CVAR_CLIENT, "mod_q3bsp_sRGBlightmaps", "0", "treat lightmaps from Q3 maps as sRGB when vid_sRGB is active"};
+cvar_t mod_q3bsp_lightgrid_texture = {CVAR_CLIENT, "mod_q3bsp_lightgrid_texture", "1", "directly apply the lightgrid as a global texture rather than only reading it at the entity origin"};
+cvar_t mod_q3bsp_lightgrid_world_surfaces = {CVAR_CLIENT, "mod_q3bsp_lightgrid_world_surfaces", "0", "apply lightgrid lighting to the world bsp geometry rather than using lightmaps (experimental/debug tool)"};
+cvar_t mod_q3bsp_lightgrid_bsp_surfaces = {CVAR_CLIENT, "mod_q3bsp_lightgrid_bsp_surfaces", "0", "apply lightgrid lighting to bsp models other than the world rather than using their lightmaps (experimental/debug tool)"};
 cvar_t mod_q3shader_default_offsetmapping = {CVAR_CLIENT | CVAR_SAVE, "mod_q3shader_default_offsetmapping", "1", "use offsetmapping by default on all surfaces that are using q3 shader files"};
 cvar_t mod_q3shader_default_offsetmapping_scale = {CVAR_CLIENT | CVAR_SAVE, "mod_q3shader_default_offsetmapping_scale", "1", "default scale used for offsetmapping"};
 cvar_t mod_q3shader_default_offsetmapping_bias = {CVAR_CLIENT | CVAR_SAVE, "mod_q3shader_default_offsetmapping_bias", "0", "default bias used for offsetmapping"};
@@ -100,6 +103,9 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_lightmapmergepower);
 	Cvar_RegisterVariable(&mod_q3bsp_nolightmaps);
 	Cvar_RegisterVariable(&mod_q3bsp_sRGBlightmaps);
+	Cvar_RegisterVariable(&mod_q3bsp_lightgrid_texture);
+	Cvar_RegisterVariable(&mod_q3bsp_lightgrid_world_surfaces);
+	Cvar_RegisterVariable(&mod_q3bsp_lightgrid_bsp_surfaces);
 	Cvar_RegisterVariable(&mod_q3bsp_tracelineofsight_brushes);
 	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping);
 	Cvar_RegisterVariable(&mod_q3shader_default_offsetmapping_scale);
@@ -6568,6 +6574,9 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	q3dlightgrid_t *out;
 	int count;
 	int i;
+	int texturesize[3];
+	unsigned char *texturergba, *texturelayer[3], *texturepadding[2];
+	double lightgridmatrix[4][4];
 
 	in = (q3dlightgrid_t *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -6641,6 +6650,81 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 			{
 				// all is good
 			}
+		}
+
+		if (mod_q3bsp_lightgrid_texture.integer)
+		{
+			// build a texture to hold the data for per-pixel sampling
+			// this has 3 different kinds of data stacked in it:
+			// ambient color
+			// bent-normal light color
+			// bent-normal light dir
+			texturesize[0] = loadmodel->brushq3.num_lightgrid_isize[0];
+			texturesize[1] = loadmodel->brushq3.num_lightgrid_isize[1];
+			texturesize[2] = (loadmodel->brushq3.num_lightgrid_isize[2] + 2) * 3;
+			texturergba = (unsigned char*)Mem_Alloc(loadmodel->mempool, texturesize[0] * texturesize[1] * texturesize[2] * sizeof(char[4]));
+			texturelayer[0] = texturergba + loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * 4;
+			texturelayer[1] = texturelayer[0] + (loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * (loadmodel->brushq3.num_lightgrid_isize[2] + 2)) * 4;
+			texturelayer[2] = texturelayer[1] + (loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * (loadmodel->brushq3.num_lightgrid_isize[2] + 2)) * 4;
+			// the light dir layer needs padding above/below it that is a neutral unsigned normal (127,127,127,255)
+			texturepadding[0] = texturelayer[2] - loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * 4;
+			texturepadding[1] = texturelayer[2] + loadmodel->brushq3.num_lightgrid_isize[0] * loadmodel->brushq3.num_lightgrid_isize[1] * loadmodel->brushq3.num_lightgrid_isize[2] * 4;
+			for (i = 0; i < texturesize[0] * texturesize[1]; i++)
+			{
+				texturepadding[0][i * 4] = texturepadding[1][i * 4] = 127;
+				texturepadding[0][i * 4 + 1] = texturepadding[1][i * 4 + 1] = 127;
+				texturepadding[0][i * 4 + 2] = texturepadding[1][i * 4 + 2] = 127;
+				texturepadding[0][i * 4 + 3] = texturepadding[1][i * 4 + 3] = 255;
+			}
+			for (i = 0; i < count; i++)
+			{
+				texturelayer[0][i * 4 + 0] = out[i].ambientrgb[0];
+				texturelayer[0][i * 4 + 1] = out[i].ambientrgb[1];
+				texturelayer[0][i * 4 + 2] = out[i].ambientrgb[2];
+				texturelayer[0][i * 4 + 3] = 255;
+				texturelayer[1][i * 4 + 0] = out[i].diffusergb[0];
+				texturelayer[1][i * 4 + 1] = out[i].diffusergb[1];
+				texturelayer[1][i * 4 + 2] = out[i].diffusergb[2];
+				texturelayer[1][i * 4 + 3] = 255;
+				// this uses the mod_md3_sin table because the values are
+				// already in the 0-255 range, the 64+ bias fetches a cosine
+				// instead of a sine value
+				texturelayer[2][i * 4 + 0] = (char)((mod_md3_sin[64 + out[i].diffuseyaw] * mod_md3_sin[out[i].diffusepitch]) * 127 + 127);
+				texturelayer[2][i * 4 + 1] = (char)((mod_md3_sin[out[i].diffuseyaw] * mod_md3_sin[out[i].diffusepitch]) * 127 + 127);
+				texturelayer[2][i * 4 + 2] = (char)((mod_md3_sin[64 + out[i].diffusepitch]) * 127 + 127);
+				texturelayer[2][i * 4 + 3] = 255;
+			}
+#if 0
+			// debugging hack
+			int x, y, z;
+			for (z = 0; z < loadmodel->brushq3.num_lightgrid_isize[2]; z++)
+			{
+				for (y = 0; y < loadmodel->brushq3.num_lightgrid_isize[1]; y++)
+				{
+					for (x = 0; x < loadmodel->brushq3.num_lightgrid_isize[0]; x++)
+					{
+						i = (z * texturesize[1] + y) * texturesize[0] + x;
+						texturelayer[0][i * 4 + 0] = x * 256 / loadmodel->brushq3.num_lightgrid_isize[0];
+						texturelayer[0][i * 4 + 1] = y * 256 / loadmodel->brushq3.num_lightgrid_isize[1];
+						texturelayer[0][i * 4 + 2] = z * 256 / loadmodel->brushq3.num_lightgrid_isize[2];
+					}
+				}
+			}
+#endif
+			loadmodel->brushq3.lightgridtexturesize[0] = texturesize[0];
+			loadmodel->brushq3.lightgridtexturesize[1] = texturesize[1];
+			loadmodel->brushq3.lightgridtexturesize[2] = texturesize[2];
+			memset(lightgridmatrix[0], 0, sizeof(lightgridmatrix));
+			lightgridmatrix[0][0] = loadmodel->brushq3.num_lightgrid_scale[0] / texturesize[0];
+			lightgridmatrix[1][1] = loadmodel->brushq3.num_lightgrid_scale[1] / texturesize[1];
+			lightgridmatrix[2][2] = loadmodel->brushq3.num_lightgrid_scale[2] / texturesize[2];
+			lightgridmatrix[0][3] = -(loadmodel->brushq3.num_lightgrid_imins[0] - 0.5f) / texturesize[0];
+			lightgridmatrix[1][3] = -(loadmodel->brushq3.num_lightgrid_imins[1] - 0.5f) / texturesize[1];
+			lightgridmatrix[2][3] = -(loadmodel->brushq3.num_lightgrid_imins[2] - 1.5f) / texturesize[2];
+			lightgridmatrix[3][3] = 1;
+			Matrix4x4_FromArrayDoubleD3D(&loadmodel->brushq3.lightgridworldtotexturematrix, lightgridmatrix[0]);
+			loadmodel->brushq3.lightgridtexture = R_LoadTexture3D(loadmodel->texturepool, "lightgrid", texturesize[0], texturesize[1], texturesize[2], texturergba, TEXTYPE_RGBA, TEXF_CLAMP, 0, NULL);
+			Mem_Free(texturergba);
 		}
 	}
 }

@@ -129,6 +129,8 @@ mplane_t;
 #define MATERIALFLAG_OCCLUDE 0x10000000
 // use vertex color instead of lighting (e.g. particles and other glowy stuff), use with MATERIALFLAG_FULLBRIGHT
 #define MATERIALFLAG_VERTEXCOLOR 0x20000000
+// sample the q3bsp lightgrid in the shader rather than relying on MATERIALFLAG_MODELLIGHT
+#define MATERIALFLAG_LIGHTGRID 0x40000000
 // combined mask of all attributes that require depth sorted rendering
 #define MATERIALFLAGMASK_DEPTHSORTED (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST)
 // combined mask of all attributes that cause some sort of transparency
