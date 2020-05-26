@@ -3989,12 +3989,14 @@ void R_AnimCache_CacheVisibleEntities(void)
 
 qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
-	int i;
+	long unsigned int i;
+	int j;
 	vec3_t eyemins, eyemaxs;
 	vec3_t boxmins, boxmaxs;
 	vec3_t padmins, padmaxs;
 	vec3_t start;
 	vec3_t end;
+	trace_t trace;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	static vec3_t positions[] = {
 		{ 0.5f, 0.5f, 0.5f },
@@ -4055,7 +4057,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 			end[1] = boxmins[1] + (boxmaxs[1] - boxmins[1]) * positions[i][1];
 			end[2] = boxmins[2] + (boxmaxs[2] - boxmins[2]) * positions[i][2];
 			//trace_t trace = CL_TraceLine(start, end, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, SUPERCONTENTS_SKY, MATERIALFLAGMASK_TRANSLUCENT, 0.0f, true, false, NULL, true, true);
-			trace_t trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
+			trace = CL_Cache_TraceLineSurfaces(start, end, MOVE_NORMAL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT);
 			// not picky - if the trace ended anywhere in the box we're good
 			if (BoxesOverlap(trace.endpos, trace.endpos, padmins, padmaxs))
 				return true;
@@ -4065,7 +4067,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 		return true;
 
 	// try various random positions
-	for (i = 0; i < numsamples; i++)
+	for (j = 0; j < numsamples; j++)
 	{
 		VectorSet(start, lhrandom(eyemins[0], eyemaxs[0]), lhrandom(eyemins[1], eyemaxs[1]), lhrandom(eyemins[2], eyemaxs[2]));
 		VectorSet(end, lhrandom(boxmins[0], boxmaxs[0]), lhrandom(boxmins[1], boxmaxs[1]), lhrandom(boxmins[2], boxmaxs[2]));

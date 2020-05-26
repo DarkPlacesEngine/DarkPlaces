@@ -2652,7 +2652,7 @@ void Mod_LoadCustomMaterial(mempool_t *mempool, texture_t *texture, const char *
 
 void Mod_UnloadCustomMaterial(texture_t *texture, qboolean purgeskins)
 {
-	int i, j;
+	long unsigned int i, j;
 	for (i = 0; i < sizeof(texture->shaderpasses) / sizeof(texture->shaderpasses[0]); i++)
 	{
 		if (texture->shaderpasses[i])
@@ -4603,7 +4603,7 @@ static void Mod_Mesh_MakeSortedSurfaces(dp_model_t *mod)
 	}
 }
 
-void Mod_Mesh_ComputeBounds(dp_model_t *mod)
+static void Mod_Mesh_ComputeBounds(dp_model_t *mod)
 {
 	int i;
 	vec_t x2a, x2b, y2a, y2b, z2a, z2b, x2, y2, z2, yawradius, rotatedradius;
@@ -4683,7 +4683,7 @@ void Mod_Mesh_Validate(dp_model_t *mod)
 	}
 }
 
-void Mod_Mesh_UploadDynamicBuffers(dp_model_t *mod)
+static void Mod_Mesh_UploadDynamicBuffers(dp_model_t *mod)
 {
 	mod->surfmesh.data_element3s_indexbuffer = mod->surfmesh.data_element3s ? R_BufferData_Store(mod->surfmesh.num_triangles * sizeof(short[3]), mod->surfmesh.data_element3s, R_BUFFERDATA_INDEX16, &mod->surfmesh.data_element3s_bufferoffset) : NULL;
 	mod->surfmesh.data_element3i_indexbuffer = mod->surfmesh.data_element3i ? R_BufferData_Store(mod->surfmesh.num_triangles * sizeof(int[3]), mod->surfmesh.data_element3i, R_BUFFERDATA_INDEX32, &mod->surfmesh.data_element3i_bufferoffset) : NULL;

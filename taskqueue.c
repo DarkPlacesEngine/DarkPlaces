@@ -141,7 +141,7 @@ qboolean TaskQueue_IsDone(taskqueue_task_t *t)
 	return !t->done != 0;
 }
 
-void TaskQueue_DistributeTasks(void)
+static void TaskQueue_DistributeTasks(void)
 {
 	Thread_AtomicLock(&taskqueue_state.command_lock);
 	if (taskqueue_state.numthreads > 0)
