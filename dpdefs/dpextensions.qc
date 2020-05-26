@@ -2608,3 +2608,11 @@ float MOVETYPE_USER_FIRST = 128;
 float MOVETYPE_USER_LAST = 191;
 //description:
 //user defined movetypes can be added between the start and end points, without producing unknown movetype warnings
+
+//DP_RM_CLIPGROUP
+//idea: Akari
+//darkplaces implementation: Akari
+//field definitions:
+.float clipgroup;
+//description:
+//If two entities have this field set to the same non-zero integer value, they won't collide with each other.
