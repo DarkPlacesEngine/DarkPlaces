@@ -5771,10 +5771,6 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	if (loadmodel->brushq3.deluxemapping)
 		loadmodel->brushq3.data_deluxemaps = (rtexture_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brushq3.num_mergedlightmaps * sizeof(rtexture_t *));
 
-	// allocate a texture pool if we need it
-	if (loadmodel->texturepool == NULL)
-		loadmodel->texturepool = R_AllocTexturePool();
-
 	mergedpixels = (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4);
 	mergeddeluxepixels = loadmodel->brushq3.deluxemapping ? (unsigned char *) Mem_Alloc(tempmempool, mergedwidth * mergedheight * 4) : NULL;
 	for (i = 0;i < count;i++)
@@ -6659,9 +6655,6 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 			// ambient color
 			// bent-normal light color
 			// bent-normal light dir
-
-			if (loadmodel->texturepool == NULL)
-				loadmodel->texturepool = R_AllocTexturePool();
 
 			texturesize[0] = loadmodel->brushq3.num_lightgrid_isize[0];
 			texturesize[1] = loadmodel->brushq3.num_lightgrid_isize[1];
@@ -8024,6 +8017,10 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		// all this checksumming can take a while, so let's send keepalives here too
 		CL_KeepaliveMessage(false);
 	}
+
+	// allocate a texture pool if we need it
+	if (mod->texturepool == NULL)
+		mod->texturepool = R_AllocTexturePool();
 
 	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);
 	Mod_Q3BSP_LoadTextures(&header->lumps[Q3LUMP_TEXTURES]);
