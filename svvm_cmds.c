@@ -1717,13 +1717,13 @@ static void VM_SV_AddStat(prvm_prog_t *prog)
 
 	if (i >= MAX_CL_STATS)
 	{
-		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_CL_STATS (%i), not supported by protocol, and AddStat beyond MAX_VM_STAT conflicts with engine MOVEVARS\n", i, MAX_CL_STATS, MAX_VM_STAT);
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_CL_STATS (%i), not supported by protocol, and AddStat beyond MAX_VM_STAT (%i) conflicts with engine MOVEVARS\n", i, MAX_CL_STATS, MAX_VM_STAT);
 		return;
 	}
 
 	if (i > (MAX_CL_STATS - 4) && type == 1)
 	{
-		VM_Warning(prog, "PF_SV_AddStat: index (%i) > (MAX_CL_STATS-4) with string type won't fit in the protocol, and AddStat beyond MAX_VM_STAT conflicts with engine MOVEVARS\n", i, MAX_CL_STATS);
+		VM_Warning(prog, "PF_SV_AddStat: index (%i) > (MAX_CL_STATS (%i) - 4) with string type won't fit in the protocol, and AddStat beyond MAX_VM_STAT conflicts with engine MOVEVARS\n", i, MAX_CL_STATS);
 		return;
 	}
 
