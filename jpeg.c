@@ -559,7 +559,7 @@ static jboolean JPEG_FillInputBuffer (j_decompress_ptr cinfo)
     cinfo->src->next_input_byte = jpeg_eoi_marker;
     cinfo->src->bytes_in_buffer = 2;
 
-	return TRUE;
+	return true;
 }
 
 static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
@@ -624,7 +624,7 @@ unsigned char* JPEG_LoadImage_BGRA (const unsigned char *f, int filesize, int *m
 	cinfo.err = qjpeg_std_error (&jerr);
 	cinfo.err->error_exit = JPEG_ErrorExit;
 	JPEG_MemSrc (&cinfo, f, filesize);
-	qjpeg_read_header (&cinfo, TRUE);
+	qjpeg_read_header (&cinfo, true);
 	cinfo.scale_num = 1;
 	cinfo.scale_denom = (1 << submip);
 	qjpeg_start_decompress (&cinfo);
@@ -848,7 +848,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	cinfo.in_color_space = JCS_RGB;
 	cinfo.input_components = 3;
 	qjpeg_set_defaults (&cinfo);
-	qjpeg_set_quality (&cinfo, (int)(scr_screenshot_jpeg_quality.value * 100), TRUE);
+	qjpeg_set_quality (&cinfo, (int)(scr_screenshot_jpeg_quality.value * 100), true);
 	qjpeg_simple_progression (&cinfo);
 
 	// turn off subsampling (to make text look better)
