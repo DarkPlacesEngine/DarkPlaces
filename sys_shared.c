@@ -18,6 +18,9 @@
 #pragma comment(lib, "winmm.lib")
 #endif
 #else
+# ifdef __FreeBSD__
+#  include <sys/sysctl.h>
+# endif
 # include <unistd.h>
 # include <fcntl.h>
 # include <sys/time.h>
@@ -498,7 +501,12 @@ static const char *Sys_FindExecutableName(void)
 	static char exenamebuf[MAX_OSPATH+1];
 	ssize_t n = -1;
 #if defined(__FreeBSD__)
-	n = readlink("/proc/curproc/file", exenamebuf, sizeof(exenamebuf)-1);
+	int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PATHNAME, -1};
+	size_t exenamebuflen = sizeof(exenamebuf)-1;
+	if (sysctl(mib, 4, exenamebuf, &exenamebuflen, NULL, 0) == 0)
+	{
+		n = exenamebuflen;
+	}
 #elif defined(__linux__)
 	n = readlink("/proc/self/exe", exenamebuf, sizeof(exenamebuf)-1);
 #endif
