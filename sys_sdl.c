@@ -63,7 +63,7 @@ void Sys_Error (const char *error, ...)
 	Con_Errorf ("Engine Error: %s\n", string);
 	
 	if(!nocrashdialog)
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Quake Error", string, NULL);
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", string, NULL);
 
 	Host_Shutdown ();
 	exit (1);
