@@ -964,7 +964,7 @@ static void Host_Loadgame_f (void)
 			PRVM_ED_ParseEdict (prog, start, ent);
 
 			// link it into the bsp tree
-			if (!ent->priv.server->free)
+			if (!ent->priv.server->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
 				SV_LinkEdict(ent);
 		}
 
