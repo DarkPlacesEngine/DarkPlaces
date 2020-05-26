@@ -6659,6 +6659,10 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 			// ambient color
 			// bent-normal light color
 			// bent-normal light dir
+
+			if (loadmodel->texturepool == NULL)
+				loadmodel->texturepool = R_AllocTexturePool();
+
 			texturesize[0] = loadmodel->brushq3.num_lightgrid_isize[0];
 			texturesize[1] = loadmodel->brushq3.num_lightgrid_isize[1];
 			texturesize[2] = (loadmodel->brushq3.num_lightgrid_isize[2] + 2) * 3;
