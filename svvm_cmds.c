@@ -227,6 +227,7 @@ const char *vm_sv_extensions =
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
 "ZQ_PAUSE "
+"DP_RM_CLIPGROUP "
 //"EXT_CSQC " // not ready yet
 ;
 
