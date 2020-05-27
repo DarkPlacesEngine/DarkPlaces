@@ -4312,8 +4312,11 @@ void CL_Parse_Init(void)
 	Cmd_AddCommand(&cmd_client, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
 	Cmd_AddCommand(&cmd_client, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
 	Cmd_AddCommand(&cmd_client, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
+	Cmd_AddCommand(&cmd_clientfromserver, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
 	Cmd_AddCommand(&cmd_client, "stopdownload", CL_StopDownload_f, "terminates a download");
+	Cmd_AddCommand(&cmd_clientfromserver, "stopdownload", CL_StopDownload_f, "terminates a download");
 	Cmd_AddCommand(&cmd_client, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
+	Cmd_AddCommand(&cmd_clientfromserver, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
 	Cmd_AddCommand(&cmd_client, "iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
 }
 
