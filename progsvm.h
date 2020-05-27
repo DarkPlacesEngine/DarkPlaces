@@ -841,14 +841,14 @@ void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
 void PRVM_ED_LoadFromFile(prvm_prog_t *prog, const char *data);
 
 unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char *filename, int fileline);
-#define	PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? (unsigned int)(n) : PRVM_EDICT_NUM_ERROR(prog, (unsigned int)(n), __FILE__, __LINE__))
-#define	PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
+#define PRVM_EDICT(n) (((unsigned)(n) < (unsigned int)prog->max_edicts) ? (unsigned int)(n) : PRVM_EDICT_NUM_ERROR(prog, (unsigned int)(n), __FILE__, __LINE__))
+#define PRVM_EDICT_NUM(n) (prog->edicts + PRVM_EDICT(n))
 
 //int NUM_FOR_EDICT_ERROR(prvm_edict_t *e);
 #define PRVM_NUM_FOR_EDICT(e) ((int)((prvm_edict_t *)(e) - prog->edicts))
 //int PRVM_NUM_FOR_EDICT(prvm_edict_t *e);
 
-#define	PRVM_NEXT_EDICT(e) ((e) + 1)
+#define PRVM_NEXT_EDICT(e) ((e) + 1)
 
 #define PRVM_EDICT_TO_PROG(e) (PRVM_NUM_FOR_EDICT(e))
 //int PRVM_EDICT_TO_PROG(prvm_edict_t *e);
@@ -857,21 +857,21 @@ unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char 
 
 //============================================================================
 
-#define	PRVM_G_FLOAT(o) (prog->globals.fp[o])
-#define	PRVM_G_INT(o) (prog->globals.ip[o])
-#define	PRVM_G_EDICT(o) (PRVM_PROG_TO_EDICT(prog->globals.ip[o]))
+#define PRVM_G_FLOAT(o) (prog->globals.fp[o])
+#define PRVM_G_INT(o) (prog->globals.ip[o])
+#define PRVM_G_EDICT(o) (PRVM_PROG_TO_EDICT(prog->globals.ip[o]))
 #define PRVM_G_EDICTNUM(o) PRVM_NUM_FOR_EDICT(PRVM_G_EDICT(o))
-#define	PRVM_G_VECTOR(o) (&prog->globals.fp[o])
-#define	PRVM_G_STRING(o) (PRVM_GetString(prog, prog->globals.ip[o]))
-//#define	PRVM_G_FUNCTION(prog, o) (prog->globals.ip[o])
+#define PRVM_G_VECTOR(o) (&prog->globals.fp[o])
+#define PRVM_G_STRING(o) (PRVM_GetString(prog, prog->globals.ip[o]))
+//#define PRVM_G_FUNCTION(prog, o) (prog->globals.ip[o])
 
 // FIXME: make these go away?
-#define	PRVM_E_FLOAT(e,o) (e->fields.fp[o])
-#define	PRVM_E_INT(e,o) (e->fields.ip[o])
-//#define	PRVM_E_VECTOR(e,o) (&(e->fields.fp[o]))
-#define	PRVM_E_STRING(e,o) (PRVM_GetString(prog, e->fields.ip[o]))
+#define PRVM_E_FLOAT(e,o) (e->fields.fp[o])
+#define PRVM_E_INT(e,o) (e->fields.ip[o])
+//#define PRVM_E_VECTOR(e,o) (&(e->fields.fp[o]))
+#define PRVM_E_STRING(e,o) (PRVM_GetString(prog, e->fields.ip[o]))
 
-extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-project is to
+extern int prvm_type_size[8]; // for consistency : I think a goal of this sub-project is to
 // make the new vm mostly independent from the old one, thus if it's necessary, I copy everything
 
 void PRVM_Init_Exec(prvm_prog_t *prog);
