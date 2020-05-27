@@ -3996,7 +3996,6 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 	vec3_t padmins, padmaxs;
 	vec3_t start;
 	vec3_t end;
-	trace_t trace;
 	dp_model_t *model = r_refdef.scene.worldmodel;
 	static vec3_t positions[] = {
 		{ 0.5f, 0.5f, 0.5f },
@@ -4052,6 +4051,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 	{
 		for (i = 0; i < sizeof(positions) / sizeof(positions[0]); i++)
 		{
+			trace_t trace;
 			VectorCopy(eye, start);
 			end[0] = boxmins[0] + (boxmaxs[0] - boxmins[0]) * positions[i][0];
 			end[1] = boxmins[1] + (boxmaxs[1] - boxmins[1]) * positions[i][1];
@@ -9802,7 +9802,6 @@ static void R_DrawModelDecals(void)
 	}
 }
 
-extern cvar_t mod_collision_bih;
 static void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
