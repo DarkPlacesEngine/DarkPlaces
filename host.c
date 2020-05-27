@@ -781,17 +781,13 @@ void Host_Main(void)
 			// process console commands
 //			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
+			Cbuf_Frame(&cmd_clientfromserver);
 			Cbuf_Frame(&cmd_client);
 			Cbuf_Frame(&cmd_server);
 
 			if(sv.active)
 			{
 				Cbuf_Frame(&cmd_serverfromclient);
-			}
-
-			if(cls.netcon)
-			{
-				Cbuf_Frame(&cmd_clientfromserver);
 			}
 
 //			R_TimeReport("console");
