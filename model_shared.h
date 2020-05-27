@@ -883,12 +883,6 @@ typedef struct model_brushq1_s
 }
 model_brushq1_t;
 
-typedef struct model_brushq2_s
-{
-	int dummy; // MSVC can't handle an empty struct
-}
-model_brushq2_t;
-
 typedef struct model_brushq3_s
 {
 	int num_models;
@@ -1067,7 +1061,6 @@ typedef struct model_s
 	model_sprite_t	sprite;
 	model_brush_t	brush;
 	model_brushq1_t	brushq1;
-	model_brushq2_t	brushq2;
 	model_brushq3_t	brushq3;
 	// flags this model for offseting sounds to the model center (used by brush models)
 	int soundfromcenter;
