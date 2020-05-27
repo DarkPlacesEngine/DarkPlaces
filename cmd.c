@@ -237,14 +237,13 @@ Cbuf_Execute_Deferred --blub
 */
 static void Cbuf_Execute_Deferred (cmd_state_t *cmd)
 {
-	static double oldrealtime = 0;
 	cmddeferred_t *defcmd, *prev;
 	double eat;
-	if (realtime - oldrealtime < 0 || realtime - oldrealtime > 1800) oldrealtime = realtime;
-	eat = realtime - oldrealtime;
+	if (realtime - cmd->deferred_oldrealtime < 0 || realtime - cmd->deferred_oldrealtime > 1800) cmd->deferred_oldrealtime = realtime;
+	eat = realtime - cmd->deferred_oldrealtime;
 	if (eat < (1.0 / 120.0))
 		return;
-	oldrealtime = realtime;
+	cmd->deferred_oldrealtime = realtime;
 	prev = NULL;
 	defcmd = cmd->deferred_list;
 	while(defcmd)

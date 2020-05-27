@@ -98,6 +98,7 @@ typedef struct cmd_state_s
 	int tokenizebufferpos;
 
 	cmddeferred_t *deferred_list;
+	double deferred_oldrealtime;
 
 	sizebuf_t text;
 	unsigned char text_buf[CMDBUFSIZE];
