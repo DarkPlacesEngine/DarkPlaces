@@ -65,7 +65,6 @@ cvar_t mod_q3shader_force_addalpha = {CVAR_CLIENT, "mod_q3shader_force_addalpha"
 cvar_t mod_q3shader_force_terrain_alphaflag = {CVAR_CLIENT, "mod_q3shader_force_terrain_alphaflag", "0", "for multilayered terrain shaders force TEXF_ALPHA flag on both layers"};
 
 cvar_t mod_q1bsp_polygoncollisions = {CVAR_CLIENT | CVAR_SERVER, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
-cvar_t mod_collision_bih = {CVAR_CLIENT | CVAR_SERVER, "mod_collision_bih", "1", "enables use of generated Bounding Interval Hierarchy tree instead of compiled bsp tree in collision code"};
 cvar_t mod_recalculatenodeboxes = {CVAR_CLIENT | CVAR_SERVER, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 
 static texture_t mod_q1bsp_texture_solid;
@@ -116,7 +115,6 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3shader_force_addalpha);
 	Cvar_RegisterVariable(&mod_q3shader_force_terrain_alphaflag);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
-	Cvar_RegisterVariable(&mod_collision_bih);
 	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
 
 	// these games were made for older DP engines and are no longer
@@ -570,30 +568,9 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		surface = info->model->data_surfaces + *mark;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
-			if(surface->deprecatedq3num_bboxstride > 0)
+			for (k = 0;k < surface->num_triangles;k++)
 			{
-				int i, cnt, tri;
-				cnt = (surface->num_triangles + surface->deprecatedq3num_bboxstride - 1) / surface->deprecatedq3num_bboxstride;
-				for(i = 0; i < cnt; ++i)
-				{
-					if(BoxesOverlap(surface->deprecatedq3data_bbox6f + i * 6, surface->deprecatedq3data_bbox6f + i * 6 + 3, info->absmin, info->absmax))
-					{
-						for(k = 0; k < surface->deprecatedq3num_bboxstride; ++k)
-						{
-							tri = i * surface->deprecatedq3num_bboxstride + k;
-							if(tri >= surface->num_triangles)
-								break;
-							Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, tri);
-						}
-					}
-				}
-			}
-			else
-			{
-				for (k = 0;k < surface->num_triangles;k++)
-				{
-					Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
-				}
+				Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
 			}
 		}
 	}
@@ -5834,53 +5811,6 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	}
 }
 
-static void Mod_Q3BSP_BuildBBoxes(const int *element3i, int num_triangles, const float *vertex3f, float **collisionbbox6f, int *collisionstride, int stride)
-{
-	int j, k, cnt, tri;
-	float *mins, *maxs;
-	const float *vert;
-	*collisionstride = stride;
-	if(stride > 0)
-	{
-		cnt = (num_triangles + stride - 1) / stride;
-		*collisionbbox6f = (float *) Mem_Alloc(loadmodel->mempool, sizeof(float[6]) * cnt);
-		for(j = 0; j < cnt; ++j)
-		{
-			mins = &((*collisionbbox6f)[6 * j + 0]);
-			maxs = &((*collisionbbox6f)[6 * j + 3]);
-			for(k = 0; k < stride; ++k)
-			{
-				tri = j * stride + k;
-				if(tri >= num_triangles)
-					break;
-				vert = &(vertex3f[element3i[3 * tri + 0] * 3]);
-				if(!k || vert[0] < mins[0]) mins[0] = vert[0];
-				if(!k || vert[1] < mins[1]) mins[1] = vert[1];
-				if(!k || vert[2] < mins[2]) mins[2] = vert[2];
-				if(!k || vert[0] > maxs[0]) maxs[0] = vert[0];
-				if(!k || vert[1] > maxs[1]) maxs[1] = vert[1];
-				if(!k || vert[2] > maxs[2]) maxs[2] = vert[2];
-				vert = &(vertex3f[element3i[3 * tri + 1] * 3]);
-				if(vert[0] < mins[0]) mins[0] = vert[0];
-				if(vert[1] < mins[1]) mins[1] = vert[1];
-				if(vert[2] < mins[2]) mins[2] = vert[2];
-				if(vert[0] > maxs[0]) maxs[0] = vert[0];
-				if(vert[1] > maxs[1]) maxs[1] = vert[1];
-				if(vert[2] > maxs[2]) maxs[2] = vert[2];
-				vert = &(vertex3f[element3i[3 * tri + 2] * 3]);
-				if(vert[0] < mins[0]) mins[0] = vert[0];
-				if(vert[1] < mins[1]) mins[1] = vert[1];
-				if(vert[2] < mins[2]) mins[2] = vert[2];
-				if(vert[0] > maxs[0]) maxs[0] = vert[0];
-				if(vert[1] > maxs[1]) maxs[1] = vert[1];
-				if(vert[2] > maxs[2]) maxs[2] = vert[2];
-			}
-		}
-	}
-	else
-		*collisionbbox6f = NULL;
-}
-
 typedef struct patchtess_s
 {
 	patchinfo_t info;
@@ -6228,42 +6158,15 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			finalvertices = finalwidth * finalheight;
 			oldnumtriangles2 = finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
 
-			// legacy collision geometry implementation
-			out->deprecatedq3data_collisionvertex3f = (float *)Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
-			out->deprecatedq3data_collisionelement3i = (int *)Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
+			// store collision geometry for BIH collision tree
 			out->num_collisionvertices = finalvertices;
 			out->num_collisiontriangles = finaltriangles;
-			Q3PatchTesselateFloat(3, sizeof(float[3]), out->deprecatedq3data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
-			Q3PatchTriangleElements(out->deprecatedq3data_collisionelement3i, finalwidth, finalheight, 0);
-
-			//Mod_SnapVertices(3, out->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * out->num_firstvertex), 0.25);
-			Mod_SnapVertices(3, finalvertices, out->deprecatedq3data_collisionvertex3f, 1);
-
-			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(finaltriangles, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionelement3i, out->deprecatedq3data_collisionvertex3f);
-
-			// now optimize the collision mesh by finding triangle bboxes...
-			Mod_Q3BSP_BuildBBoxes(out->deprecatedq3data_collisionelement3i, out->num_collisiontriangles, out->deprecatedq3data_collisionvertex3f, &out->deprecatedq3data_collisionbbox6f, &out->deprecatedq3num_collisionbboxstride, mod_q3bsp_curves_collisions_stride.integer);
-			Mod_Q3BSP_BuildBBoxes(loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle, out->num_triangles, loadmodel->surfmesh.data_vertex3f, &out->deprecatedq3data_bbox6f, &out->deprecatedq3num_bboxstride, mod_q3bsp_curves_stride.integer);
-
-			// store collision geometry for BIH collision tree
 			surfacecollisionvertex3f = loadmodel->brush.data_collisionvertex3f + collisionvertices * 3;
 			surfacecollisionelement3i = loadmodel->brush.data_collisionelement3i + collisiontriangles * 3;
 			Q3PatchTesselateFloat(3, sizeof(float[3]), surfacecollisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, cxtess, cytess);
 			Q3PatchTriangleElements(surfacecollisionelement3i, finalwidth, finalheight, collisionvertices);
 			Mod_SnapVertices(3, finalvertices, surfacecollisionvertex3f, 1);
-#if 1
-			// remove this once the legacy code is removed
-			{
-				int nc = out->num_collisiontriangles;
-#endif
 			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(finaltriangles, surfacecollisionelement3i, surfacecollisionelement3i, loadmodel->brush.data_collisionvertex3f);
-#if 1
-				if(nc != out->num_collisiontriangles)
-				{
-					Con_Printf("number of collision triangles differs between BIH and BSP. FAIL.\n");
-				}
-			}
-#endif
 
 			if (developer_extra.integer)
 				Con_DPrintf("Mod_Q3BSP_LoadFaces: %ix%i curve became %i:%i vertices / %i:%i triangles (%i:%i degenerate)\n", patchsize[0], patchsize[1], out->num_vertices, out->num_collisionvertices, oldnumtriangles, oldnumtriangles2, oldnumtriangles - out->num_triangles, oldnumtriangles2 - out->num_collisiontriangles);
@@ -7334,377 +7237,6 @@ int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, c
 #endif
 }
 
-static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, dp_model_t *model, mnode_t *node, const vec3_t point, int markframe)
-{
-	int i;
-	mleaf_t *leaf;
-	colbrushf_t *brush;
-	// find which leaf the point is in
-	while (node->plane)
-		node = node->children[(node->plane->type < 3 ? point[node->plane->type] : DotProduct(point, node->plane->normal)) < node->plane->dist];
-	// point trace the brushes
-	leaf = (mleaf_t *)node;
-	for (i = 0;i < leaf->numleafbrushes;i++)
-	{
-		brush = model->brush.data_brushes[leaf->firstleafbrush[i]].colbrushf;
-		if (brush && brush->markframe != markframe && BoxesOverlap(point, point, brush->mins, brush->maxs))
-		{
-			brush->markframe = markframe;
-			Collision_TracePointBrushFloat(trace, point, brush);
-		}
-	}
-	// can't do point traces on curves (they have no thickness)
-}
-
-static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, dp_model_t *model, mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
-{
-	int i, startside, endside;
-	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
-	mleaf_t *leaf;
-	msurface_t *surface;
-	mplane_t *plane;
-	colbrushf_t *brush;
-	// walk the tree until we hit a leaf, recursing for any split cases
-	while (node->plane)
-	{
-#if 0
-		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
-			return;
-		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[0], start, end, startfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-		node = node->children[1];
-#else
-		// abort if this part of the bsp tree can not be hit by this trace
-//		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
-//			return;
-		plane = node->plane;
-		// axial planes are much more common than non-axial, so an optimized
-		// axial case pays off here
-		if (plane->type < 3)
-		{
-			dist1 = start[plane->type] - plane->dist;
-			dist2 = end[plane->type] - plane->dist;
-		}
-		else
-		{
-			dist1 = DotProduct(start, plane->normal) - plane->dist;
-			dist2 = DotProduct(end, plane->normal) - plane->dist;
-		}
-		startside = dist1 < 0;
-		endside = dist2 < 0;
-		if (startside == endside)
-		{
-			// most of the time the line fragment is on one side of the plane
-			node = node->children[startside];
-		}
-		else
-		{
-			// line crosses node plane, split the line
-			dist1 = PlaneDiff(linestart, plane);
-			dist2 = PlaneDiff(lineend, plane);
-			midfrac = dist1 / (dist1 - dist2);
-			VectorLerp(linestart, midfrac, lineend, mid);
-			// take the near side first
-			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-			// if we found an impact on the front side, don't waste time
-			// exploring the far side
-			if (midfrac <= trace->fraction)
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
-			return;
-		}
-#endif
-	}
-	// abort if this part of the bsp tree can not be hit by this trace
-//	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
-//		return;
-	// hit a leaf
-	nodesegmentmins[0] = min(start[0], end[0]) - 1;
-	nodesegmentmins[1] = min(start[1], end[1]) - 1;
-	nodesegmentmins[2] = min(start[2], end[2]) - 1;
-	nodesegmentmaxs[0] = max(start[0], end[0]) + 1;
-	nodesegmentmaxs[1] = max(start[1], end[1]) + 1;
-	nodesegmentmaxs[2] = max(start[2], end[2]) + 1;
-	// line trace the brushes
-	leaf = (mleaf_t *)node;
-#if 0
-	if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
-		return;
-#endif
-	for (i = 0;i < leaf->numleafbrushes;i++)
-	{
-		brush = model->brush.data_brushes[leaf->firstleafbrush[i]].colbrushf;
-		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
-		{
-			brush->markframe = markframe;
-			Collision_TraceLineBrushFloat(trace, linestart, lineend, brush, brush);
-		}
-	}
-	// can't do point traces on curves (they have no thickness)
-	if (leaf->containscollisionsurfaces && mod_q3bsp_curves_collisions.integer && !VectorCompare(start, end))
-	{
-		// line trace the curves
-		for (i = 0;i < leaf->numleafsurfaces;i++)
-		{
-			surface = model->data_surfaces + leaf->firstleafsurface[i];
-			if (surface->num_collisiontriangles && surface->deprecatedq3collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
-			{
-				surface->deprecatedq3collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
-			}
-		}
-	}
-}
-
-static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, dp_model_t *model, mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
-{
-	int i;
-	int sides;
-	mleaf_t *leaf;
-	colbrushf_t *brush;
-	msurface_t *surface;
-	mplane_t *plane;
-	float nodesegmentmins[3], nodesegmentmaxs[3];
-	// walk the tree until we hit a leaf, recursing for any split cases
-	while (node->plane)
-	{
-#if 0
-		if (!BoxesOverlap(segmentmins, segmentmaxs, node->mins, node->maxs))
-			return;
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-		node = node->children[1];
-#else
-		// abort if this part of the bsp tree can not be hit by this trace
-//		if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
-//			return;
-		plane = node->plane;
-		// axial planes are much more common than non-axial, so an optimized
-		// axial case pays off here
-		if (plane->type < 3)
-		{
-			// this is an axial plane, compare bounding box directly to it and
-			// recurse sides accordingly
-			// recurse down node sides
-			// use an inlined axial BoxOnPlaneSide to slightly reduce overhead
-			//sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, plane);
-			//sides = ((segmentmaxs[plane->type] >= plane->dist) | ((segmentmins[plane->type] < plane->dist) << 1));
-			sides = ((segmentmaxs[plane->type] >= plane->dist) + ((segmentmins[plane->type] < plane->dist) * 2));
-		}
-		else
-		{
-			// this is a non-axial plane, so check if the start and end boxes
-			// are both on one side of the plane to handle 'diagonal' cases
-			sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, plane);
-		}
-		if (sides == 3)
-		{
-			// segment crosses plane
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-			sides = 2;
-		}
-		// if sides == 0 then the trace itself is bogus (Not A Number values),
-		// in this case we simply pretend the trace hit nothing
-		if (sides == 0)
-			return; // ERROR: NAN bounding box!
-		// take whichever side the segment box is on
-		node = node->children[sides - 1];
-#endif
-	}
-	// abort if this part of the bsp tree can not be hit by this trace
-//	if (!(node->combinedsupercontents & trace->hitsupercontentsmask))
-//		return;
-	nodesegmentmins[0] = max(segmentmins[0], node->mins[0] - 1);
-	nodesegmentmins[1] = max(segmentmins[1], node->mins[1] - 1);
-	nodesegmentmins[2] = max(segmentmins[2], node->mins[2] - 1);
-	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0] + 1);
-	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1] + 1);
-	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2] + 1);
-	// hit a leaf
-	leaf = (mleaf_t *)node;
-#if 0
-	if (!BoxesOverlap(segmentmins, segmentmaxs, leaf->mins, leaf->maxs))
-		return;
-#endif
-	for (i = 0;i < leaf->numleafbrushes;i++)
-	{
-		brush = model->brush.data_brushes[leaf->firstleafbrush[i]].colbrushf;
-		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
-		{
-			brush->markframe = markframe;
-			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, brush, brush);
-		}
-	}
-	if (leaf->containscollisionsurfaces && mod_q3bsp_curves_collisions.integer)
-	{
-		for (i = 0;i < leaf->numleafsurfaces;i++)
-		{
-			surface = model->data_surfaces + leaf->firstleafsurface[i];
-			if (surface->num_collisiontriangles && surface->deprecatedq3collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, surface->mins, surface->maxs))
-			{
-				surface->deprecatedq3collisionmarkframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
-			}
-		}
-	}
-}
-
-
-static int markframe = 0;
-
-static void Mod_Q3BSP_TracePoint(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
-{
-	int i;
-	q3mbrush_t *brush;
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	trace->skipsupercontentsmask = skipsupercontentsmask;
-	trace->skipmaterialflagsmask = skipmaterialflagsmask;
-	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-	else if (model->brush.submodel)
-	{
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf)
-				Collision_TracePointBrushFloat(trace, start, brush->colbrushf);
-	}
-	else
-		Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, ++markframe);
-}
-
-static void Mod_Q3BSP_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
-{
-	int i;
-	float segmentmins[3], segmentmaxs[3];
-	msurface_t *surface;
-	q3mbrush_t *brush;
-
-	if (VectorCompare(start, end))
-	{
-		Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, start, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-		return;
-	}
-
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	trace->skipsupercontentsmask = skipsupercontentsmask;
-	trace->skipmaterialflagsmask = skipmaterialflagsmask;
-	segmentmins[0] = min(start[0], end[0]) - 1;
-	segmentmins[1] = min(start[1], end[1]) - 1;
-	segmentmins[2] = min(start[2], end[2]) - 1;
-	segmentmaxs[0] = max(start[0], end[0]) + 1;
-	segmentmaxs[1] = max(start[1], end[1]) + 1;
-	segmentmaxs[2] = max(start[2], end[2]) + 1;
-	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceLine(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-	else if (model->brush.submodel)
-	{
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
-				Collision_TraceLineBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
-		if (mod_q3bsp_curves_collisions.integer)
-			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
-					Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
-	}
-	else
-		Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, 0, 1, start, end, ++markframe, segmentmins, segmentmaxs);
-}
-
-static void Mod_Q3BSP_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *start, colbrushf_t *end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
-{
-	float segmentmins[3], segmentmaxs[3];
-	int i;
-	msurface_t *surface;
-	q3mbrush_t *brush;
-
-	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(start->mins, start->maxs) && VectorCompare(end->mins, end->maxs))
-	{
-		if (VectorCompare(start->mins, end->mins))
-			Mod_Q3BSP_TracePoint(model, frameblend, skeleton, trace, start->mins, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-		else
-			Mod_Q3BSP_TraceLine(model, frameblend, skeleton, trace, start->mins, end->mins, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-		return;
-	}
-
-	// box trace, performed as brush trace
-	memset(trace, 0, sizeof(*trace));
-	trace->fraction = 1;
-	trace->hitsupercontentsmask = hitsupercontentsmask;
-	trace->skipsupercontentsmask = skipsupercontentsmask;
-	trace->skipmaterialflagsmask = skipmaterialflagsmask;
-	segmentmins[0] = min(start->mins[0], end->mins[0]) - 1;
-	segmentmins[1] = min(start->mins[1], end->mins[1]) - 1;
-	segmentmins[2] = min(start->mins[2], end->mins[2]) - 1;
-	segmentmaxs[0] = max(start->maxs[0], end->maxs[0]) + 1;
-	segmentmaxs[1] = max(start->maxs[1], end->maxs[1]) + 1;
-	segmentmaxs[2] = max(start->maxs[2], end->maxs[2]) + 1;
-	if (mod_collision_bih.integer)
-		Mod_CollisionBIH_TraceBrush(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-	else if (model->brush.submodel)
-	{
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && BoxesOverlap(segmentmins, segmentmaxs, brush->colbrushf->mins, brush->colbrushf->maxs))
-				Collision_TraceBrushBrushFloat(trace, start, end, brush->colbrushf, brush->colbrushf);
-		if (mod_q3bsp_curves_collisions.integer)
-			for (i = 0, surface = model->data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
-				if (surface->num_collisiontriangles && BoxesOverlap(segmentmins, segmentmaxs, surface->mins, surface->maxs))
-					Collision_TraceBrushTriangleMeshFloat(trace, start, end, surface->num_collisiontriangles, surface->deprecatedq3data_collisionelement3i, surface->deprecatedq3data_collisionvertex3f, surface->deprecatedq3num_collisionbboxstride, surface->deprecatedq3data_collisionbbox6f, surface->texture->supercontents, surface->texture->surfaceflags, surface->texture, segmentmins, segmentmaxs);
-	}
-	else
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brush.data_nodes, start, end, ++markframe, segmentmins, segmentmaxs);
-}
-
-static void Mod_Q3BSP_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
-{
-	colboxbrushf_t thisbrush_start, thisbrush_end;
-	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
-
-	// box trace, performed as brush trace
-	VectorAdd(start, boxmins, boxstartmins);
-	VectorAdd(start, boxmaxs, boxstartmaxs);
-	VectorAdd(end, boxmins, boxendmins);
-	VectorAdd(end, boxmaxs, boxendmaxs);
-	Collision_BrushForBox(&thisbrush_start, boxstartmins, boxstartmaxs, 0, 0, NULL);
-	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
-	Mod_Q3BSP_TraceBrush(model, frameblend, skeleton, trace, &thisbrush_start.brush, &thisbrush_end.brush, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
-}
-
-static int Mod_Q3BSP_PointSuperContents(struct model_s *model, int frame, const vec3_t point)
-{
-	int i;
-	int supercontents = 0;
-	q3mbrush_t *brush;
-	if (mod_collision_bih.integer)
-	{
-		supercontents = Mod_CollisionBIH_PointSuperContents(model, frame, point);
-	}
-	// test if the point is inside each brush
-	else if (model->brush.submodel)
-	{
-		// submodels are effectively one leaf
-		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
-			if (brush->colbrushf && Collision_PointInsideBrushFloat(point, brush->colbrushf))
-				supercontents |= brush->colbrushf->supercontents;
-	}
-	else
-	{
-		mnode_t *node = model->brush.data_nodes;
-		mleaf_t *leaf;
-		// find which leaf the point is in
-		while (node->plane)
-			node = node->children[(node->plane->type < 3 ? point[node->plane->type] : DotProduct(point, node->plane->normal)) < node->plane->dist];
-		leaf = (mleaf_t *)node;
-		// now check the brushes in the leaf
-		for (i = 0;i < leaf->numleafbrushes;i++)
-		{
-			brush = model->brush.data_brushes + leaf->firstleafbrush[i];
-			if (brush->colbrushf && Collision_PointInsideBrushFloat(point, brush->colbrushf))
-				supercontents |= brush->colbrushf->supercontents;
-		}
-	}
-	return supercontents;
-}
-
 void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	Mod_CollisionBIH_TraceLineShared(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, &model->render_bih);
@@ -7946,11 +7478,11 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
 
 	mod->soundfromcenter = true;
-	mod->TraceBox = Mod_Q3BSP_TraceBox;
-	mod->TraceBrush = Mod_Q3BSP_TraceBrush;
-	mod->TraceLine = Mod_Q3BSP_TraceLine;
-	mod->TracePoint = Mod_Q3BSP_TracePoint;
-	mod->PointSuperContents = Mod_Q3BSP_PointSuperContents;
+	mod->TraceBox = Mod_CollisionBIH_TraceBox;
+	mod->TraceBrush = Mod_CollisionBIH_TraceBrush;
+	mod->TraceLine = Mod_CollisionBIH_TraceLine;
+	mod->TracePoint = Mod_CollisionBIH_TracePoint;
+	mod->PointSuperContents = Mod_CollisionBIH_PointSuperContents;
 	mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLine;
 	mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
