@@ -19,3 +19,4 @@ Makefile.win
 *.dll
 *.dylib
 *.dSYM
+.vscode
