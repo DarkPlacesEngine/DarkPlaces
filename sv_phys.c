@@ -1983,7 +1983,7 @@ SV_Physics_Pusher
 static void SV_Physics_Pusher (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	float thinktime, oldltime, movetime;
+	double thinktime, oldltime, movetime;
 
 	oldltime = PRVM_serveredictfloat(ent, ltime);
 
