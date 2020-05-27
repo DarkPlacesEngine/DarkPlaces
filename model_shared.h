@@ -487,9 +487,10 @@ texture_shaderpass_t;
 
 typedef struct texture_s
 {
-	// q1bsp
 	// name
-	//char name[16];
+	char name[64];
+
+	// q1bsp
 	// size
 	unsigned int width, height;
 	// SURF_ flags
@@ -590,7 +591,6 @@ typedef struct texture_s
 	int customblendfunc[2];
 
 	// q3bsp
-	char name[64];
 	int surfaceflags;
 	int supercontents;
 
@@ -687,10 +687,6 @@ typedef struct msurface_s
 	struct q3deffect_s *effect; // q3bsp
 	// mesh information for collisions (only used by q3bsp curves)
 	int num_firstcollisiontriangle;
-	int *deprecatedq3data_collisionelement3i; // q3bsp
-	float *deprecatedq3data_collisionvertex3f; // q3bsp
-	float *deprecatedq3data_collisionbbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
-	float *deprecatedq3data_bbox6f; // collision optimization - contains combined bboxes of every data_collisionstride triangles
 
 	// surfaces own ranges of vertices and triangles in the model->surfmesh
 	int num_triangles; // number of triangles
@@ -701,10 +697,6 @@ typedef struct msurface_s
 	// mesh information for collisions (only used by q3bsp curves)
 	int num_collisiontriangles; // q3bsp
 	int num_collisionvertices; // q3bsp
-	int deprecatedq3num_collisionbboxstride;
-	int deprecatedq3num_bboxstride;
-	// FIXME: collisionmarkframe should be kept in a separate array
-	int deprecatedq3collisionmarkframe; // q3bsp // don't collide twice in one trace
 
 	// used by Mod_Mesh_Finalize when building sortedmodelsurfaces
 	qboolean included;
