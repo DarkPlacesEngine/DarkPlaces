@@ -91,7 +91,7 @@ void CL_VM_ShutDown(void);
 void CL_VM_UpdateIntermissionState(int intermission);
 void CL_VM_UpdateShowingScoresState(int showingscores);
 qboolean CL_VM_InputEvent(int eventtype, float x, float y);
-qboolean CL_VM_ConsoleCommand(const char *cmd);
+qboolean CL_VM_ConsoleCommand(hook_val_t *arg);
 void CL_VM_UpdateDmgGlobals(int dmg_take, int dmg_save, vec3_t dmg_origin);
 void CL_VM_UpdateIntermissionState(int intermission);
 qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed);

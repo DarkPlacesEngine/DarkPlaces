@@ -502,7 +502,9 @@ qboolean CL_VM_UpdateView (double frametime)
 	return true;
 }
 
-qboolean CL_VM_ConsoleCommand (const char *cmd)
+hook_t *csqc_concmd;
+
+qboolean CL_VM_ConsoleCommand (hook_val_t *arg)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
@@ -515,7 +517,7 @@ qboolean CL_VM_ConsoleCommand (const char *cmd)
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, cmd);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, arg->str);
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_ConsoleCommand), "QC function CSQC_ConsoleCommand is missing");
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		r = CSQC_RETURNVAL != 0;
