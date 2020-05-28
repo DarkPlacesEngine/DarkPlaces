@@ -2,6 +2,8 @@
 #ifndef QTYPES_H
 #define QTYPES_H
 
+#include <stdint.h>
+
 #ifndef __cplusplus
 #ifdef _MSC_VER
 typedef enum {false, true} bool;

@@ -2018,6 +2018,8 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
+extern hook_t *csqc_concmd;
+
 void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex)
 {
 	int oldpos;
@@ -2039,7 +2041,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp(cmd->argv[0], func->name))
 		{
-			if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
+			if (func->csqcfunc && Hook_Call(csqc_concmd, text)->bval)	//[515]: csqc
 				goto done;
 			break;
 		}

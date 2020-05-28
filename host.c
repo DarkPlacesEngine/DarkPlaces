@@ -1162,6 +1162,8 @@ void Host_UnlockSession(void)
 	}
 }
 
+extern hook_t *csqc_concmd;
+
 /*
 ====================
 Host_Init
@@ -1229,6 +1231,8 @@ static void Host_Init (void)
 	// initialize memory subsystem cvars/commands
 	Memory_Init_Commands();
 
+	Hook_Init();
+	csqc_concmd = Hook_Register(csqc_concmd,CL_VM_ConsoleCommand,1);
 	// initialize console and logging and its cvars/commands
 	Con_Init();
 
