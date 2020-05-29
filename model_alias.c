@@ -786,7 +786,7 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 	else
 		vertex3f = model->surfmesh.data_vertex3f;
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
-		Collision_TraceLineTriangleMeshFloat(trace, start, end, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+		Collision_TraceLineTriangleMeshFloat(trace, start, end, surface->num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 	if (freevertex3f)
 		Mem_Free(freevertex3f);
 }
@@ -840,7 +840,7 @@ static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameb
 	Collision_BrushForBox(&thisbrush_end, boxendmins, boxendmaxs, 0, 0, NULL);
 	model->AnimateVertices(model, frameblend, skeleton, vertex3f, NULL, NULL, NULL);
 	for (i = 0, surface = model->data_surfaces;i < model->num_surfaces;i++, surface++)
-		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, model->surfmesh.num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
+		Collision_TraceBrushTriangleMeshFloat(trace, &thisbrush_start.brush, &thisbrush_end.brush, surface->num_triangles, model->surfmesh.data_element3i, vertex3f, 0, NULL, SUPERCONTENTS_SOLID | (surface->texture->basematerialflags & MATERIALFLAGMASK_TRANSLUCENT ? 0 : SUPERCONTENTS_OPAQUE), 0, surface->texture, segmentmins, segmentmaxs);
 	if (vertex3f != vertex3fbuf)
 		Mem_Free(vertex3f);
 }
