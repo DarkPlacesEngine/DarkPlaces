@@ -4695,7 +4695,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 			if (r->depthisrenderbuffer)
 				r->depthtexture = R_LoadTextureRenderBuffer(r_main_texturepool, va(vabuf, sizeof(vabuf), "renderbuffer%i_depth_type%i", i, (int)r->depthtextype), r->texturewidth, r->textureheight, r->depthtextype);
 			else
-				r->depthtexture = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "rendertarget%i_depth_type%i", i, j, (int)r->depthtextype), r->texturewidth, r->textureheight, NULL, r->depthtextype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				r->depthtexture = R_LoadTexture2D(r_main_texturepool, va(vabuf, sizeof(vabuf), "rendertarget%i_depth_type%i", i, (int)r->depthtextype), r->texturewidth, r->textureheight, NULL, r->depthtextype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 		}
 		r->fbo = R_Mesh_CreateFramebufferObject(r->depthtexture, r->colortexture[0], r->colortexture[1], r->colortexture[2], r->colortexture[3]);
 	}
