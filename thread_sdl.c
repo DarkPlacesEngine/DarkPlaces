@@ -171,7 +171,7 @@ void _Thread_WaitBarrier(void *barrier, const char *filename, int fileline)
 int _Thread_AtomicGet(Thread_Atomic *a, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p atomic get at %s:%i\n", a, v, filename, fileline);
+	Sys_PrintfToTerminal("%p atomic get at %s:%i\n", a, filename, fileline);
 #endif
 	return SDL_AtomicGet((SDL_atomic_t *)a);
 }
@@ -195,7 +195,7 @@ int _Thread_AtomicAdd(Thread_Atomic *a, int v, const char *filename, int filelin
 void _Thread_AtomicIncRef(Thread_Atomic *a, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p atomic incref %s:%i\n", lock, filename, fileline);
+	Sys_PrintfToTerminal("%p atomic incref %s:%i\n", a, filename, fileline);
 #endif
 	SDL_AtomicIncRef((SDL_atomic_t *)a);
 }
@@ -203,7 +203,7 @@ void _Thread_AtomicIncRef(Thread_Atomic *a, const char *filename, int fileline)
 qboolean _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
-	Sys_PrintfToTerminal("%p atomic decref %s:%i\n", lock, filename, fileline);
+	Sys_PrintfToTerminal("%p atomic decref %s:%i\n", a, filename, fileline);
 #endif
 	return SDL_AtomicDecRef((SDL_atomic_t *)a) != SDL_FALSE;
 }
