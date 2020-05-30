@@ -344,5 +344,6 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
 	sfx->loopstart = min(sfx->loopstart, sfx->total_length);
 	sfx->flags &= ~SFXFLAG_STREAMED;
 
+	Mem_Free(data); // we already got a copy of this in fetcher_data
 	return true;
 }
