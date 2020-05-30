@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "libcurl.h"
 #include "snd_main.h"
+#include "cdaudio.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -2644,6 +2645,26 @@ CL_Init
 */
 void CL_Init (void)
 {
+	if (cls.state == ca_dedicated)
+	{
+		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	}
+	else
+	{
+		Con_DPrintf("Initializing client\n");
+
+		R_Modules_Init();
+		Palette_Init();
+#ifdef CONFIG_MENU
+		MR_Init_Commands();
+#endif
+		VID_Shared_Init();
+		VID_Init();
+		Render_Init();
+		S_Init();
+		CDAudio_Init();
+		Key_Init();
+	}
 
 	cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
 	cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);

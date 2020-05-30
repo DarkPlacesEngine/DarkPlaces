@@ -1289,28 +1289,7 @@ static void Host_Init (void)
 	Thread_Init();
 	TaskQueue_Init();
 
-	if (cls.state == ca_dedicated)
-	{
-		cmd = &cmd_server;
-		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-	}
-	else
-	{
-		Con_DPrintf("Initializing client\n");
-
-		R_Modules_Init();
-		Palette_Init();
-#ifdef CONFIG_MENU
-		MR_Init_Commands();
-#endif
-		VID_Shared_Init();
-		VID_Init();
-		Render_Init();
-		S_Init();
-		CDAudio_Init();
-		Key_Init();
-		CL_Init();
-	}
+	CL_Init();
 
 	// save off current state of aliases, commands and cvars for later restore if FS_GameDir_f is called
 	// NOTE: menu commands are freed by Cmd_RestoreInitState
