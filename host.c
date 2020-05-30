@@ -75,7 +75,7 @@ cvar_t cl_minfps_qualityhysteresis = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualit
 cvar_t cl_minfps_qualitystepmax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
 cvar_t cl_minfps_force = {CVAR_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
 cvar_t cl_maxfps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
-cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
+cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 cvar_t developer = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "developer","0", "shows debugging messages and information (recommended for all developers and level designers); the value -1 also suppresses buffering and logging these messages"};
