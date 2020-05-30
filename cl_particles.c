@@ -44,6 +44,7 @@ particletype_t particletype[pt_total] =
 
 #define PARTICLEEFFECT_UNDERWATER 1
 #define PARTICLEEFFECT_NOTUNDERWATER 2
+#define PARTICLEEFFECT_FORCENEAREST 4
 #define PARTICLEEFFECT_DEFINED 2147483648U
 
 typedef struct particleeffectinfo_s
@@ -465,6 +466,7 @@ static void CL_Particles_ParseEffectInfo(const char *textstart, const char *text
 		else if (!strcmp(argv[0], "staintex")) {readints(info->staintex, 2);}
 		else if (!strcmp(argv[0], "stainless")) {info->staintex[0] = -2; info->staincolor[0] = (unsigned int)-1; info->staincolor[1] = (unsigned int)-1; info->stainalpha[0] = 1; info->stainalpha[1] = 1; info->stainsize[0] = 2; info->stainsize[1] = 2; }
 		else if (!strcmp(argv[0], "rotate")) {readfloats(info->rotate, 4);}
+		else if (!strcmp(argv[0], "forcenearest")) {checkparms(1);info->flags |= PARTICLEEFFECT_FORCENEAREST;}
 		else
 			Con_Printf("%s:%i: skipping unknown command %s\n", filename, linenumber, argv[0]);
 #undef checkparms
@@ -875,6 +877,17 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 		CL_SpawnDecalParticleForSurface(besthitent, bestorg, bestnormal, color1, color2, texnum, size, alpha);
 }
 
+// generates a cubemap name with prefix flags based on info flags (for now only `!`)
+static char *LightCubemapNumToName(char *vabuf, size_t vasize, int lightcubemapnum, int flags)
+{
+	if (lightcubemapnum <= 0)
+		return NULL;
+	// `!` is prepended if the cubemap must be nearest-filtered
+	if (flags & PARTICLEEFFECT_FORCENEAREST)
+		return va(vabuf, vasize, "!cubemaps/%i", lightcubemapnum);
+	return va(vabuf, vasize, "cubemaps/%i", lightcubemapnum);
+}
+
 static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount);
 static void CL_Smoke(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float smokecount);
 static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail);
@@ -949,7 +962,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		// bullet hole
 		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, NULL, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_SUPERSPIKE)
 	{
@@ -990,7 +1003,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		// bullet hole
 		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, NULL, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_BLOOD)
 	{
@@ -1022,7 +1035,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		// plasma scorch mark
 		R_Stain(center, 40, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 6, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocLightFlash(NULL, &lightmatrix, 200, 1, 1, 1, 1000, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 200, 1, 1, 1, 1000, 0.2, NULL, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_GUNSHOT)
 	{
@@ -1057,17 +1070,17 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		// bullet hole
 		R_Stain(center, 16, 40, 40, 40, 64, 88, 88, 88, 64);
 		CL_SpawnDecalParticleForPoint(center, 6, 3, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
-		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 100, 0.15f, 0.15f, 1.5f, 500, 0.2, NULL, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_EXPLOSION)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocLightFlash(NULL, &lightmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 350, 4.0f, 2.0f, 0.50f, 700, 0.5, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_EXPLOSIONQUAD)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocLightFlash(NULL, &lightmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 350, 2.5f, 2.0f, 4.0f, 700, 0.5, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TAREXPLOSION)
 	{
@@ -1084,10 +1097,10 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		}
 		else
 			CL_ParticleExplosion(center);
-		CL_AllocLightFlash(NULL, &lightmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 600, 1.6f, 0.8f, 2.0f, 1200, 0.5, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_SMALLFLASH)
-		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2, 2, 2, 1000, 0.2, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2, 2, 2, 1000, 0.2, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	else if (effectnameindex == EFFECT_TE_FLAMEJET)
 	{
 		count *= cl_particles_quality.value;
@@ -1142,7 +1155,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		}
 		if (!cl_particles_quake.integer)
 			CL_NewParticle(center, pt_static, 0xffffff, 0xffffff, tex_particle, 30, 0, 256, 512, 0, 0, center[0], center[1], center[2], 0, 0, 0, 0, 0, 0, 0, false, 0, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2.0f, 2.0f, 2.0f, 400, 99.0f, NULL, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_G3)
 		CL_NewParticle(center, pt_beam, 0xFFFFFF, 0xFFFFFF, tex_beam, 8, 0, 256, 256, 0, 0, originmins[0], originmins[1], originmins[2], originmaxs[0], originmaxs[1], originmaxs[2], 0, 0, 0, 0, false, 0, 1, PBLEND_ADD, PARTICLE_HBEAM, -1, -1, -1, 1, 1, 0, 0, NULL);
@@ -1158,7 +1171,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 	else if (effectnameindex == EFFECT_TE_TEI_BIGEXPLOSION)
 	{
 		CL_ParticleExplosion(center);
-		CL_AllocLightFlash(NULL, &lightmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, 0, -1, true, 1, 0.25, 0.5, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 500, 2.5f, 2.0f, 1.0f, 500, 9999, NULL, -1, true, 1, 0.25, 0.5, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_TE_TEI_PLASMAHIT)
 	{
@@ -1171,7 +1184,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		if (cl_particles_sparks.integer)
 			for (f = 0;f < count;f += 1.0f / cl_particles_quality.value)
 				CL_NewParticle(center, pt_spark, 0x2030FF, 0x80C0FF, tex_particle, 2.0f, 0, lhrandom(64, 255), 512, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 0, 465, true, 0, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
-		CL_AllocLightFlash(NULL, &lightmatrix, 500, 0.6f, 1.2f, 2.0f, 2000, 9999, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 500, 0.6f, 1.2f, 2.0f, 2000, 9999, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_EF_FLAME)
 	{
@@ -1180,7 +1193,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		count *= 300 * cl_particles_quality.value;
 		while (count-- > 0)
 			CL_NewParticle(center, pt_smoke, 0x6f0f00, 0xe3974f, tex_particle, 4, 0, lhrandom(64, 128), 384, -1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 1, 4, 16, 128, true, 0, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2.0f, 1.5f, 0.5f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 200, 2.0f, 1.5f, 0.5f, 0, 0, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (effectnameindex == EFFECT_EF_STARDUST)
 	{
@@ -1189,7 +1202,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		count *= 200 * cl_particles_quality.value;
 		while (count-- > 0)
 			CL_NewParticle(center, pt_static, 0x903010, 0xFFD030, tex_particle, 4, 0, lhrandom(64, 128), 128, 1, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0.2, 0.8, 16, 128, true, 0, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-		CL_AllocLightFlash(NULL, &lightmatrix, 200, 1.0f, 0.7f, 0.3f, 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+		CL_AllocLightFlash(NULL, &lightmatrix, 200, 1.0f, 0.7f, 0.3f, 0, 0, NULL, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 	}
 	else if (!strncmp(particleeffectname[effectnameindex], "TR_", 3))
 	{
@@ -1479,7 +1492,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 					{
 						// light flash (explosion, etc)
 						// called when effect starts
-						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0]*avgtint[0]*avgtint[3], info->lightcolor[1]*avgtint[1]*avgtint[3], info->lightcolor[2]*avgtint[2]*avgtint[3], info->lightradiusfade, info->lighttime, info->lightcubemapnum, -1, info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						CL_AllocLightFlash(NULL, &tempmatrix, info->lightradiusstart, info->lightcolor[0]*avgtint[0]*avgtint[3], info->lightcolor[1]*avgtint[1]*avgtint[3], info->lightcolor[2]*avgtint[2]*avgtint[3], info->lightradiusfade, info->lighttime, LightCubemapNumToName(vabuf, sizeof(vabuf), info->lightcubemapnum, info->flags), -1, info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 					}
 					else if (r_refdef.scene.numlights < MAX_DLIGHTS)
 					{
@@ -1489,7 +1502,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 						rvec[0] = info->lightcolor[0]*avgtint[0]*avgtint[3];
 						rvec[1] = info->lightcolor[1]*avgtint[1]*avgtint[3];
 						rvec[2] = info->lightcolor[2]*avgtint[2]*avgtint[3];
-						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, info->lightcubemapnum > 0 ? va(vabuf, sizeof(vabuf), "cubemaps/%i", info->lightcubemapnum) : NULL, info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+						R_RTLight_Update(&r_refdef.scene.templights[r_refdef.scene.numlights], false, &tempmatrix, rvec, -1, LightCubemapNumToName(vabuf, sizeof(vabuf), info->lightcubemapnum, info->flags), info->lightshadow, info->lightcorona[0], info->lightcorona[1], 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 						r_refdef.scene.lights[r_refdef.scene.numlights] = &r_refdef.scene.templights[r_refdef.scene.numlights];r_refdef.scene.numlights++;
 					}
 				}

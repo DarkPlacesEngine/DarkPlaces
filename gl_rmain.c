@@ -2950,9 +2950,16 @@ static int componentorder[4] = {0, 1, 2, 3};
 
 static rtexture_t *R_LoadCubemap(const char *basename)
 {
-	int i, j, cubemapsize;
+	int i, j, cubemapsize, forcefilter;
 	unsigned char *cubemappixels, *image_buffer;
 	rtexture_t *cubemaptexture;
+	// HACK: if the cubemap name starts with a !, the cubemap is nearest-filtered
+	forcefilter = TEXF_FORCELINEAR;
+	if (basename && basename[0] == '!')
+	{
+		basename++;
+		forcefilter = TEXF_FORCENEAREST;
+	}
 	char name[256];
 	// must start 0 so the first loadimagepixels has no requested width/height
 	cubemapsize = 0;
@@ -2996,7 +3003,7 @@ static rtexture_t *R_LoadCubemap(const char *basename)
 		if (developer_loading.integer)
 			Con_Printf("loading cubemap \"%s\"\n", basename);
 
-		cubemaptexture = R_LoadTextureCubeMap(r_main_texturepool, basename, cubemapsize, cubemappixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer && gl_texturecompression.integer ? TEXF_COMPRESS : 0) | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+		cubemaptexture = R_LoadTextureCubeMap(r_main_texturepool, basename, cubemapsize, cubemappixels, vid.sRGB3D ? TEXTYPE_SRGB_BGRA : TEXTYPE_BGRA, (gl_texturecompression_lightcubemaps.integer && gl_texturecompression.integer ? TEXF_COMPRESS : 0) | forcefilter | TEXF_CLAMP, -1, NULL);
 		Mem_Free(cubemappixels);
 	}
 	else
