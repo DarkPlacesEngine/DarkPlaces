@@ -2385,7 +2385,7 @@ void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning
 		VectorCopy (end, b->end);
 	}
 	else
-		Con_Print("beam list overflow!\n");
+		Con_DPrint("beam list overflow!\n");
 }
 
 static void CL_ParseBeam (dp_model_t *m, int lightning)
