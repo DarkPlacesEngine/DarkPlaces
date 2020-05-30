@@ -1336,6 +1336,9 @@ static void Host_Init (void)
 
 	Log_Start();
 	
+	// Starting after we parse commands so the screen resolution doesn't get weird for the first few seconds
+	Host_StartVideo();
+	
 	// put up the loading image so the user doesn't stare at a black screen...
 	SCR_BeginLoadingPlaque(true);
 
