@@ -579,9 +579,6 @@ dp_model_t *Mod_FindName(const char *name, const char *parentname)
 	if (!parentname)
 		parentname = "";
 
-	// if we're not dedicatd, the renderer calls will crash without video
-	Host_StartVideo();
-
 	nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 
 	if (!name[0])
