@@ -1442,7 +1442,8 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
 		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
 			continue;
-		Con_Printf ("cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
+		Con_Printf ("cvar ");
+		Cvar_PrintHelp(cvar, true);
 		count++;
 	}
 	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
