@@ -35,7 +35,8 @@ typedef enum cachepicflags_e
 	CACHEPICFLAG_NEWPIC = 16, // disables matching texflags check, because a pic created with Draw_NewPic should not be subject to that
 	CACHEPICFLAG_MIPMAP = 32,
 	CACHEPICFLAG_NEAREST = 64, // force nearest filtering instead of linear
-	CACHEPICFLAG_FAILONMISSING = 128 // return NULL if the pic has no texture
+	CACHEPICFLAG_FAILONMISSING = 128, // return NULL if the pic has no texture
+	CACHEPICFLAG_LINEAR = 256 // force linear filtering even if nearest_2d is enabled
 }
 cachepicflags_t;
 
