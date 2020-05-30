@@ -359,6 +359,14 @@ static void S_SoundInfo_f(cmd_state_t *cmd)
 	Con_Printf("%5u total_channels\n", total_channels);
 }
 
+void S_PauseSound_f(cmd_state_t *cmd)
+{
+	if( Cmd_Argc(cmd) != 2 ) {
+		Con_Print("pausesound <pause>\n");
+		return;
+	}
+	S_PauseGameSounds(atoi( Cmd_Argv(cmd, 1 ) ) != 0);
+}
 
 int S_GetSoundRate(void)
 {
@@ -773,6 +781,7 @@ void S_Init(void)
 	Cmd_AddCommand(&cmd_client, "play2", S_Play2_f, "play a sound globally throughout the level (not heard by anyone else)");
 	Cmd_AddCommand(&cmd_client, "playvol", S_PlayVol_f, "play a sound at the specified volume level at your current location (not heard by anyone else)");
 	Cmd_AddCommand(&cmd_client, "stopsound", S_StopAllSounds_f, "silence");
+	Cmd_AddCommand(&cmd_client, "pausesound", S_PauseSound_f, "temporary silence");
 	Cmd_AddCommand(&cmd_client, "soundlist", S_SoundList_f, "list loaded sounds");
 	Cmd_AddCommand(&cmd_client, "soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
 	Cmd_AddCommand(&cmd_client, "snd_restart", S_Restart_f, "restart sound system");
