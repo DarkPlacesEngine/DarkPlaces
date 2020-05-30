@@ -251,6 +251,14 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 	return buf;
 }
 
+void Cvar_PrintHelp(cvar_t *cvar, qboolean full)
+{
+	Con_Printf("^3%s^7 is \"%s\" [\"%s\"] ", cvar->name, ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
+	if (full)
+		Con_Printf("%s", cvar->description);
+	Con_Printf("\n");
+}
+
 // written by LadyHavoc
 void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int neededflags)
 {
@@ -259,7 +267,7 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int needed
 	// Loop through the command list and print all matches
 	for (cvar = cvars->vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
-			Con_Printf ("^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
+			Cvar_PrintHelp(cvar, true);
 }
 
 // check if a cvar is held by some progs
@@ -700,7 +708,7 @@ qboolean	Cvar_Command (cmd_state_t *cmd)
 // perform a variable print or set
 	if (Cmd_Argc(cmd) == 1)
 	{
-		Con_Printf("\"%s\" is \"%s\" [\"%s\"]\n", v->name, ((v->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : v->string), v->defstring);
+		Cvar_PrintHelp(v, true);
 		return true;
 	}
 
@@ -934,7 +942,7 @@ void Cvar_List_f(cmd_state_t *cmd)
 		if (len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp (partial,cvar->name,len)))
 			continue;
 
-		Con_Printf("%s is \"%s\" [\"%s\"] %s\n", cvar->name, ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring, cvar->description);
+		Cvar_PrintHelp(cvar, true);
 		count++;
 	}
 
