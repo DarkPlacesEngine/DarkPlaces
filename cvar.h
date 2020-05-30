@@ -203,6 +203,8 @@ const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, int
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
+void Cvar_PrintHelp(cvar_t *cvar, qboolean full);
+
 void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
 
 qboolean Cvar_Command (cmd_state_t *cmd);
