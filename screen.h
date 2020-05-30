@@ -27,6 +27,7 @@ void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
 void SCR_BeginLoadingPlaque (qboolean startup);
+void SCR_EndLoadingPlaque (void);
 
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(qboolean clear, qboolean startup);
