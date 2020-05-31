@@ -4410,7 +4410,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 			mod->data_surfaces[i].texture = mod->data_textures + (mod->data_surfaces[i].texture - oldtextures);
 	}
 	t = &mod->data_textures[mod->num_textures++];
-	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags, defaultmaterialflags);
+	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, true, true, defaulttexflags, defaultmaterialflags);
 	t->mesh_drawflag = drawflag;
 	t->mesh_defaulttexflags = defaulttexflags;
 	t->mesh_defaultmaterialflags = defaultmaterialflags;
