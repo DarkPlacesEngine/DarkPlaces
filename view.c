@@ -507,6 +507,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 	float vieworg[3], viewangles[3], smoothtime;
 	float gunorg[3], gunangles[3];
 	matrix4x4_t tmpmatrix;
+	qboolean realonground;
 	
 	static float viewheightavg;
 	float viewheight;	
@@ -517,6 +518,15 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 // end of chase camera bounding box size for proper collisions by Alexander Zubov
 #endif
 	trace_t trace;
+
+	// save the "true" onground time
+	if (clonground)
+		cl.bobongroundtime = cl.movecmd[0].time;
+	realonground = clonground;
+
+	// if nogravityonground is enabled, use a "delayed" onground flag
+	if ((cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) && !clonground && (cl.time - cl.bobongroundtime < 0.2))
+		clonground = true;
 
 	// react to clonground state changes (for gun bob)
 	if (clonground)
@@ -572,7 +582,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 	else
 	{
 		// smooth stair stepping, but only if clonground and enabled
-		if (!clonground || cl_stairsmoothspeed.value <= 0 || teleported)
+		if (!realonground || cl_stairsmoothspeed.value <= 0 || teleported)
 			cl.stairsmoothz = vieworg[2];
 		else
 		{

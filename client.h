@@ -1168,6 +1168,7 @@ typedef struct client_state_s
 	qboolean oldonground;
 	double lastongroundtime;
 	double hitgroundtime;
+	double bobongroundtime;
 	float bob2_smooth;
 	float bobfall_speed;
 	float bobfall_swing;
