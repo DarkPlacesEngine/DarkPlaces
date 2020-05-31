@@ -4102,17 +4102,17 @@ void R_Shadow_PrepareLights(void)
 			break;
 		}
 
-		if (r_shadow_prepass_width != vid.width || r_shadow_prepass_height != vid.height)
+		if (r_shadow_prepass_width != r_fb.screentexturewidth || r_shadow_prepass_height != r_fb.screentextureheight)
 		{
 			R_Shadow_FreeDeferred();
 
 			r_shadow_usingdeferredprepass = true;
-			r_shadow_prepass_width = vid.width;
-			r_shadow_prepass_height = vid.height;
-			r_shadow_prepassgeometrydepthbuffer = R_LoadTextureRenderBuffer(r_shadow_texturepool, "prepassgeometrydepthbuffer", vid.width, vid.height, TEXTYPE_DEPTHBUFFER24);
-			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER32F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepass_width = r_fb.screentexturewidth;
+			r_shadow_prepass_height = r_fb.screentextureheight;
+			r_shadow_prepassgeometrydepthbuffer = R_LoadTextureRenderBuffer(r_shadow_texturepool, "prepassgeometrydepthbuffer", r_fb.screentexturewidth, r_fb.screentextureheight, TEXTYPE_DEPTHBUFFER24);
+			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER32F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 
 			// set up the geometry pass fbo (depth + normalmap)
 			r_shadow_prepassgeometryfbo = R_Mesh_CreateFramebufferObject(r_shadow_prepassgeometrydepthbuffer, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
