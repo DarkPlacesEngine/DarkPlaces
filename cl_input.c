@@ -1312,6 +1312,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	vec3_t wishdir;
 	vec3_t yawangles;
 	trace_t trace;
+	qboolean moving;
 
 	// jump if on ground with jump button pressed but only if it has been
 	// released at least once since the last jump
@@ -1378,6 +1379,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			VectorMA(s->velocity, accelspeed, wishdir, s->velocity);
 		}
 		gravity = cl.movevars_gravity * cl.movevars_entgravity * s->cmd.frametime;
+		moving = s->velocity[0] || s->velocity[1];
 		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND))
 		{
 			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
@@ -1387,9 +1389,10 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		}
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 			s->velocity[2] = 0;
+		moving = s->velocity[0] || s->velocity[1];
 		if (VectorLength2(s->velocity))
 			CL_ClientMovement_Move(s);
-		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground)
+		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground || (s->onground && moving))
 		{
 			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
 				s->velocity[2] -= gravity * 0.5f;
@@ -1448,8 +1451,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			s->velocity[2] -= gravity * 0.5f;
 		else
 			s->velocity[2] -= gravity;
+		moving = s->velocity[0] || s->velocity[1];
 		CL_ClientMovement_Move(s);
-		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground)
+		if(!(cl.moveflags & MOVEFLAG_NOGRAVITYONGROUND) || !s->onground || (s->onground && moving))
 		{
 			if(cl.moveflags & MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE)
 				s->velocity[2] -= gravity * 0.5f;

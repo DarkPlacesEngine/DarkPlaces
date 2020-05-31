@@ -1207,6 +1207,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	vec3_t end;
 #endif
 	trace_t trace;
+	qboolean moving;
 	if (time <= 0)
 		return 0;
 	gravity = 0;
@@ -1216,7 +1217,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	if(applygravity)
 	{
 		gravity = SV_Gravity(ent);
-
+		moving = PRVM_serveredictvector(ent, velocity)[0] || PRVM_serveredictvector(ent, velocity)[1];
 		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
 		{
 			if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
@@ -1420,9 +1421,11 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	if (sv_gameplayfix_easierwaterjump.integer && ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP) && !(blocked & 8))
 		VectorCopy(primal_velocity, PRVM_serveredictvector(ent, velocity));
 
+	// Mario: this workaround introduces a new bug: sliding down ramps occurs when moving sideways
+	moving = PRVM_serveredictvector(ent, velocity)[0] || PRVM_serveredictvector(ent, velocity)[1];
 	if(applygravity)
 	{
-		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
+		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || (((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) && moving))
 		{
 			if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
 				PRVM_serveredictvector(ent, velocity)[2] -= gravity * 0.5f;
