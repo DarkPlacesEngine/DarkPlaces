@@ -428,7 +428,8 @@ extern cvar_t prvm_garbagecollection_enable;
 				// against a certain sort of repeated migration to earlier
 				// points in the scan that could otherwise result in the string
 				// being freed for being unused
-				PRVM_GetString(prog, OPC->_int);
+				if(prvm_garbagecollection_enable.integer)
+					PRVM_GetString(prog, OPC->_int);
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_LOAD_V):
