@@ -182,6 +182,7 @@ cvar_t r_glsl_offsetmapping_scale = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapp
 cvar_t r_glsl_offsetmapping_lod = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_lod", "0", "apply distance-based level-of-detail correction to number of offsetmappig steps, effectively making it render faster on large open-area maps"};
 cvar_t r_glsl_offsetmapping_lod_distance = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_lod_distance", "32", "first LOD level distance, second level (-50% steps) is 2x of this, third (33%) - 3x etc."};
 cvar_t r_glsl_postprocess = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
+cvar_t r_glsl_postprocess_color_lut = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_color_lut", "", "color lookup table for post, empty string for default"};
 cvar_t r_glsl_postprocess_uservec1 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec1", "0 0 0 0", "a 4-component vector to pass as uservec1 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec2 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec3 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
@@ -276,6 +277,9 @@ rtexture_t *r_texture_normalizationcube;
 rtexture_t *r_texture_fogattenuation;
 rtexture_t *r_texture_fogheighttexture;
 rtexture_t *r_texture_gammaramps;
+rtexture_t *r_texture_lut;
+rtexture_t *r_texture_lut_default;
+cachepic_t *r_texture_lut_pic;
 unsigned int r_texture_gammaramps_serial;
 //rtexture_t *r_texture_fogintensity;
 rtexture_t *r_texture_reflectcube;
@@ -611,6 +615,32 @@ static void R_BuildFogHeightTexture(void)
 	r_texture_fogheighttexture = R_LoadTexture2D(r_main_texturepool, "fogheighttable", size, size, r_refdef.fog_height_table2d, TEXTYPE_BGRA, TEXF_ALPHA | TEXF_CLAMP, -1, NULL);
 }
 
+#define LUT_SLICE_SIZE 64
+#define LUT_FACTOR (256 / LUT_SLICE_SIZE)
+#define LUT_SLICES_X 8
+#define LUT_SLICES_Y 8
+#define LUT_WIDTH (LUT_SLICE_SIZE * LUT_SLICES_X)
+#define LUT_HEIGHT (LUT_SLICE_SIZE * LUT_SLICES_Y)
+
+static void R_BuildDefaultLUT(void)
+{
+	unsigned char *p, *data;
+	int x, y;
+	data = (unsigned char *)Mem_Alloc(r_main_mempool, LUT_WIDTH * LUT_HEIGHT * 4);
+	p = data;
+	for (y = 0; y < LUT_HEIGHT; ++y)
+		for (x = 0; x < LUT_WIDTH; ++x)
+		{
+			p[3] = 255;
+			p[2] = (x % LUT_SLICE_SIZE) * LUT_FACTOR;
+			p[1] = (y % LUT_SLICE_SIZE) * LUT_FACTOR;
+			p[0] = ((y / LUT_SLICE_SIZE) * LUT_SLICES_X + x / LUT_SLICE_SIZE) * LUT_FACTOR;
+			p += 4;
+		}
+	r_texture_lut_default = R_LoadTexture2D(r_main_texturepool, "lutdefault", LUT_WIDTH, LUT_HEIGHT, data, TEXTYPE_BGRA, TEXF_FORCELINEAR | TEXF_CLAMP | TEXF_PERSISTENT, -1, NULL);
+	r_texture_lut = r_texture_lut_default;
+}
+
 //=======================================================================================================================================================
 
 static const char *builtinshaderstrings[] =
@@ -746,6 +776,7 @@ typedef struct r_glsl_permutation_s
 	int tex_Texture_ReflectMask;
 	int tex_Texture_ReflectCube;
 	int tex_Texture_BounceGrid;
+	int tex_Texture_LUT;
 	/// locations of detected uniforms in program object, or -1 if not found
 	int loc_Texture_First;
 	int loc_Texture_Second;
@@ -777,6 +808,7 @@ typedef struct r_glsl_permutation_s
 	int loc_Texture_ReflectMask;
 	int loc_Texture_ReflectCube;
 	int loc_Texture_BounceGrid;
+	int loc_Texture_LUT;
 	int loc_Alpha;
 	int loc_BloomBlur_Parameters;
 	int loc_ClientTime;
@@ -1212,6 +1244,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->loc_Texture_ReflectMask        = qglGetUniformLocation(p->program, "Texture_ReflectMask");
 		p->loc_Texture_ReflectCube        = qglGetUniformLocation(p->program, "Texture_ReflectCube");
 		p->loc_Texture_BounceGrid         = qglGetUniformLocation(p->program, "Texture_BounceGrid");
+		p->loc_Texture_LUT                = qglGetUniformLocation(p->program, "Texture_LUT");
 		p->loc_Alpha                      = qglGetUniformLocation(p->program, "Alpha");
 		p->loc_BloomBlur_Parameters       = qglGetUniformLocation(p->program, "BloomBlur_Parameters");
 		p->loc_ClientTime                 = qglGetUniformLocation(p->program, "ClientTime");
@@ -1303,6 +1336,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		p->tex_Texture_ReflectMask = -1;
 		p->tex_Texture_ReflectCube = -1;
 		p->tex_Texture_BounceGrid = -1;
+		p->tex_Texture_LUT = -1;
 		// bind the texture samplers in use
 		sampler = 0;
 		if (p->loc_Texture_First           >= 0) {p->tex_Texture_First            = sampler;qglUniform1i(p->loc_Texture_First           , sampler);sampler++;}
@@ -1335,6 +1369,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		if (p->loc_Texture_ReflectMask     >= 0) {p->tex_Texture_ReflectMask      = sampler;qglUniform1i(p->loc_Texture_ReflectMask     , sampler);sampler++;}
 		if (p->loc_Texture_ReflectCube     >= 0) {p->tex_Texture_ReflectCube      = sampler;qglUniform1i(p->loc_Texture_ReflectCube     , sampler);sampler++;}
 		if (p->loc_Texture_BounceGrid      >= 0) {p->tex_Texture_BounceGrid       = sampler;qglUniform1i(p->loc_Texture_BounceGrid      , sampler);sampler++;}
+		if (p->loc_Texture_LUT             >= 0) {p->tex_Texture_LUT              = sampler;qglUniform1i(p->loc_Texture_LUT             , sampler);sampler++;}
 		// get the uniform block indices so we can bind them
 		p->ubiloc_Skeletal_Transform12_UniformBlock = -1;
 #ifndef USE_GLES2 /* FIXME: GLES3 only */
@@ -1496,6 +1531,8 @@ void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, 
 			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First, t);
 		if (r_glsl_permutation->tex_Texture_GammaRamps >= 0)
 			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps);
+		if (r_glsl_permutation->tex_Texture_LUT >= 0)
+			R_Mesh_TexBind(r_glsl_permutation->tex_Texture_LUT, r_texture_lut);
 		break;
 	}
 }
@@ -2057,6 +2094,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First            , r_texture_white                                     );
 		if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second           , r_texture_white                                     );
 		if (r_glsl_permutation->tex_Texture_GammaRamps      >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps       , r_texture_gammaramps                                );
+		if (r_glsl_permutation->tex_Texture_LUT             >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_LUT              , r_texture_lut                                       );
 		if (r_glsl_permutation->tex_Texture_Normal          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Normal           , t->nmaptexture                       );
 		if (r_glsl_permutation->tex_Texture_Color           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Color            , t->basetexture                       );
 		if (r_glsl_permutation->tex_Texture_Gloss           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Gloss            , t->glosstexture                      );
@@ -3100,6 +3138,8 @@ static void gl_main_start(void)
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
+	r_texture_lut = NULL;
+	r_texture_lut_default = NULL;
 	r_texture_gammaramps = NULL;
 	r_texture_numcubemaps = 0;
 	r_uniformbufferalignment = 32;
@@ -3147,6 +3187,7 @@ static void gl_main_start(void)
 	R_BuildNoTexture();
 	R_BuildWhiteCube();
 	R_BuildNormalizationCube();
+	R_BuildDefaultLUT();
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
 	r_texture_gammaramps = NULL;
@@ -3232,6 +3273,8 @@ static void gl_main_shutdown(void)
 	r_texture_normalizationcube = NULL;
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
+	r_texture_lut = NULL;
+	r_texture_lut_default = NULL;
 	r_texture_gammaramps = NULL;
 	r_texture_numcubemaps = 0;
 	//r_texture_fogintensity = NULL;
@@ -3396,6 +3439,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_lod);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_lod_distance);
 	Cvar_RegisterVariable(&r_glsl_postprocess);
+	Cvar_RegisterVariable(&r_glsl_postprocess_color_lut);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec1);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
@@ -5457,6 +5501,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		if (r_glsl_permutation->tex_Texture_First           >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_First     , viewtexture);
 		if (r_glsl_permutation->tex_Texture_Second          >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Second    , bloomtexture);
 		if (r_glsl_permutation->tex_Texture_GammaRamps      >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_GammaRamps, r_texture_gammaramps       );
+		if (r_glsl_permutation->tex_Texture_LUT             >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_LUT,        r_texture_lut       );
 		if (r_glsl_permutation->loc_ViewTintColor           >= 0) qglUniform4f(r_glsl_permutation->loc_ViewTintColor     , r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 		if (r_glsl_permutation->loc_PixelSize               >= 0) qglUniform2f(r_glsl_permutation->loc_PixelSize         , 1.0/r_fb.screentexturewidth, 1.0/r_fb.screentextureheight);
 		if (r_glsl_permutation->loc_UserVec1                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec1          , uservecs[0][0], uservecs[0][1], uservecs[0][2], uservecs[0][3]);
@@ -5602,6 +5647,21 @@ void R_UpdateVariables(void)
 	case RENDERPATH_GL32:
 		r_gpuskeletal = r_glsl_skeletal.integer && !r_showsurfaces.integer;
 	case RENDERPATH_GLES2:
+		if (r_glsl_postprocess.integer)
+		{
+			if (r_glsl_postprocess_color_lut.string[0])
+			{
+				r_texture_lut_pic = Draw_CachePic_Flags(r_glsl_postprocess_color_lut.string, CACHEPICFLAG_NOTPERSISTENT | CACHEPICFLAG_LINEAR);
+				if (r_texture_lut_pic)
+					r_texture_lut = Draw_GetPicTexture(r_texture_lut_pic);
+				else
+					r_texture_lut = r_texture_lut_default;
+			}
+			else
+			{
+				r_texture_lut = r_texture_lut_default;
+			}
+		}
 		if(!vid_gammatables_trivial)
 		{
 			if(!r_texture_gammaramps || vid_gammatables_serial != r_texture_gammaramps_serial)

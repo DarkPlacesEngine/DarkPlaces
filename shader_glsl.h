@@ -249,6 +249,7 @@
 "// uniform mediump vec4 UserVec4;\n",
 "uniform mediump float ColorFringe;\n",
 "// uniform highp float ClientTime;\n",
+"// uniform sampler2D Texture_LUT;\n",
 "uniform mediump vec2 PixelSize;\n",
 "\n",
 "#ifdef USEFXAA\n",
