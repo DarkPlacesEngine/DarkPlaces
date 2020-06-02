@@ -8664,6 +8664,9 @@ void RSurf_SetupDepthAndCulling(void)
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
 	int j;
+	const float *v;
+	float p[3], mins[3], maxs[3];
+	int scissor[4];
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
@@ -8676,10 +8679,6 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 	if (r_sky_scissor.integer)
 	{
 		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
-		const float *v;
-		float p[3];
-		float mins[3], maxs[3];
-		int scissor[4];
 		for (j = 0, v = rsurface.batchvertex3f + 3 * rsurface.batchfirstvertex; j < rsurface.batchnumvertices; j++, v += 3)
 		{
 			Matrix4x4_Transform(&rsurface.matrix, v, p);
