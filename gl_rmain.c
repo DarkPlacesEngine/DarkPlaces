@@ -5258,7 +5258,7 @@ static void R_Bloom_StartFrame(void)
 		if (r_fb.screentexturewidth && r_fb.screentextureheight)
 		{
 			if (r_motionblur.value > 0 || r_damageblur.value > 0)
-				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
+				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP, -1, NULL);
 			r_fb.ghosttexture_valid = false;
 		}
 	}
