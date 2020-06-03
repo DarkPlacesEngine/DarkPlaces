@@ -349,21 +349,28 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	qboolean changed;
 	size_t valuelen;
 	char vabuf[1024];
+	char new_value[MAX_INPUTLINE];
 
 	changed = strcmp(var->string, value) != 0;
 	// LadyHavoc: don't reallocate when there is no change
 	if (!changed)
 		return;
 
+	memcpy(new_value,value,MAX_INPUTLINE);
+	
+	// Call the function stored in the cvar for bounds checking, cleanup, etc
+	if (var->callback)
+		var->callback(new_value);
+
 	// LadyHavoc: don't reallocate when the buffer is the same size
-	valuelen = strlen(value);
+	valuelen = strlen(new_value);
 	if (!var->string || strlen(var->string) != valuelen)
 	{
 		Z_Free ((char *)var->string);	// free the old value string
 
 		var->string = (char *)Z_Malloc (valuelen + 1);
 	}
-	memcpy ((char *)var->string, value, valuelen + 1);
+	memcpy ((char *)var->string, new_value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
@@ -480,6 +487,11 @@ void Cvar_SetValue(cvar_state_t *cvars, const char *var_name, float value)
 	else
 		dpsnprintf(val, sizeof(val), "%f", value);
 	Cvar_Set(cvars, var_name, val);
+}
+
+void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *))
+{
+	variable->callback = callback;
 }
 
 /*
