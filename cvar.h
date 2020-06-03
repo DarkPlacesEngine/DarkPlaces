@@ -131,6 +131,8 @@ typedef struct cvar_s
 
 	const char *defstring;
 
+	void (*callback)(char *value);
+
 	// values at init (for Cvar_RestoreInitState)
 	qboolean initstate; // indicates this existed at init
 	int initflags;
@@ -170,6 +172,8 @@ void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name
 
 /// registers a cvar that already has the name, string, and optionally the
 /// archive elements set.
+void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *));
+
 void Cvar_RegisterVariable(cvar_t *variable);
 
 /// equivelant to "<name> <variable>" typed at the console
