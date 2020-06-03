@@ -1581,10 +1581,6 @@ qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f(&cmd_client);
 
-	// close down the video subsystem, it will start up again when the config finishes...
-	VID_Stop();
-	vid_opened = false;
-
 	// restart the video subsystem after the config is executed
 	Cbuf_InsertText(&cmd_client, "\nloadconfig\nvid_restart\n\n");
 
