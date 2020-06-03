@@ -1306,6 +1306,8 @@ static void Host_Init (void)
 	Host_AddConfigText(cmd);
 	Cbuf_Execute(cmd);
 
+	Host_StartVideo();
+
 	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
 	if (!host_stuffcmdsrun)
 	{
