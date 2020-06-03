@@ -330,6 +330,31 @@ static void Host_Ping_f(cmd_state_t *cmd)
 	}
 }
 
+// Disable cheats if sv_cheats is turned off
+static void Host_DisableCheats_c(char *value)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i = 0;
+
+	if (value[0] == '0' && !value[1])
+	{
+		while (svs.clients[i].edict)
+		{
+			if (((int)PRVM_serveredictfloat(svs.clients[i].edict, flags) & FL_GODMODE))
+				PRVM_serveredictfloat(svs.clients[i].edict, flags) = (int)PRVM_serveredictfloat(svs.clients[i].edict, flags) ^ FL_GODMODE;
+			if (((int)PRVM_serveredictfloat(svs.clients[i].edict, flags) & FL_NOTARGET))
+				PRVM_serveredictfloat(svs.clients[i].edict, flags) = (int)PRVM_serveredictfloat(svs.clients[i].edict, flags) ^ FL_NOTARGET;
+			if (PRVM_serveredictfloat(svs.clients[i].edict, movetype) == MOVETYPE_NOCLIP ||
+				PRVM_serveredictfloat(svs.clients[i].edict, movetype) == MOVETYPE_FLY)
+			{
+				noclip_anglehack = false;
+				PRVM_serveredictfloat(svs.clients[i].edict, movetype) = MOVETYPE_WALK;
+			}
+			i++;
+		}
+	}
+}
+
 /*
 ===============================================================================
 
@@ -3020,6 +3045,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&skin);
 	Cvar_RegisterVariable(&noaim);
 	Cvar_RegisterVariable(&sv_cheats);
+	Cvar_RegisterCallback(&sv_cheats, Host_DisableCheats_c);
 	Cvar_RegisterVariable(&sv_adminnick);
 	Cvar_RegisterVariable(&sv_status_privacy);
 	Cvar_RegisterVariable(&sv_status_show_qcstatus);
