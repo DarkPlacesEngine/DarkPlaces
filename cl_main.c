@@ -2777,4 +2777,5 @@ void CL_Init (void)
 	CL_MeshEntities_Init();
 
 	CL_Video_Init();
+	Host_StartVideo();
 }
