@@ -397,6 +397,8 @@ void Cbuf_Frame(cmd_state_t *cmd)
 ==============================================================================
 */
 
+extern qboolean host_init;
+
 /*
 ===============
 Cmd_StuffCmds_f
@@ -412,6 +414,10 @@ static void Cmd_StuffCmds_f (cmd_state_t *cmd)
 	int		i, j, l;
 	// this is for all commandline options combined (and is bounds checked)
 	char	build[MAX_INPUTLINE];
+
+	// come back later so we don't crash
+	if(host_init)
+		return;
 
 	if (Cmd_Argc (cmd) != 1)
 	{

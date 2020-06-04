@@ -47,6 +47,9 @@ Memory is cleared / released when a server or client begins, not when they end.
 // how many frames have occurred
 // (checked by Host_Error and Host_SaveConfig_f)
 int host_framecount = 0;
+
+// Cloudwalk: set when Host_Init is executed
+qboolean host_init = false;
 // LadyHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
@@ -328,6 +331,7 @@ static void Host_AddConfigText(cmd_state_t *cmd)
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
+	Cbuf_Execute(cmd);
 }
 
 /*
@@ -1177,6 +1181,8 @@ static void Host_Init (void)
 	qboolean dedicated_server = COM_CheckParm("-dedicated") || !cl_available;
 	cmd_state_t *cmd = &cmd_client;
 
+	host_init = true;
+
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 
@@ -1304,16 +1310,21 @@ static void Host_Init (void)
 	}
 
 	Host_AddConfigText(cmd);
-	Cbuf_Execute(cmd);
 
 	Host_StartVideo();
 
-	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
-	if (!host_stuffcmdsrun)
+	// if quake.rc is missing, use default
+	if (!FS_FileExists("quake.rc"))
 	{
-		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\nstuffcmds\n");
+		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
 		Cbuf_Execute(cmd);
 	}
+
+	host_init = false;
+
+	// run stuffcmds now, deferred previously because it can crash if a server starts that early
+	Cbuf_AddText(cmd,"stuffcmds\n");
+	Cbuf_Execute(cmd);
 
 	Log_Start();
 	
