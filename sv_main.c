@@ -413,7 +413,14 @@ prvm_required_field_t sv_reqglobals[] =
 #undef PRVM_DECLARE_function
 };
 
+static void SV_Slowmo_c(char *string)
+{
+	double value;
+	value = atof(string);
 
+	if(value < 0.00001 && value != 0)
+		string[0] = '0', string[1] = 0;
+}
 
 //============================================================================
 
@@ -467,6 +474,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&samelevel);
 	Cvar_RegisterVariable (&skill);
 	Cvar_RegisterVariable (&slowmo);
+	Cvar_RegisterCallback (&slowmo, SV_Slowmo_c);
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_airaccel_qw);
