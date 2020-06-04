@@ -1112,17 +1112,21 @@ static qboolean locksession_run = false;
 static void Host_InitSession(void)
 {
 	int i;
+	char *buf;
 	Cvar_RegisterVariable(&sessionid);
 	Cvar_RegisterVariable(&locksession);
 
 	// load the session ID into the read-only cvar
 	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < com_argc))
 	{
-		char vabuf[1024];
 		if(com_argv[i+1][0] == '.')
 			Cvar_SetQuick(&sessionid, com_argv[i+1]);
 		else
-			Cvar_SetQuick(&sessionid, va(vabuf, sizeof(vabuf), ".%s", com_argv[i+1]));
+		{
+			buf = (char *)Z_Malloc(strlen(com_argv[i+1]+2));
+			dpsnprintf(buf, sizeof(buf), ".%s", com_argv[i+1]);
+			Cvar_SetQuick(&sessionid, buf);
+		}
 	}
 }
 void Host_LockSession(void)
