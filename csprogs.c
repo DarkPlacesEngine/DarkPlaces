@@ -20,10 +20,10 @@ void CL_VM_PreventInformationLeaks(void)
 	prvm_prog_t *prog = CLVM_prog;
 	if(!cl.csqc_loaded)
 		return;
-	CSQC_BEGIN
-		VM_ClearTraceGlobals(prog);
-		PRVM_clientglobalfloat(trace_networkentity) = 0;
-	CSQC_END
+CSQC_BEGIN
+	VM_ClearTraceGlobals(prog);
+	PRVM_clientglobalfloat(trace_networkentity) = 0;
+CSQC_END
 }
 
 //[515]: these are required funcs
@@ -442,20 +442,20 @@ qboolean CL_VM_InputEvent (int eventtype, float x, float y)
 	if(!cl.csqc_loaded)
 		return false;
 
-	CSQC_BEGIN
-		if (!PRVM_clientfunction(CSQC_InputEvent))
-			r = false;
-		else
-		{
-			PRVM_clientglobalfloat(time) = cl.time;
-			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
-			PRVM_G_FLOAT(OFS_PARM0) = eventtype;
-			PRVM_G_FLOAT(OFS_PARM1) = x; // key or x
-			PRVM_G_FLOAT(OFS_PARM2) = y; // ascii or y
-			prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_InputEvent), "QC function CSQC_InputEvent is missing");
-			r = CSQC_RETURNVAL != 0;
-		}
-	CSQC_END
+CSQC_BEGIN
+	if (!PRVM_clientfunction(CSQC_InputEvent))
+		r = false;
+	else
+	{
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
+		PRVM_G_FLOAT(OFS_PARM0) = eventtype;
+		PRVM_G_FLOAT(OFS_PARM1) = x; // key or x
+		PRVM_G_FLOAT(OFS_PARM2) = y; // ascii or y
+		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_InputEvent), "QC function CSQC_InputEvent is missing");
+		r = CSQC_RETURNVAL != 0;
+	}
+CSQC_END
 	return r;
 }
 
@@ -1170,16 +1170,16 @@ void CL_VM_ShutDown (void)
 	//Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!cl.csqc_loaded)
 		return;
-	CSQC_BEGIN
-		if (prog->loaded)
-		{
-			PRVM_clientglobalfloat(time) = cl.time;
-			PRVM_clientglobaledict(self) = 0;
-			if (PRVM_clientfunction(CSQC_Shutdown))
-				prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
-		}
-		PRVM_Prog_Reset(prog);
-	CSQC_END
+CSQC_BEGIN
+	if (prog->loaded)
+	{
+		PRVM_clientglobalfloat(time) = cl.time;
+		PRVM_clientglobaledict(self) = 0;
+		if (PRVM_clientfunction(CSQC_Shutdown))
+			prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Shutdown), "QC function CSQC_Shutdown is missing");
+	}
+	PRVM_Prog_Reset(prog);
+CSQC_END
 	Con_DPrint("CSQC ^1unloaded\n");
 	cl.csqc_loaded = false;
 }

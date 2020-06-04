@@ -5419,7 +5419,7 @@ static void R_Shadow_EditLights_Edit_f(cmd_state_t *cmd)
 	VectorCopy(r_shadow_selectedlight->color, color);
 	radius = r_shadow_selectedlight->radius;
 	style = r_shadow_selectedlight->style;
-	if (r_shadow_selectedlight->cubemapname)
+	if (*r_shadow_selectedlight->cubemapname)
 		strlcpy(cubemapname, r_shadow_selectedlight->cubemapname, sizeof(cubemapname));
 	else
 		cubemapname[0] = 0;
@@ -5954,7 +5954,7 @@ static void R_Shadow_EditLights_CopyInfo_f(cmd_state_t *cmd)
 	VectorCopy(r_shadow_selectedlight->color, r_shadow_bufferlight.color);
 	r_shadow_bufferlight.radius = r_shadow_selectedlight->radius;
 	r_shadow_bufferlight.style = r_shadow_selectedlight->style;
-	if (r_shadow_selectedlight->cubemapname)
+	if (*r_shadow_selectedlight->cubemapname)
 		strlcpy(r_shadow_bufferlight.cubemapname, r_shadow_selectedlight->cubemapname, sizeof(r_shadow_bufferlight.cubemapname));
 	else
 		r_shadow_bufferlight.cubemapname[0] = 0;
