@@ -151,7 +151,7 @@ static void Host_Status_f(cmd_state_t *cmd)
 		if(sv_status_privacy.integer && cmd->source != src_command)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
-			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 48);
+			strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
 
 		frags = client->frags;
 

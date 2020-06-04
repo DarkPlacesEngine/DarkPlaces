@@ -2746,7 +2746,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 
 	t1 = (long) time(NULL);
 	t2 = strtol(s, NULL, 0);
-	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
+	if(labs(t1 - t2) > rcon_secure_maxdiff.integer)
 		return false;
 
 	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, (int)strlen(password)))

@@ -138,7 +138,7 @@ void TaskQueue_Yield(taskqueue_task_t *t)
 
 qboolean TaskQueue_IsDone(taskqueue_task_t *t)
 {
-	return !t->done != 0;
+	return !!t->done;
 }
 
 static void TaskQueue_DistributeTasks(void)
