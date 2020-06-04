@@ -357,7 +357,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		return;
 
 	memcpy(new_value,value,MAX_INPUTLINE);
-	
+
 	// Call the function stored in the cvar for bounds checking, cleanup, etc
 	if (var->callback)
 		var->callback(new_value);

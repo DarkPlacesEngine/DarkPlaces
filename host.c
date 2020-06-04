@@ -747,8 +747,6 @@ void Host_Main(void)
 			}
 		}
 
-		if (slowmo.value < 0.00001 && slowmo.value != 0)
-			Cvar_SetValueQuick(&slowmo, 0);
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValueQuick(&host_framerate, 0);
 
