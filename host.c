@@ -1121,7 +1121,7 @@ static void Host_InitSession(void)
 			Cvar_SetQuick(&sessionid, com_argv[i+1]);
 		else
 		{
-			buf = (char *)Z_Malloc(strlen(com_argv[i+1]+2));
+			buf = (char *)Z_Malloc(strlen(com_argv[i+1]) + 2);
 			dpsnprintf(buf, sizeof(buf), ".%s", com_argv[i+1]);
 			Cvar_SetQuick(&sessionid, buf);
 		}
