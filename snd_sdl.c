@@ -130,10 +130,10 @@ qboolean SndSys_Init (snd_format_t* fmt)
 	wantspec.samples = CeilPowerOf2(buffersize);  // needs to be a power of 2 on some platforms.
 
 	Con_Printf("Wanted audio Specification:\n"
-				"\tChannels  : %i\n"
-				"\tFormat    : 0x%X\n"
-				"\tFrequency : %i\n"
-				"\tSamples   : %i\n",
+				"    Channels  : %i\n"
+				"    Format    : 0x%X\n"
+				"    Frequency : %i\n"
+				"    Samples   : %i\n",
 				wantspec.channels, wantspec.format, wantspec.freq, wantspec.samples);
 
 	if ((audio_device = SDL_OpenAudioDevice(NULL, 0, &wantspec, &obtainspec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE)) == 0)
@@ -143,10 +143,10 @@ qboolean SndSys_Init (snd_format_t* fmt)
 	}
 
 	Con_Printf("Obtained audio specification:\n"
-				"\tChannels  : %i\n"
-				"\tFormat    : 0x%X\n"
-				"\tFrequency : %i\n"
-				"\tSamples   : %i\n",
+				"    Channels  : %i\n"
+				"    Format    : 0x%X\n"
+				"    Frequency : %i\n"
+				"    Samples   : %i\n",
 				obtainspec.channels, obtainspec.format, obtainspec.freq, obtainspec.samples);
 
 	fmt->speed = obtainspec.freq;
