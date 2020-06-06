@@ -1618,8 +1618,8 @@ extern cvar_t gl_info_driver;
 qboolean VID_InitMode(viddef_mode_t *mode)
 {
 	// GAME_STEELSTORM specific
-	steelstorm_showing_map = Cvar_FindVar(&cvars_all, "steelstorm_showing_map", ~0);
-	steelstorm_showing_mousecursor = Cvar_FindVar(&cvars_all, "steelstorm_showing_mousecursor", ~0);
+	steelstorm_showing_map = Cvar_FindVar(&cvars_all, "steelstorm_showing_map", ~0, false);
+	steelstorm_showing_mousecursor = Cvar_FindVar(&cvars_all, "steelstorm_showing_mousecursor", ~0, false);
 
 	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());

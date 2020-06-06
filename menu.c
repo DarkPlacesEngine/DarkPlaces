@@ -1581,7 +1581,7 @@ void M_Menu_Options_f(cmd_state_t *cmd)
 	m_entersound = true;
 }
 
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
 extern cvar_t r_textshadow;
