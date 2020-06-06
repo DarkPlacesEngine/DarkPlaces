@@ -3036,7 +3036,7 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 	if (c)
 		text = *(list[0] = Cmd_CompleteBuildList(cmd, s));
 	if (v)
-		text = *(list[1] = Cvar_CompleteBuildList(cmd->cvars, s, cmd->cvars_flagsmask));
+		text = *(list[1] = Cvar_CompleteBuildList(cmd->cvars, s, (cmd->cvars_flagsmask |= CVAR_ALIAS)));
 	if (a)
 		text = *(list[2] = Cmd_CompleteAliasBuildList(cmd, s));
 	if (n)
