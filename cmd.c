@@ -1446,8 +1446,10 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	for (cvar = cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
 		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
-		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
 			continue;
+		if (!(cvar->flags & CVAR_ALIAS))
+			if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
+				continue;
 		Con_Printf ("cvar ");
 		Cvar_PrintHelp(cvar, true);
 		count++;
