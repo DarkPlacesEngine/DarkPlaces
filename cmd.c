@@ -788,7 +788,7 @@ static void Cmd_Toggle_f(cmd_state_t *cmd)
 	else
 	{ // Correct Arguments Specified
 		// Acquire Potential CVar
-		cvar_t* cvCVar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 1), cmd->cvars_flagsmask);
+		cvar_t* cvCVar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 1), cmd->cvars_flagsmask, false);
 
 		if(cvCVar != NULL)
 		{ // Valid CVar
@@ -1036,7 +1036,7 @@ static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname,
 		}
 	}
 
-	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask)) && !(cvar->flags & CVAR_PRIVATE))
+	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask, false)) && !(cvar->flags & CVAR_PRIVATE))
 		return cvar->string;
 
 	return NULL;
@@ -1712,7 +1712,7 @@ void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function,
 	cmd_function_t *prev, *current;
 
 // fail if the command is a variable name
-	if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
+	if (Cvar_FindVar(cmd->cvars, cmd_name, ~0, true))
 	{
 		Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 		return;
