@@ -600,6 +600,31 @@ static void r_shadow_newmap(void)
 		R_Shadow_EditLights_Reload_f(&cmd_client);
 }
 
+/*
+ * (Cloudwalk) FIXME: If anyone wants to figure this shit out,
+ * go ahead. Clearing r_shadow_occlusion_buf is enough on AMD
+ * and NVIDIA. But Intel, even if I call glDeleteBuffers, insists
+ * on doing some stupid bullshit, causing a crash in the driver,
+ * when ever it calls glGetQueryObjectiv. In the interest of
+ * maintaining some semblance of stability, no occlusionquery
+ * for Intel.
+ */
+static void R_DisableCoronas_Intel_c(char *string)
+{
+	int value;
+	if(strstr(gl_vendor,"Intel"))
+	{
+		value = atoi(string);
+		if(value == 1)
+		{
+			Con_Warnf("Occlusion query is not supported on Intel iGPUs at this time. Sorry!\n");
+			string[0] = '0', string[1] = '\000';
+		}
+		else if (value != 0)
+			Con_Warnf("Force-enabling occlusion query on Intel. Proceed at your own risk. It *will* crash after a vid_restart!\n");
+	}
+}
+
 void R_Shadow_Init(void)
 {
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
@@ -697,6 +722,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_coronas);
 	Cvar_RegisterVariable(&r_coronas_occlusionsizescale);
 	Cvar_RegisterVariable(&r_coronas_occlusionquery);
+	Cvar_RegisterCallback(&r_coronas_occlusionquery,R_DisableCoronas_Intel_c);
 	Cvar_RegisterVariable(&gl_flashblend);
 	R_Shadow_EditLights_Init();
 	Mem_ExpandableArray_NewArray(&r_shadow_worldlightsarray, r_main_mempool, sizeof(dlight_t), 128);
