@@ -3007,11 +3007,11 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 		Con_Printf("\n%i possible command%s\n", c, (c > 1) ? "s: " : ":");
 		Cmd_CompleteCommandPrint(cmd, s);
 	}
-	v = Cvar_CompleteCountPossible(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
+	v = Cvar_CompleteCountPossible(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER | CVAR_ALIAS);
 	if (v)
 	{
 		Con_Printf("\n%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
-		Cvar_CompleteCvarPrint(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
+		Cvar_CompleteCvarPrint(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER | CVAR_ALIAS);
 	}
 	a = Cmd_CompleteAliasCountPossible(cmd, s);
 	if (a)
