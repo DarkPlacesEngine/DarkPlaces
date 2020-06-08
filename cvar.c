@@ -79,7 +79,7 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 	cvar_hash_t *hash;
 
 	// use hash lookup to minimize search time
-	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name));
+	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
 	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
 	if(link) *link = &cvars->hashtable[hashindex];
