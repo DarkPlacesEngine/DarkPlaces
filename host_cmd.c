@@ -3145,6 +3145,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(&cmd_client, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(&cmd_clientfromserver, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(&cmd_client, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
+	Cmd_AddCommand(&cmd_clientfromserver, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
 	Cmd_AddCommand(&cmd_client, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
 	Cmd_AddCommand(&cmd_client, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
