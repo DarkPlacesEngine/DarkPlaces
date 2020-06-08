@@ -2863,6 +2863,8 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		if(!surface->texture)
+			continue;
 		t = (int)(surface->texture - mod->data_textures);
 		numsurfacesfortexture[t]++;
 	}
@@ -2875,6 +2877,8 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		if (!surface->texture)
+			continue;
 		t = (int)(surface->texture - mod->data_textures);
 		mod->sortedmodelsurfaces[firstsurfacefortexture[t]++] = j + mod->firstmodelsurface;
 	}

@@ -566,6 +566,8 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
 		surface = info->model->data_surfaces + *mark;
+		if(!surface->texture)
+			continue;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
 			for (k = 0;k < surface->num_triangles;k++)
@@ -1242,6 +1244,8 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambie
 			surface = model->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
+				if(!surface->texture)
+					continue;
 				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo || !surface->lightmapinfo->samples)
 					continue;	// no lightmaps
 
@@ -1358,6 +1362,8 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	surface = model->data_surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
+		if(!surface->texture)
+			continue;
 		// skip surfaces whose bounding box does not include the point
 //		if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
 //			continue;
@@ -4122,7 +4128,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				mod->DrawSky = R_Q1BSP_DrawSky;
 
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
-				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+				if (surface->texture && surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 					break;
 			if (j < mod->nummodelsurfaces)
 				mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
