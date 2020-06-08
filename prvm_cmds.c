@@ -641,7 +641,7 @@ void VM_localcmd_server(prvm_prog_t *prog)
 static qboolean PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
 {
 	cvar_t *cvar;
-	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask, false);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
 	return ((cvar) && ((cvar->flags & CVAR_PRIVATE) == 0));
 }
 
@@ -683,7 +683,7 @@ void VM_cvar_type(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
-	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask, true);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
 
 
 	if(!cvar)
@@ -1674,7 +1674,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 
 // first check to see if it has already been defined
-	if (Cvar_FindVar (prog->console_cmd->cvars, name, prog->console_cmd->cvars_flagsmask, true))
+	if (Cvar_FindVar (prog->console_cmd->cvars, name, prog->console_cmd->cvars_flagsmask))
 		return;
 
 // check for overlap with a command
