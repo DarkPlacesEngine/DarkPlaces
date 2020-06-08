@@ -138,7 +138,6 @@ OBJ_COMMON= \
 	prvm_edict.o \
 	prvm_exec.o \
 	r_explosion.o \
-	r_lerpanim.o \
 	r_lightning.o \
 	r_modules.o \
 	r_shadow.o \
