@@ -404,7 +404,7 @@ extern cvar_t scratch2;
 extern cvar_t scratch3;
 extern cvar_t scratch4;
 extern cvar_t skill;
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 extern cvar_t sv_accelerate;
 extern cvar_t sv_aim;
 extern cvar_t sv_airaccel_qw;
