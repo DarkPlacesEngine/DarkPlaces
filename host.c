@@ -881,8 +881,8 @@ void Host_Main(void)
 				framelimit = cl_maxphysicsframesperserverframe.integer;
 				aborttime = Sys_DirtyTime() + 0.1;
 			}
-			if(host_timescale.value > 0 && host_timescale.value < 1)
-				advancetime = min(advancetime, 0.1 / host_timescale.value);
+			if(slowmo.value > 0 && slowmo.value < 1)
+				advancetime = min(advancetime, 0.1 / slowmo.value);
 			else
 				advancetime = min(advancetime, 0.1);
 
@@ -899,7 +899,7 @@ void Host_Main(void)
 
 			// only advance time if not paused
 			// the game also pauses in singleplayer when menu or console is used
-			sv.frametime = advancetime * host_timescale.value;
+			sv.frametime = advancetime * slowmo.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
 			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
@@ -980,7 +980,7 @@ void Host_Main(void)
 			// scale playback speed of demos by slowmo cvar
 			if (cls.demoplayback)
 			{
-				clframetime *= host_timescale.value;
+				clframetime *= slowmo.value;
 				// if demo playback is paused, don't advance time at all
 				if (cls.demopaused)
 					clframetime = 0;

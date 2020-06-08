@@ -76,10 +76,8 @@ interface from being ambiguous.
 #define CVAR_CLIENT 256
 // cvar is accessible in dedicated server
 #define CVAR_SERVER 512
-// cvar is an alias of another cvar
-#define CVAR_ALIAS 1024
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 2047
+#define CVAR_MAXFLAGSVAL 1023
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
@@ -151,7 +149,6 @@ typedef struct cvar_s
 	//menucvar_t menuinfo;
 	struct cvar_s *next;
 	struct cvar_s *nextonhashchain;
-	struct cvar_s *alias;
 } cvar_t;
 
 typedef struct cvar_state_s
@@ -175,13 +172,9 @@ void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name
 
 /// registers a cvar that already has the name, string, and optionally the
 /// archive elements set.
-void Cvar_RegisterAlias(cvar_t *source, cvar_t *target);
-
 void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *));
 
 void Cvar_RegisterVariable(cvar_t *variable);
-
-qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name);
 
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
@@ -236,7 +229,7 @@ void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
-cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags, qboolean alias);
+cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags);
 cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int neededflags);
 
 int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int neededflags);

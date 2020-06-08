@@ -3007,11 +3007,11 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 		Con_Printf("\n%i possible command%s\n", c, (c > 1) ? "s: " : ":");
 		Cmd_CompleteCommandPrint(cmd, s);
 	}
-	v = Cvar_CompleteCountPossible(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER | CVAR_ALIAS);
+	v = Cvar_CompleteCountPossible(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
 	if (v)
 	{
 		Con_Printf("\n%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
-		Cvar_CompleteCvarPrint(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER | CVAR_ALIAS);
+		Cvar_CompleteCvarPrint(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
 	}
 	a = Cmd_CompleteAliasCountPossible(cmd, s);
 	if (a)
@@ -3036,7 +3036,7 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 	if (c)
 		text = *(list[0] = Cmd_CompleteBuildList(cmd, s));
 	if (v)
-		text = *(list[1] = Cvar_CompleteBuildList(cmd->cvars, s, (cmd->cvars_flagsmask |= CVAR_ALIAS)));
+		text = *(list[1] = Cvar_CompleteBuildList(cmd->cvars, s, cmd->cvars_flagsmask));
 	if (a)
 		text = *(list[2] = Cmd_CompleteAliasBuildList(cmd, s));
 	if (n)
