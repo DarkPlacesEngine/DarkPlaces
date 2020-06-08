@@ -3191,7 +3191,7 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
-	s = PRVM_Alloc(bufferlength);
+	s = (char *)PRVM_Alloc(bufferlength);
 	PRVM_NewKnownString(prog, i, KNOWNSTRINGFLAG_GCMARK, s);
 	if(prog->leaktest_active)
 		prog->knownstrings_origin[i] = PRVM_AllocationOrigin(prog);
