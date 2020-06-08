@@ -421,7 +421,7 @@ extern char sv_readstring[MAX_INPUTLINE];
 
 extern cvar_t sv_public;
 
-extern cvar_t cl_netlocalping;
+extern cvar_t net_fakelag;
 
 extern cvar_t cl_netport;
 extern cvar_t sv_netport;

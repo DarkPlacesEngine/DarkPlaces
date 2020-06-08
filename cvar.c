@@ -35,14 +35,17 @@ Cvar_FindVar
 cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags)
 {
 	int hashindex;
-	cvar_t *var;
+	cvar_hash_t *hash;
 
 	// use hash lookup to minimize search time
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
-	for (var = cvars->hashtable[hashindex];var;var = var->nextonhashchain)
-		if (!strcmp (var_name, var->name) && (var->flags & neededflags))
-			return var;
-
+	for (hash = cvars->hashtable[hashindex];hash;hash = hash->next)
+		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
+			return hash->cvar;
+		else
+			for (int i = 0; i < hash->cvar->aliasindex; i++)
+				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
+					return hash->cvar;
 	return NULL;
 }
 
@@ -70,34 +73,37 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
 	return var;
 }
 
-static cvar_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
+static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_hash_t **parent, cvar_hash_t ***link, cvar_t **prev_alpha, int neededflags)
 {
 	int hashindex;
-	cvar_t *var;
+	cvar_hash_t *hash;
 
 	// use hash lookup to minimize search time
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name));
 	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
 	if(link) *link = &cvars->hashtable[hashindex];
-	for (var = cvars->hashtable[hashindex];var;var = var->nextonhashchain)
+	for (hash = cvars->hashtable[hashindex];hash;hash = hash->next)
 	{
-		if (!strcmp (var_name, var->name) && (var->flags & neededflags))
-		{
-			if(!prev_alpha || var == cvars->vars)
-				return var;
-
-			*prev_alpha = cvars->vars;
-			// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
-			// already - should I still insert '*prev_alpha &&' in the loop?
-			while((*prev_alpha)->next != var)
-				*prev_alpha = (*prev_alpha)->next;
-			return var;
-		}
-		if(parent) *parent = var;
+		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
+			goto match;
+		else
+			for (int i = 0; i < hash->cvar->aliasindex; i++)
+				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
+					goto match;
+		if(parent) *parent = hash;
 	}
+	return NULL;	
+match:
+	if(!prev_alpha || hash->cvar == cvars->vars)
+		return hash;
 
-	return NULL;
+	*prev_alpha = cvars->vars;
+	// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
+	// already - should I still insert '*prev_alpha &&' in the loop?
+	while((*prev_alpha)->next != hash->cvar)
+		*prev_alpha = (*prev_alpha)->next;
+	return hash;
 }
 
 /*
@@ -219,7 +225,11 @@ int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int nee
 	for (cvar = cvars->vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			h++;
-
+		else
+			for(int i = 0; i < cvar->aliasindex; i++)
+				if (!strncasecmp(partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
+					h++;
+		
 	return h;
 }
 
@@ -246,14 +256,23 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 	for (cvar = cvars->vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			buf[bpos++] = cvar->name;
+		else
+			for(int i = 0; i < cvar->aliasindex; i++)
+				if (!strncasecmp(partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
+					buf[bpos++] = cvar->aliases[i];
+		
 
 	buf[bpos] = NULL;
 	return buf;
 }
 
-void Cvar_PrintHelp(cvar_t *cvar, qboolean full)
+void Cvar_PrintHelp(cvar_t *cvar, const char *name, qboolean full)
 {
-	Con_Printf("^3%s^7 is \"%s\" [\"%s\"] ", cvar->name, ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
+	Con_Printf("^3%s^7", name);
+	if (strcmp(cvar->name, name))
+		Con_Printf(" (now ^3%s^7)", cvar->name);
+	Con_Printf(" is \"%s\" [\"%s\"] ", ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
+	
 	if (full)
 		Con_Printf("%s", cvar->description);
 	Con_Printf("\n");
@@ -267,7 +286,13 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int needed
 	// Loop through the command list and print all matches
 	for (cvar = cvars->vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
-			Cvar_PrintHelp(cvar, true);
+			Cvar_PrintHelp(cvar, cvar->name, true);
+		else
+			for (int i = 0; i < cvar->aliasindex; i++)
+				if (!strncasecmp (partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
+					Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+
+		
 }
 
 // check if a cvar is held by some progs
@@ -494,6 +519,26 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *))
 	variable->callback = callback;
 }
 
+void Cvar_RegisterAlias(cvar_t *variable, const char *alias )
+{
+	cvar_state_t *cvars = &cvars_all;
+	cvar_hash_t *hash;
+	int hashindex;
+
+	variable->aliases = (char **)Mem_Realloc(zonemempool, variable->aliases, sizeof(char *) * (variable->aliasindex + 1));
+	// Add to it
+	variable->aliases[variable->aliasindex] = (char *)Z_Malloc(strlen(alias) + 1);
+	memcpy(variable->aliases[variable->aliasindex], alias, strlen(alias) + 1);
+	variable->aliasindex++;
+
+	// link to head of list in this hash table index
+	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
+	hashindex = CRC_Block((const unsigned char *)alias, strlen(alias)) % CVAR_HASHSIZE;
+	hash->next = cvars->hashtable[hashindex];
+	cvars->hashtable[hashindex] = hash;
+	hash->cvar = variable;
+}
+
 /*
 ============
 Cvar_RegisterVariable
@@ -505,6 +550,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 {
 	cvar_state_t *cvars = NULL;
 	int hashindex;
+	cvar_hash_t *hash;
 	cvar_t *current, *next, *cvar;
 	char *oldstr;
 	size_t alloclen;
@@ -590,6 +636,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	memcpy ((char *)variable->defstring, oldstr, alloclen);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
+	variable->aliasindex = 0;
 
 	// Mark it as not an autocvar.
 	for (i = 0;i < PRVM_PROG_MAX;i++)
@@ -607,9 +654,11 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->next = next;
 
 	// link to head of list in this hash table index
+	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
 	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name)) % CVAR_HASHSIZE;
-	variable->nextonhashchain = cvars->hashtable[hashindex];
-	cvars->hashtable[hashindex] = variable;
+	hash->next = cvars->hashtable[hashindex];
+	hash->cvar = variable;
+	cvars->hashtable[hashindex] = hash;
 }
 
 /*
@@ -622,6 +671,7 @@ Adds a newly allocated variable to the variable list or sets its value.
 cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int flags, const char *newdescription)
 {
 	int hashindex;
+	cvar_hash_t *hash;
 	cvar_t *current, *next, *cvar;
 	int i;
 
@@ -671,6 +721,8 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->defstring = (char *)Mem_strdup(zonemempool, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
+	cvar->aliases = (char **)Z_Malloc(sizeof(char **));
+	memset(cvar->aliases, 0, sizeof(char *));
 
 	if(newdescription && *newdescription)
 		cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
@@ -692,13 +744,27 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->next = next;
 
 	// link to head of list in this hash table index
+	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
 	hashindex = CRC_Block((const unsigned char *)cvar->name, strlen(cvar->name)) % CVAR_HASHSIZE;
-	cvar->nextonhashchain = cvars->hashtable[hashindex];
-	cvars->hashtable[hashindex] = cvar;
+	hash->next = cvars->hashtable[hashindex];
+	cvars->hashtable[hashindex] = hash;
+	hash->cvar = cvar;
 
 	return cvar;
 }
 
+qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name)
+{
+	if (var->flags & CVAR_READONLY)
+	{
+		if(cmd_name)
+			Con_Printf("%s: ",cmd_name);
+		Con_Printf("%s", var->name);
+		Con_Printf(" is read-only\n");
+		return true;
+	}
+	return false;
+}
 
 /*
 ============
@@ -713,25 +779,23 @@ qboolean	Cvar_Command (cmd_state_t *cmd)
 	cvar_t			*v;
 
 // check variables
-	v = Cvar_FindVar(cvars, Cmd_Argv(cmd, 0), cmd->cvars_flagsmask);
+	v = Cvar_FindVar(cvars, Cmd_Argv(cmd, 0), (cmd->cvars_flagsmask));
 	if (!v)
 		return false;
 
 // perform a variable print or set
 	if (Cmd_Argc(cmd) == 1)
 	{
-		Cvar_PrintHelp(v, true);
+		Cvar_PrintHelp(v, Cmd_Argv(cmd, 0), true);
 		return true;
 	}
 
 	if (developer_extra.integer)
 		Con_DPrint("Cvar_Command: ");
-
-	if (v->flags & CVAR_READONLY)
-	{
-		Con_Printf("%s is read-only\n", v->name);
+	
+	if(Cvar_Readonly(v, NULL))
 		return true;
-	}
+	
 	Cvar_SetQuick(v, Cmd_Argv(cmd, 1));
 	if (developer_extra.integer)
 		Con_DPrint("\n");
@@ -837,15 +901,15 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 			Con_DPrintf("Cvar_RestoreInitState: Destroying cvar \"%s\"\n", c->name);
 			// unlink struct from hash
 			hashindex = CRC_Block((const unsigned char *)c->name, strlen(c->name)) % CVAR_HASHSIZE;
-			for (cp2 = &cvars->hashtable[hashindex];(c2 = *cp2);)
+			for (cp2 = &cvars->hashtable[hashindex]->cvar;(c2 = *cp2);)
 			{
 				if (c2 == c)
 				{
-					*cp2 = c2->nextonhashchain;
+					*cp2 = cvars->hashtable[hashindex]->next->cvar;
 					break;
 				}
 				else
-					cp2 = &c2->nextonhashchain;
+					cp2 = &cvars->hashtable[hashindex]->next->cvar;
 			}
 			// unlink struct from main list
 			*cp = c->next;
@@ -868,8 +932,10 @@ void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
+	{
 		if((var->flags & CVAR_NORESETTODEFAULTS) == 0)
 			Cvar_SetQuick(var, var->defstring);
+	}
 }
 
 
@@ -879,8 +945,10 @@ void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
+	{
 		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == 0)
 			Cvar_SetQuick(var, var->defstring);
+	}
 }
 
 
@@ -890,8 +958,10 @@ void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd)
 	cvar_t *var;
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
+	{
 		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == CVAR_SAVE)
 			Cvar_SetQuick(var, var->defstring);
+	}
 }
 
 
@@ -909,13 +979,14 @@ void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f)
 	char buf1[MAX_INPUTLINE], buf2[MAX_INPUTLINE];
 
 	// don't save cvars that match their default value
-	for (var = cvars->vars ; var ; var = var->next)
+	for (var = cvars->vars ; var ; var = var->next) {
 		if ((var->flags & CVAR_SAVE) && (strcmp(var->string, var->defstring) || ((var->flags & CVAR_ALLOCATED) && !(var->flags & CVAR_DEFAULTSET))))
 		{
 			Cmd_QuoteString(buf1, sizeof(buf1), var->name, "\"\\$", false);
 			Cmd_QuoteString(buf2, sizeof(buf2), var->string, "\"\\$", false);
 			FS_Printf(f, "%s\"%s\" \"%s\"\n", var->flags & CVAR_ALLOCATED ? "seta " : "", buf1, buf2);
 		}
+	}
 }
 
 
@@ -954,7 +1025,7 @@ void Cvar_List_f(cmd_state_t *cmd)
 		if (len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp (partial,cvar->name,len)))
 			continue;
 
-		Cvar_PrintHelp(cvar, true);
+		Cvar_PrintHelp(cvar, cvar->name, true);
 		count++;
 	}
 
@@ -984,11 +1055,9 @@ void Cvar_Set_f(cmd_state_t *cmd)
 
 	// check if it's read-only
 	cvar = Cvar_FindVar(cvars, Cmd_Argv(cmd, 1), ~0);
-	if (cvar && cvar->flags & CVAR_READONLY)
-	{
-		Con_Printf("Set: %s is read-only\n", cvar->name);
-		return;
-	}
+	if (cvar)
+		if(Cvar_Readonly(cvar,"Set"))
+			return;
 
 	if (developer_extra.integer)
 		Con_DPrint("Set: ");
@@ -1011,11 +1080,9 @@ void Cvar_SetA_f(cmd_state_t *cmd)
 
 	// check if it's read-only
 	cvar = Cvar_FindVar(cvars, Cmd_Argv(cmd, 1), ~0);
-	if (cvar && cvar->flags & CVAR_READONLY)
-	{
-		Con_Printf("SetA: %s is read-only\n", cvar->name);
-		return;
-	}
+	if (cvar)
+		if(Cvar_Readonly(cvar,"SetA"))
+			return;
 
 	if (developer_extra.integer)
 		Con_DPrint("SetA: ");
@@ -1029,7 +1096,8 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	int neededflags = ~0;
 	int i;
-	cvar_t *cvar, *parent, **link, *prev;
+	cvar_hash_t *hash, *parent, **link;
+	cvar_t *cvar, *prev;
 
 	if(Cmd_Argc(cmd) < 2)
 	{
@@ -1038,17 +1106,16 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	}
 	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		cvar = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
+		hash = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
+		cvar = hash->cvar;
+
 		if(!cvar)
 		{
 			Con_Printf("%s: %s is not defined\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, i));
 			continue;
 		}
-		if(cvar->flags & CVAR_READONLY)
-		{
-			Con_Printf("%s: %s is read-only\n", Cmd_Argv(cmd, 0), cvar->name);
+		if(Cvar_Readonly(cvar, Cmd_Argv(cmd, 0)))
 			continue;
-		}
 		if(!(cvar->flags & CVAR_ALLOCATED))
 		{
 			Con_Printf("%s: %s is static and cannot be deleted\n", Cmd_Argv(cmd, 0), cvar->name);
@@ -1066,10 +1133,9 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		}
 
 		if(parent)
-			parent->nextonhashchain = cvar->nextonhashchain;
+			parent->next = hash->next;
 		else if(link)
-			*link = cvar->nextonhashchain;
-
+			*link = hash->next;
 		if(cvar->description != cvar_dummy_description)
 			Z_Free((char *)cvar->description);
 
