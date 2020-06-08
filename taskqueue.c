@@ -114,7 +114,7 @@ void TaskQueue_Enqueue(int numtasks, taskqueue_task_t *tasks)
 		unsigned int newsize = (taskqueue_state.queue_size + numtasks) * 2;
 		if (newsize < 1024)
 			newsize = 1024;
-		taskqueue_state.queue_data = Mem_Realloc(zonemempool, taskqueue_state.queue_data, sizeof(*taskqueue_state.queue_data) * newsize);
+		taskqueue_state.queue_data = (taskqueue_task_t **)Mem_Realloc(zonemempool, taskqueue_state.queue_data, sizeof(*taskqueue_state.queue_data) * newsize);
 		taskqueue_state.queue_size = newsize;
 	}
 	for (i = 0; i < numtasks; i++)
@@ -293,7 +293,7 @@ void TaskQueue_Setup(taskqueue_task_t *t, taskqueue_task_t *preceding, void(*fun
 void TaskQueue_Task_CheckTasksDone(taskqueue_task_t *t)
 {
 	size_t numtasks = t->i[0];
-	taskqueue_task_t *tasks = t->p[0];
+	taskqueue_task_t *tasks = (taskqueue_task_t *)t->p[0];
 	while (numtasks > 0)
 	{
 		// check the last task first as it's usually going to be the last to finish, so we do the least work by checking it first
