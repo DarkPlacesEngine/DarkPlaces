@@ -1429,6 +1429,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	int count;
 	qboolean ispattern;
 	char vabuf[1024];
+	char *cvar_name;
 
 	if (Cmd_Argc(cmd) > 1)
 		partial = Cmd_Args(cmd);
@@ -1445,11 +1446,26 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	count = 0;
 	for (cvar = cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
-		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
-		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
+		if (!matchpattern_with_separator(cvar->name, partial, true, "", false) &&
+		    !matchpattern_with_separator(cvar->description, partial, true, "", false))
+		{
+			for (int i = 0; i < cvar->aliasindex; i++)
+			{
+				if (!matchpattern_with_separator(cvar->aliases[i], partial, true, "", false)) {
+					continue;
+				} else {
+					cvar_name = cvar->aliases[i];
+					goto print;
+				}
+			}	
 			continue;
+		} else {
+			cvar_name = (char *)cvar->name;
+			break;
+		}
+print:
 		Con_Printf ("cvar ");
-		Cvar_PrintHelp(cvar, true);
+		Cvar_PrintHelp(cvar, cvar_name, true);
 		count++;
 	}
 	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
