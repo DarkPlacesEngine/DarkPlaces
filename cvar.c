@@ -93,7 +93,7 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 					goto match;
 		if(parent) *parent = hash;
 	}
-	return NULL;	
+	return NULL;
 match:
 	if(!prev_alpha || hash->cvar == cvars->vars)
 		return hash;
