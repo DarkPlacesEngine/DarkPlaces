@@ -1461,12 +1461,11 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 			continue;
 		} else {
 			cvar_name = (char *)cvar->name;
-			break;
-		}
 print:
-		Con_Printf ("cvar ");
-		Cvar_PrintHelp(cvar, cvar_name, true);
-		count++;
+			Con_Printf ("cvar ");
+			Cvar_PrintHelp(cvar, cvar_name, true);
+			count++;
+		}
 	}
 	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
 	{
