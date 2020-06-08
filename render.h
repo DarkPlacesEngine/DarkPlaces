@@ -295,8 +295,6 @@ qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qbool
 /// generate animcache data for all entities marked visible
 void R_AnimCache_CacheVisibleEntities(void);
 
-#include "r_lerpanim.h"
-
 extern cvar_t r_render;
 extern cvar_t r_renderview;
 extern cvar_t r_waterwarp;
