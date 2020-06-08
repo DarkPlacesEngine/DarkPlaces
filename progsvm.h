@@ -506,7 +506,7 @@ prvm_prog_garbagecollection_state_stage_t;
 
 typedef struct prvm_prog_garbagecollection_state_s
 {
-	prvm_prog_garbagecollection_state_stage_t stage;
+	int stage;
 	int globals_mark_progress;
 	int fields_mark_progress;
 	int fields_mark_progress_entity;
