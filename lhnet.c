@@ -1110,7 +1110,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (net_fakelag.value && (realtime - net_fakelag.value * (1.0 / 2000.0)) < p->sentdoubletime)
+			if (cl_netlocalping.value && (realtime - cl_netlocalping.value * (1.0 / 2000.0)) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.port)

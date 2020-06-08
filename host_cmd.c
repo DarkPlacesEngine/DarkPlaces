@@ -2502,13 +2502,13 @@ static void Host_SendCvar_f(cmd_state_t *cmd)
 	cvarname = Cmd_Argv(cmd, 1);
 	if (cls.state == ca_connected)
 	{
-		c = Cvar_FindVar(&cvars_all, cvarname, CVAR_CLIENT | CVAR_SERVER, false);
+		c = Cvar_FindVar(&cvars_all, cvarname, CVAR_CLIENT | CVAR_SERVER);
 		// LadyHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
 			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
 		else
-			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", cvarname, c->string));
+			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
 	if(!sv.active)// || !PRVM_serverfunction(SV_ParseClientCommand))

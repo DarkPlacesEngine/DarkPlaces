@@ -85,28 +85,16 @@ cachepic_t *sb_complete;
 cachepic_t *sb_inter;
 cachepic_t *sb_finale;
 
-cvar_t cl_showfps = {CVAR_CLIENT | CVAR_SAVE, "cl_showfps", "0", "shows your rendered fps (frames per second)"};
-cvar_t cl_showsound = {CVAR_CLIENT | CVAR_SAVE, "cl_showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
-cvar_t cl_showblur = {CVAR_CLIENT | CVAR_SAVE, "cl_showblur", "0", "shows the current alpha level of motionblur"};
-cvar_t cl_showspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
-cvar_t cl_showtopspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from cl_showspeed, otherwise it's an unit number just like in cl_showspeed"};
-cvar_t cl_showtime = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime", "0", "shows current time of day (useful on screenshots)"};
-cvar_t cl_showtime_format = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime_format", "%H:%M:%S", "format string for time of day"};
-cvar_t cl_showdate = {CVAR_CLIENT | CVAR_SAVE, "cl_showdate", "0", "shows current date (useful on screenshots)"};
-cvar_t cl_showdate_format = {CVAR_CLIENT | CVAR_SAVE, "cl_showdate_format", "%Y-%m-%d", "format string for date"};
-cvar_t cl_showtex = {CVAR_CLIENT, "cl_showtex", "0", "shows the name of the texture on the crosshair (for map debugging)"};
-
-cvar_t showfps = {CVAR_ALIAS, "showfps"};
-cvar_t showsound = {CVAR_ALIAS, "showsound"};
-cvar_t showblur = {CVAR_ALIAS, "showblur"};
-cvar_t showspeed = {CVAR_ALIAS, "showspeed"};
-cvar_t showtopspeed = {CVAR_ALIAS, "showtopspeed"};
-cvar_t showtime = {CVAR_ALIAS, "showtime"};
-cvar_t showtime_format = {CVAR_ALIAS, "showtime_format"};
-cvar_t showdate = {CVAR_ALIAS, "showdate"};
-cvar_t showdate_format = {CVAR_ALIAS, "showdate_format"};
-cvar_t showtex = {CVAR_ALIAS, "showtex"};
-
+cvar_t showfps = {CVAR_CLIENT | CVAR_SAVE, "showfps", "0", "shows your rendered fps (frames per second)"};
+cvar_t showsound = {CVAR_CLIENT | CVAR_SAVE, "showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
+cvar_t showblur = {CVAR_CLIENT | CVAR_SAVE, "showblur", "0", "shows the current alpha level of motionblur"};
+cvar_t showspeed = {CVAR_CLIENT | CVAR_SAVE, "showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
+cvar_t showtopspeed = {CVAR_CLIENT | CVAR_SAVE, "showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from showspeed, otherwise it's an unit number just like in showspeed"};
+cvar_t showtime = {CVAR_CLIENT | CVAR_SAVE, "showtime", "0", "shows current time of day (useful on screenshots)"};
+cvar_t showtime_format = {CVAR_CLIENT | CVAR_SAVE, "showtime_format", "%H:%M:%S", "format string for time of day"};
+cvar_t showdate = {CVAR_CLIENT | CVAR_SAVE, "showdate", "0", "shows current date (useful on screenshots)"};
+cvar_t showdate_format = {CVAR_CLIENT | CVAR_SAVE, "showdate_format", "%Y-%m-%d", "format string for date"};
+cvar_t showtex = {CVAR_CLIENT, "showtex", "0", "shows the name of the texture on the crosshair (for map debugging)"};
 cvar_t sbar_alpha_bg = {CVAR_CLIENT | CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
 cvar_t sbar_alpha_fg = {CVAR_CLIENT | CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
 cvar_t sbar_hudselector = {CVAR_CLIENT | CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
@@ -374,28 +362,16 @@ void Sbar_Init (void)
 		Cmd_AddCommand(&cmd_client, "+showscores", Sbar_ShowScores_f, "show scoreboard");
 		Cmd_AddCommand(&cmd_client, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
 	}
-	Cvar_RegisterVariable(&cl_showfps);
-	Cvar_RegisterVariable(&cl_showsound);
-	Cvar_RegisterVariable(&cl_showblur);
-	Cvar_RegisterVariable(&cl_showspeed);
-	Cvar_RegisterVariable(&cl_showtopspeed);
-	Cvar_RegisterVariable(&cl_showtime);
-	Cvar_RegisterVariable(&cl_showtime_format);
-	Cvar_RegisterVariable(&cl_showdate);
-	Cvar_RegisterVariable(&cl_showdate_format);
-	Cvar_RegisterVariable(&cl_showtex);
-	
-	Cvar_RegisterAlias(&showfps, &cl_showfps);
-	Cvar_RegisterAlias(&showsound, &cl_showsound);
-	Cvar_RegisterAlias(&showblur, &cl_showblur);
-	Cvar_RegisterAlias(&showspeed, &cl_showspeed);
-	Cvar_RegisterAlias(&showtopspeed, &cl_showtopspeed);
-	Cvar_RegisterAlias(&showtime, &cl_showtime);
-	Cvar_RegisterAlias(&showtime_format, &cl_showtime_format);
-	Cvar_RegisterAlias(&showdate, &cl_showdate);
-	Cvar_RegisterAlias(&showdate_format, &cl_showdate_format);
-	Cvar_RegisterAlias(&showtex, &cl_showtex);
-	
+	Cvar_RegisterVariable(&showfps);
+	Cvar_RegisterVariable(&showsound);
+	Cvar_RegisterVariable(&showblur);
+	Cvar_RegisterVariable(&showspeed);
+	Cvar_RegisterVariable(&showtopspeed);
+	Cvar_RegisterVariable(&showtime);
+	Cvar_RegisterVariable(&showtime_format);
+	Cvar_RegisterVariable(&showdate);
+	Cvar_RegisterVariable(&showdate_format);
+	Cvar_RegisterVariable(&showtex);
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
 	Cvar_RegisterVariable(&sbar_hudselector);
@@ -1059,7 +1035,7 @@ time_t topxy_time = 0;
 static void get_showspeed_unit(int unitnumber, double *conversion_factor, const char **unit)
 {
 	if(unitnumber < 0)
-		unitnumber = cl_showspeed.integer;
+		unitnumber = showspeed.integer;
 	switch(unitnumber)
 	{
 		default:
@@ -1145,10 +1121,10 @@ void Sbar_ShowFPS(void)
 	topspeedstring[0] = 0;
 	texstring[0] = 0;
 	entstring[0] = 0;
-	if (cl_showfps.integer)
+	if (showfps.integer)
 	{
 		red = (showfps_framerate < 1.0f);
-		if(cl_showfps.integer == 2)
+		if(showfps.integer == 2)
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%7.3f mspf", (1000.0 / showfps_framerate));
 		else if (red)
 			dpsnprintf(fpsstring, sizeof(fpsstring), "%4i spf", (int)(1.0 / showfps_framerate + 0.5));
@@ -1163,42 +1139,42 @@ void Sbar_ShowFPS(void)
 			fps_strings++;
 		}
 	}
-	if (cl_showtime.integer)
+	if (showtime.integer)
 	{
-		strlcpy(timestring, Sys_TimeString(cl_showtime_format.string), sizeof(timestring));
+		strlcpy(timestring, Sys_TimeString(showtime_format.string), sizeof(timestring));
 		fps_strings++;
 	}
-	if (cl_showdate.integer)
+	if (showdate.integer)
 	{
-		strlcpy(datestring, Sys_TimeString(cl_showdate_format.string), sizeof(datestring));
+		strlcpy(datestring, Sys_TimeString(showdate_format.string), sizeof(datestring));
 		fps_strings++;
 	}
-	if (cl_showblur.integer)
+	if (showblur.integer)
 	{
 		dpsnprintf(blurstring, sizeof(blurstring), "%3i%% blur", (int)(cl.motionbluralpha * 100));
 		fps_strings++;
 	}
-	if (cl_showsound.integer)
+	if (showsound.integer)
 	{
 		dpsnprintf(soundstring, sizeof(soundstring), "%4i/4%i at %3ims", cls.soundstats.mixedsounds, cls.soundstats.totalsounds, cls.soundstats.latency_milliseconds);
 		fps_strings++;
 	}
-	if (cl_showspeed.integer || cl_showtopspeed.integer)
+	if (showspeed.integer || showtopspeed.integer)
 	{
 		double speed, speedxy, f;
 		const char *unit;
 		speed = VectorLength(cl.movement_velocity);
 		speedxy = sqrt(cl.movement_velocity[0] * cl.movement_velocity[0] + cl.movement_velocity[1] * cl.movement_velocity[1]);
-		if (cl_showspeed.integer)
+		if (showspeed.integer)
 		{
-			get_showspeed_unit(cl_showspeed.integer, &f, &unit);
+			get_showspeed_unit(showspeed.integer, &f, &unit);
 			dpsnprintf(speedstring, sizeof(speedstring), "%.0f (%.0f) %s", f*speed, f*speedxy, unit);
 			fps_strings++;
 		}
-		if (cl_showtopspeed.integer)
+		if (showtopspeed.integer)
 		{
 			qboolean topspeed_latched = false, topspeedxy_latched = false;
-			get_showspeed_unit(cl_showtopspeed.integer, &f, &unit);
+			get_showspeed_unit(showtopspeed.integer, &f, &unit);
 			if (speed >= topspeed || current_time - top_time > 3)
 			{
 				topspeed = speed;
@@ -1221,7 +1197,7 @@ void Sbar_ShowFPS(void)
 			fps_strings++;
 		}
 	}
-	if (cl_showtex.integer)
+	if (showtex.integer)
 	{
 		vec3_t org;
 		vec3_t dest;

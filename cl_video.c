@@ -137,7 +137,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		char overridename[MAX_QPATH];
 		cvar_t *langcvar;
 
-		langcvar = Cvar_FindVar(&cvars_all, "language", CVAR_CLIENT | CVAR_SERVER, false);
+		langcvar = Cvar_FindVar(&cvars_all, "language", CVAR_CLIENT | CVAR_SERVER);
 		subtitle_text = NULL;
 		if (langcvar)
 		{
