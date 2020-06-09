@@ -268,13 +268,11 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 
 void Cvar_PrintHelp(cvar_t *cvar, const char *name, qboolean full)
 {
-	Con_Printf("^3%s^7", name);
+	Con_Printf("^3%s^7 is \"%s\" [\"%s\"]", name, ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
 	if (strcmp(cvar->name, name))
-		Con_Printf(" (now ^3%s^7)", cvar->name);
-	Con_Printf(" is \"%s\" [\"%s\"] ", ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
-	
+		Con_Printf(" (also ^3%s^7)", cvar->name);
 	if (full)
-		Con_Printf("%s", cvar->description);
+		Con_Printf(" %s", cvar->description);
 	Con_Printf("\n");
 }
 
