@@ -130,6 +130,7 @@ OBJ_COMMON= \
 	model_shared.o \
 	model_sprite.o \
 	netconn.o \
+	nodegraph.o \
 	palette.o \
 	polygon.o \
 	portals.o \
