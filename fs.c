@@ -24,6 +24,15 @@
 
 #include <limits.h>
 #include <fcntl.h>
+#include <errno.h>
+
+#if defined(_MSC_VER)
+// visual studio does not have a dirent.h, so we use
+// https://github.com/tronkko/dirent
+# include "vsdirent.h"
+#else
+# include <dirent.h>
+#endif
 
 #ifdef WIN32
 # include <direct.h>
@@ -33,6 +42,7 @@
 # include <share.h>
 #else
 # include <pwd.h>
+# include <sys/types.h>
 # include <sys/stat.h>
 # include <unistd.h>
 #endif
@@ -944,6 +954,59 @@ static void FS_mkdir (const char *path)
 	}
 }
 
+int FS_rmtree(const char *dir)
+{
+	struct dirent *ep;
+	struct stat st;
+	DIR *dp;
+	char vabuf[1024] = { 0 };
+	int ret = 0;
+
+	dp = opendir(dir);
+	if (!dp)
+	{
+		Con_DPrintf("FS_rmtree(): can't open dir `%s`: %s\n", dir, strerror(errno));
+		return -1;
+	}
+
+	while ((ep = readdir(dp)))
+	{
+		if (!strcmp(".", ep->d_name) || !strcmp("..", ep->d_name))
+			continue; // NB: do these even appear in readdir() output?
+
+		if (dpsnprintf(vabuf, sizeof(vabuf), "%s/%s", dir, ep->d_name) >= (int)sizeof(vabuf))
+		{
+			// this is some wacky shit, better abort lest we fuck some poor sod's files up
+			Con_DPrintf("FS_rmtree(): path `%s` is longer than the path buffer, aborting\n", vabuf);
+			ret = -2;
+			break;
+		}
+
+		if (stat(vabuf, &st) < 0)
+		{
+			Con_DPrintf("FS_rmtree(): can't stat `%s`: %s\n", vabuf, strerror(errno));
+			ret = -3;
+			break;
+		}
+
+		ret = (S_ISDIR(st.st_mode)) ? FS_rmtree(vabuf) : remove(vabuf);
+		if (ret)
+		{
+			Con_DPrintf("FS_rmtree(): can't remove `%s`: %s\n", vabuf, strerror(errno));
+			break;
+		}
+	}
+
+	closedir(dp);
+
+	if (!ret)
+	{
+		ret = rmdir(dir);
+		if (ret) Con_DPrintf("FS_rmtree(): can't remove `%s`: %s\n", dir, strerror(errno));
+	}
+
+	return ret;
+}
 
 /*
 ============

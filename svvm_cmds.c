@@ -227,6 +227,7 @@ const char *vm_sv_extensions =
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
 "ZQ_PAUSE "
+"EXT_WRATH "
 "DP_RM_CLIPGROUP "
 //"EXT_CSQC " // not ready yet
 ;
@@ -1118,6 +1119,71 @@ static void VM_SV_walkmove(prvm_prog_t *prog)
 // restore program state
 	prog->xfunction = oldf;
 	PRVM_serverglobaledict(self) = oldself;
+}
+
+/*
+===============
+VM_SV_walkmovedist
+
+float(float yaw, float dist[, settrace]) walkmovedist (EXT_WRATH)
+===============
+*/
+static void VM_SV_walkmovedist(prvm_prog_t *prog)
+{
+	prvm_edict_t	*ent;
+	float	yaw, dist;
+	vec3_t	move, oldorg, neworg;
+	mfunction_t	*oldf;
+	int 	oldself;
+	qboolean	settrace;
+
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_walkmovedist);
+
+	// assume failure if it returns early
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+
+	ent = PRVM_PROG_TO_EDICT(PRVM_serverglobaledict(self));
+	if (ent == prog->edicts)
+	{
+		VM_Warning(prog, "walkmove: can not modify world entity\n");
+		return;
+	}
+	if (ent->priv.server->free)
+	{
+		VM_Warning(prog, "walkmove: can not modify free entity\n");
+		return;
+	}
+	yaw = PRVM_G_FLOAT(OFS_PARM0);
+	dist = PRVM_G_FLOAT(OFS_PARM1);
+	settrace = prog->argc >= 3 && PRVM_G_FLOAT(OFS_PARM2);
+
+	if ( !( (int)PRVM_serveredictfloat(ent, flags) & (FL_ONGROUND|FL_FLY|FL_SWIM) ) )
+		return;
+
+	yaw = yaw*M_PI*2 / 360;
+
+	move[0] = cos(yaw)*dist;
+	move[1] = sin(yaw)*dist;
+	move[2] = 0;
+
+// save origin before move
+	VectorCopy (PRVM_serveredictvector(ent, origin), oldorg);
+
+// save program state, because SV_movestep may call other progs
+	oldf = prog->xfunction;
+	oldself = PRVM_serverglobaledict(self);
+
+	SV_movestep(ent, move, true, false, settrace);
+
+// restore program state
+	prog->xfunction = oldf;
+	PRVM_serverglobaledict(self) = oldself;
+
+// save origin after move
+	VectorCopy (PRVM_serveredictvector(ent, origin), neworg);
+
+// return distance traveled
+	PRVM_G_FLOAT(OFS_RETURN) = VectorDistance(oldorg, neworg);
 }
 
 /*
@@ -3841,7 +3907,115 @@ VM_digest_hex,						// #639
 NULL,							// #640
 NULL,							// #641
 VM_coverage,						// #642
-NULL,							// #643
+NULL,						// #643
+NULL,						// #644
+NULL,						// #645
+NULL,						// #646
+NULL,						// #647
+NULL,						// #648
+NULL,						// #649
+// WRATH range (#650-#???)
+VM_fcopy,					// #650 float(string fnfrom, string fnto) fcopy (EXT_WRATH)
+VM_frename,					// #651 float (string fnold, string fnnew) frename (EXT_WRATH)
+VM_fremove,					// #652 float (string fname) fremove (EXT_WRATH)
+VM_fexists,					// #653 float (string fname) fexists (EXT_WRATH)
+VM_rmtree,					// #654 float (string path) rmtree (EXT_WRATH)
+VM_SV_walkmovedist, // #655 float (float yaw, float dist[, float settrace]) walkmovedist (EXT_WRATH)
+NULL,						// #656
+NULL,						// #657
+NULL,						// #658
+NULL,						// #659
+NULL,						// #660
+NULL,						// #661
+NULL,						// #662
+NULL,						// #663
+NULL,						// #664
+NULL,						// #665
+NULL,						// #666
+NULL,						// #667
+NULL,						// #668
+NULL,						// #669
+NULL,						// #670
+NULL,						// #671
+NULL,						// #672
+NULL,						// #673
+NULL,						// #674
+NULL,						// #675
+NULL,						// #676
+NULL,						// #677
+NULL,						// #678
+NULL,						// #679
+NULL,						// #680
+NULL,						// #681
+NULL,						// #682
+NULL,						// #683
+NULL,						// #684
+NULL,						// #685
+NULL,						// #686
+NULL,						// #687
+NULL,						// #688
+NULL,						// #689
+NULL,						// #690
+NULL,						// #691
+NULL,						// #692
+NULL,						// #693
+NULL,						// #694
+NULL,						// #695
+NULL,						// #696
+NULL,						// #697
+NULL,						// #698
+NULL,						// #699
+NULL,						// #700
+NULL,						// #701
+NULL,						// #702
+NULL,						// #703
+NULL,						// #704
+NULL,						// #705
+NULL,						// #706
+NULL,						// #707
+NULL,						// #708
+NULL,						// #709
+NULL,						// #710
+NULL,						// #711
+NULL,						// #712
+NULL,						// #713
+NULL,						// #714
+NULL,						// #715
+NULL,						// #716
+NULL,						// #717
+NULL,						// #718
+NULL,						// #719
+NULL,						// #720
+NULL,						// #721
+NULL,						// #722
+NULL,						// #723
+NULL,						// #724
+NULL,						// #725
+NULL,						// #726
+NULL,						// #727
+NULL,						// #728
+NULL,						// #729
+NULL,						// #730
+NULL,						// #731
+NULL,						// #732
+NULL,						// #733
+NULL,						// #734
+NULL,						// #735
+NULL,						// #736
+NULL,						// #737
+NULL,						// #738
+NULL,						// #739
+NULL,						// #740
+NULL,						// #741
+NULL,						// #742
+NULL,						// #743
+NULL,						// #744
+NULL,						// #745
+NULL,						// #746
+NULL,						// #747
+NULL,						// #748
+NULL,						// #749
+NULL
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

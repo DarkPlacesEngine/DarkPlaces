@@ -1602,6 +1602,113 @@ NULL,							// #640
 VM_M_crypto_getmyidstatus,				// #641 float(float i) crypto_getmyidstatus
 VM_coverage,						// #642
 VM_M_crypto_getidstatus,				// #643 float(string addr) crypto_getidstatus
+NULL,						// #644
+NULL,						// #645
+NULL,						// #646
+NULL,						// #647
+NULL,						// #648
+NULL,						// #649
+// WRATH range (#650-#???)
+VM_fcopy,					// #650 float(string fnfrom, string fnto) fcopy (EXT_WRATH)
+VM_frename,					// #651 float (string fnold, string fnnew) frename (EXT_WRATH)
+VM_fremove,					// #652 float (string fname) fremove (EXT_WRATH)
+VM_fexists,					// #653 float (string fname) fexists (EXT_WRATH)
+VM_rmtree,					// #654 float (string path) rmtree (EXT_WRATH)
+NULL,						// #655
+NULL,						// #656
+NULL,						// #657
+NULL,						// #658
+NULL,						// #659
+NULL,						// #660
+NULL,						// #661
+NULL,						// #662
+NULL,						// #663
+NULL,						// #664
+NULL,						// #665
+NULL,						// #666
+NULL,						// #667
+NULL,						// #668
+NULL,						// #669
+NULL,						// #670
+NULL,						// #671
+NULL,						// #672
+NULL,						// #673
+NULL,						// #674
+NULL,						// #675
+NULL,						// #676
+NULL,						// #677
+NULL,						// #678
+NULL,						// #679
+NULL,						// #680
+NULL,						// #681
+NULL,						// #682
+NULL,						// #683
+NULL,						// #684
+NULL,						// #685
+NULL,						// #686
+NULL,						// #687
+NULL,						// #688
+NULL,						// #689
+NULL,						// #690
+NULL,						// #691
+NULL,						// #692
+NULL,						// #693
+NULL,						// #694
+NULL,						// #695
+NULL,						// #696
+NULL,						// #697
+NULL,						// #698
+NULL,						// #699
+NULL,						// #700
+NULL,						// #701
+NULL,						// #702
+NULL,						// #703
+NULL,						// #704
+NULL,						// #705
+NULL,						// #706
+NULL,						// #707
+NULL,						// #708
+NULL,						// #709
+NULL,						// #710
+NULL,						// #711
+NULL,						// #712
+NULL,						// #713
+NULL,						// #714
+NULL,						// #715
+NULL,						// #716
+NULL,						// #717
+NULL,						// #718
+NULL,						// #719
+NULL,						// #720
+NULL,						// #721
+NULL,						// #722
+NULL,						// #723
+NULL,						// #724
+NULL,						// #725
+NULL,						// #726
+NULL,						// #727
+NULL,						// #728
+NULL,						// #729
+NULL,						// #730
+NULL,						// #731
+NULL,						// #732
+NULL,						// #733
+NULL,						// #734
+NULL,						// #735
+NULL,						// #736
+NULL,						// #737
+NULL,						// #738
+NULL,						// #739
+NULL,						// #740
+NULL,						// #741
+NULL,						// #742
+NULL,						// #743
+NULL,						// #744
+NULL,						// #745
+NULL,						// #746
+NULL,						// #747
+NULL,						// #748
+NULL,						// #749
 NULL
 };
 
