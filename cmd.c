@@ -397,6 +397,8 @@ void Cbuf_Frame(cmd_state_t *cmd)
 ==============================================================================
 */
 
+extern qboolean host_init;
+
 /*
 ===============
 Cmd_StuffCmds_f
@@ -412,6 +414,10 @@ static void Cmd_StuffCmds_f (cmd_state_t *cmd)
 	int		i, j, l;
 	// this is for all commandline options combined (and is bounds checked)
 	char	build[MAX_INPUTLINE];
+
+	// come back later so we don't crash
+	if(host_init)
+		return;
 
 	if (Cmd_Argc (cmd) != 1)
 	{
@@ -1439,11 +1445,22 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	count = 0;
 	for (cvar = cmd->cvars->vars; cvar; cvar = cvar->next)
 	{
-		if (!matchpattern_with_separator(cvar->name, partial, true, "", false))
-		if (!matchpattern_with_separator(cvar->description, partial, true, "", false))
-			continue;
-		Con_Printf ("cvar ^3%s^7 is \"%s\" [\"%s\"] %s\n", cvar->name, cvar->string, cvar->defstring, cvar->description);
-		count++;
+		if (matchpattern_with_separator(cvar->name, partial, true, "", false) ||
+		    matchpattern_with_separator(cvar->description, partial, true, "", false))
+		{
+			Con_Printf ("cvar ");
+			Cvar_PrintHelp(cvar, cvar->name, true);
+			count++;
+		}
+		for (int i = 0; i < cvar->aliasindex; i++)
+		{
+			if (matchpattern_with_separator(cvar->aliases[i], partial, true, "", false))
+			{
+				Con_Printf ("cvar ");
+				Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+				count++;
+			}
+		}
 	}
 	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
 	{
@@ -2018,8 +2035,6 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-extern hook_t *csqc_concmd;
-
 void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex)
 {
 	int oldpos;
@@ -2041,7 +2056,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp(cmd->argv[0], func->name))
 		{
-			if (func->csqcfunc && Hook_Call(csqc_concmd, text)->bval)	//[515]: csqc
+			if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
 				goto done;
 			break;
 		}

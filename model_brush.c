@@ -566,6 +566,8 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
 		surface = info->model->data_surfaces + *mark;
+		if(!surface->texture)
+			continue;
 		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
 			for (k = 0;k < surface->num_triangles;k++)
@@ -1242,6 +1244,8 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambie
 			surface = model->data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
+				if(!surface->texture)
+					continue;
 				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->lightmapinfo || !surface->lightmapinfo->samples)
 					continue;	// no lightmaps
 
@@ -1358,6 +1362,8 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	surface = model->data_surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surface++)
 	{
+		if(!surface->texture)
+			continue;
 		// skip surfaces whose bounding box does not include the point
 //		if (!BoxesOverlap(mid, mid, surface->mins, surface->maxs))
 //			continue;
@@ -1810,13 +1816,20 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		// LadyHavoc: backup the texture_t because q3 shader loading overwrites it
+		tx = loadmodel->data_textures + i;
+		// try to load shader or external textures, but first we have to backup the texture_t because shader loading overwrites it even if it fails
 		backuptex = loadmodel->data_textures[i];
-		if (name[0] && Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, name, false, false, 0, MATERIALFLAG_WALL))
+		if (name[0] && (Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s/%s", mapname, name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL) ||
+		                Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s"   , name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL)))
+		{
+			// set the width/height fields which are used for parsing texcoords in this bsp format
+			tx->width = mtwidth;
+			tx->height = mtheight;
 			continue;
+		}
+		// no luck with loading shaders or external textures - restore the in-progress texture loading
 		loadmodel->data_textures[i] = backuptex;
 
-		tx = loadmodel->data_textures + i;
 		strlcpy(tx->name, name, sizeof(tx->name));
 		tx->width = mtwidth;
 		tx->height = mtheight;
@@ -1859,8 +1872,26 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 		if (cls.state != ca_dedicated)
 		{
-			// LadyHavoc: HL sky textures are entirely different than quake
-			if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
+			// did not find external texture via shader loading, load it from the bsp or wad3
+			if (loadmodel->brush.ishlbsp)
+			{
+				// internal texture overrides wad
+				unsigned char* pixels, * freepixels;
+				pixels = freepixels = NULL;
+				if (mtdata)
+					pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
+				if (pixels == NULL)
+					pixels = freepixels = W_GetTextureBGRA(tx->name);
+				if (pixels != NULL)
+				{
+					tx->width = image_width;
+					tx->height = image_height;
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
+				}
+				if (freepixels)
+					Mem_Free(freepixels);
+			}
+			else if (!strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 			{
 				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
 				if (!data)
@@ -1873,41 +1904,9 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 				else if (mtdata != NULL)
 					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 			}
-			else
-			{
-				skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false);
-				if (!skinframe)
-					skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false);
-				if (skinframe)
-					tx->offsetmapping = OFFSETMAPPING_DEFAULT; // allow offsetmapping on external textures without a q3 shader
-				if (!skinframe)
-				{
-					// did not find external texture, load it from the bsp or wad3
-					if (loadmodel->brush.ishlbsp)
-					{
-						// internal texture overrides wad
-						unsigned char *pixels, *freepixels;
-						pixels = freepixels = NULL;
-						if (mtdata)
-							pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
-						if (pixels == NULL)
-							pixels = freepixels = W_GetTextureBGRA(tx->name);
-						if (pixels != NULL)
-						{
-							tx->width = image_width;
-							tx->height = image_height;
-							skinframe = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
-						}
-						if (freepixels)
-							Mem_Free(freepixels);
-					}
-					else if (mtdata) // texture included
-						skinframe = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
-				}
-				// if skinframe is still NULL the "missing" texture has already been assigned to this
-				if (skinframe)
-					tx->materialshaderpass->skinframes[0] = skinframe;
-			}
+			else if (mtdata) // texture included
+				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+			// if mtdata is NULL, the "missing" texture has already been assigned to this
 			// LadyHavoc: some Tenebrae textures get replaced by black
 			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
 				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
@@ -4129,7 +4128,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				mod->DrawSky = R_Q1BSP_DrawSky;
 
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
-				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+				if (surface->texture && surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 					break;
 			if (j < mod->nummodelsurfaces)
 				mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;

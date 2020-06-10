@@ -699,10 +699,10 @@ void VID_BuildJoyState(vid_joystate_t *joystate)
 		{
 			for (j = 0; j <= SDL_CONTROLLER_AXIS_MAX; ++j)
 			{
-				joystate->axis[j] = SDL_GameControllerGetAxis(vid_sdlgamecontroller, j) * (1.0f / 32767.0f);
+				joystate->axis[j] = SDL_GameControllerGetAxis(vid_sdlgamecontroller, (SDL_GameControllerAxis)j) * (1.0f / 32767.0f);
 			}
 			for (j = 0; j < SDL_CONTROLLER_BUTTON_MAX; ++j)
-				joystate->button[j] = SDL_GameControllerGetButton(vid_sdlgamecontroller, j);
+				joystate->button[j] = SDL_GameControllerGetButton(vid_sdlgamecontroller, (SDL_GameControllerButton)j);
 			// emulate joy buttons for trigger "axes"
 			joystate->button[SDL_CONTROLLER_BUTTON_MAX] = VID_JoyState_GetAxis(joystate, SDL_CONTROLLER_AXIS_TRIGGERLEFT, 1, joy_sdl2_trigger_deadzone.value) > 0.0f;
 			joystate->button[SDL_CONTROLLER_BUTTON_MAX+1] = VID_JoyState_GetAxis(joystate, SDL_CONTROLLER_AXIS_TRIGGERRIGHT, 1, joy_sdl2_trigger_deadzone.value) > 0.0f;

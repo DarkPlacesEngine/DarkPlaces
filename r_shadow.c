@@ -4102,17 +4102,17 @@ void R_Shadow_PrepareLights(void)
 			break;
 		}
 
-		if (r_shadow_prepass_width != vid.width || r_shadow_prepass_height != vid.height)
+		if (r_shadow_prepass_width != r_fb.screentexturewidth || r_shadow_prepass_height != r_fb.screentextureheight)
 		{
 			R_Shadow_FreeDeferred();
 
 			r_shadow_usingdeferredprepass = true;
-			r_shadow_prepass_width = vid.width;
-			r_shadow_prepass_height = vid.height;
-			r_shadow_prepassgeometrydepthbuffer = R_LoadTextureRenderBuffer(r_shadow_texturepool, "prepassgeometrydepthbuffer", vid.width, vid.height, TEXTYPE_DEPTHBUFFER24);
-			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER32F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
-			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", vid.width, vid.height, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepass_width = r_fb.screentexturewidth;
+			r_shadow_prepass_height = r_fb.screentextureheight;
+			r_shadow_prepassgeometrydepthbuffer = R_LoadTextureRenderBuffer(r_shadow_texturepool, "prepassgeometrydepthbuffer", r_fb.screentexturewidth, r_fb.screentextureheight, TEXTYPE_DEPTHBUFFER24);
+			r_shadow_prepassgeometrynormalmaptexture = R_LoadTexture2D(r_shadow_texturepool, "prepassgeometrynormalmap", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER32F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingdiffusetexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingdiffuse", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
+			r_shadow_prepasslightingspeculartexture = R_LoadTexture2D(r_shadow_texturepool, "prepasslightingspecular", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, TEXTYPE_COLORBUFFER16F, TEXF_RENDERTARGET | TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCENEAREST, -1, NULL);
 
 			// set up the geometry pass fbo (depth + normalmap)
 			r_shadow_prepassgeometryfbo = R_Mesh_CreateFramebufferObject(r_shadow_prepassgeometrydepthbuffer, r_shadow_prepassgeometrynormalmaptexture, NULL, NULL, NULL);
@@ -4663,10 +4663,7 @@ void R_Shadow_DrawCoronas(void)
 		rtlight = r_refdef.scene.lights[i];
 		if (rtlight->corona_visibility <= 0)
 			continue;
-		if (gl_flashblend.integer)
-			R_DrawCorona(rtlight, rtlight->corona, rtlight->radius * rtlight->coronasizescale * 2.0f);
-		else
-			R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
+		R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
 	}
 }
 
@@ -5419,7 +5416,7 @@ static void R_Shadow_EditLights_Edit_f(cmd_state_t *cmd)
 	VectorCopy(r_shadow_selectedlight->color, color);
 	radius = r_shadow_selectedlight->radius;
 	style = r_shadow_selectedlight->style;
-	if (r_shadow_selectedlight->cubemapname)
+	if (*r_shadow_selectedlight->cubemapname)
 		strlcpy(cubemapname, r_shadow_selectedlight->cubemapname, sizeof(cubemapname));
 	else
 		cubemapname[0] = 0;
@@ -5954,7 +5951,7 @@ static void R_Shadow_EditLights_CopyInfo_f(cmd_state_t *cmd)
 	VectorCopy(r_shadow_selectedlight->color, r_shadow_bufferlight.color);
 	r_shadow_bufferlight.radius = r_shadow_selectedlight->radius;
 	r_shadow_bufferlight.style = r_shadow_selectedlight->style;
-	if (r_shadow_selectedlight->cubemapname)
+	if (*r_shadow_selectedlight->cubemapname)
 		strlcpy(r_shadow_bufferlight.cubemapname, r_shadow_selectedlight->cubemapname, sizeof(r_shadow_bufferlight.cubemapname));
 	else
 		r_shadow_bufferlight.cubemapname[0] = 0;

@@ -3278,7 +3278,7 @@ static qboolean CL_ExaminePrintString(const char *text)
 	return true;
 }
 
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 extern cvar_t cl_lerpexcess;
 static void CL_NetworkTimeReceived(double newtime)
 {

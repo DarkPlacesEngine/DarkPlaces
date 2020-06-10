@@ -1165,11 +1165,10 @@ static void PRVM_ED_EdictGet_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) == 5)
 	{
 		cvar_t *cvar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 4), cmd->cvars_flagsmask);
-		if (cvar && cvar->flags & CVAR_READONLY)
-		{
-			Con_Printf("prvm_edictget: %s is read-only\n", cvar->name);
-			goto fail;
-		}
+		if (cvar)
+			if(Cvar_Readonly(cvar, "prvm_edictget"))
+				goto fail;
+
 		Cvar_Get(cmd->cvars, Cmd_Argv(cmd, 4), s, cmd->cvars_flagsmask, NULL);
 	}
 	else
@@ -1208,11 +1207,9 @@ static void PRVM_ED_GlobalGet_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) == 4)
 	{
 		cvar_t *cvar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 3), cmd->cvars_flagsmask);
-		if (cvar && cvar->flags & CVAR_READONLY)
-		{
-			Con_Printf("prvm_globalget: %s is read-only\n", cvar->name);
-			goto fail;
-		}
+		if (cvar)
+			if(Cvar_Readonly(cvar, "prvm_globalget"))
+				goto fail;
 		Cvar_Get(cmd->cvars, Cmd_Argv(cmd, 3), s, cmd->cvars_flagsmask, NULL);
 	}
 	else
@@ -3194,7 +3191,7 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 	for (i = prog->firstfreeknownstring;i < prog->numknownstrings;i++)
 		if (!prog->knownstrings[i])
 			break;
-	s = PRVM_Alloc(bufferlength);
+	s = (char *)PRVM_Alloc(bufferlength);
 	PRVM_NewKnownString(prog, i, KNOWNSTRINGFLAG_GCMARK, s);
 	if(prog->leaktest_active)
 		prog->knownstrings_origin[i] = PRVM_AllocationOrigin(prog);

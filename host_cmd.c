@@ -151,7 +151,7 @@ static void Host_Status_f(cmd_state_t *cmd)
 		if(sv_status_privacy.integer && cmd->source != src_command)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
-			strlcpy(ip, (client->netconnection && client->netconnection->address) ? client->netconnection->address : "botclient", 48);
+			strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
 
 		frags = client->frags;
 
@@ -327,6 +327,31 @@ static void Host_Ping_f(cmd_state_t *cmd)
 		if (!client->active)
 			continue;
 		print("%4i %s\n", bound(0, (int)floor(client->ping*1000+0.5), 9999), client->name);
+	}
+}
+
+// Disable cheats if sv_cheats is turned off
+static void Host_DisableCheats_c(char *value)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i = 0;
+
+	if (value[0] == '0' && !value[1])
+	{
+		while (svs.clients[i].edict)
+		{
+			if (((int)PRVM_serveredictfloat(svs.clients[i].edict, flags) & FL_GODMODE))
+				PRVM_serveredictfloat(svs.clients[i].edict, flags) = (int)PRVM_serveredictfloat(svs.clients[i].edict, flags) ^ FL_GODMODE;
+			if (((int)PRVM_serveredictfloat(svs.clients[i].edict, flags) & FL_NOTARGET))
+				PRVM_serveredictfloat(svs.clients[i].edict, flags) = (int)PRVM_serveredictfloat(svs.clients[i].edict, flags) ^ FL_NOTARGET;
+			if (PRVM_serveredictfloat(svs.clients[i].edict, movetype) == MOVETYPE_NOCLIP ||
+				PRVM_serveredictfloat(svs.clients[i].edict, movetype) == MOVETYPE_FLY)
+			{
+				noclip_anglehack = false;
+				PRVM_serveredictfloat(svs.clients[i].edict, movetype) = MOVETYPE_WALK;
+			}
+			i++;
+		}
 	}
 }
 
@@ -3020,6 +3045,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&skin);
 	Cvar_RegisterVariable(&noaim);
 	Cvar_RegisterVariable(&sv_cheats);
+	Cvar_RegisterCallback(&sv_cheats, Host_DisableCheats_c);
 	Cvar_RegisterVariable(&sv_adminnick);
 	Cvar_RegisterVariable(&sv_status_privacy);
 	Cvar_RegisterVariable(&sv_status_show_qcstatus);
@@ -3119,6 +3145,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(&cmd_client, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(&cmd_clientfromserver, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(&cmd_client, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
+	Cmd_AddCommand(&cmd_clientfromserver, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
 	Cmd_AddCommand(&cmd_client, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
 	Cmd_AddCommand(&cmd_client, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 

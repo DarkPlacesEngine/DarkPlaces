@@ -579,9 +579,6 @@ dp_model_t *Mod_FindName(const char *name, const char *parentname)
 	if (!parentname)
 		parentname = "";
 
-	// if we're not dedicatd, the renderer calls will crash without video
-	Host_StartVideo();
-
 	nummodels = (int)Mem_ExpandableArray_IndexRange(&models);
 
 	if (!name[0])
@@ -2866,6 +2863,8 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		if(!surface->texture)
+			continue;
 		t = (int)(surface->texture - mod->data_textures);
 		numsurfacesfortexture[t]++;
 	}
@@ -2878,6 +2877,8 @@ void Mod_MakeSortedSurfaces(dp_model_t *mod)
 	for (j = 0;j < mod->nummodelsurfaces;j++)
 	{
 		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
+		if (!surface->texture)
+			continue;
 		t = (int)(surface->texture - mod->data_textures);
 		mod->sortedmodelsurfaces[firstsurfacefortexture[t]++] = j + mod->firstmodelsurface;
 	}
@@ -4413,7 +4414,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 			mod->data_surfaces[i].texture = mod->data_textures + (mod->data_surfaces[i].texture - oldtextures);
 	}
 	t = &mod->data_textures[mod->num_textures++];
-	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, false, true, defaulttexflags, defaultmaterialflags);
+	Mod_LoadTextureFromQ3Shader(mod->mempool, mod->name, t, name, true, true, defaulttexflags, defaultmaterialflags);
 	t->mesh_drawflag = drawflag;
 	t->mesh_defaulttexflags = defaulttexflags;
 	t->mesh_defaultmaterialflags = defaultmaterialflags;

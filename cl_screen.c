@@ -1820,6 +1820,11 @@ static void R_Envmap_f(cmd_state_t *cmd)
 		return;
 	}
 
+	if(cls.state != ca_connected) {
+		Con_Printf("envmap: No map loaded\n");
+		return;
+	}
+
 	strlcpy (basename, Cmd_Argv(cmd, 1), sizeof (basename));
 	size = atoi(Cmd_Argv(cmd, 2));
 	if (size != 128 && size != 256 && size != 512 && size != 1024)

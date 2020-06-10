@@ -1581,7 +1581,7 @@ void M_Menu_Options_f(cmd_state_t *cmd)
 	m_entersound = true;
 }
 
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
 extern cvar_t r_textshadow;
@@ -1615,8 +1615,8 @@ static void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 	}
-	else if (options_cursor == optnum++) Cvar_SetValueQuick(&showfps, !showfps.integer);
-	else if (options_cursor == optnum++) {f = !(showdate.integer && showtime.integer);Cvar_SetValueQuick(&showdate, f);Cvar_SetValueQuick(&showtime, f);}
+	else if (options_cursor == optnum++) Cvar_SetValueQuick(&cl_showfps, !cl_showfps.integer);
+	else if (options_cursor == optnum++) {f = !(cl_showdate.integer && cl_showtime.integer);Cvar_SetValueQuick(&cl_showdate, f);Cvar_SetValueQuick(&cl_showtime, f);}
 	else if (options_cursor == optnum++) ;
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&r_hdr_scenebrightness, bound(1, r_hdr_scenebrightness.value + dir * 0.0625, 4));
 	else if (options_cursor == optnum++) Cvar_SetValueQuick(&v_contrast, bound(1, v_contrast.value + dir * 0.0625, 4));
@@ -1692,8 +1692,8 @@ static void M_Options_Draw (void)
 	M_Options_PrintCheckbox("          Invert Mouse", true, m_pitch.value < 0);
 	M_Options_PrintSlider(  "         Field of View", true, scr_fov.integer, 1, 170);
 	M_Options_PrintCheckbox("            Always Run", true, cl_forwardspeed.value > 200);
-	M_Options_PrintCheckbox("        Show Framerate", true, showfps.integer);
-	M_Options_PrintCheckbox("    Show Date and Time", true, showdate.integer && showtime.integer);
+	M_Options_PrintCheckbox("        Show Framerate", true, cl_showfps.integer);
+	M_Options_PrintCheckbox("    Show Date and Time", true, cl_showdate.integer && cl_showtime.integer);
 	M_Options_PrintCommand( "     Custom Brightness", true);
 	M_Options_PrintSlider(  "       Game Brightness", true, r_hdr_scenebrightness.value, 1, 4);
 	M_Options_PrintSlider(  "            Brightness", true, v_contrast.value, 1, 2);
