@@ -359,7 +359,7 @@ static void S_SoundInfo_f(cmd_state_t *cmd)
 	Con_Printf("%5u total_channels\n", total_channels);
 }
 
-void S_PauseSound_f(cmd_state_t *cmd)
+static void S_PauseSound_f(cmd_state_t *cmd)
 {
 	if( Cmd_Argc(cmd) != 2 ) {
 		Con_Print("pausesound <pause>\n");

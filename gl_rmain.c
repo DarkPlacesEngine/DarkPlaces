@@ -2951,6 +2951,7 @@ static int componentorder[4] = {0, 1, 2, 3};
 static rtexture_t *R_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize, forcefilter;
+	char name[256];
 	unsigned char *cubemappixels, *image_buffer;
 	rtexture_t *cubemaptexture;
 	// HACK: if the cubemap name starts with a !, the cubemap is nearest-filtered
@@ -2960,7 +2961,6 @@ static rtexture_t *R_LoadCubemap(const char *basename)
 		basename++;
 		forcefilter = TEXF_FORCENEAREST;
 	}
-	char name[256];
 	// must start 0 so the first loadimagepixels has no requested width/height
 	cubemapsize = 0;
 	cubemappixels = NULL;
