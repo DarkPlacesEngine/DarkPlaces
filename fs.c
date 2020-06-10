@@ -1797,33 +1797,36 @@ FS_Init_SelfPack
 */
 void FS_Init_SelfPack (void)
 {
+	char *buf;
+
 	PK3_OpenLibrary ();
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
 	// Load darkplaces.opt from the FS.
 	if (!COM_CheckParm("-noopt"))
 	{
-		char *buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
+		buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
 		if(buf)
+		{
 			COM_InsertFlags(buf);
-		Mem_Free(buf);
+			Mem_Free(buf);
+		}
 	}
 
 #ifndef USE_RWOPS
 	// Provide the SelfPack.
-	if (!COM_CheckParm("-noselfpack"))
+	if (!COM_CheckParm("-noselfpack") && com_selffd >= 0)
 	{
-		if (com_selffd >= 0)
+		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
+		if(fs_selfpack)
 		{
-			fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
-			if(fs_selfpack)
+			FS_AddSelfPack();
+			if (!COM_CheckParm("-noopt"))
 			{
-				FS_AddSelfPack();
-				if (!COM_CheckParm("-noopt"))
+				buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
+				if(buf)
 				{
-					char *buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
-					if(buf)
-						COM_InsertFlags(buf);
+					COM_InsertFlags(buf);
 					Mem_Free(buf);
 				}
 			}
