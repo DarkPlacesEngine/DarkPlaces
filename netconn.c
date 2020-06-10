@@ -85,9 +85,9 @@ cvar_t net_sourceaddresscheck = {CVAR_CLIENT, "net_sourceaddresscheck", "1", "co
 cvar_t hostname = {CVAR_SERVER | CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
 cvar_t developer_networking = {CVAR_CLIENT | CVAR_SERVER, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
-cvar_t cl_netlocalping = {CVAR_CLIENT, "cl_netlocalping","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
-static cvar_t cl_netpacketloss_send = {CVAR_CLIENT, "cl_netpacketloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
-static cvar_t cl_netpacketloss_receive = {CVAR_CLIENT, "cl_netpacketloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
+cvar_t net_fakelag = {CVAR_CLIENT, "net_fakelag","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
+static cvar_t net_fakeloss_send = {CVAR_CLIENT, "net_fakeloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
+static cvar_t net_fakeloss_receive = {CVAR_CLIENT, "net_fakeloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
 static cvar_t net_slist_queriespersecond = {CVAR_CLIENT, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
 static cvar_t net_slist_queriesperframe = {CVAR_CLIENT, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
 static cvar_t net_slist_timeout = {CVAR_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
@@ -618,9 +618,9 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 		Thread_UnlockMutex(netconn_mutex);
 	if (length == 0)
 		return 0;
-	if (cl_netpacketloss_receive.integer)
+	if (net_fakeloss_receive.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_receive.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < net_fakeloss_receive.integer)
 				return 0;
 	if (developer_networking.integer)
 	{
@@ -642,9 +642,9 @@ int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const l
 {
 	int ret;
 	int i;
-	if (cl_netpacketloss_send.integer)
+	if (net_fakeloss_send.integer)
 		for (i = 0;i < cl_numsockets;i++)
-			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_netpacketloss_send.integer)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < net_fakeloss_send.integer)
 				return length;
 	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
 		Thread_LockMutex(netconn_mutex);
@@ -2746,7 +2746,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 
 	t1 = (long) time(NULL);
 	t2 = strtol(s, NULL, 0);
-	if(abs(t1 - t2) > rcon_secure_maxdiff.integer)
+	if(labs(t1 - t2) > rcon_secure_maxdiff.integer)
 		return false;
 
 	if(!HMAC_MDFOUR_16BYTES((unsigned char *) mdfourbuf, (unsigned char *) s, slen, (unsigned char *) password, (int)strlen(password)))
@@ -3899,9 +3899,12 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_challengefloodblockingtimeout);
 	Cvar_RegisterVariable(&net_getstatusfloodblockingtimeout);
 	Cvar_RegisterVariable(&net_sourceaddresscheck);
-	Cvar_RegisterVariable(&cl_netlocalping);
-	Cvar_RegisterVariable(&cl_netpacketloss_send);
-	Cvar_RegisterVariable(&cl_netpacketloss_receive);
+	Cvar_RegisterVariable(&net_fakelag);
+	Cvar_RegisterVariable(&net_fakeloss_send);
+	Cvar_RegisterVariable(&net_fakeloss_receive);
+	Cvar_RegisterAlias(&net_fakelag, "cl_netlocalping");
+	Cvar_RegisterAlias(&net_fakeloss_send, "cl_netpacketloss_send");
+	Cvar_RegisterAlias(&net_fakeloss_receive, "cl_netpacketloss_receive");
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);

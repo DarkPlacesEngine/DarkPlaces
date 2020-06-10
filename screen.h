@@ -27,6 +27,7 @@ void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
 void SCR_BeginLoadingPlaque (qboolean startup);
+void SCR_EndLoadingPlaque (void);
 
 // invoke refresh of loading plaque (nothing else seen)
 void SCR_UpdateLoadingScreen(qboolean clear, qboolean startup);
@@ -43,9 +44,9 @@ extern int sb_lines;
 
 extern cvar_t scr_viewsize;
 extern cvar_t scr_fov;
-extern cvar_t showfps;
-extern cvar_t showtime;
-extern cvar_t showdate;
+extern cvar_t cl_showfps;
+extern cvar_t cl_showtime;
+extern cvar_t cl_showdate;
 
 extern cvar_t crosshair;
 extern cvar_t crosshair_size;

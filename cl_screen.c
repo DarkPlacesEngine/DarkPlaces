@@ -42,7 +42,7 @@ cvar_t scr_loadingscreen_background = {CVAR_CLIENT, "scr_loadingscreen_backgroun
 cvar_t scr_loadingscreen_scale = {CVAR_CLIENT, "scr_loadingscreen_scale","1", "scale factor of the background"};
 cvar_t scr_loadingscreen_scale_base = {CVAR_CLIENT, "scr_loadingscreen_scale_base","0", "0 = console pixels, 1 = video pixels"};
 cvar_t scr_loadingscreen_scale_limit = {CVAR_CLIENT, "scr_loadingscreen_scale_limit","0", "0 = no limit, 1 = until first edge hits screen edge, 2 = until last edge hits screen edge, 3 = until width hits screen width, 4 = until height hits screen height"};
-cvar_t scr_loadingscreen_picture = {CVAR_CLIENT | CVAR_SAVE, "scr_loadingscreen_picture", "gfx/loading", "picture shown during loading"};
+cvar_t scr_loadingscreen_picture = {CVAR_CLIENT, "scr_loadingscreen_picture", "gfx/loading", "picture shown during loading"};
 cvar_t scr_loadingscreen_count = {CVAR_CLIENT, "scr_loadingscreen_count","1", "number of loading screen files to use randomly (named loading.tga, loading2.tga, loading3.tga, ...)"};
 cvar_t scr_loadingscreen_firstforstartup = {CVAR_CLIENT, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
 cvar_t scr_loadingscreen_barcolor = {CVAR_CLIENT, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
@@ -1817,6 +1817,11 @@ static void R_Envmap_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 3)
 	{
 		Con_Print("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
+		return;
+	}
+
+	if(cls.state != ca_connected) {
+		Con_Printf("envmap: No map loaded\n");
 		return;
 	}
 

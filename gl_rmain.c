@@ -2074,7 +2074,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		if (r_glsl_permutation->loc_OffsetMapping_LodDistance >= 0) qglUniform1f(r_glsl_permutation->loc_OffsetMapping_LodDistance, r_glsl_offsetmapping_lod_distance.integer * r_refdef.view.quality);
 		if (r_glsl_permutation->loc_OffsetMapping_Bias >= 0) qglUniform1f(r_glsl_permutation->loc_OffsetMapping_Bias, t->offsetbias);
 		if (r_glsl_permutation->loc_ScreenToDepth >= 0) qglUniform2f(r_glsl_permutation->loc_ScreenToDepth, r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/r_fb.screentexturewidth, 1.0f/r_fb.screentextureheight);
 		if (r_glsl_permutation->loc_BounceGridMatrix >= 0) {Matrix4x4_Concat(&tempmatrix, &r_shadow_bouncegrid_state.matrix, &rsurface.matrix);Matrix4x4_ToArrayFloatGL(&tempmatrix, m16f);qglUniformMatrix4fv(r_glsl_permutation->loc_BounceGridMatrix, 1, false, m16f);}
 		if (r_glsl_permutation->loc_BounceGridIntensity >= 0) qglUniform1f(r_glsl_permutation->loc_BounceGridIntensity, r_shadow_bouncegrid_state.intensity*r_refdef.view.colorscale);
 		if (r_glsl_permutation->loc_LightGridMatrix >= 0 && r_refdef.scene.worldmodel)
@@ -2196,7 +2196,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 		if (r_glsl_permutation->loc_ShadowMap_Parameters      >= 0) qglUniform4f(       r_glsl_permutation->loc_ShadowMap_Parameters     , r_shadow_lightshadowmap_parameters[0], r_shadow_lightshadowmap_parameters[1], r_shadow_lightshadowmap_parameters[2], r_shadow_lightshadowmap_parameters[3]);
 		if (r_glsl_permutation->loc_SpecularPower             >= 0) qglUniform1f(       r_glsl_permutation->loc_SpecularPower            , (r_shadow_gloss.integer == 2 ? r_shadow_gloss2exponent.value : r_shadow_glossexponent.value) * (r_shadow_glossexact.integer ? 0.25f : 1.0f) - 1.0f);
 		if (r_glsl_permutation->loc_ScreenToDepth             >= 0) qglUniform2f(       r_glsl_permutation->loc_ScreenToDepth            , r_refdef.view.viewport.screentodepth[0], r_refdef.view.viewport.screentodepth[1]);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord     >= 0) qglUniform2f(       r_glsl_permutation->loc_PixelToScreenTexCoord    , 1.0f/r_fb.screentexturewidth, 1.0f/r_fb.screentextureheight);
 
 		if (r_glsl_permutation->tex_Texture_Attenuation       >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_Attenuation        , r_shadow_attenuationgradienttexture                 );
 		if (r_glsl_permutation->tex_Texture_ScreenNormalMap   >= 0) R_Mesh_TexBind(r_glsl_permutation->tex_Texture_ScreenNormalMap    , r_shadow_prepassgeometrynormalmaptexture            );
@@ -2989,6 +2989,7 @@ static int componentorder[4] = {0, 1, 2, 3};
 static rtexture_t *R_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize, forcefilter;
+	char name[256];
 	unsigned char *cubemappixels, *image_buffer;
 	rtexture_t *cubemaptexture;
 	// HACK: if the cubemap name starts with a !, the cubemap is nearest-filtered
@@ -2998,7 +2999,6 @@ static rtexture_t *R_LoadCubemap(const char *basename)
 		basename++;
 		forcefilter = TEXF_FORCENEAREST;
 	}
-	char name[256];
 	// must start 0 so the first loadimagepixels has no requested width/height
 	cubemapsize = 0;
 	cubemappixels = NULL;
@@ -4761,7 +4761,7 @@ static void R_Water_StartFrame(int viewwidth, int viewheight)
 {
 	int waterwidth, waterheight;
 
-	if (vid.width > (int)vid.maxtexturesize_2d || vid.height > (int)vid.maxtexturesize_2d)
+	if (viewwidth > (int)vid.maxtexturesize_2d || viewheight > (int)vid.maxtexturesize_2d)
 		return;
 
 	// set waterwidth and waterheight to the water resolution that will be
@@ -5229,9 +5229,9 @@ static void R_Bloom_StartFrame(void)
 
 	// set bloomwidth and bloomheight to the bloom resolution that will be
 	// used (often less than the screen resolution for faster rendering)
-	r_fb.bloomheight = bound(1, r_bloom_resolution.value * 0.75f, vid.height * 4);
-	r_fb.bloomwidth = r_fb.bloomheight * vid.width / vid.height;
-	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, vid.width * 4);
+	r_fb.bloomheight = bound(1, r_bloom_resolution.value * 0.75f, screentextureheight);
+	r_fb.bloomwidth = r_fb.bloomheight * screentexturewidth / screentextureheight;
+	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, screentexturewidth);
 	r_fb.bloomwidth = bound(1, r_fb.bloomwidth, (int)vid.maxtexturesize_2d);
 	r_fb.bloomheight = bound(1, r_fb.bloomheight, (int)vid.maxtexturesize_2d);
 
@@ -5509,7 +5509,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		if (r_glsl_permutation->loc_UserVec3                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec3          , uservecs[2][0], uservecs[2][1], uservecs[2][2], uservecs[2][3]);
 		if (r_glsl_permutation->loc_UserVec4                >= 0) qglUniform4f(r_glsl_permutation->loc_UserVec4          , uservecs[3][0], uservecs[3][1], uservecs[3][2], uservecs[3][3]);
 		if (r_glsl_permutation->loc_Saturation              >= 0) qglUniform1f(r_glsl_permutation->loc_Saturation        , r_glsl_saturation.value);
-		if (r_glsl_permutation->loc_PixelToScreenTexCoord   >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/vid.width, 1.0f/vid.height);
+		if (r_glsl_permutation->loc_PixelToScreenTexCoord   >= 0) qglUniform2f(r_glsl_permutation->loc_PixelToScreenTexCoord, 1.0f/r_fb.screentexturewidth, 1.0f/r_fb.screentextureheight);
 		if (r_glsl_permutation->loc_BloomColorSubtract      >= 0) qglUniform4f(r_glsl_permutation->loc_BloomColorSubtract   , r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, r_bloom_colorsubtract.value, 0.0f);
 		if (r_glsl_permutation->loc_ColorFringe             >= 0) qglUniform1f(r_glsl_permutation->loc_ColorFringe, r_colorfringe.value );
 		break;
@@ -8730,7 +8730,10 @@ void RSurf_SetupDepthAndCulling(void)
 
 static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
-	int i, j;
+	int j;
+	const float *v;
+	float p[3], mins[3], maxs[3];
+	int scissor[4];
 	// transparent sky would be ridiculous
 	if (rsurface.texture->currentmaterialflags & MATERIALFLAGMASK_DEPTHSORTED)
 		return;
@@ -8742,54 +8745,46 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 	// add the vertices of the surfaces to a world bounding box so we can scissor the sky render later
 	if (r_sky_scissor.integer)
 	{
-		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
-		for (i = 0; i < texturenumsurfaces; i++)
+		RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_NOGAPS, texturenumsurfaces, texturesurfacelist);
+		for (j = 0, v = rsurface.batchvertex3f + 3 * rsurface.batchfirstvertex; j < rsurface.batchnumvertices; j++, v += 3)
 		{
-			const msurface_t *surf = texturesurfacelist[i];
-			const float *v;
-			float p[3];
-			float mins[3], maxs[3];
-			int scissor[4];
-			for (j = 0, v = rsurface.batchvertex3f + 3 * surf->num_firstvertex; j < surf->num_vertices; j++, v += 3)
+			Matrix4x4_Transform(&rsurface.matrix, v, p);
+			if (j > 0)
 			{
-				Matrix4x4_Transform(&rsurface.matrix, v, p);
-				if (j > 0)
-				{
-					if (mins[0] > p[0]) mins[0] = p[0];
-					if (mins[1] > p[1]) mins[1] = p[1];
-					if (mins[2] > p[2]) mins[2] = p[2];
-					if (maxs[0] < p[0]) maxs[0] = p[0];
-					if (maxs[1] < p[1]) maxs[1] = p[1];
-					if (maxs[2] < p[2]) maxs[2] = p[2];
-				}
-				else
-				{
-					VectorCopy(p, mins);
-					VectorCopy(p, maxs);
-				}
+				if (mins[0] > p[0]) mins[0] = p[0];
+				if (mins[1] > p[1]) mins[1] = p[1];
+				if (mins[2] > p[2]) mins[2] = p[2];
+				if (maxs[0] < p[0]) maxs[0] = p[0];
+				if (maxs[1] < p[1]) maxs[1] = p[1];
+				if (maxs[2] < p[2]) maxs[2] = p[2];
 			}
-			if (!R_ScissorForBBox(mins, maxs, scissor))
+			else
 			{
-				if (skyscissor[2])
-				{
-					if (skyscissor[0] > scissor[0])
-					{
-						skyscissor[2] += skyscissor[0] - scissor[0];
-						skyscissor[0] = scissor[0];
-					}
-					if (skyscissor[1] > scissor[1])
-					{
-						skyscissor[3] += skyscissor[1] - scissor[1];
-						skyscissor[1] = scissor[1];
-					}
-					if (skyscissor[0] + skyscissor[2] < scissor[0] + scissor[2])
-						skyscissor[2] = scissor[0] + scissor[2] - skyscissor[0];
-					if (skyscissor[1] + skyscissor[3] < scissor[1] + scissor[3])
-						skyscissor[3] = scissor[1] + scissor[3] - skyscissor[1];
-				}
-				else
-					Vector4Copy(scissor, skyscissor);
+				VectorCopy(p, mins);
+				VectorCopy(p, maxs);
 			}
+		}
+		if (!R_ScissorForBBox(mins, maxs, scissor))
+		{
+			if (skyscissor[2])
+			{
+				if (skyscissor[0] > scissor[0])
+				{
+					skyscissor[2] += skyscissor[0] - scissor[0];
+					skyscissor[0] = scissor[0];
+				}
+				if (skyscissor[1] > scissor[1])
+				{
+					skyscissor[3] += skyscissor[1] - scissor[1];
+					skyscissor[1] = scissor[1];
+				}
+				if (skyscissor[0] + skyscissor[2] < scissor[0] + scissor[2])
+					skyscissor[2] = scissor[0] + scissor[2] - skyscissor[0];
+				if (skyscissor[1] + skyscissor[3] < scissor[1] + scissor[3])
+					skyscissor[3] = scissor[1] + scissor[3] - skyscissor[1];
+			}
+			else
+				Vector4Copy(scissor, skyscissor);
 		}
 	}
 

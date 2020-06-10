@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "libcurl.h"
 #include "snd_main.h"
+#include "cdaudio.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -2643,116 +2644,137 @@ CL_Init
 */
 void CL_Init (void)
 {
+	if (cls.state == ca_dedicated)
+	{
+		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+	}
+	else
+	{
+		Con_DPrintf("Initializing client\n");
 
-	cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
-	cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
+		R_Modules_Init();
+		Palette_Init();
+#ifdef CONFIG_MENU
+		MR_Init_Commands();
+#endif
+		VID_Shared_Init();
+		VID_Init();
+		Render_Init();
+		S_Init();
+		CDAudio_Init();
+		Key_Init();
 
-	memset(&r_refdef, 0, sizeof(r_refdef));
-	// max entities sent to renderer per frame
-	r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
-	r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-	// max temp entities
-	r_refdef.scene.maxtempentities = MAX_TEMPENTITIES;
-	r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
+		cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
+		cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
 
-	CL_InitInput ();
+		memset(&r_refdef, 0, sizeof(r_refdef));
+		// max entities sent to renderer per frame
+		r_refdef.scene.maxentities = MAX_EDICTS + 256 + 512;
+		r_refdef.scene.entities = (entity_render_t **)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t *) * r_refdef.scene.maxentities);
 
-//
-// register our commands
-//
-	Cvar_RegisterVariable (&cl_upspeed);
-	Cvar_RegisterVariable (&cl_forwardspeed);
-	Cvar_RegisterVariable (&cl_backspeed);
-	Cvar_RegisterVariable (&cl_sidespeed);
-	Cvar_RegisterVariable (&cl_movespeedkey);
-	Cvar_RegisterVariable (&cl_yawspeed);
-	Cvar_RegisterVariable (&cl_pitchspeed);
-	Cvar_RegisterVariable (&cl_anglespeedkey);
-	Cvar_RegisterVariable (&cl_shownet);
-	Cvar_RegisterVariable (&cl_nolerp);
-	Cvar_RegisterVariable (&cl_lerpexcess);
-	Cvar_RegisterVariable (&cl_lerpanim_maxdelta_server);
-	Cvar_RegisterVariable (&cl_lerpanim_maxdelta_framegroups);
-	Cvar_RegisterVariable (&cl_deathfade);
-	Cvar_RegisterVariable (&lookspring);
-	Cvar_RegisterVariable (&lookstrafe);
-	Cvar_RegisterVariable (&sensitivity);
-	Cvar_RegisterVariable (&freelook);
+		// max temp entities
+		r_refdef.scene.maxtempentities = MAX_TEMPENTITIES;
+		r_refdef.scene.tempentities = (entity_render_t *)Mem_Alloc(cls.permanentmempool, sizeof(entity_render_t) * r_refdef.scene.maxtempentities);
 
-	Cvar_RegisterVariable (&m_pitch);
-	Cvar_RegisterVariable (&m_yaw);
-	Cvar_RegisterVariable (&m_forward);
-	Cvar_RegisterVariable (&m_side);
+		CL_InitInput ();
 
-	Cvar_RegisterVariable (&cl_itembobspeed);
-	Cvar_RegisterVariable (&cl_itembobheight);
+	//
+	// register our commands
+	//
+		Cvar_RegisterVariable (&cl_upspeed);
+		Cvar_RegisterVariable (&cl_forwardspeed);
+		Cvar_RegisterVariable (&cl_backspeed);
+		Cvar_RegisterVariable (&cl_sidespeed);
+		Cvar_RegisterVariable (&cl_movespeedkey);
+		Cvar_RegisterVariable (&cl_yawspeed);
+		Cvar_RegisterVariable (&cl_pitchspeed);
+		Cvar_RegisterVariable (&cl_anglespeedkey);
+		Cvar_RegisterVariable (&cl_shownet);
+		Cvar_RegisterVariable (&cl_nolerp);
+		Cvar_RegisterVariable (&cl_lerpexcess);
+		Cvar_RegisterVariable (&cl_lerpanim_maxdelta_server);
+		Cvar_RegisterVariable (&cl_lerpanim_maxdelta_framegroups);
+		Cvar_RegisterVariable (&cl_deathfade);
+		Cvar_RegisterVariable (&lookspring);
+		Cvar_RegisterVariable (&lookstrafe);
+		Cvar_RegisterVariable (&sensitivity);
+		Cvar_RegisterVariable (&freelook);
 
-	Cmd_AddCommand(&cmd_client, "entities", CL_PrintEntities_f, "print information on network entities known to client");
-	Cmd_AddCommand(&cmd_client, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-	Cmd_AddCommand(&cmd_client, "record", CL_Record_f, "record a demo");
-	Cmd_AddCommand(&cmd_client, "stop", CL_Stop_f, "stop recording or playing a demo");
-	Cmd_AddCommand(&cmd_client, "playdemo", CL_PlayDemo_f, "watch a demo file");
-	Cmd_AddCommand(&cmd_client, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+		Cvar_RegisterVariable (&m_pitch);
+		Cvar_RegisterVariable (&m_yaw);
+		Cvar_RegisterVariable (&m_forward);
+		Cvar_RegisterVariable (&m_side);
 
-	// Support Client-side Model Index List
-	Cmd_AddCommand(&cmd_client, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
-	// Support Client-side Sound Index List
-	Cmd_AddCommand(&cmd_client, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
+		Cvar_RegisterVariable (&cl_itembobspeed);
+		Cvar_RegisterVariable (&cl_itembobheight);
 
-	Cvar_RegisterVariable (&cl_autodemo);
-	Cvar_RegisterVariable (&cl_autodemo_nameformat);
-	Cvar_RegisterVariable (&cl_autodemo_delete);
+		Cmd_AddCommand(&cmd_client, "entities", CL_PrintEntities_f, "print information on network entities known to client");
+		Cmd_AddCommand(&cmd_client, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(&cmd_client, "record", CL_Record_f, "record a demo");
+		Cmd_AddCommand(&cmd_client, "stop", CL_Stop_f, "stop recording or playing a demo");
+		Cmd_AddCommand(&cmd_client, "playdemo", CL_PlayDemo_f, "watch a demo file");
+		Cmd_AddCommand(&cmd_client, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
-	Cmd_AddCommand(&cmd_client, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
-	Cmd_AddCommand(&cmd_client, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
+		// Support Client-side Model Index List
+		Cmd_AddCommand(&cmd_client, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
+		// Support Client-side Sound Index List
+		Cmd_AddCommand(&cmd_client, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
-	// LadyHavoc: added pausedemo
-	Cmd_AddCommand(&cmd_client, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+		Cvar_RegisterVariable (&cl_autodemo);
+		Cvar_RegisterVariable (&cl_autodemo_nameformat);
+		Cvar_RegisterVariable (&cl_autodemo_delete);
 
-	Cmd_AddCommand(&cmd_client, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
+		Cmd_AddCommand(&cmd_client, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+		Cmd_AddCommand(&cmd_client, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
-	Cvar_RegisterVariable(&r_draweffects);
-	Cvar_RegisterVariable(&cl_explosions_alpha_start);
-	Cvar_RegisterVariable(&cl_explosions_alpha_end);
-	Cvar_RegisterVariable(&cl_explosions_size_start);
-	Cvar_RegisterVariable(&cl_explosions_size_end);
-	Cvar_RegisterVariable(&cl_explosions_lifetime);
-	Cvar_RegisterVariable(&cl_stainmaps);
-	Cvar_RegisterVariable(&cl_stainmaps_clearonload);
-	Cvar_RegisterVariable(&cl_beams_polygons);
-	Cvar_RegisterVariable(&cl_beams_quakepositionhack);
-	Cvar_RegisterVariable(&cl_beams_instantaimhack);
-	Cvar_RegisterVariable(&cl_beams_lightatend);
-	Cvar_RegisterVariable(&cl_noplayershadow);
-	Cvar_RegisterVariable(&cl_dlights_decayradius);
-	Cvar_RegisterVariable(&cl_dlights_decaybrightness);
+		// LadyHavoc: added pausedemo
+		Cmd_AddCommand(&cmd_client, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 
-	Cvar_RegisterVariable(&cl_prydoncursor);
-	Cvar_RegisterVariable(&cl_prydoncursor_notrace);
+		Cmd_AddCommand(&cmd_client, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
-	Cvar_RegisterVariable(&cl_deathnoviewmodel);
+		Cvar_RegisterVariable(&r_draweffects);
+		Cvar_RegisterVariable(&cl_explosions_alpha_start);
+		Cvar_RegisterVariable(&cl_explosions_alpha_end);
+		Cvar_RegisterVariable(&cl_explosions_size_start);
+		Cvar_RegisterVariable(&cl_explosions_size_end);
+		Cvar_RegisterVariable(&cl_explosions_lifetime);
+		Cvar_RegisterVariable(&cl_stainmaps);
+		Cvar_RegisterVariable(&cl_stainmaps_clearonload);
+		Cvar_RegisterVariable(&cl_beams_polygons);
+		Cvar_RegisterVariable(&cl_beams_quakepositionhack);
+		Cvar_RegisterVariable(&cl_beams_instantaimhack);
+		Cvar_RegisterVariable(&cl_beams_lightatend);
+		Cvar_RegisterVariable(&cl_noplayershadow);
+		Cvar_RegisterVariable(&cl_dlights_decayradius);
+		Cvar_RegisterVariable(&cl_dlights_decaybrightness);
 
-	// for QW connections
-	Cvar_RegisterVariable(&qport);
-	Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
+		Cvar_RegisterVariable(&cl_prydoncursor);
+		Cvar_RegisterVariable(&cl_prydoncursor_notrace);
 
-	Cmd_AddCommand(&cmd_client, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+		Cvar_RegisterVariable(&cl_deathnoviewmodel);
 
-	Cvar_RegisterVariable(&cl_locs_enable);
-	Cvar_RegisterVariable(&cl_locs_show);
-	Cmd_AddCommand(&cmd_client, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
-	Cmd_AddCommand(&cmd_client, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
-	Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
-	Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
-	Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+		// for QW connections
+		Cvar_RegisterVariable(&qport);
+		Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
-	Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
+		Cmd_AddCommand(&cmd_client, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
-	CL_Parse_Init();
-	CL_Particles_Init();
-	CL_Screen_Init();
-	CL_MeshEntities_Init();
+		Cvar_RegisterVariable(&cl_locs_enable);
+		Cvar_RegisterVariable(&cl_locs_show);
+		Cmd_AddCommand(&cmd_client, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+		Cmd_AddCommand(&cmd_client, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+		Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+		Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+		Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
-	CL_Video_Init();
+		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
+
+		CL_Parse_Init();
+		CL_Particles_Init();
+		CL_Screen_Init();
+		CL_MeshEntities_Init();
+
+		CL_Video_Init();
+	}
 }

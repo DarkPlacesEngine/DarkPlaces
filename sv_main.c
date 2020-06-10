@@ -47,7 +47,7 @@ cvar_t pausable = {CVAR_SERVER, "pausable","1", "allow players to pause or not (
 cvar_t pr_checkextension = {CVAR_SERVER | CVAR_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
 cvar_t samelevel = {CVAR_SERVER | CVAR_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
 cvar_t skill = {CVAR_SERVER, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
-cvar_t slowmo = {CVAR_CLIENT | CVAR_SERVER, "slowmo", "1.0", "controls game speed, 0.5 is half speed, 2 is double speed"};
+cvar_t host_timescale = {CVAR_CLIENT | CVAR_SERVER, "host_timescale", "1.0", "controls game speed, 0.5 is half speed, 2 is double speed"};
 
 cvar_t sv_accelerate = {CVAR_SERVER, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
 cvar_t sv_aim = {CVAR_SERVER | CVAR_SAVE, "sv_aim", "2", "maximum cosine angle for quake's vertical autoaim, a value above 1 completely disables the autoaim, quake used 0.93"};
@@ -204,7 +204,7 @@ server_static_t svs;
 
 mempool_t *sv_mempool = NULL;
 
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 extern float		scr_centertime_off;
 
 // MUST match effectnameindex_t in client.h
@@ -413,7 +413,14 @@ prvm_required_field_t sv_reqglobals[] =
 #undef PRVM_DECLARE_function
 };
 
+static void Host_Timescale_c(char *string)
+{
+	double value;
+	value = atof(string);
 
+	if(value < 0.00001 && value != 0)
+		string[0] = '0', string[1] = 0;
+}
 
 //============================================================================
 
@@ -447,7 +454,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_usedemoprogs);
 
 	Cmd_AddCommand(&cmd_server, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
+	Cmd_AddCommand(&cmd_client, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
 	Cmd_AddCommand(&cmd_server, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
+	Cmd_AddCommand(&cmd_client, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
 	Cmd_AddCommand(&cmd_serverfromclient, "sv_startdownload", SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
 	Cmd_AddCommand(&cmd_serverfromclient, "download", SV_Download_f, "downloads a specified file from the server");
 	Cmd_AddCommand(&cmd_client, "sv_startdownload", Cmd_ForwardToServer_f, "begins sending a file to the client (network protocol use only)");
@@ -464,7 +473,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&pr_checkextension);
 	Cvar_RegisterVariable (&samelevel);
 	Cvar_RegisterVariable (&skill);
-	Cvar_RegisterVariable (&slowmo);
+	Cvar_RegisterVariable (&host_timescale);
+	Cvar_RegisterCallback (&host_timescale, Host_Timescale_c);
+	Cvar_RegisterAlias (&host_timescale, "slowmo");
+	Cvar_RegisterAlias (&host_timescale, "timescale");
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_airaccel_qw);
@@ -2115,7 +2127,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		| (sv_gameplayfix_gravityunaffectedbyticrate.integer ? MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE : 0)
 	;
 	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
-	statsf[STAT_MOVEVARS_TIMESCALE] = slowmo.value;
+	statsf[STAT_MOVEVARS_TIMESCALE] = host_timescale.value;
 	statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;
 	statsf[STAT_MOVEVARS_STOPSPEED] = sv_stopspeed.value;
 	statsf[STAT_MOVEVARS_MAXSPEED] = sv_maxspeed.value;
@@ -4030,7 +4042,7 @@ static int SV_ThreadFunc(void *voiddata)
 
 			// only advance time if not paused
 			// the game also pauses in singleplayer when menu or console is used
-			sv.frametime = advancetime * slowmo.value;
+			sv.frametime = advancetime * host_timescale.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
 			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))

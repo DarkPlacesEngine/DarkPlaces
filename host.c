@@ -47,6 +47,9 @@ Memory is cleared / released when a server or client begins, not when they end.
 // how many frames have occurred
 // (checked by Host_Error and Host_SaveConfig_f)
 int host_framecount = 0;
+
+// Cloudwalk: set when Host_Init is executed
+qboolean host_init = false;
 // LadyHavoc: set when quit is executed
 qboolean host_shuttingdown = false;
 
@@ -328,6 +331,7 @@ static void Host_AddConfigText(cmd_state_t *cmd)
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
+	Cbuf_Execute(cmd);
 }
 
 /*
@@ -743,8 +747,6 @@ void Host_Main(void)
 			}
 		}
 
-		if (slowmo.value < 0.00001 && slowmo.value != 0)
-			Cvar_SetValueQuick(&slowmo, 0);
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValueQuick(&host_framerate, 0);
 
@@ -879,8 +881,8 @@ void Host_Main(void)
 				framelimit = cl_maxphysicsframesperserverframe.integer;
 				aborttime = Sys_DirtyTime() + 0.1;
 			}
-			if(slowmo.value > 0 && slowmo.value < 1)
-				advancetime = min(advancetime, 0.1 / slowmo.value);
+			if(host_timescale.value > 0 && host_timescale.value < 1)
+				advancetime = min(advancetime, 0.1 / host_timescale.value);
 			else
 				advancetime = min(advancetime, 0.1);
 
@@ -897,7 +899,7 @@ void Host_Main(void)
 
 			// only advance time if not paused
 			// the game also pauses in singleplayer when menu or console is used
-			sv.frametime = advancetime * slowmo.value;
+			sv.frametime = advancetime * host_timescale.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
 			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
@@ -978,7 +980,7 @@ void Host_Main(void)
 			// scale playback speed of demos by slowmo cvar
 			if (cls.demoplayback)
 			{
-				clframetime *= slowmo.value;
+				clframetime *= host_timescale.value;
 				// if demo playback is paused, don't advance time at all
 				if (cls.demopaused)
 					clframetime = 0;
@@ -1108,17 +1110,21 @@ static qboolean locksession_run = false;
 static void Host_InitSession(void)
 {
 	int i;
+	char *buf;
 	Cvar_RegisterVariable(&sessionid);
 	Cvar_RegisterVariable(&locksession);
 
 	// load the session ID into the read-only cvar
 	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < com_argc))
 	{
-		char vabuf[1024];
 		if(com_argv[i+1][0] == '.')
 			Cvar_SetQuick(&sessionid, com_argv[i+1]);
 		else
-			Cvar_SetQuick(&sessionid, va(vabuf, sizeof(vabuf), ".%s", com_argv[i+1]));
+		{
+			buf = (char *)Z_Malloc(strlen(com_argv[i+1]) + 2);
+			dpsnprintf(buf, sizeof(buf), ".%s", com_argv[i+1]);
+			Cvar_SetQuick(&sessionid, buf);
+		}
 	}
 }
 void Host_LockSession(void)
@@ -1162,8 +1168,6 @@ void Host_UnlockSession(void)
 	}
 }
 
-extern hook_t *csqc_concmd;
-
 /*
 ====================
 Host_Init
@@ -1176,6 +1180,8 @@ static void Host_Init (void)
 	char vabuf[1024];
 	qboolean dedicated_server = COM_CheckParm("-dedicated") || !cl_available;
 	cmd_state_t *cmd = &cmd_client;
+
+	host_init = true;
 
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -1231,8 +1237,6 @@ static void Host_Init (void)
 	// initialize memory subsystem cvars/commands
 	Memory_Init_Commands();
 
-	Hook_Init();
-	csqc_concmd = Hook_Register(csqc_concmd,CL_VM_ConsoleCommand,1);
 	// initialize console and logging and its cvars/commands
 	Con_Init();
 
@@ -1289,28 +1293,7 @@ static void Host_Init (void)
 	Thread_Init();
 	TaskQueue_Init();
 
-	if (cls.state == ca_dedicated)
-	{
-		cmd = &cmd_server;
-		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-	}
-	else
-	{
-		Con_DPrintf("Initializing client\n");
-
-		R_Modules_Init();
-		Palette_Init();
-#ifdef CONFIG_MENU
-		MR_Init_Commands();
-#endif
-		VID_Shared_Init();
-		VID_Init();
-		Render_Init();
-		S_Init();
-		CDAudio_Init();
-		Key_Init();
-		CL_Init();
-	}
+	CL_Init();
 
 	// save off current state of aliases, commands and cvars for later restore if FS_GameDir_f is called
 	// NOTE: menu commands are freed by Cmd_RestoreInitState
@@ -1325,14 +1308,21 @@ static void Host_Init (void)
 	}
 
 	Host_AddConfigText(cmd);
-	Cbuf_Execute(cmd);
 
-	// if stuffcmds wasn't run, then quake.rc is probably missing, use default
-	if (!host_stuffcmdsrun)
+	Host_StartVideo();
+
+	// if quake.rc is missing, use default
+	if (!FS_FileExists("quake.rc"))
 	{
-		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\nstuffcmds\n");
+		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
 		Cbuf_Execute(cmd);
 	}
+
+	host_init = false;
+
+	// run stuffcmds now, deferred previously because it can crash if a server starts that early
+	Cbuf_AddText(cmd,"stuffcmds\n");
+	Cbuf_Execute(cmd);
 
 	Log_Start();
 	

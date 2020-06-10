@@ -1474,7 +1474,7 @@ static void CL_ClientMovement_PlayerMove(cl_clientmovement_state_t *s)
 		CL_ClientMovement_Physics_Walk(s);
 }
 
-extern cvar_t slowmo;
+extern cvar_t host_timescale;
 void CL_UpdateMoveVars(void)
 {
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
@@ -1521,8 +1521,8 @@ void CL_UpdateMoveVars(void)
 	else
 	{
 		cl.moveflags = 0;
-		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : slowmo.value) / bound(1.0f, cl_netfps.value, 1000.0f);
-		cl.movevars_timescale = (cls.demoplayback ? 1.0f : slowmo.value);
+		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : host_timescale.value) / bound(1.0f, cl_netfps.value, 1000.0f);
+		cl.movevars_timescale = (cls.demoplayback ? 1.0f : host_timescale.value);
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
 		cl.movevars_maxspeed = cl_movement_maxspeed.value;

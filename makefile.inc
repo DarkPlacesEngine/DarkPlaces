@@ -22,7 +22,11 @@ CC?=gcc
 # Experimental
 #CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
 # Normal
-CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
+ifeq ($(CC), clang)
+	CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-trapping-math
+else
+	CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
+endif
 # NOTE: *never* *ever* use the -ffast-math or -funsafe-math-optimizations flag
 # Also, since gcc 5, -ffinite-math-only makes NaN and zero compare equal inside engine code but not inside QC, which causes error spam for seemingly valid QC code like if (x != 0) return 1 / x;
 
@@ -107,7 +111,6 @@ OBJ_COMMON= \
 	gl_rsurf.o \
 	gl_textures.o \
 	hmac.o \
-	hook.o \
 	host.o \
 	host_cmd.o \
 	image.o \
@@ -135,7 +138,6 @@ OBJ_COMMON= \
 	prvm_edict.o \
 	prvm_exec.o \
 	r_explosion.o \
-	r_lerpanim.o \
 	r_lightning.o \
 	r_modules.o \
 	r_shadow.o \
