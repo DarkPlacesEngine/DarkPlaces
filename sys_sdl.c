@@ -173,7 +173,7 @@ char *Sys_GetClipboardData (void)
 	cliptext = SDL_GetClipboardText();
 	if (cliptext != NULL) {
 		size_t allocsize;
-		allocsize = strlen(cliptext) + 1;
+		allocsize = min(MAX_INPUTLINE, strlen(cliptext) + 1);
 		data = (char *)Z_Malloc (allocsize);
 		strlcpy (data, cliptext, allocsize);
 		SDL_free(cliptext);
