@@ -6494,7 +6494,7 @@ void VM_callfunction(prvm_prog_t *prog)
 	func = PRVM_ED_FindFunction(prog, s);
 
 	if(!func)
-		prog->error_cmd("VM_callfunciton: function %s not found !", s);
+		prog->error_cmd("VM_callfunction: function %s not found !", s);
 	else if (func->first_statement < 0)
 	{
 		// negative statements are built in functions
