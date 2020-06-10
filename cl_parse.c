@@ -331,7 +331,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 	{
 		if(cls.state != ca_dedicated)
 		{
-			if(countdownupdate <= 0) // check if time stepped backwards
+			if(countdownupdate <= 0 || gamemode == GAME_WRATH) // check if time stepped backwards
 			{
 				SCR_UpdateLoadingScreenIfShown();
 				countdownupdate = 2;
@@ -484,6 +484,7 @@ static void CL_SetupWorldModel(void)
 		strlcpy(cl.worldname, cl.worldmodel->name, sizeof(cl.worldname));
 		FS_StripExtension(cl.worldname, cl.worldnamenoextension, sizeof(cl.worldnamenoextension));
 		strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/", 5) ? cl.worldnamenoextension + 5 : cl.worldnamenoextension, sizeof(cl.worldbasename));
+		SCR_SetLoadingSplash(cl.worldbasename); // set the loading splash once we know the map name for sure
 		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
 		Cvar_SetQuick(&cl_worldname, cl.worldname);
 		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
@@ -1350,7 +1351,8 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 		// finished loading sounds
 	}
 
-	SCR_PopLoadingScreen(false);
+	if (gamemode != GAME_WRATH) // this will be done after the "press any key" screen
+		SCR_ClearLoadingScreen(false);
 
 	if (!cl.loadfinished)
 	{
@@ -1659,6 +1661,17 @@ static void CL_SignonReply (void)
 		Con_ClearNotify();
 		if (COM_CheckParm("-profilegameonly"))
 			Sys_AllowProfiling(true);
+		
+		if (gamemode == GAME_WRATH)
+		{
+			// HACK: pause the game and display "loading ended, press any key" screen
+			SCR_ClearLoadingScreen(false);
+			if (cl.islocalgame)
+			{
+				SCR_PushLoadingScreen("$", 1);
+				sv.paused = true;
+			}
+		}
 		break;
 	}
 }
@@ -1685,6 +1698,7 @@ static void CL_ParseServerInfo (void)
 	// if server is active, we already began a loading plaque
 	if (!sv.active)
 	{
+		SCR_SetLoadingSplash(NULL);	
 		SCR_BeginLoadingPlaque(false);
 		S_StopAllSounds();
 		// free q3 shaders so that any newly downloaded shaders will be active

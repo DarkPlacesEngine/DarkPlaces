@@ -1432,6 +1432,12 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 			in_windowmouse_y = vid_height.value / 2.f;
 		}
 
+		// TODO: a more fine-grained calculation
+		if (((float)vid.mode.width / (float)vid.mode.height) > 1.501f)
+				Cvar_SetQuick(&scr_aspectname, "16-9");
+		else
+				Cvar_SetQuick(&scr_aspectname, "4-3");
+
 		return true;
 	}
 	else
@@ -1465,6 +1471,7 @@ void VID_Restart_f(cmd_state_t *cmd)
 
 	if (!vid_opened)
 	{
+		SCR_SetLoadingSplash(NULL);	
 		SCR_BeginLoadingPlaque(false);
 		return;
 	}

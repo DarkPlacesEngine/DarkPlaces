@@ -53,6 +53,7 @@ cvar_t vid_conwidthauto = {CVAR_CLIENT | CVAR_SAVE, "vid_conwidthauto", "1", "au
 cvar_t vid_conwidth = {CVAR_CLIENT | CVAR_SAVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
 cvar_t vid_conheight = {CVAR_CLIENT | CVAR_SAVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
 cvar_t vid_pixelheight = {CVAR_CLIENT | CVAR_SAVE, "vid_pixelheight", "1", "adjusts vertical field of vision to account for non-square pixels (1280x1024 on a CRT monitor for example)"};
+cvar_t scr_aspectname = {CVAR_CLIENT, "scr_aspectname", "16-9", "string name for the current aspect ratio; use a dash instead of a colon, e. g. 16-9"};
 cvar_t scr_screenshot_jpeg = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_jpeg","1", "save jpeg instead of targa"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9", "image quality of saved jpeg"};
 cvar_t scr_screenshot_png = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_png","0", "save png instead of targa"};
@@ -2415,8 +2416,11 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y, float size
 		len = strlen(s->msg);
 		x = (vid_conwidth.integer - DrawQ_TextWidth(s->msg, len, size, size, true, FONT_INFOBAR)) / 2;
 		y -= size;
-		DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 1, 0);
-		DrawQ_String(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+		if (gamemode != GAME_WRATH)
+		{
+			DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 1, 0);
+			DrawQ_String(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
+		}
 		total += size;
 	}
 #endif
@@ -2429,7 +2433,7 @@ static void SCR_DrawLoadingStack(void)
 	float colors[16];
 
 	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer, scr_loadingscreen_barheight.value);
-	if(loadingscreenstack)
+	if(gamemode != GAME_WRATH && loadingscreenstack)
 	{
 		// height = 32; // sorry, using the actual one is ugly
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -2465,8 +2469,47 @@ static void SCR_DrawLoadingStack(void)
 }
 
 static cachepic_t *loadingscreenpic;
+static cachepic_t *loadingscreenind;
 static float loadingscreenpic_vertex3f[12];
 static float loadingscreenpic_texcoord2f[8];
+static float loadingscreenind_vertex3f[12];
+static float loadingscreenind_texcoord2f[8];
+static float loadingscreenind_angle;
+static float loadingscreenind_pos[2];
+static qboolean loadingscreenind_show;
+
+void SCR_SetLoadingSplash (const char *mapname)
+{
+	char vabuf[1024] = { 0 };
+
+	if (gamemode != GAME_WRATH)
+		return; // let god sort em out
+
+	// if we're connecting somewhere, the mapname is unknown until the server sends it to us,
+	// so the pic is set once we get the server info,
+	// otherwise the appropriate function just calls this with a known mapname.
+	// to reset to black screen, just call this with NULL mapname
+
+	if (mapname && mapname[0]) {
+		// try the current aspect ratio
+		dpsnprintf(vabuf, sizeof(vabuf), "gfx/splashes/%s_%s", mapname, scr_aspectname.string);
+		if (!Draw_PicExists(vabuf)) {
+			// try the default aspect ratio (16:9)
+			dpsnprintf(vabuf, sizeof(vabuf), "gfx/splashes/%s_16-9", mapname);
+			if (!Draw_PicExists(vabuf)) {
+				// try without aspect ratio
+				dpsnprintf(vabuf, sizeof(vabuf), "gfx/splashes/%s", mapname);
+				if (!Draw_PicExists(vabuf))
+					vabuf[0] = 0; // give up
+			}
+		}
+	}
+
+	if (!vabuf[0])
+		strlcpy(vabuf, "gfx/splashes/_blank", sizeof(vabuf));
+
+	Cvar_SetQuick(&scr_loadingscreen_picture, vabuf);
+}
 
 static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 {
@@ -2488,59 +2531,103 @@ static void SCR_DrawLoadingScreen_SharedSetup (qboolean clear)
 	R_Textures_Frame();
 	R_Mesh_Start();
 	R_EntityMatrix(&identitymatrix);
-	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
-
-	w = Draw_GetPicWidth(loadingscreenpic);
-	h = Draw_GetPicHeight(loadingscreenpic);
-
-	// apply scale
-	w *= scr_loadingscreen_scale.value;
-	h *= scr_loadingscreen_scale.value;
-
-	// apply scale base
-	if(scr_loadingscreen_scale_base.integer)
+	
+	if (gamemode == GAME_WRATH)
 	{
-		w *= vid_conwidth.integer / (float) vid.width;
-		h *= vid_conheight.integer / (float) vid.height;
-	}
+		// setup the splash
+		loadingscreenpic = Draw_CachePic_Flags(scr_loadingscreen_picture.string, 0);
+		loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
+		loadingscreenpic_vertex3f[0] = loadingscreenpic_vertex3f[9] = 0;
+		loadingscreenpic_vertex3f[1] = loadingscreenpic_vertex3f[4] = 0;
+		loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = vid_conwidth.integer;
+		loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = vid_conheight.integer;
+		loadingscreenpic_texcoord2f[0] = 0;loadingscreenpic_texcoord2f[1] = 0;
+		loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
+		loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
+		loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
+    
+		// spinning circle/arrow thing
+		if (SCR_LoadingScreenWaiting())
+		{
+			loadingscreenind = loadingscreenind_show ? Draw_CachePic_Flags ("gfx/splashes/arrow", 0) : NULL;
+			loadingscreenind_angle = 0.f;
+		}
+		else
+		{
+			loadingscreenind = Draw_CachePic_Flags ("gfx/splashes/loading_ring", 0);
+		}
 
-	// apply scale limit
-	sw = w / vid_conwidth.integer;
-	sh = h / vid_conheight.integer;
-	f = 1;
-	switch(scr_loadingscreen_scale_limit.integer)
-	{
-		case 1:
-			f = max(sw, sh);
-			break;
-		case 2:
-			f = min(sw, sh);
-			break;
-		case 3:
-			f = sw;
-			break;
-		case 4:
-			f = sh;
-			break;
+		if (loadingscreenind)
+		{
+			loadingscreenind_pos[0] = vid_conwidth.integer - 20;
+			loadingscreenind_pos[1] = vid_conheight.integer - 20;
+			loadingscreenind_vertex3f[2] = loadingscreenind_vertex3f[5] = loadingscreenind_vertex3f[8] = loadingscreenind_vertex3f[11] = 0;
+			loadingscreenind_vertex3f[0] = loadingscreenind_vertex3f[9] = -Draw_GetPicWidth(loadingscreenind) / 2;
+			loadingscreenind_vertex3f[1] = loadingscreenind_vertex3f[4] = -Draw_GetPicHeight(loadingscreenind) / 2;
+			loadingscreenind_vertex3f[3] = loadingscreenind_vertex3f[6] = Draw_GetPicWidth(loadingscreenind) / 2;
+			loadingscreenind_vertex3f[7] = loadingscreenind_vertex3f[10] = Draw_GetPicHeight(loadingscreenind) / 2;
+			loadingscreenind_texcoord2f[0] = 0;loadingscreenind_texcoord2f[1] = 0;
+			loadingscreenind_texcoord2f[2] = 1;loadingscreenind_texcoord2f[3] = 0;
+			loadingscreenind_texcoord2f[4] = 1;loadingscreenind_texcoord2f[5] = 1;
+			loadingscreenind_texcoord2f[6] = 0;loadingscreenind_texcoord2f[7] = 1;
+		}
 	}
-	if(f > 1)
+	else
 	{
-		w /= f;
-		h /= f;
-	}
+		// draw the loading plaque
+		loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
-	x = (vid_conwidth.integer - w)/2;
-	y = (vid_conheight.integer - h)/2;
-	loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
-	loadingscreenpic_vertex3f[0] = loadingscreenpic_vertex3f[9] = x;
-	loadingscreenpic_vertex3f[1] = loadingscreenpic_vertex3f[4] = y;
-	loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = x + w;
-	loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = y + h;
-	loadingscreenpic_texcoord2f[0] = 0;loadingscreenpic_texcoord2f[1] = 0;
-	loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
-	loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
-	loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
+		w = Draw_GetPicWidth(loadingscreenpic);
+		h = Draw_GetPicHeight(loadingscreenpic);
+
+		// apply scale
+		w *= scr_loadingscreen_scale.value;
+		h *= scr_loadingscreen_scale.value;
+
+		// apply scale base
+		if(scr_loadingscreen_scale_base.integer)
+		{
+			w *= vid_conwidth.integer / (float) vid.width;
+			h *= vid_conheight.integer / (float) vid.height;
+		}
+
+		// apply scale limit
+		sw = w / vid_conwidth.integer;
+		sh = h / vid_conheight.integer;
+		f = 1;
+		switch(scr_loadingscreen_scale_limit.integer)
+		{
+			case 1:
+				f = max(sw, sh);
+				break;
+			case 2:
+				f = min(sw, sh);
+				break;
+			case 3:
+				f = sw;
+				break;
+			case 4:
+				f = sh;
+				break;
+		}
+		if(f > 1)
+		{
+			w /= f;
+			h /= f;
+		}
+
+		x = (vid_conwidth.integer - w)/2;
+		y = (vid_conheight.integer - h)/2;
+		loadingscreenpic_vertex3f[2] = loadingscreenpic_vertex3f[5] = loadingscreenpic_vertex3f[8] = loadingscreenpic_vertex3f[11] = 0;
+		loadingscreenpic_vertex3f[0] = loadingscreenpic_vertex3f[9] = x;
+		loadingscreenpic_vertex3f[1] = loadingscreenpic_vertex3f[4] = y;
+		loadingscreenpic_vertex3f[3] = loadingscreenpic_vertex3f[6] = x + w;
+		loadingscreenpic_vertex3f[7] = loadingscreenpic_vertex3f[10] = y + h;
+		loadingscreenpic_texcoord2f[0] = 0;loadingscreenpic_texcoord2f[1] = 0;
+		loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
+		loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
+		loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
+	}
 }
 
 static void SCR_DrawLoadingScreen (void)
@@ -2652,6 +2739,11 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 	Key_EventQueue_Block(); Sys_SendKeyEvents();
 	key_dest = old_key_dest;
 	key_consoleactive = old_key_consoleactive;
+}
+
+qboolean SCR_LoadingScreenWaiting(void)
+{
+	return cl.islocalgame && (loadingscreenstack && loadingscreenstack->msg[0] == '$' && loadingscreenstack->msg[1] == '\0');
 }
 
 qboolean R_Stereo_ColorMasking(void)

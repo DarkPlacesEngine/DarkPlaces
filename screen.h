@@ -26,6 +26,8 @@ void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
+void SCR_SetLoadingSplash (const char *mapname);
+
 void SCR_BeginLoadingPlaque (qboolean startup);
 void SCR_EndLoadingPlaque (void);
 
@@ -37,6 +39,9 @@ void SCR_UpdateLoadingScreenIfShown(void);
 void SCR_PushLoadingScreen (const char *msg, float len_in_parent);
 void SCR_PopLoadingScreen (qboolean redraw);
 void SCR_ClearLoadingScreen (qboolean redraw);
+
+// returns true if the loading screen is waiting for a key press
+qboolean SCR_LoadingScreenWaiting(void);
 
 extern float scr_con_current; // current height of displayed console
 
@@ -63,6 +68,8 @@ extern cvar_t scr_conscroll3_x;
 extern cvar_t scr_conscroll3_y;
 extern cvar_t scr_conbrightness;
 extern cvar_t r_letterbox;
+
+extern cvar_t scr_aspectname;
 
 extern cvar_t scr_refresh;
 extern cvar_t scr_stipple;

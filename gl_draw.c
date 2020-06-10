@@ -323,6 +323,17 @@ void Draw_FreePic(const char *picname)
 	}
 }
 
+qboolean Draw_PicExists(const char *name) {
+	char vabuf[1024] = { 0 };
+	const char *checkfmt[] = { "%s.tga", "%s.png", "%s.jpg", "%s.pcx" };
+	int i;
+	// TODO: actually use the gfx format list for this
+	for (i = 0; i < sizeof(checkfmt) / sizeof(checkfmt[0]); ++i)
+		if (FS_FileExists(va(vabuf, sizeof(vabuf), checkfmt[i], name)))
+			return true;
+	return false;
+}
+
 static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
 void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset)

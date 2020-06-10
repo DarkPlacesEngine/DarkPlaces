@@ -695,6 +695,30 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "csqc_polygons_defaultmaterial_nocullface 1\n"
 				);
 			break;
+		case GAME_WRATH:
+			Cbuf_InsertText(cmd, "\n"
+"sv_gameplayfix_blowupfallenzombies 1\n"
+"sv_gameplayfix_findradiusdistancetobox 1\n"
+"sv_gameplayfix_grenadebouncedownslopes 1\n"
+"sv_gameplayfix_slidemoveprojectiles 1\n"
+"sv_gameplayfix_upwardvelocityclearsongroundflag 1\n"
+"sv_gameplayfix_setmodelrealbox 1\n"
+"sv_gameplayfix_droptofloorstartsolid 1\n"
+"sv_gameplayfix_droptofloorstartsolid_nudgetocorrect 1\n"
+"sv_gameplayfix_noairborncorpse 1\n"
+"sv_gameplayfix_noairborncorpse_allowsuspendeditems 0\n"
+"sv_gameplayfix_easierwaterjump 1\n"
+"sv_gameplayfix_delayprojectiles 1\n"
+"sv_gameplayfix_multiplethinksperframe 1\n"
+"sv_gameplayfix_fixedcheckwatertransition 1\n"
+"sv_gameplayfix_q1bsptracelinereportstexture 1\n"
+"sv_gameplayfix_swiminbmodels 1\n"
+"sv_gameplayfix_downtracesupportsongroundflag 0\n"
+"sv_gameplayfix_stepmultipletimes 1\n"
+"sv_gameplayfix_nogravityonground 1\n"
+"sys_ticrate 0.01388889\n"
+				);
+			break;
 		default:
 			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 1\n"

@@ -47,6 +47,7 @@ cachepic_t *Draw_CachePic (const char *path); // standard function with no optio
 cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned char *pixels, textype_t textype, int texflags);
 // free the texture memory used by a pic (the cachepic_t itself is eternal)
 void Draw_FreePic(const char *picname);
+qboolean Draw_PicExists(const char *picname);
 
 // a triangle mesh..
 // each vertex is 3 floats

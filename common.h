@@ -298,6 +298,7 @@ typedef enum gamemode_e
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
 	GAME_VORETOURNAMENT,
+	GAME_WRATH,
 	GAME_COUNT
 }
 gamemode_t;

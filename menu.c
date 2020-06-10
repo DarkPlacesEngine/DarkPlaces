@@ -2451,6 +2451,36 @@ static const char *goodvsbad2bindnames[][2] =
 {"+movedown",		"swim down"}
 };
 
+static const char *wrathbindnames[][2] =
+{
+{"+attack", 		"primary fire"},
+{"+button3", 		"secondary fire"},
+{"impulse 10", 		"next weapon"},
+{"impulse 12", 		"previous weapon"},
+{"impulse 15", 		"use artifact"},
+{"+button6", 		"artifact inventory"},
+{"+jump", 			"jump / swim up"},
+{"+forward", 		"walk forward"},
+{"+back", 			"backpedal"},
+{"+left", 			"turn left"},
+{"+right", 			"turn right"},
+{"+speed", 			"walk"},
+{"+button4", 			"crouch"},
+{"+button5", 			"use"},
+{"+moveleft", 		"step left"},
+{"+moveright", 		"step right"},
+{"+moveup",			"swim up"},
+{"+movedown",		"swim down"},
+{"impulse 35", 			"toggle journal"},
+// guns
+{"impulse 1", 		"select gauntlet"},
+{"impulse 2", 		"select coachgun"},
+{"impulse 3", 		"select shotgun"},
+{"impulse 4", 		"select fang spitter"},
+{"impulse 5", 		"select retcher"},
+{"impulse 6", 		"select slag cannon"}
+};
+
 static int numcommands;
 static const char *(*bindnames)[2];
 
@@ -2563,6 +2593,11 @@ void M_Menu_Keys_f(cmd_state_t *cmd)
 	{
 		numcommands = sizeof(goodvsbad2bindnames) / sizeof(goodvsbad2bindnames[0]);
 		bindnames = goodvsbad2bindnames;
+	}
+	else if (gamemode == GAME_WRATH)
+	{
+		numcommands = sizeof(wrathbindnames) / sizeof(wrathbindnames[0]);
+		bindnames = wrathbindnames;
 	}
 	else
 	{

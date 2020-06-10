@@ -1795,9 +1795,21 @@ Key_Event (int key, int ascii, qboolean down)
 	qboolean q;
 	keydest_t keydest = key_dest;
 	char vabuf[1024];
+	long curtime;
+	static long pausetime = 0; // HACK: prevent double unpause	
 
 	if (key < 0 || key >= MAX_KEYS)
 		return;
+
+	// HACK: allow unpause by any key for the "press any key" screen
+	if (SCR_LoadingScreenWaiting() && sv.paused && down && (curtime = Sys_DirtyTime()) > pausetime)
+	{
+		key_consoleactive &= ~KEY_CONSOLEACTIVE_USER; // close the console if opened
+		Cbuf_InsertText(cmd,"pause\n"); // unpause
+		SCR_ClearLoadingScreen(false);
+		pausetime = curtime + 2;
+		return; // eat the key
+	}
 
 	if(events_blocked)
 	{

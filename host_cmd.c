@@ -382,6 +382,8 @@ static void Host_Map_f(cmd_state_t *cmd)
 		return;
 	}
 
+	SCR_SetLoadingSplash(NULL); // clear splash
+
 	// GAME_DELUXEQUAKE - clear warpmark (used by QC)
 	if (gamemode == GAME_DELUXEQUAKE)
 		Cvar_Set(&cvars_all, "warpmark", "");
@@ -435,6 +437,8 @@ static void Host_Changelevel_f(cmd_state_t *cmd)
 		return;
 	}
 
+	SCR_SetLoadingSplash(NULL); // clear splash
+
 #ifdef CONFIG_MENU
 	// remove menu
 	if (key_dest == key_menu || key_dest == key_menu_grabbed)
@@ -470,6 +474,8 @@ static void Host_Restart_f(cmd_state_t *cmd)
 		Con_Print("Only the server may restart\n");
 		return;
 	}
+
+	SCR_SetLoadingSplash(NULL); // clear splash
 
 #ifdef CONFIG_MENU
 	// remove menu
@@ -800,6 +806,8 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 		Con_Print("load <savename> : load a game\n");
 		return;
 	}
+
+	SCR_SetLoadingSplash(NULL); // clear splash
 
 	strlcpy (filename, Cmd_Argv(cmd, 1), sizeof(filename));
 	FS_DefaultExtension (filename, ".sav", sizeof (filename));
