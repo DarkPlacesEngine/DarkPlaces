@@ -671,6 +671,16 @@ Key_ClearEditLine (int edit_line)
 	key_linepos = 1;
 }
 
+// key modifier states
+#define KM_NONE           (!keydown[K_CTRL] && !keydown[K_SHIFT] && !keydown[K_ALT])
+#define KM_CTRL_SHIFT_ALT ( keydown[K_CTRL] &&  keydown[K_SHIFT] &&  keydown[K_ALT])
+#define KM_CTRL_SHIFT     ( keydown[K_CTRL] &&  keydown[K_SHIFT] && !keydown[K_ALT])
+#define KM_CTRL_ALT       ( keydown[K_CTRL] && !keydown[K_SHIFT] &&  keydown[K_ALT])
+#define KM_SHIFT_ALT      (!keydown[K_CTRL] &&  keydown[K_SHIFT] &&  keydown[K_ALT])
+#define KM_CTRL           ( keydown[K_CTRL] && !keydown[K_SHIFT] && !keydown[K_ALT])
+#define KM_SHIFT          (!keydown[K_CTRL] &&  keydown[K_SHIFT] && !keydown[K_ALT])
+#define KM_ALT            (!keydown[K_CTRL] && !keydown[K_SHIFT] &&  keydown[K_ALT])
+
 /*
 ====================
 Interactive line editing and console scrollback
@@ -682,51 +692,30 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 	// LadyHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
 	{
-	case K_KP_SLASH:
-		key = '/';
-		break;
-	case K_KP_MINUS:
-		key = '-';
-		break;
-	case K_KP_PLUS:
-		key = '+';
-		break;
-	case K_KP_HOME:
-		key = '7';
-		break;
-	case K_KP_UPARROW:
-		key = '8';
-		break;
-	case K_KP_PGUP:
-		key = '9';
-		break;
-	case K_KP_LEFTARROW:
-		key = '4';
-		break;
-	case K_KP_5:
-		key = '5';
-		break;
-	case K_KP_RIGHTARROW:
-		key = '6';
-		break;
-	case K_KP_END:
-		key = '1';
-		break;
-	case K_KP_DOWNARROW:
-		key = '2';
-		break;
-	case K_KP_PGDN:
-		key = '3';
-		break;
-	case K_KP_INS:
-		key = '0';
-		break;
-	case K_KP_DEL:
-		key = '.';
-		break;
+		case K_KP_SLASH:      key = '/'; break;
+		case K_KP_MINUS:      key = '-'; break;
+		case K_KP_PLUS:       key = '+'; break;
+		case K_KP_HOME:       key = '7'; break;
+		case K_KP_UPARROW:    key = '8'; break;
+		case K_KP_PGUP:       key = '9'; break;
+		case K_KP_LEFTARROW:  key = '4'; break;
+		case K_KP_5:          key = '5'; break;
+		case K_KP_RIGHTARROW: key = '6'; break;
+		case K_KP_END:        key = '1'; break;
+		case K_KP_DOWNARROW:  key = '2'; break;
+		case K_KP_PGDN:       key = '3'; break;
+		case K_KP_INS:        key = '0'; break;
+		case K_KP_DEL:        key = '.'; break;
 	}
 
-	if ((key == 'v' && keydown[K_CTRL]) || ((key == K_INS || key == K_KP_INS) && keydown[K_SHIFT]))
+	// Forbid Ctrl Alt shortcuts since on Windows they are used to type some characters
+	// in certain non-English keyboards using the AltGr key (which emulates Ctrl Alt)
+	// Reference: "Why Ctrl+Alt shouldn't be used as a shortcut modifier"
+	//            https://blogs.msdn.microsoft.com/oldnewthing/20040329-00/?p=40003
+	if (keydown[K_CTRL] && keydown[K_ALT])
+		goto add_char;
+
+	if ((key == 'v' && KM_CTRL) || ((key == K_INS || key == K_KP_INS) && KM_SHIFT))
 	{
 		char *cbd, *p;
 		if ((cbd = Sys_GetClipboardData()) != 0)
@@ -763,13 +752,13 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		return;
 	}
 
-	if (key == 'l' && keydown[K_CTRL])
+	if (key == 'l' && KM_CTRL)
 	{
 		Cbuf_AddText (cmd, "clear\n");
 		return;
 	}
 
-	if (key == 'u' && keydown[K_CTRL]) // like vi/readline ^u: delete currently edited line
+	if (key == 'u' && KM_CTRL) // like vi/readline ^u: delete currently edited line
 	{
 		// clear line
 		key_line[0] = ']';
@@ -778,7 +767,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		return;
 	}
 
-	if (key == 'q' && keydown[K_CTRL]) // like zsh ^q: push line to history, don't execute, and clear
+	if (key == 'q' && KM_CTRL) // like zsh ^q: push line to history, don't execute, and clear
 	{
 		// clear line
 		Key_History_Push();
@@ -788,7 +777,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		return;
 	}
 
-	if (key == K_ENTER || key == K_KP_ENTER)
+	if ((key == K_ENTER || key == K_KP_ENTER) && KM_NONE)
 	{
 		Cbuf_AddText (cmd, key_line+1);	// skip the ]
 		Cbuf_AddText (cmd, "\n");
@@ -804,7 +793,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 
 	if (key == K_TAB)
 	{
-		if(keydown[K_CTRL]) // append to the cvar its value
+		if (KM_CTRL) // append the cvar value to the cvar name
 		{
 			int		cvar_len, cvar_str_len, chars_to_move;
 			char	k;
@@ -855,11 +844,15 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 				Con_Printf("Couldn't append cvar value, edit line too long.\n");
 			return;
 		}
-		// Enhanced command completion
-		// by EvilTypeGuy eviltypeguy@qeradiant.com
-		// Thanks to Fett, Taniwha
-		Con_CompleteCommandLine(cmd);
-		return;
+
+		if (KM_NONE)
+		{
+			// Enhanced command completion
+			// by EvilTypeGuy eviltypeguy@qeradiant.com
+			// Thanks to Fett, Taniwha
+			Con_CompleteCommandLine(cmd);
+			return;
+		}
 	}
 
 	// Advanced Console Editing by Radix radix@planetquake.com
@@ -870,12 +863,12 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 	// move cursor to the previous character
 	if (key == K_LEFTARROW || key == K_KP_LEFTARROW)
 	{
-		if (key_linepos < 2)
-			return;
-		if(keydown[K_CTRL]) // move cursor to the previous word
+		if(KM_CTRL) // move cursor to the previous word
 		{
 			int		pos;
 			char	k;
+			if (key_linepos < 2)
+				return;
 			pos = key_linepos-1;
 
 			if(pos) // skip all "; ' after the word
@@ -894,11 +887,15 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 						break;
 				}
 			key_linepos = pos + 1;
+			return;
 		}
-		else if(keydown[K_SHIFT]) // move cursor to the previous character ignoring colors
+
+		if(KM_SHIFT) // move cursor to the previous character ignoring colors
 		{
 			int		pos;
 			size_t          inchar = 0;
+			if (key_linepos < 2)
+				return;
 			pos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
 			while (pos)
 				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
@@ -916,16 +913,20 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 			// we need to move to the beginning of the character when in a wide character:
 			u8_charidx(key_line, pos + 1, &inchar);
 			key_linepos = (int)(pos + 1 - inchar);
+			return;
 		}
-		else
+
+		if(KM_NONE)
 		{
+			if (key_linepos < 2)
+				return;
 			key_linepos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
+			return;
 		}
-		return;
 	}
 
 	// delete char before cursor
-	if (key == K_BACKSPACE || (key == 'h' && keydown[K_CTRL]))
+	if ((key == K_BACKSPACE && KM_NONE) || (key == 'h' && KM_CTRL))
 	{
 		if (key_linepos > 1)
 		{
@@ -937,7 +938,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 	}
 
 	// delete char on cursor
-	if (key == K_DEL || key == K_KP_DEL)
+	if ((key == K_DEL || key == K_KP_DEL) && KM_NONE)
 	{
 		size_t linelen;
 		linelen = strlen(key_line);
@@ -950,13 +951,13 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 	// move cursor to the next character
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
 	{
-		if (key_linepos >= (int)strlen(key_line))
-			return;
-		if(keydown[K_CTRL]) // move cursor to the next word
+		if (KM_CTRL) // move cursor to the next word
 		{
 			int		pos, len;
 			char	k;
 			len = (int)strlen(key_line);
+			if (key_linepos >= len)
+				return;
 			pos = key_linepos;
 
 			while(++pos < len)
@@ -974,11 +975,15 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 						break;
 				}
 			key_linepos = pos;
+			return;
 		}
-		else if(keydown[K_SHIFT]) // move cursor to the next character ignoring colors
+
+		if (KM_SHIFT) // move cursor to the next character ignoring colors
 		{
 			int		pos, len;
 			len = (int)strlen(key_line);
+			if (key_linepos >= len)
+				return;
 			pos = key_linepos;
 			
 			// go beyond all initial consecutive color tags, if any
@@ -1010,13 +1015,19 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 						break;
 				}
 			key_linepos = pos;
+			return;
 		}
-		else
+
+		if (KM_NONE)
+		{
+			if (key_linepos >= (int)strlen(key_line))
+				return;
 			key_linepos += (int)u8_bytelen(key_line + key_linepos, 1);
-		return;
+			return;
+		}
 	}
 
-	if (key == K_INS || key == K_KP_INS) // toggle insert mode
+	if ((key == K_INS || key == K_KP_INS) && KM_NONE) // toggle insert mode
 	{
 		key_insert ^= 1;
 		return;
@@ -1024,13 +1035,13 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 
 	// End Advanced Console Editing
 
-	if (key == K_UPARROW || key == K_KP_UPARROW || (key == 'p' && keydown[K_CTRL]))
+	if (((key == K_UPARROW || key == K_KP_UPARROW) && KM_NONE) || (key == 'p' && KM_CTRL))
 	{
 		Key_History_Up();
 		return;
 	}
 
-	if (key == K_DOWNARROW || key == K_KP_DOWNARROW || (key == 'n' && keydown[K_CTRL]))
+	if (((key == K_DOWNARROW || key == K_KP_DOWNARROW) && KM_NONE) || (key == 'n' && KM_CTRL))
 	{
 		Key_History_Down();
 		return;
@@ -1039,7 +1050,7 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 	if (keydown[K_CTRL])
 	{
 		// prints all the matching commands
-		if (key == 'f')
+		if (key == 'f' && KM_CTRL)
 		{
 			Key_History_Find_All();
 			return;
@@ -1047,21 +1058,24 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		// Search forwards/backwards, pointing the history's index to the
 		// matching command but without fetching it to let one continue the search.
 		// To fetch it, it suffices to just press UP or DOWN.
-		if (key == 'r')
+		if (key == 'r' && KM_CTRL_SHIFT)
 		{
-			if (keydown[K_SHIFT])
-				Key_History_Find_Forwards();
-			else
-				Key_History_Find_Backwards();
+			Key_History_Find_Forwards();
 			return;
 		}
+		if (key == 'r' && KM_CTRL)
+		{
+			Key_History_Find_Backwards();
+			return;
+		}
+
 		// go to the last/first command of the history
-		if (key == ',')
+		if (key == ',' && KM_CTRL)
 		{
 			Key_History_First();
 			return;
 		}
-		if (key == '.')
+		if (key == '.' && KM_CTRL)
 		{
 			Key_History_Last();
 			return;
@@ -1070,66 +1084,88 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 
 	if (key == K_PGUP || key == K_KP_PGUP)
 	{
-		if(keydown[K_CTRL])
+		if (KM_CTRL)
 		{
 			con_backscroll += ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			return;
 		}
-		else
+		if (KM_NONE)
+		{
 			con_backscroll += ((vid_conheight.integer >> 1) / con_textsize.integer)-3;
-		return;
+			return;
+		}
 	}
 
 	if (key == K_PGDN || key == K_KP_PGDN)
 	{
-		if(keydown[K_CTRL])
+		if (KM_CTRL)
 		{
 			con_backscroll -= ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
+			return;
 		}
-		else
+		if (KM_NONE)
+		{
 			con_backscroll -= ((vid_conheight.integer >> 1) / con_textsize.integer)-3;
-		return;
+			return;
+		}
 	}
- 
+
 	if (key == K_MWHEELUP)
 	{
-		if(keydown[K_CTRL])
+		if (KM_CTRL)
+		{
 			con_backscroll += 1;
-		else if(keydown[K_SHIFT])
+			return;
+		}
+		if (KM_SHIFT)
+		{
 			con_backscroll += ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
-		else
+			return;
+		}
+		if (KM_NONE)
+		{
 			con_backscroll += 5;
-		return;
+			return;
+		}
 	}
 
 	if (key == K_MWHEELDOWN)
 	{
-		if(keydown[K_CTRL])
+		if (KM_CTRL)
+		{
 			con_backscroll -= 1;
-		else if(keydown[K_SHIFT])
+			return;
+		}
+		if (KM_SHIFT)
+		{
 			con_backscroll -= ((vid_conheight.integer >> 2) / con_textsize.integer)-1;
-		else
+			return;
+		}
+		if (KM_NONE)
+		{
 			con_backscroll -= 5;
-		return;
+			return;
+		}
 	}
 
 	if (keydown[K_CTRL])
 	{
 		// text zoom in
-		if (key == '+' || key == K_KP_PLUS)
+		if ((key == '+' || key == K_KP_PLUS) && KM_CTRL)
 		{
 			if (con_textsize.integer < 128)
 				Cvar_SetValueQuick(&con_textsize, con_textsize.integer + 1);
 			return;
 		}
 		// text zoom out
-		if (key == '-' || key == K_KP_MINUS)
+		if ((key == '-' || key == K_KP_MINUS) && KM_CTRL)
 		{
 			if (con_textsize.integer > 1)
 				Cvar_SetValueQuick(&con_textsize, con_textsize.integer - 1);
 			return;
 		}
 		// text zoom reset
-		if (key == '0' || key == K_KP_INS)
+		if ((key == '0' || key == K_KP_INS) && KM_CTRL)
 		{
 			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CVAR_CLIENT | CVAR_SERVER)));
 			return;
@@ -1138,21 +1174,33 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 
 	if (key == K_HOME || key == K_KP_HOME)
 	{
-		if (keydown[K_CTRL])
+		if (KM_CTRL)
+		{
 			con_backscroll = CON_TEXTSIZE;
-		else
+			return;
+		}
+		if (KM_NONE)
+		{
 			key_linepos = 1;
-		return;
+			return;
+		}
 	}
 
 	if (key == K_END || key == K_KP_END)
 	{
-		if (keydown[K_CTRL])
+		if (KM_CTRL)
+		{
 			con_backscroll = 0;
-		else
+			return;
+		}
+		if (KM_NONE)
+		{
 			key_linepos = (int)strlen(key_line);
-		return;
+			return;
+		}
 	}
+
+add_char:
 
 	// non printable
 	if (unicode < 32)
