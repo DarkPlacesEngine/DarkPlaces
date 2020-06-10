@@ -592,12 +592,13 @@ static void VM_CL_checkbottom (prvm_prog_t *prog)
 	vec3_t			mins, maxs, start, stop;
 	trace_t			trace;
 	int				x, y;
-	float			mid, bottom;
+	float			mid, bottom, stepheight;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_checkbottom);
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 
+	stepheight = sv_stepheight.value + PRVM_clientedictfloat(ent, stepheight_delta);
 	VectorAdd (PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), mins);
 	VectorAdd (PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, maxs), maxs);
 
@@ -628,7 +629,7 @@ realcheck:
 // the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
-	stop[2] = start[2] - 2*sv_stepheight.value;
+	stop[2] = start[2] - 2*stepheight;
 	trace = CL_TraceLine(start, stop, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, true, true, NULL, true, false);
 
 	if (trace.fraction == 1.0)
@@ -647,7 +648,7 @@ realcheck:
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
-			if (trace.fraction == 1.0 || mid - trace.endpos[2] > sv_stepheight.value)
+			if (trace.fraction == 1.0 || mid - trace.endpos[2] > stepheight)
 				return;
 		}
 
@@ -3432,8 +3433,9 @@ static qboolean CL_CheckBottom (prvm_edict_t *ent)
 	vec3_t	mins, maxs, start, stop;
 	trace_t	trace;
 	int		x, y;
-	float	mid, bottom;
+	float	mid, bottom, stepheight;
 
+	stepheight = sv_stepheight.value + PRVM_clientedictfloat(ent, stepheight_delta);
 	VectorAdd (PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, mins), mins);
 	VectorAdd (PRVM_clientedictvector(ent, origin), PRVM_clientedictvector(ent, maxs), maxs);
 
@@ -3461,7 +3463,7 @@ realcheck:
 // the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
-	stop[2] = start[2] - 2*sv_stepheight.value;
+	stop[2] = start[2] - 2*stepheight;
 	trace = CL_TraceLine(start, stop, MOVE_NOMONSTERS, ent, CL_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, true, false, NULL, true, false);
 
 	if (trace.fraction == 1.0)
@@ -3479,7 +3481,7 @@ realcheck:
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
-			if (trace.fraction == 1.0 || mid - trace.endpos[2] > sv_stepheight.value)
+			if (trace.fraction == 1.0 || mid - trace.endpos[2] > stepheight)
 				return false;
 		}
 
@@ -3498,12 +3500,14 @@ possible, no move is done and false is returned
 static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	float		dz;
+	float		dz, stepheight;
 	vec3_t		oldorg, neworg, end, traceendpos;
 	vec3_t		mins, maxs, start;
 	trace_t		trace;
 	int			i, svent;
 	prvm_edict_t		*enemy;
+
+	stepheight = sv_stepheight.value + PRVM_clientedictfloat(ent, stepheight_delta);
 
 // try the move
 	VectorCopy(PRVM_clientedictvector(ent, mins), mins);
@@ -3552,9 +3556,9 @@ static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qb
 	}
 
 // push down from a step height above the wished position
-	neworg[2] += sv_stepheight.value;
+	neworg[2] += stepheight;
 	VectorCopy (neworg, end);
-	end[2] -= sv_stepheight.value*2;
+	end[2] -= stepheight*2;
 
 	trace = CL_TraceBox(neworg, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, true, true, &svent, true);
 	if (settrace)
@@ -3562,7 +3566,7 @@ static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qb
 
 	if (trace.startsolid)
 	{
-		neworg[2] -= sv_stepheight.value;
+		neworg[2] -= stepheight;
 		trace = CL_TraceBox(neworg, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, true, true, &svent, true);
 		if (settrace)
 			CL_VM_SetTraceGlobals(prog, &trace, svent);

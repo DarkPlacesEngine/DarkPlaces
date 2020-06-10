@@ -39,8 +39,9 @@ qboolean SV_CheckBottom (prvm_edict_t *ent)
 	vec3_t	mins, maxs, start, stop;
 	trace_t	trace;
 	int		x, y;
-	float	mid, bottom;
+	float	mid, bottom, stepheight;
 
+	stepheight = sv_stepheight.value + PRVM_serveredictfloat(ent, stepheight_delta);
 	VectorAdd (PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, mins), mins);
 	VectorAdd (PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, maxs), maxs);
 
@@ -70,7 +71,7 @@ realcheck:
 // the midpoint must be within 16 of the bottom
 	start[0] = stop[0] = (mins[0] + maxs[0])*0.5;
 	start[1] = stop[1] = (mins[1] + maxs[1])*0.5;
-	stop[2] = start[2] - 2*sv_stepheight.value;
+	stop[2] = start[2] - 2*stepheight;
 	trace = SV_TraceLine(start, stop, MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
 
 	if (trace.fraction == 1.0)
@@ -88,7 +89,7 @@ realcheck:
 
 			if (trace.fraction != 1.0 && trace.endpos[2] > bottom)
 				bottom = trace.endpos[2];
-			if (trace.fraction == 1.0 || mid - trace.endpos[2] > sv_stepheight.value)
+			if (trace.fraction == 1.0 || mid - trace.endpos[2] > stepheight)
 				return false;
 		}
 
@@ -109,11 +110,13 @@ possible, no move is done and false is returned
 qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	float		dz;
+	float		dz, stepheight;
 	vec3_t		oldorg, neworg, end, traceendpos, entorigin, entmins, entmaxs;
 	trace_t		trace;
 	int			i;
 	prvm_edict_t		*enemy;
+
+	stepheight = sv_stepheight.value + PRVM_serveredictfloat(ent, stepheight_delta);
 
 // try the move
 	VectorCopy (PRVM_serveredictvector(ent, origin), oldorg);
@@ -168,15 +171,15 @@ qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean 
 	}
 
 // push down from a step height above the wished position
-	neworg[2] += sv_stepheight.value;
+	neworg[2] += stepheight;
 	VectorCopy (neworg, end);
-	end[2] -= sv_stepheight.value*2;
+	end[2] -= stepheight*2;
 
 	trace = SV_TraceBox(neworg, entmins, entmaxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
 
 	if (trace.startsolid)
 	{
-		neworg[2] -= sv_stepheight.value;
+		neworg[2] -= stepheight;
 		trace = SV_TraceBox(neworg, entmins, entmaxs, end, MOVE_NORMAL, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
 		if (trace.startsolid)
 			return false;

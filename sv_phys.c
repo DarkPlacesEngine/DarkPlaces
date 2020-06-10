@@ -2312,6 +2312,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity, entmins, entmaxs;
 	trace_t downtrace, trace;
 	qboolean applygravity;
+	float stepheight;
 
 	// if frametime is 0 (due to client sending the same timestamp twice),
 	// don't move
@@ -2320,6 +2321,8 @@ static void SV_WalkMove (prvm_edict_t *ent)
 
 	if (sv_gameplayfix_unstickplayers.integer)
 		SV_CheckStuck (ent);
+
+	stepheight = sv_stepheight.value + PRVM_serveredictfloat(ent, stepheight_delta);
 
 	applygravity = !SV_CheckWater (ent) && PRVM_serveredictfloat(ent, movetype) == MOVETYPE_WALK && ! ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP);
 
@@ -2331,7 +2334,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (PRVM_serveredictvector(ent, origin), start_origin);
 	VectorCopy (PRVM_serveredictvector(ent, velocity), start_velocity);
 
-	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, sv_gameplayfix_stepmultipletimes.integer ? sv_stepheight.value : 0);
+	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, sv_gameplayfix_stepmultipletimes.integer ? stepheight : 0);
 
 	if(sv_gameplayfix_downtracesupportsongroundflag.integer)
 	if(!(clip & 1))
@@ -2405,7 +2408,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 
 		// move up
 		VectorClear (upmove);
-		upmove[2] = sv_stepheight.value;
+		upmove[2] = stepheight;
 		if(!SV_PushEntity(&trace, ent, upmove, true))
 		{
 			// we got teleported when upstepping... must abort the move
@@ -2457,7 +2460,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 
 	// move down
 	VectorClear (downmove);
-	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
+	downmove[2] = -stepheight + start_velocity[2]*sv.frametime;
 	if(!SV_PushEntity (&downtrace, ent, downmove, true))
 	{
 		// we got teleported when downstepping... must abort the move
