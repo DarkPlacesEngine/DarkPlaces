@@ -1350,8 +1350,8 @@ void VID_Shared_Init(void)
 	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
 #endif
 
-	Cmd_AddCommand(&cmd_client, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
-	Cmd_AddCommand(&cmd_client, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+	Cmd_AddCommand(CMD_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
+	Cmd_AddCommand(CMD_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
 static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)

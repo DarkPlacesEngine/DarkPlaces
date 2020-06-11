@@ -41,6 +41,17 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 
 struct cmd_state_s;
 
+// Command flags
+#define CMD_CLIENT				(1<<0)
+#define CMD_SERVER				(1<<1)
+#define CMD_CLIENT_FROM_SERVER	(1<<2)
+#define CMD_SERVER_FROM_CLIENT	9
+#define CMD_INITWAIT			(1<<5)
+#define CMD_CHEAT				(1<<6)
+
+
+#define CMD_SHARED 6
+
 typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
 typedef enum
@@ -61,6 +72,7 @@ typedef struct cmdalias_s
 
 typedef struct cmd_function_s
 {
+	int flags;
 	struct cmd_function_s *next;
 	const char *name;
 	const char *description;
@@ -180,7 +192,7 @@ void Cmd_SaveInitState(void);
 // called by FS_GameDir_f, this restores cvars, commands and aliases to init values
 void Cmd_RestoreInitState(void);
 
-void Cmd_AddCommand(cmd_state_t *cmd, const char *cmd_name, xcommand_t function, const char *description);
+void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const char *description);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory

@@ -1670,18 +1670,18 @@ Key_Init (void)
 //
 // register our functions
 //
-	Cmd_AddCommand(&cmd_client, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
-	Cmd_AddCommand(&cmd_client, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
-	Cmd_AddCommand(&cmd_client, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
-	Cmd_AddCommand(&cmd_client, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
-	Cmd_AddCommand(&cmd_client, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
+	Cmd_AddCommand(CMD_CLIENT, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
+	Cmd_AddCommand(CMD_CLIENT, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand(CMD_CLIENT, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
+	Cmd_AddCommand(CMD_CLIENT, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
+	Cmd_AddCommand(CMD_CLIENT, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
 
-	Cmd_AddCommand(&cmd_client, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
-	Cmd_AddCommand(&cmd_client, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
-	Cmd_AddCommand(&cmd_client, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
-	Cmd_AddCommand(&cmd_client, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+	Cmd_AddCommand(CMD_CLIENT, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
+	Cmd_AddCommand(CMD_CLIENT, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand(CMD_CLIENT, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
+	Cmd_AddCommand(CMD_CLIENT, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
-	Cmd_AddCommand(&cmd_client, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
+	Cmd_AddCommand(CMD_CLIENT, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }

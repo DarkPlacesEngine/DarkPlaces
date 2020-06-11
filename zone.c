@@ -916,11 +916,8 @@ void Memory_Shutdown (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand(&cmd_client, "memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand(&cmd_client, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
-
-	Cmd_AddCommand(&cmd_server, "memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand(&cmd_server, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+	Cmd_AddCommand(CMD_SHARED, "memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand(CMD_SHARED, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);

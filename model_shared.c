@@ -174,10 +174,10 @@ void Mod_Init (void)
 	Cvar_RegisterVariable(&mod_generatelightmaps_vertexradius);
 	Cvar_RegisterVariable(&mod_generatelightmaps_gridradius);
 
-	Cmd_AddCommand(&cmd_client, "modellist", Mod_Print_f, "prints a list of loaded models");
-	Cmd_AddCommand(&cmd_client, "modelprecache", Mod_Precache_f, "load a model");
-	Cmd_AddCommand(&cmd_client, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
-	Cmd_AddCommand(&cmd_client, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
+	Cmd_AddCommand(CMD_CLIENT, "modellist", Mod_Print_f, "prints a list of loaded models");
+	Cmd_AddCommand(CMD_CLIENT, "modelprecache", Mod_Precache_f, "load a model");
+	Cmd_AddCommand(CMD_CLIENT, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
+	Cmd_AddCommand(CMD_CLIENT, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
 }
 
 void Mod_RenderInit(void)

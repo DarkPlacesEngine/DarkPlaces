@@ -896,16 +896,13 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&condump_stripcolors);
 
 	// register our commands
-	Cmd_AddCommand(&cmd_client, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
-	Cmd_AddCommand(&cmd_client, "messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
-	Cmd_AddCommand(&cmd_client, "messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
-	Cmd_AddCommand(&cmd_client, "commandmode", Con_CommandMode_f, "input a console command");
-	Cmd_AddCommand(&cmd_client, "clear", Con_Clear_f, "clear console history");
-	Cmd_AddCommand(&cmd_client, "maps", Con_Maps_f, "list information about available maps");
-	Cmd_AddCommand(&cmd_client, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
-
-	Cmd_AddCommand(&cmd_server, "maps", Con_Maps_f, "list information about available maps");
-	Cmd_AddCommand(&cmd_server, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
+	Cmd_AddCommand(CMD_CLIENT, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
+	Cmd_AddCommand(CMD_CLIENT, "messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
+	Cmd_AddCommand(CMD_CLIENT, "messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
+	Cmd_AddCommand(CMD_CLIENT, "commandmode", Con_CommandMode_f, "input a console command");
+	Cmd_AddCommand(CMD_SHARED, "clear", Con_Clear_f, "clear console history");
+	Cmd_AddCommand(CMD_SHARED, "maps", Con_Maps_f, "list information about available maps");
+	Cmd_AddCommand(CMD_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
 	Con_DPrint("Console initialized.\n");

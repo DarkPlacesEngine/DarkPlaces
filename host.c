@@ -238,11 +238,8 @@ extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
 static void Host_InitLocal (void)
 {
-	Cmd_AddCommand(&cmd_client, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
-	Cmd_AddCommand(&cmd_client, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
-	Cmd_AddCommand(&cmd_server, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
-	Cmd_AddCommand(&cmd_server, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
-
+	Cmd_AddCommand(CMD_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
+	Cmd_AddCommand(CMD_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
