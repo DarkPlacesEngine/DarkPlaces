@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "thread.h"
 
 cmd_state_t cmd_client;
-cmd_state_t cmd_clientfromserver;
 cmd_state_t cmd_server;
 cmd_state_t cmd_serverfromclient;
 
@@ -37,7 +36,6 @@ cmd_iter_t;
 
 static cmd_iter_t cmd_iter_all[] = {
 	{&cmd_client},
-	{&cmd_clientfromserver},
 	{&cmd_server},
 	{&cmd_serverfromclient},
 	{NULL},
@@ -1512,10 +1510,6 @@ void Cmd_Init(void)
 	cmd_client.cvars = &cvars_all;
 	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
 	cmd_client.userdefined = &cmd_userdefined_all;
-	// stuffcmd from server has access to the reasonable client things, but it probably doesn't need to access the client's server-only cvars
-	cmd_clientfromserver.cvars = &cvars_all;
-	cmd_clientfromserver.cvars_flagsmask = CVAR_CLIENT;
-	cmd_clientfromserver.userdefined = &cmd_userdefined_all;
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
 	cmd_server.cvars_flagsmask = CVAR_SERVER;
@@ -1533,7 +1527,6 @@ void Cmd_Init_Commands(qboolean dedicated_server)
 //
 	// client-only commands
 	Cmd_AddCommand(&cmd_client, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
-	Cmd_AddCommand(&cmd_clientfromserver, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand(&cmd_client, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand(&cmd_client, "cprint", Cmd_Centerprint_f, "print something at the screen center");
 
@@ -1557,13 +1550,6 @@ void Cmd_Init_Commands(qboolean dedicated_server)
 	Cmd_AddCommand(&cmd_client, "set", Cvar_Set_f, "create or change the value of a console variable");
 	Cmd_AddCommand(&cmd_client, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
 	Cmd_AddCommand(&cmd_client, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
-	Cmd_AddCommand(&cmd_clientfromserver, "exec", Cmd_Exec_f, "execute a script file");
-	Cmd_AddCommand(&cmd_clientfromserver, "echo", Cmd_Echo_f, "print a message to the console (useful in scripts)");
-	Cmd_AddCommand(&cmd_clientfromserver, "alias", Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
-	Cmd_AddCommand(&cmd_clientfromserver, "unalias", Cmd_UnAlias_f, "remove an alias");
-	Cmd_AddCommand(&cmd_clientfromserver, "set", Cvar_Set_f, "create or change the value of a console variable");
-	Cmd_AddCommand(&cmd_clientfromserver, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
-	Cmd_AddCommand(&cmd_clientfromserver, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
 	Cmd_AddCommand(&cmd_server, "exec", Cmd_Exec_f, "execute a script file");
 	Cmd_AddCommand(&cmd_server, "echo", Cmd_Echo_f, "print a message to the console (useful in scripts)");
 	Cmd_AddCommand(&cmd_server, "alias", Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
@@ -1593,7 +1579,6 @@ void Cmd_Init_Commands(qboolean dedicated_server)
 	// Support Doom3-style Toggle Command
 	Cmd_AddCommand(&cmd_client, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
 	Cmd_AddCommand(&cmd_server, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
-	Cmd_AddCommand(&cmd_clientfromserver, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
 }
 
 /*
@@ -2103,13 +2088,8 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	}
 
 // check cvars
-	if (!Cvar_Command(cmd) && host_framecount > 0) {
-		if (cmd == &cmd_clientfromserver) {
-			Con_Printf("Server tried to execute \"%s\"\n", Cmd_Argv(cmd, 0));
-		} else {
-			Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
-		}
-	}
+	if (!Cvar_Command(cmd) && host_framecount > 0)
+		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 done:
 	cmd->tokenizebufferpos = oldpos;
 	if (lockmutex)

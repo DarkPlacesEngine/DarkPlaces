@@ -571,8 +571,6 @@ int CDAudio_Init (void)
 	}
 
 	Cmd_AddCommand(&cmd_client, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
-	Cmd_AddCommand(&cmd_clientfromserver, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
-
 	return 0;
 }
 

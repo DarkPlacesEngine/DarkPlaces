@@ -125,9 +125,6 @@ extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
 // command interpreter for client commands injected by CSQC, MQC or client engine code
 // uses cmddefs_all
 extern cmd_state_t cmd_client;
-// command interpreter for client commands received over network from server
-// uses cmddefs_all
-extern cmd_state_t cmd_clientfromserver;
 // command interpreter for server commands injected by MQC, SVQC, menu engine code or server engine code
 // uses cmddefs_all
 extern cmd_state_t cmd_server;
