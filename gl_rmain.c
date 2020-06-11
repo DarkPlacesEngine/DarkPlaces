@@ -3268,8 +3268,8 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 	R_InitShaderModeInfo();
 
-	Cmd_AddCommand(&cmd_client, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
-	Cmd_AddCommand(&cmd_client, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
+	Cmd_AddCommand(CMD_CLIENT, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
+	Cmd_AddCommand(CMD_CLIENT, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
 	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
 	if (gamemode == GAME_NEHAHRA)
 	{

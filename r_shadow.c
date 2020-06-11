@@ -6022,21 +6022,21 @@ static void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_current_specular);
 	Cvar_RegisterVariable(&r_editlights_current_normalmode);
 	Cvar_RegisterVariable(&r_editlights_current_realtimemode);
-	Cmd_AddCommand(&cmd_client, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
-	Cmd_AddCommand(&cmd_client, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
-	Cmd_AddCommand(&cmd_client, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
 }
 
 

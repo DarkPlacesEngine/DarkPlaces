@@ -1589,8 +1589,8 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_vis_trace_surfaces);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
-	Cmd_AddCommand(&cmd_client, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
-	Cmd_AddCommand(&cmd_client, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
+	Cmd_AddCommand(CMD_CLIENT, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
+	Cmd_AddCommand(CMD_CLIENT, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
 
 	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

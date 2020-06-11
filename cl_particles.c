@@ -582,8 +582,8 @@ CL_InitParticles
 void CL_ReadPointFile_f(cmd_state_t *cmd);
 void CL_Particles_Init (void)
 {
-	Cmd_AddCommand(&cmd_client, "pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
-	Cmd_AddCommand(&cmd_client, "cl_particles_reloadeffects", CL_Particles_LoadEffectInfo_f, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map) if parameter is given, loads from custom file (no levelname_effectinfo are loaded in this case)");
+	Cmd_AddCommand(CMD_CLIENT, "pointfile", CL_ReadPointFile_f, "display point file produced by qbsp when a leak was detected in the map (a line leading through the leak hole, to an entity inside the level)");
+	Cmd_AddCommand(CMD_CLIENT, "cl_particles_reloadeffects", CL_Particles_LoadEffectInfo_f, "reloads effectinfo.txt and maps/levelname_effectinfo.txt (where levelname is the current map) if parameter is given, loads from custom file (no levelname_effectinfo are loaded in this case)");
 
 	Cvar_RegisterVariable (&cl_particles);
 	Cvar_RegisterVariable (&cl_particles_quality);

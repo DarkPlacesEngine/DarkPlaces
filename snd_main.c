@@ -758,8 +758,8 @@ void S_Init(void)
 	if (COM_CheckParm("-nosound"))
 	{
 		// dummy out Play and Play2 because mods stuffcmd that
-		Cmd_AddCommand(&cmd_client, "play", Host_NoOperation_f, "does nothing because -nosound was specified");
-		Cmd_AddCommand(&cmd_client, "play2", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(CMD_CLIENT, "play", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(CMD_CLIENT, "play2", Host_NoOperation_f, "does nothing because -nosound was specified");
 		return;
 	}
 
@@ -769,14 +769,14 @@ void S_Init(void)
 	if (COM_CheckParm("-simsound"))
 		simsound = true;
 
-	Cmd_AddCommand(&cmd_client, "play", S_Play_f, "play a sound at your current location (not heard by anyone else)");
-	Cmd_AddCommand(&cmd_client, "play2", S_Play2_f, "play a sound globally throughout the level (not heard by anyone else)");
-	Cmd_AddCommand(&cmd_client, "playvol", S_PlayVol_f, "play a sound at the specified volume level at your current location (not heard by anyone else)");
-	Cmd_AddCommand(&cmd_client, "stopsound", S_StopAllSounds_f, "silence");
-	Cmd_AddCommand(&cmd_client, "soundlist", S_SoundList_f, "list loaded sounds");
-	Cmd_AddCommand(&cmd_client, "soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
-	Cmd_AddCommand(&cmd_client, "snd_restart", S_Restart_f, "restart sound system");
-	Cmd_AddCommand(&cmd_client, "snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
+	Cmd_AddCommand(CMD_CLIENT, "play", S_Play_f, "play a sound at your current location (not heard by anyone else)");
+	Cmd_AddCommand(CMD_CLIENT, "play2", S_Play2_f, "play a sound globally throughout the level (not heard by anyone else)");
+	Cmd_AddCommand(CMD_CLIENT, "playvol", S_PlayVol_f, "play a sound at the specified volume level at your current location (not heard by anyone else)");
+	Cmd_AddCommand(CMD_CLIENT, "stopsound", S_StopAllSounds_f, "silence");
+	Cmd_AddCommand(CMD_CLIENT, "soundlist", S_SoundList_f, "list loaded sounds");
+	Cmd_AddCommand(CMD_CLIENT, "soundinfo", S_SoundInfo_f, "print sound system information (such as channels and speed)");
+	Cmd_AddCommand(CMD_CLIENT, "snd_restart", S_Restart_f, "restart sound system");
+	Cmd_AddCommand(CMD_CLIENT, "snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);

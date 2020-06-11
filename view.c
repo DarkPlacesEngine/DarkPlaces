@@ -1200,9 +1200,9 @@ V_Init
 */
 void V_Init (void)
 {
-	Cmd_AddCommand(&cmd_client, "v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand(&cmd_client, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
-	Cmd_AddCommand(&cmd_client, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
+	Cmd_AddCommand(CMD_CLIENT, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
 
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);

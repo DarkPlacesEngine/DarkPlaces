@@ -3871,14 +3871,13 @@ void NetConn_Init(void)
 	int i;
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
-	Cmd_AddCommand(&cmd_client, "net_stats", Net_Stats_f, "print network statistics");
-	Cmd_AddCommand(&cmd_server, "net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand(CMD_SHARED, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
-	Cmd_AddCommand(&cmd_client, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
-	Cmd_AddCommand(&cmd_client, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
-	Cmd_AddCommand(&cmd_client, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
 #endif
-	Cmd_AddCommand(&cmd_server, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
+	Cmd_AddCommand(CMD_SERVER, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_test);
 	Cvar_RegisterVariable(&net_usesizelimit);
 	Cvar_RegisterVariable(&net_burstreserve);
