@@ -1204,9 +1204,6 @@ void V_Init (void)
 	Cmd_AddCommand(&cmd_client, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
 	Cmd_AddCommand(&cmd_client, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
 
-	Cmd_AddCommand(&cmd_clientfromserver, "v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand(&cmd_clientfromserver, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
-
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);
 

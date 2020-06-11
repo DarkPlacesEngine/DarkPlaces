@@ -783,7 +783,6 @@ void Host_Main(void)
 			// process console commands
 //			R_TimeReport("preconsole");
 			CL_VM_PreventInformationLeaks();
-			Cbuf_Frame(&cmd_clientfromserver);
 			Cbuf_Frame(&cmd_client);
 			Cbuf_Frame(&cmd_server);
 
