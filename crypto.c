@@ -1429,17 +1429,11 @@ void Crypto_Init_Commands(void)
 {
 	if(d0_blind_id_dll)
 	{
-		Cmd_AddCommand(&cmd_client, "crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
-		Cmd_AddCommand(&cmd_client, "crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
-		Cmd_AddCommand(&cmd_client, "crypto_keys", Crypto_Keys_f, "lists the loaded keys");
-		Cmd_AddCommand(&cmd_client, "crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
-		Cmd_AddCommand(&cmd_client, "crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
-
-		Cmd_AddCommand(&cmd_server, "crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
-		Cmd_AddCommand(&cmd_server, "crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
-		Cmd_AddCommand(&cmd_server, "crypto_keys", Crypto_Keys_f, "lists the loaded keys");
-		Cmd_AddCommand(&cmd_server, "crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
-		Cmd_AddCommand(&cmd_server, "crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
+		Cmd_AddCommand(CMD_SHARED, "crypto_reload", Crypto_Reload_f, "reloads cryptographic keys");
+		Cmd_AddCommand(CMD_SHARED, "crypto_keygen", Crypto_KeyGen_f, "generates and saves a cryptographic key");
+		Cmd_AddCommand(CMD_SHARED, "crypto_keys", Crypto_Keys_f, "lists the loaded keys");
+		Cmd_AddCommand(CMD_SHARED, "crypto_hostkeys", Crypto_HostKeys_f, "lists the cached host keys");
+		Cmd_AddCommand(CMD_SHARED, "crypto_hostkey_clear", Crypto_HostKey_Clear_f, "clears a cached host key");
 
 		Cvar_RegisterVariable(&crypto_developer);
 		if(d0_rijndael_dll)

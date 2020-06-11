@@ -689,8 +689,8 @@ void CL_Video_Init( void )
 	bgra.i = 0;bgra.b[1] = 0xFF;cl_videogmask = bgra.i;
 	bgra.i = 0;bgra.b[2] = 0xFF;cl_videormask = bgra.i;
 
-	Cmd_AddCommand(&cmd_client, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
-	Cmd_AddCommand(&cmd_client, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
+	Cmd_AddCommand(CMD_CLIENT, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
+	Cmd_AddCommand(CMD_CLIENT, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
 
 	Cvar_RegisterVariable(&cl_video_subtitles);
 	Cvar_RegisterVariable(&cl_video_subtitles_lines);

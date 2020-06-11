@@ -453,14 +453,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&csqc_progsize);
 	Cvar_RegisterVariable (&csqc_usedemoprogs);
 
-	Cmd_AddCommand(&cmd_server, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
-	Cmd_AddCommand(&cmd_client, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
-	Cmd_AddCommand(&cmd_server, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
-	Cmd_AddCommand(&cmd_client, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
-	Cmd_AddCommand(&cmd_serverfromclient, "sv_startdownload", SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
-	Cmd_AddCommand(&cmd_serverfromclient, "download", SV_Download_f, "downloads a specified file from the server");
-	Cmd_AddCommand(&cmd_client, "sv_startdownload", Cmd_ForwardToServer_f, "begins sending a file to the client (network protocol use only)");
-	Cmd_AddCommand(&cmd_client, "download", Cmd_ForwardToServer_f, "downloads a specified file from the server");
+	Cmd_AddCommand(CMD_SHARED, "sv_saveentfile", SV_SaveEntFile_f, "save map entities to .ent file (to allow external editing)");
+	Cmd_AddCommand(CMD_SHARED, "sv_areastats", SV_AreaStats_f, "prints statistics on entity culling during collision traces");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "sv_startdownload", SV_StartDownload_f, "begins sending a file to the client (network protocol use only)");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "download", SV_Download_f, "downloads a specified file from the server");
 
 	Cvar_RegisterVariable (&sv_disablenotify);
 	Cvar_RegisterVariable (&coop);

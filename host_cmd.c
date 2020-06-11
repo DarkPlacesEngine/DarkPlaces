@@ -210,11 +210,6 @@ Sets client to godmode
 static void Host_God_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!sv_cheats.integer)
-	{
-		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
-		return;
-	}
 
 	PRVM_serveredictfloat(host_client->edict, flags) = (int)PRVM_serveredictfloat(host_client->edict, flags) ^ FL_GODMODE;
 	if (!((int)PRVM_serveredictfloat(host_client->edict, flags) & FL_GODMODE) )
@@ -226,11 +221,6 @@ static void Host_God_f(cmd_state_t *cmd)
 static void Host_Notarget_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!sv_cheats.integer)
-	{
-		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
-		return;
-	}
 
 	PRVM_serveredictfloat(host_client->edict, flags) = (int)PRVM_serveredictfloat(host_client->edict, flags) ^ FL_NOTARGET;
 	if (!((int)PRVM_serveredictfloat(host_client->edict, flags) & FL_NOTARGET) )
@@ -244,11 +234,6 @@ qboolean noclip_anglehack;
 static void Host_Noclip_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!sv_cheats.integer)
-	{
-		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
-		return;
-	}
 
 	if (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP)
 	{
@@ -274,11 +259,6 @@ Sets client to flymode
 static void Host_Fly_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if (!sv_cheats.integer)
-	{
-		SV_ClientPrint("No cheats allowed. Set sv_cheats to 1 in the server console to enable.\n");
-		return;
-	}
 
 	if (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_FLY)
 	{
@@ -2160,12 +2140,6 @@ static void Host_Give_f(cmd_state_t *cmd)
 	const char *t;
 	int v;
 
-	if (!sv_cheats.integer)
-	{
-		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
-		return;
-	}
-
 	t = Cmd_Argv(cmd, 1);
 	v = atoi (Cmd_Argv(cmd, 2));
 
@@ -3052,112 +3026,67 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&sv_namechangetimer);
 
 	// client commands - this includes server commands because the client can host a server, so they must exist
-	Cmd_AddCommand(&cmd_client, "quit", Host_Quit_f, "quit the game");
-	Cmd_AddCommand(&cmd_client, "status", Host_Status_f, "print server status information");
-	Cmd_AddCommand(&cmd_client, "map", Host_Map_f, "kick everyone off the server and start a new level");
-	Cmd_AddCommand(&cmd_client, "restart", Host_Restart_f, "restart current level");
-	Cmd_AddCommand(&cmd_client, "changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
-	Cmd_AddCommand(&cmd_client, "version", Host_Version_f, "print engine version");
-	Cmd_AddCommand(&cmd_client, "say", Host_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand(&cmd_client, "tell", Host_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand(&cmd_client, "pause", Host_Pause_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(&cmd_client, "kick", Host_Kick_f, "kick a player off the server by number or name");
-	Cmd_AddCommand(&cmd_client, "ping", Host_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(&cmd_client, "load", Host_Loadgame_f, "load a saved game file");
-	Cmd_AddCommand(&cmd_client, "save", Host_Savegame_f, "save the game to a file");
-	Cmd_AddCommand(&cmd_client, "viewmodel", Host_Viewmodel_f, "change model of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_client, "viewframe", Host_Viewframe_f, "change animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_client, "viewnext", Host_Viewnext_f, "change to next animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_client, "viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_client, "maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
-	Cmd_AddCommand(&cmd_client, "user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
-	Cmd_AddCommand(&cmd_client, "users", Host_Users_f, "prints additional information about all players on the scoreboard");
-
-	// dedicated server commands
-	Cmd_AddCommand(&cmd_server, "quit", Host_Quit_f, "quit the game");
-	Cmd_AddCommand(&cmd_server, "status", Host_Status_f, "print server status information");
-	Cmd_AddCommand(&cmd_server, "map", Host_Map_f, "kick everyone off the server and start a new level");
-	Cmd_AddCommand(&cmd_server, "restart", Host_Restart_f, "restart current level");
-	Cmd_AddCommand(&cmd_server, "changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
-	Cmd_AddCommand(&cmd_server, "version", Host_Version_f, "print engine version");
-	Cmd_AddCommand(&cmd_server, "say", Host_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand(&cmd_server, "tell", Host_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand(&cmd_server, "pause", Host_Pause_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(&cmd_server, "kick", Host_Kick_f, "kick a player off the server by number or name");
-	Cmd_AddCommand(&cmd_server, "ping", Host_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(&cmd_server, "load", Host_Loadgame_f, "load a saved game file");
-	Cmd_AddCommand(&cmd_server, "save", Host_Savegame_f, "save the game to a file");
-	Cmd_AddCommand(&cmd_server, "viewmodel", Host_Viewmodel_f, "change model of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_server, "viewframe", Host_Viewframe_f, "change animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_server, "viewnext", Host_Viewnext_f, "change to next animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_server, "viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
-	Cmd_AddCommand(&cmd_server, "maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
-	Cmd_AddCommand(&cmd_server, "user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
-	Cmd_AddCommand(&cmd_server, "users", Host_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand(CMD_SHARED, "quit", Host_Quit_f, "quit the game");
+	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "status", Host_Status_f, "print server status information");
+	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "map", Host_Map_f, "kick everyone off the server and start a new level");
+	Cmd_AddCommand(CMD_SHARED, "restart", Host_Restart_f, "restart current level");
+	Cmd_AddCommand(CMD_SHARED, "changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
+	Cmd_AddCommand(CMD_SHARED, "version", Host_Version_f, "print engine version");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "say", Host_Say_f, "send a chat message to everyone on the server");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "say_team", Host_Say_Team_f, "send a chat message to your team on the server");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "tell", Host_Tell_f, "send a chat message to only one person on the server");
+	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "pause", Host_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand(CMD_SHARED, "kick", Host_Kick_f, "kick a player off the server by number or name");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "ping", Host_Ping_f, "print ping times of all players on the server");
+	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "load", Host_Loadgame_f, "load a saved game file");
+	Cmd_AddCommand(CMD_SHARED, "save", Host_Savegame_f, "save the game to a file");
+	Cmd_AddCommand(CMD_SHARED, "viewmodel", Host_Viewmodel_f, "change model of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewframe", Host_Viewframe_f, "change animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewnext", Host_Viewnext_f, "change to next animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
+	Cmd_AddCommand(CMD_SHARED, "user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand(CMD_SHARED, "users", Host_Users_f, "prints additional information about all players on the scoreboard");
 
 	// commands that do not have automatic forwarding from cmd_client, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
-	Cmd_AddCommand(&cmd_serverfromclient, "prespawn", Host_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
-	Cmd_AddCommand(&cmd_serverfromclient, "spawn", Host_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
-	Cmd_AddCommand(&cmd_serverfromclient, "begin", Host_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
-	Cmd_AddCommand(&cmd_serverfromclient, "pings", Host_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "prespawn", Host_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "spawn", Host_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "begin", Host_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "pings", Host_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 
-	Cmd_AddCommand(&cmd_serverfromclient, "status", Host_Status_f, "print server status information");
-	Cmd_AddCommand(&cmd_serverfromclient, "god", Host_God_f, "god mode (invulnerability)");
-	Cmd_AddCommand(&cmd_serverfromclient, "notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
-	Cmd_AddCommand(&cmd_serverfromclient, "fly", Host_Fly_f, "fly mode (flight)");
-	Cmd_AddCommand(&cmd_serverfromclient, "noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-	Cmd_AddCommand(&cmd_serverfromclient, "give", Host_Give_f, "alter inventory");
-	Cmd_AddCommand(&cmd_serverfromclient, "say", Host_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand(&cmd_serverfromclient, "say_team", Host_Say_Team_f, "send a chat message to your team on the server");
-	Cmd_AddCommand(&cmd_serverfromclient, "tell", Host_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand(&cmd_serverfromclient, "kill", Host_Kill_f, "die instantly");
-	Cmd_AddCommand(&cmd_serverfromclient, "pause", Host_Pause_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(&cmd_serverfromclient, "ping", Host_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(&cmd_serverfromclient, "name", Host_Name_f, "change your player name");
-	Cmd_AddCommand(&cmd_serverfromclient, "color", Host_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(&cmd_serverfromclient, "rate", Host_Rate_f, "change your network connection speed");
-	Cmd_AddCommand(&cmd_serverfromclient, "rate_burstsize", Host_Rate_BurstSize_f, "change your network connection speed");
-	Cmd_AddCommand(&cmd_serverfromclient, "pmodel", Host_PModel_f, "(Nehahra-only) change your player model choice");
-	Cmd_AddCommand(&cmd_serverfromclient, "playermodel", Host_Playermodel_f, "change your player model");
-	Cmd_AddCommand(&cmd_serverfromclient, "playerskin", Host_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "god", Host_God_f, "god mode (invulnerability)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "fly", Host_Fly_f, "fly mode (flight)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "give", Host_Give_f, "alter inventory");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", Host_Kill_f, "die instantly");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", Host_Name_f, "change your player name");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", Host_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate", Host_Rate_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate_burstsize", Host_Rate_BurstSize_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "pmodel", Host_PModel_f, "(Nehahra-only) change your player model choice");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playermodel", Host_Playermodel_f, "change your player model");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playerskin", Host_Playerskin_f, "change your player skin number");
 
-	// client commands that require a connection and are simply forwarded to server
-	Cmd_AddCommand(&cmd_client, "god", Cmd_ForwardToServer_f, "god mode (invulnerability)");
-	Cmd_AddCommand(&cmd_client, "notarget", Cmd_ForwardToServer_f, "notarget mode (monsters do not see you)");
-	Cmd_AddCommand(&cmd_client, "fly", Cmd_ForwardToServer_f, "fly mode (flight)");
-	Cmd_AddCommand(&cmd_client, "noclip", Cmd_ForwardToServer_f, "noclip mode (flight without collisions, move through walls)");
-	Cmd_AddCommand(&cmd_client, "give", Cmd_ForwardToServer_f, "alter inventory");
-	Cmd_AddCommand(&cmd_client, "say_team", Cmd_ForwardToServer_f, "send a chat message to your team on the server");
-	Cmd_AddCommand(&cmd_client, "kill", Cmd_ForwardToServer_f, "die instantly");
-
-	Cmd_AddCommand(&cmd_client, "connect", Host_Connect_f, "connect to a server by IP address or hostname");
-	Cmd_AddCommand(&cmd_client, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
-	Cmd_AddCommand(&cmd_client, "startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
-	Cmd_AddCommand(&cmd_client, "demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
-	Cmd_AddCommand(&cmd_client, "stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
-	Cmd_AddCommand(&cmd_client, "sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
-	Cmd_AddCommand(&cmd_client, "rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(&cmd_client, "srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(&cmd_client, "pqrcon", Host_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
-	Cmd_AddCommand(&cmd_client, "fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
-	Cmd_AddCommand(&cmd_client, "setinfo", Host_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(&cmd_client, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
-	Cmd_AddCommand(&cmd_client, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
-	Cmd_AddCommand(&cmd_client, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
-	Cmd_AddCommand(&cmd_client, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
-
-	// client commands that also exist as cmd_serverfromclient and are often forwarded
-	Cmd_AddCommand(&cmd_client, "name", Host_Name_f, "change your player name");
-	Cmd_AddCommand(&cmd_client, "color", Host_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(&cmd_client, "rate", Host_Rate_f, "change your network connection speed");
-	Cmd_AddCommand(&cmd_client, "rate_burstsize", Host_Rate_BurstSize_f, "change your network connection speed");
-	Cmd_AddCommand(&cmd_client, "pmodel", Host_PModel_f, "(Nehahra-only) change your player model choice");
-	Cmd_AddCommand(&cmd_client, "playermodel", Host_Playermodel_f, "change your player model");
-	Cmd_AddCommand(&cmd_client, "playerskin", Host_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand(CMD_CLIENT, "connect", Host_Connect_f, "connect to a server by IP address or hostname");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
+	Cmd_AddCommand(CMD_CLIENT, "startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
+	Cmd_AddCommand(CMD_CLIENT, "demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
+	Cmd_AddCommand(CMD_CLIENT, "stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
+	Cmd_AddCommand(CMD_CLIENT, "sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	Cmd_AddCommand(CMD_CLIENT, "rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CMD_CLIENT, "srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CMD_CLIENT, "pqrcon", Host_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand(CMD_CLIENT, "fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
+	Cmd_AddCommand(CMD_CLIENT, "setinfo", Host_SetInfo_f, "modifies your userinfo");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
+	Cmd_AddCommand(CMD_CLIENT, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
+	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
 	// commands that are only sent by server to client for execution
-	Cmd_AddCommand(&cmd_client, "pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
-	Cmd_AddCommand(&cmd_client, "fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
 }
 
 void Host_NoOperation_f(cmd_state_t *cmd)

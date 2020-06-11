@@ -2647,7 +2647,7 @@ void CL_Init (void)
 {
 	if (cls.state == ca_dedicated)
 	{
-		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CMD_SERVER, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
 	}
 	else
 	{
@@ -2710,29 +2710,29 @@ void CL_Init (void)
 		Cvar_RegisterVariable (&cl_itembobspeed);
 		Cvar_RegisterVariable (&cl_itembobheight);
 
-		Cmd_AddCommand(&cmd_client, "entities", CL_PrintEntities_f, "print information on network entities known to client");
-		Cmd_AddCommand(&cmd_client, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-		Cmd_AddCommand(&cmd_client, "record", CL_Record_f, "record a demo");
-		Cmd_AddCommand(&cmd_client, "stop", CL_Stop_f, "stop recording or playing a demo");
-		Cmd_AddCommand(&cmd_client, "playdemo", CL_PlayDemo_f, "watch a demo file");
-		Cmd_AddCommand(&cmd_client, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+		Cmd_AddCommand(CMD_CLIENT, "entities", CL_PrintEntities_f, "print information on network entities known to client");
+		Cmd_AddCommand(CMD_CLIENT, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CMD_CLIENT, "record", CL_Record_f, "record a demo");
+		Cmd_AddCommand(CMD_CLIENT, "stop", CL_Stop_f, "stop recording or playing a demo");
+		Cmd_AddCommand(CMD_CLIENT, "playdemo", CL_PlayDemo_f, "watch a demo file");
+		Cmd_AddCommand(CMD_CLIENT, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
 		// Support Client-side Model Index List
-		Cmd_AddCommand(&cmd_client, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
+		Cmd_AddCommand(CMD_CLIENT, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 		// Support Client-side Sound Index List
-		Cmd_AddCommand(&cmd_client, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
+		Cmd_AddCommand(CMD_CLIENT, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
 		Cvar_RegisterVariable (&cl_autodemo);
 		Cvar_RegisterVariable (&cl_autodemo_nameformat);
 		Cvar_RegisterVariable (&cl_autodemo_delete);
 
-		Cmd_AddCommand(&cmd_client, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
-		Cmd_AddCommand(&cmd_client, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
+		Cmd_AddCommand(CMD_CLIENT, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+		Cmd_AddCommand(CMD_CLIENT, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
 		// LadyHavoc: added pausedemo
-		Cmd_AddCommand(&cmd_client, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+		Cmd_AddCommand(CMD_CLIENT, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 
-		Cmd_AddCommand(&cmd_client, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
+		Cmd_AddCommand(CMD_CLIENT, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
 		Cvar_RegisterVariable(&r_draweffects);
 		Cvar_RegisterVariable(&cl_explosions_alpha_start);
@@ -2759,15 +2759,15 @@ void CL_Init (void)
 		Cvar_RegisterVariable(&qport);
 		Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
-		Cmd_AddCommand(&cmd_client, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+		Cmd_AddCommand(CMD_CLIENT, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
 		Cvar_RegisterVariable(&cl_locs_enable);
 		Cvar_RegisterVariable(&cl_locs_show);
-		Cmd_AddCommand(&cmd_client, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
-		Cmd_AddCommand(&cmd_client, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
-		Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
-		Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
-		Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+		Cmd_AddCommand(CMD_CLIENT, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+		Cmd_AddCommand(CMD_CLIENT, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+		Cmd_AddCommand(CMD_CLIENT, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+		Cmd_AddCommand(CMD_CLIENT, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+		Cmd_AddCommand(CMD_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
 

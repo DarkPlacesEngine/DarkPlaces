@@ -4735,25 +4735,25 @@ static void M_Init (void)
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
-	Cmd_AddCommand(&cmd_client, "menu_main", M_Menu_Main_f, "open the main menu");
-	Cmd_AddCommand(&cmd_client, "menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
-	Cmd_AddCommand(&cmd_client, "menu_load", M_Menu_Load_f, "open the loadgame menu");
-	Cmd_AddCommand(&cmd_client, "menu_save", M_Menu_Save_f, "open the savegame menu");
-	Cmd_AddCommand(&cmd_client, "menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
-	Cmd_AddCommand(&cmd_client, "menu_setup", M_Menu_Setup_f, "open the player setup menu");
-	Cmd_AddCommand(&cmd_client, "menu_options", M_Menu_Options_f, "open the options menu");
-	Cmd_AddCommand(&cmd_client, "menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
-	Cmd_AddCommand(&cmd_client, "menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
-	Cmd_AddCommand(&cmd_client, "menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
-	Cmd_AddCommand(&cmd_client, "menu_keys", M_Menu_Keys_f, "open the key binding menu");
-	Cmd_AddCommand(&cmd_client, "menu_video", M_Menu_Video_f, "open the video options menu");
-	Cmd_AddCommand(&cmd_client, "menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
-	Cmd_AddCommand(&cmd_client, "menu_mods", M_Menu_ModList_f, "open the mods browser menu");
-	Cmd_AddCommand(&cmd_client, "help", M_Menu_Help_f, "open the help menu");
-	Cmd_AddCommand(&cmd_client, "menu_quit", M_Menu_Quit_f, "open the quit menu");
-	Cmd_AddCommand(&cmd_client, "menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
-	Cmd_AddCommand(&cmd_client, "menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
-	Cmd_AddCommand(&cmd_client, "menu_credits", M_Menu_Credits_f, "open the credits menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_main", M_Menu_Main_f, "open the main menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_load", M_Menu_Load_f, "open the loadgame menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_save", M_Menu_Save_f, "open the savegame menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_setup", M_Menu_Setup_f, "open the player setup menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_options", M_Menu_Options_f, "open the options menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_keys", M_Menu_Keys_f, "open the key binding menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_video", M_Menu_Video_f, "open the video options menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_mods", M_Menu_ModList_f, "open the mods browser menu");
+	Cmd_AddCommand(CMD_CLIENT, "help", M_Menu_Help_f, "open the help menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_quit", M_Menu_Quit_f, "open the quit menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_credits", M_Menu_Credits_f, "open the credits menu");
 }
 
 void M_Draw (void)
@@ -5473,8 +5473,8 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cvar_RegisterVariable (&menu_progs);
-	Cmd_AddCommand(&cmd_client, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
-	Cmd_AddCommand(&cmd_client, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
+	Cmd_AddCommand(CMD_CLIENT, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
+	Cmd_AddCommand(CMD_CLIENT, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
 
 void MR_Init(void)
