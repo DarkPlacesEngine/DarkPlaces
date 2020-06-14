@@ -50,7 +50,7 @@ struct cmd_state_s;
 #define CMD_CHEAT				(1<<6)
 
 
-#define CMD_SHARED 6
+#define CMD_SHARED 3
 
 typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
