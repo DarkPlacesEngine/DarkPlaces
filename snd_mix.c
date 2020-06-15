@@ -24,11 +24,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t snd_softclip;
 
 static portable_sampleframe_t paintbuffer[PAINTBUFFER_SIZE];
-static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
 
 extern speakerlayout_t snd_speakerlayout; // for querying the listeners
 
 #ifdef CONFIG_VIDEO_CAPTURE
+static portable_sampleframe_t paintbuffer_unswapped[PAINTBUFFER_SIZE];
+
 static void S_CaptureAVISound(const portable_sampleframe_t *sampleframes, size_t length)
 {
 	size_t i;
