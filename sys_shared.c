@@ -77,7 +77,7 @@ void Sys_AllowProfiling(qboolean enable)
 	else
 		moncleanup();
 #endif
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif (defined(__linux__) && (defined(__GLIBC__) || defined(__GNU_LIBRARY__))) || defined(__FreeBSD__)
 	extern int moncontrol(int);
 	moncontrol(enable);
 #endif
