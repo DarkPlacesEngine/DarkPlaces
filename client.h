@@ -1242,7 +1242,7 @@ typedef struct client_state_s
 	sfx_t *sfx_ric3;
 	sfx_t *sfx_r_exp3;
 	// indicates that the file "sound/misc/talk2.wav" was found (for use by team chat messages)
-	qboolean foundtalk2wav;
+	qboolean foundteamchatsound;
 
 // refresh related state
 
