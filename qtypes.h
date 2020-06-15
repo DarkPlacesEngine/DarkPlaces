@@ -3,16 +3,9 @@
 #define QTYPES_H
 
 #include <stdint.h>
-
-#ifndef __cplusplus
-#ifdef _MSC_VER
-typedef enum {false, true} bool;
-#else
 #include <stdbool.h>
-#endif
-#endif
-typedef bool qboolean;
 
+typedef bool qboolean;
 
 #ifndef NULL
 #define NULL ((void *)0)
