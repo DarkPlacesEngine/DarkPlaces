@@ -57,7 +57,9 @@ cvar_t con_textsize = {CVAR_CLIENT | CVAR_SAVE, "con_textsize","8", "console tex
 cvar_t con_notifysize = {CVAR_CLIENT | CVAR_SAVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
 cvar_t con_chatsize = {CVAR_CLIENT | CVAR_SAVE, "con_chatsize","8", "chat text size in virtual 2D pixels (if con_chat is enabled)"};
 cvar_t con_chatsound = {CVAR_CLIENT | CVAR_SAVE, "con_chatsound","1", "enables chat sound to play on message"};
-
+cvar_t con_chatsound_file = {CVAR_CLIENT, "con_chatsound_file","sound/misc/talk.wav", "The sound to play for chat messages"};
+cvar_t con_chatsound_team_file = {CVAR_CLIENT, "con_chatsound_team_file","sound/misc/talk2.wav", "The sound to play for team chat messages"};
+cvar_t con_chatsound_team_mask = {CVAR_CLIENT | CVAR_READONLY, "con_chatsound_team_mask","40","Magic ASCII code that denotes a team chat message"};
 
 cvar_t sys_specialcharactertranslation = {CVAR_CLIENT | CVAR_SERVER, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
 #ifdef WIN32
@@ -884,6 +886,9 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&con_notifytime);
 	Cvar_RegisterVariable (&con_textsize);
 	Cvar_RegisterVariable (&con_chatsound);
+	Cvar_RegisterVariable (&con_chatsound_file);
+	Cvar_RegisterVariable (&con_chatsound_team_file);
+	Cvar_RegisterVariable (&con_chatsound_team_mask);
 
 	// --blub
 	Cvar_RegisterVariable (&con_nickcompletion);
@@ -1156,28 +1161,17 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 				{
 					if (con_chatsound.value)
 					{
-						if(IS_NEXUIZ_DERIVED(gamemode))
-						{
-							if(msg[1] == '\r' && cl.foundtalk2wav)
-								S_LocalSound ("sound/misc/talk2.wav");
-							else
-								S_LocalSound ("sound/misc/talk.wav");
-						}
+						if(msg[1] == con_chatsound_team_mask.integer && cl.foundteamchatsound)
+							S_LocalSound (con_chatsound_team_file.string);
 						else
-						{
-							if (msg[1] == '(' && cl.foundtalk2wav)
-								S_LocalSound ("sound/misc/talk2.wav");
-							else
-								S_LocalSound ("sound/misc/talk.wav");
-						}
+							S_LocalSound (con_chatsound_file.string);
 					}
 				}
-				
 				// Send to chatbox for say/tell (1) and messages (3)
 				// 3 is just so that a message can be sent to the chatbox without a sound.
 				if (*msg == 1 || *msg == 3)
 					mask = CON_MASK_CHAT;
-				
+
 				line[index++] = STRING_COLOR_TAG;
 				line[index++] = '3';
 				msg++;
