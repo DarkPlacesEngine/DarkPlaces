@@ -1681,6 +1681,8 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 	}
 }
 
+extern cvar_t sv_gameplayfix_customstats;
+
 // void(float index, float type, .void field) SV_AddStat = #232;
 // Set up an auto-sent player stat.
 // Client's get thier own fields sent to them. Index may not be less than 32.
@@ -1730,9 +1732,9 @@ static void VM_SV_AddStat(prvm_prog_t *prog)
 	// these are hazardous to override but sort of allowed if one wants to be adventurous...  and enjoys warnings.
 	if (i < MIN_VM_STAT)
 		VM_Warning(prog, "PF_SV_AddStat: index (%i) < MIN_VM_STAT (%i) may conflict with engine stats - allowed, but this may break things\n", i, MIN_VM_STAT);
-	else if (i >= MAX_VM_STAT)
+	else if (i >= MAX_VM_STAT && !sv_gameplayfix_customstats.integer)
 		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_VM_STAT (%i) conflicts with engine stats - allowed, but this may break slowmo and stuff\n", i, MAX_VM_STAT);
-	else if (i > (MAX_VM_STAT - 4) && type == 1)
+	else if (i > (MAX_VM_STAT - 4) && type == 1 && !sv_gameplayfix_customstats.integer)
 		VM_Warning(prog, "PF_SV_AddStat: index (%i) >= MAX_VM_STAT (%i) - 4 with string type won't fit within MAX_VM_STAT, thus conflicting with engine stats - allowed, but this may break slowmo and stuff\n", i, MAX_VM_STAT);
 
 	vm_customstats[i].type		= type;
