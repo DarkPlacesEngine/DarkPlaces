@@ -402,7 +402,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
-		SV_BroadcastPrintf("\001^3Server cvar \"%s\" changed to \"%s\"\n", var->name, var->string);
+		SV_BroadcastPrintf("\003^3Server cvar \"%s\" changed to \"%s\"\n", var->name, var->string);
 #if 0
 	// TODO: add infostring support to the server?
 	if ((var->flags & CVAR_SERVERINFO) && changed && sv.active)
