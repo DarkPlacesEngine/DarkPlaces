@@ -659,6 +659,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sv_gameplayfix_q2airaccelerate 1\n"
 "sv_gameplayfix_stepmultipletimes 1\n"
 "csqc_polygons_defaultmaterial_nocullface 1\n"
+"con_chatsound_team_mask 13\n"
 				);
 			break;
 		case GAME_XONOTIC:
@@ -666,6 +667,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 			// compatibility for versions prior to 2020-05-25, this can be overridden in newer versions to get the default behavior and be consistent with FTEQW engine
 			Cbuf_InsertText(cmd, "\n"
 "csqc_polygons_defaultmaterial_nocullface 1\n"
+"con_chatsound_team_mask 13\n"
 				);
 			break;
 		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1

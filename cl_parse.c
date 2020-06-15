@@ -468,6 +468,7 @@ void CL_ParseEntityLump(char *entdata)
 		R_SetSkyBox("unit1_");
 }
 
+extern cvar_t con_chatsound_team_file;
 static const vec3_t defaultmins = {-4096, -4096, -4096};
 static const vec3_t defaultmaxs = {4096, 4096, 4096};
 static void CL_SetupWorldModel(void)
@@ -512,7 +513,7 @@ static void CL_SetupWorldModel(void)
 	CL_KeepaliveMessage(false);
 
 	// load the team chat beep if possible
-	cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
+	cl.foundteamchatsound = FS_FileExists(con_chatsound_team_file.string);
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
