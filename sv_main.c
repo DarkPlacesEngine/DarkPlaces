@@ -124,6 +124,7 @@ cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {CVAR_SERVER, "sv_gameplayf
 cvar_t sv_gameplayfix_unstickplayers = {CVAR_SERVER, "sv_gameplayfix_unstickplayers", "1", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull."};
 cvar_t sv_gameplayfix_unstickentities = {CVAR_SERVER, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position"};
 cvar_t sv_gameplayfix_fixedcheckwatertransition = {CVAR_SERVER, "sv_gameplayfix_fixedcheckwatertransition", "1", "fix two very stupid bugs in SV_CheckWaterTransition when watertype is CONTENTS_EMPTY (the bugs causes waterlevel to be 1 on first frame, -1 on second frame - the fix makes it 0 on both frames)"};
+cvar_t sv_gameplayfix_customstats = {CVAR_SERVER | CVAR_READONLY, "sv_gameplayfix_customstats", "0", "Disable stats higher than 220, for use by certain games such as Xonotic"};
 cvar_t sv_gravity = {CVAR_SERVER | CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_init_frame_count = {CVAR_SERVER, "sv_init_frame_count", "2", "number of frames to run to allow everything to settle before letting clients connect"};
 cvar_t sv_idealpitchscale = {CVAR_SERVER, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
@@ -548,6 +549,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_unstickplayers);
 	Cvar_RegisterVariable (&sv_gameplayfix_unstickentities);
 	Cvar_RegisterVariable (&sv_gameplayfix_fixedcheckwatertransition);
+	Cvar_RegisterVariable (&sv_gameplayfix_customstats);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_init_frame_count);
 	Cvar_RegisterVariable (&sv_idealpitchscale);
@@ -2115,47 +2117,50 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	//stats[STAT_SECRETS] = PRVM_serverglobalfloat(found_secrets);
 	//stats[STAT_MONSTERS] = PRVM_serverglobalfloat(killed_monsters);
 
-	// movement settings for prediction
-	// note: these are not sent in protocols with lower MAX_CL_STATS limits
-	stats[STAT_MOVEFLAGS] = MOVEFLAG_VALID
-		| (sv_gameplayfix_q2airaccelerate.integer ? MOVEFLAG_Q2AIRACCELERATE : 0)
-		| (sv_gameplayfix_nogravityonground.integer ? MOVEFLAG_NOGRAVITYONGROUND : 0)
-		| (sv_gameplayfix_gravityunaffectedbyticrate.integer ? MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE : 0)
-	;
-	statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
-	statsf[STAT_MOVEVARS_TIMESCALE] = host_timescale.value;
-	statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;
-	statsf[STAT_MOVEVARS_STOPSPEED] = sv_stopspeed.value;
-	statsf[STAT_MOVEVARS_MAXSPEED] = sv_maxspeed.value;
-	statsf[STAT_MOVEVARS_SPECTATORMAXSPEED] = sv_maxspeed.value; // FIXME: QW has a separate cvar for this
-	statsf[STAT_MOVEVARS_ACCELERATE] = sv_accelerate.value;
-	statsf[STAT_MOVEVARS_AIRACCELERATE] = sv_airaccelerate.value >= 0 ? sv_airaccelerate.value : sv_accelerate.value;
-	statsf[STAT_MOVEVARS_WATERACCELERATE] = sv_wateraccelerate.value >= 0 ? sv_wateraccelerate.value : sv_accelerate.value;
-	statsf[STAT_MOVEVARS_ENTGRAVITY] = gravity;
-	statsf[STAT_MOVEVARS_JUMPVELOCITY] = sv_jumpvelocity.value;
-	statsf[STAT_MOVEVARS_EDGEFRICTION] = sv_edgefriction.value;
-	statsf[STAT_MOVEVARS_MAXAIRSPEED] = sv_maxairspeed.value;
-	statsf[STAT_MOVEVARS_STEPHEIGHT] = sv_stepheight.value;
-	statsf[STAT_MOVEVARS_AIRACCEL_QW] = sv_airaccel_qw.value;
-	statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR] = sv_airaccel_qw_stretchfactor.value;
-	statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION] = sv_airaccel_sideways_friction.value;
-	statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;
-	statsf[STAT_MOVEVARS_WATERFRICTION] = sv_waterfriction.value >= 0 ? sv_waterfriction.value : sv_friction.value;
-	statsf[STAT_MOVEVARS_AIRSTOPACCELERATE] = sv_airstopaccelerate.value;
-	statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE] = sv_airstrafeaccelerate.value;
-	statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED] = sv_maxairstrafespeed.value;
-	statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW] = sv_airstrafeaccel_qw.value;
-	statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
-	statsf[STAT_MOVEVARS_AIRCONTROL_POWER] = sv_aircontrol_power.value;
-	statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY] = sv_aircontrol_penalty.value;
-	statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL] = sv_warsowbunny_airforwardaccel.value;
-	statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL] = sv_warsowbunny_accel.value;
-	statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED] = sv_warsowbunny_topspeed.value;
-	statsf[STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL] = sv_warsowbunny_turnaccel.value;
-	statsf[STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO] = sv_warsowbunny_backtosideratio.value;
-	statsf[STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW] = sv_airspeedlimit_nonqw.value;
-	statsf[STAT_FRAGLIMIT] = fraglimit.value;
-	statsf[STAT_TIMELIMIT] = timelimit.value;
+	if(!sv_gameplayfix_customstats.integer)
+	{
+		statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR] = sv_airaccel_qw_stretchfactor.value;
+		statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY] = sv_aircontrol_penalty.value;
+		statsf[STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW] = sv_airspeedlimit_nonqw.value;		
+		statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW] = sv_airstrafeaccel_qw.value;
+		statsf[STAT_MOVEVARS_AIRCONTROL_POWER] = sv_aircontrol_power.value;
+		// movement settings for prediction
+		// note: these are not sent in protocols with lower MAX_CL_STATS limits
+		stats[STAT_MOVEFLAGS] = MOVEFLAG_VALID
+			| (sv_gameplayfix_q2airaccelerate.integer ? MOVEFLAG_Q2AIRACCELERATE : 0)
+			| (sv_gameplayfix_nogravityonground.integer ? MOVEFLAG_NOGRAVITYONGROUND : 0)
+			| (sv_gameplayfix_gravityunaffectedbyticrate.integer ? MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE : 0)
+		;
+		statsf[STAT_MOVEVARS_WARSOWBUNNY_AIRFORWARDACCEL] = sv_warsowbunny_airforwardaccel.value;
+		statsf[STAT_MOVEVARS_WARSOWBUNNY_ACCEL] = sv_warsowbunny_accel.value;
+		statsf[STAT_MOVEVARS_WARSOWBUNNY_TOPSPEED] = sv_warsowbunny_topspeed.value;
+		statsf[STAT_MOVEVARS_WARSOWBUNNY_TURNACCEL] = sv_warsowbunny_turnaccel.value;
+		statsf[STAT_MOVEVARS_WARSOWBUNNY_BACKTOSIDERATIO] = sv_warsowbunny_backtosideratio.value;
+		statsf[STAT_MOVEVARS_AIRSTOPACCELERATE] = sv_airstopaccelerate.value;
+		statsf[STAT_MOVEVARS_AIRSTRAFEACCELERATE] = sv_airstrafeaccelerate.value;
+		statsf[STAT_MOVEVARS_MAXAIRSTRAFESPEED] = sv_maxairstrafespeed.value;
+		statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
+		statsf[STAT_FRAGLIMIT] = fraglimit.value;
+		statsf[STAT_TIMELIMIT] = timelimit.value;
+		statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;	
+		statsf[STAT_MOVEVARS_WATERFRICTION] = sv_waterfriction.value >= 0 ? sv_waterfriction.value : sv_friction.value;
+		statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
+		statsf[STAT_MOVEVARS_TIMESCALE] = host_timescale.value;
+		statsf[STAT_MOVEVARS_GRAVITY] = sv_gravity.value;
+		statsf[STAT_MOVEVARS_STOPSPEED] = sv_stopspeed.value;
+		statsf[STAT_MOVEVARS_MAXSPEED] = sv_maxspeed.value;
+		statsf[STAT_MOVEVARS_SPECTATORMAXSPEED] = sv_maxspeed.value; // FIXME: QW has a separate cvar for this
+		statsf[STAT_MOVEVARS_ACCELERATE] = sv_accelerate.value;
+		statsf[STAT_MOVEVARS_AIRACCELERATE] = sv_airaccelerate.value >= 0 ? sv_airaccelerate.value : sv_accelerate.value;
+		statsf[STAT_MOVEVARS_WATERACCELERATE] = sv_wateraccelerate.value >= 0 ? sv_wateraccelerate.value : sv_accelerate.value;
+		statsf[STAT_MOVEVARS_ENTGRAVITY] = gravity;
+		statsf[STAT_MOVEVARS_JUMPVELOCITY] = sv_jumpvelocity.value;
+		statsf[STAT_MOVEVARS_EDGEFRICTION] = sv_edgefriction.value;
+		statsf[STAT_MOVEVARS_MAXAIRSPEED] = sv_maxairspeed.value;
+		statsf[STAT_MOVEVARS_STEPHEIGHT] = sv_stepheight.value;
+		statsf[STAT_MOVEVARS_AIRACCEL_QW] = sv_airaccel_qw.value;
+		statsf[STAT_MOVEVARS_AIRACCEL_SIDEWAYS_FRICTION] = sv_airaccel_sideways_friction.value;
+	}
 
 	if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_QUAKEDP || sv.protocol == PROTOCOL_NEHAHRAMOVIE || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3 || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
 	{
