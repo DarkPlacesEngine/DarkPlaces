@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 typedef bool qboolean;
 
@@ -25,9 +26,6 @@ typedef bool qboolean;
 #else
 #define RESTRICT
 #endif
-
-typedef long long dpint64;
-typedef unsigned long long dpuint64;
 
 // LadyHavoc: upgrade the prvm to double precision for better time values
 // LadyHavoc: to be enabled when bugs are worked out...

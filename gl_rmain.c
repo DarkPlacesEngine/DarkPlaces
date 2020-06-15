@@ -709,7 +709,7 @@ typedef struct r_glsl_permutation_s
 	/// hash lookup data
 	struct r_glsl_permutation_s *hashnext;
 	unsigned int mode;
-	dpuint64 permutation;
+	uint64_t permutation;
 
 	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
@@ -925,7 +925,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "#define " n "\n"; \
 	else \
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "\n"
-static void R_CompileShader_AddStaticParms(unsigned int mode, dpuint64 permutation)
+static void R_CompileShader_AddStaticParms(unsigned int mode, uint64_t permutation)
 {
 	shaderstaticparms_count = 0;
 
@@ -953,7 +953,7 @@ r_glsl_permutation_t *r_glsl_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_glsl_permutationarray;
 
-static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, dpuint64 permutation)
+static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, uint64_t permutation)
 {
 	//unsigned int hashdepth = 0;
 	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
@@ -1037,7 +1037,7 @@ static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean p
 	return Mem_strdup(r_main_mempool, modeinfo->builtinstring);
 }
 
-static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, dpuint64 permutation)
+static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, uint64_t permutation)
 {
 	int i;
 	int ubibind;
@@ -1359,7 +1359,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		Mem_Free(sourcestring);
 }
 
-static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permutation)
+static void R_SetupShader_SetPermutationGLSL(unsigned int mode, uint64_t permutation)
 {
 	r_glsl_permutation_t *perm = R_GLSL_FindPermutation(mode, permutation);
 	if (r_glsl_permutation != perm)
@@ -1369,7 +1369,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 		{
 			if (!r_glsl_permutation->compiled)
 			{
-				Con_DPrintf("Compiling shader mode %u permutation %llx\n", mode, permutation);
+				Con_DPrintf("Compiling shader mode %u permutation %"PRIx64"\n", mode, permutation);
 				R_GLSL_CompilePermutation(perm, mode, permutation);
 			}
 			if (!r_glsl_permutation->program)
@@ -1379,7 +1379,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 				{
 					// reduce i more quickly whenever it would not remove any bits
-					dpuint64 j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
+					uint64_t j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
 					if (!(permutation & j))
 						continue;
 					permutation -= j;
@@ -1475,7 +1475,7 @@ static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 
 void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
 {
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	permutation |= SHADERPERMUTATION_VIEWTINT;
@@ -1507,7 +1507,7 @@ void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
 
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
 {
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (depthrgb)
@@ -1581,7 +1581,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	unsigned int mode = 0;
 	int blendfuncflags;
 	texture_t *t = rsurface.texture;
@@ -2109,7 +2109,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	unsigned int mode = 0;
 	const float *lightcolorbase = rtlight->currentcolor;
 	float ambientscale = rtlight->ambientscale;
@@ -5330,7 +5330,7 @@ static void R_Bloom_MakeTexture(void)
 
 static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	dpuint64 permutation;
+	uint64_t permutation;
 	float uservecs[4][4];
 	rtexture_t *viewtexture;
 	rtexture_t *bloomtexture;
