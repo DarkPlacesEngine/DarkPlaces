@@ -130,6 +130,7 @@ extern qboolean vid_activewindow;
 extern qboolean vid_supportrefreshrate;
 
 extern cvar_t vid_fullscreen;
+extern cvar_t vid_borderless;
 extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
@@ -141,6 +142,7 @@ extern cvar_t vid_touchscreen_xdpi;
 extern cvar_t vid_touchscreen_ydpi;
 extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
+extern cvar_t vid_mouse_clickthrough;
 extern cvar_t vid_grabkeyboard;
 extern cvar_t vid_touchscreen;
 extern cvar_t vid_touchscreen_showkeyboard;
@@ -148,6 +150,9 @@ extern cvar_t vid_touchscreen_supportshowkeyboard;
 extern cvar_t vid_stick_mouse;
 extern cvar_t vid_resizable;
 extern cvar_t vid_desktopfullscreen;
+#ifdef WIN32
+extern cvar_t vid_ignore_taskbar;
+#endif
 extern cvar_t vid_minwidth;
 extern cvar_t vid_minheight;
 extern cvar_t vid_sRGB;

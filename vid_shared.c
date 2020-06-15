@@ -133,6 +133,7 @@ cvar_t gl_info_platform = {CVAR_CLIENT | CVAR_READONLY, "gl_info_platform", "", 
 cvar_t gl_info_driver = {CVAR_CLIENT | CVAR_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
 
 cvar_t vid_fullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
+cvar_t vid_borderless = {CVAR_CLIENT | CVAR_SAVE, "vid_borderless", "0", "make the window borderless by removing all window decorations. has no effect in fullscreen mode"};
 cvar_t vid_width = {CVAR_CLIENT | CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_CLIENT | CVAR_SAVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CVAR_CLIENT | CVAR_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
@@ -149,6 +150,7 @@ cvar_t vid_touchscreen_ydpi = {CVAR_CLIENT, "vid_touchscreen_ydpi", "300", "Vert
 
 cvar_t vid_vsync = {CVAR_CLIENT | CVAR_SAVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
 cvar_t vid_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in windowed mode (fullscreen always does)"};
+cvar_t vid_mouse_clickthrough = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse_clickthrough", "0", "mouse behavior in windowed mode: 0 = click to focus, 1 = allow interaction even if the window is not focused (click-through behaviour, can be useful when using third-party game overlays)"};
 cvar_t vid_grabkeyboard = {CVAR_CLIENT | CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
 cvar_t vid_minwidth = {CVAR_CLIENT, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {CVAR_CLIENT, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
@@ -162,6 +164,9 @@ cvar_t vid_touchscreen_supportshowkeyboard = {CVAR_CLIENT | CVAR_READONLY, "vid_
 cvar_t vid_stick_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CVAR_CLIENT | CVAR_SAVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
 cvar_t vid_desktopfullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
+#ifdef WIN32
+cvar_t vid_ignore_taskbar = {CVAR_CLIENT | CVAR_SAVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
+#endif
 
 cvar_t v_gamma = {CVAR_CLIENT | CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t v_contrast = {CVAR_CLIENT | CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
@@ -1275,6 +1280,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_psycho);
 
 	Cvar_RegisterVariable(&vid_fullscreen);
+	Cvar_RegisterVariable(&vid_borderless);
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
@@ -1287,6 +1293,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_touchscreen_ydpi);
 	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
+	Cvar_RegisterVariable(&vid_mouse_clickthrough);
 	Cvar_RegisterVariable(&vid_grabkeyboard);
 	Cvar_RegisterVariable(&vid_touchscreen);
 	Cvar_RegisterVariable(&vid_touchscreen_showkeyboard);
@@ -1294,6 +1301,9 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_stick_mouse);
 	Cvar_RegisterVariable(&vid_resizable);
 	Cvar_RegisterVariable(&vid_desktopfullscreen);
+#ifdef WIN32
+	Cvar_RegisterVariable(&vid_ignore_taskbar);
+#endif
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&gl_finish);

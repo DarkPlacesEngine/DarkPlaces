@@ -1418,6 +1418,11 @@ static void VID_OutputVersion(void)
 #ifdef WIN32
 static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 {
+	int workWidth;
+	int workHeight;
+	int titleBarPixels = 2;
+	int screenHeight;
+	RECT workArea;
 	LONG width = mode->width; // vid_width
 	LONG height = mode->height; // vid_height
 
@@ -1428,16 +1433,14 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 	rect->bottom = height;
 	AdjustWindowRectEx(rect, WS_CAPTION|WS_THICKFRAME, false, 0);
 
-	RECT workArea;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-	int workWidth = workArea.right - workArea.left;
-	int workHeight = workArea.bottom - workArea.top;
+	workWidth = workArea.right - workArea.left;
+	workHeight = workArea.bottom - workArea.top;
 
 	// SDL forces the window height to be <= screen height - 27px (on Win8.1 - probably intended for the title bar) 
 	// If the task bar is docked to the the left screen border and we move the window to negative y,
 	// there would be some part of the regular desktop visible on the bottom of the screen.
-	int titleBarPixels = 2;
-	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	if (screenHeight == workHeight)
 		titleBarPixels = -rect->top;
 
@@ -1468,6 +1471,8 @@ extern cvar_t gl_info_driver;
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+	// currently SDL_WINDOWPOS_UNDEFINED behaves exactly like SDL_WINDOWPOS_CENTERED, this might change some day
+	// https://trello.com/c/j56vUcwZ/81-centered-vs-undefined-window-position
 	int xPos = SDL_WINDOWPOS_UNDEFINED;
 	int yPos = SDL_WINDOWPOS_UNDEFINED;
 #ifndef USE_GLES2
@@ -1520,15 +1525,26 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 			vid_isfullscreen = true;
 		}
 		else {
+			if (vid_borderless.integer)
+				windowflags |= SDL_WINDOW_BORDERLESS;
 #ifdef WIN32
-			RECT rect;
-			AdjustWindowBounds(mode, &rect);
-			xPos = rect.left;
-			yPos = rect.top;
+			if (vid_ignore_taskbar.integer) {
+				xPos = SDL_WINDOWPOS_CENTERED;
+				yPos = SDL_WINDOWPOS_CENTERED;
+			}
+			else {
+				RECT rect;
+				AdjustWindowBounds(mode, &rect);
+				xPos = rect.left;
+				yPos = rect.top;
+			}
 #endif
 		}
 	}
 	//flags |= SDL_HWSURFACE;
+
+	if (vid_mouse_clickthrough.integer && !vid_isfullscreen)
+		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
