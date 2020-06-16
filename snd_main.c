@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_main.h"
 #include "snd_ogg.h"
+#include "snd_xmp.h"
 #include "csprogs.h"
 #include "cl_collision.h"
 #include "cdaudio.h"
@@ -800,6 +801,9 @@ void S_Init(void)
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
 	OGG_OpenLibrary ();
+#ifdef USEXMP
+	XMP_OpenLibrary ();
+#endif
 }
 
 
@@ -813,6 +817,9 @@ Shutdown and free all resources
 void S_Terminate (void)
 {
 	S_Shutdown ();
+#ifdef USEXMP
+	XMP_CloseLibrary ();
+#endif
 	OGG_CloseLibrary ();
 
 	// Free all SFXs
