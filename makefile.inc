@@ -53,23 +53,23 @@ LIB_SND_NULL=
 
 # Open Sound System (Linux, FreeBSD and Solaris)
 OBJ_SND_OSS=$(OBJ_SND_COMMON) snd_oss.o
-LIB_SND_OSS=
+LIB_SND_OSS=$(LIB_SND_XMP)
 
 # Advanced Linux Sound Architecture (Linux)
 OBJ_SND_ALSA=$(OBJ_SND_COMMON) snd_alsa.o
-LIB_SND_ALSA=-lasound
+LIB_SND_ALSA=-lasound $(LIB_SND_XMP)
 
 # Core Audio (Mac OS X)
 OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.o
-LIB_SND_COREAUDIO=-framework CoreAudio
+LIB_SND_COREAUDIO=-framework CoreAudio $(LIB_SND_XMP)
 
 # BSD / Sun audio API (NetBSD and OpenBSD)
 OBJ_SND_BSD=$(OBJ_SND_COMMON) snd_bsd.o
-LIB_SND_BSD=
+LIB_SND_BSD=$(LIB_SND_XMP)
 
 # DirectX and Win32 WAVE output (Win32)
 OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
-LIB_SND_WIN=
+LIB_SND_WIN=$(LIB_SND_XMP)
 
 
 ###### Common objects and flags #####
@@ -163,11 +163,11 @@ OBJ_MENU= \
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
 OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) $(OBJ_SND_XMP) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
+CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_SND_XMP) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
 CFLAGS_CLIENT=-DCONFIG_MENU $(CFLAGS_VIDEO_CAPTURE)
 CFLAGS_SERVER=
 CFLAGS_DEBUG=-ggdb
@@ -204,9 +204,9 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 ##### UNIX specific variables #####
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(LIB_SND_XMP)
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
-LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl
+LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lxmp
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
 LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS)
@@ -257,7 +257,7 @@ WINDRES ?= windres
 # Link
 # see LDFLAGS_WINCOMMON in makefile
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
@@ -413,6 +413,7 @@ prepare :
 	$(CMD_MKDIR) $(BUILD_DIR)
 	$(CMD_CP) makefile.inc $(BUILD_DIR)/
 	$(CMD_CP) $(MAKEFILE) $(BUILD_DIR)/
+
 
 #this checks USEODE when compiling so it needs the ODE flags as well
 prvm_cmds.o: prvm_cmds.c

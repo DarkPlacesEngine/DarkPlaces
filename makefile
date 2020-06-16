@@ -106,6 +106,7 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
 endif
 
 # Mac OS X configuration
@@ -134,6 +135,7 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
 
 	# on OS X, we don't build the CL by default because it uses deprecated
 	# and not-implemented-in-64bit Carbon
@@ -168,6 +170,7 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
 endif
 
 # BSD configuration
@@ -193,6 +196,7 @@ ifeq ($(DP_MAKE_TARGET), bsd)
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
 endif
 
 # Win32 configuration
@@ -237,6 +241,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	DP_LINK_ODE?=dlopen
 	DP_LINK_CRYPTO?=dlopen
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
 endif
 
 # set these to "" if you want to use dynamic loading instead
@@ -288,6 +293,19 @@ ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), dlopen)
 	LIB_CRYPTO_RIJNDAEL=
 	CFLAGS_CRYPTO_RIJNDAEL=
 endif
+
+# xmp
+ifeq ($(DP_LINK_XMP), shared)
+	OBJ_SND_XMP=snd_xmp.o
+	LIB_SND_XMP=-lxmp
+	CFLAGS_SND_XMP=-DUSEXMP -DLINK_TO_LIBXMP
+endif
+ifeq ($(DP_LINK_XMP), dlopen)
+	OBJ_SND_XMP=snd_xmp.o
+	LIB_SND_XMP=
+	CFLAGS_SND_XMP=-DUSEXMP
+endif
+
 
 ##### Extra CFLAGS #####
 
