@@ -171,7 +171,7 @@ vector	getresolution(float number)
 static void VM_M_getresolution(prvm_prog_t *prog)
 {
 	int nr, fs;
-	VM_SAFEPARMCOUNTRANGE(1, 2, VM_getresolution);
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_M_getresolution);
 
 	nr = (int)PRVM_G_FLOAT(OFS_PARM0);
 
@@ -521,7 +521,7 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 	const serverlist_entry_t *cache;
 	int hostnr;
 
-	VM_SAFEPARMCOUNT(2, VM_M_getserverliststring);
+	VM_SAFEPARMCOUNT(2, VM_M_getserverlistnumber);
 
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 
@@ -868,7 +868,7 @@ static void VM_M_crypto_getmykeyfp(prvm_prog_t *prog)
 	int i;
 	char keyfp[FP64_SIZE + 1];
 
-	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+	VM_SAFEPARMCOUNT(1, VM_M_crypto_getmykeyfp);
 
 	i = PRVM_G_FLOAT( OFS_PARM0 );
 	switch(Crypto_RetrieveLocalKey(i, keyfp, sizeof(keyfp), NULL, 0, NULL))
@@ -890,7 +890,7 @@ static void VM_M_crypto_getmyidfp(prvm_prog_t *prog)
 	int i;
 	char idfp[FP64_SIZE + 1];
 
-	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+	VM_SAFEPARMCOUNT(1, VM_M_crypto_getmyidfp);
 
 	i = PRVM_G_FLOAT( OFS_PARM0 );
 	switch(Crypto_RetrieveLocalKey(i, NULL, 0, idfp, sizeof(idfp), NULL))
@@ -912,7 +912,7 @@ static void VM_M_crypto_getmyidstatus(prvm_prog_t *prog)
 	int i;
 	qboolean issigned;
 
-	VM_SAFEPARMCOUNT(1,VM_M_crypto_getmykey);
+	VM_SAFEPARMCOUNT(1, VM_M_crypto_getmyidstatus);
 
 	i = PRVM_G_FLOAT( OFS_PARM0 );
 	switch(Crypto_RetrieveLocalKey(i, NULL, 0, NULL, 0, &issigned))
