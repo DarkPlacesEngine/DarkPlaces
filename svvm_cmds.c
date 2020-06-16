@@ -244,7 +244,7 @@ static void VM_SV_setorigin(prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
 
-	VM_SAFEPARMCOUNT(2, VM_setorigin);
+	VM_SAFEPARMCOUNT(2, VM_SV_setorigin);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
@@ -295,7 +295,7 @@ static void VM_SV_setsize(prvm_prog_t *prog)
 	prvm_edict_t	*e;
 	vec3_t mins, maxs;
 
-	VM_SAFEPARMCOUNT(3, VM_setsize);
+	VM_SAFEPARMCOUNT(3, VM_SV_setsize);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)
@@ -328,7 +328,7 @@ static void VM_SV_setmodel(prvm_prog_t *prog)
 	dp_model_t	*mod;
 	int		i;
 
-	VM_SAFEPARMCOUNT(2, VM_setmodel);
+	VM_SAFEPARMCOUNT(2, VM_SV_setmodel);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
 	if (e == prog->edicts)

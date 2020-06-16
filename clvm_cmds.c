@@ -2924,7 +2924,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 	particle_t *part;
 	int themenum;
 
-	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_SpawnParticle2);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_SpawnParticle);
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
@@ -3046,10 +3046,10 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 	particle_t *part;
 	int themenum;
 
-	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_SpawnParticle2);
+	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_SpawnParticleDelayed);
 	if (vmpartspawner.verified == false)
 	{
-		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
+		VM_Warning(prog, "VM_CL_SpawnParticleDelayed: particle spawner not initialized\n");
 		PRVM_G_FLOAT(OFS_RETURN) = 0; 
 		return;
 	}
@@ -3095,7 +3095,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 		themenum = (int)PRVM_G_FLOAT(OFS_PARM4);
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
-			VM_Warning(prog, "VM_CL_SpawnParticle: bad theme number %i\n", themenum);
+			VM_Warning(prog, "VM_CL_SpawnParticleDelayed: bad theme number %i\n", themenum);
 			PRVM_G_FLOAT(OFS_RETURN) = 0;  
 			return;
 		}
@@ -3157,7 +3157,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 {
 	int entnum, fieldnum;
 	vec3_t forward, left, up, org;
-	VM_SAFEPARMCOUNT(2, VM_CL_GetEntityVec);
+	VM_SAFEPARMCOUNT(2, VM_CL_GetEntity);
 
 	entnum = PRVM_G_FLOAT(OFS_PARM0);
 	if (entnum < 0 || entnum >= cl.num_entities)
@@ -3705,7 +3705,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 	unsigned char fatpvs[MAX_MAP_LEAFS/8];
 #endif
 
-	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);
+	VM_SAFEPARMCOUNT(2, VM_CL_checkpvs);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
 	viewee = PRVM_G_EDICT(OFS_PARM1);
 

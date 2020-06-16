@@ -413,7 +413,7 @@ static qboolean SV_CloseEnough (prvm_edict_t *ent, prvm_edict_t *goal, float dis
 
 /*
 ======================
-SV_MoveToGoal
+VM_SV_MoveToGoal
 
 ======================
 */
@@ -422,7 +422,7 @@ void VM_SV_MoveToGoal(prvm_prog_t *prog)
 	prvm_edict_t		*ent, *goal;
 	float		dist;
 
-	VM_SAFEPARMCOUNT(1, SV_MoveToGoal);
+	VM_SAFEPARMCOUNT(1, VM_SV_MoveToGoal);
 
 	ent = PRVM_PROG_TO_EDICT(PRVM_serverglobaledict(self));
 	goal = PRVM_PROG_TO_EDICT(PRVM_serveredictedict(ent, goalentity));
