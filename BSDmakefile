@@ -28,6 +28,7 @@ DP_LINK_JPEG?=shared
 DP_LINK_ODE?=dlopen
 DP_LINK_CRYPTO?=dlopen
 DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+DP_LINK_XMP?=dlopen
 
 ###### Optional features #####
 DP_VIDEO_CAPTURE?=enabled
@@ -110,6 +111,17 @@ CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
 .else
 LIB_CRYPTO_RIJNDAEL=
 CFLAGS_CRYPTO_RIJNDAEL=
+.endif
+
+# xmp
+.if $(DP_LINK_XMP) == "shared"
+OBJ_SND_XMP=snd_xmp.o
+LIB_SND_XMP=-lxmp
+CFLAGS_SND_XMP=-DUSEXMP -DLINK_TO_LIBXMP
+.else
+OBJ_SND_XMP=snd_xmp.o
+LIB_SND_XMP=
+CFLAGS_SND_XMP=-DUSEXMP
 .endif
 
 .endif
