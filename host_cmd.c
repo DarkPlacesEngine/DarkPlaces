@@ -3054,11 +3054,11 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "begin", Host_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
 	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "pings", Host_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "god", Host_God_f, "god mode (invulnerability)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "fly", Host_Fly_f, "fly mode (flight)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "give", Host_Give_f, "alter inventory");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "god", Host_God_f, "god mode (invulnerability)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "fly", Host_Fly_f, "fly mode (flight)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "give", Host_Give_f, "alter inventory");
 	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", Host_Kill_f, "die instantly");
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", Host_Name_f, "change your player name");
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", Host_Color_f, "change your player shirt and pants colors");
