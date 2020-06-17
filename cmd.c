@@ -1435,7 +1435,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		partial = Cmd_Args(cmd);
 	else
 	{
-		Con_Printf("usage: apropos <string>\n");
+		Con_Printf("usage: %s <string>\n",Cmd_Argv(cmd, 0));
 		return;
 	}
 
@@ -1561,6 +1561,7 @@ void Cmd_Init_Commands(qboolean dedicated_server)
 	Cmd_AddCommand(CMD_SHARED, "cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
 	Cmd_AddCommand(CMD_SHARED, "cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
 	Cmd_AddCommand(CMD_SHARED, "apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
+	Cmd_AddCommand(CMD_SHARED, "find", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
 
 	Cmd_AddCommand(CMD_SHARED, "defer", Cmd_Defer_f, "execute a command in the future");
 
