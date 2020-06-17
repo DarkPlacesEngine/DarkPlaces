@@ -2074,7 +2074,8 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 				{
 					if((func->flags & CMD_CHEAT) && !sv_cheats.integer)
 						SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
-					func->function(cmd);
+					else
+						func->function(cmd);
 					goto done;
 				}
 			}
