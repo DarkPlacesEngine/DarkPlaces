@@ -45,9 +45,9 @@ struct cmd_state_s;
 #define CMD_CLIENT				(1<<0)
 #define CMD_SERVER				(1<<1)
 #define CMD_CLIENT_FROM_SERVER	(1<<2)
-#define CMD_SERVER_FROM_CLIENT	9
-#define CMD_INITWAIT			(1<<5)
-#define CMD_CHEAT				(1<<6)
+#define CMD_SERVER_FROM_CLIENT	(1<<3)
+#define CMD_INITWAIT			(1<<4)
+#define CMD_CHEAT				(1<<5)
 
 
 #define CMD_SHARED 3
@@ -128,6 +128,8 @@ typedef struct cmd_state_s
 
 	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
 	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
+
+	int cmd_flags; // cmd flags that identify this interpreter
 }
 cmd_state_t;
 

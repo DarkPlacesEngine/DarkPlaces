@@ -1512,14 +1512,17 @@ void Cmd_Init(void)
 	// client console can see server cvars because the user may start a server
 	cmd_client.cvars = &cvars_all;
 	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
+	cmd_client.cmd_flags = CMD_CLIENT | CMD_CLIENT_FROM_SERVER;
 	cmd_client.userdefined = &cmd_userdefined_all;
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
 	cmd_server.cvars_flagsmask = CVAR_SERVER;
+	cmd_server.cmd_flags = CMD_SERVER;
 	cmd_server.userdefined = &cmd_userdefined_all;
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
+	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
 }
 
@@ -1691,98 +1694,87 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	cmd_function_t *func;
 	cmd_function_t *prev, *current;
 	cmd_state_t *cmd;
-	xcommand_t function_actual;
 	int i;
 
-	for (i = 1; i < (1<<8); i *= 2)
+	for (i = 0; i < 3; i++)
 	{
-		function_actual = function;
-		if ((i == CMD_CLIENT) && (flags & i))
+		cmd = cmd_iter_all[i].cmd;
+		if (flags & cmd->cmd_flags)
 		{
-			cmd = &cmd_client;	
-			if (flags & 8)
-				function_actual = Cmd_ForwardToServer_f;
-		}
-		else if ((i == CMD_SERVER) && (flags & i))
-			cmd = &cmd_server;
-		else if ((i == 8) && (flags & i)) // CMD_SERVER_FROM_CLIENT
-			cmd = &cmd_serverfromclient;
-		else
-			continue;
-
-	// fail if the command is a variable name
-		if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
-		{
-			Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
-			return;
-		}
-
-		if (function_actual)
-		{
-			// fail if the command already exists in this interpreter
-			for (func = cmd->engine_functions; func; func = func->next)
+			// fail if the command is a variable name
+			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 			{
-				if (!strcmp(cmd_name, func->name))
+				Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
+				return;
+			}
+
+			if (function)
+			{
+				// fail if the command already exists in this interpreter
+				for (func = cmd->engine_functions; func; func = func->next)
 				{
-					// Allow overriding forward to server
-					if(func->function == Cmd_ForwardToServer_f && (func->flags & 8))
-						break;
-					else
+					if (!strcmp(cmd_name, func->name))
 					{
-						Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-						goto nested_continue;
+						// Allow overriding forward to server
+						if(func->function == Cmd_ForwardToServer_f && (func->flags & 8))
+							break;
+						else
+						{
+							Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
+							goto nested_continue;
+						}
 					}
 				}
-			}
 
-			func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
-			func->flags = flags;
-			func->name = cmd_name;
-			func->function = function_actual;
-			func->description = description;
-			func->next = cmd->engine_functions;
+				func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
+				func->flags = flags;
+				func->name = cmd_name;
+				func->function = function;
+				func->description = description;
+				func->next = cmd->engine_functions;
 
-			// insert it at the right alphanumeric position
-			for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
-				;
-			if (prev) {
-				prev->next = func;
-			}
-			else {
-				cmd->engine_functions = func;
-			}
-			func->next = current;
-		}
-		else
-		{
-			// mark csqcfunc if the function already exists in the csqc_functions list
-			for (func = cmd->userdefined->csqc_functions; func; func = func->next)
-			{
-				if (!strcmp(cmd_name, func->name))
-				{
-					func->csqcfunc = true; //[515]: csqc
-					continue;
+				// insert it at the right alphanumeric position
+				for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+					;
+				if (prev) {
+					prev->next = func;
 				}
+				else {
+					cmd->engine_functions = func;
+				}
+				func->next = current;
 			}
+			else
+			{
+				// mark csqcfunc if the function already exists in the csqc_functions list
+				for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+				{
+					if (!strcmp(cmd_name, func->name))
+					{
+						func->csqcfunc = true; //[515]: csqc
+						continue;
+					}
+				}
 
 
-			func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
-			func->name = cmd_name;
-			func->function = function_actual;
-			func->description = description;
-			func->csqcfunc = true; //[515]: csqc
-			func->next = cmd->userdefined->csqc_functions;
+				func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
+				func->name = cmd_name;
+				func->function = function;
+				func->description = description;
+				func->csqcfunc = true; //[515]: csqc
+				func->next = cmd->userdefined->csqc_functions;
 
-			// insert it at the right alphanumeric position
-			for (prev = NULL, current = cmd->userdefined->csqc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
-				;
-			if (prev) {
-				prev->next = func;
+				// insert it at the right alphanumeric position
+				for (prev = NULL, current = cmd->userdefined->csqc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+					;
+				if (prev) {
+					prev->next = func;
+				}
+				else {
+					cmd->userdefined->csqc_functions = func;
+				}
+				func->next = current;
 			}
-			else {
-				cmd->userdefined->csqc_functions = func;
-			}
-			func->next = current;
 		}
 nested_continue:
 		continue;
