@@ -23,7 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "snd_main.h"
 #include "snd_ogg.h"
+#ifdef USEXMP
 #include "snd_xmp.h"
+#endif
 #include "csprogs.h"
 #include "cl_collision.h"
 #include "cdaudio.h"
