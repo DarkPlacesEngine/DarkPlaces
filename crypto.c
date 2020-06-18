@@ -518,7 +518,7 @@ static crypto_t *Crypto_ServerFindInstance(lhnetaddress_t *peeraddress, qboolean
 	if(i < MAX_CRYPTOCONNECTS && (allow_create || cryptoconnects[i].crypto.data))
 	{
 		crypto = &cryptoconnects[i].crypto;
-		cryptoconnects[i].lasttime = realtime;
+		cryptoconnects[i].lasttime = host.realtime;
 		return crypto;
 	}
 	if(!allow_create)
@@ -528,7 +528,7 @@ static crypto_t *Crypto_ServerFindInstance(lhnetaddress_t *peeraddress, qboolean
 		if(cryptoconnects[i].lasttime < cryptoconnects[best].lasttime)
 			best = i;
 	crypto = &cryptoconnects[best].crypto;
-	cryptoconnects[best].lasttime = realtime;
+	cryptoconnects[best].lasttime = host.realtime;
 	memcpy(&cryptoconnects[best].address, peeraddress, sizeof(cryptoconnects[best].address));
 	CLEAR_CDATA;
 	return crypto;
@@ -2037,7 +2037,7 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 		// check if we may perform crypto...
 		if(crypto_servercpupercent.value > 0)
 		{
-			crypto_servercpu_accumulator += (realtime - crypto_servercpu_lastrealtime) * crypto_servercpupercent.value * 0.01;
+			crypto_servercpu_accumulator += (host.realtime - crypto_servercpu_lastrealtime) * crypto_servercpupercent.value * 0.01;
 			if(crypto_servercpumaxtime.value)
 				if(crypto_servercpu_accumulator > crypto_servercpumaxtime.value)
 					crypto_servercpu_accumulator = crypto_servercpumaxtime.value;
@@ -2045,13 +2045,13 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 		else
 		{
 			if(crypto_servercpumaxtime.value > 0)
-				if(realtime != crypto_servercpu_lastrealtime)
+				if(host.realtime != crypto_servercpu_lastrealtime)
 					crypto_servercpu_accumulator = crypto_servercpumaxtime.value;
 		}
-		crypto_servercpu_lastrealtime = realtime;
+		crypto_servercpu_lastrealtime = host.realtime;
 		if(do_reject && crypto_servercpu_accumulator < 0)
 		{
-			if(realtime > complain_time + 5)
+			if(host.realtime > complain_time + 5)
 				Con_Printf("crypto: cannot perform requested crypto operations; denial service attack or crypto_servercpupercent/crypto_servercpumaxtime are too low\n");
 			*len_out = 0;
 			return CRYPTO_DISCARD;
@@ -2420,7 +2420,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			if(CDATA->next_step != 1)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
-			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
+			cls.connect_nextsendtime = max(cls.connect_nextsendtime, host.realtime + 1); // prevent "hammering"
 
 			if((s = InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue))))
 				aes = atoi(s);
@@ -2469,7 +2469,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			if(CDATA->next_step != 3)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
-			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
+			cls.connect_nextsendtime = max(cls.connect_nextsendtime, host.realtime + 1); // prevent "hammering"
 
 			if(!qd0_blind_id_authenticate_with_private_id_verify(CDATA->id, data_in, len_in, msgbuf, &msgbuflen, &status))
 			{
@@ -2551,7 +2551,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			if(CDATA->next_step != 5)
 				return Crypto_SoftClientError(data_out, len_out, va(vabuf, sizeof(vabuf), "Got d0pk\\cnt\\%s when expecting %d", cnt, CDATA->next_step));
 
-			cls.connect_nextsendtime = max(cls.connect_nextsendtime, realtime + 1); // prevent "hammering"
+			cls.connect_nextsendtime = max(cls.connect_nextsendtime, host.realtime + 1); // prevent "hammering"
 
 			if(CDATA->s < 0) // only if server didn't auth
 			{

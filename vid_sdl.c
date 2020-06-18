@@ -607,7 +607,7 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 		}
 		if (scr_numtouchscreenareas < 128)
 		{
-			if (clickrealtime + 1 > realtime)
+			if (clickrealtime + 1 > host.realtime)
 			{
 				scr_touchscreenareas[scr_numtouchscreenareas].pic = "gfx/gui/touch_puck_cur_click.tga";
 			}
@@ -617,7 +617,7 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 			}
 			else
 			{
-				switch ((int)realtime * 10 % 20)
+				switch ((int)host.realtime * 10 % 20)
 				{
 				case 0:
 					scr_touchscreenareas[scr_numtouchscreenareas].pic = "gfx/gui/touch_puck_cur_touch.tga";
@@ -671,11 +671,11 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 			{
 				Key_Event(key, 0, true);
 				canclick = false;
-				clickrealtime = realtime;
+				clickrealtime = host.realtime;
 			}
 
 			// SS:BR can't qc can't cope with presses and releases on the same frame
-			if (clickrealtime && clickrealtime + 0.1 < realtime)
+			if (clickrealtime && clickrealtime + 0.1 < host.realtime)
 			{
 				Key_Event(key, 0, false);
 				clickrealtime = 0;
@@ -1494,8 +1494,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 // COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is whatever SDL recommends, useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
 	i = COM_CheckParm("-gl_driver");
-	if (i && i < com_argc - 1)
-		drivername = com_argv[i + 1];
+	if (i && i < sys.argc - 1)
+		drivername = sys.argv[i + 1];
 	if (SDL_GL_LoadLibrary(drivername) < 0)
 	{
 		Con_Errorf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());

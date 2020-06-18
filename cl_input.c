@@ -1766,7 +1766,7 @@ void CL_SendMove(void)
 		return;
 
 	// we don't que moves during a lag spike (potential network timeout)
-	quemove = realtime - cl.last_received_message < cl_movement_nettimeout.value;
+	quemove = host.realtime - cl.last_received_message < cl_movement_nettimeout.value;
 
 	// we build up cl.cmd and then decide whether to send or not
 	// we store this into cl.movecmd[0] for prediction each frame even if we
@@ -1870,7 +1870,7 @@ void CL_SendMove(void)
 		cl.movecmd[0] = cl.cmd;
 
 	// don't predict more than 200fps
-	if (realtime >= cl.lastpackettime + 0.005)
+	if (host.realtime >= cl.lastpackettime + 0.005)
 		cl.movement_replay = true; // redo the prediction
 
 	// now decide whether to actually send this move
@@ -1892,7 +1892,7 @@ void CL_SendMove(void)
 	// even if it violates the rate limit!
 	important = (cl.cmd.impulse || (cl_netimmediatebuttons.integer && cl.cmd.buttons != cl.movecmd[1].buttons));
 	// don't send too often (cl_netfps)
-	if (!important && realtime < cl.lastpackettime + packettime)
+	if (!important && host.realtime < cl.lastpackettime + packettime)
 		return;
 	// don't choke the connection with packets (obey rate limit)
 	// it is important that this check be last, because it adds a new
@@ -1904,9 +1904,9 @@ void CL_SendMove(void)
 	// try to round off the lastpackettime to a multiple of the packet interval
 	// (this causes it to emit packets at a steady beat)
 	if (packettime > 0)
-		cl.lastpackettime = floor(realtime / packettime) * packettime;
+		cl.lastpackettime = floor(host.realtime / packettime) * packettime;
 	else
-		cl.lastpackettime = realtime;
+		cl.lastpackettime = host.realtime;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;

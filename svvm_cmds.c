@@ -2876,7 +2876,7 @@ static void VM_SV_setpause(prvm_prog_t *prog) {
 	pauseValue = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if (pauseValue != 0) { //pause the game
 		sv.paused = 1;
-		sv.pausedstart = realtime;
+		sv.pausedstart = host.realtime;
 	} else { //disable pause, in case it was enabled
 		if (sv.paused != 0) {
 			sv.paused = 0;

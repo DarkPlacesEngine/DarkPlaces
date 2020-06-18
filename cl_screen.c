@@ -265,7 +265,7 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
 		graph = netgraph + j;
-		g[j][0] = 1.0f - 0.25f * (realtime - graph->time);
+		g[j][0] = 1.0f - 0.25f * (host.realtime - graph->time);
 		g[j][1] = 1.0f;
 		g[j][2] = 1.0f;
 		g[j][3] = 1.0f;
@@ -285,7 +285,7 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 			g[j][4] = g[j][3] - graph->reliablebytes   * graphscale;
 			g[j][5] = g[j][4] - graph->ackbytes        * graphscale;
 			// count bytes in the last second
-			if (realtime - graph->time < 1.0f)
+			if (host.realtime - graph->time < 1.0f)
 				totalbytes += graph->unreliablebytes + graph->reliablebytes + graph->ackbytes;
 		}
 		if(graph->cleartime >= 0)
@@ -409,7 +409,7 @@ static void SCR_DrawNet (void)
 {
 	if (cls.state != ca_connected)
 		return;
-	if (realtime - cl.last_received_message < 0.3)
+	if (host.realtime - cl.last_received_message < 0.3)
 		return;
 	if (cls.demoplayback)
 		return;
@@ -511,14 +511,14 @@ static int SCR_DrawQWDownload(int offset)
 	if (!cls.qw_downloadname[0])
 	{
 		cls.qw_downloadspeedrate = 0;
-		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedtime = host.realtime;
 		cls.qw_downloadspeedcount = 0;
 		return 0;
 	}
-	if (realtime >= cls.qw_downloadspeedtime + 1)
+	if (host.realtime >= cls.qw_downloadspeedtime + 1)
 	{
 		cls.qw_downloadspeedrate = cls.qw_downloadspeedcount;
-		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedtime = host.realtime;
 		cls.qw_downloadspeedcount = 0;
 	}
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
@@ -984,8 +984,8 @@ static void R_TimeReport_EndFrame(void)
 	mleaf_t *viewleaf;
 	static double oldtime = 0;
 
-	r_refdef.stats[r_stat_timedelta] = (int)((realtime - oldtime) * 1000000.0);
-	oldtime = realtime;
+	r_refdef.stats[r_stat_timedelta] = (int)((host.realtime - oldtime) * 1000000.0);
+	oldtime = host.realtime;
 	r_refdef.stats[r_stat_quality] = (int)(100 * r_refdef.view.quality);
 
 	string[0] = 0;
@@ -1538,9 +1538,9 @@ static void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.framestep = cl_capturevideo_framestep.integer;
 	cls.capturevideo.soundrate = S_GetSoundRate();
 	cls.capturevideo.soundchannels = S_GetSoundChannels();
-	cls.capturevideo.startrealtime = realtime;
+	cls.capturevideo.startrealtime = host.realtime;
 	cls.capturevideo.frame = cls.capturevideo.lastfpsframe = 0;
-	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = realtime;
+	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = host.realtime;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
 	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
@@ -1712,7 +1712,7 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	if(cl_capturevideo_printfps.integer)
 	{
 		char buf[80];
-		double t = realtime;
+		double t = host.realtime;
 		if(t > cls.capturevideo.lastfpstime + 1)
 		{
 			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
@@ -1749,7 +1749,7 @@ static void SCR_CaptureVideo(void)
 		if (cls.capturevideo.realtime)
 		{
 			// preserve sound sync by duplicating frames when running slow
-			newframenum = (int)((realtime - cls.capturevideo.startrealtime) * cls.capturevideo.framerate);
+			newframenum = (int)((host.realtime - cls.capturevideo.startrealtime) * cls.capturevideo.framerate);
 		}
 		else
 			newframenum = cls.capturevideo.frame + 1;

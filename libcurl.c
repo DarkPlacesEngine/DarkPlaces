@@ -1148,7 +1148,7 @@ void Curl_Run(void)
 		return;
 	}
 
-	if(realtime < curltime) // throttle
+	if(host.realtime < curltime) // throttle
 	{
 		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return;
@@ -1231,12 +1231,12 @@ void Curl_Run(void)
 	if(maxspeed > 0)
 	{
 		double bytes = bytes_sent + bytes_received; // maybe smoothen a bit?
-		curltime = realtime + bytes / (maxspeed * 1024.0);
+		curltime = host.realtime + bytes / (maxspeed * 1024.0);
 		bytes_sent = 0;
 		bytes_received = 0;
 	}
 	else
-		curltime = realtime;
+		curltime = host.realtime;
 
 	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
