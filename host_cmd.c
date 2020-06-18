@@ -45,7 +45,6 @@ cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player s
 cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
-extern qboolean host_shuttingdown;
 extern cvar_t developer_entityparsing;
 
 /*
@@ -56,7 +55,7 @@ Host_Quit_f
 
 void Host_Quit_f(cmd_state_t *cmd)
 {
-	if(host_shuttingdown)
+	if(host.state == host_shutdown)
 		Con_Printf("shutting down already!\n");
 	else
 		Sys_Quit (0);
@@ -127,7 +126,7 @@ static void Host_Status_f(cmd_state_t *cmd)
 
 		if (in == 0 || in == 1)
 		{
-			seconds = (int)(realtime - client->connecttime);
+			seconds = (int)(host.realtime - client->connecttime);
 			minutes = seconds / 60;
 			if (minutes)
 			{
@@ -605,7 +604,7 @@ void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 			FS_Printf(f, "(dummy)\n");
 		FS_Printf(f, "%d\n", 0);
 		FS_Printf(f, "%s\n", "(dummy)");
-		FS_Printf(f, "%f\n", realtime);
+		FS_Printf(f, "%f\n", host.realtime);
 	}
 
 	// write the light styles
@@ -1141,13 +1140,13 @@ static void Host_Name_f(cmd_state_t *cmd)
 		return;
 	}
 
-	if (realtime < host_client->nametime)
+	if (host.realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change name more than once every %.1f seconds!\n", max(0.0f, sv_namechangetimer.value));
 		return;
 	}
 
-	host_client->nametime = realtime + max(0.0f, sv_namechangetimer.value);
+	host_client->nametime = host.realtime + max(0.0f, sv_namechangetimer.value);
 
 	// point the string back at updateclient->name to keep it safe
 	strlcpy (host_client->name, newName, sizeof (host_client->name));
@@ -1270,13 +1269,13 @@ static void Host_Playermodel_f(cmd_state_t *cmd)
 	}
 
 	/*
-	if (realtime < host_client->nametime)
+	if (host.realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
 
-	host_client->nametime = realtime + 5;
+	host_client->nametime = host.realtime + 5;
 	*/
 
 	// point the string back at updateclient->name to keep it safe
@@ -1330,13 +1329,13 @@ static void Host_Playerskin_f(cmd_state_t *cmd)
 	}
 
 	/*
-	if (realtime < host_client->nametime)
+	if (host.realtime < host_client->nametime)
 	{
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
 
-	host_client->nametime = realtime + 5;
+	host_client->nametime = host.realtime + 5;
 	*/
 
 	// point the string back at updateclient->name to keep it safe
@@ -2653,7 +2652,7 @@ static void Host_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &cls.rcon_address); // otherwise we'll request the challenge later
 			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(cmd), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
 			cls.rcon_addresses[cls.rcon_ringpos] = cls.rcon_address;
-			cls.rcon_timeout[cls.rcon_ringpos] = realtime + rcon_secure_challengetimeout.value;
+			cls.rcon_timeout[cls.rcon_ringpos] = host.realtime + rcon_secure_challengetimeout.value;
 			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
 		}
 		else if(rcon_secure.integer > 0)

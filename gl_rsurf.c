@@ -584,9 +584,9 @@ void R_View_WorldVisibility(qboolean forcenovis)
 						continue;
 					if (r_vis_trace.integer)
 					{
-						if (p->tracetime != realtime && R_CanSeeBox(r_vis_trace_samples.value, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, cullmins, cullmaxs))
-							p->tracetime = realtime;
-						if (realtime - p->tracetime > r_vis_trace_delay.value)
+						if (p->tracetime != host.realtime && R_CanSeeBox(r_vis_trace_samples.value, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, cullmins, cullmaxs))
+							p->tracetime = host.realtime;
+						if (host.realtime - p->tracetime > r_vis_trace_delay.value)
 							continue;
 					}
 					if (leafstackpos >= (int)(sizeof(leafstack) / sizeof(leafstack[0])))

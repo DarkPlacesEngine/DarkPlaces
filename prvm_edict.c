@@ -205,7 +205,7 @@ void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e)
 {
 	memset(e->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 	e->priv.required->free = false;
-	e->priv.required->freetime = realtime;
+	e->priv.required->freetime = host.realtime;
 	if(e->priv.required->allocation_origin)
 		Mem_Free((char *)e->priv.required->allocation_origin);
 	e->priv.required->allocation_origin = PRVM_AllocationOrigin(prog);
@@ -237,13 +237,13 @@ qboolean PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e)
 {
 	if(!e->priv.required->free)
 		return false;
-	if(prvm_reuseedicts_always_allow == realtime)
+	if(prvm_reuseedicts_always_allow == host.realtime)
 		return true;
-	if(realtime <= e->priv.required->freetime + 0.1 && prvm_reuseedicts_neverinsameframe.integer)
+	if(host.realtime <= e->priv.required->freetime + 0.1 && prvm_reuseedicts_neverinsameframe.integer)
 		return false; // never allow reuse in same frame (causes networking trouble)
 	if(e->priv.required->freetime < prog->starttime + prvm_reuseedicts_startuptime.value)
 		return true;
-	if(realtime > e->priv.required->freetime + 1)
+	if(host.realtime > e->priv.required->freetime + 1)
 		return true;
 	return false; // entity slot still blocked because the entity was freed less than one second ago
 }
@@ -309,7 +309,7 @@ void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed)
 	prog->free_edict(prog, ed);
 
 	ed->priv.required->free = true;
-	ed->priv.required->freetime = realtime;
+	ed->priv.required->freetime = host.realtime;
 	if(ed->priv.required->allocation_origin)
 	{
 		Mem_Free((char *)ed->priv.required->allocation_origin);
@@ -1343,7 +1343,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 
 	if (!init) {
 		ent->priv.required->free = true;
-		ent->priv.required->freetime = realtime;
+		ent->priv.required->freetime = host.realtime;
 	}
 
 	return data;
@@ -1378,7 +1378,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 	spawned = 0;
 	died = 0;
 
-	prvm_reuseedicts_always_allow = realtime;
+	prvm_reuseedicts_always_allow = host.realtime;
 
 // parse ents
 	while (1)
@@ -1977,7 +1977,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	// TODO bounds check header fields (e.g. numstatements), they must never go behind end of file
 
 	prog->profiletime = Sys_DirtyTime();
-	prog->starttime = realtime;
+	prog->starttime = host.realtime;
 
 	Con_DPrintf("%s programs occupy %iK.\n", prog->name, (int)(filesize/1024));
 
@@ -2483,7 +2483,7 @@ fail:
 
 	// Inittime is at least the time when this function finished. However,
 	// later events may bump it.
-	prog->inittime = realtime;
+	prog->inittime = host.realtime;
 }
 
 

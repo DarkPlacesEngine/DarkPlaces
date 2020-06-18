@@ -4146,8 +4146,8 @@ static void R_View_UpdateEntityVisible (void)
 			{
 				samples = ent->last_trace_visibility == 0 ? r_cullentities_trace_tempentitysamples.integer : r_cullentities_trace_samples.integer;
 				if (R_CanSeeBox(samples, r_cullentities_trace_eyejitter.value, r_cullentities_trace_enlarge.value, r_cullentities_trace_expand.value, r_cullentities_trace_pad.value, r_refdef.view.origin, ent->mins, ent->maxs))
-					ent->last_trace_visibility = realtime;
-				if (ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
+					ent->last_trace_visibility = host.realtime;
+				if (ent->last_trace_visibility < host.realtime - r_cullentities_trace_delay.value)
 					r_refdef.viewcache.entityvisible[i] = 0;
 			}
 		}
@@ -4639,7 +4639,7 @@ void R_RenderTarget_FreeUnused(qboolean force)
 		// free resources for rendertargets that have not been used for a while
 		// (note: this check is run after the frame render, so any targets used
 		// this frame will not be affected even at low framerates)
-		if (r && (realtime - r->lastusetime > 0.2 || force))
+		if (r && (host.realtime - r->lastusetime > 0.2 || force))
 		{
 			if (r->fbo)
 				R_Mesh_DestroyFramebufferObject(r->fbo);
@@ -4680,7 +4680,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 	for (i = 0; i < end; i++)
 	{
 		r = (r_rendertarget_t *)Mem_ExpandableArray_RecordAtIndex(&r_fb.rendertargets, i);
-		if (r && r->lastusetime != realtime && r->texturewidth == texturewidth && r->textureheight == textureheight && r->depthtextype == depthtextype && r->colortextype[0] == colortextype0 && r->colortextype[1] == colortextype1 && r->colortextype[2] == colortextype2 && r->colortextype[3] == colortextype3)
+		if (r && r->lastusetime != host.realtime && r->texturewidth == texturewidth && r->textureheight == textureheight && r->depthtextype == depthtextype && r->colortextype[0] == colortextype0 && r->colortextype[1] == colortextype1 && r->colortextype[2] == colortextype2 && r->colortextype[3] == colortextype3)
 			break;
 	}
 	if (i == end)
@@ -4709,7 +4709,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 	}
 	r_refdef.stats[r_stat_rendertargets_used]++;
 	r_refdef.stats[r_stat_rendertargets_pixels] += r->texturewidth * r->textureheight;
-	r->lastusetime = realtime;
+	r->lastusetime = host.realtime;
 	R_CalcTexCoordsForView(0, 0, r->texturewidth, r->textureheight, r->texturewidth, r->textureheight, r->texcoord2f);
 	return r;
 }

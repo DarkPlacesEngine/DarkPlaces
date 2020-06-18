@@ -3405,7 +3405,7 @@ void CL_ParseServerMessage(void)
 	//if (cls.demorecording)
 	//	CL_WriteDemoMessage (&cl_message);
 
-	cl.last_received_message = realtime;
+	cl.last_received_message = host.realtime;
 
 	CL_KeepaliveMessage(false);
 
@@ -3413,7 +3413,7 @@ void CL_ParseServerMessage(void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.integer == 1)
-		Con_Printf("%f %i\n", realtime, cl_message.cursize);
+		Con_Printf("%f %i\n", host.realtime, cl_message.cursize);
 	else if (cl_shownet.integer == 2)
 		Con_Print("------------------\n");
 
@@ -3426,7 +3426,7 @@ void CL_ParseServerMessage(void)
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		CL_NetworkTimeReceived(realtime); // qw has no clock
+		CL_NetworkTimeReceived(host.realtime); // qw has no clock
 
 		// kill all qw nails
 		cl.qw_num_nails = 0;

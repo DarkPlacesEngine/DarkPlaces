@@ -227,7 +227,7 @@ static void CSQC_SetGlobals (double frametime)
 	prvm_prog_t *prog = CLVM_prog;
 	CSQC_BEGIN
 		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobalfloat(cltime) = realtime; // Spike named it that way.
+		PRVM_clientglobalfloat(cltime) = host.realtime; // Spike named it that way.
 		PRVM_clientglobalfloat(frametime) = frametime;
 		PRVM_clientglobalfloat(servercommandframe) = cls.servermovesequence;
 		PRVM_clientglobalfloat(clientcommandframe) = cl.movecmd[0].sequence;
@@ -1149,7 +1149,7 @@ void CL_VM_Init (void)
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
 
 	// Once CSQC_Init was called, we consider csqc code fully initialized.
-	prog->inittime = realtime;
+	prog->inittime = host.realtime;
 
 	cl.csqc_loaded = true;
 

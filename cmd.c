@@ -237,11 +237,11 @@ static void Cbuf_Execute_Deferred (cmd_state_t *cmd)
 {
 	cmddeferred_t *defcmd, *prev;
 	double eat;
-	if (realtime - cmd->deferred_oldrealtime < 0 || realtime - cmd->deferred_oldrealtime > 1800) cmd->deferred_oldrealtime = realtime;
-	eat = realtime - cmd->deferred_oldrealtime;
+	if (host.realtime - cmd->deferred_oldrealtime < 0 || host.realtime - cmd->deferred_oldrealtime > 1800) cmd->deferred_oldrealtime = host.realtime;
+	eat = host.realtime - cmd->deferred_oldrealtime;
 	if (eat < (1.0 / 120.0))
 		return;
-	cmd->deferred_oldrealtime = realtime;
+	cmd->deferred_oldrealtime = host.realtime;
 	prev = NULL;
 	defcmd = cmd->deferred_list;
 	while(defcmd)
@@ -395,8 +395,6 @@ void Cbuf_Frame(cmd_state_t *cmd)
 ==============================================================================
 */
 
-extern qboolean host_init;
-
 /*
 ===============
 Cmd_StuffCmds_f
@@ -414,7 +412,7 @@ static void Cmd_StuffCmds_f (cmd_state_t *cmd)
 	char	build[MAX_INPUTLINE];
 
 	// come back later so we don't crash
-	if(host_init)
+	if(host.state == host_init)
 		return;
 
 	if (Cmd_Argc (cmd) != 1)
@@ -430,28 +428,28 @@ static void Cmd_StuffCmds_f (cmd_state_t *cmd)
 	host_stuffcmdsrun = true;
 	build[0] = 0;
 	l = 0;
-	for (i = 0;i < com_argc;i++)
+	for (i = 0;i < sys.argc;i++)
 	{
-		if (com_argv[i] && com_argv[i][0] == '+' && (com_argv[i][1] < '0' || com_argv[i][1] > '9') && l + strlen(com_argv[i]) - 1 <= sizeof(build) - 1)
+		if (sys.argv[i] && sys.argv[i][0] == '+' && (sys.argv[i][1] < '0' || sys.argv[i][1] > '9') && l + strlen(sys.argv[i]) - 1 <= sizeof(build) - 1)
 		{
 			j = 1;
-			while (com_argv[i][j])
-				build[l++] = com_argv[i][j++];
+			while (sys.argv[i][j])
+				build[l++] = sys.argv[i][j++];
 			i++;
-			for (;i < com_argc;i++)
+			for (;i < sys.argc;i++)
 			{
-				if (!com_argv[i])
+				if (!sys.argv[i])
 					continue;
-				if ((com_argv[i][0] == '+' || com_argv[i][0] == '-') && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
+				if ((sys.argv[i][0] == '+' || sys.argv[i][0] == '-') && (sys.argv[i][1] < '0' || sys.argv[i][1] > '9'))
 					break;
-				if (l + strlen(com_argv[i]) + 4 > sizeof(build) - 1)
+				if (l + strlen(sys.argv[i]) + 4 > sizeof(build) - 1)
 					break;
 				build[l++] = ' ';
-				if (strchr(com_argv[i], ' '))
+				if (strchr(sys.argv[i], ' '))
 					build[l++] = '\"';
-				for (j = 0;com_argv[i][j];j++)
-					build[l++] = com_argv[i][j];
-				if (strchr(com_argv[i], ' '))
+				for (j = 0;sys.argv[i][j];j++)
+					build[l++] = sys.argv[i][j];
+				if (strchr(sys.argv[i], ' '))
 					build[l++] = '\"';
 			}
 			build[l++] = '\n';
@@ -2102,7 +2100,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	}
 
 // check cvars
-	if (!Cvar_Command(cmd) && host_framecount > 0)
+	if (!Cvar_Command(cmd) && host.framecount > 0)
 		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 done:
 	cmd->tokenizebufferpos = oldpos;

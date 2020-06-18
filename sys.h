@@ -22,6 +22,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SYS_H
 #define SYS_H
 
+typedef struct sys_s
+{
+	int argc;
+	const char **argv;
+	int selffd;
+	int outfd;
+} sys_t;
+
+extern sys_t sys;
+
 extern cvar_t sys_usenoclockbutbenchmark;
 
 //

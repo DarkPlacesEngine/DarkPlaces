@@ -204,10 +204,6 @@ int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_Console(const char **datapointer);
 
-extern int com_argc;
-extern const char **com_argv;
-extern int com_selffd;
-
 int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_Shutdown (void);

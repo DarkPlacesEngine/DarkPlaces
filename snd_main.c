@@ -529,15 +529,15 @@ void S_Startup (void)
 	}
 // COMMANDLINEOPTION: Sound: -sndspeed <hz> chooses sound output rate (supported values are 48000, 44100, 32000, 24000, 22050, 16000, 11025 (quake), 8000)
 	i = COM_CheckParm ("-sndspeed");
-	if (0 < i && i < com_argc - 1)
+	if (0 < i && i < sys.argc - 1)
 	{
-		chosen_fmt.speed = atoi (com_argv[i + 1]);
+		chosen_fmt.speed = atoi (sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Sound: -sndbits <bits> chooses 8 bit or 16 bit or 32bit float sound output
 	i = COM_CheckParm ("-sndbits");
-	if (0 < i && i < com_argc - 1)
+	if (0 < i && i < sys.argc - 1)
 	{
-		chosen_fmt.width = atoi (com_argv[i + 1]) / 8;
+		chosen_fmt.width = atoi (sys.argv[i + 1]) / 8;
 	}
 
 #if 0
@@ -622,7 +622,7 @@ void S_Startup (void)
 	current_channellayout_used = SND_CHANNELLAYOUT_AUTO;
 	S_SetChannelLayout();
 
-	snd_starttime = realtime;
+	snd_starttime = host.realtime;
 
 	// If the sound module has already run, add an extra time to make sure
 	// the sound time doesn't decrease, to not confuse playing SFXs
@@ -1912,7 +1912,7 @@ static void S_PaintAndSubmit (void)
 	else if (simsound)
 	{
 		usesoundtimehack = 3;
-		newsoundtime = (unsigned int)((realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
+		newsoundtime = (unsigned int)((host.realtime - snd_starttime) * (double)snd_renderbuffer->format.speed);
 	}
 	else
 	{

@@ -35,9 +35,9 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 	Con_Warn(msg);
 
 	// TODO: either add a cvar/cmd to control the state dumping or replace some of the calls with Con_Printf [9/13/2006 Black]
-	if(prvm_backtraceforwarnings.integer && recursive != realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
+	if(prvm_backtraceforwarnings.integer && recursive != host.realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
 	{
-		recursive = realtime;
+		recursive = host.realtime;
 		PRVM_PrintState(prog, 0);
 		recursive = -1;
 	}
@@ -2903,7 +2903,7 @@ void VM_gettime(prvm_prog_t *prog)
 
 	if(prog->argc == 0)
 	{
-		PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) realtime;
+		PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) host.realtime;
 	}
 	else
 	{
@@ -2911,23 +2911,23 @@ void VM_gettime(prvm_prog_t *prog)
 		switch(timer_index)
 		{
 			case 0: // GETTIME_FRAMESTART
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 			case 1: // GETTIME_REALTIME
 				PRVM_G_FLOAT(OFS_RETURN) = Sys_DirtyTime();
 				break;
 			case 2: // GETTIME_HIRES
-				PRVM_G_FLOAT(OFS_RETURN) = (Sys_DirtyTime() - host_dirtytime);
+				PRVM_G_FLOAT(OFS_RETURN) = (Sys_DirtyTime() - host.dirtytime);
 				break;
 			case 3: // GETTIME_UPTIME
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 			case 4: // GETTIME_CDTRACK
 				PRVM_G_FLOAT(OFS_RETURN) = CDAudio_GetPosition();
 				break;
 			default:
 				VM_Warning(prog, "VM_gettime: %s: unsupported timer specified, returning realtime\n", prog->name);
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 		}
 	}

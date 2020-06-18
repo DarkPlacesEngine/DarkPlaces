@@ -32,9 +32,6 @@ cvar_t registered = {CVAR_CLIENT | CVAR_SERVER, "registered","0", "indicates if 
 cvar_t cmdline = {CVAR_CLIENT | CVAR_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
 
 char com_token[MAX_INPUTLINE];
-int com_argc;
-const char **com_argv;
-int com_selffd = -1;
 
 gamemode_t gamemode;
 const char *gamename;
@@ -1413,11 +1410,11 @@ int COM_CheckParm (const char *parm)
 {
 	int i;
 
-	for (i=1 ; i<com_argc ; i++)
+	for (i=1 ; i<sys.argc ; i++)
 	{
-		if (!com_argv[i])
+		if (!sys.argv[i])
 			continue;               // NEXTSTEP sometimes clears appkit vars.
-		if (!strcmp (parm,com_argv[i]))
+		if (!strcmp (parm,sys.argv[i]))
 			return i;
 	}
 
@@ -1493,7 +1490,7 @@ void COM_InitGameType (void)
 	COM_ToLowerString(FORCEGAME, name, sizeof (name));
 #else
 	// check executable filename for keywords, but do it SMARTLY - only check the last path element
-	FS_StripExtension(FS_FileWithoutPath(com_argv[0]), name, sizeof (name));
+	FS_StripExtension(FS_FileWithoutPath(sys.argv[0]), name, sizeof (name));
 	COM_ToLowerString(name, name, sizeof (name));
 #endif
 	for (i = 1;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
@@ -1557,18 +1554,18 @@ static void COM_SetGameType(int index)
 
 	if (gamemode == com_startupgamemode)
 	{
-		if((t = COM_CheckParm("-customgamename")) && t + 1 < com_argc)
-			gamename = gamenetworkfiltername = com_argv[t+1];
-		if((t = COM_CheckParm("-customgamenetworkfiltername")) && t + 1 < com_argc)
-			gamenetworkfiltername = com_argv[t+1];
-		if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < com_argc)
-			gamedirname1 = com_argv[t+1];
-		if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < com_argc)
-			gamedirname2 = *com_argv[t+1] ? com_argv[t+1] : NULL;
-		if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < com_argc)
-			gamescreenshotname = com_argv[t+1];
-		if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < com_argc)
-			gameuserdirname = com_argv[t+1];
+		if((t = COM_CheckParm("-customgamename")) && t + 1 < sys.argc)
+			gamename = gamenetworkfiltername = sys.argv[t+1];
+		if((t = COM_CheckParm("-customgamenetworkfiltername")) && t + 1 < sys.argc)
+			gamenetworkfiltername = sys.argv[t+1];
+		if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < sys.argc)
+			gamedirname1 = sys.argv[t+1];
+		if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < sys.argc)
+			gamedirname2 = *sys.argv[t+1] ? sys.argv[t+1] : NULL;
+		if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < sys.argc)
+			gamescreenshotname = sys.argv[t+1];
+		if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < sys.argc)
+			gameuserdirname = sys.argv[t+1];
 	}
 
 	if (gamedirname2 && gamedirname2[0])
@@ -1614,10 +1611,10 @@ void COM_Init_Commands (void)
 
 	// reconstitute the command line for the cmdline externally visible cvar
 	n = 0;
-	for (j = 0;(j < MAX_NUM_ARGVS) && (j < com_argc);j++)
+	for (j = 0;(j < MAX_NUM_ARGVS) && (j < sys.argc);j++)
 	{
 		i = 0;
-		if (strstr(com_argv[j], " "))
+		if (strstr(sys.argv[j], " "))
 		{
 			// arg contains whitespace, store quotes around it
 			// This condition checks whether we can allow to put
@@ -1627,17 +1624,17 @@ void COM_Init_Commands (void)
 			com_cmdline[n++] = '\"';
 			// This condition checks whether we can allow one
 			// more character and a quote character.
-			while ((n < ((int)sizeof(com_cmdline) - 2)) && com_argv[j][i])
+			while ((n < ((int)sizeof(com_cmdline) - 2)) && sys.argv[j][i])
 				// FIXME: Doesn't quote special characters.
-				com_cmdline[n++] = com_argv[j][i++];
+				com_cmdline[n++] = sys.argv[j][i++];
 			com_cmdline[n++] = '\"';
 		}
 		else
 		{
 			// This condition checks whether we can allow one
 			// more character.
-			while ((n < ((int)sizeof(com_cmdline) - 1)) && com_argv[j][i])
-				com_cmdline[n++] = com_argv[j][i++];
+			while ((n < ((int)sizeof(com_cmdline) - 1)) && sys.argv[j][i])
+				com_cmdline[n++] = sys.argv[j][i++];
 		}
 		if (n < ((int)sizeof(com_cmdline) - 1))
 			com_cmdline[n++] = ' ';

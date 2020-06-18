@@ -584,9 +584,9 @@ typedef struct r_rendertarget_s {
 	// but potentially faster)
 	rtexture_t *colortexture[4];
 	rtexture_t *depthtexture;
-	// a rendertarget will not be reused in the same frame (realtime == lastusetime),
+	// a rendertarget will not be reused in the same frame (host.realtime == lastusetime),
 	// on a new frame, matching rendertargets will be reused (texturewidth, textureheight, number of color and depth textures and their types),
-	// when a new frame arrives the rendertargets can be reused by requests for matching texturewidth,textureheight and fbo configuration (the number of color and depth textures), when a rendertarget is not reused for > 200ms (realtime - lastusetime > 0.2) the rendertarget's resources will be freed (fbo, textures) and it can be reused for any target in future frames
+	// when a new frame arrives the rendertargets can be reused by requests for matching texturewidth,textureheight and fbo configuration (the number of color and depth textures), when a rendertarget is not reused for > 200ms (host.realtime - lastusetime > 0.2) the rendertarget's resources will be freed (fbo, textures) and it can be reused for any target in future frames
 	double lastusetime;
 } r_rendertarget_t;
 

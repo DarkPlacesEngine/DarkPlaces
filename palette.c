@@ -283,15 +283,15 @@ static void Palette_Load(void)
 // COMMANDLINEOPTION: Client: -texgamma <number> sets the quake palette gamma, allowing you to make quake textures brighter/darker, not recommended
 	i = COM_CheckParm("-texgamma");
 	if (i)
-		gamma = atof(com_argv[i + 1]);
+		gamma = atof(sys.argv[i + 1]);
 // COMMANDLINEOPTION: Client: -texcontrast <number> sets the quake palette contrast, allowing you to make quake textures brighter/darker, not recommended
 	i = COM_CheckParm("-texcontrast");
 	if (i)
-		scale = atof(com_argv[i + 1]);
+		scale = atof(sys.argv[i + 1]);
 // COMMANDLINEOPTION: Client: -texbrightness <number> sets the quake palette brightness (brightness of black), allowing you to make quake textures brighter/darker, not recommended
 	i = COM_CheckParm("-texbrightness");
 	if (i)
-		base = atof(com_argv[i + 1]);
+		base = atof(sys.argv[i + 1]);
 	gamma = bound(0.01, gamma, 10.0);
 	scale = bound(0.01, scale, 10.0);
 	base = bound(0, base, 0.95);

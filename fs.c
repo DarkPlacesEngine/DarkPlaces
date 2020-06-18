@@ -1474,8 +1474,8 @@ void FS_Rescan (void)
 	else
 		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 	
-	if((i = COM_CheckParm("-modname")) && i < com_argc - 1)
-		strlcpy(com_modname, com_argv[i+1], sizeof(com_modname));
+	if((i = COM_CheckParm("-modname")) && i < sys.argc - 1)
+		strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
 
 	// If "-condebug" is in the command line, remove the previous log file
 	if (COM_CheckParm ("-condebug") != 0)
@@ -1761,11 +1761,11 @@ static void COM_InsertFlags(const char *buf) {
 	const char **new_argv;
 	int i = 0;
 	int args_left = 256;
-	new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*com_argv) * (com_argc + args_left + 2));
-	if(com_argc == 0)
+	new_argv = (const char **)Mem_Alloc(fs_mempool, sizeof(*sys.argv) * (sys.argc + args_left + 2));
+	if(sys.argc == 0)
 		new_argv[0] = "dummy";  // Can't really happen.
 	else
-		new_argv[0] = com_argv[0];
+		new_argv[0] = sys.argv[0];
 	++i;
 	p = buf;
 	while(COM_ParseToken_Console(&p))
@@ -1779,15 +1779,15 @@ static void COM_InsertFlags(const char *buf) {
 		++i;
 	}
 	// Now: i <= args_left + 1.
-	if (com_argc >= 1)
+	if (sys.argc >= 1)
 	{
-		memcpy((char *)(&new_argv[i]), &com_argv[1], sizeof(*com_argv) * (com_argc - 1));
-		i += com_argc - 1;
+		memcpy((char *)(&new_argv[i]), &sys.argv[1], sizeof(*sys.argv) * (sys.argc - 1));
+		i += sys.argc - 1;
 	}
-	// Now: i <= args_left + (com_argc || 1).
+	// Now: i <= args_left + (sys.argc || 1).
 	new_argv[i] = NULL;
-	com_argv = new_argv;
-	com_argc = i;
+	sys.argv = new_argv;
+	sys.argc = i;
 }
 
 /*
@@ -1815,9 +1815,9 @@ void FS_Init_SelfPack (void)
 
 #ifndef USE_RWOPS
 	// Provide the SelfPack.
-	if (!COM_CheckParm("-noselfpack") && com_selffd >= 0)
+	if (!COM_CheckParm("-noselfpack") && sys.selffd >= 0)
 	{
-		fs_selfpack = FS_LoadPackPK3FromFD(com_argv[0], com_selffd, true);
+		fs_selfpack = FS_LoadPackPK3FromFD(sys.argv[0], sys.selffd, true);
 		if(fs_selfpack)
 		{
 			FS_AddSelfPack();
@@ -2024,9 +2024,9 @@ void FS_Init (void)
 	// Overrides the system supplied base directory (under GAMENAME)
 // COMMANDLINEOPTION: Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
 	i = COM_CheckParm ("-basedir");
-	if (i && i < com_argc-1)
+	if (i && i < sys.argc-1)
 	{
-		strlcpy (fs_basedir, com_argv[i+1], sizeof (fs_basedir));
+		strlcpy (fs_basedir, sys.argv[i+1], sizeof (fs_basedir));
 		i = (int)strlen (fs_basedir);
 		if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
 			fs_basedir[i-1] = 0;
@@ -2040,10 +2040,10 @@ void FS_Init (void)
 		dpsnprintf(fs_basedir, sizeof(fs_basedir), "/sdcard/%s/", gameuserdirname);
 #elif defined(MACOSX)
 		// FIXME: is there a better way to find the directory outside the .app, without using Objective-C?
-		if (strstr(com_argv[0], ".app/"))
+		if (strstr(sys.argv[0], ".app/"))
 		{
 			char *split;
-			strlcpy(fs_basedir, com_argv[0], sizeof(fs_basedir));
+			strlcpy(fs_basedir, sys.argv[0], sizeof(fs_basedir));
 			split = strstr(fs_basedir, ".app/");
 			if (split)
 			{
@@ -2077,8 +2077,8 @@ void FS_Init (void)
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	// Add the personal game directory
-	if((i = COM_CheckParm("-userdir")) && i < com_argc - 1)
-		dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/", com_argv[i+1]);
+	if((i = COM_CheckParm("-userdir")) && i < sys.argc - 1)
+		dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/", sys.argv[i+1]);
 	else if (COM_CheckParm("-nohome"))
 		*fs_userdir = 0; // user wants roaming installation, no userdir
 	else
@@ -2149,20 +2149,20 @@ void FS_Init (void)
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
 	// LadyHavoc: now supports multiple -game directories
-	for (i = 1;i < com_argc && fs_numgamedirs < MAX_GAMEDIRS;i++)
+	for (i = 1;i < sys.argc && fs_numgamedirs < MAX_GAMEDIRS;i++)
 	{
-		if (!com_argv[i])
+		if (!sys.argv[i])
 			continue;
-		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
+		if (!strcmp (sys.argv[i], "-game") && i < sys.argc-1)
 		{
 			i++;
-			p = FS_CheckGameDir(com_argv[i]);
+			p = FS_CheckGameDir(sys.argv[i]);
 			if(!p)
-				Sys_Error("Nasty -game name rejected: %s", com_argv[i]);
+				Sys_Error("Nasty -game name rejected: %s", sys.argv[i]);
 			if(p == fs_checkgamedir_missing)
-				Con_Warnf("WARNING: -game %s%s/ not found!\n", fs_basedir, com_argv[i]);
+				Con_Warnf("WARNING: -game %s%s/ not found!\n", fs_basedir, sys.argv[i]);
 			// add the gamedir to the list of active gamedirs
-			strlcpy (fs_gamedirs[fs_numgamedirs], com_argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
+			strlcpy (fs_gamedirs[fs_numgamedirs], sys.argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
 			fs_numgamedirs++;
 		}
 	}
