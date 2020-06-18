@@ -26,6 +26,9 @@
 
 #ifdef LINK_TO_LIBXMP
 #include <xmp.h>
+#if ((XMP_VERCODE+0) < 0x040200)
+#error libxmp version 4.2 or newer is required when linking to libxmp
+#endif
 
 /* libxmp API */
 // Version and player information
@@ -36,7 +39,7 @@
 #define qxmp_create_context xmp_create_context // xmp_context xmp_create_context()
 #define qxmp_free_context xmp_free_context // void xmp_free_context(xmp_context c)
 // Module loading
-#define qxmp_test_module xmp_test_module // int xmp_test_module(char *path, struct xmp_test_info *test_info)
+//#define qxmp_test_module xmp_test_module // int xmp_test_module(char *path, struct xmp_test_info *test_info)
 //#define qxmp_load_module xmp_load_module // int xmp_load_module(xmp_context c, char *path)
 #define qxmp_load_module_from_memory xmp_load_module_from_memory // int xmp_load_module_from_memory(xmp_context c, void *mem, long size)
 //#define qxmp_load_module_from_file xmp_load_module_from_file // int xmp_load_module_from_file(xmp_context c, FILE *f, long size)
@@ -66,11 +69,7 @@
 
 #define xmp_dll 1
 
-qboolean XMP_OpenLibrary (void)
-{
-	Con_Printf("Linked against libxmp version %s (0x0%x)\n", qxmp_version, qxmp_vercode);
-	return true;
-}
+qboolean XMP_OpenLibrary (void) {return true;}
 void XMP_CloseLibrary (void) {}
 #else
 
@@ -178,10 +177,10 @@ struct xmp_module {
 	unsigned char xxo[XMP_MAX_MOD_LENGTH];	/* Orders */
 };
 
-struct xmp_test_info {
+//struct xmp_test_info {
 //	char name[XMP_NAME_SIZE];	/* Module title */
 //	char type[XMP_NAME_SIZE];	/* Module format */
-};
+//};
 
 struct xmp_module_info {
 	unsigned char md5[16];		/* MD5 message digest */
@@ -229,7 +228,7 @@ struct xmp_frame_info {			/* Current frame information */
 // Functions exported from libxmp
 static xmp_context (*qxmp_create_context)  (void);
 static void        (*qxmp_free_context)    (xmp_context);
-static int         (*qxmp_test_module)     (char *, struct xmp_test_info *);
+//static int         (*qxmp_test_module)     (char *, struct xmp_test_info *);
 //static int         (*qxmp_load_module)     (xmp_context, char *);
 //static void        (*qxmp_scan_module)     (xmp_context);
 static void        (*qxmp_release_module)  (xmp_context);
@@ -287,7 +286,7 @@ static dllfunction_t xmpfuncs[] =
 	{"xmp_create_context",          (void **) &qxmp_create_context},
 	{"xmp_free_context",            (void **) &qxmp_free_context},
 	// Module loading
-	{"xmp_test_module",             (void **) &qxmp_test_module},
+//	{"xmp_test_module",             (void **) &qxmp_test_module},
 //	{"xmp_load_module",             (void **) &qxmp_load_module},
 	{"xmp_load_module_from_memory", (void **) &qxmp_load_module_from_memory}, // since libxmp 4.2.0
 //	{"xmp_load_module_from_file",   (void **) &qxmp_load_module_from_file},   // since libxmp 4.3.0
@@ -349,6 +348,7 @@ qboolean XMP_OpenLibrary (void)
 	const char* dllnames_xmp [] =
 	{
 #if defined(WIN32)
+		"libxmp-4.dll",
 		"libxmp.dll",
 #elif defined(MACOSX) // FIXME: untested, please test a mac os build
 		"libxmp.4.dylib",
@@ -376,7 +376,8 @@ qboolean XMP_OpenLibrary (void)
 			Sys_UnloadLibrary (&xmp_dll);
 			return false;
 		}
-		Con_Printf("XMP library loaded, version %s (0x0%x)\n", *qxmp_version, *qxmp_vercode);
+		if (developer_loading.integer >= 1)
+			Con_Printf("XMP library loaded, version %s (0x0%x)\n", *qxmp_version, *qxmp_vercode);
 		return true;
 	}
 	else
@@ -647,7 +648,7 @@ qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
 //	sfx->volume_peak // for replay gain (highest peak); if set to 0, ReplayGain isn't supported
 
 	qxmp_get_module_info(xc, &mi);
-	if (developer_loading.integer >= 1)
+	if (developer_loading.integer >= 2)
 	{
 		Con_Printf("Decoding module (libxmp):\n"
 			"    Module name  : %s\n"
@@ -666,7 +667,7 @@ qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
 			mi.mod->spd, mi.mod->bpm, mi.mod->rst, mi.mod->gvl
 		);
 	}
-	else if (developer.integer >= 1)
+	else if (developer_loading.integer == 1)
 		Con_Printf("Decoding module (libxmp) \"%s\" (%s)\n", mi.mod->name, mi.mod->type);
 
 	qxmp_free_context(xc);
