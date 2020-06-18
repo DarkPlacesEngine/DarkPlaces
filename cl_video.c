@@ -120,7 +120,7 @@ static qboolean WakeVideo( clvideo_t * video )
 	LinkVideoTexture( video );
 
 	// update starttime
-	video->starttime += realtime - video->lasttime;
+	video->starttime += host.realtime - video->lasttime;
 
 	return true;
 }
@@ -227,7 +227,7 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->state = CLVIDEO_FIRSTFRAME;
 	video->framenum = -1;
 	video->framerate = video->getframerate( video->stream );
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 	video->subtitles = 0;
 
 	video->width = video->getwidth( video->stream );
@@ -276,7 +276,7 @@ static clvideo_t* CL_GetVideoBySlot( int slot )
 			video->framenum = -1;
 	}
 
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 
 	return video;
 }
@@ -300,7 +300,7 @@ void CL_SetVideoState(clvideo_t *video, clvideostate_t state)
 	if (!video)
 		return;
 
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 	video->state = state;
 	if (state == CLVIDEO_FIRSTFRAME)
 		CL_RestartVideo(video);
@@ -312,7 +312,7 @@ void CL_RestartVideo(clvideo_t *video)
 		return;
 
 	// reset time
-	video->starttime = video->lasttime = realtime;
+	video->starttime = video->lasttime = host.realtime;
 	video->framenum = -1;
 
 	// reopen stream
@@ -364,21 +364,21 @@ void CL_Video_Frame(void)
 	{
 		if (video->state != CLVIDEO_UNUSED && !video->suspended)
 		{
-			if (realtime - video->lasttime > CLTHRESHOLD)
+			if (host.realtime - video->lasttime > CLTHRESHOLD)
 			{
 				SuspendVideo(video);
 				continue;
 			}
 			if (video->state == CLVIDEO_PAUSE)
 			{
-				video->starttime = realtime - video->framenum * video->framerate;
+				video->starttime = host.realtime - video->framenum * video->framerate;
 				continue;
 			}
 			// read video frame from stream if time has come
 			if (video->state == CLVIDEO_FIRSTFRAME )
 				destframe = 0;
 			else
-				destframe = (int)((realtime - video->starttime) * video->framerate);
+				destframe = (int)((host.realtime - video->starttime) * video->framerate);
 			if (destframe < 0)
 				destframe = 0;
 			if (video->framenum < destframe)
@@ -524,10 +524,10 @@ void CL_DrawVideo(void)
 
 	// calc brightness for fadein and fadeout effects
 	b = cl_video_brightness.value;
-	if (cl_video_fadein.value && (realtime - video->starttime) < cl_video_fadein.value)
-		b = pow((realtime - video->starttime)/cl_video_fadein.value, 2);
-	else if (cl_video_fadeout.value && ((video->starttime + video->framenum * video->framerate) - realtime) < cl_video_fadeout.value)
-		b = pow(((video->starttime + video->framenum * video->framerate) - realtime)/cl_video_fadeout.value, 2);
+	if (cl_video_fadein.value && (host.realtime - video->starttime) < cl_video_fadein.value)
+		b = pow((host.realtime - video->starttime)/cl_video_fadein.value, 2);
+	else if (cl_video_fadeout.value && ((video->starttime + video->framenum * video->framerate) - host.realtime) < cl_video_fadeout.value)
+		b = pow(((video->starttime + video->framenum * video->framerate) - host.realtime)/cl_video_fadeout.value, 2);
 
 	// draw black bg in case stipple is active or video is scaled
 	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
@@ -555,7 +555,7 @@ void CL_DrawVideo(void)
 		return;
 
 	// find current subtitle
-	videotime = realtime - video->starttime;
+	videotime = host.realtime - video->starttime;
 	for (i = 0; i < video->subtitles; i++)
 	{
 		if (videotime >= video->subtitle_start[i] && videotime <= video->subtitle_end[i])

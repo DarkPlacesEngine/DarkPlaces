@@ -1095,7 +1095,7 @@ void Sbar_ShowFPS_Update(void)
 {
 	double interval = 1;
 	double newtime;
-	newtime = realtime;
+	newtime = host.realtime;
 	if (newtime >= showfps_nexttime)
 	{
 		showfps_framerate = showfps_framecount / (newtime - showfps_lasttime);
@@ -1146,7 +1146,7 @@ void Sbar_ShowFPS(void)
 		fps_strings++;
 		if (cls.timedemo)
 		{
-			dpsnprintf(timedemostring1, sizeof(timedemostring1), "frame%4i %f", cls.td_frames, realtime - cls.td_starttime);
+			dpsnprintf(timedemostring1, sizeof(timedemostring1), "frame%4i %f", cls.td_frames, host.realtime - cls.td_starttime);
 			dpsnprintf(timedemostring2, sizeof(timedemostring2), "%i seconds %3.0f/%3.0f/%3.0f fps", cls.td_onesecondavgcount, cls.td_onesecondminfps, cls.td_onesecondavgfps / max(1, cls.td_onesecondavgcount), cls.td_onesecondmaxfps);
 			fps_strings++;
 			fps_strings++;
@@ -1881,9 +1881,9 @@ void Sbar_DeathmatchOverlay (void)
 	char vabuf[1024];
 
 	// request new ping times every two second
-	if (cl.last_ping_request < realtime - 2 && cls.netcon)
+	if (cl.last_ping_request < host.realtime - 2 && cls.netcon)
 	{
-		cl.last_ping_request = realtime;
+		cl.last_ping_request = host.realtime;
 		if (cls.protocol == PROTOCOL_QUAKEWORLD)
 		{
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);

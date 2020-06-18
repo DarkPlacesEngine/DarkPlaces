@@ -2017,9 +2017,9 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 			// is probably fine (and they use the same timer)
 			if (r_shadow_culllights_trace.integer)
 			{
-				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
-					rtlight->trace_timer = realtime;
-				if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+				if (rtlight->trace_timer != host.realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+					rtlight->trace_timer = host.realtime;
+				if (host.realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 					continue;
 			}
 			// skip if expanded light box is offscreen
@@ -2084,8 +2084,8 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 	}
 
 	// compute a seed for the unstable random modes
-	Math_RandomSeed_FromInts(&randomseed, 0, 0, 0, realtime * 1000.0);
-	seed = realtime * 1000.0;
+	Math_RandomSeed_FromInts(&randomseed, 0, 0, 0, host.realtime * 1000.0);
+	seed = host.realtime * 1000.0;
 
 	for (lightindex = 0; lightindex < range2; lightindex++)
 	{
@@ -2596,7 +2596,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		break;
 	}
 
-	r_shadow_bouncegrid_state.lastupdatetime = realtime;
+	r_shadow_bouncegrid_state.lastupdatetime = host.realtime;
 }
 
 static void R_Shadow_BounceGrid_ClearTex_Task(taskqueue_task_t *t)
@@ -2804,7 +2804,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	}
 
 	// if all the settings seem identical to the previous update, return
-	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_dynamic_updateinterval.value) && !settingschanged)
+	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || host.realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_dynamic_updateinterval.value) && !settingschanged)
 		return;
 
 	// store the new settings
@@ -3477,7 +3477,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	/*
 	if (rtlight->selected)
 	{
-		f = 2 + sin(realtime * M_PI * 4.0);
+		f = 2 + sin(host.realtime * M_PI * 4.0);
 		VectorScale(rtlight->currentcolor, f, rtlight->currentcolor);
 	}
 	*/
@@ -3500,9 +3500,9 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	// skip if the light box is not visible to traceline
 	if (r_shadow_culllights_trace.integer)
 	{
-		if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
-			rtlight->trace_timer = realtime;
-		if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+		if (rtlight->trace_timer != host.realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+			rtlight->trace_timer = host.realtime;
+		if (host.realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 			return;
 	}
 

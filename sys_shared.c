@@ -45,7 +45,6 @@ char *Sys_TimeString(const char *timeformat)
 }
 
 
-extern qboolean host_shuttingdown;
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
@@ -58,7 +57,7 @@ void Sys_Quit (int returnvalue)
 
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
-	host_shuttingdown = true;
+	host.state = host_shutdown;
 	Host_Shutdown();
 	exit(returnvalue);
 }
@@ -164,7 +163,7 @@ notfound:
 #else
 		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
-		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(com_argv[0], '/'))))
+		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
 			break;
 		else
 			Sys_UnloadLibrary (&dllhandle);
@@ -172,10 +171,10 @@ notfound:
 
 	// see if the names can be loaded relative to the executable path
 	// (this is for Mac OSX which does not check next to the executable)
-	if (!dllhandle && strrchr(com_argv[0], '/'))
+	if (!dllhandle && strrchr(sys.argv[0], '/'))
 	{
 		char path[MAX_OSPATH];
-		strlcpy(path, com_argv[0], sizeof(path));
+		strlcpy(path, sys.argv[0], sizeof(path));
 		strrchr(path, '/')[1] = 0;
 		for (i = 0; dllnames[i] != NULL; i++)
 		{
@@ -496,7 +495,7 @@ static const char *Sys_FindInPATH(const char *name, char namesep, const char *PA
 static const char *Sys_FindExecutableName(void)
 {
 #if defined(WIN32)
-	return com_argv[0];
+	return sys.argv[0];
 #else
 	static char exenamebuf[MAX_OSPATH+1];
 	ssize_t n = -1;
@@ -515,18 +514,18 @@ static const char *Sys_FindExecutableName(void)
 		exenamebuf[n] = 0;
 		return exenamebuf;
 	}
-	if(strchr(com_argv[0], '/'))
-		return com_argv[0]; // possibly a relative path
+	if(strchr(sys.argv[0], '/'))
+		return sys.argv[0]; // possibly a relative path
 	else
-		return Sys_FindInPATH(com_argv[0], '/', getenv("PATH"), ':', exenamebuf, sizeof(exenamebuf));
+		return Sys_FindInPATH(sys.argv[0], '/', getenv("PATH"), ':', exenamebuf, sizeof(exenamebuf));
 #endif
 }
 
 void Sys_ProvideSelfFD(void)
 {
-	if(com_selffd != -1)
+	if(sys.selffd != -1)
 		return;
-	com_selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
+	sys.selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
 }
 
 // for x86 cpus only...  (x64 has SSE2_PRESENT)

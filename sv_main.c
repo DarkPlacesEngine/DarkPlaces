@@ -1067,7 +1067,7 @@ void SV_SendServerinfo (client_t *client)
 	client->ping = 0;
 
 	// allow the client some time to send his keepalives, even if map loading took ages
-	client->netconnection->timeout = realtime + net_connecttimeout.value;
+	client->netconnection->timeout = host.realtime + net_connecttimeout.value;
 }
 
 /*
@@ -1128,7 +1128,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	client->unreliablemsg.maxsize = sizeof(client->unreliablemsg_data);
 	// updated by receiving "rate" command from client, this is also the default if not using a DP client
 	client->rate = 1000000000;
-	client->connecttime = realtime;
+	client->connecttime = host.realtime;
 
 	if (!sv.loadgame)
 	{
@@ -1747,12 +1747,12 @@ static void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 							break;
 					if(eyeindex < sv.writeentitiestoclient_numeyes)
 						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
-							realtime + (
+							host.realtime + (
 								s->number <= svs.maxclients
 									? sv_cullentities_trace_delay_players.value
 									: sv_cullentities_trace_delay.value
 							);
-					else if (realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
+					else if (host.realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
 					{
 						sv.writeentitiestoclient_stats_culled_trace++;
 						return;
@@ -2394,7 +2394,7 @@ static void SV_SendClientDatagram (client_t *client)
 		timedelta *= 1 - net_burstreserve.value;
 
 		// only try to use excess time
-		timedelta = bound(0, realtime - host_client->netconnection->cleartime, timedelta);
+		timedelta = bound(0, host.realtime - host_client->netconnection->cleartime, timedelta);
 
 		// but we know next packet will be in sys_ticrate, so we can use up THAT bandwidth
 		timedelta += sys_ticrate.value;
@@ -2454,12 +2454,12 @@ static void SV_SendClientDatagram (client_t *client)
 		// now write as many entities as we can fit, and also sends stats
 		SV_WriteEntitiesToClient (client, client->edict, &msg, maxsize);
 	}
-	else if (realtime > client->keepalivetime)
+	else if (host.realtime > client->keepalivetime)
 	{
 		// the player isn't totally in the game yet
 		// send small keepalive messages if too much time has passed
 		// (may also be sending downloads)
-		client->keepalivetime = realtime + 5;
+		client->keepalivetime = host.realtime + 5;
 		MSG_WriteChar (&msg, svc_nop);
 	}
 
@@ -3544,7 +3544,7 @@ void SV_SpawnServer (const char *server)
 	}
 
 	// Once all init frames have been run, we consider svqc code fully initialized.
-	prog->inittime = realtime;
+	prog->inittime = host.realtime;
 
 	if (cls.state == ca_dedicated)
 		Mod_PurgeUnused();

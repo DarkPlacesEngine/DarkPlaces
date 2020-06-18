@@ -29,6 +29,8 @@
 
 #include "quakedef.h"
 
+sys_t sys;
+
 // =======================================================================
 // General routines
 // =======================================================================
@@ -69,36 +71,35 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-static int outfd = 1;
 void Sys_PrintToTerminal(const char *text)
 {
 #ifdef __ANDROID__
 	if (developer.integer > 0)
 	{
-		__android_log_write(ANDROID_LOG_DEBUG, com_argv[0], text);
+		__android_log_write(ANDROID_LOG_DEBUG, sys.argv[0], text);
 	}
 #else
-	if(outfd < 0)
+	if(sys.outfd < 0)
 		return;
 #ifdef FNDELAY
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
-		int origflags = fcntl (outfd, F_GETFL, 0);
-		fcntl (outfd, F_SETFL, origflags & ~FNDELAY);
+		int origflags = fcntl (sys.outfd, F_GETFL, 0);
+		fcntl (sys.outfd, F_SETFL, origflags & ~FNDELAY);
 #endif
 #ifdef WIN32
 #define write _write
 #endif
 		while(*text)
 		{
-			fs_offset_t written = (fs_offset_t)write(outfd, text, (int)strlen(text));
+			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, (int)strlen(text));
 			if(written <= 0)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
 		}
 #ifdef FNDELAY
-		fcntl (outfd, F_SETFL, origflags);
+		fcntl (sys.outfd, F_SETFL, origflags);
 	}
 #endif
 	//fprintf(stdout, "%s", text);
@@ -194,8 +195,9 @@ int main (int argc, char *argv[])
 	Sys_AllowProfiling(true);
 #endif
 
-	com_argc = argc;
-	com_argv = (const char **)argv;
+	sys.selffd = -1;
+	sys.argc = argc;
+	sys.argv = (const char **)argv;
 
 	// Sys_Error this early in startup might screw with automated
 	// workflows or something if we show the dialog by default.
@@ -208,12 +210,12 @@ int main (int argc, char *argv[])
 		nocrashdialog = false;
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
 	if(COM_CheckParm("-noterminal"))
-		outfd = -1;
+		sys.outfd = -1;
 	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
 	else if(COM_CheckParm("-stderr"))
-		outfd = 2;
+		sys.outfd = 2;
 	else
-		outfd = 1;
+		sys.outfd = 1;
 
 #ifndef WIN32
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);

@@ -213,9 +213,9 @@ void CL_ReadDemoMessage(void)
 				// count against the final report
 				if (cls.td_frames == 0)
 				{
-					cls.td_starttime = realtime;
+					cls.td_starttime = host.realtime;
 					cls.td_onesecondnexttime = cl.time + 1;
-					cls.td_onesecondrealtime = realtime;
+					cls.td_onesecondrealtime = host.realtime;
 					cls.td_onesecondframes = 0;
 					cls.td_onesecondminfps = 0;
 					cls.td_onesecondmaxfps = 0;
@@ -224,13 +224,13 @@ void CL_ReadDemoMessage(void)
 				}
 				if (cl.time >= cls.td_onesecondnexttime)
 				{
-					double fps = cls.td_onesecondframes / (realtime - cls.td_onesecondrealtime);
+					double fps = cls.td_onesecondframes / (host.realtime - cls.td_onesecondrealtime);
 					if (cls.td_onesecondavgcount == 0)
 					{
 						cls.td_onesecondminfps = fps;
 						cls.td_onesecondmaxfps = fps;
 					}
-					cls.td_onesecondrealtime = realtime;
+					cls.td_onesecondrealtime = host.realtime;
 					cls.td_onesecondminfps = min(cls.td_onesecondminfps, fps);
 					cls.td_onesecondmaxfps = max(cls.td_onesecondmaxfps, fps);
 					cls.td_onesecondavgfps += fps;
@@ -502,7 +502,7 @@ static void CL_FinishTimeDemo (void)
 	cls.timedemo = false;
 
 	frames = cls.td_frames;
-	time = realtime - cls.td_starttime;
+	time = host.realtime - cls.td_starttime;
 	totalfpsavg = time > 0 ? frames / time : 0;
 	fpsmin = cls.td_onesecondminfps;
 	fpsavg = cls.td_onesecondavgcount ? cls.td_onesecondavgfps / cls.td_onesecondavgcount : 0;
@@ -514,11 +514,11 @@ static void CL_FinishTimeDemo (void)
 	{
 		++benchmark_runs;
 		i = COM_CheckParm("-benchmarkruns");
-		if(i && i + 1 < com_argc)
+		if(i && i + 1 < sys.argc)
 		{
 			static benchmarkhistory_t *history = NULL;
 			if(!history)
-				history = (benchmarkhistory_t *)Z_Malloc(sizeof(*history) * atoi(com_argv[i + 1]));
+				history = (benchmarkhistory_t *)Z_Malloc(sizeof(*history) * atoi(sys.argv[i + 1]));
 
 			history[benchmark_runs - 1].frames = frames;
 			history[benchmark_runs - 1].time = time;
@@ -527,7 +527,7 @@ static void CL_FinishTimeDemo (void)
 			history[benchmark_runs - 1].fpsavg = fpsavg;
 			history[benchmark_runs - 1].fpsmax = fpsmax;
 
-			if(atoi(com_argv[i + 1]) > benchmark_runs)
+			if(atoi(sys.argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
 				Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));

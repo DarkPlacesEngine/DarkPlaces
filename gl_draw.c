@@ -235,9 +235,9 @@ void Draw_Frame(void)
 	int i;
 	cachepic_t *pic;
 	static double nextpurgetime;
-	if (nextpurgetime > realtime)
+	if (nextpurgetime > host.realtime)
 		return;
-	nextpurgetime = realtime + 0.05;
+	nextpurgetime = host.realtime + 0.05;
 	for (i = 0, pic = cachepics;i < numcachepics;i++, pic++)
 	{
 		if (pic->autoload && pic->skinframe && pic->skinframe->base && pic->lastusedframe < draw_frame - 3)

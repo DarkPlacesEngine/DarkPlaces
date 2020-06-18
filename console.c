@@ -1618,7 +1618,7 @@ static void Con_DrawInput (void)
 	DrawQ_String(x, con_vislines - con_textsize.value*2, text, y + 3, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
 
 	// draw a cursor on top of this
-	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
+	if ((int)(host.realtime*con_cursorspeed) & 1)		// cursor is visible
 	{
 		if (!utf8_enable.integer)
 		{
@@ -1872,7 +1872,7 @@ void Con_DrawNotify (void)
 		int colorindex = -1;
 		const char *cursor;
 		char charbuf16[16];
-		cursor = u8_encodech(0xE00A + ((int)(realtime * con_cursorspeed)&1), NULL, charbuf16);
+		cursor = u8_encodech(0xE00A + ((int)(host.realtime * con_cursorspeed)&1), NULL, charbuf16);
 
 		// LadyHavoc: speedup, and other improvements
 		if (chat_mode < 0)
@@ -2026,7 +2026,7 @@ void Con_DrawConsole (int lines)
 		if (sx != 0 || sy != 0)
 			conbackflags &= CACHEPICFLAG_NOCLAMP;
 		conbackpic = scr_conbrightness.value >= 0.01f ? Draw_CachePic_Flags("gfx/conback", conbackflags) : NULL;
-		sx *= realtime; sy *= realtime;
+		sx *= host.realtime; sy *= host.realtime;
 		sx -= floor(sx); sy -= floor(sy);
 		if (Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
@@ -2043,7 +2043,7 @@ void Con_DrawConsole (int lines)
 		sx = scr_conscroll2_x.value;
 		sy = scr_conscroll2_y.value;
 		conbackpic = Draw_CachePic_Flags("gfx/conback2", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
-		sx *= realtime; sy *= realtime;
+		sx *= host.realtime; sy *= host.realtime;
 		sx -= floor(sx); sy -= floor(sy);
 		if(Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
@@ -2058,7 +2058,7 @@ void Con_DrawConsole (int lines)
 		sx = scr_conscroll3_x.value;
 		sy = scr_conscroll3_y.value;
 		conbackpic = Draw_CachePic_Flags("gfx/conback3", (sx != 0 || sy != 0) ? CACHEPICFLAG_NOCLAMP : 0);
-		sx *= realtime; sy *= realtime;
+		sx *= host.realtime; sy *= host.realtime;
 		sx -= floor(sx); sy -= floor(sy);
 		if(Draw_IsPicLoaded(conbackpic))
 			DrawQ_SuperPic(0, lines - vid_conheight.integer, conbackpic, vid_conwidth.integer, vid_conheight.integer,
