@@ -59,7 +59,7 @@ cvar_t con_chatsize = {CVAR_CLIENT | CVAR_SAVE, "con_chatsize","8", "chat text s
 cvar_t con_chatsound = {CVAR_CLIENT | CVAR_SAVE, "con_chatsound","1", "enables chat sound to play on message"};
 cvar_t con_chatsound_file = {CVAR_CLIENT, "con_chatsound_file","sound/misc/talk.wav", "The sound to play for chat messages"};
 cvar_t con_chatsound_team_file = {CVAR_CLIENT, "con_chatsound_team_file","sound/misc/talk2.wav", "The sound to play for team chat messages"};
-cvar_t con_chatsound_team_mask = {CVAR_CLIENT | CVAR_READONLY, "con_chatsound_team_mask","40","Magic ASCII code that denotes a team chat message"};
+cvar_t con_chatsound_team_mask = {CVAR_CLIENT, "con_chatsound_team_mask","40","Magic ASCII code that denotes a team chat message"};
 
 cvar_t sys_specialcharactertranslation = {CVAR_CLIENT | CVAR_SERVER, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
 #ifdef WIN32

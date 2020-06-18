@@ -124,7 +124,7 @@ cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {CVAR_SERVER, "sv_gameplayf
 cvar_t sv_gameplayfix_unstickplayers = {CVAR_SERVER, "sv_gameplayfix_unstickplayers", "1", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull."};
 cvar_t sv_gameplayfix_unstickentities = {CVAR_SERVER, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position"};
 cvar_t sv_gameplayfix_fixedcheckwatertransition = {CVAR_SERVER, "sv_gameplayfix_fixedcheckwatertransition", "1", "fix two very stupid bugs in SV_CheckWaterTransition when watertype is CONTENTS_EMPTY (the bugs causes waterlevel to be 1 on first frame, -1 on second frame - the fix makes it 0 on both frames)"};
-cvar_t sv_gameplayfix_customstats = {CVAR_SERVER | CVAR_READONLY, "sv_gameplayfix_customstats", "0", "Disable stats higher than 220, for use by certain games such as Xonotic"};
+cvar_t sv_gameplayfix_customstats = {CVAR_SERVER, "sv_gameplayfix_customstats", "0", "Disable stats higher than 220, for use by certain games such as Xonotic"};
 cvar_t sv_gravity = {CVAR_SERVER | CVAR_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_init_frame_count = {CVAR_SERVER, "sv_init_frame_count", "2", "number of frames to run to allow everything to settle before letting clients connect"};
 cvar_t sv_idealpitchscale = {CVAR_SERVER, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
