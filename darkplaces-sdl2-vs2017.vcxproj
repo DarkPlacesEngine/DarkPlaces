@@ -272,6 +272,7 @@
     <ClCompile Include="snd_ogg.c" />
     <ClCompile Include="snd_sdl.c" />
     <ClCompile Include="snd_wav.c" />
+	<ClInclude Include="snd_xmp.c" />
     <ClCompile Include="sv_demo.c" />
     <ClCompile Include="sv_main.c" />
     <ClCompile Include="sv_move.c" />
@@ -375,6 +376,7 @@
     <ClInclude Include="snd_main.h" />
     <ClInclude Include="snd_ogg.h" />
     <ClInclude Include="snd_wav.h" />
+	<ClInclude Include="snd_xmp.h" />
     <ClInclude Include="sound.h" />
     <ClInclude Include="spritegn.h" />
     <ClInclude Include="sv_demo.h" />
