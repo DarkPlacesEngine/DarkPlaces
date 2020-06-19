@@ -668,7 +668,8 @@ void Host_Main(void)
 
 	host.realtime = 0;
 	host.dirtytime = Sys_DirtyTime();
-	for (;;)
+
+	while(host.state != host_shutdown)
 	{
 		if (setjmp(host.abortframe))
 		{
@@ -1066,6 +1067,8 @@ void Host_Main(void)
 
 		host.framecount++;
 	}
+
+	Sys_Quit(0);
 }
 
 //============================================================================
