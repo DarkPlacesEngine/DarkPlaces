@@ -759,24 +759,16 @@ void Host_Main(void)
 		// check for commands typed to the host
 		Host_GetConsoleCommands();
 
-		// when a server is running we only execute console commands on server frames
-		// (this mainly allows frikbot .way config files to work properly by staying in sync with the server qc)
-		// otherwise we execute them on client frames
-		if (sv.active ? sv_timer > 0 : cl_timer > 0)
-		{
-			// process console commands
-//			R_TimeReport("preconsole");
-			CL_VM_PreventInformationLeaks();
-			Cbuf_Frame(&cmd_client);
-			Cbuf_Frame(&cmd_server);
+		// process console commands
+//		R_TimeReport("preconsole");
+		CL_VM_PreventInformationLeaks();
+		Cbuf_Frame(&cmd_client);
+		Cbuf_Frame(&cmd_server);
 
-			if(sv.active)
-			{
-				Cbuf_Frame(&cmd_serverfromclient);
-			}
+		if(sv.active)
+			Cbuf_Frame(&cmd_serverfromclient);
 
-//			R_TimeReport("console");
-		}
+//		R_TimeReport("console");
 
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
 
