@@ -2274,9 +2274,10 @@ static void SCR_DrawScreen (void)
 #endif
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
-	if(!scr_loading) {
-		SCR_DrawConsole();
 
+	SCR_DrawConsole();
+	
+	if(!scr_loading) {
 		SCR_DrawBrand();
 
 		SCR_DrawInfobar();
