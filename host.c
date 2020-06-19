@@ -658,7 +658,7 @@ void Host_Main(void)
 	double time2 = 0;
 	double time3 = 0;
 	double cl_timer = 0, sv_timer = 0;
-	double clframetime, deltacleantime, olddirtytime, dirtytime;
+	double clframetime, time, oldtime, newtime;
 	double wait;
 	int pass1, pass2, pass3, i;
 	char vabuf[1024];
@@ -677,30 +677,30 @@ void Host_Main(void)
 			continue;			// something bad happened, or the server disconnected
 		}
 
-		olddirtytime = host.dirtytime;
-		dirtytime = Sys_DirtyTime();
-		deltacleantime = dirtytime - olddirtytime;
-		if (deltacleantime < 0)
+		oldtime = host.dirtytime;
+		newtime = Sys_DirtyTime();
+		time = newtime - oldtime;
+		if (time < 0)
 		{
 			// warn if it's significant
-			if (deltacleantime < -0.01)
-				Con_Warnf("Host_Mingled: time stepped backwards (went from %f to %f, difference %f)\n", olddirtytime, dirtytime, deltacleantime);
-			deltacleantime = 0;
+			if (time < -0.01)
+				Con_Warnf("Host_Mingled: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+			time = 0;
 		}
-		else if (deltacleantime >= 1800)
+		else if (time >= 1800)
 		{
-			Con_Warnf("Host_Mingled: time stepped forward (went from %f to %f, difference %f)\n", olddirtytime, dirtytime, deltacleantime);
-			deltacleantime = 0;
+			Con_Warnf("Host_Mingled: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+			time = 0;
 		}
-		host.realtime += deltacleantime;
-		host.dirtytime = dirtytime;
+		host.realtime += time;
+		host.dirtytime = newtime;
 
-		cl_timer += deltacleantime;
-		sv_timer += deltacleantime;
+		cl_timer += time;
+		sv_timer += time;
 
 		if (!svs.threaded)
 		{
-			svs.perf_acc_realtime += deltacleantime;
+			svs.perf_acc_realtime += time;
 
 			// Look for clients who have spawned
 			playing = false;
@@ -863,7 +863,7 @@ void Host_Main(void)
 
 			if(advancetime > 0)
 			{
-				offset = Sys_DirtyTime() - dirtytime;if (offset < 0 || offset >= 1800) offset = 0;
+				offset = Sys_DirtyTime() - newtime;if (offset < 0 || offset >= 1800) offset = 0;
 				offset += sv_timer;
 				++svs.perf_acc_offset_samples;
 				svs.perf_acc_offset += offset;
