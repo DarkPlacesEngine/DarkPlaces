@@ -58,7 +58,7 @@ void Host_Quit_f(cmd_state_t *cmd)
 	if(host.state == host_shutdown)
 		Con_Printf("shutting down already!\n");
 	else
-		Sys_Quit (0);
+		host.state = host_shutdown;
 }
 
 /*
