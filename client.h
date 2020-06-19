@@ -737,6 +737,7 @@ typedef enum qw_downloadtype_e
 }
 qw_downloadtype_t;
 
+#ifdef CONFIG_VIDEO_CAPTURE
 typedef enum capturevideoformat_e
 {
 	CAPTUREVIDEOFORMAT_AVI_I420,
@@ -788,6 +789,7 @@ typedef struct capturevideostate_s
 	void *formatspecific;
 }
 capturevideostate_t;
+#endif
 
 #define CL_MAX_DOWNLOADACKS 4
 
@@ -917,8 +919,10 @@ typedef struct client_static_s
 	// extra user info for the "connect" command
 	char connect_userinfo[MAX_USERINFO_STRING];
 
+#ifdef CONFIG_VIDEO_CAPTURE
 	// video capture stuff
 	capturevideostate_t capturevideo;
+#endif
 
 	// crypto channel
 	crypto_t crypto;

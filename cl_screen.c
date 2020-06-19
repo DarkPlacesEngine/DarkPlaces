@@ -2721,7 +2721,11 @@ void CL_UpdateScreen(void)
 	if(drawscreenstart)
 	{
 		drawscreendelta = Sys_DirtyTime() - drawscreenstart;
+#ifdef CONFIG_VIDEO_CAPTURE
 		if (cl_minfps.value > 0 && (cl_minfps_force.integer || !(cls.timedemo || (cls.capturevideo.active && !cls.capturevideo.realtime))) && drawscreendelta >= 0 && drawscreendelta < 60)
+#else
+		if (cl_minfps.value > 0 && (cl_minfps_force.integer || !cls.timedemo) && drawscreendelta >= 0 && drawscreendelta < 60)
+#endif
 		{
 			// quality adjustment according to render time
 			double actualframetime;

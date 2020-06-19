@@ -150,7 +150,9 @@ static qboolean sound_spatialized = false;
 
 qboolean simsound = false;
 
+#ifdef CONFIG_VIDEO_CAPTURE
 static qboolean recording_sound = false;
+#endif
 
 int snd_blocked = 0;
 static int current_swapstereo = false;
@@ -643,7 +645,9 @@ void S_Startup (void)
 		extrasoundtime = 0;
 	snd_renderbuffer->startframe = soundtime;
 	snd_renderbuffer->endframe = soundtime;
+#ifdef CONFIG_VIDEO_CAPTURE
 	recording_sound = false;
+#endif
 }
 
 void S_Shutdown(void)
@@ -1906,11 +1910,13 @@ static void S_PaintAndSubmit (void)
 		usesoundtimehack = 1;
 		newsoundtime = (unsigned int)((double)cl.mtime[0] * (double)snd_renderbuffer->format.speed);
 	}
+#ifdef CONFIG_VIDEO_CAPTURE
 	else if (cls.capturevideo.soundrate && !cls.capturevideo.realtime) // SUPER NASTY HACK to record non-realtime sound
 	{
 		usesoundtimehack = 2;
 		newsoundtime = (unsigned int)((double)cls.capturevideo.frame * (double)snd_renderbuffer->format.speed / (double)cls.capturevideo.framerate);
 	}
+#endif
 	else if (simsound)
 	{
 		usesoundtimehack = 3;
@@ -1918,7 +1924,11 @@ static void S_PaintAndSubmit (void)
 	}
 	else
 	{
+#ifdef CONFIG_VIDEO_CAPTURE
 		snd_usethreadedmixing = snd_threaded && !cls.capturevideo.soundrate;
+#else
+		snd_usethreadedmixing = snd_threaded;
+#endif
 		usesoundtimehack = 0;
 		newsoundtime = SndSys_GetSoundTime();
 	}
@@ -1952,6 +1962,7 @@ static void S_PaintAndSubmit (void)
 	newsoundtime += extrasoundtime;
 	if (newsoundtime < soundtime)
 	{
+#ifdef CONFIG_VIDEO_CAPTURE
 		if ((cls.capturevideo.soundrate != 0) != recording_sound)
 		{
 			unsigned int additionaltime;
@@ -1970,11 +1981,16 @@ static void S_PaintAndSubmit (void)
 						extrasoundtime);
 		}
 		else if (!soundtimehack)
+#else
+		if (!soundtimehack)
+#endif
 			Con_Printf("S_PaintAndSubmit: WARNING: newsoundtime < soundtime (%u < %u)\n",
 					   newsoundtime, soundtime);
 	}
 	soundtime = newsoundtime;
+#ifdef CONFIG_VIDEO_CAPTURE
 	recording_sound = (cls.capturevideo.soundrate != 0);
+#endif
 
 	// Lock submitbuffer
 	if (!simsound && !SndSys_LockRenderBuffer())
