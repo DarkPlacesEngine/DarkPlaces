@@ -1086,6 +1086,7 @@ extern cvar_t mod_q3bsp_lightgrid_texture;
 extern cvar_t mod_q3bsp_lightgrid_world_surfaces;
 extern cvar_t mod_q3bsp_lightgrid_bsp_surfaces;
 
+void Mod_Init_Commands (void);
 void Mod_Init (void);
 void Mod_Reload (void);
 dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk);

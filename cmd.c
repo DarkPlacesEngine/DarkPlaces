@@ -1520,7 +1520,7 @@ void Cmd_Init(void)
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
 }
 
-void Cmd_Init_Commands(qboolean dedicated_server)
+void Cmd_Init_Commands(void)
 {
 //
 // register our commands

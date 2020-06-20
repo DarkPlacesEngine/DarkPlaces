@@ -441,6 +441,7 @@ void NetConn_OpenServerPorts(int opennetports);
 void NetConn_UpdateSockets(void);
 lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address);
 lhnetsocket_t *NetConn_ChooseServerSocketForAddress(lhnetaddress_t *address);
+void NetConn_Init_Commands(void);
 void NetConn_Init(void);
 void NetConn_Shutdown(void);
 netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);

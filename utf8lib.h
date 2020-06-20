@@ -27,7 +27,7 @@ typedef U_int32 Uchar;
 // u8_byteofs() and u8_charidx() will simply return whatever is passed as index parameter
 // u8_getchar() will will just return the next byte, u8_fromchar will write one byte, ...
 extern cvar_t    utf8_enable;
-void   u8_Init(void);
+void   u8_Init_Commands(void);
 
 size_t u8_strlen(const char*);
 size_t u8_strnlen(const char*, size_t);
