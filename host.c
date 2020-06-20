@@ -1294,23 +1294,13 @@ static void Host_Init (void)
 	// if quake.rc is missing, use default
 	if (!FS_FileExists("quake.rc"))
 	{
-		Cbuf_AddText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
+		Cbuf_InsertText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
 		Cbuf_Execute(cmd);
 	}
 
 	host.state = host_active;
 
 	Log_Start();
-	
-	// put up the loading image so the user doesn't stare at a black screen...
-	SCR_BeginLoadingPlaque(true);
-
-#ifdef CONFIG_MENU
-	if (cls.state != ca_dedicated)
-	{
-		MR_Init();
-	}
-#endif
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
@@ -1359,8 +1349,6 @@ static void Host_Init (void)
 	}
 
 	Con_DPrint("========Initialized=========\n");
-
-	//Host_StartVideo();
 
 	if (cls.state != ca_dedicated)
 		SV_StartThread();

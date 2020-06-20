@@ -2778,5 +2778,11 @@ void CL_Init (void)
 		CL_Video_Init();
 		Host_StartVideo();
 
+		// put up the loading image so the user doesn't stare at a black screen...
+		SCR_BeginLoadingPlaque(true);
+		
+		#ifdef CONFIG_MENU
+		Cbuf_InsertText(&cmd_client,"menu_start\n");
+		#endif
 	}
 }
