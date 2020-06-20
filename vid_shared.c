@@ -1364,10 +1364,9 @@ void VID_Shared_Init(void)
 	Cmd_AddCommand(CMD_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
-static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
+static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer)
 {
 	viddef_mode_t mode;
-	char vabuf[1024];
 
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
@@ -1377,11 +1376,9 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 	mode.refreshrate = vid_userefreshrate.integer ? max(1, refreshrate) : 0;
 	mode.userefreshrate = vid_userefreshrate.integer != 0;
 	mode.stereobuffer = stereobuffer != 0;
-	mode.samples = samples;
 	cl_ignoremousemoves = 2;
 	VID_ClearExtensions();
 
-	vid.samples = vid.mode.samples;
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode
@@ -1422,10 +1419,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
-		if(vid.samples != vid.mode.samples)
-			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
-
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(vabuf, sizeof(vabuf), " (%ix AA)", mode.samples) : "");
+		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "");
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 		Cvar_SetValueQuick(&vid_width, vid.mode.width);
@@ -1468,7 +1462,7 @@ extern qboolean vid_opened;
 void VID_Restart_f(cmd_state_t *cmd)
 {
 	char vabuf[1024];
-	char vabuf2[1024];
+
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
@@ -1479,15 +1473,15 @@ void VID_Restart_f(cmd_state_t *cmd)
 		return;
 	}
 
-	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
-		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid.mode.samples) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid_samples.integer) : "");
+	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
+		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
 	VID_CloseSystems();
 	VID_Shutdown();
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer))
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer))
 	{
 		Con_Print("Video mode change failed\n");
-		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer, vid.mode.samples))
+		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
 			Sys_Error("Unable to restore to last working video mode");
 	}
 	VID_OpenSystems();
@@ -1552,14 +1546,14 @@ void VID_Start(void)
 			Cvar_SetQuick(&vid_touchscreen_ydpi, sys.argv[i+1]);
 	}
 
-	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer);
+	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 	if (!success)
 	{
 		Con_Print("Desired video mode fail, trying fallbacks...\n");
 		for (i = 0;!success && vidfallbacks[i][0] != NULL;i++)
 		{
 			Cvar_Set(&cvars_all, vidfallbacks[i][0], vidfallbacks[i][1]);
-			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer);
+			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 		}
 		if (!success)
 			Sys_Error("Video modes failed");
