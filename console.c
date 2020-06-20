@@ -842,23 +842,8 @@ void Con_Clear_f(cmd_state_t *cmd)
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
-/*
-================
-Con_Init
-================
-*/
-void Con_Init (void)
+void Con_Init_Commands(void)
 {
-	con_linewidth = 80;
-	ConBuffer_Init(&con, CON_TEXTSIZE, CON_MAXLINES, zonemempool);
-	if (Thread_HasThreads())
-		con_mutex = Thread_CreateMutex();
-
-	// Allocate a log queue, this will be freed after configs are parsed
-	logq_size = MAX_INPUTLINE;
-	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
-	logq_ind = 0;
-
 	Cvar_RegisterVariable (&sys_colortranslation);
 	Cvar_RegisterVariable (&sys_specialcharactertranslation);
 
@@ -908,6 +893,25 @@ void Con_Init (void)
 	Cmd_AddCommand(CMD_SHARED, "clear", Con_Clear_f, "clear console history");
 	Cmd_AddCommand(CMD_SHARED, "maps", Con_Maps_f, "list information about available maps");
 	Cmd_AddCommand(CMD_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
+
+}
+
+/*
+================
+Con_Init
+================
+*/
+void Con_Init (void)
+{
+	con_linewidth = 80;
+	ConBuffer_Init(&con, CON_TEXTSIZE, CON_MAXLINES, zonemempool);
+	if (Thread_HasThreads())
+		con_mutex = Thread_CreateMutex();
+
+	// Allocate a log queue, this will be freed after configs are parsed
+	logq_size = MAX_INPUTLINE;
+	logqueue = (unsigned char *)Mem_Alloc (tempmempool, logq_size);
+	logq_ind = 0;
 
 	con_initialized = true;
 	Con_DPrint("Console initialized.\n");

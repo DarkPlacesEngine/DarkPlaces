@@ -30,8 +30,14 @@ entities never clip against themselves, or their owner
 line of sight checks trace->inopen and trace->inwater, but bullets don't
 
 */
-
+static void World_Physics_Init_Commands(void);
 static void World_Physics_Init(void);
+void World_Init_Commands(void)
+{
+	Collision_Init_Commands();
+	World_Physics_Init_Commands();
+}
+
 void World_Init(void)
 {
 	Collision_Init();
@@ -1471,29 +1477,9 @@ dllhandle_t ode_dll = NULL;
 #endif
 #endif
 
-static void World_Physics_Init(void)
+static void World_Physics_Init_Commands(void)
 {
 #ifdef USEODE
-#ifndef LINK_TO_LIBODE
-	const char* dllnames [] =
-	{
-# if defined(WIN32)
-		"libode3.dll",
-		"libode2.dll",
-		"libode1.dll",
-# elif defined(MACOSX)
-		"libode.3.dylib",
-		"libode.2.dylib",
-		"libode.1.dylib",
-# else
-		"libode.so.3",
-		"libode.so.2",
-		"libode.so.1",
-# endif
-		NULL
-	};
-#endif
-
 	Cvar_RegisterVariable(&physics_ode_quadtree_depth);
 	Cvar_RegisterVariable(&physics_ode_contactsurfacelayer);
 	Cvar_RegisterVariable(&physics_ode_worldstep_iterations);
@@ -1523,6 +1509,31 @@ static void World_Physics_Init(void)
 	Cvar_RegisterVariable(&physics_ode_printstats);
 	Cvar_RegisterVariable(&physics_ode_allowconvex);
 	Cvar_RegisterVariable(&physics_ode);
+#endif
+}
+
+static void World_Physics_Init(void)
+{
+#ifdef USEODE
+#ifndef LINK_TO_LIBODE
+	const char* dllnames [] =
+	{
+# if defined(WIN32)
+		"libode3.dll",
+		"libode2.dll",
+		"libode1.dll",
+# elif defined(MACOSX)
+		"libode.3.dylib",
+		"libode.2.dylib",
+		"libode.1.dylib",
+# else
+		"libode.so.3",
+		"libode.so.2",
+		"libode.so.1",
+# endif
+		NULL
+	};
+#endif
 
 #ifndef LINK_TO_LIBODE
 	// Load the DLL
