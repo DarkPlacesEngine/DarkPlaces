@@ -430,12 +430,7 @@ static void SV_AreaStats_f(cmd_state_t *cmd)
 	World_PrintAreaStats(&sv.world, "server");
 }
 
-/*
-===============
-SV_Init
-===============
-*/
-void SV_Init (void)
+void SV_Init_Commands(void)
 {
 	// init the csqc progs cvars, since they are updated/used by the server code
 	// TODO: fix this since this is a quick hack to make some of [515]'s broken code run ;) [9/13/2006 Black]
@@ -443,7 +438,6 @@ void SV_Init (void)
 	extern cvar_t csqc_progcrc;
 	extern cvar_t csqc_progsize;
 	extern cvar_t csqc_usedemoprogs;
-
 	Cvar_RegisterVariable(&sv_worldmessage);
 	Cvar_RegisterVariable(&sv_worldname);
 	Cvar_RegisterVariable(&sv_worldnamenoextension);
@@ -625,7 +619,15 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&halflifebsp);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
+}
 
+/*
+===============
+SV_Init
+===============
+*/
+void SV_Init (void)
+{
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
 

@@ -3866,11 +3866,8 @@ void Net_SlistQW_f(cmd_state_t *cmd)
 }
 #endif
 
-void NetConn_Init(void)
+void NetConn_Init_Commands(void)
 {
-	int i;
-	lhnetaddress_t tempaddress;
-	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
 	Cmd_AddCommand(CMD_SHARED, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
 	Cmd_AddCommand(CMD_CLIENT, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
@@ -3913,11 +3910,19 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_public_rejectreason);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
-	for (i = 0;sv_masters[i].name;i++)
+	for (int i = 0;sv_masters[i].name;i++)
 		Cvar_RegisterVariable(&sv_masters[i]);
 	Cvar_RegisterVariable(&gameversion);
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);
+}
+
+void NetConn_Init(void)
+{
+	int i;
+	lhnetaddress_t tempaddress;
+	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
+
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
 	if ((i = COM_CheckParm("-ip")) && i + 1 < sys.argc)
 	{
