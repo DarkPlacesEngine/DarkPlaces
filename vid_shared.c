@@ -1516,6 +1516,12 @@ void VID_Start(void)
 // COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
 		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || (i = COM_CheckParm("+vid_fullscreen") != 0 && atoi(sys.argv[i+1]) == 0))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
+// COMMANDLINEOPTION: Video: -borderless performs +vid_borderless 1
+		if (COM_CheckParm("-borderless") || (i = COM_CheckParm("+vid_borderless") != 0 && atoi(sys.argv[i+1]) == 1))
+		{
+			Cvar_SetValueQuick(&vid_borderless, true);
+			Cvar_SetValueQuick(&vid_fullscreen, false);
+		}
 // COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
 		if (COM_CheckParm("-fullscreen") || (i = COM_CheckParm("+vid_fullscreen") != 0 && atoi(sys.argv[i+1]) == 1))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
