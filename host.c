@@ -1304,6 +1304,9 @@ static void Host_Init (void)
 
 	Log_Start();
 
+	// put up the loading image so the user doesn't stare at a black screen...
+	SCR_BeginLoadingPlaque(true);
+	
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
 	i = COM_CheckParm("-benchmark");
