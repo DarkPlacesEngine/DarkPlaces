@@ -210,6 +210,8 @@
     <ClCompile Include="clvm_cmds.c" />
     <ClCompile Include="cmd.c" />
     <ClCompile Include="collision.c" />
+	<ClCompile Include="com_crc16.c" />
+	<ClCompile Include="com_msg.c" />
     <ClCompile Include="common.c" />
     <ClCompile Include="console.c" />
     <ClCompile Include="crypto.c">

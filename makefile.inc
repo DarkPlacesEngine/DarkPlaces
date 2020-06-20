@@ -90,6 +90,8 @@ OBJ_COMMON= \
 	clvm_cmds.o \
 	cmd.o \
 	collision.o \
+	com_crc16.o \
+	com_msg.o \
 	common.o \
 	console.o \
 	csprogs.o \
