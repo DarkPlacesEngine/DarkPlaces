@@ -1508,24 +1508,24 @@ void VID_Start(void)
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
 // COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
-		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || (i = COM_CheckParm("+vid_fullscreen") != 0 && atoi(sys.argv[i+1]) == 0))
+		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 // COMMANDLINEOPTION: Video: -borderless performs +vid_borderless 1
-		if (COM_CheckParm("-borderless") || (i = COM_CheckParm("+vid_borderless") != 0 && atoi(sys.argv[i+1]) == 1))
+		if (COM_CheckParm("-borderless") || ((i = COM_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
 		{
 			Cvar_SetValueQuick(&vid_borderless, true);
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 		}
 // COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
-		if (COM_CheckParm("-fullscreen") || (i = COM_CheckParm("+vid_fullscreen") != 0 && atoi(sys.argv[i+1]) == 1))
+		if (COM_CheckParm("-fullscreen") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
 // COMMANDLINEOPTION: Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-width")) != 0 || (i = COM_CheckParm("+vid_width") != 0))
+		if ((i = COM_CheckParm("-width")) != 0 || ((i = COM_CheckParm("+vid_width")) != 0))
 			width = atoi(sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-height")) != 0 || (i = COM_CheckParm("+vid_height") != 0))
+		if ((i = COM_CheckParm("-height")) != 0 || ((i = COM_CheckParm("+vid_height")) != 0))
 			height = atoi(sys.argv[i+1]);
 		if (width == 0)
 			width = height * 4 / 3;
