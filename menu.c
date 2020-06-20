@@ -5467,12 +5467,23 @@ static void Call_MR_ToggleMenu_f(cmd_state_t *cmd)
 		MR_ToggleMenu(m);
 }
 
+static qboolean menu_active;
+
+static void MR_Start_f(cmd_state_t *cmd)
+{
+	if(menu_active || cls.state == ca_dedicated)
+		return;
+	MR_Init();
+	
+}
+
 void MR_Init_Commands(void)
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cvar_RegisterVariable (&menu_progs);
+	Cmd_AddCommand(CMD_CLIENT, "menu_start", MR_Start_f, "initialize the menu system");
 	Cmd_AddCommand(CMD_CLIENT, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
 	Cmd_AddCommand(CMD_CLIENT, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
@@ -5613,4 +5624,5 @@ void MR_Init(void)
 		MR_SetRouting (true);
 	else
 		MR_SetRouting (false);
+	menu_active = true;
 }
