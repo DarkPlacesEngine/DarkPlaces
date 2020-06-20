@@ -214,9 +214,6 @@ float	getserverlistindexforkey(string key)
 
 #define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
 
-// init code
-void PR_Cmd_Init(void);
-
 // general functions
 void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);
 void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength);

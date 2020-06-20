@@ -1261,8 +1261,6 @@ static void Host_Init (void)
 
 	NetConn_Init();
 	Curl_Init();
-	//PR_Init();
-	//PR_Cmd_Init();
 	PRVM_Init();
 	Mod_Init();
 	World_Init();
@@ -1411,7 +1409,6 @@ void Host_Shutdown(void)
 	S_Terminate ();
 	Curl_Shutdown ();
 	NetConn_Shutdown ();
-	//PR_Shutdown ();
 
 	if (cls.state != ca_dedicated)
 	{
