@@ -1160,7 +1160,6 @@ static void Host_Init (void)
 	int i;
 	const char* os;
 	char vabuf[1024];
-	qboolean dedicated_server = COM_CheckParm("-dedicated") || !cl_available;
 	cmd_state_t *cmd = &cmd_client;
 
 	host.state = host_init;
@@ -1213,8 +1212,6 @@ static void Host_Init (void)
 
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
-
-	Cmd_Init_Commands(dedicated_server);
 
 	// initialize memory subsystem cvars/commands
 	Memory_Init_Commands();
