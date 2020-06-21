@@ -151,8 +151,6 @@ extern qboolean host_stuffcmdsrun;
 void Cbuf_Lock(cmd_state_t *cmd);
 void Cbuf_Unlock(cmd_state_t *cmd);
 
-void Cmd_Init_Commands(qboolean dedicated_server);
-
 /*! as new commands are generated from the console or keybindings,
  * the text is added to the end of the command buffer.
  */
