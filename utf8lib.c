@@ -9,7 +9,7 @@ Initialization of UTF-8 support and new cvars.
 // for compatibility this defaults to 0
 cvar_t utf8_enable = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "utf8_enable", "0", "Enable UTF-8 support. For compatibility, this is disabled by default in most games."};
 
-void u8_Init_Commands(void)
+void   u8_Init(void)
 {
 	Cvar_RegisterVariable(&utf8_enable);
 }

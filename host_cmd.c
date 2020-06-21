@@ -2995,10 +2995,10 @@ static void Host_PingPLReport_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Init_Commands
+Host_InitCommands
 ==================
 */
-void Host_Init_Commands (void)
+void Host_InitCommands (void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
 
