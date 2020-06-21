@@ -28,6 +28,9 @@ typedef struct sys_s
 	const char **argv;
 	int selffd;
 	int outfd;
+	int nicelevel;
+	qboolean nicepossible;
+	qboolean isnice;
 } sys_t;
 
 extern sys_t sys;
