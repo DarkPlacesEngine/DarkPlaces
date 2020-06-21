@@ -1518,10 +1518,7 @@ void Cmd_Init(void)
 	cmd_serverfromclient.cvars_flagsmask = 0;
 	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
-}
 
-void Cmd_Init_Commands(qboolean dedicated_server)
-{
 //
 // register our commands
 //
