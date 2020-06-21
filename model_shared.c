@@ -152,8 +152,15 @@ static void Mod_Print_f(cmd_state_t *cmd);
 static void Mod_Precache_f(cmd_state_t *cmd);
 static void Mod_Decompile_f(cmd_state_t *cmd);
 static void Mod_GenerateLightmaps_f(cmd_state_t *cmd);
-void Mod_Init_Commands (void)
+void Mod_Init (void)
 {
+	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
+	Mem_ExpandableArray_NewArray(&models, mod_mempool, sizeof(dp_model_t), 16);
+
+	Mod_BrushInit();
+	Mod_AliasInit();
+	Mod_SpriteInit();
+
 	Cvar_RegisterVariable(&r_mipskins);
 	Cvar_RegisterVariable(&r_mipnormalmaps);
 	Cvar_RegisterVariable(&mod_generatelightmaps_unitspersample);
@@ -171,16 +178,6 @@ void Mod_Init_Commands (void)
 	Cmd_AddCommand(CMD_CLIENT, "modelprecache", Mod_Precache_f, "load a model");
 	Cmd_AddCommand(CMD_CLIENT, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
 	Cmd_AddCommand(CMD_CLIENT, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
-}
-
-void Mod_Init (void)
-{
-	mod_mempool = Mem_AllocPool("modelinfo", 0, NULL);
-	Mem_ExpandableArray_NewArray(&models, mod_mempool, sizeof(dp_model_t), 16);
-
-	Mod_BrushInit();
-	Mod_AliasInit();
-	Mod_SpriteInit();
 }
 
 void Mod_RenderInit(void)

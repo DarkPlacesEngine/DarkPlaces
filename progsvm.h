@@ -780,7 +780,7 @@ void MVM_reset_cmd(prvm_prog_t *prog);
 void VM_Cmd_Init(prvm_prog_t *prog);
 void VM_Cmd_Reset(prvm_prog_t *prog);
 //============================================================================
-void PRVM_Init_Commands (void);
+
 void PRVM_Init (void);
 
 #ifdef PROFILING
