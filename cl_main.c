@@ -2776,7 +2776,6 @@ void CL_Init (void)
 		CL_MeshEntities_Init();
 
 		CL_Video_Init();
-		Host_StartVideo();
 
 		#ifdef CONFIG_MENU
 		Cbuf_InsertText(&cmd_client,"menu_start\n");
