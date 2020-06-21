@@ -537,7 +537,7 @@ typedef struct host_s
 
 extern host_t host;
 
-void Host_Init_Commands(void);
+void Host_InitCommands(void);
 void Host_Main(void);
 void Host_Shutdown(void);
 void Host_StartVideo(void);

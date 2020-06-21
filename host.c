@@ -222,7 +222,7 @@ void Host_SaveConfig_f(cmd_state_t *cmd);
 void Host_LoadConfig_f(cmd_state_t *cmd);
 extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
-static void Host_InitLocal_Commands (void)
+static void Host_InitLocal (void)
 {
 	Cmd_AddCommand(CMD_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand(CMD_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
@@ -1089,16 +1089,12 @@ qboolean sys_nostdout = false;
 
 static qfile_t *locksession_fh = NULL;
 static qboolean locksession_run = false;
-static void Host_InitSession_Commands(void)
-{
-	Cvar_RegisterVariable(&sessionid);
-	Cvar_RegisterVariable(&locksession);
-}
-
 static void Host_InitSession(void)
 {
 	int i;
 	char *buf;
+	Cvar_RegisterVariable(&sessionid);
+	Cvar_RegisterVariable(&locksession);
 
 	// load the session ID into the read-only cvar
 	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < sys.argc))
@@ -1164,6 +1160,7 @@ static void Host_Init (void)
 	int i;
 	const char* os;
 	char vabuf[1024];
+	qboolean dedicated_server = COM_CheckParm("-dedicated") || !cl_available;
 	cmd_state_t *cmd = &cmd_client;
 
 	host.state = host_init;
@@ -1211,33 +1208,26 @@ static void Host_Init (void)
 	if (COM_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 
-	// Stage 0 - Initialize core subsystems (memory management, command interpreters)
-	Memory_Init(); // used by everything
-	Cmd_Init(); // initialize console command/cvar/alias/command execution systems
-	
-	// Stage 1 - Initialize all commands and cvars
-	Cmd_Init_Commands();
+	// used by everything
+	Memory_Init();
+
+	// initialize console command/cvar/alias/command execution systems
+	Cmd_Init();
+
+	Cmd_Init_Commands(dedicated_server);
+
+	// initialize memory subsystem cvars/commands
 	Memory_Init_Commands();
-	Con_Init_Commands();
-	u8_Init_Commands();
+
+	// initialize console and logging and its cvars/commands
+	Con_Init();
+
+	// initialize various cvars that could not be initialized earlier
+	u8_Init();
 	Curl_Init_Commands();
 	Sys_Init_Commands();
 	COM_Init_Commands();
 	FS_Init_Commands();
-	NetConn_Init_Commands();
-	Crypto_Init_Commands();
-	PRVM_Init_Commands();
-	Mod_Init_Commands();
-	World_Init_Commands();
-	SV_Init_Commands();
-	V_Init(); // some cvars needed by server player physics (cl_rollangle etc)
-	Host_Init_Commands();
-	Host_InitSession_Commands(); // register the cvars for session locking
-	Host_InitLocal_Commands();
-	TaskQueue_Init();
-
-	// initialize console and logging and its cvars/commands
-	Con_Init();
 
 	// initialize console window (only used by sys_win.c)
 	Sys_InitConsole();
@@ -1262,10 +1252,12 @@ static void Host_Init (void)
 	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
 	FS_Init();
 
+	// register the cvars for session locking
 	Host_InitSession();
 
 	// must be after FS_Init
 	Crypto_Init();
+	Crypto_Init_Commands();
 
 	NetConn_Init();
 	Curl_Init();
@@ -1273,9 +1265,13 @@ static void Host_Init (void)
 	Mod_Init();
 	World_Init();
 	SV_Init();
+	V_Init(); // some cvars needed by server player physics (cl_rollangle etc)
+	Host_InitCommands();
+	Host_InitLocal();
 	Host_ServerOptions();
 
 	Thread_Init();
+	TaskQueue_Init();
 
 	CL_Init();
 

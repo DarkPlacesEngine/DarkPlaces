@@ -2907,7 +2907,12 @@ static void PRVM_EdictWatchpoint_f(cmd_state_t *cmd)
 	PRVM_UpdateBreakpoints(prog);
 }
 
-void PRVM_Init_Commands (void)
+/*
+===============
+PRVM_Init
+===============
+*/
+void PRVM_Init (void)
 {
 	Cmd_AddCommand(CMD_SHARED, "prvm_edict", PRVM_ED_PrintEdict_f, "print all data about an entity number in the selected VM (server, client, menu)");
 	Cmd_AddCommand(CMD_SHARED, "prvm_edicts", PRVM_ED_PrintEdicts_f, "prints all data about all entities in the selected VM (server, client, menu)");
@@ -2948,15 +2953,7 @@ void PRVM_Init_Commands (void)
 	Cvar_RegisterVariable (&prvm_garbagecollection_scan_limit);
 	Cvar_RegisterVariable (&prvm_garbagecollection_strings);
 	Cvar_RegisterVariable (&prvm_stringdebug);
-}
 
-/*
-===============
-PRVM_Init
-===============
-*/
-void PRVM_Init (void)
-{
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !COM_CheckParm("-norunaway");
 
