@@ -1286,6 +1286,8 @@ static void Host_Init (void)
 
 	Host_AddConfigText(cmd);
 
+	Host_StartVideo();
+
 	// if quake.rc is missing, use default
 	if (!FS_FileExists("quake.rc"))
 	{
@@ -1294,6 +1296,10 @@ static void Host_Init (void)
 	}
 
 	host.state = host_active;
+
+	// run stuffcmds now, deferred previously because it can crash if a server starts that early
+	Cbuf_AddText(cmd,"stuffcmds\n");
+	Cbuf_Execute(cmd);
 
 	Log_Start();
 
