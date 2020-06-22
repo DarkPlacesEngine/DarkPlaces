@@ -599,7 +599,7 @@ void SV_CheckVelocity (prvm_edict_t *ent);
 
 void SV_SetupVM(void);
 
-const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in Host_Status_f
+const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
 void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
@@ -611,7 +611,7 @@ void SV_StopThread(void);
 
 void VM_CustomStats_Clear(void);
 void VM_SV_UpdateCustomStats(client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
-void Host_Savegame_to(prvm_prog_t *prog, const char *name);
+void SV_Savegame_to(prvm_prog_t *prog, const char *name);
 void SV_SendServerinfo(client_t *client);
 
 #endif

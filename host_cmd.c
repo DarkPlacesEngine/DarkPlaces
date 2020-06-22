@@ -63,10 +63,10 @@ void Host_Quit_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Status_f
+SV_Status_f
 ==================
 */
-static void Host_Status_f(cmd_state_t *cmd)
+static void SV_Status_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char qcstatus[256];
@@ -201,12 +201,12 @@ static void Host_Status_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_God_f
+SV_God_f
 
 Sets client to godmode
 ==================
 */
-static void Host_God_f(cmd_state_t *cmd)
+static void SV_God_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 
@@ -217,7 +217,7 @@ static void Host_God_f(cmd_state_t *cmd)
 		SV_ClientPrint("godmode ON\n");
 }
 
-static void Host_Notarget_f(cmd_state_t *cmd)
+static void SV_Notarget_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 
@@ -230,7 +230,7 @@ static void Host_Notarget_f(cmd_state_t *cmd)
 
 qboolean noclip_anglehack;
 
-static void Host_Noclip_f(cmd_state_t *cmd)
+static void SV_Noclip_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 
@@ -250,12 +250,12 @@ static void Host_Noclip_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Fly_f
+SV_Fly_f
 
 Sets client to flymode
 ==================
 */
-static void Host_Fly_f(cmd_state_t *cmd)
+static void SV_Fly_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 
@@ -274,11 +274,11 @@ static void Host_Fly_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Ping_f
+SV_Ping_f
 
 ==================
 */
-static void Host_Ping_f(cmd_state_t *cmd)
+static void SV_Ping_f(cmd_state_t *cmd)
 {
 	int i;
 	client_t *client;
@@ -310,7 +310,7 @@ static void Host_Ping_f(cmd_state_t *cmd)
 }
 
 // Disable cheats if sv_cheats is turned off
-static void Host_DisableCheats_c(char *value)
+static void SV_DisableCheats_c(char *value)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i = 0;
@@ -344,14 +344,14 @@ SERVER TRANSITIONS
 
 /*
 ======================
-Host_Map_f
+SV_Map_f
 
 handle a
 map <servername>
 command from the console.  Active clients are kicked off.
 ======================
 */
-static void Host_Map_f(cmd_state_t *cmd)
+static void SV_Map_f(cmd_state_t *cmd)
 {
 	char level[MAX_QPATH];
 
@@ -394,12 +394,12 @@ static void Host_Map_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Changelevel_f
+SV_Changelevel_f
 
 Goes to a new map, taking all clients along
 ==================
 */
-static void Host_Changelevel_f(cmd_state_t *cmd)
+static void SV_Changelevel_f(cmd_state_t *cmd)
 {
 	char level[MAX_QPATH];
 
@@ -410,7 +410,7 @@ static void Host_Changelevel_f(cmd_state_t *cmd)
 	}
 	// HACKHACKHACK
 	if (!sv.active) {
-		Host_Map_f(cmd);
+		SV_Map_f(cmd);
 		return;
 	}
 
@@ -430,12 +430,12 @@ static void Host_Changelevel_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Restart_f
+SV_Restart_f
 
 Restarts the current server for a dead player
 ==================
 */
-static void Host_Restart_f(cmd_state_t *cmd)
+static void SV_Restart_f(cmd_state_t *cmd)
 {
 	char mapname[MAX_QPATH];
 
@@ -465,13 +465,13 @@ static void Host_Restart_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Reconnect_f
+CL_Reconnect_f
 
 This command causes the client to wait for the signon messages again.
 This is sent just before a server changes levels
 ==================
 */
-void Host_Reconnect_f(cmd_state_t *cmd)
+void CL_Reconnect_f(cmd_state_t *cmd)
 {
 	char temp[128];
 	// if not connected, reconnect to the most recent server
@@ -521,12 +521,12 @@ void Host_Reconnect_f(cmd_state_t *cmd)
 
 /*
 =====================
-Host_Connect_f
+CL_Connect_f
 
 User command to connect to server
 =====================
 */
-static void Host_Connect_f(cmd_state_t *cmd)
+static void CL_Connect_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) < 2)
 	{
@@ -550,7 +550,7 @@ LOAD / SAVE GAME
 
 #define	SAVEGAME_VERSION	5
 
-void Host_Savegame_to(prvm_prog_t *prog, const char *name)
+void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 {
 	qfile_t	*f;
 	int		i, k, l, numbuffers, lightstyles = 64;
@@ -697,10 +697,10 @@ void Host_Savegame_to(prvm_prog_t *prog, const char *name)
 
 /*
 ===============
-Host_Savegame_f
+SV_Savegame_f
 ===============
 */
-static void Host_Savegame_f(cmd_state_t *cmd)
+static void SV_Savegame_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char	name[MAX_QPATH];
@@ -747,17 +747,17 @@ static void Host_Savegame_f(cmd_state_t *cmd)
 	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
-	Host_Savegame_to(prog, name);
+	SV_Savegame_to(prog, name);
 }
 
 
 /*
 ===============
-Host_Loadgame_f
+SV_Loadgame_f
 ===============
 */
 
-static void Host_Loadgame_f(cmd_state_t *cmd)
+static void SV_Loadgame_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char filename[MAX_QPATH];
@@ -806,7 +806,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	}
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: loading version\n");
+		Con_Printf("SV_Loadgame_f: loading version\n");
 
 	// version
 	COM_ParseToken_Simple(&t, false, false, true);
@@ -819,7 +819,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	}
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: loading description\n");
+		Con_Printf("SV_Loadgame_f: loading description\n");
 
 	// description
 	COM_ParseToken_Simple(&t, false, false, true);
@@ -836,21 +836,21 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	Cvar_SetValue (&cvars_all, "skill", (float)current_skill);
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: loading mapname\n");
+		Con_Printf("SV_Loadgame_f: loading mapname\n");
 
 	// mapname
 	COM_ParseToken_Simple(&t, false, false, true);
 	strlcpy (mapname, com_token, sizeof(mapname));
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: loading time\n");
+		Con_Printf("SV_Loadgame_f: loading time\n");
 
 	// time
 	COM_ParseToken_Simple(&t, false, false, true);
 	time = atof(com_token);
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: spawning server\n");
+		Con_Printf("SV_Loadgame_f: spawning server\n");
 
 	SV_SpawnServer (mapname);
 	if (!sv.active)
@@ -863,7 +863,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	sv.loadgame = true;
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: loading light styles\n");
+		Con_Printf("SV_Loadgame_f: loading light styles\n");
 
 // load the light styles
 
@@ -886,7 +886,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	}
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: skipping until globals\n");
+		Con_Printf("SV_Loadgame_f: skipping until globals\n");
 
 	// now skip everything before the first opening brace
 	// (this is for forward compatibility, so that older versions (at
@@ -929,7 +929,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 		if (entnum == -1)
 		{
 			if(developer_entityparsing.integer)
-				Con_Printf("Host_Loadgame_f: loading globals\n");
+				Con_Printf("SV_Loadgame_f: loading globals\n");
 
 			// parse the global vars
 			PRVM_ED_ParseGlobals (prog, start);
@@ -952,7 +952,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 			ent->priv.server->free = false;
 
 			if(developer_entityparsing.integer)
-				Con_Printf("Host_Loadgame_f: loading edict %d\n", entnum);
+				Con_Printf("SV_Loadgame_f: loading edict %d\n", entnum);
 
 			PRVM_ED_ParseEdict (prog, start, ent);
 
@@ -972,7 +972,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 		svs.clients[0].spawn_parms[i] = spawn_parms[i];
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: skipping until extended data\n");
+		Con_Printf("SV_Loadgame_f: skipping until extended data\n");
 
 	// read extended data if present
 	// the extended data is stored inside a /* */ comment block, which the
@@ -984,7 +984,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 		if (end[0] == '/' && end[1] == '*' && (end[2] == '\r' || end[2] == '\n'))
 		{
 			if(developer_entityparsing.integer)
-				Con_Printf("Host_Loadgame_f: loading extended data\n");
+				Con_Printf("SV_Loadgame_f: loading extended data\n");
 
 			Con_Printf("Loading extended DarkPlaces savegame\n");
 			t = end + 2;
@@ -1090,7 +1090,7 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 	}
 
 	if(developer_entityparsing.integer)
-		Con_Printf("Host_Loadgame_f: finished\n");
+		Con_Printf("SV_Loadgame_f: finished\n");
 
 	// make sure we're connected to loopback
 	if (sv.active && cls.state == ca_disconnected)
@@ -1101,11 +1101,11 @@ static void Host_Loadgame_f(cmd_state_t *cmd)
 
 /*
 ======================
-Host_Name_f
+CL_Name_f
 ======================
 */
 cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
-static void Host_Name_f(cmd_state_t *cmd)
+static void CL_Name_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
@@ -1232,12 +1232,12 @@ static void Host_Name_f(cmd_state_t *cmd)
 
 /*
 ======================
-Host_Playermodel_f
+CL_Playermodel_f
 ======================
 */
 cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz/Xonotic (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
-static void Host_Playermodel_f(cmd_state_t *cmd)
+static void CL_Playermodel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
@@ -1293,11 +1293,11 @@ static void Host_Playermodel_f(cmd_state_t *cmd)
 
 /*
 ======================
-Host_Playerskin_f
+CL_Playerskin_f
 ======================
 */
 cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz/Xonotic (changed by playerskin command)"};
-static void Host_Playerskin_f(cmd_state_t *cmd)
+static void CL_Playerskin_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
@@ -1358,7 +1358,7 @@ static void Host_Version_f(cmd_state_t *cmd)
 	Con_Printf("Version: %s build %s\n", gamename, buildstring);
 }
 
-static void Host_Say(cmd_state_t *cmd, qboolean teamonly)
+static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	client_t *save;
@@ -1426,20 +1426,17 @@ static void Host_Say(cmd_state_t *cmd, qboolean teamonly)
 		Con_Print(&text[1]);
 }
 
-
-static void Host_Say_f(cmd_state_t *cmd)
+static void SV_Say_f(cmd_state_t *cmd)
 {
-	Host_Say(cmd, false);
+	SV_Say(cmd, false);
 }
 
-
-static void Host_Say_Team_f(cmd_state_t *cmd)
+static void SV_Say_Team_f(cmd_state_t *cmd)
 {
-	Host_Say(cmd, true);
+	SV_Say(cmd, true);
 }
 
-
-static void Host_Tell_f(cmd_state_t *cmd)
+static void SV_Tell_f(cmd_state_t *cmd)
 {
 	const char *playername_start = NULL;
 	size_t playername_length = 0;
@@ -1567,14 +1564,13 @@ static void Host_Tell_f(cmd_state_t *cmd)
 	host_client = save;
 }
 
-
 /*
 ==================
-Host_Color_f
+CL_Color_f
 ==================
 */
 cvar_t cl_color = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
-static void Host_Color(cmd_state_t *cmd, int changetop, int changebottom)
+static void CL_Color(cmd_state_t *cmd, int changetop, int changebottom)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int top, bottom, playercolor;
@@ -1630,7 +1626,7 @@ static void Host_Color(cmd_state_t *cmd, int changetop, int changebottom)
 	}
 }
 
-static void Host_Color_f(cmd_state_t *cmd)
+static void CL_Color_f(cmd_state_t *cmd)
 {
 	int		top, bottom;
 
@@ -1651,10 +1647,10 @@ static void Host_Color_f(cmd_state_t *cmd)
 		top = atoi(Cmd_Argv(cmd, 1));
 		bottom = atoi(Cmd_Argv(cmd, 2));
 	}
-	Host_Color(cmd, top, bottom);
+	CL_Color(cmd, top, bottom);
 }
 
-static void Host_TopColor_f(cmd_state_t *cmd)
+static void CL_TopColor_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) == 1)
 	{
@@ -1666,10 +1662,10 @@ static void Host_TopColor_f(cmd_state_t *cmd)
 		return;
 	}
 
-	Host_Color(cmd, atoi(Cmd_Argv(cmd, 1)), -1);
+	CL_Color(cmd, atoi(Cmd_Argv(cmd, 1)), -1);
 }
 
-static void Host_BottomColor_f(cmd_state_t *cmd)
+static void CL_BottomColor_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) == 1)
 	{
@@ -1681,12 +1677,12 @@ static void Host_BottomColor_f(cmd_state_t *cmd)
 		return;
 	}
 
-	Host_Color(cmd, -1, atoi(Cmd_Argv(cmd, 1)));
+	CL_Color(cmd, -1, atoi(Cmd_Argv(cmd, 1)));
 }
 
 cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
 cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
-static void Host_Rate_f(cmd_state_t *cmd)
+static void CL_Rate_f(cmd_state_t *cmd)
 {
 	int rate;
 
@@ -1710,7 +1706,8 @@ static void Host_Rate_f(cmd_state_t *cmd)
 
 	host_client->rate = rate;
 }
-static void Host_Rate_BurstSize_f(cmd_state_t *cmd)
+
+static void CL_Rate_BurstSize_f(cmd_state_t *cmd)
 {
 	int rate_burstsize;
 
@@ -1734,10 +1731,10 @@ static void Host_Rate_BurstSize_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Kill_f
+SV_Kill_f
 ==================
 */
-static void Host_Kill_f(cmd_state_t *cmd)
+static void SV_Kill_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	if (PRVM_serveredictfloat(host_client->edict, health) <= 0)
@@ -1754,10 +1751,10 @@ static void Host_Kill_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Pause_f
+SV_Pause_f
 ==================
 */
-static void Host_Pause_f(cmd_state_t *cmd)
+static void SV_Pause_f(cmd_state_t *cmd)
 {
 	void (*print) (const char *fmt, ...);
 	if (cmd->source == src_command)
@@ -1799,13 +1796,13 @@ static void Host_Pause_f(cmd_state_t *cmd)
 
 /*
 ======================
-Host_PModel_f
+CL_PModel_f
 LadyHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
 LadyHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
 cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
-static void Host_PModel_f(cmd_state_t *cmd)
+static void CL_PModel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
@@ -1838,10 +1835,10 @@ static void Host_PModel_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_PreSpawn_f
+SV_PreSpawn_f
 ==================
 */
-static void Host_PreSpawn_f(cmd_state_t *cmd)
+static void SV_PreSpawn_f(cmd_state_t *cmd)
 {
 	if (host_client->prespawned)
 	{
@@ -1864,10 +1861,10 @@ static void Host_PreSpawn_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Spawn_f
+SV_Spawn_f
 ==================
 */
-static void Host_Spawn_f(cmd_state_t *cmd)
+static void SV_Spawn_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
@@ -1909,7 +1906,7 @@ static void Host_Spawn_f(cmd_state_t *cmd)
 	}
 	else
 	{
-		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), host_client->name);
+		//Con_Printf("SV_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), host_client->name);
 
 		// copy spawn parms out of the client_t
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
@@ -2007,10 +2004,10 @@ static void Host_Spawn_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Begin_f
+SV_Begin_f
 ==================
 */
-static void Host_Begin_f(cmd_state_t *cmd)
+static void SV_Begin_f(cmd_state_t *cmd)
 {
 	if (!host_client->spawned)
 	{
@@ -2044,12 +2041,12 @@ static void Host_Begin_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Kick_f
+SV_Kick_f
 
 Kicks a user off of the server
 ==================
 */
-static void Host_Kick_f(cmd_state_t *cmd)
+static void SV_Kick_f(cmd_state_t *cmd)
 {
 	const char *who;
 	const char *message = NULL;
@@ -2130,10 +2127,10 @@ DEBUGGING TOOLS
 
 /*
 ==================
-Host_Give_f
+SV_Give_f
 ==================
 */
-static void Host_Give_f(cmd_state_t *cmd)
+static void SV_Give_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	const char *t;
@@ -2267,10 +2264,10 @@ static prvm_edict_t	*FindViewthing(prvm_prog_t *prog)
 
 /*
 ==================
-Host_Viewmodel_f
+SV_Viewmodel_f
 ==================
 */
-static void Host_Viewmodel_f(cmd_state_t *cmd)
+static void SV_Viewmodel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
@@ -2295,10 +2292,10 @@ static void Host_Viewmodel_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Viewframe_f
+SV_Viewframe_f
 ==================
 */
-static void Host_Viewframe_f(cmd_state_t *cmd)
+static void SV_Viewframe_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
@@ -2332,10 +2329,10 @@ static void PrintFrameName (dp_model_t *m, int frame)
 
 /*
 ==================
-Host_Viewnext_f
+SV_Viewnext_f
 ==================
 */
-static void Host_Viewnext_f(cmd_state_t *cmd)
+static void SV_Viewnext_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
@@ -2359,10 +2356,10 @@ static void Host_Viewnext_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Viewprev_f
+SV_Viewprev_f
 ==================
 */
-static void Host_Viewprev_f(cmd_state_t *cmd)
+static void SV_Viewprev_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
@@ -2395,10 +2392,10 @@ DEMO LOOP CONTROL
 
 /*
 ==================
-Host_Startdemos_f
+CL_Startdemos_f
 ==================
 */
-static void Host_Startdemos_f(cmd_state_t *cmd)
+static void CL_Startdemos_f(cmd_state_t *cmd)
 {
 	int		i, c;
 
@@ -2432,12 +2429,12 @@ static void Host_Startdemos_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Demos_f
+CL_Demos_f
 
 Return to looping demos
 ==================
 */
-static void Host_Demos_f(cmd_state_t *cmd)
+static void CL_Demos_f(cmd_state_t *cmd)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -2449,12 +2446,12 @@ static void Host_Demos_f(cmd_state_t *cmd)
 
 /*
 ==================
-Host_Stopdemo_f
+CL_Stopdemo_f
 
 Return to looping demos
 ==================
 */
-static void Host_Stopdemo_f(cmd_state_t *cmd)
+static void CL_Stopdemo_f(cmd_state_t *cmd)
 {
 	if (!cls.demoplayback)
 		return;
@@ -2462,7 +2459,7 @@ static void Host_Stopdemo_f(cmd_state_t *cmd)
 	Host_ShutdownServer ();
 }
 
-static void Host_SendCvar_f(cmd_state_t *cmd)
+static void CL_SendCvar_f(cmd_state_t *cmd)
 {
 	int		i;
 	cvar_t	*c;
@@ -2501,7 +2498,7 @@ static void Host_SendCvar_f(cmd_state_t *cmd)
 	host_client = old;
 }
 
-static void MaxPlayers_f(cmd_state_t *cmd)
+static void SV_MaxPlayers_f(cmd_state_t *cmd)
 {
 	int n;
 
@@ -2530,12 +2527,12 @@ static void MaxPlayers_f(cmd_state_t *cmd)
 
 /*
 =====================
-Host_PQRcon_f
+CL_PQRcon_f
 
 ProQuake rcon support
 =====================
 */
-static void Host_PQRcon_f(cmd_state_t *cmd)
+static void CL_PQRcon_f(cmd_state_t *cmd)
 {
 	int n;
 	const char *e;
@@ -2591,13 +2588,13 @@ static void Host_PQRcon_f(cmd_state_t *cmd)
 
 /*
 =====================
-Host_Rcon_f
+CL_Rcon_f
 
   Send the rest of the command line over as
   an unconnected command.
 =====================
 */
-static void Host_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	int i, n;
 	const char *e;
@@ -2680,14 +2677,14 @@ static void Host_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 
 /*
 ====================
-Host_User_f
+SV_User_f
 
 user <name or userid>
 
 Dump userdata / masterdata for a user
 ====================
 */
-static void Host_User_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void SV_User_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	int		uid;
 	int		i;
@@ -2715,12 +2712,12 @@ static void Host_User_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 
 /*
 ====================
-Host_Users_f
+SV_Users_f
 
 Dump userids for all current players
 ====================
 */
-static void Host_Users_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void SV_Users_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	int		i;
 	int		c;
@@ -2742,13 +2739,13 @@ static void Host_Users_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 
 /*
 ==================
-Host_FullServerinfo_f
+CL_FullServerinfo_f
 
 Sent by server when serverinfo changes
 ==================
 */
 // TODO: shouldn't this be a cvar instead?
-static void Host_FullServerinfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void CL_FullServerinfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	char temp[512];
 	if (Cmd_Argc(cmd) != 2)
@@ -2764,13 +2761,13 @@ static void Host_FullServerinfo_f(cmd_state_t *cmd) // credit: taken from QuakeW
 
 /*
 ==================
-Host_FullInfo_f
+CL_FullInfo_f
 
 Allow clients to change userinfo
 ==================
 Casey was here :)
 */
-static void Host_FullInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void CL_FullInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	char key[512];
 	char value[512];
@@ -2824,7 +2821,7 @@ CL_SetInfo_f
 Allow clients to change userinfo
 ==================
 */
-static void Host_SetInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void CL_SetInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	if (Cmd_Argc(cmd) == 1)
 	{
@@ -2841,14 +2838,14 @@ static void Host_SetInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 
 /*
 ====================
-Host_Packet_f
+CL_Packet_f
 
 packet <destination> <contents>
 
 Contents allows \n escape character
 ====================
 */
-static void Host_Packet_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+static void CL_Packet_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 {
 	char send[2048];
 	int i, l;
@@ -2916,12 +2913,12 @@ static void Host_Packet_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 
 /*
 ====================
-Host_Pings_f
+SV_Pings_f
 
 Send back ping and packet loss update for all current players to this player
 ====================
 */
-static void Host_Pings_f(cmd_state_t *cmd)
+static void SV_Pings_f(cmd_state_t *cmd)
 {
 	int		i, j, ping, packetloss, movementloss;
 	char temp[128];
@@ -2973,7 +2970,7 @@ static void Host_Pings_f(cmd_state_t *cmd)
 		MSG_WriteString(&host_client->netconnection->message, "\n");
 }
 
-static void Host_PingPLReport_f(cmd_state_t *cmd)
+static void CL_PingPLReport_f(cmd_state_t *cmd)
 {
 	char *errbyte;
 	int i;
@@ -3018,7 +3015,7 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&skin);
 	Cvar_RegisterVariable(&noaim);
 	Cvar_RegisterVariable(&sv_cheats);
-	Cvar_RegisterCallback(&sv_cheats, Host_DisableCheats_c);
+	Cvar_RegisterCallback(&sv_cheats, SV_DisableCheats_c);
 	Cvar_RegisterVariable(&sv_adminnick);
 	Cvar_RegisterVariable(&sv_status_privacy);
 	Cvar_RegisterVariable(&sv_status_show_qcstatus);
@@ -3026,66 +3023,66 @@ void Host_InitCommands (void)
 
 	// client commands - this includes server commands because the client can host a server, so they must exist
 	Cmd_AddCommand(CMD_SHARED, "quit", Host_Quit_f, "quit the game");
-	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "status", Host_Status_f, "print server status information");
-	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "map", Host_Map_f, "kick everyone off the server and start a new level");
-	Cmd_AddCommand(CMD_SHARED, "restart", Host_Restart_f, "restart current level");
-	Cmd_AddCommand(CMD_SHARED, "changelevel", Host_Changelevel_f, "change to another level, bringing along all connected clients");
+	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "status", SV_Status_f, "print server status information");
+	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "map", SV_Map_f, "kick everyone off the server and start a new level");
+	Cmd_AddCommand(CMD_SHARED, "restart", SV_Restart_f, "restart current level");
+	Cmd_AddCommand(CMD_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients");
 	Cmd_AddCommand(CMD_SHARED, "version", Host_Version_f, "print engine version");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "say", Host_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "say_team", Host_Say_Team_f, "send a chat message to your team on the server");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "tell", Host_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "pause", Host_Pause_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(CMD_SHARED, "kick", Host_Kick_f, "kick a player off the server by number or name");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "ping", Host_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "load", Host_Loadgame_f, "load a saved game file");
-	Cmd_AddCommand(CMD_SHARED, "save", Host_Savegame_f, "save the game to a file");
-	Cmd_AddCommand(CMD_SHARED, "viewmodel", Host_Viewmodel_f, "change model of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewframe", Host_Viewframe_f, "change animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewnext", Host_Viewnext_f, "change to next animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewprev", Host_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "maxplayers", MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
-	Cmd_AddCommand(CMD_SHARED, "user", Host_User_f, "prints additional information about a player number or name on the scoreboard");
-	Cmd_AddCommand(CMD_SHARED, "users", Host_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "say", SV_Say_f, "send a chat message to everyone on the server");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "say_team", SV_Say_Team_f, "send a chat message to your team on the server");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "tell", SV_Tell_f, "send a chat message to only one person on the server");
+	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "pause", SV_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand(CMD_SHARED, "kick", SV_Kick_f, "kick a player off the server by number or name");
+	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "ping", SV_Ping_f, "print ping times of all players on the server");
+	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "load", SV_Loadgame_f, "load a saved game file");
+	Cmd_AddCommand(CMD_SHARED, "save", SV_Savegame_f, "save the game to a file");
+	Cmd_AddCommand(CMD_SHARED, "viewmodel", SV_Viewmodel_f, "change model of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewframe", SV_Viewframe_f, "change animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewnext", SV_Viewnext_f, "change to next animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "viewprev", SV_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CMD_SHARED, "maxplayers", SV_MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
+	Cmd_AddCommand(CMD_SHARED, "user", SV_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand(CMD_SHARED, "users", SV_Users_f, "prints additional information about all players on the scoreboard");
 
 	// commands that do not have automatic forwarding from cmd_client, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "prespawn", Host_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "spawn", Host_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "begin", Host_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "pings", Host_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "prespawn", SV_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "spawn", SV_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "begin", SV_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "pings", SV_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "god", Host_God_f, "god mode (invulnerability)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "notarget", Host_Notarget_f, "notarget mode (monsters do not see you)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "fly", Host_Fly_f, "fly mode (flight)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "noclip", Host_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "give", Host_Give_f, "alter inventory");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", Host_Kill_f, "die instantly");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", Host_Name_f, "change your player name");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", Host_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate", Host_Rate_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate_burstsize", Host_Rate_BurstSize_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "pmodel", Host_PModel_f, "(Nehahra-only) change your player model choice");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playermodel", Host_Playermodel_f, "change your player model");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playerskin", Host_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "god", SV_God_f, "god mode (invulnerability)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "notarget", SV_Notarget_f, "notarget mode (monsters do not see you)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "fly", SV_Fly_f, "fly mode (flight)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "noclip", SV_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "give", SV_Give_f, "alter inventory");
+	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", SV_Kill_f, "die instantly");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", CL_Name_f, "change your player name");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate", CL_Rate_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate_burstsize", CL_Rate_BurstSize_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "pmodel", CL_PModel_f, "(Nehahra-only) change your player model choice");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playermodel", CL_Playermodel_f, "change your player model");
+	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playerskin", CL_Playerskin_f, "change your player skin number");
 
-	Cmd_AddCommand(CMD_CLIENT, "connect", Host_Connect_f, "connect to a server by IP address or hostname");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", Host_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
-	Cmd_AddCommand(CMD_CLIENT, "startdemos", Host_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
-	Cmd_AddCommand(CMD_CLIENT, "demos", Host_Demos_f, "restart looping demos defined by the last startdemos command");
-	Cmd_AddCommand(CMD_CLIENT, "stopdemo", Host_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
-	Cmd_AddCommand(CMD_CLIENT, "sendcvar", Host_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
-	Cmd_AddCommand(CMD_CLIENT, "rcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "srcon", Host_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "pqrcon", Host_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
-	Cmd_AddCommand(CMD_CLIENT, "fullinfo", Host_FullInfo_f, "allows client to modify their userinfo");
-	Cmd_AddCommand(CMD_CLIENT, "setinfo", Host_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "packet", Host_Packet_f, "send a packet to the specified address:port containing a text string");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "topcolor", Host_TopColor_f, "QW command to set top color without changing bottom color");
-	Cmd_AddCommand(CMD_CLIENT, "bottomcolor", Host_BottomColor_f, "QW command to set bottom color without changing top color");
+	Cmd_AddCommand(CMD_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
+	Cmd_AddCommand(CMD_CLIENT, "startdemos", CL_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
+	Cmd_AddCommand(CMD_CLIENT, "demos", CL_Demos_f, "restart looping demos defined by the last startdemos command");
+	Cmd_AddCommand(CMD_CLIENT, "stopdemo", CL_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
+	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CMD_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand(CMD_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
+	Cmd_AddCommand(CMD_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "topcolor", CL_TopColor_f, "QW command to set top color without changing bottom color");
+	Cmd_AddCommand(CMD_CLIENT, "bottomcolor", CL_BottomColor_f, "QW command to set bottom color without changing top color");
 	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
 	// commands that are only sent by server to client for execution
-	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", Host_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
-	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", Host_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", CL_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
 }
 
 void Host_NoOperation_f(cmd_state_t *cmd)
