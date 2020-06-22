@@ -406,6 +406,7 @@ extern char engineversion[128];
 extern qboolean noclip_anglehack;
 
 extern cvar_t developer;
+extern cvar_t developer_entityparsing;
 extern cvar_t developer_extra;
 extern cvar_t developer_insane;
 extern cvar_t developer_loadfile;

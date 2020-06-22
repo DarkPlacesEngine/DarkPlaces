@@ -626,6 +626,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
+	SV_InitOperatorCommands();
+
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
 
