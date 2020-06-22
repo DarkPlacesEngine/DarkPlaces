@@ -44,22 +44,6 @@ cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player s
 cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
-extern cvar_t developer_entityparsing;
-
-/*
-==================
-Host_Quit_f
-==================
-*/
-
-void Host_Quit_f(cmd_state_t *cmd)
-{
-	if(host.state == host_shutdown)
-		Con_Printf("shutting down already!\n");
-	else
-		host.state = host_shutdown;
-}
-
 /*
 ==================
 CL_Reconnect_f
@@ -391,11 +375,6 @@ static void CL_Playerskin_f(cmd_state_t *cmd)
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 		MSG_WriteString (&sv.reliable_datagram, host_client->playerskin);*/
 	}
-}
-
-static void Host_Version_f(cmd_state_t *cmd)
-{
-	Con_Printf("Version: %s build %s\n", gamename, buildstring);
 }
 
 /*
@@ -1010,10 +989,6 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&team);
 	Cvar_RegisterVariable(&skin);
 	Cvar_RegisterVariable(&noaim);
-
-	// client commands - this includes server commands because the client can host a server, so they must exist
-	Cmd_AddCommand(CMD_SHARED, "quit", Host_Quit_f, "quit the game");
-	Cmd_AddCommand(CMD_SHARED, "version", Host_Version_f, "print engine version");
 
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", CL_Name_f, "change your player name");
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
