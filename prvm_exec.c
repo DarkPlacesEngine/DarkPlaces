@@ -549,7 +549,7 @@ void PRVM_Crash(prvm_prog_t *prog)
 	if(prvm_errordump.integer)
 	{
 		// make a savegame
-		Host_Savegame_to(prog, va(vabuf, sizeof(vabuf), "crash-%s.dmp", prog->name));
+		SV_Savegame_to(prog, va(vabuf, sizeof(vabuf), "crash-%s.dmp", prog->name));
 	}
 
 	// dump the stack so host_error can shutdown functions
