@@ -611,7 +611,17 @@ void SV_StopThread(void);
 
 void VM_CustomStats_Clear(void);
 void VM_SV_UpdateCustomStats(client_t *client, prvm_edict_t *ent, sizebuf_t *msg, int *stats);
+
+void SV_InitOperatorCommands(void);
+
 void SV_Savegame_to(prvm_prog_t *prog, const char *name);
+void SV_Savegame_f(cmd_state_t *cmd);
+void SV_Loadgame_f(cmd_state_t *cmd);
+
+void SV_PreSpawn_f(cmd_state_t *cmd);
+void SV_Spawn_f(cmd_state_t *cmd);
+void SV_Begin_f(cmd_state_t *cmd);
+
 void SV_SendServerinfo(client_t *client);
 
 #endif

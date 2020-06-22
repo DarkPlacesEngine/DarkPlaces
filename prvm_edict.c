@@ -715,7 +715,6 @@ PRVM_ED_Write
 For savegames
 =============
 */
-extern cvar_t developer_entityparsing;
 void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 {
 	ddef_t	*d;
