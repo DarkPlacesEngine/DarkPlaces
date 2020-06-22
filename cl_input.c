@@ -2152,7 +2152,7 @@ void CL_SendMove(void)
 		Con_Print("CL_SendMove: lost server connection\n");
 		CL_Disconnect();
 		SV_LockThreadMutex();
-		Host_ShutdownServer();
+		SV_Shutdown();
 		SV_UnlockThreadMutex();
 	}
 }

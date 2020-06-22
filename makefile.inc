@@ -146,6 +146,7 @@ OBJ_COMMON= \
 	sv_main.o \
 	sv_move.o \
 	sv_phys.o \
+	sv_send.o \
 	sv_user.o \
 	svbsp.o \
 	svvm_cmds.o \

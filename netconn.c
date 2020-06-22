@@ -1517,7 +1517,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
 	{
 		SV_LockThreadMutex();
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
 	// allocate a net connection to keep track of things
@@ -2482,7 +2482,7 @@ void NetConn_ClientFrame(void)
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
 		SV_LockThreadMutex();
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
 }

@@ -1827,7 +1827,7 @@ void Curl_SendRequirements(void)
 		strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
 
 	if(strlen(sendbuffer) + 1 < sizeof(sendbuffer))
-		Host_ClientCommands("%s", sendbuffer);
+		SV_ClientCommands("%s", sendbuffer);
 	else
 		Con_Printf("Could not initiate autodownload due to URL buffer overflow\n");
 }

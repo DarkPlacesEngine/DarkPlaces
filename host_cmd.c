@@ -368,7 +368,7 @@ static void SV_Map_f(cmd_state_t *cmd)
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	CL_Disconnect ();
-	Host_ShutdownServer();
+	SV_Shutdown();
 
 	if(svs.maxclients != svs.maxclients_next)
 	{
@@ -2456,7 +2456,7 @@ static void CL_Stopdemo_f(cmd_state_t *cmd)
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();
-	Host_ShutdownServer ();
+	SV_Shutdown ();
 }
 
 static void CL_SendCvar_f(cmd_state_t *cmd)
@@ -2493,7 +2493,7 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 		if(svs.clients[i].active && svs.clients[i].netconnection)
 		{
 			host_client = &svs.clients[i];
-			Host_ClientCommands("sendcvar %s\n", cvarname);
+			SV_ClientCommands("sendcvar %s\n", cvarname);
 		}
 	host_client = old;
 }
