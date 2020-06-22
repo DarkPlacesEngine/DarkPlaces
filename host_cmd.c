@@ -603,84 +603,6 @@ static void CL_PModel_f(cmd_state_t *cmd)
 
 //===========================================================================
 
-/*
-===============================================================================
-
-DEMO LOOP CONTROL
-
-===============================================================================
-*/
-
-
-/*
-==================
-CL_Startdemos_f
-==================
-*/
-static void CL_Startdemos_f(cmd_state_t *cmd)
-{
-	int		i, c;
-
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
-		return;
-
-	c = Cmd_Argc(cmd) - 1;
-	if (c > MAX_DEMOS)
-	{
-		Con_Printf("Max %i demos in demoloop\n", MAX_DEMOS);
-		c = MAX_DEMOS;
-	}
-	Con_DPrintf("%i demo(s) in loop\n", c);
-
-	for (i=1 ; i<c+1 ; i++)
-		strlcpy (cls.demos[i-1], Cmd_Argv(cmd, i), sizeof (cls.demos[i-1]));
-
-	// LadyHavoc: clear the remaining slots
-	for (;i <= MAX_DEMOS;i++)
-		cls.demos[i-1][0] = 0;
-
-	if (!sv.active && cls.demonum != -1 && !cls.demoplayback)
-	{
-		cls.demonum = 0;
-		CL_NextDemo ();
-	}
-	else
-		cls.demonum = -1;
-}
-
-
-/*
-==================
-CL_Demos_f
-
-Return to looping demos
-==================
-*/
-static void CL_Demos_f(cmd_state_t *cmd)
-{
-	if (cls.state == ca_dedicated)
-		return;
-	if (cls.demonum == -1)
-		cls.demonum = 1;
-	CL_Disconnect_f (cmd);
-	CL_NextDemo ();
-}
-
-/*
-==================
-CL_Stopdemo_f
-
-Return to looping demos
-==================
-*/
-static void CL_Stopdemo_f(cmd_state_t *cmd)
-{
-	if (!cls.demoplayback)
-		return;
-	CL_Disconnect ();
-	SV_Shutdown ();
-}
-
 static void CL_SendCvar_f(cmd_state_t *cmd)
 {
 	int		i;
@@ -1103,9 +1025,6 @@ void Host_InitCommands (void)
 
 	Cmd_AddCommand(CMD_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
 	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
-	Cmd_AddCommand(CMD_CLIENT, "startdemos", CL_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
-	Cmd_AddCommand(CMD_CLIENT, "demos", CL_Demos_f, "restart looping demos defined by the last startdemos command");
-	Cmd_AddCommand(CMD_CLIENT, "stopdemo", CL_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
 	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");

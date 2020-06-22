@@ -1955,16 +1955,6 @@ void CL_UpdateWorld(void)
 	r_refdef.scene.time = cl.time;
 }
 
-// LadyHavoc: pausedemo command
-static void CL_PauseDemo_f(cmd_state_t *cmd)
-{
-	cls.demopaused = !cls.demopaused;
-	if (cls.demopaused)
-		Con_Print("Demo paused\n");
-	else
-		Con_Print("Demo unpaused\n");
-}
-
 /*
 ======================
 CL_Fog_f
@@ -2709,27 +2699,18 @@ void CL_Init (void)
 		Cvar_RegisterVariable (&cl_itembobspeed);
 		Cvar_RegisterVariable (&cl_itembobheight);
 
+		CL_Demo_Init();
+
 		Cmd_AddCommand(CMD_CLIENT, "entities", CL_PrintEntities_f, "print information on network entities known to client");
 		Cmd_AddCommand(CMD_CLIENT, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-		Cmd_AddCommand(CMD_CLIENT, "record", CL_Record_f, "record a demo");
-		Cmd_AddCommand(CMD_CLIENT, "stop", CL_Stop_f, "stop recording or playing a demo");
-		Cmd_AddCommand(CMD_CLIENT, "playdemo", CL_PlayDemo_f, "watch a demo file");
-		Cmd_AddCommand(CMD_CLIENT, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
 
 		// Support Client-side Model Index List
 		Cmd_AddCommand(CMD_CLIENT, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 		// Support Client-side Sound Index List
 		Cmd_AddCommand(CMD_CLIENT, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
-		Cvar_RegisterVariable (&cl_autodemo);
-		Cvar_RegisterVariable (&cl_autodemo_nameformat);
-		Cvar_RegisterVariable (&cl_autodemo_delete);
-
 		Cmd_AddCommand(CMD_CLIENT, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
 		Cmd_AddCommand(CMD_CLIENT, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
-
-		// LadyHavoc: added pausedemo
-		Cmd_AddCommand(CMD_CLIENT, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 
 		Cmd_AddCommand(CMD_CLIENT, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
