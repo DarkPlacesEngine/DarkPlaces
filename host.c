@@ -214,6 +214,24 @@ static void Host_ServerOptions (void)
 }
 
 /*
+==================
+Host_Quit_f
+==================
+*/
+void Host_Quit_f(cmd_state_t *cmd)
+{
+	if(host.state == host_shutdown)
+		Con_Printf("shutting down already!\n");
+	else
+		host.state = host_shutdown;
+}
+
+static void Host_Version_f(cmd_state_t *cmd)
+{
+	Con_Printf("Version: %s build %s\n", gamename, buildstring);
+}
+
+/*
 =======================
 Host_InitLocal
 ======================
@@ -224,6 +242,8 @@ extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
 static void Host_InitLocal (void)
 {
+	Cmd_AddCommand(CMD_SHARED, "quit", Host_Quit_f, "quit the game");
+	Cmd_AddCommand(CMD_SHARED, "version", Host_Version_f, "print engine version");
 	Cmd_AddCommand(CMD_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand(CMD_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
