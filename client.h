@@ -1608,6 +1608,8 @@ void CL_Record_f(cmd_state_t *cmd);
 void CL_PlayDemo_f(cmd_state_t *cmd);
 void CL_TimeDemo_f(cmd_state_t *cmd);
 
+void CL_Demo_Init(void);
+
 //
 // cl_parse.c
 //
