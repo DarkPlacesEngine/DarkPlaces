@@ -1224,16 +1224,12 @@ static void Host_Init (void)
 	Curl_Init_Commands();
 	Sys_Init_Commands();
 	COM_Init_Commands();
-	FS_Init_Commands();
 
 	// initialize console window (only used by sys_win.c)
 	Sys_InitConsole();
 
-	// initialize the self-pack (must be before COM_InitGameType as it may add command line options)
-	FS_Init_SelfPack();
-
-	// detect gamemode from commandline options or executable name
-	COM_InitGameType();
+	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
+	FS_Init();
 
 	// construct a version string for the corner of the console
 	os = DP_OS_NAME;
@@ -1245,9 +1241,6 @@ static void Host_Init (void)
 
 	// initialize ixtable
 	Mathlib_Init();
-
-	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
-	FS_Init();
 
 	// register the cvars for session locking
 	Host_InitSession();
