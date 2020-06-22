@@ -910,6 +910,9 @@ void Con_Init (void)
 	Cmd_AddCommand(CMD_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
+	// initialize console window (only used by sys_win.c)
+	Sys_InitConsole();
+	
 	Con_DPrint("Console initialized.\n");
 }
 
