@@ -1152,6 +1152,126 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 		client->prespawned = client->spawned = client->begun = true;
 }
 
+/*
+=====================
+SV_DropClient
+
+Called when the player is getting totally kicked off the host
+if (crash = true), don't bother sending signofs
+=====================
+*/
+void SV_DropClient(qboolean crash)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i;
+	Con_Printf("Client \"%s\" dropped\n", host_client->name);
+
+	SV_StopDemoRecording(host_client);
+
+	// make sure edict is not corrupt (from a level change for example)
+	host_client->edict = PRVM_EDICT_NUM(host_client - svs.clients + 1);
+
+	if (host_client->netconnection)
+	{
+		// tell the client to be gone
+		if (!crash)
+		{
+			// LadyHavoc: no opportunity for resending, so use unreliable 3 times
+			unsigned char bufdata[8];
+			sizebuf_t buf;
+			memset(&buf, 0, sizeof(buf));
+			buf.data = bufdata;
+			buf.maxsize = sizeof(bufdata);
+			MSG_WriteByte(&buf, svc_disconnect);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
+		}
+	}
+
+	// call qc ClientDisconnect function
+	// LadyHavoc: don't call QC if server is dead (avoids recursive
+	// Host_Error in some mods when they run out of edicts)
+	if (host_client->clientconnectcalled && sv.active && host_client->edict)
+	{
+		// call the prog function for removing a client
+		// this will set the body to a dead frame, among other things
+		int saveSelf = PRVM_serverglobaledict(self);
+		host_client->clientconnectcalled = false;
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(ClientDisconnect), "QC function ClientDisconnect is missing");
+		PRVM_serverglobaledict(self) = saveSelf;
+	}
+
+	if (host_client->netconnection)
+	{
+		// break the net connection
+		NetConn_Close(host_client->netconnection);
+		host_client->netconnection = NULL;
+	}
+
+	// if a download is active, close it
+	if (host_client->download_file)
+	{
+		Con_DPrintf("Download of %s aborted when %s dropped\n", host_client->download_name, host_client->name);
+		FS_Close(host_client->download_file);
+		host_client->download_file = NULL;
+		host_client->download_name[0] = 0;
+		host_client->download_expectedposition = 0;
+		host_client->download_started = false;
+	}
+
+	// remove leaving player from scoreboard
+	host_client->name[0] = 0;
+	host_client->colors = 0;
+	host_client->frags = 0;
+	// send notification to all clients
+	// get number of client manually just to make sure we get it right...
+	i = host_client - svs.clients;
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+	MSG_WriteByte (&sv.reliable_datagram, i);
+	MSG_WriteString (&sv.reliable_datagram, host_client->name);
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+	MSG_WriteByte (&sv.reliable_datagram, i);
+	MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatefrags);
+	MSG_WriteByte (&sv.reliable_datagram, i);
+	MSG_WriteShort (&sv.reliable_datagram, host_client->frags);
+
+	// free the client now
+	if (host_client->entitydatabase)
+		EntityFrame_FreeDatabase(host_client->entitydatabase);
+	if (host_client->entitydatabase4)
+		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
+	if (host_client->entitydatabase5)
+		EntityFrame5_FreeDatabase(host_client->entitydatabase5);
+
+	if (sv.active)
+	{
+		// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
+		PRVM_ED_ClearEdict(prog, host_client->edict);
+	}
+
+	// clear the client struct (this sets active to false)
+	memset(host_client, 0, sizeof(*host_client));
+
+	// update server listing on the master because player count changed
+	// (which the master uses for filtering empty/full servers)
+	NetConn_Heartbeat(1);
+
+	if (sv.loadgame)
+	{
+		for (i = 0;i < svs.maxclients;i++)
+			if (svs.clients[i].active && !svs.clients[i].spawned)
+				break;
+		if (i == svs.maxclients)
+		{
+			Con_Printf("Loaded game, everyone rejoined - unpausing\n");
+			sv.paused = sv.loadgame = false; // we're basically done with loading now
+		}
+	}
+}
 
 /*
 ===============================================================================
@@ -2725,7 +2845,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	{
 		// at this point we'll assume the previous download should be aborted
 		Con_DPrintf("Download of %s aborted by %s starting a new download\n", host_client->download_name, host_client->name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 
 		// close the file and reset variables
 		FS_Close(host_client->download_file);
@@ -2740,7 +2860,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	if (!sv_allowdownloads.integer && !is_csqc)
 	{
 		SV_ClientPrintf("Downloads are disabled on this server\n");
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		return;
 	}
 
@@ -2769,7 +2889,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 			host_client->download_file = FS_FileFromData(svs.csqc_progdata, sv.csqc_progsize, true);
 		
 		// no, no space is needed between %s and %s :P
-		Host_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
+		SV_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
 
 		host_client->download_expectedposition = 0;
 		host_client->download_started = false;
@@ -2780,7 +2900,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	if (!FS_FileExists(host_client->download_name))
 	{
 		SV_ClientPrintf("Download rejected: server does not have the file \"%s\"\nYou may need to separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		return;
 	}
 
@@ -2790,7 +2910,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	if ((whichpack && whichpack2 && !strcasecmp(whichpack, whichpack2)) || FS_IsRegisteredQuakePack(host_client->download_name))
 	{
 		SV_ClientPrintf("Download rejected: file \"%s\" is part of registered Quake(r)\nYou must purchase Quake(r) from id Software or a retailer to get this file\nPlease go to http://www.idsoftware.com/games/quake/quake/index.php?game_section=buy\n", host_client->download_name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		return;
 	}
 
@@ -2801,7 +2921,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 		if (whichpack)
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is in an archive (\"%s\")\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name, whichpack);
-			Host_ClientCommands("\nstopdownload\n");
+			SV_ClientCommands("\nstopdownload\n");
 			return;
 		}
 	}
@@ -2811,7 +2931,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 		if (!strcasecmp(extension, "cfg"))
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is a .cfg file which is forbidden for security reasons\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
-			Host_ClientCommands("\nstopdownload\n");
+			SV_ClientCommands("\nstopdownload\n");
 			return;
 		}
 	}
@@ -2821,7 +2941,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 		if (!strncasecmp(host_client->download_name, "dlcache/", 8))
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is in the dlcache/ directory which is forbidden for security reasons\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
-			Host_ClientCommands("\nstopdownload\n");
+			SV_ClientCommands("\nstopdownload\n");
 			return;
 		}
 	}
@@ -2831,7 +2951,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 		if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is an archive\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
-			Host_ClientCommands("\nstopdownload\n");
+			SV_ClientCommands("\nstopdownload\n");
 			return;
 		}
 	}
@@ -2840,14 +2960,14 @@ static void SV_Download_f(cmd_state_t *cmd)
 	if (!host_client->download_file)
 	{
 		SV_ClientPrintf("Download rejected: server could not open the file \"%s\"\n", host_client->download_name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		return;
 	}
 
 	if (FS_FileSize(host_client->download_file) > 1<<30)
 	{
 		SV_ClientPrintf("Download rejected: file \"%s\" is very large\n", host_client->download_name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		FS_Close(host_client->download_file);
 		host_client->download_file = NULL;
 		return;
@@ -2856,7 +2976,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	if (FS_FileSize(host_client->download_file) < 0)
 	{
 		SV_ClientPrintf("Download rejected: file \"%s\" is not a regular file\n", host_client->download_name);
-		Host_ClientCommands("\nstopdownload\n");
+		SV_ClientCommands("\nstopdownload\n");
 		FS_Close(host_client->download_file);
 		host_client->download_file = NULL;
 		return;
@@ -2875,10 +2995,10 @@ static void SV_Download_f(cmd_state_t *cmd)
 			strlcat(extensions, " deflate", sizeof(extensions));
 
 		// no, no space is needed between %s and %s :P
-		Host_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
+		SV_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
 	}
 	*/
-	Host_ClientCommands("\ncl_downloadbegin %i %s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name);
+	SV_ClientCommands("\ncl_downloadbegin %i %s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name);
 
 	host_client->download_expectedposition = 0;
 	host_client->download_started = false;
@@ -3594,6 +3714,54 @@ void SV_SpawnServer (const char *server)
 		Sys_MakeProcessMean();
 
 //	SV_UnlockThreadMutex();
+}
+
+/*
+==================
+SV_Shutdown
+
+This only happens at the end of a game, not between levels
+==================
+*/
+void SV_Shutdown(void)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i;
+
+	Con_DPrintf("SV_Shutdown\n");
+
+	if (!sv.active)
+		return;
+
+	NetConn_Heartbeat(2);
+	NetConn_Heartbeat(2);
+
+// make sure all the clients know we're disconnecting
+	World_End(&sv.world);
+	if(prog->loaded)
+	{
+		if(PRVM_serverfunction(SV_Shutdown))
+		{
+			func_t s = PRVM_serverfunction(SV_Shutdown);
+			PRVM_serverglobalfloat(time) = sv.time;
+			PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
+			prog->ExecuteProgram(prog, s,"SV_Shutdown() required");
+		}
+	}
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client->active)
+			SV_DropClient(false); // server shutdown
+
+	NetConn_CloseServerPorts();
+
+	sv.active = false;
+//
+// clear structures
+//
+	memset(&sv, 0, sizeof(sv));
+	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
+
+	cl.islocalgame = false;
 }
 
 /////////////////////////////////////////////////////
