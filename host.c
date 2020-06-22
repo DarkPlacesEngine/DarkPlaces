@@ -1225,9 +1225,6 @@ static void Host_Init (void)
 	Sys_Init_Commands();
 	COM_Init_Commands();
 
-	// initialize console window (only used by sys_win.c)
-	Sys_InitConsole();
-
 	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
 	FS_Init();
 
