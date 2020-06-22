@@ -276,10 +276,12 @@
     <ClCompile Include="snd_sdl.c" />
     <ClCompile Include="snd_wav.c" />
 	<ClCompile Include="snd_xmp.c" />
+    <ClCompile Include="sv_ccmds.c" />
     <ClCompile Include="sv_demo.c" />
     <ClCompile Include="sv_main.c" />
     <ClCompile Include="sv_move.c" />
     <ClCompile Include="sv_phys.c" />
+    <ClCompile Include="sv_save.c" />
     <ClCompile Include="sv_send.c" />
     <ClCompile Include="sv_user.c" />
     <ClCompile Include="svbsp.c" />

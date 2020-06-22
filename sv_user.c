@@ -27,6 +27,209 @@ static usercmd_t cmd;
 extern cvar_t sv_autodemo_perclient;
 
 /*
+==================
+SV_PreSpawn_f
+==================
+*/
+void SV_PreSpawn_f(cmd_state_t *cmd)
+{
+	if (host_client->prespawned)
+	{
+		Con_Print("prespawn not valid -- already prespawned\n");
+		return;
+	}
+	host_client->prespawned = true;
+
+	if (host_client->netconnection)
+	{
+		SZ_Write (&host_client->netconnection->message, sv.signon.data, sv.signon.cursize);
+		MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
+		MSG_WriteByte (&host_client->netconnection->message, 2);
+		host_client->sendsignon = 0;		// enable unlimited sends again
+	}
+
+	// reset the name change timer because the client will send name soon
+	host_client->nametime = 0;
+}
+
+/*
+==================
+SV_Spawn_f
+==================
+*/
+void SV_Spawn_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i;
+	client_t *client;
+	int stats[MAX_CL_STATS];
+
+	if (!host_client->prespawned)
+	{
+		Con_Print("Spawn not valid -- not yet prespawned\n");
+		return;
+	}
+	if (host_client->spawned)
+	{
+		Con_Print("Spawn not valid -- already spawned\n");
+		return;
+	}
+	host_client->spawned = true;
+
+	// reset name change timer again because they might want to change name
+	// again in the first 5 seconds after connecting
+	host_client->nametime = 0;
+
+	// LadyHavoc: moved this above the QC calls at FrikaC's request
+	// LadyHavoc: commented this out
+	//if (host_client->netconnection)
+	//	SZ_Clear (&host_client->netconnection->message);
+
+	// run the entrance script
+	if (sv.loadgame)
+	{
+		// loaded games are fully initialized already
+		if (PRVM_serverfunction(RestoreGame))
+		{
+			Con_DPrint("Calling RestoreGame\n");
+			PRVM_serverglobalfloat(time) = sv.time;
+			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+			prog->ExecuteProgram(prog, PRVM_serverfunction(RestoreGame), "QC function RestoreGame is missing");
+		}
+	}
+	else
+	{
+		//Con_Printf("SV_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), PRVM_GetString(PRVM_serveredictstring(host_client->edict, netname)), host_client->name);
+
+		// copy spawn parms out of the client_t
+		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
+			(&PRVM_serverglobalfloat(parm1))[i] = host_client->spawn_parms[i];
+
+		// call the spawn function
+		host_client->clientconnectcalled = true;
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
+
+		if (cls.state == ca_dedicated)
+			Con_Printf("%s connected\n", host_client->name);
+
+		PRVM_serverglobalfloat(time) = sv.time;
+		prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
+	}
+
+	if (!host_client->netconnection)
+		return;
+
+	// send time of update
+	MSG_WriteByte (&host_client->netconnection->message, svc_time);
+	MSG_WriteFloat (&host_client->netconnection->message, sv.time);
+
+	// send all current names, colors, and frag counts
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+	{
+		if (!client->active)
+			continue;
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatename);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteString (&host_client->netconnection->message, client->name);
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatefrags);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteShort (&host_client->netconnection->message, client->frags);
+		MSG_WriteByte (&host_client->netconnection->message, svc_updatecolors);
+		MSG_WriteByte (&host_client->netconnection->message, i);
+		MSG_WriteByte (&host_client->netconnection->message, client->colors);
+	}
+
+	// send all current light styles
+	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
+	{
+		if (sv.lightstyles[i][0])
+		{
+			MSG_WriteByte (&host_client->netconnection->message, svc_lightstyle);
+			MSG_WriteByte (&host_client->netconnection->message, (char)i);
+			MSG_WriteString (&host_client->netconnection->message, sv.lightstyles[i]);
+		}
+	}
+
+	// send some stats
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALSECRETS);
+	MSG_WriteLong (&host_client->netconnection->message, (int)PRVM_serverglobalfloat(total_secrets));
+
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_TOTALMONSTERS);
+	MSG_WriteLong (&host_client->netconnection->message, (int)PRVM_serverglobalfloat(total_monsters));
+
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_SECRETS);
+	MSG_WriteLong (&host_client->netconnection->message, (int)PRVM_serverglobalfloat(found_secrets));
+
+	MSG_WriteByte (&host_client->netconnection->message, svc_updatestat);
+	MSG_WriteByte (&host_client->netconnection->message, STAT_MONSTERS);
+	MSG_WriteLong (&host_client->netconnection->message, (int)PRVM_serverglobalfloat(killed_monsters));
+
+	// send a fixangle
+	// Never send a roll angle, because savegames can catch the server
+	// in a state where it is expecting the client to correct the angle
+	// and it won't happen if the game was just loaded, so you wind up
+	// with a permanent head tilt
+	if (sv.loadgame)
+	{
+		MSG_WriteByte (&host_client->netconnection->message, svc_setangle);
+		MSG_WriteAngle (&host_client->netconnection->message, PRVM_serveredictvector(host_client->edict, v_angle)[0], sv.protocol);
+		MSG_WriteAngle (&host_client->netconnection->message, PRVM_serveredictvector(host_client->edict, v_angle)[1], sv.protocol);
+		MSG_WriteAngle (&host_client->netconnection->message, 0, sv.protocol);
+	}
+	else
+	{
+		MSG_WriteByte (&host_client->netconnection->message, svc_setangle);
+		MSG_WriteAngle (&host_client->netconnection->message, PRVM_serveredictvector(host_client->edict, angles)[0], sv.protocol);
+		MSG_WriteAngle (&host_client->netconnection->message, PRVM_serveredictvector(host_client->edict, angles)[1], sv.protocol);
+		MSG_WriteAngle (&host_client->netconnection->message, 0, sv.protocol);
+	}
+
+	SV_WriteClientdataToMessage (host_client, host_client->edict, &host_client->netconnection->message, stats);
+
+	MSG_WriteByte (&host_client->netconnection->message, svc_signonnum);
+	MSG_WriteByte (&host_client->netconnection->message, 3);
+}
+
+/*
+==================
+SV_Begin_f
+==================
+*/
+void SV_Begin_f(cmd_state_t *cmd)
+{
+	if (!host_client->spawned)
+	{
+		Con_Print("Begin not valid -- not yet spawned\n");
+		return;
+	}
+	if (host_client->begun)
+	{
+		Con_Print("Begin not valid -- already begun\n");
+		return;
+	}
+	host_client->begun = true;
+
+	// LadyHavoc: note: this code also exists in SV_DropClient
+	if (sv.loadgame)
+	{
+		int i;
+		for (i = 0;i < svs.maxclients;i++)
+			if (svs.clients[i].active && !svs.clients[i].spawned)
+				break;
+		if (i == svs.maxclients)
+		{
+			Con_Printf("Loaded game, everyone rejoined - unpausing\n");
+			sv.paused = sv.loadgame = false; // we're basically done with loading now
+		}
+	}
+}
+
+/*
 ===============
 SV_SetIdealPitch
 ===============
