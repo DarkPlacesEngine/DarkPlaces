@@ -438,7 +438,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 
 	// disconnect from server
 	CL_Disconnect ();
-	Host_ShutdownServer ();
+	SV_Shutdown ();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();

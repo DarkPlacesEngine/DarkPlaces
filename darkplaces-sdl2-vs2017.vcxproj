@@ -279,6 +279,7 @@
     <ClCompile Include="sv_main.c" />
     <ClCompile Include="sv_move.c" />
     <ClCompile Include="sv_phys.c" />
+    <ClCompile Include="sv_send.c" />
     <ClCompile Include="sv_user.c" />
     <ClCompile Include="svbsp.c" />
     <ClCompile Include="svvm_cmds.c" />

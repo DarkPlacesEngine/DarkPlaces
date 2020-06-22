@@ -407,7 +407,7 @@ void CL_Disconnect_f(cmd_state_t *cmd)
 {
 	CL_Disconnect ();
 	if (sv.active)
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 }
 
 
