@@ -1790,51 +1790,6 @@ static void COM_InsertFlags(const char *buf) {
 	sys.argc = i;
 }
 
-/*
-================
-FS_Init_SelfPack
-================
-*/
-void FS_Init_SelfPack (void)
-{
-	char *buf;
-
-	PK3_OpenLibrary ();
-	fs_mempool = Mem_AllocPool("file management", 0, NULL);
-
-	// Load darkplaces.opt from the FS.
-	if (!COM_CheckParm("-noopt"))
-	{
-		buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
-		if(buf)
-		{
-			COM_InsertFlags(buf);
-			Mem_Free(buf);
-		}
-	}
-
-#ifndef USE_RWOPS
-	// Provide the SelfPack.
-	if (!COM_CheckParm("-noselfpack") && sys.selffd >= 0)
-	{
-		fs_selfpack = FS_LoadPackPK3FromFD(sys.argv[0], sys.selffd, true);
-		if(fs_selfpack)
-		{
-			FS_AddSelfPack();
-			if (!COM_CheckParm("-noopt"))
-			{
-				buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
-				if(buf)
-				{
-					COM_InsertFlags(buf);
-					Mem_Free(buf);
-				}
-			}
-		}
-	}
-#endif
-}
-
 static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t userdirsize)
 {
 #if defined(__IPHONEOS__)
@@ -2006,12 +1961,21 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 #endif
 }
 
-/*
-================
-FS_Init
-================
-*/
-void FS_Init (void)
+void FS_Init_Commands(void)
+{
+	Cvar_RegisterVariable (&scr_screenshot_name);
+	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
+	Cvar_RegisterVariable (&cvar_fs_gamedir);
+
+	Cmd_AddCommand(CMD_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(CMD_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
+	Cmd_AddCommand(CMD_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand(CMD_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand(CMD_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand(CMD_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+}
+
+static void FS_Init_Dir (void)
 {
 	const char *p;
 	int i;
@@ -2174,18 +2138,69 @@ void FS_Init (void)
 		fs_mutex = Thread_CreateMutex();
 }
 
-void FS_Init_Commands(void)
+/*
+================
+FS_Init_SelfPack
+================
+*/
+void FS_Init_SelfPack (void)
 {
-	Cvar_RegisterVariable (&scr_screenshot_name);
-	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
-	Cvar_RegisterVariable (&cvar_fs_gamedir);
+	char *buf;
 
-	Cmd_AddCommand(CMD_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
-	Cmd_AddCommand(CMD_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
-	Cmd_AddCommand(CMD_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
-	Cmd_AddCommand(CMD_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
-	Cmd_AddCommand(CMD_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
-	Cmd_AddCommand(CMD_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+	// Load darkplaces.opt from the FS.
+	if (!COM_CheckParm("-noopt"))
+	{
+		buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
+		if(buf)
+		{
+			COM_InsertFlags(buf);
+			Mem_Free(buf);
+		}
+	}
+
+#ifndef USE_RWOPS
+	// Provide the SelfPack.
+	if (!COM_CheckParm("-noselfpack") && sys.selffd >= 0)
+	{
+		fs_selfpack = FS_LoadPackPK3FromFD(sys.argv[0], sys.selffd, true);
+		if(fs_selfpack)
+		{
+			FS_AddSelfPack();
+			if (!COM_CheckParm("-noopt"))
+			{
+				buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
+				if(buf)
+				{
+					COM_InsertFlags(buf);
+					Mem_Free(buf);
+				}
+			}
+		}
+	}
+#endif
+}
+
+/*
+================
+FS_Init
+================
+*/
+
+void FS_Init(void)
+{
+	fs_mempool = Mem_AllocPool("file management", 0, NULL);
+
+	FS_Init_Commands();
+
+	PK3_OpenLibrary ();
+
+	// initialize the self-pack (must be before COM_InitGameType as it may add command line options)
+	FS_Init_SelfPack();
+
+	// detect gamemode from commandline options or executable name
+	COM_InitGameType();
+
+	FS_Init_Dir();
 }
 
 /*
