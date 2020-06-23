@@ -44,83 +44,6 @@ cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player s
 cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
-/*
-==================
-CL_Reconnect_f
-
-This command causes the client to wait for the signon messages again.
-This is sent just before a server changes levels
-==================
-*/
-void CL_Reconnect_f(cmd_state_t *cmd)
-{
-	char temp[128];
-	// if not connected, reconnect to the most recent server
-	if (!cls.netcon)
-	{
-		// if we have connected to a server recently, the userinfo
-		// will still contain its IP address, so get the address...
-		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
-		if (temp[0])
-			CL_EstablishConnection(temp, -1);
-		else
-			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
-		return;
-	}
-	// if connected, do something based on protocol
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-	{
-		// quakeworld can just re-login
-		if (cls.qw_downloadmemory)  // don't change when downloading
-			return;
-
-		S_StopAllSounds();
-
-		if (cls.state == ca_connected)
-		{
-			Con_Printf("Server is changing level...\n");
-			MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, "new");
-		}
-	}
-	else
-	{
-		// netquake uses reconnect on level changes (silly)
-		if (Cmd_Argc(cmd) != 1)
-		{
-			Con_Print("reconnect : wait for signon messages again\n");
-			return;
-		}
-		if (!cls.signon)
-		{
-			Con_Print("reconnect: no signon, ignoring reconnect\n");
-			return;
-		}
-		cls.signon = 0;		// need new connection messages
-	}
-}
-
-/*
-=====================
-CL_Connect_f
-
-User command to connect to server
-=====================
-*/
-static void CL_Connect_f(cmd_state_t *cmd)
-{
-	if (Cmd_Argc(cmd) < 2)
-	{
-		Con_Print("connect <serveraddress> [<key> <value> ...]: connect to a multiplayer game\n");
-		return;
-	}
-	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
-	if(rcon_secure.integer <= 0)
-		Cvar_SetQuick(&rcon_password, "");
-	CL_EstablishConnection(Cmd_Argv(cmd, 1), 2);
-}
-
-
 //============================================================================
 
 /*
@@ -998,8 +921,6 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playermodel", CL_Playermodel_f, "change your player model");
 	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playerskin", CL_Playerskin_f, "change your player skin number");
 
-	Cmd_AddCommand(CMD_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
 	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
