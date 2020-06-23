@@ -343,7 +343,7 @@ static void SCR_DrawNetGraph (void)
 	graphwidth = 120;
 	graphheight = 70;
 	graphscale = 1.0f / 1500.0f;
-	graphlimit = cl_rate.integer;
+	graphlimit = rate.integer;
 
 	netgraphsperrow = (vid_conwidth.integer + separator2) / (graphwidth * 2 + separator1 + separator2);
 	netgraphsperrow = max(netgraphsperrow, 1);
