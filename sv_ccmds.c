@@ -988,7 +988,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 			if (cls.state == ca_dedicated)
 				who = "Console";
 			else
-				who = cl_name.string;
+				who = name.string;
 		}
 		else
 			who = save->name;
@@ -1199,7 +1199,7 @@ void SV_InitOperatorCommands(void)
 	Cvar_RegisterVariable(&sv_namechangetimer);
 	
 	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "status", SV_Status_f, "print server status information");
-	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "map", SV_Map_f, "kick everyone off the server and start a new level");
+	Cmd_AddCommand(CMD_SHARED, "map", SV_Map_f, "kick everyone off the server and start a new level");
 	Cmd_AddCommand(CMD_SHARED, "restart", SV_Restart_f, "restart current level");
 	Cmd_AddCommand(CMD_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients");
 	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "say", SV_Say_f, "send a chat message to everyone on the server");
@@ -1208,7 +1208,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "pause", SV_Pause_f, "pause the game (if the server allows pausing)");
 	Cmd_AddCommand(CMD_SHARED, "kick", SV_Kick_f, "kick a player off the server by number or name");
 	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "ping", SV_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(CMD_SHARED | CMD_INITWAIT, "load", SV_Loadgame_f, "load a saved game file");
+	Cmd_AddCommand(CMD_SHARED, "load", SV_Loadgame_f, "load a saved game file");
 	Cmd_AddCommand(CMD_SHARED, "save", SV_Savegame_f, "save the game to a file");
 	Cmd_AddCommand(CMD_SHARED, "viewmodel", SV_Viewmodel_f, "change model of viewthing entity in current level");
 	Cmd_AddCommand(CMD_SHARED, "viewframe", SV_Viewframe_f, "change animation frame of viewthing entity in current level");

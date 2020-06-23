@@ -373,10 +373,8 @@ Cvar_Set
 extern cvar_t sv_disablenotify;
 static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
-	cvar_state_t *cvars = &cvars_all;
 	qboolean changed;
 	size_t valuelen;
-	char vabuf[1024];
 	char new_value[MAX_INPUTLINE];
 
 	changed = strcmp(var->string, value) != 0;
@@ -416,50 +414,8 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		}
 	}
 #endif
-	if ((var->flags & CVAR_USERINFO) && cls.state != ca_dedicated)
+	if (var->flags & CVAR_USERINFO)
 		CL_SetInfo(var->name, var->string, true, false, false, false);
-	else if ((var->flags & CVAR_NQUSERINFOHACK) && cls.state != ca_dedicated)
-	{
-		// update the cls.userinfo to have proper values for the
-		// silly nq config variables.
-		//
-		// this is done when these variables are changed rather than at
-		// connect time because if the user or code checks the userinfo and it
-		// holds weird values it may cause confusion...
-		if (!strcmp(var->name, "_cl_color"))
-		{
-			int top = (var->integer >> 4) & 15, bottom = var->integer & 15;
-			CL_SetInfo("topcolor", va(vabuf, sizeof(vabuf), "%i", top), true, false, false, false);
-			CL_SetInfo("bottomcolor", va(vabuf, sizeof(vabuf), "%i", bottom), true, false, false, false);
-			if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
-			{
-				MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", top, bottom));
-			}
-		}
-		else if (!strcmp(var->name, "_cl_rate"))
-			CL_SetInfo("rate", va(vabuf, sizeof(vabuf), "%i", var->integer), true, false, false, false);
-		else if (!strcmp(var->name, "_cl_rate_burstsize"))
-			CL_SetInfo("rate_burstsize", va(vabuf, sizeof(vabuf), "%i", var->integer), true, false, false, false);
-		else if (!strcmp(var->name, "_cl_playerskin"))
-			CL_SetInfo("playerskin", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "_cl_playermodel"))
-			CL_SetInfo("playermodel", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "_cl_name"))
-			CL_SetInfo("name", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "rcon_secure"))
-		{
-			// whenever rcon_secure is changed to 0, clear rcon_password for
-			// security reasons (prevents a send-rcon-password-as-plaintext
-			// attack based on NQ protocol session takeover and svc_stufftext)
-			if(var->integer <= 0)
-				Cvar_Set(cvars, "rcon_password", "");
-		}
-#ifdef CONFIG_MENU
-		else if (!strcmp(var->name, "net_slist_favorites"))
-			NetConn_UpdateFavorites();
-#endif
-	}
 
 	Cvar_UpdateAutoCvar(var);
 }
@@ -488,6 +444,14 @@ void Cvar_Set(cvar_state_t *cvars, const char *var_name, const char *value)
 		return;
 	}
 	Cvar_SetQuick(var, value);
+}
+
+void Cvar_Set_NoCallback(cvar_t *var, const char *value)
+{
+	void (*callback_save)(char *) = var->callback;
+	var->callback = NULL;
+	Cvar_SetQuick_Internal(var, value);
+	var->callback = callback_save;
 }
 
 /*
