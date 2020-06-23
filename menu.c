@@ -1284,15 +1284,18 @@ static int		setup_oldrate;
 
 #define	NUM_SETUP_CMDS	5
 
+extern cvar_t topcolor;
+extern cvar_t bottomcolor;
+
 void M_Menu_Setup_f(cmd_state_t *cmd)
 {
 	key_dest = key_menu;
 	m_state = m_setup;
 	m_entersound = true;
-	strlcpy(setup_myname, cl_name.string, sizeof(setup_myname));
-	setup_top = setup_oldtop = cl_color.integer >> 4;
-	setup_bottom = setup_oldbottom = cl_color.integer & 15;
-	setup_rate = cl_rate.integer;
+	strlcpy(setup_myname, name.string, sizeof(setup_myname));
+	setup_top = setup_oldtop = topcolor.integer;
+	setup_bottom = setup_oldbottom = bottomcolor.integer;
+	setup_rate = rate.integer;
 }
 
 static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load;
@@ -1493,7 +1496,7 @@ forward:
 			goto forward;
 
 		// setup_cursor == 4 (Accept changes)
-		if (strcmp(cl_name.string, setup_myname) != 0)
+		if (strcmp(name.string, setup_myname) != 0)
 			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "name \"%s\"\n", setup_myname) );
 		if (setup_top != setup_oldtop || setup_bottom != setup_oldbottom)
 			Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "color %i %i\n", setup_top, setup_bottom) );

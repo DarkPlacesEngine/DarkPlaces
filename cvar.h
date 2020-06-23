@@ -68,16 +68,14 @@ interface from being ambiguous.
 #define CVAR_USERINFO 16
 // CVAR_PRIVATE means do not $ expand or sendcvar this cvar under any circumstances (rcon_password uses this)
 #define CVAR_PRIVATE 32
-// this means that this cvar should update a userinfo key but the name does not correspond directly to the userinfo key to update, and may require additional conversion ("_cl_color" for example should update "topcolor" and "bottomcolor")
-#define CVAR_NQUSERINFOHACK 64
 // for engine-owned cvars that must not be reset on gametype switch (e.g. scr_screenshot_name, which otherwise isn't set to the mod name properly)
-#define CVAR_NORESETTODEFAULTS 128
+#define CVAR_NORESETTODEFAULTS 64
 // cvar is accessible in client
-#define CVAR_CLIENT 256
+#define CVAR_CLIENT 128
 // cvar is accessible in dedicated server
-#define CVAR_SERVER 512
+#define CVAR_SERVER 256
 // used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 1023
+#define CVAR_MAXFLAGSVAL 511
 // for internal use only!
 #define CVAR_DEFAULTSET (1<<30)
 #define CVAR_ALLOCATED (1<<31)
@@ -132,6 +130,7 @@ typedef struct cvar_s
 	const char *defstring;
 
 	void (*callback)(char *value);
+	qboolean ignore_callback;
 
 	char **aliases;
 	int aliasindex;
@@ -191,6 +190,7 @@ qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name);
 
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
+void Cvar_Set_NoCallback (cvar_t *var, const char *value);
 
 /// expands value to a string and calls Cvar_Set
 void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, float value);

@@ -46,7 +46,7 @@ struct cmd_state_s;
 #define CMD_SERVER				(1<<1)
 #define CMD_CLIENT_FROM_SERVER	(1<<2)
 #define CMD_SERVER_FROM_CLIENT	(1<<3)
-#define CMD_INITWAIT			(1<<4)
+#define CMD_USERINFO			(1<<4)
 #define CMD_CHEAT				(1<<5)
 
 

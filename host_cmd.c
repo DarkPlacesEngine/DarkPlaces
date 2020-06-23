@@ -30,29 +30,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "mdfour.h"
 #include <time.h>
 
-int current_skill;
 extern cvar_t sv_adminnick;
 extern cvar_t sv_status_privacy;
 extern cvar_t sv_status_show_qcstatus;
 extern cvar_t sv_namechangetimer;
 cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER | CVAR_NQUSERINFOHACK, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
 cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+cvar_t name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
+cvar_t topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
+cvar_t bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
 cvar_t team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t playermodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
+cvar_t playerskin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
 cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
+cvar_t pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
 //============================================================================
 
 /*
 ======================
-CL_Name_f
+SV_Name_f
 ======================
 */
-cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_name", "player", "internal storage cvar for current player name (changed by name command)"};
-static void CL_Name_f(cmd_state_t *cmd)
+static void SV_Name_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
@@ -61,13 +65,7 @@ static void CL_Name_f(cmd_state_t *cmd)
 	char newName[sizeof(host_client->name)];
 
 	if (Cmd_Argc (cmd) == 1)
-	{
-		if (cmd->source == src_command)
-		{
-			Con_Printf("name: %s\n", cl_name.string);
-		}
 		return;
-	}
 
 	if (Cmd_Argc (cmd) == 2)
 		newNameSource = Cmd_Argv(cmd, 1);
@@ -77,17 +75,9 @@ static void CL_Name_f(cmd_state_t *cmd)
 	strlcpy(newName, newNameSource, sizeof(newName));
 
 	if (cmd->source == src_command)
-	{
-		Cvar_Set (&cvars_all, "_cl_name", newName);
-		if (strlen(newNameSource) >= sizeof(newName)) // overflowed
-		{
-			Con_Printf("Your name is longer than %i chars! It has been truncated.\n", (int) (sizeof(newName) - 1));
-			Con_Printf("name: %s\n", cl_name.string);
-		}
 		return;
-	}
 
-	if (host.realtime < host_client->nametime)
+	if (host.realtime < host_client->nametime && strcmp(newName, host_client->name))
 	{
 		SV_ClientPrintf("You can't change name more than once every %.1f seconds!\n", max(0.0f, sv_namechangetimer.value));
 		return;
@@ -182,7 +172,6 @@ static void CL_Name_f(cmd_state_t *cmd)
 CL_Playermodel_f
 ======================
 */
-cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playermodel", "", "internal storage cvar for current player model in Nexuiz/Xonotic (changed by playermodel command)"};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
 static void CL_Playermodel_f(cmd_state_t *cmd)
 {
@@ -194,7 +183,7 @@ static void CL_Playermodel_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"playermodel\" is \"%s\"\n", cl_playermodel.string);
+			Con_Printf("\"playermodel\" is \"%s\"\n", playermodel.string);
 		}
 		return;
 	}
@@ -243,7 +232,6 @@ static void CL_Playermodel_f(cmd_state_t *cmd)
 CL_Playerskin_f
 ======================
 */
-cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_playerskin", "", "internal storage cvar for current player skin in Nexuiz/Xonotic (changed by playerskin command)"};
 static void CL_Playerskin_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -254,7 +242,7 @@ static void CL_Playerskin_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"playerskin\" is \"%s\"\n", cl_playerskin.string);
+			Con_Printf("\"playerskin\" is \"%s\"\n", playerskin.string);
 		}
 		return;
 	}
@@ -305,16 +293,24 @@ static void CL_Playerskin_f(cmd_state_t *cmd)
 CL_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
+cvar_t cl_color = {CVAR_READONLY | CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 static void CL_Color(cmd_state_t *cmd, int changetop, int changebottom)
 {
+	/*
+	 * This is just a convenient way to change topcolor and bottomcolor
+	 * We can't change cl_color from here directly because topcolor and
+	 * bottomcolor may be changed separately and do not call this function.
+	 * So it has to be changed when the userinfo strings are updated, which
+	 * happens twice here. Perhaps find a cleaner way?
+	 */
+
 	prvm_prog_t *prog = SVVM_prog;
 	int top, bottom, playercolor;
 
 	// get top and bottom either from the provided values or the current values
 	// (allows changing only top or bottom, or both at once)
-	top = changetop >= 0 ? changetop : (cl_color.integer >> 4);
-	bottom = changebottom >= 0 ? changebottom : cl_color.integer;
+	top = changetop >= 0 ? changetop : (topcolor.integer);
+	bottom = changebottom >= 0 ? changebottom : bottomcolor.integer;
 
 	top &= 15;
 	bottom &= 15;
@@ -328,7 +324,8 @@ static void CL_Color(cmd_state_t *cmd, int changetop, int changebottom)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_SetValueQuick(&cl_color, playercolor);
+		Cvar_SetValueQuick(&topcolor, top);
+		Cvar_SetValueQuick(&bottomcolor, bottom);
 		return;
 	}
 
@@ -362,6 +359,29 @@ static void CL_Color(cmd_state_t *cmd, int changetop, int changebottom)
 	}
 }
 
+// Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
+static void CL_Color_c(char *string)
+{
+	char vabuf[1024];
+	
+	Cvar_Set_NoCallback(&topcolor, va(vabuf, sizeof(vabuf), "%i", ((atoi(string) >> 4) & 15)));
+	Cvar_Set_NoCallback(&bottomcolor, va(vabuf, sizeof(vabuf), "%i", (atoi(string) & 15)));
+}
+
+static void CL_Topcolor_c(char *string)
+{
+	char vabuf[1024];
+	
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", atoi(string)*16 + bottomcolor.integer));
+}
+
+static void CL_Bottomcolor_c(char *string)
+{
+	char vabuf[1024];
+
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", topcolor.integer*16 + atoi(string)));
+}
+
 static void CL_Color_f(cmd_state_t *cmd)
 {
 	int		top, bottom;
@@ -370,7 +390,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"color\" is \"%i %i\"\n", cl_color.integer >> 4, cl_color.integer & 15);
+			Con_Printf("\"color\" is \"%i %i\"\n", topcolor.integer, bottomcolor.integer);
 			Con_Print("color <0-15> [0-15]\n");
 		}
 		return;
@@ -386,81 +406,28 @@ static void CL_Color_f(cmd_state_t *cmd)
 	CL_Color(cmd, top, bottom);
 }
 
-static void CL_TopColor_f(cmd_state_t *cmd)
-{
-	if (Cmd_Argc(cmd) == 1)
-	{
-		if (cmd->source == src_command)
-		{
-			Con_Printf("\"topcolor\" is \"%i\"\n", (cl_color.integer >> 4) & 15);
-			Con_Print("topcolor <0-15>\n");
-		}
-		return;
-	}
-
-	CL_Color(cmd, atoi(Cmd_Argv(cmd, 1)), -1);
-}
-
-static void CL_BottomColor_f(cmd_state_t *cmd)
-{
-	if (Cmd_Argc(cmd) == 1)
-	{
-		if (cmd->source == src_command)
-		{
-			Con_Printf("\"bottomcolor\" is \"%i\"\n", cl_color.integer & 15);
-			Con_Print("bottomcolor <0-15>\n");
-		}
-		return;
-	}
-
-	CL_Color(cmd, -1, atoi(Cmd_Argv(cmd, 1)));
-}
-
-cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate", "20000", "internal storage cvar for current rate (changed by rate command)"};
-cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
-static void CL_Rate_f(cmd_state_t *cmd)
+cvar_t rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
+cvar_t rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
+static void SV_Rate_f(cmd_state_t *cmd)
 {
 	int rate;
-
-	if (Cmd_Argc(cmd) != 2)
-	{
-		if (cmd->source == src_command)
-		{
-			Con_Printf("\"rate\" is \"%i\"\n", cl_rate.integer);
-			Con_Print("rate <bytespersecond>\n");
-		}
-		return;
-	}
 
 	rate = atoi(Cmd_Argv(cmd, 1));
 
 	if (cmd->source == src_command)
-	{
-		Cvar_SetValue (&cvars_all, "_cl_rate", max(NET_MINRATE, rate));
 		return;
-	}
 
 	host_client->rate = rate;
 }
 
-static void CL_Rate_BurstSize_f(cmd_state_t *cmd)
+static void SV_Rate_BurstSize_f(cmd_state_t *cmd)
 {
 	int rate_burstsize;
 
 	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Printf("\"rate_burstsize\" is \"%i\"\n", cl_rate_burstsize.integer);
-		Con_Print("rate_burstsize <bytes>\n");
 		return;
-	}
 
 	rate_burstsize = atoi(Cmd_Argv(cmd, 1));
-
-	if (cmd->source == src_command)
-	{
-		Cvar_SetValue (&cvars_all, "_cl_rate_burstsize", rate_burstsize);
-		return;
-	}
 
 	host_client->rate_burstsize = rate_burstsize;
 }
@@ -472,7 +439,6 @@ LadyHavoc: only supported for Nehahra, I personally think this is dumb, but Mind
 LadyHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
 ======================
 */
-cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "_cl_pmodel", "0", "internal storage cvar for current player model number in nehahra (changed by pmodel command)"};
 static void CL_PModel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -482,7 +448,7 @@ static void CL_PModel_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
+			Con_Printf("\"pmodel\" is \"%s\"\n", pmodel.string);
 		}
 		return;
 	}
@@ -490,7 +456,7 @@ static void CL_PModel_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		if (cl_pmodel.integer == i)
+		if (pmodel.integer == i)
 			return;
 		Cvar_SetValue (&cvars_all, "_cl_pmodel", i);
 		if (cls.state == ca_connected)
@@ -692,6 +658,15 @@ static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 			NetConn_WriteString(mysocket, buf, &cls.rcon_address);
 		}
 	}
+}
+
+static void CL_RCon_ClearPassword_c(char *string)
+{
+	// whenever rcon_secure is changed to 0, clear rcon_password for
+	// security reasons (prevents a send-rcon-password-as-plaintext
+	// attack based on NQ protocol session takeover and svc_stufftext)
+	if(atoi(string) <= 0)
+		Cvar_SetQuick(&rcon_password, "");
 }
 
 /*
@@ -897,29 +872,42 @@ void Host_InitCommands (void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
 
-	Cvar_RegisterVariable(&cl_name);
+	Cvar_RegisterVariable(&name);
+	Cvar_RegisterAlias(&name, "_cl_name");
 	Cvar_RegisterVariable(&cl_color);
-	Cvar_RegisterVariable(&cl_rate);
-	Cvar_RegisterVariable(&cl_rate_burstsize);
-	Cvar_RegisterVariable(&cl_pmodel);
-	Cvar_RegisterVariable(&cl_playermodel);
-	Cvar_RegisterVariable(&cl_playerskin);
+	Cvar_RegisterCallback(&cl_color, CL_Color_c);
+	Cvar_RegisterVariable(&topcolor);
+	Cvar_RegisterCallback(&topcolor, CL_Topcolor_c);
+	Cvar_RegisterVariable(&bottomcolor);
+	Cvar_RegisterCallback(&bottomcolor, CL_Bottomcolor_c);
+	Cvar_RegisterVariable(&rate);
+	Cvar_RegisterAlias(&rate, "_cl_rate");
+	Cvar_RegisterVariable(&rate_burstsize);
+	Cvar_RegisterAlias(&rate_burstsize, "_cl_rate_burstsize");
+	Cvar_RegisterVariable(&pmodel);
+	Cvar_RegisterAlias(&pmodel, "_cl_pmodel");
+	Cvar_RegisterVariable(&playermodel);
+	Cvar_RegisterAlias(&playermodel, "_cl_playermodel");
+	Cvar_RegisterVariable(&playerskin);
+	Cvar_RegisterAlias(&playerskin, "_cl_playerskin");
 	Cvar_RegisterVariable(&rcon_password);
 	Cvar_RegisterVariable(&rcon_address);
 	Cvar_RegisterVariable(&rcon_secure);
+	Cvar_RegisterCallback(&rcon_secure, CL_RCon_ClearPassword_c);
 	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
 	Cvar_RegisterVariable(&r_fixtrans_auto);
 	Cvar_RegisterVariable(&team);
 	Cvar_RegisterVariable(&skin);
 	Cvar_RegisterVariable(&noaim);
 
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "name", CL_Name_f, "change your player name");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate", CL_Rate_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "rate_burstsize", CL_Rate_BurstSize_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "pmodel", CL_PModel_f, "(Nehahra-only) change your player model choice");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playermodel", CL_Playermodel_f, "change your player model");
-	Cmd_AddCommand(CMD_CLIENT | CMD_SERVER_FROM_CLIENT, "playerskin", CL_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand(CMD_USERINFO, "name", SV_Name_f, "change your player name");
+	Cmd_AddCommand(CMD_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CMD_USERINFO, "color", CL_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CMD_USERINFO, "rate", SV_Rate_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_USERINFO, "pmodel", CL_PModel_f, "(Nehahra-only) change your player model choice");
+	Cmd_AddCommand(CMD_USERINFO, "playermodel", CL_Playermodel_f, "change your player model");
+	Cmd_AddCommand(CMD_USERINFO, "playerskin", CL_Playerskin_f, "change your player skin number");
 
 	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
@@ -927,9 +915,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand(CMD_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
 	Cmd_AddCommand(CMD_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand(CMD_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "topcolor", CL_TopColor_f, "QW command to set top color without changing bottom color");
-	Cmd_AddCommand(CMD_CLIENT, "bottomcolor", CL_BottomColor_f, "QW command to set bottom color without changing top color");
+	Cmd_AddCommand(CMD_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
 	// commands that are only sent by server to client for execution

@@ -1520,7 +1520,7 @@ void Cmd_Init(void)
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
-	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT;
+	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT | CMD_USERINFO;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
 
 //

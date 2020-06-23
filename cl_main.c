@@ -209,6 +209,9 @@ void CL_ClearState(void)
 	CL_Screen_NewMap();
 }
 
+extern cvar_t topcolor;
+extern cvar_t bottomcolor;
+
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
 {
 	int i;
@@ -255,11 +258,13 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		}
 		else if (!strcasecmp(key, "topcolor"))
 		{
-			// don't send anything, the combined color code will be updated manually
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", atoi(value), bottomcolor.integer));
 		}
 		else if (!strcasecmp(key, "bottomcolor"))
 		{
-			// don't send anything, the combined color code will be updated manually
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", topcolor.integer, atoi(value)));
 		}
 		else if (!strcasecmp(key, "rate"))
 		{
