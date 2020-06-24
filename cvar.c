@@ -111,7 +111,7 @@ match:
 Cvar_VariableValue
 ============
 */
-float Cvar_VariableValueOr(cvar_state_t *cvars, const char *var_name, float def, int neededflags)
+float Cvar_VariableValueOr(cvar_state_t *cvars, const char *var_name, double def, int neededflags)
 {
 	cvar_t *var;
 
@@ -459,22 +459,22 @@ void Cvar_Set_NoCallback(cvar_t *var, const char *value)
 Cvar_SetValue
 ============
 */
-void Cvar_SetValueQuick(cvar_t *var, float value)
+void Cvar_SetValueQuick(cvar_t *var, double value)
 {
 	char val[MAX_INPUTLINE];
 
-	if ((float)((int)value) == value)
+	if ((double)((int)value) == value)
 		dpsnprintf(val, sizeof(val), "%i", (int)value);
 	else
 		dpsnprintf(val, sizeof(val), "%f", value);
 	Cvar_SetQuick(var, val);
 }
 
-void Cvar_SetValue(cvar_state_t *cvars, const char *var_name, float value)
+void Cvar_SetValue(cvar_state_t *cvars, const char *var_name, double value)
 {
 	char val[MAX_INPUTLINE];
 
-	if ((float)((int)value) == value)
+	if ((double)((int)value) == value)
 		dpsnprintf(val, sizeof(val), "%i", (int)value);
 	else
 		dpsnprintf(val, sizeof(val), "%f", value);
