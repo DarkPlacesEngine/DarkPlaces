@@ -6952,7 +6952,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
 	// off the colormap and glossmap, but leave the normalmap on as it still
 	// accurately represents the shading involved
-	if (gl_lightmaps.integer)
+	if (gl_lightmaps.integer && ent != &cl_meshentities[MESH_UI].render)
 	{
 		t->basetexture = r_texture_grey128;
 		t->pantstexture = r_texture_black;
