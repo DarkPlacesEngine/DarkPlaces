@@ -19,7 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include <quakedef.h>
+#include <utf8lib.h>
 #include <server.h>
+#include <sv_demo.h>
 
 int current_skill;
 cvar_t sv_cheats = {CVAR_SERVER | CVAR_NOTIFY, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
@@ -944,6 +946,184 @@ static void SV_Status_f(cmd_state_t *cmd)
 }
 
 /*
+======================
+SV_Name_f
+======================
+*/
+static void SV_Name_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i, j;
+	qboolean valid_colors;
+	const char *newNameSource;
+	char newName[sizeof(host_client->name)];
+
+	if (Cmd_Argc (cmd) == 1)
+		return;
+
+	if (Cmd_Argc (cmd) == 2)
+		newNameSource = Cmd_Argv(cmd, 1);
+	else
+		newNameSource = Cmd_Args(cmd);
+
+	strlcpy(newName, newNameSource, sizeof(newName));
+
+	if (cmd->source == src_command)
+		return;
+
+	if (host.realtime < host_client->nametime && strcmp(newName, host_client->name))
+	{
+		SV_ClientPrintf("You can't change name more than once every %.1f seconds!\n", max(0.0f, sv_namechangetimer.value));
+		return;
+	}
+
+	host_client->nametime = host.realtime + max(0.0f, sv_namechangetimer.value);
+
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->name, newName, sizeof (host_client->name));
+
+	for (i = 0, j = 0;host_client->name[i];i++)
+		if (host_client->name[i] != '\r' && host_client->name[i] != '\n')
+			host_client->name[j++] = host_client->name[i];
+	host_client->name[j] = 0;
+
+	if(host_client->name[0] == 1 || host_client->name[0] == 2)
+	// may interfere with chat area, and will needlessly beep; so let's add a ^7
+	{
+		memmove(host_client->name + 2, host_client->name, sizeof(host_client->name) - 2);
+		host_client->name[sizeof(host_client->name) - 1] = 0;
+		host_client->name[0] = STRING_COLOR_TAG;
+		host_client->name[1] = '0' + STRING_COLOR_DEFAULT;
+	}
+
+	u8_COM_StringLengthNoColors(host_client->name, 0, &valid_colors);
+	if(!valid_colors) // NOTE: this also proves the string is not empty, as "" is a valid colored string
+	{
+		size_t l;
+		l = strlen(host_client->name);
+		if(l < sizeof(host_client->name) - 1)
+		{
+			// duplicate the color tag to escape it
+			host_client->name[i] = STRING_COLOR_TAG;
+			host_client->name[i+1] = 0;
+			//Con_DPrintf("abuse detected, adding another trailing color tag\n");
+		}
+		else
+		{
+			// remove the last character to fix the color code
+			host_client->name[l-1] = 0;
+			//Con_DPrintf("abuse detected, removing a trailing color tag\n");
+		}
+	}
+
+	// find the last color tag offset and decide if we need to add a reset tag
+	for (i = 0, j = -1;host_client->name[i];i++)
+	{
+		if (host_client->name[i] == STRING_COLOR_TAG)
+		{
+			if (host_client->name[i+1] >= '0' && host_client->name[i+1] <= '9')
+			{
+				j = i;
+				// if this happens to be a reset  tag then we don't need one
+				if (host_client->name[i+1] == '0' + STRING_COLOR_DEFAULT)
+					j = -1;
+				i++;
+				continue;
+			}
+			if (host_client->name[i+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(host_client->name[i+2]) && isxdigit(host_client->name[i+3]) && isxdigit(host_client->name[i+4]))
+			{
+				j = i;
+				i += 4;
+				continue;
+			}
+			if (host_client->name[i+1] == STRING_COLOR_TAG)
+			{
+				i++;
+				continue;
+			}
+		}
+	}
+	// does not end in the default color string, so add it
+	if (j >= 0 && strlen(host_client->name) < sizeof(host_client->name) - 2)
+		memcpy(host_client->name + strlen(host_client->name), STRING_COLOR_DEFAULT_STR, strlen(STRING_COLOR_DEFAULT_STR) + 1);
+
+	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
+	if (strcmp(host_client->old_name, host_client->name))
+	{
+		if (host_client->begun)
+			SV_BroadcastPrintf("%s ^7changed name to %s\n", host_client->old_name, host_client->name);
+		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
+		// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteString (&sv.reliable_datagram, host_client->name);
+		SV_WriteNetnameIntoDemo(host_client);
+	}
+}
+
+static void SV_Rate_f(cmd_state_t *cmd)
+{
+	int rate;
+
+	rate = atoi(Cmd_Argv(cmd, 1));
+
+	if (cmd->source == src_command)
+		return;
+
+	host_client->rate = rate;
+}
+
+static void SV_Rate_BurstSize_f(cmd_state_t *cmd)
+{
+	int rate_burstsize;
+
+	if (Cmd_Argc(cmd) != 2)
+		return;
+
+	rate_burstsize = atoi(Cmd_Argv(cmd, 1));
+
+	host_client->rate_burstsize = rate_burstsize;
+}
+
+static void SV_Color_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+
+	int top, bottom, playercolor;
+
+	top = atoi(Cmd_Argv(cmd, 1));
+	bottom = atoi(Cmd_Argv(cmd, 2));
+
+	playercolor = top*16 + bottom;
+
+	if (host_client->edict && PRVM_serverfunction(SV_ChangeTeam))
+	{
+		Con_DPrint("Calling SV_ChangeTeam\n");
+		prog->globals.fp[OFS_PARM0] = playercolor;
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_ChangeTeam), "QC function SV_ChangeTeam is missing");
+	}
+	else
+	{
+		if (host_client->edict)
+		{
+			PRVM_serveredictfloat(host_client->edict, clientcolors) = playercolor;
+			PRVM_serveredictfloat(host_client->edict, team) = bottom + 1;
+		}
+		host_client->colors = playercolor;
+		if (host_client->old_colors != host_client->colors)
+		{
+			host_client->old_colors = host_client->colors;
+			// send notification to all clients
+			MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+			MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+		}
+	}
+}
+
+/*
 ==================
 SV_Kick_f
 
@@ -1230,4 +1410,9 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "noclip", SV_Noclip_f, "noclip mode (flight without collisions, move through walls)");
 	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "give", SV_Give_f, "alter inventory");
 	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", SV_Kill_f, "die instantly");
+	
+	Cmd_AddCommand(CMD_USERINFO, "color", SV_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CMD_USERINFO, "name", SV_Name_f, "change your player name");
+	Cmd_AddCommand(CMD_USERINFO, "rate", SV_Rate_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
 }
