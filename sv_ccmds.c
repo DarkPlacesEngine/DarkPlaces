@@ -1095,6 +1095,9 @@ static void SV_Color_f(cmd_state_t *cmd)
 	top = atoi(Cmd_Argv(cmd, 1));
 	bottom = atoi(Cmd_Argv(cmd, 2));
 
+	top &= 15;
+	bottom &= 15;
+
 	playercolor = top*16 + bottom;
 
 	if (host_client->edict && PRVM_serverfunction(SV_ChangeTeam))
