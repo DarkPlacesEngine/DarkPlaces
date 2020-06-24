@@ -104,9 +104,10 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 		Con_Print("changelevel <levelname> : continue game on a new level\n");
 		return;
 	}
-	// HACKHACKHACK
-	if (!sv.active) {
-		SV_Map_f(cmd);
+
+	if (!sv.active)
+	{
+		Con_Printf("You must be running a server to changelevel. Use 'map %s' instead\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 
