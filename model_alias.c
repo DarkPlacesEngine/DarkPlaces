@@ -966,7 +966,7 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 		Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, skin, stripbuf, true, true, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL);
 	}
 }
-
+extern cvar_t r_nolerp_list;
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)", loadmodel->name, VALUE, MIN, MAX);
 void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
@@ -1043,6 +1043,9 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
 	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
+
+	if (strstr(r_nolerp_list.string, loadmodel->name))
+		loadmodel->nolerp = true;
 
 	for (i = 0;i < 3;i++)
 	{
