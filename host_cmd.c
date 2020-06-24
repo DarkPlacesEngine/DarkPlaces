@@ -231,7 +231,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 	 * happens twice here. Perhaps find a cleaner way?
 	 */
 
-	top = top >= 0 ? bottom : topcolor.integer;
+	top = top >= 0 ? top : topcolor.integer;
 	bottom = bottom >= 0 ? bottom : bottomcolor.integer;
 
 	top &= 15;
