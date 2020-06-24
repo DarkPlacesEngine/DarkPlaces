@@ -45,10 +45,12 @@ cvar_t cl_bobfall = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfall","0", "how much the vi
 cvar_t cl_bobfallcycle = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallcycle","3", "speed of the bobfall swing"};
 cvar_t cl_bobfallminspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
 cvar_t cl_bobmodel = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
-cvar_t cl_bobmodel_side = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
-cvar_t cl_bobmodel_up = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
-cvar_t cl_bobmodel_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
-cvar_t cl_bob_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit", "7", "limits bobbing to this much distance from view_ofs"};
+cvar_t cl_bobmodel_side = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_side", "0", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_up", "0", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_forward = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_forward", "0.25", "gun bobbing forward movement amount"};
+cvar_t cl_bobmodel_classic = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_classic", "1", "classic Quake-style forward gun bobbing"};
+cvar_t cl_bobmodel_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_speed", "6", "gun bobbing speed"};
+cvar_t cl_bob_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit", "4", "limits bobbing to this much distance from view_ofs"};
 cvar_t cl_bob_limit_heightcheck = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck", "0", "check ceiling and floor height against cl_bob_limit and scale down all view bobbing if could result in camera being in solid"};
 cvar_t cl_bob_limit_heightcheck_dontcrosswatersurface = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck_dontcrosswatersurface", "1", "limit cl_bob_limit to not crossing liquid surfaces also"};
 cvar_t cl_bob_velocity_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_velocity_limit", "400", "limits the xyspeed value in the bobbing code"};
@@ -797,8 +799,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					// bob is proportional to velocity in the xy plane
 					// (don't count Z, or jumping messes it up)
 					bob = xyspeed * cl_bob.value;
-					bob = bound(0, bob, bob_limit);
 					bob = bob*0.3 + bob*0.7*cycle;
+					bob = bound(-7, bob, bob_limit);
 					vieworg[2] += bob;
 					// we also need to adjust gunorg, or this appears like pushing the gun!
 					// In the old code, this was applied to vieworg BEFORE copying to gunorg,
@@ -916,6 +918,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					VectorMA (gunorg, bob, right, gunorg);
 					bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 					VectorMA (gunorg, bob, up, gunorg);
+					// Classic Quake bobbing
+					bob = (cl_bobmodel_classic.integer ? xyspeed * cl_bob.value * 0.25 * cycle : bspeed * cl_bobmodel_forward.value * cos(s * 2) * t) * cl_viewmodel_scale.value;
+					VectorMA (gunorg, (cl_bobmodel_classic.integer ? (bob > 1 ? 1 : bob) : bob), forward, gunorg);
 				}
 			}
 		}
@@ -1255,6 +1260,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
+	Cvar_RegisterVariable (&cl_bobmodel_forward);
+	Cvar_RegisterVariable (&cl_bobmodel_classic);
 	Cvar_RegisterVariable (&cl_bobmodel_speed);
 	Cvar_RegisterVariable (&cl_bob_limit);
 	Cvar_RegisterVariable (&cl_bob_limit_heightcheck);
