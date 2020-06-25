@@ -73,7 +73,7 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
 	return var;
 }
 
-static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_hash_t **parent, cvar_hash_t ***link, cvar_t **prev_alpha, int neededflags)
+static cvar_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
 {
 	int hashindex;
 	cvar_hash_t *hash;
@@ -82,7 +82,7 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
 	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
-	if(link) *link = &cvars->hashtable[hashindex];
+	if(link) *link = &cvars->hashtable[hashindex]->cvar;
 	for (hash = cvars->hashtable[hashindex];hash;hash = hash->next)
 	{
 		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
@@ -91,19 +91,19 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 			for (int i = 0; i < hash->cvar->aliasindex; i++)
 				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
 					goto match;
-		if(parent) *parent = hash;
+		if(parent) *parent = hash->cvar;
 	}
 	return NULL;
 match:
 	if(!prev_alpha || hash->cvar == cvars->vars)
-		return hash;
+		return hash->cvar;
 
 	*prev_alpha = cvars->vars;
 	// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
 	// already - should I still insert '*prev_alpha &&' in the loop?
 	while((*prev_alpha)->next != hash->cvar)
 		*prev_alpha = (*prev_alpha)->next;
-	return hash;
+	return hash->cvar;
 }
 
 /*
@@ -1071,7 +1071,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	int neededflags = ~0;
 	int i;
-	cvar_hash_t *hash, *parent, **link;
+	cvar_t *parent, **link;
 	cvar_t *cvar, *prev;
 
 	if(Cmd_Argc(cmd) < 2)
@@ -1081,8 +1081,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	}
 	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		hash = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
-		cvar = hash->cvar;
+		cvar = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
 
 		if(!cvar)
 		{
@@ -1108,9 +1107,9 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		}
 
 		if(parent)
-			parent->next = hash->next;
+			parent->next = cvar->next;
 		else if(link)
-			*link = hash->next;
+			*link = cvar->next;
 		if(cvar->description != cvar_dummy_description)
 			Z_Free((char *)cvar->description);
 
