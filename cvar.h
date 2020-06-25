@@ -124,8 +124,8 @@ typedef struct cvar_s
 	const char *string;
 	const char *description;
 	int integer;
-	double value;
-	double vector[3];
+	float value;
+	float vector[3];
 
 	const char *defstring;
 
@@ -141,8 +141,8 @@ typedef struct cvar_s
 	const char *initstring;
 	const char *initdescription;
 	int initinteger;
-	double initvalue;
-	double initvector[3];
+	float initvalue;
+	float initvector[3];
 	const char *initdefstring;
 
 	int globaldefindex[3];
@@ -193,12 +193,12 @@ void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
 void Cvar_Set_NoCallback (cvar_t *var, const char *value);
 
 /// expands value to a string and calls Cvar_Set
-void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, double value);
+void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, float value);
 
 void Cvar_SetQuick (cvar_t *var, const char *value);
-void Cvar_SetValueQuick (cvar_t *var, double value);
+void Cvar_SetValueQuick (cvar_t *var, float value);
 
-float Cvar_VariableValueOr (cvar_state_t *cvars, const char *var_name, double def, int neededflags);
+float Cvar_VariableValueOr (cvar_state_t *cvars, const char *var_name, float def, int neededflags);
 // returns def if not defined
 
 float Cvar_VariableValue (cvar_state_t *cvars, const char *var_name, int neededflags);
