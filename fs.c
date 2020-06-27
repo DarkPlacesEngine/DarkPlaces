@@ -2891,7 +2891,7 @@ fs_offset_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 {
 	fs_offset_t count, done;
 
-	if (buffersize == 0)
+	if (buffersize == 0 || !buffer)
 		return 0;
 
 	// Get rid of the ungetc character

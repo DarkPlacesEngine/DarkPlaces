@@ -270,8 +270,6 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 			sound_num = MSG_ReadByte(&cl_message);
 	}
 
-	channel = CHAN_NET2ENGINE(channel);
-
 	MSG_ReadVector(&cl_message, pos, cls.protocol);
 
 	if (sound_num < 0 || sound_num >= MAX_SOUNDS)
