@@ -64,7 +64,7 @@ static qboolean OpenStream( clvideo_t * video )
 	if (video->stream)
 		return true;
 
-	Con_Errorf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
+	Con_Printf(CON_ERROR "unable to open \"%s\", error: %s\n", video->filename, errorstring);
 	return false;
 }
 
@@ -178,7 +178,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		// check limits
 		if (video->subtitles == CLVIDEO_MAX_SUBTITLES)
 		{
-			Con_Warnf("WARNING: CLVIDEO_MAX_SUBTITLES = %i reached when reading subtitles from '%s'\n", CLVIDEO_MAX_SUBTITLES, subtitlesfile);
+			Con_Printf(CON_WARN "WARNING: CLVIDEO_MAX_SUBTITLES = %i reached when reading subtitles from '%s'\n", CLVIDEO_MAX_SUBTITLES, subtitlesfile);
 			break;	
 		}
 		// add a sub
@@ -253,7 +253,7 @@ clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner, cons
 
 	video = FindUnusedVid();
 	if( !video ) {
-		Con_Errorf( "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
+		Con_Printf(CON_ERROR "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
 		return NULL;
 	}
 	video = OpenVideo( video, filename, name, owner, subtitlesfile );

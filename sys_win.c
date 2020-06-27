@@ -65,7 +65,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
-	Con_Errorf ("Engine Error: %s\n", text);
+	Con_Printf(CON_ERROR "Engine Error: %s\n", text);
 
 	// close video so the message box is visible, unless we already tried that
 	if (!in_sys_error0 && cls.state != ca_dedicated)

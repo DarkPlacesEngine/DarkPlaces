@@ -809,7 +809,7 @@ static void Con_ConDump_f(cmd_state_t *cmd)
 	file = FS_OpenRealFile(Cmd_Argv(cmd, 1), "w", false);
 	if (!file)
 	{
-		Con_Errorf("condump: unable to write file \"%s\"\n", Cmd_Argv(cmd, 1));
+		Con_Printf(CON_ERROR "condump: unable to write file \"%s\"\n", Cmd_Argv(cmd, 1));
 		return;
 	}
 	if (con_mutex) Thread_LockMutex(con_mutex);
@@ -1450,61 +1450,6 @@ void Con_Printf(const char *fmt, ...)
 	va_end(argptr);
 
 	Con_MaskPrint(CON_MASK_PRINT, msg);
-}
-
-/*
-================
-Con_Warn
-================
-*/
-void Con_Warn(const char *msg)
-{
-	Con_Printf("^3%s",msg);
-}
-
-/*
-================
-Con_Warnf
-================
-*/
-void Con_Warnf(const char *fmt, ...)
-{
-	va_list argptr;
-	char msg[MAX_INPUTLINE];
-
-	va_start(argptr,fmt);
-	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
-	va_end(argptr);
-
-	Con_Printf("^3%s",msg);
-}
-
-/*
-================
-Con_Error
-================
-*/
-void Con_Error(const char *msg)
-{
-	Con_Printf("^1%s",msg);
-}
-
-/*
-================
-Con_Errorf
-================
-*/
-void Con_Errorf(const char *fmt, ...)
-{
-	va_list argptr;
-	char msg[MAX_INPUTLINE];
-
-	va_start(argptr,fmt);
-	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
-	va_end(argptr);
-
-	Con_Printf("^1%s",msg);
-
 }
 
 /*

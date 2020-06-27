@@ -3649,12 +3649,12 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 	if (nodeportal->numpoints < 3)
 	{
-		Con_Warn("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+		Con_Print(CON_WARN "Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
 		nodeportal->numpoints = 0;
 	}
 	else if (nodeportal->numpoints >= MAX_PORTALPOINTS)
 	{
-		Con_Warn("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
+		Con_Print(CON_WARN "Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
 		nodeportal->numpoints = 0;
 	}
 
@@ -4174,7 +4174,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		else
 		{
 			// LadyHavoc: empty submodel(lacrima.bsp has such a glitch)
-			Con_Warnf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
+			Con_Printf(CON_WARN "warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
 		//mod->brushq1.num_visleafs = bm->visleafs;
 
@@ -5150,7 +5150,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 		else
 		{
-			Con_Warnf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
+			Con_Printf(CON_WARN "warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
 		//mod->brushq1.num_visleafs = bm->visleafs;
 
@@ -6123,7 +6123,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				}
 			if(xtess == -1)
 			{
-				Con_Errorf("ERROR: patch %d isn't preprocessed?!?\n", i);
+				Con_Printf(CON_ERROR "ERROR: patch %d isn't preprocessed?!?\n", i);
 				xtess = ytess = cxtess = cytess = 0;
 			}
 
@@ -6183,7 +6183,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				invalidelements++;
 		if (invalidelements)
 		{
-			Con_Warnf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
+			Con_Printf(CON_WARN "Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
 			for (j = 0;j < out->num_triangles * 3;j++)
 			{
 				Con_Printf(" %i", (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] - out->num_firstvertex);
@@ -6500,11 +6500,11 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	{
 		if (l->filelen < count * (int)sizeof(*in))
 		{
-			Con_Errorf("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, (int)(count * sizeof(*in)), loadmodel->brushq3.num_lightgrid_isize[0], loadmodel->brushq3.num_lightgrid_isize[1], loadmodel->brushq3.num_lightgrid_isize[2]);
+			Con_Printf(CON_ERROR "Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, (int)(count * sizeof(*in)), loadmodel->brushq3.num_lightgrid_isize[0], loadmodel->brushq3.num_lightgrid_isize[1], loadmodel->brushq3.num_lightgrid_isize[2]);
 			return; // ignore the grid if we cannot understand it
 		}
 		if (l->filelen != count * (int)sizeof(*in))
-			Con_Warnf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", (int)(count * sizeof(*in)), l->filelen);
+			Con_Printf(CON_WARN "Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", (int)(count * sizeof(*in)), l->filelen);
 		out = (q3dlightgrid_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 		loadmodel->brushq3.data_lightgrid = out;
 		loadmodel->brushq3.num_lightgrid = count;

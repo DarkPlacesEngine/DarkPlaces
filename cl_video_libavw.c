@@ -175,7 +175,7 @@ static int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask,
 		// got error or file end
 		errorcode = qLibAvW_StreamGetError(s->stream);
 		if (errorcode)
-			Con_Errorf("LibAvW: %s\n", qLibAvW_ErrorString(errorcode));
+			Con_Printf(CON_ERROR "LibAvW: %s\n", qLibAvW_ErrorString(errorcode));
 		return 1;
 	}
 
@@ -186,11 +186,11 @@ static int libavw_decodeframe(void *stream, void *imagedata, unsigned int Rmask,
 		pixel_format = LIBAVW_PIXEL_FORMAT_BGR;
 	else
 	{
-		Con_Errorf("LibAvW: cannot determine pixel format for bpp %i\n", bytesperpixel);
+		Con_Printf(CON_ERROR "LibAvW: cannot determine pixel format for bpp %i\n", bytesperpixel);
 		return 1;
 	}
 	if (!qLibAvW_PlayGetFrameImage(s->stream, pixel_format, imagedata, s->info_imagewidth, s->info_imageheight, min(9, max(0, cl_video_libavw_scaler.integer))))
-		Con_Errorf("LibAvW: %s\n", qLibAvW_ErrorString(qLibAvW_StreamGetError(s->stream)));
+		Con_Printf(CON_ERROR "LibAvW: %s\n", qLibAvW_ErrorString(qLibAvW_StreamGetError(s->stream)));
 	return 0;
 }
 
@@ -343,13 +343,13 @@ static void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **err
 static void libavw_message(int level, const char *message)
 {
 	if (level == LIBAVW_PRINT_WARNING)
-		Con_Warnf("LibAvcodec warning: %s\n", message);
+		Con_Printf(CON_WARN "LibAvcodec warning: %s\n", message);
 	else if (level == LIBAVW_PRINT_ERROR)
-		Con_Errorf("LibAvcodec error: %s\n", message);
+		Con_Printf(CON_ERROR "LibAvcodec error: %s\n", message);
 	else if (level == LIBAVW_PRINT_FATAL)
-		Con_Errorf("LibAvcodec fatal error: %s\n", message);
+		Con_Printf(CON_ERROR "LibAvcodec fatal error: %s\n", message);
 	else
-		Con_Errorf("LibAvcodec panic: %s\n", message);
+		Con_Printf(CON_ERROR "LibAvcodec panic: %s\n", message);
 }
 
 static qboolean LibAvW_OpenLibrary(void)
@@ -368,7 +368,7 @@ static qboolean LibAvW_OpenLibrary(void)
 	// initialize libav wrapper
 	if ((errorcode = qLibAvW_Init(&libavw_message)))
 	{
-		Con_Errorf("LibAvW failed to initialize: %s\n", qLibAvW_ErrorString(errorcode));
+		Con_Printf(CON_ERROR "LibAvW failed to initialize: %s\n", qLibAvW_ErrorString(errorcode));
 		Sys_UnloadLibrary(&libavw_dll);
 	}
 

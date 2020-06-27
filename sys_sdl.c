@@ -62,7 +62,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Errorf ("Engine Error: %s\n", string);
+	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
 	
 	if(!nocrashdialog)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", string, NULL);
