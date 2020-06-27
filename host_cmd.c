@@ -180,26 +180,26 @@ CL_Color_f
 cvar_t cl_color = {CVAR_READONLY | CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 
 // Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
-static void CL_Color_c(char *string)
+static void CL_Color_c(cvar_t *var)
 {
 	char vabuf[1024];
 	
-	Cvar_Set_NoCallback(&topcolor, va(vabuf, sizeof(vabuf), "%i", ((atoi(string) >> 4) & 15)));
-	Cvar_Set_NoCallback(&bottomcolor, va(vabuf, sizeof(vabuf), "%i", (atoi(string) & 15)));
+	Cvar_Set_NoCallback(&topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
+	Cvar_Set_NoCallback(&bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
 }
 
-static void CL_Topcolor_c(char *string)
+static void CL_Topcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
 	
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", atoi(string)*16 + bottomcolor.integer));
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + bottomcolor.integer));
 }
 
-static void CL_Bottomcolor_c(char *string)
+static void CL_Bottomcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
 
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", topcolor.integer*16 + atoi(string)));
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", topcolor.integer*16 + var->integer));
 }
 
 static void CL_Color_f(cmd_state_t *cmd)
@@ -482,12 +482,12 @@ static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 	}
 }
 
-static void CL_RCon_ClearPassword_c(char *string)
+static void CL_RCon_ClearPassword_c(cvar_t *var)
 {
 	// whenever rcon_secure is changed to 0, clear rcon_password for
 	// security reasons (prevents a send-rcon-password-as-plaintext
 	// attack based on NQ protocol session takeover and svc_stufftext)
-	if(atoi(string) <= 0)
+	if(var->integer <= 0)
 		Cvar_SetQuick(&rcon_password, "");
 }
 
