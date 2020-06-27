@@ -541,6 +541,7 @@ void coverage() = #642;  // Reports a coverage event. The engine counts for each
 // assorted undocumented extensions
 string(string, float) netaddress_resolve = #625;
 string(string search, string replace, string subject) strreplace = #484;
+string(string search, string replace, string subject) strireplace = #485;
 string(float uselocaltime, string format, ...) strftime = #478;
 float(string s) tokenize_console = #514;
 float(float i) argv_start_index = #515;
