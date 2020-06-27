@@ -231,20 +231,11 @@ static int colorcode_skipwidth(const unsigned char *s)
 	if(*s == STRING_COLOR_TAG)
 	{
 		if(s[1] <= '9' && s[1] >= '0') // ^[0-9] found
-		{
 			return 2;
-		}
-		else if(s[1] == STRING_COLOR_RGB_TAG_CHAR &&
-			((s[2] >= '0' && s[2] <= '9') || (s[2] >= 'a' && s[2] <= 'f') || (s[2] >= 'A' && s[2] <= 'F')) &&
-			((s[3] >= '0' && s[3] <= '9') || (s[3] >= 'a' && s[3] <= 'f') || (s[3] >= 'A' && s[3] <= 'F')) &&
-			((s[4] >= '0' && s[4] <= '9') || (s[4] >= 'a' && s[4] <= 'f') || (s[4] >= 'A' && s[4] <= 'F')))
-		{
+		else if(s[1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(s[2]) && isxdigit(s[3]) && isxdigit(s[4]))
 			return 5;
-		}
 		else if(s[1] == STRING_COLOR_TAG)
-		{
 			return 1; // special case, do NOT call colorcode_skipwidth for next char
-		}
 	}
 	return 0;
 }
