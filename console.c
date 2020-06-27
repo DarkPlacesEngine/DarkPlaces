@@ -2427,7 +2427,7 @@ static int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
  */
 static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
 {
-	char name[128];
+	char name[MAX_SCOREBOARDNAME];
 	int i, p;
 	int match;
 	int spos;
