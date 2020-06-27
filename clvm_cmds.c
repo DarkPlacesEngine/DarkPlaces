@@ -219,8 +219,6 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	else
 		startposition = 0;
 
-	channel = CHAN_USER2ENGINE(channel);
-
 	if (!IS_CHAN(channel))
 	{
 		VM_Warning(prog, "VM_CL_sound: channel must be in range 0-127\n");
