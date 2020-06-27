@@ -685,8 +685,8 @@ static void VM_CL_ambientsound (prvm_prog_t *prog)
 	vec3_t f;
 	sfx_t	*s;
 	VM_SAFEPARMCOUNT(4, VM_CL_ambientsound);
-	s = S_FindName(PRVM_G_STRING(OFS_PARM0));
-	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), f);
+	s = S_FindName(PRVM_G_STRING(OFS_PARM1));
 	S_StaticSound (s, f, PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3)*64);
 }
 
