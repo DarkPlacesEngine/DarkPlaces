@@ -389,7 +389,7 @@ void CL_Record_f(cmd_state_t *cmd)
 	cls.demofile = FS_OpenRealFile(name, "wb", false);
 	if (!cls.demofile)
 	{
-		Con_Error("ERROR: couldn't open.\n");
+		Con_Print(CON_ERROR "ERROR: couldn't open.\n");
 		return;
 	}
 	strlcpy(cls.demoname, name, sizeof(cls.demoname));
@@ -429,7 +429,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
 	{
-		Con_Errorf("ERROR: couldn't open %s.\n", name);
+		Con_Printf(CON_ERROR "ERROR: couldn't open %s.\n", name);
 		cls.demonum = -1;		// stop demo loop
 		return;
 	}

@@ -970,11 +970,11 @@ static void NetConn_OpenClientPort(const char *addressstring, lhnetaddresstype_t
 		else
 		{
 			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-			Con_Errorf("Client failed to open a socket on address %s\n", addressstring2);
+			Con_Printf(CON_ERROR "Client failed to open a socket on address %s\n", addressstring2);
 		}
 	}
 	else
-		Con_Errorf("Client unable to parse address %s\n", addressstring);
+		Con_Printf(CON_ERROR "Client unable to parse address %s\n", addressstring);
 }
 
 void NetConn_OpenClientPorts(void)
@@ -1034,12 +1034,12 @@ static qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddressty
 			else
 			{
 				LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-				Con_Errorf("Server failed to open socket on address %s\n", addressstring2);
+				Con_Printf(CON_ERROR "Server failed to open socket on address %s\n", addressstring2);
 			}
 		}
 		else
 		{
-			Con_Errorf("Server unable to parse address %s\n", addressstring);
+			Con_Printf(CON_ERROR "Server unable to parse address %s\n", addressstring);
 			// if it cant parse one address, it wont be able to parse another for sure
 			return false;
 		}
@@ -2740,7 +2740,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	long t1, t2;
 
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2761,7 +2761,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	int i;
 
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2792,7 +2792,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 static qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -3757,7 +3757,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	}
 	if (!masterquerycount)
 	{
-		Con_Error("Unable to query master servers, no suitable network sockets active.\n");
+		Con_Print(CON_ERROR "Unable to query master servers, no suitable network sockets active.\n");
 		M_Update_Return_Reason("No network");
 	}
 }
@@ -3930,7 +3930,7 @@ void NetConn_Init(void)
 			Cvar_SetQuick(&net_address, sys.argv[i + 1]);
 		}
 		else
-			Con_Errorf("-ip option used, but unable to parse the address \"%s\"\n", sys.argv[i + 1]);
+			Con_Printf(CON_ERROR "-ip option used, but unable to parse the address \"%s\"\n", sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
 	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < sys.argc)
@@ -3942,7 +3942,7 @@ void NetConn_Init(void)
 			Cvar_SetValueQuick(&sv_netport, i);
 		}
 		else
-			Con_Errorf("-port option used, but %i is not a valid port number\n", i);
+			Con_Printf(CON_ERROR "-port option used, but %i is not a valid port number\n", i);
 	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;

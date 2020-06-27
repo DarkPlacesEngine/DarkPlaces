@@ -1551,7 +1551,7 @@ void R_Mesh_Start(void)
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
-		Con_Warnf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
+		Con_Printf(CON_WARN "WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
 		Cvar_SetValueQuick(&gl_paranoid, 1);
 	}
 }

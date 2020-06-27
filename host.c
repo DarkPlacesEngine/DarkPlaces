@@ -118,7 +118,7 @@ void Host_Error (const char *error, ...)
 	dpvsnprintf (hosterrorstring1,sizeof(hosterrorstring1),error,argptr);
 	va_end (argptr);
 
-	Con_Errorf("Host_Error: %s\n", hosterrorstring1);
+	Con_Printf(CON_ERROR "Host_Error: %s\n", hosterrorstring1);
 
 	// LadyHavoc: if crashing very early, or currently shutting down, do
 	// Sys_Error instead
@@ -296,7 +296,7 @@ static void Host_SaveConfig_to(const char *file)
 		f = FS_OpenRealFile(file, "wb", false);
 		if (!f)
 		{
-			Con_Errorf("Couldn't write %s.\n", file);
+			Con_Printf(CON_ERROR "Couldn't write %s.\n", file);
 			return;
 		}
 
@@ -430,12 +430,12 @@ void Host_Main(void)
 		{
 			// warn if it's significant
 			if (time < -0.01)
-				Con_Warnf("Host_Mingled: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+				Con_Printf(CON_WARN "Host_Mingled: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
 			time = 0;
 		}
 		else if (time >= 1800)
 		{
-			Con_Warnf("Host_Mingled: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+			Con_Printf(CON_WARN "Host_Mingled: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
 			time = 0;
 		}
 		host.realtime += time;
@@ -871,7 +871,7 @@ void Host_LockSession(void)
 		{
 			if(locksession.integer == 2)
 			{
-				Con_Warnf("WARNING: session lock %s could not be acquired. Please run with -sessionid and an unique session name. Continuing anyway.\n", p);
+				Con_Printf(CON_WARN "WARNING: session lock %s could not be acquired. Please run with -sessionid and an unique session name. Continuing anyway.\n", p);
 			}
 			else
 			{

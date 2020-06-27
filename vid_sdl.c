@@ -1338,7 +1338,7 @@ void VID_Init (void)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	vid_sdl_initjoysticksystem = SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0;
 	if (!vid_sdl_initjoysticksystem)
-		Con_Errorf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
 }
 
@@ -1392,7 +1392,7 @@ void VID_EnableJoystick(qboolean enable)
 			}
 			else
 			{
-				Con_Errorf("Joystick %i failed (SDL_JoystickOpen(%i) returned: %s)\n", index, sdlindex, SDL_GetError());
+				Con_Printf(CON_ERROR "Joystick %i failed (SDL_JoystickOpen(%i) returned: %s)\n", index, sdlindex, SDL_GetError());
 				sdlindex = -1;
 			}
 		}
@@ -1498,7 +1498,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 		drivername = sys.argv[i + 1];
 	if (SDL_GL_LoadLibrary(drivername) < 0)
 	{
-		Con_Errorf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
+		Con_Printf(CON_ERROR "Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
 #endif
@@ -1578,7 +1578,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
 	{
-		Con_Errorf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
@@ -1586,7 +1586,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
 	{
-		Con_Errorf("Failed to initialize OpenGL context: %s\n", SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to initialize OpenGL context: %s\n", SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}

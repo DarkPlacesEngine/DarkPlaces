@@ -283,12 +283,12 @@ static void PNG_fFlushData(void *png)
 
 static void PNG_error_fn(void *png, const char *message)
 {
-	Con_Errorf("PNG_LoadImage: error: %s\n", message);
+	Con_Printf(CON_ERROR "PNG_LoadImage: error: %s\n", message);
 }
 
 static void PNG_warning_fn(void *png, const char *message)
 {
-	Con_Warnf("PNG_LoadImage: warning: %s\n", message);
+	Con_Printf(CON_WARN "PNG_LoadImage: warning: %s\n", message);
 }
 
 unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *miplevel)

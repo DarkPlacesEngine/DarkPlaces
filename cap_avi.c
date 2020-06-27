@@ -147,7 +147,7 @@ static void SCR_CaptureVideo_RIFF_Pop(void)
 		if(sizehint != -1)
 		{
 			int i;
-			Con_Warnf("WARNING: invalid size hint %d when writing video data (actual size: %d)\n", (int) sizehint, x);
+			Con_Printf(CON_WARN "WARNING: invalid size hint %d when writing video data (actual size: %d)\n", (int) sizehint, x);
 			for(i = 0; i <= format->riffstacklevel; ++i)
 			{
 				Con_Printf("  RIFF level %d = %s\n", i, format->riffstackfourcc[i]);

@@ -3366,7 +3366,7 @@ void EntityFrameQW_CL_ReadFrame(qboolean delta)
 			if (newnum != oldnum && !delta && !invalid)
 			{
 				cl.qw_validsequence = 0;
-				Con_Warnf("WARNING: U_REMOVE %i on full update\n", newnum);
+				Con_Printf(CON_WARN "WARNING: U_REMOVE %i on full update\n", newnum);
 			}
 		}
 		else

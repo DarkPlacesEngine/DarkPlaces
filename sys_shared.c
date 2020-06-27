@@ -635,7 +635,7 @@ void Sys_MakeProcessNice (void)
 		return;
 	Con_DPrintf("Process is becoming 'nice'...\n");
 	if(setpriority(PRIO_PROCESS, 0, 19))
-		Con_Errorf("Failed to raise nice level to %d\n", 19);
+		Con_Printf(CON_ERROR "Failed to raise nice level to %d\n", 19);
 	sys.isnice = true;
 }
 void Sys_MakeProcessMean (void)
@@ -646,7 +646,7 @@ void Sys_MakeProcessMean (void)
 		return;
 	Con_DPrintf("Process is becoming 'mean'...\n");
 	if(setpriority(PRIO_PROCESS, 0, sys.nicelevel))
-		Con_Errorf("Failed to lower nice level to %d\n", sys.nicelevel);
+		Con_Printf(CON_ERROR "Failed to lower nice level to %d\n", sys.nicelevel);
 	sys.isnice = false;
 }
 #else

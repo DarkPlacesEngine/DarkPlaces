@@ -1948,7 +1948,7 @@ static void CL_ParseServerInfo (void)
 				cls.demo_lastcsprogscrc = -1;
 			}
 			else
-				Con_Error ("ERROR: couldn't open.\n");
+				Con_Print(CON_ERROR "ERROR: couldn't open.\n");
 		}
 	}
 	cl.islocalgame = NetConn_IsLocalGame();
