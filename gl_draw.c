@@ -670,7 +670,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 
 				if (sizes == MAX_FONT_SIZES)
 				{
-					Con_Warnf("Warning: specified more than %i different font sizes, exceding ones are ignored\n", MAX_FONT_SIZES);
+					Con_Printf(CON_WARN "Warning: specified more than %i different font sizes, exceding ones are ignored\n", MAX_FONT_SIZES);
 					sizes = -1;
 					continue;
 				}

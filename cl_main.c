@@ -2268,7 +2268,7 @@ static void CL_Locs_Save_f(cmd_state_t *cmd)
 			if (VectorCompare(loc->mins, loc->maxs))
 				break;
 		if (loc)
-			Con_Warnf("Warning: writing loc file containing a mixture of qizmo-style points and proquake-style boxes may not work in qizmo or proquake!\n");
+			Con_Printf(CON_WARN "Warning: writing loc file containing a mixture of qizmo-style points and proquake-style boxes may not work in qizmo or proquake!\n");
 	}
 	for (loc = cl.locnodes;loc;loc = loc->next)
 	{

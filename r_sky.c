@@ -182,7 +182,7 @@ static void LoadSky_f(cmd_state_t *cmd)
 				Con_Print("skybox disabled\n");
 		}
 		else
-			Con_Errorf("failed to load skybox %s\n", Cmd_Argv(cmd, 1));
+			Con_Printf(CON_ERROR "failed to load skybox %s\n", Cmd_Argv(cmd, 1));
 		break;
 	default:
 		Con_Print("usage: loadsky skyname\n");

@@ -41,7 +41,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Errorf ("Engine Error: %s\n", string);
+	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
 
 	Host_Shutdown ();
 	exit (1);
