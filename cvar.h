@@ -129,7 +129,7 @@ typedef struct cvar_s
 
 	const char *defstring;
 
-	void (*callback)(char *value);
+	void (*callback)(struct cvar_s *var);
 	qboolean ignore_callback;
 
 	char **aliases;
@@ -180,7 +180,7 @@ void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name
 
 void Cvar_RegisterAlias(cvar_t *variable, const char *alias );
 
-void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *));
+void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
 
 /// registers a cvar that already has the name, string, and optionally the
 /// archive elements set.
