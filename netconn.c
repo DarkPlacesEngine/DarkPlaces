@@ -3889,7 +3889,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_slist_timeout);
 	Cvar_RegisterVariable(&net_slist_maxtries);
 	Cvar_RegisterVariable(&net_slist_favorites);
+#ifdef CONFIG_MENU
 	Cvar_RegisterCallback(&net_slist_favorites, NetConn_UpdateFavorites_c);
+#endif
 	Cvar_RegisterVariable(&net_slist_pause);
 	if(LHNET_DefaultDSCP(-1) >= 0) // register cvar only if supported
 		Cvar_RegisterVariable(&net_tos_dscp);
