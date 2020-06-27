@@ -884,16 +884,38 @@ static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g,
 	}
 }
 
+// returns a colorindex (format 0x1RGBA) if str is a valid RGB string
+// returns 0 otherwise
+static int RGBstring_to_colorindex(const char *str)
+{
+	Uchar ch; 
+	int ind = 0x0001 << 4;
+	do {
+		if (*str <= '9' && *str >= '0')
+			ind |= (*str - '0');
+		else
+		{
+			ch = tolower(*str);
+			if (ch >= 'a' && ch <= 'f')
+				ind |= (ch - 87);
+			else
+				return 0;
+		}
+		++str;
+		ind <<= 4;
+	} while(!(ind & 0x10000));
+	return ind | 0xf; // add costant alpha value
+}
+
 // NOTE: this function always draws exactly one character if maxwidth <= 0
 float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	const char *text_start = text;
-	int colorindex = STRING_COLOR_DEFAULT;
+	int colorindex;
 	size_t i;
 	float x = 0;
 	Uchar ch, mapch, nextch;
 	Uchar prevch = 0; // used for kerning
-	int tempcolorindex;
 	float kx;
 	int map_index = 0;
 	size_t bytes_left;
@@ -940,7 +962,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 
 	// maxwidth /= fnt->scale; // w and h are multiplied by it already
 	// ftbase_x = snap_to_pixel_x(0);
-	
+
 	if(maxwidth <= 0)
 	{
 		least_one = true;
@@ -974,7 +996,6 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			x += width_of[(int) ' '] * dw;
 			continue;
 		}
-		// i points to the char after ^
 		if (ch == STRING_COLOR_TAG && !ignorecolorcodes && i < *maxlen)
 		{
 			ch = *text; // colors are ascii, so no u8_ needed
@@ -985,41 +1006,19 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 				++i;
 				continue;
 			}
-			// i points to the char after ^...
-			// i+3 points to 3 in ^x123
-			// i+3 == *maxlen would mean that char is missing
 			else if (ch == STRING_COLOR_RGB_TAG_CHAR && i + 3 < *maxlen ) // ^x found
 			{
-				// building colorindex...
-				ch = tolower(text[1]);
-				tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
-				if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
-				else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
-				else tempcolorindex = 0;
+				const char *text_p = &text[1];
+				int tempcolorindex = RGBstring_to_colorindex(text_p);
 				if (tempcolorindex)
 				{
-					ch = tolower(text[2]);
-					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
-					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
-					else tempcolorindex = 0;
-					if (tempcolorindex)
-					{
-						ch = tolower(text[3]);
-						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
-						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
-						else tempcolorindex = 0;
-						if (tempcolorindex)
-						{
-							colorindex = tempcolorindex | 0xf;
-							// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
-							i+=4;
-							text += 4;
-							continue;
-						}
-					}
+					colorindex = tempcolorindex;
+					i+=4;
+					text += 4;
+					continue;
 				}
 			}
-			else if (ch == STRING_COLOR_TAG) // ^^ found, ignore the first ^ and go to print the second
+			else if (ch == STRING_COLOR_TAG) // ^^ found
 			{
 				i++;
 				text++;
@@ -1081,7 +1080,6 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	float x = startx, y, s, t, u, v, thisw;
 	Uchar ch, mapch, nextch;
 	Uchar prevch = 0; // used for kerning
-	int tempcolorindex;
 	int map_index = 0;
 	//ft2_font_map_t *prevmap = NULL; // the previous map
 	ft2_font_map_t *map = NULL;     // the currently used map
@@ -1195,35 +1193,15 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				}
 				else if (ch == STRING_COLOR_RGB_TAG_CHAR && i+3 < maxlen ) // ^x found
 				{
-					// building colorindex...
-					ch = tolower(text[1]);
-					tempcolorindex = 0x10000; // binary: 1,0000,0000,0000,0000
-					if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 12;
-					else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 12;
-					else tempcolorindex = 0;
-					if (tempcolorindex)
+					const char *text_p = &text[1];
+					int tempcolorindex = RGBstring_to_colorindex(text_p);
+					if(tempcolorindex)
 					{
-						ch = tolower(text[2]);
-						if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 8;
-						else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 8;
-						else tempcolorindex = 0;
-						if (tempcolorindex)
-						{
-							ch = tolower(text[3]);
-							if (ch <= '9' && ch >= '0') tempcolorindex |= (ch - '0') << 4;
-							else if (ch >= 'a' && ch <= 'f') tempcolorindex |= (ch - 87) << 4;
-							else tempcolorindex = 0;
-							if (tempcolorindex)
-							{
-								colorindex = tempcolorindex | 0xf;
-								// ...done! now colorindex has rgba codes (1,rrrr,gggg,bbbb,aaaa)
-								//Con_Printf("^1colorindex:^7 %x\n", colorindex);
-								DrawQ_GetTextColor(DrawQ_Color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
-								i+=4;
-								text+=4;
-								continue;
-							}
-						}
+						colorindex = tempcolorindex;
+						DrawQ_GetTextColor(DrawQ_Color, colorindex, basered, basegreen, baseblue, basealpha, shadow != 0);
+						i+=4;
+						text+=4;
+						continue;
 					}
 				}
 				else if (ch == STRING_COLOR_TAG)
@@ -1337,7 +1315,7 @@ out:
 
 	if (outcolor)
 		*outcolor = colorindex;
-	
+
 	// note: this relies on the proper text (not shadow) being drawn last
 	return x;
 }
