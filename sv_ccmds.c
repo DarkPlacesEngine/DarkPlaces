@@ -163,12 +163,12 @@ static void SV_Restart_f(cmd_state_t *cmd)
 //===========================================================================
 
 // Disable cheats if sv_cheats is turned off
-static void SV_DisableCheats_c(char *value)
+static void SV_DisableCheats_c(cvar_t *var)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i = 0;
 
-	if (value[0] == '0' && !value[1])
+	if (var->value == 0)
 	{
 		while (svs.clients[i].edict)
 		{

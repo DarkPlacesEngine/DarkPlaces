@@ -166,12 +166,12 @@ static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
 static int nFavorites_idfp = 0;
 static char favorites_idfp[MAX_FAVORITESERVERS][FP64_SIZE+1];
 
-void NetConn_UpdateFavorites_c(char *string)
+void NetConn_UpdateFavorites_c(cvar_t *var)
 {
 	const char *p;
 	nFavorites = 0;
 	nFavorites_idfp = 0;
-	p = string;
+	p = var->string;
 	while((size_t) nFavorites < sizeof(favorites) / sizeof(*favorites) && COM_ParseToken_Console(&p))
 	{
 		if(com_token[0] != '[' && strlen(com_token) == FP64_SIZE && !strchr(com_token, '.'))

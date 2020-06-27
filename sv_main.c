@@ -414,13 +414,10 @@ prvm_required_field_t sv_reqglobals[] =
 #undef PRVM_DECLARE_function
 };
 
-static void Host_Timescale_c(char *string)
+static void Host_Timescale_c(cvar_t *var)
 {
-	double value;
-	value = atof(string);
-
-	if(value < 0.00001 && value != 0)
-		string[0] = '0', string[1] = 0;
+	if(var->value < 0.00001 && var->value != 0)
+		Cvar_SetValueQuick(var, 0);
 }
 
 //============================================================================
