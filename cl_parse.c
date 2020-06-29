@@ -1562,37 +1562,37 @@ static void CL_DownloadFinished_f(cmd_state_t *cmd)
 	CL_BeginDownloads(false);
 }
 
-extern cvar_t topcolor;
-extern cvar_t bottomcolor;
+extern cvar_t cl_topcolor;
+extern cvar_t cl_bottomcolor;
 static void CL_SendPlayerInfo(void)
 {
 	char vabuf[1024];
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", name.string));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", cl_name.string));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", topcolor.integer, bottomcolor.integer));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_topcolor.integer, cl_bottomcolor.integer));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate %i", rate.integer));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate %i", cl_rate.integer));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate_burstsize %i", rate_burstsize.integer));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate_burstsize %i", cl_rate_burstsize.integer));
 
-	if (pmodel.integer)
+	if (cl_pmodel.integer)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "pmodel %i", pmodel.integer));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "pmodel %i", cl_pmodel.integer));
 	}
-	if (*playermodel.string)
+	if (*cl_playermodel.string)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playermodel %s", playermodel.string));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playermodel %s", cl_playermodel.string));
 	}
-	if (*playerskin.string)
+	if (*cl_playerskin.string)
 	{
 		MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playerskin %s", playerskin.string));
+		MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "playerskin %s", cl_playerskin.string));
 	}
 }
 

@@ -40,14 +40,14 @@
 #define uint32 unsigned int32
 #endif
 
-struct mdfour {
+struct mdfour_s {
 	uint32 A, B, C, D;
 	uint32 totalN;
 };
 
-void mdfour_begin(struct mdfour *md); // old: MD4Init
-void mdfour_update(struct mdfour *md, const unsigned char *in, int n); //old: MD4Update
-void mdfour_result(struct mdfour *md, unsigned char *out); // old: MD4Final
+void mdfour_begin(struct mdfour_s *md); // old: MD4Init
+void mdfour_update(struct mdfour_s *md, const unsigned char *in, int n); //old: MD4Update
+void mdfour_result(struct mdfour_s *md, unsigned char *out); // old: MD4Final
 void mdfour(unsigned char *out, const unsigned char *in, int n);
 
 #endif	// _MDFOUR_H

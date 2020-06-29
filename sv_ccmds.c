@@ -1172,7 +1172,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 			if (cls.state == ca_dedicated)
 				who = "Console";
 			else
-				who = name.string;
+				who = cl_name.string;
 		}
 		else
 			who = save->name;
