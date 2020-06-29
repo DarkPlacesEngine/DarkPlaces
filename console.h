@@ -63,15 +63,13 @@ void Con_DrawNotify (void);
 void Con_ClearNotify (void);
 void Con_ToggleConsole_f(cmd_state_t *cmd);
 
-int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos);
-
 qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength);
 
 /// wrapper function to attempt to either complete the command line
 /// or to list possible matches grouped by type
 /// (i.e. will display possible variables, aliases, commands
 /// that match what they've typed so far)
-void Con_CompleteCommandLine(cmd_state_t *cmd);
+int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console);
 
 /// Generic libs/util/console.c function to display a list
 /// formatted in columns on the console
