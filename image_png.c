@@ -511,7 +511,6 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
-#ifdef __cplusplus
 #ifdef WIN64
 	if (setjmp((_JBTYPE *)png))
 #elif defined(MACOSX) || defined(WIN32)
@@ -519,10 +518,7 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 #elif defined(__ANDROID__)
 	if (setjmp((long *)png))
 #else
-	if (setjmp((__jmp_buf_tag *)png))
-#endif
-#else
-	if (setjmp(png))
+	if (setjmp((struct __jmp_buf_tag *)png))
 #endif
 	{
 		qpng_destroy_write_struct(&png, &pnginfo);
