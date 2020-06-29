@@ -1265,7 +1265,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
 		conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
 		conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
-		NetConn_UpdateCleartime(&conn->incoming_cleartime, rate.integer, rate_burstsize.integer, originallength + 28);
+		NetConn_UpdateCleartime(&conn->incoming_cleartime, cl_rate.integer, cl_rate_burstsize.integer, originallength + 28);
 
 		// limit bursts to one packet in size ("dialup mode" emulating old behaviour)
 		if (net_test.integer)
@@ -1361,7 +1361,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 					conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
 					conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
 					conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
-					NetConn_UpdateCleartime(&conn->incoming_cleartime, rate.integer, rate_burstsize.integer, originallength + 28);
+					NetConn_UpdateCleartime(&conn->incoming_cleartime, cl_rate.integer, cl_rate_burstsize.integer, originallength + 28);
 
 					conn->nq.unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = host.realtime;
@@ -1391,7 +1391,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 			else if (flags & NETFLAG_ACK)
 			{
 				conn->incoming_netgraph[conn->incoming_packetcounter].ackbytes += originallength + 28;
-				NetConn_UpdateCleartime(&conn->incoming_cleartime, rate.integer, rate_burstsize.integer, originallength + 28);
+				NetConn_UpdateCleartime(&conn->incoming_cleartime, cl_rate.integer, cl_rate_burstsize.integer, originallength + 28);
 
 				if (sequence == (conn->nq.sendSequence - 1))
 				{
@@ -1451,7 +1451,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 			{
 				unsigned char temppacket[8];
 				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   += originallength + 28;
-				NetConn_UpdateCleartime(&conn->incoming_cleartime, rate.integer, rate_burstsize.integer, originallength + 28);
+				NetConn_UpdateCleartime(&conn->incoming_cleartime, cl_rate.integer, cl_rate_burstsize.integer, originallength + 28);
 
 				conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        += 8 + 28;
 

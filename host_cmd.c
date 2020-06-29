@@ -38,15 +38,15 @@ cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password
 cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
 cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
-cvar_t name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
-cvar_t topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
-cvar_t bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
-cvar_t team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
-cvar_t skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
-cvar_t playermodel = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
-cvar_t playerskin = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
-cvar_t noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
-cvar_t pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
+cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
+cvar_t cl_topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
+cvar_t cl_bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
+cvar_t cl_team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
+cvar_t cl_skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
+cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
+cvar_t cl_noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
+cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
 //============================================================================
@@ -67,7 +67,7 @@ static void CL_Playermodel_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"playermodel\" is \"%s\"\n", playermodel.string);
+			Con_Printf("\"playermodel\" is \"%s\"\n", cl_playermodel.string);
 		}
 		return;
 	}
@@ -126,7 +126,7 @@ static void CL_Playerskin_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"playerskin\" is \"%s\"\n", playerskin.string);
+			Con_Printf("\"playerskin\" is \"%s\"\n", cl_playerskin.string);
 		}
 		return;
 	}
@@ -184,22 +184,22 @@ static void CL_Color_c(cvar_t *var)
 {
 	char vabuf[1024];
 	
-	Cvar_Set_NoCallback(&topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
-	Cvar_Set_NoCallback(&bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
+	Cvar_Set_NoCallback(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
+	Cvar_Set_NoCallback(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
 }
 
 static void CL_Topcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
 	
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + bottomcolor.integer));
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
 }
 
 static void CL_Bottomcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
 
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", topcolor.integer*16 + var->integer));
+	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
 }
 
 static void CL_Color_f(cmd_state_t *cmd)
@@ -210,7 +210,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"color\" is \"%i %i\"\n", topcolor.integer, bottomcolor.integer);
+			Con_Printf("\"color\" is \"%i %i\"\n", cl_topcolor.integer, cl_bottomcolor.integer);
 			Con_Print("color <0-15> [0-15]\n");
 		}
 		return;
@@ -231,8 +231,8 @@ static void CL_Color_f(cmd_state_t *cmd)
 	 * happens twice here. Perhaps find a cleaner way?
 	 */
 
-	top = top >= 0 ? top : topcolor.integer;
-	bottom = bottom >= 0 ? bottom : bottomcolor.integer;
+	top = top >= 0 ? top : cl_topcolor.integer;
+	bottom = bottom >= 0 ? bottom : cl_bottomcolor.integer;
 
 	top &= 15;
 	bottom &= 15;
@@ -245,14 +245,14 @@ static void CL_Color_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		Cvar_SetValueQuick(&topcolor, top);
-		Cvar_SetValueQuick(&bottomcolor, bottom);
+		Cvar_SetValueQuick(&cl_topcolor, top);
+		Cvar_SetValueQuick(&cl_bottomcolor, bottom);
 		return;
 	}
 }
 
-cvar_t rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
-cvar_t rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
+cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
+cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
 
 /*
 ======================
@@ -270,7 +270,7 @@ static void CL_PModel_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_command)
 		{
-			Con_Printf("\"pmodel\" is \"%s\"\n", pmodel.string);
+			Con_Printf("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
 		}
 		return;
 	}
@@ -278,7 +278,7 @@ static void CL_PModel_f(cmd_state_t *cmd)
 
 	if (cmd->source == src_command)
 	{
-		if (pmodel.integer == i)
+		if (cl_pmodel.integer == i)
 			return;
 		Cvar_SetValue (&cvars_all, "_cl_pmodel", i);
 		if (cls.state == ca_connected)
@@ -694,33 +694,33 @@ void Host_InitCommands (void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
 
-	Cvar_RegisterVariable(&name);
-	Cvar_RegisterAlias(&name, "_cl_name");
+	Cvar_RegisterVariable(&cl_name);
+	Cvar_RegisterAlias(&cl_name, "_cl_name");
 	Cvar_RegisterVariable(&cl_color);
 	Cvar_RegisterCallback(&cl_color, CL_Color_c);
-	Cvar_RegisterVariable(&topcolor);
-	Cvar_RegisterCallback(&topcolor, CL_Topcolor_c);
-	Cvar_RegisterVariable(&bottomcolor);
-	Cvar_RegisterCallback(&bottomcolor, CL_Bottomcolor_c);
-	Cvar_RegisterVariable(&rate);
-	Cvar_RegisterAlias(&rate, "_cl_rate");
-	Cvar_RegisterVariable(&rate_burstsize);
-	Cvar_RegisterAlias(&rate_burstsize, "_cl_rate_burstsize");
-	Cvar_RegisterVariable(&pmodel);
-	Cvar_RegisterAlias(&pmodel, "_cl_pmodel");
-	Cvar_RegisterVariable(&playermodel);
-	Cvar_RegisterAlias(&playermodel, "_cl_playermodel");
-	Cvar_RegisterVariable(&playerskin);
-	Cvar_RegisterAlias(&playerskin, "_cl_playerskin");
+	Cvar_RegisterVariable(&cl_topcolor);
+	Cvar_RegisterCallback(&cl_topcolor, CL_Topcolor_c);
+	Cvar_RegisterVariable(&cl_bottomcolor);
+	Cvar_RegisterCallback(&cl_bottomcolor, CL_Bottomcolor_c);
+	Cvar_RegisterVariable(&cl_rate);
+	Cvar_RegisterAlias(&cl_rate, "_cl_rate");
+	Cvar_RegisterVariable(&cl_rate_burstsize);
+	Cvar_RegisterAlias(&cl_rate_burstsize, "_cl_rate_burstsize");
+	Cvar_RegisterVariable(&cl_pmodel);
+	Cvar_RegisterAlias(&cl_pmodel, "_cl_pmodel");
+	Cvar_RegisterVariable(&cl_playermodel);
+	Cvar_RegisterAlias(&cl_playermodel, "_cl_playermodel");
+	Cvar_RegisterVariable(&cl_playerskin);
+	Cvar_RegisterAlias(&cl_playerskin, "_cl_playerskin");
 	Cvar_RegisterVariable(&rcon_password);
 	Cvar_RegisterVariable(&rcon_address);
 	Cvar_RegisterVariable(&rcon_secure);
 	Cvar_RegisterCallback(&rcon_secure, CL_RCon_ClearPassword_c);
 	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
 	Cvar_RegisterVariable(&r_fixtrans_auto);
-	Cvar_RegisterVariable(&team);
-	Cvar_RegisterVariable(&skin);
-	Cvar_RegisterVariable(&noaim);
+	Cvar_RegisterVariable(&cl_team);
+	Cvar_RegisterVariable(&cl_skin);
+	Cvar_RegisterVariable(&cl_noaim);
 
 	Cmd_AddCommand(CMD_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
 	Cmd_AddCommand(CMD_USERINFO, "pmodel", CL_PModel_f, "(Nehahra-only) change your player model choice");
