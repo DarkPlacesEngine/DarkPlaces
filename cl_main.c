@@ -209,8 +209,8 @@ void CL_ClearState(void)
 	CL_Screen_NewMap();
 }
 
-extern cvar_t topcolor;
-extern cvar_t bottomcolor;
+extern cvar_t cl_topcolor;
+extern cvar_t cl_bottomcolor;
 
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
 {
@@ -259,12 +259,12 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		else if (!strcasecmp(key, "topcolor"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", atoi(value), bottomcolor.integer));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", atoi(value), cl_bottomcolor.integer));
 		}
 		else if (!strcasecmp(key, "bottomcolor"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", topcolor.integer, atoi(value)));
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_topcolor.integer, atoi(value)));
 		}
 		else if (!strcasecmp(key, "rate"))
 		{
@@ -503,7 +503,7 @@ CL_EstablishConnection
 Host should be either "local" or a net address
 =====================
 */
-void CL_EstablishConnection(const char *host, int firstarg)
+void CL_EstablishConnection(const char *address, int firstarg)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -523,7 +523,7 @@ void CL_EstablishConnection(const char *host, int firstarg)
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
 
-	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
+	if (LHNETADDRESS_FromString(&cls.connect_address, address, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
