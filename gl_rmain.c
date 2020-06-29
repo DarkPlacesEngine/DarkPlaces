@@ -1966,7 +1966,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, t->render_rtlight_diffuse[0], t->render_rtlight_diffuse[1], t->render_rtlight_diffuse[2]);
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, t->render_rtlight_specular[0], t->render_rtlight_specular[1], t->render_rtlight_specular[2]);
 				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, 1, 1, 1); // DEPRECATED
-				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, t->render_modellight_lightdir[0], t->render_modellight_lightdir[1], t->render_modellight_lightdir[2]);
+				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, t->render_modellight_lightdir_local[0], t->render_modellight_lightdir_local[1], t->render_modellight_lightdir_local[2]);
 			}
 			else
 			{
@@ -6731,7 +6731,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->glowmod[q];
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 1;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6750,7 +6751,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
 			t->render_modellight_ambient[q] = rsurface.entity->render_fullbright[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
 			t->render_lightmap_ambient[q] = 0;
@@ -6766,7 +6768,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6784,7 +6787,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = rsurface.entity->render_modellight_lightdir[q];
+			t->render_modellight_lightdir_world[q] = rsurface.entity->render_modellight_lightdir_world[q];
+			t->render_modellight_lightdir_local[q] = rsurface.entity->render_modellight_lightdir_local[q];
 			t->render_modellight_ambient[q] = rsurface.entity->render_modellight_ambient[q] * r_refdef.view.colorscale;
 			t->render_modellight_diffuse[q] = rsurface.entity->render_modellight_diffuse[q] * r_refdef.view.colorscale;
 			t->render_modellight_specular[q] = rsurface.entity->render_modellight_specular[q] * r_refdef.view.colorscale;
@@ -6801,7 +6805,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6825,7 +6830,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;

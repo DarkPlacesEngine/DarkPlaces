@@ -2488,7 +2488,8 @@ static void CL_MeshEntities_Init(void)
 		VectorSet(ent->render.render_modellight_ambient, 1, 1, 1);
 		VectorSet(ent->render.render_modellight_diffuse, 0, 0, 0);
 		VectorSet(ent->render.render_modellight_specular, 0, 0, 0);
-		VectorSet(ent->render.render_modellight_lightdir, 0, 0, 1);
+		VectorSet(ent->render.render_modellight_lightdir_world, 0, 0, 1);
+		VectorSet(ent->render.render_modellight_lightdir_local, 0, 0, 1); // local doesn't matter because no diffuse/specular color
 		VectorSet(ent->render.render_lightmap_ambient, 0, 0, 0);
 		VectorSet(ent->render.render_lightmap_diffuse, 1, 1, 1);
 		VectorSet(ent->render.render_lightmap_specular, 1, 1, 1);
@@ -2664,7 +2665,7 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 		ent->render_modellight_ambient[q] = a[q] * ent->colormod[q];
 		ent->render_modellight_diffuse[q] = c[q] * ent->colormod[q];
 		ent->render_modellight_specular[q] = c[q];
-		ent->render_modellight_lightdir[q] = dir[q];
+		ent->render_modellight_lightdir_world[q] = dir[q];
 		ent->render_lightmap_ambient[q] = ent->colormod[q] * r_refdef.scene.ambientintensity;
 		ent->render_lightmap_diffuse[q] = ent->colormod[q] * r_refdef.scene.lightmapintensity;
 		ent->render_lightmap_specular[q] = r_refdef.scene.lightmapintensity;
@@ -2680,9 +2681,12 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 		for (q = 0; q < 3; q++)
 			ent->render_rtlight_diffuse[q] = ent->render_rtlight_specular[q] = q;
 
-	if (VectorLength2(ent->render_modellight_lightdir) == 0)
-		VectorSet(ent->render_modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
-	VectorNormalize(ent->render_modellight_lightdir);
+	if (VectorLength2(ent->render_modellight_lightdir_world) == 0)
+		VectorSet(ent->render_modellight_lightdir_world, 0, 0, 1); // have to set SOME valid vector here
+	VectorNormalize(ent->render_modellight_lightdir_world);
+	// transform into local space for the entity as well
+	Matrix4x4_Transform3x3(&ent->inversematrix, ent->render_modellight_lightdir_world, ent->render_modellight_lightdir_local);
+	VectorNormalize(ent->render_modellight_lightdir_local);
 }
 
 

@@ -573,7 +573,8 @@ typedef struct texture_s
 	// MATERIALFLAG_MODELLIGHT uses these parameters
 	float render_modellight_ambient[3];
 	float render_modellight_diffuse[3];
-	float render_modellight_lightdir[3];
+	float render_modellight_lightdir_world[3];
+	float render_modellight_lightdir_local[3];
 	float render_modellight_specular[3];
 	// lightmap rendering (not MATERIALFLAG_MODELLIGHT)
 	float render_lightmap_ambient[3];
