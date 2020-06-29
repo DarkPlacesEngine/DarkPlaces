@@ -663,12 +663,19 @@ static const keyname_t   keynames[] = {
 ==============================================================================
 */
 
-void
-Key_ClearEditLine (int edit_line)
+int Key_ClearEditLine(qboolean is_console)
 {
-	memset (key_line, '\0', sizeof(key_line));
-	key_line[0] = ']';
-	key_linepos = 1;
+	if (is_console)
+	{
+		key_line[0] = ']';
+		key_line[1] = 0;
+		return 1;
+	}
+	else
+	{
+		chat_buffer[0] = 0;
+		return 0;
+	}
 }
 
 // key modifier states
@@ -686,34 +693,77 @@ Key_ClearEditLine (int edit_line)
 Interactive line editing and console scrollback
 ====================
 */
-static void
-Key_Console (cmd_state_t *cmd, int key, int unicode)
+
+int chat_mode; // 0 for say, 1 for say_team, -1 for command
+char chat_buffer[MAX_INPUTLINE];
+int chat_bufferpos = 0;
+
+int Key_AddChar(int unicode, qboolean is_console)
 {
-	// LadyHavoc: copied most of this from Q2 to improve keyboard handling
-	switch (key)
+	char *line;
+	char buf[16];
+	int len, blen, linepos;
+
+	if (is_console)
 	{
-		case K_KP_SLASH:      key = '/'; break;
-		case K_KP_MINUS:      key = '-'; break;
-		case K_KP_PLUS:       key = '+'; break;
-		case K_KP_HOME:       key = '7'; break;
-		case K_KP_UPARROW:    key = '8'; break;
-		case K_KP_PGUP:       key = '9'; break;
-		case K_KP_LEFTARROW:  key = '4'; break;
-		case K_KP_5:          key = '5'; break;
-		case K_KP_RIGHTARROW: key = '6'; break;
-		case K_KP_END:        key = '1'; break;
-		case K_KP_DOWNARROW:  key = '2'; break;
-		case K_KP_PGDN:       key = '3'; break;
-		case K_KP_INS:        key = '0'; break;
-		case K_KP_DEL:        key = '.'; break;
+		line = key_line;
+		linepos = key_linepos;
+	}
+	else
+	{
+		line = chat_buffer;
+		linepos = chat_bufferpos;
 	}
 
-	// Forbid Ctrl Alt shortcuts since on Windows they are used to type some characters
-	// in certain non-English keyboards using the AltGr key (which emulates Ctrl Alt)
-	// Reference: "Why Ctrl+Alt shouldn't be used as a shortcut modifier"
-	//            https://blogs.msdn.microsoft.com/oldnewthing/20040329-00/?p=40003
-	if (keydown[K_CTRL] && keydown[K_ALT])
-		goto add_char;
+	if (linepos >= MAX_INPUTLINE-1)
+		return linepos;
+
+	blen = u8_fromchar(unicode, buf, sizeof(buf));
+	if (!blen)
+		return linepos;
+	len = (int)strlen(&line[linepos]);
+	// check insert mode, or always insert if at end of line
+	if (key_insert || len == 0)
+	{
+		if (linepos + len + blen >= MAX_INPUTLINE)
+			return linepos;
+		// can't use strcpy to move string to right
+		len++;
+		if (linepos + blen + len >= MAX_INPUTLINE)
+			return linepos;
+		memmove(&line[linepos + blen], &line[linepos], len);
+	}
+	else if (linepos + len + blen - u8_bytelen(line + linepos, 1) >= MAX_INPUTLINE)
+		return linepos;
+	memcpy(line + linepos, buf, blen);
+	if (blen > len)
+		line[linepos + blen] = 0;
+	linepos += blen;
+	return linepos;
+}
+
+// returns -1 if no key has been recognized
+// returns linepos (>= 0) otherwise
+// if is_console is true can modify key_line (doesn't change key_linepos)
+int Key_Parse_CommonKeys(cmd_state_t *cmd, qboolean is_console, int key, int unicode)
+{
+	char *line;
+	int linepos, linestart;
+	unsigned int linesize;
+	if (is_console)
+	{
+		line = key_line;
+		linepos = key_linepos;
+		linesize = sizeof(key_line);
+		linestart = 1;
+	}
+	else
+	{
+		line = chat_buffer;
+		linepos = chat_bufferpos;
+		linesize = sizeof(chat_buffer);
+		linestart = 0;
+	}
 
 	if ((key == 'v' && KM_CTRL) || ((key == K_INS || key == K_KP_INS) && KM_SHIFT))
 	{
@@ -738,121 +788,81 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 			strtok(cbd, "\n\r\b");
 #endif
 			i = (int)strlen(cbd);
-			if (i + key_linepos >= MAX_INPUTLINE)
-				i= MAX_INPUTLINE - key_linepos - 1;
+			if (i + linepos >= MAX_INPUTLINE)
+				i= MAX_INPUTLINE - linepos - 1;
 			if (i > 0)
 			{
 				cbd[i] = 0;
-				memmove(key_line + key_linepos + i, key_line + key_linepos, sizeof(key_line) - key_linepos - i);
-				memcpy(key_line + key_linepos, cbd, i);
-				key_linepos += i;
+				memmove(line + linepos + i, line + linepos, linesize - linepos - i);
+				memcpy(line + linepos, cbd, i);
+				linepos += i;
 			}
 			Z_Free(cbd);
 		}
-		return;
-	}
-
-	if (key == 'l' && KM_CTRL)
-	{
-		Cbuf_AddText (cmd, "clear\n");
-		return;
+		return linepos;
 	}
 
 	if (key == 'u' && KM_CTRL) // like vi/readline ^u: delete currently edited line
 	{
-		// clear line
-		key_line[0] = ']';
-		key_line[1] = 0;
-		key_linepos = 1;
-		return;
-	}
-
-	if (key == 'q' && KM_CTRL) // like zsh ^q: push line to history, don't execute, and clear
-	{
-		// clear line
-		Key_History_Push();
-		key_line[0] = ']';
-		key_line[1] = 0;
-		key_linepos = 1;
-		return;
-	}
-
-	if ((key == K_ENTER || key == K_KP_ENTER) && KM_NONE)
-	{
-		Cbuf_AddText (cmd, key_line+1);	// skip the ]
-		Cbuf_AddText (cmd, "\n");
-		Key_History_Push();
-		key_line[0] = ']';
-		key_line[1] = 0;	// EvilTypeGuy: null terminate
-		key_linepos = 1;
-		// force an update, because the command may take some time
-		if (cls.state == ca_disconnected)
-			CL_UpdateScreen ();
-		return;
+		return Key_ClearEditLine(is_console);
 	}
 
 	if (key == K_TAB)
 	{
-		if (KM_CTRL) // append the cvar value to the cvar name
+		if (is_console && KM_CTRL) // append the cvar value to the cvar name
 		{
 			int		cvar_len, cvar_str_len, chars_to_move;
 			char	k;
 			char	cvar[MAX_INPUTLINE];
 			const char *cvar_str;
-			
+
 			// go to the start of the variable
-			while(--key_linepos)
+			while(--linepos)
 			{
-				k = key_line[key_linepos];
+				k = line[linepos];
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 			}
-			key_linepos++;
-			
+			linepos++;
+
 			// save the variable name in cvar
-			for(cvar_len=0; (k = key_line[key_linepos + cvar_len]) != 0; cvar_len++)
+			for(cvar_len=0; (k = line[linepos + cvar_len]) != 0; cvar_len++)
 			{
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 				cvar[cvar_len] = k;
 			}
 			if (cvar_len==0)
-				return;
+				return linepos;
 			cvar[cvar_len] = 0;
-			
+
 			// go to the end of the cvar
-			key_linepos += cvar_len;
-			
+			linepos += cvar_len;
+
 			// save the content of the variable in cvar_str
 			cvar_str = Cvar_VariableString(&cvars_all, cvar, CVAR_CLIENT | CVAR_SERVER);
 			cvar_str_len = (int)strlen(cvar_str);
 			if (cvar_str_len==0)
-				return;
-			
-			// insert space and cvar_str in key_line
-			chars_to_move = (int)strlen(&key_line[key_linepos]);
-			if (key_linepos + 1 + cvar_str_len + chars_to_move < MAX_INPUTLINE)
+				return linepos;
+
+			// insert space and cvar_str in line
+			chars_to_move = (int)strlen(&line[linepos]);
+			if (linepos + 1 + cvar_str_len + chars_to_move < MAX_INPUTLINE)
 			{
 				if (chars_to_move)
-					memmove(&key_line[key_linepos + 1 + cvar_str_len], &key_line[key_linepos], chars_to_move);
-				key_line[key_linepos++] = ' ';
-				memcpy(&key_line[key_linepos], cvar_str, cvar_str_len);
-				key_linepos += cvar_str_len;
-				key_line[key_linepos + chars_to_move] = 0;
+					memmove(&line[linepos + 1 + cvar_str_len], &line[linepos], chars_to_move);
+				line[linepos++] = ' ';
+				memcpy(&line[linepos], cvar_str, cvar_str_len);
+				linepos += cvar_str_len;
+				line[linepos + chars_to_move] = 0;
 			}
 			else
 				Con_Printf("Couldn't append cvar value, edit line too long.\n");
-			return;
+			return linepos;
 		}
 
 		if (KM_NONE)
-		{
-			// Enhanced command completion
-			// by EvilTypeGuy eviltypeguy@qeradiant.com
-			// Thanks to Fett, Taniwha
-			Con_CompleteCommandLine(cmd);
-			return;
-		}
+			return Con_CompleteCommandLine(cmd, is_console);
 	}
 
 	// Advanced Console Editing by Radix radix@planetquake.com
@@ -867,86 +877,92 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		{
 			int		pos;
 			char	k;
-			if (key_linepos < 2)
-				return;
-			pos = key_linepos-1;
+			if (linepos <= linestart + 1)
+				return linestart;
+			pos = linepos;
 
-			if(pos) // skip all "; ' after the word
-				while(--pos)
-				{
-					k = key_line[pos];
-					if (!(k == '\"' || k == ';' || k == ' ' || k == '\''))
-						break;
-				}
+			do {
+				k = line[--pos];
+				if (!(k == '\"' || k == ';' || k == ' ' || k == '\''))
+					break;
+			} while(pos > linestart); // skip all "; ' after the word
 
-			if(pos)
-				while(--pos)
+			if (pos == linestart)
+				return linestart;
+
+			do {
+				k = line[--pos];
+				if (k == '\"' || k == ';' || k == ' ' || k == '\'')
 				{
-					k = key_line[pos];
-					if(k == '\"' || k == ';' || k == ' ' || k == '\'')
-						break;
+					pos++;
+					break;
 				}
-			key_linepos = pos + 1;
-			return;
+			} while(pos > linestart);
+
+			linepos = pos;
+			return linepos;
 		}
 
 		if(KM_SHIFT) // move cursor to the previous character ignoring colors
 		{
 			int		pos;
 			size_t          inchar = 0;
-			if (key_linepos < 2)
-				return;
-			pos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
-			while (pos)
-				if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && isdigit(key_line[pos]))
+			if (linepos <= linestart + 1)
+				return linestart;
+			pos = (int)u8_prevbyte(line + linestart, linepos - linestart) + linestart;
+			while (pos > linestart)
+				if(pos-1 >= linestart && line[pos-1] == STRING_COLOR_TAG && isdigit(line[pos]))
 					pos-=2;
-				else if(pos-4 > 0 && key_line[pos-4] == STRING_COLOR_TAG && key_line[pos-3] == STRING_COLOR_RGB_TAG_CHAR
-						&& isxdigit(key_line[pos-2]) && isxdigit(key_line[pos-1]) && isxdigit(key_line[pos]))
+				else if(pos-4 >= linestart && line[pos-4] == STRING_COLOR_TAG && line[pos-3] == STRING_COLOR_RGB_TAG_CHAR
+						&& isxdigit(line[pos-2]) && isxdigit(line[pos-1]) && isxdigit(line[pos]))
 					pos-=5;
 				else
 				{
-					if(pos-1 > 0 && key_line[pos-1] == STRING_COLOR_TAG && key_line[pos] == STRING_COLOR_TAG) // consider ^^ as a character
+					if(pos-1 >= linestart && line[pos-1] == STRING_COLOR_TAG && line[pos] == STRING_COLOR_TAG) // consider ^^ as a character
 						pos--;
 					pos--;
 					break;
 				}
+			if (pos < linestart)
+				return linestart;
 			// we need to move to the beginning of the character when in a wide character:
-			u8_charidx(key_line, pos + 1, &inchar);
-			key_linepos = (int)(pos + 1 - inchar);
-			return;
+			u8_charidx(line, pos + 1, &inchar);
+			linepos = (int)(pos + 1 - inchar);
+			return linepos;
 		}
 
 		if(KM_NONE)
 		{
-			if (key_linepos < 2)
-				return;
-			key_linepos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
-			return;
+			if (linepos <= linestart + 1)
+				return linestart;
+			// hide ']' from u8_prevbyte otherwise it could go out of bounds
+			linepos = (int)u8_prevbyte(line + linestart, linepos - linestart) + linestart;
+			return linepos;
 		}
 	}
 
 	// delete char before cursor
 	if ((key == K_BACKSPACE && KM_NONE) || (key == 'h' && KM_CTRL))
 	{
-		if (key_linepos > 1)
+		if (linepos > linestart)
 		{
-			int newpos = (int)u8_prevbyte(key_line+1, key_linepos-1) + 1; // do NOT give the ']' to u8_prevbyte
-			strlcpy(key_line + newpos, key_line + key_linepos, sizeof(key_line) + 1 - key_linepos);
-			key_linepos = newpos;
+			// hide ']' from u8_prevbyte otherwise it could go out of bounds
+			int newpos = (int)u8_prevbyte(line + linestart, linepos - linestart) + linestart;
+			strlcpy(line + newpos, line + linepos, linesize + 1 - linepos);
+			linepos = newpos;
 		}
-		return;
+		return linepos;
 	}
 
 	// delete char on cursor
 	if ((key == K_DEL || key == K_KP_DEL) && KM_NONE)
 	{
 		size_t linelen;
-		linelen = strlen(key_line);
-		if (key_linepos < (int)linelen)
-			memmove(key_line + key_linepos, key_line + key_linepos + u8_bytelen(key_line + key_linepos, 1), linelen - key_linepos);
-		return;
+		linelen = strlen(line);
+		if (linepos < (int)linelen)
+			memmove(line + linepos, line + linepos + u8_bytelen(line + linepos, 1), linelen - linepos);
+		return linepos;
 	}
-
 
 	// move cursor to the next character
 	if (key == K_RIGHTARROW || key == K_KP_RIGHTARROW)
@@ -955,81 +971,176 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		{
 			int		pos, len;
 			char	k;
-			len = (int)strlen(key_line);
-			if (key_linepos >= len)
-				return;
-			pos = key_linepos;
+			len = (int)strlen(line);
+			if (linepos >= len)
+				return linepos;
+			pos = linepos;
 
 			while(++pos < len)
 			{
-				k = key_line[pos];
+				k = line[pos];
 				if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 					break;
 			}
-			
+
 			if (pos < len) // skip all "; ' after the word
 				while(++pos < len)
 				{
-					k = key_line[pos];
+					k = line[pos];
 					if (!(k == '\"' || k == ';' || k == ' ' || k == '\''))
 						break;
 				}
-			key_linepos = pos;
-			return;
+			linepos = pos;
+			return linepos;
 		}
 
 		if (KM_SHIFT) // move cursor to the next character ignoring colors
 		{
 			int		pos, len;
-			len = (int)strlen(key_line);
-			if (key_linepos >= len)
-				return;
-			pos = key_linepos;
-			
+			len = (int)strlen(line);
+			if (linepos >= len)
+				return linepos;
+			pos = linepos;
+
 			// go beyond all initial consecutive color tags, if any
 			if(pos < len)
-				while (key_line[pos] == STRING_COLOR_TAG)
+				while (line[pos] == STRING_COLOR_TAG)
 				{
-					if(isdigit(key_line[pos+1]))
+					if(isdigit(line[pos+1]))
 						pos+=2;
-					else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
+					else if(line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(line[pos+2]) && isxdigit(line[pos+3]) && isxdigit(line[pos+4]))
 						pos+=5;
 					else
 						break;
 				}
-			
+
 			// skip the char
-			if (key_line[pos] == STRING_COLOR_TAG && key_line[pos+1] == STRING_COLOR_TAG) // consider ^^ as a character
+			if (line[pos] == STRING_COLOR_TAG && line[pos+1] == STRING_COLOR_TAG) // consider ^^ as a character
 				pos++;
-			pos += (int)u8_bytelen(key_line + pos, 1);
-			
+			pos += (int)u8_bytelen(line + pos, 1);
+
 			// now go beyond all next consecutive color tags, if any
 			if(pos < len)
-				while (key_line[pos] == STRING_COLOR_TAG)
+				while (line[pos] == STRING_COLOR_TAG)
 				{
-					if(isdigit(key_line[pos+1]))
+					if(isdigit(line[pos+1]))
 						pos+=2;
-					else if(key_line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(key_line[pos+2]) && isxdigit(key_line[pos+3]) && isxdigit(key_line[pos+4]))
+					else if(line[pos+1] == STRING_COLOR_RGB_TAG_CHAR && isxdigit(line[pos+2]) && isxdigit(line[pos+3]) && isxdigit(line[pos+4]))
 						pos+=5;
 					else
 						break;
 				}
-			key_linepos = pos;
-			return;
+			linepos = pos;
+			return linepos;
 		}
 
 		if (KM_NONE)
 		{
-			if (key_linepos >= (int)strlen(key_line))
-				return;
-			key_linepos += (int)u8_bytelen(key_line + key_linepos, 1);
-			return;
+			if (linepos >= (int)strlen(line))
+				return linepos;
+			linepos += (int)u8_bytelen(line + linepos, 1);
+			return linepos;
 		}
 	}
 
 	if ((key == K_INS || key == K_KP_INS) && KM_NONE) // toggle insert mode
 	{
 		key_insert ^= 1;
+		return linepos;
+	}
+
+	if (key == K_HOME || key == K_KP_HOME)
+	{
+		if (is_console && KM_CTRL)
+		{
+			con_backscroll = CON_TEXTSIZE;
+			return linepos;
+		}
+		if (KM_NONE)
+			return linestart;
+	}
+
+	if (key == K_END || key == K_KP_END)
+	{
+		if (is_console && KM_CTRL)
+		{
+			con_backscroll = 0;
+			return linepos;
+		}
+		if (KM_NONE)
+			return (int)strlen(line);
+	}
+
+	return -1;
+}
+
+static int Key_Convert_NumPadKey(int key)
+{
+	// LadyHavoc: copied most of this from Q2 to improve keyboard handling
+	switch (key)
+	{
+		case K_KP_SLASH:      return '/';
+		case K_KP_MINUS:      return '-';
+		case K_KP_PLUS:       return '+';
+		case K_KP_HOME:       return '7';
+		case K_KP_UPARROW:    return '8';
+		case K_KP_PGUP:       return '9';
+		case K_KP_LEFTARROW:  return '4';
+		case K_KP_5:          return '5';
+		case K_KP_RIGHTARROW: return '6';
+		case K_KP_END:        return '1';
+		case K_KP_DOWNARROW:  return '2';
+		case K_KP_PGDN:       return '3';
+		case K_KP_INS:        return '0';
+		case K_KP_DEL:        return '.';
+	}
+	return key;
+}
+
+static void
+Key_Console(cmd_state_t *cmd, int key, int unicode)
+{
+	int linepos;
+
+	key = Key_Convert_NumPadKey(key);
+
+	// Forbid Ctrl Alt shortcuts since on Windows they are used to type some characters
+	// in certain non-English keyboards using the AltGr key (which emulates Ctrl Alt)
+	// Reference: "Why Ctrl+Alt shouldn't be used as a shortcut modifier"
+	//            https://blogs.msdn.microsoft.com/oldnewthing/20040329-00/?p=40003
+	if (keydown[K_CTRL] && keydown[K_ALT])
+		goto add_char;
+
+	linepos = Key_Parse_CommonKeys(cmd, true, key, unicode);
+	if (linepos >= 0)
+	{
+		key_linepos = linepos;
+		return;
+	}
+
+	if ((key == K_ENTER || key == K_KP_ENTER) && KM_NONE)
+	{
+		Cbuf_AddText (cmd, key_line+1);	// skip the ]
+		Cbuf_AddText (cmd, "\n");
+		Key_History_Push();
+		key_linepos = Key_ClearEditLine(true);
+		// force an update, because the command may take some time
+		if (cls.state == ca_disconnected)
+			CL_UpdateScreen ();
+		return;
+	}
+
+	if (key == 'l' && KM_CTRL)
+	{
+		Cbuf_AddText (cmd, "clear\n");
+		return;
+	}
+
+	if (key == 'q' && KM_CTRL) // like zsh ^q: push line to history, don't execute, and clear
+	{
+		// clear line
+		Key_History_Push();
+		key_linepos = Key_ClearEditLine(true);
 		return;
 	}
 
@@ -1172,80 +1283,25 @@ Key_Console (cmd_state_t *cmd, int key, int unicode)
 		}
 	}
 
-	if (key == K_HOME || key == K_KP_HOME)
-	{
-		if (KM_CTRL)
-		{
-			con_backscroll = CON_TEXTSIZE;
-			return;
-		}
-		if (KM_NONE)
-		{
-			key_linepos = 1;
-			return;
-		}
-	}
-
-	if (key == K_END || key == K_KP_END)
-	{
-		if (KM_CTRL)
-		{
-			con_backscroll = 0;
-			return;
-		}
-		if (KM_NONE)
-		{
-			key_linepos = (int)strlen(key_line);
-			return;
-		}
-	}
-
 add_char:
 
 	// non printable
 	if (unicode < 32)
 		return;
 
-	if (key_linepos < MAX_INPUTLINE-1)
-	{
-		char buf[16];
-		int len;
-		int blen;
-		blen = u8_fromchar(unicode, buf, sizeof(buf));
-		if (!blen)
-			return;
-		len = (int)strlen(&key_line[key_linepos]);
-		// check insert mode, or always insert if at end of line
-		if (key_insert || len == 0)
-		{
-			if (key_linepos + len + blen >= MAX_INPUTLINE)
-				return;
-			// can't use strcpy to move string to right
-			len++;
-			if (key_linepos + blen + len >= MAX_INPUTLINE)
-				return;
-			memmove(&key_line[key_linepos + blen], &key_line[key_linepos], len);
-		}
-		else if (key_linepos + len + blen - u8_bytelen(key_line + key_linepos, 1) >= MAX_INPUTLINE)
-			return;
-		memcpy(key_line + key_linepos, buf, blen);
-		if (blen > len)
-			key_line[key_linepos + blen] = 0;
-		// END OF FIXME
-		key_linepos += blen;
-	}
+	key_linepos = Key_AddChar(unicode, true);
 }
 
 //============================================================================
 
-int chat_mode;
-char		chat_buffer[MAX_INPUTLINE];
-unsigned int	chat_bufferlen = 0;
-
 static void
 Key_Message (cmd_state_t *cmd, int key, int ascii)
 {
+	int linepos;
 	char vabuf[1024];
+
+	key = Key_Convert_NumPadKey(key);
+
 	if (key == K_ENTER || key == K_KP_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
@@ -1254,30 +1310,20 @@ Key_Message (cmd_state_t *cmd, int key, int ascii)
 			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
 		key_dest = key_game;
-		chat_bufferlen = 0;
-		chat_buffer[0] = 0;
+		chat_bufferpos = Key_ClearEditLine(false);
 		return;
 	}
-
-	// TODO add support for arrow keys and simple editing
 
 	if (key == K_ESCAPE) {
 		key_dest = key_game;
-		chat_bufferlen = 0;
-		chat_buffer[0] = 0;
+		chat_bufferpos = Key_ClearEditLine(false);
 		return;
 	}
 
-	if (key == K_BACKSPACE) {
-		if (chat_bufferlen) {
-			chat_bufferlen = (unsigned int)u8_prevbyte(chat_buffer, chat_bufferlen);
-			chat_buffer[chat_bufferlen] = 0;
-		}
-		return;
-	}
-
-	if(key == K_TAB) {
-		chat_bufferlen = Nicks_CompleteChatLine(chat_buffer, sizeof(chat_buffer), chat_bufferlen);
+	linepos = Key_Parse_CommonKeys(cmd, false, key, ascii);
+	if (linepos >= 0)
+	{
+		chat_bufferpos = linepos;
 		return;
 	}
 
@@ -1285,16 +1331,10 @@ Key_Message (cmd_state_t *cmd, int key, int ascii)
 	if (ascii > 0 && ascii < 32 && utf8_enable.integer)
 		ascii = 0xE000 + ascii;
 
-	if (chat_bufferlen == sizeof (chat_buffer) - 1)
-		return;							// all full
-
 	if (!ascii)
 		return;							// non printable
 
-	chat_bufferlen += u8_fromchar(ascii, chat_buffer+chat_bufferlen, sizeof(chat_buffer) - chat_bufferlen - 1);
-
-	//chat_buffer[chat_bufferlen++] = ascii;
-	//chat_buffer[chat_bufferlen] = 0;
+	chat_bufferpos = Key_AddChar(ascii, false);
 }
 
 //============================================================================
@@ -1666,9 +1706,7 @@ void
 Key_Init (void)
 {
 	Key_History_Init();
-	key_line[0] = ']';
-	key_line[1] = 0;
-	key_linepos = 1;
+	key_linepos = Key_ClearEditLine(true);
 
 //
 // register our functions

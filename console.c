@@ -716,7 +716,7 @@ static void Con_MessageMode_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferlen = (unsigned int)strlen(chat_buffer);
+		chat_bufferpos = (unsigned int)strlen(chat_buffer);
 	}
 }
 
@@ -733,7 +733,7 @@ static void Con_MessageMode2_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferlen = (unsigned int)strlen(chat_buffer);
+		chat_bufferpos = (unsigned int)strlen(chat_buffer);
 	}
 }
 
@@ -748,7 +748,7 @@ static void Con_CommandMode_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferlen = (unsigned int)strlen(chat_buffer);
+		chat_bufferpos = (unsigned int)strlen(chat_buffer);
 	}
 	chat_mode = -1; // command
 }
@@ -1498,38 +1498,55 @@ DRAWING
 ================
 Con_DrawInput
 
+It draws either the console input line or the chat input line (if is_console is false)
 The input line scrolls horizontally if typing goes beyond the right edge
 
 Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 ================
 */
-static void Con_DrawInput (void)
+static void Con_DrawInput(qboolean is_console, float x, float v, float inputsize)
 {
-	int		y;
-	int		i;
-	char text[sizeof(key_line)+5+1]; // space for ^^xRGB too
-	float x, xo;
+	int y, i, col_out, linepos, text_start, prefix_start;
+	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
+	float xo;
 	size_t len_out;
-	int col_out;
+	char *prefix;
+	dp_font_t *fnt;
 
-	if (!key_consoleactive)
+	if (is_console && !key_consoleactive)
 		return;		// don't draw anything
 
-	strlcpy(text, key_line, sizeof(text));
-
-	// Advanced Console Editing by Radix radix@planetquake.com
-	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
+	if (is_console)
+	{
+		// empty prefix because ] is part of the console edit line
+		prefix = "";
+		strlcpy(text, key_line, sizeof(text));
+		linepos = key_linepos;
+		fnt = FONT_CONSOLE;
+	}
+	else
+	{
+		if (chat_mode < 0)
+			prefix = "]";
+		else if(chat_mode)
+			prefix = "say_team:";
+		else
+			prefix = "say:";
+		strlcpy(text, chat_buffer, sizeof(text));
+		linepos = chat_bufferpos;
+		fnt = FONT_CHAT;
+	}
 
 	y = (int)strlen(text);
 
 	// make the color code visible when the cursor is inside it
-	if(text[key_linepos] != 0)
+	if(text[linepos] != 0)
 	{
-		for(i=1; i < 5 && key_linepos - i > 0; ++i)
-			if(text[key_linepos-i] == STRING_COLOR_TAG)
+		for(i=1; i < 5 && linepos - i > 0; ++i)
+			if(text[linepos-i] == STRING_COLOR_TAG)
 			{
 				int caret_pos, ofs = 0;
-				caret_pos = key_linepos - i;
+				caret_pos = linepos - i;
 				if(i == 1 && text[caret_pos+1] == STRING_COLOR_TAG)
 					ofs = 1;
 				else if(i == 1 && isdigit(text[caret_pos+1]))
@@ -1555,15 +1572,28 @@ static void Con_DrawInput (void)
 			}
 	}
 
-	len_out = key_linepos;
-	col_out = -1;
-	xo = DrawQ_TextWidth_UntilWidth_TrackColors(text, &len_out, con_textsize.value, con_textsize.value, &col_out, false, FONT_CONSOLE, 1000000000);
-	x = vid_conwidth.value * 0.95 - xo; // scroll
-	if(x >= 0)
-		x = 0;
+	if (!is_console)
+	{
+		prefix_start = x;
+		x += DrawQ_TextWidth(prefix, 0, inputsize, inputsize, false, fnt);
+	}
 
-	// draw it
-	DrawQ_String(x, con_vislines - con_textsize.value*2, text, y + 3, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, FONT_CONSOLE );
+	len_out = linepos;
+	col_out = -1;
+	xo = 0;
+	if (linepos > 0)
+		xo = DrawQ_TextWidth_UntilWidth_TrackColors(text, &len_out, inputsize, inputsize, &col_out, false, fnt, 1000000000);
+
+	text_start = x + (vid_conwidth.value - x) * 0.95 - xo; // scroll
+	if(text_start >= x)
+		text_start = x;
+	else if (!is_console)
+		prefix_start -= (x - text_start);
+
+	if (!is_console)
+		DrawQ_String(prefix_start, v, prefix, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, fnt);
+
+	DrawQ_String(text_start, v, text, y + 3, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, NULL, false, fnt);
 
 	// draw a cursor on top of this
 	if ((int)(host.realtime*con_cursorspeed) & 1)		// cursor is visible
@@ -1582,7 +1612,7 @@ static void Con_DrawInput (void)
 			memcpy(text, curbuf, len);
 			text[len] = 0;
 		}
-		DrawQ_String(x + xo, con_vislines - con_textsize.value*2, text, 0, con_textsize.value, con_textsize.value, 1.0, 1.0, 1.0, 1.0, 0, &col_out, false, FONT_CONSOLE);
+		DrawQ_String(text_start + xo, v, text, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &col_out, false, fnt);
 	}
 }
 
@@ -1737,10 +1767,9 @@ Draws the last few lines of output transparently over the game top
 */
 void Con_DrawNotify (void)
 {
-	float	x, v, xr;
+	float x, v;
 	float chatstart, notifystart, inputsize, height;
 	float align;
-	char	temptext[MAX_INPUTLINE];
 	int numChatlines;
 	int chatpos;
 
@@ -1816,26 +1845,12 @@ void Con_DrawNotify (void)
 	}
 	if (key_dest == key_message)
 	{
-		//static char *cursor[2] = { "\xee\x80\x8a", "\xee\x80\x8b" }; // { off, on }
-		int colorindex = -1;
-		const char *cursor;
-		char charbuf16[16];
-		cursor = u8_encodech(0xE00A + ((int)(host.realtime * con_cursorspeed)&1), NULL, charbuf16);
-
-		// LadyHavoc: speedup, and other improvements
-		if (chat_mode < 0)
-			dpsnprintf(temptext, sizeof(temptext), "]%s%s", chat_buffer, cursor);
-		else if(chat_mode)
-			dpsnprintf(temptext, sizeof(temptext), "say_team:%s%s", chat_buffer, cursor);
-		else
-			dpsnprintf(temptext, sizeof(temptext), "say:%s%s", chat_buffer, cursor);
-
-		// FIXME word wrap
 		inputsize = (numChatlines ? con_chatsize : con_notifysize).value;
-		xr = vid_conwidth.value - DrawQ_TextWidth(temptext, 0, inputsize, inputsize, false, FONT_CHAT);
-		x = min(xr, x);
-		DrawQ_String(x, v, temptext, 0, inputsize, inputsize, 1.0, 1.0, 1.0, 1.0, 0, &colorindex, false, FONT_CHAT);
+		Con_DrawInput(false, x, v, inputsize);
 	}
+	else
+		chat_bufferpos = 0;
+
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
@@ -2063,7 +2078,7 @@ void Con_DrawConsole (int lines)
 #endif
 
 // draw the input prompt, user text, and cursor if desired
-	Con_DrawInput ();
+	Con_DrawInput(true, 0, con_vislines - con_textsize.value * 2, con_textsize.value);
 
 	r_draw2d_force = false;
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
@@ -2404,8 +2419,7 @@ static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean is
 		{
 			if(spos > 0 && line[spos-1] != ' ' && line[spos-1] != ';' && line[spos-1] != '\"' && line[spos-1] != '\'')
 			{
-				if(!(isCon && line[spos-1] == ']' && spos == 1) && // console start
-				   !(spos > 1 && line[spos-1] >= '0' && line[spos-1] <= '9' && line[spos-2] == STRING_COLOR_TAG)) // color start
+				if(!(isCon && spos == 1)) // console start
 				{
 					--spos;
 					continue;
@@ -2689,45 +2703,6 @@ static int Nicks_AddLastColor(char *buffer, int pos)
 	return pos;
 }
 
-int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
-{
-	int n;
-	/*if(!con_nickcompletion.integer)
-	  return; is tested in Nicks_CompletionCountPossible */
-	n = Nicks_CompleteCountPossible(buffer, pos, &buffer[pos], false);
-	if(n == 1)
-	{
-		size_t len;
-		char *msg;
-
-		msg = Nicks_list[0];
-		len = min(size - Nicks_matchpos - 3, strlen(msg));
-		memcpy(&buffer[Nicks_matchpos], msg, len);
-		if(len < size - 7) // space for color code (^[0-9] or ^xrgb), space and \0
-			len = (int)Nicks_AddLastColor(buffer, Nicks_matchpos+(int)len);
-		buffer[len++] = ' ';
-		buffer[len] = 0;
-		return (int)len;
-	} else if(n > 1)
-	{
-		int len;
-		char *msg;
-		Con_Printf("\n%i possible nicks:\n", n);
-		Cmd_CompleteNicksPrint(n);
-
-		Nicks_CutMatches(n);
-
-		msg = Nicks_sanlist[0];
-		len = (int)min(size - Nicks_matchpos, strlen(msg));
-		memcpy(&buffer[Nicks_matchpos], msg, len);
-		buffer[Nicks_matchpos + len] = 0;
-		//pos += len;
-		return Nicks_matchpos + len;
-	}
-	return pos;
-}
-
-
 /*
 	Con_CompleteCommandLine
 
@@ -2738,7 +2713,7 @@ int Nicks_CompleteChatLine(char *buffer, size_t size, unsigned int pos)
 	Enhanced to tab-complete map names by [515]
 
 */
-void Con_CompleteCommandLine (cmd_state_t *cmd)
+int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 {
 	const char *text = "";
 	char *s;
@@ -2750,24 +2725,46 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 	const char *space, *patterns;
 	char vabuf[1024];
 
-	//find what we want to complete
-	pos = key_linepos;
-	while(--pos)
+	char *line;
+	int linestart, linepos;
+	unsigned int linesize;
+	if (is_console)
 	{
-		k = key_line[pos];
+		line = key_line;
+		linepos = key_linepos;
+		linesize = sizeof(key_line);
+		linestart = 1;
+	}
+	else
+	{
+		line = chat_buffer;
+		linepos = chat_bufferpos;
+		linesize = sizeof(chat_buffer);
+		linestart = 0;
+	}
+
+	//find what we want to complete
+	pos = linepos;
+	while(--pos >= linestart)
+	{
+		k = line[pos];
 		if(k == '\"' || k == ';' || k == ' ' || k == '\'')
 			break;
 	}
 	pos++;
 
-	s = key_line + pos;
-	strlcpy(s2, key_line + key_linepos, sizeof(s2));	//save chars after cursor
-	key_line[key_linepos] = 0;					//hide them
+	s = line + pos;
+	strlcpy(s2, line + linepos, sizeof(s2)); //save chars after cursor
+	line[linepos] = 0; //hide them
 
-	space = strchr(key_line + 1, ' ');
-	if(space && pos == (space - key_line) + 1)
+	c = v = a = n = cmd_len = 0;
+	if (!is_console)
+		goto nicks;
+
+	space = strchr(line + 1, ' ');
+	if(space && pos == (space - line) + 1)
 	{
-		strlcpy(command, key_line + 1, min(sizeof(command), (unsigned int)(space - key_line)));
+		strlcpy(command, line + 1, min(sizeof(command), (unsigned int)(space - line)));
 
 		patterns = Cvar_VariableString(cmd->cvars, va(vabuf, sizeof(vabuf), "con_completion_%s", command), CVAR_CLIENT | CVAR_SERVER); // TODO maybe use a better place for this?
 		if(patterns && !*patterns)
@@ -2780,18 +2777,18 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 			if (GetMapList(s, t, sizeof(t)))
 			{
 				// first move the cursor
-				key_linepos += (int)strlen(t) - (int)strlen(s);
+				linepos += (int)strlen(t) - (int)strlen(s);
 
 				// and now do the actual work
 				*s = 0;
-				strlcat(key_line, t, MAX_INPUTLINE);
-				strlcat(key_line, s2, MAX_INPUTLINE); //add back chars after cursor
+				strlcat(line, t, MAX_INPUTLINE);
+				strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 				// and fix the cursor
-				if(key_linepos > (int) strlen(key_line))
-					key_linepos = (int) strlen(key_line);
+				if(linepos > (int) strlen(line))
+					linepos = (int) strlen(line);
 			}
-			return;
+			return linepos;
 		}
 		else
 		{
@@ -2920,21 +2917,21 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 					}
 
 					// first move the cursor
-					key_linepos += (int)strlen(t) - (int)strlen(s);
+					linepos += (int)strlen(t) - (int)strlen(s);
 
 					// and now do the actual work
 					*s = 0;
-					strlcat(key_line, t, MAX_INPUTLINE);
-					strlcat(key_line, s2, MAX_INPUTLINE); //add back chars after cursor
+					strlcat(line, t, MAX_INPUTLINE);
+					strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 					// and fix the cursor
-					if(key_linepos > (int) strlen(key_line))
-						key_linepos = (int) strlen(key_line);
+					if(linepos > (int) strlen(line))
+						linepos = (int) strlen(line);
 				}
 				stringlistfreecontents(&resultbuf);
 				stringlistfreecontents(&dirbuf);
 
-				return; // bail out, when we complete for a command that wants a file name
+				return linepos; // bail out, when we complete for a command that wants a file name
 			}
 		}
 	}
@@ -2958,7 +2955,9 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 		Con_Printf("\n%i possible alias%s\n", a, (a > 1) ? "es: " : ":");
 		Cmd_CompleteAliasPrint(cmd, s);
 	}
-	n = Nicks_CompleteCountPossible(key_line, key_linepos, s, true);
+
+nicks:
+	n = Nicks_CompleteCountPossible(line, linepos, s, is_console);
 	if (n)
 	{
 		Con_Printf("\n%i possible nick%s\n", n, (n > 1) ? "s: " : ":");
@@ -2968,8 +2967,8 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 	if (!(c + v + a + n))	// No possible matches
 	{
 		if(s2[0])
-			strlcpy(&key_line[key_linepos], s2, sizeof(key_line) - key_linepos);
-		return;
+			strlcpy(&line[linepos], s2, linesize - linepos);
+		return linepos;
 	}
 
 	if (c)
@@ -2979,7 +2978,12 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 	if (a)
 		text = *(list[2] = Cmd_CompleteAliasBuildList(cmd, s));
 	if (n)
-		text = *(list[3] = Nicks_CompleteBuildList(n));
+	{
+		if (is_console)
+			text = *(list[3] = Nicks_CompleteBuildList(n));
+		else
+			text = *(Nicks_CompleteBuildList(n));
+	}
 
 	for (cmd_len = (int)strlen(s);;cmd_len++)
 	{
@@ -3000,37 +3004,42 @@ void Con_CompleteCommandLine (cmd_state_t *cmd)
 done:
 
 	// prevent a buffer overrun by limiting cmd_len according to remaining space
-	cmd_len = min(cmd_len, (int)sizeof(key_line) - 1 - pos);
+	cmd_len = min(cmd_len, (int)linesize - 1 - pos);
 	if (text)
 	{
-		key_linepos = pos;
-		memcpy(&key_line[key_linepos], text, cmd_len);
-		key_linepos += cmd_len;
+		linepos = pos;
+		memcpy(&line[linepos], text, cmd_len);
+		linepos += cmd_len;
 		// if there is only one match, add a space after it
-		if (c + v + a + n == 1 && key_linepos < (int)sizeof(key_line) - 1)
+		if (c + v + a + n == 1 && linepos < (int)linesize - 1)
 		{
 			if(n)
 			{ // was a nick, might have an offset, and needs colors ;) --blub
-				key_linepos = pos - Nicks_offset[0];
+				linepos = pos - Nicks_offset[0];
 				cmd_len = (int)strlen(Nicks_list[0]);
-				cmd_len = min(cmd_len, (int)sizeof(key_line) - 3 - pos);
+				cmd_len = min(cmd_len, (int)linesize - 3 - pos);
 
-				memcpy(&key_line[key_linepos] , Nicks_list[0], cmd_len);
-				key_linepos += cmd_len;
-				if(key_linepos < (int)(sizeof(key_line) - 7)) // space for color code (^[0-9] or ^xrgb), space and \0
-					key_linepos = Nicks_AddLastColor(key_line, key_linepos);
+				memcpy(&line[linepos] , Nicks_list[0], cmd_len);
+				linepos += cmd_len;
+				if(linepos < (int)(linesize - 7)) // space for color code (^[0-9] or ^xrgb), space and \0
+					linepos = Nicks_AddLastColor(line, linepos);
 			}
-			key_line[key_linepos++] = ' ';
+			line[linepos++] = ' ';
 		}
 	}
 
 	// use strlcat to avoid a buffer overrun
-	key_line[key_linepos] = 0;
-	strlcat(key_line, s2, sizeof(key_line));
+	line[linepos] = 0;
+	strlcat(line, s2, linesize);
+
+	if (!is_console)
+		return linepos;
 
 	// free the command, cvar, and alias lists
 	for (i = 0; i < 4; i++)
 		if (list[i])
 			Mem_Free((void *)list[i]);
+
+	return linepos;
 }
 
