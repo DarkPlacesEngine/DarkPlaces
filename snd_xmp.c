@@ -143,11 +143,11 @@ static const char **qxmp_version;
 static const unsigned int *qxmp_vercode;
 
 struct xmp_channel {
-//	int pan;			/* Channel pan (0x80 is center) */
-//	int vol;			/* Channel volume */
-//#define XMP_CHANNEL_SYNTH	(1 << 0)  /* Channel is synthesized */
-//#define XMP_CHANNEL_MUTE  	(1 << 1)  /* Channel is muted */
-//	int flg;			/* Channel flags */
+	int pan;			/* Channel pan (0x80 is center) */
+	int vol;			/* Channel volume */
+#define XMP_CHANNEL_SYNTH	(1 << 0)  /* Channel is synthesized */
+#define XMP_CHANNEL_MUTE  	(1 << 1)  /* Channel is muted */
+	int flg;			/* Channel flags */
 };
 
 //struct xmp_sequence {
@@ -191,7 +191,8 @@ struct xmp_module_info {
 	struct xmp_sequence *seq_data;	/* Pointer to sequence data */
 };
 
-struct xmp_frame_info {			/* Current frame information */
+struct xmp_frame_info
+// {			/* Current frame information */
 //	int pos;			/* Current position */
 //	int pattern;			/* Current pattern */
 //	int row;			/* Current row in pattern */
@@ -223,7 +224,8 @@ struct xmp_frame_info {			/* Current frame information */
 //		unsigned char reserved;	/* Reserved */
 //		struct xmp_event event;	/* Current track event */
 //	} channel_info[XMP_MAX_CHANNELS];
-};
+//}
+;
 
 // Functions exported from libxmp
 static xmp_context (*qxmp_create_context)  (void);
