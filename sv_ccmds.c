@@ -18,10 +18,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include <quakedef.h>
-#include <utf8lib.h>
-#include <server.h>
-#include <sv_demo.h>
+#include "quakedef.h"
+#include "utf8lib.h"
+#include "server.h"
+#include "sv_demo.h"
 
 int current_skill;
 cvar_t sv_cheats = {CVAR_SERVER | CVAR_NOTIFY, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
