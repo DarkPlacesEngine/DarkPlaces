@@ -685,7 +685,7 @@ typedef struct prvm_prog_s
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
 	int				flag;
 
-	const char			*extensionstring; // [INIT]
+	const char			**extensionstring; // [INIT]
 
 	qboolean			loadintoworld; // [INIT]
 
@@ -763,8 +763,8 @@ extern const int vm_sv_numbuiltins;
 extern const int vm_cl_numbuiltins;
 extern const int vm_m_numbuiltins;
 
-extern const char * vm_sv_extensions; // client also uses this
-extern const char * vm_m_extensions;
+extern const char *vm_sv_extensions[]; // client also uses this
+extern const char *vm_m_extensions[];
 
 void SVVM_init_cmd(prvm_prog_t *prog);
 void SVVM_reset_cmd(prvm_prog_t *prog);

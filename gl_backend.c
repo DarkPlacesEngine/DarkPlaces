@@ -1907,7 +1907,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 		{
 			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
 			if (!bufferobject && gl_paranoid.integer)
-				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, vertexbuffer, (unsigned int)bufferoffset);
+				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, (void *)vertexbuffer, (unsigned int)bufferoffset);
 			gl_state.pointer_vertex_components = components;
 			gl_state.pointer_vertex_gltype = gltype;
 			gl_state.pointer_vertex_stride = stride;

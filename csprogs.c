@@ -1015,7 +1015,7 @@ void CL_VM_Init (void)
 		}
 		else
 		{
-			Con_DPrintf("Not using buffered \"%s\" (buffered: %p, %d)\n", csprogsfn, cls.caughtcsprogsdata, (int) cls.caughtcsprogsdatasize);
+			Con_DPrintf("Not using buffered \"%s\" (buffered: %p, %d)\n", csprogsfn, (void *)cls.caughtcsprogsdata, (int) cls.caughtcsprogsdatasize);
 			csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
 		}
 	}

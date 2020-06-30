@@ -265,20 +265,11 @@ checkextension(extensionname)
 // kind of helper function
 static qboolean checkextension(prvm_prog_t *prog, const char *name)
 {
-	int len;
-	const char *e, *start;
-	len = (int)strlen(name);
+	const char **e;
 
 	for (e = prog->extensionstring;*e;e++)
 	{
-		while (*e == ' ')
-			e++;
-		if (!*e)
-			break;
-		start = e;
-		while (*e && *e != ' ')
-			e++;
-		if ((e - start) == len && !strncasecmp(start, name, len))
+		if(!strcasecmp(*e, name))
 		{
 #ifdef USEODE
 			// special sheck for ODE

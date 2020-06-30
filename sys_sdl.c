@@ -10,10 +10,6 @@
 
 #ifdef __ANDROID__
 #include <android/log.h>
-
-#ifndef FNDELAY
-#define FNDELAY		O_NDELAY
-#endif
 #endif
 
 #include <signal.h>
@@ -41,7 +37,7 @@ void Sys_Shutdown (void)
 	Sys_AllowProfiling(false);
 #endif
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
 #endif
 	fflush(stdout);
 	SDL_Quit();
@@ -55,7 +51,7 @@ void Sys_Error (const char *error, ...)
 
 // change stdin to non blocking
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
 #endif
 
 	va_start (argptr,error);
@@ -81,12 +77,12 @@ void Sys_PrintToTerminal(const char *text)
 #else
 	if(sys.outfd < 0)
 		return;
-#ifdef FNDELAY
+#ifdef O_NDELAY
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
 		int origflags = fcntl (sys.outfd, F_GETFL, 0);
-		fcntl (sys.outfd, F_SETFL, origflags & ~FNDELAY);
+		fcntl (sys.outfd, F_SETFL, origflags & ~O_NDELAY);
 #endif
 #ifdef WIN32
 #define write _write
@@ -98,7 +94,7 @@ void Sys_PrintToTerminal(const char *text)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
 		}
-#ifdef FNDELAY
+#ifdef O_NDELAY
 		fcntl (sys.outfd, F_SETFL, origflags);
 	}
 #endif
@@ -218,7 +214,7 @@ int main (int argc, char *argv[])
 		sys.outfd = 1;
 
 #ifndef WIN32
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
+	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NDELAY);
 #endif
 
 	// we don't know which systems we'll want to init, yet...
