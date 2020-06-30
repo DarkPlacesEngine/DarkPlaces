@@ -696,7 +696,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			if (!cldead)
 			{
 				double xyspeed, bob, bobfall;
-				double cycle; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
+				double bobcycle = 0, cycle; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
 				vec_t frametime;
 
 				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
@@ -793,9 +793,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					cycle = cl.time / cl_bobcycle.value;
 					cycle -= (int) cycle;
 					if (cycle < cl_bobup.value)
-						cycle = sin(M_PI * cycle / cl_bobup.value);
+						bobcycle = cycle = sin(M_PI * cycle / cl_bobup.value);
 					else
-						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+						bobcycle = cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
 					// bob is proportional to velocity in the xy plane
 					// (don't count Z, or jumping messes it up)
 					bob = xyspeed * cl_bob.value;
@@ -919,7 +919,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 					VectorMA (gunorg, bob, up, gunorg);
 					// Classic Quake bobbing
-					bob = (cl_bobmodel_classic.integer ? xyspeed * cl_bob.value * 0.25 * cycle : bspeed * cl_bobmodel_forward.value * cos(s * 2) * t) * cl_viewmodel_scale.value;
+					bob = (cl_bobmodel_classic.integer ? xyspeed * cl_bob.value * 0.25 * bobcycle : bspeed * cl_bobmodel_forward.value * cos(s * 2) * t) * cl_viewmodel_scale.value;
 					VectorMA (gunorg, (cl_bobmodel_classic.integer ? (bob > 1 ? 1 : bob) : bob), forward, gunorg);
 				}
 			}
