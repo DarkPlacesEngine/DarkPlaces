@@ -79,8 +79,8 @@ OBJ_COMMON= \
 	bih.o \
 	crypto.o \
 	cd_shared.o \
-	cl_collision.o \
 	cl_cmd.o \
+	cl_collision.o \
 	cl_demo.o \
 	cl_input.o \
 	cl_main.o \
