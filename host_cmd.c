@@ -25,22 +25,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "prvm_cmds.h"
 #include "utf8lib.h"
 
-// for secure rcon authentication
-#include "hmac.h"
-#include "mdfour.h"
-#include <time.h>
-
 extern cvar_t sv_adminnick;
 extern cvar_t sv_status_privacy;
 extern cvar_t sv_status_show_qcstatus;
 extern cvar_t sv_namechangetimer;
-cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
-cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
-cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
-cvar_t cl_topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
-cvar_t cl_bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
 cvar_t cl_team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t cl_skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
 cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
@@ -172,85 +160,6 @@ static void CL_Playerskin_f(cmd_state_t *cmd)
 	}
 }
 
-/*
-==================
-CL_Color_f
-==================
-*/
-cvar_t cl_color = {CVAR_READONLY | CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
-
-// Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
-static void CL_Color_c(cvar_t *var)
-{
-	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
-	Cvar_Set_NoCallback(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
-}
-
-static void CL_Topcolor_c(cvar_t *var)
-{
-	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
-}
-
-static void CL_Bottomcolor_c(cvar_t *var)
-{
-	char vabuf[1024];
-
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
-}
-
-static void CL_Color_f(cmd_state_t *cmd)
-{
-	int top, bottom;
-
-	if (Cmd_Argc(cmd) == 1)
-	{
-		if (cmd->source == src_command)
-		{
-			Con_Printf("\"color\" is \"%i %i\"\n", cl_topcolor.integer, cl_bottomcolor.integer);
-			Con_Print("color <0-15> [0-15]\n");
-		}
-		return;
-	}
-
-	if (Cmd_Argc(cmd) == 2)
-		top = bottom = atoi(Cmd_Argv(cmd, 1));
-	else
-	{
-		top = atoi(Cmd_Argv(cmd, 1));
-		bottom = atoi(Cmd_Argv(cmd, 2));
-	}
-	/*
-	 * This is just a convenient way to change topcolor and bottomcolor
-	 * We can't change cl_color from here directly because topcolor and
-	 * bottomcolor may be changed separately and do not call this function.
-	 * So it has to be changed when the userinfo strings are updated, which
-	 * happens twice here. Perhaps find a cleaner way?
-	 */
-
-	top = top >= 0 ? top : cl_topcolor.integer;
-	bottom = bottom >= 0 ? bottom : cl_bottomcolor.integer;
-
-	top &= 15;
-	bottom &= 15;
-
-	// LadyHavoc: allowing skin colormaps 14 and 15 by commenting this out
-	//if (top > 13)
-	//	top = 13;
-	//if (bottom > 13)
-	//	bottom = 13;
-
-	if (cmd->source == src_command)
-	{
-		Cvar_SetValueQuick(&cl_topcolor, top);
-		Cvar_SetValueQuick(&cl_bottomcolor, bottom);
-		return;
-	}
-}
-
 cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
 cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
 
@@ -282,7 +191,7 @@ static void CL_PModel_f(cmd_state_t *cmd)
 			return;
 		Cvar_SetValue (&cvars_all, "_cl_pmodel", i);
 		if (cls.state == ca_connected)
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 		return;
 	}
 
@@ -310,9 +219,9 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 		// LadyHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
 		if(!c || (c->flags & CVAR_PRIVATE))
-			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
+			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
 		else
-			Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
+			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
 	if(!sv.active)// || !PRVM_serverfunction(SV_ParseClientCommand))
@@ -332,164 +241,9 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 	host_client = old;
 }
 
-/*
-=====================
-CL_PQRcon_f
-
-ProQuake rcon support
-=====================
-*/
-static void CL_PQRcon_f(cmd_state_t *cmd)
-{
-	int n;
-	const char *e;
-	lhnetsocket_t *mysocket;
-
-	if (Cmd_Argc(cmd) == 1)
-	{
-		Con_Printf("%s: Usage: %s command\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, 0));
-		return;
-	}
-
-	if (!rcon_password.string || !rcon_password.string[0] || rcon_secure.integer > 0)
-	{
-		Con_Printf ("You must set rcon_password before issuing an pqrcon command, and rcon_secure must be 0.\n");
-		return;
-	}
-
-	e = strchr(rcon_password.string, ' ');
-	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
-
-	if (cls.netcon)
-		cls.rcon_address = cls.netcon->peeraddress;
-	else
-	{
-		if (!rcon_address.string[0])
-		{
-			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
-			return;
-		}
-		LHNETADDRESS_FromString(&cls.rcon_address, rcon_address.string, sv_netport.integer);
-	}
-	mysocket = NetConn_ChooseClientSocketForAddress(&cls.rcon_address);
-	if (mysocket)
-	{
-		sizebuf_t buf;
-		unsigned char bufdata[64];
-		buf.data = bufdata;
-		SZ_Clear(&buf);
-		MSG_WriteLong(&buf, 0);
-		MSG_WriteByte(&buf, CCREQ_RCON);
-		SZ_Write(&buf, (const unsigned char*)rcon_password.string, n);
-		MSG_WriteByte(&buf, 0); // terminate the (possibly partial) string
-		MSG_WriteString(&buf, Cmd_Args(cmd));
-		StoreBigLong(buf.data, NETFLAG_CTL | (buf.cursize & NETFLAG_LENGTH_MASK));
-		NetConn_Write(mysocket, buf.data, buf.cursize, &cls.rcon_address);
-		SZ_Clear(&buf);
-	}
-}
-
 //=============================================================================
 
 // QuakeWorld commands
-
-/*
-=====================
-CL_Rcon_f
-
-  Send the rest of the command line over as
-  an unconnected command.
-=====================
-*/
-static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
-{
-	int i, n;
-	const char *e;
-	lhnetsocket_t *mysocket;
-
-	if (Cmd_Argc(cmd) == 1)
-	{
-		Con_Printf("%s: Usage: %s command\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, 0));
-		return;
-	}
-
-	if (!rcon_password.string || !rcon_password.string[0])
-	{
-		Con_Printf ("You must set rcon_password before issuing an rcon command.\n");
-		return;
-	}
-
-	e = strchr(rcon_password.string, ' ');
-	n = e ? e-rcon_password.string : (int)strlen(rcon_password.string);
-
-	if (cls.netcon)
-		cls.rcon_address = cls.netcon->peeraddress;
-	else
-	{
-		if (!rcon_address.string[0])
-		{
-			Con_Printf ("You must either be connected, or set the rcon_address cvar to issue rcon commands\n");
-			return;
-		}
-		LHNETADDRESS_FromString(&cls.rcon_address, rcon_address.string, sv_netport.integer);
-	}
-	mysocket = NetConn_ChooseClientSocketForAddress(&cls.rcon_address);
-	if (mysocket && Cmd_Args(cmd)[0])
-	{
-		// simply put together the rcon packet and send it
-		if(Cmd_Argv(cmd, 0)[0] == 's' || rcon_secure.integer > 1)
-		{
-			if(cls.rcon_commands[cls.rcon_ringpos][0])
-			{
-				char s[128];
-				LHNETADDRESS_ToString(&cls.rcon_addresses[cls.rcon_ringpos], s, sizeof(s), true);
-				Con_Printf("rcon to %s (for command %s) failed: too many buffered commands (possibly increase MAX_RCONS)\n", s, cls.rcon_commands[cls.rcon_ringpos]);
-				cls.rcon_commands[cls.rcon_ringpos][0] = 0;
-				--cls.rcon_trying;
-			}
-			for (i = 0;i < MAX_RCONS;i++)
-				if(cls.rcon_commands[i][0])
-					if (!LHNETADDRESS_Compare(&cls.rcon_address, &cls.rcon_addresses[i]))
-						break;
-			++cls.rcon_trying;
-			if(i >= MAX_RCONS)
-				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &cls.rcon_address); // otherwise we'll request the challenge later
-			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(cmd), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
-			cls.rcon_addresses[cls.rcon_ringpos] = cls.rcon_address;
-			cls.rcon_timeout[cls.rcon_ringpos] = host.realtime + rcon_secure_challengetimeout.value;
-			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
-		}
-		else if(rcon_secure.integer > 0)
-		{
-			char buf[1500];
-			char argbuf[1500];
-			dpsnprintf(argbuf, sizeof(argbuf), "%ld.%06d %s", (long) time(NULL), (int) (rand() % 1000000), Cmd_Args(cmd));
-			memcpy(buf, "\377\377\377\377srcon HMAC-MD4 TIME ", 24);
-			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, (int)strlen(argbuf), (unsigned char *) rcon_password.string, n))
-			{
-				buf[40] = ' ';
-				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
-				NetConn_Write(mysocket, buf, 41 + (int)strlen(buf + 41), &cls.rcon_address);
-			}
-		}
-		else
-		{
-			char buf[1500];
-			memcpy(buf, "\377\377\377\377", 4);
-			dpsnprintf(buf+4, sizeof(buf)-4, "rcon %.*s %s",  n, rcon_password.string, Cmd_Args(cmd));
-			NetConn_WriteString(mysocket, buf, &cls.rcon_address);
-		}
-	}
-}
-
-static void CL_RCon_ClearPassword_c(cvar_t *var)
-{
-	// whenever rcon_secure is changed to 0, clear rcon_password for
-	// security reasons (prevents a send-rcon-password-as-plaintext
-	// attack based on NQ protocol session takeover and svc_stufftext)
-	if(var->integer <= 0)
-		Cvar_SetQuick(&rcon_password, "");
-}
 
 /*
 ==================
@@ -590,81 +344,6 @@ static void CL_SetInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 	CL_SetInfo(Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), true, false, false, false);
 }
 
-/*
-====================
-CL_Packet_f
-
-packet <destination> <contents>
-
-Contents allows \n escape character
-====================
-*/
-static void CL_Packet_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
-{
-	char send[2048];
-	int i, l;
-	const char *in;
-	char *out;
-	lhnetaddress_t address;
-	lhnetsocket_t *mysocket;
-
-	if (Cmd_Argc(cmd) != 3)
-	{
-		Con_Printf ("packet <destination> <contents>\n");
-		return;
-	}
-
-	if (!LHNETADDRESS_FromString (&address, Cmd_Argv(cmd, 1), sv_netport.integer))
-	{
-		Con_Printf ("Bad address\n");
-		return;
-	}
-
-	in = Cmd_Argv(cmd, 2);
-	out = send+4;
-	send[0] = send[1] = send[2] = send[3] = -1;
-
-	l = (int)strlen (in);
-	for (i=0 ; i<l ; i++)
-	{
-		if (out >= send + sizeof(send) - 1)
-			break;
-		if (in[i] == '\\' && in[i+1] == 'n')
-		{
-			*out++ = '\n';
-			i++;
-		}
-		else if (in[i] == '\\' && in[i+1] == '0')
-		{
-			*out++ = '\0';
-			i++;
-		}
-		else if (in[i] == '\\' && in[i+1] == 't')
-		{
-			*out++ = '\t';
-			i++;
-		}
-		else if (in[i] == '\\' && in[i+1] == 'r')
-		{
-			*out++ = '\r';
-			i++;
-		}
-		else if (in[i] == '\\' && in[i+1] == '"')
-		{
-			*out++ = '\"';
-			i++;
-		}
-		else
-			*out++ = in[i];
-	}
-
-	mysocket = NetConn_ChooseClientSocketForAddress(&address);
-	if (!mysocket)
-		mysocket = NetConn_ChooseServerSocketForAddress(&address);
-	if (mysocket)
-		NetConn_Write(mysocket, send, out - send, &address);
-}
-
 static void CL_PingPLReport_f(cmd_state_t *cmd)
 {
 	char *errbyte;
@@ -696,12 +375,6 @@ void Host_InitCommands (void)
 
 	Cvar_RegisterVariable(&cl_name);
 	Cvar_RegisterAlias(&cl_name, "_cl_name");
-	Cvar_RegisterVariable(&cl_color);
-	Cvar_RegisterCallback(&cl_color, CL_Color_c);
-	Cvar_RegisterVariable(&cl_topcolor);
-	Cvar_RegisterCallback(&cl_topcolor, CL_Topcolor_c);
-	Cvar_RegisterVariable(&cl_bottomcolor);
-	Cvar_RegisterCallback(&cl_bottomcolor, CL_Bottomcolor_c);
 	Cvar_RegisterVariable(&cl_rate);
 	Cvar_RegisterAlias(&cl_rate, "_cl_rate");
 	Cvar_RegisterVariable(&cl_rate_burstsize);
@@ -713,27 +386,18 @@ void Host_InitCommands (void)
 	Cvar_RegisterVariable(&cl_playerskin);
 	Cvar_RegisterAlias(&cl_playerskin, "_cl_playerskin");
 	Cvar_RegisterVariable(&rcon_password);
-	Cvar_RegisterVariable(&rcon_address);
-	Cvar_RegisterVariable(&rcon_secure);
-	Cvar_RegisterCallback(&rcon_secure, CL_RCon_ClearPassword_c);
-	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
 	Cvar_RegisterVariable(&r_fixtrans_auto);
 	Cvar_RegisterVariable(&cl_team);
 	Cvar_RegisterVariable(&cl_skin);
 	Cvar_RegisterVariable(&cl_noaim);
 
-	Cmd_AddCommand(CMD_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
 	Cmd_AddCommand(CMD_USERINFO, "pmodel", CL_PModel_f, "(Nehahra-only) change your player model choice");
 	Cmd_AddCommand(CMD_USERINFO, "playermodel", CL_Playermodel_f, "change your player model");
 	Cmd_AddCommand(CMD_USERINFO, "playerskin", CL_Playerskin_f, "change your player skin number");
 
 	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
-	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
 	Cmd_AddCommand(CMD_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand(CMD_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(CMD_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
 
 	// commands that are only sent by server to client for execution

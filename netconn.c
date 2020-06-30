@@ -1549,7 +1549,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	// reset move sequence numbering on this new connection
 	cls.servermovesequence = 0;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		Cmd_ForwardStringToServer("new");
+		CL_ForwardToServer("new");
 	if (cls.protocol == PROTOCOL_QUAKE)
 	{
 		// write a keepalive (clc_nop) as it seems to greatly improve the
