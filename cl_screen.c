@@ -125,6 +125,8 @@ int			scr_con_margin_bottom;
 
 extern int	con_vislines;
 
+extern int cl_punchangle_applied;
+
 static void SCR_ScreenShot_f(cmd_state_t *cmd);
 static void R_Envmap_f(cmd_state_t *cmd);
 
@@ -2717,6 +2719,9 @@ void CL_UpdateScreen(void)
 	static double drawscreenstart = 0.0;
 	double drawscreendelta;
 	r_viewport_t viewport;
+
+	// TODO: Move to a better place.
+	cl_punchangle_applied = 0;
 
 	if(drawscreenstart)
 	{
