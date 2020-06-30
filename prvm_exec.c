@@ -716,8 +716,10 @@ static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, mfunction_t *func, in
 	Con_Printf("prvm_coverage: %s just executed a statement at %s for the first time. Coverage: %.2f%%.\n", prog->name, PRVM_WhereAmI(vabuf, sizeof(vabuf), prog, func, statement), prog->statements_covered * 100.0 / prog->numstatements);
 }
 
-#if defined (__GNUC__) && (_GNU_SOURCE)
-#define HAVE_COMPUTED_GOTOS 1
+#if defined (__GNUC__) || (__clang__)
+#  ifndef CONFIG_PEDANTIC
+#  define HAVE_COMPUTED_GOTOS 1
+#  endif
 #endif
 
 #define OPA ((prvm_eval_t *)&prog->globals.fp[st->operand[0]])
