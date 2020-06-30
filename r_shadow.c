@@ -1757,8 +1757,8 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	int resolution[3];
 	int numpixels;
 	vec3_t ispacing;
-	vec3_t maxs;
-	vec3_t mins;
+	vec3_t maxs = {0,0,0};
+	vec3_t mins = {0,0,0};
 	vec3_t size;
 	vec3_t spacing;
 	r_shadow_bouncegrid_settings_t *settings = &r_shadow_bouncegrid_state.settings;
