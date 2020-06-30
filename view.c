@@ -144,6 +144,7 @@ cvar_t v_yshearing = {CVAR_CLIENT, "v_yshearing", "0", "be all out of gum (set t
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
+int cl_punchangle_applied;
 
 /*
 ===============
@@ -684,8 +685,15 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			// angles
 			if (cldead && v_deathtilt.integer)
 				viewangles[ROLL] = v_deathtiltangle.value;
-			VectorAdd(viewangles, cl.punchangle, viewangles);
+
+			// Hanicef: don't apply punchangle twice if the scene is rendered more than once.
+			if (!cl_punchangle_applied)
+			{
+				VectorAdd(viewangles, cl.punchangle, viewangles);
+				cl_punchangle_applied = 1;
+			}
 			viewangles[ROLL] += V_CalcRoll(clviewangles, clvelocity);
+
 			if (v_dmg_time > 0)
 			{
 				viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
