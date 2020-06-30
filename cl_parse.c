@@ -1116,9 +1116,9 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			Con_Printf("Downloading new CSQC code to dlcache/%s.%i.%i\n", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer);
 			if(cl_serverextension_download.integer == 2 && FS_HasZlib())
-				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s deflate", csqc_progname.string));
+				CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s deflate", csqc_progname.string));
 			else
-				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", csqc_progname.string));
+				CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", csqc_progname.string));
 			return;
 		}
 	}
@@ -1197,7 +1197,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 					cl.loadfinished = true;
 					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("prespawn");
+						CL_ForwardToServer("prespawn");
 				}
 			}
 		}
@@ -1267,7 +1267,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 						cl.loadfinished = true;
 						// now issue the spawn to move on to signon 2 like normal
 						if (cls.netcon)
-							Cmd_ForwardStringToServer("prespawn");
+							CL_ForwardToServer("prespawn");
 					}
 				}
 				aborteddownload = false;
@@ -1285,7 +1285,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				// regarding the * check: don't try to download submodels
 				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*' && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", cl.model_name[cl.downloadmodel_current]));
+					CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", cl.model_name[cl.downloadmodel_current]));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1309,7 +1309,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 					cl.loadfinished = true;
 					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("prespawn");
+						CL_ForwardToServer("prespawn");
 				}
 			}
 		}
@@ -1338,7 +1338,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				Con_Printf("Sound %s not found\n", soundname);
 				if (cl_serverextension_download.integer && cls.netcon && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
+					CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1360,7 +1360,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 
 		// now issue the spawn to move on to signon 2 like normal
 		if (cls.netcon)
-			Cmd_ForwardStringToServer("prespawn");
+			CL_ForwardToServer("prespawn");
 	}
 }
 
@@ -1537,7 +1537,7 @@ static void CL_DownloadBegin_f(cmd_state_t *cmd)
 		// check further encodings here
 	}
 
-	Cmd_ForwardStringToServer("sv_startdownload");
+	CL_ForwardToServer("sv_startdownload");
 }
 
 static void CL_StopDownload_f(cmd_state_t *cmd)

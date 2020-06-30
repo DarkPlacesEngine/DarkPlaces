@@ -2759,6 +2759,8 @@ void CL_Init (void)
 	//
 	// register our commands
 	//
+		CL_InitCommands();
+
 		Cvar_RegisterVariable (&cl_upspeed);
 		Cvar_RegisterVariable (&cl_forwardspeed);
 		Cvar_RegisterVariable (&cl_backspeed);
