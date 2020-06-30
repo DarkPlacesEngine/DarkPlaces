@@ -29,15 +29,19 @@ typedef bool qboolean;
 
 // LadyHavoc: upgrade the prvm to double precision for better time values
 // LadyHavoc: to be enabled when bugs are worked out...
-#define PRVM_64
+//#define PRVM_64
 #ifdef PRVM_64
 typedef double prvm_vec_t;
-typedef long long prvm_int_t;
-typedef unsigned long long prvm_uint_t;
+typedef int64_t prvm_int_t;
+typedef uint64_t prvm_uint_t;
+#define PRVM_PRIi PRIi64
+#define PRVM_PRIu PRIu64
 #else
 typedef float prvm_vec_t;
-typedef int prvm_int_t;
-typedef unsigned int prvm_uint_t;
+typedef int32_t prvm_int_t;
+typedef uint32_t prvm_uint_t;
+#define PRVM_PRIi PRIi32
+#define PRVM_PRIu PRIu32
 #endif
 typedef prvm_vec_t prvm_vec3_t[3];
 
