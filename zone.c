@@ -758,9 +758,9 @@ void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record) // co
 		{
 			j = (p - l->arrays[i].data) / l->recordsize;
 			if (p != l->arrays[i].data + j * l->recordsize)
-				Sys_Error("Mem_ExpandableArray_FreeRecord: no such record %p\n", p);
+				Sys_Error("Mem_ExpandableArray_FreeRecord: no such record %p\n", (void *)p);
 			if (!l->arrays[i].allocflags[j])
-				Sys_Error("Mem_ExpandableArray_FreeRecord: record %p is already free!\n", p);
+				Sys_Error("Mem_ExpandableArray_FreeRecord: record %p is already free!\n", (void *)p);
 			l->arrays[i].allocflags[j] = false;
 			l->arrays[i].numflaggedrecords--;
 			return;

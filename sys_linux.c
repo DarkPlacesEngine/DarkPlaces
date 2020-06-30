@@ -5,9 +5,9 @@
 #include <io.h>
 #include "conio.h"
 #else
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <time.h>
 #endif
 
 #include <signal.h>
@@ -21,9 +21,7 @@ sys_t sys;
 // =======================================================================
 void Sys_Shutdown (void)
 {
-#ifdef FNDELAY
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
-#endif
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
 	fflush(stdout);
 }
 
@@ -33,9 +31,7 @@ void Sys_Error (const char *error, ...)
 	char string[MAX_INPUTLINE];
 
 // change stdin to non blocking
-#ifdef FNDELAY
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
-#endif
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
 
 	va_start (argptr,error);
 	dpvsnprintf (string, sizeof (string), error, argptr);
@@ -51,13 +47,11 @@ void Sys_PrintToTerminal(const char *text)
 {
 	if(sys.outfd < 0)
 		return;
-#ifdef FNDELAY
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
 		int origflags = fcntl (sys.outfd, F_GETFL, 0);
-		fcntl (sys.outfd, F_SETFL, origflags & ~FNDELAY);
-#endif
+		fcntl (sys.outfd, F_SETFL, origflags & ~O_NDELAY);
 #ifdef WIN32
 #define write _write
 #endif
@@ -68,10 +62,8 @@ void Sys_PrintToTerminal(const char *text)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
 		}
-#ifdef FNDELAY
 		fcntl (sys.outfd, F_SETFL, origflags);
 	}
-#endif
 	//fprintf(stdout, "%s", text);
 }
 
@@ -164,9 +156,7 @@ int main (int argc, char **argv)
 	else
 		sys.outfd = 1;
 
-#ifdef FNDELAY
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
-#endif
+	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NDELAY);
 
 	Host_Main();
 

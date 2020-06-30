@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef WIN32
 # define strcasecmp _stricmp
 # define strncasecmp _strnicmp
+#else
+#include "strings.h"
 #endif
 
 // Create our own define for Mac OS X
@@ -34,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef SUNOS
-#include <sys/file.h>		///< Needed for FNDELAY
+#include <sys/file.h>		///< Needed for O_NDELAY
 #endif
 
 //============================================================================
