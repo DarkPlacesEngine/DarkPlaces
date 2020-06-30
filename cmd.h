@@ -241,15 +241,6 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 /// The text can come from the command buffer, a remote client, or stdin.
 void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex);
 
-/// adds the string as a clc_stringcmd to the client message.
-/// (used when there is no reason to generate a local command to do it)
-void Cmd_ForwardStringToServer (const char *s);
-
-/// adds the current command line as a clc_stringcmd to the client message.
-/// things like godmode, noclip, etc, are commands directed to the server,
-/// so when they are typed in at the console, they will need to be forwarded.
-void Cmd_ForwardToServer_f (cmd_state_t *cmd);
-
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies
 /// the characters to be quoted (you usually want to either pass "\"\\" or

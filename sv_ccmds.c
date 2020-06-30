@@ -413,7 +413,7 @@ static void SV_Pause_f(cmd_state_t *cmd)
 		// if running a client, try to send over network so the pause is handled by the server
 		if (cls.state == ca_connected)
 		{
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 			return;
 		}
 		print = Con_Printf;
@@ -465,7 +465,7 @@ static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
 		}
 		else
 		{
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 			return;
 		}
 	}
@@ -540,7 +540,7 @@ static void SV_Tell_f(cmd_state_t *cmd)
 			fromServer = true;
 		else
 		{
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 			return;
 		}
 	}
@@ -668,7 +668,7 @@ static void SV_Ping_f(cmd_state_t *cmd)
 		// if running a client, try to send over network so the client's ping report parser will see the report
 		if (cls.state == ca_connected)
 		{
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 			return;
 		}
 		print = Con_Printf;
@@ -830,7 +830,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 		// if running a client, try to send over network so the client's status report parser will see the report
 		if (cls.state == ca_connected)
 		{
-			Cmd_ForwardToServer_f(cmd);
+			CL_ForwardToServer_f(cmd);
 			return;
 		}
 		print = Con_Printf;

@@ -1527,7 +1527,6 @@ void Cmd_Init(void)
 // register our commands
 //
 	// client-only commands
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cmd", Cmd_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand(CMD_SHARED, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
 	Cmd_AddCommand(CMD_CLIENT, "cprint", Cmd_Centerprint_f, "print something at the screen center");
 
@@ -1701,7 +1700,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 			if(cmd == &cmd_client && (flags & CMD_SERVER_FROM_CLIENT) && !(flags & CMD_CLIENT))
 			{
 				save = function;
-				function = Cmd_ForwardToServer_f;
+				function = CL_ForwardToServer_f;
 			}
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
@@ -2104,162 +2103,6 @@ done:
 	if (lockmutex)
 		Cbuf_Unlock(cmd);
 }
-
-
-/*
-===================
-Cmd_ForwardStringToServer
-
-Sends an entire command string over to the server, unprocessed
-===================
-*/
-void Cmd_ForwardStringToServer (const char *s)
-{
-	char temp[128];
-	if (cls.state != ca_connected)
-	{
-		Con_Printf("Can't \"%s\", not connected\n", s);
-		return;
-	}
-
-	if (!cls.netcon)
-		return;
-
-	// LadyHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
-	// attention, it has been eradicated from here, its only (former) use in
-	// all of darkplaces.
-	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
-	else
-		MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-	if ((!strncmp(s, "say ", 4) || !strncmp(s, "say_team ", 9)) && cl_locs_enable.integer)
-	{
-		// say/say_team commands can replace % character codes with status info
-		while (*s)
-		{
-			if (*s == '%' && s[1])
-			{
-				// handle proquake message macros
-				temp[0] = 0;
-				switch (s[1])
-				{
-				case 'l': // current location
-					CL_Locs_FindLocationName(temp, sizeof(temp), cl.movement_origin);
-					break;
-				case 'h': // current health
-					dpsnprintf(temp, sizeof(temp), "%i", cl.stats[STAT_HEALTH]);
-					break;
-				case 'a': // current armor
-					dpsnprintf(temp, sizeof(temp), "%i", cl.stats[STAT_ARMOR]);
-					break;
-				case 'x': // current rockets
-					dpsnprintf(temp, sizeof(temp), "%i", cl.stats[STAT_ROCKETS]);
-					break;
-				case 'c': // current cells
-					dpsnprintf(temp, sizeof(temp), "%i", cl.stats[STAT_CELLS]);
-					break;
-				// silly proquake macros
-				case 'd': // loc at last death
-					CL_Locs_FindLocationName(temp, sizeof(temp), cl.lastdeathorigin);
-					break;
-				case 't': // current time
-					dpsnprintf(temp, sizeof(temp), "%.0f:%.0f", floor(cl.time / 60), cl.time - floor(cl.time / 60) * 60);
-					break;
-				case 'r': // rocket launcher status ("I have RL", "I need rockets", "I need RL")
-					if (!(cl.stats[STAT_ITEMS] & IT_ROCKET_LAUNCHER))
-						dpsnprintf(temp, sizeof(temp), "I need RL");
-					else if (!cl.stats[STAT_ROCKETS])
-						dpsnprintf(temp, sizeof(temp), "I need rockets");
-					else
-						dpsnprintf(temp, sizeof(temp), "I have RL");
-					break;
-				case 'p': // powerup status (outputs "quad" "pent" and "eyes" according to status)
-					if (cl.stats[STAT_ITEMS] & IT_QUAD)
-					{
-						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "quad", sizeof(temp));
-					}
-					if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
-					{
-						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "pent", sizeof(temp));
-					}
-					if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
-					{
-						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "eyes", sizeof(temp));
-					}
-					break;
-				case 'w': // weapon status (outputs "SSG:NG:SNG:GL:RL:LG" with the text between : characters omitted if you lack the weapon)
-					if (cl.stats[STAT_ITEMS] & IT_SUPER_SHOTGUN)
-						strlcat(temp, "SSG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
-					if (cl.stats[STAT_ITEMS] & IT_NAILGUN)
-						strlcat(temp, "NG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
-					if (cl.stats[STAT_ITEMS] & IT_SUPER_NAILGUN)
-						strlcat(temp, "SNG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
-					if (cl.stats[STAT_ITEMS] & IT_GRENADE_LAUNCHER)
-						strlcat(temp, "GL", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
-					if (cl.stats[STAT_ITEMS] & IT_ROCKET_LAUNCHER)
-						strlcat(temp, "RL", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
-					if (cl.stats[STAT_ITEMS] & IT_LIGHTNING)
-						strlcat(temp, "LG", sizeof(temp));
-					break;
-				default:
-					// not a recognized macro, print it as-is...
-					temp[0] = s[0];
-					temp[1] = s[1];
-					temp[2] = 0;
-					break;
-				}
-				// write the resulting text
-				SZ_Write(&cls.netcon->message, (unsigned char *)temp, (int)strlen(temp));
-				s += 2;
-				continue;
-			}
-			MSG_WriteByte(&cls.netcon->message, *s);
-			s++;
-		}
-		MSG_WriteByte(&cls.netcon->message, 0);
-	}
-	else // any other command is passed on as-is
-		SZ_Write(&cls.netcon->message, (const unsigned char *)s, (int)strlen(s) + 1);
-}
-
-/*
-===================
-Cmd_ForwardToServer
-
-Sends the entire command line over to the server
-===================
-*/
-void Cmd_ForwardToServer_f (cmd_state_t *cmd)
-{
-	const char *s;
-	char vabuf[1024];
-	if (!strcasecmp(Cmd_Argv(cmd, 0), "cmd"))
-	{
-		// we want to strip off "cmd", so just send the args
-		s = Cmd_Argc(cmd) > 1 ? Cmd_Args(cmd) : "";
-	}
-	else
-	{
-		// we need to keep the command name, so send Cmd_Argv(cmd, 0), a space and then Cmd_Args(cmd)
-		s = va(vabuf, sizeof(vabuf), "%s %s", Cmd_Argv(cmd, 0), Cmd_Argc(cmd) > 1 ? Cmd_Args(cmd) : "");
-	}
-	// don't send an empty forward message if the user tries "cmd" by itself
-	if (!s || !*s)
-		return;
-	Cmd_ForwardStringToServer(s);
-}
-
 
 /*
 ================

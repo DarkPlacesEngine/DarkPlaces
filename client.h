@@ -1594,6 +1594,20 @@ const char *Key_KeynumToString (int keynum, char *buf, size_t buflength);
 int Key_StringToKeynum (const char *str);
 
 //
+// cl_cmd.c
+//
+/// adds the string as a clc_stringcmd to the client message.
+/// (used when there is no reason to generate a local command to do it)
+void CL_ForwardToServer (const char *s);
+
+/// adds the current command line as a clc_stringcmd to the client message.
+/// things like godmode, noclip, etc, are commands directed to the server,
+/// so when they are typed in at the console, they will need to be forwarded.
+void CL_ForwardToServer_f (cmd_state_t *cmd);
+void CL_InitCommands(void);
+
+
+//
 // cl_demo.c
 //
 void CL_StopPlayback(void);
