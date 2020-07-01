@@ -30,6 +30,24 @@ protocolversion_t Protocol_EnumForNumber(int n);
 int Protocol_NumberForEnum(protocolversion_t p);
 void Protocol_Names(char *buffer, size_t buffersize);
 
+#define ENTITYSIZEPROFILING_START(msg, num, flags) \
+	int entityprofiling_startsize = msg->cursize
+
+#define ENTITYSIZEPROFILING_END(msg, num, flags) \
+	if(developer_networkentities.integer >= 2) \
+	{ \
+		prvm_edict_t *edict = prog->edicts + num; \
+		Con_Printf("sent entity update of size %u for %d classname %s flags %d\n", (msg->cursize - entityprofiling_startsize), num, PRVM_serveredictstring(edict, classname) ? PRVM_GetString(prog, PRVM_serveredictstring(edict, classname)) : "(no classname)", flags); \
+	}
+
+// CSQC entity scope values. Bitflags!
+#define SCOPE_WANTREMOVE 1        // Set if a remove has been scheduled. Never set together with WANTUPDATE.
+#define SCOPE_WANTUPDATE 2        // Set if an update has been scheduled.
+#define SCOPE_WANTSEND (SCOPE_WANTREMOVE | SCOPE_WANTUPDATE)
+#define SCOPE_EXISTED_ONCE 4      // Set if the entity once existed. All these get resent on a full loss.
+#define SCOPE_ASSUMED_EXISTING 8  // Set if the entity is currently assumed existing and therefore needs removes.
+
+
 // model effects
 #define	MF_ROCKET	1			// leave a trail
 #define	MF_GRENADE	2			// leave a trail
