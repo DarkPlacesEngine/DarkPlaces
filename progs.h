@@ -71,7 +71,7 @@ typedef struct edict_engineprivate_s
 	qboolean free;
 	// sv.time when the object was freed (to prevent early reuse which could
 	// mess up client interpolation or obscure severe QuakeC bugs)
-	float freetime;
+	double freetime;
 	// mark for the leak detector
 	int mark;
 	// place in the code where it was allocated (for the leak detector)
