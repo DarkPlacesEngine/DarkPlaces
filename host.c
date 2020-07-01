@@ -486,11 +486,6 @@ void Host_Main(void)
 		if(!*sv_random_seed.string && !cls.demoplayback)
 			rand();
 
-		// get new key events
-		Key_EventQueue_Unblock();
-		SndSys_SendKeyEvents();
-		Sys_SendKeyEvents();
-
 		NetConn_UpdateSockets();
 
 		Log_DestBuffer_Flush();
@@ -665,6 +660,11 @@ void Host_Main(void)
 	// client operations
 	//
 	//-------------------
+
+		// get new key events
+		Key_EventQueue_Unblock();
+		SndSys_SendKeyEvents();
+		Sys_SendKeyEvents();
 
 		if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
 		{
