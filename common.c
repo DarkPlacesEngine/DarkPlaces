@@ -31,6 +31,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t registered = {CVAR_CLIENT | CVAR_SERVER, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
 cvar_t cmdline = {CVAR_CLIENT | CVAR_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
 
+// FIXME: Find a better place for these.
+cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
+cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
+
 char com_token[MAX_INPUTLINE];
 
 gamemode_t gamemode;
@@ -1076,6 +1080,10 @@ void COM_Init_Commands (void)
 
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
+	Cvar_RegisterVariable(&cl_playermodel);
+	Cvar_RegisterAlias(&cl_playermodel, "_cl_playermodel");
+	Cvar_RegisterVariable(&cl_playerskin);
+	Cvar_RegisterAlias(&cl_playerskin, "_cl_playerskin");
 
 	// reconstitute the command line for the cmdline externally visible cvar
 	n = 0;

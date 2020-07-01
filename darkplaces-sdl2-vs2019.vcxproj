@@ -236,7 +236,6 @@
     <ClCompile Include="gl_textures.c" />
     <ClCompile Include="hmac.c" />
     <ClCompile Include="host.c" />
-    <ClCompile Include="host_cmd.c" />
     <ClCompile Include="image.c" />
     <ClCompile Include="image_png.c" />
     <ClCompile Include="jpeg.c" />
