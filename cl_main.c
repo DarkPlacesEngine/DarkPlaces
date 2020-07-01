@@ -749,11 +749,11 @@ entity_render_t *CL_NewTempEntity(double shadertime)
 	return render;
 }
 
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
+void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate)
 {
 	int i;
 	cl_effect_t *e;
-	if (!modelindex) // sanity check
+	if (!model) // sanity check
 		return;
 	if (framerate < 1)
 	{
@@ -771,7 +771,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 			continue;
 		e->active = true;
 		VectorCopy(org, e->origin);
-		e->modelindex = modelindex;
+		e->model = model;
 		e->starttime = cl.time;
 		e->startframe = startframe;
 		e->endframe = startframe + framecount;
@@ -1771,7 +1771,7 @@ static void CL_RelinkEffects(void)
 				}
 
 				// normal stuff
-				entrender->model = CL_GetModelByIndex(e->modelindex);
+				entrender->model = e->model;
 				entrender->alpha = 1;
 				VectorSet(entrender->colormod, 1, 1, 1);
 				VectorSet(entrender->glowmod, 1, 1, 1);
