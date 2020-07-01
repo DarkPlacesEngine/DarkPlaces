@@ -82,6 +82,8 @@ OBJ_COMMON= \
 	cl_cmd.o \
 	cl_collision.o \
 	cl_demo.o \
+	cl_entframe.o \
+	cl_entframe_quake.o \
 	cl_input.o \
 	cl_main.o \
 	cl_parse.o \
@@ -144,6 +146,8 @@ OBJ_COMMON= \
 	sbar.o \
 	sv_ccmds.o \
 	sv_demo.o \
+	sv_entframe_csqc.o \
+	sv_entframe_quake.o \
 	sv_main.o \
 	sv_move.o \
 	sv_phys.o \
