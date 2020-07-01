@@ -111,7 +111,6 @@ OBJ_COMMON= \
 	gl_textures.o \
 	hmac.o \
 	host.o \
-	host_cmd.o \
 	image.o \
 	image_png.o \
 	jpeg.o \
