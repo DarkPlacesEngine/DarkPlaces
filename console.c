@@ -89,6 +89,11 @@ cvar_t con_completion_exec = {CVAR_CLIENT | CVAR_SAVE, "con_completion_exec", "*
 
 cvar_t condump_stripcolors = {CVAR_CLIENT | CVAR_SERVER| CVAR_SAVE, "condump_stripcolors", "0", "strip color codes from console dumps"};
 
+cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
+cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
+cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+
 int con_linewidth;
 int con_vislines;
 
@@ -842,6 +847,15 @@ void Con_Clear_f(cmd_state_t *cmd)
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
 }
 
+static void Con_RCon_ClearPassword_c(cvar_t *var)
+{
+	// whenever rcon_secure is changed to 0, clear rcon_password for
+	// security reasons (prevents a send-rcon-password-as-plaintext
+	// attack based on NQ protocol session takeover and svc_stufftext)
+	if(var->integer <= 0)
+		Cvar_SetQuick(&rcon_password, "");
+}
+
 /*
 ================
 Con_Init
@@ -899,6 +913,12 @@ void Con_Init (void)
 	Cvar_RegisterVariable (&con_completion_exec); // *.cfg
 
 	Cvar_RegisterVariable (&condump_stripcolors);
+
+	Cvar_RegisterVariable(&rcon_address);
+	Cvar_RegisterVariable(&rcon_secure);
+	Cvar_RegisterCallback(&rcon_secure, Con_RCon_ClearPassword_c);
+	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
+	Cvar_RegisterVariable(&rcon_password);
 
 	// register our commands
 	Cmd_AddCommand(CMD_CLIENT, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
