@@ -1233,6 +1233,120 @@ static void SV_MaxPlayers_f(cmd_state_t *cmd)
 }
 
 /*
+======================
+SV_Playermodel_f
+======================
+*/
+// the old playermodel in cl_main has been renamed to __cl_playermodel
+static void SV_Playermodel_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i, j;
+	char newPath[sizeof(host_client->playermodel)];
+
+	if (Cmd_Argc (cmd) == 1)
+		return;
+
+	if (Cmd_Argc (cmd) == 2)
+		strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
+	else
+		strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
+
+	for (i = 0, j = 0;newPath[i];i++)
+		if (newPath[i] != '\r' && newPath[i] != '\n')
+			newPath[j++] = newPath[i];
+	newPath[j] = 0;
+
+	/*
+	if (host.realtime < host_client->nametime)
+	{
+		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
+		return;
+	}
+
+	host_client->nametime = host.realtime + 5;
+	*/
+
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
+	PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
+	if (strcmp(host_client->old_model, host_client->playermodel))
+	{
+		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
+		/*// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteString (&sv.reliable_datagram, host_client->playermodel);*/
+	}
+}
+
+/*
+======================
+SV_Playerskin_f
+======================
+*/
+static void SV_Playerskin_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i, j;
+	char newPath[sizeof(host_client->playerskin)];
+
+	if (Cmd_Argc (cmd) == 1)
+		return;
+
+	if (Cmd_Argc (cmd) == 2)
+		strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
+	else
+		strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
+
+	for (i = 0, j = 0;newPath[i];i++)
+		if (newPath[i] != '\r' && newPath[i] != '\n')
+			newPath[j++] = newPath[i];
+	newPath[j] = 0;
+
+	/*
+	if (host.realtime < host_client->nametime)
+	{
+		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
+		return;
+	}
+
+	host_client->nametime = host.realtime + 5;
+	*/
+
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
+	PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
+	if (strcmp(host_client->old_skin, host_client->playerskin))
+	{
+		//if (host_client->begun)
+		//	SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
+		strlcpy(host_client->old_skin, host_client->playerskin, sizeof(host_client->old_skin));
+		/*// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteString (&sv.reliable_datagram, host_client->playerskin);*/
+	}
+}
+
+/*
+======================
+SV_PModel_f
+LadyHavoc: only supported for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
+LadyHavoc: correction, Mindcrime will be removing pmodel in the future, but it's still stuck here for compatibility.
+======================
+*/
+static void SV_PModel_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+
+	if (Cmd_Argc (cmd) == 1)
+		return;
+
+	PRVM_serveredictfloat(host_client->edict, pmodel) = atoi(Cmd_Argv(cmd, 1));
+}
+
+/*
 ===============================================================================
 
 DEBUGGING TOOLS
@@ -1373,6 +1487,34 @@ static void SV_Viewprev_f(cmd_state_t *cmd)
 	}
 }
 
+static void SV_SendCvar_f(cmd_state_t *cmd)
+{
+	int i;	
+	const char *cvarname;
+	client_t *old;
+	
+	if(Cmd_Argc(cmd) != 2)
+		return;
+
+	if(!sv.active)// || !PRVM_serverfunction(SV_ParseClientCommand))
+		return;
+
+	cvarname = Cmd_Argv(cmd, 1);
+
+	old = host_client;
+	if (cls.state != ca_dedicated)
+		i = 1;
+	else
+		i = 0;
+	for(;i<svs.maxclients;i++)
+		if(svs.clients[i].active && svs.clients[i].netconnection)
+		{
+			host_client = &svs.clients[i];
+			SV_ClientCommands("sendcvar %s\n", cvarname);
+		}
+	host_client = old;
+}
+
 void SV_InitOperatorCommands(void)
 {
 	Cvar_RegisterVariable(&sv_cheats);
@@ -1401,6 +1543,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_SHARED, "maxplayers", SV_MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 	Cmd_AddCommand(CMD_SHARED, "user", SV_User_f, "prints additional information about a player number or name on the scoreboard");
 	Cmd_AddCommand(CMD_SHARED, "users", SV_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand(CMD_SERVER, "sendcvar", SV_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 
 	// commands that do not have automatic forwarding from cmd_client, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
 	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "prespawn", SV_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
@@ -1419,4 +1562,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_USERINFO, "name", SV_Name_f, "change your player name");
 	Cmd_AddCommand(CMD_USERINFO, "rate", SV_Rate_f, "change your network connection speed");
 	Cmd_AddCommand(CMD_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
+	Cmd_AddCommand(CMD_USERINFO, "pmodel", SV_PModel_f, "(Nehahra-only) change your player model choice");
+	Cmd_AddCommand(CMD_USERINFO, "playermodel", SV_Playermodel_f, "change your player model");
+	Cmd_AddCommand(CMD_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");	
 }

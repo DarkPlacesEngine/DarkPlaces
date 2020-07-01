@@ -999,7 +999,6 @@ static void Host_Init (void)
 	World_Init();
 	SV_Init();
 	V_Init(); // some cvars needed by server player physics (cl_rollangle etc)
-	Host_InitCommands();
 	Host_InitLocal();
 	Host_ServerOptions();
 
@@ -1175,3 +1174,6 @@ void Host_Shutdown(void)
 	Memory_Shutdown();
 }
 
+void Host_NoOperation_f(cmd_state_t *cmd)
+{
+}

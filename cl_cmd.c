@@ -23,15 +23,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // for secure rcon authentication
 #include "hmac.h"
 #include "mdfour.h"
+#include "image.h"
 #include <time.h>
 
+cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
+cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
+cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
+cvar_t cl_topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
+cvar_t cl_bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
+cvar_t cl_team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
+cvar_t cl_skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t cl_noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
+cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
+cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
 cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
 cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
 cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
-cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
-cvar_t cl_topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
-cvar_t cl_bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
 
 /*
 ===================
@@ -178,6 +186,28 @@ void CL_ForwardToServer_f (cmd_state_t *cmd)
 	if (!s || !*s)
 		return;
 	CL_ForwardToServer(s);
+}
+
+static void CL_SendCvar_f(cmd_state_t *cmd)
+{
+	cvar_t	*c;
+	const char *cvarname;
+	char vabuf[1024];
+
+	if(Cmd_Argc(cmd) != 2)
+		return;
+	cvarname = Cmd_Argv(cmd, 1);
+	if (cls.state == ca_connected)
+	{
+		c = Cvar_FindVar(&cvars_all, cvarname, CVAR_CLIENT | CVAR_SERVER);
+		// LadyHavoc: if there is no such cvar or if it is private, send a
+		// reply indicating that it has no value
+		if(!c || (c->flags & CVAR_PRIVATE))
+			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
+		else
+			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
+		return;
+	}
 }
 
 /*
@@ -489,8 +519,135 @@ static void CL_RCon_ClearPassword_c(cvar_t *var)
 		Cvar_SetQuick(&rcon_password, "");
 }
 
+/*
+==================
+CL_FullServerinfo_f
+
+Sent by server when serverinfo changes
+==================
+*/
+// TODO: shouldn't this be a cvar instead?
+static void CL_FullServerinfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	char temp[512];
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Printf ("usage: fullserverinfo <complete info string>\n");
+		return;
+	}
+
+	strlcpy (cl.qw_serverinfo, Cmd_Argv(cmd, 1), sizeof(cl.qw_serverinfo));
+	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
+	cl.qw_teamplay = atoi(temp);
+}
+
+/*
+==================
+CL_FullInfo_f
+
+Allow clients to change userinfo
+==================
+Casey was here :)
+*/
+static void CL_FullInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	char key[512];
+	char value[512];
+	const char *s;
+
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Printf ("fullinfo <complete info string>\n");
+		return;
+	}
+
+	s = Cmd_Argv(cmd, 1);
+	if (*s == '\\')
+		s++;
+	while (*s)
+	{
+		size_t len = strcspn(s, "\\");
+		if (len >= sizeof(key)) {
+			len = sizeof(key) - 1;
+		}
+		strlcpy(key, s, len + 1);
+		s += len;
+		if (!*s)
+		{
+			Con_Printf ("MISSING VALUE\n");
+			return;
+		}
+		++s; // Skip over backslash.
+
+		len = strcspn(s, "\\");
+		if (len >= sizeof(value)) {
+			len = sizeof(value) - 1;
+		}
+		strlcpy(value, s, len + 1);
+
+		CL_SetInfo(key, value, false, false, false, false);
+
+		s += len;
+		if (!*s)
+		{
+			break;
+		}
+		++s; // Skip over backslash.
+	}
+}
+
+/*
+==================
+CL_SetInfo_f
+
+Allow clients to change userinfo
+==================
+*/
+static void CL_SetInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	if (Cmd_Argc(cmd) == 1)
+	{
+		InfoString_Print(cls.userinfo);
+		return;
+	}
+	if (Cmd_Argc(cmd) != 3)
+	{
+		Con_Printf ("usage: setinfo [ <key> <value> ]\n");
+		return;
+	}
+	CL_SetInfo(Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), true, false, false, false);
+}
+
+static void CL_PingPLReport_f(cmd_state_t *cmd)
+{
+	char *errbyte;
+	int i;
+	int l = Cmd_Argc(cmd);
+	if (l > cl.maxclients)
+		l = cl.maxclients;
+	for (i = 0;i < l;i++)
+	{
+		cl.scores[i].qw_ping = atoi(Cmd_Argv(cmd, 1+i*2));
+		cl.scores[i].qw_packetloss = strtol(Cmd_Argv(cmd, 1+i*2+1), &errbyte, 0);
+		if(errbyte && *errbyte == ',')
+			cl.scores[i].qw_movementloss = atoi(errbyte + 1);
+		else
+			cl.scores[i].qw_movementloss = 0;
+	}
+}
+
 void CL_InitCommands(void)
 {
+	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
+
+	Cvar_RegisterVariable(&cl_name);
+	Cvar_RegisterAlias(&cl_name, "_cl_name");
+	Cvar_RegisterVariable(&cl_rate);
+	Cvar_RegisterAlias(&cl_rate, "_cl_rate");
+	Cvar_RegisterVariable(&cl_rate_burstsize);
+	Cvar_RegisterAlias(&cl_rate_burstsize, "_cl_rate_burstsize");
+	Cvar_RegisterVariable(&cl_pmodel);
+	Cvar_RegisterAlias(&cl_pmodel, "_cl_pmodel");
 	Cvar_RegisterVariable(&cl_color);
 	Cvar_RegisterCallback(&cl_color, CL_Color_c);
 	Cvar_RegisterVariable(&cl_topcolor);
@@ -501,6 +658,11 @@ void CL_InitCommands(void)
 	Cvar_RegisterVariable(&rcon_secure);
 	Cvar_RegisterCallback(&rcon_secure, CL_RCon_ClearPassword_c);
 	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
+	Cvar_RegisterVariable(&rcon_password);
+	Cvar_RegisterVariable(&r_fixtrans_auto);
+	Cvar_RegisterVariable(&cl_team);
+	Cvar_RegisterVariable(&cl_skin);
+	Cvar_RegisterVariable(&cl_noaim);	
 
 	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cmd", CL_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
 	Cmd_AddCommand(CMD_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
@@ -508,5 +670,12 @@ void CL_InitCommands(void)
 	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand(CMD_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
 	Cmd_AddCommand(CMD_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
-	
+	Cmd_AddCommand(CMD_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
+	Cmd_AddCommand(CMD_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
+	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
+
+	// commands that are only sent by server to client for execution
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
+	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", CL_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
 }
