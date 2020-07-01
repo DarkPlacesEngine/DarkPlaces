@@ -36,10 +36,9 @@ cvar_t cl_skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW playe
 cvar_t cl_noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
 cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
-cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
-cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+
+extern cvar_t rcon_secure;
+extern cvar_t rcon_secure_challengetimeout;
 
 /*
 ===================
@@ -510,15 +509,6 @@ static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 	}
 }
 
-static void CL_RCon_ClearPassword_c(cvar_t *var)
-{
-	// whenever rcon_secure is changed to 0, clear rcon_password for
-	// security reasons (prevents a send-rcon-password-as-plaintext
-	// attack based on NQ protocol session takeover and svc_stufftext)
-	if(var->integer <= 0)
-		Cvar_SetQuick(&rcon_password, "");
-}
-
 /*
 ==================
 CL_FullServerinfo_f
@@ -654,11 +644,6 @@ void CL_InitCommands(void)
 	Cvar_RegisterCallback(&cl_topcolor, CL_Topcolor_c);
 	Cvar_RegisterVariable(&cl_bottomcolor);
 	Cvar_RegisterCallback(&cl_bottomcolor, CL_Bottomcolor_c);
-	Cvar_RegisterVariable(&rcon_address);
-	Cvar_RegisterVariable(&rcon_secure);
-	Cvar_RegisterCallback(&rcon_secure, CL_RCon_ClearPassword_c);
-	Cvar_RegisterVariable(&rcon_secure_challengetimeout);
-	Cvar_RegisterVariable(&rcon_password);
 	Cvar_RegisterVariable(&r_fixtrans_auto);
 	Cvar_RegisterVariable(&cl_team);
 	Cvar_RegisterVariable(&cl_skin);
