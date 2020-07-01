@@ -234,7 +234,7 @@ typedef struct effect_s
 	vec3_t origin;
 	double starttime;
 	float framerate;
-	int modelindex;
+	dp_model_t *model;
 	int startframe;
 	int endframe;
 	// these are for interpolation
@@ -1575,7 +1575,7 @@ void CL_ClientMovement_Replay(void);
 void CL_ClearTempEntities (void);
 entity_render_t *CL_NewTempEntity (double shadertime);
 
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
+void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate);
 
 void CL_ClearState (void);
 void CL_ExpandEntities(int num);

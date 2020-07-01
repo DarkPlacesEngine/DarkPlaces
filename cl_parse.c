@@ -2333,7 +2333,7 @@ static void CL_ParseEffect (void)
 	framecount = MSG_ReadByte(&cl_message);
 	framerate = MSG_ReadByte(&cl_message);
 
-	CL_Effect(org, modelindex, startframe, framecount, framerate);
+	CL_Effect(org, CL_GetModelByIndex(modelindex), startframe, framecount, framerate);
 }
 
 static void CL_ParseEffect2 (void)
@@ -2347,7 +2347,7 @@ static void CL_ParseEffect2 (void)
 	framecount = MSG_ReadByte(&cl_message);
 	framerate = MSG_ReadByte(&cl_message);
 
-	CL_Effect(org, modelindex, startframe, framecount, framerate);
+	CL_Effect(org, CL_GetModelByIndex(modelindex), startframe, framecount, framerate);
 }
 
 void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning)
@@ -2484,7 +2484,7 @@ static void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-			CL_Effect(pos, cl.qw_modelindex_s_explod, 0, 6, 10);
+			CL_Effect(pos, CL_GetModelByIndex(cl.qw_modelindex_s_explod), 0, 6, 10);
 			break;
 
 		case QW_TE_TAREXPLOSION:
