@@ -203,6 +203,7 @@
     <ClCompile Include="cl_collision.c" />
     <ClCompile Include="cl_demo.c" />
 	<ClCompile Include="cl_entframe.c" />
+	<ClCompile Include="cl_entframe4.c" />
 	<ClCompile Include="cl_entframe5.c" />
 	<ClCompile Include="cl_entframe_quake.c" />
 	<ClCompile Include="cl_entframe_qw.c" />
@@ -217,6 +218,7 @@
     <ClCompile Include="collision.c" />
 	<ClCompile Include="com_crc16.c" />
 	<ClCompile Include="com_entframe.c" />
+	<ClCompile Include="com_entframe4.c" />
 	<ClCompile Include="com_msg.c" />
     <ClCompile Include="common.c" />
     <ClCompile Include="console.c" />
@@ -284,6 +286,7 @@
     <ClCompile Include="sv_ccmds.c" />
     <ClCompile Include="sv_demo.c" />
 	<ClCompile Include="sv_entframe.c" />
+	<ClCompile Include="sv_entframe4.c" />
 	<ClCompile Include="sv_entframe5.c" />
 	<ClCompile Include="sv_entframe_quake.c" />
 	<ClCompile Include="sv_entframe_csqc.c" />
