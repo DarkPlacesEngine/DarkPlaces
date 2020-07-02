@@ -83,6 +83,7 @@ OBJ_COMMON= \
 	cl_collision.o \
 	cl_demo.o \
 	cl_entframe.o \
+	cl_entframe4.o \
 	cl_entframe5.o \
 	cl_entframe_quake.o \
 	cl_entframe_qw.o \
@@ -97,6 +98,7 @@ OBJ_COMMON= \
 	collision.o \
 	com_crc16.o \
 	com_entframe.o \
+	com_entframe4.o \
 	com_msg.o \
 	common.o \
 	console.o \
@@ -150,6 +152,7 @@ OBJ_COMMON= \
 	sv_ccmds.o \
 	sv_demo.o \
 	sv_entframe.o \
+	sv_entframe4.o \
 	sv_entframe5.o \
 	sv_entframe_csqc.o \
 	sv_entframe_quake.o \
