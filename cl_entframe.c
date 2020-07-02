@@ -1,6 +1,169 @@
 #include "quakedef.h"
 #include "protocol.h"
 
+int EntityState_ReadExtendBits(void)
+{
+	unsigned int bits;
+	bits = MSG_ReadByte(&cl_message);
+	if (bits & 0x00000080)
+	{
+		bits |= MSG_ReadByte(&cl_message) << 8;
+		if (bits & 0x00008000)
+		{
+			bits |= MSG_ReadByte(&cl_message) << 16;
+			if (bits & 0x00800000)
+				bits |= MSG_ReadByte(&cl_message) << 24;
+		}
+	}
+	return bits;
+}
+
+void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
+{
+	if (cls.protocol == PROTOCOL_DARKPLACES2)
+	{
+		if (bits & E_ORIGIN1)
+			e->origin[0] = MSG_ReadCoord16i(&cl_message);
+		if (bits & E_ORIGIN2)
+			e->origin[1] = MSG_ReadCoord16i(&cl_message);
+		if (bits & E_ORIGIN3)
+			e->origin[2] = MSG_ReadCoord16i(&cl_message);
+	}
+	else
+	{
+		if (bits & E_FLAGS)
+			e->flags = MSG_ReadByte(&cl_message);
+		if (e->flags & RENDER_LOWPRECISION)
+		{
+			if (bits & E_ORIGIN1)
+				e->origin[0] = MSG_ReadCoord16i(&cl_message);
+			if (bits & E_ORIGIN2)
+				e->origin[1] = MSG_ReadCoord16i(&cl_message);
+			if (bits & E_ORIGIN3)
+				e->origin[2] = MSG_ReadCoord16i(&cl_message);
+		}
+		else
+		{
+			if (bits & E_ORIGIN1)
+				e->origin[0] = MSG_ReadCoord32f(&cl_message);
+			if (bits & E_ORIGIN2)
+				e->origin[1] = MSG_ReadCoord32f(&cl_message);
+			if (bits & E_ORIGIN3)
+				e->origin[2] = MSG_ReadCoord32f(&cl_message);
+		}
+	}
+	if ((cls.protocol == PROTOCOL_DARKPLACES5 || cls.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadAngle16i(&cl_message);
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadAngle16i(&cl_message);
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadAngle16i(&cl_message);
+	}
+	else
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadAngle8i(&cl_message);
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadAngle8i(&cl_message);
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadAngle8i(&cl_message);
+	}
+	if (bits & E_MODEL1)
+		e->modelindex = (e->modelindex & 0xFF00) | (unsigned int) MSG_ReadByte(&cl_message);
+	if (bits & E_MODEL2)
+		e->modelindex = (e->modelindex & 0x00FF) | ((unsigned int) MSG_ReadByte(&cl_message) << 8);
+	if (bits & E_FRAME1)
+		e->frame = (e->frame & 0xFF00) | (unsigned int) MSG_ReadByte(&cl_message);
+	if (bits & E_FRAME2)
+		e->frame = (e->frame & 0x00FF) | ((unsigned int) MSG_ReadByte(&cl_message) << 8);
+	if (bits & E_EFFECTS1)
+		e->effects = (e->effects & 0xFF00) | (unsigned int) MSG_ReadByte(&cl_message);
+	if (bits & E_EFFECTS2)
+		e->effects = (e->effects & 0x00FF) | ((unsigned int) MSG_ReadByte(&cl_message) << 8);
+	if (bits & E_COLORMAP)
+		e->colormap = MSG_ReadByte(&cl_message);
+	if (bits & E_SKIN)
+		e->skin = MSG_ReadByte(&cl_message);
+	if (bits & E_ALPHA)
+		e->alpha = MSG_ReadByte(&cl_message);
+	if (bits & E_SCALE)
+		e->scale = MSG_ReadByte(&cl_message);
+	if (bits & E_GLOWSIZE)
+		e->glowsize = MSG_ReadByte(&cl_message);
+	if (bits & E_GLOWCOLOR)
+		e->glowcolor = MSG_ReadByte(&cl_message);
+	if (cls.protocol == PROTOCOL_DARKPLACES2)
+		if (bits & E_FLAGS)
+			e->flags = MSG_ReadByte(&cl_message);
+	if (bits & E_TAGATTACHMENT)
+	{
+		e->tagentity = (unsigned short) MSG_ReadShort(&cl_message);
+		e->tagindex = MSG_ReadByte(&cl_message);
+	}
+	if (bits & E_LIGHT)
+	{
+		e->light[0] = (unsigned short) MSG_ReadShort(&cl_message);
+		e->light[1] = (unsigned short) MSG_ReadShort(&cl_message);
+		e->light[2] = (unsigned short) MSG_ReadShort(&cl_message);
+		e->light[3] = (unsigned short) MSG_ReadShort(&cl_message);
+	}
+	if (bits & E_LIGHTSTYLE)
+		e->lightstyle = MSG_ReadByte(&cl_message);
+	if (bits & E_LIGHTPFLAGS)
+		e->lightpflags = MSG_ReadByte(&cl_message);
+
+	if (developer_networkentities.integer >= 2)
+	{
+		Con_Printf("ReadFields e%i", e->number);
+
+		if (bits & E_ORIGIN1)
+			Con_Printf(" E_ORIGIN1 %f", e->origin[0]);
+		if (bits & E_ORIGIN2)
+			Con_Printf(" E_ORIGIN2 %f", e->origin[1]);
+		if (bits & E_ORIGIN3)
+			Con_Printf(" E_ORIGIN3 %f", e->origin[2]);
+		if (bits & E_ANGLE1)
+			Con_Printf(" E_ANGLE1 %f", e->angles[0]);
+		if (bits & E_ANGLE2)
+			Con_Printf(" E_ANGLE2 %f", e->angles[1]);
+		if (bits & E_ANGLE3)
+			Con_Printf(" E_ANGLE3 %f", e->angles[2]);
+		if (bits & (E_MODEL1 | E_MODEL2))
+			Con_Printf(" E_MODEL %i", e->modelindex);
+
+		if (bits & (E_FRAME1 | E_FRAME2))
+			Con_Printf(" E_FRAME %i", e->frame);
+		if (bits & (E_EFFECTS1 | E_EFFECTS2))
+			Con_Printf(" E_EFFECTS %i", e->effects);
+		if (bits & E_ALPHA)
+			Con_Printf(" E_ALPHA %f", e->alpha / 255.0f);
+		if (bits & E_SCALE)
+			Con_Printf(" E_SCALE %f", e->scale / 16.0f);
+		if (bits & E_COLORMAP)
+			Con_Printf(" E_COLORMAP %i", e->colormap);
+		if (bits & E_SKIN)
+			Con_Printf(" E_SKIN %i", e->skin);
+
+		if (bits & E_GLOWSIZE)
+			Con_Printf(" E_GLOWSIZE %i", e->glowsize * 4);
+		if (bits & E_GLOWCOLOR)
+			Con_Printf(" E_GLOWCOLOR %i", e->glowcolor);
+
+		if (bits & E_LIGHT)
+			Con_Printf(" E_LIGHT %i:%i:%i:%i", e->light[0], e->light[1], e->light[2], e->light[3]);
+		if (bits & E_LIGHTPFLAGS)
+			Con_Printf(" E_LIGHTPFLAGS %i", e->lightpflags);
+
+		if (bits & E_TAGATTACHMENT)
+			Con_Printf(" E_TAGATTACHMENT e%i:%i", e->tagentity, e->tagindex);
+		if (bits & E_LIGHTSTYLE)
+			Con_Printf(" E_LIGHTSTYLE %i", e->lightstyle);
+		Con_Print("\n");
+	}
+}
+
 // (client) adds a entity_frame to the database, for future reference
 void EntityFrame_AddFrame_Client(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata)
 {
