@@ -722,9 +722,9 @@ static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, mfunction_t *func, in
 #  endif
 #endif
 
-#define OPA ((prvm_eval_t *)&prog->globals.fp[st->operand[0]])
-#define OPB ((prvm_eval_t *)&prog->globals.fp[st->operand[1]])
-#define OPC ((prvm_eval_t *)&prog->globals.fp[st->operand[2]])
+#define OPA ((prvm_eval_t *)&globals[st->operand[0]])
+#define OPB ((prvm_eval_t *)&globals[st->operand[1]])
+#define OPC ((prvm_eval_t *)&globals[st->operand[2]])
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern qboolean prvm_runawaycheck;
@@ -760,6 +760,8 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	mstatement_t *cached_statements = prog->statements;
 	qboolean cached_allowworldwrites = prog->allowworldwrites;
 	unsigned int cached_flag = prog->flag;
+
+	prvm_vec_t *globals = prog->globals.fp;
 
 	calltime = Sys_DirtyTime();
 
@@ -867,6 +869,8 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	mstatement_t *cached_statements = prog->statements;
 	qboolean cached_allowworldwrites = prog->allowworldwrites;
 	unsigned int cached_flag = prog->flag;
+
+	prvm_vec_t *globals = prog->globals.fp;
 
 	calltime = Sys_DirtyTime();
 
@@ -978,6 +982,8 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	mstatement_t *cached_statements = prog->statements;
 	qboolean cached_allowworldwrites = prog->allowworldwrites;
 	unsigned int cached_flag = prog->flag;
+
+	prvm_vec_t *globals = prog->globals.fp;
 
 	calltime = Sys_DirtyTime();
 
