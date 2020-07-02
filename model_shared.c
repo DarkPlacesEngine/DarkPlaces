@@ -4705,6 +4705,7 @@ void Mod_Mesh_Finalize(dp_model_t *mod)
 		Mod_Mesh_Validate(mod);
 	Mod_Mesh_ComputeBounds(mod);
 	Mod_Mesh_MakeSortedSurfaces(mod);
-	Mod_BuildTextureVectorsFromNormals(0, mod->surfmesh.num_vertices, mod->surfmesh.num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_texcoordtexture2f, mod->surfmesh.data_normal3f, mod->surfmesh.data_element3i, mod->surfmesh.data_svector3f, mod->surfmesh.data_tvector3f, true);
+	if(!r_refdef.draw2dstage)
+		Mod_BuildTextureVectorsFromNormals(0, mod->surfmesh.num_vertices, mod->surfmesh.num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_texcoordtexture2f, mod->surfmesh.data_normal3f, mod->surfmesh.data_element3i, mod->surfmesh.data_svector3f, mod->surfmesh.data_tvector3f, true);
 	Mod_Mesh_UploadDynamicBuffers(mod);
 }
