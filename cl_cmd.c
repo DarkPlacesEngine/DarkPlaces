@@ -170,7 +170,8 @@ void CL_ForwardToServer (const char *s)
 void CL_ForwardToServer_f (cmd_state_t *cmd)
 {
 	const char *s;
-	char vabuf[1024];
+	char vabuf[MAX_INPUTLINE];
+	size_t i;
 	if (!strcasecmp(Cmd_Argv(cmd, 0), "cmd"))
 	{
 		// we want to strip off "cmd", so just send the args
@@ -179,7 +180,10 @@ void CL_ForwardToServer_f (cmd_state_t *cmd)
 	else
 	{
 		// we need to keep the command name, so send Cmd_Argv(cmd, 0), a space and then Cmd_Args(cmd)
-		s = va(vabuf, sizeof(vabuf), "%s %s", Cmd_Argv(cmd, 0), Cmd_Argc(cmd) > 1 ? Cmd_Args(cmd) : "");
+		i = dpsnprintf(vabuf, sizeof(vabuf), "%s", Cmd_Argv(cmd, 0));
+		if(Cmd_Argc(cmd) > 1)
+			dpsnprintf(&vabuf[i], sizeof(vabuf - i), " %s", Cmd_Args(cmd));
+		s = vabuf;
 	}
 	// don't send an empty forward message if the user tries "cmd" by itself
 	if (!s || !*s)
