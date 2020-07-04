@@ -3406,7 +3406,7 @@ This is called at the start of each level
 ================
 */
 
-void SV_SpawnServer (const char *server)
+void SV_SpawnServer (const char *map)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t *ent;
@@ -3416,16 +3416,16 @@ void SV_SpawnServer (const char *server)
 	char modelname[sizeof(sv.worldname)];
 	char vabuf[1024];
 
-	Con_DPrintf("SpawnServer: %s\n", server);
+	Con_DPrintf("SpawnServer: %s\n", map);
 
-	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
+	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", map);
 
 	if (!FS_FileExists(modelname))
 	{
-		dpsnprintf (modelname, sizeof(modelname), "maps/%s", server);
+		dpsnprintf (modelname, sizeof(modelname), "maps/%s", map);
 		if (!FS_FileExists(modelname))
 		{
-			Con_Printf("SpawnServer: no map file named maps/%s.bsp\n", server);
+			Con_Printf("SpawnServer: no map file named maps/%s.bsp\n", map);
 			return;
 		}
 	}
@@ -3530,7 +3530,7 @@ void SV_SpawnServer (const char *server)
 	sv.active = true;
 
 	// set level base name variables for later use
-	strlcpy (sv.name, server, sizeof (sv.name));
+	strlcpy (sv.name, map, sizeof (sv.name));
 	strlcpy(sv.worldname, modelname, sizeof(sv.worldname));
 	FS_StripExtension(sv.worldname, sv.worldnamenoextension, sizeof(sv.worldnamenoextension));
 	strlcpy(sv.worldbasename, !strncmp(sv.worldnamenoextension, "maps/", 5) ? sv.worldnamenoextension + 5 : sv.worldnamenoextension, sizeof(sv.worldbasename));
