@@ -47,7 +47,7 @@ static memexpandablearray_t models;
 static mempool_t* q3shaders_mem;
 typedef struct q3shader_hash_entry_s
 {
-  q3shaderinfo_t shader;
+  shader_t shader;
   struct q3shader_hash_entry_s* chain;
 } q3shader_hash_entry_t;
 #define Q3SHADER_HASH_SIZE  1021
@@ -1370,7 +1370,7 @@ void Mod_FreeQ3Shaders(void)
 	Mem_FreePool(&q3shaders_mem);
 }
 
-static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
+static void Q3Shader_AddToHash (shader_t* shader)
 {
 	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)shader->name, strlen (shader->name));
 	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
@@ -1425,7 +1425,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 		/* else: head of chain, in hash entry array */
 		entry = lastEntry;
 	}
-	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
+	memcpy (&entry->shader, shader, sizeof (shader_t));
 }
 
 void Mod_LoadQ3Shaders(void)
@@ -1435,7 +1435,7 @@ void Mod_LoadQ3Shaders(void)
 	fssearch_t *search;
 	char *f;
 	const char *text;
-	q3shaderinfo_t shader;
+	shader_t shader;
 	q3shaderinfo_layer_t *layer;
 	int numparameters;
 	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
@@ -2181,7 +2181,7 @@ void Mod_LoadQ3Shaders(void)
 		Mem_Free(custsurfaceparmnames[j]);
 }
 
-q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
+shader_t *Mod_LookupQ3Shader(const char *name)
 {
 	unsigned short hash;
 	q3shader_hash_entry_t* entry;
@@ -2241,7 +2241,7 @@ qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, 
 {
 	int texflagsmask, texflagsor;
 	qboolean success = true;
-	q3shaderinfo_t *shader;
+	shader_t *shader;
 	if (!name)
 		name = "";
 	strlcpy(texture->name, name, sizeof(texture->name));
