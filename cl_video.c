@@ -20,7 +20,7 @@ cvar_t v_glslgamma_video = {CVAR_CLIENT | CVAR_SAVE, "v_glslgamma_video", "1", "
 #include "dpvsimpledecode.h"
 
 // VorteX: libavcodec implementation
-#include "cl_video_libavw.c"
+#include "cl_video_libavw.h"
 
 // JAM video decoder used by Blood Omnicide
 #ifdef JAMVIDEO
