@@ -212,6 +212,7 @@
     <ClCompile Include="cl_particles.c" />
     <ClCompile Include="cl_screen.c" />
     <ClCompile Include="cl_video.c" />
+	<ClCompile Include="cl_video_libavw.c" />
     <ClCompile Include="clvm_cmds.c" />
     <ClCompile Include="cmd.c" />
     <ClCompile Include="collision.c" />
@@ -319,6 +320,7 @@
     <ClInclude Include="cl_gecko.h" />
     <ClInclude Include="cl_screen.h" />
     <ClInclude Include="cl_video.h" />
+    <ClInclude Include="cl_video_libavw.h" />
     <ClInclude Include="client.h" />
     <ClInclude Include="clprogdefs.h" />
     <ClInclude Include="clvm_cmds.h" />
