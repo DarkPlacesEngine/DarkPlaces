@@ -25,6 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "thread.h"
 
+// current client
+client_t *host_client;
+
 static void SV_SaveEntFile_f(cmd_state_t *cmd);
 static void SV_StartDownload_f(cmd_state_t *cmd);
 static void SV_Download_f(cmd_state_t *cmd);
