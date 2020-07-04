@@ -21,7 +21,9 @@ sys_t sys;
 // =======================================================================
 void Sys_Shutdown (void)
 {
+#ifndef WIN32
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
+#endif
 	fflush(stdout);
 }
 
@@ -31,8 +33,9 @@ void Sys_Error (const char *error, ...)
 	char string[MAX_INPUTLINE];
 
 // change stdin to non blocking
+#ifndef WIN32
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
-
+#endif
 	va_start (argptr,error);
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
@@ -50,9 +53,10 @@ void Sys_PrintToTerminal(const char *text)
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
+#ifndef WIN32
 		int origflags = fcntl (sys.outfd, F_GETFL, 0);
 		fcntl (sys.outfd, F_SETFL, origflags & ~O_NDELAY);
-#ifdef WIN32
+#else
 #define write _write
 #endif
 		while(*text)
@@ -62,7 +66,9 @@ void Sys_PrintToTerminal(const char *text)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
 		}
+#ifndef WIN32
 		fcntl (sys.outfd, F_SETFL, origflags);
+#endif
 	}
 	//fprintf(stdout, "%s", text);
 }
@@ -155,9 +161,9 @@ int main (int argc, char **argv)
 		sys.outfd = 2;
 	else
 		sys.outfd = 1;
-
+#ifndef WIN32
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NDELAY);
-
+#endif
 	Host_Main();
 
 	return 0;
