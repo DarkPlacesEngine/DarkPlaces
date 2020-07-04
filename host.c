@@ -44,9 +44,6 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 */
 
-// current client
-client_t *host_client;
-
 host_t host;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
