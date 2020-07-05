@@ -182,7 +182,8 @@ void CL_ForwardToServer_f (cmd_state_t *cmd)
 		// we need to keep the command name, so send Cmd_Argv(cmd, 0), a space and then Cmd_Args(cmd)
 		i = dpsnprintf(vabuf, sizeof(vabuf), "%s", Cmd_Argv(cmd, 0));
 		if(Cmd_Argc(cmd) > 1)
-			dpsnprintf(&vabuf[i], sizeof(vabuf - i), " %s", Cmd_Args(cmd));
+			// (i + 1) accounts for the added space
+			dpsnprintf(&vabuf[i], sizeof(vabuf) - (i + 1), " %s", Cmd_Args(cmd));
 		s = vabuf;
 	}
 	// don't send an empty forward message if the user tries "cmd" by itself
