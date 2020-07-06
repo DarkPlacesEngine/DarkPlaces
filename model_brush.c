@@ -1872,46 +1872,53 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 		if (cls.state != ca_dedicated)
 		{
-			// did not find external texture via shader loading, load it from the bsp or wad3
-			if (loadmodel->brush.ishlbsp)
+			skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false);
+			if (!skinframe &&
+			    !(skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false)))
 			{
-				// internal texture overrides wad
-				unsigned char* pixels, * freepixels;
-				pixels = freepixels = NULL;
-				if (mtdata)
-					pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
-				if (pixels == NULL)
-					pixels = freepixels = W_GetTextureBGRA(tx->name);
-				if (pixels != NULL)
+				// did not find external texture via shader loading, load it from the bsp or wad3
+				if (loadmodel->brush.ishlbsp)
 				{
-					tx->width = image_width;
-					tx->height = image_height;
-					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
+					// internal texture overrides wad
+					unsigned char* pixels, * freepixels;
+					pixels = freepixels = NULL;
+					if (mtdata)
+						pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
+					if (pixels == NULL)
+						pixels = freepixels = W_GetTextureBGRA(tx->name);
+					if (pixels != NULL)
+					{
+						tx->width = image_width;
+						tx->height = image_height;
+						tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
+					}
+					if (freepixels)
+						Mem_Free(freepixels);
 				}
-				if (freepixels)
-					Mem_Free(freepixels);
-			}
-			else if (!strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
-			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
-				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
-				if (data && image_width == image_height * 2)
+				else if (!strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 				{
-					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
-					Mem_Free(data);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
+					if (!data)
+						data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
+					if (data && image_width == image_height * 2)
+					{
+						R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+						Mem_Free(data);
+					}
+					else if (mtdata != NULL)
+						R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 				}
-				else if (mtdata != NULL)
-					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
+				else if (mtdata) // texture included
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+				// if mtdata is NULL, the "missing" texture has already been assigned to this
+				// LadyHavoc: some Tenebrae textures get replaced by black
+				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
+				else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false);
 			}
-			else if (mtdata) // texture included
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
-			// if mtdata is NULL, the "missing" texture has already been assigned to this
-			// LadyHavoc: some Tenebrae textures get replaced by black
-			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
-			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false);
+			else
+				tx->materialshaderpass->skinframes[0] = skinframe;
 			tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		}
 
