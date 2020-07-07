@@ -1819,7 +1819,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx = loadmodel->data_textures + i;
 		// try to load shader or external textures, but first we have to backup the texture_t because shader loading overwrites it even if it fails
 		backuptex = loadmodel->data_textures[i];
-		if (name[0] && (Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s/%s", mapname, name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL) ||
+		if (name[0] && /* HACK */ strncmp(name, "sky", 3) /* END HACK */ && (Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s/%s", mapname, name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL) ||
 		                Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s"   , name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL)))
 		{
 			// set the width/height fields which are used for parsing texcoords in this bsp format
@@ -1873,8 +1873,10 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		if (cls.state != ca_dedicated)
 		{
 			skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false);
-			if (!skinframe &&
+			if ((!skinframe &&
 			    !(skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false)))
+				// HACK: It loads custom skybox textures as a wall if loaded as a skinframe.
+				|| !strncmp(tx->name, "sky", 3))
 			{
 				// did not find external texture via shader loading, load it from the bsp or wad3
 				if (loadmodel->brush.ishlbsp)
