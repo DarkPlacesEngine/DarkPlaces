@@ -2604,7 +2604,7 @@ nothing                GL_ZERO GL_ONE
 			}
 			else
 				success = false;
-			if (!success)
+			if (!success && warnmissing)
 				Con_Printf("^1%s:^7 could not load texture ^3\"%s\"\n", modelname, texture->name);
 		}
 	}
