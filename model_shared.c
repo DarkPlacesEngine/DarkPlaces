@@ -41,6 +41,28 @@ cvar_t mod_generatelightmaps_gridradius = {CVAR_CLIENT | CVAR_SAVE, "mod_generat
 
 dp_model_t *loadmodel;
 
+// Supported model formats
+static modloader_t loader[] =
+{
+	{"obj", NULL, 0, Mod_OBJ_Load},
+	{NULL, "IDPO", 4, Mod_IDP0_Load},
+	{NULL, "IDP2", 4, Mod_IDP2_Load},
+	{NULL, "IDP3", 4, Mod_IDP3_Load},
+	{NULL, "IDSP", 4, Mod_IDSP_Load},
+	{NULL, "IDS2", 4, Mod_IDS2_Load},
+	{NULL, "\035", 1, Mod_Q1BSP_Load},
+	{NULL, "\036", 1, Mod_HLBSP_Load},
+	{NULL, "BSP2", 4, Mod_BSP2_Load},
+	{NULL, "2PSB", 4, Mod_2PSB_Load},
+	{NULL, "IBSP", 4, Mod_IBSP_Load},
+	{NULL, "ZYMOTICMODEL", 13, Mod_ZYMOTICMODEL_Load},
+	{NULL, "DARKPLACESMODEL", 16, Mod_DARKPLACESMODEL_Load},
+	{NULL, "PSKMODEL", 9, Mod_PSKMODEL_Load},
+	{NULL, "INTERQUAKEMODEL", 16, Mod_INTERQUAKEMODEL_Load},
+	{"map", NULL, 0, Mod_MAP_Load},
+	{NULL, NULL, 0, NULL}
+};
+
 static mempool_t *mod_mempool;
 static memexpandablearray_t models;
 
@@ -382,7 +404,6 @@ Loads a model
 */
 dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 {
-	int num;
 	unsigned int crc;
 	void *buf;
 	fs_offset_t filesize = 0;
@@ -490,46 +511,45 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 
 	if (buf)
 	{
+		int i;
+		const char *ext = FS_FileExtension(mod->name);	
 		char *bufend = (char *)buf + filesize;
-
 		// all models use memory, so allocate a memory pool
 		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
 
-		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
-		if (!strcasecmp(FS_FileExtension(mod->name), "obj")) Mod_OBJ_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDS2", 4)) Mod_IDS2_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "ACTRHEAD", 8)) Mod_PSKMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "INTERQUAKEMODEL", 16)) Mod_INTERQUAKEMODEL_Load(mod, buf, bufend);
-		else if (strlen(mod->name) >= 4 && !strcmp(mod->name + strlen(mod->name) - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
-		else if (num == BSPVERSION || num == 30 || !memcmp(buf, "BSP2", 4) || !memcmp(buf, "2PSB", 4)) Mod_Q1BSP_Load(mod, buf, bufend);
-		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
-		Mem_Free(buf);
 
-		Mod_FindPotentialDeforms(mod);
-
-		buf = FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.framegroups", mod->name), tempmempool, false, &filesize);
-		if(buf)
+		// Try matching magic bytes.
+		for (i = 0; loader[i].Load; i++)
 		{
-			Mod_FrameGroupify(mod, (const char *)buf);
-			Mem_Free(buf);
-		}
+			// Headerless formats can just load based on extension. Otherwise match the magic string.
+			if((loader[i].extension && !strcasecmp(ext, loader[i].extension) && !loader[i].header) ||
+			   (loader[i].header && !memcmp(buf, loader[i].header, loader[i].headersize)))
+			{
+				// Matched. Load it.
+				loader[i].Load(mod, buf, bufend);
+				Mem_Free(buf);
 
-		Mod_BuildVBOs();
+				Mod_FindPotentialDeforms(mod);
+
+				buf = FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.framegroups", mod->name), tempmempool, false, &filesize);
+				if(buf)
+				{
+					Mod_FrameGroupify(mod, (const char *)buf);
+					Mem_Free(buf);
+				}
+
+				Mod_BuildVBOs();
+				break;
+			}
+		}
+		if(!loader[i].Load)
+			Con_Printf(CON_ERROR "Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 	}
 	else if (crash)
-	{
 		// LadyHavoc: Sys_Error was *ANNOYING*
-		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
-	}
+		Con_Printf (CON_ERROR "Mod_LoadModel: %s not found\n", mod->name);
 
 	// no fatal errors occurred, so this model is ready to use.
 	mod->loaded = true;

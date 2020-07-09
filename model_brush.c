@@ -3848,6 +3848,28 @@ static void Mod_Q1BSP_RoundUpToHullSize(dp_model_t *cmodel, const vec3_t inmins,
 
 void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 
+void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.isbsp2 = true;
+	mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
+	mod->modeldatatypestring = "Q1BSP2rmqe";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
+void Mod_BSP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.isbsp2 = true;
+	mod->modeldatatypestring = "Q1BSP2";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
+void Mod_HLBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.ishlbsp = true;
+	mod->modeldatatypestring = "HLBSP";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
@@ -3872,29 +3894,9 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.isq3bsp = false;
 	mod->brush.skymasking = true;
 	i = MSG_ReadLittleLong(&sb);
-	switch(i)
-	{
-	case BSPVERSION:
+
+	if(!mod->modeldatatypestring)
 		mod->modeldatatypestring = "Q1BSP";
-		break;
-	case 30:
-		mod->brush.ishlbsp = true;
-		mod->modeldatatypestring = "HLBSP";
-		break;
-	case ('2' + 'P' * 256 + 'S' * 65536 + 'B' * 16777216):
-		mod->brush.isbsp2 = true;
-		mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
-		mod->modeldatatypestring = "Q1BSP2rmqe";
-		break;
-	case ('B' + 'S' * 256 + 'P' * 65536 + '2' * 16777216):
-		mod->brush.isbsp2 = true;
-		mod->modeldatatypestring = "Q1BSP2";
-		break;
-	default:
-		mod->modeldatatypestring = "Unknown BSP";
-		Host_Error("Mod_Q1BSP_Load: %s has wrong version number %i: supported versions are 29 (Quake), 30 (Half-Life), \"BSP2\" or \"2PSB\" (rmqe)", mod->name, i);
-		return;
-	}
 
 // fill in hull info
 	VectorClear (hullinfo.hullsizes[0][0]);
