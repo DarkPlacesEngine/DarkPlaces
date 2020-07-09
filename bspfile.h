@@ -25,6 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 
 #define BSPVERSION	29
+#define HLBSPVERSION 30
+#define _2PSBVERSION ('2' + 'P' * 256 + 'S' * 65536 + 'B' * 16777216)
+#define BSP2VERSION ('B' + 'S' * 256 + 'P' * 65536 + '2' * 16777216)
 
 typedef struct lump_s
 {
