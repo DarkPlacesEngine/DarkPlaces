@@ -296,6 +296,7 @@ typedef enum gamemode_e
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
 	GAME_VORETOURNAMENT,
+	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
 	GAME_COUNT
 }
 gamemode_t;
