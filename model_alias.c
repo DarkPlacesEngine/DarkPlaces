@@ -1006,13 +1006,13 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	// FIXME add TraceBrush!
@@ -1325,9 +1325,9 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -1365,13 +1365,13 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -1589,9 +1589,9 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -1624,13 +1624,13 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -1779,9 +1779,9 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -1859,13 +1859,13 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -2172,9 +2172,9 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -2236,13 +2236,13 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -2546,9 +2546,9 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -2585,13 +2585,13 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->type = mod_alias;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -3217,9 +3217,9 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }
 
@@ -3409,13 +3409,13 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawAddWaterPlanes = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->TraceLine = Mod_MDLMD2MD3_TraceLine;
 	loadmodel->PointSuperContents = NULL;
@@ -3964,8 +3964,8 @@ void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < loadmodel->num_textures;i++)
 	{
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	}
 }

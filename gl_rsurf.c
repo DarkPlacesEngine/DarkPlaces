@@ -600,14 +600,14 @@ void R_View_WorldVisibility(qboolean forcenovis)
 	R_View_WorldVisibility_CullSurfaces();
 }
 
-void R_Q1BSP_DrawSky(entity_render_t *ent)
+void R_Mod_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, true, true, false, false, false, false);
 }
 
-void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
+void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 {
 	int i, j, n, flagsmask;
 	dp_model_t *model = ent->model;
@@ -647,7 +647,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
-void R_Q1BSP_Draw(entity_render_t *ent)
+void R_Mod_Draw(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL)
@@ -655,7 +655,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	R_DrawModelSurfaces(ent, false, true, false, false, false, false);
 }
 
-void R_Q1BSP_DrawDepth(entity_render_t *ent)
+void R_Mod_DrawDepth(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL || model->surfmesh.isanimated)
@@ -670,14 +670,14 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
-void R_Q1BSP_DrawDebug(entity_render_t *ent)
+void R_Mod_DrawDebug(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, false, false, false, true, false, false);
 }
 
-void R_Q1BSP_DrawPrepass(entity_render_t *ent)
+void R_Mod_DrawPrepass(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL)
@@ -1212,7 +1212,7 @@ static int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
 
 extern cvar_t r_shadow_sortsurfaces;
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
+void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
 {
 	r_q1bsp_getlightinfo_t info;
 	info.frontsidecasting = r_shadow_frontsidecasting.integer != 0;
@@ -1296,7 +1296,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		qsort(info.outsurfacelist, info.outnumsurfaces, sizeof(*info.outsurfacelist), R_Q1BSP_GetLightInfo_comparefunc);
 }
 
-void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Mod_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	dp_model_t *model = ent->model;
 	msurface_t *surface;
@@ -1327,7 +1327,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 
 static const msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 
-void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Mod_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
@@ -1406,7 +1406,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 }
 
 extern qboolean r_shadow_usingdeferredprepass;
-void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
+void R_Mod_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
