@@ -1481,7 +1481,7 @@ void DrawQ_FlushUI(void)
 		return;
 	}
 
-	// this is roughly equivalent to R_Q1BSP_Draw, so the UI can use full material feature set
+	// this is roughly equivalent to R_Mod_Draw, so the UI can use full material feature set
 	r_refdef.view.colorscale = 1;
 	r_textureframe++; // used only by R_GetCurrentTexture
 	GL_DepthMask(false);

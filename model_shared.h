@@ -1195,16 +1195,16 @@ int Mod_Q2BSP_NativeContentsFromSuperContents(int supercontents);
 
 // a lot of model formats use the Q1BSP code, so here are the prototypes...
 struct entity_render_s;
-void R_Q1BSP_DrawAddWaterPlanes(struct entity_render_s *ent);
-void R_Q1BSP_DrawSky(struct entity_render_s *ent);
-void R_Q1BSP_Draw(struct entity_render_s *ent);
-void R_Q1BSP_DrawDepth(struct entity_render_s *ent);
-void R_Q1BSP_DrawDebug(struct entity_render_s *ent);
-void R_Q1BSP_DrawPrepass(struct entity_render_s *ent);
-void R_Q1BSP_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion);
-void R_Q1BSP_CompileShadowMap(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist);
-void R_Q1BSP_DrawShadowMap(int side, struct entity_render_s *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs);
-void R_Q1BSP_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
+void R_Mod_DrawAddWaterPlanes(struct entity_render_s *ent);
+void R_Mod_DrawSky(struct entity_render_s *ent);
+void R_Mod_Draw(struct entity_render_s *ent);
+void R_Mod_DrawDepth(struct entity_render_s *ent);
+void R_Mod_DrawDebug(struct entity_render_s *ent);
+void R_Mod_DrawPrepass(struct entity_render_s *ent);
+void R_Mod_GetLightInfo(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion);
+void R_Mod_CompileShadowMap(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist);
+void R_Mod_DrawShadowMap(int side, struct entity_render_s *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs);
+void R_Mod_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
 
 // dynamic mesh building (every frame) for debugging and other uses
 void Mod_Mesh_Create(dp_model_t *mod, const char *name);
