@@ -4375,13 +4375,13 @@ void Mod_Mesh_Create(dp_model_t *mod, const char *name)
 	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->mempool = Mem_AllocPool(name, 0, NULL);
 	mod->texturepool = R_AllocTexturePool();
-	mod->Draw = R_Q1BSP_Draw;
-	mod->DrawDepth = R_Q1BSP_DrawDepth;
-	mod->DrawDebug = R_Q1BSP_DrawDebug;
-	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
-	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->Draw = R_Mod_Draw;
+	mod->DrawDepth = R_Mod_DrawDepth;
+	mod->DrawDebug = R_Mod_DrawDebug;
+	mod->DrawPrepass = R_Mod_DrawPrepass;
+	mod->GetLightInfo = R_Mod_GetLightInfo;
+	mod->DrawShadowMap = R_Mod_DrawShadowMap;
+	mod->DrawLight = R_Mod_DrawLight;
 }
 
 void Mod_Mesh_Destroy(dp_model_t *mod)
@@ -4473,9 +4473,9 @@ msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchw
 	surf->num_firsttriangle = mod->surfmesh.num_triangles;
 	surf->num_firstvertex = mod->surfmesh.num_vertices;
 	if (tex->basematerialflags & (MATERIALFLAG_SKY))
-		mod->DrawSky = R_Q1BSP_DrawSky;
+		mod->DrawSky = R_Mod_DrawSky;
 	if (tex->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-		mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+		mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	return surf;
 }
 
