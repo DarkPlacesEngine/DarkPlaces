@@ -1071,6 +1071,15 @@ dp_model_t;
 // model loading
 extern dp_model_t *loadmodel;
 extern unsigned char *mod_base;
+
+typedef struct modloader_s
+{
+	char *extension;
+	char *header;
+	size_t headersize; // The header might not be NULL terminated
+	void (*Load)(dp_model_t *, void *, void *);
+} modloader_t;
+
 // sky/water subdivision
 //extern cvar_t gl_subdivide_size;
 // texture fullbrights
@@ -1242,6 +1251,9 @@ void Mod_Skeletal_FreeBuffers(void);
 void Mod_SpriteInit(void);
 
 // loaders
+void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_BSP2_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_HLBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
 void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend);
