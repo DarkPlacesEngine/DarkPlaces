@@ -158,7 +158,7 @@ static size_t Crypto_UnParsePack(char *buf, size_t len, unsigned long header, co
 
 // d0_blind_id interface
 #define D0_EXPORT
-#ifdef __GNUC__
+#if defined (__GNUC__) || (__clang__) || (__TINYC__)
 #define D0_WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #else
 #define D0_WARN_UNUSED_RESULT

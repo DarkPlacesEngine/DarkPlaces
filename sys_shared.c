@@ -534,7 +534,7 @@ void Sys_ProvideSelfFD(void)
 static int CPUID_Features(void)
 {
 	int features = 0;
-# if defined(__GNUC__) && defined(__i386__)
+# if defined((__GNUC__) || (__clang__) || (__TINYC__)) && defined(__i386__)
         __asm__ (
 "        movl    %%ebx,%%edi\n"
 "        xorl    %%eax,%%eax                                           \n"
