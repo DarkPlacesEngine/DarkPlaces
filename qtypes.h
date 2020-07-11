@@ -21,7 +21,7 @@ typedef bool qboolean;
 // fall over
 #define	ROLL	2
 
-#if defined(__GNUC__) || (defined(_MSC_VER) && _MSC_VER >= 1400)
+#if defined(__GNUC__) || (__clang__) || (__TINYC__) || (_MSC_VER >= 1400)
 #define RESTRICT __restrict
 #else
 #define RESTRICT

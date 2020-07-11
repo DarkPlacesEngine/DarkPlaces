@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # include <TargetConditionals.h>
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ > 2)
+#if (__GNUC__ > 2) || defined (__clang__) || (__TINYC__)
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
 #define DP_FUNC_NORETURN  __attribute__ ((noreturn))
@@ -471,7 +471,7 @@ extern cvar_t sessionid;
 # define DP_OS_STR		"unknown"
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || (__clang__)
 # if defined(__i386__)
 #  define DP_ARCH_STR		"686"
 #  define SSE_POSSIBLE
