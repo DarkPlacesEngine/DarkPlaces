@@ -1183,7 +1183,7 @@ static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t s
 	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
-static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
+static int Mod_BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side;
 	float front, back;
@@ -1225,7 +1225,7 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambie
 		}
 
 		// go down front side
-		if (node->children[side]->plane && Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
+		if (node->children[side]->plane && Mod_BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
 			return true;	// hit something
 
 		// check for impact on this node
@@ -1339,7 +1339,7 @@ static void Mod_BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambient
 		return;
 	}
 
-	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
+	Mod_BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
 static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
@@ -1526,7 +1526,7 @@ static void Mod_Q1BSP_TraceLineAgainstSurfaces(struct model_s *model, const fram
 	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
 }
 
-static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
+static void Mod_BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
 {
 	int c;
 	unsigned char *outstart = out;
@@ -1534,7 +1534,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 	{
 		if (in == inend)
 		{
-			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+			Con_Printf("Mod_BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 			return;
 		}
 		c = *in++;
@@ -1544,14 +1544,14 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 		{
 			if (in == inend)
 			{
-				Con_Printf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+				Con_Printf("Mod_BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 				return;
 			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
 				{
-					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+					Con_Printf("Mod_BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 					return;
 				}
 				*out++ = 0;
@@ -2828,16 +2828,16 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 }
 
-static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
+static void Mod_BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
 {
 	//if (node->parent)
-	//	Host_Error("Mod_Q1BSP_LoadNodes_RecursiveSetParent: runaway recursion");
+	//	Host_Error("Mod_BSP_LoadNodes_RecursiveSetParent: runaway recursion");
 	node->parent = parent;
 	if (node->plane)
 	{
 		// this is a node, recurse to children
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
+		Mod_BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
+		Mod_BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
 		// combine supercontents of children
 		node->combinedsupercontents = node->children[0]->combinedsupercontents | node->children[1]->combinedsupercontents;
 	}
@@ -2966,7 +2966,7 @@ static void Mod_Q1BSP_LoadNodes(sizebuf_t *sb)
 		}
 	}
 
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
@@ -3004,7 +3004,7 @@ static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
 			if (p >= loadmodel->brushq1.num_compressedpvs)
 				Con_Print("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
 			else
-				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
+				Mod_BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
 		}
 
 		if (loadmodel->brush.isbsp2rmqe)
@@ -4095,7 +4095,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// set node/leaf parents for this submodel
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + mod->brushq1.hulls[0].firstclipnode, NULL);
+		Mod_BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + mod->brushq1.hulls[0].firstclipnode, NULL);
 
 		// this has to occur after hull info has been set, as it uses Mod_Q1BSP_PointSuperContents
 		Mod_Q1BSP_AssignNoShadowSkySurfaces(mod);
@@ -4284,7 +4284,7 @@ static void Mod_Q2BSP_LoadVisibility(sizebuf_t *sb)
 		/*int phsofs = */MSG_ReadLittleLong(sb);
 		// decompress the vis data for this cluster
 		// (note this accesses the underlying data store of sb, which is kind of evil)
-		Mod_Q1BSP_DecompressVis(sb->data + pvsofs, sb->data + sb->cursize, loadmodel->brush.data_pvsclusters + i * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (i+1) * loadmodel->brush.num_pvsclusterbytes);
+		Mod_BSP_DecompressVis(sb->data + pvsofs, sb->data + sb->cursize, loadmodel->brush.data_pvsclusters + i * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (i+1) * loadmodel->brush.num_pvsclusterbytes);
 	}
 	// hush the loading error check later - we had to do random access on this lump, so we didn't read to the end
 	sb->readcount = sb->cursize;
@@ -4356,7 +4356,7 @@ static void Mod_Q2BSP_LoadNodes(sizebuf_t *sb)
 		}
 	}
 
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
@@ -5066,7 +5066,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			rootnode = mod->brush.data_nodes + bm->headnode[0];
 		else
 			rootnode = (mnode_t*)(mod->brush.data_leafs + -1 - bm->headnode[0]);
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(rootnode, NULL);
+		Mod_BSP_LoadNodes_RecursiveSetParent(rootnode, NULL);
 
 		// make the model surface list (used by shadowing/lighting)
 		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
@@ -6474,7 +6474,7 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 	}
 
 	// set the parent pointers
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
 }
 
 static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
