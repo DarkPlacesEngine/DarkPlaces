@@ -412,6 +412,7 @@ void Host_Main(void)
 	Host_Init();
 
 	host.realtime = 0;
+	host.sleeptime = 0;
 	host.dirtytime = Sys_DirtyTime();
 
 	while(host.state != host_shutdown)
@@ -445,6 +446,7 @@ void Host_Main(void)
 
 		if (!svs.threaded)
 		{
+			svs.perf_acc_sleeptime = host.sleeptime;
 			svs.perf_acc_realtime += time;
 
 			// Look for clients who have spawned
@@ -457,7 +459,7 @@ void Host_Main(void)
 			{
 				// don't accumulate time for the first 10 seconds of a match
 				// so things can settle
-				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
 			}
 			else if(svs.perf_acc_realtime > 5)
 			{
@@ -472,7 +474,7 @@ void Host_Main(void)
 				if(svs.perf_lost > 0 && developer_extra.integer)
 					if(playing) // only complain if anyone is looking
 						Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
-				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
 			}
 		}
 
@@ -541,9 +543,9 @@ void Host_Main(void)
 			else
 				Sys_Sleep((int)wait);
 			delta = Sys_DirtyTime() - time0;
-			if (delta < 0 || delta >= 1800) delta = 0;
-			if (!svs.threaded)
-				svs.perf_acc_sleeptime += delta;
+			if (delta < 0 || delta >= 1800) 
+				delta = 0;
+			host.sleeptime += delta;
 //			R_TimeReport("sleep");
 			continue;
 		}
