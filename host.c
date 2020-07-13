@@ -407,6 +407,8 @@ void Host_Main(void)
 	char vabuf[1024];
 	qboolean playing;
 
+	host.restless = false;
+
 	Host_Init();
 
 	host.realtime = 0;
@@ -518,7 +520,7 @@ void Host_Main(void)
 		else
 			wait = max(cl_timer, sv_timer) * -1000000.0;
 
-		if (!cls.timedemo && wait >= 1)
+		if (!host.restless && wait >= 1)
 		{
 			double time0, delta;
 

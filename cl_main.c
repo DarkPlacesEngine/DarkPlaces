@@ -403,7 +403,7 @@ void CL_Disconnect(void)
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
 
-	cls.demoplayback = cls.timedemo = false;
+	cls.demoplayback = cls.timedemo = host.restless = false;
 	cls.signon = 0;
 
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
