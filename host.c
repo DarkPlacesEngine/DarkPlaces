@@ -444,40 +444,6 @@ void Host_Main(void)
 		cl_timer += time;
 		sv_timer += time;
 
-		if (!svs.threaded)
-		{
-			svs.perf_acc_sleeptime = host.sleeptime;
-			svs.perf_acc_realtime += time;
-
-			// Look for clients who have spawned
-			playing = false;
-			for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-				if(host_client->begun)
-					if(host_client->netconnection)
-						playing = true;
-			if(sv.time < 10)
-			{
-				// don't accumulate time for the first 10 seconds of a match
-				// so things can settle
-				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
-			}
-			else if(svs.perf_acc_realtime > 5)
-			{
-				svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
-				svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
-				if(svs.perf_acc_offset_samples > 0)
-				{
-					svs.perf_offset_max = svs.perf_acc_offset_max;
-					svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
-					svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
-				}
-				if(svs.perf_lost > 0 && developer_extra.integer)
-					if(playing) // only complain if anyone is looking
-						Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
-				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
-			}
-		}
-
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValueQuick(&host_framerate, 0);
 
@@ -566,93 +532,126 @@ void Host_Main(void)
 			sv_timer = 0.1;
 		}
 
-		if (sv.active && sv_timer > 0 && !svs.threaded)
+		if (!svs.threaded)
 		{
-			// execute one or more server frames, with an upper limit on how much
-			// execution time to spend on server frames to avoid freezing the game if
-			// the server is overloaded, this execution time limit means the game will
-			// slow down if the server is taking too long.
-			int framecount, framelimit = 1;
-			double advancetime, aborttime = 0;
-			float offset;
-			prvm_prog_t *prog = SVVM_prog;
+			svs.perf_acc_sleeptime = host.sleeptime;
+			svs.perf_acc_realtime += time;
 
-			// run the world state
-			// don't allow simulation to run too fast or too slow or logic glitches can occur
-
-			// stop running server frames if the wall time reaches this value
-			if (sys_ticrate.value <= 0)
-				advancetime = sv_timer;
-			else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
+			// Look for clients who have spawned
+			playing = false;
+			for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+				if(host_client->begun)
+					if(host_client->netconnection)
+						playing = true;
+			if(sv.time < 10)
 			{
-				// synchronize to the client frametime, but no less than 10ms and no more than 100ms
-				advancetime = bound(0.01, cl_timer, 0.1);
+				// don't accumulate time for the first 10 seconds of a match
+				// so things can settle
+				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
+			}
+			else if(svs.perf_acc_realtime > 5)
+			{
+				svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
+				svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+				if(svs.perf_acc_offset_samples > 0)
+				{
+					svs.perf_offset_max = svs.perf_acc_offset_max;
+					svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
+					svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+				}
+				if(svs.perf_lost > 0 && developer_extra.integer)
+					if(playing) // only complain if anyone is looking
+						Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
+			}
+
+			if (sv.active && sv_timer > 0 && !svs.threaded)
+			{
+				// execute one or more server frames, with an upper limit on how much
+				// execution time to spend on server frames to avoid freezing the game if
+				// the server is overloaded, this execution time limit means the game will
+				// slow down if the server is taking too long.
+				int framecount, framelimit = 1;
+				double advancetime, aborttime = 0;
+				float offset;
+				prvm_prog_t *prog = SVVM_prog;
+
+				// run the world state
+				// don't allow simulation to run too fast or too slow or logic glitches can occur
+
+				// stop running server frames if the wall time reaches this value
+				if (sys_ticrate.value <= 0)
+					advancetime = sv_timer;
+				else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
+				{
+					// synchronize to the client frametime, but no less than 10ms and no more than 100ms
+					advancetime = bound(0.01, cl_timer, 0.1);
+				}
+				else
+				{
+					advancetime = sys_ticrate.value;
+					// listen servers can run multiple server frames per client frame
+					framelimit = cl_maxphysicsframesperserverframe.integer;
+					aborttime = Sys_DirtyTime() + 0.1;
+				}
+				if(host_timescale.value > 0 && host_timescale.value < 1)
+					advancetime = min(advancetime, 0.1 / host_timescale.value);
+				else
+					advancetime = min(advancetime, 0.1);
+
+				if(advancetime > 0)
+				{
+					offset = Sys_DirtyTime() - newtime;if (offset < 0 || offset >= 1800) offset = 0;
+					offset += sv_timer;
+					++svs.perf_acc_offset_samples;
+					svs.perf_acc_offset += offset;
+					svs.perf_acc_offset_squared += offset * offset;
+					if(svs.perf_acc_offset_max < offset)
+						svs.perf_acc_offset_max = offset;
+				}
+
+				// only advance time if not paused
+				// the game also pauses in singleplayer when menu or console is used
+				sv.frametime = advancetime * host_timescale.value;
+				if (host_framerate.value)
+					sv.frametime = host_framerate.value;
+				if (sv.paused || host.paused)
+					sv.frametime = 0;
+
+				for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
+				{
+					sv_timer -= advancetime;
+
+					// move things around and think unless paused
+					if (sv.frametime)
+						SV_Physics();
+
+					// if this server frame took too long, break out of the loop
+					if (framelimit > 1 && Sys_DirtyTime() >= aborttime)
+						break;
+				}
+				R_TimeReport("serverphysics");
+
+				// send all messages to the clients
+				SV_SendClientMessages();
+
+				if (sv.paused == 1 && host.realtime > sv.pausedstart && sv.pausedstart > 0) {
+					prog->globals.fp[OFS_PARM0] = host.realtime - sv.pausedstart;
+					PRVM_serverglobalfloat(time) = sv.time;
+					prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
+				}
+
+				// send an heartbeat if enough time has passed since the last one
+				NetConn_Heartbeat(0);
+				R_TimeReport("servernetwork");
 			}
 			else
 			{
-				advancetime = sys_ticrate.value;
-				// listen servers can run multiple server frames per client frame
-				framelimit = cl_maxphysicsframesperserverframe.integer;
-				aborttime = Sys_DirtyTime() + 0.1;
+				// don't let r_speeds display jump around
+				R_TimeReport("serverphysics");
+				R_TimeReport("servernetwork");
 			}
-			if(host_timescale.value > 0 && host_timescale.value < 1)
-				advancetime = min(advancetime, 0.1 / host_timescale.value);
-			else
-				advancetime = min(advancetime, 0.1);
-
-			if(advancetime > 0)
-			{
-				offset = Sys_DirtyTime() - newtime;if (offset < 0 || offset >= 1800) offset = 0;
-				offset += sv_timer;
-				++svs.perf_acc_offset_samples;
-				svs.perf_acc_offset += offset;
-				svs.perf_acc_offset_squared += offset * offset;
-				if(svs.perf_acc_offset_max < offset)
-					svs.perf_acc_offset_max = offset;
-			}
-
-			// only advance time if not paused
-			// the game also pauses in singleplayer when menu or console is used
-			sv.frametime = advancetime * host_timescale.value;
-			if (host_framerate.value)
-				sv.frametime = host_framerate.value;
-			if (sv.paused || host.paused)
-				sv.frametime = 0;
-
-			for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
-			{
-				sv_timer -= advancetime;
-
-				// move things around and think unless paused
-				if (sv.frametime)
-					SV_Physics();
-
-				// if this server frame took too long, break out of the loop
-				if (framelimit > 1 && Sys_DirtyTime() >= aborttime)
-					break;
-			}
-			R_TimeReport("serverphysics");
-
-			// send all messages to the clients
-			SV_SendClientMessages();
-
-			if (sv.paused == 1 && host.realtime > sv.pausedstart && sv.pausedstart > 0) {
-				prog->globals.fp[OFS_PARM0] = host.realtime - sv.pausedstart;
-				PRVM_serverglobalfloat(time) = sv.time;
-				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_PausedTic), "QC function SV_PausedTic is missing");
-			}
-
-			// send an heartbeat if enough time has passed since the last one
-			NetConn_Heartbeat(0);
-			R_TimeReport("servernetwork");
 		}
-		else if (!svs.threaded)
-		{
-			// don't let r_speeds display jump around
-			R_TimeReport("serverphysics");
-			R_TimeReport("servernetwork");
-		}
-
 		// if there is some time remaining from this frame, reset the timer
 		if (sv_timer >= 0)
 		{
