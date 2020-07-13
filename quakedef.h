@@ -535,6 +535,7 @@ typedef struct host_s
 	double realtime; // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
 	double dirtytime; // the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
 	qboolean restless; // don't sleep
+	qboolean paused; // global paused state, pauses both client and server
 } host_t;
 
 extern host_t host;

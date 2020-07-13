@@ -617,7 +617,7 @@ void Host_Main(void)
 			sv.frametime = advancetime * host_timescale.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
-			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+			if (sv.paused || host.paused)
 				sv.frametime = 0;
 
 			for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
@@ -716,7 +716,7 @@ void Host_Main(void)
 				if (host_framerate.value)
 					clframetime = host_framerate.value;
 
-				if (cl.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+				if (cl.paused || host.paused)
 					clframetime = 0;
 			}
 

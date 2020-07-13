@@ -4210,7 +4210,7 @@ static int SV_ThreadFunc(void *voiddata)
 			sv.frametime = advancetime * host_timescale.value;
 			if (host_framerate.value)
 				sv.frametime = host_framerate.value;
-			if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive || cl.csqc_paused)))
+			if (sv.paused || host.paused)
 				sv.frametime = 0;
 
 			sv_timer -= advancetime;

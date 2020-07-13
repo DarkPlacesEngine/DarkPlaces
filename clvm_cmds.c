@@ -1414,10 +1414,13 @@ static void VM_CL_boxparticles (prvm_prog_t *prog)
 static void VM_CL_setpause(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_setpause);
-	if ((int)PRVM_G_FLOAT(OFS_PARM0) != 0)
-		cl.csqc_paused = true;
-	else
-		cl.csqc_paused = false;
+	if(cl.islocalgame)
+	{
+		if ((int)PRVM_G_FLOAT(OFS_PARM0) != 0)
+			host.paused = true;
+		else
+			host.paused = false;
+	}
 }
 
 //#343 void(float usecursor) setcursormode (DP_CSQC)
