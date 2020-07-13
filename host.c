@@ -550,16 +550,6 @@ void Host_Main(void)
 			continue;
 		}
 
-		// limit the frametime steps to no more than 100ms each
-		if (cl_timer > 0.1)
-			cl_timer = 0.1;
-		if (sv_timer > 0.1)
-		{
-			if (!svs.threaded)
-				svs.perf_acc_lost += (sv_timer - 0.1);
-			sv_timer = 0.1;
-		}
-
 		R_TimeReport("---");
 
 	//-------------------
@@ -569,6 +559,13 @@ void Host_Main(void)
 	//-------------------
 
 		// limit the frametime steps to no more than 100ms each
+		if (sv_timer > 0.1)
+		{
+			if (!svs.threaded)
+				svs.perf_acc_lost += (sv_timer - 0.1);
+			sv_timer = 0.1;
+		}
+
 		if (sv.active && sv_timer > 0 && !svs.threaded)
 		{
 			// execute one or more server frames, with an upper limit on how much
@@ -661,6 +658,10 @@ void Host_Main(void)
 	// client operations
 	//
 	//-------------------
+
+		// limit the frametime steps to no more than 100ms each
+		if (cl_timer > 0.1)
+			cl_timer = 0.1;
 
 		// get new key events
 		Key_EventQueue_Unblock();
