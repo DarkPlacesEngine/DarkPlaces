@@ -653,6 +653,14 @@ void Host_Main(void)
 			R_TimeReport("servernetwork");
 		}
 
+		// if there is some time remaining from this frame, reset the timer
+		if (sv_timer >= 0)
+		{
+			if (!svs.threaded)
+				svs.perf_acc_lost += sv_timer;
+			sv_timer = 0;
+		}
+
 	//-------------------
 	//
 	// client operations
@@ -793,22 +801,16 @@ void Host_Main(void)
 			}
 		}
 
+		// if there is some time remaining from this frame, reset the timer
+		if (cl_timer >= 0)
+			cl_timer = 0;
+
 #if MEMPARANOIA
 		Mem_CheckSentinelsGlobal();
 #else
 		if (developer_memorydebug.integer)
 			Mem_CheckSentinelsGlobal();
 #endif
-
-		// if there is some time remaining from this frame, reset the timers
-		if (cl_timer >= 0)
-			cl_timer = 0;
-		if (sv_timer >= 0)
-		{
-			if (!svs.threaded)
-				svs.perf_acc_lost += sv_timer;
-			sv_timer = 0;
-		}
 
 		host.framecount++;
 	}
