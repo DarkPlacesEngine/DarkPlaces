@@ -499,7 +499,7 @@ static void CL_FinishTimeDemo (void)
 	static int benchmark_runs = 0;
 	char vabuf[1024];
 
-	cls.timedemo = false;
+	cls.timedemo = host.restless = false;
 
 	frames = cls.td_frames;
 	time = host.realtime - cls.td_starttime;
@@ -614,7 +614,7 @@ void CL_TimeDemo_f(cmd_state_t *cmd)
 	key_consoleactive = 0;
 	scr_con_current = 0;
 
-	cls.timedemo = true;
+	cls.timedemo = host.restless = true;
 	cls.td_frames = -2;		// skip the first frame
 	cls.demonum = -1;		// stop demo loop
 }

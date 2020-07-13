@@ -534,6 +534,7 @@ typedef struct host_s
 	int framecount; // incremented every frame, never reset (checked by Host_Error and Host_SaveConfig_f)
 	double realtime; // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
 	double dirtytime; // the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
+	qboolean restless; // don't sleep
 } host_t;
 
 extern host_t host;
