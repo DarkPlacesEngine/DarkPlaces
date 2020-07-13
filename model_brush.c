@@ -2278,14 +2278,14 @@ static void Mod_Q1BSP_LoadVertexes(sizebuf_t *sb)
 	}
 }
 
-static void Mod_Q1BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
+static void Mod_BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
 {
 	mmodel_t	*out;
 	int			i, j, count;
-	int			structsize = (48+4*hullinfo->filehulls);
+	int			structsize = hullinfo ? (48+4*hullinfo->filehulls) : 48;
 
 	if (sb->cursize % structsize)
-		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
+		Host_Error ("Mod_BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
 
 	count = sb->cursize / structsize;
 	out = (mmodel_t *)Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
@@ -2305,9 +2305,15 @@ static void Mod_Q1BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
 		out->origin[0] = MSG_ReadLittleFloat(sb);
 		out->origin[1] = MSG_ReadLittleFloat(sb);
 		out->origin[2] = MSG_ReadLittleFloat(sb);
-		for (j = 0; j < hullinfo->filehulls; j++)
-			out->headnode[j] = MSG_ReadLittleLong(sb);
-		out->visleafs  = MSG_ReadLittleLong(sb);
+		if(hullinfo)
+		{
+			for (j = 0; j < hullinfo->filehulls; j++)
+				out->headnode[j] = MSG_ReadLittleLong(sb);
+			out->visleafs  = MSG_ReadLittleLong(sb);
+		}
+		else // Quake 2 has only one hull
+			out->headnode[0] = MSG_ReadLittleLong(sb);
+
 		out->firstface = MSG_ReadLittleLong(sb);
 		out->numfaces  = MSG_ReadLittleLong(sb);
 	}
@@ -3987,7 +3993,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q1BSP_LoadLeaffaces(&lumpsb[LUMP_MARKSURFACES]);
 	Mod_Q1BSP_LoadVisibility(&lumpsb[LUMP_VISIBILITY]);
 	// load submodels before leafs because they contain the number of vis leafs
-	Mod_Q1BSP_LoadSubmodels(&lumpsb[LUMP_MODELS], &hullinfo);
+	Mod_BSP_LoadSubmodels(&lumpsb[LUMP_MODELS], &hullinfo);
 	Mod_Q1BSP_LoadLeafs(&lumpsb[LUMP_LEAFS]);
 	Mod_Q1BSP_LoadNodes(&lumpsb[LUMP_NODES]);
 	Mod_Q1BSP_LoadClipnodes(&lumpsb[LUMP_CLIPNODES], &hullinfo);
@@ -4811,40 +4817,6 @@ static void Mod_Q2BSP_LoadAreaPortals(sizebuf_t *sb)
 	sb->readcount = sb->cursize;
 }
 
-static void Mod_Q2BSP_LoadSubmodels(sizebuf_t *sb)
-{
-	mmodel_t	*out;
-	int			i, count;
-	int			structsize = 48;
-
-	if (sb->cursize % structsize)
-		Host_Error ("Mod_Q2BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
-
-	count = sb->cursize / structsize;
-	out = (mmodel_t *)Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
-
-	loadmodel->brushq1.submodels = out;
-	loadmodel->brush.numsubmodels = count;
-
-	// this is identical to the q1 submodel structure except for having 1 hull
-	for (i = 0; i < count; i++, out++)
-	{
-		// spread out the mins / maxs by a pixel
-		out->mins[0] = MSG_ReadLittleFloat(sb) - 1;
-		out->mins[1] = MSG_ReadLittleFloat(sb) - 1;
-		out->mins[2] = MSG_ReadLittleFloat(sb) - 1;
-		out->maxs[0] = MSG_ReadLittleFloat(sb) + 1;
-		out->maxs[1] = MSG_ReadLittleFloat(sb) + 1;
-		out->maxs[2] = MSG_ReadLittleFloat(sb) + 1;
-		out->origin[0] = MSG_ReadLittleFloat(sb);
-		out->origin[1] = MSG_ReadLittleFloat(sb);
-		out->origin[2] = MSG_ReadLittleFloat(sb);
-		out->headnode[0] = MSG_ReadLittleLong(sb);
-		out->firstface = MSG_ReadLittleLong(sb);
-		out->numfaces  = MSG_ReadLittleLong(sb);
-	}
-}
-
 static void Mod_Q2BSP_FindSubmodelBrushRange_r(dp_model_t *mod, mnode_t *node, int *first, int *last)
 {
 	int i;
@@ -4972,7 +4944,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q2BSP_LoadAreaPortals(&lumpsb[Q2LUMP_AREAPORTALS]);
 	Mod_Q2BSP_LoadLeafs(&lumpsb[Q2LUMP_LEAFS]);
 	Mod_Q2BSP_LoadNodes(&lumpsb[Q2LUMP_NODES]);
-	Mod_Q2BSP_LoadSubmodels(&lumpsb[Q2LUMP_MODELS]);
+	Mod_BSP_LoadSubmodels(&lumpsb[Q2LUMP_MODELS], NULL);
 
 	for (i = 0; i < Q2HEADER_LUMPS; i++)
 		if (lumpsb[i].readcount != lumpsb[i].cursize)
