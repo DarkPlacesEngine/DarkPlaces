@@ -644,13 +644,8 @@ void CSQC_AddPrintText (const char *msg)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	size_t i;
-	if(!cl.csqc_loaded)
-	{
-		Con_Print(msg);
-		return;
-	}
 	CSQC_BEGIN
-	if(PRVM_clientfunction(CSQC_Parse_Print))
+	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_Print))
 	{
 		// FIXME: is this bugged?
 		i = strlen(msg)-1;
@@ -678,13 +673,8 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
-	if(!cl.csqc_loaded)
-	{
-		SCR_CenterPrint(msg);
-		return;
-	}
 	CSQC_BEGIN
-	if(PRVM_clientfunction(CSQC_Parse_CenterPrint))
+	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_CenterPrint))
 	{
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
