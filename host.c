@@ -413,7 +413,7 @@ void Host_Main(void)
 
 	host.realtime = 0;
 	host.sleeptime = 0;
-	host.dirtytime = Sys_DirtyTime();
+	host.dirtytime = oldtime = Sys_DirtyTime();
 
 	while(host.state != host_shutdown)
 	{
@@ -423,8 +423,7 @@ void Host_Main(void)
 			continue;			// something bad happened, or the server disconnected
 		}
 
-		oldtime = host.dirtytime;
-		newtime = Sys_DirtyTime();
+		newtime = host.dirtytime = Sys_DirtyTime();
 		time = newtime - oldtime;
 		if (time < 0)
 		{
@@ -439,10 +438,6 @@ void Host_Main(void)
 			time = 0;
 		}
 		host.realtime += time;
-		host.dirtytime = newtime;
-
-		cl_timer += time;
-		sv_timer += time;
 
 		if (host_framerate.value < 0.00001 && host_framerate.value != 0)
 			Cvar_SetValueQuick(&host_framerate, 0);
@@ -660,6 +655,8 @@ void Host_Main(void)
 			sv_timer = 0;
 		}
 
+		sv_timer += time;
+
 	//-------------------
 	//
 	// client operations
@@ -804,6 +801,8 @@ void Host_Main(void)
 		if (cl_timer >= 0)
 			cl_timer = 0;
 
+		cl_timer += time;
+
 #if MEMPARANOIA
 		Mem_CheckSentinelsGlobal();
 #else
@@ -812,6 +811,7 @@ void Host_Main(void)
 #endif
 
 		host.framecount++;
+		oldtime = newtime;
 	}
 
 	Sys_Quit(0);
