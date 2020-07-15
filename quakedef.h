@@ -95,7 +95,7 @@ extern char engineversion[128];
 #define	MAX_CUBEMAPS			1024
 #define	MAX_EXPLOSIONS			8
 #define	MAX_DLIGHTS				16
-#define	MAX_CACHED_PICS			1024 // this is 144 bytes each (or 152 on 64bit)
+#define	MAX_CACHED_PICS			2048 // this is 144 bytes each (or 152 on 64bit)
 #define	CACHEPICHASHSIZE		256
 #define	MAX_PARTICLEEFFECTNAME	256
 #define	MAX_PARTICLEEFFECTINFO	1024
@@ -162,7 +162,7 @@ extern char engineversion[128];
 #define	MAX_CUBEMAPS			1024 ///< max number of cubemap textures loaded for light filters
 #define	MAX_EXPLOSIONS			64 ///< max number of explosion shell effects active at once (not particle related)
 #define	MAX_DLIGHTS				256 ///< max number of dynamic lights (rocket flashes, etc) in scene at once
-#define	MAX_CACHED_PICS			1024 ///< max number of 2D pics loaded at once
+#define	MAX_CACHED_PICS			2048 ///< max number of 2D pics loaded at once
 #define	CACHEPICHASHSIZE		256 ///< number of hash buckets for accelerating 2D pic name lookups
 #define	MAX_PARTICLEEFFECTNAME	4096 ///< maximum number of unique names of particle effects (for particleeffectnum)
 #define	MAX_PARTICLEEFFECTINFO	8192 ///< maximum number of unique particle effects (each name may associate with several of these)
