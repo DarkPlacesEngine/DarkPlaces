@@ -94,7 +94,9 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 		texflags |= TEXF_MIPMAP;
 	if (!(cachepicflags & CACHEPICFLAG_NOCOMPRESSION) && gl_texturecompression_2d.integer && gl_texturecompression.integer)
 		texflags |= TEXF_COMPRESS;
-	if ((cachepicflags & CACHEPICFLAG_NEAREST) || r_nearest_2d.integer)
+	if (cachepicflags & CACHEPICFLAG_LINEAR)
+		texflags |= TEXF_FORCELINEAR;
+	else if ((cachepicflags & CACHEPICFLAG_NEAREST) || r_nearest_2d.integer)
 		texflags |= TEXF_FORCENEAREST;
 
 	// check whether the picture has already been cached
