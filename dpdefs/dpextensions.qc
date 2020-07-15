@@ -2616,3 +2616,10 @@ float MOVETYPE_USER_LAST = 191;
 .float clipgroup;
 //description:
 //If two entities have this field set to the same non-zero integer value, they won't collide with each other.
+
+//idea: eukara
+//darkplaces implementation: Cloudwalk
+// Do NOT use in production yet.
+string __fullspawndata;
+//description:
+// http://icculus.org/finger/marco?date=2019-01-25&time=05-38-02

@@ -1367,7 +1367,10 @@ to call PRVM_ED_CallSpawnFunctions () to let the objects initialize themselves.
 void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 {
 	prvm_edict_t *ent;
+	const char *start;
 	int parsed, inhibited, spawned, died;
+	ddef_t *fulldata_ddef = NULL;
+	prvm_eval_t *fulldata = NULL;
 	const char *funcname;
 	mfunction_t *func;
 	char vabuf[1024];
@@ -1400,7 +1403,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 		// clear it
 		if (ent != prog->edicts)	// hack
 			memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
-
+		start = data;
 		data = PRVM_ED_ParseEdict (prog, data, ent);
 		parsed++;
 
@@ -1437,6 +1440,32 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 				PRVM_ED_Print(prog, ent, NULL);
 				PRVM_ED_Free (prog, ent);
 				continue;
+			}
+			/* 
+			 * This is required for FTE compatibility (FreeCS).
+			 * It copies the key/value pairs themselves into a
+			 * global for QC to parse on its own.
+			 */
+			else
+			{
+				fulldata_ddef = PRVM_ED_FindGlobal(prog, "__fullspawndata");
+				if(fulldata_ddef)
+					fulldata = (prvm_eval_t *) &prog->globals.fp[fulldata_ddef->ofs];
+				if(fulldata)
+				{
+					const char *in;
+					char *spawndata;
+					fulldata->string = PRVM_AllocString(prog, data - start + 1, &spawndata);
+					for(in = start; in < data; )
+					{
+						char c = *in++;
+						if(c == '\n')
+							*spawndata++ = '\t';
+						else
+							*spawndata++ = c;
+					}
+					*spawndata = 0;
+				}
 			}
 
 			// look for the spawn function
