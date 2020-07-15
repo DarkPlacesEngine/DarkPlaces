@@ -452,11 +452,6 @@ void Host_Main(void)
 
 		Log_DestBuffer_Flush();
 
-		// receive packets on each main loop iteration, as the main loop may
-		// be undersleeping due to select() detecting a new packet
-		if (sv.active && !svs.threaded)
-			NetConn_ServerFrame();
-
 		Curl_Run();
 
 		// check for commands typed to the host
@@ -474,37 +469,6 @@ void Host_Main(void)
 //		R_TimeReport("console");
 
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
-
-		// if the accumulators haven't become positive yet, wait a while
-		wait = max(cl_timer, sv_timer) * -1000000.0;
-
-		if (!host.restless && wait >= 1)
-		{
-			double time0, delta;
-
-			if(host_maxwait.value <= 0)
-				wait = min(wait, 1000000.0);
-			else
-				wait = min(wait, host_maxwait.value * 1000.0);
-			if(wait < 1)
-				wait = 1; // because we cast to int
-
-			time0 = Sys_DirtyTime();
-			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
-				NetConn_SleepMicroseconds((int)wait);
-				if (cls.state != ca_dedicated)
-					NetConn_ClientFrame(); // helps server browser get good ping values
-				// TODO can we do the same for ServerFrame? Probably not.
-			}
-			else
-				Sys_Sleep((int)wait);
-			delta = Sys_DirtyTime() - time0;
-			if (delta < 0 || delta >= 1800) 
-				delta = 0;
-			host.sleeptime += delta;
-//			R_TimeReport("sleep");
-			continue;
-		}
 
 		R_TimeReport("---");
 
@@ -565,7 +529,10 @@ void Host_Main(void)
 				double advancetime, aborttime = 0;
 				float offset;
 				prvm_prog_t *prog = SVVM_prog;
-
+				// receive packets on each main loop iteration, as the main loop may
+				// be undersleeping due to select() detecting a new packet
+				if (sv.active && !svs.threaded)
+					NetConn_ServerFrame();
 				// run the world state
 				// don't allow simulation to run too fast or too slow or logic glitches can occur
 
@@ -804,6 +771,36 @@ void Host_Main(void)
 		if (developer_memorydebug.integer)
 			Mem_CheckSentinelsGlobal();
 #endif
+
+		// if the accumulators haven't become positive yet, wait a while
+		wait = max(cl_timer, sv_timer) * -1000000.0;
+
+		if (!host.restless && wait >= 1)
+		{
+			double time0, delta;
+
+			if(host_maxwait.value <= 0)
+				wait = min(wait, 1000000.0);
+			else
+				wait = min(wait, host_maxwait.value * 1000.0);
+			if(wait < 1)
+				wait = 1; // because we cast to int
+
+			time0 = Sys_DirtyTime();
+			if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
+				NetConn_SleepMicroseconds((int)wait);
+				if (cls.state != ca_dedicated)
+					NetConn_ClientFrame(); // helps server browser get good ping values
+				// TODO can we do the same for ServerFrame? Probably not.
+			}
+			else
+				Sys_Sleep((int)wait);
+			delta = Sys_DirtyTime() - time0;
+			if (delta < 0 || delta >= 1800) 
+				delta = 0;
+			host.sleeptime += delta;
+//			R_TimeReport("sleep");
+		}
 
 		host.framecount++;
 		oldtime = newtime;
