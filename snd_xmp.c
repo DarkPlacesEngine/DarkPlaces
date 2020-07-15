@@ -121,8 +121,8 @@ void XMP_CloseLibrary (void) {}
 //#define XMP_MAX_ENV_POINTS	32	/* Max number of envelope points */
 #define XMP_MAX_MOD_LENGTH	256	/* Max number of patterns in module */
 //#define XMP_MAX_CHANNELS	64	/* Max number of channels in module */
-//#define XMP_MAX_SRATE		49170	/* max sampling rate (Hz) */
-//#define XMP_MIN_SRATE		4000	/* min sampling rate (Hz) */
+#define XMP_MAX_SRATE		49170	/* max sampling rate (Hz) */
+#define XMP_MIN_SRATE		4000	/* min sampling rate (Hz) */
 //#define XMP_MIN_BPM		20	/* min BPM */
 #define XMP_MAX_FRAMESIZE	(5 * XMP_MAX_SRATE * 2 / XMP_MIN_BPM)
 
@@ -464,9 +464,22 @@ static void XMP_GetSamplesFloat(channel_t *ch, sfx_t *sfx, int firstsampleframe,
 		}
 
 		// start playing the loaded file
-		if (sfx->format.width == 1)    { format |= XMP_FORMAT_8BIT; } // else 16bit
+		if (sfx->format.width == 1)    { format |= XMP_FORMAT_8BIT | XMP_FORMAT_UNSIGNED; } // else 16bit
 		if (sfx->format.channels == 1) { format |= XMP_FORMAT_MONO; } // else stereo
-		if (qxmp_start_player(per_ch->playercontext, sfx->format.speed, format) < 0) // FIXME: only if speed is in XMP acceptable range, else default to 48khz and let DP mix
+
+		if (qxmp_start_player(per_ch->playercontext, sfx->format.speed, format) < 0)
+		{
+			Mem_Free(per_ch);
+			return;
+		}
+		/* percentual left/right channel separation, default is 70. */
+		if (sfx->format.channels == 2 && (qxmp_set_player(per_ch->playercontext, XMP_PLAYER_MIX, 50) != 0))
+		{
+			Mem_Free(per_ch);
+			return;
+		}
+		/* interpolation type, default is XMP_INTERP_LINEAR */
+		if (qxmp_set_player(per_ch->playercontext, XMP_PLAYER_INTERP, XMP_INTERP_SPLINE) != 0)
 		{
 			Mem_Free(per_ch);
 			return;
@@ -634,20 +647,20 @@ qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
 	// set dp sfx
 	sfx->memsize += sizeof(*per_sfx);
 	sfx->memsize += filesize; // total memory used (including sfx_t and fetcher data)
-//	sfx->format // format describing the audio data that fetcher->getsamplesfloat shall return
-	sfx->format.speed = 48000; // default to this sample rate
-	sfx->format.width = 2;  // default to 16 bit samples
-//	sfx->format.width = 1; // 8-bit
-	sfx->format.channels = 2; // default to stereo
-//	sfx->format.channels = 1; // mono
+	if (S_GetSoundRate() > XMP_MAX_SRATE)
+		sfx->format.speed = 48000;
+	else if (S_GetSoundRate() < XMP_MIN_SRATE)
+		sfx->format.speed = 8000;
+	else
+		sfx->format.speed = S_GetSoundRate();
+	sfx->format.width = S_GetSoundWidth();  // 2 = 16 bit samples
+	sfx->format.channels = S_GetSoundChannels();
 	sfx->flags |= SFXFLAG_STREAMED; // cf SFXFLAG_* defines
-//	sfx->total_length // in (pcm) sample frames
-	sfx->total_length = 1<<30; // 2147384647; // they always loop (FIXME this breaks after 6 hours, we need support for a real "infinite" value!)
+	sfx->total_length = 1<<30; // 2147384647; // in (pcm) sample frames - they always loop (FIXME this breaks after 6 hours, we need support for a real "infinite" value!)
 	sfx->loopstart = sfx->total_length; // (modplug does it) in sample frames. equals total_length if not looped
 	sfx->fetcher_data = per_sfx;
 	sfx->fetcher = &xmp_fetcher;
-//	sfx->volume_mult // for replay gain (multiplier to apply)
-//	sfx->volume_peak // for replay gain (highest peak); if set to 0, ReplayGain isn't supported
+	sfx->volume_peak = 0;
 
 	qxmp_get_module_info(xc, &mi);
 	if (developer_loading.integer >= 2)
