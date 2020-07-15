@@ -107,6 +107,9 @@ void Mem_PrintList(size_t minallocationsize);
 #if FILE_BACKED_MALLOC
 #include <stdlib.h>
 #include <sys/mman.h>
+#ifndef MAP_NORESERVE
+#define MAP_NORESERVE 0
+#endif
 typedef struct mmap_data_s
 {
 	size_t len;
@@ -127,7 +130,7 @@ static void *mmap_malloc(size_t size)
 	data = (unsigned char *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, fd, 0);
 	close(fd);
 	unlink(vabuf);
-	if(!data)
+	if(!data || data == (void *)-1)
 		return NULL;
 	data->len = size;
 	return (void *) (data + 1);
