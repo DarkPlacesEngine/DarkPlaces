@@ -1113,58 +1113,36 @@ void Host_Shutdown(void)
 	}
 	isdown = true;
 
-	// be quiet while shutting down
-	S_StopAllSounds();
+	if(cls.state != ca_dedicated)
+		CL_Shutdown();
 
 	// end the server thread
 	if (svs.threaded)
 		SV_StopThread();
-
-	// disconnect client from server if active
-	CL_Disconnect();
 
 	// shut down local server if active
 	SV_LockThreadMutex();
 	SV_Shutdown ();
 	SV_UnlockThreadMutex();
 
-#ifdef CONFIG_MENU
-	// Shutdown menu
-	if(MR_Shutdown)
-		MR_Shutdown();
-#endif
-
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
 
-	CL_Video_Shutdown();
-
 	Host_SaveConfig();
 
-	CDAudio_Shutdown ();
-	S_Terminate ();
 	Curl_Shutdown ();
 	NetConn_Shutdown ();
-
-	if (cls.state != ca_dedicated)
-	{
-		R_Modules_Shutdown();
-		VID_Shutdown();
-	}
 
 	SV_StopThread();
 	TaskQueue_Shutdown();
 	Thread_Shutdown();
 	Cmd_Shutdown();
-	Key_Shutdown();
-	CL_Shutdown();
 	Sys_Shutdown();
 	Log_Close();
 	Crypto_Shutdown();
 
 	Host_UnlockSession();
 
-	S_Shutdown();
 	Con_Shutdown();
 	Memory_Shutdown();
 }
