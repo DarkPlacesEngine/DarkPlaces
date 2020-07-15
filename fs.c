@@ -2122,7 +2122,7 @@ static void FS_Init_Dir (void)
 			i++;
 			p = FS_CheckGameDir(sys.argv[i]);
 			if(!p)
-				Sys_Error("Nasty -game name rejected: %s", sys.argv[i]);
+				Con_Printf("WARNING: Nasty -game name rejected: %s\n", sys.argv[i]);
 			if(p == fs_checkgamedir_missing)
 				Con_Printf(CON_WARN "WARNING: -game %s%s/ not found!\n", fs_basedir, sys.argv[i]);
 			// add the gamedir to the list of active gamedirs
