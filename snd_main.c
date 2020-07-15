@@ -375,6 +375,11 @@ int S_GetSoundChannels(void)
 	return snd_renderbuffer ? snd_renderbuffer->format.channels : 0;
 }
 
+int S_GetSoundWidth(void)
+{
+	return snd_renderbuffer ? snd_renderbuffer->format.width : 0;
+}
+
 
 #define SWAP_LISTENERS(l1, l2, tmpl) { tmpl = (l1); (l1) = (l2); (l2) = tmpl; }
 
@@ -572,7 +577,7 @@ void S_Startup (void)
 	{
 		chosen_fmt.width = SND_MIN_WIDTH;
 	}
-    else if (chosen_fmt.width == 3)
+	else if (chosen_fmt.width == 3)
 	{
 		chosen_fmt.width = 4;
 	}
