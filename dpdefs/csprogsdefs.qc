@@ -337,7 +337,7 @@ void(entity e, vector min, vector max) setsize = #4;
 
 void() break_to_debugger = #6;
 float() random = #7;
-void(entity e, float chan, string samp) sound = #8;
+void(entity e, float chan, string samp, float volume, float atten, ...) sound = #8;
 vector(vector v) normalize = #9;
 void(string e) error = #10;
 void(string e) objerror = #11;
@@ -469,7 +469,7 @@ void() R_EndPolygon = #308;
 vector (vector v) cs_unproject = #310;
 vector (vector v) cs_project = #311;
 
-void(float width, vector pos1, vector pos2, float flag) drawline = #315;
+void(float width, vector pos1, vector pos2, vector rgb, float alpha, float flag) drawline = #315;
 float(string name) iscachedpic = #316;
 string(string name, ...) precache_pic = #317;
 string(string name) precache_cubemap = #317;
