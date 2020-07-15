@@ -1517,7 +1517,7 @@ void Mod_LoadQ3Shaders(void)
 	}
 
 	// parse shaders
-	search = FS_Search("scripts/*.shader", true, false);
+	search = FS_Search("scripts/*.shader", true, false, NULL);
 	if (!search)
 		return;
 	for (fileindex = 0;fileindex < search->numfilenames;fileindex++)

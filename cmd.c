@@ -737,7 +737,7 @@ static void Cmd_Exec_f (cmd_state_t *cmd)
 		return;
 	}
 
-	s = FS_Search(Cmd_Argv(cmd, 1), true, true);
+	s = FS_Search(Cmd_Argv(cmd, 1), true, true, NULL);
 	if(!s || !s->numfilenames)
 	{
 		Con_Printf("couldn't exec %s\n",Cmd_Argv(cmd, 1));
