@@ -519,6 +519,7 @@ already running on that entity/channel pair.
 An attenuation of 0 will play full volume everywhere in the level.
 Larger attenuations will drop off.
 
+void(entity e, float chan, string samp, float volume[, float atten[, float pitchchange[, float flags]]]) sound (QUAKE)
 =================
 */
 static void VM_SV_sound(prvm_prog_t *prog)
@@ -3205,7 +3206,7 @@ VM_SV_setsize,					// #4 void(entity e, vector min, vector max) setsize (QUAKE)
 NULL,							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
 VM_break,						// #6 void() break (QUAKE)
 VM_random,						// #7 float() random (QUAKE)
-VM_SV_sound,					// #8 void(entity e, float chan, string samp) sound (QUAKE)
+VM_SV_sound,					// #8 void(entity e, float chan, string samp, float volume[, float atten[, float pitchchange[, float flags]]]) sound (QUAKE)
 VM_normalize,					// #9 vector(vector v) normalize (QUAKE)
 VM_error,						// #10 void(string e) error (QUAKE)
 VM_objerror,					// #11 void(string e) objerror (QUAKE)
