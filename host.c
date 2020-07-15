@@ -519,7 +519,7 @@ void Host_Main(void)
 				svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
 			}
 
-			if (sv.active && sv_timer > 0 && !svs.threaded)
+			if (sv.active && sv_timer > 0)
 			{
 				// execute one or more server frames, with an upper limit on how much
 				// execution time to spend on server frames to avoid freezing the game if
