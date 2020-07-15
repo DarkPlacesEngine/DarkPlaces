@@ -107,7 +107,7 @@ typedef struct fssearch_s
 }
 fssearch_t;
 
-fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet);
+fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const char *packfile);
 void FS_FreeSearch(fssearch_t *search);
 
 unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer);

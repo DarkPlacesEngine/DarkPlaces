@@ -2125,7 +2125,7 @@ qboolean GetMapList (const char *s, char *completedname, int completednamebuffer
 	unsigned char buf[1024];
 
 	dpsnprintf(message, sizeof(message), "maps/%s*.bsp", s);
-	t = FS_Search(message, 1, true);
+	t = FS_Search(message, 1, true, NULL);
 	if(!t)
 		return false;
 	if (t->numfilenames > 1)
@@ -2843,7 +2843,7 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 					fssearch_t *search;
 					if(strchr(com_token, '/'))
 					{
-						search = FS_Search(com_token, true, true);
+						search = FS_Search(com_token, true, true, NULL);
 					}
 					else
 					{
@@ -2852,10 +2852,10 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 						{
 							strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
 							strlcat(t, com_token, sizeof(t));
-							search = FS_Search(t, true, true);
+							search = FS_Search(t, true, true, NULL);
 						}
 						else
-							search = FS_Search(com_token, true, true);
+							search = FS_Search(com_token, true, true, NULL);
 					}
 					if(search)
 					{
@@ -2875,10 +2875,10 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 					{
 						strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
 						strlcat(t, "*", sizeof(t));
-						search = FS_Search(t, true, true);
+						search = FS_Search(t, true, true, NULL);
 					}
 					else
-						search = FS_Search("*", true, true);
+						search = FS_Search("*", true, true, NULL);
 					if(search)
 					{
 						for(i = 0; i < search->numfilenames; ++i)
