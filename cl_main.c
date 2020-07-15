@@ -2705,10 +2705,33 @@ CL_Shutdown
 */
 void CL_Shutdown (void)
 {
+	// be quiet while shutting down
+	S_StopAllSounds();
+	
+	// disconnect client from server if active
+	CL_Disconnect();
+	
+	CL_Video_Shutdown();
+
+#ifdef CONFIG_MENU
+	// Shutdown menu
+	if(MR_Shutdown)
+		MR_Shutdown();
+#endif
+
+	CDAudio_Shutdown ();
+	S_Terminate ();
+	
+	R_Modules_Shutdown();
+	VID_Shutdown();
+
 	CL_Screen_Shutdown();
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 	CL_MeshEntities_Shutdown();
+
+	Key_Shutdown();
+	S_Shutdown();
 
 	Mem_FreePool (&cls.permanentmempool);
 	Mem_FreePool (&cls.levelmempool);
