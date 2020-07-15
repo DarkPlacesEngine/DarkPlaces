@@ -795,7 +795,7 @@ int i;
 				OPC->_int = OPA->_int + OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_IF):
-				OPC->_int = OPA->_int + (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int + (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_FI):
 				OPC->_float = OPA->_float + (prvm_vec_t) OPB->_int;
@@ -804,7 +804,7 @@ int i;
 				OPC->_int = OPA->_int - OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_IF):
-				OPC->_int = OPA->_int - (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int - (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_FI):
 				OPC->_float = OPA->_float - (prvm_vec_t) OPB->_int;
@@ -813,7 +813,7 @@ int i;
 				OPC->_int = OPA->_int * OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_IF):
-				OPC->_int = OPA->_int * (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int * (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_FI):
 				OPC->_float = OPA->_float * (prvm_vec_t) OPB->_int;
@@ -835,7 +835,7 @@ int i;
 				OPC->_int = OPA->_int / OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_IF):
-				OPC->_int = OPA->_int / (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int / (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_FI):
 				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
@@ -859,85 +859,85 @@ int i;
 				OPC->_int = OPA->_int | (prvm_int_t)OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_BITAND_FI):
-				OPC->_float = (prvm_int_t)OPA->_float & OPB->_int;
+				OPC->_int = (prvm_int_t)OPA->_float & OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_BITOR_FI):
-				OPC->_float = (prvm_int_t)OPA->_float | OPB->_int;
+				OPC->_int = (prvm_int_t)OPA->_float | OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_I):
-				OPC->_float = OPA->_int >= OPB->_int;
+				OPC->_int = OPA->_int >= OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_I):
-				OPC->_float = OPA->_int <= OPB->_int;
+				OPC->_int = OPA->_int <= OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_I):
-				OPC->_float = OPA->_int > OPB->_int;
+				OPC->_int = OPA->_int > OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_I):
-				OPC->_float = OPA->_int < OPB->_int;
+				OPC->_int = OPA->_int < OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_I):
-				OPC->_float = OPA->_int && OPB->_int;
+				OPC->_int = OPA->_int && OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_I):
-				OPC->_float = OPA->_int || OPB->_int;
+				OPC->_int = OPA->_int || OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int >= OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int >= OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int <= OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int <= OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int > OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int > OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int < OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int < OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int && OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int && OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int || OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int || OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_FI):
-				OPC->_float = OPA->_float >= (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float >= (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_FI):
-				OPC->_float = OPA->_float <= (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float <= (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_FI):
-				OPC->_float = OPA->_float > (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float > (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_FI):
-				OPC->_float = OPA->_float < (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float < (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_FI):
-				OPC->_float = OPA->_float && (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float && (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_FI):
-				OPC->_float = OPA->_float || (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float || (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NOT_I):
-				OPC->_float = !OPA->_int;
+				OPC->_int = !OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_I):
-				OPC->_float = OPA->_int == OPB->_int;
+				OPC->_int = OPA->_int == OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int == OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int == OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_FI):
-				OPC->_float = OPA->_float == (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float == (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_I):
-				OPC->_float = OPA->_int != OPB->_int;
+				OPC->_int = OPA->_int != OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int != OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int != OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_FI):
-				OPC->_float = OPA->_float != (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float != (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_I):
 			HANDLE_OPCODE(OP_STORE_P):
@@ -980,7 +980,7 @@ int i;
 			HANDLE_OPCODE(OP_GSTOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_GSTOREP_S):
 			HANDLE_OPCODE(OP_GSTOREP_FNC):		// pointers
-				if (OPB->_int < 0 || OPB->_int >= prog->numglobaldefs)
+				if (OPB->_int < 0 || OPB->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
