@@ -3570,7 +3570,7 @@ FS_Search
 Allocate and fill a search structure with information on matching filenames.
 ===========
 */
-fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
+fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const char *packfile)
 {
 	fssearch_t *search;
 	searchpath_t *searchpath;
@@ -3612,6 +3612,11 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		{
 			// look through all the pak file elements
 			pak = searchpath->pack;
+			if(packfile)
+			{
+				if(strcmp(packfile, pak->shortname))
+					continue;
+			}
 			for (i = 0;i < pak->numfiles;i++)
 			{
 				char temp[MAX_OSPATH];
@@ -3648,6 +3653,8 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		}
 		else
 		{
+			if(packfile)
+				continue;
 			stringlist_t matchedSet, foundSet;
 			const char *start = pattern;
 
@@ -3786,7 +3793,7 @@ static int FS_ListDirectory(const char *pattern, int oneperline)
 	const char *name;
 	char linebuf[MAX_INPUTLINE];
 	fssearch_t *search;
-	search = FS_Search(pattern, true, true);
+	search = FS_Search(pattern, true, true, NULL);
 	if (!search)
 		return 0;
 	numfiles = search->numfilenames;
