@@ -820,23 +820,9 @@ static void SV_Status_f(cmd_state_t *cmd)
 	char qcstatus[256];
 	client_t *client;
 	int seconds = 0, minutes = 0, hours = 0, i, j, k, in, players, ping = 0, packetloss = 0;
-	void (*print) (const char *fmt, ...);
 	char ip[48]; // can contain a full length v6 address with [] and a port
 	int frags;
 	char vabuf[1024];
-
-	if (cmd->source == src_command)
-	{
-		// if running a client, try to send over network so the client's status report parser will see the report
-		if (cls.state == ca_connected)
-		{
-			CL_ForwardToServer_f(cmd);
-			return;
-		}
-		print = Con_Printf;
-	}
-	else
-		print = SV_ClientPrintf;
 
 	if (!sv.active)
 		return;
@@ -853,17 +839,17 @@ static void SV_Status_f(cmd_state_t *cmd)
 	for (players = 0, i = 0;i < svs.maxclients;i++)
 		if (svs.clients[i].active)
 			players++;
-	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CVAR_SERVER));
-	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
-	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
-	print ("map:      %s\n", sv.name);
-	print ("timing:   %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
-	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
+	SV_ClientPrintf ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CVAR_SERVER));
+	SV_ClientPrintf ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
+	SV_ClientPrintf ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
+	SV_ClientPrintf ("map:      %s\n", sv.name);
+	SV_ClientPrintf ("timing:   %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+	SV_ClientPrintf ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 
 	if (in == 1)
-		print ("^2IP                                             %%pl ping  time   frags  no   name\n");
+		SV_ClientPrintf ("^2IP                                             %%pl ping  time   frags  no   name\n");
 	else if (in == 2)
-		print ("^5IP                                              no   name\n");
+		SV_ClientPrintf ("^5IP                                              no   name\n");
 
 	for (i = 0, k = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
@@ -895,7 +881,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 			ping = bound(0, (int)floor(client->ping*1000+0.5), 9999);
 		}
 
-		if(sv_status_privacy.integer && cmd->source != src_command)
+		if(sv_status_privacy.integer && cmd->source != src_command && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
 			strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
@@ -925,23 +911,23 @@ static void SV_Status_f(cmd_state_t *cmd)
 			if (sv.protocol == PROTOCOL_QUAKE && svs.maxclients <= 99)
 			{
 				// LadyHavoc: this is very touchy because we must maintain ProQuake compatible status output
-				print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
-				print ("   %s\n", ip);
+				SV_ClientPrintf ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
+				SV_ClientPrintf ("   %s\n", ip);
 			}
 			else
 			{
 				// LadyHavoc: no real restrictions here, not a ProQuake-compatible protocol anyway...
-				print ("#%-3u %-16.16s %4i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
-				print ("   %s\n", ip);
+				SV_ClientPrintf ("#%-3u %-16.16s %4i  %2i:%02i:%02i\n", i+1, client->name, frags, hours, minutes, seconds);
+				SV_ClientPrintf ("   %s\n", ip);
 			}
 		}
 		else if (in == 1) // extended layout
 		{
-			print ("%s%-47s %2i %4i %2i:%02i:%02i %4i  #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, packetloss, ping, hours, minutes, seconds, frags, i+1, client->name);
+			SV_ClientPrintf ("%s%-47s %2i %4i %2i:%02i:%02i %4i  #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, packetloss, ping, hours, minutes, seconds, frags, i+1, client->name);
 		}
 		else if (in == 2) // reduced layout
 		{
-			print ("%s%-47s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
+			SV_ClientPrintf ("%s%-47s #%-3u ^7%s\n", k%2 ? "^3" : "^7", ip, i+1, client->name);
 		}
 	}
 }
