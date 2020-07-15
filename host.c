@@ -476,12 +476,7 @@ void Host_Main(void)
 		//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
 
 		// if the accumulators haven't become positive yet, wait a while
-		if (cls.state == ca_dedicated)
-			wait = sv_timer * -1000000.0;
-		else if (!sv.active || svs.threaded)
-			wait = cl_timer * -1000000.0;
-		else
-			wait = max(cl_timer, sv_timer) * -1000000.0;
+		wait = max(cl_timer, sv_timer) * -1000000.0;
 
 		if (!host.restless && wait >= 1)
 		{
