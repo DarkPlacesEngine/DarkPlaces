@@ -2619,10 +2619,10 @@ float MOVETYPE_USER_LAST = 191;
 
 //idea: eukara
 //darkplaces implementation: Cloudwalk
-// Do NOT use in production yet.
-string __fullspawndata;
+//Do NOT use in production yet. Uncomment if you intend to use it
+//string __fullspawndata;
 //description:
-// http://icculus.org/finger/marco?date=2019-01-25&time=05-38-02
+//http://icculus.org/finger/marco?date=2019-01-25&time=05-38-02
 
 //DP_QC_FS_SEARCH_PACKFILE
 //idea: Mario
