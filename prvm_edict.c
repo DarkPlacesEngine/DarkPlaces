@@ -1382,10 +1382,12 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 
 	prvm_reuseedicts_always_allow = host.realtime;
 
-// parse ents
+	// parse ents
 	while (1)
 	{
-// parse the opening brace
+		start = data;
+
+		// parse the opening brace
 		if (!COM_ParseToken_Simple(&data, false, false, true))
 			break;
 		if (com_token[0] != '{')
@@ -1403,7 +1405,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 		// clear it
 		if (ent != prog->edicts)	// hack
 			memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
-		start = data;
+
 		data = PRVM_ED_ParseEdict (prog, data, ent);
 		parsed++;
 
