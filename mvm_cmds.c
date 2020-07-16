@@ -49,6 +49,7 @@ const char *vm_m_extensions[] = {
 "DP_QC_URI_POST",
 "DP_QC_WHICHPACK",
 "FTE_STRINGS",
+"DP_QC_FS_SEARCH_PACKFILE",
 NULL
 };
 
