@@ -5233,9 +5233,11 @@ void MVM_error_cmd(const char *format, ...)
 	MR_SetRouting (true);
 
 	// reset the active scene, too (to be on the safe side ;))
-   R_SelectScene( RST_CLIENT );
+	R_SelectScene( RST_CLIENT );
 
-	Host_AbortCurrentFrame();
+	// Let video start at least
+	if(host.state != host_init)
+		Host_AbortCurrentFrame();
 }
 
 static void MVM_begin_increase_edicts(prvm_prog_t *prog)
