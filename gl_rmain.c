@@ -4295,12 +4295,16 @@ void R_HDR_UpdateIrisAdaptation(const vec3_t point)
 		Cvar_SetValueQuick(&r_hdr_irisadaptation_value, 1.0f);
 }
 
+extern cvar_t r_lockvisibility;
+extern cvar_t r_lockpvs;
+
 static void R_View_SetFrustum(const int *scissor)
 {
 	int i;
 	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
-
+	if(r_lockvisibility.integer || r_lockpvs.integer)
+		return;
 	if(scissor)
 	{
 		// flipped x coordinates (because x points left here)
