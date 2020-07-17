@@ -428,7 +428,7 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	surfacevisible = r_refdef.viewcache.world_surfacevisible;
 	for (surfaceindex = surfaceindexstart; surfaceindex < surfaceindexend; surfaceindex++)
 	{
-		if (surfacevisible[surfaceindex] && !r_lockvisibility.integer)
+		if (surfacevisible[surfaceindex])
 		{
 			if (R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)
 			 || (r_vis_trace_surfaces.integer && !R_CanSeeBox(r_vis_trace_samples.integer, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)))
@@ -595,9 +595,8 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				}
 			}
 		}
+		R_View_WorldVisibility_CullSurfaces();	
 	}
-
-	R_View_WorldVisibility_CullSurfaces();
 }
 
 void R_Mod_DrawSky(entity_render_t *ent)
