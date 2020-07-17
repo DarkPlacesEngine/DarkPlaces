@@ -428,7 +428,7 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	surfacevisible = r_refdef.viewcache.world_surfacevisible;
 	for (surfaceindex = surfaceindexstart; surfaceindex < surfaceindexend; surfaceindex++)
 	{
-		if (surfacevisible[surfaceindex])
+		if (surfacevisible[surfaceindex] && !r_lockvisibility.integer)
 		{
 			if (R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)
 			 || (r_vis_trace_surfaces.integer && !R_CanSeeBox(r_vis_trace_samples.integer, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)))
