@@ -4732,7 +4732,7 @@ static void R_Water_StartFrame(int viewwidth, int viewheight)
 	waterwidth = (int)bound(16, viewwidth * r_water_resolutionmultiplier.value, viewwidth);
 	waterheight = (int)bound(16, viewheight * r_water_resolutionmultiplier.value, viewheight);
 
-	if (!r_water.integer || r_showsurfaces.integer)
+	if (!r_water.integer || r_showsurfaces.integer || r_lockvisibility.integer || r_lockpvs.integer)
 		waterwidth = waterheight = 0;
 
 	// set up variables that will be used in shader setup
