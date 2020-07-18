@@ -49,12 +49,12 @@ qboolean host_stuffcmdsrun = false;
 
 void Cbuf_Lock(cmd_state_t *cmd)
 {
-	Thread_AtomicLock(&cmd->text_lock);
+	Thread_LockMutex(cmd->text_mutex);
 }
 
 void Cbuf_Unlock(cmd_state_t *cmd)
 {
-	Thread_AtomicUnlock(&cmd->text_lock);
+	Thread_UnlockMutex(cmd->text_mutex);
 }
 
 
@@ -1512,16 +1512,19 @@ void Cmd_Init(void)
 	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
 	cmd_client.cmd_flags = CMD_CLIENT | CMD_CLIENT_FROM_SERVER | CMD_SERVER_FROM_CLIENT;
 	cmd_client.userdefined = &cmd_userdefined_all;
+	cmd_client.text_mutex = Thread_CreateMutex();
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
 	cmd_server.cvars_flagsmask = CVAR_SERVER;
 	cmd_server.cmd_flags = CMD_SERVER;
 	cmd_server.userdefined = &cmd_userdefined_all;
+	cmd_server.text_mutex = Thread_CreateMutex();
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
 	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT | CMD_USERINFO;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
+	cmd_serverfromclient.text_mutex = Thread_CreateMutex();
 
 //
 // register our commands
@@ -1576,7 +1579,7 @@ void Cmd_Shutdown(void)
 	{
 		cmd_state_t *cmd = cmd_iter->cmd;
 
-		if (cmd->text_lock)
+		if (cmd->text_mutex)
 		{
 			// we usually have this locked when we get here from Host_Quit_f
 			Cbuf_Unlock(cmd);
