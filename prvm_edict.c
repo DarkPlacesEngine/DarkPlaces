@@ -457,7 +457,7 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 		if (def != NULL)
 			dpsnprintf (line, linelength, ".%s", PRVM_GetString(prog, def->s_name));
 		else
-			dpsnprintf (line, linelength, "field%" PRVM_PRIi " (invalid!)", val->_int );
+			dpsnprintf (line, linelength, "field %" PRVM_PRIi " (invalid!)", val->_int );
 		break;
 	case ev_void:
 		dpsnprintf (line, linelength, "void");
