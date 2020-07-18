@@ -1533,6 +1533,8 @@ void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point);
 // cl_main
 //
 
+double CL_Frame(double time);
+
 void CL_Shutdown (void);
 void CL_Init (void);
 
