@@ -48,9 +48,9 @@ char *Sys_TimeString(const char *timeformat)
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	if (cmd_client.text_lock)
+	if (cmd_client.text_mutex)
 		Cbuf_Unlock(&cmd_client);
-	if (cmd_server.text_lock)
+	if (cmd_server.text_mutex)
 		Cbuf_Unlock(&cmd_server);
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);

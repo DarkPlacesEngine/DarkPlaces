@@ -114,7 +114,7 @@ typedef struct cmd_state_s
 
 	sizebuf_t text;
 	unsigned char text_buf[CMDBUFSIZE];
-	Thread_SpinLock text_lock;
+	void *text_mutex;
 
 	int argc;
 	const char *argv[MAX_ARGS];
