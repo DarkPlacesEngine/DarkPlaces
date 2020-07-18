@@ -95,6 +95,18 @@ cvar_t cl_deathnoviewmodel = {CVAR_CLIENT, "cl_deathnoviewmodel", "1", "hides gu
 cvar_t cl_locs_enable = {CVAR_CLIENT | CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
 cvar_t cl_locs_show = {CVAR_CLIENT, "locs_show", "0", "shows defined locations for editing purposes"};
 
+cvar_t cl_minfps = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
+cvar_t cl_minfps_fade = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
+cvar_t cl_minfps_qualitymax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymin = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymultiply = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
+cvar_t cl_minfps_qualityhysteresis = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
+cvar_t cl_minfps_qualitystepmax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
+cvar_t cl_minfps_force = {CVAR_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
+cvar_t cl_maxfps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
+cvar_t cl_maxidlefps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
+
 client_static_t	cls;
 client_state_t	cl;
 
@@ -2698,6 +2710,156 @@ void CL_UpdateEntityShading(void)
 		CL_UpdateEntityShading_Entity(r_refdef.scene.entities[i]);
 }
 
+extern cvar_t host_framerate;
+extern cvar_t host_speeds;
+
+double CL_Frame (double time)
+{
+	static double clframetime;
+	static double time1 = 0, time2 = 0, time3 = 0;
+	static double wait;	
+	int pass1, pass2, pass3;
+
+	// limit the frametime steps to no more than 100ms each
+	if (time > 0.1)
+		time = 0.1;
+
+	// get new key events
+	Key_EventQueue_Unblock();
+	SndSys_SendKeyEvents();
+	Sys_SendKeyEvents();
+
+	if (cls.state != ca_dedicated && (time > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
+	{
+		R_TimeReport("---");
+		Collision_Cache_NewFrame();
+		R_TimeReport("photoncache");
+#ifdef CONFIG_VIDEO_CAPTURE
+		// decide the simulation time
+		if (cls.capturevideo.active)
+		{
+			//***
+			if (cls.capturevideo.realtime)
+				clframetime = cl.realframetime = max(time, 1.0 / cls.capturevideo.framerate);
+			else
+			{
+				clframetime = 1.0 / cls.capturevideo.framerate;
+				cl.realframetime = max(time, clframetime);
+			}
+		}
+		else if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+
+#else
+		if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+#endif
+		{
+			clframetime = cl.realframetime = max(time, 1.0 / cl_maxfps.value);
+			// when running slow, we need to sleep to keep input responsive
+			wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
+			if (wait > 0)
+				Sys_Sleep((int)wait);
+		}
+		else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
+			clframetime = cl.realframetime = max(time, 1.0 / cl_maxidlefps.value);
+		else
+			clframetime = cl.realframetime = time;
+
+		// apply slowmo scaling
+		clframetime *= cl.movevars_timescale;
+		// scale playback speed of demos by slowmo cvar
+		if (cls.demoplayback)
+		{
+			clframetime *= host_timescale.value;
+			// if demo playback is paused, don't advance time at all
+			if (cls.demopaused)
+				clframetime = 0;
+		}
+		else
+		{
+			// host_framerate overrides all else
+			if (host_framerate.value)
+				clframetime = host_framerate.value;
+
+			if (cl.paused || host.paused)
+				clframetime = 0;
+		}
+
+		if (cls.timedemo)
+			clframetime = cl.realframetime = time;
+
+		// deduct the frame time from the accumulator
+		time -= cl.realframetime;
+
+		cl.oldtime = cl.time;
+		cl.time += clframetime;
+
+		// update video
+		if (host_speeds.integer)
+			time1 = Sys_DirtyTime();
+		R_TimeReport("pre-input");
+
+		// Collect input into cmd
+		CL_Input();
+
+		R_TimeReport("input");
+
+		// check for new packets
+		NetConn_ClientFrame();
+
+		// read a new frame from a demo if needed
+		CL_ReadDemoMessage();
+		R_TimeReport("clientnetwork");
+
+		// now that packets have been read, send input to server
+		CL_SendMove();
+		R_TimeReport("sendmove");
+
+		// update client world (interpolate entities, create trails, etc)
+		CL_UpdateWorld();
+		R_TimeReport("lerpworld");
+
+		CL_Video_Frame();
+
+		R_TimeReport("client");
+
+		CL_UpdateScreen();
+		R_TimeReport("render");
+
+		if (host_speeds.integer)
+			time2 = Sys_DirtyTime();
+
+		// update audio
+		if(cl.csqc_usecsqclistener)
+		{
+			S_Update(&cl.csqc_listenermatrix);
+			cl.csqc_usecsqclistener = false;
+		}
+		else
+			S_Update(&r_refdef.view.matrix);
+
+		CDAudio_Update();
+		R_TimeReport("audio");
+
+		// reset gathering of mouse input
+		in_mouse_x = in_mouse_y = 0;
+
+		if (host_speeds.integer)
+		{
+			pass1 = (int)((time1 - time3)*1000000);
+			time3 = Sys_DirtyTime();
+			pass2 = (int)((time2 - time1)*1000000);
+			pass3 = (int)((time3 - time2)*1000000);
+			Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
+						pass1+pass2+pass3, pass1, pass2, pass3);
+		}
+	}
+
+	// if there is some time remaining from this frame, reset the timer
+	if (time >= 0)
+		time = 0;
+	return time;
+}
+
 /*
 ===========
 CL_Shutdown
@@ -2864,6 +3026,18 @@ void CL_Init (void)
 		Cmd_AddCommand(CMD_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
+
+		Cvar_RegisterVariable (&cl_minfps);
+		Cvar_RegisterVariable (&cl_minfps_fade);
+		Cvar_RegisterVariable (&cl_minfps_qualitymax);
+		Cvar_RegisterVariable (&cl_minfps_qualitymin);
+		Cvar_RegisterVariable (&cl_minfps_qualitystepmax);
+		Cvar_RegisterVariable (&cl_minfps_qualityhysteresis);
+		Cvar_RegisterVariable (&cl_minfps_qualitymultiply);
+		Cvar_RegisterVariable (&cl_minfps_force);
+		Cvar_RegisterVariable (&cl_maxfps);
+		Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
+		Cvar_RegisterVariable (&cl_maxidlefps);
 
 		CL_Parse_Init();
 		CL_Particles_Init();
