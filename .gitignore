@@ -21,3 +21,4 @@ Makefile.win
 *.dSYM
 .vscode
 *.code-workspace
+.ccls-cache
