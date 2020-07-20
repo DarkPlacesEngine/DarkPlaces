@@ -2068,11 +2068,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	{
 		// not a monster
 		ent->persistent.lerpstarttime = ent->state_previous.time;
-		// no lerp if it's singleplayer
-		if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
-			ent->persistent.lerpdeltatime = 0;
-		else
-			ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
+		ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
 		VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
 		VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
@@ -3286,7 +3282,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	double timehigh;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
-	if (cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
+	if (cl_nolerp.integer || cls.timedemo || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
 	else if (cls.demoplayback)
 	{

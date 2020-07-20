@@ -443,7 +443,6 @@ extern cvar_t sv_debugmove;
 extern cvar_t sv_echobprint;
 extern cvar_t sv_edgefriction;
 extern cvar_t sv_entpatch;
-extern cvar_t sv_fixedframeratesingleplayer;
 extern cvar_t sv_freezenonclients;
 extern cvar_t sv_friction;
 extern cvar_t sv_gameplayfix_blowupfallenzombies;

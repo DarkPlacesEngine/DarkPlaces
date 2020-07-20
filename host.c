@@ -514,11 +514,6 @@ void Host_Main(void)
 				// stop running server frames if the wall time reaches this value
 				if (sys_ticrate.value <= 0)
 					advancetime = sv_timer;
-				else if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
-				{
-					// synchronize to the client frametime, but no less than 10ms and no more than 100ms
-					advancetime = bound(0.01, cl_timer, 0.1);
-				}
 				else
 				{
 					advancetime = sys_ticrate.value;
