@@ -1076,7 +1076,7 @@ void Sys_SendKeyEvents( void )
 #ifdef DEBUGSDLEVENTS
 				Con_DPrintf("SDL_Event: SDL_QUIT\n");
 #endif
-				Sys_Quit(0);
+				host.state = host_shutdown;
 				break;
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
@@ -1202,7 +1202,7 @@ void Sys_SendKeyEvents( void )
 						vid_hasfocus = false;
 						break;
 					case SDL_WINDOWEVENT_CLOSE:
-						Sys_Quit(0);
+						host.state = host_shutdown;
 						break;
 					}
 				}
