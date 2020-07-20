@@ -2723,6 +2723,11 @@ double CL_Frame (double time)
 
 	CL_VM_PreventInformationLeaks();
 
+	// get new key events
+	Key_EventQueue_Unblock();
+	SndSys_SendKeyEvents();
+	Sys_SendKeyEvents();
+
 	if((cl_timer += time) < 0)
 		return cl_timer;
 
@@ -2732,11 +2737,6 @@ double CL_Frame (double time)
 
 	if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
 	{
-		// get new key events
-		Key_EventQueue_Unblock();
-		SndSys_SendKeyEvents();
-		Sys_SendKeyEvents();
-
 		R_TimeReport("---");
 		Collision_Cache_NewFrame();
 		R_TimeReport("photoncache");
