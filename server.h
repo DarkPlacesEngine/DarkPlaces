@@ -487,7 +487,7 @@ extern cvar_t sv_playerphysicsqc;
 extern cvar_t sv_progs;
 extern cvar_t sv_protocolname;
 extern cvar_t sv_random_seed;
-extern cvar_t sv_ratelimitlocalplayer;
+extern cvar_t host_limitlocal;
 extern cvar_t sv_sound_land;
 extern cvar_t sv_sound_watersplash;
 extern cvar_t sv_stepheight;
