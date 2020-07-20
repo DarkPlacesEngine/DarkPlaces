@@ -2716,21 +2716,27 @@ extern cvar_t host_speeds;
 double CL_Frame (double time)
 {
 	static double clframetime;
+	static double cl_timer = 0;
 	static double time1 = 0, time2 = 0, time3 = 0;
-	static double wait;	
+	static double wait;
 	int pass1, pass2, pass3;
 
+	CL_VM_PreventInformationLeaks();
+
+	if((cl_timer += time) < 0)
+		return cl_timer;
+
 	// limit the frametime steps to no more than 100ms each
-	if (time > 0.1)
-		time = 0.1;
+	if (cl_timer > 0.1)
+		cl_timer = 0.1;
 
-	// get new key events
-	Key_EventQueue_Unblock();
-	SndSys_SendKeyEvents();
-	Sys_SendKeyEvents();
-
-	if (cls.state != ca_dedicated && (time > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
+	if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
 	{
+		// get new key events
+		Key_EventQueue_Unblock();
+		SndSys_SendKeyEvents();
+		Sys_SendKeyEvents();
+
 		R_TimeReport("---");
 		Collision_Cache_NewFrame();
 		R_TimeReport("photoncache");
@@ -2753,16 +2759,16 @@ double CL_Frame (double time)
 		if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
 #endif
 		{
-			clframetime = cl.realframetime = max(time, 1.0 / cl_maxfps.value);
+			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
 			// when running slow, we need to sleep to keep input responsive
 			wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
 			if (wait > 0)
 				Sys_Sleep((int)wait);
 		}
 		else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
-			clframetime = cl.realframetime = max(time, 1.0 / cl_maxidlefps.value);
+			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
 		else
-			clframetime = cl.realframetime = time;
+			clframetime = cl.realframetime = cl_timer;
 
 		// apply slowmo scaling
 		clframetime *= cl.movevars_timescale;
@@ -2785,10 +2791,10 @@ double CL_Frame (double time)
 		}
 
 		if (cls.timedemo)
-			clframetime = cl.realframetime = time;
+			clframetime = cl.realframetime = cl_timer;
 
 		// deduct the frame time from the accumulator
-		time -= cl.realframetime;
+		cl_timer -= cl.realframetime;
 
 		cl.oldtime = cl.time;
 		cl.time += clframetime;
@@ -2853,11 +2859,8 @@ double CL_Frame (double time)
 						pass1+pass2+pass3, pass1, pass2, pass3);
 		}
 	}
-
 	// if there is some time remaining from this frame, reset the timer
-	if (time >= 0)
-		time = 0;
-	return time;
+	return cl_timer >= 0 ? 0 : cl_timer;
 }
 
 /*
