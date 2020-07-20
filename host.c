@@ -492,12 +492,14 @@ void Host_Main(void)
 	host.realtime = 0;
 	oldtime = Sys_DirtyTime();
 
+	// Main event loop
 	while(host.state != host_shutdown)
 	{
+		// Something bad happened, or the server disconnected
 		if (setjmp(host.abortframe))
 		{
 			host.state = host_active; // In case we were loading
-			continue;			// something bad happened, or the server disconnected
+			continue;
 		}
 
 		newtime = host.dirtytime = Sys_DirtyTime();
