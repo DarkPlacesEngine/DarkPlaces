@@ -389,7 +389,7 @@ double Host_Frame(double time)
 	TaskQueue_Frame(false);
 
 	// keep the random time dependent, but not when playing demos/benchmarking
-	if(!*sv_random_seed.string && !cls.demoplayback)
+	if(!*sv_random_seed.string && !host.restless)
 		rand();
 
 	NetConn_UpdateSockets();
