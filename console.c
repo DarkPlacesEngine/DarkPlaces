@@ -1530,7 +1530,7 @@ static void Con_DrawInput(qboolean is_console, float x, float v, float inputsize
 	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
 	float xo;
 	size_t len_out;
-	char *prefix;
+	const char *prefix;
 	dp_font_t *fnt;
 
 	if (is_console && !key_consoleactive)
