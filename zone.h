@@ -83,7 +83,11 @@ mempool_t;
 #define Mem_Realloc(pool,data,size) _Mem_Alloc(pool, data, size, 16, __FILE__, __LINE__)
 #define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
-#define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
+#if MEMPARANOIA
+#define Mem_CheckSentinelsGlobal()  _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
+#else
+#define Mem_CheckSentinelsGlobal() if(developer_memorydebug.integer) { _Mem_CheckSentinelsGlobal(__FILE__, __LINE__); }
+#endif
 #define Mem_AllocPool(name, flags, parent) _Mem_AllocPool(name, flags, parent, __FILE__, __LINE__)
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)

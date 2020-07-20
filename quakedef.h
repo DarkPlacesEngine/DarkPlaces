@@ -543,11 +543,13 @@ extern host_t host;
 
 void Host_InitCommands(void);
 void Host_Main(void);
+double Host_Frame(double time);
 void Host_Shutdown(void);
 void Host_StartVideo(void);
 void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 void Host_Quit_f(cmd_state_t *cmd);
 void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
+double SV_Frame(double time);
 void SV_Shutdown(void);
 void CL_Reconnect_f(cmd_state_t *cmd);
 void Host_NoOperation_f(cmd_state_t *cmd);
