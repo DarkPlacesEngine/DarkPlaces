@@ -217,7 +217,7 @@ ifeq ($(WIN64RELEASE), 1)
 #	WINDRES=$(TARGET)-windres
 endif
 
-CFLAGS_WARNINGS=-Wall -Winline -Werror=c++-compat -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
+CFLAGS_WARNINGS=-Wall -Winline -Werror=c++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
 
 
 ifeq ($(DP_MAKE_TARGET), mingw)
