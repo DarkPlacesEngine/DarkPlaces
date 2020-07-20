@@ -3578,7 +3578,8 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 	int i, basepathlength, numfiles, numchars, resultlistindex, dirlistindex;
 	stringlist_t resultlist;
 	stringlist_t dirlist;
-	const char *slash, *backslash, *colon, *separator;
+	stringlist_t matchedSet, foundSet;
+	const char *start, *slash, *backslash, *colon, *separator;
 	char *basepath;
 
 	for (i = 0;pattern[i] == '.' || pattern[i] == ':' || pattern[i] == '/' || pattern[i] == '\\';i++)
@@ -3655,8 +3656,8 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 		{
 			if(packfile)
 				continue;
-			stringlist_t matchedSet, foundSet;
-			const char *start = pattern;
+
+			start = pattern;
 
 			stringlistinit(&matchedSet);
 			stringlistinit(&foundSet);
