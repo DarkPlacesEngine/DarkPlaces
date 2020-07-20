@@ -217,6 +217,12 @@ static void Host_Version_f(cmd_state_t *cmd)
 	Con_Printf("Version: %s build %s\n", gamename, buildstring);
 }
 
+static void Host_Framerate_c(cvar_t *var)
+{
+	if (var->value < 0.00001 && var->value != 0)
+		Cvar_SetValueQuick(var, 0);
+}
+
 /*
 =======================
 Host_InitLocal
@@ -234,6 +240,7 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand(CMD_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
+	Cvar_RegisterCallback (&host_framerate, Host_Framerate_c);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&host_maxwait);
 
@@ -378,9 +385,6 @@ double Host_Frame(double time)
 	double cl_timer = 0;
 	double sv_timer = 0;
 	static double wait;
-
-	if (host_framerate.value < 0.00001 && host_framerate.value != 0)
-		Cvar_SetValueQuick(&host_framerate, 0);
 
 	TaskQueue_Frame(false);
 
