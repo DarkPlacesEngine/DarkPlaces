@@ -1074,8 +1074,8 @@ extern unsigned char *mod_base;
 
 typedef struct modloader_s
 {
-	char *extension;
-	char *header;
+	const char *extension;
+	const char *header;
 	size_t headersize; // The header might not be NULL terminated
 	void (*Load)(dp_model_t *, void *, void *);
 } modloader_t;
