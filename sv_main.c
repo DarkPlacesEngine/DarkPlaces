@@ -142,7 +142,7 @@ cvar_t sv_playerphysicsqc = {CVAR_SERVER | CVAR_NOTIFY, "sv_playerphysicsqc", "1
 cvar_t sv_progs = {CVAR_SERVER, "sv_progs", "progs.dat", "selects which quakec progs.dat file to run" };
 cvar_t sv_protocolname = {CVAR_SERVER, "sv_protocolname", "DP7", "selects network protocol to host for (values include QUAKE, QUAKEDP, NEHAHRAMOVIE, DP1 and up)"};
 cvar_t sv_random_seed = {CVAR_SERVER, "sv_random_seed", "", "random seed; when set, on every map start this random seed is used to initialize the random number generator. Don't touch it unless for benchmarking or debugging"};
-cvar_t sv_ratelimitlocalplayer = {CVAR_SERVER, "sv_ratelimitlocalplayer", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
+cvar_t host_limitlocal = {CVAR_SERVER, "host_limitlocal", "0", "whether to apply rate limiting to the local player in a listen server (only useful for testing)"};
 cvar_t sv_sound_land = {CVAR_SERVER, "sv_sound_land", "demon/dland2.wav", "sound to play when MOVETYPE_STEP entity hits the ground at high speed (empty cvar disables the sound)"};
 cvar_t sv_sound_watersplash = {CVAR_SERVER, "sv_sound_watersplash", "misc/h2ohit1.wav", "sound to play when MOVETYPE_FLY/TOSS/BOUNCE/STEP entity enters or leaves water (empty cvar disables the sound)"};
 cvar_t sv_stepheight = {CVAR_SERVER | CVAR_NOTIFY, "sv_stepheight", "18", "how high you can step up (TW_SV_STEPCONTROL extension)"};
@@ -564,7 +564,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_progs);
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_random_seed);
-	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
+	Cvar_RegisterVariable (&host_limitlocal);
+	Cvar_RegisterAlias(&host_limitlocal, "sv_ratelimitlocalplayer");
 	Cvar_RegisterVariable (&sv_sound_land);
 	Cvar_RegisterVariable (&sv_sound_watersplash);
 	Cvar_RegisterVariable (&sv_stepheight);
@@ -2536,7 +2537,7 @@ static void SV_SendClientDatagram (client_t *client)
 		break;
 	}
 
-	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
+	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !host_limitlocal.integer)
 	{
 		// for good singleplayer, send huge packets
 		maxsize = sizeof(sv_sendclientdatagram_buf);
