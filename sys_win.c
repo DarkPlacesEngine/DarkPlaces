@@ -363,6 +363,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	Host_Main();
 
+	Sys_Quit(0);
+
 	/* return success of application */
 	return true;
 }
