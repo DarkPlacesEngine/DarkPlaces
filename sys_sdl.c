@@ -222,6 +222,8 @@ int main (int argc, char *argv[])
 
 	Host_Main();
 
+	Sys_Quit(0);
+	
 	return 0;
 }
 

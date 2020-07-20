@@ -166,6 +166,8 @@ int main (int argc, char **argv)
 #endif
 	Host_Main();
 
+	Sys_Quit(0);
+
 	return 0;
 }
 
