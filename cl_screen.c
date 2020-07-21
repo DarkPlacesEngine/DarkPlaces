@@ -85,7 +85,7 @@ cvar_t r_stereo_angle = {CVAR_CLIENT, "r_stereo_angle", "0", "separation angle o
 cvar_t scr_stipple = {CVAR_CLIENT, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {CVAR_CLIENT, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t scr_screenshot_name_in_mapdir = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
-cvar_t shownetgraph = {CVAR_CLIENT | CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
+cvar_t net_graph = {CVAR_CLIENT | CVAR_SAVE, "net_graph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {CVAR_CLIENT, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 cvar_t timedemo_screenshotframelist = {CVAR_CLIENT, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
 cvar_t vid_touchscreen_outlinealpha = {CVAR_CLIENT, "vid_touchscreen_outlinealpha", "0", "opacity of touchscreen area outlines"};
@@ -336,7 +336,7 @@ static void SCR_DrawNetGraph (void)
 		return;
 	if (!cls.netcon)
 		return;
-	if (!shownetgraph.integer)
+	if (!net_graph.integer)
 		return;
 
 	separator1 = 2;
@@ -358,7 +358,7 @@ static void SCR_DrawNetGraph (void)
 	SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, graphlimit, "outgoing", textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
 	index++;
 
-	if (sv.active && shownetgraph.integer >= 2)
+	if (sv.active && net_graph.integer >= 2)
 	{
 		for (i = 0;i < svs.maxclients;i++)
 		{
@@ -1349,7 +1349,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_stereo_angle);
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
-	Cvar_RegisterVariable(&shownetgraph);
+	Cvar_RegisterVariable(&net_graph);
+	Cvar_RegisterAlias(&net_graph, "shownetgraph");
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
 	Cvar_RegisterVariable(&timedemo_screenshotframelist);
 	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);
