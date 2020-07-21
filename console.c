@@ -933,7 +933,7 @@ void Con_Init (void)
 	// initialize console window (only used by sys_win.c)
 	Sys_InitConsole();
 	
-	Con_DPrint("Console initialized.\n");
+	Con_Print("Console initialized.\n");
 }
 
 void Con_Shutdown (void)

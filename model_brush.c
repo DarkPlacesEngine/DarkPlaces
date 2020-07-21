@@ -5585,12 +5585,12 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	{
 		// no internal lightmaps
 		// try external lightmaps
-		if (developer_loading.integer)
-			Con_Printf("Using external lightmaps\n");
 		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
 		inpixels[0] = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s/lm_%04d", mapname, 0), false, false, false, NULL);
 		if(!inpixels[0])
 			return;
+		else
+			Con_Printf("Using external lightmaps\n");
 
 		// using EXTERNAL lightmaps instead
 		if(image_width != (int) CeilPowerOf2(image_width) || image_width != image_height)
@@ -5686,7 +5686,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		}
 	}
 
-	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
+	Con_Printf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	// figure out what the most reasonable merge power is within limits
 

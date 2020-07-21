@@ -2915,7 +2915,7 @@ void CL_Init (void)
 	}
 	else
 	{
-		Con_DPrintf("Initializing client\n");
+		Con_Printf("Initializing client\n");
 
 		R_Modules_Init();
 		Palette_Init();

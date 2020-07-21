@@ -160,7 +160,7 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-		Con_DPrintf("failed to load sound \"%s\"\n", sfx->name);
+		Con_Printf(CON_ERROR "Failed to load sound \"%s\"\n", sfx->name);
 
 	SCR_PopLoadingScreen(false);
 	return false;

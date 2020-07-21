@@ -258,7 +258,7 @@ static void gl_backend_start(void)
 
 	Mem_ExpandableArray_NewArray(&gl_state.meshbufferarray, r_main_mempool, sizeof(r_meshbuffer_t), 128);
 
-	Con_DPrintf("OpenGL backend started.\n");
+	Con_Printf("OpenGL backend started\n");
 
 	CHECKGLERROR
 
@@ -281,7 +281,7 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
-	Con_DPrint("OpenGL Backend shutting down\n");
+	Con_Print("OpenGL backend shutting down\n");
 
 	switch(vid.renderpath)
 	{
