@@ -470,7 +470,7 @@ int i;
 				if(prvm_garbagecollection_enable.integer)
 					PRVM_GetString(prog, OPA->_int);
 				OPB->_int = OPA->_int;
-			DISPATCH_OPCODE();
+				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_V):
 				OPB->ivector[0] = OPA->ivector[0];
 				OPB->ivector[1] = OPA->ivector[1];
