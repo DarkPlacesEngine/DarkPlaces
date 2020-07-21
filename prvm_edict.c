@@ -2012,8 +2012,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	prog->profiletime = Sys_DirtyTime();
 	prog->starttime = host.realtime;
 
-	Con_DPrintf("%s programs occupy %iK.\n", prog->name, (int)(filesize/1024));
-
 	requiredglobalspace = 0;
 	for (i = 0;i < numrequiredglobals;i++)
 		requiredglobalspace += required_global[i].type == ev_vector ? 3 : 1;
@@ -2537,6 +2535,8 @@ fail:
 
 	// init mempools
 	PRVM_MEM_Alloc(prog);
+
+	Con_Printf("Progs \"%s\" loaded (crc %i, size %iK)\n", prog->name, prog->progs_crc, (int)(filesize/1024));
 
 	// Inittime is at least the time when this function finished. However,
 	// later events may bump it.

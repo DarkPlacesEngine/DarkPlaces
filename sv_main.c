@@ -3415,7 +3415,7 @@ void SV_SpawnServer (const char *map)
 	char modelname[sizeof(sv.worldname)];
 	char vabuf[1024];
 
-	Con_DPrintf("SpawnServer: %s\n", map);
+	Con_Printf("SpawnServer: %s\n", map);
 
 	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", map);
 
@@ -3702,7 +3702,7 @@ void SV_SpawnServer (const char *map)
 	strlcpy(sv.worldmessage, PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)), sizeof(sv.worldmessage)); // map title (not related to filename)
 	Cvar_SetQuick(&sv_worldmessage, sv.worldmessage);
 
-	Con_DPrint("Server spawned.\n");
+	Con_Printf("Server spawned.\n");
 	NetConn_Heartbeat (2);
 
 	if(cls.state == ca_dedicated)

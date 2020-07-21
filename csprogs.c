@@ -1088,8 +1088,6 @@ void CL_VM_Init (void)
 		return;
 	}
 
-	Con_DPrintf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
-
 	if(cls.demorecording)
 	{
 		if(cls.demo_lastcsprogssize != csprogsdatasize || cls.demo_lastcsprogscrc != csprogsdatacrc)
