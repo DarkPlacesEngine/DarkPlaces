@@ -393,30 +393,7 @@ static void R_BuildBlankTextures(void)
 
 static void R_BuildNoTexture(void)
 {
-	int x, y;
-	unsigned char pix[16][16][4];
-	// this makes a light grey/dark grey checkerboard texture
-	for (y = 0;y < 16;y++)
-	{
-		for (x = 0;x < 16;x++)
-		{
-			if ((y < 8) ^ (x < 8))
-			{
-				pix[y][x][0] = 128;
-				pix[y][x][1] = 128;
-				pix[y][x][2] = 128;
-				pix[y][x][3] = 255;
-			}
-			else
-			{
-				pix[y][x][0] = 64;
-				pix[y][x][1] = 64;
-				pix[y][x][2] = 64;
-				pix[y][x][3] = 255;
-			}
-		}
-	}
-	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_PERSISTENT, -1, NULL);
+	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, Image_GenerateNoTexture(), TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_PERSISTENT, -1, NULL);
 }
 
 static void R_BuildWhiteCube(void)
@@ -2847,38 +2824,10 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 skinframe_t *R_SkinFrame_LoadNoTexture(void)
 {
-	int x, y;
-	static unsigned char pix[16][16][4];
-
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	// this makes a light grey/dark grey checkerboard texture
-	if (!pix[0][0][3])
-	{
-		for (y = 0; y < 16; y++)
-		{
-			for (x = 0; x < 16; x++)
-			{
-				if ((y < 8) ^ (x < 8))
-				{
-					pix[y][x][0] = 128;
-					pix[y][x][1] = 128;
-					pix[y][x][2] = 128;
-					pix[y][x][3] = 255;
-				}
-				else
-				{
-					pix[y][x][0] = 64;
-					pix[y][x][1] = 64;
-					pix[y][x][2] = 64;
-					pix[y][x][3] = 255;
-				}
-			}
-		}
-	}
-
-	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, pix[0][0], 16, 16, 0, 0, 0, false);
+	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false);
 }
 
 skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
