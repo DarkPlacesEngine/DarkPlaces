@@ -1715,7 +1715,7 @@ static void CL_ParseServerInfo (void)
 	if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && gamemode == GAME_NEHAHRA)
 		protocol = PROTOCOL_NEHAHRAMOVIE;
 	cls.protocol = protocol;
-	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
+	Con_Printf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
 
 	cl.num_entities = 1;
 

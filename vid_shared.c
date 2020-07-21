@@ -687,6 +687,8 @@ void VID_ClearExtensions(void)
 void GL_Setup(void)
 {
 	char *s;
+	int j;
+	GLint numextensions = 0;
 	const glfunction_t *func;
 	qboolean missingrequiredfuncs = false;
 	static char missingfuncs[16384];
@@ -705,19 +707,16 @@ void GL_Setup(void)
 	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
 	Con_Printf("GL_VERSION: %s\n", gl_version);
 
-	if (developer.integer)
+	qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
+	Con_DPrint("GL_EXTENSIONS:\n");
+	for (j = 0; j < numextensions; j++)
 	{
-		int j;
-		GLint numextensions = 0;
-		qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
-		Con_DPrint("GL_EXTENSIONS:");
-		for (j = 0; j < numextensions; j++)
-		{
-			const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
-			Con_DPrintf(" %s", ext);
-		}
-		Con_DPrint("\n");
+		const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
+		Con_DPrintf(" %s", ext);
+		if(j && !(j % 3))
+			Con_DPrintf("\n");
 	}
+	Con_DPrint("\n");
 
 #ifndef USE_GLES2
 	missingfuncs[0] = 0;
@@ -745,7 +744,7 @@ void GL_Setup(void)
 		vid.support.glshaderversion = (int)(atof(s) * 100.0f + 0.5f);
 	if (vid.support.glshaderversion < 100)
 		vid.support.glshaderversion = 100;
-	Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
+	Con_Printf("Detected GLSL version %i\n", vid.support.glshaderversion);
 
 #ifdef USE_GLES2
 	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
@@ -800,12 +799,12 @@ void GL_Setup(void)
 	CHECKGLERROR
 
 #ifdef USE_GLES2
-	Con_DPrint("Using GLES2 rendering path\n");
+	Con_Print("Using GLES2 rendering path\n");
 	vid.renderpath = RENDERPATH_GLES2;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
 #else
-	Con_DPrint("Using GL32 rendering path\n");
+	Con_Print("Using GL32 rendering path\n");
 	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = true;
