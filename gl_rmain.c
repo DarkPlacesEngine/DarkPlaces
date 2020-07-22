@@ -211,11 +211,11 @@ cvar_t r_waterscroll = {CVAR_CLIENT | CVAR_SAVE, "r_waterscroll", "1", "makes wa
 cvar_t r_bloom = {CVAR_CLIENT | CVAR_SAVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
 cvar_t r_bloom_colorscale = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorscale", "1", "how bright the glow is"};
 
-cvar_t r_bloom_brighten = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_brighten", "2", "how bright the glow is, after subtract/power"};
+cvar_t r_bloom_brighten = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_brighten", "1", "how bright the glow is, after subtract/power"};
 cvar_t r_bloom_blur = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
 cvar_t r_bloom_resolution = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
 cvar_t r_bloom_colorexponent = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
-cvar_t r_bloom_colorsubtract = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
+cvar_t r_bloom_colorsubtract = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorsubtract", "0.1", "reduces bloom colors by a certain amount"};
 cvar_t r_bloom_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_scenebrightness", "1", "global rendering brightness when bloom is enabled"};
 
 cvar_t r_hdr_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
