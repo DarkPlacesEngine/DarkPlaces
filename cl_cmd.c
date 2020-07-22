@@ -219,7 +219,7 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 CL_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_READONLY | CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
+cvar_t cl_color = {CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 
 // Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
 static void CL_Color_c(cvar_t *var)
