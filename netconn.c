@@ -1060,7 +1060,6 @@ void NetConn_OpenServerPorts(int opennetports)
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)
 		port = 26000;
-	Con_Printf("Server using port %i\n", port);
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
 	if (cls.state != ca_dedicated)

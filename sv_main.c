@@ -3521,7 +3521,7 @@ void SV_SpawnServer (const char *map)
 	if(*sv_random_seed.string)
 	{
 		srand(sv_random_seed.integer);
-		Con_Printf("NOTE: random seed is %d; use for debugging/benchmarking only!\nUnset sv_random_seed to get real random numbers again.\n", sv_random_seed.integer);
+		Con_Printf(CON_WARN "NOTE: random seed is %d; use for debugging/benchmarking only!\nUnset sv_random_seed to get real random numbers again.\n", sv_random_seed.integer);
 	}
 
 	SV_VM_Setup();
@@ -3543,7 +3543,7 @@ void SV_SpawnServer (const char *map)
 	{
 		char buffer[1024];
 		Protocol_Names(buffer, sizeof(buffer));
-		Con_Printf("Unknown sv_protocolname \"%s\", valid values are:\n%s\n", sv_protocolname.string, buffer);
+		Con_Printf(CON_ERROR "Unknown sv_protocolname \"%s\", valid values are:\n%s\n", sv_protocolname.string, buffer);
 		sv.protocol = PROTOCOL_QUAKE;
 	}
 

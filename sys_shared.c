@@ -202,6 +202,7 @@ notfound:
 	}
 
 	Con_DPrintf(" - loaded.\n");
+	Con_Printf("Loaded library \"%s\"\n", dllnames[i]);
 
 	*handle = dllhandle;
 	return true;
