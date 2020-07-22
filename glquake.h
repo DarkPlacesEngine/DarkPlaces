@@ -8,7 +8,7 @@
 #else
 //#include <SDL_opengl.h>
 //#include <SDL_opengl_glext.h>
-#endif
+#endif //USE_GLES2
 
 // disable data conversion warnings
 
@@ -24,24 +24,24 @@
 //#pragma warning(disable : 4100) // LadyHavoc: MSVC++ 2008 x86, unreferenced formal parameter
 //#pragma warning(disable : 4055) // LadyHavoc: MSVC++ 2008 x86, 'type cast' from data pointer   to function pointer
 //#pragma warning(disable : 4054) // LadyHavoc: MSVC++ 2008 x86, 'type cast' from function pointer   to data pointer
-#endif
+#endif //_MSC_VER
 
 
 //====================================================
 
-#define DEBUGGL
+//#define DEBUGGL
 
 #ifdef DEBUGGL
 #ifdef USE_GLES2
 #define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = glGetError();if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
 #else
 #define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = qglGetError ? qglGetError() : 0;if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
-#endif
+#endif //USE_GLES2
 extern int gl_errornumber;
 void GL_PrintError(int errornumber, const char *filename, int linenumber);
 #else
 #define CHECKGLERROR
-#endif
+#endif //DEBUGGL
 
 #ifndef USE_GLES2
 // this is defined if the SDL_opengl.h is included
@@ -49,12 +49,12 @@ void GL_PrintError(int errornumber, const char *filename, int linenumber);
 // on Windows this is WINAPI
 #ifndef APIENTRY
 #define APIENTRY
-#endif
+#endif //APIENTRY
 
 // for platforms (wgl) that do not use GLAPIENTRY
 #ifndef GLAPIENTRY
 #define GLAPIENTRY APIENTRY
-#endif
+#endif //GLAPIENTRY
 
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
@@ -264,7 +264,6 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_PACK_IMAGE_HEIGHT			0x806C
 #define GL_UNPACK_SKIP_IMAGES			0x806D
 #define GL_UNPACK_IMAGE_HEIGHT			0x806E
-#define GL_TEXTURE_3D				0x806F
 #define GL_PROXY_TEXTURE_3D			0x8070
 #define GL_TEXTURE_DEPTH			0x8071
 #define GL_TEXTURE_WRAP_R			0x8072
@@ -364,22 +363,6 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_UNSIGNED_NORMALIZED                           0x8C17
 #define GL_FRAMEBUFFER_DEFAULT                           0x8218
 #define GL_INDEX                                         0x8222
-#define GL_COLOR_ATTACHMENT0                0x8CE0
-#define GL_COLOR_ATTACHMENT1                0x8CE1
-#define GL_COLOR_ATTACHMENT2                0x8CE2
-#define GL_COLOR_ATTACHMENT3                0x8CE3
-#define GL_COLOR_ATTACHMENT4                0x8CE4
-#define GL_COLOR_ATTACHMENT5                0x8CE5
-#define GL_COLOR_ATTACHMENT6                0x8CE6
-#define GL_COLOR_ATTACHMENT7                0x8CE7
-#define GL_COLOR_ATTACHMENT8                0x8CE8
-#define GL_COLOR_ATTACHMENT9                0x8CE9
-#define GL_COLOR_ATTACHMENT10               0x8CEA
-#define GL_COLOR_ATTACHMENT11               0x8CEB
-#define GL_COLOR_ATTACHMENT12               0x8CEC
-#define GL_COLOR_ATTACHMENT13               0x8CED
-#define GL_COLOR_ATTACHMENT14               0x8CEE
-#define GL_COLOR_ATTACHMENT15               0x8CEF
 #define GL_DEPTH_ATTACHMENT                 0x8D00
 #define GL_STENCIL_ATTACHMENT               0x8D20
 #define GL_DEPTH_STENCIL_ATTACHMENT         0x821A
@@ -422,20 +405,6 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_DRAW_BUFFER14                                 0x8833
 #define GL_DRAW_BUFFER15                                 0x8834
 
-#define GL_RGBA32F                                       0x8814
-#define GL_RGB32F                                        0x8815
-#define GL_ALPHA32F                                      0x8816
-#define GL_INTENSITY32F                                  0x8817
-#define GL_LUMINANCE32F                                  0x8818
-#define GL_LUMINANCE_ALPHA32F                            0x8819
-#define GL_RGBA16F                                       0x881A
-#define GL_RGB16F                                        0x881B
-#define GL_ALPHA16F                                      0x881C
-#define GL_INTENSITY16F                                  0x881D
-#define GL_LUMINANCE16F                                  0x881E
-#define GL_LUMINANCE_ALPHA16F                            0x881F
-
-#define GL_HALF_FLOAT                                    0x140B
 
 #define GL_SRGB                                          0x8C40
 #define GL_SRGB8                                         0x8C41
@@ -632,8 +601,7 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_DEBUG_SEVERITY_MEDIUM_ARB      0x9147
 #define GL_DEBUG_SEVERITY_LOW_ARB         0x9148
 
-#define GL_NUM_EXTENSIONS                 0x821D
-#endif
+#endif //GL_ZERO
 
 extern GLboolean(GLAPIENTRY *qglIsBuffer) (GLuint buffer);
 extern GLboolean(GLAPIENTRY *qglIsEnabled)(GLenum cap);
@@ -1045,6 +1013,40 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 #define qglVertexAttrib4usv glVertexAttrib4usv
 #define qglVertexAttribPointer glVertexAttribPointer
 #define qglViewport glViewport
-#endif
+#endif //USE_GLES2
 
-#endif
+#endif //DEBUGGL
+#define GL_COLOR_ATTACHMENT0                0x8CE0
+#define GL_COLOR_ATTACHMENT1                0x8CE1
+#define GL_COLOR_ATTACHMENT2                0x8CE2
+#define GL_COLOR_ATTACHMENT3                0x8CE3
+#define GL_COLOR_ATTACHMENT4                0x8CE4
+#define GL_COLOR_ATTACHMENT5                0x8CE5
+#define GL_COLOR_ATTACHMENT6                0x8CE6
+#define GL_COLOR_ATTACHMENT7                0x8CE7
+#define GL_COLOR_ATTACHMENT8                0x8CE8
+#define GL_COLOR_ATTACHMENT9                0x8CE9
+#define GL_COLOR_ATTACHMENT10               0x8CEA
+#define GL_COLOR_ATTACHMENT11               0x8CEB
+#define GL_COLOR_ATTACHMENT12               0x8CEC
+#define GL_COLOR_ATTACHMENT13               0x8CED
+#define GL_COLOR_ATTACHMENT14               0x8CEE
+#define GL_COLOR_ATTACHMENT15               0x8CEF
+
+#define GL_RGBA32F                                       0x8814
+#define GL_RGB32F                                        0x8815
+#define GL_ALPHA32F                                      0x8816
+#define GL_INTENSITY32F                                  0x8817
+#define GL_LUMINANCE32F                                  0x8818
+#define GL_LUMINANCE_ALPHA32F                            0x8819
+#define GL_RGBA16F                                       0x881A
+#define GL_RGB16F                                        0x881B
+#define GL_ALPHA16F                                      0x881C
+#define GL_INTENSITY16F                                  0x881D
+#define GL_LUMINANCE16F                                  0x881E
+#define GL_LUMINANCE_ALPHA16F                            0x881F
+
+#define GL_TEXTURE_3D				0x806F
+
+#define GL_HALF_FLOAT                                    0x140B
+#define GL_NUM_EXTENSIONS                 0x821D

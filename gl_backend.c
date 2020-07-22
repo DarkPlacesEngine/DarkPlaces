@@ -264,11 +264,13 @@ static void gl_backend_start(void)
 
 	switch(vid.renderpath)
 	{
+#ifndef USE_GLES2
 	case RENDERPATH_GL32:
 		// GL3.2 Core requires that we have a VAO bound - but using more than one has no performance benefit so this is just placeholder
 		qglGenVertexArrays(1, &gl_state.defaultvao);
 		qglBindVertexArray(gl_state.defaultvao);
 		// fall through
+#endif //USE_GLES2
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
 		CHECKGLERROR
@@ -1102,6 +1104,7 @@ static void GL_Backend_ResetState(void)
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// set up debug output early
+#ifdef DEBUGGL
 		if (vid.support.arb_debug_output)
 		{
 			GLuint unused = 0;
@@ -1120,6 +1123,7 @@ static void GL_Backend_ResetState(void)
 				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, GL_FALSE);
 			qglDebugMessageCallbackARB(GL_DebugOutputCallback, NULL);
 		}
+#endif //DEBUGGL
 		CHECKGLERROR
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
@@ -1496,7 +1500,7 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 		if (mask & GL_DEPTH_BUFFER_BIT)
 		{
 #ifdef USE_GLES2
-			qglClearDepthf(depthvalue);CHECKGLERROR
+			//qglClearDepthf(depthvalue);CHECKGLERROR
 #else
 			qglClearDepth(depthvalue);CHECKGLERROR
 #endif
