@@ -2634,7 +2634,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 
 #ifdef USE_GLES2
 	SCR_DrawLoadingScreen_SharedSetup(clear);
-	SCR_DrawLoadingScreen(clear);
+	SCR_DrawLoadingScreen();
 #else
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
