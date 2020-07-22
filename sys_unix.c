@@ -22,7 +22,7 @@ sys_t sys;
 void Sys_Shutdown (void)
 {
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
 #endif
 	fflush(stdout);
 }
@@ -34,7 +34,7 @@ void Sys_Error (const char *error, ...)
 
 // change stdin to non blocking
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NDELAY);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
 #endif
 	va_start (argptr,error);
 	dpvsnprintf (string, sizeof (string), error, argptr);
@@ -55,7 +55,7 @@ void Sys_PrintToTerminal(const char *text)
 	{
 #ifndef WIN32
 		int origflags = fcntl (sys.outfd, F_GETFL, 0);
-		fcntl (sys.outfd, F_SETFL, origflags & ~O_NDELAY);
+		fcntl (sys.outfd, F_SETFL, origflags & ~O_NONBLOCK);
 #else
 #define write _write
 #endif
@@ -162,7 +162,7 @@ int main (int argc, char **argv)
 	else
 		sys.outfd = 1;
 #ifndef WIN32
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NDELAY);
+	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
 #endif
 	Host_Main();
 
