@@ -460,12 +460,23 @@ extern cvar_t sessionid;
 #elif defined(__OpenBSD__)
 # define DP_OS_NAME		"OpenBSD"
 # define DP_OS_STR		"openbsd"
+#elif defined(__DragonFly__)
+# define DP_OS_NAME		"DragonFlyBSD"
+# define DP_OS_STR		"dragonflybsd"
 #elif defined(MACOSX)
 # define DP_OS_NAME		"Mac OS X"
 # define DP_OS_STR		"osx"
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"
+#elif defined (sun) || defined (__sun)
+# if defined (__SVR4) || defined (__svr4__)
+#  define DP_OS_NAME	"Solaris"
+#  define DP_OS_STR		"solaris"
+# else
+#  define DP_OS_NAME	"SunOS"
+#  define DP_OS_STR		"sunos"
+# endif
 #else
 # define DP_OS_NAME		"Unknown"
 # define DP_OS_STR		"unknown"
