@@ -1475,8 +1475,8 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// https://trello.com/c/j56vUcwZ/81-centered-vs-undefined-window-position
 	int xPos = SDL_WINDOWPOS_UNDEFINED;
 	int yPos = SDL_WINDOWPOS_UNDEFINED;
-#ifndef USE_GLES2
 	int i;
+#ifndef USE_GLES2
 	const char *drivername;
 #endif
 

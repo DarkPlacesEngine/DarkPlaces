@@ -3097,7 +3097,9 @@ static void gl_main_start(void)
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
 	R_BuildWhiteCube();
+#ifndef USE_GLES2
 	R_BuildNormalizationCube();
+#endif //USE_GLES2
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
 	r_texture_gammaramps = NULL;
