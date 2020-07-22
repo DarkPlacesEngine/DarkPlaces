@@ -528,8 +528,10 @@ void Host_StartVideo(void)
 	if (!vid_opened && cls.state != ca_dedicated)
 	{
 		vid_opened = true;
+#ifdef WIN32
 		// make sure we open sockets before opening video because the Windows Firewall "unblock?" dialog can screw up the graphics context on some graphics drivers
 		NetConn_UpdateSockets();
+#endif
 		VID_Start();
 		CDAudio_Startup();
 	}
