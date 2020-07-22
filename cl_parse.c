@@ -1335,7 +1335,6 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			dpsnprintf(soundname, sizeof(soundname), "sound/%s", cl.sound_name[cl.downloadsound_current]);
 			if (!FS_FileExists(soundname) && !FS_FileExists(cl.sound_name[cl.downloadsound_current]))
 			{
-				Con_Printf("Sound %s not found\n", soundname);
 				if (cl_serverextension_download.integer && cls.netcon && !sv.active)
 				{
 					CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
