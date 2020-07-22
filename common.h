@@ -35,9 +35,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # define MACOSX
 #endif
 
-#ifdef SUNOS
-#include <sys/file.h>		///< Needed for O_NDELAY
-#endif
 
 //============================================================================
 
