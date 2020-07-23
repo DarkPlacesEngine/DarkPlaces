@@ -4108,8 +4108,8 @@ double SV_Frame(double time)
 {
 	static double sv_timer;
 	int i;
-	qboolean playing;
 	char vabuf[1024];
+	qboolean playing = false;
 
 	if (!svs.threaded)
 	{
@@ -4117,39 +4117,51 @@ double SV_Frame(double time)
 		svs.perf_acc_realtime += time;
 
 		// Look for clients who have spawned
-		playing = false;
-		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-			if(host_client->begun)
-				if(host_client->netconnection)
-					playing = true;
-		if(sv.time < 10)
-		{
-			// don't accumulate time for the first 10 seconds of a match
-			// so things can settle
-			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
-		}
-		else if(svs.perf_acc_realtime > 5)
+		for (i = 0, host_client = svs.clients; i < svs.maxclients; i++, host_client++)
+			if(host_client->begun && host_client->netconnection)
+				playing = true;
+
+		if(svs.perf_acc_realtime > 5)
 		{
 			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
 			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+
 			if(svs.perf_acc_offset_samples > 0)
 			{
 				svs.perf_offset_max = svs.perf_acc_offset_max;
 				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
 				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
 			}
-			if(svs.perf_lost > 0 && developer_extra.integer)
-				if(playing) // only complain if anyone is looking
-					Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
-			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
+
+			if(svs.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
+				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
 		}
 
-		// receive packets on each main loop iteration, as the main loop may
-		// be undersleeping due to select() detecting a new packet
+		if(svs.perf_acc_realtime > 5 || sv.time < 10)
+		{
+			/*
+			 * Don't accumulate time for the first 10 seconds of a match
+			 * so things can settle
+			 */
+			svs.perf_acc_realtime = svs.perf_acc_sleeptime =
+			svs.perf_acc_lost = svs.perf_acc_offset =
+			svs.perf_acc_offset_squared = svs.perf_acc_offset_max =
+			svs.perf_acc_offset_samples = host.sleeptime = 0;
+		}
+
+		/*
+		 * Receive packets on each main loop iteration, as the main loop may
+		 * be undersleeping due to select() detecting a new packet
+		 */
 		if (sv.active)
 			NetConn_ServerFrame();
 	}
 
+	/*
+	 * If the accumulator hasn't become positive, don't
+	 * run the frame. Everything that happens before this
+	 * point will happen even if we're sleeping this frame.
+	 */
 	if((sv_timer += time) < 0)
 		return sv_timer;
 
@@ -4163,10 +4175,12 @@ double SV_Frame(double time)
 
 	if (sv.active && sv_timer > 0 && !svs.threaded)
 	{
-		// execute one or more server frames, with an upper limit on how much
-		// execution time to spend on server frames to avoid freezing the game if
-		// the server is overloaded, this execution time limit means the game will
-		// slow down if the server is taking too long.
+		/*
+		 * Execute one or more server frames, with an upper limit on how much
+		 * execution time to spend on server frames to avoid freezing the game if
+		 * the server is overloaded. This execution time limit means the game will
+		 * slow down if the server is taking too long.
+		 */
 		int framecount, framelimit = 1;
 		double advancetime, aborttime = 0;
 		float offset;
@@ -4185,6 +4199,7 @@ double SV_Frame(double time)
 			framelimit = cl_maxphysicsframesperserverframe.integer;
 			aborttime = Sys_DirtyTime() + 0.1;
 		}
+
 		if(host_timescale.value > 0 && host_timescale.value < 1)
 			advancetime = min(advancetime, 0.1 / host_timescale.value);
 		else
@@ -4195,10 +4210,12 @@ double SV_Frame(double time)
 			offset = Sys_DirtyTime() - host.dirtytime;
 			if (offset < 0 || offset >= 1800)
 				offset = 0;
+
 			offset += sv_timer;
 			++svs.perf_acc_offset_samples;
 			svs.perf_acc_offset += offset;
 			svs.perf_acc_offset_squared += offset * offset;
+			
 			if(svs.perf_acc_offset_max < offset)
 				svs.perf_acc_offset_max = offset;
 		}
@@ -4211,7 +4228,7 @@ double SV_Frame(double time)
 		if (sv.paused || host.paused)
 			sv.frametime = 0;
 
-		for (framecount = 0;framecount < framelimit && sv_timer > 0;framecount++)
+		for (framecount = 0; framecount < framelimit && sv_timer > 0; framecount++)
 		{
 			sv_timer -= advancetime;
 
@@ -4223,6 +4240,7 @@ double SV_Frame(double time)
 			if (framelimit > 1 && Sys_DirtyTime() >= aborttime)
 				break;
 		}
+
 		R_TimeReport("serverphysics");
 
 		// send all messages to the clients
