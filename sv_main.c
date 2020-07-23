@@ -4143,6 +4143,11 @@ double SV_Frame(double time)
 					Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
 			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = host.sleeptime = 0;
 		}
+
+		// receive packets on each main loop iteration, as the main loop may
+		// be undersleeping due to select() detecting a new packet
+		if (sv.active)
+			NetConn_ServerFrame();
 	}
 
 	if((sv_timer += time) < 0)
@@ -4166,10 +4171,7 @@ double SV_Frame(double time)
 		double advancetime, aborttime = 0;
 		float offset;
 		prvm_prog_t *prog = SVVM_prog;
-		// receive packets on each main loop iteration, as the main loop may
-		// be undersleeping due to select() detecting a new packet
-		if (sv.active && !svs.threaded)
-			NetConn_ServerFrame();
+
 		// run the world state
 		// don't allow simulation to run too fast or too slow or logic glitches can occur
 
