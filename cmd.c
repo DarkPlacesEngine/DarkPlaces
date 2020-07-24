@@ -1510,19 +1510,25 @@ void Cmd_Init(void)
 	// client console can see server cvars because the user may start a server
 	cmd_client.cvars = &cvars_all;
 	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
-	cmd_client.cmd_flags = CMD_CLIENT | CMD_CLIENT_FROM_SERVER | CMD_SERVER_FROM_CLIENT;
+	cmd_client.cmd_flags = CMD_CLIENT | CMD_CLIENT_FROM_SERVER;
+	cmd_client.auto_flags = CMD_SERVER_FROM_CLIENT;
+	cmd_client.auto_function = CL_ForwardToServer_f; // FIXME: Move this to the client.
 	cmd_client.userdefined = &cmd_userdefined_all;
 	cmd_client.text_mutex = Thread_CreateMutex();
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
 	cmd_server.cvars_flagsmask = CVAR_SERVER;
 	cmd_server.cmd_flags = CMD_SERVER;
+	cmd_server.auto_flags = 0;
+	cmd_server.auto_function = NULL;
 	cmd_server.userdefined = &cmd_userdefined_all;
 	cmd_server.text_mutex = Thread_CreateMutex();
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
 	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT | CMD_USERINFO;
+	cmd_serverfromclient.auto_flags = 0;
+	cmd_serverfromclient.auto_function = NULL;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
 	cmd_serverfromclient.text_mutex = Thread_CreateMutex();
 
@@ -1621,7 +1627,6 @@ const char *Cmd_Args (cmd_state_t *cmd)
 	return cmd->args;
 }
 
-
 /*
 ============
 Cmd_TokenizeString
@@ -1693,18 +1698,21 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	cmd_function_t *prev, *current;
 	cmd_state_t *cmd;
 	xcommand_t save = NULL;
+	qboolean auto_add = false;
 	int i;
 
 	for (i = 0; i < 3; i++)
 	{
 		cmd = cmd_iter_all[i].cmd;
-		if (flags & cmd->cmd_flags)
+		if ((flags & cmd->cmd_flags) || (flags & cmd->auto_flags))
 		{
-			if(cmd == &cmd_client && (flags & CMD_SERVER_FROM_CLIENT) && !(flags & CMD_CLIENT))
+			if((flags & cmd->auto_flags) && cmd->auto_function)
 			{
 				save = function;
-				function = CL_ForwardToServer_f;
+				function = cmd->auto_function;
+				auto_add = true;
 			}
+
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 			{
@@ -1719,6 +1727,8 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				{
 					if (!strcmp(cmd_name, func->name))
 					{
+						if(func->autofunc && !auto_add)
+							break;
 						Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
 						goto next;
 					}
@@ -1730,6 +1740,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->function = function;
 				func->description = description;
 				func->next = cmd->engine_functions;
+				func->autofunc = auto_add;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1761,6 +1772,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->description = description;
 				func->csqcfunc = true; //[515]: csqc
 				func->next = cmd->userdefined->csqc_functions;
+				func->autofunc = false;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->userdefined->csqc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1777,6 +1789,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				function = save;
 		}
 next:
+		auto_add = false;
 		continue;
 	}
 }

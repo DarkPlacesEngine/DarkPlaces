@@ -78,6 +78,7 @@ typedef struct cmd_function_s
 	const char *description;
 	xcommand_t function;
 	qboolean csqcfunc;
+	qboolean autofunc;
 	qboolean initstate; // indicates this command existed at init
 } cmd_function_t;
 
@@ -130,6 +131,16 @@ typedef struct cmd_state_s
 	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
 
 	int cmd_flags; // cmd flags that identify this interpreter
+
+	/*
+	 * If a requested flag matches auto_flags, a command will be
+	 * added to a given interpreter with auto_function. For example,
+	 * a CMD_SERVER_FROM_CLIENT command should be automatically added
+	 * to the client interpreter as CL_ForwardToServer_f. It can be
+	 * overridden at any time.
+	 */
+	int auto_flags;
+	xcommand_t auto_function;
 }
 cmd_state_t;
 
@@ -225,6 +236,7 @@ void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial);
 int Cmd_Argc (cmd_state_t *cmd);
 const char *Cmd_Argv (cmd_state_t *cmd, int arg);
 const char *Cmd_Args (cmd_state_t *cmd);
+const char *Cmd_Args_After(cmd_state_t *cmd, int arg);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv(cmd, ) will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
