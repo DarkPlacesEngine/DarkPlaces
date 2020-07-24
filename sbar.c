@@ -1217,7 +1217,7 @@ void Sbar_ShowFPS(void)
 		vec3_t temp;
 		trace_t svtrace, cltrace;
 		int hitnetentity = -1;
-
+		// TODO: Use CL_TraceLine_FromViewOrigin
 		Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, org);
 		VectorSet(temp, 65536, 0, 0);
 		Matrix4x4_Transform(&r_refdef.view.matrix, temp, dest);
