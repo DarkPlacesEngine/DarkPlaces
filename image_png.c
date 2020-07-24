@@ -172,16 +172,14 @@ qboolean PNG_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if(!Sys_LoadLibrary (dllnames, &png14_dll, pngfuncs))
-	{
-		if(qpng_access_version_number() / 100 >= 104)
-			return false;
-		if(!Sys_LoadLibrary (dllnames, &png_dll, png14funcs))
+	if(!Sys_LoadLibrary (dllnames, &png_dll, pngfuncs))
+		return false;
+	if(qpng_access_version_number() / 100 >= 104)
+		if(!Sys_LoadLibrary (dllnames, &png14_dll, png14funcs))
 		{
-			Sys_UnloadLibrary (&png14_dll);
+			Sys_UnloadLibrary (&png_dll);
 			return false;
 		}
-	}
 	return true;
 }
 
