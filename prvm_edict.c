@@ -1449,6 +1449,7 @@ qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const c
 		}
 		return true;
 	}
+	PRVM_ED_Free(prog, ent);
 	return false;
 }
 
