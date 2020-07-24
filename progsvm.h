@@ -839,6 +839,10 @@ const char *PRVM_ED_ParseEdict(prvm_prog_t *prog, const char *data, prvm_edict_t
 void PRVM_ED_WriteGlobals(prvm_prog_t *prog, qfile_t *f);
 void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
 
+void PRVM_ED_CallPrespawnFunction(prvm_prog_t *prog, prvm_edict_t *ent);
+qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start);
+void PRVM_ED_CallPostspawnFunction (prvm_prog_t *prog, prvm_edict_t *ent);
+
 void PRVM_ED_LoadFromFile(prvm_prog_t *prog, const char *data);
 
 unsigned int PRVM_EDICT_NUM_ERROR(prvm_prog_t *prog, unsigned int n, const char *filename, int fileline);
