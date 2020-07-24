@@ -1507,6 +1507,68 @@ static void SV_SendCvar_f(cmd_state_t *cmd)
 	host_client = old;
 }
 
+static void SV_Ent_Create_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	ddef_t *key;
+	int i;
+	qboolean expectval = false, haveorigin = false;
+	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
+
+	prvm_edict_t *ed = PRVM_ED_Alloc(SVVM_prog);
+
+	PRVM_ED_ParseEpair(prog, ed, PRVM_ED_FindField(prog, "classname"), Cmd_Argv(cmd, 1), false);
+
+	for(i = 2; i < Cmd_Argc(cmd); i++)
+	{
+		if(!expectval)
+		{
+			if(!(key = PRVM_ED_FindField(prog, Cmd_Argv(cmd, i))))
+			{
+				Con_Printf("Key %s not found!\n", Cmd_Argv(cmd, i));
+				return;
+			}
+
+			if(!strcmp(Cmd_Argv(cmd, i), "origin") && !haveorigin)
+				haveorigin = true;
+
+			expectval = true;
+		}
+		else
+		{
+			PRVM_ED_ParseEpair(prog, ed, key, Cmd_Argv(cmd, i), false);
+			expectval = false;
+		}
+	}
+	
+	if(!haveorigin)
+	{
+		print("Missing origin\n");
+		if(cmd->source == src_client)
+			print("This should never happen if you're a player. Please report this to a developer.\n");
+		return;
+	}
+
+	// Spawn it
+	PRVM_ED_CallPrespawnFunction(prog, ed);
+	
+	if(!PRVM_ED_CallSpawnFunction(prog, ed, NULL, NULL))
+	{
+		print("Could not spawn a \"%s\". No such entity or it has no spawn function\n", Cmd_Argv(cmd, 1));
+		if(cmd->source == src_client)
+			Con_Printf("%s tried to spawn a \"%s\"\n", host_client->name, Cmd_Argv(cmd, 1));
+		return;
+	}
+
+	PRVM_ED_CallPostspawnFunction(prog, ed);	
+
+	// Make it appear in the world
+	SV_LinkEdict(ed);
+
+	if(cmd->source == src_client)
+		Con_Printf("%s spawned a \"%s\"\n", host_client->name, Cmd_Argv(cmd, 1));
+}
+
 void SV_InitOperatorCommands(void)
 {
 	Cvar_RegisterVariable(&sv_cheats);
@@ -1556,5 +1618,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
 	Cmd_AddCommand(CMD_USERINFO, "pmodel", SV_PModel_f, "(Nehahra-only) change your player model choice");
 	Cmd_AddCommand(CMD_USERINFO, "playermodel", SV_Playermodel_f, "change your player model");
-	Cmd_AddCommand(CMD_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");	
+	Cmd_AddCommand(CMD_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");
+
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_create", SV_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
 }
