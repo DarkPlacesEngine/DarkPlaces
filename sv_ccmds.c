@@ -1519,13 +1519,15 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 
 	PRVM_ED_ParseEpair(prog, ed, PRVM_ED_FindField(prog, "classname"), Cmd_Argv(cmd, 1), false);
 
+	// Allow more than one key/value pair by cycling between expecting either one.
 	for(i = 2; i < Cmd_Argc(cmd); i++)
 	{
 		if(!expectval)
 		{
 			if(!(key = PRVM_ED_FindField(prog, Cmd_Argv(cmd, i))))
 			{
-				Con_Printf("Key %s not found!\n", Cmd_Argv(cmd, i));
+				print("Key %s not found!\n", Cmd_Argv(cmd, i));
+				PRVM_ED_Free(prog, ed);
 				return;
 			}
 
@@ -1540,12 +1542,13 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 			expectval = false;
 		}
 	}
-	
+
 	if(!haveorigin)
 	{
 		print("Missing origin\n");
 		if(cmd->source == src_client)
 			print("This should never happen if you're a player. Please report this to a developer.\n");
+		PRVM_ED_Free(prog, ed);
 		return;
 	}
 
@@ -1557,6 +1560,7 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 		print("Could not spawn a \"%s\". No such entity or it has no spawn function\n", Cmd_Argv(cmd, 1));
 		if(cmd->source == src_client)
 			Con_Printf("%s tried to spawn a \"%s\"\n", host_client->name, Cmd_Argv(cmd, 1));
+		// CallSpawnFunction already freed the edict for us.
 		return;
 	}
 
