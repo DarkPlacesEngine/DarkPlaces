@@ -1253,7 +1253,7 @@ static void PRVM_ED_EdictSet_f(cmd_state_t *cmd)
 	ed = PRVM_EDICT_NUM(atoi(Cmd_Argv(cmd, 2)));
 
 	if((key = PRVM_ED_FindField(prog, Cmd_Argv(cmd, 3))) == 0)
-		Con_Printf("Key %s not found !\n", Cmd_Argv(cmd, 3));
+		Con_Printf("Key %s not found!\n", Cmd_Argv(cmd, 3));
 	else
 		PRVM_ED_ParseEpair(prog, ed, key, Cmd_Argv(cmd, 4), true);
 }
@@ -1358,6 +1358,111 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 	return data;
 }
 
+void PRVM_ED_CallPrespawnFunction(prvm_prog_t *prog, prvm_edict_t *ent)
+{
+	if (PRVM_serverfunction(SV_OnEntityPreSpawnFunction))
+	{
+		// self = ent
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityPreSpawnFunction), "QC function SV_OnEntityPreSpawnFunction is missing");
+	}
+}
+
+qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start)
+{
+	const char *funcname;
+	mfunction_t *func;
+	prvm_eval_t *fulldata = NULL;
+	char vabuf[1024];
+
+//
+// immediately call spawn function, but only if there is a self global and a classname
+//
+	if (!ent->priv.required->free)
+	{
+		if (!PRVM_alledictstring(ent, classname))
+		{
+			Con_Print("No classname for:\n");
+			PRVM_ED_Print(prog, ent, NULL);
+			PRVM_ED_Free (prog, ent);
+			return false;
+		}
+		/*
+		 * This is required for FTE compatibility (FreeCS).
+		 * It copies the key/value pairs themselves into a
+		 * global for QC to parse on its own.
+		 */
+		else if (data && start)
+		{
+			if((fulldata = PRVM_ED_FindGlobalEval(prog, "__fullspawndata")))
+			{
+				const char *in;
+				char *spawndata;
+				fulldata->string = PRVM_AllocString(prog, data - start + 1, &spawndata);
+				for(in = start; in < data; )
+				{
+					char c = *in++;
+					if(c == '\n')
+						*spawndata++ = '\t';
+					else
+						*spawndata++ = c;
+				}
+				*spawndata = 0;
+			}
+		}
+
+		// look for the spawn function
+		funcname = PRVM_GetString(prog, PRVM_alledictstring(ent, classname));
+		func = PRVM_ED_FindFunction (prog, va(vabuf, sizeof(vabuf), "spawnfunc_%s", funcname));
+		if(!func)
+			if(!PRVM_allglobalfloat(require_spawnfunc_prefix))
+				func = PRVM_ED_FindFunction (prog, funcname);
+
+		if (!func)
+		{
+			// check for OnEntityNoSpawnFunction
+			if (PRVM_serverfunction(SV_OnEntityNoSpawnFunction))
+			{
+				// self = ent
+				PRVM_serverglobalfloat(time) = sv.time;
+				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityNoSpawnFunction), "QC function SV_OnEntityNoSpawnFunction is missing");
+			}
+			else
+			{
+				
+				Con_DPrint("No spawn function for:\n");
+				if (developer.integer > 0) // don't confuse non-developers with errors	
+					PRVM_ED_Print(prog, ent, NULL);
+
+				PRVM_ED_Free (prog, ent);
+				return false; // not included in "inhibited" count
+			}
+		}
+		else
+		{
+			// self = ent
+			PRVM_serverglobalfloat(time) = sv.time;
+			PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+			prog->ExecuteProgram(prog, func - prog->functions, "");
+		}
+		return true;
+	}
+	return false;
+}
+
+void PRVM_ED_CallPostspawnFunction (prvm_prog_t *prog, prvm_edict_t *ent)
+{
+	if(!ent->priv.required->free)
+	if (PRVM_serverfunction(SV_OnEntityPostSpawnFunction))
+	{
+		// self = ent
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityPostSpawnFunction), "QC function SV_OnEntityPostSpawnFunction is missing");
+	}
+}
 
 /*
 ================
@@ -1379,11 +1484,6 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 	prvm_edict_t *ent;
 	const char *start;
 	int parsed, inhibited, spawned, died;
-	ddef_t *fulldata_ddef = NULL;
-	prvm_eval_t *fulldata = NULL;
-	const char *funcname;
-	mfunction_t *func;
-	char vabuf[1024];
 
 	parsed = 0;
 	inhibited = 0;
@@ -1427,13 +1527,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 			continue;
 		}
 
-		if (PRVM_serverfunction(SV_OnEntityPreSpawnFunction))
-		{
-			// self = ent
-			PRVM_serverglobalfloat(time) = sv.time;
-			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-			prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityPreSpawnFunction), "QC function SV_OnEntityPreSpawnFunction is missing");
-		}
+		PRVM_ED_CallPrespawnFunction(prog, ent);
 
 		if(ent->priv.required->free)
 		{
@@ -1441,90 +1535,10 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 			continue;
 		}
 
-//
-// immediately call spawn function, but only if there is a self global and a classname
-//
-		if(!ent->priv.required->free)
-		{
-			if (!PRVM_alledictstring(ent, classname))
-			{
-				Con_Print("No classname for:\n");
-				PRVM_ED_Print(prog, ent, NULL);
-				PRVM_ED_Free (prog, ent);
-				continue;
-			}
-			/* 
-			 * This is required for FTE compatibility (FreeCS).
-			 * It copies the key/value pairs themselves into a
-			 * global for QC to parse on its own.
-			 */
-			else
-			{
-				fulldata_ddef = PRVM_ED_FindGlobal(prog, "__fullspawndata");
-				if(fulldata_ddef)
-					fulldata = (prvm_eval_t *) &prog->globals.fp[fulldata_ddef->ofs];
-				if(fulldata)
-				{
-					const char *in;
-					char *spawndata;
-					fulldata->string = PRVM_AllocString(prog, data - start + 1, &spawndata);
-					for(in = start; in < data; )
-					{
-						char c = *in++;
-						if(c == '\n')
-							*spawndata++ = '\t';
-						else
-							*spawndata++ = c;
-					}
-					*spawndata = 0;
-				}
-			}
-
-			// look for the spawn function
-			funcname = PRVM_GetString(prog, PRVM_alledictstring(ent, classname));
-			func = PRVM_ED_FindFunction (prog, va(vabuf, sizeof(vabuf), "spawnfunc_%s", funcname));
-			if(!func)
-				if(!PRVM_allglobalfloat(require_spawnfunc_prefix))
-					func = PRVM_ED_FindFunction (prog, funcname);
-
-			if (!func)
-			{
-				// check for OnEntityNoSpawnFunction
-				if (PRVM_serverfunction(SV_OnEntityNoSpawnFunction))
-				{
-					// self = ent
-					PRVM_serverglobalfloat(time) = sv.time;
-					PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-					prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityNoSpawnFunction), "QC function SV_OnEntityNoSpawnFunction is missing");
-				}
-				else
-				{
-					if (developer.integer > 0) // don't confuse non-developers with errors
-					{
-						Con_Print("No spawn function for:\n");
-						PRVM_ED_Print(prog, ent, NULL);
-					}
-					PRVM_ED_Free (prog, ent);
-					continue; // not included in "inhibited" count
-				}
-			}
-			else
-			{
-				// self = ent
-				PRVM_serverglobalfloat(time) = sv.time;
-				PRVM_allglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-				prog->ExecuteProgram(prog, func - prog->functions, "");
-			}
-		}
-
-		if(!ent->priv.required->free)
-		if (PRVM_serverfunction(SV_OnEntityPostSpawnFunction))
-		{
-			// self = ent
-			PRVM_serverglobalfloat(time) = sv.time;
-			PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(ent);
-			prog->ExecuteProgram(prog, PRVM_serverfunction(SV_OnEntityPostSpawnFunction), "QC function SV_OnEntityPostSpawnFunction is missing");
-		}
+		if(!PRVM_ED_CallSpawnFunction(prog, ent, data, start))
+			continue;
+		
+		PRVM_ED_CallPostspawnFunction(prog, ent);
 
 		spawned++;
 		if (ent->priv.required->free)
