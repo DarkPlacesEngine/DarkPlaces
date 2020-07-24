@@ -815,6 +815,7 @@ void PRVM_GarbageCollection(prvm_prog_t *prog);
 
 ddef_t *PRVM_ED_FindField(prvm_prog_t *prog, const char *name);
 ddef_t *PRVM_ED_FindGlobal(prvm_prog_t *prog, const char *name);
+prvm_eval_t *PRVM_ED_FindGlobalEval(prvm_prog_t *prog, const char *name);
 mfunction_t *PRVM_ED_FindFunction(prvm_prog_t *prog, const char *name);
 
 int PRVM_ED_FindFieldOffset(prvm_prog_t *prog, const char *name);
