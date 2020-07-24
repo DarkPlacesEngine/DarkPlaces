@@ -395,6 +395,16 @@ ddef_t *PRVM_ED_FindGlobal (prvm_prog_t *prog, const char *name)
 	return NULL;
 }
 
+/*
+============
+PRVM_ED_FindGlobalEval
+============
+*/
+prvm_eval_t *PRVM_ED_FindGlobalEval(prvm_prog_t *prog, const char *name)
+{
+	ddef_t *def = PRVM_ED_FindGlobal(prog, name);
+	return def ? (prvm_eval_t *) &prog->globals.fp[def->ofs] : NULL;
+}
 
 /*
 ============
