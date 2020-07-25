@@ -1572,6 +1572,35 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	if(cmd->source == src_client)
 		Con_Printf("%s spawned a \"%s\"\n", host_client->name, Cmd_Argv(cmd, 1));
 }
+//static void SV_Ent_Remove()
+
+static void SV_Ent_Remove_All_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int i, rmcount;
+	prvm_edict_t *ed;
+	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
+
+	for (i = 0, rmcount = 0, ed = PRVM_EDICT_NUM(i); i < prog->num_edicts; i++, ed = PRVM_NEXT_EDICT(ed))
+	{
+		if(!ed->priv.required->free && !strcmp(PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)), Cmd_Argv(cmd, 1)))
+		{
+			if(!i)
+			{
+				print("Cannot remove the world\n");
+				return;
+			}
+			PRVM_ED_ClearEdict(prog, ed);
+			PRVM_ED_Free(prog, ed);
+			rmcount++;
+		}
+	}
+
+	if(!rmcount)
+		print("No \"%s\" found\n", Cmd_Argv(cmd, 1));
+	else
+		print("Removed %i of \"%s\"\n", rmcount, Cmd_Argv(cmd, 1));
+}
 
 void SV_InitOperatorCommands(void)
 {
@@ -1625,4 +1654,5 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CMD_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");
 
 	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_create", SV_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_remove_all", SV_Ent_Remove_All_f, "Removes all entities of the specified classname");
 }
