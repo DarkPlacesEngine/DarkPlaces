@@ -1608,7 +1608,80 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	if(cmd->source == src_client)
 		Con_Printf("%s spawned a \"%s\"\n", host_client->name, Cmd_Argv(cmd, 1));
 }
-//static void SV_Ent_Remove()
+
+static void SV_Ent_Remove_f(cmd_state_t *cmd)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	prvm_edict_t *ed;
+	int i, ednum;
+	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
+
+	if(!Cmd_Argc(cmd))
+		return;
+
+	// Allow specifying edict by number
+	if(Cmd_Argc(cmd) > 1 && Cmd_Argv(cmd, 1))
+	{
+		ednum = atoi(Cmd_Argv(cmd, 1));
+		if(!ednum)
+		{
+			print("Cannot remove the world\n");
+			return;
+		}
+	}
+	// Or trace a line if it's a client who didn't specify one.
+	else if(cmd->source == src_client)
+	{
+		vec3_t org, temp, dest;
+		matrix4x4_t view;
+		trace_t trace;
+
+		SV_GetEntityMatrix(prog, host_client->edict, &view, true);
+
+		Matrix4x4_OriginFromMatrix(&view, org);
+		VectorSet(temp, 65536, 0, 0);
+		Matrix4x4_Transform(&view, temp, dest);		
+
+		trace = SV_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY, 0, 0, collision_extendmovelength.value);
+		
+		if(trace.ent)
+			ednum = (int)PRVM_EDICT_TO_PROG(trace.ent);
+		if(!trace.ent || !ednum)
+			// Don't remove the world, but don't annoy players with a print if they miss
+			return;
+	}
+	else
+	{
+		// Only a dedicated server console should be able to reach this.
+		print("No edict given\n");
+		return;
+	}
+
+	ed = PRVM_EDICT_NUM(ednum);
+
+	if(ed)
+	{
+		// Skip players
+		for (i = 0; i < svs.maxclients; i++)
+		{
+			if(ed == svs.clients[i].edict)
+				return;
+		}
+
+		if(!ed->priv.required->free)
+		{
+			print("Removed a \"%s\"\n", PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)));
+			PRVM_ED_ClearEdict(prog, ed);
+			PRVM_ED_Free(prog, ed);
+		}
+	}
+	else
+	{
+		// This should only be reachable if an invalid edict number was given
+		print("No such entity\n");
+		return;
+	}
+}
 
 static void SV_Ent_Remove_All_f(cmd_state_t *cmd)
 {
@@ -1691,4 +1764,5 @@ void SV_InitOperatorCommands(void)
 
 	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_create", SV_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
 	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_remove_all", SV_Ent_Remove_All_f, "Removes all entities of the specified classname");
+	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_remove", SV_Ent_Remove_f, "Removes an entity by number, or the entity you're aiming at");
 }
