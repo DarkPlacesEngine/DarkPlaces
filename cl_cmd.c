@@ -633,29 +633,6 @@ static void CL_PingPLReport_f(cmd_state_t *cmd)
 	}
 }
 
-static void CL_Ent_Create_f(cmd_state_t *cmd)
-{
-	trace_t trace;
-	char vabuf[MAX_INPUTLINE];
-
-	if(Cmd_Argc(cmd) < 1)
-		return;
-
-	if(!strstr(Cmd_Args(cmd), "origin"))
-	{
-		// Get coordinates where the player is aiming.
-		trace = CL_TraceLine_FromViewOrigin(MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value, true, false, NULL, false, true);
-		dpsnprintf(vabuf, sizeof(vabuf), "ent_create %s origin \"%g %g %g\"", Cmd_Args(cmd), trace.endpos[0], trace.endpos[1], trace.endpos[2]);
-	}
-	else
-	{
-		// Unless we're setting origin manually.
-		dpsnprintf(vabuf, sizeof(vabuf), "ent_create %s", Cmd_Args(cmd));
-	}
-
-	CL_ForwardToServer(vabuf);
-}
-
 void CL_InitCommands(void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
@@ -693,5 +670,4 @@ void CL_InitCommands(void)
 	// commands that are only sent by server to client for execution
 	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
 	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", CL_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
-	Cmd_AddCommand(CMD_CLIENT, "ent_create", CL_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
 }

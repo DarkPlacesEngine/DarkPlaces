@@ -1510,14 +1510,48 @@ static void SV_SendCvar_f(cmd_state_t *cmd)
 static void SV_Ent_Create_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
+	prvm_edict_t *ed;
 	ddef_t *key;
 	int i;
-	qboolean expectval = false, haveorigin = false;
+	qboolean haveorigin;
+
+	qboolean expectval = false;
 	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
 
-	prvm_edict_t *ed = PRVM_ED_Alloc(SVVM_prog);
+	if(!Cmd_Argc(cmd))
+		return;
+
+	ed = PRVM_ED_Alloc(SVVM_prog);
 
 	PRVM_ED_ParseEpair(prog, ed, PRVM_ED_FindField(prog, "classname"), Cmd_Argv(cmd, 1), false);
+
+	// Spawn where the player is aiming. We need a view matrix first.
+	if(cmd->source == src_client)
+	{
+		vec3_t org, temp, dest;
+		matrix4x4_t view;
+		trace_t trace;
+		char buf[128];
+
+		SV_GetEntityMatrix(prog, host_client->edict, &view, true);
+
+		Matrix4x4_OriginFromMatrix(&view, org);
+		VectorSet(temp, 65536, 0, 0);
+		Matrix4x4_Transform(&view, temp, dest);		
+
+		trace = SV_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
+
+		dpsnprintf(buf, sizeof(buf), "%g %g %g", trace.endpos[0], trace.endpos[1], trace.endpos[2]);
+		PRVM_ED_ParseEpair(prog, ed, PRVM_ED_FindField(prog, "origin"), buf, false);
+
+		haveorigin = true;
+	}
+	// Or spawn at a specified origin.
+	else
+	{
+		print = Con_Printf;
+		haveorigin = false;
+	}
 
 	// Allow more than one key/value pair by cycling between expecting either one.
 	for(i = 2; i < Cmd_Argc(cmd); i++)
@@ -1531,7 +1565,11 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 				return;
 			}
 
-			if(!strcmp(Cmd_Argv(cmd, i), "origin") && !haveorigin)
+			/*
+			 * This is mostly for dedicated server console, but if the
+			 * player gave a custom origin, we can ignore the traceline.
+			 */
+			if(!strcmp(Cmd_Argv(cmd, i), "origin"))
 				haveorigin = true;
 
 			expectval = true;
@@ -1546,8 +1584,6 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	if(!haveorigin)
 	{
 		print("Missing origin\n");
-		if(cmd->source == src_client)
-			print("This should never happen if you're a player. Please report this to a developer.\n");
 		PRVM_ED_Free(prog, ed);
 		return;
 	}
