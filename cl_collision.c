@@ -643,18 +643,6 @@ finished:
 	return cliptrace;
 }
 
-trace_t CL_TraceLine_FromViewOrigin(int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
-{
-	vec3_t org, temp, dest;
-
-	Matrix4x4_OriginFromMatrix(&r_refdef.view.matrix, org);
-	VectorSet(temp, 65536, 0, 0);
-	Matrix4x4_Transform(&r_refdef.view.matrix, temp, dest);
-
-	return CL_TraceLine(org, dest, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend, hitnetworkbrushmodels, hitnetworkplayers, hitnetworkentity, hitcsqcentities, hitsurfaces);
-
-}
-
 /*
 ==================
 CL_Move
