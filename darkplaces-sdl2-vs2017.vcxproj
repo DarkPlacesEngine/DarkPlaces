@@ -219,6 +219,7 @@
 	<ClCompile Include="com_crc16.c" />
 	<ClCompile Include="com_ents.c" />
 	<ClCompile Include="com_ents4.c" />
+	<ClCompile Include="com_game.c" />
 	<ClCompile Include="com_msg.c" />
     <ClCompile Include="common.c" />
     <ClCompile Include="console.c" />
