@@ -100,6 +100,7 @@ OBJ_COMMON= \
 	com_crc16.o \
 	com_ents.o \
 	com_ents4.o \
+	com_game.o \
 	com_msg.o \
 	common.o \
 	console.o \
