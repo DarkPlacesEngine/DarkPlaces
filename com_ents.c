@@ -13,6 +13,24 @@ void EntityFrame_FreeDatabase(entityframe_database_t *d)
 	Mem_Free(d);
 }
 
+// (client and server) clears the database to contain no frames (thus delta compression compresses against nothing)
+void EntityFrame_ClearDatabase(entityframe_database_t *d)
+{
+	memset(d, 0, sizeof(*d));
+}
+
+// (client and server) clears frame, to prepare for adding entities
+void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum)
+{
+	f->time = 0;
+	f->framenum = framenum;
+	f->numentities = 0;
+	if (eye == NULL)
+		VectorClear(f->eye);
+	else
+		VectorCopy(eye, f->eye);
+}
+
 // (server and client) removes frames older than 'frame' from database
 void EntityFrame_AckFrame(entityframe_database_t *d, int frame)
 {
