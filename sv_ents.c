@@ -210,24 +210,6 @@ void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const en
 	}
 }
 
-// (server) clears the database to contain no frames (thus delta compression compresses against nothing)
-void EntityFrame_ClearDatabase(entityframe_database_t *d)
-{
-	memset(d, 0, sizeof(*d));
-}
-
-// (server) clears frame, to prepare for adding entities
-void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum)
-{
-	f->time = 0;
-	f->framenum = framenum;
-	f->numentities = 0;
-	if (eye == NULL)
-		VectorClear(f->eye);
-	else
-		VectorCopy(eye, f->eye);
-}
-
 // (server) adds a entity_frame to the database, for future reference
 void EntityFrame_AddFrame_Server(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t **entitydata)
 {
