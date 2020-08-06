@@ -236,7 +236,6 @@ void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial);
 int Cmd_Argc (cmd_state_t *cmd);
 const char *Cmd_Argv (cmd_state_t *cmd, int arg);
 const char *Cmd_Args (cmd_state_t *cmd);
-const char *Cmd_Args_After(cmd_state_t *cmd, int arg);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv(cmd, ) will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
