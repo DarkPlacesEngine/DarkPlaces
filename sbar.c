@@ -89,6 +89,7 @@ cvar_t cl_showfps = {CVAR_CLIENT | CVAR_SAVE, "cl_showfps", "0", "shows your ren
 cvar_t cl_showsound = {CVAR_CLIENT | CVAR_SAVE, "cl_showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
 cvar_t cl_showblur = {CVAR_CLIENT | CVAR_SAVE, "cl_showblur", "0", "shows the current alpha level of motionblur"};
 cvar_t cl_showspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
+cvar_t cl_showspeed_factor = {CVAR_CLIENT | CVAR_SAVE, "cl_showspeed_factor", "2.54", "multiplier of the centimeter for cl_showspeed. 1 unit = 1 inch in Quake, so this should be 2.54 for Quake, etc"};
 cvar_t cl_showtopspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from cl_showspeed, otherwise it's an unit number just like in cl_showspeed"};
 cvar_t cl_showtime = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime", "0", "shows current time of day (useful on screenshots)"};
 cvar_t cl_showtime_format = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime_format", "%H:%M:%S", "format string for time of day"};
@@ -367,6 +368,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&cl_showsound);
 	Cvar_RegisterVariable(&cl_showblur);
 	Cvar_RegisterVariable(&cl_showspeed);
+	Cvar_RegisterVariable(&cl_showspeed_factor);
 	Cvar_RegisterVariable(&cl_showtopspeed);
 	Cvar_RegisterVariable(&cl_showtime);
 	Cvar_RegisterVariable(&cl_showtime_format);
@@ -1053,36 +1055,24 @@ static void get_showspeed_unit(int unitnumber, double *conversion_factor, const 
 	{
 		default:
 		case 1:
-			if(IS_NEXUIZ_DERIVED(gamemode))
-				*unit = "in/s";
-			else
-				*unit = "qu/s";
+			*unit = "qu/s";
 			*conversion_factor = 1.0;
 			break;
 		case 2:
 			*unit = "m/s";
-			*conversion_factor = 0.0254;
-			if(!IS_NEXUIZ_DERIVED(gamemode))
-				*conversion_factor *= 1.5;
-			// 1qu=1.5in is for non-Nexuiz/Xonotic only - Nexuiz/Xonotic players are overly large, but 1qu=1in fixes that
+			*conversion_factor = 1.0 * cl_showspeed_factor.value * 0.01;
 			break;
 		case 3:
 			*unit = "km/h";
-			*conversion_factor = 0.0254 * 3.6;
-			if(!IS_NEXUIZ_DERIVED(gamemode))
-				*conversion_factor *= 1.5;
+			*conversion_factor = 1.0 * (cl_showspeed_factor.value * 0.01) * 3.6;
 			break;
 		case 4:
 			*unit = "mph";
-			*conversion_factor = 0.0254 * 3.6 * 0.6213711922;
-			if(!IS_NEXUIZ_DERIVED(gamemode))
-				*conversion_factor *= 1.5;
+			*conversion_factor = 1.0 * (cl_showspeed_factor.value * 0.01 * 3.6) * 0.6213711922;
 			break;
 		case 5:
 			*unit = "knots";
-			*conversion_factor = 0.0254 * 1.943844492; // 1 m/s = 1.943844492 knots, because 1 knot = 1.852 km/h
-			if(!IS_NEXUIZ_DERIVED(gamemode))
-				*conversion_factor *= 1.5;
+			*conversion_factor = 1.0 * (cl_showspeed_factor.value * 0.01 * 3.6) * 0.539957;
 			break;
 	}
 }
