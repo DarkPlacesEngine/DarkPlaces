@@ -938,6 +938,23 @@ static void SV_Status_f(cmd_state_t *cmd)
 	}
 }
 
+void SV_Name(int clientnum)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
+	if (strcmp(host_client->old_name, host_client->name))
+	{
+		if (host_client->begun)
+			SV_BroadcastPrintf("\003%s ^7changed name to ^3%s\n", host_client->old_name, host_client->name);
+		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
+		// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+		MSG_WriteByte (&sv.reliable_datagram, clientnum);
+		MSG_WriteString (&sv.reliable_datagram, host_client->name);
+		SV_WriteNetnameIntoDemo(host_client);
+	}	
+}
+
 /*
 ======================
 SV_Name_f
@@ -945,7 +962,6 @@ SV_Name_f
 */
 static void SV_Name_f(cmd_state_t *cmd)
 {
-	prvm_prog_t *prog = SVVM_prog;
 	int i, j;
 	qboolean valid_colors;
 	const char *newNameSource;
@@ -1040,18 +1056,7 @@ static void SV_Name_f(cmd_state_t *cmd)
 	if (j >= 0 && strlen(host_client->name) < sizeof(host_client->name) - 2)
 		memcpy(host_client->name + strlen(host_client->name), STRING_COLOR_DEFAULT_STR, strlen(STRING_COLOR_DEFAULT_STR) + 1);
 
-	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
-	if (strcmp(host_client->old_name, host_client->name))
-	{
-		if (host_client->begun)
-			SV_BroadcastPrintf("%s ^7changed name to %s\n", host_client->old_name, host_client->name);
-		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
-		// send notification to all clients
-		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
-		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
-		MSG_WriteString (&sv.reliable_datagram, host_client->name);
-		SV_WriteNetnameIntoDemo(host_client);
-	}
+	SV_Name(host_client - svs.clients);
 }
 
 static void SV_Rate_f(cmd_state_t *cmd)
