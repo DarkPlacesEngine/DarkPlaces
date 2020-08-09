@@ -275,7 +275,7 @@ void CL_ReadDemoMessage(void)
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
-				Cbuf_Execute(&cmd_client); // immediately execute svc_stufftext if in the demo before connect!
+				Cbuf_Execute((&cmd_client)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
