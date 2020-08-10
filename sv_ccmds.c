@@ -409,15 +409,7 @@ static void SV_Pause_f(cmd_state_t *cmd)
 {
 	void (*print) (const char *fmt, ...);
 	if (cmd->source == src_command)
-	{
-		// if running a client, try to send over network so the pause is handled by the server
-		if (cls.state == ca_connected)
-		{
-			CL_ForwardToServer_f(cmd);
-			return;
-		}
 		print = Con_Printf;
-	}
 	else
 		print = SV_ClientPrintf;
 
