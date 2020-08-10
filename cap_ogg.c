@@ -1,6 +1,3 @@
-#ifndef _MSC_VER
-#include <stdint.h>
-#endif
 #include <sys/types.h>
 
 #include "quakedef.h"
@@ -20,19 +17,11 @@ static cvar_t cl_capturevideo_ogg_theora_sharpness = {CVAR_CLIENT | CVAR_SAVE, "
 static cvar_t cl_capturevideo_ogg_vorbis_quality = {CVAR_CLIENT | CVAR_SAVE, "cl_capturevideo_ogg_vorbis_quality", "3", "audio quality (-1 to 10); higher is better"};
 
 // ogg.h stuff
-#ifdef _MSC_VER
-typedef __int16 ogg_int16_t;
-typedef unsigned __int16 ogg_uint16_t;
-typedef __int32 ogg_int32_t;
-typedef unsigned __int32 ogg_uint32_t;
-typedef __int64 ogg_int64_t;
-#else
 typedef int16_t ogg_int16_t;
 typedef uint16_t ogg_uint16_t;
 typedef int32_t ogg_int32_t;
 typedef uint32_t ogg_uint32_t;
 typedef int64_t ogg_int64_t;
-#endif
 
 typedef struct {
   long endbyte;
