@@ -453,16 +453,8 @@ static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
 
 	if (cmd->source == src_command)
 	{
-		if (cls.state == ca_dedicated)
-		{
-			fromServer = true;
-			teamonly = false;
-		}
-		else
-		{
-			CL_ForwardToServer_f(cmd);
-			return;
-		}
+		fromServer = true;
+		teamonly = false;
 	}
 
 	if (Cmd_Argc (cmd) < 2)
@@ -530,15 +522,7 @@ static void SV_Tell_f(cmd_state_t *cmd)
 	qboolean fromServer = false;
 
 	if (cmd->source == src_command)
-	{
-		if (cls.state == ca_dedicated)
-			fromServer = true;
-		else
-		{
-			CL_ForwardToServer_f(cmd);
-			return;
-		}
-	}
+		fromServer = true;
 
 	if (Cmd_Argc (cmd) < 2)
 		return;
@@ -659,15 +643,7 @@ static void SV_Ping_f(cmd_state_t *cmd)
 	void (*print) (const char *fmt, ...);
 
 	if (cmd->source == src_command)
-	{
-		// if running a client, try to send over network so the client's ping report parser will see the report
-		if (cls.state == ca_connected)
-		{
-			CL_ForwardToServer_f(cmd);
-			return;
-		}
 		print = Con_Printf;
-	}
 	else
 		print = SV_ClientPrintf;
 
