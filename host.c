@@ -659,9 +659,6 @@ static void Host_Init (void)
 	if (COM_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 
-	// used by everything
-	Memory_Init();
-
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
 

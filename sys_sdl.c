@@ -220,6 +220,9 @@ int main (int argc, char *argv[])
 	// we don't know which systems we'll want to init, yet...
 	SDL_Init(0);
 
+	// used by everything
+	Memory_Init();
+
 	Host_Main();
 
 	Sys_Quit(0);
