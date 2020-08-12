@@ -84,8 +84,9 @@ static void SV_Map_f(cmd_state_t *cmd)
 	svs.serverflags = 0;			// haven't completed an episode yet
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
-	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1", -2);
+
+	if(sv.active && host.hook.ConnectLocal != NULL)
+		host.hook.ConnectLocal();
 }
 
 /*
@@ -121,8 +122,9 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 	SV_SaveSpawnparms ();
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
-	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1", -2);
+	
+	if(sv.active && host.hook.ConnectLocal != NULL)
+		host.hook.ConnectLocal();
 }
 
 /*
@@ -156,8 +158,9 @@ static void SV_Restart_f(cmd_state_t *cmd)
 
 	strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
-	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1", -2);
+	
+	if(sv.active && host.hook.ConnectLocal != NULL)
+		host.hook.ConnectLocal();
 }
 
 //===========================================================================
