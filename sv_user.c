@@ -25,6 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static usercmd_t usercmd;
 extern cvar_t sv_autodemo_perclient;
+extern cvar_t sv_rollangle;
+extern cvar_t sv_rollspeed;
 
 /*
 ==================
@@ -606,7 +608,7 @@ void SV_ClientThink (void)
 	VectorAdd (PRVM_serveredictvector(host_client->edict, v_angle), PRVM_serveredictvector(host_client->edict, punchangle), v_angle);
 	VectorCopy(PRVM_serveredictvector(host_client->edict, angles), angles);
 	VectorCopy(PRVM_serveredictvector(host_client->edict, velocity), velocity);
-	PRVM_serveredictvector(host_client->edict, angles)[ROLL] = V_CalcRoll (angles, velocity)*4;
+	PRVM_serveredictvector(host_client->edict, angles)[ROLL] = Com_CalcRoll (angles, velocity, sv_rollangle.value, sv_rollspeed.value)*4;
 	if (!PRVM_serveredictfloat(host_client->edict, fixangle))
 	{
 		PRVM_serveredictvector(host_client->edict, angles)[PITCH] = -v_angle[PITCH]/3;

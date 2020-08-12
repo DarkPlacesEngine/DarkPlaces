@@ -701,7 +701,6 @@ static void Host_Init (void)
 	Mod_Init();
 	World_Init();
 	SV_Init();
-	V_Init(); // some cvars needed by server player physics (cl_rollangle etc)
 	Host_InitLocal();
 	Host_ServerOptions();
 
