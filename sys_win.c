@@ -361,6 +361,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	Sys_ProvideSelfFD();
 
+	// used by everything
+	Memory_Init();
+
 	Host_Main();
 
 	Sys_Quit(0);

@@ -164,6 +164,10 @@ int main (int argc, char **argv)
 #ifndef WIN32
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
 #endif
+
+	// used by everything
+	Memory_Init();
+
 	Host_Main();
 
 	Sys_Quit(0);
