@@ -469,12 +469,12 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 	{
 		// warn if it's significant
 		if (time < -0.01)
-			Con_Printf(CON_WARN "Host_GetTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+			Con_Printf(CON_WARN "Host_UpdateTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
 		time = 0;
 	}
 	else if (time >= 1800)
 	{
-		Con_Printf(CON_WARN "Host_GetTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+		Con_Printf(CON_WARN "Host_UpdateTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
 		time = 0;
 	}
 
