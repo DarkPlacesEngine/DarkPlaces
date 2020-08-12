@@ -40,6 +40,9 @@ static void QW_TranslateEffects(entity_state_t *s, int qweffects)
 		s->effects |= EF_DIMLIGHT;
 }
 
+extern cvar_t cl_rollangle;
+extern cvar_t cl_rollspeed;
+
 void EntityStateQW_ReadPlayerUpdate(void)
 {
 	int slot = MSG_ReadByte(&cl_message);
@@ -130,7 +133,7 @@ void EntityStateQW_ReadPlayerUpdate(void)
 	s->angles[0] = viewangles[0] * -0.0333;
 	s->angles[1] = viewangles[1];
 	s->angles[2] = 0;
-	s->angles[2] = V_CalcRoll(s->angles, velocity)*4;
+	s->angles[2] = Com_CalcRoll(s->angles, velocity, cl_rollangle.value, cl_rollspeed.value)*4;
 
 	// if this is an update on our player, update interpolation state
 	if (enumber == cl.playerentity)

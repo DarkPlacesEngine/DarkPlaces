@@ -2928,7 +2928,7 @@ void CL_Init (void)
 		S_Init();
 		CDAudio_Init();
 		Key_Init();
-
+		V_Init();
 
 		cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
 		cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);

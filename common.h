@@ -382,5 +382,7 @@ size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
+float Com_CalcRoll (const vec3_t angles, const vec3_t velocity, const vec_t angleval, const vec_t velocityval);
+
 #endif
 

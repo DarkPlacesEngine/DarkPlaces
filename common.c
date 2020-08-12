@@ -884,6 +884,33 @@ int COM_CheckParm (const char *parm)
 	return 0;
 }
 
+/*
+===============
+Com_CalcRoll
+
+Used by view and sv_user
+===============
+*/
+float Com_CalcRoll (const vec3_t angles, const vec3_t velocity, const vec_t angleval, const vec_t velocityval)
+{
+	vec3_t	right;
+	float	sign;
+	float	side;
+
+	AngleVectors (angles, NULL, right, NULL);
+	side = DotProduct (velocity, right);
+	sign = side < 0 ? -1 : 1;
+	side = fabs(side);
+
+	if (side < velocityval)
+		side = side * angleval / velocityval;
+	else
+		side = angleval;
+
+	return side*sign;
+
+}
+
 //===========================================================================
 
 /*

@@ -146,36 +146,6 @@ float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 int cl_punchangle_applied;
 
-/*
-===============
-V_CalcRoll
-
-Used by view and sv_user
-===============
-*/
-float V_CalcRoll (const vec3_t angles, const vec3_t velocity)
-{
-	vec3_t	right;
-	float	sign;
-	float	side;
-	float	value;
-
-	AngleVectors (angles, NULL, right, NULL);
-	side = DotProduct (velocity, right);
-	sign = side < 0 ? -1 : 1;
-	side = fabs(side);
-
-	value = cl_rollangle.value;
-
-	if (side < cl_rollspeed.value)
-		side = side * value / cl_rollspeed.value;
-	else
-		side = value;
-
-	return side*sign;
-
-}
-
 void V_StartPitchDrift (void)
 {
 	if (cl.laststop == cl.time)
@@ -692,7 +662,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				VectorAdd(viewangles, cl.punchangle, viewangles);
 				cl_punchangle_applied = 1;
 			}
-			viewangles[ROLL] += V_CalcRoll(clviewangles, clvelocity);
+			viewangles[ROLL] += Com_CalcRoll(clviewangles, clvelocity, cl_rollangle.value, cl_rollspeed.value);
 
 			if (v_dmg_time > 0)
 			{
