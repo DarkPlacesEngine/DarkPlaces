@@ -1645,7 +1645,6 @@ void V_StartPitchDrift_f(cmd_state_t *cmd);
 void V_StopPitchDrift (void);
 
 void V_Init (void);
-float V_CalcRoll (const vec3_t angles, const vec3_t velocity);
 void V_UpdateBlends (void);
 void V_ParseDamage (void);
 
