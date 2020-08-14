@@ -205,21 +205,35 @@ typedef enum opcode_e
 opcode_t;
 
 
-typedef struct statement_s
+typedef struct statement16_s
 {
 	unsigned short	op;
 	signed short	a,b,c;
 }
-dstatement_t;
+dstatement16_t;
+typedef struct statement32_s
+{
+	unsigned int	op;
+	signed int	a,b,c;
+}
+dstatement32_t;
 
-typedef struct ddef_s
+typedef struct ddef16_s
 {
 	unsigned short	type;		// if DEF_SAVEGLOBGAL bit is set
 								// the variable needs to be saved in savegames
 	unsigned short	ofs;
 	int			s_name;
 }
-ddef_t;
+ddef16_t;
+typedef struct ddef32_s
+{
+	unsigned int	type;		// if DEF_SAVEGLOBGAL bit is set
+								// the variable needs to be saved in savegames
+	unsigned int	ofs;
+	int			s_name;
+}
+ddef32_t, mdef_t;
 #define	DEF_SAVEGLOBAL	(1<<15)
 
 #define	MAX_PARMS	8
@@ -281,27 +295,47 @@ typedef struct dprograms_s
 	int		version;
 	int		crc;			// check of header file
 
-	int		ofs_statements;
-	int		numstatements;	// statement 0 is an error
+	unsigned int		ofs_statements;
+	unsigned int		numstatements;	// statement 0 is an error
 
-	int		ofs_globaldefs;
-	int		numglobaldefs;
+	unsigned int		ofs_globaldefs;
+	unsigned int		numglobaldefs;
 
-	int		ofs_fielddefs;
-	int		numfielddefs;
+	unsigned int		ofs_fielddefs;
+	unsigned int		numfielddefs;
 
-	int		ofs_functions;
-	int		numfunctions;	// function 0 is an empty
+	unsigned int		ofs_functions;
+	unsigned int		numfunctions;	// function 0 is an empty
 
-	int		ofs_strings;
-	int		numstrings;		// first string is a null string
+	unsigned int		ofs_strings;
+	unsigned int		numstrings;		// first string is a null string
 
-	int		ofs_globals;
-	int		numglobals;
+	unsigned int		ofs_globals;
+	unsigned int		numglobals;
 
-	int		entityfields;
+	unsigned int		entityfields;
 }
 dprograms_t;
+
+typedef struct dprograms_v7_s
+{	//extended header written by fteqcc.
+	dprograms_t	v6;	//for easier casting.
+
+	//debug / version 7 extensions
+	unsigned int	ofsfiles;			//ignored. deprecated, should be 0. source files can instead be embedded by simply treating the .dat as a zip.
+	unsigned int	ofslinenums;		//ignored. alternative to external .lno files.
+	unsigned int	ofsbodylessfuncs;	//unsupported. function names imported from other modules. must be 0.
+	unsigned int	numbodylessfuncs;	//unsupported. must be 0.
+
+	unsigned int	ofs_types;			//unsupported+deprecated. rich type info. must be 0.
+	unsigned int	numtypes;			//unsupported+deprecated. rich type info. must be 0.
+	unsigned int	blockscompressed;	//unsupported. per-block compression. must be 0.
+
+	int	secondaryversion;				//if not known then its kkqwsv's v7, qfcc's v7, or uhexen2's v7, or something. abandon all hope when not recognised.
+#define PROG_SECONDARYVERSION16 ((('1'<<0)|('F'<<8)|('T'<<16)|('E'<<24))^(('P'<<0)|('R'<<8)|('O'<<16)|('G'<<24)))	//regular 16bit statements.
+#define PROG_SECONDARYVERSION32 ((('1'<<0)|('F'<<8)|('T'<<16)|('E'<<24))^(('3'<<0)|('2'<<8)|('B'<<16)|(' '<<24)))	//statements+globaldefs+fielddefs extended to 32bit.
+}
+dprograms_v7_t;
 
 #endif
 

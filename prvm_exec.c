@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "progsvm.h"
 
-const char *prvm_opnames[] =
+static const char *prvm_opnames[] =
 {
 "^5DONE",
 
@@ -107,7 +107,186 @@ const char *prvm_opnames[] =
 "^2OR",
 
 "BITAND",
-"BITOR"
+"BITOR",
+
+
+
+
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+
+"STORE_I",
+
+NULL,
+NULL,
+
+"ADD_I",
+"ADD_FI",
+"ADD_IF",
+
+"SUB_I",
+"SUB_FI",
+"SUB_IF",
+"CONV_IF",
+"CONV_FI",
+
+NULL,
+NULL,
+
+"LOAD_I",
+"STOREP_I",
+
+NULL,
+NULL,
+
+"BITAND_I",
+"BITOR_I",
+
+"MUL_I",
+"DIV_I",
+"EQ_I",
+"NE_I",
+
+NULL,
+NULL,
+
+"NOT_I",
+
+"DIV_VF",
+
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+
+"STORE_P",
+
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+
+"LE_I",
+"GE_I",
+"LT_I",
+"GT_I",
+
+"LE_IF",
+"GE_IF",
+"LT_IF",
+"GT_IF",
+
+"LE_FI",
+"GE_FI",
+"LT_FI",
+"GT_FI",
+
+"EQ_IF",
+"EQ_FI",
+
+NULL,
+NULL,
+NULL,
+NULL,
+
+"MUL_IF",
+"MUL_FI",
+"MUL_VI",
+
+NULL,
+
+"DIV_IF",
+"DIV_FI",
+"BITAND_IF",
+"BITOR_IF",
+"BITAND_FI",
+"BITOR_FI",
+"AND_I",
+"OR_I",
+"AND_IF",
+"OR_IF",
+"AND_FI",
+"OR_FI",
+"NE_IF",
+"NE_FI",
+
+"GSTOREP_I",
+"GSTOREP_F",
+"GSTOREP_ENT",
+"GSTOREP_FLD",
+"GSTOREP_S",
+"GSTOREP_FNC",
+"GSTOREP_V",
+"GADDRESS",
+"GLOAD_I",
+"GLOAD_F",
+"GLOAD_FLD",
+"GLOAD_ENT",
+"GLOAD_S",
+"GLOAD_FNC",
+"BOUNDCHECK",
+NULL,
+NULL,
+NULL,
+NULL,
+"GLOAD_V",
 };
 
 
@@ -127,6 +306,7 @@ static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
 	size_t i;
 	int opnum = (int)(s - prog->statements);
 	char valuebuf[MAX_INPUTLINE];
+	const char *opname;
 
 	Con_Printf("s%i: ", opnum);
 	if( prog->statement_linenums )
@@ -140,16 +320,18 @@ static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
 	if (prvm_statementprofiling.integer)
 		Con_Printf("%7.0f ", prog->statement_profile[s - prog->statements]);
 
-	if ( (unsigned)s->op < sizeof(prvm_opnames)/sizeof(prvm_opnames[0]))
-	{
-		Con_Printf("%s ",  prvm_opnames[s->op]);
-		i = strlen(prvm_opnames[s->op]);
-		// don't count a preceding color tag when padding the name
-		if (prvm_opnames[s->op][0] == STRING_COLOR_TAG)
-			i -= 2;
-		for ( ; i<10 ; i++)
-			Con_Print(" ");
-	}
+	if ( (unsigned)s->op < sizeof(prvm_opnames)/sizeof(prvm_opnames[0]) && prvm_opnames[s->op])
+		opname = prvm_opnames[s->op];
+	else
+		opname = valuebuf, dpsnprintf(valuebuf, sizeof(valuebuf), "OPCODE_%u", (unsigned)s->op);
+	Con_Printf("%s ",  opname);
+	i = strlen(opname);
+	// don't count a preceding color tag when padding the name
+	if (opname[0] == STRING_COLOR_TAG)
+		i -= 2;
+	for ( ; i<10 ; i++)
+		Con_Print(" ");
+
 	if (s->operand[0] >= 0) Con_Printf(  "%s", PRVM_GlobalString(prog, s->operand[0], valuebuf, sizeof(valuebuf)));
 	if (s->operand[1] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[1], valuebuf, sizeof(valuebuf)));
 	if (s->operand[2] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[2], valuebuf, sizeof(valuebuf)));

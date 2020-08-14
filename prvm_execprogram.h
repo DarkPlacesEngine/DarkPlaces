@@ -632,6 +632,8 @@ int i;
 		//==================
 
 			HANDLE_OPCODE(OP_IFNOT):
+				//spike FIXME -- dp redefined IFNOT[_I] as IFNOT_F, which breaks if(0x80000000)
+				//spike FIXME -- you should add separate IFNOT_I/IFNOT_F opcodes and remap IFNOT_I to ITNOT_F in v6 progs for compat.
 				if(!FLOAT_IS_TRUE_FOR_INT(OPA->_int))
 				// TODO add an "int-if", and change this one to OPA->_float
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
@@ -651,6 +653,7 @@ int i;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_IF):
+				//spike FIXME -- dp redefined IF[_I] as IF_F
 				if(FLOAT_IS_TRUE_FOR_INT(OPA->_int))
 				// TODO add an "int-if", and change this one, as well as the FLOAT_IS_TRUE_FOR_INT usages, to OPA->_float
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
@@ -989,7 +992,7 @@ int i;
 				prog->globals.ip[OPB->_int] = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GSTOREP_V):
-				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobaldefs)
+				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
@@ -1041,10 +1044,10 @@ int i;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_BOUNDCHECK):
-				if (OPA->_int < 0 || OPA->_int >= OPB->_int)
+				if ((unsigned int)OPA->_int < (unsigned int)st->operand[2] || (unsigned int)OPA->_int >= (unsigned int)st->operand[1])
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs boundcheck failed at line number %d, value is < 0 or >= %d", prog->name, OPB->_int, OPC->_int);
+					prog->error_cmd("Progs boundcheck failed in %s, value is < %d or >= %d", prog->name, OPC->_int, OPB->_int);
 					goto cleanup;
 				}
 				DISPATCH_OPCODE();
