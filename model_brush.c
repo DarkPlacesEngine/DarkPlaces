@@ -3893,11 +3893,6 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	mod->brush.ishlbsp = false;
-	mod->brush.isbsp2rmqe = false;
-	mod->brush.isbsp2 = false;
-	mod->brush.isq2bsp = false;
-	mod->brush.isq3bsp = false;
 	mod->brush.skymasking = true;
 	i = MSG_ReadLittleLong(&sb);
 
