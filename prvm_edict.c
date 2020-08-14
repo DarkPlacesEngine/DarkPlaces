@@ -127,7 +127,7 @@ void PRVM_MEM_IncreaseEdicts(prvm_prog_t *prog)
 
 int PRVM_ED_FindFieldOffset(prvm_prog_t *prog, const char *field)
 {
-	ddef_t *d;
+	mdef_t *d;
 	d = PRVM_ED_FindField(prog, field);
 	if (!d)
 		return -1;
@@ -136,7 +136,7 @@ int PRVM_ED_FindFieldOffset(prvm_prog_t *prog, const char *field)
 
 int PRVM_ED_FindGlobalOffset(prvm_prog_t *prog, const char *global)
 {
-	ddef_t *d;
+	mdef_t *d;
 	d = PRVM_ED_FindGlobal(prog, global);
 	if (!d)
 		return -1;
@@ -324,9 +324,9 @@ void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed)
 PRVM_ED_GlobalAtOfs
 ============
 */
-static ddef_t *PRVM_ED_GlobalAtOfs (prvm_prog_t *prog, int ofs)
+static mdef_t *PRVM_ED_GlobalAtOfs (prvm_prog_t *prog, unsigned int ofs)
 {
-	ddef_t		*def;
+	mdef_t		*def;
 	int			i;
 
 	for (i = 0;i < prog->numglobaldefs;i++)
@@ -343,9 +343,9 @@ static ddef_t *PRVM_ED_GlobalAtOfs (prvm_prog_t *prog, int ofs)
 PRVM_ED_FieldAtOfs
 ============
 */
-ddef_t *PRVM_ED_FieldAtOfs (prvm_prog_t *prog, int ofs)
+mdef_t *PRVM_ED_FieldAtOfs (prvm_prog_t *prog, unsigned int ofs)
 {
-	ddef_t		*def;
+	mdef_t		*def;
 	int			i;
 
 	for (i = 0;i < prog->numfielddefs;i++)
@@ -362,9 +362,9 @@ ddef_t *PRVM_ED_FieldAtOfs (prvm_prog_t *prog, int ofs)
 PRVM_ED_FindField
 ============
 */
-ddef_t *PRVM_ED_FindField (prvm_prog_t *prog, const char *name)
+mdef_t *PRVM_ED_FindField (prvm_prog_t *prog, const char *name)
 {
-	ddef_t *def;
+	mdef_t *def;
 	int i;
 
 	for (i = 0;i < prog->numfielddefs;i++)
@@ -381,9 +381,9 @@ ddef_t *PRVM_ED_FindField (prvm_prog_t *prog, const char *name)
 PRVM_ED_FindGlobal
 ============
 */
-ddef_t *PRVM_ED_FindGlobal (prvm_prog_t *prog, const char *name)
+mdef_t *PRVM_ED_FindGlobal (prvm_prog_t *prog, const char *name)
 {
-	ddef_t *def;
+	mdef_t *def;
 	int i;
 
 	for (i = 0;i < prog->numglobaldefs;i++)
@@ -402,7 +402,7 @@ PRVM_ED_FindGlobalEval
 */
 prvm_eval_t *PRVM_ED_FindGlobalEval(prvm_prog_t *prog, const char *name)
 {
-	ddef_t *def = PRVM_ED_FindGlobal(prog, name);
+	mdef_t *def = PRVM_ED_FindGlobal(prog, name);
 	return def ? (prvm_eval_t *) &prog->globals.fp[def->ofs] : NULL;
 }
 
@@ -435,7 +435,7 @@ Returns a string describing *data in a type specific manner
 */
 static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, char *line, size_t linelength)
 {
-	ddef_t *def;
+	mdef_t *def;
 	mfunction_t *f;
 	int n;
 
@@ -503,7 +503,7 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 {
 	int i;
 	const char *s;
-	ddef_t *def;
+	mdef_t *def;
 	mfunction_t *f;
 
 	type = (etype_t)((int)type & ~DEF_SAVEGLOBAL);
@@ -592,7 +592,7 @@ char *PRVM_GlobalString (prvm_prog_t *prog, int ofs, char *line, size_t lineleng
 {
 	char	*s;
 	//size_t	i;
-	ddef_t	*def;
+	mdef_t	*def;
 	prvm_eval_t	*val;
 	char valuebuf[MAX_INPUTLINE];
 
@@ -617,7 +617,7 @@ char *PRVM_GlobalString (prvm_prog_t *prog, int ofs, char *line, size_t lineleng
 char *PRVM_GlobalStringNoContents (prvm_prog_t *prog, int ofs, char *line, size_t linelength)
 {
 	//size_t	i;
-	ddef_t	*def;
+	mdef_t	*def;
 
 	def = PRVM_ED_GlobalAtOfs(prog, ofs);
 	if (!def)
@@ -646,7 +646,7 @@ For debugging
 void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fieldname)
 {
 	size_t	l;
-	ddef_t	*d;
+	mdef_t	*d;
 	prvm_eval_t	*val;
 	int		i, j;
 	const char	*name;
@@ -727,7 +727,7 @@ For savegames
 */
 void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 {
-	ddef_t	*d;
+	mdef_t	*d;
 	prvm_eval_t	*val;
 	int		i, j;
 	const char	*name;
@@ -889,7 +889,7 @@ PRVM_ED_WriteGlobals
 */
 void PRVM_ED_WriteGlobals (prvm_prog_t *prog, qfile_t *f)
 {
-	ddef_t		*def;
+	mdef_t		*def;
 	int			i;
 	const char		*name;
 	int			type;
@@ -929,7 +929,7 @@ PRVM_ED_ParseGlobals
 void PRVM_ED_ParseGlobals (prvm_prog_t *prog, const char *data)
 {
 	char keyname[MAX_INPUTLINE];
-	ddef_t *key;
+	mdef_t *key;
 
 	while (1)
 	{
@@ -977,11 +977,11 @@ Can parse either fields or globals
 returns false if error
 =============
 */
-qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash)
+qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qboolean parsebackslash)
 {
 	int i, l;
 	char *new_p;
-	ddef_t *def;
+	mdef_t *def;
 	prvm_eval_t *val;
 	mfunction_t *func;
 
@@ -1147,7 +1147,7 @@ static void PRVM_ED_EdictGet_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
 	prvm_edict_t *ed;
-	ddef_t *key;
+	mdef_t *key;
 	const char *s;
 	prvm_eval_t *v;
 	char valuebuf[MAX_INPUTLINE];
@@ -1190,7 +1190,7 @@ fail:
 static void PRVM_ED_GlobalGet_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
-	ddef_t *key;
+	mdef_t *key;
 	const char *s;
 	prvm_eval_t *v;
 	char valuebuf[MAX_INPUTLINE];
@@ -1239,7 +1239,7 @@ static void PRVM_ED_EdictSet_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
 	prvm_edict_t *ed;
-	ddef_t *key;
+	mdef_t *key;
 
 	if(Cmd_Argc(cmd) != 5)
 	{
@@ -1269,7 +1269,7 @@ Used for initial level load and for savegames.
 */
 const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent)
 {
-	ddef_t *key;
+	mdef_t *key;
 	qboolean anglehack;
 	qboolean init;
 	char keyname[256];
@@ -1729,7 +1729,7 @@ static void PRVM_PO_ParseString(char *out, const char *in, size_t outsize)
 					case '\\': if(outsize > 0) { *out++ = '\\'; --outsize; } break;
 					case '"': if(outsize > 0) { *out++ = '"'; --outsize; } break;
 					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7':
-						if(outsize > 0) 
+						if(outsize > 0)
 							*out = *in - '0';
 						++in;
 						if(*in >= '0' && *in <= '7')
@@ -1873,7 +1873,7 @@ static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t
 				memset(&thisstr, 0, sizeof(thisstr));
 			}
 		}
-		
+
 		Mem_Free((char *) buf);
 	}
 
@@ -1994,9 +1994,14 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 {
 	int i;
 	dprograms_t *dprograms;
-	dstatement_t *instatements;
-	ddef_t *infielddefs;
-	ddef_t *inglobaldefs;
+
+	dstatement16_t *instatements16;
+	dstatement32_t *instatements32;
+	ddef16_t *infielddefs16;
+	ddef32_t *infielddefs32;
+	ddef16_t *inglobaldefs16;
+	ddef32_t *inglobaldefs32;
+
 	int *inglobals;
 	dfunction_t *infunctions;
 	char *instrings;
@@ -2016,6 +2021,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	char vabuf[1024];
 	char vabuf2[1024];
 	cvar_t *cvar;
+	int structtype = 0;
 
 	if (prog->loaded)
 		prog->error_cmd("PRVM_LoadProgs: there is already a %s program loaded!", prog->name );
@@ -2046,13 +2052,29 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 // byte swap the header
 	prog->progs_version = LittleLong(dprograms->version);
 	prog->progs_crc = LittleLong(dprograms->crc);
-	if (prog->progs_version != PROG_VERSION)
+	if (prog->progs_version == 7)
+	{
+		dprograms_v7_t *v7 = (dprograms_v7_t*)dprograms;
+		structtype = LittleLong(v7->secondaryversion);
+		if (structtype == PROG_SECONDARYVERSION16 ||
+			structtype == PROG_SECONDARYVERSION32)
+			;//supported
+		else
+			prog->error_cmd("%s: %s targets unknown engine", prog->name, filename);
+
+		if (v7->numbodylessfuncs != 0 || v7->numtypes != 0 || v7->blockscompressed != 0)
+			prog->error_cmd("%s: %s uses unsupported features.", prog->name, filename);
+	}
+	else if (prog->progs_version != PROG_VERSION)
 		prog->error_cmd("%s: %s has wrong version number (%i should be %i)", prog->name, filename, prog->progs_version, PROG_VERSION);
-	instatements = (dstatement_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_statements));
+	instatements16 = (dstatement16_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_statements));
+	instatements32 = (dstatement32_t *)instatements16;
 	prog->progs_numstatements = LittleLong(dprograms->numstatements);
-	inglobaldefs = (ddef_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_globaldefs));
+	inglobaldefs16 = (ddef16_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_globaldefs));
+	inglobaldefs32 = (ddef32_t *)inglobaldefs16;
 	prog->progs_numglobaldefs = LittleLong(dprograms->numglobaldefs);
-	infielddefs = (ddef_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_fielddefs));
+	infielddefs16 = (ddef16_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_fielddefs));
+	infielddefs32 = (ddef32_t *)infielddefs16;
 	prog->progs_numfielddefs = LittleLong(dprograms->numfielddefs);
 	infunctions = (dfunction_t *)((unsigned char *)dprograms + LittleLong(dprograms->ofs_functions));
 	prog->progs_numfunctions = LittleLong(dprograms->numfunctions);
@@ -2084,12 +2106,12 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	Mem_ExpandableArray_NewArray(&prog->stringbuffersarray, prog->progs_mempool, sizeof(prvm_stringbuffer_t), 64);
 
 	// we need to expand the globaldefs and fielddefs to include engine defs
-	prog->globaldefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobaldefs + numrequiredglobals) * sizeof(ddef_t));
+	prog->globaldefs = (mdef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobaldefs + numrequiredglobals) * sizeof(mdef_t));
 	prog->globals.fp = (prvm_vec_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numglobals + requiredglobalspace + 2) * sizeof(prvm_vec_t));
 		// + 2 is because of an otherwise occurring overrun in RETURN instruction
 		// when trying to return the last or second-last global
 		// (RETURN always returns a vector, there is no RETURN_F instruction)
-	prog->fielddefs = (ddef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numfielddefs + numrequiredfields) * sizeof(ddef_t));
+	prog->fielddefs = (mdef_t *)Mem_Alloc(prog->progs_mempool, (prog->progs_numfielddefs + numrequiredfields) * sizeof(mdef_t));
 	// we need to convert the statements to our memory format
 	prog->statements = (mstatement_t *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof(mstatement_t));
 	// allocate space for profiling statement usage
@@ -2113,12 +2135,26 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	}
 
 	// copy the globaldefs to the new globaldefs list
-	for (i=0 ; i<prog->numglobaldefs ; i++)
+	switch(structtype)
 	{
-		prog->globaldefs[i].type = LittleShort(inglobaldefs[i].type);
-		prog->globaldefs[i].ofs = LittleShort(inglobaldefs[i].ofs);
-		prog->globaldefs[i].s_name = LittleLong(inglobaldefs[i].s_name);
-		// TODO bounds check ofs, s_name
+	case PROG_SECONDARYVERSION32:
+		for (i=0 ; i<prog->numglobaldefs ; i++)
+		{
+			prog->globaldefs[i].type = LittleLong(inglobaldefs32[i].type);
+			prog->globaldefs[i].ofs = LittleLong(inglobaldefs32[i].ofs);
+			prog->globaldefs[i].s_name = LittleLong(inglobaldefs32[i].s_name);
+			// TODO bounds check ofs, s_name
+		}
+		break;
+	default:
+		for (i=0 ; i<prog->numglobaldefs ; i++)
+		{
+			prog->globaldefs[i].type = (unsigned short)LittleShort(inglobaldefs16[i].type);
+			prog->globaldefs[i].ofs = (unsigned short)LittleShort(inglobaldefs16[i].ofs);
+			prog->globaldefs[i].s_name = LittleLong(inglobaldefs16[i].s_name);
+			// TODO bounds check ofs, s_name
+		}
+		break;
 	}
 
 	// append the required globals
@@ -2135,14 +2171,30 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	}
 
 	// copy the progs fields to the new fields list
-	for (i = 0;i < prog->numfielddefs;i++)
+	switch(structtype)
 	{
-		prog->fielddefs[i].type = LittleShort(infielddefs[i].type);
-		if (prog->fielddefs[i].type & DEF_SAVEGLOBAL)
-			prog->error_cmd("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", prog->name);
-		prog->fielddefs[i].ofs = LittleShort(infielddefs[i].ofs);
-		prog->fielddefs[i].s_name = LittleLong(infielddefs[i].s_name);
-		// TODO bounds check ofs, s_name
+	case PROG_SECONDARYVERSION32:
+		for (i = 0;i < prog->numfielddefs;i++)
+		{
+			prog->fielddefs[i].type = LittleLong(infielddefs32[i].type);
+			if (prog->fielddefs[i].type & DEF_SAVEGLOBAL)
+				prog->error_cmd("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", prog->name);
+			prog->fielddefs[i].ofs = LittleLong(infielddefs32[i].ofs);
+			prog->fielddefs[i].s_name = LittleLong(infielddefs32[i].s_name);
+			// TODO bounds check ofs, s_name
+		}
+		break;
+	default:
+		for (i = 0;i < prog->numfielddefs;i++)
+		{
+			prog->fielddefs[i].type = (unsigned short)LittleShort(infielddefs16[i].type);
+			if (prog->fielddefs[i].type & DEF_SAVEGLOBAL)
+				prog->error_cmd("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", prog->name);
+			prog->fielddefs[i].ofs = (unsigned short)LittleShort(infielddefs16[i].ofs);
+			prog->fielddefs[i].s_name = LittleLong(infielddefs16[i].s_name);
+			// TODO bounds check ofs, s_name
+		}
+		break;
 	}
 
 	// append the required fields
@@ -2185,14 +2237,24 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 	}
 
-	// LadyHavoc: TODO: support 32bit progs statement formats
 	// copy, remap globals in statements, bounds check
 	for (i = 0;i < prog->progs_numstatements;i++)
 	{
-		op = (opcode_t)LittleShort(instatements[i].op);
-		a = (unsigned short)LittleShort(instatements[i].a);
-		b = (unsigned short)LittleShort(instatements[i].b);
-		c = (unsigned short)LittleShort(instatements[i].c);
+		switch(structtype)
+		{
+		case PROG_SECONDARYVERSION32:
+			op = (opcode_t)LittleLong(instatements32[i].op);
+			a = (unsigned int)LittleLong(instatements32[i].a);
+			b = (unsigned int)LittleLong(instatements32[i].b);
+			c = (unsigned int)LittleLong(instatements32[i].c);
+			break;
+		default:
+			op = (opcode_t)LittleShort(instatements16[i].op);
+			a = (unsigned short)LittleShort(instatements16[i].a);
+			b = (unsigned short)LittleShort(instatements16[i].b);
+			c = (unsigned short)LittleShort(instatements16[i].c);
+			break;
+		}
 		switch (op)
 		{
 		case OP_IF:
@@ -2218,7 +2280,82 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			break;
 		default:
 			Con_DPrintf("PRVM_LoadProgs: unknown opcode %d at statement %d in %s\n", (int)op, i, prog->name);
+
+			//make sure its something well defined.
+			prog->statements[i].op = OP_BOUNDCHECK;
+			prog->statements[i].operand[0] = 0;
+			prog->statements[i].operand[1] =
+			prog->statements[i].operand[2] = op;
+			prog->statements[i].jumpabsolute = -1;
 			break;
+		case OP_STORE_I:
+		case OP_ADD_I:
+		case OP_ADD_FI:
+		case OP_ADD_IF:
+		case OP_SUB_I:
+		case OP_SUB_FI:
+		case OP_SUB_IF:
+		case OP_CONV_IF:
+		case OP_CONV_FI:
+		case OP_LOAD_I:
+		case OP_STOREP_I:
+		case OP_BITAND_I:
+		case OP_BITOR_I:
+		case OP_MUL_I:
+		case OP_DIV_I:
+		case OP_EQ_I:
+		case OP_NE_I:
+		case OP_NOT_I:
+		case OP_DIV_VF:
+		case OP_STORE_P:
+		case OP_LE_I:
+		case OP_GE_I:
+		case OP_LT_I:
+		case OP_GT_I:
+		case OP_LE_IF:
+		case OP_GE_IF:
+		case OP_LT_IF:
+		case OP_GT_IF:
+		case OP_LE_FI:
+		case OP_GE_FI:
+		case OP_LT_FI:
+		case OP_GT_FI:
+		case OP_EQ_IF:
+		case OP_EQ_FI:
+		case OP_MUL_IF:
+		case OP_MUL_FI:
+		case OP_MUL_VI:
+		case OP_DIV_IF:
+		case OP_DIV_FI:
+		case OP_BITAND_IF:
+		case OP_BITOR_IF:
+		case OP_BITAND_FI:
+		case OP_BITOR_FI:
+		case OP_AND_I:
+		case OP_OR_I:
+		case OP_AND_IF:
+		case OP_OR_IF:
+		case OP_AND_FI:
+		case OP_OR_FI:
+		case OP_NE_IF:
+		case OP_NE_FI:
+		case OP_GSTOREP_I:
+		case OP_GSTOREP_F:
+		case OP_GSTOREP_ENT:
+		case OP_GSTOREP_FLD:
+		case OP_GSTOREP_S:
+		case OP_GSTOREP_FNC:
+		case OP_GSTOREP_V:
+//		case OP_GADDRESS:
+		case OP_GLOAD_I:
+		case OP_GLOAD_F:
+		case OP_GLOAD_FLD:
+		case OP_GLOAD_ENT:
+		case OP_GLOAD_S:
+		case OP_GLOAD_FNC:
+		case OP_BOUNDCHECK:
+		case OP_GLOAD_V:
+
 		// global global global
 		case OP_ADD_F:
 		case OP_ADD_V:
@@ -2282,6 +2419,9 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_STOREP_FLD:
 		case OP_STOREP_S:
 		case OP_STOREP_FNC:
+			if (c)	//Spike -- DP is alergic to pointers in QC. Try to avoid too many nasty surprises.
+				Con_DPrintf("PRVM_LoadProgs: storep-with-offset is not permitted in %s\n", prog->name);
+			//fallthrough
 		case OP_STORE_F:
 		case OP_STORE_ENT:
 		case OP_STORE_FLD:
@@ -2317,6 +2457,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_RETURN:
 			if ( a >= prog->progs_numglobals)
 				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, prog->name);
+			if (b || c)	//Spike -- added this check just as a diagnostic...
+				Con_DPrintf("PRVM_LoadProgs: unxpected offset on call opcode in %s. Hexen2 format is not supported\n", prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
@@ -2550,7 +2692,7 @@ fail:
 
 	PRVM_UpdateBreakpoints(prog);
 
-	// set flags & ddef_ts in prog
+	// set flags & mdef_ts in prog
 
 	prog->flag = 0;
 
@@ -2577,7 +2719,7 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 	char tempstring[MAX_INPUTLINE], tempstring2[260];
 	const char *name;
 	prvm_edict_t *ed;
-	ddef_t *d;
+	mdef_t *d;
 	prvm_eval_t *val;
 
 	// TODO
@@ -2740,7 +2882,7 @@ PRVM_Global
 static void PRVM_Global_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
-	ddef_t *global;
+	mdef_t *global;
 	char valuebuf[MAX_INPUTLINE];
 	if( Cmd_Argc(cmd) != 3 ) {
 		Con_Printf( "prvm_global <program name> <global name>\n" );
@@ -2765,7 +2907,7 @@ PRVM_GlobalSet
 static void PRVM_GlobalSet_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog;
-	ddef_t *global;
+	mdef_t *global;
 	if( Cmd_Argc(cmd) != 4 ) {
 		Con_Printf( "prvm_globalset <program name> <global name> <value>\n" );
 		return;
@@ -2856,7 +2998,7 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 
 	if (debug->watch_global[0])
 	{
-		ddef_t *global = PRVM_ED_FindGlobal( prog, debug->watch_global );
+		mdef_t *global = PRVM_ED_FindGlobal( prog, debug->watch_global );
 		if( !global )
 		{
 			Con_Printf( "%s progs: no global named '%s' to watch!\n", prog->name, debug->watch_global );
@@ -2877,7 +3019,7 @@ static void PRVM_UpdateBreakpoints(prvm_prog_t *prog)
 
 	if (debug->watch_field[0])
 	{
-		ddef_t *field = PRVM_ED_FindField( prog, debug->watch_field );
+		mdef_t *field = PRVM_ED_FindField( prog, debug->watch_field );
 		if( !field )
 		{
 			Con_Printf( "%s progs: no field named '%s' to watch!\n", prog->name, debug->watch_field );
@@ -3292,7 +3434,7 @@ static qboolean PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
 
 	for (i = 0;i < prog->numglobaldefs;i++)
 	{
-		ddef_t *d = &prog->globaldefs[i];
+		mdef_t *d = &prog->globaldefs[i];
 		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_string)
 			continue;
 		if(string == PRVM_GLOBALFIELDSTRING(d->ofs))
@@ -3306,7 +3448,7 @@ static qboolean PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
 			continue;
 		for (i=0; i<prog->numfielddefs; ++i)
 		{
-			ddef_t *d = &prog->fielddefs[i];
+			mdef_t *d = &prog->fielddefs[i];
 			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_string)
 				continue;
 			if(string == PRVM_EDICTFIELDSTRING(ed, d->ofs))
@@ -3398,7 +3540,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 		}
 		for (i=0; i<prog->numfielddefs; ++i)
 		{
-			ddef_t *d = &prog->fielddefs[i];
+			mdef_t *d = &prog->fielddefs[i];
 			if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
 				continue;
 			if(edictnum == PRVM_EDICTFIELDEDICT(ed, d->ofs))
@@ -3426,7 +3568,7 @@ static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 	}
 	for (i = 0;i < prog->numglobaldefs;i++)
 	{
-		ddef_t *d = &prog->globaldefs[i];
+		mdef_t *d = &prog->globaldefs[i];
 		prvm_edict_t *ed;
 		if((etype_t)((int) d->type & ~DEF_SAVEGLOBAL) != ev_entity)
 			continue;
@@ -3556,7 +3698,7 @@ void PRVM_GarbageCollection(prvm_prog_t *prog)
 	case PRVM_GC_GLOBALS_MARK:
 		for (; gc->globals_mark_progress < prog->numglobaldefs && (limit--) > 0; gc->globals_mark_progress++)
 		{
-			ddef_t *d = &prog->globaldefs[gc->globals_mark_progress];
+			mdef_t *d = &prog->globaldefs[gc->globals_mark_progress];
 			switch (d->type)
 			{
 			case ev_string:
@@ -3586,7 +3728,7 @@ void PRVM_GarbageCollection(prvm_prog_t *prog)
 	case PRVM_GC_FIELDS_MARK:
 		for (; gc->fields_mark_progress < prog->numfielddefs && limit > 0;)
 		{
-			ddef_t *d = &prog->fielddefs[gc->fields_mark_progress];
+			mdef_t *d = &prog->fielddefs[gc->fields_mark_progress];
 			switch (d->type)
 			{
 			case ev_string:

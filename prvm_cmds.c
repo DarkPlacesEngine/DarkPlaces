@@ -2044,7 +2044,7 @@ Return name of the specified field as a string, or empty if the field is invalid
 */
 void VM_entityfieldname(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if (i < 0 || i >= prog->numfielddefs)
@@ -2068,7 +2068,7 @@ float(float fieldnum) entityfieldtype
 */
 void VM_entityfieldtype(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	
 	if (i < 0 || i >= prog->numfielddefs)
@@ -2093,7 +2093,7 @@ string(float fieldnum, entity ent) getentityfieldstring
 void VM_getentityfieldstring(prvm_prog_t *prog)
 {
 	// put the data into a string
-	ddef_t *d;
+	mdef_t *d;
 	int type, j;
 	prvm_eval_t *val;
 	prvm_edict_t * ent;
@@ -2143,7 +2143,7 @@ float(float fieldnum, entity ent, string s) putentityfieldstring
 */
 void VM_putentityfieldstring(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	prvm_edict_t * ent;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 
@@ -6827,6 +6827,7 @@ nolength:
 								o += u8_strpad(o, end - o, buf, (flags & PRINTF_LEFT) != 0, width, precision);
 							}
 							break;
+						//spike FIXME -- 'S' for quoted tokenize-safe-or-print escaping of strings so stuff can safely survive console commands.
 						case 's':
 							if(flags & PRINTF_ALTERNATE)
 							{

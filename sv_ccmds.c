@@ -1487,7 +1487,7 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t *ed;
-	ddef_t *key;
+	mdef_t *key;
 	int i;
 	qboolean haveorigin;
 
