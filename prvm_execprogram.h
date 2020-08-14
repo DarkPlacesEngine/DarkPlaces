@@ -1047,7 +1047,7 @@ int i;
 				if ((unsigned int)OPA->_int < (unsigned int)st->operand[2] || (unsigned int)OPA->_int >= (unsigned int)st->operand[1])
 				{
 					PRE_ERROR();
-					prog->error_cmd("Progs boundcheck failed in %s, value is < %d or >= %d", prog->name, OPC->_int, OPB->_int);
+					prog->error_cmd("Progs boundcheck failed in %s, value is < %" PRVM_PRIi " or >= %" PRVM_PRIi, prog->name, OPC->_int, OPB->_int);
 					goto cleanup;
 				}
 				DISPATCH_OPCODE();
