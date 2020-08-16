@@ -80,6 +80,9 @@ Cause a command to be executed after a delay.
 ============
 */
 static void Cbuf_LinkInsert(cbuf_cmd_t *insert, cbuf_cmd_t **list);
+static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing);
+static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t **list);
+static void Cbuf_LinkAdd(cbuf_cmd_t *add, cbuf_cmd_t **list);
 static void Cmd_Defer_f (cmd_state_t *cmd)
 {
 	cbuf_cmd_t *current;
@@ -90,11 +93,11 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 		current = cbuf->deferred;
 		if(!current)
 			Con_Printf("No commands are pending.\n");
-		else if (current->next == current)
+		else if (current == cbuf->deferred)
 			goto print_delay;
 		else
 		{
-			while(current->next != current)
+			while(current != cbuf->deferred)
 			{
 print_delay:
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
@@ -106,16 +109,16 @@ print_delay:
 	{
 		while(cbuf->deferred)
 		{
-			current = cbuf->deferred;
-			cbuf->deferred = current->next;
-			Mem_Free(current);
+			current = Cbuf_LinkPop(&cbuf->deferred);
+			current->prev = current->next = current;
+			Cbuf_LinkAdd(current, &cbuf->free);
 		}
 	}
 	else if(Cmd_Argc(cmd) == 3)
 	{
 		const char *text = Cmd_Argv(cmd, 2);
 		size_t len = strlen(text);
-		current = (cbuf_cmd_t *)Z_Malloc(sizeof(cbuf_cmd_t));
+		current = Cbuf_LinkGet(cbuf, NULL);
 
 		current->delay = atof(Cmd_Argv(cmd, 1));
 		memcpy(current->text, text, len+1);
@@ -446,14 +449,15 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 
 	if(cbuf->deferred)
 	{
-		current = cbuf->deferred;
-		current->delay -= eat;
-		if(current->delay <= 0)
+		cbuf->deferred->delay -= eat;
+		if(cbuf->deferred->delay <= 0)
 		{
+			current = Cbuf_LinkPop(&cbuf->deferred);
 			Cbuf_AddText(current->source, current->text);
 			Cbuf_AddText(current->source, ";\n");
 
-			current = Cbuf_LinkPop(&cbuf->deferred);
+			current->prev = current->next = current;
+			Cbuf_LinkAdd(current, &cbuf->free);
 		}
 	}
 }
