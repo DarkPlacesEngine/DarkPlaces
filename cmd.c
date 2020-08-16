@@ -207,9 +207,9 @@ static void Cbuf_LinkInsert(cbuf_cmd_t *insert, cbuf_cmd_t **list)
 	*list = insert;
 }
 
-static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t *node, cbuf_cmd_t **list)
+static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t **list)
 {
-	node = *list;
+	cbuf_cmd_t *node = *list;
 	*list = node->next;
 	(*list)->prev = node->prev;
 	(*list)->prev->next = *list;
@@ -223,70 +223,54 @@ static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t *node, cbuf_cmd_t **list)
 Cbuf_ParseText
 
 Parses Quake console command-line
-Allocates a cyclic doubly linked list node
-for each individual command. Returns a
-pointer to the head.
+Returns size of parsed command-line
 ============
 */
-static cbuf_cmd_t *Cbuf_ParseText(cmd_state_t *cmd, const char *text)
+static size_t Cbuf_ParseText(char **in)
 {
 	int i = 0;
-	cbuf_t *cbuf = cmd->cbuf;
-	cbuf_cmd_t *head = NULL;
-	cbuf_cmd_t *current = NULL;
 	qboolean quotes = false;
-	qboolean comment = false;
+	qboolean comment = false; // Does not imply end because we might be starting the line with a comment.
 	qboolean escaped = false;
-	qboolean mark = false;
-	qboolean noalloc;
-	char *offset = NULL;
-	size_t cmdsize = 0;
-
-	if(cbuf->pending)
-	{
-		// If not from the same interpreter, weird things could happen.
-		if(cbuf->start->source != cmd)
-			cbuf->pending = false;
-	}
+	qboolean end = false; // Reached the end of a valid command
+	char *offset = NULL; // Non-NULL if valid command. Used by the caller to know where to start copying.
+	size_t cmdsize = 0; // Non-zero if valid command. Basically bytes to copy for the caller.
 
 	/*
 	 * Allow escapes in quotes. Ignore newlines and
-	 * comments. Return NULL if input consists solely
+	 * comments. Return 0 if input consists solely
 	 * of either of those, and ignore blank input.
 	 */
-	while(text[i])
+	while(!end)
 	{
-		noalloc = cbuf->pending;
-
-		switch (text[i])
+		switch ((*in)[i])
 		{
 			case '/':
-				if(!quotes && text[i+1] == '/' && (i == 0 || ISWHITESPACE(text[i-1])))
-				{
+				if(!quotes && (*in)[i+1] == '/' && (i == 0 || ISWHITESPACE((*in)[i-1])))
 					comment = true;
-					cbuf->pending = false;
-					mark = true;
-				}
+				break;
+			case 0:
+				if(!end && cmdsize)
+					// Use bit magic to indicate an incomplete (pending) command.
+					cmdsize |= (1<<17);
+				comment = false;
+				end = true;
 				break;
 			case '\r':
 			case '\n':
 				comment = false;
 				quotes = false;
-				cbuf->pending = false;
-				mark = true;
+				end = true;
 				break;
 		}
 
 		if(!comment)
 		{
-			switch (text[i])
+			switch ((*in)[i])
 			{
 				case ';':
 					if(!quotes)
-					{
-						cbuf->pending = false;
-						mark = true;
-					}
+						end = true;
 					break;
 				case '"':
 					if (!escaped)
@@ -302,69 +286,86 @@ static cbuf_cmd_t *Cbuf_ParseText(cmd_state_t *cmd, const char *text)
 					break;
 			}
 
-			if(!mark)
+			if(!offset)
 			{
-				// If there's no trailing newline, mark it as pending
-				if(text[i+1] == 0)
-				{
-					cbuf->pending = true;
-					mark = true;
-				}
-
-				if(!offset)
-					// Allow i to run until the end of a comment
-					offset = (char *)&text[i];
+				if(!end)
+					offset = (char *)&(*in)[i];
+				else if ((*in)[i])
+					end = false;
+			}
+			else
 				cmdsize++;
-			}
-		}
-
-		if(!current)
-		{
-			if(noalloc)
-				current = cbuf->start;
-			else if(offset)
-			{
-				if(cbuf->free)
-				{
-					current = Cbuf_LinkPop(current, &cbuf->free);
-					current->size = 0;
-				}
-				else
-				{
-					current = (cbuf_cmd_t *)Z_Malloc(sizeof(cbuf_cmd_t));
-					current->size = 0;
-				}
-			}
-		}
-
-		// Create a cyclic doubly linked list.
-		if(mark)
-		{
-			if(offset)
-			{
-				// Data write stage
-				strlcpy(&current->text[current->size], offset, cmdsize + 1);
-				current->size += cmdsize;
-				current->source = cmd;
-
-				if(!noalloc)
-				{
-					// Link stage
-					current->prev = current->next = current;
-					Cbuf_LinkAdd(current, &head);
-				}
-				cbuf->size += cmdsize;
-				cmdsize = 0;
-			}
-
-			// Reset stage
-			offset = NULL;
-			escaped = false;
-			mark = false;
-			current = NULL;
 		}
 		i++;
 	}
+
+	*in = offset;
+
+	return cmdsize;
+}
+
+static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
+{
+	cbuf_cmd_t *ret = NULL;
+	if(existing && existing->pending)
+		ret = existing;
+	else
+	{
+		if(cbuf->free)
+			ret = Cbuf_LinkPop(&cbuf->free);
+		else
+			ret = (cbuf_cmd_t *)Z_Malloc(sizeof(cbuf_cmd_t));
+		ret->size = 0;
+		ret->pending = false;
+	}
+
+	return ret;
+}
+
+
+// Cloudwalk: Not happy with this, but it works.
+static cbuf_cmd_t *Cbuf_LinkCreate(cmd_state_t *cmd, cbuf_cmd_t *existing, const char *text)
+{
+	char *in = (char *)&text[0];
+	cbuf_t *cbuf = cmd->cbuf;
+	size_t totalsize = 0, newsize = 0;
+	cbuf_cmd_t *current = NULL, *head = NULL;
+
+	// Slide the pointer down until we reach the end
+	while(in)
+	{
+		/*
+		 * FIXME: Upon reaching a terminator, we make a redundant
+		 * call just to say "it's the end of the input stream".
+		 */
+		newsize = Cbuf_ParseText(&in);
+
+		// Valid command
+		if(newsize)
+		{
+			if(!current)
+				current = Cbuf_LinkGet(cbuf, existing);	
+
+			if(!current->pending)
+			{
+				current->source = cmd;
+				current->prev = current->next = current;
+				Cbuf_LinkAdd(current, &head);
+			}
+
+			if(newsize & (1<<17))
+				current->pending = true;
+			totalsize += (newsize &= ~(1<<17));
+			strlcpy(&current->text[current->size], in, newsize + 1);
+			current->size += newsize;
+		}
+		else if (existing && !totalsize)
+			existing->pending = false;
+		current = NULL;
+		in = &in[newsize];
+	}
+
+	cbuf->size += totalsize;
 
 	return head;
 }
@@ -388,12 +389,11 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 	{
-		if(!(add = Cbuf_ParseText(cmd, text)))
+		if(!(add = Cbuf_LinkCreate(cmd, cbuf->start ? cbuf->start->prev : NULL, text)))
 			return;
 
 		Cbuf_LinkAdd(add, &cbuf->start);
 	}
-
 	Cbuf_Unlock(cbuf);
 }
 
@@ -418,7 +418,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		if(!(insert = Cbuf_ParseText(cmd, text)))
+		if(!(insert = Cbuf_LinkCreate(cmd, cbuf->start, text)))
 			return;
 
 		Cbuf_LinkInsert(insert, &cbuf->start);
@@ -453,7 +453,7 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 			Cbuf_AddText(current->source, current->text);
 			Cbuf_AddText(current->source, ";\n");
 
-			current = Cbuf_LinkPop(current, &cbuf->deferred);
+			current = Cbuf_LinkPop(&cbuf->deferred);
 		}
 	}
 }
@@ -476,18 +476,18 @@ void Cbuf_Execute (cbuf_t *cbuf)
 	while (cbuf->start)
 	{
 		/*
-		 * Assume we're rolling with the current command-line and
-		 * always set this false because alias expansion or cbuf insertion
-		 * without a newline may set this true, and cause weirdness.
-		 */
-		cbuf->pending = false;
-
-		/*
 		 * Delete the text from the command buffer and move remaining
 		 * commands down. This is necessary because commands (exec, alias)
 		 * can insert data at the beginning of the text buffer
 		 */
-		current = Cbuf_LinkPop(current, &cbuf->start);
+		current = Cbuf_LinkPop(&cbuf->start);
+
+		/*
+		 * Assume we're rolling with the current command-line and
+		 * always set this false because alias expansion or cbuf insertion
+		 * without a newline may set this true, and cause weirdness.
+		 */
+		current->pending = false;
 
 		cbuf->size -= current->size;
 
@@ -1650,7 +1650,6 @@ void Cmd_Init(void)
 	cbuf_t *cbuf = (cbuf_t *)Z_Malloc(sizeof(cbuf_t));
 	cbuf->maxsize = 655360;
 	cbuf->lock = Thread_CreateMutex();
-	cbuf->pending = false;
 	cbuf->wait = false;
 	host.cbuf = cbuf;
 

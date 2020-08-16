@@ -141,6 +141,7 @@ typedef struct cbuf_cmd_s
 	double delay;
 	size_t size;
 	char text[MAX_INPUTLINE];
+	qboolean pending;
 } cbuf_cmd_t;
 
 typedef struct cbuf_s
@@ -148,7 +149,6 @@ typedef struct cbuf_s
 	cbuf_cmd_t *start;
 	cbuf_cmd_t *deferred;
 	cbuf_cmd_t *free;
-	qboolean pending;
 	qboolean wait;
 	size_t maxsize;
 	size_t size;
