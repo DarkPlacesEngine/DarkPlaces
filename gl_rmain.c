@@ -10088,7 +10088,8 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		int updated = 0;
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 		{
-			if (update[j])
+			// Update brush entities even if not visible otherwise they'll render solid black.
+			if (update[j] && (r_refdef.viewcache.world_surfacevisible[j] || ent != r_refdef.scene.worldentity))
 			{
 				updated++;
 				R_BuildLightMap(ent, surfaces + j);
