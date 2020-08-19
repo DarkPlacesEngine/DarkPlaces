@@ -222,6 +222,8 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 
+cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qboolean casesensitive);
+
 /// used by the cvar code to check for cvar / command name overlap
 qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
 

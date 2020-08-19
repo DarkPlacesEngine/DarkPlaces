@@ -1949,6 +1949,30 @@ next:
 	}
 }
 
+static int Cmd_Compare(const char *s1, const char *s2, size_t len, qboolean casesensitive)
+{
+	if(len)
+		return (casesensitive ? strncmp(s1, s2, len) : strncasecmp(s1, s2, len));
+	else
+		return (casesensitive ? strcmp(s1, s2) : strcasecmp(s1, s2));
+}
+
+cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qboolean casesensitive)
+{
+	cmd_function_t *func = NULL;
+
+	// check functions
+	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+		if (!Cmd_Compare(partial, func->name, len, casesensitive))
+			break;
+
+	for (func=cmd->engine_functions ; func ; func=func->next)
+		if (!Cmd_Compare(partial, func->name, len, casesensitive))
+			break;
+
+	return func;
+}
+
 /*
 ============
 Cmd_Exists
@@ -1956,19 +1980,10 @@ Cmd_Exists
 */
 qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
 {
-	cmd_function_t	*func;
-
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
-		if (!strcmp(cmd_name, func->name))
-			return true;
-
-	for (func=cmd->engine_functions ; func ; func=func->next)
-		if (!strcmp (cmd_name,func->name))
-			return true;
-
+	if(Cmd_GetCommand(cmd, cmd_name, 0, true))
+		return true;
 	return false;
 }
-
 
 /*
 ============
@@ -1978,22 +1993,10 @@ Cmd_CompleteCommand
 const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial)
 {
 	cmd_function_t *func;
-	size_t len;
 
-	len = strlen(partial);
-
-	if (!len)
-		return NULL;
-
-// check functions
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
-		if (!strncasecmp(partial, func->name, len))
-			return func->name;
-
-	for (func = cmd->engine_functions; func; func = func->next)
-		if (!strncasecmp(partial, func->name, len))
-			return func->name;
-
+	func = Cmd_GetCommand(cmd, partial, strlen(partial), false);
+	if(func)
+		return func->name;
 	return NULL;
 }
 
@@ -2213,19 +2216,12 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		goto done; // no tokens
 
 // check functions
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	func = Cmd_GetCommand(cmd, cmd->argv[0], 0, false);
+	if(func)
 	{
-		if (!strcasecmp(cmd->argv[0], func->name))
-		{
-			if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
-				goto done;
-			break;
-		}
-	}
-
-	for (func = cmd->engine_functions; func; func=func->next)
-	{
-		if (!strcasecmp (cmd->argv[0], func->name))
+		if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
+			goto done;
+		else
 		{
 			switch (src)
 			{
@@ -2245,7 +2241,6 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 					goto done;
 				}
 			}
-			break;
 		}
 	}
 
