@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t r_ambient = {CVAR_CLIENT, "r_ambient", "0", "brightens map, value is 0-128"};
 cvar_t r_lockpvs = {CVAR_CLIENT, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
 cvar_t r_lockvisibility = {CVAR_CLIENT, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
-cvar_t r_useportalculling = {CVAR_CLIENT, "r_useportalculling", "2", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
+cvar_t r_useportalculling = {CVAR_CLIENT, "r_useportalculling", "1", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
 cvar_t r_usesurfaceculling = {CVAR_CLIENT, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
 cvar_t r_vis_trace = {CVAR_CLIENT, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
 cvar_t r_vis_trace_samples = {CVAR_CLIENT, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
@@ -584,9 +584,9 @@ void R_View_WorldVisibility(qboolean forcenovis)
 						continue;
 					if (r_vis_trace.integer)
 					{
-						if (p->tracetime != realtime && R_CanSeeBox(r_vis_trace_samples.value, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, cullmins, cullmaxs))
-							p->tracetime = realtime;
-						if (realtime - p->tracetime > r_vis_trace_delay.value)
+						if (p->tracetime != host.realtime && R_CanSeeBox(r_vis_trace_samples.value, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, cullmins, cullmaxs))
+							p->tracetime = host.realtime;
+						if (host.realtime - p->tracetime > r_vis_trace_delay.value)
 							continue;
 					}
 					if (leafstackpos >= (int)(sizeof(leafstack) / sizeof(leafstack[0])))
@@ -595,19 +595,18 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				}
 			}
 		}
+		R_View_WorldVisibility_CullSurfaces();	
 	}
-
-	R_View_WorldVisibility_CullSurfaces();
 }
 
-void R_Q1BSP_DrawSky(entity_render_t *ent)
+void R_Mod_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, true, true, false, false, false, false);
 }
 
-void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
+void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 {
 	int i, j, n, flagsmask;
 	dp_model_t *model = ent->model;
@@ -647,7 +646,7 @@ void R_Q1BSP_DrawAddWaterPlanes(entity_render_t *ent)
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
-void R_Q1BSP_Draw(entity_render_t *ent)
+void R_Mod_Draw(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL)
@@ -655,7 +654,7 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	R_DrawModelSurfaces(ent, false, true, false, false, false, false);
 }
 
-void R_Q1BSP_DrawDepth(entity_render_t *ent)
+void R_Mod_DrawDepth(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL || model->surfmesh.isanimated)
@@ -670,14 +669,14 @@ void R_Q1BSP_DrawDepth(entity_render_t *ent)
 	GL_ColorMask(r_refdef.view.colormask[0], r_refdef.view.colormask[1], r_refdef.view.colormask[2], 1);
 }
 
-void R_Q1BSP_DrawDebug(entity_render_t *ent)
+void R_Mod_DrawDebug(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, false, false, false, true, false, false);
 }
 
-void R_Q1BSP_DrawPrepass(entity_render_t *ent)
+void R_Mod_DrawPrepass(entity_render_t *ent)
 {
 	dp_model_t *model = ent->model;
 	if (model == NULL)
@@ -1212,7 +1211,7 @@ static int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
 
 extern cvar_t r_shadow_sortsurfaces;
 
-void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
+void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
 {
 	r_q1bsp_getlightinfo_t info;
 	info.frontsidecasting = r_shadow_frontsidecasting.integer != 0;
@@ -1296,7 +1295,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		qsort(info.outsurfacelist, info.outnumsurfaces, sizeof(*info.outsurfacelist), R_Q1BSP_GetLightInfo_comparefunc);
 }
 
-void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Mod_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	dp_model_t *model = ent->model;
 	msurface_t *surface;
@@ -1327,7 +1326,7 @@ void R_Q1BSP_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, 
 
 static const msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 
-void R_Q1BSP_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
+void R_Mod_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
@@ -1406,7 +1405,7 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 }
 
 extern qboolean r_shadow_usingdeferredprepass;
-void R_Q1BSP_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
+void R_Mod_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
 {
 	dp_model_t *model = ent->model;
 	const msurface_t *surface;
@@ -1589,8 +1588,8 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_vis_trace_surfaces);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
-	Cmd_AddCommand(&cmd_client, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
-	Cmd_AddCommand(&cmd_client, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
+	Cmd_AddCommand(CMD_CLIENT, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
+	Cmd_AddCommand(CMD_CLIENT, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
 
 	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

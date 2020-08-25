@@ -219,8 +219,6 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	else
 		startposition = 0;
 
-	channel = CHAN_USER2ENGINE(channel);
-
 	if (!IS_CHAN(channel))
 	{
 		VM_Warning(prog, "VM_CL_sound: channel must be in range 0-127\n");
@@ -686,8 +684,8 @@ static void VM_CL_ambientsound (prvm_prog_t *prog)
 	vec3_t f;
 	sfx_t	*s;
 	VM_SAFEPARMCOUNT(4, VM_CL_ambientsound);
-	s = S_FindName(PRVM_G_STRING(OFS_PARM0));
-	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f);
+	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), f);
+	s = S_FindName(PRVM_G_STRING(OFS_PARM1));
 	S_StaticSound (s, f, PRVM_G_FLOAT(OFS_PARM2), PRVM_G_FLOAT(OFS_PARM3)*64);
 }
 
@@ -1417,10 +1415,13 @@ static void VM_CL_boxparticles (prvm_prog_t *prog)
 static void VM_CL_setpause(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_setpause);
-	if ((int)PRVM_G_FLOAT(OFS_PARM0) != 0)
-		cl.csqc_paused = true;
-	else
-		cl.csqc_paused = false;
+	if(cl.islocalgame)
+	{
+		if ((int)PRVM_G_FLOAT(OFS_PARM0) != 0)
+			host.paused = true;
+		else
+			host.paused = false;
+	}
 }
 
 //#343 void(float usecursor) setcursormode (DP_CSQC)
@@ -1628,7 +1629,7 @@ static void VM_CL_registercmd (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
 	if(!Cmd_Exists(&cmd_client, PRVM_G_STRING(OFS_PARM0)))
-		Cmd_AddCommand(&cmd_client, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+		Cmd_AddCommand(CMD_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
 //#360 float() readbyte (EXT_CSQC)
@@ -1872,14 +1873,16 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 // #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
 static void VM_CL_effect (prvm_prog_t *prog)
 {
-#if 1
-	Con_Warnf("WARNING: VM_CL_effect not implemented\n"); // FIXME: this needs to take modelname not modelindex, the csqc defs has it as string and so it shall be
-#else
+	dp_model_t *model;
 	vec3_t org;
 	VM_SAFEPARMCOUNT(5, VM_CL_effect);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
-	CL_Effect(org, (int)PRVM_G_FLOAT(OFS_PARM1), (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
-#endif
+
+	model = Mod_FindName(PRVM_G_STRING(OFS_PARM1), NULL);
+	if(model->loaded)
+		CL_Effect(org, model, (int)PRVM_G_FLOAT(OFS_PARM2), (int)PRVM_G_FLOAT(OFS_PARM3), PRVM_G_FLOAT(OFS_PARM4));
+	else
+		Con_Printf(CON_ERROR "VM_CL_effect: Could not load model '%s'\n", PRVM_G_STRING(OFS_PARM1));
 }
 
 // #405 void(vector org, vector velocity, float howmany) te_blood (DP_TE_BLOOD)
@@ -2925,7 +2928,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 	particle_t *part;
 	int themenum;
 
-	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_SpawnParticle2);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_SpawnParticle);
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
@@ -3047,10 +3050,10 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 	particle_t *part;
 	int themenum;
 
-	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_SpawnParticle2);
+	VM_SAFEPARMCOUNTRANGE(4, 5, VM_CL_SpawnParticleDelayed);
 	if (vmpartspawner.verified == false)
 	{
-		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
+		VM_Warning(prog, "VM_CL_SpawnParticleDelayed: particle spawner not initialized\n");
 		PRVM_G_FLOAT(OFS_RETURN) = 0; 
 		return;
 	}
@@ -3096,7 +3099,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 		themenum = (int)PRVM_G_FLOAT(OFS_PARM4);
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
-			VM_Warning(prog, "VM_CL_SpawnParticle: bad theme number %i\n", themenum);
+			VM_Warning(prog, "VM_CL_SpawnParticleDelayed: bad theme number %i\n", themenum);
 			PRVM_G_FLOAT(OFS_RETURN) = 0;  
 			return;
 		}
@@ -3158,7 +3161,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 {
 	int entnum, fieldnum;
 	vec3_t forward, left, up, org;
-	VM_SAFEPARMCOUNT(2, VM_CL_GetEntityVec);
+	VM_SAFEPARMCOUNT(2, VM_CL_GetEntity);
 
 	entnum = PRVM_G_FLOAT(OFS_PARM0);
 	if (entnum < 0 || entnum >= cl.num_entities)
@@ -3709,7 +3712,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 	unsigned char fatpvs[MAX_MAP_LEAFS/8];
 #endif
 
-	VM_SAFEPARMCOUNT(2, VM_SV_checkpvs);
+	VM_SAFEPARMCOUNT(2, VM_CL_checkpvs);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
 	viewee = PRVM_G_EDICT(OFS_PARM1);
 
@@ -4171,7 +4174,7 @@ VM_CL_setsize,					// #4 void(entity e, vector min, vector max) setsize (QUAKE)
 NULL,							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
 VM_break,						// #6 void() break (QUAKE)
 VM_random,						// #7 float() random (QUAKE)
-VM_CL_sound,					// #8 void(entity e, float chan, string samp) sound (QUAKE)
+VM_CL_sound,					// #8 void(entity e, float chan, string samp, float volume, float atten[, float pitchchange[, float flags]]) sound (QUAKE)
 VM_normalize,					// #9 vector(vector v) normalize (QUAKE)
 VM_error,						// #10 void(string e) error (QUAKE)
 VM_objerror,					// #11 void(string e) objerror (QUAKE)

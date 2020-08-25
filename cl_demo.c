@@ -213,9 +213,9 @@ void CL_ReadDemoMessage(void)
 				// count against the final report
 				if (cls.td_frames == 0)
 				{
-					cls.td_starttime = realtime;
+					cls.td_starttime = host.realtime;
 					cls.td_onesecondnexttime = cl.time + 1;
-					cls.td_onesecondrealtime = realtime;
+					cls.td_onesecondrealtime = host.realtime;
 					cls.td_onesecondframes = 0;
 					cls.td_onesecondminfps = 0;
 					cls.td_onesecondmaxfps = 0;
@@ -224,13 +224,13 @@ void CL_ReadDemoMessage(void)
 				}
 				if (cl.time >= cls.td_onesecondnexttime)
 				{
-					double fps = cls.td_onesecondframes / (realtime - cls.td_onesecondrealtime);
+					double fps = cls.td_onesecondframes / (host.realtime - cls.td_onesecondrealtime);
 					if (cls.td_onesecondavgcount == 0)
 					{
 						cls.td_onesecondminfps = fps;
 						cls.td_onesecondmaxfps = fps;
 					}
-					cls.td_onesecondrealtime = realtime;
+					cls.td_onesecondrealtime = host.realtime;
 					cls.td_onesecondminfps = min(cls.td_onesecondminfps, fps);
 					cls.td_onesecondmaxfps = max(cls.td_onesecondmaxfps, fps);
 					cls.td_onesecondavgfps += fps;
@@ -275,7 +275,7 @@ void CL_ReadDemoMessage(void)
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
-				Cbuf_Execute(&cmd_client); // immediately execute svc_stufftext if in the demo before connect!
+				Cbuf_Execute((&cmd_client)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
@@ -389,7 +389,7 @@ void CL_Record_f(cmd_state_t *cmd)
 	cls.demofile = FS_OpenRealFile(name, "wb", false);
 	if (!cls.demofile)
 	{
-		Con_Error("ERROR: couldn't open.\n");
+		Con_Print(CON_ERROR "ERROR: couldn't open.\n");
 		return;
 	}
 	strlcpy(cls.demoname, name, sizeof(cls.demoname));
@@ -429,7 +429,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
 	{
-		Con_Errorf("ERROR: couldn't open %s.\n", name);
+		Con_Printf(CON_ERROR "ERROR: couldn't open %s.\n", name);
 		cls.demonum = -1;		// stop demo loop
 		return;
 	}
@@ -438,7 +438,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 
 	// disconnect from server
 	CL_Disconnect ();
-	Host_ShutdownServer ();
+	SV_Shutdown ();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -499,10 +499,10 @@ static void CL_FinishTimeDemo (void)
 	static int benchmark_runs = 0;
 	char vabuf[1024];
 
-	cls.timedemo = false;
+	cls.timedemo = host.restless = false;
 
 	frames = cls.td_frames;
-	time = realtime - cls.td_starttime;
+	time = host.realtime - cls.td_starttime;
 	totalfpsavg = time > 0 ? frames / time : 0;
 	fpsmin = cls.td_onesecondminfps;
 	fpsavg = cls.td_onesecondavgcount ? cls.td_onesecondavgfps / cls.td_onesecondavgcount : 0;
@@ -514,11 +514,11 @@ static void CL_FinishTimeDemo (void)
 	{
 		++benchmark_runs;
 		i = COM_CheckParm("-benchmarkruns");
-		if(i && i + 1 < com_argc)
+		if(i && i + 1 < sys.argc)
 		{
 			static benchmarkhistory_t *history = NULL;
 			if(!history)
-				history = (benchmarkhistory_t *)Z_Malloc(sizeof(*history) * atoi(com_argv[i + 1]));
+				history = (benchmarkhistory_t *)Z_Malloc(sizeof(*history) * atoi(sys.argv[i + 1]));
 
 			history[benchmark_runs - 1].frames = frames;
 			history[benchmark_runs - 1].time = time;
@@ -527,7 +527,7 @@ static void CL_FinishTimeDemo (void)
 			history[benchmark_runs - 1].fpsavg = fpsavg;
 			history[benchmark_runs - 1].fpsmax = fpsmax;
 
-			if(atoi(com_argv[i + 1]) > benchmark_runs)
+			if(atoi(sys.argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
 				Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
@@ -614,8 +614,111 @@ void CL_TimeDemo_f(cmd_state_t *cmd)
 	key_consoleactive = 0;
 	scr_con_current = 0;
 
-	cls.timedemo = true;
+	cls.timedemo = host.restless = true;
 	cls.td_frames = -2;		// skip the first frame
 	cls.demonum = -1;		// stop demo loop
 }
 
+/*
+===============================================================================
+
+DEMO LOOP CONTROL
+
+===============================================================================
+*/
+
+
+/*
+==================
+CL_Startdemos_f
+==================
+*/
+static void CL_Startdemos_f(cmd_state_t *cmd)
+{
+	int		i, c;
+
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
+		return;
+
+	c = Cmd_Argc(cmd) - 1;
+	if (c > MAX_DEMOS)
+	{
+		Con_Printf("Max %i demos in demoloop\n", MAX_DEMOS);
+		c = MAX_DEMOS;
+	}
+	Con_DPrintf("%i demo(s) in loop\n", c);
+
+	for (i=1 ; i<c+1 ; i++)
+		strlcpy (cls.demos[i-1], Cmd_Argv(cmd, i), sizeof (cls.demos[i-1]));
+
+	// LadyHavoc: clear the remaining slots
+	for (;i <= MAX_DEMOS;i++)
+		cls.demos[i-1][0] = 0;
+
+	if (!sv.active && cls.demonum != -1 && !cls.demoplayback)
+	{
+		cls.demonum = 0;
+		CL_NextDemo ();
+	}
+	else
+		cls.demonum = -1;
+}
+
+
+/*
+==================
+CL_Demos_f
+
+Return to looping demos
+==================
+*/
+static void CL_Demos_f(cmd_state_t *cmd)
+{
+	if (cls.state == ca_dedicated)
+		return;
+	if (cls.demonum == -1)
+		cls.demonum = 1;
+	CL_Disconnect_f (cmd);
+	CL_NextDemo ();
+}
+
+/*
+==================
+CL_Stopdemo_f
+
+Return to looping demos
+==================
+*/
+static void CL_Stopdemo_f(cmd_state_t *cmd)
+{
+	if (!cls.demoplayback)
+		return;
+	CL_Disconnect ();
+	SV_Shutdown ();
+}
+
+// LadyHavoc: pausedemo command
+static void CL_PauseDemo_f(cmd_state_t *cmd)
+{
+	cls.demopaused = !cls.demopaused;
+	if (cls.demopaused)
+		Con_Print("Demo paused\n");
+	else
+		Con_Print("Demo unpaused\n");
+}
+
+void CL_Demo_Init(void)
+{
+	Cmd_AddCommand(CMD_CLIENT, "record", CL_Record_f, "record a demo");
+	Cmd_AddCommand(CMD_CLIENT, "stop", CL_Stop_f, "stop recording or playing a demo");
+	Cmd_AddCommand(CMD_CLIENT, "playdemo", CL_PlayDemo_f, "watch a demo file");
+	Cmd_AddCommand(CMD_CLIENT, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+	Cmd_AddCommand(CMD_CLIENT, "startdemos", CL_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
+	Cmd_AddCommand(CMD_CLIENT, "demos", CL_Demos_f, "restart looping demos defined by the last startdemos command");
+	Cmd_AddCommand(CMD_CLIENT, "stopdemo", CL_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
+	// LadyHavoc: added pausedemo
+	Cmd_AddCommand(CMD_CLIENT, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+	Cvar_RegisterVariable (&cl_autodemo);
+	Cvar_RegisterVariable (&cl_autodemo_nameformat);
+	Cvar_RegisterVariable (&cl_autodemo_delete);
+}

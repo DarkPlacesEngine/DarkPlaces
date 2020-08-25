@@ -86,7 +86,7 @@ cvar_t r_stereo_angle = {CVAR_CLIENT, "r_stereo_angle", "0", "separation angle o
 cvar_t scr_stipple = {CVAR_CLIENT, "scr_stipple", "0", "interlacing-like stippling of the display"};
 cvar_t scr_refresh = {CVAR_CLIENT, "scr_refresh", "1", "allows you to completely shut off rendering for benchmarking purposes"};
 cvar_t scr_screenshot_name_in_mapdir = {CVAR_CLIENT | CVAR_SAVE, "scr_screenshot_name_in_mapdir", "0", "if set to 1, screenshots are placed in a subdirectory named like the map they are from"};
-cvar_t shownetgraph = {CVAR_CLIENT | CVAR_SAVE, "shownetgraph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
+cvar_t net_graph = {CVAR_CLIENT | CVAR_SAVE, "net_graph", "0", "shows a graph of packet sizes and other information, 0 = off, 1 = show client netgraph, 2 = show client and server netgraphs (when hosting a server)"};
 cvar_t cl_demo_mousegrab = {CVAR_CLIENT, "cl_demo_mousegrab", "0", "Allows reading the mouse input while playing demos. Useful for camera mods developed in csqc. (0: never, 1: always)"};
 cvar_t timedemo_screenshotframelist = {CVAR_CLIENT, "timedemo_screenshotframelist", "", "when performing a timedemo, take screenshots of each frame in this space-separated list - example: 1 201 401"};
 cvar_t vid_touchscreen_outlinealpha = {CVAR_CLIENT, "vid_touchscreen_outlinealpha", "0", "opacity of touchscreen area outlines"};
@@ -125,6 +125,8 @@ float		scr_con_current;
 int			scr_con_margin_bottom;
 
 extern int	con_vislines;
+
+extern int cl_punchangle_applied;
 
 static void SCR_ScreenShot_f(cmd_state_t *cmd);
 static void R_Envmap_f(cmd_state_t *cmd);
@@ -266,7 +268,7 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 	for (j = 0;j < NETGRAPH_PACKETS;j++)
 	{
 		graph = netgraph + j;
-		g[j][0] = 1.0f - 0.25f * (realtime - graph->time);
+		g[j][0] = 1.0f - 0.25f * (host.realtime - graph->time);
 		g[j][1] = 1.0f;
 		g[j][2] = 1.0f;
 		g[j][3] = 1.0f;
@@ -286,7 +288,7 @@ static void SCR_DrawNetGraph_DrawGraph (int graphx, int graphy, int graphwidth, 
 			g[j][4] = g[j][3] - graph->reliablebytes   * graphscale;
 			g[j][5] = g[j][4] - graph->ackbytes        * graphscale;
 			// count bytes in the last second
-			if (realtime - graph->time < 1.0f)
+			if (host.realtime - graph->time < 1.0f)
 				totalbytes += graph->unreliablebytes + graph->reliablebytes + graph->ackbytes;
 		}
 		if(graph->cleartime >= 0)
@@ -335,7 +337,7 @@ static void SCR_DrawNetGraph (void)
 		return;
 	if (!cls.netcon)
 		return;
-	if (!shownetgraph.integer)
+	if (!net_graph.integer)
 		return;
 
 	separator1 = 2;
@@ -357,7 +359,7 @@ static void SCR_DrawNetGraph (void)
 	SCR_DrawNetGraph_DrawGraph(netgraph_x + graphwidth + separator1, netgraph_y, graphwidth, graphheight, graphscale, graphlimit, "outgoing", textsize, c->outgoing_packetcounter, c->outgoing_netgraph);
 	index++;
 
-	if (sv.active && shownetgraph.integer >= 2)
+	if (sv.active && net_graph.integer >= 2)
 	{
 		for (i = 0;i < svs.maxclients;i++)
 		{
@@ -410,7 +412,7 @@ static void SCR_DrawNet (void)
 {
 	if (cls.state != ca_connected)
 		return;
-	if (realtime - cl.last_received_message < 0.3)
+	if (host.realtime - cl.last_received_message < 0.3)
 		return;
 	if (cls.demoplayback)
 		return;
@@ -512,14 +514,14 @@ static int SCR_DrawQWDownload(int offset)
 	if (!cls.qw_downloadname[0])
 	{
 		cls.qw_downloadspeedrate = 0;
-		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedtime = host.realtime;
 		cls.qw_downloadspeedcount = 0;
 		return 0;
 	}
-	if (realtime >= cls.qw_downloadspeedtime + 1)
+	if (host.realtime >= cls.qw_downloadspeedtime + 1)
 	{
 		cls.qw_downloadspeedrate = cls.qw_downloadspeedcount;
-		cls.qw_downloadspeedtime = realtime;
+		cls.qw_downloadspeedtime = host.realtime;
 		cls.qw_downloadspeedcount = 0;
 	}
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
@@ -985,8 +987,8 @@ static void R_TimeReport_EndFrame(void)
 	mleaf_t *viewleaf;
 	static double oldtime = 0;
 
-	r_refdef.stats[r_stat_timedelta] = (int)((realtime - oldtime) * 1000000.0);
-	oldtime = realtime;
+	r_refdef.stats[r_stat_timedelta] = (int)((host.realtime - oldtime) * 1000000.0);
+	oldtime = host.realtime;
 	r_refdef.stats[r_stat_quality] = (int)(100 * r_refdef.view.quality);
 
 	string[0] = 0;
@@ -1348,7 +1350,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_stereo_angle);
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
-	Cvar_RegisterVariable(&shownetgraph);
+	Cvar_RegisterVariable(&net_graph);
+	Cvar_RegisterAlias(&net_graph, "shownetgraph");
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
 	Cvar_RegisterVariable(&timedemo_screenshotframelist);
 	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);
@@ -1369,11 +1372,11 @@ void CL_Screen_Init(void)
 	if (COM_CheckParm ("-noconsole"))
 		Cvar_SetQuick(&scr_conforcewhiledisconnected, "0");
 
-	Cmd_AddCommand(&cmd_client, "sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
-	Cmd_AddCommand(&cmd_client, "sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
-	Cmd_AddCommand(&cmd_client, "screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
-	Cmd_AddCommand(&cmd_client, "envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
-	Cmd_AddCommand(&cmd_client, "infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
+	Cmd_AddCommand(CMD_CLIENT, "sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
+	Cmd_AddCommand(CMD_CLIENT, "sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
+	Cmd_AddCommand(CMD_CLIENT, "screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
+	Cmd_AddCommand(CMD_CLIENT, "envmap", R_Envmap_f, "render a cubemap (skybox) of the current scene");
+	Cmd_AddCommand(CMD_CLIENT, "infobar", SCR_InfoBar_f, "display a text in the infobar (usage: infobar expiretime string)");
 
 #ifdef CONFIG_VIDEO_CAPTURE
 	SCR_CaptureVideo_Ogg_Init();
@@ -1490,7 +1493,7 @@ void SCR_ScreenShot_f(cmd_state_t *cmd)
 		Con_Printf("Wrote %s\n", filename);
 	else
 	{
-		Con_Errorf("Unable to write %s\n", filename);
+		Con_Printf(CON_ERROR "Unable to write %s\n", filename);
 		if(jpeg || png)
 		{
 			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer != 0))
@@ -1539,9 +1542,9 @@ static void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.framestep = cl_capturevideo_framestep.integer;
 	cls.capturevideo.soundrate = S_GetSoundRate();
 	cls.capturevideo.soundchannels = S_GetSoundChannels();
-	cls.capturevideo.startrealtime = realtime;
+	cls.capturevideo.startrealtime = host.realtime;
 	cls.capturevideo.frame = cls.capturevideo.lastfpsframe = 0;
-	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = realtime;
+	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = host.realtime;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
 	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.width * vid.height * 4);
@@ -1713,7 +1716,7 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	if(cl_capturevideo_printfps.integer)
 	{
 		char buf[80];
-		double t = realtime;
+		double t = host.realtime;
 		if(t > cls.capturevideo.lastfpstime + 1)
 		{
 			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
@@ -1750,7 +1753,7 @@ static void SCR_CaptureVideo(void)
 		if (cls.capturevideo.realtime)
 		{
 			// preserve sound sync by duplicating frames when running slow
-			newframenum = (int)((realtime - cls.capturevideo.startrealtime) * cls.capturevideo.framerate);
+			newframenum = (int)((host.realtime - cls.capturevideo.startrealtime) * cls.capturevideo.framerate);
 		}
 		else
 			newframenum = cls.capturevideo.frame + 1;
@@ -2258,6 +2261,11 @@ static void SCR_DrawScreen (void)
 		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value && !scr_loading)
 			Con_DrawNotify ();	// only draw notify in game
 
+	if (cl.islocalgame && (key_dest != key_game || key_consoleactive))
+		host.paused = true;
+	else
+		host.paused = false;
+
 	if (cls.signon == SIGNONS)
 	{
 		SCR_DrawNet ();
@@ -2275,9 +2283,10 @@ static void SCR_DrawScreen (void)
 #endif
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
-	if(!scr_loading) {
-		SCR_DrawConsole();
 
+	SCR_DrawConsole();
+	
+	if(!scr_loading) {
 		SCR_DrawBrand();
 
 		SCR_DrawInfobar();
@@ -2709,7 +2718,7 @@ void SCR_UpdateLoadingScreen (qboolean clear, qboolean startup)
 
 #ifdef USE_GLES2
 	SCR_DrawLoadingScreen_SharedSetup(clear);
-	SCR_DrawLoadingScreen(clear);
+	SCR_DrawLoadingScreen();
 #else
 	SCR_DrawLoadingScreen_SharedSetup(clear);
 	if (vid.stereobuffer)
@@ -2809,10 +2818,17 @@ void CL_UpdateScreen(void)
 	double drawscreendelta;
 	r_viewport_t viewport;
 
+	// TODO: Move to a better place.
+	cl_punchangle_applied = 0;
+
 	if(drawscreenstart)
 	{
 		drawscreendelta = Sys_DirtyTime() - drawscreenstart;
+#ifdef CONFIG_VIDEO_CAPTURE
 		if (cl_minfps.value > 0 && (cl_minfps_force.integer || !(cls.timedemo || (cls.capturevideo.active && !cls.capturevideo.realtime))) && drawscreendelta >= 0 && drawscreendelta < 60)
+#else
+		if (cl_minfps.value > 0 && (cl_minfps_force.integer || !cls.timedemo) && drawscreendelta >= 0 && drawscreendelta < 60)
+#endif
 		{
 			// quality adjustment according to render time
 			double actualframetime;

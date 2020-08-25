@@ -1421,7 +1421,7 @@ void Image_FixTransparentPixels_f(cmd_state_t *cmd)
 		return;
 	}
 	filename_pattern = Cmd_Argv(cmd, 1);
-	search = FS_Search(filename_pattern, true, true);
+	search = FS_Search(filename_pattern, true, true, NULL);
 	if(!search)
 		return;
 	for(i = 0; i < search->numfilenames; ++i)

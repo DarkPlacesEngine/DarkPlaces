@@ -24,6 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_wav.h"
+#ifdef USEXMP
+#include "snd_xmp.h"
+#endif
 
 
 /*
@@ -120,6 +123,13 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 			if (OGG_LoadVorbisFile (namebuffer, sfx))
 				goto loaded;
 		}
+#ifdef USEXMP
+		else if (len >= 1)
+		{
+			if (XMP_LoadModFile (namebuffer, sfx))
+				goto loaded;
+		}
+#endif
 	}
 
 	// LadyHavoc: then try without the added sound/ as wav and ogg
@@ -139,11 +149,18 @@ qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
 		if (OGG_LoadVorbisFile (namebuffer, sfx))
 			goto loaded;
 	}
+#ifdef USEXMP
+	else if (len >= 1)
+	{
+		if (XMP_LoadModFile (namebuffer, sfx))
+			goto loaded;
+	}
+#endif
 
 	// Can't load the sound!
 	sfx->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
-		Con_DPrintf("failed to load sound \"%s\"\n", sfx->name);
+		Con_Printf(CON_ERROR "Failed to load sound \"%s\"\n", sfx->name);
 
 	SCR_PopLoadingScreen(false);
 	return false;

@@ -1757,8 +1757,8 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	int resolution[3];
 	int numpixels;
 	vec3_t ispacing;
-	vec3_t maxs;
-	vec3_t mins;
+	vec3_t maxs = {0,0,0};
+	vec3_t mins = {0,0,0};
 	vec3_t size;
 	vec3_t spacing;
 	r_shadow_bouncegrid_settings_t *settings = &r_shadow_bouncegrid_state.settings;
@@ -2017,9 +2017,9 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 			// is probably fine (and they use the same timer)
 			if (r_shadow_culllights_trace.integer)
 			{
-				if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
-					rtlight->trace_timer = realtime;
-				if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+				if (rtlight->trace_timer != host.realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+					rtlight->trace_timer = host.realtime;
+				if (host.realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 					continue;
 			}
 			// skip if expanded light box is offscreen
@@ -2084,8 +2084,8 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 	}
 
 	// compute a seed for the unstable random modes
-	Math_RandomSeed_FromInts(&randomseed, 0, 0, 0, realtime * 1000.0);
-	seed = realtime * 1000.0;
+	Math_RandomSeed_FromInts(&randomseed, 0, 0, 0, host.realtime * 1000.0);
+	seed = host.realtime * 1000.0;
 
 	for (lightindex = 0; lightindex < range2; lightindex++)
 	{
@@ -2596,7 +2596,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		break;
 	}
 
-	r_shadow_bouncegrid_state.lastupdatetime = realtime;
+	r_shadow_bouncegrid_state.lastupdatetime = host.realtime;
 }
 
 static void R_Shadow_BounceGrid_ClearTex_Task(taskqueue_task_t *t)
@@ -2804,7 +2804,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	}
 
 	// if all the settings seem identical to the previous update, return
-	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_dynamic_updateinterval.value) && !settingschanged)
+	if (r_shadow_bouncegrid_state.texture && (settings.staticmode || host.realtime < r_shadow_bouncegrid_state.lastupdatetime + r_shadow_bouncegrid_dynamic_updateinterval.value) && !settingschanged)
 		return;
 
 	// store the new settings
@@ -3477,7 +3477,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	/*
 	if (rtlight->selected)
 	{
-		f = 2 + sin(realtime * M_PI * 4.0);
+		f = 2 + sin(host.realtime * M_PI * 4.0);
 		VectorScale(rtlight->currentcolor, f, rtlight->currentcolor);
 	}
 	*/
@@ -3500,9 +3500,9 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	// skip if the light box is not visible to traceline
 	if (r_shadow_culllights_trace.integer)
 	{
-		if (rtlight->trace_timer != realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
-			rtlight->trace_timer = realtime;
-		if (realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
+		if (rtlight->trace_timer != host.realtime && R_CanSeeBox(rtlight->trace_timer == 0 ? r_shadow_culllights_trace_tempsamples.integer : r_shadow_culllights_trace_samples.integer, r_shadow_culllights_trace_eyejitter.value, r_shadow_culllights_trace_enlarge.value, r_shadow_culllights_trace_expand.value, r_shadow_culllights_trace_pad.value, r_refdef.view.origin, rtlight->cullmins, rtlight->cullmaxs))
+			rtlight->trace_timer = host.realtime;
+		if (host.realtime - rtlight->trace_timer > r_shadow_culllights_trace_delay.value)
 			return;
 	}
 
@@ -6022,21 +6022,21 @@ static void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_current_specular);
 	Cvar_RegisterVariable(&r_editlights_current_normalmode);
 	Cvar_RegisterVariable(&r_editlights_current_realtimemode);
-	Cmd_AddCommand(&cmd_client, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
-	Cmd_AddCommand(&cmd_client, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
-	Cmd_AddCommand(&cmd_client, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
-	Cmd_AddCommand(&cmd_client, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
-	Cmd_AddCommand(&cmd_client, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
+	Cmd_AddCommand(CMD_CLIENT, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
 }
 
 

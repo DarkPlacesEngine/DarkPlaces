@@ -42,6 +42,7 @@ static HANDLE	heventParent;
 static HANDLE	heventChild;
 #endif
 
+sys_t sys;
 
 /*
 ===============================================================================
@@ -64,7 +65,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
-	Con_Errorf ("Engine Error: %s\n", text);
+	Con_Printf(CON_ERROR "Engine Error: %s\n", text);
 
 	// close video so the message box is visible, unless we already tried that
 	if (!in_sys_error0 && cls.state != ca_dedicated)
@@ -262,20 +263,20 @@ void Sys_InitConsole (void)
 	// give QHOST a chance to hook into the console
 		if ((t = COM_CheckParm ("-HFILE")) > 0)
 		{
-			if (t < com_argc)
-				hFile = (HANDLE)atoi (com_argv[t+1]);
+			if (t < sys.argc)
+				hFile = (HANDLE)atoi (sys.argv[t+1]);
 		}
 
 		if ((t = COM_CheckParm ("-HPARENT")) > 0)
 		{
-			if (t < com_argc)
-				heventParent = (HANDLE)atoi (com_argv[t+1]);
+			if (t < sys.argc)
+				heventParent = (HANDLE)atoi (sys.argv[t+1]);
 		}
 
 		if ((t = COM_CheckParm ("-HCHILD")) > 0)
 		{
-			if (t < com_argc)
-				heventChild = (HANDLE)atoi (com_argv[t+1]);
+			if (t < sys.argc)
+				heventChild = (HANDLE)atoi (sys.argv[t+1]);
 		}
 
 		InitConProc (hFile, heventParent, heventChild);
@@ -320,12 +321,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	program_name[sizeof(program_name)-1] = 0;
 	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
 
-	com_argc = 1;
-	com_argv = argv;
+	sys.argc = 1;
+	sys.argv = argv;
 	argv[0] = program_name;
 
 	// FIXME: this tokenizer is rather redundent, call a more general one
-	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
+	while (*lpCmdLine && (sys.argc < MAX_NUM_ARGVS))
 	{
 		while (*lpCmdLine && ISWHITESPACE(*lpCmdLine))
 			lpCmdLine++;
@@ -337,16 +338,16 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		{
 			// quoted string
 			lpCmdLine++;
-			argv[com_argc] = lpCmdLine;
-			com_argc++;
+			argv[sys.argc] = lpCmdLine;
+			sys.argc++;
 			while (*lpCmdLine && (*lpCmdLine != '\"'))
 				lpCmdLine++;
 		}
 		else
 		{
 			// unquoted word
-			argv[com_argc] = lpCmdLine;
-			com_argc++;
+			argv[sys.argc] = lpCmdLine;
+			sys.argc++;
 			while (*lpCmdLine && !ISWHITESPACE(*lpCmdLine))
 				lpCmdLine++;
 		}
@@ -360,7 +361,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	Sys_ProvideSelfFD();
 
+	// used by everything
+	Memory_Init();
+
 	Host_Main();
+
+	Sys_Quit(0);
 
 	/* return success of application */
 	return true;
@@ -380,8 +386,8 @@ int main (int argc, const char* argv[])
 	program_name[sizeof(program_name)-1] = 0;
 	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
 
-	com_argc = argc;
-	com_argv = argv;
+	sys.argc = argc;
+	sys.argv = argv;
 
 	Host_Main();
 

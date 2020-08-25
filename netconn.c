@@ -93,7 +93,7 @@ static cvar_t net_slist_queriesperframe = {CVAR_CLIENT, "net_slist_queriesperfra
 static cvar_t net_slist_timeout = {CVAR_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
 static cvar_t net_slist_pause = {CVAR_CLIENT, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
 static cvar_t net_slist_maxtries = {CVAR_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
-static cvar_t net_slist_favorites = {CVAR_CLIENT | CVAR_SAVE | CVAR_NQUSERINFOHACK, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
+static cvar_t net_slist_favorites = {CVAR_CLIENT | CVAR_SAVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
 static cvar_t net_tos_dscp = {CVAR_CLIENT | CVAR_SAVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
 static cvar_t gameversion = {CVAR_SERVER, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
 static cvar_t gameversion_min = {CVAR_CLIENT | CVAR_SERVER, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
@@ -166,12 +166,12 @@ static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
 static int nFavorites_idfp = 0;
 static char favorites_idfp[MAX_FAVORITESERVERS][FP64_SIZE+1];
 
-void NetConn_UpdateFavorites(void)
+void NetConn_UpdateFavorites_c(cvar_t *var)
 {
 	const char *p;
 	nFavorites = 0;
 	nFavorites_idfp = 0;
-	p = net_slist_favorites.string;
+	p = var->string;
 	while((size_t) nFavorites < sizeof(favorites) / sizeof(*favorites) && COM_ParseToken_Console(&p))
 	{
 		if(com_token[0] != '[' && strlen(com_token) == FP64_SIZE && !strchr(com_token, '.'))
@@ -578,7 +578,7 @@ static void _ServerList_Test(void)
 
 void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryqw, qboolean consoleoutput)
 {
-	masterquerytime = realtime;
+	masterquerytime = host.realtime;
 	masterquerycount = 0;
 	masterreplycount = 0;
 	if( resetcache ) {
@@ -671,12 +671,12 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 qboolean NetConn_CanSend(netconn_t *conn)
 {
 	conn->outgoing_packetcounter = (conn->outgoing_packetcounter + 1) % NETGRAPH_PACKETS;
-	conn->outgoing_netgraph[conn->outgoing_packetcounter].time            = realtime;
+	conn->outgoing_netgraph[conn->outgoing_packetcounter].time            = host.realtime;
 	conn->outgoing_netgraph[conn->outgoing_packetcounter].unreliablebytes = NETGRAPH_NOPACKET;
 	conn->outgoing_netgraph[conn->outgoing_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
 	conn->outgoing_netgraph[conn->outgoing_packetcounter].ackbytes        = NETGRAPH_NOPACKET;
 	conn->outgoing_netgraph[conn->outgoing_packetcounter].cleartime       = conn->cleartime;
-	if (realtime > conn->cleartime)
+	if (host.realtime > conn->cleartime)
 		return true;
 	else
 	{
@@ -690,15 +690,15 @@ static void NetConn_UpdateCleartime(double *cleartime, int rate, int burstsize, 
 	double bursttime = burstsize / (double)rate;
 
 	// delay later packets to obey rate limit
-	if (*cleartime < realtime - bursttime)
-		*cleartime = realtime - bursttime;
+	if (*cleartime < host.realtime - bursttime)
+		*cleartime = host.realtime - bursttime;
 	*cleartime = *cleartime + len / (double)rate;
 
 	// limit bursts to one packet in size ("dialup mode" emulating old behaviour)
 	if (net_test.integer)
 	{
-		if (*cleartime < realtime)
-			*cleartime = realtime;
+		if (*cleartime < host.realtime)
+			*cleartime = host.realtime;
 	}
 }
 
@@ -813,7 +813,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 		size_t sendmelen;
 
 		// if a reliable message fragment has been lost, send it again
-		if (conn->sendMessageLength && (realtime - conn->lastSendTime) > 1.0)
+		if (conn->sendMessageLength && (host.realtime - conn->lastSendTime) > 1.0)
 		{
 			if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 			{
@@ -837,7 +837,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 			if (sendme && NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress) == (int)sendmelen)
 			{
-				conn->lastSendTime = realtime;
+				conn->lastSendTime = host.realtime;
 				conn->packetsReSent++;
 			}
 
@@ -889,7 +889,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 			if(sendme)
 				NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress);
 
-			conn->lastSendTime = realtime;
+			conn->lastSendTime = host.realtime;
 			conn->packetsSent++;
 			conn->reliableMessagesSent++;
 
@@ -970,11 +970,11 @@ static void NetConn_OpenClientPort(const char *addressstring, lhnetaddresstype_t
 		else
 		{
 			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-			Con_Errorf("Client failed to open a socket on address %s\n", addressstring2);
+			Con_Printf(CON_ERROR "Client failed to open a socket on address %s\n", addressstring2);
 		}
 	}
 	else
-		Con_Errorf("Client unable to parse address %s\n", addressstring);
+		Con_Printf(CON_ERROR "Client unable to parse address %s\n", addressstring);
 }
 
 void NetConn_OpenClientPorts(void)
@@ -1034,12 +1034,12 @@ static qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddressty
 			else
 			{
 				LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
-				Con_Errorf("Server failed to open socket on address %s\n", addressstring2);
+				Con_Printf(CON_ERROR "Server failed to open socket on address %s\n", addressstring2);
 			}
 		}
 		else
 		{
-			Con_Errorf("Server unable to parse address %s\n", addressstring);
+			Con_Printf(CON_ERROR "Server unable to parse address %s\n", addressstring);
 			// if it cant parse one address, it wont be able to parse another for sure
 			return false;
 		}
@@ -1060,7 +1060,6 @@ void NetConn_OpenServerPorts(int opennetports)
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)
 		port = 26000;
-	Con_Printf("Server using port %i\n", port);
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
 	if (cls.state != ca_dedicated)
@@ -1102,13 +1101,13 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn = (netconn_t *)Mem_Alloc(netconn_mempool, sizeof(*conn));
 	conn->mysocket = mysocket;
 	conn->peeraddress = *peeraddress;
-	conn->lastMessageTime = realtime;
+	conn->lastMessageTime = host.realtime;
 	conn->message.data = conn->messagedata;
 	conn->message.maxsize = sizeof(conn->messagedata);
 	conn->message.cursize = 0;
 	// LadyHavoc: (inspired by ProQuake) use a short connect timeout to
 	// reduce effectiveness of connection request floods
-	conn->timeout = realtime + net_connecttimeout.value;
+	conn->timeout = host.realtime + net_connecttimeout.value;
 	LHNETADDRESS_ToString(&conn->peeraddress, conn->address, sizeof(conn->address), true);
 	conn->next = netconn_list;
 	netconn_list = conn;
@@ -1183,7 +1182,7 @@ void NetConn_UpdateSockets(void)
 		i = (cls.rcon_ringpos + j + 1) % MAX_RCONS;
 		if(cls.rcon_commands[i][0])
 		{
-			if(realtime > cls.rcon_timeout[i])
+			if(host.realtime > cls.rcon_timeout[i])
 			{
 				char s[128];
 				LHNETADDRESS_ToString(&cls.rcon_addresses[i], s, sizeof(s), true);
@@ -1252,7 +1251,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 			while (count--)
 			{
 				conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-				conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+				conn->incoming_netgraph[conn->incoming_packetcounter].time            = host.realtime;
 				conn->incoming_netgraph[conn->incoming_packetcounter].cleartime       = conn->incoming_cleartime;
 				conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = NETGRAPH_LOSTPACKET;
 				conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
@@ -1260,7 +1259,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 			}
 		}
 		conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-		conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+		conn->incoming_netgraph[conn->incoming_packetcounter].time            = host.realtime;
 		conn->incoming_netgraph[conn->incoming_packetcounter].cleartime       = conn->incoming_cleartime;
 		conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
 		conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
@@ -1270,8 +1269,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		// limit bursts to one packet in size ("dialup mode" emulating old behaviour)
 		if (net_test.integer)
 		{
-			if (conn->cleartime < realtime)
-				conn->cleartime = realtime;
+			if (conn->cleartime < host.realtime)
+				conn->cleartime = host.realtime;
 		}
 
 		if (reliable_ack == conn->qw.reliable_sequence)
@@ -1287,8 +1286,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		conn->qw.incoming_reliable_acknowledged = reliable_ack;
 		if (reliable_message)
 			conn->qw.incoming_reliable_sequence ^= 1;
-		conn->lastMessageTime = realtime;
-		conn->timeout = realtime + newtimeout;
+		conn->lastMessageTime = host.realtime;
+		conn->timeout = host.realtime + newtimeout;
 		conn->unreliableMessagesReceived++;
 		if (conn == cls.netcon)
 		{
@@ -1348,7 +1347,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 						while (count--)
 						{
 							conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-							conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+							conn->incoming_netgraph[conn->incoming_packetcounter].time            = host.realtime;
 							conn->incoming_netgraph[conn->incoming_packetcounter].cleartime       = conn->incoming_cleartime;
 							conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = NETGRAPH_LOSTPACKET;
 							conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
@@ -1356,7 +1355,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 						}
 					}
 					conn->incoming_packetcounter = (conn->incoming_packetcounter + 1) % NETGRAPH_PACKETS;
-					conn->incoming_netgraph[conn->incoming_packetcounter].time            = realtime;
+					conn->incoming_netgraph[conn->incoming_packetcounter].time            = host.realtime;
 					conn->incoming_netgraph[conn->incoming_packetcounter].cleartime       = conn->incoming_cleartime;
 					conn->incoming_netgraph[conn->incoming_packetcounter].unreliablebytes = originallength + 28;
 					conn->incoming_netgraph[conn->incoming_packetcounter].reliablebytes   = NETGRAPH_NOPACKET;
@@ -1364,8 +1363,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 					NetConn_UpdateCleartime(&conn->incoming_cleartime, cl_rate.integer, cl_rate_burstsize.integer, originallength + 28);
 
 					conn->nq.unreliableReceiveSequence = sequence + 1;
-					conn->lastMessageTime = realtime;
-					conn->timeout = realtime + newtimeout;
+					conn->lastMessageTime = host.realtime;
+					conn->timeout = host.realtime + newtimeout;
 					conn->unreliableMessagesReceived++;
 					if (length > 0)
 					{
@@ -1400,8 +1399,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 						conn->nq.ackSequence++;
 						if (conn->nq.ackSequence != conn->nq.sendSequence)
 							Con_DPrint("ack sequencing error\n");
-						conn->lastMessageTime = realtime;
-						conn->timeout = realtime + newtimeout;
+						conn->lastMessageTime = host.realtime;
+						conn->timeout = host.realtime + newtimeout;
 						if (conn->sendMessageLength > MAX_PACKETFRAGMENT)
 						{
 							unsigned int packetLen;
@@ -1433,7 +1432,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 							sendme = Crypto_EncryptPacket(&conn->crypto, &sendbuffer, packetLen, &cryptosendbuffer, &sendmelen, sizeof(cryptosendbuffer));
 							if (sendme && NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress) == (int)sendmelen)
 							{
-								conn->lastSendTime = realtime;
+								conn->lastSendTime = host.realtime;
 								conn->packetsSent++;
 							}
 						}
@@ -1462,8 +1461,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 					NetConn_Write(conn->mysocket, sendme, (int)sendmelen, &conn->peeraddress);
 				if (sequence == conn->nq.receiveSequence)
 				{
-					conn->lastMessageTime = realtime;
-					conn->timeout = realtime + newtimeout;
+					conn->lastMessageTime = host.realtime;
+					conn->timeout = host.realtime + newtimeout;
 					conn->nq.receiveSequence++;
 					if( conn->receiveMessageLength + length <= (int)sizeof( conn->receiveMessage ) ) {
 						memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
@@ -1517,7 +1516,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
 	{
 		SV_LockThreadMutex();
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
 	// allocate a net connection to keep track of things
@@ -1549,7 +1548,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 	// reset move sequence numbering on this new connection
 	cls.servermovesequence = 0;
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
-		Cmd_ForwardStringToServer("new");
+		CL_ForwardToServer("new");
 	if (cls.protocol == PROTOCOL_QUAKE)
 	{
 		// write a keepalive (clc_nop) as it seems to greatly improve the
@@ -1605,14 +1604,14 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		// store the data the engine cares about (address and ping)
 		strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
 		entry->info.ping = 100000;
-		entry->querytime = realtime;
+		entry->querytime = host.realtime;
 		// if not in the slist menu we should print the server to console
 		if (serverlist_consoleoutput)
 			Con_Printf("querying %s\n", addressstring);
 		++serverlist_cachecount;
 	}
 	// if this is the first reply from this server, count it as having replied
-	pingtime = (int)((realtime - entry->querytime) * 1000.0 + 0.5);
+	pingtime = (int)((host.realtime - entry->querytime) * 1000.0 + 0.5);
 	pingtime = bound(0, pingtime, 9999);
 	if (entry->query == SQS_REFRESHING) {
 		entry->info.ping = pingtime;
@@ -1778,7 +1777,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 	// begin or resume serverlist queries
 	serverlist_querysleep = false;
-	serverlist_querywaittime = realtime + 3;
+	serverlist_querywaittime = host.realtime + 3;
 }
 #endif
 
@@ -1890,7 +1889,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 						for (l = 0;l < MAX_RCONS;l++)
 							if(cls.rcon_commands[l][0])
 								if (!LHNETADDRESS_Compare(peeraddress, &cls.rcon_addresses[l]))
-									cls.rcon_timeout[l] = realtime + rcon_secure_challengetimeout.value;
+									cls.rcon_timeout[l] = host.realtime + rcon_secure_challengetimeout.value;
 					}
 
 					return true; // we used up the challenge, so we can't use this oen for connecting now anyway
@@ -2084,7 +2083,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				}
 				// begin or resume serverlist queries
 				serverlist_querysleep = false;
-				serverlist_querywaittime = realtime + 3;
+				serverlist_querywaittime = host.realtime + 3;
 				return true;
 			}
 		}
@@ -2348,7 +2347,7 @@ void NetConn_QueryQueueFrame(void)
 
 	// apply a cool down time after master server replies,
 	// to avoid messing up the ping times on the servers
-	if (serverlist_querywaittime > realtime)
+	if (serverlist_querywaittime > host.realtime)
 		return;
 
 	// each time querycounter reaches 1.0 issue a query
@@ -2364,7 +2363,7 @@ void NetConn_QueryQueueFrame(void)
 	//	scan serverlist and issue queries as needed
 	serverlist_querysleep = true;
 
-	timeouttime	= realtime - net_slist_timeout.value;
+	timeouttime	= host.realtime - net_slist_timeout.value;
 	for( index = 0, queries	= 0 ;	index	< serverlist_cachecount	&&	queries < maxqueries	; index++ )
 	{
 		serverlist_entry_t *entry = &serverlist_cache[ index ];
@@ -2397,7 +2396,7 @@ void NetConn_QueryQueueFrame(void)
 			}
 
 			//	update the entry fields
-			entry->querytime = realtime;
+			entry->querytime = host.realtime;
 			entry->querycounter++;
 
 			// if not in the slist menu we should print the server to console
@@ -2427,13 +2426,13 @@ void NetConn_ClientFrame(void)
 	lhnetaddress_t peeraddress;
 	unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 	NetConn_UpdateSockets();
-	if (cls.connect_trying && cls.connect_nextsendtime < realtime)
+	if (cls.connect_trying && cls.connect_nextsendtime < host.realtime)
 	{
 #ifdef CONFIG_MENU
 		if (cls.connect_remainingtries == 0)
 			M_Update_Return_Reason("Connect: Waiting 10 seconds for reply");
 #endif
-		cls.connect_nextsendtime = realtime + 1;
+		cls.connect_nextsendtime = host.realtime + 1;
 		cls.connect_remainingtries--;
 		if (cls.connect_remainingtries <= -10)
 		{
@@ -2477,12 +2476,12 @@ void NetConn_ClientFrame(void)
 #ifdef CONFIG_MENU
 	NetConn_QueryQueueFrame();
 #endif
-	if (cls.netcon && realtime > cls.netcon->timeout && !sv.active)
+	if (cls.netcon && host.realtime > cls.netcon->timeout && !sv.active)
 	{
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
 		SV_LockThreadMutex();
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
 }
@@ -2689,13 +2688,13 @@ static qboolean NetConn_PreventFlood(lhnetaddress_t *peeraddress, server_floodad
 		if (floodlist[floodslotnum].lasttime && LHNETADDRESS_Compare(&noportpeeraddress, &floodlist[floodslotnum].address) == 0)
 		{
 			// this address matches an ongoing flood address
-			if (realtime < floodlist[floodslotnum].lasttime + floodtime)
+			if (host.realtime < floodlist[floodslotnum].lasttime + floodtime)
 			{
 				if(renew)
 				{
 					// renew the ban on this address so it does not expire
 					// until the flood has subsided
-					floodlist[floodslotnum].lasttime = realtime;
+					floodlist[floodslotnum].lasttime = host.realtime;
 				}
 				//Con_Printf("Flood detected!\n");
 				return true;
@@ -2707,7 +2706,7 @@ static qboolean NetConn_PreventFlood(lhnetaddress_t *peeraddress, server_floodad
 	}
 	// begin a new timeout on this address
 	floodlist[bestfloodslotnum].address = noportpeeraddress;
-	floodlist[bestfloodslotnum].lasttime = realtime;
+	floodlist[bestfloodslotnum].lasttime = host.realtime;
 	//Con_Printf("Flood detection initiated!\n");
 	return false;
 }
@@ -2740,7 +2739,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	long t1, t2;
 
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2761,7 +2760,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	int i;
 
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -2792,7 +2791,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 static qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	if (!password[0]) {
-		Con_Error("LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
+		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
 		return false;
 	}
 
@@ -3008,7 +3007,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 		if (length >= 12 && !memcmp(string, "getchallenge", 12) && (islocal || sv_public.integer > -3))
 		{
-			for (i = 0, best = 0, besttime = realtime;i < MAX_CHALLENGES;i++)
+			for (i = 0, best = 0, besttime = host.realtime;i < MAX_CHALLENGES;i++)
 			{
 				if(challenges[i].time > 0)
 					if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address))
@@ -3027,10 +3026,10 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			else
 			{
 				// flood control: drop if requesting challenge too often
-				if(challenges[i].time > realtime - net_challengefloodblockingtimeout.value)
+				if(challenges[i].time > host.realtime - net_challengefloodblockingtimeout.value)
 					return true;
 			}
-			challenges[i].time = realtime;
+			challenges[i].time = host.realtime;
 			// send the challenge
 			memcpy(response, "\377\377\377\377", 4);
 			dpsnprintf(response+4, sizeof(response)-4, "challenge %s", challenges[i].string);
@@ -3520,7 +3519,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					MSG_WriteString(&sv_message, client->name);
 					MSG_WriteLong(&sv_message, client->colors);
 					MSG_WriteLong(&sv_message, client->frags);
-					MSG_WriteLong(&sv_message, (int)(realtime - client->connecttime));
+					MSG_WriteLong(&sv_message, (int)(host.realtime - client->connecttime));
 					if(sv_status_privacy.integer)
 						MSG_WriteString(&sv_message, client->netconnection ? "hidden" : "botclient");
 					else
@@ -3612,7 +3611,7 @@ void NetConn_ServerFrame(void)
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
 		// never timeout loopback connections
-		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
 			SV_DropClient(false);
@@ -3757,7 +3756,7 @@ void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
 	}
 	if (!masterquerycount)
 	{
-		Con_Error("Unable to query master servers, no suitable network sockets active.\n");
+		Con_Print(CON_ERROR "Unable to query master servers, no suitable network sockets active.\n");
 		M_Update_Return_Reason("No network");
 	}
 }
@@ -3771,8 +3770,8 @@ void NetConn_Heartbeat(int priority)
 
 	// if it's a state change (client connected), limit next heartbeat to no
 	// more than 30 sec in the future
-	if (priority == 1 && nextheartbeattime > realtime + 30.0)
-		nextheartbeattime = realtime + 30.0;
+	if (priority == 1 && nextheartbeattime > host.realtime + 30.0)
+		nextheartbeattime = host.realtime + 30.0;
 
 	// limit heartbeatperiod to 30 to 270 second range,
 	// lower limit is to avoid abusing master servers with excess traffic,
@@ -3785,9 +3784,9 @@ void NetConn_Heartbeat(int priority)
 
 	// make advertising optional and don't advertise singleplayer games, and
 	// only send a heartbeat as often as the admin wants
-	if (sv.active && sv_public.integer > 0 && svs.maxclients >= 2 && (priority > 1 || realtime > nextheartbeattime))
+	if (sv.active && sv_public.integer > 0 && svs.maxclients >= 2 && (priority > 1 || host.realtime > nextheartbeattime))
 	{
-		nextheartbeattime = realtime + sv_heartbeatperiod.value;
+		nextheartbeattime = host.realtime + sv_heartbeatperiod.value;
 		for (masternum = 0;sv_masters[masternum].name;masternum++)
 			if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
 				NetConn_WriteString(mysocket, "\377\377\377\377heartbeat DarkPlaces\x0A", &masteraddress);
@@ -3871,14 +3870,13 @@ void NetConn_Init(void)
 	int i;
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
-	Cmd_AddCommand(&cmd_client, "net_stats", Net_Stats_f, "print network statistics");
-	Cmd_AddCommand(&cmd_server, "net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand(CMD_SHARED, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
-	Cmd_AddCommand(&cmd_client, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
-	Cmd_AddCommand(&cmd_client, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
-	Cmd_AddCommand(&cmd_client, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
+	Cmd_AddCommand(CMD_CLIENT, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
 #endif
-	Cmd_AddCommand(&cmd_server, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
+	Cmd_AddCommand(CMD_SERVER, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_test);
 	Cvar_RegisterVariable(&net_usesizelimit);
 	Cvar_RegisterVariable(&net_burstreserve);
@@ -3890,6 +3888,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_slist_timeout);
 	Cvar_RegisterVariable(&net_slist_maxtries);
 	Cvar_RegisterVariable(&net_slist_favorites);
+#ifdef CONFIG_MENU
+	Cvar_RegisterCallback(&net_slist_favorites, NetConn_UpdateFavorites_c);
+#endif
 	Cvar_RegisterVariable(&net_slist_pause);
 	if(LHNET_DefaultDSCP(-1) >= 0) // register cvar only if supported
 		Cvar_RegisterVariable(&net_tos_dscp);
@@ -3920,27 +3921,27 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
-	if ((i = COM_CheckParm("-ip")) && i + 1 < com_argc)
+	if ((i = COM_CheckParm("-ip")) && i + 1 < sys.argc)
 	{
-		if (LHNETADDRESS_FromString(&tempaddress, com_argv[i + 1], 0) == 1)
+		if (LHNETADDRESS_FromString(&tempaddress, sys.argv[i + 1], 0) == 1)
 		{
-			Con_Printf("-ip option used, setting net_address to \"%s\"\n", com_argv[i + 1]);
-			Cvar_SetQuick(&net_address, com_argv[i + 1]);
+			Con_Printf("-ip option used, setting net_address to \"%s\"\n", sys.argv[i + 1]);
+			Cvar_SetQuick(&net_address, sys.argv[i + 1]);
 		}
 		else
-			Con_Errorf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
+			Con_Printf(CON_ERROR "-ip option used, but unable to parse the address \"%s\"\n", sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
-	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < com_argc)
+	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < sys.argc)
 	{
-		i = atoi(com_argv[i + 1]);
+		i = atoi(sys.argv[i + 1]);
 		if (i >= 0 && i < 65536)
 		{
 			Con_Printf("-port option used, setting port cvar to %i\n", i);
 			Cvar_SetValueQuick(&sv_netport, i);
 		}
 		else
-			Con_Errorf("-port option used, but %i is not a valid port number\n", i);
+			Con_Printf(CON_ERROR "-port option used, but %i is not a valid port number\n", i);
 	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;

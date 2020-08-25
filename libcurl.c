@@ -1148,7 +1148,7 @@ void Curl_Run(void)
 		return;
 	}
 
-	if(realtime < curltime) // throttle
+	if(host.realtime < curltime) // throttle
 	{
 		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return;
@@ -1231,12 +1231,12 @@ void Curl_Run(void)
 	if(maxspeed > 0)
 	{
 		double bytes = bytes_sent + bytes_received; // maybe smoothen a bit?
-		curltime = realtime + bytes / (maxspeed * 1024.0);
+		curltime = host.realtime + bytes / (maxspeed * 1024.0);
 		bytes_sent = 0;
 		bytes_received = 0;
 	}
 	else
-		curltime = realtime;
+		curltime = host.realtime;
 
 	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 }
@@ -1552,8 +1552,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
-	Cmd_AddCommand(&cmd_client, "curl", Curl_Curl_f, "download data from an URL and add to search path");
-	Cmd_AddCommand(&cmd_clientfromserver, "curl", Curl_Curl_f, "download data from an URL and add to search path");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
@@ -1828,7 +1827,7 @@ void Curl_SendRequirements(void)
 		strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
 
 	if(strlen(sendbuffer) + 1 < sizeof(sendbuffer))
-		Host_ClientCommands("%s", sendbuffer);
+		SV_ClientCommands("%s", sendbuffer);
 	else
 		Con_Printf("Could not initiate autodownload due to URL buffer overflow\n");
 }

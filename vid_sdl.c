@@ -607,7 +607,7 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 		}
 		if (scr_numtouchscreenareas < 128)
 		{
-			if (clickrealtime + 1 > realtime)
+			if (clickrealtime + 1 > host.realtime)
 			{
 				scr_touchscreenareas[scr_numtouchscreenareas].pic = "gfx/gui/touch_puck_cur_click.tga";
 			}
@@ -617,7 +617,7 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 			}
 			else
 			{
-				switch ((int)realtime * 10 % 20)
+				switch ((int)host.realtime * 10 % 20)
 				{
 				case 0:
 					scr_touchscreenareas[scr_numtouchscreenareas].pic = "gfx/gui/touch_puck_cur_touch.tga";
@@ -671,11 +671,11 @@ static void VID_TouchscreenCursor(float px, float py, float pwidth, float pheigh
 			{
 				Key_Event(key, 0, true);
 				canclick = false;
-				clickrealtime = realtime;
+				clickrealtime = host.realtime;
 			}
 
 			// SS:BR can't qc can't cope with presses and releases on the same frame
-			if (clickrealtime && clickrealtime + 0.1 < realtime)
+			if (clickrealtime && clickrealtime + 0.1 < host.realtime)
 			{
 				Key_Event(key, 0, false);
 				clickrealtime = 0;
@@ -1076,7 +1076,7 @@ void Sys_SendKeyEvents( void )
 #ifdef DEBUGSDLEVENTS
 				Con_DPrintf("SDL_Event: SDL_QUIT\n");
 #endif
-				Sys_Quit(0);
+				host.state = host_shutdown;
 				break;
 			case SDL_KEYDOWN:
 			case SDL_KEYUP:
@@ -1202,7 +1202,7 @@ void Sys_SendKeyEvents( void )
 						vid_hasfocus = false;
 						break;
 					case SDL_WINDOWEVENT_CLOSE:
-						Sys_Quit(0);
+						host.state = host_shutdown;
 						break;
 					}
 				}
@@ -1338,7 +1338,7 @@ void VID_Init (void)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	vid_sdl_initjoysticksystem = SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0;
 	if (!vid_sdl_initjoysticksystem)
-		Con_Errorf("Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 	vid_isfullscreen = false;
 }
 
@@ -1392,7 +1392,7 @@ void VID_EnableJoystick(qboolean enable)
 			}
 			else
 			{
-				Con_Errorf("Joystick %i failed (SDL_JoystickOpen(%i) returned: %s)\n", index, sdlindex, SDL_GetError());
+				Con_Printf(CON_ERROR "Joystick %i failed (SDL_JoystickOpen(%i) returned: %s)\n", index, sdlindex, SDL_GetError());
 				sdlindex = -1;
 			}
 		}
@@ -1418,6 +1418,11 @@ static void VID_OutputVersion(void)
 #ifdef WIN32
 static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 {
+	int workWidth;
+	int workHeight;
+	int titleBarPixels = 2;
+	int screenHeight;
+	RECT workArea;
 	LONG width = mode->width; // vid_width
 	LONG height = mode->height; // vid_height
 
@@ -1428,16 +1433,14 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 	rect->bottom = height;
 	AdjustWindowRectEx(rect, WS_CAPTION|WS_THICKFRAME, false, 0);
 
-	RECT workArea;
 	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
-	int workWidth = workArea.right - workArea.left;
-	int workHeight = workArea.bottom - workArea.top;
+	workWidth = workArea.right - workArea.left;
+	workHeight = workArea.bottom - workArea.top;
 
 	// SDL forces the window height to be <= screen height - 27px (on Win8.1 - probably intended for the title bar) 
 	// If the task bar is docked to the the left screen border and we move the window to negative y,
 	// there would be some part of the regular desktop visible on the bottom of the screen.
-	int titleBarPixels = 2;
-	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+	screenHeight = GetSystemMetrics(SM_CYSCREEN);
 	if (screenHeight == workHeight)
 		titleBarPixels = -rect->top;
 
@@ -1468,10 +1471,12 @@ extern cvar_t gl_info_driver;
 static qboolean VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
+	// currently SDL_WINDOWPOS_UNDEFINED behaves exactly like SDL_WINDOWPOS_CENTERED, this might change some day
+	// https://trello.com/c/j56vUcwZ/81-centered-vs-undefined-window-position
 	int xPos = SDL_WINDOWPOS_UNDEFINED;
 	int yPos = SDL_WINDOWPOS_UNDEFINED;
-#ifndef USE_GLES2
 	int i;
+#ifndef USE_GLES2
 	const char *drivername;
 #endif
 
@@ -1489,11 +1494,11 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 
 // COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is whatever SDL recommends, useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
 	i = COM_CheckParm("-gl_driver");
-	if (i && i < com_argc - 1)
-		drivername = com_argv[i + 1];
+	if (i && i < sys.argc - 1)
+		drivername = sys.argv[i + 1];
 	if (SDL_GL_LoadLibrary(drivername) < 0)
 	{
-		Con_Errorf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
+		Con_Printf(CON_ERROR "Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
 #endif
@@ -1520,15 +1525,26 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 			vid_isfullscreen = true;
 		}
 		else {
+			if (vid_borderless.integer)
+				windowflags |= SDL_WINDOW_BORDERLESS;
 #ifdef WIN32
-			RECT rect;
-			AdjustWindowBounds(mode, &rect);
-			xPos = rect.left;
-			yPos = rect.top;
+			if (vid_ignore_taskbar.integer) {
+				xPos = SDL_WINDOWPOS_CENTERED;
+				yPos = SDL_WINDOWPOS_CENTERED;
+			}
+			else {
+				RECT rect;
+				AdjustWindowBounds(mode, &rect);
+				xPos = rect.left;
+				yPos = rect.top;
+			}
 #endif
 		}
 	}
 	//flags |= SDL_HWSURFACE;
+
+	if (vid_mouse_clickthrough.integer && !vid_isfullscreen)
+		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
@@ -1562,7 +1578,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
 	{
-		Con_Errorf("Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
@@ -1570,7 +1586,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
 	{
-		Con_Errorf("Failed to initialize OpenGL context: %s\n", SDL_GetError());
+		Con_Printf(CON_ERROR "Failed to initialize OpenGL context: %s\n", SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
@@ -1590,10 +1606,15 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 
 	// LadyHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client:");
+	for (i = 0; vm_sv_extensions[i]; i++)
+		Con_DPrintf(" %s", vm_sv_extensions[i]);
+	Con_DPrintf("\n");
 #ifdef CONFIG_MENU
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\nQuakeC extensions for menu: %s\n", vm_sv_extensions, vm_m_extensions);
-#else
-	Con_DPrintf("\nQuakeC extensions for server and client: %s\n", vm_sv_extensions);
+	Con_DPrintf("\nQuakeC extensions for menu:");
+	for (i = 0; vm_m_extensions[i]; i++)
+		Con_DPrintf(" %s", vm_m_extensions[i]);
+	Con_DPrintf("\n");
 #endif
 
 	// clear to black (loading plaque will be seen over this)

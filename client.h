@@ -234,7 +234,7 @@ typedef struct effect_s
 	vec3_t origin;
 	double starttime;
 	float framerate;
-	int modelindex;
+	dp_model_t *model;
 	int startframe;
 	int endframe;
 	// these are for interpolation
@@ -576,7 +576,8 @@ typedef struct entity_render_s
 	// MATERIALFLAG_MODELLIGHT uses these parameters
 	float render_modellight_ambient[3];
 	float render_modellight_diffuse[3];
-	float render_modellight_lightdir[3];
+	float render_modellight_lightdir_world[3];
+	float render_modellight_lightdir_local[3];
 	float render_modellight_specular[3];
 	// lightmap rendering (not MATERIALFLAG_MODELLIGHT)
 	float render_lightmap_ambient[3];
@@ -737,6 +738,7 @@ typedef enum qw_downloadtype_e
 }
 qw_downloadtype_t;
 
+#ifdef CONFIG_VIDEO_CAPTURE
 typedef enum capturevideoformat_e
 {
 	CAPTUREVIDEOFORMAT_AVI_I420,
@@ -788,6 +790,7 @@ typedef struct capturevideostate_s
 	void *formatspecific;
 }
 capturevideostate_t;
+#endif
 
 #define CL_MAX_DOWNLOADACKS 4
 
@@ -917,8 +920,10 @@ typedef struct client_static_s
 	// extra user info for the "connect" command
 	char connect_userinfo[MAX_USERINFO_STRING];
 
+#ifdef CONFIG_VIDEO_CAPTURE
 	// video capture stuff
 	capturevideostate_t capturevideo;
+#endif
 
 	// crypto channel
 	crypto_t crypto;
@@ -1153,7 +1158,6 @@ typedef struct client_state_s
 	float sensitivityscale;
 	csqc_vidvars_t csqc_vidvars;	//[515]: these parms must be set to true by default
 	qboolean csqc_wantsmousemove;
-	qboolean csqc_paused; // vortex: int because could be flags
 	struct model_s *csqc_model_precache[MAX_MODELS];
 
 	// local amount for smoothing stepups
@@ -1243,7 +1247,7 @@ typedef struct client_state_s
 	sfx_t *sfx_ric3;
 	sfx_t *sfx_r_exp3;
 	// indicates that the file "sound/misc/talk2.wav" was found (for use by team chat messages)
-	qboolean foundtalk2wav;
+	qboolean foundteamchatsound;
 
 // refresh related state
 
@@ -1530,6 +1534,8 @@ void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point);
 // cl_main
 //
 
+double CL_Frame(double time);
+
 void CL_Shutdown (void);
 void CL_Init (void);
 
@@ -1571,7 +1577,7 @@ void CL_ClientMovement_Replay(void);
 void CL_ClearTempEntities (void);
 entity_render_t *CL_NewTempEntity (double shadertime);
 
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
+void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate);
 
 void CL_ClearState (void);
 void CL_ExpandEntities(int num);
@@ -1590,6 +1596,20 @@ const char *Key_KeynumToString (int keynum, char *buf, size_t buflength);
 int Key_StringToKeynum (const char *str);
 
 //
+// cl_cmd.c
+//
+/// adds the string as a clc_stringcmd to the client message.
+/// (used when there is no reason to generate a local command to do it)
+void CL_ForwardToServer (const char *s);
+
+/// adds the current command line as a clc_stringcmd to the client message.
+/// things like godmode, noclip, etc, are commands directed to the server,
+/// so when they are typed in at the console, they will need to be forwarded.
+void CL_ForwardToServer_f (cmd_state_t *cmd);
+void CL_InitCommands(void);
+
+
+//
 // cl_demo.c
 //
 void CL_StopPlayback(void);
@@ -1604,6 +1624,8 @@ void CL_Stop_f(cmd_state_t *cmd);
 void CL_Record_f(cmd_state_t *cmd);
 void CL_PlayDemo_f(cmd_state_t *cmd);
 void CL_TimeDemo_f(cmd_state_t *cmd);
+
+void CL_Demo_Init(void);
 
 //
 // cl_parse.c
@@ -1624,7 +1646,6 @@ void V_StartPitchDrift_f(cmd_state_t *cmd);
 void V_StopPitchDrift (void);
 
 void V_Init (void);
-float V_CalcRoll (const vec3_t angles, const vec3_t velocity);
 void V_UpdateBlends (void);
 void V_ParseDamage (void);
 

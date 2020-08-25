@@ -270,8 +270,6 @@ static void CL_ParseStartSoundPacket(int largesoundindex)
 			sound_num = MSG_ReadByte(&cl_message);
 	}
 
-	channel = CHAN_NET2ENGINE(channel);
-
 	MSG_ReadVector(&cl_message, pos, cls.protocol);
 
 	if (sound_num < 0 || sound_num >= MAX_SOUNDS)
@@ -468,6 +466,7 @@ void CL_ParseEntityLump(char *entdata)
 		R_SetSkyBox("unit1_");
 }
 
+extern cvar_t con_chatsound_team_file;
 static const vec3_t defaultmins = {-4096, -4096, -4096};
 static const vec3_t defaultmaxs = {4096, 4096, 4096};
 static void CL_SetupWorldModel(void)
@@ -513,7 +512,7 @@ static void CL_SetupWorldModel(void)
 	CL_KeepaliveMessage(false);
 
 	// load the team chat beep if possible
-	cl.foundtalk2wav = FS_FileExists("sound/misc/talk2.wav");
+	cl.foundteamchatsound = FS_FileExists(con_chatsound_team_file.string);
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
@@ -1118,9 +1117,9 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 		{
 			Con_Printf("Downloading new CSQC code to dlcache/%s.%i.%i\n", csqc_progname.string, csqc_progsize.integer, csqc_progcrc.integer);
 			if(cl_serverextension_download.integer == 2 && FS_HasZlib())
-				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s deflate", csqc_progname.string));
+				CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s deflate", csqc_progname.string));
 			else
-				Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", csqc_progname.string));
+				CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", csqc_progname.string));
 			return;
 		}
 	}
@@ -1199,7 +1198,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 					cl.loadfinished = true;
 					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("prespawn");
+						CL_ForwardToServer("prespawn");
 				}
 			}
 		}
@@ -1269,7 +1268,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 						cl.loadfinished = true;
 						// now issue the spawn to move on to signon 2 like normal
 						if (cls.netcon)
-							Cmd_ForwardStringToServer("prespawn");
+							CL_ForwardToServer("prespawn");
 					}
 				}
 				aborteddownload = false;
@@ -1287,7 +1286,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 				// regarding the * check: don't try to download submodels
 				if (cl_serverextension_download.integer && cls.netcon && cl.model_name[cl.downloadmodel_current][0] != '*' && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", cl.model_name[cl.downloadmodel_current]));
+					CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", cl.model_name[cl.downloadmodel_current]));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1311,7 +1310,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 					cl.loadfinished = true;
 					// now issue the spawn to move on to signon 2 like normal
 					if (cls.netcon)
-						Cmd_ForwardStringToServer("prespawn");
+						CL_ForwardToServer("prespawn");
 				}
 			}
 		}
@@ -1337,10 +1336,9 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 			dpsnprintf(soundname, sizeof(soundname), "sound/%s", cl.sound_name[cl.downloadsound_current]);
 			if (!FS_FileExists(soundname) && !FS_FileExists(cl.sound_name[cl.downloadsound_current]))
 			{
-				Con_Printf("Sound %s not found\n", soundname);
 				if (cl_serverextension_download.integer && cls.netcon && !sv.active)
 				{
-					Cmd_ForwardStringToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
+					CL_ForwardToServer(va(vabuf, sizeof(vabuf), "download %s", soundname));
 					// we'll try loading again when the download finishes
 					return;
 				}
@@ -1363,7 +1361,7 @@ static void CL_BeginDownloads(qboolean aborteddownload)
 
 		// now issue the spawn to move on to signon 2 like normal
 		if (cls.netcon)
-			Cmd_ForwardStringToServer("prespawn");
+			CL_ForwardToServer("prespawn");
 	}
 }
 
@@ -1540,7 +1538,7 @@ static void CL_DownloadBegin_f(cmd_state_t *cmd)
 		// check further encodings here
 	}
 
-	Cmd_ForwardStringToServer("sv_startdownload");
+	CL_ForwardToServer("sv_startdownload");
 }
 
 static void CL_StopDownload_f(cmd_state_t *cmd)
@@ -1565,6 +1563,8 @@ static void CL_DownloadFinished_f(cmd_state_t *cmd)
 	CL_BeginDownloads(false);
 }
 
+extern cvar_t cl_topcolor;
+extern cvar_t cl_bottomcolor;
 static void CL_SendPlayerInfo(void)
 {
 	char vabuf[1024];
@@ -1572,7 +1572,7 @@ static void CL_SendPlayerInfo(void)
 	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", cl_name.string));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
-	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_color.integer >> 4, cl_color.integer & 15));
+	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_topcolor.integer, cl_bottomcolor.integer));
 
 	MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 	MSG_WriteString (&cls.netcon->message, va(vabuf, sizeof(vabuf), "rate %i", cl_rate.integer));
@@ -1728,7 +1728,7 @@ static void CL_ParseServerInfo (void)
 	if (protocol == PROTOCOL_QUAKEDP && cls.demoplayback && gamemode == GAME_NEHAHRA)
 		protocol = PROTOCOL_NEHAHRAMOVIE;
 	cls.protocol = protocol;
-	Con_DPrintf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
+	Con_Printf("Server protocol is %s\n", Protocol_NameForEnum(cls.protocol));
 
 	cl.num_entities = 1;
 
@@ -1959,7 +1959,7 @@ static void CL_ParseServerInfo (void)
 				cls.demo_lastcsprogscrc = -1;
 			}
 			else
-				Con_Error ("ERROR: couldn't open.\n");
+				Con_Print(CON_ERROR "ERROR: couldn't open.\n");
 		}
 	}
 	cl.islocalgame = NetConn_IsLocalGame();
@@ -2081,11 +2081,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	{
 		// not a monster
 		ent->persistent.lerpstarttime = ent->state_previous.time;
-		// no lerp if it's singleplayer
-		if (cl.islocalgame && !sv_fixedframeratesingleplayer.integer)
-			ent->persistent.lerpdeltatime = 0;
-		else
-			ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
+		ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
 		VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
 		VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
@@ -2346,7 +2342,7 @@ static void CL_ParseEffect (void)
 	framecount = MSG_ReadByte(&cl_message);
 	framerate = MSG_ReadByte(&cl_message);
 
-	CL_Effect(org, modelindex, startframe, framecount, framerate);
+	CL_Effect(org, CL_GetModelByIndex(modelindex), startframe, framecount, framerate);
 }
 
 static void CL_ParseEffect2 (void)
@@ -2360,7 +2356,7 @@ static void CL_ParseEffect2 (void)
 	framecount = MSG_ReadByte(&cl_message);
 	framerate = MSG_ReadByte(&cl_message);
 
-	CL_Effect(org, modelindex, startframe, framecount, framerate);
+	CL_Effect(org, CL_GetModelByIndex(modelindex), startframe, framecount, framerate);
 }
 
 void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning)
@@ -2497,7 +2493,7 @@ static void CL_ParseTempEntity(void)
 			CL_FindNonSolidLocation(pos, pos, 10);
 			CL_ParticleEffect(EFFECT_TE_EXPLOSION, 1, pos, pos, vec3_origin, vec3_origin, NULL, 0);
 			S_StartSound(-1, 0, cl.sfx_r_exp3, pos, 1, 1);
-			CL_Effect(pos, cl.qw_modelindex_s_explod, 0, 6, 10);
+			CL_Effect(pos, CL_GetModelByIndex(cl.qw_modelindex_s_explod), 0, 6, 10);
 			break;
 
 		case QW_TE_TAREXPLOSION:
@@ -3299,7 +3295,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	double timehigh;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
-	if (cl_nolerp.integer || cls.timedemo || (cl.islocalgame && !sv_fixedframeratesingleplayer.integer) || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
+	if (cl_nolerp.integer || cls.timedemo || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
 		cl.time = cl.mtime[1] = newtime;
 	else if (cls.demoplayback)
 	{
@@ -3418,7 +3414,7 @@ void CL_ParseServerMessage(void)
 	//if (cls.demorecording)
 	//	CL_WriteDemoMessage (&cl_message);
 
-	cl.last_received_message = realtime;
+	cl.last_received_message = host.realtime;
 
 	CL_KeepaliveMessage(false);
 
@@ -3426,7 +3422,7 @@ void CL_ParseServerMessage(void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.integer == 1)
-		Con_Printf("%f %i\n", realtime, cl_message.cursize);
+		Con_Printf("%f %i\n", host.realtime, cl_message.cursize);
 	else if (cl_shownet.integer == 2)
 		Con_Print("------------------\n");
 
@@ -3439,7 +3435,7 @@ void CL_ParseServerMessage(void)
 
 	if (cls.protocol == PROTOCOL_QUAKEWORLD)
 	{
-		CL_NetworkTimeReceived(realtime); // qw has no clock
+		CL_NetworkTimeReceived(host.realtime); // qw has no clock
 
 		// kill all qw nails
 		cl.qw_num_nails = 0;
@@ -4319,19 +4315,15 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_iplog_name);
 	Cvar_RegisterVariable(&cl_readpicture_force);
 
-	Cmd_AddCommand(&cmd_client, "nextul", QW_CL_NextUpload_f, "sends next fragment of current upload buffer (screenshot for example)");
-	Cmd_AddCommand(&cmd_client, "stopul", QW_CL_StopUpload_f, "aborts current upload (screenshot for example)");
-	Cmd_AddCommand(&cmd_client, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
-	Cmd_AddCommand(&cmd_clientfromserver, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
-	Cmd_AddCommand(&cmd_client, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
-	Cmd_AddCommand(&cmd_client, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
-	Cmd_AddCommand(&cmd_client, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
-	Cmd_AddCommand(&cmd_clientfromserver, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
-	Cmd_AddCommand(&cmd_client, "stopdownload", CL_StopDownload_f, "terminates a download");
-	Cmd_AddCommand(&cmd_clientfromserver, "stopdownload", CL_StopDownload_f, "terminates a download");
-	Cmd_AddCommand(&cmd_client, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
-	Cmd_AddCommand(&cmd_clientfromserver, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
-	Cmd_AddCommand(&cmd_client, "iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
+	Cmd_AddCommand(CMD_CLIENT, "nextul", QW_CL_NextUpload_f, "sends next fragment of current upload buffer (screenshot for example)");
+	Cmd_AddCommand(CMD_CLIENT, "stopul", QW_CL_StopUpload_f, "aborts current upload (screenshot for example)");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
+	Cmd_AddCommand(CMD_CLIENT, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
+	Cmd_AddCommand(CMD_CLIENT, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "stopdownload", CL_StopDownload_f, "terminates a download");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
+	Cmd_AddCommand(CMD_CLIENT, "iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
 }
 
 void CL_Parse_Shutdown(void)

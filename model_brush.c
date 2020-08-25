@@ -148,7 +148,7 @@ void Mod_BrushInit(void)
 	mod_q1bsp_texture_water.supercontents = SUPERCONTENTS_WATER;
 }
 
-static mleaf_t *Mod_Q1BSP_PointInLeaf(dp_model_t *model, const vec3_t p)
+static mleaf_t *Mod_BSP_PointInLeaf(dp_model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 
@@ -168,7 +168,7 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(dp_model_t *model, const vec3_t
 {
 	int i;
 	mleaf_t *leaf;
-	leaf = Mod_Q1BSP_PointInLeaf(model, p);
+	leaf = Mod_BSP_PointInLeaf(model, p);
 	if (leaf)
 	{
 		i = min(outsize, (int)sizeof(leaf->ambient_sound_level));
@@ -183,7 +183,7 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(dp_model_t *model, const vec3_t
 		memset(out, 0, outsize);
 }
 
-static int Mod_Q1BSP_FindBoxClusters(dp_model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
+static int Mod_BSP_FindBoxClusters(dp_model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
 {
 	int numclusters = 0;
 	int nodestackindex = 0;
@@ -249,7 +249,7 @@ static int Mod_Q1BSP_FindBoxClusters(dp_model_t *model, const vec3_t mins, const
 	return numclusters;
 }
 
-static int Mod_Q1BSP_BoxTouchingPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -320,7 +320,7 @@ static int Mod_Q1BSP_BoxTouchingPVS(dp_model_t *model, const unsigned char *pvs,
 	return false;
 }
 
-static int Mod_Q1BSP_BoxTouchingLeafPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingLeafPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -391,7 +391,7 @@ static int Mod_Q1BSP_BoxTouchingLeafPVS(dp_model_t *model, const unsigned char *
 	return false;
 }
 
-static int Mod_Q1BSP_BoxTouchingVisibleLeafs(dp_model_t *model, const unsigned char *visibleleafs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingVisibleLeafs(dp_model_t *model, const unsigned char *visibleleafs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -595,7 +595,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, m
 	}
 }
 
-static void Mod_Q1BSP_FindNonSolidLocation(dp_model_t *model, const vec3_t in, vec3_t out, float radius)
+static void Mod_BSP_FindNonSolidLocation(dp_model_t *model, const vec3_t in, vec3_t out, float radius)
 {
 	int i;
 	findnonsolidlocationinfo_t info;
@@ -1183,7 +1183,7 @@ static qboolean Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t s
 	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
-static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
+static int Mod_BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side;
 	float front, back;
@@ -1225,7 +1225,7 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambie
 		}
 
 		// go down front side
-		if (node->children[side]->plane && Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
+		if (node->children[side]->plane && Mod_BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
 			return true;	// hit something
 
 		// check for impact on this node
@@ -1327,7 +1327,7 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambie
 	return false;
 }
 
-static void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+static void Mod_BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	// pretend lighting is coming down from above (due to lack of a lightgrid to know primary lighting direction)
 	VectorSet(diffusenormal, 0, 0, 1);
@@ -1339,7 +1339,7 @@ static void Mod_Q1BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambie
 		return;
 	}
 
-	Mod_Q1BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
+	Mod_BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
 static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
@@ -1526,7 +1526,7 @@ static void Mod_Q1BSP_TraceLineAgainstSurfaces(struct model_s *model, const fram
 	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
 }
 
-static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
+static void Mod_BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
 {
 	int c;
 	unsigned char *outstart = out;
@@ -1534,7 +1534,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 	{
 		if (in == inend)
 		{
-			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+			Con_Printf("Mod_BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 			return;
 		}
 		c = *in++;
@@ -1544,14 +1544,14 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 		{
 			if (in == inend)
 			{
-				Con_Printf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+				Con_Printf("Mod_BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 				return;
 			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
 				{
-					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
+					Con_Printf("Mod_BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, (int)(out - outstart), (int)(outend - outstart));
 					return;
 				}
 				*out++ = 0;
@@ -1562,12 +1562,12 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
 
 /*
 =============
-R_Q1BSP_LoadSplitSky
+Mod_Q1BSP_LoadSplitSky
 
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-static void R_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
+static void Mod_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
 {
 	int x, y;
 	int w = width/2;
@@ -1819,7 +1819,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 		tx = loadmodel->data_textures + i;
 		// try to load shader or external textures, but first we have to backup the texture_t because shader loading overwrites it even if it fails
 		backuptex = loadmodel->data_textures[i];
-		if (name[0] && (Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s/%s", mapname, name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL) ||
+		if (name[0] && /* HACK */ strncmp(name, "sky", 3) /* END HACK */ && (Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s/%s", mapname, name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL) ||
 		                Mod_LoadTextureFromQ3Shader(loadmodel->mempool, loadmodel->name, loadmodel->data_textures + i, va(vabuf, sizeof(vabuf), "%s"   , name), false, false, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, MATERIALFLAG_WALL)))
 		{
 			// set the width/height fields which are used for parsing texcoords in this bsp format
@@ -1872,46 +1872,55 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 
 		if (cls.state != ca_dedicated)
 		{
-			// did not find external texture via shader loading, load it from the bsp or wad3
-			if (loadmodel->brush.ishlbsp)
+			skinframe_t *skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false);
+			if ((!skinframe &&
+			    !(skinframe = R_SkinFrame_LoadExternal(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP | TEXF_COMPRESS, false, false)))
+				// HACK: It loads custom skybox textures as a wall if loaded as a skinframe.
+				|| !strncmp(tx->name, "sky", 3))
 			{
-				// internal texture overrides wad
-				unsigned char* pixels, * freepixels;
-				pixels = freepixels = NULL;
-				if (mtdata)
-					pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
-				if (pixels == NULL)
-					pixels = freepixels = W_GetTextureBGRA(tx->name);
-				if (pixels != NULL)
+				// did not find external texture via shader loading, load it from the bsp or wad3
+				if (loadmodel->brush.ishlbsp)
 				{
-					tx->width = image_width;
-					tx->height = image_height;
-					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
+					// internal texture overrides wad
+					unsigned char* pixels, * freepixels;
+					pixels = freepixels = NULL;
+					if (mtdata)
+						pixels = W_ConvertWAD3TextureBGRA(&miptexsb);
+					if (pixels == NULL)
+						pixels = freepixels = W_GetTextureBGRA(tx->name);
+					if (pixels != NULL)
+					{
+						tx->width = image_width;
+						tx->height = image_height;
+						tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
+					}
+					if (freepixels)
+						Mem_Free(freepixels);
 				}
-				if (freepixels)
-					Mem_Free(freepixels);
-			}
-			else if (!strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
-			{
-				data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
-				if (!data)
-					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
-				if (data && image_width == image_height * 2)
+				else if (!strncmp(tx->name, "sky", 3) && mtwidth == mtheight * 2)
 				{
-					R_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
-					Mem_Free(data);
+					data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s/%s", mapname, tx->name), false, false, false, NULL);
+					if (!data)
+						data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
+					if (data && image_width == image_height * 2)
+					{
+						Mod_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+						Mem_Free(data);
+					}
+					else if (mtdata != NULL)
+						Mod_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 				}
-				else if (mtdata != NULL)
-					R_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
+				else if (mtdata) // texture included
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
+				// if mtdata is NULL, the "missing" texture has already been assigned to this
+				// LadyHavoc: some Tenebrae textures get replaced by black
+				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
+				else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false);
 			}
-			else if (mtdata) // texture included
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
-			// if mtdata is NULL, the "missing" texture has already been assigned to this
-			// LadyHavoc: some Tenebrae textures get replaced by black
-			if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
-			else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-				tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false);
+			else
+				tx->materialshaderpass->skinframes[0] = skinframe;
 			tx->currentskinframe = tx->materialshaderpass->skinframes[0];
 		}
 
@@ -2269,14 +2278,14 @@ static void Mod_Q1BSP_LoadVertexes(sizebuf_t *sb)
 	}
 }
 
-static void Mod_Q1BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
+static void Mod_BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
 {
 	mmodel_t	*out;
 	int			i, j, count;
-	int			structsize = (48+4*hullinfo->filehulls);
+	int			structsize = hullinfo ? (48+4*hullinfo->filehulls) : 48;
 
 	if (sb->cursize % structsize)
-		Host_Error ("Mod_Q1BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
+		Host_Error ("Mod_BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
 
 	count = sb->cursize / structsize;
 	out = (mmodel_t *)Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
@@ -2296,9 +2305,15 @@ static void Mod_Q1BSP_LoadSubmodels(sizebuf_t *sb, hullinfo_t *hullinfo)
 		out->origin[0] = MSG_ReadLittleFloat(sb);
 		out->origin[1] = MSG_ReadLittleFloat(sb);
 		out->origin[2] = MSG_ReadLittleFloat(sb);
-		for (j = 0; j < hullinfo->filehulls; j++)
-			out->headnode[j] = MSG_ReadLittleLong(sb);
-		out->visleafs  = MSG_ReadLittleLong(sb);
+		if(hullinfo)
+		{
+			for (j = 0; j < hullinfo->filehulls; j++)
+				out->headnode[j] = MSG_ReadLittleLong(sb);
+			out->visleafs  = MSG_ReadLittleLong(sb);
+		}
+		else // Quake 2 has only one hull
+			out->headnode[0] = MSG_ReadLittleLong(sb);
+
 		out->firstface = MSG_ReadLittleLong(sb);
 		out->numfaces  = MSG_ReadLittleLong(sb);
 	}
@@ -2819,16 +2834,16 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 			loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 }
 
-static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
+static void Mod_BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
 {
 	//if (node->parent)
-	//	Host_Error("Mod_Q1BSP_LoadNodes_RecursiveSetParent: runaway recursion");
+	//	Host_Error("Mod_BSP_LoadNodes_RecursiveSetParent: runaway recursion");
 	node->parent = parent;
 	if (node->plane)
 	{
 		// this is a node, recurse to children
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
+		Mod_BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
+		Mod_BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
 		// combine supercontents of children
 		node->combinedsupercontents = node->children[0]->combinedsupercontents | node->children[1]->combinedsupercontents;
 	}
@@ -2957,7 +2972,7 @@ static void Mod_Q1BSP_LoadNodes(sizebuf_t *sb)
 		}
 	}
 
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
@@ -2995,7 +3010,7 @@ static void Mod_Q1BSP_LoadLeafs(sizebuf_t *sb)
 			if (p >= loadmodel->brushq1.num_compressedpvs)
 				Con_Print("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
 			else
-				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
+				Mod_BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
 		}
 
 		if (loadmodel->brush.isbsp2rmqe)
@@ -3378,7 +3393,7 @@ static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
 }
 
-static void Mod_Q1BSP_FinalizePortals(void)
+static void Mod_BSP_FinalizePortals(void)
 {
 	int i, j, numportals, numpoints, portalindex, portalrange = (int)Mem_ExpandableArray_IndexRange(&portalarray);
 	portal_t *p;
@@ -3581,7 +3596,7 @@ static void RemovePortalFromNodes(portal_t *portal)
 static double *portalpointsbuffer;
 static int portalpointsbufferoffset;
 static int portalpointsbuffersize;
-static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
+static void Mod_BSP_RecursiveNodePortals(mnode_t *node)
 {
 	int i, side;
 	mnode_t *front, *back, *other_node;
@@ -3610,7 +3625,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	front = node->children[0];
 	back = node->children[1];
 	if (front == back)
-		Host_Error("Mod_Q1BSP_RecursiveNodePortals: corrupt node hierarchy");
+		Host_Error("Mod_BSP_RecursiveNodePortals: corrupt node hierarchy");
 
 	// create the new portal by generating a polygon for the node plane,
 	// and clipping it by all of the other portals(which came from nodes above this one)
@@ -3625,7 +3640,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	{
 		clipplane = portal->plane;
 		if (portal->nodes[0] == portal->nodes[1])
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(1)");
+			Host_Error("Mod_BSP_RecursiveNodePortals: portal has same node on both sides(1)");
 		if (portal->nodes[0] == node)
 			side = 0;
 		else if (portal->nodes[1] == node)
@@ -3636,7 +3651,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		}
 		else
 		{
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+			Host_Error("Mod_BSP_RecursiveNodePortals: mislinked portal");
 			side = 0; // hush warning
 		}
 
@@ -3649,12 +3664,12 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 
 	if (nodeportal->numpoints < 3)
 	{
-		Con_Warn("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+		Con_Print(CON_WARN "Mod_BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
 		nodeportal->numpoints = 0;
 	}
 	else if (nodeportal->numpoints >= MAX_PORTALPOINTS)
 	{
-		Con_Warn("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
+		Con_Print(CON_WARN "Mod_BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
 		nodeportal->numpoints = 0;
 	}
 
@@ -3665,14 +3680,14 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	for (portal = (portal_t *)node->portals;portal;portal = nextportal)
 	{
 		if (portal->nodes[0] == portal->nodes[1])
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
+			Host_Error("Mod_BSP_RecursiveNodePortals: portal has same node on both sides(2)");
 		if (portal->nodes[0] == node)
 			side = 0;
 		else if (portal->nodes[1] == node)
 			side = 1;
 		else
 		{
-			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+			Host_Error("Mod_BSP_RecursiveNodePortals: mislinked portal");
 			side = 0; // hush warning
 		}
 		nextportal = portal->next[side];
@@ -3726,30 +3741,30 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		}
 	}
 
-	Mod_Q1BSP_RecursiveNodePortals(front);
-	Mod_Q1BSP_RecursiveNodePortals(back);
+	Mod_BSP_RecursiveNodePortals(front);
+	Mod_BSP_RecursiveNodePortals(back);
 
 	portalpointsbufferoffset -= 6*MAX_PORTALPOINTS;
 }
 
-static void Mod_Q1BSP_MakePortals(void)
+static void Mod_BSP_MakePortals(void)
 {
 	Mem_ExpandableArray_NewArray(&portalarray, loadmodel->mempool, sizeof(portal_t), 1020*1024/sizeof(portal_t));
 	portalpointsbufferoffset = 0;
 	portalpointsbuffersize = 6*MAX_PORTALPOINTS*128;
 	portalpointsbuffer = (double *)Mem_Alloc(loadmodel->mempool, portalpointsbuffersize * sizeof(*portalpointsbuffer));
-	Mod_Q1BSP_RecursiveNodePortals(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
+	Mod_BSP_RecursiveNodePortals(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
 	Mem_Free(portalpointsbuffer);
 	portalpointsbuffer = NULL;
 	portalpointsbufferoffset = 0;
 	portalpointsbuffersize = 0;
-	Mod_Q1BSP_FinalizePortals();
+	Mod_BSP_FinalizePortals();
 	Mem_ExpandableArray_FreeArray(&portalarray);
 }
 
 //Returns PVS data for a given point
 //(note: can return NULL)
-static unsigned char *Mod_Q1BSP_GetPVS(dp_model_t *model, const vec3_t p)
+static unsigned char *Mod_BSP_GetPVS(dp_model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 	node = model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode;
@@ -3761,7 +3776,7 @@ static unsigned char *Mod_Q1BSP_GetPVS(dp_model_t *model, const vec3_t p)
 		return NULL;
 }
 
-static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbytes, mnode_t *node)
+static void Mod_BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	while (node->plane)
 	{
@@ -3773,7 +3788,7 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t or
 		else
 		{
 			// go down both sides
-			Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
+			Mod_BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
 			node = node->children[1];
 		}
 	}
@@ -3789,18 +3804,18 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t or
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
 //of the given point.
-static int Mod_Q1BSP_FatPVS(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qboolean merge)
+static int Mod_BSP_FatPVS(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qboolean merge)
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || r_trippy.integer || !model->brush.num_pvsclusters || !Mod_Q1BSP_GetPVS(model, org))
+	if (r_novis.integer || r_trippy.integer || !model->brush.num_pvsclusters || !Mod_BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
 	}
 	if (!merge)
 		memset(pvsbuffer, 0, bytes);
-	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
+	Mod_BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
 	return bytes;
 }
 
@@ -3839,6 +3854,28 @@ static void Mod_Q1BSP_RoundUpToHullSize(dp_model_t *cmodel, const vec3_t inmins,
 
 void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 
+void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.isbsp2 = true;
+	mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
+	mod->modeldatatypestring = "Q1BSP2rmqe";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
+void Mod_BSP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.isbsp2 = true;
+	mod->modeldatatypestring = "Q1BSP2";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
+void Mod_HLBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+{
+	mod->brush.ishlbsp = true;
+	mod->modeldatatypestring = "HLBSP";
+	Mod_Q1BSP_Load(mod, buffer, bufferend);
+}
+
 void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
@@ -3856,36 +3893,11 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	mod->type = mod_brushq1;
 
-	mod->brush.ishlbsp = false;
-	mod->brush.isbsp2rmqe = false;
-	mod->brush.isbsp2 = false;
-	mod->brush.isq2bsp = false;
-	mod->brush.isq3bsp = false;
 	mod->brush.skymasking = true;
 	i = MSG_ReadLittleLong(&sb);
-	switch(i)
-	{
-	case BSPVERSION:
+
+	if(!mod->modeldatatypestring)
 		mod->modeldatatypestring = "Q1BSP";
-		break;
-	case 30:
-		mod->brush.ishlbsp = true;
-		mod->modeldatatypestring = "HLBSP";
-		break;
-	case ('2' + 'P' * 256 + 'S' * 65536 + 'B' * 16777216):
-		mod->brush.isbsp2 = true;
-		mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
-		mod->modeldatatypestring = "Q1BSP2rmqe";
-		break;
-	case ('B' + 'S' * 256 + 'P' * 65536 + '2' * 16777216):
-		mod->brush.isbsp2 = true;
-		mod->modeldatatypestring = "Q1BSP2";
-		break;
-	default:
-		mod->modeldatatypestring = "Unknown BSP";
-		Host_Error("Mod_Q1BSP_Load: %s has wrong version number %i: supported versions are 29 (Quake), 30 (Half-Life), \"BSP2\" or \"2PSB\" (rmqe)", mod->name, i);
-		return;
-	}
 
 // fill in hull info
 	VectorClear (hullinfo.hullsizes[0][0]);
@@ -3928,25 +3940,25 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.TraceLineOfSight = Mod_Q1BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
-	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
-	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
-	mod->brush.BoxTouchingLeafPVS = Mod_Q1BSP_BoxTouchingLeafPVS;
-	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
-	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
-	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
-	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.GetPVS = Mod_BSP_GetPVS;
+	mod->brush.FatPVS = Mod_BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingLeafPVS = Mod_BSP_BoxTouchingLeafPVS;
+	mod->brush.BoxTouchingVisibleLeafs = Mod_BSP_BoxTouchingVisibleLeafs;
+	mod->brush.FindBoxClusters = Mod_BSP_FindBoxClusters;
+	mod->brush.LightPoint = Mod_BSP_LightPoint;
+	mod->brush.FindNonSolidLocation = Mod_BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
-	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->Draw = R_Q1BSP_Draw;
-	mod->DrawDepth = R_Q1BSP_DrawDepth;
-	mod->DrawDebug = R_Q1BSP_DrawDebug;
-	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
-	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->brush.PointInLeaf = Mod_BSP_PointInLeaf;
+	mod->Draw = R_Mod_Draw;
+	mod->DrawDepth = R_Mod_DrawDepth;
+	mod->DrawDebug = R_Mod_DrawDebug;
+	mod->DrawPrepass = R_Mod_DrawPrepass;
+	mod->GetLightInfo = R_Mod_GetLightInfo;
+	mod->CompileShadowMap = R_Mod_CompileShadowMap;
+	mod->DrawShadowMap = R_Mod_DrawShadowMap;
+	mod->DrawLight = R_Mod_DrawLight;
 
 // load into heap
 
@@ -3976,7 +3988,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q1BSP_LoadLeaffaces(&lumpsb[LUMP_MARKSURFACES]);
 	Mod_Q1BSP_LoadVisibility(&lumpsb[LUMP_VISIBILITY]);
 	// load submodels before leafs because they contain the number of vis leafs
-	Mod_Q1BSP_LoadSubmodels(&lumpsb[LUMP_MODELS], &hullinfo);
+	Mod_BSP_LoadSubmodels(&lumpsb[LUMP_MODELS], &hullinfo);
 	Mod_Q1BSP_LoadLeafs(&lumpsb[LUMP_LEAFS]);
 	Mod_Q1BSP_LoadNodes(&lumpsb[LUMP_NODES]);
 	Mod_Q1BSP_LoadClipnodes(&lumpsb[LUMP_CLIPNODES], &hullinfo);
@@ -3996,7 +4008,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	Mod_Q1BSP_MakeHull0();
 	if (mod_bsp_portalize.integer)
-		Mod_Q1BSP_MakePortals();
+		Mod_BSP_MakePortals();
 
 	mod->numframes = 2;		// regular and alternate animation
 	mod->numskins = 1;
@@ -4084,7 +4096,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		mod->nummodelsurfaces = bm->numfaces;
 
 		// set node/leaf parents for this submodel
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + mod->brushq1.hulls[0].firstclipnode, NULL);
+		Mod_BSP_LoadNodes_RecursiveSetParent(mod->brush.data_nodes + mod->brushq1.hulls[0].firstclipnode, NULL);
 
 		// this has to occur after hull info has been set, as it uses Mod_Q1BSP_PointSuperContents
 		Mod_Q1BSP_AssignNoShadowSkySurfaces(mod);
@@ -4125,13 +4137,13 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					break;
 			if (j < mod->nummodelsurfaces)
-				mod->DrawSky = R_Q1BSP_DrawSky;
+				mod->DrawSky = R_Mod_DrawSky;
 
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 				if (surface->texture && surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 					break;
 			if (j < mod->nummodelsurfaces)
-				mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+				mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
@@ -4174,7 +4186,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		else
 		{
 			// LadyHavoc: empty submodel(lacrima.bsp has such a glitch)
-			Con_Warnf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
+			Con_Printf(CON_WARN "warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
 		//mod->brushq1.num_visleafs = bm->visleafs;
 
@@ -4273,7 +4285,7 @@ static void Mod_Q2BSP_LoadVisibility(sizebuf_t *sb)
 		/*int phsofs = */MSG_ReadLittleLong(sb);
 		// decompress the vis data for this cluster
 		// (note this accesses the underlying data store of sb, which is kind of evil)
-		Mod_Q1BSP_DecompressVis(sb->data + pvsofs, sb->data + sb->cursize, loadmodel->brush.data_pvsclusters + i * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (i+1) * loadmodel->brush.num_pvsclusterbytes);
+		Mod_BSP_DecompressVis(sb->data + pvsofs, sb->data + sb->cursize, loadmodel->brush.data_pvsclusters + i * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (i+1) * loadmodel->brush.num_pvsclusterbytes);
 	}
 	// hush the loading error check later - we had to do random access on this lump, so we didn't read to the end
 	sb->readcount = sb->cursize;
@@ -4345,7 +4357,7 @@ static void Mod_Q2BSP_LoadNodes(sizebuf_t *sb)
 		}
 	}
 
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q2BSP_LoadTexinfo(sizebuf_t *sb)
@@ -4800,40 +4812,6 @@ static void Mod_Q2BSP_LoadAreaPortals(sizebuf_t *sb)
 	sb->readcount = sb->cursize;
 }
 
-static void Mod_Q2BSP_LoadSubmodels(sizebuf_t *sb)
-{
-	mmodel_t	*out;
-	int			i, count;
-	int			structsize = 48;
-
-	if (sb->cursize % structsize)
-		Host_Error ("Mod_Q2BSP_LoadSubmodels: funny lump size in %s", loadmodel->name);
-
-	count = sb->cursize / structsize;
-	out = (mmodel_t *)Mem_Alloc (loadmodel->mempool, count*sizeof(*out));
-
-	loadmodel->brushq1.submodels = out;
-	loadmodel->brush.numsubmodels = count;
-
-	// this is identical to the q1 submodel structure except for having 1 hull
-	for (i = 0; i < count; i++, out++)
-	{
-		// spread out the mins / maxs by a pixel
-		out->mins[0] = MSG_ReadLittleFloat(sb) - 1;
-		out->mins[1] = MSG_ReadLittleFloat(sb) - 1;
-		out->mins[2] = MSG_ReadLittleFloat(sb) - 1;
-		out->maxs[0] = MSG_ReadLittleFloat(sb) + 1;
-		out->maxs[1] = MSG_ReadLittleFloat(sb) + 1;
-		out->maxs[2] = MSG_ReadLittleFloat(sb) + 1;
-		out->origin[0] = MSG_ReadLittleFloat(sb);
-		out->origin[1] = MSG_ReadLittleFloat(sb);
-		out->origin[2] = MSG_ReadLittleFloat(sb);
-		out->headnode[0] = MSG_ReadLittleLong(sb);
-		out->firstface = MSG_ReadLittleLong(sb);
-		out->numfaces  = MSG_ReadLittleLong(sb);
-	}
-}
-
 static void Mod_Q2BSP_FindSubmodelBrushRange_r(dp_model_t *mod, mnode_t *node, int *first, int *last)
 {
 	int i;
@@ -4906,25 +4884,25 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q2BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q2BSP_NativeContentsFromSuperContents;
-	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
-	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
-	mod->brush.BoxTouchingLeafPVS = Mod_Q1BSP_BoxTouchingLeafPVS;
-	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
-	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
-	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
-	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.GetPVS = Mod_BSP_GetPVS;
+	mod->brush.FatPVS = Mod_BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingLeafPVS = Mod_BSP_BoxTouchingLeafPVS;
+	mod->brush.BoxTouchingVisibleLeafs = Mod_BSP_BoxTouchingVisibleLeafs;
+	mod->brush.FindBoxClusters = Mod_BSP_FindBoxClusters;
+	mod->brush.LightPoint = Mod_BSP_LightPoint;
+	mod->brush.FindNonSolidLocation = Mod_BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = NULL;
 	mod->brush.RoundUpToHullSize = NULL;
-	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->Draw = R_Q1BSP_Draw;
-	mod->DrawDepth = R_Q1BSP_DrawDepth;
-	mod->DrawDebug = R_Q1BSP_DrawDebug;
-	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
-	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->brush.PointInLeaf = Mod_BSP_PointInLeaf;
+	mod->Draw = R_Mod_Draw;
+	mod->DrawDepth = R_Mod_DrawDepth;
+	mod->DrawDebug = R_Mod_DrawDebug;
+	mod->DrawPrepass = R_Mod_DrawPrepass;
+	mod->GetLightInfo = R_Mod_GetLightInfo;
+	mod->CompileShadowMap = R_Mod_CompileShadowMap;
+	mod->DrawShadowMap = R_Mod_DrawShadowMap;
+	mod->DrawLight = R_Mod_DrawLight;
 
 // load into heap
 
@@ -4961,7 +4939,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q2BSP_LoadAreaPortals(&lumpsb[Q2LUMP_AREAPORTALS]);
 	Mod_Q2BSP_LoadLeafs(&lumpsb[Q2LUMP_LEAFS]);
 	Mod_Q2BSP_LoadNodes(&lumpsb[Q2LUMP_NODES]);
-	Mod_Q2BSP_LoadSubmodels(&lumpsb[Q2LUMP_MODELS]);
+	Mod_BSP_LoadSubmodels(&lumpsb[Q2LUMP_MODELS], NULL);
 
 	for (i = 0; i < Q2HEADER_LUMPS; i++)
 		if (lumpsb[i].readcount != lumpsb[i].cursize)
@@ -4979,7 +4957,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	// the MakePortals code works fine on the q2bsp data as well
 	if (mod_bsp_portalize.integer)
-		Mod_Q1BSP_MakePortals();
+		Mod_BSP_MakePortals();
 
 	mod->numframes = 0;		// q2bsp animations are kind of special, frame is unbounded...
 	mod->numskins = 1;
@@ -5055,7 +5033,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			rootnode = mod->brush.data_nodes + bm->headnode[0];
 		else
 			rootnode = (mnode_t*)(mod->brush.data_leafs + -1 - bm->headnode[0]);
-		Mod_Q1BSP_LoadNodes_RecursiveSetParent(rootnode, NULL);
+		Mod_BSP_LoadNodes_RecursiveSetParent(rootnode, NULL);
 
 		// make the model surface list (used by shadowing/lighting)
 		mod->sortedmodelsurfaces = (int *)datapointer;datapointer += mod->nummodelsurfaces * sizeof(int);
@@ -5102,13 +5080,13 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					break;
 			if (j < mod->nummodelsurfaces)
-				mod->DrawSky = R_Q1BSP_DrawSky;
+				mod->DrawSky = R_Mod_DrawSky;
 
 			for (j = 0, surface = &mod->data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 				if (surface->texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 					break;
 			if (j < mod->nummodelsurfaces)
-				mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+				mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
@@ -5150,7 +5128,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		}
 		else
 		{
-			Con_Warnf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
+			Con_Printf(CON_WARN "warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
 		//mod->brushq1.num_visleafs = bm->visleafs;
 
@@ -5602,19 +5580,16 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 	{
 		// no internal lightmaps
 		// try external lightmaps
-		if (developer_loading.integer)
-			Con_Printf("Using external lightmaps\n");
 		FS_StripExtension(loadmodel->name, mapname, sizeof(mapname));
 		inpixels[0] = loadimagepixelsbgra(va(vabuf, sizeof(vabuf), "%s/lm_%04d", mapname, 0), false, false, false, NULL);
 		if(!inpixels[0])
 			return;
+		else
+			Con_Printf("Using external lightmaps\n");
 
 		// using EXTERNAL lightmaps instead
 		if(image_width != (int) CeilPowerOf2(image_width) || image_width != image_height)
-		{
-			Mem_Free(inpixels[0]);
-			Host_Error("Mod_Q3BSP_LoadLightmaps: invalid external lightmap size in %s",loadmodel->name);
-		}
+			Con_Printf("Mod_Q3BSP_LoadLightmaps: irregularly sized external lightmap in %s",loadmodel->name);
 
 		size = image_width;
 		bytesperpixel = 4;
@@ -5703,7 +5678,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l, lump_t *faceslump)
 		}
 	}
 
-	Con_DPrintf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
+	Con_Printf("%s is %sdeluxemapped\n", loadmodel->name, loadmodel->brushq3.deluxemapping ? "" : "not ");
 
 	// figure out what the most reasonable merge power is within limits
 
@@ -6123,7 +6098,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				}
 			if(xtess == -1)
 			{
-				Con_Errorf("ERROR: patch %d isn't preprocessed?!?\n", i);
+				Con_Printf(CON_ERROR "ERROR: patch %d isn't preprocessed?!?\n", i);
 				xtess = ytess = cxtess = cytess = 0;
 			}
 
@@ -6183,7 +6158,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				invalidelements++;
 		if (invalidelements)
 		{
-			Con_Warnf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
+			Con_Printf(CON_WARN "Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
 			for (j = 0;j < out->num_triangles * 3;j++)
 			{
 				Con_Printf(" %i", (loadmodel->surfmesh.data_element3i + 3 * out->num_firsttriangle)[j] - out->num_firstvertex);
@@ -6463,7 +6438,7 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 	}
 
 	// set the parent pointers
-	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
+	Mod_BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
 }
 
 static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
@@ -6500,11 +6475,11 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 	{
 		if (l->filelen < count * (int)sizeof(*in))
 		{
-			Con_Errorf("Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, (int)(count * sizeof(*in)), loadmodel->brushq3.num_lightgrid_isize[0], loadmodel->brushq3.num_lightgrid_isize[1], loadmodel->brushq3.num_lightgrid_isize[2]);
+			Con_Printf(CON_ERROR "Mod_Q3BSP_LoadLightGrid: invalid lightgrid lump size %i bytes, should be %i bytes (%ix%ix%i)", l->filelen, (int)(count * sizeof(*in)), loadmodel->brushq3.num_lightgrid_isize[0], loadmodel->brushq3.num_lightgrid_isize[1], loadmodel->brushq3.num_lightgrid_isize[2]);
 			return; // ignore the grid if we cannot understand it
 		}
 		if (l->filelen != count * (int)sizeof(*in))
-			Con_Warnf("Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", (int)(count * sizeof(*in)), l->filelen);
+			Con_Printf(CON_WARN "Mod_Q3BSP_LoadLightGrid: Warning: calculated lightgrid size %i bytes does not match lump size %i\n", (int)(count * sizeof(*in)), l->filelen);
 		out = (q3dlightgrid_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 		loadmodel->brushq3.data_lightgrid = out;
 		loadmodel->brushq3.num_lightgrid = count;
@@ -7486,25 +7461,25 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
-	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
-	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
-	mod->brush.BoxTouchingLeafPVS = Mod_Q1BSP_BoxTouchingLeafPVS;
-	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
-	mod->brush.FindBoxClusters = Mod_Q1BSP_FindBoxClusters;
+	mod->brush.GetPVS = Mod_BSP_GetPVS;
+	mod->brush.FatPVS = Mod_BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingLeafPVS = Mod_BSP_BoxTouchingLeafPVS;
+	mod->brush.BoxTouchingVisibleLeafs = Mod_BSP_BoxTouchingVisibleLeafs;
+	mod->brush.FindBoxClusters = Mod_BSP_FindBoxClusters;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
-	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brush.FindNonSolidLocation = Mod_BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = NULL;
 	mod->brush.RoundUpToHullSize = NULL;
-	mod->brush.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->Draw = R_Q1BSP_Draw;
-	mod->DrawDepth = R_Q1BSP_DrawDepth;
-	mod->DrawDebug = R_Q1BSP_DrawDebug;
-	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
-	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-	mod->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->brush.PointInLeaf = Mod_BSP_PointInLeaf;
+	mod->Draw = R_Mod_Draw;
+	mod->DrawDepth = R_Mod_DrawDepth;
+	mod->DrawDebug = R_Mod_DrawDebug;
+	mod->DrawPrepass = R_Mod_DrawPrepass;
+	mod->GetLightInfo = R_Mod_GetLightInfo;
+	mod->CompileShadowMap = R_Mod_CompileShadowMap;
+	mod->DrawShadowMap = R_Mod_DrawShadowMap;
+	mod->DrawLight = R_Mod_DrawLight;
 
 	mod_base = (unsigned char *)header;
 
@@ -7577,7 +7552,7 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 	// the MakePortals code works fine on the q3bsp data as well
 	if (mod_bsp_portalize.integer)
-		Mod_Q1BSP_MakePortals();
+		Mod_BSP_MakePortals();
 
 	// FIXME: shader alpha should replace r_wateralpha support in q3bsp
 	loadmodel->brush.supportwateralpha = true;
@@ -7674,13 +7649,13 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 				break;
 		if (j < mod->nummodelsurfaces)
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 
 		Mod_MakeCollisionBIH(mod, false, &mod->collision_bih);
 		Mod_MakeCollisionBIH(mod, true, &mod->render_bih);
@@ -7817,14 +7792,14 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.AmbientSoundLevelsForPoint = NULL;
 	loadmodel->brush.RoundUpToHullSize = NULL;
 	loadmodel->brush.PointInLeaf = NULL;
-	loadmodel->Draw = R_Q1BSP_Draw;
-	loadmodel->DrawDepth = R_Q1BSP_DrawDepth;
-	loadmodel->DrawDebug = R_Q1BSP_DrawDebug;
-	loadmodel->DrawPrepass = R_Q1BSP_DrawPrepass;
-	loadmodel->GetLightInfo = R_Q1BSP_GetLightInfo;
-	loadmodel->CompileShadowMap = R_Q1BSP_CompileShadowMap;
-	loadmodel->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	loadmodel->DrawLight = R_Q1BSP_DrawLight;
+	loadmodel->Draw = R_Mod_Draw;
+	loadmodel->DrawDepth = R_Mod_DrawDepth;
+	loadmodel->DrawDebug = R_Mod_DrawDebug;
+	loadmodel->DrawPrepass = R_Mod_DrawPrepass;
+	loadmodel->GetLightInfo = R_Mod_GetLightInfo;
+	loadmodel->CompileShadowMap = R_Mod_CompileShadowMap;
+	loadmodel->DrawShadowMap = R_Mod_DrawShadowMap;
+	loadmodel->DrawLight = R_Mod_DrawLight;
 
 	skinfiles = Mod_LoadSkinFiles();
 	if (loadmodel->numskins < 1)
@@ -8323,13 +8298,13 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & MATERIALFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
-			mod->DrawSky = R_Q1BSP_DrawSky;
+			mod->DrawSky = R_Mod_DrawSky;
 
 		for (j = 0;j < mod->nummodelsurfaces;j++)
 			if (mod->data_surfaces[j + mod->firstmodelsurface].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
 				break;
 		if (j < mod->nummodelsurfaces)
-			mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 
 		Mod_MakeCollisionBIH(mod, true, &mod->collision_bih);
 		mod->render_bih = mod->collision_bih;

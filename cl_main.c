@@ -95,6 +95,18 @@ cvar_t cl_deathnoviewmodel = {CVAR_CLIENT, "cl_deathnoviewmodel", "1", "hides gu
 cvar_t cl_locs_enable = {CVAR_CLIENT | CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
 cvar_t cl_locs_show = {CVAR_CLIENT, "locs_show", "0", "shows defined locations for editing purposes"};
 
+cvar_t cl_minfps = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
+cvar_t cl_minfps_fade = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
+cvar_t cl_minfps_qualitymax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymin = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymultiply = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
+cvar_t cl_minfps_qualityhysteresis = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
+cvar_t cl_minfps_qualitystepmax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
+cvar_t cl_minfps_force = {CVAR_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
+cvar_t cl_maxfps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
+cvar_t cl_maxidlefps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
+
 client_static_t	cls;
 client_state_t	cl;
 
@@ -209,6 +221,9 @@ void CL_ClearState(void)
 	CL_Screen_NewMap();
 }
 
+extern cvar_t cl_topcolor;
+extern cvar_t cl_bottomcolor;
+
 void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
 {
 	int i;
@@ -255,11 +270,13 @@ void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allo
 		}
 		else if (!strcasecmp(key, "topcolor"))
 		{
-			// don't send anything, the combined color code will be updated manually
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", atoi(value), cl_bottomcolor.integer));
 		}
 		else if (!strcasecmp(key, "bottomcolor"))
 		{
-			// don't send anything, the combined color code will be updated manually
+			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", cl_topcolor.integer, atoi(value)));
 		}
 		else if (!strcasecmp(key, "rate"))
 		{
@@ -322,6 +339,8 @@ void CL_ExpandCSQCRenderEntities(int num)
 		}
 	}
 }
+
+extern cvar_t rcon_secure;
 
 /*
 =====================
@@ -396,18 +415,94 @@ void CL_Disconnect(void)
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
 
-	cls.demoplayback = cls.timedemo = false;
+	cls.demoplayback = cls.timedemo = host.restless = false;
 	cls.signon = 0;
 
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
 	SCR_ClearLoadingScreen(false);
 }
 
+/*
+==================
+CL_Reconnect_f
+
+This command causes the client to wait for the signon messages again.
+This is sent just before a server changes levels
+==================
+*/
+void CL_Reconnect_f(cmd_state_t *cmd)
+{
+	char temp[128];
+	// if not connected, reconnect to the most recent server
+	if (!cls.netcon)
+	{
+		// if we have connected to a server recently, the userinfo
+		// will still contain its IP address, so get the address...
+		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
+		if (temp[0])
+			CL_EstablishConnection(temp, -1);
+		else
+			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
+		return;
+	}
+	// if connected, do something based on protocol
+	if (cls.protocol == PROTOCOL_QUAKEWORLD)
+	{
+		// quakeworld can just re-login
+		if (cls.qw_downloadmemory)  // don't change when downloading
+			return;
+
+		S_StopAllSounds();
+
+		if (cls.state == ca_connected)
+		{
+			Con_Printf("Server is changing level...\n");
+			MSG_WriteChar(&cls.netcon->message, qw_clc_stringcmd);
+			MSG_WriteString(&cls.netcon->message, "new");
+		}
+	}
+	else
+	{
+		// netquake uses reconnect on level changes (silly)
+		if (Cmd_Argc(cmd) != 1)
+		{
+			Con_Print("reconnect : wait for signon messages again\n");
+			return;
+		}
+		if (!cls.signon)
+		{
+			Con_Print("reconnect: no signon, ignoring reconnect\n");
+			return;
+		}
+		cls.signon = 0;		// need new connection messages
+	}
+}
+
+/*
+=====================
+CL_Connect_f
+
+User command to connect to server
+=====================
+*/
+static void CL_Connect_f(cmd_state_t *cmd)
+{
+	if (Cmd_Argc(cmd) < 2)
+	{
+		Con_Print("connect <serveraddress> [<key> <value> ...]: connect to a multiplayer game\n");
+		return;
+	}
+	// clear the rcon password, to prevent vulnerability by stuffcmd-ing a connect command
+	if(rcon_secure.integer <= 0)
+		Cvar_SetQuick(&rcon_password, "");
+	CL_EstablishConnection(Cmd_Argv(cmd, 1), 2);
+}
+
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
 	CL_Disconnect ();
 	if (sv.active)
-		Host_ShutdownServer ();
+		SV_Shutdown ();
 }
 
 
@@ -420,7 +515,7 @@ CL_EstablishConnection
 Host should be either "local" or a net address
 =====================
 */
-void CL_EstablishConnection(const char *host, int firstarg)
+void CL_EstablishConnection(const char *address, int firstarg)
 {
 	if (cls.state == ca_dedicated)
 		return;
@@ -440,7 +535,7 @@ void CL_EstablishConnection(const char *host, int firstarg)
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
 
-	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
+	if (LHNETADDRESS_FromString(&cls.connect_address, address, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
@@ -472,6 +567,11 @@ void CL_EstablishConnection(const char *host, int firstarg)
 		M_Update_Return_Reason("No network");
 #endif
 	}
+}
+
+static void CL_EstablishConnection_Local(void)
+{
+	CL_EstablishConnection("local:1", -2);
 }
 
 /*
@@ -666,11 +766,11 @@ entity_render_t *CL_NewTempEntity(double shadertime)
 	return render;
 }
 
-void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
+void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate)
 {
 	int i;
 	cl_effect_t *e;
-	if (!modelindex) // sanity check
+	if (!model) // sanity check
 		return;
 	if (framerate < 1)
 	{
@@ -688,7 +788,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 			continue;
 		e->active = true;
 		VectorCopy(org, e->origin);
-		e->modelindex = modelindex;
+		e->model = model;
 		e->starttime = cl.time;
 		e->startframe = startframe;
 		e->endframe = startframe + framecount;
@@ -1688,7 +1788,7 @@ static void CL_RelinkEffects(void)
 				}
 
 				// normal stuff
-				entrender->model = CL_GetModelByIndex(e->modelindex);
+				entrender->model = e->model;
 				entrender->alpha = 1;
 				VectorSet(entrender->colormod, 1, 1, 1);
 				VectorSet(entrender->glowmod, 1, 1, 1);
@@ -1955,16 +2055,6 @@ void CL_UpdateWorld(void)
 	r_refdef.scene.time = cl.time;
 }
 
-// LadyHavoc: pausedemo command
-static void CL_PauseDemo_f(cmd_state_t *cmd)
-{
-	cls.demopaused = !cls.demopaused;
-	if (cls.demopaused)
-		Con_Print("Demo paused\n");
-	else
-		Con_Print("Demo unpaused\n");
-}
-
 /*
 ======================
 CL_Fog_f
@@ -2195,7 +2285,7 @@ static void CL_Locs_Save_f(cmd_state_t *cmd)
 			if (VectorCompare(loc->mins, loc->maxs))
 				break;
 		if (loc)
-			Con_Warnf("Warning: writing loc file containing a mixture of qizmo-style points and proquake-style boxes may not work in qizmo or proquake!\n");
+			Con_Printf(CON_WARN "Warning: writing loc file containing a mixture of qizmo-style points and proquake-style boxes may not work in qizmo or proquake!\n");
 	}
 	for (loc = cl.locnodes;loc;loc = loc->next)
 	{
@@ -2415,7 +2505,8 @@ static void CL_MeshEntities_Init(void)
 		VectorSet(ent->render.render_modellight_ambient, 1, 1, 1);
 		VectorSet(ent->render.render_modellight_diffuse, 0, 0, 0);
 		VectorSet(ent->render.render_modellight_specular, 0, 0, 0);
-		VectorSet(ent->render.render_modellight_lightdir, 0, 0, 1);
+		VectorSet(ent->render.render_modellight_lightdir_world, 0, 0, 1);
+		VectorSet(ent->render.render_modellight_lightdir_local, 0, 0, 1); // local doesn't matter because no diffuse/specular color
 		VectorSet(ent->render.render_lightmap_ambient, 0, 0, 0);
 		VectorSet(ent->render.render_lightmap_diffuse, 1, 1, 1);
 		VectorSet(ent->render.render_lightmap_specular, 1, 1, 1);
@@ -2591,7 +2682,7 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 		ent->render_modellight_ambient[q] = a[q] * ent->colormod[q];
 		ent->render_modellight_diffuse[q] = c[q] * ent->colormod[q];
 		ent->render_modellight_specular[q] = c[q];
-		ent->render_modellight_lightdir[q] = dir[q];
+		ent->render_modellight_lightdir_world[q] = dir[q];
 		ent->render_lightmap_ambient[q] = ent->colormod[q] * r_refdef.scene.ambientintensity;
 		ent->render_lightmap_diffuse[q] = ent->colormod[q] * r_refdef.scene.lightmapintensity;
 		ent->render_lightmap_specular[q] = r_refdef.scene.lightmapintensity;
@@ -2607,9 +2698,12 @@ static void CL_UpdateEntityShading_Entity(entity_render_t *ent)
 		for (q = 0; q < 3; q++)
 			ent->render_rtlight_diffuse[q] = ent->render_rtlight_specular[q] = q;
 
-	if (VectorLength2(ent->render_modellight_lightdir) == 0)
-		VectorSet(ent->render_modellight_lightdir, 0, 0, 1); // have to set SOME valid vector here
-	VectorNormalize(ent->render_modellight_lightdir);
+	if (VectorLength2(ent->render_modellight_lightdir_world) == 0)
+		VectorSet(ent->render_modellight_lightdir_world, 0, 0, 1); // have to set SOME valid vector here
+	VectorNormalize(ent->render_modellight_lightdir_world);
+	// transform into local space for the entity as well
+	Matrix4x4_Transform3x3(&ent->inversematrix, ent->render_modellight_lightdir_world, ent->render_modellight_lightdir_local);
+	VectorNormalize(ent->render_modellight_lightdir_local);
 }
 
 
@@ -2621,6 +2715,159 @@ void CL_UpdateEntityShading(void)
 		CL_UpdateEntityShading_Entity(r_refdef.scene.entities[i]);
 }
 
+extern cvar_t host_framerate;
+extern cvar_t host_speeds;
+
+double CL_Frame (double time)
+{
+	static double clframetime;
+	static double cl_timer = 0;
+	static double time1 = 0, time2 = 0, time3 = 0;
+	static double wait;
+	int pass1, pass2, pass3;
+
+	CL_VM_PreventInformationLeaks();
+
+	// get new key events
+	Key_EventQueue_Unblock();
+	SndSys_SendKeyEvents();
+	Sys_SendKeyEvents();
+
+	if((cl_timer += time) < 0)
+		return cl_timer;
+
+	// limit the frametime steps to no more than 100ms each
+	if (cl_timer > 0.1)
+		cl_timer = 0.1;
+
+	if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || ((vid_activewindow ? cl_maxfps : cl_maxidlefps).value < 1)))
+	{
+		R_TimeReport("---");
+		Collision_Cache_NewFrame();
+		R_TimeReport("photoncache");
+#ifdef CONFIG_VIDEO_CAPTURE
+		// decide the simulation time
+		if (cls.capturevideo.active)
+		{
+			//***
+			if (cls.capturevideo.realtime)
+				clframetime = cl.realframetime = max(time, 1.0 / cls.capturevideo.framerate);
+			else
+			{
+				clframetime = 1.0 / cls.capturevideo.framerate;
+				cl.realframetime = max(time, clframetime);
+			}
+		}
+		else if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+
+#else
+		if (vid_activewindow && cl_maxfps.value >= 1 && !cls.timedemo)
+#endif
+		{
+			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
+			// when running slow, we need to sleep to keep input responsive
+			wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
+			if (wait > 0)
+				Sys_Sleep((int)wait);
+		}
+		else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
+			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
+		else
+			clframetime = cl.realframetime = cl_timer;
+
+		// apply slowmo scaling
+		clframetime *= cl.movevars_timescale;
+		// scale playback speed of demos by slowmo cvar
+		if (cls.demoplayback)
+		{
+			clframetime *= host_timescale.value;
+			// if demo playback is paused, don't advance time at all
+			if (cls.demopaused)
+				clframetime = 0;
+		}
+		else
+		{
+			// host_framerate overrides all else
+			if (host_framerate.value)
+				clframetime = host_framerate.value;
+
+			if (cl.paused || host.paused)
+				clframetime = 0;
+		}
+
+		if (cls.timedemo)
+			clframetime = cl.realframetime = cl_timer;
+
+		// deduct the frame time from the accumulator
+		cl_timer -= cl.realframetime;
+
+		cl.oldtime = cl.time;
+		cl.time += clframetime;
+
+		// update video
+		if (host_speeds.integer)
+			time1 = Sys_DirtyTime();
+		R_TimeReport("pre-input");
+
+		// Collect input into cmd
+		CL_Input();
+
+		R_TimeReport("input");
+
+		// check for new packets
+		NetConn_ClientFrame();
+
+		// read a new frame from a demo if needed
+		CL_ReadDemoMessage();
+		R_TimeReport("clientnetwork");
+
+		// now that packets have been read, send input to server
+		CL_SendMove();
+		R_TimeReport("sendmove");
+
+		// update client world (interpolate entities, create trails, etc)
+		CL_UpdateWorld();
+		R_TimeReport("lerpworld");
+
+		CL_Video_Frame();
+
+		R_TimeReport("client");
+
+		CL_UpdateScreen();
+		R_TimeReport("render");
+
+		if (host_speeds.integer)
+			time2 = Sys_DirtyTime();
+
+		// update audio
+		if(cl.csqc_usecsqclistener)
+		{
+			S_Update(&cl.csqc_listenermatrix);
+			cl.csqc_usecsqclistener = false;
+		}
+		else
+			S_Update(&r_refdef.view.matrix);
+
+		CDAudio_Update();
+		R_TimeReport("audio");
+
+		// reset gathering of mouse input
+		in_mouse_x = in_mouse_y = 0;
+
+		if (host_speeds.integer)
+		{
+			pass1 = (int)((time1 - time3)*1000000);
+			time3 = Sys_DirtyTime();
+			pass2 = (int)((time2 - time1)*1000000);
+			pass3 = (int)((time3 - time2)*1000000);
+			Con_Printf("%6ius total %6ius server %6ius gfx %6ius snd\n",
+						pass1+pass2+pass3, pass1, pass2, pass3);
+		}
+	}
+	// if there is some time remaining from this frame, reset the timer
+	return cl_timer >= 0 ? 0 : cl_timer;
+}
+
 /*
 ===========
 CL_Shutdown
@@ -2628,10 +2875,33 @@ CL_Shutdown
 */
 void CL_Shutdown (void)
 {
+	// be quiet while shutting down
+	S_StopAllSounds();
+	
+	// disconnect client from server if active
+	CL_Disconnect();
+	
+	CL_Video_Shutdown();
+
+#ifdef CONFIG_MENU
+	// Shutdown menu
+	if(MR_Shutdown)
+		MR_Shutdown();
+#endif
+
+	CDAudio_Shutdown ();
+	S_Terminate ();
+	
+	R_Modules_Shutdown();
+	VID_Shutdown();
+
 	CL_Screen_Shutdown();
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 	CL_MeshEntities_Shutdown();
+
+	Key_Shutdown();
+	S_Shutdown();
 
 	Mem_FreePool (&cls.permanentmempool);
 	Mem_FreePool (&cls.levelmempool);
@@ -2646,11 +2916,11 @@ void CL_Init (void)
 {
 	if (cls.state == ca_dedicated)
 	{
-		Cmd_AddCommand(&cmd_server, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CMD_SERVER, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
 	}
 	else
 	{
-		Con_DPrintf("Initializing client\n");
+		Con_Printf("Initializing client\n");
 
 		R_Modules_Init();
 		Palette_Init();
@@ -2663,7 +2933,7 @@ void CL_Init (void)
 		S_Init();
 		CDAudio_Init();
 		Key_Init();
-
+		V_Init();
 
 		cls.levelmempool = Mem_AllocPool("client (per-level memory)", 0, NULL);
 		cls.permanentmempool = Mem_AllocPool("client (long term memory)", 0, NULL);
@@ -2682,6 +2952,8 @@ void CL_Init (void)
 	//
 	// register our commands
 	//
+		CL_InitCommands();
+
 		Cvar_RegisterVariable (&cl_upspeed);
 		Cvar_RegisterVariable (&cl_forwardspeed);
 		Cvar_RegisterVariable (&cl_backspeed);
@@ -2709,29 +2981,22 @@ void CL_Init (void)
 		Cvar_RegisterVariable (&cl_itembobspeed);
 		Cvar_RegisterVariable (&cl_itembobheight);
 
-		Cmd_AddCommand(&cmd_client, "entities", CL_PrintEntities_f, "print information on network entities known to client");
-		Cmd_AddCommand(&cmd_client, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-		Cmd_AddCommand(&cmd_client, "record", CL_Record_f, "record a demo");
-		Cmd_AddCommand(&cmd_client, "stop", CL_Stop_f, "stop recording or playing a demo");
-		Cmd_AddCommand(&cmd_client, "playdemo", CL_PlayDemo_f, "watch a demo file");
-		Cmd_AddCommand(&cmd_client, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+		CL_Demo_Init();
+
+		Cmd_AddCommand(CMD_CLIENT, "entities", CL_PrintEntities_f, "print information on network entities known to client");
+		Cmd_AddCommand(CMD_CLIENT, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CMD_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
+		Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
 
 		// Support Client-side Model Index List
-		Cmd_AddCommand(&cmd_client, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
+		Cmd_AddCommand(CMD_CLIENT, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 		// Support Client-side Sound Index List
-		Cmd_AddCommand(&cmd_client, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
+		Cmd_AddCommand(CMD_CLIENT, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
-		Cvar_RegisterVariable (&cl_autodemo);
-		Cvar_RegisterVariable (&cl_autodemo_nameformat);
-		Cvar_RegisterVariable (&cl_autodemo_delete);
+		Cmd_AddCommand(CMD_CLIENT, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+		Cmd_AddCommand(CMD_CLIENT, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
-		Cmd_AddCommand(&cmd_client, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
-		Cmd_AddCommand(&cmd_client, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
-
-		// LadyHavoc: added pausedemo
-		Cmd_AddCommand(&cmd_client, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
-
-		Cmd_AddCommand(&cmd_client, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
+		Cmd_AddCommand(CMD_CLIENT, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
 		Cvar_RegisterVariable(&r_draweffects);
 		Cvar_RegisterVariable(&cl_explosions_alpha_start);
@@ -2758,17 +3023,29 @@ void CL_Init (void)
 		Cvar_RegisterVariable(&qport);
 		Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
-		Cmd_AddCommand(&cmd_client, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+		Cmd_AddCommand(CMD_CLIENT, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
 		Cvar_RegisterVariable(&cl_locs_enable);
 		Cvar_RegisterVariable(&cl_locs_show);
-		Cmd_AddCommand(&cmd_client, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
-		Cmd_AddCommand(&cmd_client, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
-		Cmd_AddCommand(&cmd_client, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
-		Cmd_AddCommand(&cmd_client, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
-		Cmd_AddCommand(&cmd_client, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+		Cmd_AddCommand(CMD_CLIENT, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+		Cmd_AddCommand(CMD_CLIENT, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+		Cmd_AddCommand(CMD_CLIENT, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+		Cmd_AddCommand(CMD_CLIENT, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+		Cmd_AddCommand(CMD_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
+
+		Cvar_RegisterVariable (&cl_minfps);
+		Cvar_RegisterVariable (&cl_minfps_fade);
+		Cvar_RegisterVariable (&cl_minfps_qualitymax);
+		Cvar_RegisterVariable (&cl_minfps_qualitymin);
+		Cvar_RegisterVariable (&cl_minfps_qualitystepmax);
+		Cvar_RegisterVariable (&cl_minfps_qualityhysteresis);
+		Cvar_RegisterVariable (&cl_minfps_qualitymultiply);
+		Cvar_RegisterVariable (&cl_minfps_force);
+		Cvar_RegisterVariable (&cl_maxfps);
+		Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
+		Cvar_RegisterVariable (&cl_maxidlefps);
 
 		CL_Parse_Init();
 		CL_Particles_Init();
@@ -2776,5 +3053,11 @@ void CL_Init (void)
 		CL_MeshEntities_Init();
 
 		CL_Video_Init();
+
+		host.hook.ConnectLocal = CL_EstablishConnection_Local;
+
+		#ifdef CONFIG_MENU
+		Cbuf_InsertText(&cmd_client,"menu_start\n");
+		#endif
 	}
 }

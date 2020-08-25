@@ -1,4 +1,5 @@
 extern cvar_t prvm_garbagecollection_enable;
+int i;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
 	prog->xfunction->profile += (st - startst); \
@@ -111,7 +112,183 @@ extern cvar_t prvm_garbagecollection_enable;
 	&&handle_OP_OR,
 
 	&&handle_OP_BITAND,
-	&&handle_OP_BITOR
+	&&handle_OP_BITOR,
+
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	&&handle_OP_STORE_I,
+
+	NULL,
+	NULL,
+
+	&&handle_OP_ADD_I,
+	&&handle_OP_ADD_FI,
+	&&handle_OP_ADD_IF,
+
+	&&handle_OP_SUB_I,
+	&&handle_OP_SUB_FI,
+	&&handle_OP_SUB_IF,
+	&&handle_OP_CONV_IF,
+	&&handle_OP_CONV_FI,
+
+	NULL,
+	NULL,
+
+	&&handle_OP_LOAD_I,
+	&&handle_OP_STOREP_I,
+
+	NULL,
+	NULL,
+
+	&&handle_OP_BITAND_I,
+	&&handle_OP_BITOR_I,
+
+	&&handle_OP_MUL_I,
+	&&handle_OP_DIV_I,
+	&&handle_OP_EQ_I,
+	&&handle_OP_NE_I,
+
+	NULL,
+	NULL,
+
+	&&handle_OP_NOT_I,
+
+	&&handle_OP_DIV_VF,
+
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	&&handle_OP_STORE_P,
+
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	&&handle_OP_LE_I,
+	&&handle_OP_GE_I,
+	&&handle_OP_LT_I,
+	&&handle_OP_GT_I,
+	
+	&&handle_OP_LE_IF,
+	&&handle_OP_GE_IF,
+	&&handle_OP_LT_IF,
+	&&handle_OP_GT_IF,
+
+	&&handle_OP_LE_FI,
+	&&handle_OP_GE_FI,
+	&&handle_OP_LT_FI,
+	&&handle_OP_GT_FI,
+
+	&&handle_OP_EQ_IF,
+	&&handle_OP_EQ_FI,
+
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	&&handle_OP_MUL_IF,
+	&&handle_OP_MUL_FI,
+	&&handle_OP_MUL_VI,
+
+	NULL,
+
+	&&handle_OP_DIV_IF,
+	&&handle_OP_DIV_FI,
+	&&handle_OP_BITAND_IF,
+	&&handle_OP_BITOR_IF,
+	&&handle_OP_BITAND_FI,
+	&&handle_OP_BITOR_FI,
+	&&handle_OP_AND_I,
+	&&handle_OP_OR_I,
+	&&handle_OP_AND_IF,
+	&&handle_OP_OR_IF,
+	&&handle_OP_AND_FI,
+	&&handle_OP_OR_FI,
+	&&handle_OP_NE_IF,
+	&&handle_OP_NE_FI,
+
+	&&handle_OP_GSTOREP_I,
+	&&handle_OP_GSTOREP_F,
+	&&handle_OP_GSTOREP_ENT,
+	&&handle_OP_GSTOREP_FLD,
+	&&handle_OP_GSTOREP_S,
+	&&handle_OP_GSTOREP_FNC,		
+	&&handle_OP_GSTOREP_V,
+	&&handle_OP_GADDRESS,
+	&&handle_OP_GLOAD_I,
+	&&handle_OP_GLOAD_F,
+	&&handle_OP_GLOAD_FLD,
+	&&handle_OP_GLOAD_ENT,
+	&&handle_OP_GLOAD_S,
+	&&handle_OP_GLOAD_FNC,
+	&&handle_OP_BOUNDCHECK,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	&&handle_OP_GLOAD_V
 	    };
 #define DISPATCH_OPCODE() \
     goto *dispatchtable[(++st)->op]
@@ -293,7 +470,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				if(prvm_garbagecollection_enable.integer)
 					PRVM_GetString(prog, OPA->_int);
 				OPB->_int = OPA->_int;
-			DISPATCH_OPCODE();
+				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_V):
 				OPB->ivector[0] = OPA->ivector[0];
 				OPB->ivector[1] = OPA->ivector[1];
@@ -455,6 +632,8 @@ extern cvar_t prvm_garbagecollection_enable;
 		//==================
 
 			HANDLE_OPCODE(OP_IFNOT):
+				//spike FIXME -- dp redefined IFNOT[_I] as IFNOT_F, which breaks if(0x80000000)
+				//spike FIXME -- you should add separate IFNOT_I/IFNOT_F opcodes and remap IFNOT_I to ITNOT_F in v6 progs for compat.
 				if(!FLOAT_IS_TRUE_FOR_INT(OPA->_int))
 				// TODO add an "int-if", and change this one to OPA->_float
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
@@ -474,6 +653,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_IF):
+				//spike FIXME -- dp redefined IF[_I] as IF_F
 				if(FLOAT_IS_TRUE_FOR_INT(OPA->_int))
 				// TODO add an "int-if", and change this one, as well as the FLOAT_IS_TRUE_FOR_INT usages, to OPA->_float
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
@@ -614,13 +794,11 @@ extern cvar_t prvm_garbagecollection_enable;
 				}
 				DISPATCH_OPCODE();
 
-// LadyHavoc: to be enabled when Progs version 7 (or whatever it will be numbered) is finalized
-/*
 			HANDLE_OPCODE(OP_ADD_I):
 				OPC->_int = OPA->_int + OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_IF):
-				OPC->_int = OPA->_int + (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int + (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_FI):
 				OPC->_float = OPA->_float + (prvm_vec_t) OPB->_int;
@@ -629,7 +807,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				OPC->_int = OPA->_int - OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_IF):
-				OPC->_int = OPA->_int - (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int - (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_FI):
 				OPC->_float = OPA->_float - (prvm_vec_t) OPB->_int;
@@ -638,7 +816,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				OPC->_int = OPA->_int * OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_IF):
-				OPC->_int = OPA->_int * (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int * (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_FI):
 				OPC->_float = OPA->_float * (prvm_vec_t) OPB->_int;
@@ -660,7 +838,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				OPC->_int = OPA->_int / OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_IF):
-				OPC->_int = OPA->_int / (prvm_int_t) OPB->_float;
+				OPC->_float = OPA->_int / (prvm_int_t) OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_FI):
 				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
@@ -684,87 +862,88 @@ extern cvar_t prvm_garbagecollection_enable;
 				OPC->_int = OPA->_int | (prvm_int_t)OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_BITAND_FI):
-				OPC->_float = (prvm_int_t)OPA->_float & OPB->_int;
+				OPC->_int = (prvm_int_t)OPA->_float & OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_BITOR_FI):
-				OPC->_float = (prvm_int_t)OPA->_float | OPB->_int;
+				OPC->_int = (prvm_int_t)OPA->_float | OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_I):
-				OPC->_float = OPA->_int >= OPB->_int;
+				OPC->_int = OPA->_int >= OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_I):
-				OPC->_float = OPA->_int <= OPB->_int;
+				OPC->_int = OPA->_int <= OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_I):
-				OPC->_float = OPA->_int > OPB->_int;
+				OPC->_int = OPA->_int > OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_I):
-				OPC->_float = OPA->_int < OPB->_int;
+				OPC->_int = OPA->_int < OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_I):
-				OPC->_float = OPA->_int && OPB->_int;
+				OPC->_int = OPA->_int && OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_I):
-				OPC->_float = OPA->_int || OPB->_int;
+				OPC->_int = OPA->_int || OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int >= OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int >= OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int <= OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int <= OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int > OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int > OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int < OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int < OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int && OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int && OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int || OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int || OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GE_FI):
-				OPC->_float = OPA->_float >= (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float >= (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LE_FI):
-				OPC->_float = OPA->_float <= (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float <= (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GT_FI):
-				OPC->_float = OPA->_float > (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float > (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LT_FI):
-				OPC->_float = OPA->_float < (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float < (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND_FI):
-				OPC->_float = OPA->_float && (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float && (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR_FI):
-				OPC->_float = OPA->_float || (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float || (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NOT_I):
-				OPC->_float = !OPA->_int;
+				OPC->_int = !OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_I):
-				OPC->_float = OPA->_int == OPB->_int;
+				OPC->_int = OPA->_int == OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int == OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int == OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_EQ_FI):
-				OPC->_float = OPA->_float == (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float == (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_I):
-				OPC->_float = OPA->_int != OPB->_int;
+				OPC->_int = OPA->_int != OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_IF):
-				OPC->_float = (prvm_vec_t)OPA->_int != OPB->_float;
+				OPC->_int = (prvm_vec_t)OPA->_int != OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NE_FI):
-				OPC->_float = OPA->_float != (prvm_vec_t)OPB->_int;
+				OPC->_int = OPA->_float != (prvm_vec_t)OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STORE_I):
+			HANDLE_OPCODE(OP_STORE_P):
 				OPB->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_I):
@@ -776,7 +955,7 @@ extern cvar_t prvm_garbagecollection_enable;
 					goto cleanup;
 				}
 #endif
-				ptr = (prvm_eval_t *)(prog->edictsfields + OPB->_int);
+				ptr = (prvm_eval_t *)(prog->edictsfields.ip + OPB->_int);
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LOAD_I):
@@ -787,7 +966,7 @@ extern cvar_t prvm_garbagecollection_enable;
 					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if (OPB->_int < 0 || OPB->_int >= progs->entityfields)
+				if (OPB->_int < 0 || OPB->_int >= progs->entityfields.ip)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid field in an edict", prog->name);
@@ -795,7 +974,7 @@ extern cvar_t prvm_garbagecollection_enable;
 				}
 #endif
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
-				OPC->_int = ((prvm_eval_t *)((int *)ed->v + OPB->_int))->_int;
+				OPC->_int = ((prvm_eval_t *)((int *)ed->fields.ip + OPB->_int))->_int;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GSTOREP_I):
@@ -804,41 +983,35 @@ extern cvar_t prvm_garbagecollection_enable;
 			HANDLE_OPCODE(OP_GSTOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_GSTOREP_S):
 			HANDLE_OPCODE(OP_GSTOREP_FNC):		// pointers
-#if PRBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int >= pr_globaldefs)
+				if (OPB->_int < 0 || OPB->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
-#endif
-				pr_iglobals[OPB->_int] = OPA->_int;
+				prog->globals.ip[OPB->_int] = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GSTOREP_V):
-#if PRBOUNDSCHECK
-				if (OPB->_int < 0 || OPB->_int + 2 >= pr_globaldefs)
+				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
-#endif
-				pr_iglobals[OPB->_int  ] = OPA->ivector[0];
-				pr_iglobals[OPB->_int+1] = OPA->ivector[1];
-				pr_iglobals[OPB->_int+2] = OPA->ivector[2];
+				prog->globals.ip[OPB->_int  ] = OPA->ivector[0];
+				prog->globals.ip[OPB->_int+1] = OPA->ivector[1];
+				prog->globals.ip[OPB->_int+2] = OPA->ivector[2];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GADDRESS):
 				i = OPA->_int + (prvm_int_t) OPB->_float;
-#if PRBOUNDSCHECK
-				if (i < 0 || i >= pr_globaldefs)
+				if (i < 0 || i >= prog->numglobaldefs)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to address an out of bounds global", prog->name);
 					goto cleanup;
 				}
-#endif
-				OPC->_int = pr_iglobals[i];
+				OPC->_int = prog->globals.ip[i];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GLOAD_I):
@@ -847,41 +1020,37 @@ extern cvar_t prvm_garbagecollection_enable;
 			HANDLE_OPCODE(OP_GLOAD_ENT):
 			HANDLE_OPCODE(OP_GLOAD_S):
 			HANDLE_OPCODE(OP_GLOAD_FNC):
-#if PRBOUNDSCHECK
-				if (OPA->_int < 0 || OPA->_int >= pr_globaldefs)
+				// FIXME?: Is this correct?             vvvvvvvvvvvvv
+				if (OPA->_int < 0 || OPA->_int >= prog->numglobaldefs)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
-#endif
-				OPC->_int = pr_iglobals[OPA->_int];
+				OPC->_int = prog->globals.ip[OPA->_int];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GLOAD_V):
-#if PRBOUNDSCHECK
-				if (OPA->_int < 0 || OPA->_int + 2 >= pr_globaldefs)
+				// FIXME?: Is this correct?                 vvvvvvvvvvvvv
+				if (OPA->_int < 0 || OPA->_int + 2 >= prog->numglobaldefs)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
-#endif
-				OPC->ivector[0] = pr_iglobals[OPA->_int  ];
-				OPC->ivector[1] = pr_iglobals[OPA->_int+1];
-				OPC->ivector[2] = pr_iglobals[OPA->_int+2];
+				OPC->ivector[0] = prog->globals.ip[OPA->_int  ];
+				OPC->ivector[1] = prog->globals.ip[OPA->_int+1];
+				OPC->ivector[2] = prog->globals.ip[OPA->_int+2];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_BOUNDCHECK):
-				if (OPA->_int < 0 || OPA->_int >= st->b)
+				if ((unsigned int)OPA->_int < (unsigned int)st->operand[2] || (unsigned int)OPA->_int >= (unsigned int)st->operand[1])
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs boundcheck failed at line number %d, value is < 0 or >= %d", prog->name, st->b, st->c);
+					prog->error_cmd("Progs boundcheck failed in %s, value is < %" PRVM_PRIi " or >= %" PRVM_PRIi, prog->name, OPC->_int, OPB->_int);
 					goto cleanup;
 				}
 				DISPATCH_OPCODE();
-
-*/
 
 #if !USE_COMPUTED_GOTOS
 			default:

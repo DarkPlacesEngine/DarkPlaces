@@ -69,43 +69,39 @@ typedef enum shadermode_e
 }
 shadermode_t;
 
-typedef enum shaderpermutation_e
-{
-	SHADERPERMUTATION_DIFFUSE = 1<<0, ///< (lightsource) whether to use directional shading
-	SHADERPERMUTATION_VERTEXTEXTUREBLEND = 1<<1, ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-	SHADERPERMUTATION_VIEWTINT = 1<<2, ///< view tint (postprocessing only), use vertex colors (generic only)
-	SHADERPERMUTATION_COLORMAPPING = 1<<3, ///< indicates this is a colormapped skin
-	SHADERPERMUTATION_SATURATION = 1<<4, ///< saturation (postprocessing only)
-	SHADERPERMUTATION_FOGINSIDE = 1<<5, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_FOGOUTSIDE = 1<<6, ///< tint the color by fog color or black if using additive blend mode
-	SHADERPERMUTATION_FOGHEIGHTTEXTURE = 1<<7, ///< fog color and density determined by texture mapped on vertical axis
-	SHADERPERMUTATION_FOGALPHAHACK = 1<<8, ///< fog color and density determined by texture mapped on vertical axis
-	SHADERPERMUTATION_GAMMARAMPS = 1<<9, ///< gamma (postprocessing only)
-	SHADERPERMUTATION_CUBEFILTER = 1<<10, ///< (lightsource) use cubemap light filter
-	SHADERPERMUTATION_GLOW = 1<<11, ///< (lightmap) blend in an additive glow texture
-	SHADERPERMUTATION_BLOOM = 1<<12, ///< bloom (postprocessing only)
-	SHADERPERMUTATION_SPECULAR = 1<<13, ///< (lightsource or deluxemapping) render specular effects
-	SHADERPERMUTATION_POSTPROCESSING = 1<<14, ///< user defined postprocessing (postprocessing only)
-	SHADERPERMUTATION_REFLECTION = 1<<15, ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-	SHADERPERMUTATION_OFFSETMAPPING = 1<<16, ///< adjust texcoords to roughly simulate a displacement mapped surface
-	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING = 1<<17, ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-	SHADERPERMUTATION_SHADOWMAP2D = 1<<18, ///< (lightsource) use shadowmap texture as light filter
-	SHADERPERMUTATION_SHADOWMAPVSDCT = 1<<19, ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-	SHADERPERMUTATION_SHADOWMAPORTHO = 1<<20, ///< (lightsource) use orthographic shadowmap projection
-	SHADERPERMUTATION_DEFERREDLIGHTMAP = 1<<21, ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
-	SHADERPERMUTATION_ALPHAKILL = 1<<22, ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5, (generic) apply global alpha
-	SHADERPERMUTATION_REFLECTCUBE = 1<<23, ///< fake reflections using global cubemap (not HDRI light probe)
-	SHADERPERMUTATION_NORMALMAPSCROLLBLEND = 1<<24, ///< (water) counter-direction normalmaps scrolling
-	SHADERPERMUTATION_BOUNCEGRID = 1<<25, ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
-	SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL = 1<<26, ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
-	SHADERPERMUTATION_TRIPPY = 1<<27, ///< use trippy vertex shader effect
-	SHADERPERMUTATION_DEPTHRGB = 1<<28, ///< read/write depth values in RGB color coded format for older hardware without depth samplers
-	SHADERPERMUTATION_ALPHAGEN_VERTEX = 1<<29, ///< alphaGen vertex
-	SHADERPERMUTATION_SKELETAL = 1<<30, ///< (skeletal models) use skeletal matrices to deform vertices (gpu-skinning)
-	SHADERPERMUTATION_OCCLUDE = 1<<31, ///< use occlusion buffer for corona
-	SHADERPERMUTATION_COUNT = 32 ///< size of shaderpermutationinfo array
-}
-shaderpermutation_t;
+#define SHADERPERMUTATION_DIFFUSE (1<<0) ///< (lightsource) whether to use directional shading
+#define SHADERPERMUTATION_VERTEXTEXTUREBLEND (1<<1) ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+#define	SHADERPERMUTATION_VIEWTINT (1<<2) ///< view tint (postprocessing only), use vertex colors (generic only)
+#define	SHADERPERMUTATION_COLORMAPPING (1<<3) ///< indicates this is a colormapped skin
+#define	SHADERPERMUTATION_SATURATION (1<<4) ///< saturation (postprocessing only)
+#define	SHADERPERMUTATION_FOGINSIDE (1<<5) ///< tint the color by fog color or black if using additive blend mode
+#define	SHADERPERMUTATION_FOGOUTSIDE (1<<6) ///< tint the color by fog color or black if using additive blend mode
+#define	SHADERPERMUTATION_FOGHEIGHTTEXTURE (1<<7) ///< fog color and density determined by texture mapped on vertical axis
+#define	SHADERPERMUTATION_FOGALPHAHACK (1<<8) ///< fog color and density determined by texture mapped on vertical axis
+#define	SHADERPERMUTATION_GAMMARAMPS (1<<9) ///< gamma (postprocessing only)
+#define	SHADERPERMUTATION_CUBEFILTER (1<<10) ///< (lightsource) use cubemap light filter
+#define	SHADERPERMUTATION_GLOW (1<<11) ///< (lightmap) blend in an additive glow texture
+#define	SHADERPERMUTATION_BLOOM (1<<12) ///< bloom (postprocessing only)
+#define	SHADERPERMUTATION_SPECULAR (1<<13) ///< (lightsource or deluxemapping) render specular effects
+#define	SHADERPERMUTATION_POSTPROCESSING (1<<14) ///< user defined postprocessing (postprocessing only)
+#define	SHADERPERMUTATION_REFLECTION (1<<15) ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+#define	SHADERPERMUTATION_OFFSETMAPPING (1<<16) ///< adjust texcoords to roughly simulate a displacement mapped surface
+#define	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<17) ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define	SHADERPERMUTATION_SHADOWMAP2D (1<<18) ///< (lightsource) use shadowmap texture as light filter
+#define	SHADERPERMUTATION_SHADOWMAPVSDCT (1<<19) ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+#define	SHADERPERMUTATION_SHADOWMAPORTHO (1<<20) ///< (lightsource) use orthographic shadowmap projection
+#define	SHADERPERMUTATION_DEFERREDLIGHTMAP (1<<21) ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
+#define	SHADERPERMUTATION_ALPHAKILL (1<<22) ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5, (generic) apply global alpha
+#define	SHADERPERMUTATION_REFLECTCUBE (1<<23) ///< fake reflections using global cubemap (not HDRI light probe)
+#define	SHADERPERMUTATION_NORMALMAPSCROLLBLEND (1<<24) ///< (water) counter-direction normalmaps scrolling
+#define	SHADERPERMUTATION_BOUNCEGRID (1<<25) ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
+#define	SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL (1<<26) ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
+#define SHADERPERMUTATION_TRIPPY (1<<27) ///< use trippy vertex shader effect
+#define	SHADERPERMUTATION_DEPTHRGB (1<<28) ///< read/write depth values in RGB color coded format for older hardware without depth samplers
+#define	SHADERPERMUTATION_ALPHAGEN_VERTEX (1<<29) ///< alphaGen vertex
+#define	SHADERPERMUTATION_SKELETAL (1<<30) ///< (skeletal models) use skeletal matrices to deform vertices (gpu-skinning)
+#define	SHADERPERMUTATION_OCCLUDE (1<<31) ///< use occlusion buffer for corona
+#define	SHADERPERMUTATION_COUNT 32 ///< size of shaderpermutationinfo array
 
 // 1.0f / N table
 extern float ixtable[4096];
@@ -584,9 +580,9 @@ typedef struct r_rendertarget_s {
 	// but potentially faster)
 	rtexture_t *colortexture[4];
 	rtexture_t *depthtexture;
-	// a rendertarget will not be reused in the same frame (realtime == lastusetime),
+	// a rendertarget will not be reused in the same frame (host.realtime == lastusetime),
 	// on a new frame, matching rendertargets will be reused (texturewidth, textureheight, number of color and depth textures and their types),
-	// when a new frame arrives the rendertargets can be reused by requests for matching texturewidth,textureheight and fbo configuration (the number of color and depth textures), when a rendertarget is not reused for > 200ms (realtime - lastusetime > 0.2) the rendertarget's resources will be freed (fbo, textures) and it can be reused for any target in future frames
+	// when a new frame arrives the rendertargets can be reused by requests for matching texturewidth,textureheight and fbo configuration (the number of color and depth textures), when a rendertarget is not reused for > 200ms (host.realtime - lastusetime > 0.2) the rendertarget's resources will be freed (fbo, textures) and it can be reused for any target in future frames
 	double lastusetime;
 } r_rendertarget_t;
 

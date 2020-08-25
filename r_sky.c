@@ -182,7 +182,7 @@ static void LoadSky_f(cmd_state_t *cmd)
 				Con_Print("skybox disabled\n");
 		}
 		else
-			Con_Errorf("failed to load skybox %s\n", Cmd_Argv(cmd, 1));
+			Con_Printf(CON_ERROR "failed to load skybox %s\n", Cmd_Argv(cmd, 1));
 		break;
 	default:
 		Con_Print("usage: loadsky skyname\n");
@@ -463,7 +463,7 @@ static void r_sky_newmap(void)
 
 void R_Sky_Init(void)
 {
-	Cmd_AddCommand(&cmd_client, "loadsky", &LoadSky_f, "load a skybox by basename (for example loadsky mtnsun_ loads mtnsun_ft.tga and so on)");
+	Cmd_AddCommand(CMD_CLIENT, "loadsky", &LoadSky_f, "load a skybox by basename (for example loadsky mtnsun_ loads mtnsun_ft.tga and so on)");
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);

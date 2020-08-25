@@ -258,17 +258,19 @@ static void gl_backend_start(void)
 
 	Mem_ExpandableArray_NewArray(&gl_state.meshbufferarray, r_main_mempool, sizeof(r_meshbuffer_t), 128);
 
-	Con_DPrintf("OpenGL backend started.\n");
+	Con_Printf("OpenGL backend started\n");
 
 	CHECKGLERROR
 
 	switch(vid.renderpath)
 	{
+#ifndef USE_GLES2
 	case RENDERPATH_GL32:
 		// GL3.2 Core requires that we have a VAO bound - but using more than one has no performance benefit so this is just placeholder
 		qglGenVertexArrays(1, &gl_state.defaultvao);
 		qglBindVertexArray(gl_state.defaultvao);
 		// fall through
+#endif //USE_GLES2
 	case RENDERPATH_GLES2:
 		// fetch current fbo here (default fbo is not 0 on some GLES devices)
 		CHECKGLERROR
@@ -281,7 +283,7 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
-	Con_DPrint("OpenGL Backend shutting down\n");
+	Con_Print("OpenGL backend shutting down\n");
 
 	switch(vid.renderpath)
 	{
@@ -372,7 +374,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 
-	Cmd_AddCommand(&cmd_client, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
+	Cmd_AddCommand(CMD_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, gl_backend_devicelost, gl_backend_devicerestored);
 }
@@ -1102,6 +1104,7 @@ static void GL_Backend_ResetState(void)
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// set up debug output early
+#ifdef DEBUGGL
 		if (vid.support.arb_debug_output)
 		{
 			GLuint unused = 0;
@@ -1120,6 +1123,7 @@ static void GL_Backend_ResetState(void)
 				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, GL_FALSE);
 			qglDebugMessageCallbackARB(GL_DebugOutputCallback, NULL);
 		}
+#endif //DEBUGGL
 		CHECKGLERROR
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
@@ -1496,7 +1500,7 @@ void GL_Clear(int mask, const float *colorvalue, float depthvalue, int stencilva
 		if (mask & GL_DEPTH_BUFFER_BIT)
 		{
 #ifdef USE_GLES2
-			qglClearDepthf(depthvalue);CHECKGLERROR
+			//qglClearDepthf(depthvalue);CHECKGLERROR
 #else
 			qglClearDepth(depthvalue);CHECKGLERROR
 #endif
@@ -1551,7 +1555,7 @@ void R_Mesh_Start(void)
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
-		Con_Warnf("WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
+		Con_Printf(CON_WARN "WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
 		Cvar_SetValueQuick(&gl_paranoid, 1);
 	}
 }
@@ -1907,7 +1911,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 		{
 			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
 			if (!bufferobject && gl_paranoid.integer)
-				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, vertexbuffer, (unsigned int)bufferoffset);
+				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, (void *)vertexbuffer, (unsigned int)bufferoffset);
 			gl_state.pointer_vertex_components = components;
 			gl_state.pointer_vertex_gltype = gltype;
 			gl_state.pointer_vertex_stride = stride;

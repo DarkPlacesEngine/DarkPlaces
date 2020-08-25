@@ -9,16 +9,9 @@
 // types for unicode strings
 // let them be 32 bit for now
 // normally, whcar_t is 16 or 32 bit, 16 on linux I think, 32 on haiku and maybe windows
-#ifdef _MSC_VER
-typedef __int32 U_int32;
-#else
-#include <stdint.h>
-#include <sys/types.h>
-typedef int32_t U_int32;
-#endif
 
 // Uchar, a wide character
-typedef U_int32 Uchar;
+typedef int32_t Uchar;
 
 // Initialize UTF8, this registers cvars which allows for UTF8 to be disabled
 // completely.

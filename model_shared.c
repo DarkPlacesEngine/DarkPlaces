@@ -41,13 +41,35 @@ cvar_t mod_generatelightmaps_gridradius = {CVAR_CLIENT | CVAR_SAVE, "mod_generat
 
 dp_model_t *loadmodel;
 
+// Supported model formats
+static modloader_t loader[] =
+{
+	{"obj", NULL, 0, Mod_OBJ_Load},
+	{NULL, "IDPO", 4, Mod_IDP0_Load},
+	{NULL, "IDP2", 4, Mod_IDP2_Load},
+	{NULL, "IDP3", 4, Mod_IDP3_Load},
+	{NULL, "IDSP", 4, Mod_IDSP_Load},
+	{NULL, "IDS2", 4, Mod_IDS2_Load},
+	{NULL, "\035", 1, Mod_Q1BSP_Load},
+	{NULL, "\036", 1, Mod_HLBSP_Load},
+	{NULL, "BSP2", 4, Mod_BSP2_Load},
+	{NULL, "2PSB", 4, Mod_2PSB_Load},
+	{NULL, "IBSP", 4, Mod_IBSP_Load},
+	{NULL, "ZYMOTICMODEL", 13, Mod_ZYMOTICMODEL_Load},
+	{NULL, "DARKPLACESMODEL", 16, Mod_DARKPLACESMODEL_Load},
+	{NULL, "PSKMODEL", 9, Mod_PSKMODEL_Load},
+	{NULL, "INTERQUAKEMODEL", 16, Mod_INTERQUAKEMODEL_Load},
+	{"map", NULL, 0, Mod_MAP_Load},
+	{NULL, NULL, 0, NULL}
+};
+
 static mempool_t *mod_mempool;
 static memexpandablearray_t models;
 
 static mempool_t* q3shaders_mem;
 typedef struct q3shader_hash_entry_s
 {
-  q3shaderinfo_t shader;
+  shader_t shader;
   struct q3shader_hash_entry_s* chain;
 } q3shader_hash_entry_t;
 #define Q3SHADER_HASH_SIZE  1021
@@ -174,10 +196,10 @@ void Mod_Init (void)
 	Cvar_RegisterVariable(&mod_generatelightmaps_vertexradius);
 	Cvar_RegisterVariable(&mod_generatelightmaps_gridradius);
 
-	Cmd_AddCommand(&cmd_client, "modellist", Mod_Print_f, "prints a list of loaded models");
-	Cmd_AddCommand(&cmd_client, "modelprecache", Mod_Precache_f, "load a model");
-	Cmd_AddCommand(&cmd_client, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
-	Cmd_AddCommand(&cmd_client, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
+	Cmd_AddCommand(CMD_CLIENT, "modellist", Mod_Print_f, "prints a list of loaded models");
+	Cmd_AddCommand(CMD_CLIENT, "modelprecache", Mod_Precache_f, "load a model");
+	Cmd_AddCommand(CMD_CLIENT, "modeldecompile", Mod_Decompile_f, "exports a model in several formats for editing purposes");
+	Cmd_AddCommand(CMD_CLIENT, "mod_generatelightmaps", Mod_GenerateLightmaps_f, "rebuilds lighting on current worldmodel");
 }
 
 void Mod_RenderInit(void)
@@ -382,7 +404,6 @@ Loads a model
 */
 dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 {
-	int num;
 	unsigned int crc;
 	void *buf;
 	fs_offset_t filesize = 0;
@@ -490,46 +511,45 @@ dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
 
 	if (buf)
 	{
+		int i;
+		const char *ext = FS_FileExtension(mod->name);	
 		char *bufend = (char *)buf + filesize;
-
 		// all models use memory, so allocate a memory pool
 		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
 
-		num = LittleLong(*((int *)buf));
 		// call the apropriate loader
 		loadmodel = mod;
-		if (!strcasecmp(FS_FileExtension(mod->name), "obj")) Mod_OBJ_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IDS2", 4)) Mod_IDS2_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "DARKPLACESMODEL", 16)) Mod_DARKPLACESMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "ACTRHEAD", 8)) Mod_PSKMODEL_Load(mod, buf, bufend);
-		else if (!memcmp(buf, "INTERQUAKEMODEL", 16)) Mod_INTERQUAKEMODEL_Load(mod, buf, bufend);
-		else if (strlen(mod->name) >= 4 && !strcmp(mod->name + strlen(mod->name) - 4, ".map")) Mod_MAP_Load(mod, buf, bufend);
-		else if (num == BSPVERSION || num == 30 || !memcmp(buf, "BSP2", 4) || !memcmp(buf, "2PSB", 4)) Mod_Q1BSP_Load(mod, buf, bufend);
-		else Con_Printf("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
-		Mem_Free(buf);
 
-		Mod_FindPotentialDeforms(mod);
-
-		buf = FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.framegroups", mod->name), tempmempool, false, &filesize);
-		if(buf)
+		// Try matching magic bytes.
+		for (i = 0; loader[i].Load; i++)
 		{
-			Mod_FrameGroupify(mod, (const char *)buf);
-			Mem_Free(buf);
-		}
+			// Headerless formats can just load based on extension. Otherwise match the magic string.
+			if((loader[i].extension && !strcasecmp(ext, loader[i].extension) && !loader[i].header) ||
+			   (loader[i].header && !memcmp(buf, loader[i].header, loader[i].headersize)))
+			{
+				// Matched. Load it.
+				loader[i].Load(mod, buf, bufend);
+				Mem_Free(buf);
 
-		Mod_BuildVBOs();
+				Mod_FindPotentialDeforms(mod);
+
+				buf = FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.framegroups", mod->name), tempmempool, false, &filesize);
+				if(buf)
+				{
+					Mod_FrameGroupify(mod, (const char *)buf);
+					Mem_Free(buf);
+				}
+
+				Mod_BuildVBOs();
+				break;
+			}
+		}
+		if(!loader[i].Load)
+			Con_Printf(CON_ERROR "Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 	}
 	else if (crash)
-	{
 		// LadyHavoc: Sys_Error was *ANNOYING*
-		Con_Printf ("Mod_LoadModel: %s not found\n", mod->name);
-	}
+		Con_Printf (CON_ERROR "Mod_LoadModel: %s not found\n", mod->name);
 
 	// no fatal errors occurred, so this model is ready to use.
 	mod->loaded = true;
@@ -748,7 +768,7 @@ qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int num
 	}
 	if (invalidintcount || invalidshortcount || invalidmismatchcount)
 	{
-		Con_Printf("Mod_ValidateElements(%i, %i, %i, %p, %p) called at %s:%d", numelements, first, last, element3i, element3s, filename, fileline);
+		Con_Printf("Mod_ValidateElements(%i, %i, %i, %p, %p) called at %s:%d", numelements, first, last, (void *)element3i, (void *)element3s, filename, fileline);
 		Con_Printf(", %i elements are invalid in element3i (example: element3i[%i] == %i)", invalidintcount, invalidintexample, element3i ? element3i[invalidintexample] : 0);
 		Con_Printf(", %i elements are invalid in element3s (example: element3s[%i] == %i)", invalidshortcount, invalidshortexample, element3s ? element3s[invalidshortexample] : 0);
 		Con_Printf(", %i elements mismatch between element3i and element3s (example: element3s[%i] is %i and element3i[%i] is %i)", invalidmismatchcount, invalidmismatchexample, element3s ? element3s[invalidmismatchexample] : 0, invalidmismatchexample, element3i ? element3i[invalidmismatchexample] : 0);
@@ -1370,7 +1390,7 @@ void Mod_FreeQ3Shaders(void)
 	Mem_FreePool(&q3shaders_mem);
 }
 
-static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
+static void Q3Shader_AddToHash (shader_t* shader)
 {
 	unsigned short hash = CRC_Block_CaseInsensitive ((const unsigned char *)shader->name, strlen (shader->name));
 	q3shader_hash_entry_t* entry = q3shader_data->hash + (hash % Q3SHADER_HASH_SIZE);
@@ -1425,7 +1445,7 @@ static void Q3Shader_AddToHash (q3shaderinfo_t* shader)
 		/* else: head of chain, in hash entry array */
 		entry = lastEntry;
 	}
-	memcpy (&entry->shader, shader, sizeof (q3shaderinfo_t));
+	memcpy (&entry->shader, shader, sizeof (shader_t));
 }
 
 void Mod_LoadQ3Shaders(void)
@@ -1435,7 +1455,7 @@ void Mod_LoadQ3Shaders(void)
 	fssearch_t *search;
 	char *f;
 	const char *text;
-	q3shaderinfo_t shader;
+	shader_t shader;
 	q3shaderinfo_layer_t *layer;
 	int numparameters;
 	char parameter[TEXTURE_MAXFRAMES + 4][Q3PATHLENGTH];
@@ -1497,7 +1517,7 @@ void Mod_LoadQ3Shaders(void)
 	}
 
 	// parse shaders
-	search = FS_Search("scripts/*.shader", true, false);
+	search = FS_Search("scripts/*.shader", true, false, NULL);
 	if (!search)
 		return;
 	for (fileindex = 0;fileindex < search->numfilenames;fileindex++)
@@ -2181,7 +2201,7 @@ void Mod_LoadQ3Shaders(void)
 		Mem_Free(custsurfaceparmnames[j]);
 }
 
-q3shaderinfo_t *Mod_LookupQ3Shader(const char *name)
+shader_t *Mod_LookupQ3Shader(const char *name)
 {
 	unsigned short hash;
 	q3shader_hash_entry_t* entry;
@@ -2228,7 +2248,12 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, 
 	for (j = 0; j < Q3MAXTCMODS && layer->tcmods[j].tcmod != Q3TCMOD_NONE; j++)
 		shaderpass->tcmods[j] = layer->tcmods[j];
 	for (j = 0; j < layer->numframes; j++)
+	{
+		for (int i = 0; layer->texturename[j][i]; i++)
+			if(layer->texturename[j][i] == '\\')
+				layer->texturename[j][i] = '/';
 		shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false, true);
+	}
 	return shaderpass;
 }
 
@@ -2236,7 +2261,7 @@ qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, 
 {
 	int texflagsmask, texflagsor;
 	qboolean success = true;
-	q3shaderinfo_t *shader;
+	shader_t *shader;
 	if (!name)
 		name = "";
 	strlcpy(texture->name, name, sizeof(texture->name));
@@ -4370,13 +4395,13 @@ void Mod_Mesh_Create(dp_model_t *mod, const char *name)
 	strlcpy(mod->name, name, sizeof(mod->name));
 	mod->mempool = Mem_AllocPool(name, 0, NULL);
 	mod->texturepool = R_AllocTexturePool();
-	mod->Draw = R_Q1BSP_Draw;
-	mod->DrawDepth = R_Q1BSP_DrawDepth;
-	mod->DrawDebug = R_Q1BSP_DrawDebug;
-	mod->DrawPrepass = R_Q1BSP_DrawPrepass;
-	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
-	mod->DrawShadowMap = R_Q1BSP_DrawShadowMap;
-	mod->DrawLight = R_Q1BSP_DrawLight;
+	mod->Draw = R_Mod_Draw;
+	mod->DrawDepth = R_Mod_DrawDepth;
+	mod->DrawDebug = R_Mod_DrawDebug;
+	mod->DrawPrepass = R_Mod_DrawPrepass;
+	mod->GetLightInfo = R_Mod_GetLightInfo;
+	mod->DrawShadowMap = R_Mod_DrawShadowMap;
+	mod->DrawLight = R_Mod_DrawLight;
 }
 
 void Mod_Mesh_Destroy(dp_model_t *mod)
@@ -4468,9 +4493,9 @@ msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchw
 	surf->num_firsttriangle = mod->surfmesh.num_triangles;
 	surf->num_firstvertex = mod->surfmesh.num_vertices;
 	if (tex->basematerialflags & (MATERIALFLAG_SKY))
-		mod->DrawSky = R_Q1BSP_DrawSky;
+		mod->DrawSky = R_Mod_DrawSky;
 	if (tex->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-		mod->DrawAddWaterPlanes = R_Q1BSP_DrawAddWaterPlanes;
+		mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
 	return surf;
 }
 
@@ -4705,6 +4730,7 @@ void Mod_Mesh_Finalize(dp_model_t *mod)
 		Mod_Mesh_Validate(mod);
 	Mod_Mesh_ComputeBounds(mod);
 	Mod_Mesh_MakeSortedSurfaces(mod);
-	Mod_BuildTextureVectorsFromNormals(0, mod->surfmesh.num_vertices, mod->surfmesh.num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_texcoordtexture2f, mod->surfmesh.data_normal3f, mod->surfmesh.data_element3i, mod->surfmesh.data_svector3f, mod->surfmesh.data_tvector3f, true);
+	if(!r_refdef.draw2dstage)
+		Mod_BuildTextureVectorsFromNormals(0, mod->surfmesh.num_vertices, mod->surfmesh.num_triangles, mod->surfmesh.data_vertex3f, mod->surfmesh.data_texcoordtexture2f, mod->surfmesh.data_normal3f, mod->surfmesh.data_element3i, mod->surfmesh.data_svector3f, mod->surfmesh.data_tvector3f, true);
 	Mod_Mesh_UploadDynamicBuffers(mod);
 }

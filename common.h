@@ -26,6 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef WIN32
 # define strcasecmp _stricmp
 # define strncasecmp _strnicmp
+#else
+#include "strings.h"
 #endif
 
 // Create our own define for Mac OS X
@@ -33,9 +35,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # define MACOSX
 #endif
 
-#ifdef SUNOS
-#include <sys/file.h>		///< Needed for FNDELAY
-#endif
 
 //============================================================================
 
@@ -204,10 +203,6 @@ int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_Console(const char **datapointer);
 
-extern int com_argc;
-extern const char **com_argv;
-extern int com_selffd;
-
 int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_Shutdown (void);
@@ -298,6 +293,7 @@ typedef enum gamemode_e
 	GAME_STRAPBOMB, // added by motorsep for Urre
 	GAME_MOONHELM,
 	GAME_VORETOURNAMENT,
+	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
 	GAME_WRATH,
 	GAME_COUNT
 }
@@ -386,6 +382,8 @@ char **XPM_DecodeString(const char *in);
 size_t base64_encode(unsigned char *buf, size_t buflen, size_t outbuflen);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+float Com_CalcRoll (const vec3_t angles, const vec3_t velocity, const vec_t angleval, const vec_t velocityval);
 
 #endif
 

@@ -32,12 +32,12 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_Warn(msg);
+	Con_Printf(CON_WARN "%s", msg);
 
 	// TODO: either add a cvar/cmd to control the state dumping or replace some of the calls with Con_Printf [9/13/2006 Black]
-	if(prvm_backtraceforwarnings.integer && recursive != realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
+	if(prvm_backtraceforwarnings.integer && recursive != host.realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
 	{
-		recursive = realtime;
+		recursive = host.realtime;
 		PRVM_PrintState(prog, 0);
 		recursive = -1;
 	}
@@ -108,7 +108,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 		return;
 	}
 
-	nolerp = (model->type == mod_sprite) ? !r_lerpsprites.integer : !r_lerpmodels.integer;
+	nolerp = ((model->type == mod_sprite) ? !r_lerpsprites.integer : !r_lerpmodels.integer) || (model->nolerp == true);
 	numframes = model->numframes;
 	for (k = 0, g = framegroupblend;k < MAX_FRAMEGROUPBLENDS;k++, g++)
 	{
@@ -265,20 +265,11 @@ checkextension(extensionname)
 // kind of helper function
 static qboolean checkextension(prvm_prog_t *prog, const char *name)
 {
-	int len;
-	const char *e, *start;
-	len = (int)strlen(name);
+	const char **e;
 
 	for (e = prog->extensionstring;*e;e++)
 	{
-		while (*e == ' ')
-			e++;
-		if (!*e)
-			break;
-		start = e;
-		while (*e && *e != ' ')
-			e++;
-		if ((e - start) == len && !strncasecmp(start, name, len))
+		if(!strcasecmp(*e, name))
 		{
 #ifdef USEODE
 			// special sheck for ODE
@@ -331,7 +322,7 @@ void VM_error(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(prog, 0, string, sizeof(string));
-	Con_Errorf("======%s ERROR in %s:\n%s\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
+	Con_Printf(CON_ERROR "======%s ERROR in %s:\n%s\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
 	ed = PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self));
 	PRVM_ED_Print(prog, ed, NULL);
 
@@ -354,11 +345,11 @@ void VM_objerror(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(prog, 0, string, sizeof(string));
-	Con_Errorf("======OBJECT ERROR======\n"); // , prog->name, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
+	Con_Printf(CON_ERROR "======OBJECT ERROR======\n"); // , prog->name, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
 	ed = PRVM_PROG_TO_EDICT(PRVM_allglobaledict(self));
 	PRVM_ED_Print(prog, ed, NULL);
 	PRVM_ED_Free (prog, ed);
-	Con_Errorf("%s OBJECT ERROR in %s:\n%s\nTip: read above for entity information\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
+	Con_Printf(CON_ERROR "%s OBJECT ERROR in %s:\n%s\nTip: read above for entity information\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
 }
 
 /*
@@ -615,7 +606,7 @@ cmd (string, ...)
 void VM_localcmd_client(prvm_prog_t *prog)
 {
 	char string[VM_STRINGTEMP_LENGTH];
-	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_client);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(&cmd_client, string);
 }
@@ -633,7 +624,7 @@ cmd (string, ...)
 void VM_localcmd_server(prvm_prog_t *prog)
 {
 	char string[VM_STRINGTEMP_LENGTH];
-	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_server);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(&cmd_server, string);
 }
@@ -680,7 +671,7 @@ void VM_cvar_type(prvm_prog_t *prog)
 	cvar_t *cvar;
 	int ret;
 
-	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_cvar_type);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
 	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
@@ -2291,7 +2282,7 @@ Return name of the specified field as a string, or empty if the field is invalid
 */
 void VM_entityfieldname(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 
 	if (i < 0 || i >= prog->numfielddefs)
@@ -2315,7 +2306,7 @@ float(float fieldnum) entityfieldtype
 */
 void VM_entityfieldtype(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	
 	if (i < 0 || i >= prog->numfielddefs)
@@ -2340,7 +2331,7 @@ string(float fieldnum, entity ent) getentityfieldstring
 void VM_getentityfieldstring(prvm_prog_t *prog)
 {
 	// put the data into a string
-	ddef_t *d;
+	mdef_t *d;
 	int type, j;
 	prvm_eval_t *val;
 	prvm_edict_t * ent;
@@ -2390,7 +2381,7 @@ float(float fieldnum, entity ent, string s) putentityfieldstring
 */
 void VM_putentityfieldstring(prvm_prog_t *prog)
 {
-	ddef_t *d;
+	mdef_t *d;
 	prvm_edict_t * ent;
 	int i = (int)PRVM_G_FLOAT(OFS_PARM0);
 
@@ -2697,7 +2688,7 @@ void VM_strireplace(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 	int search_len, replace_len, subject_len;
 
-	VM_SAFEPARMCOUNT(3,VM_strreplace);
+	VM_SAFEPARMCOUNT(3, VM_strireplace);
 
 	search = PRVM_G_STRING(OFS_PARM0);
 	replace = PRVM_G_STRING(OFS_PARM1);
@@ -2883,7 +2874,7 @@ void VM_tokenize_console (prvm_prog_t *prog)
 {
 	const char *p;
 
-	VM_SAFEPARMCOUNT(1,VM_tokenize);
+	VM_SAFEPARMCOUNT(1, VM_tokenize_console);
 
 	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
 	p = tokenize_string;
@@ -3051,7 +3042,7 @@ float	isserver()
 */
 void VM_isserver(prvm_prog_t *prog)
 {
-	VM_SAFEPARMCOUNT(0,VM_serverstate);
+	VM_SAFEPARMCOUNT(0, VM_isserver);
 
 	PRVM_G_FLOAT(OFS_RETURN) = sv.active;
 }
@@ -3141,7 +3132,7 @@ void VM_gettime(prvm_prog_t *prog)
 
 	if(prog->argc == 0)
 	{
-		PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) realtime;
+		PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) host.realtime;
 	}
 	else
 	{
@@ -3149,23 +3140,23 @@ void VM_gettime(prvm_prog_t *prog)
 		switch(timer_index)
 		{
 			case 0: // GETTIME_FRAMESTART
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 			case 1: // GETTIME_REALTIME
 				PRVM_G_FLOAT(OFS_RETURN) = Sys_DirtyTime();
 				break;
 			case 2: // GETTIME_HIRES
-				PRVM_G_FLOAT(OFS_RETURN) = (Sys_DirtyTime() - host_dirtytime);
+				PRVM_G_FLOAT(OFS_RETURN) = (Sys_DirtyTime() - host.dirtytime);
 				break;
 			case 3: // GETTIME_UPTIME
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 			case 4: // GETTIME_CDTRACK
 				PRVM_G_FLOAT(OFS_RETURN) = CDAudio_GetPosition();
 				break;
 			default:
 				VM_Warning(prog, "VM_gettime: %s: unsupported timer specified, returning realtime\n", prog->name);
-				PRVM_G_FLOAT(OFS_RETURN) = realtime;
+				PRVM_G_FLOAT(OFS_RETURN) = host.realtime;
 				break;
 		}
 	}
@@ -3227,7 +3218,7 @@ loadfromdata(string data)
 */
 void VM_loadfromdata(prvm_prog_t *prog)
 {
-	VM_SAFEPARMCOUNT(1,VM_loadentsfromfile);
+	VM_SAFEPARMCOUNT(1, VM_loadfromdata);
 
 	PRVM_ED_LoadFromFile(prog, PRVM_G_STRING(OFS_PARM0));
 }
@@ -3304,7 +3295,7 @@ float	mod(float val, float m)
 void VM_modulo(prvm_prog_t *prog)
 {
 	prvm_int_t val, m;
-	VM_SAFEPARMCOUNT(2,VM_module);
+	VM_SAFEPARMCOUNT(2, VM_modulo);
 
 	val = (prvm_int_t) PRVM_G_FLOAT(OFS_PARM0);
 	m	= (prvm_int_t) PRVM_G_FLOAT(OFS_PARM1);
@@ -3335,16 +3326,16 @@ static void VM_Search_Reset(prvm_prog_t *prog)
 =========
 VM_search_begin
 
-float search_begin(string pattern, float caseinsensitive, float quiet)
+float search_begin(string pattern, float caseinsensitive, float quiet[, string packfile])
 =========
 */
 void VM_search_begin(prvm_prog_t *prog)
 {
 	int handle;
-	const char *pattern;
+	const char *packfile = NULL, *pattern;
 	int caseinsens, quiet;
 
-	VM_SAFEPARMCOUNT(3, VM_search_begin);
+	VM_SAFEPARMCOUNTRANGE(3, 4, VM_search_begin);
 
 	pattern = PRVM_G_STRING(OFS_PARM0);
 
@@ -3352,6 +3343,10 @@ void VM_search_begin(prvm_prog_t *prog)
 
 	caseinsens = (int)PRVM_G_FLOAT(OFS_PARM1);
 	quiet = (int)PRVM_G_FLOAT(OFS_PARM2);
+
+	// optional packfile parameter (DP_QC_FS_SEARCH_PACKFILE)
+	if(prog->argc >= 4)
+		packfile = PRVM_G_STRING(OFS_PARM3);
 
 	for(handle = 0; handle < PRVM_MAX_OPENSEARCHES; handle++)
 		if(!prog->opensearches[handle])
@@ -3364,7 +3359,7 @@ void VM_search_begin(prvm_prog_t *prog)
 		return;
 	}
 
-	if(!(prog->opensearches[handle] = FS_Search(pattern,caseinsens, quiet)))
+	if(!(prog->opensearches[handle] = FS_Search(pattern,caseinsens, quiet, packfile)))
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	else
 	{
@@ -3414,7 +3409,7 @@ float	search_getsize(float handle)
 void VM_search_getsize(prvm_prog_t *prog)
 {
 	int handle;
-	VM_SAFEPARMCOUNT(1, VM_M_search_getsize);
+	VM_SAFEPARMCOUNT(1, VM_search_getsize);
 
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
 
@@ -3771,7 +3766,7 @@ void VM_stringwidth(prvm_prog_t *prog)
 	int colors;
 	float sx, sy;
 	size_t maxlen = 0;
-	VM_SAFEPARMCOUNTRANGE(2,3,VM_drawstring);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_stringwidth);
 
 	getdrawfontscale(prog, &sx, &sy);
 	if(prog->argc == 3)
@@ -4305,7 +4300,7 @@ float stringtokeynum(string key)
 */
 void VM_stringtokeynum (prvm_prog_t *prog)
 {
-	VM_SAFEPARMCOUNT( 1, VM_keynumtostring );
+	VM_SAFEPARMCOUNT( 1, VM_stringtokeynum );
 
 	PRVM_G_FLOAT(OFS_RETURN) = Key_StringToKeynum(PRVM_G_STRING(OFS_PARM0));
 }
@@ -4320,7 +4315,7 @@ string getkeybind(float key, float bindmap)
 void VM_getkeybind (prvm_prog_t *prog)
 {
 	int bindmap;
-	VM_SAFEPARMCOUNTRANGE(1, 2, VM_CL_getkeybind);
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_getkeybind);
 	if(prog->argc == 2)
 		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
@@ -4339,7 +4334,7 @@ float setkeybind(float key, string cmd, float bindmap)
 void VM_setkeybind (prvm_prog_t *prog)
 {
 	int bindmap;
-	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_setkeybind);
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_setkeybind);
 	if(prog->argc == 3)
 		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM2), MAX_BINDMAPS-1);
 	else
@@ -4360,7 +4355,7 @@ vector getbindmaps()
 void VM_getbindmaps (prvm_prog_t *prog)
 {
 	int fg, bg;
-	VM_SAFEPARMCOUNT(0, VM_CL_getbindmap);
+	VM_SAFEPARMCOUNT(0, VM_getbindmaps);
 	Key_GetBindMap(&fg, &bg);
 	PRVM_G_VECTOR(OFS_RETURN)[0] = fg;
 	PRVM_G_VECTOR(OFS_RETURN)[1] = bg;
@@ -4376,7 +4371,7 @@ float setbindmaps(vector bindmap)
 */
 void VM_setbindmaps (prvm_prog_t *prog)
 {
-	VM_SAFEPARMCOUNT(1, VM_CL_setbindmap);
+	VM_SAFEPARMCOUNT(1, VM_setbindmaps);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 	if(PRVM_G_VECTOR(OFS_PARM0)[2] == 0)
 		if(Key_SetBindMap((int)PRVM_G_VECTOR(OFS_PARM0)[0], (int)PRVM_G_VECTOR(OFS_PARM0)[1]))
@@ -4442,7 +4437,7 @@ void VM_cin_setstate(prvm_prog_t *prog)
 	clvideostate_t 	state;
 	clvideo_t		*video;
 
-	VM_SAFEPARMCOUNT( 2, VM_cin_netstate );
+	VM_SAFEPARMCOUNT( 2, VM_cin_setstate );
 
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString(prog,  name );
@@ -5025,9 +5020,9 @@ void VM_buf_create (prvm_prog_t *prog)
 {
 	prvm_stringbuffer_t *stringbuffer;
 	int i;
-	
+
 	VM_SAFEPARMCOUNTRANGE(0, 2, VM_buf_create);
-	
+
 	// VorteX: optional parm1 (buffer format) is unfinished, to keep intact with future databuffers extension must be set to "string"
 	if(prog->argc >= 1 && strcmp(PRVM_G_STRING(OFS_PARM0), "string"))
 	{
@@ -6732,7 +6727,7 @@ void VM_callfunction(prvm_prog_t *prog)
 	func = PRVM_ED_FindFunction(prog, s);
 
 	if(!func)
-		prog->error_cmd("VM_callfunciton: function %s not found !", s);
+		prog->error_cmd("VM_callfunction: function %s not found !", s);
 	else if (func->first_statement < 0)
 	{
 		// negative statements are built in functions
@@ -7070,6 +7065,7 @@ nolength:
 								o += u8_strpad(o, end - o, buf, (flags & PRINTF_LEFT) != 0, width, precision);
 							}
 							break;
+						//spike FIXME -- 'S' for quoted tokenize-safe-or-print escaping of strings so stuff can safely survive console commands.
 						case 's':
 							if(flags & PRINTF_ALTERNATE)
 							{
@@ -7346,7 +7342,7 @@ void VM_getsurfacepointattribute(prvm_prog_t *prog)
 	int attributetype;
 	vec3_t result;
 
-	VM_SAFEPARMCOUNT(4, VM_getsurfacepoint);
+	VM_SAFEPARMCOUNT(4, VM_getsurfacepointattribute);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(prog, ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -7499,7 +7495,7 @@ void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 	dp_model_t *model;
 	msurface_t *surface;
 	vec3_t p, out, inp;
-	VM_SAFEPARMCOUNT(3, VM_te_getsurfaceclippedpoint);
+	VM_SAFEPARMCOUNT(3, VM_getsurfaceclippedpoint);
 	VectorClear(PRVM_G_VECTOR(OFS_RETURN));
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!(model = getmodel(prog, ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
@@ -7516,7 +7512,7 @@ void VM_getsurfacenumtriangles(prvm_prog_t *prog)
 {
        dp_model_t *model;
        msurface_t *surface;
-       VM_SAFEPARMCOUNT(2, VM_SV_getsurfacenumtriangles);
+       VM_SAFEPARMCOUNT(2, VM_getsurfacenumtriangles);
        // return 0 if no such surface
        if (!(model = getmodel(prog, PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
        {
@@ -7534,7 +7530,7 @@ void VM_getsurfacetriangle(prvm_prog_t *prog)
        dp_model_t *model;
        msurface_t *surface;
        int trinum;
-       VM_SAFEPARMCOUNT(3, VM_SV_getsurfacetriangle);
+       VM_SAFEPARMCOUNT(3, VM_getsurfacetriangle);
        VectorClear(PRVM_G_VECTOR(OFS_RETURN));
        ed = PRVM_G_EDICT(OFS_PARM0);
        if (!(model = getmodel(prog, ed)) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))

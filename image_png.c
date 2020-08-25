@@ -283,12 +283,12 @@ static void PNG_fFlushData(void *png)
 
 static void PNG_error_fn(void *png, const char *message)
 {
-	Con_Errorf("PNG_LoadImage: error: %s\n", message);
+	Con_Printf(CON_ERROR "PNG_LoadImage: error: %s\n", message);
 }
 
 static void PNG_warning_fn(void *png, const char *message)
 {
-	Con_Warnf("PNG_LoadImage: warning: %s\n", message);
+	Con_Printf(CON_WARN "PNG_LoadImage: warning: %s\n", message);
 }
 
 unsigned char *PNG_LoadImage_BGRA (const unsigned char *raw, int filesize, int *miplevel)
@@ -511,7 +511,6 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 
 	// NOTE: this relies on jmp_buf being the first thing in the png structure
 	// created by libpng! (this is correct for libpng 1.2.x)
-#ifdef __cplusplus
 #ifdef WIN64
 	if (setjmp((_JBTYPE *)png))
 #elif defined(MACOSX) || defined(WIN32)
@@ -519,10 +518,7 @@ qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, 
 #elif defined(__ANDROID__)
 	if (setjmp((long *)png))
 #else
-	if (setjmp((__jmp_buf_tag *)png))
-#endif
-#else
-	if (setjmp(png))
+	if (setjmp((struct __jmp_buf_tag *)png))
 #endif
 	{
 		qpng_destroy_write_struct(&png, &pnginfo);

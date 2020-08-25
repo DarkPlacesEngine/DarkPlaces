@@ -570,8 +570,7 @@ int CDAudio_Init (void)
 		Cvar_RegisterVariable(&music_playlist_sampleposition[i]);
 	}
 
-	Cmd_AddCommand(&cmd_client, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
-	Cmd_AddCommand(&cmd_clientfromserver, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cd", CD_f, "execute a CD drive command (cd on/off/reset/remap/close/play/loop/stop/pause/resume/eject/info) - use cd by itself for usage");
 
 	return 0;
 }

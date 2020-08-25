@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 # include <TargetConditionals.h>
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ > 2)
+#if (__GNUC__ > 2) || defined (__clang__) || (__TINYC__)
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
 #define DP_FUNC_NORETURN  __attribute__ ((noreturn))
@@ -406,6 +406,7 @@ extern char engineversion[128];
 extern qboolean noclip_anglehack;
 
 extern cvar_t developer;
+extern cvar_t developer_entityparsing;
 extern cvar_t developer_extra;
 extern cvar_t developer_insane;
 extern cvar_t developer_loadfile;
@@ -428,6 +429,9 @@ extern cvar_t sessionid;
 # define USE_RWOPS		1
 # define LINK_TO_ZLIB	1
 # define LINK_TO_LIBVORBIS 1
+#ifdef USEXMP
+# define LINK_TO_LIBXMP 1 // nyov: if someone can test with the android NDK compiled libxmp?
+#endif
 # define DP_MOBILETOUCH	1
 # define DP_FREETYPE_STATIC 1
 #elif TARGET_OS_IPHONE /* must come first because it also defines MACOSX */
@@ -456,18 +460,29 @@ extern cvar_t sessionid;
 #elif defined(__OpenBSD__)
 # define DP_OS_NAME		"OpenBSD"
 # define DP_OS_STR		"openbsd"
+#elif defined(__DragonFly__)
+# define DP_OS_NAME		"DragonFlyBSD"
+# define DP_OS_STR		"dragonflybsd"
 #elif defined(MACOSX)
 # define DP_OS_NAME		"Mac OS X"
 # define DP_OS_STR		"osx"
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"
+#elif defined (sun) || defined (__sun)
+# if defined (__SVR4) || defined (__svr4__)
+#  define DP_OS_NAME	"Solaris"
+#  define DP_OS_STR		"solaris"
+# else
+#  define DP_OS_NAME	"SunOS"
+#  define DP_OS_STR		"sunos"
+# endif
 #else
 # define DP_OS_NAME		"Unknown"
 # define DP_OS_STR		"unknown"
 #endif
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || (__clang__)
 # if defined(__i386__)
 #  define DP_ARCH_STR		"686"
 #  define SSE_POSSIBLE
@@ -515,23 +530,45 @@ qboolean Sys_HaveSSE2(void);
 #include "glquake.h"
 
 #include "palette.h"
+typedef enum host_state_e
+{
+	host_shutdown,
+	host_init,
+	host_loading,
+	host_active
+} host_state_t;
 
-/// incremented every frame, never reset
-extern int host_framecount;
-/// not bounded in any way, changed at start of every frame, never reset
-extern double realtime;
-/// equal to Sys_DirtyTime() at the start of this host frame
-extern double host_dirtytime;
+typedef struct host_s
+{
+	jmp_buf abortframe;
+	int state;
+	int framecount; // incremented every frame, never reset (checked by Host_Error and Host_SaveConfig_f)
+	double realtime; // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
+	double dirtytime; // the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
+	double sleeptime; // time spent sleeping overall
+	qboolean restless; // don't sleep
+	qboolean paused; // global paused state, pauses both client and server
+	cbuf_t *cbuf;
+
+	struct
+	{
+		void (*ConnectLocal)(void);
+	} hook;
+} host_t;
+
+extern host_t host;
 
 void Host_InitCommands(void);
 void Host_Main(void);
+double Host_Frame(double time);
 void Host_Shutdown(void);
 void Host_StartVideo(void);
 void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 void Host_Quit_f(cmd_state_t *cmd);
-void Host_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
-void Host_ShutdownServer(void);
-void Host_Reconnect_f(cmd_state_t *cmd);
+void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
+double SV_Frame(double time);
+void SV_Shutdown(void);
+void CL_Reconnect_f(cmd_state_t *cmd);
 void Host_NoOperation_f(cmd_state_t *cmd);
 void Host_LockSession(void);
 void Host_UnlockSession(void);

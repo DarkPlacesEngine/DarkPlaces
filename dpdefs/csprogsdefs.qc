@@ -337,7 +337,7 @@ void(entity e, vector min, vector max) setsize = #4;
 
 void() break_to_debugger = #6;
 float() random = #7;
-void(entity e, float chan, string samp) sound = #8;
+void(entity e, float chan, string samp, float volume, float atten, ...) sound = #8;
 vector(vector v) normalize = #9;
 void(string e) error = #10;
 void(string e) objerror = #11;
@@ -421,6 +421,7 @@ float( float b, ... ) max = #95;
 float(float minimum, float val, float maximum) bound = #96;
 float(float f, float f) pow = #97;
 entity(entity start, .float fld, float match) findfloat = #98;
+entity(entity start, .entity fld, entity match) findentity = #98;
 float(string s) checkextension = #99;
 // FrikaC and Telejano range #100-#199
 
@@ -469,7 +470,7 @@ void() R_EndPolygon = #308;
 vector (vector v) cs_unproject = #310;
 vector (vector v) cs_project = #311;
 
-void(float width, vector pos1, vector pos2, float flag) drawline = #315;
+void(float width, vector pos1, vector pos2, vector rgb, float alpha, float flag) drawline = #315;
 float(string name) iscachedpic = #316;
 string(string name, ...) precache_pic = #317;
 string(string name) precache_cubemap = #317;
@@ -596,7 +597,7 @@ float(float t) atan = #473;
 float(float c, float s) atan2 = #474;
 float(float a) tan = #475;
 float(string s) strippedstringlen = #476;
-float(string s) strlennocol = #476; // This is the correct name for the function, but not removing the decolorizedstring mapping.
+float(string s) strlennocol = #476; // This is the correct name for the function, but not removing the strippedstringlen mapping.
 string(string s) decolorizedstring = #477;
 string(string s) strdecolorize = #477; // This is the correct name for the function, but not removing the decolorizedstring mapping.
 string(float uselocaltime, string format, ...) strftime = #478;
@@ -943,13 +944,13 @@ vector	drawgetimagesize(string pic) = #318;
 #define SPA_TEXCOORDS0 4
 #define SPA_LIGHTMAP0_TEXCOORDS 5
 #define SPA_LIGHTMAP_COLOR 6
-float (entity e, float s)						getsurfacenumpoints = #434;
-vector (entity e, float s, float n)					getsurfacepoint = #435;
-vector (entity e, float s)						getsurfacenormal = #436;
-string (entity e, float s)						getsurfacetexture = #437;
-float (entity e, vector p)						getsurfacenearpoint = #438;
-vector (entity e, float s, vector p)					getsurfaceclippedpoint = #439;
-vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
+// float (entity e, float s)						getsurfacenumpoints = #434;
+// vector (entity e, float s, float n)					getsurfacepoint = #435;
+// vector (entity e, float s)						getsurfacenormal = #436;
+// string (entity e, float s)						getsurfacetexture = #437;
+// float (entity e, vector p)						getsurfacenearpoint = #438;
+// vector (entity e, float s, vector p)					getsurfaceclippedpoint = #439;
+// vector(entity e, float s, float n, float a) getsurfacepointattribute = #486;
 float(entity e, float s) getsurfacenumtriangles = #628;
 vector(entity e, float s, float n) getsurfacetriangle = #629;
 
@@ -961,11 +962,13 @@ float DEG2RAD = 0.01745329251994329576923690768488612713442871888541725456097191
 float RAD2DEG = 57.2957795130823208767981548141051703324054724665643215491602438612;
 float PI      = 3.1415926535897932384626433832795028841971693993751058209749445923;
 //builtin definitions:
+/* -Wdouble-declaration
 float(float s) asin = #471; // returns angle in radians for a given sin() value, the result is in the range -PI*0.5 to PI*0.5
 float(float c) acos = #472; // returns angle in radians for a given cos() value, the result is in the range 0 to PI
 float(float t) atan = #473; // returns angle in radians for a given tan() value, the result is in the range -PI*0.5 to PI*0.5
 float(float c, float s) atan2 = #474; // returns angle in radians for a given cos() and sin() value pair, the result is in the range -PI to PI (this is identical to vectoyaw except it returns radians rather than degrees)
 float(float a) tan = #475; // returns tangent value (which is simply sin(a)/cos(a)) for the given angle in radians, the result is in the range -infinity to +infinity
+*/
 //description:
 //useful math functions for analyzing vectors, note that these all use angles in radians (just like the cos/sin functions) not degrees unlike makevectors/vectoyaw/vectoangles, so be sure to do the appropriate conversions (multiply by DEG2RAD or RAD2DEG as needed).
 //note: atan2 can take unnormalized vectors (just like vectoyaw), and the function was included only for completeness (more often you want vectoyaw or vectoangles), atan2(v_x,v_y) * RAD2DEG gives the same result as vectoyaw(v)
@@ -1434,6 +1437,15 @@ void(entity e, string s) parseentitydata = #608;
 //darkplaces implementation: divVerent
 //function definitions:
 void coverage() = #642;  // Reports a coverage event. The engine counts for each of the calls to this builtin whether it has been called.
+
+//DP_QC_FS_SEARCH_PACKFILE
+//idea: Mario
+//darkplaces implementation: Mario
+//builtin definitions:
+float(string pattern, float caseinsensitive, float quiet, string packfile) search_packfile_begin = #444;
+//description:
+//extension to search_begin (DP_QC_FS_SEARCH), performs a filename search with the specified pattern (for example "maps/*.bsp") and stores the results in a search slot (minimum of 128 supported by any engine with this extension), the other functions take this returned search slot number, be sure to search_free when done (they are also freed on progs reload).
+//only searches for files within the specified packfile, which is expected to match the results of whichpack().
 
 // assorted builtins
 const float		STAT_MOVEVARS_TICRATE           = 240;

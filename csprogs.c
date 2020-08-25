@@ -227,7 +227,7 @@ static void CSQC_SetGlobals (double frametime)
 	prvm_prog_t *prog = CLVM_prog;
 	CSQC_BEGIN
 		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobalfloat(cltime) = realtime; // Spike named it that way.
+		PRVM_clientglobalfloat(cltime) = host.realtime; // Spike named it that way.
 		PRVM_clientglobalfloat(frametime) = frametime;
 		PRVM_clientglobalfloat(servercommandframe) = cls.servermovesequence;
 		PRVM_clientglobalfloat(clientcommandframe) = cl.movecmd[0].sequence;
@@ -562,12 +562,10 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		// temporarily so that it can be set by the cvar command,
 		// and then reprotect it afterwards
 		int crcflags = csqc_progcrc.flags;
-		int sizeflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CVAR_READONLY;
 		csqc_progsize.flags &= ~CVAR_READONLY;
-		Cmd_ExecuteString(&cmd_clientfromserver, msg, src_command, true);
-		csqc_progcrc.flags = crcflags;
-		csqc_progsize.flags = sizeflags;
+		Cmd_ExecuteString(&cmd_client, msg, src_command, true);
+		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
 
@@ -598,7 +596,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 				l = sizeof(buf) - 1;
 			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
 
-			Cmd_ExecuteString(&cmd_clientfromserver, buf, src_command, true);
+			Cmd_ExecuteString(&cmd_client, buf, src_command, true);
 
 			p += l;
 			if(*p == '\n')
@@ -606,13 +604,13 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 			else
 				break; // end of string or overflow
 		}
-		Cmd_ExecuteString(&cmd_clientfromserver, "curl --clear_autodownload", src_command, true); // don't inhibit CSQC loading
+		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_command, true); // don't inhibit CSQC loading
 		return;
 	}
 
 	if(!cl.csqc_loaded)
 	{
-		Cbuf_AddText(&cmd_clientfromserver, msg);
+		Cbuf_AddText(&cmd_client, msg);
 		return;
 	}
 	CSQC_BEGIN
@@ -626,7 +624,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
-		Cbuf_AddText(&cmd_clientfromserver, msg);
+		Cbuf_AddText(&cmd_client, msg);
 	CSQC_END
 }
 
@@ -646,13 +644,8 @@ void CSQC_AddPrintText (const char *msg)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	size_t i;
-	if(!cl.csqc_loaded)
-	{
-		Con_Print(msg);
-		return;
-	}
 	CSQC_BEGIN
-	if(PRVM_clientfunction(CSQC_Parse_Print))
+	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_Print))
 	{
 		// FIXME: is this bugged?
 		i = strlen(msg)-1;
@@ -680,13 +673,8 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
-	if(!cl.csqc_loaded)
-	{
-		SCR_CenterPrint(msg);
-		return;
-	}
 	CSQC_BEGIN
-	if(PRVM_clientfunction(CSQC_Parse_CenterPrint))
+	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_CenterPrint))
 	{
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
@@ -1017,7 +1005,7 @@ void CL_VM_Init (void)
 		}
 		else
 		{
-			Con_DPrintf("Not using buffered \"%s\" (buffered: %p, %d)\n", csprogsfn, cls.caughtcsprogsdata, (int) cls.caughtcsprogsdatasize);
+			Con_DPrintf("Not using buffered \"%s\" (buffered: %p, %d)\n", csprogsfn, (void *)cls.caughtcsprogsdata, (int) cls.caughtcsprogsdatasize);
 			csprogsdata = FS_LoadFile(csprogsfn, tempmempool, true, &csprogsdatasize);
 		}
 	}
@@ -1033,7 +1021,7 @@ void CL_VM_Init (void)
 		{
 			if (cls.demoplayback)
 			{
-				Con_Warnf("Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
+				Con_Printf(CON_WARN "Warning: Your %s is not the same version as the demo was recorded with (CRC/size are %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				// Mem_Free(csprogsdata);
 				// return;
 				// We WANT to continue here, and play the demo with different csprogs!
@@ -1042,7 +1030,7 @@ void CL_VM_Init (void)
 			else
 			{
 				Mem_Free(csprogsdata);
-				Con_Errorf("Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
+				Con_Printf(CON_ERROR "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				CL_Disconnect();
 				return;
 			}
@@ -1053,9 +1041,9 @@ void CL_VM_Init (void)
 		if (requiredcrc >= 0)
 		{
 			if (cls.demoplayback)
-				Con_Errorf("CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+				Con_Printf(CON_ERROR "CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
 			else
-				Con_Errorf("CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
+				Con_Printf(CON_ERROR "CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
 			CL_Disconnect();
 		}
 		return;
@@ -1099,8 +1087,6 @@ void CL_VM_Init (void)
 		Mem_Free(csprogsdata);
 		return;
 	}
-
-	Con_DPrintf("CSQC %s ^5loaded (crc=%i, size=%i)\n", csprogsfn, csprogsdatacrc, (int)csprogsdatasize);
 
 	if(cls.demorecording)
 	{
@@ -1149,7 +1135,7 @@ void CL_VM_Init (void)
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
 
 	// Once CSQC_Init was called, we consider csqc code fully initialized.
-	prog->inittime = realtime;
+	prog->inittime = host.realtime;
 
 	cl.csqc_loaded = true;
 

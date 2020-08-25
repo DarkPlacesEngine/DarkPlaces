@@ -5,22 +5,24 @@
 #include <io.h>
 #include "conio.h"
 #else
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <time.h>
 #endif
 
 #include <signal.h>
 
 #include "quakedef.h"
 
+sys_t sys;
+
 // =======================================================================
 // General routines
 // =======================================================================
 void Sys_Shutdown (void)
 {
-#ifdef FNDELAY
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+#ifndef WIN32
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
 #endif
 	fflush(stdout);
 }
@@ -31,46 +33,43 @@ void Sys_Error (const char *error, ...)
 	char string[MAX_INPUTLINE];
 
 // change stdin to non blocking
-#ifdef FNDELAY
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+#ifndef WIN32
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
 #endif
-
 	va_start (argptr,error);
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Errorf ("Engine Error: %s\n", string);
+	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
 
 	Host_Shutdown ();
 	exit (1);
 }
 
-static int outfd = 1;
 void Sys_PrintToTerminal(const char *text)
 {
-	if(outfd < 0)
+	if(sys.outfd < 0)
 		return;
-#ifdef FNDELAY
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
-		int origflags = fcntl (outfd, F_GETFL, 0);
-		fcntl (outfd, F_SETFL, origflags & ~FNDELAY);
-#endif
-#ifdef WIN32
+#ifndef WIN32
+		int origflags = fcntl (sys.outfd, F_GETFL, 0);
+		fcntl (sys.outfd, F_SETFL, origflags & ~O_NONBLOCK);
+#else
 #define write _write
 #endif
 		while(*text)
 		{
-			fs_offset_t written = (fs_offset_t)write(outfd, text, (int)strlen(text));
+			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, (int)strlen(text));
 			if(written <= 0)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
 		}
-#ifdef FNDELAY
-		fcntl (outfd, F_SETFL, origflags);
-	}
+#ifndef WIN32
+		fcntl (sys.outfd, F_SETFL, origflags);
 #endif
+	}
 	//fprintf(stdout, "%s", text);
 }
 
@@ -149,25 +148,29 @@ void Sys_InitConsole (void)
 int main (int argc, char **argv)
 {
 	signal(SIGFPE, SIG_IGN);
-
-	com_argc = argc;
-	com_argv = (const char **)argv;
+	sys.selffd = -1;
+	sys.argc = argc;
+	sys.argv = (const char **)argv;
 	Sys_ProvideSelfFD();
 
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
 	if(COM_CheckParm("-noterminal"))
-		outfd = -1;
+		sys.outfd = -1;
 	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
 	else if(COM_CheckParm("-stderr"))
-		outfd = 2;
+		sys.outfd = 2;
 	else
-		outfd = 1;
-
-#ifdef FNDELAY
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
+		sys.outfd = 1;
+#ifndef WIN32
+	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
 #endif
 
+	// used by everything
+	Memory_Init();
+
 	Host_Main();
+
+	Sys_Quit(0);
 
 	return 0;
 }

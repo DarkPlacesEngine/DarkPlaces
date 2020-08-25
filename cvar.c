@@ -73,7 +73,7 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
 	return var;
 }
 
-static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_hash_t **parent, cvar_hash_t ***link, cvar_t **prev_alpha, int neededflags)
+static cvar_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
 {
 	int hashindex;
 	cvar_hash_t *hash;
@@ -82,7 +82,7 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
 	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
-	if(link) *link = &cvars->hashtable[hashindex];
+	if(link) *link = &cvars->hashtable[hashindex]->cvar;
 	for (hash = cvars->hashtable[hashindex];hash;hash = hash->next)
 	{
 		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
@@ -91,19 +91,19 @@ static cvar_hash_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, 
 			for (int i = 0; i < hash->cvar->aliasindex; i++)
 				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
 					goto match;
-		if(parent) *parent = hash;
+		if(parent) *parent = hash->cvar;
 	}
 	return NULL;
 match:
 	if(!prev_alpha || hash->cvar == cvars->vars)
-		return hash;
+		return hash->cvar;
 
 	*prev_alpha = cvars->vars;
 	// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
 	// already - should I still insert '*prev_alpha &&' in the loop?
 	while((*prev_alpha)->next != hash->cvar)
 		*prev_alpha = (*prev_alpha)->next;
-	return hash;
+	return hash->cvar;
 }
 
 /*
@@ -373,36 +373,27 @@ Cvar_Set
 extern cvar_t sv_disablenotify;
 static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
-	cvar_state_t *cvars = &cvars_all;
 	qboolean changed;
 	size_t valuelen;
-	char vabuf[1024];
-	char new_value[MAX_INPUTLINE];
 
 	changed = strcmp(var->string, value) != 0;
 	// LadyHavoc: don't reallocate when there is no change
 	if (!changed)
 		return;
 
-	memcpy(new_value,value,MAX_INPUTLINE);
-
-	// Call the function stored in the cvar for bounds checking, cleanup, etc
-	if (var->callback)
-		var->callback(new_value);
-
 	// LadyHavoc: don't reallocate when the buffer is the same size
-	valuelen = strlen(new_value);
+	valuelen = strlen(value);
 	if (!var->string || strlen(var->string) != valuelen)
 	{
 		Z_Free ((char *)var->string);	// free the old value string
 
 		var->string = (char *)Z_Malloc (valuelen + 1);
 	}
-	memcpy ((char *)var->string, new_value, valuelen + 1);
+	memcpy ((char *)var->string, value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
-		SV_BroadcastPrintf("\001^3Server cvar \"%s\" changed to \"%s\"\n", var->name, var->string);
+		SV_BroadcastPrintf("\003^3Server cvar \"%s\" changed to \"%s\"\n", var->name, var->string);
 #if 0
 	// TODO: add infostring support to the server?
 	if ((var->flags & CVAR_SERVERINFO) && changed && sv.active)
@@ -416,52 +407,14 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		}
 	}
 #endif
-	if ((var->flags & CVAR_USERINFO) && cls.state != ca_dedicated)
+	if (var->flags & CVAR_USERINFO)
 		CL_SetInfo(var->name, var->string, true, false, false, false);
-	else if ((var->flags & CVAR_NQUSERINFOHACK) && cls.state != ca_dedicated)
-	{
-		// update the cls.userinfo to have proper values for the
-		// silly nq config variables.
-		//
-		// this is done when these variables are changed rather than at
-		// connect time because if the user or code checks the userinfo and it
-		// holds weird values it may cause confusion...
-		if (!strcmp(var->name, "_cl_color"))
-		{
-			int top = (var->integer >> 4) & 15, bottom = var->integer & 15;
-			CL_SetInfo("topcolor", va(vabuf, sizeof(vabuf), "%i", top), true, false, false, false);
-			CL_SetInfo("bottomcolor", va(vabuf, sizeof(vabuf), "%i", bottom), true, false, false, false);
-			if (cls.protocol != PROTOCOL_QUAKEWORLD && cls.netcon)
-			{
-				MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
-				MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "color %i %i", top, bottom));
-			}
-		}
-		else if (!strcmp(var->name, "_cl_rate"))
-			CL_SetInfo("rate", va(vabuf, sizeof(vabuf), "%i", var->integer), true, false, false, false);
-		else if (!strcmp(var->name, "_cl_rate_burstsize"))
-			CL_SetInfo("rate_burstsize", va(vabuf, sizeof(vabuf), "%i", var->integer), true, false, false, false);
-		else if (!strcmp(var->name, "_cl_playerskin"))
-			CL_SetInfo("playerskin", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "_cl_playermodel"))
-			CL_SetInfo("playermodel", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "_cl_name"))
-			CL_SetInfo("name", var->string, true, false, false, false);
-		else if (!strcmp(var->name, "rcon_secure"))
-		{
-			// whenever rcon_secure is changed to 0, clear rcon_password for
-			// security reasons (prevents a send-rcon-password-as-plaintext
-			// attack based on NQ protocol session takeover and svc_stufftext)
-			if(var->integer <= 0)
-				Cvar_Set(cvars, "rcon_password", "");
-		}
-#ifdef CONFIG_MENU
-		else if (!strcmp(var->name, "net_slist_favorites"))
-			NetConn_UpdateFavorites();
-#endif
-	}
 
 	Cvar_UpdateAutoCvar(var);
+
+	// Call the function stored in the cvar for bounds checking, cleanup, etc
+	if (var->callback)
+		var->callback(var);
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)
@@ -488,6 +441,14 @@ void Cvar_Set(cvar_state_t *cvars, const char *var_name, const char *value)
 		return;
 	}
 	Cvar_SetQuick(var, value);
+}
+
+void Cvar_Set_NoCallback(cvar_t *var, const char *value)
+{
+	void (*callback_save)(cvar_t *) = var->callback;
+	var->callback = NULL;
+	Cvar_SetQuick_Internal(var, value);
+	var->callback = callback_save;
 }
 
 /*
@@ -517,7 +478,7 @@ void Cvar_SetValue(cvar_state_t *cvars, const char *var_name, float value)
 	Cvar_Set(cvars, var_name, val);
 }
 
-void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(char *))
+void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 {
 	variable->callback = callback;
 }
@@ -1107,7 +1068,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	int neededflags = ~0;
 	int i;
-	cvar_hash_t *hash, *parent, **link;
+	cvar_t *parent, **link;
 	cvar_t *cvar, *prev;
 
 	if(Cmd_Argc(cmd) < 2)
@@ -1117,8 +1078,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	}
 	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		hash = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
-		cvar = hash->cvar;
+		cvar = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
 
 		if(!cvar)
 		{
@@ -1144,9 +1104,9 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		}
 
 		if(parent)
-			parent->next = hash->next;
+			parent->next = cvar->next;
 		else if(link)
-			*link = hash->next;
+			*link = cvar->next;
 		if(cvar->description != cvar_dummy_description)
 			Z_Free((char *)cvar->description);
 

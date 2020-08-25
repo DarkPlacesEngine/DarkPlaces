@@ -133,6 +133,7 @@ cvar_t gl_info_platform = {CVAR_CLIENT | CVAR_READONLY, "gl_info_platform", "", 
 cvar_t gl_info_driver = {CVAR_CLIENT | CVAR_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
 
 cvar_t vid_fullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
+cvar_t vid_borderless = {CVAR_CLIENT | CVAR_SAVE, "vid_borderless", "0", "make the window borderless by removing all window decorations. has no effect in fullscreen mode"};
 cvar_t vid_width = {CVAR_CLIENT | CVAR_SAVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CVAR_CLIENT | CVAR_SAVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CVAR_CLIENT | CVAR_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
@@ -149,6 +150,7 @@ cvar_t vid_touchscreen_ydpi = {CVAR_CLIENT, "vid_touchscreen_ydpi", "300", "Vert
 
 cvar_t vid_vsync = {CVAR_CLIENT | CVAR_SAVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
 cvar_t vid_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in windowed mode (fullscreen always does)"};
+cvar_t vid_mouse_clickthrough = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse_clickthrough", "0", "mouse behavior in windowed mode: 0 = click to focus, 1 = allow interaction even if the window is not focused (click-through behaviour, can be useful when using third-party game overlays)"};
 cvar_t vid_grabkeyboard = {CVAR_CLIENT | CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
 cvar_t vid_minwidth = {CVAR_CLIENT, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
 cvar_t vid_minheight = {CVAR_CLIENT, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
@@ -162,6 +164,9 @@ cvar_t vid_touchscreen_supportshowkeyboard = {CVAR_CLIENT | CVAR_READONLY, "vid_
 cvar_t vid_stick_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CVAR_CLIENT | CVAR_SAVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
 cvar_t vid_desktopfullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
+#ifdef WIN32
+cvar_t vid_ignore_taskbar = {CVAR_CLIENT | CVAR_SAVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
+#endif
 
 cvar_t v_gamma = {CVAR_CLIENT | CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
 cvar_t v_contrast = {CVAR_CLIENT | CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
@@ -650,6 +655,7 @@ qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent
 		return false;
 	}
 
+#ifndef USE_GLES2
 	for (func = openglfuncs; func && func->name != NULL; func++)
 	{
 		if (!*func->funcvariable && !strcmp(name, func->extension))
@@ -659,6 +665,7 @@ qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent
 			failed = true;
 		}
 	}
+#endif //USE_GLES2
 	// delay the return so it prints all missing functions
 	if (failed)
 		return false;
@@ -682,6 +689,8 @@ void VID_ClearExtensions(void)
 void GL_Setup(void)
 {
 	char *s;
+	int j;
+	GLint numextensions = 0;
 	const glfunction_t *func;
 	qboolean missingrequiredfuncs = false;
 	static char missingfuncs[16384];
@@ -700,19 +709,18 @@ void GL_Setup(void)
 	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
 	Con_Printf("GL_VERSION: %s\n", gl_version);
 
-	if (developer.integer)
+#ifndef USE_GLES2
+	qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
+	Con_DPrint("GL_EXTENSIONS:\n");
+	for (j = 0; j < numextensions; j++)
 	{
-		int j;
-		GLint numextensions = 0;
-		qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
-		Con_DPrint("GL_EXTENSIONS:");
-		for (j = 0; j < numextensions; j++)
-		{
-			const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
-			Con_DPrintf(" %s", ext);
-		}
-		Con_DPrint("\n");
+		const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
+		Con_DPrintf(" %s", ext);
+		if(j && !(j % 3))
+			Con_DPrintf("\n");
 	}
+	Con_DPrint("\n");
+#endif //USE_GLES2
 
 #ifndef USE_GLES2
 	missingfuncs[0] = 0;
@@ -740,7 +748,7 @@ void GL_Setup(void)
 		vid.support.glshaderversion = (int)(atof(s) * 100.0f + 0.5f);
 	if (vid.support.glshaderversion < 100)
 		vid.support.glshaderversion = 100;
-	Con_DPrintf("Detected GLSL #version %i\n", vid.support.glshaderversion);
+	Con_Printf("Detected GLSL version %i\n", vid.support.glshaderversion);
 
 #ifdef USE_GLES2
 	// GLES devices in general do not like GL_BGRA, so use GL_RGBA
@@ -795,12 +803,12 @@ void GL_Setup(void)
 	CHECKGLERROR
 
 #ifdef USE_GLES2
-	Con_DPrint("Using GLES2 rendering path\n");
+	Con_Print("Using GLES2 rendering path\n");
 	vid.renderpath = RENDERPATH_GLES2;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = false;
 #else
-	Con_DPrint("Using GL32 rendering path\n");
+	Con_Print("Using GL32 rendering path\n");
 	vid.renderpath = RENDERPATH_GL32;
 	vid.sRGBcapable2D = false;
 	vid.sRGBcapable3D = true;
@@ -925,10 +933,10 @@ static void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int ke
 	{
 		if (newbutton)
 		{
-			if (realtime >= *timer)
+			if (host.realtime >= *timer)
 			{
 				Key_Event(key, 0, true);
-				*timer = realtime + 0.1;
+				*timer = host.realtime + 0.1;
 			}
 		}
 		else
@@ -942,7 +950,7 @@ static void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int ke
 		if (newbutton)
 		{
 			Key_Event(key, 0, true);
-			*timer = realtime + 0.5;
+			*timer = host.realtime + 0.5;
 		}
 	}
 }
@@ -1275,6 +1283,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_psycho);
 
 	Cvar_RegisterVariable(&vid_fullscreen);
+	Cvar_RegisterVariable(&vid_borderless);
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
@@ -1287,6 +1296,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_touchscreen_ydpi);
 	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
+	Cvar_RegisterVariable(&vid_mouse_clickthrough);
 	Cvar_RegisterVariable(&vid_grabkeyboard);
 	Cvar_RegisterVariable(&vid_touchscreen);
 	Cvar_RegisterVariable(&vid_touchscreen_showkeyboard);
@@ -1294,6 +1304,9 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_stick_mouse);
 	Cvar_RegisterVariable(&vid_resizable);
 	Cvar_RegisterVariable(&vid_desktopfullscreen);
+#ifdef WIN32
+	Cvar_RegisterVariable(&vid_ignore_taskbar);
+#endif
 	Cvar_RegisterVariable(&vid_minwidth);
 	Cvar_RegisterVariable(&vid_minheight);
 	Cvar_RegisterVariable(&gl_finish);
@@ -1350,14 +1363,13 @@ void VID_Shared_Init(void)
 	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
 #endif
 
-	Cmd_AddCommand(&cmd_client, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
-	Cmd_AddCommand(&cmd_client, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+	Cmd_AddCommand(CMD_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
+	Cmd_AddCommand(CMD_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
-static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer, int samples)
+static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer)
 {
 	viddef_mode_t mode;
-	char vabuf[1024];
 
 	memset(&mode, 0, sizeof(mode));
 	mode.fullscreen = fullscreen != 0;
@@ -1367,11 +1379,9 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 	mode.refreshrate = vid_userefreshrate.integer ? max(1, refreshrate) : 0;
 	mode.userefreshrate = vid_userefreshrate.integer != 0;
 	mode.stereobuffer = stereobuffer != 0;
-	mode.samples = samples;
 	cl_ignoremousemoves = 2;
 	VID_ClearExtensions();
 
-	vid.samples = vid.mode.samples;
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode
@@ -1412,10 +1422,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
-		if(vid.samples != vid.mode.samples)
-			Con_Printf("NOTE: requested %dx AA, got %dx AA\n", vid.mode.samples, vid.samples);
-
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", mode.samples > 1 ? va(vabuf, sizeof(vabuf), " (%ix AA)", mode.samples) : "");
+		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "");
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 		Cvar_SetValueQuick(&vid_width, vid.mode.width);
@@ -1464,7 +1471,7 @@ extern qboolean vid_opened;
 void VID_Restart_f(cmd_state_t *cmd)
 {
 	char vabuf[1024];
-	char vabuf2[1024];
+
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
@@ -1476,15 +1483,15 @@ void VID_Restart_f(cmd_state_t *cmd)
 		return;
 	}
 
-	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s%s, to %s %dx%dx%dbpp%s%s.\n",
-		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "", vid.mode.samples > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid.mode.samples) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "", vid_samples.integer > 1 ? va(vabuf2, sizeof(vabuf2), " (%ix AA)", vid_samples.integer) : "");
+	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
+		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
 	VID_CloseSystems();
 	VID_Shutdown();
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer))
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer))
 	{
 		Con_Print("Video mode change failed\n");
-		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer, vid.mode.samples))
+		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
 			Sys_Error("Unable to restore to last working video mode");
 	}
 	VID_OpenSystems();
@@ -1504,25 +1511,32 @@ const char *vidfallbacks[][2] =
 // this is only called once by Host_StartVideo and again on each FS_GameDir_f
 void VID_Start(void)
 {
-	int i, width, height, success;
+	int i = 0;
+	int width, height, success;
 	if (vid_commandlinecheck)
 	{
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
 // COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
-		if (COM_CheckParm("-window") || COM_CheckParm("-safe"))
+		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
+// COMMANDLINEOPTION: Video: -borderless performs +vid_borderless 1
+		if (COM_CheckParm("-borderless") || ((i = COM_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
+		{
+			Cvar_SetValueQuick(&vid_borderless, true);
+			Cvar_SetValueQuick(&vid_fullscreen, false);
+		}
 // COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
-		if (COM_CheckParm("-fullscreen"))
+		if (COM_CheckParm("-fullscreen") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
 // COMMANDLINEOPTION: Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-width")) != 0)
-			width = atoi(com_argv[i+1]);
+		if ((i = COM_CheckParm("-width")) != 0 || ((i = COM_CheckParm("+vid_width")) != 0))
+			width = atoi(sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-height")) != 0)
-			height = atoi(com_argv[i+1]);
+		if ((i = COM_CheckParm("-height")) != 0 || ((i = COM_CheckParm("+vid_height")) != 0))
+			height = atoi(sys.argv[i+1]);
 		if (width == 0)
 			width = height * 4 / 3;
 		if (height == 0)
@@ -1533,23 +1547,23 @@ void VID_Start(void)
 			Cvar_SetValueQuick(&vid_height, height);
 // COMMANDLINEOPTION: Video: -density <multiplier> performs +vid_touchscreen_density <multiplier> (example -density 1 or -density 1.5)
 		if ((i = COM_CheckParm("-density")) != 0)
-			Cvar_SetQuick(&vid_touchscreen_density, com_argv[i+1]);
+			Cvar_SetQuick(&vid_touchscreen_density, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -xdpi <dpi> performs +vid_touchscreen_xdpi <dpi> (example -xdpi 160 or -xdpi 320)
 		if ((i = COM_CheckParm("-touchscreen_xdpi")) != 0)
-			Cvar_SetQuick(&vid_touchscreen_xdpi, com_argv[i+1]);
+			Cvar_SetQuick(&vid_touchscreen_xdpi, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -ydpi <dpi> performs +vid_touchscreen_ydpi <dpi> (example -ydpi 160 or -ydpi 320)
 		if ((i = COM_CheckParm("-touchscreen_ydpi")) != 0)
-			Cvar_SetQuick(&vid_touchscreen_ydpi, com_argv[i+1]);
+			Cvar_SetQuick(&vid_touchscreen_ydpi, sys.argv[i+1]);
 	}
 
-	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer);
+	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 	if (!success)
 	{
 		Con_Print("Desired video mode fail, trying fallbacks...\n");
 		for (i = 0;!success && vidfallbacks[i][0] != NULL;i++)
 		{
 			Cvar_Set(&cvars_all, vidfallbacks[i][0], vidfallbacks[i][1]);
-			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer, vid_samples.integer);
+			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 		}
 		if (!success)
 			Sys_Error("Video modes failed");

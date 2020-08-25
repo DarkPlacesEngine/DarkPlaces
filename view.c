@@ -45,10 +45,12 @@ cvar_t cl_bobfall = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfall","0", "how much the vi
 cvar_t cl_bobfallcycle = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallcycle","3", "speed of the bobfall swing"};
 cvar_t cl_bobfallminspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
 cvar_t cl_bobmodel = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
-cvar_t cl_bobmodel_side = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_side", "0.15", "gun bobbing sideways sway amount"};
-cvar_t cl_bobmodel_up = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_up", "0.06", "gun bobbing upward movement amount"};
-cvar_t cl_bobmodel_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_speed", "7", "gun bobbing speed"};
-cvar_t cl_bob_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit", "7", "limits bobbing to this much distance from view_ofs"};
+cvar_t cl_bobmodel_side = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_side", "0", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_up", "0", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_forward = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_forward", "0.25", "gun bobbing forward movement amount"};
+cvar_t cl_bobmodel_classic = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_classic", "1", "classic Quake-style forward gun bobbing"};
+cvar_t cl_bobmodel_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_speed", "6", "gun bobbing speed"};
+cvar_t cl_bob_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit", "4", "limits bobbing to this much distance from view_ofs"};
 cvar_t cl_bob_limit_heightcheck = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck", "0", "check ceiling and floor height against cl_bob_limit and scale down all view bobbing if could result in camera being in solid"};
 cvar_t cl_bob_limit_heightcheck_dontcrosswatersurface = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck_dontcrosswatersurface", "1", "limit cl_bob_limit to not crossing liquid surfaces also"};
 cvar_t cl_bob_velocity_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_velocity_limit", "400", "limits the xyspeed value in the bobbing code"};
@@ -142,36 +144,7 @@ cvar_t v_yshearing = {CVAR_CLIENT, "v_yshearing", "0", "be all out of gum (set t
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
-
-/*
-===============
-V_CalcRoll
-
-Used by view and sv_user
-===============
-*/
-float V_CalcRoll (const vec3_t angles, const vec3_t velocity)
-{
-	vec3_t	right;
-	float	sign;
-	float	side;
-	float	value;
-
-	AngleVectors (angles, NULL, right, NULL);
-	side = DotProduct (velocity, right);
-	sign = side < 0 ? -1 : 1;
-	side = fabs(side);
-
-	value = cl_rollangle.value;
-
-	if (side < cl_rollspeed.value)
-		side = side * value / cl_rollspeed.value;
-	else
-		side = value;
-
-	return side*sign;
-
-}
+int cl_punchangle_applied;
 
 void V_StartPitchDrift (void)
 {
@@ -692,8 +665,15 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			// angles
 			if (cldead && v_deathtilt.integer)
 				viewangles[ROLL] = v_deathtiltangle.value;
-			VectorAdd(viewangles, cl.punchangle, viewangles);
-			viewangles[ROLL] += V_CalcRoll(clviewangles, clvelocity);
+
+			// Hanicef: don't apply punchangle twice if the scene is rendered more than once.
+			if (!cl_punchangle_applied)
+			{
+				VectorAdd(viewangles, cl.punchangle, viewangles);
+				cl_punchangle_applied = 1;
+			}
+			viewangles[ROLL] += Com_CalcRoll(clviewangles, clvelocity, cl_rollangle.value, cl_rollspeed.value);
+
 			if (v_dmg_time > 0)
 			{
 				viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
@@ -704,7 +684,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			if (!cldead)
 			{
 				double xyspeed, bob, bobfall;
-				double cycle; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
+				double bobcycle = 0, cycle; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
 				vec_t frametime;
 
 				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
@@ -801,14 +781,14 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					cycle = cl.time / cl_bobcycle.value;
 					cycle -= (int) cycle;
 					if (cycle < cl_bobup.value)
-						cycle = sin(M_PI * cycle / cl_bobup.value);
+						bobcycle = cycle = sin(M_PI * cycle / cl_bobup.value);
 					else
-						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+						bobcycle = cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
 					// bob is proportional to velocity in the xy plane
 					// (don't count Z, or jumping messes it up)
 					bob = xyspeed * cl_bob.value;
-					bob = bound(0, bob, bob_limit);
 					bob = bob*0.3 + bob*0.7*cycle;
+					bob = bound(-7, bob, bob_limit);
 					vieworg[2] += bob;
 					// we also need to adjust gunorg, or this appears like pushing the gun!
 					// In the old code, this was applied to vieworg BEFORE copying to gunorg,
@@ -926,6 +906,9 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					VectorMA (gunorg, bob, right, gunorg);
 					bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 					VectorMA (gunorg, bob, up, gunorg);
+					// Classic Quake bobbing
+					bob = (cl_bobmodel_classic.integer ? xyspeed * cl_bob.value * 0.25 * bobcycle : bspeed * cl_bobmodel_forward.value * cos(s * 2) * t) * cl_viewmodel_scale.value;
+					VectorMA (gunorg, (cl_bobmodel_classic.integer ? (bob > 1 ? 1 : bob) : bob), forward, gunorg);
 				}
 			}
 		}
@@ -1210,12 +1193,9 @@ V_Init
 */
 void V_Init (void)
 {
-	Cmd_AddCommand(&cmd_client, "v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand(&cmd_client, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
-	Cmd_AddCommand(&cmd_client, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
-
-	Cmd_AddCommand(&cmd_clientfromserver, "v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand(&cmd_clientfromserver, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
+	Cmd_AddCommand(CMD_CLIENT, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
 
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);
@@ -1268,6 +1248,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_bobmodel);
 	Cvar_RegisterVariable (&cl_bobmodel_side);
 	Cvar_RegisterVariable (&cl_bobmodel_up);
+	Cvar_RegisterVariable (&cl_bobmodel_forward);
+	Cvar_RegisterVariable (&cl_bobmodel_classic);
 	Cvar_RegisterVariable (&cl_bobmodel_speed);
 	Cvar_RegisterVariable (&cl_bob_limit);
 	Cvar_RegisterVariable (&cl_bob_limit_heightcheck);

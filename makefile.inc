@@ -45,7 +45,7 @@ STRIP?=strip
 
 ###### Sound #####
 
-OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o
+OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o $(OBJ_SND_XMP)
 
 # No sound
 OBJ_SND_NULL=snd_null.o
@@ -71,10 +71,6 @@ LIB_SND_BSD=
 OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
 LIB_SND_WIN=
 
-# Qantourisc's 3D Realtime Acoustic Lib (3D RAS)
-OBJ_SND_3DRAS=snd_3dras.o
-LIB_SND_3DRAS=
-
 
 ###### Common objects and flags #####
 
@@ -83,17 +79,29 @@ OBJ_COMMON= \
 	bih.o \
 	crypto.o \
 	cd_shared.o \
+	cl_cmd.o \
 	cl_collision.o \
 	cl_demo.o \
+	cl_ents.o \
+	cl_ents4.o \
+	cl_ents5.o \
+	cl_ents_nq.o \
+	cl_ents_qw.o \
 	cl_input.o \
 	cl_main.o \
 	cl_parse.o \
 	cl_particles.o \
 	cl_screen.o \
 	cl_video.o \
+	cl_video_libavw.o \
 	clvm_cmds.o \
 	cmd.o \
 	collision.o \
+	com_crc16.o \
+	com_ents.o \
+	com_ents4.o \
+	com_game.o \
+	com_msg.o \
 	common.o \
 	console.o \
 	csprogs.o \
@@ -112,7 +120,6 @@ OBJ_COMMON= \
 	gl_textures.o \
 	hmac.o \
 	host.o \
-	host_cmd.o \
 	image.o \
 	image_png.o \
 	jpeg.o \
@@ -145,10 +152,18 @@ OBJ_COMMON= \
 	r_sky.o \
 	r_sprites.o \
 	sbar.o \
+	sv_ccmds.o \
 	sv_demo.o \
+	sv_ents.o \
+	sv_ents4.o \
+	sv_ents5.o \
+	sv_ents_csqc.o \
+	sv_ents_nq.o \
 	sv_main.o \
 	sv_move.o \
 	sv_phys.o \
+	sv_save.o \
+	sv_send.o \
 	sv_user.o \
 	svbsp.o \
 	svvm_cmds.o \
@@ -167,12 +182,24 @@ OBJ_MENU= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
-OBJ_SV= builddate.c sys_linux.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
+OBJ_SV= builddate.c sys_unix.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) $(OBJ_SND_XMP) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 
 # Compilation
-CFLAGS_COMMON=$(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_D3D) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
+ifeq ($(PEDANTIC),1)
+	CFLAGS_STANDARD=-std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -DCONFIG_PEDANTIC
+else
+	CFLAGS_STANDARD=
+endif
+
+CFLAGS_TCC=
+
+ifeq ($(CC), tcc)
+	CFLAGS_TCC=-DSDL_DISABLE_IMMINTRIN_H
+endif
+
+CFLAGS_COMMON=$(CFLAGS_STANDARD) $(CFLAGS_TCC) $(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_SND_XMP) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
 CFLAGS_CLIENT=-DCONFIG_MENU $(CFLAGS_VIDEO_CAPTURE)
 CFLAGS_SERVER=
 CFLAGS_DEBUG=-ggdb
@@ -209,12 +236,12 @@ LDFLAGS_RELEASE=$(OPTIM_RELEASE) -DSVNREVISION=`{ test -d .svn && svnversion; } 
 
 ##### UNIX specific variables #####
 
-LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL)
+LDFLAGS_UNIXCOMMON=-lm $(LIB_ODE) $(LIB_Z) $(LIB_JPEG) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(LIB_SND_XMP)
 LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
-LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl
+LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lxmp
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
-LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS)
+LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS) #-lGLESv2
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
@@ -262,7 +289,7 @@ WINDRES ?= windres
 # Link
 # see LDFLAGS_WINCOMMON in makefile
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
@@ -419,6 +446,7 @@ prepare :
 	$(CMD_CP) makefile.inc $(BUILD_DIR)/
 	$(CMD_CP) $(MAKEFILE) $(BUILD_DIR)/
 
+
 #this checks USEODE when compiling so it needs the ODE flags as well
 prvm_cmds.o: prvm_cmds.c
 	$(CHECKLEVEL2)
@@ -443,6 +471,20 @@ crypto.o: crypto.c
 mod_skeletal_animatevertices_sse.o: mod_skeletal_animatevertices_sse.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_SSE)
+
+snd_xmp.o: snd_xmp.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SND_XMP)
+
+#this checks USEXMP when compiling so it needs the XMP flags as well
+snd_main.o: snd_main.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SND_XMP)
+
+#this checks USEXMP when compiling so it needs the XMP flags as well
+snd_mem.o: snd_mem.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_SND_XMP)
 
 darkplaces.o: %.o : %.rc
 	$(CHECKLEVEL2)

@@ -138,7 +138,7 @@ qboolean SndSys_Init (snd_format_t* fmt)
 
 	if ((audio_device = SDL_OpenAudioDevice(NULL, 0, &wantspec, &obtainspec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE)) == 0)
 	{
-		Con_Errorf( "Failed to open the audio device! (%s)\n", SDL_GetError() );
+		Con_Printf(CON_ERROR "Failed to open the audio device! (%s)\n", SDL_GetError() );
 		return false;
 	}
 

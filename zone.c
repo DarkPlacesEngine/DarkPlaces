@@ -107,6 +107,9 @@ void Mem_PrintList(size_t minallocationsize);
 #if FILE_BACKED_MALLOC
 #include <stdlib.h>
 #include <sys/mman.h>
+#ifndef MAP_NORESERVE
+#define MAP_NORESERVE 0
+#endif
 typedef struct mmap_data_s
 {
 	size_t len;
@@ -127,7 +130,7 @@ static void *mmap_malloc(size_t size)
 	data = (unsigned char *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_NORESERVE, fd, 0);
 	close(fd);
 	unlink(vabuf);
-	if(!data)
+	if(!data || data == (void *)-1)
 		return NULL;
 	data->len = size;
 	return (void *) (data + 1);
@@ -758,9 +761,9 @@ void Mem_ExpandableArray_FreeRecord(memexpandablearray_t *l, void *record) // co
 		{
 			j = (p - l->arrays[i].data) / l->recordsize;
 			if (p != l->arrays[i].data + j * l->recordsize)
-				Sys_Error("Mem_ExpandableArray_FreeRecord: no such record %p\n", p);
+				Sys_Error("Mem_ExpandableArray_FreeRecord: no such record %p\n", (void *)p);
 			if (!l->arrays[i].allocflags[j])
-				Sys_Error("Mem_ExpandableArray_FreeRecord: record %p is already free!\n", p);
+				Sys_Error("Mem_ExpandableArray_FreeRecord: record %p is already free!\n", (void *)p);
 			l->arrays[i].allocflags[j] = false;
 			l->arrays[i].numflaggedrecords--;
 			return;
@@ -916,11 +919,8 @@ void Memory_Shutdown (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand(&cmd_client, "memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand(&cmd_client, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
-
-	Cmd_AddCommand(&cmd_server, "memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand(&cmd_server, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+	Cmd_AddCommand(CMD_SHARED, "memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand(CMD_SHARED, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);

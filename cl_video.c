@@ -20,7 +20,7 @@ cvar_t v_glslgamma_video = {CVAR_CLIENT | CVAR_SAVE, "v_glslgamma_video", "1", "
 #include "dpvsimpledecode.h"
 
 // VorteX: libavcodec implementation
-#include "cl_video_libavw.c"
+#include "cl_video_libavw.h"
 
 // JAM video decoder used by Blood Omnicide
 #ifdef JAMVIDEO
@@ -64,7 +64,7 @@ static qboolean OpenStream( clvideo_t * video )
 	if (video->stream)
 		return true;
 
-	Con_Errorf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
+	Con_Printf(CON_ERROR "unable to open \"%s\", error: %s\n", video->filename, errorstring);
 	return false;
 }
 
@@ -120,7 +120,7 @@ static qboolean WakeVideo( clvideo_t * video )
 	LinkVideoTexture( video );
 
 	// update starttime
-	video->starttime += realtime - video->lasttime;
+	video->starttime += host.realtime - video->lasttime;
 
 	return true;
 }
@@ -178,7 +178,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		// check limits
 		if (video->subtitles == CLVIDEO_MAX_SUBTITLES)
 		{
-			Con_Warnf("WARNING: CLVIDEO_MAX_SUBTITLES = %i reached when reading subtitles from '%s'\n", CLVIDEO_MAX_SUBTITLES, subtitlesfile);
+			Con_Printf(CON_WARN "WARNING: CLVIDEO_MAX_SUBTITLES = %i reached when reading subtitles from '%s'\n", CLVIDEO_MAX_SUBTITLES, subtitlesfile);
 			break;	
 		}
 		// add a sub
@@ -227,7 +227,7 @@ static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char 
 	video->state = CLVIDEO_FIRSTFRAME;
 	video->framenum = -1;
 	video->framerate = video->getframerate( video->stream );
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 	video->subtitles = 0;
 
 	video->width = video->getwidth( video->stream );
@@ -253,7 +253,7 @@ clvideo_t* CL_OpenVideo( const char *filename, const char *name, int owner, cons
 
 	video = FindUnusedVid();
 	if( !video ) {
-		Con_Errorf( "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
+		Con_Printf(CON_ERROR "CL_OpenVideo: unable to open video \"%s\" - video limit reached\n", filename );
 		return NULL;
 	}
 	video = OpenVideo( video, filename, name, owner, subtitlesfile );
@@ -276,7 +276,7 @@ static clvideo_t* CL_GetVideoBySlot( int slot )
 			video->framenum = -1;
 	}
 
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 
 	return video;
 }
@@ -300,7 +300,7 @@ void CL_SetVideoState(clvideo_t *video, clvideostate_t state)
 	if (!video)
 		return;
 
-	video->lasttime = realtime;
+	video->lasttime = host.realtime;
 	video->state = state;
 	if (state == CLVIDEO_FIRSTFRAME)
 		CL_RestartVideo(video);
@@ -312,7 +312,7 @@ void CL_RestartVideo(clvideo_t *video)
 		return;
 
 	// reset time
-	video->starttime = video->lasttime = realtime;
+	video->starttime = video->lasttime = host.realtime;
 	video->framenum = -1;
 
 	// reopen stream
@@ -364,21 +364,21 @@ void CL_Video_Frame(void)
 	{
 		if (video->state != CLVIDEO_UNUSED && !video->suspended)
 		{
-			if (realtime - video->lasttime > CLTHRESHOLD)
+			if (host.realtime - video->lasttime > CLTHRESHOLD)
 			{
 				SuspendVideo(video);
 				continue;
 			}
 			if (video->state == CLVIDEO_PAUSE)
 			{
-				video->starttime = realtime - video->framenum * video->framerate;
+				video->starttime = host.realtime - video->framenum * video->framerate;
 				continue;
 			}
 			// read video frame from stream if time has come
 			if (video->state == CLVIDEO_FIRSTFRAME )
 				destframe = 0;
 			else
-				destframe = (int)((realtime - video->starttime) * video->framerate);
+				destframe = (int)((host.realtime - video->starttime) * video->framerate);
 			if (destframe < 0)
 				destframe = 0;
 			if (video->framenum < destframe)
@@ -524,10 +524,10 @@ void CL_DrawVideo(void)
 
 	// calc brightness for fadein and fadeout effects
 	b = cl_video_brightness.value;
-	if (cl_video_fadein.value && (realtime - video->starttime) < cl_video_fadein.value)
-		b = pow((realtime - video->starttime)/cl_video_fadein.value, 2);
-	else if (cl_video_fadeout.value && ((video->starttime + video->framenum * video->framerate) - realtime) < cl_video_fadeout.value)
-		b = pow(((video->starttime + video->framenum * video->framerate) - realtime)/cl_video_fadeout.value, 2);
+	if (cl_video_fadein.value && (host.realtime - video->starttime) < cl_video_fadein.value)
+		b = pow((host.realtime - video->starttime)/cl_video_fadein.value, 2);
+	else if (cl_video_fadeout.value && ((video->starttime + video->framenum * video->framerate) - host.realtime) < cl_video_fadeout.value)
+		b = pow(((video->starttime + video->framenum * video->framerate) - host.realtime)/cl_video_fadeout.value, 2);
 
 	// draw black bg in case stipple is active or video is scaled
 	if (cl_video_stipple.integer || px != 0 || py != 0 || sx != vid_conwidth.integer || sy != vid_conheight.integer)
@@ -555,7 +555,7 @@ void CL_DrawVideo(void)
 		return;
 
 	// find current subtitle
-	videotime = realtime - video->starttime;
+	videotime = host.realtime - video->starttime;
 	for (i = 0; i < video->subtitles; i++)
 	{
 		if (videotime >= video->subtitle_start[i] && videotime <= video->subtitle_end[i])
@@ -689,8 +689,8 @@ void CL_Video_Init( void )
 	bgra.i = 0;bgra.b[1] = 0xFF;cl_videogmask = bgra.i;
 	bgra.i = 0;bgra.b[2] = 0xFF;cl_videormask = bgra.i;
 
-	Cmd_AddCommand(&cmd_client, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
-	Cmd_AddCommand(&cmd_client, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
+	Cmd_AddCommand(CMD_CLIENT, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
+	Cmd_AddCommand(CMD_CLIENT, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
 
 	Cvar_RegisterVariable(&cl_video_subtitles);
 	Cvar_RegisterVariable(&cl_video_subtitles_lines);

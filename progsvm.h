@@ -70,7 +70,7 @@ typedef struct prvm_required_field_s
 typedef struct prvm_edict_private_s
 {
 	qboolean free;
-	float freetime; // realtime of last change to "free" (i.e. also set on allocation)
+	double freetime; // realtime of last change to "free" (i.e. also set on allocation)
 	int mark; // used during leaktest (0 = unref, >0 = referenced); special values during server physics:
 #define PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN -1
 #define PRVM_EDICT_MARK_SETORIGIN_CAUGHT -2
@@ -525,8 +525,8 @@ typedef struct prvm_prog_s
 	int				functions_covered;
 	char				*strings;
 	int					stringssize;
-	ddef_t				*fielddefs;
-	ddef_t				*globaldefs;
+	mdef_t				*fielddefs;
+	mdef_t				*globaldefs;
 	mstatement_t		*statements;
 	int					entityfields;			// number of vec_t fields in progs (some variables are 3)
 	int					entityfieldsarea;		// LadyHavoc: equal to max_edicts * entityfields (for bounds checking)
@@ -685,7 +685,7 @@ typedef struct prvm_prog_s
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
 	int				flag;
 
-	const char			*extensionstring; // [INIT]
+	const char			**extensionstring; // [INIT]
 
 	qboolean			loadintoworld; // [INIT]
 
@@ -709,7 +709,7 @@ typedef struct prvm_prog_s
 
 	//============================================================================
 
-	ddef_t				*self; // if self != 0 then there is a global self
+	mdef_t				*self; // if self != 0 then there is a global self
 
 	//============================================================================
 	// function pointers
@@ -763,8 +763,8 @@ extern const int vm_sv_numbuiltins;
 extern const int vm_cl_numbuiltins;
 extern const int vm_m_numbuiltins;
 
-extern const char * vm_sv_extensions; // client also uses this
-extern const char * vm_m_extensions;
+extern const char *vm_sv_extensions[]; // client also uses this
+extern const char *vm_m_extensions[];
 
 void SVVM_init_cmd(prvm_prog_t *prog);
 void SVVM_reset_cmd(prvm_prog_t *prog);
@@ -813,8 +813,9 @@ void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize);
 const char *PRVM_AllocationOrigin(prvm_prog_t *prog);
 void PRVM_GarbageCollection(prvm_prog_t *prog);
 
-ddef_t *PRVM_ED_FindField(prvm_prog_t *prog, const char *name);
-ddef_t *PRVM_ED_FindGlobal(prvm_prog_t *prog, const char *name);
+mdef_t *PRVM_ED_FindField(prvm_prog_t *prog, const char *name);
+mdef_t *PRVM_ED_FindGlobal(prvm_prog_t *prog, const char *name);
+prvm_eval_t *PRVM_ED_FindGlobalEval(prvm_prog_t *prog, const char *name);
 mfunction_t *PRVM_ED_FindFunction(prvm_prog_t *prog, const char *name);
 
 int PRVM_ED_FindFieldOffset(prvm_prog_t *prog, const char *name);
@@ -837,6 +838,10 @@ const char *PRVM_ED_ParseEdict(prvm_prog_t *prog, const char *data, prvm_edict_t
 
 void PRVM_ED_WriteGlobals(prvm_prog_t *prog, qfile_t *f);
 void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
+
+void PRVM_ED_CallPrespawnFunction(prvm_prog_t *prog, prvm_edict_t *ent);
+qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start);
+void PRVM_ED_CallPostspawnFunction (prvm_prog_t *prog, prvm_edict_t *ent);
 
 void PRVM_ED_LoadFromFile(prvm_prog_t *prog, const char *data);
 
@@ -886,8 +891,8 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s);
 int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer);
 void PRVM_FreeString(prvm_prog_t *prog, int num);
 
-ddef_t *PRVM_ED_FieldAtOfs(prvm_prog_t *prog, int ofs);
-qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, ddef_t *key, const char *s, qboolean parsebackslash);
+mdef_t *PRVM_ED_FieldAtOfs(prvm_prog_t *prog, unsigned int ofs);
+qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qboolean parsebackslash);
 char *PRVM_UglyValueString(prvm_prog_t *prog, etype_t type, prvm_eval_t *val, char *line, size_t linelength);
 char *PRVM_GlobalString(prvm_prog_t *prog, int ofs, char *line, size_t linelength);
 char *PRVM_GlobalStringNoContents(prvm_prog_t *prog, int ofs, char *line, size_t linelength);

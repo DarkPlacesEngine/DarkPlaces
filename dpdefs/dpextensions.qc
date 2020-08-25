@@ -2616,3 +2616,19 @@ float MOVETYPE_USER_LAST = 191;
 .float clipgroup;
 //description:
 //If two entities have this field set to the same non-zero integer value, they won't collide with each other.
+
+//idea: eukara
+//darkplaces implementation: Cloudwalk
+//Do NOT use in production yet. Uncomment if you intend to use it
+//string __fullspawndata;
+//description:
+//http://icculus.org/finger/marco?date=2019-01-25&time=05-38-02
+
+//DP_QC_FS_SEARCH_PACKFILE
+//idea: Mario
+//darkplaces implementation: Mario
+//builtin definitions:
+float(string pattern, float caseinsensitive, float quiet, string packfile) search_packfile_begin = #444;
+//description:
+//extension to search_begin (DP_QC_FS_SEARCH), performs a filename search with the specified pattern (for example "maps/*.bsp") and stores the results in a search slot (minimum of 128 supported by any engine with this extension), the other functions take this returned search slot number, be sure to search_free when done (they are also freed on progs reload).
+//only searches for files within the specified packfile, which is expected to match the results of whichpack().

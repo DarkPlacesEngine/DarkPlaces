@@ -700,8 +700,8 @@ static void r_textures_devicerestored(void)
 
 void R_Textures_Init (void)
 {
-	Cmd_AddCommand(&cmd_client, "gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
-	Cmd_AddCommand(&cmd_client, "r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
+	Cmd_AddCommand(CMD_CLIENT, "gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
+	Cmd_AddCommand(CMD_CLIENT, "r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&gl_picmip_world);

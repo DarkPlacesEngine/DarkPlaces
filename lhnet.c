@@ -314,7 +314,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 #ifdef STANDALONETEST
 	if (i < MAX_NAMECACHE)
 #else
-	if (i < MAX_NAMECACHE && realtime < namecache[i].expirationtime)
+	if (i < MAX_NAMECACHE && host.realtime < namecache[i].expirationtime)
 #endif
 	{
 		*address = namecache[i].address;
@@ -336,7 +336,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-	namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+	namecache[namecacheposition].expirationtime = host.realtime + 12 * 3600; // 12 hours
 #endif
 
 	// try resolving the address (handles dns and other ip formats)
@@ -449,7 +449,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 #ifdef STANDALONETEST
 	if (i < MAX_NAMECACHE)
 #else
-	if (i < MAX_NAMECACHE && realtime < namecache[i].expirationtime)
+	if (i < MAX_NAMECACHE && host.realtime < namecache[i].expirationtime)
 #endif
 	{
 		*address = namecache[i].address;
@@ -485,7 +485,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+			namecache[namecacheposition].expirationtime = host.realtime + 12 * 3600; // 12 hours
 #endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -508,7 +508,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 				namecache[namecacheposition].name[i] = name[i];
 			namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-			namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+			namecache[namecacheposition].expirationtime = host.realtime + 12 * 3600; // 12 hours
 #endif
 			namecache[namecacheposition].address = *address;
 			namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -526,7 +526,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *vaddress, const char *string, int de
 		namecache[namecacheposition].name[i] = name[i];
 	namecache[namecacheposition].name[i] = 0;
 #ifndef STANDALONETEST
-	namecache[namecacheposition].expirationtime = realtime + 12 * 3600; // 12 hours
+	namecache[namecacheposition].expirationtime = host.realtime + 12 * 3600; // 12 hours
 #endif
 	namecache[namecacheposition].address.addresstype = LHNETADDRESSTYPE_NONE;
 	namecacheposition = (namecacheposition + 1) % MAX_NAMECACHE;
@@ -969,9 +969,9 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 								int rfc1149only = 0;
 								int rfc1149enabled = 0;
 								if(setsockopt(lhnetsocket->inetsocket, SOL_RFC1149, RFC1149_1149ONLY, &rfc1149only))
-									Con_Errorf("LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_1149ONLY) returned error: %s\n", LHNETPRIVATE_StrError());
+									Con_Printf(CON_ERROR "LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_1149ONLY) returned error: %s\n", LHNETPRIVATE_StrError());
 								if(setsockopt(lhnetsocket->inetsocket, SOL_RFC1149, RFC1149_ENABLED, &rfc1149enabled))
-									Con_Errorf("LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_ENABLED) returned error: %s\n", LHNETPRIVATE_StrError());
+									Con_Printf(CON_ERROR "LHNET_OpenSocket_Connectionless: warning: setsockopt(RFC1149_ENABLED) returned error: %s\n", LHNETPRIVATE_StrError());
 							}
 #endif
 
@@ -1110,7 +1110,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (net_fakelag.value && (realtime - net_fakelag.value * (1.0 / 2000.0)) < p->sentdoubletime)
+			if (net_fakelag.value && (host.realtime - net_fakelag.value * (1.0 / 2000.0)) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.port)
@@ -1212,7 +1212,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->next->prev = p;
 		p->prev->next = p;
 #ifndef STANDALONETEST
-		p->sentdoubletime = realtime;
+		p->sentdoubletime = host.realtime;
 #endif
 		value = contentlength;
 	}

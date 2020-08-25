@@ -205,17 +205,18 @@ cvar_t r_water_hideplayer = {CVAR_CLIENT | CVAR_SAVE, "r_water_hideplayer", "0",
 
 cvar_t r_lerpsprites = {CVAR_CLIENT | CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
 cvar_t r_lerpmodels = {CVAR_CLIENT | CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
+cvar_t r_nolerp_list = {CVAR_CLIENT | CVAR_SAVE, "r_nolerp_list", "progs/v_nail.mdl,progs/v_nail2.mdl,progs/flame.mdl,progs/flame2.mdl,progs/braztall.mdl,progs/brazshrt.mdl,progs/longtrch.mdl,progs/flame_pyre.mdl,progs/v_saw.mdl,progs/v_xfist.mdl,progs/h2stuff/newfire.mdl", "comma separated list of models that will not have their animations smoothed"};
 cvar_t r_lerplightstyles = {CVAR_CLIENT | CVAR_SAVE, "r_lerplightstyles", "0", "enable animation smoothing on flickering lights"};
 cvar_t r_waterscroll = {CVAR_CLIENT | CVAR_SAVE, "r_waterscroll", "1", "makes water scroll around, value controls how much"};
 
 cvar_t r_bloom = {CVAR_CLIENT | CVAR_SAVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
 cvar_t r_bloom_colorscale = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorscale", "1", "how bright the glow is"};
 
-cvar_t r_bloom_brighten = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_brighten", "2", "how bright the glow is, after subtract/power"};
+cvar_t r_bloom_brighten = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_brighten", "1", "how bright the glow is, after subtract/power"};
 cvar_t r_bloom_blur = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
 cvar_t r_bloom_resolution = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
 cvar_t r_bloom_colorexponent = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
-cvar_t r_bloom_colorsubtract = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorsubtract", "0.125", "reduces bloom colors by a certain amount"};
+cvar_t r_bloom_colorsubtract = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorsubtract", "0.1", "reduces bloom colors by a certain amount"};
 cvar_t r_bloom_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_scenebrightness", "1", "global rendering brightness when bloom is enabled"};
 
 cvar_t r_hdr_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
@@ -396,30 +397,7 @@ static void R_BuildBlankTextures(void)
 
 static void R_BuildNoTexture(void)
 {
-	int x, y;
-	unsigned char pix[16][16][4];
-	// this makes a light grey/dark grey checkerboard texture
-	for (y = 0;y < 16;y++)
-	{
-		for (x = 0;x < 16;x++)
-		{
-			if ((y < 8) ^ (x < 8))
-			{
-				pix[y][x][0] = 128;
-				pix[y][x][1] = 128;
-				pix[y][x][2] = 128;
-				pix[y][x][3] = 255;
-			}
-			else
-			{
-				pix[y][x][0] = 64;
-				pix[y][x][1] = 64;
-				pix[y][x][2] = 64;
-				pix[y][x][3] = 255;
-			}
-		}
-	}
-	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_PERSISTENT, -1, NULL);
+	r_texture_notexture = R_LoadTexture2D(r_main_texturepool, "notexture", 16, 16, Image_GenerateNoTexture(), TEXTYPE_BGRA, TEXF_MIPMAP | TEXF_PERSISTENT, -1, NULL);
 }
 
 static void R_BuildWhiteCube(void)
@@ -739,7 +717,7 @@ typedef struct r_glsl_permutation_s
 	/// hash lookup data
 	struct r_glsl_permutation_s *hashnext;
 	unsigned int mode;
-	dpuint64 permutation;
+	uint64_t permutation;
 
 	/// indicates if we have tried compiling this permutation already
 	qboolean compiled;
@@ -957,7 +935,7 @@ qboolean R_CompileShader_CheckStaticParms(void)
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "#define " n "\n"; \
 	else \
 		shaderstaticparmstrings_list[shaderstaticparms_count++] = "\n"
-static void R_CompileShader_AddStaticParms(unsigned int mode, dpuint64 permutation)
+static void R_CompileShader_AddStaticParms(unsigned int mode, uint64_t permutation)
 {
 	shaderstaticparms_count = 0;
 
@@ -985,7 +963,7 @@ r_glsl_permutation_t *r_glsl_permutation;
 /// storage for permutations linked in the hash table
 memexpandablearray_t r_glsl_permutationarray;
 
-static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, dpuint64 permutation)
+static r_glsl_permutation_t *R_GLSL_FindPermutation(unsigned int mode, uint64_t permutation)
 {
 	//unsigned int hashdepth = 0;
 	unsigned int hashindex = (permutation * 0x1021) & (SHADERPERMUTATION_HASHSIZE - 1);
@@ -1069,7 +1047,7 @@ static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean p
 	return Mem_strdup(r_main_mempool, modeinfo->builtinstring);
 }
 
-static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, dpuint64 permutation)
+static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, uint64_t permutation)
 {
 	int i;
 	int ubibind;
@@ -1394,7 +1372,7 @@ static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode
 		Mem_Free(sourcestring);
 }
 
-static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permutation)
+static void R_SetupShader_SetPermutationGLSL(unsigned int mode, uint64_t permutation)
 {
 	r_glsl_permutation_t *perm = R_GLSL_FindPermutation(mode, permutation);
 	if (r_glsl_permutation != perm)
@@ -1404,7 +1382,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 		{
 			if (!r_glsl_permutation->compiled)
 			{
-				Con_DPrintf("Compiling shader mode %u permutation %llx\n", mode, permutation);
+				Con_DPrintf("Compiling shader mode %u permutation %" PRIx64 "\n", mode, permutation);
 				R_GLSL_CompilePermutation(perm, mode, permutation);
 			}
 			if (!r_glsl_permutation->program)
@@ -1414,7 +1392,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, dpuint64 permuta
 				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 				{
 					// reduce i more quickly whenever it would not remove any bits
-					dpuint64 j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
+					uint64_t j = 1ll<<(SHADERPERMUTATION_COUNT-1-i);
 					if (!(permutation & j))
 						continue;
 					permutation -= j;
@@ -1503,14 +1481,14 @@ static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 				Con_Printf("%s written\n", modeinfo[mode].filename);
 			}
 			else
-				Con_Errorf("failed to write to %s\n", modeinfo[mode].filename);
+				Con_Printf(CON_ERROR "failed to write to %s\n", modeinfo[mode].filename);
 		}
 	}
 }
 
 void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
 {
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	permutation |= SHADERPERMUTATION_VIEWTINT;
@@ -1544,7 +1522,7 @@ void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
 
 void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
 {
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
 		permutation |= SHADERPERMUTATION_TRIPPY;
 	if (depthrgb)
@@ -1618,7 +1596,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	unsigned int mode = 0;
 	int blendfuncflags;
 	texture_t *t = rsurface.texture;
@@ -1879,7 +1857,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		// lightmapped wall
 		if ((t->glowtexture || t->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
-		if (r_refdef.fogenabled)
+		if (r_refdef.fogenabled && !notrippy)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
 		if (t->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
@@ -1951,7 +1929,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 	}
 	if(!(blendfuncflags & BLENDFUNC_ALLOWS_ANYFOG))
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
-	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA)
+	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA && !notrippy)
 		permutation |= SHADERPERMUTATION_FOGALPHAHACK;
 	switch(vid.renderpath)
 	{
@@ -2002,7 +1980,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 				if (r_glsl_permutation->loc_DeferredMod_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Diffuse, t->render_rtlight_diffuse[0], t->render_rtlight_diffuse[1], t->render_rtlight_diffuse[2]);
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, t->render_rtlight_specular[0], t->render_rtlight_specular[1], t->render_rtlight_specular[2]);
 				if (r_glsl_permutation->loc_LightColor >= 0) qglUniform3f(r_glsl_permutation->loc_LightColor, 1, 1, 1); // DEPRECATED
-				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, t->render_modellight_lightdir[0], t->render_modellight_lightdir[1], t->render_modellight_lightdir[2]);
+				if (r_glsl_permutation->loc_LightDir >= 0) qglUniform3f(r_glsl_permutation->loc_LightDir, t->render_modellight_lightdir_local[0], t->render_modellight_lightdir_local[1], t->render_modellight_lightdir_local[2]);
 			}
 			else
 			{
@@ -2013,7 +1991,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, t->render_rtlight_specular[0], t->render_rtlight_specular[1], t->render_rtlight_specular[2]);
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (r_glsl_permutation->loc_FogColor >= 0)
+			if (r_glsl_permutation->loc_FogColor >= 0 && !notrippy)
 			{
 				if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 					qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
@@ -2147,7 +2125,7 @@ void R_SetupShader_DeferredLight(const rtlight_t *rtlight)
 	// combination of texture, entity, light source, and fogging, only use the
 	// minimum features necessary to avoid wasting rendering time in the
 	// fragment shader on features that are not being used
-	dpuint64 permutation = 0;
+	uint64_t permutation = 0;
 	unsigned int mode = 0;
 	const float *lightcolorbase = rtlight->currentcolor;
 	float ambientscale = rtlight->ambientscale;
@@ -2884,38 +2862,10 @@ skinframe_t *R_SkinFrame_LoadMissing(void)
 
 skinframe_t *R_SkinFrame_LoadNoTexture(void)
 {
-	int x, y;
-	static unsigned char pix[16][16][4];
-
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	// this makes a light grey/dark grey checkerboard texture
-	if (!pix[0][0][3])
-	{
-		for (y = 0; y < 16; y++)
-		{
-			for (x = 0; x < 16; x++)
-			{
-				if ((y < 8) ^ (x < 8))
-				{
-					pix[y][x][0] = 128;
-					pix[y][x][1] = 128;
-					pix[y][x][2] = 128;
-					pix[y][x][3] = 255;
-				}
-				else
-				{
-					pix[y][x][0] = 64;
-					pix[y][x][1] = 64;
-					pix[y][x][2] = 64;
-					pix[y][x][3] = 255;
-				}
-			}
-		}
-	}
-
-	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, pix[0][0], 16, 16, 0, 0, 0, false);
+	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false);
 }
 
 skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
@@ -2989,9 +2939,10 @@ static int componentorder[4] = {0, 1, 2, 3};
 static rtexture_t *R_LoadCubemap(const char *basename)
 {
 	int i, j, cubemapsize, forcefilter;
-	char name[256];
 	unsigned char *cubemappixels, *image_buffer;
 	rtexture_t *cubemaptexture;
+	char name[256];
+
 	// HACK: if the cubemap name starts with a !, the cubemap is nearest-filtered
 	forcefilter = TEXF_FORCELINEAR;
 	if (basename && basename[0] == '!')
@@ -3186,7 +3137,9 @@ static void gl_main_start(void)
 	R_BuildBlankTextures();
 	R_BuildNoTexture();
 	R_BuildWhiteCube();
+#ifndef USE_GLES2
 	R_BuildNormalizationCube();
+#endif //USE_GLES2
 	R_BuildDefaultLUT();
 	r_texture_fogattenuation = NULL;
 	r_texture_fogheighttexture = NULL;
@@ -3318,8 +3271,8 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 	R_InitShaderModeInfo();
 
-	Cmd_AddCommand(&cmd_client, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
-	Cmd_AddCommand(&cmd_client, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
+	Cmd_AddCommand(CMD_CLIENT, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
+	Cmd_AddCommand(CMD_CLIENT, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
 	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -3463,6 +3416,7 @@ void GL_Main_Init(void)
 
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
+	Cvar_RegisterVariable(&r_nolerp_list);
 	Cvar_RegisterVariable(&r_lerplightstyles);
 	Cvar_RegisterVariable(&r_waterscroll);
 	Cvar_RegisterVariable(&r_bloom);
@@ -4189,8 +4143,8 @@ static void R_View_UpdateEntityVisible (void)
 			{
 				samples = ent->last_trace_visibility == 0 ? r_cullentities_trace_tempentitysamples.integer : r_cullentities_trace_samples.integer;
 				if (R_CanSeeBox(samples, r_cullentities_trace_eyejitter.value, r_cullentities_trace_enlarge.value, r_cullentities_trace_expand.value, r_cullentities_trace_pad.value, r_refdef.view.origin, ent->mins, ent->maxs))
-					ent->last_trace_visibility = realtime;
-				if (ent->last_trace_visibility < realtime - r_cullentities_trace_delay.value)
+					ent->last_trace_visibility = host.realtime;
+				if (ent->last_trace_visibility < host.realtime - r_cullentities_trace_delay.value)
 					r_refdef.viewcache.entityvisible[i] = 0;
 			}
 		}
@@ -4336,12 +4290,16 @@ void R_HDR_UpdateIrisAdaptation(const vec3_t point)
 		Cvar_SetValueQuick(&r_hdr_irisadaptation_value, 1.0f);
 }
 
+extern cvar_t r_lockvisibility;
+extern cvar_t r_lockpvs;
+
 static void R_View_SetFrustum(const int *scissor)
 {
 	int i;
 	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
-
+	if(r_lockvisibility.integer || r_lockpvs.integer)
+		return;
 	if(scissor)
 	{
 		// flipped x coordinates (because x points left here)
@@ -4682,7 +4640,7 @@ void R_RenderTarget_FreeUnused(qboolean force)
 		// free resources for rendertargets that have not been used for a while
 		// (note: this check is run after the frame render, so any targets used
 		// this frame will not be affected even at low framerates)
-		if (r && (realtime - r->lastusetime > 0.2 || force))
+		if (r && (host.realtime - r->lastusetime > 0.2 || force))
 		{
 			if (r->fbo)
 				R_Mesh_DestroyFramebufferObject(r->fbo);
@@ -4723,7 +4681,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 	for (i = 0; i < end; i++)
 	{
 		r = (r_rendertarget_t *)Mem_ExpandableArray_RecordAtIndex(&r_fb.rendertargets, i);
-		if (r && r->lastusetime != realtime && r->texturewidth == texturewidth && r->textureheight == textureheight && r->depthtextype == depthtextype && r->colortextype[0] == colortextype0 && r->colortextype[1] == colortextype1 && r->colortextype[2] == colortextype2 && r->colortextype[3] == colortextype3)
+		if (r && r->lastusetime != host.realtime && r->texturewidth == texturewidth && r->textureheight == textureheight && r->depthtextype == depthtextype && r->colortextype[0] == colortextype0 && r->colortextype[1] == colortextype1 && r->colortextype[2] == colortextype2 && r->colortextype[3] == colortextype3)
 			break;
 	}
 	if (i == end)
@@ -4752,7 +4710,7 @@ r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textyp
 	}
 	r_refdef.stats[r_stat_rendertargets_used]++;
 	r_refdef.stats[r_stat_rendertargets_pixels] += r->texturewidth * r->textureheight;
-	r->lastusetime = realtime;
+	r->lastusetime = host.realtime;
 	R_CalcTexCoordsForView(0, 0, r->texturewidth, r->textureheight, r->texturewidth, r->textureheight, r->texcoord2f);
 	return r;
 }
@@ -4769,7 +4727,7 @@ static void R_Water_StartFrame(int viewwidth, int viewheight)
 	waterwidth = (int)bound(16, viewwidth * r_water_resolutionmultiplier.value, viewwidth);
 	waterheight = (int)bound(16, viewheight * r_water_resolutionmultiplier.value, viewheight);
 
-	if (!r_water.integer || r_showsurfaces.integer)
+	if (!r_water.integer || r_showsurfaces.integer || r_lockvisibility.integer || r_lockpvs.integer)
 		waterwidth = waterheight = 0;
 
 	// set up variables that will be used in shader setup
@@ -5381,7 +5339,7 @@ static void R_Bloom_MakeTexture(void)
 
 static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	dpuint64 permutation;
+	uint64_t permutation;
 	float uservecs[4][4];
 	rtexture_t *viewtexture;
 	rtexture_t *bloomtexture;
@@ -6788,7 +6746,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->glowmod[q];
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 1;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6807,7 +6766,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
 			t->render_modellight_ambient[q] = rsurface.entity->render_fullbright[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
 			t->render_lightmap_ambient[q] = 0;
@@ -6823,7 +6783,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6841,7 +6802,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = rsurface.entity->render_modellight_lightdir[q];
+			t->render_modellight_lightdir_world[q] = rsurface.entity->render_modellight_lightdir_world[q];
+			t->render_modellight_lightdir_local[q] = rsurface.entity->render_modellight_lightdir_local[q];
 			t->render_modellight_ambient[q] = rsurface.entity->render_modellight_ambient[q] * r_refdef.view.colorscale;
 			t->render_modellight_diffuse[q] = rsurface.entity->render_modellight_diffuse[q] * r_refdef.view.colorscale;
 			t->render_modellight_specular[q] = rsurface.entity->render_modellight_specular[q] * r_refdef.view.colorscale;
@@ -6858,7 +6820,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -6882,7 +6845,8 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 		for (q = 0; q < 3; q++)
 		{
 			t->render_glowmod[q] = rsurface.entity->render_glowmod[q] * r_refdef.view.colorscale;
-			t->render_modellight_lightdir[q] = q == 2;
+			t->render_modellight_lightdir_world[q] = q == 2;
+			t->render_modellight_lightdir_local[q] = q == 2;
 			t->render_modellight_ambient[q] = 0;
 			t->render_modellight_diffuse[q] = 0;
 			t->render_modellight_specular[q] = 0;
@@ -7009,7 +6973,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 	// lightmaps mode looks bad with dlights using actual texturing, so turn
 	// off the colormap and glossmap, but leave the normalmap on as it still
 	// accurately represents the shading involved
-	if (gl_lightmaps.integer)
+	if (gl_lightmaps.integer && ent != &cl_meshentities[MESH_UI].render)
 	{
 		t->basetexture = r_texture_grey128;
 		t->pantstexture = r_texture_black;
@@ -9532,6 +9496,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 			surfaceindex = bih_surfaces[triangleindex];
 			surface = surfaces + surfaceindex;
 			texture = surface->texture;
+			if (!texture)
+				continue;
 			if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 				continue;
 			if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
@@ -9550,6 +9516,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 				continue;
 			// skip transparent surfaces
 			texture = surface->texture;
+			if (!texture)
+				continue;
 			if (texture->currentmaterialflags & (MATERIALFLAG_BLENDED | MATERIALFLAG_NODEPTHTEST | MATERIALFLAG_SKY | MATERIALFLAG_SHORTDEPTHRANGE | MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION))
 				continue;
 			if (texture->surfaceflags & Q3SURFACEFLAG_NOMARKS)
@@ -10180,7 +10148,8 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		int updated = 0;
 		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
 		{
-			if (update[j])
+			// Update brush entities even if not visible otherwise they'll render solid black.
+			if (update[j] && (r_refdef.viewcache.world_surfacevisible[j] || ent != r_refdef.scene.worldentity))
 			{
 				updated++;
 				R_BuildLightMap(ent, surfaces + j);

@@ -45,20 +45,19 @@ char *Sys_TimeString(const char *timeformat)
 }
 
 
-extern qboolean host_shuttingdown;
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	if (cmd_client.text_lock)
-		Cbuf_Unlock(&cmd_client);
-	if (cmd_server.text_lock)
-		Cbuf_Unlock(&cmd_server);
+	if ((&cmd_client)->cbuf->lock)
+		Cbuf_Unlock((&cmd_client)->cbuf);
+	if ((&cmd_server)->cbuf->lock)
+		Cbuf_Unlock((&cmd_server)->cbuf);
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 
 	if (COM_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
-	host_shuttingdown = true;
+	host.state = host_shutdown;
 	Host_Shutdown();
 	exit(returnvalue);
 }
@@ -77,7 +76,7 @@ void Sys_AllowProfiling(qboolean enable)
 	else
 		moncleanup();
 #endif
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif (defined(__linux__) && (defined(__GLIBC__) || defined(__GNU_LIBRARY__))) || defined(__FreeBSD__)
 	extern int moncontrol(int);
 	moncontrol(enable);
 #endif
@@ -164,7 +163,7 @@ notfound:
 #else
 		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
-		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(com_argv[0], '/'))))
+		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
 			break;
 		else
 			Sys_UnloadLibrary (&dllhandle);
@@ -172,10 +171,10 @@ notfound:
 
 	// see if the names can be loaded relative to the executable path
 	// (this is for Mac OSX which does not check next to the executable)
-	if (!dllhandle && strrchr(com_argv[0], '/'))
+	if (!dllhandle && strrchr(sys.argv[0], '/'))
 	{
 		char path[MAX_OSPATH];
-		strlcpy(path, com_argv[0], sizeof(path));
+		strlcpy(path, sys.argv[0], sizeof(path));
 		strrchr(path, '/')[1] = 0;
 		for (i = 0; dllnames[i] != NULL; i++)
 		{
@@ -203,6 +202,7 @@ notfound:
 	}
 
 	Con_DPrintf(" - loaded.\n");
+	Con_Printf("Loaded library \"%s\"\n", dllnames[i]);
 
 	*handle = dllhandle;
 	return true;
@@ -335,13 +335,8 @@ double Sys_DirtyTime(void)
 		{
 			QueryPerformanceCounter (&PerformanceCount);
 	
-			#ifdef __BORLANDC__
-			timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-			return ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
-			#else
 			timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
 			return ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
-			#endif
 		}
 		else
 		{
@@ -496,7 +491,7 @@ static const char *Sys_FindInPATH(const char *name, char namesep, const char *PA
 static const char *Sys_FindExecutableName(void)
 {
 #if defined(WIN32)
-	return com_argv[0];
+	return sys.argv[0];
 #else
 	static char exenamebuf[MAX_OSPATH+1];
 	ssize_t n = -1;
@@ -515,18 +510,18 @@ static const char *Sys_FindExecutableName(void)
 		exenamebuf[n] = 0;
 		return exenamebuf;
 	}
-	if(strchr(com_argv[0], '/'))
-		return com_argv[0]; // possibly a relative path
+	if(strchr(sys.argv[0], '/'))
+		return sys.argv[0]; // possibly a relative path
 	else
-		return Sys_FindInPATH(com_argv[0], '/', getenv("PATH"), ':', exenamebuf, sizeof(exenamebuf));
+		return Sys_FindInPATH(sys.argv[0], '/', getenv("PATH"), ':', exenamebuf, sizeof(exenamebuf));
 #endif
 }
 
 void Sys_ProvideSelfFD(void)
 {
-	if(com_selffd != -1)
+	if(sys.selffd != -1)
 		return;
-	com_selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
+	sys.selffd = FS_SysOpenFD(Sys_FindExecutableName(), "rb", false);
 }
 
 // for x86 cpus only...  (x64 has SSE2_PRESENT)
@@ -535,7 +530,7 @@ void Sys_ProvideSelfFD(void)
 static int CPUID_Features(void)
 {
 	int features = 0;
-# if defined(__GNUC__) && defined(__i386__)
+# if defined((__GNUC__) || (__clang__) || (__TINYC__)) && defined(__i386__)
         __asm__ (
 "        movl    %%ebx,%%edi\n"
 "        xorl    %%eax,%%eax                                           \n"
@@ -601,17 +596,15 @@ qboolean Sys_HaveSSE2(void)
 #if defined(__linux__)
 #include <sys/resource.h>
 #include <errno.h>
-static int nicelevel;
-static qboolean nicepossible;
-static qboolean isnice;
+
 void Sys_InitProcessNice (void)
 {
 	struct rlimit lim;
-	nicepossible = false;
+	sys.nicepossible = false;
 	if(COM_CheckParm("-nonice"))
 		return;
 	errno = 0;
-	nicelevel = getpriority(PRIO_PROCESS, 0);
+	sys.nicelevel = getpriority(PRIO_PROCESS, 0);
 	if(errno)
 	{
 		Con_Printf("Kernel does not support reading process priority - cannot use niceness\n");
@@ -622,35 +615,35 @@ void Sys_InitProcessNice (void)
 		Con_Printf("Kernel does not support lowering nice level again - cannot use niceness\n");
 		return;
 	}
-	if(lim.rlim_cur != RLIM_INFINITY && nicelevel < (int) (20 - lim.rlim_cur))
+	if(lim.rlim_cur != RLIM_INFINITY && sys.nicelevel < (int) (20 - lim.rlim_cur))
 	{
 		Con_Printf("Current nice level is below the soft limit - cannot use niceness\n");
 		return;
 	}
-	nicepossible = true;
-	isnice = false;
+	sys.nicepossible = true;
+	sys.isnice = false;
 }
 void Sys_MakeProcessNice (void)
 {
-	if(!nicepossible)
+	if(!sys.nicepossible)
 		return;
-	if(isnice)
+	if(sys.isnice)
 		return;
 	Con_DPrintf("Process is becoming 'nice'...\n");
 	if(setpriority(PRIO_PROCESS, 0, 19))
-		Con_Errorf("Failed to raise nice level to %d\n", 19);
-	isnice = true;
+		Con_Printf(CON_ERROR "Failed to raise nice level to %d\n", 19);
+	sys.isnice = true;
 }
 void Sys_MakeProcessMean (void)
 {
-	if(!nicepossible)
+	if(!sys.nicepossible)
 		return;
-	if(!isnice)
+	if(!sys.isnice)
 		return;
 	Con_DPrintf("Process is becoming 'mean'...\n");
-	if(setpriority(PRIO_PROCESS, 0, nicelevel))
-		Con_Errorf("Failed to lower nice level to %d\n", nicelevel);
-	isnice = false;
+	if(setpriority(PRIO_PROCESS, 0, sys.nicelevel))
+		Con_Printf(CON_ERROR "Failed to lower nice level to %d\n", sys.nicelevel);
+	sys.isnice = false;
 }
 #else
 void Sys_InitProcessNice (void)
