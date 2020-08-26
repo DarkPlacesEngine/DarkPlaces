@@ -326,7 +326,7 @@ void Draw_FreePic(const char *picname)
 qboolean Draw_PicExists(const char *name) {
 	char vabuf[1024] = { 0 };
 	const char *checkfmt[] = { "%s.tga", "%s.png", "%s.jpg", "%s.pcx" };
-	int i;
+	long unsigned int i;
 	// TODO: actually use the gfx format list for this
 	for (i = 0; i < sizeof(checkfmt) / sizeof(checkfmt[0]); ++i)
 		if (FS_FileExists(va(vabuf, sizeof(vabuf), checkfmt[i], name)))

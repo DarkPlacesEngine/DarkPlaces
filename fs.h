@@ -80,6 +80,7 @@ void FS_Purge (qfile_t* file);
 const char *FS_FileWithoutPath (const char *in);
 const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qboolean isgamedir);
+int FS_rmtree(const char *dir);
 
 extern const char *const fs_checkgamedir_missing; // "(missing)"
 const char *FS_CheckGameDir(const char *gamedir); // returns NULL if nasty, fs_checkgamedir_missing (exact pointer) if missing

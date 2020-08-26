@@ -2040,7 +2040,7 @@ void VM_fcopy(prvm_prog_t *prog)
 			FS_Close(f1);
 			FS_Close(f2);
 			PRVM_G_FLOAT(OFS_RETURN) = -3;
-			VM_Warning(prog, "VM_fcopy: %s read %I64d from %s but wrote %I64d to %s\n", prog->name, rx, fname1, wx, fname2);
+			VM_Warning(prog, "VM_fcopy: %s read %lli from %s but wrote %lli to %s\n", prog->name, rx, fname1, wx, fname2);
 			return;
 		}
 	}
