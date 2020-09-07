@@ -382,7 +382,7 @@ void CL_Record_f(cmd_state_t *cmd)
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_command, false);
+		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_local, false);
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);

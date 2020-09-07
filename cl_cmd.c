@@ -252,7 +252,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 
 	if (Cmd_Argc(cmd) == 1)
 	{
-		if (cmd->source == src_command)
+		if (cmd->source == src_local)
 		{
 			Con_Printf("\"color\" is \"%i %i\"\n", cl_topcolor.integer, cl_bottomcolor.integer);
 			Con_Print("color <0-15> [0-15]\n");
@@ -287,7 +287,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 	//if (bottom > 13)
 	//	bottom = 13;
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 	{
 		Cvar_SetValueQuick(&cl_topcolor, top);
 		Cvar_SetValueQuick(&cl_bottomcolor, bottom);
