@@ -79,10 +79,7 @@ Cmd_Defer_f
 Cause a command to be executed after a delay.
 ============
 */
-static void Cbuf_LinkInsert(cbuf_cmd_t *insert, cbuf_cmd_t **list);
 static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing);
-static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t **list);
-static void Cbuf_LinkAdd(cbuf_cmd_t *add, cbuf_cmd_t **list);
 static void Cmd_Defer_f (cmd_state_t *cmd)
 {
 	cbuf_cmd_t *current;
@@ -90,43 +87,34 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 
 	if(Cmd_Argc(cmd) == 1)
 	{
-		current = cbuf->deferred;
-		if(!current)
+		if(List_IsEmpty(&cbuf->deferred))
 			Con_Printf("No commands are pending.\n");
-		else if (current == cbuf->deferred)
-			goto print_delay;
 		else
 		{
-			while(current != cbuf->deferred)
-			{
-print_delay:
+			llist_t *pos;
+        	List_ForEach(pos, &cbuf->deferred)
+    		{
+				current = List_Container(*pos, cbuf_cmd_t, list);
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
-				current = current->next;
 			}
 		}
 	}
 	else if(Cmd_Argc(cmd) == 2 && !strcasecmp("clear", Cmd_Argv(cmd, 1)))
 	{
-		while(cbuf->deferred)
-		{
-			current = Cbuf_LinkPop(&cbuf->deferred);
-			current->prev = current->next = current;
-			Cbuf_LinkAdd(current, &cbuf->free);
-		}
+		while(!List_IsEmpty(&cbuf->deferred))
+			List_Move_Tail(cbuf->deferred.next, &cbuf->free);
 	}
 	else if(Cmd_Argc(cmd) == 3)
 	{
 		const char *text = Cmd_Argv(cmd, 2);
-		size_t len = strlen(text);
 		current = Cbuf_LinkGet(cbuf, NULL);
-
-		current->delay = atof(Cmd_Argv(cmd, 1));
-		memcpy(current->text, text, len+1);
+		current->size = strlen(text);
 		current->source = cmd;
+		current->delay = atof(Cmd_Argv(cmd, 1));
 
-		current->prev = current->next = current;
+		memcpy(current->text, text, current->size + 1);
 
-		Cbuf_LinkInsert(current, &cbuf->deferred);
+		List_Move_Tail(&current->list, &cbuf->deferred);
 
 	}
 	else
@@ -187,39 +175,6 @@ static void Cmd_Centerprint_f (cmd_state_t *cmd)
 
 =============================================================================
 */
-
-static void Cbuf_LinkAdd(cbuf_cmd_t *add, cbuf_cmd_t **list)
-{
-	if(!*list)
-		*list = add;
-	else
-	{
-		cbuf_cmd_t *temp = add->prev;
-		add->prev->next = *list;
-		add->prev = (*list)->prev;
-		(*list)->prev->next = add;
-		(*list)->prev = temp;
-	}
-}
-
-static void Cbuf_LinkInsert(cbuf_cmd_t *insert, cbuf_cmd_t **list)
-{
-	// Same algorithm, but backwards
-	if(*list)
-		Cbuf_LinkAdd(*list, &insert);
-	*list = insert;
-}
-
-static cbuf_cmd_t *Cbuf_LinkPop(cbuf_cmd_t **list)
-{
-	cbuf_cmd_t *node = *list;
-	*list = node->next;
-	(*list)->prev = node->prev;
-	(*list)->prev->next = *list;
-	if(*list == node)
-		*list = NULL;
-	return node;
-}
 
 /*
 ============
@@ -314,10 +269,13 @@ static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
 		ret = existing;
 	else
 	{
-		if(cbuf->free)
-			ret = Cbuf_LinkPop(&cbuf->free);
+		if(!List_IsEmpty(&cbuf->free))
+			ret = List_Container(*cbuf->free.next, cbuf_cmd_t, list);
 		else
+		{
 			ret = (cbuf_cmd_t *)Z_Malloc(sizeof(cbuf_cmd_t));
+			ret->list.next = ret->list.prev = &ret->list;
+		}
 		ret->size = 0;
 		ret->pending = false;
 	}
@@ -327,12 +285,12 @@ static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
 
 
 // Cloudwalk: Not happy with this, but it works.
-static cbuf_cmd_t *Cbuf_LinkCreate(cmd_state_t *cmd, cbuf_cmd_t *existing, const char *text)
+static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cbuf_cmd_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
 	cbuf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
-	cbuf_cmd_t *current = NULL, *head = NULL;
+	cbuf_cmd_t *current = NULL;
 
 	// Slide the pointer down until we reach the end
 	while(in)
@@ -347,13 +305,12 @@ static cbuf_cmd_t *Cbuf_LinkCreate(cmd_state_t *cmd, cbuf_cmd_t *existing, const
 		if(newsize)
 		{
 			if(!current)
-				current = Cbuf_LinkGet(cbuf, existing);	
+				current = Cbuf_LinkGet(cbuf, existing);
 
 			if(!current->pending)
 			{
 				current->source = cmd;
-				current->prev = current->next = current;
-				Cbuf_LinkAdd(current, &head);
+				List_Move_Tail(&current->list, head);
 			}
 
 			if(newsize & (1<<17))
@@ -369,8 +326,6 @@ static cbuf_cmd_t *Cbuf_LinkCreate(cmd_state_t *cmd, cbuf_cmd_t *existing, const
 	}
 
 	cbuf->size += totalsize;
-
-	return head;
 }
 
 /*
@@ -384,7 +339,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 {
 	size_t l = strlen(text);
 	cbuf_t *cbuf = cmd->cbuf;
-	cbuf_cmd_t *add = NULL;
+	llist_t llist = {&llist, &llist};
 
 	Cbuf_Lock(cbuf);
 
@@ -392,10 +347,9 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 	{
-		if(!(add = Cbuf_LinkCreate(cmd, cbuf->start ? cbuf->start->prev : NULL, text)))
-			return;
-
-		Cbuf_LinkAdd(add, &cbuf->start);
+		Cbuf_LinkCreate(cmd, &llist, (List_IsEmpty(&cbuf->start) ? NULL : List_Container(*cbuf->start.prev, cbuf_cmd_t, list)), text);
+		if(!List_IsEmpty(&llist))
+			List_Splice_Tail(&llist, &cbuf->start);
 	}
 	Cbuf_Unlock(cbuf);
 }
@@ -411,7 +365,7 @@ FIXME: actually change the command buffer to do less copying
 void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 {
 	cbuf_t *cbuf = cmd->cbuf;
-	cbuf_cmd_t *insert = NULL;
+	llist_t llist = {&llist, &llist};
 	size_t l = strlen(text);
 
 	Cbuf_Lock(cbuf);
@@ -421,10 +375,8 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		if(!(insert = Cbuf_LinkCreate(cmd, cbuf->start, text)))
-			return;
-
-		Cbuf_LinkInsert(insert, &cbuf->start);
+		Cbuf_LinkCreate(cmd, &llist, List_Container(*cbuf->start.next, cbuf_cmd_t, list), text);
+		List_Splice(&llist, &cbuf->start);
 	}
 
 	Cbuf_Unlock(cbuf);
@@ -437,6 +389,7 @@ Cbuf_Execute_Deferred --blub
 */
 static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 {
+	llist_t *pos;
 	cbuf_cmd_t *current;
 	double eat;
 
@@ -447,17 +400,16 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
-	if(cbuf->deferred)
+    List_ForEach(pos, &cbuf->deferred)
 	{
-		cbuf->deferred->delay -= eat;
-		if(cbuf->deferred->delay <= 0)
+		current = List_Container(*pos, cbuf_cmd_t, list);
+		current->delay -= eat;
+		if(current->delay <= 0)
 		{
-			current = Cbuf_LinkPop(&cbuf->deferred);
-			Cbuf_AddText(current->source, current->text);
-			Cbuf_AddText(current->source, ";\n");
-
-			current->prev = current->next = current;
-			Cbuf_LinkAdd(current, &cbuf->free);
+			cbuf->size += current->size;
+			List_Move(pos, &cbuf->start);
+			// We must return and come back next frame or the engine will freeze. Fragile... like glass :3
+			return;
 		}
 	}
 }
@@ -477,14 +429,14 @@ void Cbuf_Execute (cbuf_t *cbuf)
 	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cbuf->tokenizebufferpos = 0;
 
-	while (cbuf->start)
+	while (!List_IsEmpty(&cbuf->start))
 	{
 		/*
 		 * Delete the text from the command buffer and move remaining
 		 * commands down. This is necessary because commands (exec, alias)
 		 * can insert data at the beginning of the text buffer
 		 */
-		current = Cbuf_LinkPop(&cbuf->start);
+		current = List_Container(*cbuf->start.next, cbuf_cmd_t, list);
 
 		/*
 		 * Assume we're rolling with the current command-line and
@@ -494,10 +446,6 @@ void Cbuf_Execute (cbuf_t *cbuf)
 		current->pending = false;
 
 		cbuf->size -= current->size;
-
-		// Infinite loop if aliases expand without this
-		if(cbuf->size == 0)
-			cbuf->start = NULL;
 
 		firstchar = current->text;
 		while(*firstchar && ISWHITESPACE(*firstchar))
@@ -515,9 +463,7 @@ void Cbuf_Execute (cbuf_t *cbuf)
 		}
 
 		// Recycle memory so using WASD doesn't cause a malloc and free
-		current->prev = current->next = current;
-
-		Cbuf_LinkAdd(current, &cbuf->free);
+		List_Move_Tail(&current->list, &cbuf->free);
 
 		current = NULL;
 
@@ -1656,6 +1602,10 @@ void Cmd_Init(void)
 	cbuf->lock = Thread_CreateMutex();
 	cbuf->wait = false;
 	host.cbuf = cbuf;
+
+	cbuf->start.prev = cbuf->start.next = &(cbuf->start);
+	cbuf->deferred.prev = cbuf->deferred.next = &(cbuf->deferred);
+	cbuf->free.prev = cbuf->free.next = &(cbuf->free);
 
 	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
 	{
