@@ -38,6 +38,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //============================================================================
 
+#define ContainerOf(ptr, type, member) (type *)((void *)&(ptr) - offsetof(type, member))
+
 typedef struct sizebuf_s
 {
 	qboolean	allowoverflow;	///< if false, do a Sys_Error
