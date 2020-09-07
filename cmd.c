@@ -507,11 +507,11 @@ void Cbuf_Execute (cbuf_t *cbuf)
 		   (strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7])))
 		{
 			if(Cmd_PreprocessString(current->source, current->text, preprocessed, sizeof(preprocessed), NULL ))
-				Cmd_ExecuteString(current->source, preprocessed, src_command, false);
+				Cmd_ExecuteString(current->source, preprocessed, src_local, false);
 		}
 		else
 		{
-			Cmd_ExecuteString (current->source, current->text, src_command, false);
+			Cmd_ExecuteString (current->source, current->text, src_local, false);
 		}
 
 		// Recycle memory so using WASD doesn't cause a malloc and free
@@ -2225,7 +2225,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		{
 			switch (src)
 			{
-			case src_command:
+			case src_local:
 				if (func->function)
 					func->function(cmd);
 				else
