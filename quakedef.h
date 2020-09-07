@@ -371,6 +371,7 @@ extern char engineversion[128];
 #include "zone.h"
 #include "fs.h"
 #include "common.h"
+#include "com_list.h"
 #include "cvar.h"
 #include "bspfile.h"
 #include "sys.h"
