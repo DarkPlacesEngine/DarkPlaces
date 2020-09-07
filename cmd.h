@@ -136,7 +136,7 @@ cmd_state_t;
 
 typedef struct cbuf_cmd_s
 {
-	struct cbuf_cmd_s *prev, *next;
+	llist_t list;
 	cmd_state_t *source;
 	double delay;
 	size_t size;
@@ -146,9 +146,9 @@ typedef struct cbuf_cmd_s
 
 typedef struct cbuf_s
 {
-	cbuf_cmd_t *start;
-	cbuf_cmd_t *deferred;
-	cbuf_cmd_t *free;
+	llist_t start;
+	llist_t deferred;
+	llist_t free;
 	qboolean wait;
 	size_t maxsize;
 	size_t size;
