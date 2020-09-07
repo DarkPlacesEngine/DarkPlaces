@@ -411,7 +411,7 @@ SV_Pause_f
 static void SV_Pause_f(cmd_state_t *cmd)
 {
 	void (*print) (const char *fmt, ...);
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		print = Con_Printf;
 	else
 		print = SV_ClientPrintf;
@@ -429,7 +429,7 @@ static void SV_Pause_f(cmd_state_t *cmd)
 	}
 	
 	sv.paused ^= 1;
-	if (cmd->source != src_command)
+	if (cmd->source != src_local)
 		SV_BroadcastPrintf("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
 	else if(*(sv_adminnick.string))
 		SV_BroadcastPrintf("%s %spaused the game\n", sv_adminnick.string, sv.paused ? "" : "un");
@@ -451,7 +451,7 @@ static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
 	char text[1024];
 	qboolean fromServer = false;
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 	{
 		fromServer = true;
 		teamonly = false;
@@ -521,7 +521,7 @@ static void SV_Tell_f(cmd_state_t *cmd)
 	char text[MAX_INPUTLINE]; // LadyHavoc: FIXME: temporary buffer overflow fix (was 64)
 	qboolean fromServer = false;
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		fromServer = true;
 
 	if (Cmd_Argc (cmd) < 2)
@@ -642,7 +642,7 @@ static void SV_Ping_f(cmd_state_t *cmd)
 	client_t *client;
 	void (*print) (const char *fmt, ...);
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		print = Con_Printf;
 	else
 		print = SV_ClientPrintf;
@@ -796,7 +796,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 	int frags;
 	char vabuf[1024];
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		print = Con_Printf;
 	else
 		print = SV_ClientPrintf;
@@ -858,7 +858,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 			ping = bound(0, (int)floor(client->ping*1000+0.5), 9999);
 		}
 
-		if(sv_status_privacy.integer && cmd->source != src_command && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+		if(sv_status_privacy.integer && cmd->source != src_local && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
 			strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
@@ -948,7 +948,7 @@ static void SV_Name_f(cmd_state_t *cmd)
 
 	strlcpy(newName, newNameSource, sizeof(newName));
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		return;
 
 	if (host.realtime < host_client->nametime && strcmp(newName, host_client->name))
@@ -1036,7 +1036,7 @@ static void SV_Rate_f(cmd_state_t *cmd)
 
 	rate = atoi(Cmd_Argv(cmd, 1));
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 		return;
 
 	host_client->rate = rate;
@@ -1135,7 +1135,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 
 	if (i < svs.maxclients)
 	{
-		if (cmd->source == src_command)
+		if (cmd->source == src_local)
 		{
 			if (cls.state == ca_dedicated)
 				who = "Console";

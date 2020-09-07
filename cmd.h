@@ -58,7 +58,7 @@ typedef enum
 {
 	src_client,		///< came in over a net connection as a clc_stringcmd
 					///< host_client will be valid during this state.
-	src_command		///< from the command buffer
+	src_local		///< from the command buffer
 } cmd_source_t;
 
 typedef struct cmdalias_s

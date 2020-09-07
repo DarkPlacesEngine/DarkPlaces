@@ -564,7 +564,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		int crcflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CVAR_READONLY;
 		csqc_progsize.flags &= ~CVAR_READONLY;
-		Cmd_ExecuteString(&cmd_client, msg, src_command, true);
+		Cmd_ExecuteString(&cmd_client, msg, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
@@ -596,7 +596,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 				l = sizeof(buf) - 1;
 			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
 
-			Cmd_ExecuteString(&cmd_client, buf, src_command, true);
+			Cmd_ExecuteString(&cmd_client, buf, src_local, true);
 
 			p += l;
 			if(*p == '\n')
@@ -604,7 +604,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 			else
 				break; // end of string or overflow
 		}
-		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_command, true); // don't inhibit CSQC loading
+		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
 		return;
 	}
 
