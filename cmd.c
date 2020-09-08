@@ -419,7 +419,7 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 Cbuf_Execute
 ============
 */
-static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias );
+static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
 void Cbuf_Execute (cbuf_t *cbuf)
 {
 	cbuf_cmd_t *current;
@@ -956,7 +956,7 @@ Creates a new command that executes a command string (possibly ; seperated)
 */
 static void Cmd_Alias_f (cmd_state_t *cmd)
 {
-	cmdalias_t	*a;
+	cmd_alias_t	*a;
 	char		line[MAX_INPUTLINE];
 	int			i, c;
 	const char		*s;
@@ -989,9 +989,9 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 
 	if (!a)
 	{
-		cmdalias_t *prev, *current;
+		cmd_alias_t *prev, *current;
 
-		a = (cmdalias_t *)Z_Malloc (sizeof(cmdalias_t));
+		a = (cmd_alias_t *)Z_Malloc (sizeof(cmd_alias_t));
 		strlcpy (a->name, s, sizeof (a->name));
 		// insert it at the right alphanumeric position
 		for( prev = NULL, current = cmd->userdefined->alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
@@ -1032,7 +1032,7 @@ Remove existing aliases.
 */
 static void Cmd_UnAlias_f (cmd_state_t *cmd)
 {
-	cmdalias_t	*a, *p;
+	cmd_alias_t	*a, *p;
 	int i;
 	const char *s;
 
@@ -1074,7 +1074,7 @@ static void Cmd_UnAlias_f (cmd_state_t *cmd)
 =============================================================================
 */
 
-static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname, cmdalias_t *alias, qboolean *is_multiple)
+static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname, cmd_alias_t *alias, qboolean *is_multiple)
 {
 	cvar_t *cvar;
 	long argno;
@@ -1200,7 +1200,7 @@ fail:
 	return false;
 }
 
-static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t varlen, cmdalias_t *alias)
+static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t varlen, cmd_alias_t *alias)
 {
 	static char varname[MAX_INPUTLINE]; // cmd_mutex
 	static char varval[MAX_INPUTLINE]; // cmd_mutex
@@ -1316,7 +1316,7 @@ Cmd_PreprocessString
 
 Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
 */
-static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmdalias_t *alias ) {
+static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias ) {
 	const char *in;
 	size_t eat, varlen;
 	unsigned outlen;
@@ -1445,7 +1445,7 @@ Cmd_ExecuteAlias
 Called for aliases and fills in the alias into the cbuffer
 ============
 */
-static void Cmd_ExecuteAlias (cmd_state_t *cmd, cmdalias_t *alias)
+static void Cmd_ExecuteAlias (cmd_state_t *cmd, cmd_alias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE ]; // cmd_mutex
 	static char buffer2[ MAX_INPUTLINE ]; // cmd_mutex
@@ -1523,7 +1523,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 {
 	cmd_function_t *func;
 	cvar_t *cvar;
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 	const char *partial;
 	int count;
 	qboolean ispattern;
@@ -2039,7 +2039,7 @@ void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial)
 */
 const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial)
 {
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 	size_t len;
 
 	len = strlen(partial);
@@ -2058,7 +2058,7 @@ const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial)
 // written by LadyHavoc
 void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial)
 {
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 	size_t len = strlen(partial);
 	// Loop through the alias list and print all matches
 	for (alias = cmd->userdefined->alias; alias; alias = alias->next)
@@ -2078,7 +2078,7 @@ void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial)
 */
 int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial)
 {
-	cmdalias_t	*alias;
+	cmd_alias_t	*alias;
 	size_t		len;
 	int			h;
 
@@ -2108,7 +2108,7 @@ int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial)
 */
 const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 {
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 	size_t len = 0;
 	size_t bpos = 0;
 	size_t sizeofbuf = (Cmd_CompleteAliasCountPossible (cmd, partial) + 1) * sizeof (const char *);
@@ -2153,7 +2153,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 {
 	int oldpos;
 	cmd_function_t *func;
-	cmdalias_t *a;
+	cmd_alias_t *a;
 	if (lockmutex)
 		Cbuf_Lock(cmd->cbuf);
 	oldpos = cmd->cbuf->tokenizebufferpos;
@@ -2255,7 +2255,7 @@ void Cmd_SaveInitState(void)
 	{
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f;
-		cmdalias_t *a;
+		cmd_alias_t *a;
 		for (f = cmd->userdefined->csqc_functions; f; f = f->next)
 			f->initstate = true;
 		for (f = cmd->engine_functions; f; f = f->next)
@@ -2276,7 +2276,7 @@ void Cmd_RestoreInitState(void)
 	{
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f, **fp;
-		cmdalias_t *a, **ap;
+		cmd_alias_t *a, **ap;
 		for (fp = &cmd->userdefined->csqc_functions; (f = *fp);)
 		{
 			if (f->initstate)
