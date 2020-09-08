@@ -109,7 +109,7 @@ void COM_InitGameType (void)
 
 	// check commandline options for keywords
 	for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
-		if (COM_CheckParm (gamemode_info[i].cmdline))
+		if (Sys_CheckParm (gamemode_info[i].cmdline))
 			index = i;
 
 	com_startupgamemode = gamemode_info[index].mode;
@@ -164,17 +164,17 @@ static void COM_SetGameType(int index)
 
 	if (gamemode == com_startupgamemode)
 	{
-		if((t = COM_CheckParm("-customgamename")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgamename")) && t + 1 < sys.argc)
 			gamename = gamenetworkfiltername = sys.argv[t+1];
-		if((t = COM_CheckParm("-customgamenetworkfiltername")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgamenetworkfiltername")) && t + 1 < sys.argc)
 			gamenetworkfiltername = sys.argv[t+1];
-		if((t = COM_CheckParm("-customgamedirname1")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgamedirname1")) && t + 1 < sys.argc)
 			gamedirname1 = sys.argv[t+1];
-		if((t = COM_CheckParm("-customgamedirname2")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgamedirname2")) && t + 1 < sys.argc)
 			gamedirname2 = *sys.argv[t+1] ? sys.argv[t+1] : NULL;
-		if((t = COM_CheckParm("-customgamescreenshotname")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgamescreenshotname")) && t + 1 < sys.argc)
 			gamescreenshotname = sys.argv[t+1];
-		if((t = COM_CheckParm("-customgameuserdirname")) && t + 1 < sys.argc)
+		if((t = Sys_CheckParm("-customgameuserdirname")) && t + 1 < sys.argc)
 			gameuserdirname = sys.argv[t+1];
 	}
 

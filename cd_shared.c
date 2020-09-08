@@ -549,7 +549,7 @@ int CDAudio_Init (void)
 		return -1;
 
 // COMMANDLINEOPTION: Sound: -nocdaudio disables CD audio support
-	if (COM_CheckParm("-nocdaudio"))
+	if (Sys_CheckParm("-nocdaudio"))
 		return -1;
 
 #ifdef MAXTRACKS
@@ -577,7 +577,7 @@ int CDAudio_Init (void)
 
 int CDAudio_Startup (void)
 {
-	if (COM_CheckParm("-nocdaudio"))
+	if (Sys_CheckParm("-nocdaudio"))
 		return -1;
 
 	initialized = true;

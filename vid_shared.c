@@ -643,7 +643,7 @@ qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent
 
 	Con_DPrintf("checking for %s...  ", name);
 
-	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
+	if (disableparm && (Sys_CheckParm(disableparm) || Sys_CheckParm("-safe")))
 	{
 		Con_DPrint("disabled by commandline\n");
 		return false;
@@ -1511,24 +1511,24 @@ void VID_Start(void)
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
 // COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
-		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
+		if (Sys_CheckParm("-window") || Sys_CheckParm("-safe") || ((i = Sys_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 // COMMANDLINEOPTION: Video: -borderless performs +vid_borderless 1
-		if (COM_CheckParm("-borderless") || ((i = COM_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
+		if (Sys_CheckParm("-borderless") || ((i = Sys_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
 		{
 			Cvar_SetValueQuick(&vid_borderless, true);
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 		}
 // COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
-		if (COM_CheckParm("-fullscreen") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
+		if (Sys_CheckParm("-fullscreen") || ((i = Sys_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
 // COMMANDLINEOPTION: Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-width")) != 0 || ((i = COM_CheckParm("+vid_width")) != 0))
+		if ((i = Sys_CheckParm("-width")) != 0 || ((i = Sys_CheckParm("+vid_width")) != 0))
 			width = atoi(sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-height")) != 0 || ((i = COM_CheckParm("+vid_height")) != 0))
+		if ((i = Sys_CheckParm("-height")) != 0 || ((i = Sys_CheckParm("+vid_height")) != 0))
 			height = atoi(sys.argv[i+1]);
 		if (width == 0)
 			width = height * 4 / 3;
@@ -1539,13 +1539,13 @@ void VID_Start(void)
 		if (height)
 			Cvar_SetValueQuick(&vid_height, height);
 // COMMANDLINEOPTION: Video: -density <multiplier> performs +vid_touchscreen_density <multiplier> (example -density 1 or -density 1.5)
-		if ((i = COM_CheckParm("-density")) != 0)
+		if ((i = Sys_CheckParm("-density")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_density, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -xdpi <dpi> performs +vid_touchscreen_xdpi <dpi> (example -xdpi 160 or -xdpi 320)
-		if ((i = COM_CheckParm("-touchscreen_xdpi")) != 0)
+		if ((i = Sys_CheckParm("-touchscreen_xdpi")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_xdpi, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -ydpi <dpi> performs +vid_touchscreen_ydpi <dpi> (example -ydpi 160 or -ydpi 320)
-		if ((i = COM_CheckParm("-touchscreen_ydpi")) != 0)
+		if ((i = Sys_CheckParm("-touchscreen_ydpi")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_ydpi, sys.argv[i+1]);
 	}
 

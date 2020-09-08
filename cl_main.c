@@ -355,7 +355,7 @@ void CL_Disconnect(void)
 	if (cls.state == ca_dedicated)
 		return;
 
-	if (COM_CheckParm("-profilegameonly"))
+	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 
 	Curl_Clear_forthismap();
@@ -521,7 +521,7 @@ void CL_EstablishConnection(const char *address, int firstarg)
 		return;
 
 	// don't connect to a server if we're benchmarking a demo
-	if (COM_CheckParm("-benchmark"))
+	if (Sys_CheckParm("-benchmark"))
 		return;
 
 	// clear menu's connect error message

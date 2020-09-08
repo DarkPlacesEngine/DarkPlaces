@@ -1493,7 +1493,7 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	drivername = NULL;
 
 // COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is whatever SDL recommends, useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
-	i = COM_CheckParm("-gl_driver");
+	i = Sys_CheckParm("-gl_driver");
 	if (i && i < sys.argc - 1)
 		drivername = sys.argv[i + 1];
 	if (SDL_GL_LoadLibrary(drivername) < 0)

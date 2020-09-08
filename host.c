@@ -160,14 +160,14 @@ static void Host_ServerOptions (void)
 // COMMANDLINEOPTION: Server: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
 	// if no client is in the executable or -dedicated is specified on
 	// commandline, start a dedicated server
-	i = COM_CheckParm ("-dedicated");
+	i = Sys_CheckParm ("-dedicated");
 	if (i || !cl_available)
 	{
 		cls.state = ca_dedicated;
 		// check for -dedicated specifying how many players
 		if (i && i + 1 < sys.argc && atoi (sys.argv[i+1]) >= 1)
 			svs.maxclients = atoi (sys.argv[i+1]);
-		if (COM_CheckParm ("-listen"))
+		if (Sys_CheckParm ("-listen"))
 			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
 		Cvar_SetValue(&cvars_all, "sv_public", 1);
@@ -176,7 +176,7 @@ static void Host_ServerOptions (void)
 	{
 		// client exists and not dedicated, check if -listen is specified
 		cls.state = ca_disconnected;
-		i = COM_CheckParm ("-listen");
+		i = Sys_CheckParm ("-listen");
 		if (i)
 		{
 			// default players unless specified
@@ -273,7 +273,7 @@ static void Host_SaveConfig_to(const char *file)
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
 	// LadyHavoc: don't save a config if it crashed in startup
-	if (host.framecount >= 3 && cls.state != ca_dedicated && !COM_CheckParm("-benchmark") && !COM_CheckParm("-capturedemo"))
+	if (host.framecount >= 3 && cls.state != ca_dedicated && !Sys_CheckParm("-benchmark") && !Sys_CheckParm("-capturedemo"))
 	{
 		f = FS_OpenRealFile(file, "wb", false);
 		if (!f)
@@ -549,7 +549,7 @@ static void Host_InitSession(void)
 	Cvar_RegisterVariable(&locksession);
 
 	// load the session ID into the read-only cvar
-	if ((i = COM_CheckParm("-sessionid")) && (i + 1 < sys.argc))
+	if ((i = Sys_CheckParm("-sessionid")) && (i + 1 < sys.argc))
 	{
 		if(sys.argv[i+1][0] == '.')
 			Cvar_SetQuick(&sessionid, sys.argv[i+1]);
@@ -566,7 +566,7 @@ void Host_LockSession(void)
 	if(locksession_run)
 		return;
 	locksession_run = true;
-	if(locksession.integer != 0 && !COM_CheckParm("-readonly"))
+	if(locksession.integer != 0 && !Sys_CheckParm("-readonly"))
 	{
 		char vabuf[1024];
 		char *p = va(vabuf, sizeof(vabuf), "%slock%s", *fs_userdir ? fs_userdir : fs_basedir, sessionid.string);
@@ -616,11 +616,11 @@ static void Host_Init (void)
 
 	host.state = host_init;
 
-	if (COM_CheckParm("-profilegameonly"))
+	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 
 	// LadyHavoc: quake never seeded the random number generator before... heh
-	if (COM_CheckParm("-benchmark"))
+	if (Sys_CheckParm("-benchmark"))
 		srand(0); // predictable random sequence for -benchmark
 	else
 		srand((unsigned int)time(NULL));
@@ -629,13 +629,13 @@ static void Host_Init (void)
 	// LadyHavoc: doesn't seem very temporary...
 	// LadyHavoc: made this a saved cvar
 // COMMANDLINEOPTION: Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
-	if (COM_CheckParm("-developer"))
+	if (Sys_CheckParm("-developer"))
 	{
 		developer.value = developer.integer = 1;
 		developer.string = "1";
 	}
 
-	if (COM_CheckParm("-developer2") || COM_CheckParm("-developer3"))
+	if (Sys_CheckParm("-developer2") || Sys_CheckParm("-developer3"))
 	{
 		developer.value = developer.integer = 1;
 		developer.string = "1";
@@ -649,14 +649,14 @@ static void Host_Init (void)
 		developer_memorydebug.string = "1";
 	}
 
-	if (COM_CheckParm("-developer3"))
+	if (Sys_CheckParm("-developer3"))
 	{
 		gl_paranoid.integer = 1;gl_paranoid.string = "1";
 		gl_printcheckerror.integer = 1;gl_printcheckerror.string = "1";
 	}
 
 // COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
-	if (COM_CheckParm("-nostdout"))
+	if (Sys_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 
 	// initialize console command/cvar/alias/command execution systems
@@ -745,7 +745,7 @@ static void Host_Init (void)
 
 	// check for special benchmark mode
 // COMMANDLINEOPTION: Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
-	i = COM_CheckParm("-benchmark");
+	i = Sys_CheckParm("-benchmark");
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
@@ -755,7 +755,7 @@ static void Host_Init (void)
 
 	// check for special demo mode
 // COMMANDLINEOPTION: Client: -demo <demoname> runs a playdemo and quits
-	i = COM_CheckParm("-demo");
+	i = Sys_CheckParm("-demo");
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
@@ -765,7 +765,7 @@ static void Host_Init (void)
 
 #ifdef CONFIG_VIDEO_CAPTURE
 // COMMANDLINEOPTION: Client: -capturedemo <demoname> captures a playdemo and quits
-	i = COM_CheckParm("-capturedemo");
+	i = Sys_CheckParm("-capturedemo");
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
@@ -774,7 +774,7 @@ static void Host_Init (void)
 	}
 #endif
 
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
+	if (cls.state == ca_dedicated || Sys_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
 		Cbuf_AddText(&cmd_client, "startmap_dm\n");

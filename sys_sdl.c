@@ -202,13 +202,13 @@ int main (int argc, char *argv[])
 	Sys_ProvideSelfFD();
 
 	// COMMANDLINEOPTION: -nocrashdialog disables "Engine Error" crash dialog boxes
-	if(!COM_CheckParm("-nocrashdialog"))
+	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
-	if(COM_CheckParm("-noterminal"))
+	if(Sys_CheckParm("-noterminal"))
 		sys.outfd = -1;
 	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
-	else if(COM_CheckParm("-stderr"))
+	else if(Sys_CheckParm("-stderr"))
 		sys.outfd = 2;
 	else
 		sys.outfd = 1;
