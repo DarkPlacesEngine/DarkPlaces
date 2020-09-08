@@ -35,8 +35,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct link_s
 {
+	llist_t list;
 	int entitynumber;
-	struct link_s	*prev, *next;
 } link_t;
 
 typedef struct world_physics_s

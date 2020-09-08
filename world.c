@@ -62,22 +62,18 @@ void World_End(world_t *world)
 void World_ClearLink (link_t *l)
 {
 	l->entitynumber = 0;
-	l->prev = l->next = l;
+	l->list.prev = l->list.next = &l->list;
 }
 
 void World_RemoveLink (link_t *l)
 {
-	l->next->prev = l->prev;
-	l->prev->next = l->next;
+	List_Delete(&l->list);
 }
 
 void World_InsertLinkBefore (link_t *l, link_t *before, int entitynumber)
 {
 	l->entitynumber = entitynumber;
-	l->next = before;
-	l->prev = before->prev;
-	l->prev->next = l;
-	l->next->prev = l;
+	List_Add_Tail(&l->list, &before->list);
 }
 
 /*
@@ -150,11 +146,11 @@ void World_UnlinkAll(world_t *world)
 	link_t *grid;
 	// unlink all entities one by one
 	grid = &world->areagrid_outside;
-	while (grid->next != grid)
-		World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+	while (grid->list.next != &grid->list)
+		World_UnlinkEdict(PRVM_EDICT_NUM(List_Container(*grid->list.next, link_t, list)->entitynumber));
 	for (i = 0, grid = world->areagrid;i < AREA_GRIDNODES;i++, grid++)
-		while (grid->next != grid)
-			World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+		while (grid->list.next != &grid->list)
+			World_UnlinkEdict(PRVM_EDICT_NUM(List_Container(*grid->list.next, link_t, list)->entitynumber));
 }
 
 /*
@@ -167,11 +163,8 @@ void World_UnlinkEdict(prvm_edict_t *ent)
 	int i;
 	for (i = 0;i < ENTITYGRIDAREAS;i++)
 	{
-		if (ent->priv.server->areagrid[i].prev)
-		{
+		if (ent->priv.server->areagrid[i].list.prev)
 			World_RemoveLink (&ent->priv.server->areagrid[i]);
-			ent->priv.server->areagrid[i].prev = ent->priv.server->areagrid[i].next = NULL;
-		}
 	}
 }
 
@@ -179,6 +172,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 {
 	prvm_prog_t *prog = world->prog;
 	int numlist;
+	llist_t *pos;
 	link_t *grid;
 	link_t *l;
 	prvm_edict_t *ent;
@@ -218,11 +212,12 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	numlist = 0;
 	// add entities not linked into areagrid because they are too big or
 	// outside the grid bounds
-	if (world->areagrid_outside.next)
+	if (world->areagrid_outside.list.next)
 	{
 		grid = &world->areagrid_outside;
-		for (l = grid->next;l != grid;l = l->next)
+		List_ForEach(pos, &grid->list)
 		{
+			l = List_Container(*pos, link_t, list);
 			ent = PRVM_EDICT_NUM(l->entitynumber);
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
@@ -243,10 +238,11 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 		grid = world->areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
 		{
-			if (grid->next)
+			if (grid->list.next)
 			{
-				for (l = grid->next;l != grid;l = l->next)
+				List_ForEach(pos, &grid->list)
 				{
+					l = List_Container(*pos, link_t, list);
 					ent = PRVM_EDICT_NUM(l->entitynumber);
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{
@@ -311,7 +307,7 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 {
 	prvm_prog_t *prog = world->prog;
 	// unlink from old position first
-	if (ent->priv.server->areagrid[0].prev)
+	if (ent->priv.server->areagrid[0].list.prev)
 		World_UnlinkEdict(ent);
 
 	// don't add the world
