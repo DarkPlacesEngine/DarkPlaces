@@ -205,7 +205,6 @@ int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline);
 int COM_ParseToken_Console(const char **datapointer);
 
-int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_Shutdown (void);
 void COM_InitGameType (void);

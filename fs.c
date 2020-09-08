@@ -928,7 +928,7 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 
 static void FS_mkdir (const char *path)
 {
-	if(COM_CheckParm("-readonly"))
+	if(Sys_CheckParm("-readonly"))
 		return;
 
 #if WIN32
@@ -1474,11 +1474,11 @@ void FS_Rescan (void)
 	else
 		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 	
-	if((i = COM_CheckParm("-modname")) && i < sys.argc - 1)
+	if((i = Sys_CheckParm("-modname")) && i < sys.argc - 1)
 		strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
 
 	// If "-condebug" is in the command line, remove the previous log file
-	if (COM_CheckParm ("-condebug") != 0)
+	if (Sys_CheckParm ("-condebug") != 0)
 		unlink (va(vabuf, sizeof(vabuf), "%s/qconsole.log", fs_gamedir));
 
 	// look for the pop.lmp file and set registered to true if it is found
@@ -1987,7 +1987,7 @@ static void FS_Init_Dir (void)
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
 // COMMANDLINEOPTION: Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
-	i = COM_CheckParm ("-basedir");
+	i = Sys_CheckParm ("-basedir");
 	if (i && i < sys.argc-1)
 	{
 		strlcpy (fs_basedir, sys.argv[i+1], sizeof (fs_basedir));
@@ -2041,9 +2041,9 @@ static void FS_Init_Dir (void)
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	// Add the personal game directory
-	if((i = COM_CheckParm("-userdir")) && i < sys.argc - 1)
+	if((i = Sys_CheckParm("-userdir")) && i < sys.argc - 1)
 		dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/", sys.argv[i+1]);
-	else if (COM_CheckParm("-nohome"))
+	else if (Sys_CheckParm("-nohome"))
 		*fs_userdir = 0; // user wants roaming installation, no userdir
 	else
 	{
@@ -2060,9 +2060,9 @@ static void FS_Init_Dir (void)
 			preferreduserdirmode = USERDIRMODE_NOHOME;
 # endif
 		// check what limitations the user wants to impose
-		if (COM_CheckParm("-home")) preferreduserdirmode = USERDIRMODE_HOME;
-		if (COM_CheckParm("-mygames")) preferreduserdirmode = USERDIRMODE_MYGAMES;
-		if (COM_CheckParm("-savedgames")) preferreduserdirmode = USERDIRMODE_SAVEDGAMES;
+		if (Sys_CheckParm("-home")) preferreduserdirmode = USERDIRMODE_HOME;
+		if (Sys_CheckParm("-mygames")) preferreduserdirmode = USERDIRMODE_MYGAMES;
+		if (Sys_CheckParm("-savedgames")) preferreduserdirmode = USERDIRMODE_SAVEDGAMES;
 		// gather the status of the possible userdirs
 		for (dirmode = 0;dirmode < USERDIRMODE_COUNT;dirmode++)
 		{
@@ -2148,7 +2148,7 @@ void FS_Init_SelfPack (void)
 	char *buf;
 
 	// Load darkplaces.opt from the FS.
-	if (!COM_CheckParm("-noopt"))
+	if (!Sys_CheckParm("-noopt"))
 	{
 		buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
 		if(buf)
@@ -2160,13 +2160,13 @@ void FS_Init_SelfPack (void)
 
 #ifndef USE_RWOPS
 	// Provide the SelfPack.
-	if (!COM_CheckParm("-noselfpack") && sys.selffd >= 0)
+	if (!Sys_CheckParm("-noselfpack") && sys.selffd >= 0)
 	{
 		fs_selfpack = FS_LoadPackPK3FromFD(sys.argv[0], sys.selffd, true);
 		if(fs_selfpack)
 		{
 			FS_AddSelfPack();
-			if (!COM_CheckParm("-noopt"))
+			if (!Sys_CheckParm("-noopt"))
 			{
 				buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
 				if(buf)
@@ -2275,7 +2275,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
-	if(COM_CheckParm("-readonly") && mod != O_RDONLY)
+	if(Sys_CheckParm("-readonly") && mod != O_RDONLY)
 		return FILEDESC_INVALID;
 
 #if USE_RWOPS

@@ -1657,7 +1657,7 @@ static void CL_SignonReply (void)
 		S_PurgeUnused();
 
 		Con_ClearNotify();
-		if (COM_CheckParm("-profilegameonly"))
+		if (Sys_CheckParm("-profilegameonly"))
 			Sys_AllowProfiling(true);
 		break;
 	}

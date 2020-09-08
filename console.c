@@ -686,7 +686,7 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f(cmd_state_t *cmd)
 {
-	if (COM_CheckParm ("-noconsole"))
+	if (Sys_CheckParm ("-noconsole"))
 		if (!(key_consoleactive & KEY_CONSOLEACTIVE_USER))
 			return; // only allow the key bind to turn off console
 
@@ -882,7 +882,7 @@ void Con_Init (void)
 
 	// support for the classic Quake option
 // COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
-	if (COM_CheckParm ("-condebug") != 0)
+	if (Sys_CheckParm ("-condebug") != 0)
 		Cvar_SetQuick (&log_file, "qconsole.log");
 
 	// register our cvars

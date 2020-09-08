@@ -3179,7 +3179,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_stringdebug);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
-	prvm_runawaycheck = !COM_CheckParm("-norunaway");
+	prvm_runawaycheck = !Sys_CheckParm("-norunaway");
 
 	//VM_Cmd_Init();
 }
