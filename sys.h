@@ -67,6 +67,8 @@ qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllf
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
+int Sys_CheckParm (const char *parm);
+
 /// called early in Host_Init
 void Sys_InitConsole (void);
 /// called after command system is initialized but before first Con_Print

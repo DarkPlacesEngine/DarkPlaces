@@ -366,7 +366,7 @@ qboolean XMP_OpenLibrary (void)
 		return true;
 
 // COMMANDLINEOPTION: Sound: -noxmp disables xmp module sound support
-	if (COM_CheckParm("-noxmp"))
+	if (Sys_CheckParm("-noxmp"))
 		return false;
 
 	// Load the DLL
@@ -606,7 +606,7 @@ qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
 #endif
 
 // COMMANDLINEOPTION: Sound: -noxmp disables xmp module sound support
-	if (COM_CheckParm("-noxmp"))
+	if (Sys_CheckParm("-noxmp"))
 		return false;
 
 	// Return if already loaded

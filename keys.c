@@ -1996,7 +1996,7 @@ Key_Event (int key, int ascii, qboolean down)
 			return;
 		}
 
-		if (COM_CheckParm ("-noconsole"))
+		if (Sys_CheckParm ("-noconsole"))
 			return; // only allow the key bind to turn off console
 
 		Key_Console (cmd, key, ascii);

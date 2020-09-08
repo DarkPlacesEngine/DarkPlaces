@@ -360,7 +360,7 @@ qboolean LibAvW_OpenLibrary(void)
 	int errorcode;
 
 	// COMMANDLINEOPTION: Video: -nolibavw disables libavcodec wrapper support
-	if (COM_CheckParm("-nolibavw"))
+	if (Sys_CheckParm("-nolibavw"))
 		return false;
 
 	// load DLL's

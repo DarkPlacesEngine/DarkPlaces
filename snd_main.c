@@ -530,28 +530,28 @@ void S_Startup (void)
 
 	// Parse the command line to see if the player wants a particular sound format
 // COMMANDLINEOPTION: Sound: -sndquad sets sound output to 4 channel surround
-	if (COM_CheckParm ("-sndquad") != 0)
+	if (Sys_CheckParm ("-sndquad") != 0)
 	{
 		chosen_fmt.channels = 4;
 	}
 // COMMANDLINEOPTION: Sound: -sndstereo sets sound output to stereo
-	else if (COM_CheckParm ("-sndstereo") != 0)
+	else if (Sys_CheckParm ("-sndstereo") != 0)
 	{
 		chosen_fmt.channels = 2;
 	}
 // COMMANDLINEOPTION: Sound: -sndmono sets sound output to mono
-	else if (COM_CheckParm ("-sndmono") != 0)
+	else if (Sys_CheckParm ("-sndmono") != 0)
 	{
 		chosen_fmt.channels = 1;
 	}
 // COMMANDLINEOPTION: Sound: -sndspeed <hz> chooses sound output rate (supported values are 48000, 44100, 32000, 24000, 22050, 16000, 11025 (quake), 8000)
-	i = COM_CheckParm ("-sndspeed");
+	i = Sys_CheckParm ("-sndspeed");
 	if (0 < i && i < sys.argc - 1)
 	{
 		chosen_fmt.speed = atoi (sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Sound: -sndbits <bits> chooses 8 bit or 16 bit or 32bit float sound output
-	i = COM_CheckParm ("-sndbits");
+	i = Sys_CheckParm ("-sndbits");
 	if (0 < i && i < sys.argc - 1)
 	{
 		chosen_fmt.width = atoi (sys.argv[i + 1]) / 8;
@@ -775,7 +775,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_identicalsoundrandomization_tics);
 
 // COMMANDLINEOPTION: Sound: -nosound disables sound (including CD audio)
-	if (COM_CheckParm("-nosound"))
+	if (Sys_CheckParm("-nosound"))
 	{
 		// dummy out Play and Play2 because mods stuffcmd that
 		Cmd_AddCommand(CMD_CLIENT, "play", Host_NoOperation_f, "does nothing because -nosound was specified");
@@ -786,7 +786,7 @@ void S_Init(void)
 	snd_mempool = Mem_AllocPool("sound", 0, NULL);
 
 // COMMANDLINEOPTION: Sound: -simsound runs sound mixing but with no output
-	if (COM_CheckParm("-simsound"))
+	if (Sys_CheckParm("-simsound"))
 		simsound = true;
 
 	Cmd_AddCommand(CMD_CLIENT, "play", S_Play_f, "play a sound at your current location (not heard by anyone else)");

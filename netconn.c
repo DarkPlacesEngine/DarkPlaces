@@ -3921,7 +3921,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
-	if ((i = COM_CheckParm("-ip")) && i + 1 < sys.argc)
+	if ((i = Sys_CheckParm("-ip")) && i + 1 < sys.argc)
 	{
 		if (LHNETADDRESS_FromString(&tempaddress, sys.argv[i + 1], 0) == 1)
 		{
@@ -3932,7 +3932,7 @@ void NetConn_Init(void)
 			Con_Printf(CON_ERROR "-ip option used, but unable to parse the address \"%s\"\n", sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
-	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < sys.argc)
+	if (((i = Sys_CheckParm("-port")) || (i = Sys_CheckParm("-ipport")) || (i = Sys_CheckParm("-udpport"))) && i + 1 < sys.argc)
 	{
 		i = atoi(sys.argv[i + 1]);
 		if (i >= 0 && i < 65536)

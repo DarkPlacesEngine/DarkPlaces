@@ -1368,7 +1368,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&r_speeds_graph_maxdefault);
 
 	// if we want no console, turn it off here too
-	if (COM_CheckParm ("-noconsole"))
+	if (Sys_CheckParm ("-noconsole"))
 		Cvar_SetQuick(&scr_conforcewhiledisconnected, "0");
 
 	Cmd_AddCommand(CMD_CLIENT, "sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");

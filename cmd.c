@@ -576,7 +576,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 	if (!strcmp(filename, "config.cfg"))
 	{
 		filename = CONFIGFILENAME;
-		if (COM_CheckParm("-noconfig"))
+		if (Sys_CheckParm("-noconfig"))
 			return; // don't execute config.cfg
 	}
 

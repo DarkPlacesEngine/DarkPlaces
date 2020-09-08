@@ -97,7 +97,7 @@ void CL_StopPlayback (void)
 		CL_FinishTimeDemo ();
 
 	if (!cls.demostarting) // only quit if not starting another demo
-		if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
+		if (Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
 			Host_Quit_f(&cmd_client);
 
 }
@@ -510,10 +510,10 @@ static void CL_FinishTimeDemo (void)
 	// LadyHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | run %d | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, benchmark_runs + 1, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
-	if (COM_CheckParm("-benchmark"))
+	if (Sys_CheckParm("-benchmark"))
 	{
 		++benchmark_runs;
-		i = COM_CheckParm("-benchmarkruns");
+		i = Sys_CheckParm("-benchmarkruns");
 		if(i && i + 1 < sys.argc)
 		{
 			static benchmarkhistory_t *history = NULL;
@@ -536,7 +536,7 @@ static void CL_FinishTimeDemo (void)
 			else
 			{
 				// print statistics
-				int first = COM_CheckParm("-benchmarkruns_skipfirst") ? 1 : 0;
+				int first = Sys_CheckParm("-benchmarkruns_skipfirst") ? 1 : 0;
 				if(benchmark_runs > first)
 				{
 #define DO_MIN(f) \
@@ -637,7 +637,7 @@ static void CL_Startdemos_f(cmd_state_t *cmd)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
+	if (cls.state == ca_dedicated || Sys_CheckParm("-listen") || Sys_CheckParm("-benchmark") || Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
 		return;
 
 	c = Cmd_Argc(cmd) - 1;

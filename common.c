@@ -860,30 +860,6 @@ skipwhite:
 	return true;
 }
 
-
-/*
-================
-COM_CheckParm
-
-Returns the position (1 to argc-1) in the program's argument list
-where the given parameter apears, or 0 if not present
-================
-*/
-int COM_CheckParm (const char *parm)
-{
-	int i;
-
-	for (i=1 ; i<sys.argc ; i++)
-	{
-		if (!sys.argv[i])
-			continue;               // NEXTSTEP sometimes clears appkit vars.
-		if (!strcmp (parm,sys.argv[i]))
-			return i;
-	}
-
-	return 0;
-}
-
 /*
 ===============
 Com_CalcRoll

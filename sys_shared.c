@@ -55,7 +55,7 @@ void Sys_Quit (int returnvalue)
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 
-	if (COM_CheckParm("-profilegameonly"))
+	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 	host.state = host_shutdown;
 	Host_Shutdown();
@@ -282,6 +282,29 @@ static cvar_t sys_useclockgettime = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys
 #endif
 
 static double benchmark_time; // actually always contains an integer amount of milliseconds, will eventually "overflow"
+
+/*
+================
+Sys_CheckParm
+
+Returns the position (1 to argc-1) in the program's argument list
+where the given parameter apears, or 0 if not present
+================
+*/
+int Sys_CheckParm (const char *parm)
+{
+	int i;
+
+	for (i=1 ; i<sys.argc ; i++)
+	{
+		if (!sys.argv[i])
+			continue;               // NEXTSTEP sometimes clears appkit vars.
+		if (!strcmp (parm,sys.argv[i]))
+			return i;
+	}
+
+	return 0;
+}
 
 void Sys_Init_Commands (void)
 {
@@ -560,13 +583,13 @@ static int CPUID_Features(void)
 qboolean Sys_HaveSSE(void)
 {
 	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
-	if(COM_CheckParm("-nosse"))
+	if(Sys_CheckParm("-nosse"))
 		return false;
 #ifdef SSE_PRESENT
 	return true;
 #else
 	// COMMANDLINEOPTION: SSE: -forcesse enables SSE support and disables detection
-	if(COM_CheckParm("-forcesse") || COM_CheckParm("-forcesse2"))
+	if(Sys_CheckParm("-forcesse") || Sys_CheckParm("-forcesse2"))
 		return true;
 	if(CPUID_Features() & (1 << 25))
 		return true;
@@ -577,13 +600,13 @@ qboolean Sys_HaveSSE(void)
 qboolean Sys_HaveSSE2(void)
 {
 	// COMMANDLINEOPTION: SSE2: -nosse2 disables SSE2 support and detection
-	if(COM_CheckParm("-nosse") || COM_CheckParm("-nosse2"))
+	if(Sys_CheckParm("-nosse") || Sys_CheckParm("-nosse2"))
 		return false;
 #ifdef SSE2_PRESENT
 	return true;
 #else
 	// COMMANDLINEOPTION: SSE2: -forcesse2 enables SSE2 support and disables detection
-	if(COM_CheckParm("-forcesse2"))
+	if(Sys_CheckParm("-forcesse2"))
 		return true;
 	if((CPUID_Features() & (3 << 25)) == (3 << 25)) // SSE is 1<<25, SSE2 is 1<<26
 		return true;
@@ -601,7 +624,7 @@ void Sys_InitProcessNice (void)
 {
 	struct rlimit lim;
 	sys.nicepossible = false;
-	if(COM_CheckParm("-nonice"))
+	if(Sys_CheckParm("-nonice"))
 		return;
 	errno = 0;
 	sys.nicelevel = getpriority(PRIO_PROCESS, 0);
