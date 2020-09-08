@@ -41,6 +41,7 @@ typedef struct llist_s
 void List_Add(llist_t *node, llist_t *start);
 void List_Add_Tail(llist_t *node, llist_t *start);
 void List_Delete(llist_t *node);
+void List_Delete_Init(llist_t *node);
 void List_Replace(llist_t *old, llist_t *_new);
 void List_Swap(llist_t *node1, llist_t *node2);
 void List_Move(llist_t *list, llist_t *start);
