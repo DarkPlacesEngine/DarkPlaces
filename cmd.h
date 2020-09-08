@@ -61,14 +61,14 @@ typedef enum
 	src_local		///< from the command buffer
 } cmd_source_t;
 
-typedef struct cmdalias_s
+typedef struct cmd_alias_s
 {
-	struct cmdalias_s *next;
+	struct cmd_alias_s *next;
 	char name[MAX_ALIAS_NAME];
 	char *value;
 	qboolean initstate; // indicates this command existed at init
 	char *initialvalue; // backup copy of value at init
-} cmdalias_t;
+} cmd_alias_t;
 
 typedef struct cmd_function_s
 {
@@ -96,7 +96,7 @@ typedef struct cmd_userdefined_s
 	cmd_function_t *csqc_functions;
 
 	// aliases
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 }
 cmd_userdefined_t;
 
