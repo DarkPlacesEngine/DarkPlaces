@@ -70,9 +70,18 @@ static void __List_Delete_Node(llist_t *node)
 }
 
 /*
- * Removes a node from its list.
+ * Removes a node from its list. Sets its pointers to NULL.
  */
 void List_Delete(llist_t *node)
+{
+	__List_Delete_Node(node);
+	node->next = node->prev = NULL;
+}
+
+/*
+ * Removes a node from its list. Reinitialize it.
+ */
+void List_Delete_Init(llist_t *node)
 {
 	__List_Delete_Node(node);
 	node->next = node->prev = node;
@@ -96,7 +105,7 @@ void List_Replace(llist_t *old, llist_t *_new)
 void List_Swap(llist_t *node1, llist_t *node2)
 {
 	llist_t *pos = node2->prev;
-	List_Delete(node2);
+	List_Delete_Init(node2);
 	List_Replace(node1, node2);
 	if(pos == node1)
 		pos = node2;
