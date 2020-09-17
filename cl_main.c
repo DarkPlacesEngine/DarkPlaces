@@ -571,7 +571,8 @@ void CL_EstablishConnection(const char *address, int firstarg)
 
 static void CL_EstablishConnection_Local(void)
 {
-	CL_EstablishConnection("local:1", -2);
+	if(cls.state == ca_disconnected)
+		CL_EstablishConnection("local:1", -2);
 }
 
 /*
