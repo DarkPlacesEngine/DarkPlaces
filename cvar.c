@@ -273,7 +273,7 @@ void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full)
 		Con_Printf("^6");
 	else
 		Con_Printf("^3");
-	Con_Printf("%s^7 is \"%s\" [\"%s\"]", name, ((cvar->flags & CVAR_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
+	Con_Printf("%s^7 is \"%s\" [\"%s\"]", name, ((cvar->flags & CF_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
 	if (strcmp(cvar->name, name))
 		Con_Printf(" (also ^3%s^7)", cvar->name);
 	if (full)
@@ -392,11 +392,11 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	memcpy ((char *)var->string, value, valuelen + 1);
 	var->value = atof (var->string);
 	var->integer = (int) var->value;
-	if ((var->flags & CVAR_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
+	if ((var->flags & CF_NOTIFY) && changed && sv.active && !sv_disablenotify.integer)
 		SV_BroadcastPrintf("\003^3Server cvar \"%s\" changed to \"%s\"\n", var->name, var->string);
 #if 0
 	// TODO: add infostring support to the server?
-	if ((var->flags & CVAR_SERVERINFO) && changed && sv.active)
+	if ((var->flags & CF_SERVERINFO) && changed && sv.active)
 	{
 		InfoString_SetValue(svs.serverinfo, sizeof(svs.serverinfo), var->name, var->string);
 		if (sv.active)
@@ -407,7 +407,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 		}
 	}
 #endif
-	if (var->flags & CVAR_USERINFO)
+	if (var->flags & CF_USERINFO)
 		CL_SetInfo(var->name, var->string, true, false, false, false);
 
 	Cvar_UpdateAutoCvar(var);
@@ -520,18 +520,18 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	size_t alloclen;
 	int i;
 
-	switch (variable->flags & (CVAR_CLIENT | CVAR_SERVER))
+	switch (variable->flags & (CF_CLIENT | CF_SERVER))
 	{
-	case CVAR_CLIENT:
-	case CVAR_SERVER:
-	case CVAR_CLIENT | CVAR_SERVER:
+	case CF_CLIENT:
+	case CF_SERVER:
+	case CF_CLIENT | CF_SERVER:
 		cvars = &cvars_all;
 		break;
 	case 0:
-		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with no CVAR_CLIENT | CVAR_SERVER flags\n", variable->name, variable->string, variable->flags);
+		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with no CF_CLIENT | CF_SERVER flags\n", variable->name, variable->string, variable->flags);
 		break;
 	default:
-		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with weird CVAR_CLIENT | CVAR_SERVER flags\n", variable->name, variable->string, variable->flags);
+		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with weird CF_CLIENT | CF_SERVER flags\n", variable->name, variable->string, variable->flags);
 		break;
 	}
 
@@ -542,7 +542,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	cvar = Cvar_FindVar(cvars, variable->name, ~0);
 	if (cvar)
 	{
-		if (cvar->flags & CVAR_ALLOCATED)
+		if (cvar->flags & CF_ALLOCATED)
 		{
 			if (developer_extra.integer)
 				Con_DPrintf("...  replacing existing allocated cvar {\"%s\", \"%s\", %i}\n", cvar->name, cvar->string, cvar->flags);
@@ -550,7 +550,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			// (because the engine directly accesses fixed variables)
 			// NOTE: this isn't actually used currently
 			// (all cvars are registered before config parsing)
-			variable->flags |= (cvar->flags & ~CVAR_ALLOCATED);
+			variable->flags |= (cvar->flags & ~CF_ALLOCATED);
 			// cvar->string is now owned by variable instead
 			variable->string = cvar->string;
 			variable->defstring = cvar->defstring;
@@ -648,7 +648,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	{
 		cvar->flags |= flags;
 		Cvar_SetQuick_Internal (cvar, value);
-		if(newdescription && (cvar->flags & CVAR_ALLOCATED))
+		if(newdescription && (cvar->flags & CF_ALLOCATED))
 		{
 			if(cvar->description != cvar_dummy_description)
 				Z_Free((char *)cvar->description);
@@ -679,7 +679,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 // TODO: factorize the following code with the one at the end of Cvar_RegisterVariable()
 // FIXME: these never get Z_Free'd
 	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
-	cvar->flags = flags | CVAR_ALLOCATED;
+	cvar->flags = flags | CF_ALLOCATED;
 	cvar->name = (char *)Mem_strdup(zonemempool, name);
 	cvar->string = (char *)Mem_strdup(zonemempool, value);
 	cvar->defstring = (char *)Mem_strdup(zonemempool, value);
@@ -719,7 +719,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 
 qbool Cvar_Readonly (cvar_t *var, const char *cmd_name)
 {
-	if (var->flags & CVAR_READONLY)
+	if (var->flags & CF_READONLY)
 	{
 		if(cmd_name)
 			Con_Printf("%s: ",cmd_name);
@@ -773,7 +773,7 @@ void Cvar_UnlockDefaults(cmd_state_t *cmd)
 	cvar_t *var;
 	// unlock the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
-		var->flags &= ~CVAR_DEFAULTSET;
+		var->flags &= ~CF_DEFAULTSET;
 }
 
 
@@ -784,12 +784,12 @@ void Cvar_LockDefaults_f(cmd_state_t *cmd)
 	// lock in the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if (!(var->flags & CVAR_DEFAULTSET))
+		if (!(var->flags & CF_DEFAULTSET))
 		{
 			size_t alloclen;
 
 			//Con_Printf("locking cvar %s (%s -> %s)\n", var->name, var->string, var->defstring);
-			var->flags |= CVAR_DEFAULTSET;
+			var->flags |= CF_DEFAULTSET;
 			Z_Free((char *)var->defstring);
 			alloclen = strlen(var->string) + 1;
 			var->defstring = (char *)Z_Malloc(alloclen);
@@ -823,7 +823,7 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 		if (c->initstate)
 		{
 			// restore this cvar, it existed at init
-			if (((c->flags ^ c->initflags) & CVAR_MAXFLAGSVAL)
+			if (((c->flags ^ c->initflags) & CF_MAXFLAGSVAL)
 			 || strcmp(c->defstring ? c->defstring : "", c->initdefstring ? c->initdefstring : "")
 			 || strcmp(c->string ? c->string : "", c->initstring ? c->initstring : ""))
 			{
@@ -843,11 +843,11 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 		}
 		else
 		{
-			if (!(c->flags & CVAR_ALLOCATED))
+			if (!(c->flags & CF_ALLOCATED))
 			{
 				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it was registered after init!\n", c->name);
 				// In this case, at least reset it to the default.
-				if((c->flags & CVAR_NORESETTODEFAULTS) == 0)
+				if((c->flags & CF_PERSISTENT) == 0)
 					Cvar_SetQuick(c, c->defstring);
 				cp = &c->next;
 				continue;
@@ -856,7 +856,7 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 			{
 				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it is an autocvar used by running progs!\n", c->name);
 				// In this case, at least reset it to the default.
-				if((c->flags & CVAR_NORESETTODEFAULTS) == 0)
+				if((c->flags & CF_PERSISTENT) == 0)
 					Cvar_SetQuick(c, c->defstring);
 				cp = &c->next;
 				continue;
@@ -897,7 +897,7 @@ void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if((var->flags & CVAR_NORESETTODEFAULTS) == 0)
+		if((var->flags & CF_PERSISTENT) == 0)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -910,7 +910,7 @@ void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == 0)
+		if ((var->flags & (CF_PERSISTENT | CF_ARCHIVE)) == 0)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -923,7 +923,7 @@ void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if ((var->flags & (CVAR_NORESETTODEFAULTS | CVAR_SAVE)) == CVAR_SAVE)
+		if ((var->flags & (CF_PERSISTENT | CF_ARCHIVE)) == CF_ARCHIVE)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -944,11 +944,11 @@ void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f)
 
 	// don't save cvars that match their default value
 	for (var = cvars->vars ; var ; var = var->next) {
-		if ((var->flags & CVAR_SAVE) && (strcmp(var->string, var->defstring) || ((var->flags & CVAR_ALLOCATED) && !(var->flags & CVAR_DEFAULTSET))))
+		if ((var->flags & CF_ARCHIVE) && (strcmp(var->string, var->defstring) || ((var->flags & CF_ALLOCATED) && !(var->flags & CF_DEFAULTSET))))
 		{
 			Cmd_QuoteString(buf1, sizeof(buf1), var->name, "\"\\$", false);
 			Cmd_QuoteString(buf2, sizeof(buf2), var->string, "\"\\$", false);
-			FS_Printf(f, "%s\"%s\" \"%s\"\n", var->flags & CVAR_ALLOCATED ? "seta " : "", buf1, buf2);
+			FS_Printf(f, "%s\"%s\" \"%s\"\n", var->flags & CF_ALLOCATED ? "seta " : "", buf1, buf2);
 		}
 	}
 }
@@ -1060,7 +1060,7 @@ void Cvar_SetA_f(cmd_state_t *cmd)
 		Con_DPrint("SetA: ");
 
 	// all looks ok, create/modify the cvar
-	Cvar_Get(cvars, Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), cmd->cvars_flagsmask | CVAR_SAVE, Cmd_Argc(cmd) > 3 ? Cmd_Argv(cmd, 3) : NULL);
+	Cvar_Get(cvars, Cmd_Argv(cmd, 1), Cmd_Argv(cmd, 2), cmd->cvars_flagsmask | CF_ARCHIVE, Cmd_Argc(cmd) > 3 ? Cmd_Argv(cmd, 3) : NULL);
 }
 
 void Cvar_Del_f(cmd_state_t *cmd)
@@ -1087,7 +1087,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		}
 		if(Cvar_Readonly(cvar, Cmd_Argv(cmd, 0)))
 			continue;
-		if(!(cvar->flags & CVAR_ALLOCATED))
+		if(!(cvar->flags & CF_ALLOCATED))
 		{
 			Con_Printf("%s: %s is static and cannot be deleted\n", Cmd_Argv(cmd, 0), cvar->name);
 			continue;

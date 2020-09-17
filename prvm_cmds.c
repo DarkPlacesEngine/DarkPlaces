@@ -633,7 +633,7 @@ static qbool PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
 {
 	cvar_t *cvar;
 	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
-	return ((cvar) && ((cvar->flags & CVAR_PRIVATE) == 0));
+	return ((cvar) && ((cvar->flags & CF_PRIVATE) == 0));
 }
 
 /*
@@ -684,15 +684,15 @@ void VM_cvar_type(prvm_prog_t *prog)
 	}
 
 	ret = 1; // CVAR_EXISTS
-	if(cvar->flags & CVAR_SAVE)
+	if(cvar->flags & CF_ARCHIVE)
 		ret |= 2; // CVAR_TYPE_SAVED
-	if(cvar->flags & CVAR_PRIVATE)
+	if(cvar->flags & CF_PRIVATE)
 		ret |= 4; // CVAR_TYPE_PRIVATE
-	if(!(cvar->flags & CVAR_ALLOCATED))
+	if(!(cvar->flags & CF_ALLOCATED))
 		ret |= 8; // CVAR_TYPE_ENGINE
 	if(cvar->description != cvar_dummy_description)
 		ret |= 16; // CVAR_TYPE_HASDESCRIPTION
-	if(cvar->flags & CVAR_READONLY)
+	if(cvar->flags & CF_READONLY)
 		ret |= 32; // CVAR_TYPE_READONLY
 	
 	PRVM_G_FLOAT(OFS_RETURN) = ret;
@@ -1661,7 +1661,7 @@ void VM_registercvar(prvm_prog_t *prog)
 	flags = prog->argc >= 3 ? (int)PRVM_G_FLOAT(OFS_PARM2) : 0;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 
-	if(flags > CVAR_MAXFLAGSVAL)
+	if(flags > CF_MAXFLAGSVAL)
 		return;
 
 // first check to see if it has already been defined

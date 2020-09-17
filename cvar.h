@@ -59,27 +59,6 @@ interface from being ambiguous.
 #ifndef CVAR_H
 #define CVAR_H
 
-// cvar flags
-
-#define CVAR_SAVE 1
-#define CVAR_NOTIFY 2
-#define CVAR_READONLY 4
-#define CVAR_SERVERINFO 8
-#define CVAR_USERINFO 16
-// CVAR_PRIVATE means do not $ expand or sendcvar this cvar under any circumstances (rcon_password uses this)
-#define CVAR_PRIVATE 32
-// for engine-owned cvars that must not be reset on gametype switch (e.g. scr_screenshot_name, which otherwise isn't set to the mod name properly)
-#define CVAR_NORESETTODEFAULTS 64
-// cvar is accessible in client
-#define CVAR_CLIENT 128
-// cvar is accessible in dedicated server
-#define CVAR_SERVER 256
-// used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 511
-// for internal use only!
-#define CVAR_DEFAULTSET (1<<30)
-#define CVAR_ALLOCATED (1<<31)
-
 typedef struct cvar_s
 {
 	int flags;

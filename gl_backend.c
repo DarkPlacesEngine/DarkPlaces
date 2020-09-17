@@ -4,16 +4,16 @@
 
 #define MAX_RENDERTARGETS 4
 
-cvar_t gl_debug = {CVAR_CLIENT, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
-cvar_t gl_paranoid = {CVAR_CLIENT, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
-cvar_t gl_printcheckerror = {CVAR_CLIENT, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
+cvar_t gl_debug = {CF_CLIENT, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
+cvar_t gl_paranoid = {CF_CLIENT, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
+cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
-cvar_t r_render = {CVAR_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
-cvar_t r_renderview = {CVAR_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
-cvar_t r_waterwarp = {CVAR_CLIENT | CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
-cvar_t gl_polyblend = {CVAR_CLIENT | CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
+cvar_t r_render = {CF_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
+cvar_t r_renderview = {CF_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
+cvar_t r_waterwarp = {CF_CLIENT | CF_ARCHIVE, "r_waterwarp", "1", "warp view while underwater"};
+cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 
-cvar_t v_flipped = {CVAR_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
+cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qbool v_flipped_state = false;
 
 r_viewport_t gl_viewport;
@@ -374,7 +374,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 
-	Cmd_AddCommand(CMD_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
+	Cmd_AddCommand(CF_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, gl_backend_devicelost, gl_backend_devicerestored);
 }
