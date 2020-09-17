@@ -82,13 +82,6 @@ typedef struct cmd_function_s
 	qbool initstate; // indicates this command existed at init
 } cmd_function_t;
 
-typedef struct cmddeferred_s
-{
-	struct cmddeferred_s *next;
-	char *value;
-	double delay;
-} cmddeferred_t;
-
 /// container for user-defined QC functions and aliases, shared between different command interpreters
 typedef struct cmd_userdefined_s
 {
