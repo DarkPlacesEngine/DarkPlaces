@@ -181,10 +181,10 @@ static void Cmd_Centerprint_f (cmd_state_t *cmd)
 Cbuf_ParseText
 
 Parses Quake console command-line
-Returns size of parsed command-line
+Returns true if command is complete
 ============
 */
-static size_t Cbuf_ParseText(char **in)
+static qboolean Cbuf_ParseText(char **start, size_t *size)
 {
 	int i = 0;
 	qboolean quotes = false;
@@ -201,16 +201,15 @@ static size_t Cbuf_ParseText(char **in)
 	 */
 	while(!end)
 	{
-		switch ((*in)[i])
+		switch ((*start)[i])
 		{
 			case '/':
-				if(!quotes && (*in)[i+1] == '/' && (i == 0 || ISWHITESPACE((*in)[i-1])))
+				if(!quotes && (*start)[i+1] == '/' && (i == 0 || ISWHITESPACE((*start)[i-1])))
 					comment = true;
 				break;
 			case 0:
 				if(!end && cmdsize)
-					// Use bit magic to indicate an incomplete (pending) command.
-					cmdsize |= (1<<17);
+					return false;
 				comment = false;
 				end = true;
 				break;
@@ -224,7 +223,7 @@ static size_t Cbuf_ParseText(char **in)
 
 		if(!comment)
 		{
-			switch ((*in)[i])
+			switch ((*start)[i])
 			{
 				case ';':
 					if(!quotes)
@@ -247,8 +246,8 @@ static size_t Cbuf_ParseText(char **in)
 			if(!offset)
 			{
 				if(!end)
-					offset = (char *)&(*in)[i];
-				else if ((*in)[i])
+					offset = (char *)&(*start)[i];
+				else if ((*start)[i])
 					end = false;
 			}
 			else
@@ -257,9 +256,10 @@ static size_t Cbuf_ParseText(char **in)
 		i++;
 	}
 
-	*in = offset;
+	*start = offset;
+	*size = cmdsize;
 
-	return cmdsize;
+	return true;
 }
 
 static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
@@ -288,6 +288,7 @@ static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
 static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cbuf_cmd_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
+	qboolean complete;
 	cbuf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
 	cbuf_cmd_t *current = NULL;
@@ -299,7 +300,7 @@ static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cbuf_cmd_t *existin
 		 * FIXME: Upon reaching a terminator, we make a redundant
 		 * call just to say "it's the end of the input stream".
 		 */
-		newsize = Cbuf_ParseText(&in);
+		complete = Cbuf_ParseText(&in, &newsize);
 
 		// Valid command
 		if(newsize)
@@ -313,9 +314,8 @@ static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cbuf_cmd_t *existin
 				List_Move_Tail(&current->list, head);
 			}
 
-			if(newsize & (1<<17))
-				current->pending = true;
-			totalsize += (newsize &= ~(1<<17));
+			current->pending = complete;
+			totalsize += newsize;
 			strlcpy(&current->text[current->size], in, newsize + 1);
 			current->size += newsize;
 		}
