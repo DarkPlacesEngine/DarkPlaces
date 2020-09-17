@@ -5212,6 +5212,10 @@ void MVM_error_cmd(const char *format, ...)
 	va_start (argptr, format);
 	dpvsnprintf (errorstring, sizeof(errorstring), format, argptr);
 	va_end (argptr);
+
+	if (host.framecount < 3)
+		Sys_Error("Menu_Error: %s\n", errorstring);
+
 	Con_Printf( "Menu_Error: %s\n", errorstring );
 
 	if( !processingError ) {
@@ -5236,8 +5240,7 @@ void MVM_error_cmd(const char *format, ...)
 	R_SelectScene( RST_CLIENT );
 
 	// Let video start at least
-	if(host.state != host_init)
-		Host_AbortCurrentFrame();
+	Host_AbortCurrentFrame();
 }
 
 static void MVM_begin_increase_edicts(prvm_prog_t *prog)
