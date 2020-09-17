@@ -25,7 +25,7 @@
 #include "utf8lib.h"
 #include "csprogs.h"
 
-cvar_t con_closeontoggleconsole = {CVAR_CLIENT | CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
+cvar_t con_closeontoggleconsole = {CF_CLIENT | CF_ARCHIVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
 
 /*
 key up events are sent even if in console mode
@@ -840,7 +840,7 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicod
 			linepos += cvar_len;
 
 			// save the content of the variable in cvar_str
-			cvar_str = Cvar_VariableString(&cvars_all, cvar, CVAR_CLIENT | CVAR_SERVER);
+			cvar_str = Cvar_VariableString(&cvars_all, cvar, CF_CLIENT | CF_SERVER);
 			cvar_str_len = (int)strlen(cvar_str);
 			if (cvar_str_len==0)
 				return linepos;
@@ -1278,7 +1278,7 @@ Key_Console(cmd_state_t *cmd, int key, int unicode)
 		// text zoom reset
 		if ((key == '0' || key == K_KP_INS) && KM_CTRL)
 		{
-			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CVAR_CLIENT | CVAR_SERVER)));
+			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CF_CLIENT | CF_SERVER)));
 			return;
 		}
 	}
@@ -1711,18 +1711,18 @@ Key_Init (void)
 //
 // register our functions
 //
-	Cmd_AddCommand(CMD_CLIENT, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
-	Cmd_AddCommand(CMD_CLIENT, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
+	Cmd_AddCommand(CF_CLIENT, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
+	Cmd_AddCommand(CF_CLIENT, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
 
-	Cmd_AddCommand(CMD_CLIENT, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
-	Cmd_AddCommand(CMD_CLIENT, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
-	Cmd_AddCommand(CMD_CLIENT, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
-	Cmd_AddCommand(CMD_CLIENT, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+	Cmd_AddCommand(CF_CLIENT, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
+	Cmd_AddCommand(CF_CLIENT, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand(CF_CLIENT, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
+	Cmd_AddCommand(CF_CLIENT, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
-	Cmd_AddCommand(CMD_CLIENT, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
+	Cmd_AddCommand(CF_CLIENT, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }

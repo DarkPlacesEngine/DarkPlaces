@@ -24,11 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 
 int current_skill;
-cvar_t sv_cheats = {CVAR_SERVER | CVAR_NOTIFY, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
-cvar_t sv_adminnick = {CVAR_SERVER | CVAR_SAVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
-cvar_t sv_status_privacy = {CVAR_SERVER | CVAR_SAVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
-cvar_t sv_status_show_qcstatus = {CVAR_SERVER | CVAR_SAVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
-cvar_t sv_namechangetimer = {CVAR_SERVER | CVAR_SAVE, "sv_namechangetimer", "5", "how often to allow name changes, in seconds (prevents people from using animated names and other tricks"};
+cvar_t sv_cheats = {CF_SERVER | CF_NOTIFY, "sv_cheats", "0", "enables cheat commands in any game, and cheat impulses in dpmod"};
+cvar_t sv_adminnick = {CF_SERVER | CF_ARCHIVE, "sv_adminnick", "", "nick name to use for admin messages instead of host name"};
+cvar_t sv_status_privacy = {CF_SERVER | CF_ARCHIVE, "sv_status_privacy", "0", "do not show IP addresses in 'status' replies to clients"};
+cvar_t sv_status_show_qcstatus = {CF_SERVER | CF_ARCHIVE, "sv_status_show_qcstatus", "0", "show the 'qcstatus' field in status replies, not the 'frags' field. Turn this on if your mod uses this field, and the 'frags' field on the other hand has no meaningful value."};
+cvar_t sv_namechangetimer = {CF_SERVER | CF_ARCHIVE, "sv_namechangetimer", "5", "how often to allow name changes, in seconds (prevents people from using animated names and other tricks"};
 
 /*
 ===============================================================================
@@ -816,7 +816,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 	for (players = 0, i = 0;i < svs.maxclients;i++)
 		if (svs.clients[i].active)
 			players++;
-	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CVAR_SERVER));
+	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CF_SERVER));
 	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
@@ -1696,49 +1696,49 @@ void SV_InitOperatorCommands(void)
 	Cvar_RegisterVariable(&sv_status_show_qcstatus);
 	Cvar_RegisterVariable(&sv_namechangetimer);
 	
-	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "status", SV_Status_f, "print server status information");
-	Cmd_AddCommand(CMD_SHARED, "map", SV_Map_f, "kick everyone off the server and start a new level");
-	Cmd_AddCommand(CMD_SHARED, "restart", SV_Restart_f, "restart current level");
-	Cmd_AddCommand(CMD_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "say", SV_Say_f, "send a chat message to everyone on the server");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "say_team", SV_Say_Team_f, "send a chat message to your team on the server");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "tell", SV_Tell_f, "send a chat message to only one person on the server");
-	Cmd_AddCommand(CMD_SERVER | CMD_SERVER_FROM_CLIENT, "pause", SV_Pause_f, "pause the game (if the server allows pausing)");
-	Cmd_AddCommand(CMD_SHARED, "kick", SV_Kick_f, "kick a player off the server by number or name");
-	Cmd_AddCommand(CMD_SHARED | CMD_SERVER_FROM_CLIENT, "ping", SV_Ping_f, "print ping times of all players on the server");
-	Cmd_AddCommand(CMD_SHARED, "load", SV_Loadgame_f, "load a saved game file");
-	Cmd_AddCommand(CMD_SHARED, "save", SV_Savegame_f, "save the game to a file");
-	Cmd_AddCommand(CMD_SHARED, "viewmodel", SV_Viewmodel_f, "change model of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewframe", SV_Viewframe_f, "change animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewnext", SV_Viewnext_f, "change to next animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "viewprev", SV_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
-	Cmd_AddCommand(CMD_SHARED, "maxplayers", SV_MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
-	Cmd_AddCommand(CMD_SHARED, "user", SV_User_f, "prints additional information about a player number or name on the scoreboard");
-	Cmd_AddCommand(CMD_SHARED, "users", SV_Users_f, "prints additional information about all players on the scoreboard");
-	Cmd_AddCommand(CMD_SERVER, "sendcvar", SV_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	Cmd_AddCommand(CF_SERVER | CF_SERVER_FROM_CLIENT, "status", SV_Status_f, "print server status information");
+	Cmd_AddCommand(CF_SHARED, "map", SV_Map_f, "kick everyone off the server and start a new level");
+	Cmd_AddCommand(CF_SHARED, "restart", SV_Restart_f, "restart current level");
+	Cmd_AddCommand(CF_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients");
+	Cmd_AddCommand(CF_SHARED | CF_SERVER_FROM_CLIENT, "say", SV_Say_f, "send a chat message to everyone on the server");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "say_team", SV_Say_Team_f, "send a chat message to your team on the server");
+	Cmd_AddCommand(CF_SHARED | CF_SERVER_FROM_CLIENT, "tell", SV_Tell_f, "send a chat message to only one person on the server");
+	Cmd_AddCommand(CF_SERVER | CF_SERVER_FROM_CLIENT, "pause", SV_Pause_f, "pause the game (if the server allows pausing)");
+	Cmd_AddCommand(CF_SHARED, "kick", SV_Kick_f, "kick a player off the server by number or name");
+	Cmd_AddCommand(CF_SHARED | CF_SERVER_FROM_CLIENT, "ping", SV_Ping_f, "print ping times of all players on the server");
+	Cmd_AddCommand(CF_SHARED, "load", SV_Loadgame_f, "load a saved game file");
+	Cmd_AddCommand(CF_SHARED, "save", SV_Savegame_f, "save the game to a file");
+	Cmd_AddCommand(CF_SHARED, "viewmodel", SV_Viewmodel_f, "change model of viewthing entity in current level");
+	Cmd_AddCommand(CF_SHARED, "viewframe", SV_Viewframe_f, "change animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CF_SHARED, "viewnext", SV_Viewnext_f, "change to next animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CF_SHARED, "viewprev", SV_Viewprev_f, "change to previous animation frame of viewthing entity in current level");
+	Cmd_AddCommand(CF_SHARED, "maxplayers", SV_MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
+	Cmd_AddCommand(CF_SHARED, "user", SV_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand(CF_SHARED, "users", SV_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand(CF_SERVER, "sendcvar", SV_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 
 	// commands that do not have automatic forwarding from cmd_client, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "prespawn", SV_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "spawn", SV_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "begin", SV_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "pings", SV_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "prespawn", SV_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "spawn", SV_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "begin", SV_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "pings", SV_Pings_f, "internal use - command sent by clients to request updated ping and packetloss of players on scoreboard (originally from QW, but also used on NQ servers)");
 
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "god", SV_God_f, "god mode (invulnerability)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "notarget", SV_Notarget_f, "notarget mode (monsters do not see you)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "fly", SV_Fly_f, "fly mode (flight)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "noclip", SV_Noclip_f, "noclip mode (flight without collisions, move through walls)");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "give", SV_Give_f, "alter inventory");
-	Cmd_AddCommand(CMD_SERVER_FROM_CLIENT, "kill", SV_Kill_f, "die instantly");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "god", SV_God_f, "god mode (invulnerability)");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "notarget", SV_Notarget_f, "notarget mode (monsters do not see you)");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "fly", SV_Fly_f, "fly mode (flight)");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "noclip", SV_Noclip_f, "noclip mode (flight without collisions, move through walls)");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "give", SV_Give_f, "alter inventory");
+	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "kill", SV_Kill_f, "die instantly");
 	
-	Cmd_AddCommand(CMD_USERINFO, "color", SV_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(CMD_USERINFO, "name", SV_Name_f, "change your player name");
-	Cmd_AddCommand(CMD_USERINFO, "rate", SV_Rate_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
-	Cmd_AddCommand(CMD_USERINFO, "pmodel", SV_PModel_f, "(Nehahra-only) change your player model choice");
-	Cmd_AddCommand(CMD_USERINFO, "playermodel", SV_Playermodel_f, "change your player model");
-	Cmd_AddCommand(CMD_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");
+	Cmd_AddCommand(CF_USERINFO, "color", SV_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CF_USERINFO, "name", SV_Name_f, "change your player name");
+	Cmd_AddCommand(CF_USERINFO, "rate", SV_Rate_f, "change your network connection speed");
+	Cmd_AddCommand(CF_USERINFO, "rate_burstsize", SV_Rate_BurstSize_f, "change your network connection speed");
+	Cmd_AddCommand(CF_USERINFO, "pmodel", SV_PModel_f, "(Nehahra-only) change your player model choice");
+	Cmd_AddCommand(CF_USERINFO, "playermodel", SV_Playermodel_f, "change your player model");
+	Cmd_AddCommand(CF_USERINFO, "playerskin", SV_Playerskin_f, "change your player skin number");
 
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_create", SV_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_remove_all", SV_Ent_Remove_All_f, "Removes all entities of the specified classname");
-	Cmd_AddCommand(CMD_CHEAT | CMD_SERVER_FROM_CLIENT, "ent_remove", SV_Ent_Remove_f, "Removes an entity by number, or the entity you're aiming at");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "ent_create", SV_Ent_Create_f, "Creates an entity at the specified coordinate, of the specified classname. If executed from a server, origin has to be specified manually.");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "ent_remove_all", SV_Ent_Remove_All_f, "Removes all entities of the specified classname");
+	Cmd_AddCommand(CF_CHEAT | CF_SERVER_FROM_CLIENT, "ent_remove", SV_Ent_Remove_f, "Removes an entity by number, or the entity you're aiming at");
 }

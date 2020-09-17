@@ -93,11 +93,11 @@ static memclump_t *clumpchain = NULL;
 #endif
 
 
-cvar_t developer_memory = {CVAR_CLIENT | CVAR_SERVER, "developer_memory", "0", "prints debugging information about memory allocations"};
-cvar_t developer_memorydebug = {CVAR_CLIENT | CVAR_SERVER, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
-cvar_t developer_memoryreportlargerthanmb = {CVAR_CLIENT | CVAR_SERVER, "developer_memorylargerthanmb", "16", "prints debugging information about memory allocations over this size"};
-cvar_t sys_memsize_physical = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
-cvar_t sys_memsize_virtual = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
+cvar_t developer_memory = {CF_CLIENT | CF_SERVER, "developer_memory", "0", "prints debugging information about memory allocations"};
+cvar_t developer_memorydebug = {CF_CLIENT | CF_SERVER, "developer_memorydebug", "0", "enables memory corruption checks (very slow)"};
+cvar_t developer_memoryreportlargerthanmb = {CF_CLIENT | CF_SERVER, "developer_memorylargerthanmb", "16", "prints debugging information about memory allocations over this size"};
+cvar_t sys_memsize_physical = {CF_CLIENT | CF_SERVER | CF_READONLY, "sys_memsize_physical", "", "physical memory size in MB (or empty if unknown)"};
+cvar_t sys_memsize_virtual = {CF_CLIENT | CF_SERVER | CF_READONLY, "sys_memsize_virtual", "", "virtual memory size in MB (or empty if unknown)"};
 
 static mempool_t *poolchain = NULL;
 
@@ -919,8 +919,8 @@ void Memory_Shutdown (void)
 
 void Memory_Init_Commands (void)
 {
-	Cmd_AddCommand(CMD_SHARED, "memstats", MemStats_f, "prints memory system statistics");
-	Cmd_AddCommand(CMD_SHARED, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
+	Cmd_AddCommand(CF_SHARED, "memstats", MemStats_f, "prints memory system statistics");
+	Cmd_AddCommand(CF_SHARED, "memlist", MemList_f, "prints memory pool information (or if used as memlist 5 lists individual allocations of 5K or larger, 0 lists all allocations)");
 
 	Cvar_RegisterVariable (&developer_memory);
 	Cvar_RegisterVariable (&developer_memorydebug);

@@ -1145,7 +1145,7 @@ static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname,
 		}
 	}
 
-	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask)) && !(cvar->flags & CVAR_PRIVATE))
+	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask)) && !(cvar->flags & CF_PRIVATE))
 		return cvar->string;
 
 	return NULL;
@@ -1627,22 +1627,22 @@ void Cmd_Init(void)
 	}
 	// client console can see server cvars because the user may start a server
 	cmd_client.cvars = &cvars_all;
-	cmd_client.cvars_flagsmask = CVAR_CLIENT | CVAR_SERVER;
-	cmd_client.cmd_flags = CMD_CLIENT | CMD_CLIENT_FROM_SERVER;
-	cmd_client.auto_flags = CMD_SERVER_FROM_CLIENT;
+	cmd_client.cvars_flagsmask = CF_CLIENT | CF_SERVER;
+	cmd_client.cmd_flags = CF_CLIENT | CF_CLIENT_FROM_SERVER;
+	cmd_client.auto_flags = CF_SERVER_FROM_CLIENT;
 	cmd_client.auto_function = CL_ForwardToServer_f; // FIXME: Move this to the client.
 	cmd_client.userdefined = &cmd_userdefined_all;
 	// dedicated server console can only see server cvars, there is no client
 	cmd_server.cvars = &cvars_all;
-	cmd_server.cvars_flagsmask = CVAR_SERVER;
-	cmd_server.cmd_flags = CMD_SERVER;
+	cmd_server.cvars_flagsmask = CF_SERVER;
+	cmd_server.cmd_flags = CF_SERVER;
 	cmd_server.auto_flags = 0;
 	cmd_server.auto_function = NULL;
 	cmd_server.userdefined = &cmd_userdefined_all;
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
-	cmd_serverfromclient.cmd_flags = CMD_SERVER_FROM_CLIENT | CMD_USERINFO;
+	cmd_serverfromclient.cmd_flags = CF_SERVER_FROM_CLIENT | CF_USERINFO;
 	cmd_serverfromclient.auto_flags = 0;
 	cmd_serverfromclient.auto_function = NULL;
 	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
@@ -1651,41 +1651,41 @@ void Cmd_Init(void)
 // register our commands
 //
 	// client-only commands
-	Cmd_AddCommand(CMD_SHARED, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
-	Cmd_AddCommand(CMD_CLIENT, "cprint", Cmd_Centerprint_f, "print something at the screen center");
+	Cmd_AddCommand(CF_SHARED, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
+	Cmd_AddCommand(CF_CLIENT, "cprint", Cmd_Centerprint_f, "print something at the screen center");
 
 	// maintenance commands used for upkeep of cvars and saved configs
-	Cmd_AddCommand(CMD_SHARED, "stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
-	Cmd_AddCommand(CMD_SHARED, "cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
-	Cmd_AddCommand(CMD_SHARED, "cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
-	Cmd_AddCommand(CMD_SHARED, "cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
-	Cmd_AddCommand(CMD_SHARED, "cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
+	Cmd_AddCommand(CF_SHARED, "stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");
+	Cmd_AddCommand(CF_SHARED, "cvar_lockdefaults", Cvar_LockDefaults_f, "stores the current values of all cvars into their default values, only used once during startup after parsing default.cfg");
+	Cmd_AddCommand(CF_SHARED, "cvar_resettodefaults_all", Cvar_ResetToDefaults_All_f, "sets all cvars to their locked default values");
+	Cmd_AddCommand(CF_SHARED, "cvar_resettodefaults_nosaveonly", Cvar_ResetToDefaults_NoSaveOnly_f, "sets all non-saved cvars to their locked default values (variables that will not be saved to config.cfg)");
+	Cmd_AddCommand(CF_SHARED, "cvar_resettodefaults_saveonly", Cvar_ResetToDefaults_SaveOnly_f, "sets all saved cvars to their locked default values (variables that will be saved to config.cfg)");
 
 	// general console commands used in multiple environments
-	Cmd_AddCommand(CMD_SHARED, "exec", Cmd_Exec_f, "execute a script file");
-	Cmd_AddCommand(CMD_SHARED, "echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
-	Cmd_AddCommand(CMD_SHARED, "alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
-	Cmd_AddCommand(CMD_SHARED, "unalias",Cmd_UnAlias_f, "remove an alias");
-	Cmd_AddCommand(CMD_SHARED, "set", Cvar_Set_f, "create or change the value of a console variable");
-	Cmd_AddCommand(CMD_SHARED, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
-	Cmd_AddCommand(CMD_SHARED, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
+	Cmd_AddCommand(CF_SHARED, "exec", Cmd_Exec_f, "execute a script file");
+	Cmd_AddCommand(CF_SHARED, "echo",Cmd_Echo_f, "print a message to the console (useful in scripts)");
+	Cmd_AddCommand(CF_SHARED, "alias",Cmd_Alias_f, "create a script function (parameters are passed in as $X (being X a number), $* for all parameters, $X- for all parameters starting from $X). Without arguments show the list of all alias");
+	Cmd_AddCommand(CF_SHARED, "unalias",Cmd_UnAlias_f, "remove an alias");
+	Cmd_AddCommand(CF_SHARED, "set", Cvar_Set_f, "create or change the value of a console variable");
+	Cmd_AddCommand(CF_SHARED, "seta", Cvar_SetA_f, "create or change the value of a console variable that will be saved to config.cfg");
+	Cmd_AddCommand(CF_SHARED, "unset", Cvar_Del_f, "delete a cvar (does not work for static ones like _cl_name, or read-only ones)");
 
 #ifdef FILLALLCVARSWITHRUBBISH
-	Cmd_AddCommand(CMD_SHARED, "fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
+	Cmd_AddCommand(CF_SHARED, "fillallcvarswithrubbish", Cvar_FillAll_f, "fill all cvars with a specified number of characters to provoke buffer overruns");
 #endif /* FILLALLCVARSWITHRUBBISH */
 
 	// 2000-01-09 CmdList, CvarList commands By Matthias "Maddes" Buecher
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
-	Cmd_AddCommand(CMD_SHARED, "cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
-	Cmd_AddCommand(CMD_SHARED, "cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
-	Cmd_AddCommand(CMD_SHARED, "apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
-	Cmd_AddCommand(CMD_SHARED, "find", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
+	Cmd_AddCommand(CF_SHARED, "cmdlist", Cmd_List_f, "lists all console commands beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(CF_SHARED, "cvarlist", Cvar_List_f, "lists all console variables beginning with the specified prefix or matching the specified wildcard pattern");
+	Cmd_AddCommand(CF_SHARED, "apropos", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
+	Cmd_AddCommand(CF_SHARED, "find", Cmd_Apropos_f, "lists all console variables/commands/aliases containing the specified string in the name or description");
 
-	Cmd_AddCommand(CMD_SHARED, "defer", Cmd_Defer_f, "execute a command in the future");
+	Cmd_AddCommand(CF_SHARED, "defer", Cmd_Defer_f, "execute a command in the future");
 
 	// DRESK - 5/14/06
 	// Support Doom3-style Toggle Command
-	Cmd_AddCommand(CMD_SHARED | CMD_CLIENT_FROM_SERVER, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
+	Cmd_AddCommand(CF_SHARED | CF_CLIENT_FROM_SERVER, "toggle", Cmd_Toggle_f, "toggles a console variable's values (use for more info)");
 }
 
 /*
@@ -2194,7 +2194,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 			case src_client:
 				if (func->function)
 				{
-					if((func->flags & CMD_CHEAT) && !sv_cheats.integer)
+					if((func->flags & CF_CHEAT) && !sv_cheats.integer)
 						SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
 					else
 						func->function(cmd);
