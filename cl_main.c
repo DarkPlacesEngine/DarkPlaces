@@ -3056,9 +3056,5 @@ void CL_Init (void)
 		CL_Video_Init();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
-
-		#ifdef CONFIG_MENU
-		Cbuf_InsertText(&cmd_client,"menu_start\n");
-		#endif
 	}
 }
