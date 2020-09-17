@@ -626,6 +626,8 @@ dp_model_t *Mod_FindName(const char *name, const char *parentname)
 	return mod;
 }
 
+extern qbool vid_opened;
+
 /*
 ==================
 Mod_ForName
@@ -636,6 +638,11 @@ Loads in a model for the given name
 dp_model_t *Mod_ForName(const char *name, qbool crash, qbool checkdisk, const char *parentname)
 {
 	dp_model_t *model;
+
+	// FIXME: So we don't crash if a server is started early.
+	if(!vid_opened)
+		Host_StartVideo();
+
 	model = Mod_FindName(name, parentname);
 	if (!model->loaded || checkdisk)
 		Mod_LoadModel(model, crash, checkdisk);
