@@ -549,7 +549,7 @@ typedef struct host_s
 	double sleeptime; // time spent sleeping overall
 	qbool restless; // don't sleep
 	qbool paused; // global paused state, pauses both client and server
-	cbuf_t *cbuf;
+	cmd_buf_t *cbuf;
 
 	struct
 	{

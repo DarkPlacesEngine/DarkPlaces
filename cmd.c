@@ -47,12 +47,12 @@ qbool host_stuffcmdsrun = false;
 
 //=============================================================================
 
-void Cbuf_Lock(cbuf_t *cbuf)
+void Cbuf_Lock(cmd_buf_t *cbuf)
 {
 	Thread_LockMutex(cbuf->lock);
 }
 
-void Cbuf_Unlock(cbuf_t *cbuf)
+void Cbuf_Unlock(cmd_buf_t *cbuf)
 {
 	Thread_UnlockMutex(cbuf->lock);
 }
@@ -79,11 +79,11 @@ Cmd_Defer_f
 Cause a command to be executed after a delay.
 ============
 */
-static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing);
+static cmd_input_t *Cbuf_LinkGet(cmd_buf_t *cbuf, cmd_input_t *existing);
 static void Cmd_Defer_f (cmd_state_t *cmd)
 {
 	cmd_input_t *current;
-	cbuf_t *cbuf = cmd->cbuf;
+	cmd_buf_t *cbuf = cmd->cbuf;
 
 	if(Cmd_Argc(cmd) == 1)
 	{
@@ -176,7 +176,7 @@ static void Cmd_Centerprint_f (cmd_state_t *cmd)
 =============================================================================
 */
 
-static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing)
+static cmd_input_t *Cbuf_LinkGet(cmd_buf_t *cbuf, cmd_input_t *existing)
 {
 	cmd_input_t *ret = NULL;
 	if(existing && existing->pending)
@@ -309,7 +309,7 @@ static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
-	cbuf_t *cbuf = cmd->cbuf;
+	cmd_buf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
 	cmd_input_t *current = NULL;
 
@@ -348,7 +348,7 @@ Adds command text at the end of the buffer
 void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 {
 	size_t l = strlen(text);
-	cbuf_t *cbuf = cmd->cbuf;
+	cmd_buf_t *cbuf = cmd->cbuf;
 	llist_t llist = {&llist, &llist};
 
 	Cbuf_Lock(cbuf);
@@ -374,7 +374,7 @@ FIXME: actually change the command buffer to do less copying
 */
 void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 {
-	cbuf_t *cbuf = cmd->cbuf;
+	cmd_buf_t *cbuf = cmd->cbuf;
 	llist_t llist = {&llist, &llist};
 	size_t l = strlen(text);
 
@@ -398,7 +398,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 Cbuf_Execute_Deferred --blub
 ============
 */
-static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
+static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 {
 	llist_t *pos;
 	cmd_input_t *current;
@@ -431,7 +431,7 @@ Cbuf_Execute
 ============
 */
 static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
-void Cbuf_Execute (cbuf_t *cbuf)
+void Cbuf_Execute (cmd_buf_t *cbuf)
 {
 	cmd_input_t *current;
 	char preprocessed[MAX_INPUTLINE];
@@ -490,7 +490,7 @@ void Cbuf_Execute (cbuf_t *cbuf)
 	}
 }
 
-void Cbuf_Frame(cbuf_t *cbuf)
+void Cbuf_Frame(cmd_buf_t *cbuf)
 {
 	Cbuf_Execute_Deferred(cbuf);
 	if (cbuf->size)
@@ -1608,7 +1608,7 @@ Cmd_Init
 void Cmd_Init(void)
 {
 	cmd_iter_t *cmd_iter;
-	cbuf_t *cbuf = (cbuf_t *)Z_Malloc(sizeof(cbuf_t));
+	cmd_buf_t *cbuf = (cmd_buf_t *)Z_Malloc(sizeof(cmd_buf_t));
 	cbuf->maxsize = 655360;
 	cbuf->lock = Thread_CreateMutex();
 	cbuf->wait = false;
