@@ -140,7 +140,8 @@ typedef struct cmd_input_s
 	cmd_state_t *source;
 	double delay;
 	size_t size;
-	char text[MAX_INPUTLINE];
+	size_t length;
+	char *text;
 	qbool pending;
 } cmd_input_t;
 
