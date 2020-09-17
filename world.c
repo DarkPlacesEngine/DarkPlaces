@@ -2130,7 +2130,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	int triangleindex;
 	int vertexindex;
 	mempool_t *mempool;
-	qboolean modified = false;
+	qbool modified = false;
 	vec3_t angles;
 	vec3_t avelocity;
 	vec3_t entmaxs;
@@ -2151,13 +2151,13 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec3_t scale;
 	vec_t spinlimit;
 	vec_t test;
-	qboolean gravity;
-	qboolean geom_modified = false;
+	qbool gravity;
+	qbool geom_modified = false;
 	edict_odefunc_t *func, *nextf;
 
 	dReal *planes, *planesData, *pointsData;
 	unsigned int *polygons, *polygonsData, polyvert;
-	qboolean *mapped, *used, convex_compatible;
+	qbool *mapped, *used, convex_compatible;
 	int numplanes = 0, numpoints = 0, i;
 
 #ifndef LINK_TO_LIBODE
@@ -2374,10 +2374,10 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 				//              followed by that amount of indices to "points" in counter clockwise order
 				polygonsData = polygons = (unsigned int *)Mem_Alloc(mempool, numtriangles*sizeof(int)*4);
 				planesData = planes = (dReal *)Mem_Alloc(mempool, numtriangles*sizeof(dReal)*4);
-				mapped = (qboolean *)Mem_Alloc(mempool, numvertices*sizeof(qboolean));
-				used = (qboolean *)Mem_Alloc(mempool, numtriangles*sizeof(qboolean));
-				memset(mapped, 0, numvertices*sizeof(qboolean));
-				memset(used, 0, numtriangles*sizeof(qboolean));
+				mapped = (qbool *)Mem_Alloc(mempool, numvertices*sizeof(qbool));
+				used = (qbool *)Mem_Alloc(mempool, numtriangles*sizeof(qbool));
+				memset(mapped, 0, numvertices*sizeof(qbool));
+				memset(used, 0, numtriangles*sizeof(qbool));
 				numplanes = numpoints = polyvert = 0;
 				// build convex hull
 				// todo: merge duplicated verts here

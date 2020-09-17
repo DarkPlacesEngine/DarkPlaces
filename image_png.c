@@ -140,7 +140,7 @@ PNG_OpenLibrary
 Try to load the PNG DLL
 ====================
 */
-qboolean PNG_OpenLibrary (void)
+qbool PNG_OpenLibrary (void)
 {
 	const char* dllnames [] =
 	{
@@ -474,7 +474,7 @@ PNG_SaveImage_preflipped
 Save a preflipped PNG image to a file
 ====================
 */
-qboolean PNG_SaveImage_preflipped (const char *filename, int width, int height, qboolean has_alpha, unsigned char *data)
+qbool PNG_SaveImage_preflipped (const char *filename, int width, int height, qbool has_alpha, unsigned char *data)
 {
 	unsigned int offset, linesize;
 	qfile_t* file = NULL;

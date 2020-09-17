@@ -29,7 +29,7 @@ void EntityFrameCSQC_LostFrame(client_t *client, int framenum)
 {
 	// marks a frame as lost
 	int i, j;
-	qboolean valid;
+	qbool valid;
 	int ringfirst, ringlast;
 	static int recoversendflags[MAX_EDICTS]; // client only
 	csqcentityframedb_t *d;
@@ -159,11 +159,11 @@ static void EntityFrameCSQC_DeallocFrame(client_t *client, int framenum)
 //[515]: we use only one array per-client for SendEntity feature
 // TODO: add some handling for entity send priorities, to better deal with huge
 // amounts of csqc networked entities
-qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum)
+qbool EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int num, number, end, sendflags;
-	qboolean sectionstarted = false;
+	qbool sectionstarted = false;
 	const unsigned short *n;
 	prvm_edict_t *ed;
 	client_t *client = svs.clients + sv.writeentitiestoclient_clientnumber;

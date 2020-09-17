@@ -32,7 +32,7 @@ cvar_t r_texture_dds_load_alphamode = {CVAR_CLIENT, "r_texture_dds_load_alphamod
 cvar_t r_texture_dds_load_logfailure = {CVAR_CLIENT, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log, 0: done log, 1: log with no optional textures (_norm, glow etc.). 2: log all"};
 cvar_t r_texture_dds_swdecode = {CVAR_CLIENT, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
 
-qboolean	gl_filter_force = false;
+qbool	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
 
@@ -163,8 +163,8 @@ typedef struct gltexture_s
 	// speed reasons, must be identical in rtexture_t!
 	int texnum; // GL texture slot number
 	int renderbuffernum; // GL renderbuffer slot number
-	qboolean dirty; // indicates that R_RealGetTexture should be called
-	qboolean glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
+	qbool dirty; // indicates that R_RealGetTexture should be called
+	qbool glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
 	int gltexturetypeenum; // used by R_Mesh_TexBind
 
 	// dynamic texture stuff [11/22/2007 Black]
@@ -174,7 +174,7 @@ typedef struct gltexture_s
 
 	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
 	unsigned char *bufferpixels;
-	qboolean buffermodified;
+	qbool buffermodified;
 
 	// pointer to texturepool (check this to see if the texture is allocated)
 	struct gltexturepool_s *pool;
@@ -560,7 +560,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 	return (int)(size * glt->textype->glinternalbytesperpixel) * glt->sides;
 }
 
-void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
+void R_TextureStats_Print(qbool printeach, qbool printpool, qbool printtotal)
 {
 	int glsize;
 	int isloaded;
@@ -736,7 +736,7 @@ void R_Textures_Frame (void)
 {
 #ifdef GL_TEXTURE_MAX_ANISOTROPY_EXT
 	static int old_aniso = 0;
-	static qboolean first_time_aniso = true;
+	static qbool first_time_aniso = true;
 #endif
 
 	// could do procedural texture animation here, if we keep track of which
@@ -1112,7 +1112,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
 	textypeinfo_t *texinfo, *texinfo2;
 	unsigned char *temppixels = NULL;
-	qboolean swaprb;
+	qbool swaprb;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -1162,7 +1162,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	// if sRGB texture formats are not supported, convert input to linear and upload as normal types
 	if (!vid.support.ext_texture_srgb)
 	{
-		qboolean convertsRGB = false;
+		qbool convertsRGB = false;
 		switch(textype)
 		{
 		case TEXTYPE_SRGB_DXT1:    textype = TEXTYPE_DXT1   ;convertsRGB = true;break;
@@ -1342,7 +1342,7 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, miplevel, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qboolean filter)
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qbool filter)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_RENDERTARGET | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR : TEXF_FORCENEAREST), -1, textype, GLTEXTURETYPE_2D, NULL, NULL);
 }
@@ -1406,7 +1406,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	return (rtexture_t *)glt;
 }
 
-int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qbool skipuncompressed, qbool hasalpha)
 {
 #ifdef USE_GLES2
 	return -1; // unsupported on this platform
@@ -1544,7 +1544,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 #include "ktx10/include/ktx.h"
 #endif
 
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel, qboolean optionaltexture) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qbool srgb, int flags, qbool *hasalphaflag, float *avgcolor, int miplevel, qbool optionaltexture) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
 {
 	int i, size, dds_format_flags, dds_miplevels, dds_width, dds_height;
 	//int dds_flags;
@@ -1563,7 +1563,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;
 	unsigned int ddssize;
-	qboolean force_swdecode;
+	qbool force_swdecode;
 #ifdef __ANDROID__
 	// ELUAN: FIXME: separate this code
 	char vabuf[1024];

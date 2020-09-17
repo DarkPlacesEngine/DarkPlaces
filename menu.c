@@ -106,7 +106,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii);
 static void M_ServerList_Key(cmd_state_t *cmd, int key, int ascii);
 static void M_ModList_Key(cmd_state_t *cmd, int key, int ascii);
 
-static qboolean	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
+static qbool	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
 
 void M_Update_Return_Reason(const char *s)
 {
@@ -355,7 +355,7 @@ static void M_Demo_Key (cmd_state_t *cmd, int k, int ascii)
 /* MAIN MENU */
 
 static int	m_main_cursor;
-static qboolean m_missingdata = false;
+static qbool m_missingdata = false;
 
 static int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
@@ -2848,7 +2848,7 @@ int video_resolutions_count;
 
 static video_resolution_t *menu_video_resolutions;
 static int menu_video_resolutions_count;
-static qboolean menu_video_resolutions_forfullscreen;
+static qbool menu_video_resolutions_forfullscreen;
 
 static void M_Menu_Video_FindResolution(int w, int h, float a)
 {
@@ -3168,7 +3168,7 @@ static void M_Credits_Key(cmd_state_t *cmd, int key, int ascii)
 
 static const char *m_quit_message[9];
 static int		m_quit_prevstate;
-static qboolean	wasInMenus;
+static qbool	wasInMenus;
 
 
 static int M_QuitMessage(const char *line1, const char *line2, const char *line3, const char *line4, const char *line5, const char *line6, const char *line7, const char *line8)
@@ -3949,7 +3949,7 @@ static gamelevels_t *gameoptions_levels  = NULL;
 static int	startepisode;
 static int	startlevel;
 static int maxplayers;
-static qboolean m_serverInfoMessage = false;
+static qbool m_serverInfoMessage = false;
 static double m_serverInfoMessageTime;
 
 void M_Menu_GameOptions_f(cmd_state_t *cmd)
@@ -4506,7 +4506,7 @@ static int modlist_numenabled;			//number of enabled (or in process to be..) mod
 
 typedef struct modlist_entry_s
 {
-	qboolean loaded;	// used to determine whether this entry is loaded and running
+	qbool loaded;	// used to determine whether this entry is loaded and running
 	int enabled;		// index to array of modlist_enabled
 
 	// name of the modification, this is (will...be) displayed on the menu entry
@@ -4728,7 +4728,7 @@ static void M_ModList_Key(cmd_state_t *cmd, int k, int ascii)
 //=============================================================================
 /* Menu Subsystem */
 
-static void M_KeyEvent(int key, int ascii, qboolean downevent);
+static void M_KeyEvent(int key, int ascii, qbool downevent);
 static void M_Draw(void);
 void M_ToggleMenu(int mode);
 static void M_Shutdown(void);
@@ -4908,7 +4908,7 @@ void M_Draw (void)
 }
 
 
-void M_KeyEvent (int key, int ascii, qboolean downevent)
+void M_KeyEvent (int key, int ascii, qbool downevent)
 {
 	cmd_state_t *cmd = &cmd_client;
 	if (!downevent)
@@ -5199,13 +5199,13 @@ static prvm_required_field_t m_required_globals[] =
 
 static int m_numrequiredglobals = sizeof(m_required_globals) / sizeof(m_required_globals[0]);
 
-void MR_SetRouting (qboolean forceold);
+void MR_SetRouting (qbool forceold);
 
 void MVM_error_cmd(const char *format, ...) DP_FUNC_PRINTF(1);
 void MVM_error_cmd(const char *format, ...)
 {
 	prvm_prog_t *prog = MVM_prog;
-	static qboolean processingError = false;
+	static qbool processingError = false;
 	char errorstring[MAX_INPUTLINE];
 	va_list argptr;
 
@@ -5275,12 +5275,12 @@ static void MVM_count_edicts(prvm_prog_t *prog)
 	Con_Printf("active    :%3i\n", active);
 }
 
-static qboolean MVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
+static qbool MVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	return true;
 }
 
-static void MP_KeyEvent (int key, int ascii, qboolean downevent)
+static void MP_KeyEvent (int key, int ascii, qbool downevent)
 {
 	prvm_prog_t *prog = MVM_prog;
 
@@ -5417,14 +5417,14 @@ static void MP_Init (void)
 //============================================================================
 // Menu router
 
-void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
+void (*MR_KeyEvent) (int key, int ascii, qbool downevent);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu) (int mode);
 void (*MR_Shutdown) (void);
 void (*MR_NewMap) (void);
 int (*MR_GetServerListEntryCategory) (const serverlist_entry_t *entry);
 
-void MR_SetRouting(qboolean forceold)
+void MR_SetRouting(qbool forceold)
 {
 	// if the menu prog isnt available or forceqmenu ist set, use the old menu
 	if(!FS_FileExists(menu_progs.string) || forceqmenu.integer || forceold)
@@ -5472,7 +5472,7 @@ static void Call_MR_ToggleMenu_f(cmd_state_t *cmd)
 		MR_ToggleMenu(m);
 }
 
-static qboolean menu_active;
+static qbool menu_active;
 
 static void MR_Start_f(cmd_state_t *cmd)
 {

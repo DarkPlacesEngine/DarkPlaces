@@ -246,7 +246,7 @@ typedef struct fontfilecache_s
 fontfilecache_t;
 #define MAX_FONTFILES 8
 static fontfilecache_t fontfiles[MAX_FONTFILES];
-static const unsigned char *fontfilecache_LoadFile(const char *path, qboolean quiet, fs_offset_t *filesizepointer)
+static const unsigned char *fontfilecache_LoadFile(const char *path, qbool quiet, fs_offset_t *filesizepointer)
 {
 	int i;
 	unsigned char *buf;
@@ -339,7 +339,7 @@ Font_OpenLibrary
 Try to load the FreeType2 DLL
 ====================
 */
-qboolean Font_OpenLibrary (void)
+qbool Font_OpenLibrary (void)
 {
 #ifndef DP_FREETYPE_STATIC
 	const char* dllnames [] =
@@ -454,7 +454,7 @@ ft2_font_t *Font_Alloc(void)
 	return (ft2_font_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_t));
 }
 
-static qboolean Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
+static qbool Font_Attach(ft2_font_t *font, ft2_attachment_t *attachment)
 {
 	ft2_attachment_t *na;
 
@@ -495,9 +495,9 @@ float Font_SnapTo(float val, float snapwidth)
 	return floor(val / snapwidth + 0.5f) * snapwidth;
 }
 
-static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font);
-static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only);
-qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
+static qbool Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font);
+static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only);
+qbool Font_LoadFont(const char *name, dp_font_t *dpfnt)
 {
 	int s, count, i;
 	ft2_font_t *ft2, *fbfont, *fb;
@@ -604,7 +604,7 @@ qboolean Font_LoadFont(const char *name, dp_font_t *dpfnt)
 	return true;
 }
 
-static qboolean Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font)
+static qbool Font_LoadFile(const char *name, int _face, ft2_settings_t *settings, ft2_font_t *font)
 {
 	size_t namelen;
 	char filename[MAX_QPATH];
@@ -713,8 +713,8 @@ static void Font_Postprocess_Update(ft2_font_t *fnt, int bpp, int w, int h)
 {
 	int needed, x, y;
 	float gausstable[2*POSTPROCESS_MAXRADIUS+1];
-	qboolean need_gauss  = (!pp.buf || pp.blur != fnt->settings->blur || pp.shadowz != fnt->settings->shadowz);
-	qboolean need_circle = (!pp.buf || pp.outline != fnt->settings->outline || pp.shadowx != fnt->settings->shadowx || pp.shadowy != fnt->settings->shadowy);
+	qbool need_gauss  = (!pp.buf || pp.blur != fnt->settings->blur || pp.shadowz != fnt->settings->shadowz);
+	qbool need_circle = (!pp.buf || pp.outline != fnt->settings->outline || pp.shadowx != fnt->settings->shadowx || pp.shadowy != fnt->settings->shadowy);
 	pp.blur = fnt->settings->blur;
 	pp.outline = fnt->settings->outline;
 	pp.shadowx = fnt->settings->shadowx;
@@ -886,8 +886,8 @@ static void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitc
 }
 
 static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size);
-static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap);
-static qboolean Font_LoadSize(ft2_font_t *font, float size, qboolean check_only)
+static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap);
+static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only)
 {
 	int map_index;
 	ft2_font_map_t *fmap, temp;
@@ -1034,7 +1034,7 @@ ft2_font_map_t *Font_MapForIndex(ft2_font_t *font, int index)
 	return font->font_maps[index];
 }
 
-static qboolean Font_SetSize(ft2_font_t *font, float w, float h)
+static qbool Font_SetSize(ft2_font_t *font, float w, float h)
 {
 	if (font->currenth == h &&
 	    ((!w && (!font->currentw || font->currentw == font->currenth)) || // check if w==h when w is not set
@@ -1060,7 +1060,7 @@ static qboolean Font_SetSize(ft2_font_t *font, float w, float h)
 	return true;
 }
 
-qboolean Font_GetKerningForMap(ft2_font_t *font, int map_index, float w, float h, Uchar left, Uchar right, float *outx, float *outy)
+qbool Font_GetKerningForMap(ft2_font_t *font, int map_index, float w, float h, Uchar left, Uchar right, float *outx, float *outy)
 {
 	ft2_font_map_t *fmap;
 	if (!font->has_kerning || !r_font_kerning.integer)
@@ -1118,7 +1118,7 @@ qboolean Font_GetKerningForMap(ft2_font_t *font, int map_index, float w, float h
 	}
 }
 
-qboolean Font_GetKerningForSize(ft2_font_t *font, float w, float h, Uchar left, Uchar right, float *outx, float *outy)
+qbool Font_GetKerningForSize(ft2_font_t *font, float w, float h, Uchar left, Uchar right, float *outx, float *outy)
 {
 	return Font_GetKerningForMap(font, Font_IndexForSize(font, h, NULL, NULL), w, h, left, right, outx, outy);
 }
@@ -1200,7 +1200,7 @@ static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size)
 	}
 }
 
-static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
+static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
 {
 	char map_identifier[MAX_QPATH];
 	unsigned long mapidx = _ch / FONT_CHARS_PER_MAP;
@@ -1659,7 +1659,7 @@ static qboolean Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _
 	return true;
 }
 
-qboolean Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_font_map_t **outmap)
+qbool Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_font_map_t **outmap)
 {
 	if (map_index < 0 || map_index >= MAX_FONT_SIZES)
 		return false;

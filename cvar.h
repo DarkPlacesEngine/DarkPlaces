@@ -95,13 +95,13 @@ typedef struct cvar_s
 	const char *defstring;
 
 	void (*callback)(struct cvar_s *var);
-	qboolean ignore_callback;
+	qbool ignore_callback;
 
 	char **aliases;
 	int aliasindex;
 
 	// values at init (for Cvar_RestoreInitState)
-	qboolean initstate; // indicates this existed at init
+	qbool initstate; // indicates this existed at init
 	int initflags;
 	const char *initstring;
 	const char *initdescription;
@@ -140,7 +140,7 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
 /// archive elements set.
 void Cvar_RegisterVariable(cvar_t *variable);
 
-qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name);
+qbool Cvar_Readonly (cvar_t *var, const char *cmd_name);
 
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
@@ -174,11 +174,11 @@ const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, int
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
-void Cvar_PrintHelp(cvar_t *cvar, const char *name, qboolean full);
+void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full);
 
 void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
 
-qboolean Cvar_Command (cmd_state_t *cmd);
+qbool Cvar_Command (cmd_state_t *cmd);
 // called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)

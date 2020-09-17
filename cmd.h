@@ -66,7 +66,7 @@ typedef struct cmd_alias_s
 	struct cmd_alias_s *next;
 	char name[MAX_ALIAS_NAME];
 	char *value;
-	qboolean initstate; // indicates this command existed at init
+	qbool initstate; // indicates this command existed at init
 	char *initialvalue; // backup copy of value at init
 } cmd_alias_t;
 
@@ -77,9 +77,9 @@ typedef struct cmd_function_s
 	const char *name;
 	const char *description;
 	xcommand_t function;
-	qboolean csqcfunc;
-	qboolean autofunc;
-	qboolean initstate; // indicates this command existed at init
+	qbool csqcfunc;
+	qbool autofunc;
+	qbool initstate; // indicates this command existed at init
 } cmd_function_t;
 
 typedef struct cmddeferred_s
@@ -141,7 +141,7 @@ typedef struct cmd_input_s
 	double delay;
 	size_t size;
 	char text[MAX_INPUTLINE];
-	qboolean pending;
+	qbool pending;
 } cmd_input_t;
 
 typedef struct cbuf_s
@@ -149,7 +149,7 @@ typedef struct cbuf_s
 	llist_t start;
 	llist_t deferred;
 	llist_t free;
-	qboolean wait;
+	qbool wait;
 	size_t maxsize;
 	size_t size;
 	char tokenizebuffer[CMD_TOKENIZELENGTH];
@@ -171,7 +171,7 @@ extern cmd_state_t cmd_server;
 // uses cmddefs_null
 extern cmd_state_t cmd_serverfromclient;
 
-extern qboolean host_stuffcmdsrun;
+extern qbool host_stuffcmdsrun;
 
 void Cbuf_Lock(cbuf_t *cbuf);
 void Cbuf_Unlock(cbuf_t *cbuf);
@@ -222,10 +222,10 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 
-cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qboolean casesensitive);
+cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qbool casesensitive);
 
 /// used by the cvar code to check for cvar / command name overlap
-qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
+qbool Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
 
 /// attempts to match a partial command for automatic command line completion
 /// returns NULL if nothing fits
@@ -266,7 +266,7 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex);
+void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qbool lockmutex);
 
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies
@@ -274,7 +274,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 /// "\"\\$"). Returns true on success, and false on overrun (in which case out
 /// will contain a part of the quoted string). If putquotes is set, the
 /// enclosing quote marks are also put.
-qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
+qbool Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qbool putquotes);
 
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd);
 

@@ -180,7 +180,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 	//     If it fits, append it. Continue.
 	//     If it doesn't fit, output current line, advance to next line. Append the word. This is a continuation. Continue.
 
-	qboolean isContinuation = false;
+	qbool isContinuation = false;
 	float spaceWidth;
 	const char *startOfLine = string;
 	const char *cursor = string;
@@ -258,7 +258,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 	return result;
 
 /*
-	qboolean isContinuation = false;
+	qbool isContinuation = false;
 	float currentWordSpace = 0;
 	const char *currentWord = 0;
 	float minReserve = 0;
@@ -457,7 +457,7 @@ COM_ParseToken_Simple
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash, qboolean parsecomments)
+int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
 {
 	int len;
 	int c;
@@ -570,7 +570,7 @@ COM_ParseToken_QuakeC
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline)
+int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -684,7 +684,7 @@ COM_ParseToken_VM_Tokenize
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline)
+int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -1163,7 +1163,7 @@ all characters until the zero terminator.
 ============
 */
 size_t
-COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
+COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid)
 {
 	const char *end = size_s ? (s + size_s) : NULL;
 	size_t len = 0;
@@ -1236,8 +1236,8 @@ For size_in, specify the maximum number of characters from in to use, or 0 to us
 all characters until the zero terminator.
 ============
 */
-qboolean
-COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets)
+qbool
+COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
 {
 #define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return false; } } while(0)
 	const char *end = size_in ? (in + size_in) : NULL;

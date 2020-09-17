@@ -10,11 +10,11 @@ typedef void (*curl_callback_t) (int status, size_t length_received, unsigned ch
 // code is one of the CURLCBSTATUS constants, or the HTTP error code (when > 0).
 
 void Curl_Run(void);
-qboolean Curl_Running(void);
-qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, int loadtype, qboolean forthismap);
+qbool Curl_Running(void);
+qbool Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, int loadtype, qbool forthismap);
 
-qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
-qboolean Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+qbool Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+qbool Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 void Curl_Cancel_ToMemory(curl_callback_t callback, void* cbdata);
 
 void Curl_Init(void);
@@ -22,7 +22,7 @@ void Curl_Init_Commands(void);
 void Curl_Shutdown(void);
 void Curl_CancelAll(void);
 void Curl_Clear_forthismap(void);
-qboolean Curl_Have_forthismap(void);
+qbool Curl_Have_forthismap(void);
 void Curl_Register_predownload(void);
 
 void Curl_ClearRequirements(void);
@@ -34,7 +34,7 @@ typedef struct Curl_downloadinfo_s
 	char filename[MAX_QPATH];
 	double progress;
 	double speed;
-	qboolean queued;
+	qbool queued;
 }
 Curl_downloadinfo_t;
 Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **additional_info, char *addinfo, size_t addinfolength);

@@ -206,7 +206,7 @@ int Draw_GetPicHeight(cachepic_t *pic)
 	return pic->height;
 }
 
-qboolean Draw_IsPicLoaded(cachepic_t *pic)
+qbool Draw_IsPicLoaded(cachepic_t *pic)
 {
 	if (pic == NULL)
 		return false;
@@ -325,7 +325,7 @@ void Draw_FreePic(const char *picname)
 
 static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
-void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset)
+void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, float voffset)
 {
 	int i, ch;
 	float maxwidth;
@@ -475,7 +475,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 }
 
 extern cvar_t developer_font;
-dp_font_t *FindFont(const char *title, qboolean allocate_new)
+dp_font_t *FindFont(const char *title, qbool allocate_new)
 {
 	int i, oldsize;
 
@@ -778,7 +778,7 @@ void DrawQ_Start(void)
 	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
 }
 
-qboolean r_draw2d_force = false;
+qbool r_draw2d_force = false;
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
@@ -865,7 +865,7 @@ static const vec4_t string_colors[] =
 
 #define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
 
-static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qboolean shadow)
+static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qbool shadow)
 {
 	float C = r_textcontrast.value;
 	float B = r_textbrightness.value;
@@ -910,7 +910,7 @@ static int RGBstring_to_colorindex(const char *str)
 }
 
 // NOTE: this function always draws exactly one character if maxwidth <= 0
-float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	const char *text_start = text;
 	int colorindex;
@@ -926,8 +926,8 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	//ft2_font_map_t *prevmap = NULL;
 	ft2_font_t *ft2 = fnt->ft2;
 	// float ftbase_x;
-	qboolean snap = true;
-	qboolean least_one = false;
+	qbool snap = true;
+	qbool least_one = false;
 	float dw; // display w
 	//float dh; // display h
 	const float *width_of;
@@ -1075,7 +1075,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 }
 
 float DrawQ_Color[4];
-float DrawQ_String_Scale(float startx, float starty, const char *text, size_t maxlen, float w, float h, float sw, float sh, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_String_Scale(float startx, float starty, const char *text, size_t maxlen, float w, float h, float sw, float sh, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	int shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
@@ -1090,7 +1090,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	const char *text_start = text;
 	float kx, ky;
 	ft2_font_t *ft2 = fnt->ft2;
-	qboolean snap = true;
+	qbool snap = true;
 	float pix_x, pix_y;
 	size_t bytes_left;
 	float dw, dh;
@@ -1322,22 +1322,22 @@ out:
 	return x;
 }
 
-float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_String_Scale(startx, starty, text, maxlen, w, h, 1, 1, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, fnt);
 }
 
-float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	return DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, maxlen, w, h, 1, 1, outcolor, ignorecolorcodes, fnt, maxwidth);
 }
 
-float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_TextWidth_UntilWidth(text, &maxlen, w, h, ignorecolorcodes, fnt, 1000000000);
 }
 
-float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
 	return DrawQ_TextWidth_UntilWidth_TrackColors(text, maxlen, w, h, NULL, ignorecolorcodes, fnt, maxWidth);
 }
@@ -1345,7 +1345,7 @@ float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, floa
 #if 0
 // not used
 // no ^xrgb management
-static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qboolean ignorecolorcodes, int *outcolor)
+static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qbool ignorecolorcodes, int *outcolor)
 {
 	int color, numchars = 0;
 	char *outputend2c = output2c + maxoutchars - 2;

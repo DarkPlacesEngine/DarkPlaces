@@ -37,7 +37,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MEMHEADER_SENTINEL_FOR_ADDRESS(p) ((sentinel_seed ^ (unsigned int) (uintptr_t) (p)) + sentinel_seed)
 unsigned int sentinel_seed;
 
-qboolean mem_bigendian = false;
+qbool mem_bigendian = false;
 void *mem_mutex = NULL;
 
 // divVerent: enables file backed malloc using mmap to conserve swap space (instead of malloc)
@@ -660,7 +660,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 #endif
 }
 
-qboolean Mem_IsAllocated(mempool_t *pool, void *data)
+qbool Mem_IsAllocated(mempool_t *pool, void *data)
 {
 	memheader_t *header;
 	memheader_t *target;

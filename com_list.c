@@ -203,17 +203,17 @@ void List_Splice_Tail(const llist_t *list, llist_t *head)
 		__List_Splice(list, head->prev, head);
 }
 
-qboolean List_IsFirst(llist_t *list, llist_t *start)
+qbool List_IsFirst(llist_t *list, llist_t *start)
 {
 	return list->prev == start;
 }
 
-qboolean List_IsLast(llist_t *list, llist_t *start)
+qbool List_IsLast(llist_t *list, llist_t *start)
 {
 	return list->next == start;
 }
 
-qboolean List_IsEmpty(const llist_t *list)
+qbool List_IsEmpty(const llist_t *list)
 {
 	return list->next == list;
 }

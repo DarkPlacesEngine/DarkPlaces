@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef SSE_POSSIBLE
-static qboolean r_skeletal_use_sse_defined = false;
+static qbool r_skeletal_use_sse_defined = false;
 cvar_t r_skeletal_use_sse = {CVAR_CLIENT, "r_skeletal_use_sse", "1", "use SSE for skeletal model animation"};
 #endif
 cvar_t r_skeletal_debugbone = {CVAR_CLIENT, "r_skeletal_debugbone", "-1", "development cvar for testing skeletal model code"};
@@ -623,13 +623,13 @@ static void Mod_BuildBaseBonePoses(void)
 	Mem_Free(basebonepose);
 }
 
-static qboolean Mod_Alias_CalculateBoundingBox(void)
+static qbool Mod_Alias_CalculateBoundingBox(void)
 {
 	int vnum;
-	qboolean firstvertex = true;
+	qbool firstvertex = true;
 	float dist, yawradius, radius;
 	float *v;
-	qboolean isanimated = false;
+	qbool isanimated = false;
 	VectorClear(loadmodel->normalmins);
 	VectorClear(loadmodel->normalmaxs);
 	yawradius = 0;
