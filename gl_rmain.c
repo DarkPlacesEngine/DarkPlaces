@@ -44,12 +44,12 @@ rtexturepool_t *r_main_texturepool;
 
 int r_textureframe = 0; ///< used only by R_GetCurrentTexture, incremented per view and per UI render
 
-static qboolean r_loadnormalmap;
-static qboolean r_loadgloss;
-qboolean r_loadfog;
-static qboolean r_loaddds;
-static qboolean r_savedds;
-static qboolean r_gpuskeletal;
+static qbool r_loadnormalmap;
+static qbool r_loadgloss;
+qbool r_loadfog;
+static qbool r_loaddds;
+static qbool r_savedds;
+static qbool r_gpuskeletal;
 
 //
 // screen size info
@@ -258,7 +258,7 @@ cvar_t r_buffermegs[R_BUFFERDATA_COUNT] =
 
 extern cvar_t v_glslgamma_2d;
 
-extern qboolean v_flipped_state;
+extern qbool v_flipped_state;
 
 r_framebufferstate_t r_fb;
 
@@ -690,7 +690,7 @@ typedef struct r_glsl_permutation_s
 	uint64_t permutation;
 
 	/// indicates if we have tried compiling this permutation already
-	qboolean compiled;
+	qbool compiled;
 	/// 0 if compilation failed
 	int program;
 	// texture units assigned to each detected uniform
@@ -853,9 +853,9 @@ static int shaderstaticparms_count = 0;
 static unsigned int r_compileshader_staticparms[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5] = {0};
 #define R_COMPILESHADER_STATICPARM_ENABLE(p) r_compileshader_staticparms[(p) >> 5] |= (1 << ((p) & 0x1F))
 
-extern qboolean r_shadow_shadowmapsampler;
+extern qbool r_shadow_shadowmapsampler;
 extern int r_shadow_shadowmappcf;
-qboolean R_CompileShader_CheckStaticParms(void)
+qbool R_CompileShader_CheckStaticParms(void)
 {
 	static int r_compileshader_staticparms_save[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5];
 	memcpy(r_compileshader_staticparms_save, r_compileshader_staticparms, sizeof(r_compileshader_staticparms));
@@ -997,7 +997,7 @@ static void R_InitShaderModeInfo(void)
 	}
 }
 
-static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean printfromdisknotice, qboolean builtinonly)
+static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qbool printfromdisknotice, qbool builtinonly)
 {
 	char *shaderstring;
 	// if the mode has no filename we have to return the builtin string
@@ -1451,7 +1451,7 @@ static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 	}
 }
 
-void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
+void R_SetupShader_Generic(rtexture_t *t, qbool usegamma, qbool notrippy, qbool suppresstexalpha)
 {
 	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
@@ -1478,12 +1478,12 @@ void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, 
 	}
 }
 
-void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
+void R_SetupShader_Generic_NoTexture(qbool usegamma, qbool notrippy)
 {
 	R_SetupShader_Generic(NULL, usegamma, notrippy, false);
 }
 
-void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
+void R_SetupShader_DepthOrShadow(qbool notrippy, qbool depthrgb, qbool skeletal)
 {
 	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
@@ -1553,7 +1553,7 @@ static int R_BlendFuncFlags(int src, int dst)
 	return r;
 }
 
-void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qboolean notrippy)
+void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qbool notrippy)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -2230,7 +2230,7 @@ skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name ) {
 	return NULL;
 }
 
-skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add)
+skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qbool add)
 {
 	skinframe_t *item;
 	int compareflags = textureflags & TEXF_IMPORTANTBITS;
@@ -2304,7 +2304,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		skinframe->avgcolor[3] = avgcolor[4] / (255.0 * cnt); \
 	}
 
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qbool complain, qbool fallbacknotexture)
 {
 	skinframe_t *skinframe;
 
@@ -2321,7 +2321,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 }
 
 extern cvar_t gl_picmip;
-skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
+skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qbool complain, qbool fallbacknotexture)
 {
 	int j;
 	unsigned char *pixels;
@@ -2330,7 +2330,7 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	int basepixels_width = 0;
 	int basepixels_height = 0;
 	rtexture_t *ddsbase = NULL;
-	qboolean ddshasalpha = false;
+	qbool ddshasalpha = false;
 	float ddsavgcolor[4];
 	char basename[MAX_QPATH];
 	int miplevel = R_PicmipForFlags(textureflags);
@@ -2536,7 +2536,7 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	return skinframe;
 }
 
-skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qboolean sRGB)
+skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qbool sRGB)
 {
 	int i;
 	skinframe_t *skinframe;
@@ -2666,7 +2666,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	return skinframe;
 }
 
-static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboolean colormapped)
+static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qbool colormapped)
 {
 	int width;
 	int height;
@@ -2830,7 +2830,7 @@ skinframe_t *R_SkinFrame_LoadNoTexture(void)
 	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false);
 }
 
-skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
+skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qbool sRGB)
 {
 	skinframe_t *skinframe;
 	if (cls.state == ca_dedicated)
@@ -2865,7 +2865,7 @@ skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int texturef
 typedef struct suffixinfo_s
 {
 	const char *suffix;
-	qboolean flipx, flipy, flipdiagonal;
+	qbool flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
 static suffixinfo_t suffix[3][6] =
@@ -3563,7 +3563,7 @@ void R_FrameData_Reset(void)
 	}
 }
 
-static void R_FrameData_Resize(qboolean mustgrow)
+static void R_FrameData_Resize(qbool mustgrow)
 {
 	size_t wantedsize;
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
@@ -3696,7 +3696,7 @@ void R_BufferData_Reset(void)
 }
 
 // resize buffer as needed (this actually makes a new one, the old one will be recycled next frame)
-static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow, size_t minsize)
+static void R_BufferData_Resize(r_bufferdata_type_t type, qbool mustgrow, size_t minsize)
 {
 	r_bufferdata_buffer_t *mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
 	size_t size;
@@ -3849,7 +3849,7 @@ void R_AnimCache_ClearCache(void)
 	}
 }
 
-qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
+qbool R_AnimCache_GetEntity(entity_render_t *ent, qbool wantnormals, qbool wanttangents)
 {
 	dp_model_t *model = ent->model;
 	int numvertices;
@@ -3948,7 +3948,7 @@ void R_AnimCache_CacheVisibleEntities(void)
 
 //==================================================================================
 
-qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	long unsigned int i;
 	int j;
@@ -4452,7 +4452,7 @@ static void R_View_Update(void)
 
 float viewscalefpsadjusted = 1.0f;
 
-void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
+void R_SetupView(qbool allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
 	const float *customclipplane = NULL;
 	float plane[4];
@@ -4586,7 +4586,7 @@ void R_RenderView_UpdateViewVectors(void)
 	Matrix4x4_Invert_Full(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 }
 
-void R_RenderTarget_FreeUnused(qboolean force)
+void R_RenderTarget_FreeUnused(qbool force)
 {
 	unsigned int i, j, end;
 	end = (unsigned int)Mem_ExpandableArray_IndexRange(&r_fb.rendertargets); // checked
@@ -4627,7 +4627,7 @@ static void R_CalcTexCoordsForView(float x, float y, float w, float h, float tw,
 	texcoord2f[7] = y2;
 }
 
-r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qboolean depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3)
+r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qbool depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3)
 {
 	unsigned int i, j, end;
 	r_rendertarget_t *r = NULL;
@@ -5622,7 +5622,7 @@ R_GetScenePointer
 */
 r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
 {
-	// of course, we could also add a qboolean that provides a lock state and a ReleaseScenePointer function..
+	// of course, we could also add a qbool that provides a lock state and a ReleaseScenePointer function..
 	if( scenetype == r_currentscenetype ) {
 		return &r_refdef.scene;
 	} else {
@@ -5849,11 +5849,11 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(prvm_prog_t *prog);
 static void R_DrawModelDecals(void);
-extern qboolean r_shadow_usingdeferredprepass;
+extern qbool r_shadow_usingdeferredprepass;
 extern int r_shadow_shadowmapatlas_modelshadows_size;
 void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	qboolean shadowmapping = false;
+	qbool shadowmapping = false;
 
 	if (r_timereport_active)
 		R_TimeReport("beginscene");
@@ -6442,7 +6442,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
-static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
+static qbool R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	if(parms[0] == 0 && parms[1] == 0)
 		return false;
@@ -6966,7 +6966,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 
 rsurfacestate_t rsurface;
 
-void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass)
+void RSurf_ActiveModelEntity(const entity_render_t *ent, qbool wantnormals, qbool wanttangents, qbool prepass)
 {
 	dp_model_t *model = ent->model;
 	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
@@ -7191,7 +7191,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.forcecurrenttextureupdate = false;
 }
 
-void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
+void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qbool wantnormals, qbool wanttangents)
 {
 	rsurface.entity = r_refdef.scene.worldentity;
 	if (r != 1.0f || g != 1.0f || b != 1.0f || a != 1.0f) {
@@ -7450,8 +7450,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	int batchnumvertices;
 	int batchnumtriangles;
 	int i, j;
-	qboolean gaps;
-	qboolean dynamicvertex;
+	qbool gaps;
+	qbool dynamicvertex;
 	float amplitude;
 	float animpos;
 	float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
@@ -8589,7 +8589,7 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 	vec3_t vert;
 	const float *v;
 	r_waterstate_waterplane_t *p;
-	qboolean prepared = false;
+	qbool prepared = false;
 	bestd = 0;
 	for (planeindex = 0, p = r_fb.water.waterplanes;planeindex < r_fb.water.numwaterplanes;planeindex++, p++)
 	{
@@ -8731,7 +8731,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
-static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
+static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool prepass, qbool ui)
 {
 	if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 		return;
@@ -8791,7 +8791,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	RSurf_DrawBatch();
 }
 
-static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth)
 {
 	int vi;
 	int j;
@@ -8823,7 +8823,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	RSurf_DrawBatch();
 }
 
-static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
+static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool prepass, qbool ui)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -8854,7 +8854,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 
 	if (r_transparentdepthmasking.integer)
 	{
-		qboolean setup = false;
+		qbool setup = false;
 		for (i = 0;i < numsurfaces;i = j)
 		{
 			j = i + 1;
@@ -8969,7 +8969,7 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 	RSurf_DrawBatch();
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool depthonly, qbool prepass, qbool ui)
 {
 	CHECKGLERROR
 	if (ui)
@@ -9003,7 +9003,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	CHECKGLERROR
 }
 
-static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
+static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qbool writedepth, qbool depthonly, qbool prepass, qbool ui)
 {
 	int i, j;
 	texture_t *texture;
@@ -9142,7 +9142,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	if (decalsystem->maxdecals <= decalsystem->numdecals)
 	{
 		decalsystem_t old = *decalsystem;
-		qboolean useshortelements;
+		qbool useshortelements;
 		decalsystem->maxdecals = max(16, decalsystem->maxdecals * 2);
 		useshortelements = decalsystem->maxdecals * 3 <= 65536;
 		decalsystem->decals = (tridecal_t *)Mem_Alloc(cls.levelmempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + (useshortelements ? sizeof(unsigned short[3]) : 0)));
@@ -9212,7 +9212,7 @@ extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
 // baseparms, parms, temps
-static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, unsigned int decalsequence, qboolean dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
+static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, unsigned int decalsequence, qbool dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
 {
 	int cornerindex;
 	int index;
@@ -9309,7 +9309,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
-	qboolean dynamic;
+	qbool dynamic;
 	dp_model_t *model;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
@@ -9826,7 +9826,7 @@ static void R_DrawDebugModel(void)
 	{
 		int triangleindex;
 		int bihleafindex;
-		qboolean cullbox = false;
+		qbool cullbox = false;
 		const q3mbrush_t *brush;
 		const bih_t *bih = &model->collision_bih;
 		const bih_leaf_t *bihleaf;
@@ -9992,7 +9992,7 @@ static void R_DrawDebugModel(void)
 
 int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass, qboolean ui)
+void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedepth, qbool depthonly, qbool debug, qbool prepass, qbool ui)
 {
 	int i, j, endj, flagsmask;
 	dp_model_t *model = ent->model;
@@ -10155,7 +10155,7 @@ void R_DebugLine(vec3_t start, vec3_t end)
 }
 
 
-void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qbool writedepth, qbool prepass, qbool ui)
 {
 	static texture_t texture;
 
@@ -10175,7 +10175,7 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	R_DrawCustomSurface_Texture(&texture, texmatrix, materialflags, firstvertex, numvertices, firsttriangle, numtriangles, writedepth, prepass, ui);
 }
 
-void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
+void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qbool writedepth, qbool prepass, qbool ui)
 {
 	static msurface_t surface;
 	const msurface_t *surfacelist = &surface;

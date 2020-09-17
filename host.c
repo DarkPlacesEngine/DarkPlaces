@@ -93,7 +93,7 @@ void Host_Error (const char *error, ...)
 {
 	static char hosterrorstring1[MAX_INPUTLINE]; // THREAD UNSAFE
 	static char hosterrorstring2[MAX_INPUTLINE]; // THREAD UNSAFE
-	static qboolean hosterror = false;
+	static qbool hosterror = false;
 	va_list argptr;
 
 	// turn off rcon redirect if it was active when the crash occurred
@@ -520,7 +520,7 @@ void Host_Main(void)
 
 //============================================================================
 
-qboolean vid_opened = false;
+qbool vid_opened = false;
 void Host_StartVideo(void)
 {
 	if (!vid_opened && cls.state != ca_dedicated)
@@ -537,10 +537,10 @@ void Host_StartVideo(void)
 
 char engineversion[128];
 
-qboolean sys_nostdout = false;
+qbool sys_nostdout = false;
 
 static qfile_t *locksession_fh = NULL;
-static qboolean locksession_run = false;
+static qbool locksession_run = false;
 static void Host_InitSession(void)
 {
 	int i;
@@ -806,7 +806,7 @@ to run quit through here before the final handoff to the sys code.
 */
 void Host_Shutdown(void)
 {
-	static qboolean isdown = false;
+	static qbool isdown = false;
 
 	if (isdown)
 	{

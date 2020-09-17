@@ -30,7 +30,7 @@ void TaskQueue_Enqueue(int numtasks, taskqueue_task_t *tasks);
 void TaskQueue_Yield(taskqueue_task_t *t);
 
 // polls for status of task and returns the result, does not cause tasks to be executed (see TaskQueue_WaitForTaskDone for that)
-qboolean TaskQueue_IsDone(taskqueue_task_t *t);
+qbool TaskQueue_IsDone(taskqueue_task_t *t);
 
 // triggers execution of queued tasks, and waits for the specified task to be done
 void TaskQueue_WaitForTaskDone(taskqueue_task_t *t);
@@ -45,6 +45,6 @@ void TaskQueue_Task_CheckTasksDone(taskqueue_task_t *t);
 
 void TaskQueue_Init(void);
 void TaskQueue_Shutdown(void);
-void TaskQueue_Frame(qboolean shutdown);
+void TaskQueue_Frame(qbool shutdown);
 
 #endif

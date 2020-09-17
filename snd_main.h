@@ -119,8 +119,8 @@ extern unsigned int total_channels;
 extern channel_t channels[MAX_CHANNELS];
 
 extern snd_ringbuffer_t *snd_renderbuffer;
-extern qboolean snd_threaded; // enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
-extern qboolean snd_usethreadedmixing; // if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
+extern qbool snd_threaded; // enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
+extern qbool snd_usethreadedmixing; // if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
 
 extern cvar_t _snd_mixahead;
 extern cvar_t snd_swapstereo;
@@ -139,7 +139,7 @@ extern mempool_t *snd_mempool;
 // If simsound is true, the sound card is not initialized and no sound is submitted to it.
 // More generally, all arch-dependent operations are skipped or emulated.
 // Used for isolating performance in the renderer.
-extern qboolean simsound;
+extern qbool simsound;
 
 
 #define STREAM_BUFFERSIZE 16384 // in sampleframes
@@ -151,7 +151,7 @@ extern qboolean simsound;
 
 void S_MixToBuffer(void *stream, unsigned int frames);
 
-qboolean S_LoadSound (sfx_t *sfx, qboolean complain);
+qbool S_LoadSound (sfx_t *sfx, qbool complain);
 
 // If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
 // (if "sampleframes" is 0, the function chooses the size).
@@ -164,7 +164,7 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 
 // Create "snd_renderbuffer", attempting to use the chosen sound format, but accepting if the driver wants to change it (e.g. 7.1 to stereo or lowering the speed)
 // Note: SDL automatically converts all formats, so this only fails if there is no audio
-qboolean SndSys_Init (snd_format_t* fmt);
+qbool SndSys_Init (snd_format_t* fmt);
 
 // Stop the sound card, delete "snd_renderbuffer" and free its other resources
 void SndSys_Shutdown (void);
@@ -176,7 +176,7 @@ void SndSys_Submit (void);
 unsigned int SndSys_GetSoundTime (void);
 
 // Get the exclusive lock on "snd_renderbuffer"
-qboolean SndSys_LockRenderBuffer (void);
+qbool SndSys_LockRenderBuffer (void);
 
 // Release the exclusive lock on "snd_renderbuffer"
 void SndSys_UnlockRenderBuffer (void);

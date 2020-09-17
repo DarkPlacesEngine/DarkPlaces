@@ -41,7 +41,7 @@
 #define qov_read ov_read
 #define qvorbis_comment_query vorbis_comment_query
 
-qboolean OGG_OpenLibrary (void) {return true;}
+qbool OGG_OpenLibrary (void) {return true;}
 void OGG_CloseLibrary (void) {}
 #else
 
@@ -269,7 +269,7 @@ OGG_OpenLibrary
 Try to load the VorbisFile DLL
 ====================
 */
-qboolean OGG_OpenLibrary (void)
+qbool OGG_OpenLibrary (void)
 {
 	const char* dllnames_vo [] =
 	{
@@ -600,7 +600,7 @@ OGG_LoadVorbisFile
 Load an Ogg Vorbis file into memory
 ====================
 */
-qboolean OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
+qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
 	fs_offset_t filesize;

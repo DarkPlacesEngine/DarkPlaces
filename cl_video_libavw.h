@@ -3,5 +3,5 @@
 
 void libavw_close(void *stream);
 void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstring);
-qboolean LibAvW_OpenLibrary(void);
+qbool LibAvW_OpenLibrary(void);
 void LibAvW_CloseLibrary(void);

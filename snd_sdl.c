@@ -102,7 +102,7 @@ Create "snd_renderbuffer" with the proper sound format if the call is successful
 May return a suggested format if the requested format isn't available
 ====================
 */
-qboolean SndSys_Init (snd_format_t* fmt)
+qbool SndSys_Init (snd_format_t* fmt)
 {
 	unsigned int buffersize;
 	SDL_AudioSpec wantspec;
@@ -220,7 +220,7 @@ SndSys_LockRenderBuffer
 Get the exclusive lock on "snd_renderbuffer"
 ====================
 */
-qboolean SndSys_LockRenderBuffer (void)
+qbool SndSys_LockRenderBuffer (void)
 {
 	SDL_LockAudioDevice(audio_device);
 	return true;

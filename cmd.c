@@ -43,7 +43,7 @@ static cmd_iter_t cmd_iter_all[] = {
 
 
 // we only run the +whatever commandline arguments once
-qboolean host_stuffcmdsrun = false;
+qbool host_stuffcmdsrun = false;
 
 //=============================================================================
 
@@ -184,13 +184,13 @@ Parses Quake console command-line
 Returns true if command is complete
 ============
 */
-static qboolean Cbuf_ParseText(char **start, size_t *size)
+static qbool Cbuf_ParseText(char **start, size_t *size)
 {
 	int i = 0;
-	qboolean quotes = false;
-	qboolean comment = false; // Does not imply end because we might be starting the line with a comment.
-	qboolean escaped = false;
-	qboolean end = false; // Reached the end of a valid command
+	qbool quotes = false;
+	qbool comment = false; // Does not imply end because we might be starting the line with a comment.
+	qbool escaped = false;
+	qbool end = false; // Reached the end of a valid command
 	char *offset = NULL; // Non-NULL if valid command. Used by the caller to know where to start copying.
 	size_t cmdsize = 0; // Non-zero if valid command. Basically bytes to copy for the caller.
 
@@ -288,7 +288,7 @@ static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing)
 static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
-	qboolean complete;
+	qbool complete;
 	cbuf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
 	cmd_input_t *current = NULL;
@@ -419,7 +419,7 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 Cbuf_Execute
 ============
 */
-static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
+static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
 void Cbuf_Execute (cbuf_t *cbuf)
 {
 	cmd_input_t *current;
@@ -569,7 +569,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 {
 	char *f;
 	size_t filenameLen = strlen(filename);
-	qboolean isdefaultcfg =
+	qbool isdefaultcfg =
 		!strcmp(filename, "default.cfg") ||
 		(filenameLen >= 12 && !strcmp(filename + filenameLen - 12, "/default.cfg"));
 
@@ -1074,7 +1074,7 @@ static void Cmd_UnAlias_f (cmd_state_t *cmd)
 =============================================================================
 */
 
-static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname, cmd_alias_t *alias, qboolean *is_multiple)
+static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname, cmd_alias_t *alias, qbool *is_multiple)
 {
 	cvar_t *cvar;
 	long argno;
@@ -1141,11 +1141,11 @@ static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname,
 	return NULL;
 }
 
-qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes)
+qbool Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qbool putquotes)
 {
-	qboolean quote_quot = !!strchr(quoteset, '"');
-	qboolean quote_backslash = !!strchr(quoteset, '\\');
-	qboolean quote_dollar = !!strchr(quoteset, '$');
+	qbool quote_quot = !!strchr(quoteset, '"');
+	qbool quote_backslash = !!strchr(quoteset, '\\');
+	qbool quote_dollar = !!strchr(quoteset, '$');
 
 	if(putquotes)
 	{
@@ -1206,8 +1206,8 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 	static char varval[MAX_INPUTLINE]; // cmd_mutex
 	const char *varstr = NULL;
 	char *varfunc;
-	qboolean required = false;
-	qboolean optional = false;
+	qbool required = false;
+	qbool optional = false;
 	static char asis[] = "asis"; // just to suppress const char warnings
 
 	if(varlen >= MAX_INPUTLINE)
@@ -1261,7 +1261,7 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 		varstr = Cmd_GetDirectCvarValue(cmd, Cmd_GetDirectCvarValue(cmd, varname + 1, alias, NULL), alias, NULL);
 	else
 	{
-		qboolean is_multiple = false;
+		qbool is_multiple = false;
 		// Exception: $* and $n- don't use the quoted form by default
 		varstr = Cmd_GetDirectCvarValue(cmd, varname, alias, &is_multiple);
 		if(is_multiple)
@@ -1316,7 +1316,7 @@ Cmd_PreprocessString
 
 Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
 */
-static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias ) {
+static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias ) {
 	const char *in;
 	size_t eat, varlen;
 	unsigned outlen;
@@ -1449,7 +1449,7 @@ static void Cmd_ExecuteAlias (cmd_state_t *cmd, cmd_alias_t *alias)
 {
 	static char buffer[ MAX_INPUTLINE ]; // cmd_mutex
 	static char buffer2[ MAX_INPUTLINE ]; // cmd_mutex
-	qboolean ret = Cmd_PreprocessString( cmd, alias->value, buffer, sizeof(buffer) - 2, alias );
+	qbool ret = Cmd_PreprocessString( cmd, alias->value, buffer, sizeof(buffer) - 2, alias );
 	if(!ret)
 		return;
 	// insert at start of command buffer, so that aliases execute in order
@@ -1477,7 +1477,7 @@ static void Cmd_List_f (cmd_state_t *cmd)
 	const char *partial;
 	size_t len;
 	int count;
-	qboolean ispattern;
+	qbool ispattern;
 
 	if (Cmd_Argc(cmd) > 1)
 	{
@@ -1526,7 +1526,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	cmd_alias_t *alias;
 	const char *partial;
 	int count;
-	qboolean ispattern;
+	qbool ispattern;
 	char vabuf[1024];
 
 	if (Cmd_Argc(cmd) > 1)
@@ -1803,7 +1803,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	cmd_function_t *prev, *current;
 	cmd_state_t *cmd;
 	xcommand_t save = NULL;
-	qboolean auto_add = false;
+	qbool auto_add = false;
 	int i;
 
 	for (i = 0; i < 3; i++)
@@ -1899,7 +1899,7 @@ next:
 	}
 }
 
-static int Cmd_Compare(const char *s1, const char *s2, size_t len, qboolean casesensitive)
+static int Cmd_Compare(const char *s1, const char *s2, size_t len, qbool casesensitive)
 {
 	if(len)
 		return (casesensitive ? strncmp(s1, s2, len) : strncasecmp(s1, s2, len));
@@ -1907,7 +1907,7 @@ static int Cmd_Compare(const char *s1, const char *s2, size_t len, qboolean case
 		return (casesensitive ? strcmp(s1, s2) : strcasecmp(s1, s2));
 }
 
-cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qboolean casesensitive)
+cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qbool casesensitive)
 {
 	cmd_function_t *func = NULL;
 
@@ -1928,7 +1928,7 @@ cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len
 Cmd_Exists
 ============
 */
-qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
+qbool Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
 {
 	if(Cmd_GetCommand(cmd, cmd_name, 0, true))
 		return true;
@@ -2149,7 +2149,7 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex)
+void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qbool lockmutex)
 {
 	int oldpos;
 	cmd_function_t *func;

@@ -512,7 +512,7 @@ static dllfunction_t theorafuncs[] =
 
 static dllhandle_t og_dll = NULL, vo_dll = NULL, ve_dll = NULL, th_dll = NULL;
 
-static qboolean SCR_CaptureVideo_Ogg_OpenLibrary(void)
+static qbool SCR_CaptureVideo_Ogg_OpenLibrary(void)
 {
 	const char* dllnames_og [] =
 	{
@@ -596,7 +596,7 @@ void SCR_CaptureVideo_Ogg_Init(void)
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
 }
 
-qboolean SCR_CaptureVideo_Ogg_Available(void)
+qbool SCR_CaptureVideo_Ogg_Available(void)
 {
 	return og_dll && th_dll && vo_dll && ve_dll;
 }

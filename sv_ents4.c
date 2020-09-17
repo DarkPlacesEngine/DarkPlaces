@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "protocol.h"
 
-qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states)
+qbool EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	const entity_state_t *e, *s;

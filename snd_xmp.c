@@ -69,7 +69,7 @@
 
 #define xmp_dll 1
 
-qboolean XMP_OpenLibrary (void) {return true;}
+qbool XMP_OpenLibrary (void) {return true;}
 void XMP_CloseLibrary (void) {}
 #else
 
@@ -345,7 +345,7 @@ XMP_OpenLibrary
 Try to load the libxmp DLL
 ====================
 */
-qboolean XMP_OpenLibrary (void)
+qbool XMP_OpenLibrary (void)
 {
 	const char* dllnames_xmp [] =
 	{
@@ -592,7 +592,7 @@ XMP_LoadModFile
 Load an XMP module file into memory
 ===============
 */
-qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
+qbool XMP_LoadModFile(const char *filename, sfx_t *sfx)
 {
 	fs_offset_t filesize;
 	unsigned char *data;

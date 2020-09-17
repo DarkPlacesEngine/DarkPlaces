@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "protocol.h"
 
-qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t **states)
+qbool EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t **states)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	const entity_state_t *s;
@@ -9,7 +9,7 @@ qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates,
 	int i, bits;
 	sizebuf_t buf;
 	unsigned char data[128];
-	qboolean success = false;
+	qbool success = false;
 
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));

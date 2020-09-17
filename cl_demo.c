@@ -414,7 +414,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 {
 	char	name[MAX_QPATH];
 	int c;
-	qboolean neg = false;
+	qbool neg = false;
 	qfile_t *f;
 
 	if (Cmd_Argc(cmd) != 2)

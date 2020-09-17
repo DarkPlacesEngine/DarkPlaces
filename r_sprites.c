@@ -181,7 +181,7 @@ static void R_RotateSprite(const mspriteframe_t *frame, vec3_t origin, vec3_t le
 		// Now that we've kicked center-hotspotted sprites, rotate using the appropriate matrix :)
 
 		// determine the angle of a sprite, we could only do that once though and
-		// add a `qboolean initialized' to the mspriteframe_t struct... let's get the direction vector of it :)
+		// add a `qbool initialized' to the mspriteframe_t struct... let's get the direction vector of it :)
 
 		angle = atan(dir[1] / dir[0]) * 180.0f/M_PI;
 

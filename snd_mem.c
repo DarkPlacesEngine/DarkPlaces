@@ -81,7 +81,7 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 S_LoadSound
 ==============
 */
-qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
+qbool S_LoadSound (sfx_t *sfx, qbool complain)
 {
 	char namebuffer[MAX_QPATH + 16];
 	size_t len;

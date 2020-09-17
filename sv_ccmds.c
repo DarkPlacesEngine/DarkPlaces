@@ -208,7 +208,7 @@ static void SV_God_f(cmd_state_t *cmd)
 		SV_ClientPrint("godmode ON\n");
 }
 
-qboolean noclip_anglehack;
+qbool noclip_anglehack;
 
 static void SV_Noclip_f(cmd_state_t *cmd)
 {
@@ -440,7 +440,7 @@ static void SV_Pause_f(cmd_state_t *cmd)
 	MSG_WriteByte(&sv.reliable_datagram, sv.paused);
 }
 
-static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
+static void SV_Say(cmd_state_t *cmd, qbool teamonly)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	client_t *save;
@@ -449,7 +449,7 @@ static void SV_Say(cmd_state_t *cmd, qboolean teamonly)
 	char *p2;
 	// LadyHavoc: long say messages
 	char text[1024];
-	qboolean fromServer = false;
+	qbool fromServer = false;
 
 	if (cmd->source == src_local)
 	{
@@ -519,7 +519,7 @@ static void SV_Tell_f(cmd_state_t *cmd)
 	int j;
 	const char *p1, *p2;
 	char text[MAX_INPUTLINE]; // LadyHavoc: FIXME: temporary buffer overflow fix (was 64)
-	qboolean fromServer = false;
+	qbool fromServer = false;
 
 	if (cmd->source == src_local)
 		fromServer = true;
@@ -934,7 +934,7 @@ SV_Name_f
 static void SV_Name_f(cmd_state_t *cmd)
 {
 	int i, j;
-	qboolean valid_colors;
+	qbool valid_colors;
 	const char *newNameSource;
 	char newName[sizeof(host_client->name)];
 
@@ -1108,7 +1108,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 	const char *message = NULL;
 	client_t *save;
 	int i;
-	qboolean byNumber = false;
+	qbool byNumber = false;
 
 	if (!sv.active)
 		return;
@@ -1489,9 +1489,9 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	prvm_edict_t *ed;
 	mdef_t *key;
 	int i;
-	qboolean haveorigin;
+	qbool haveorigin;
 
-	qboolean expectval = false;
+	qbool expectval = false;
 	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
 
 	if(!Cmd_Argc(cmd))

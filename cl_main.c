@@ -224,10 +224,10 @@ void CL_ClearState(void)
 extern cvar_t cl_topcolor;
 extern cvar_t cl_bottomcolor;
 
-void CL_SetInfo(const char *key, const char *value, qboolean send, qboolean allowstarkey, qboolean allowmodel, qboolean quiet)
+void CL_SetInfo(const char *key, const char *value, qbool send, qbool allowstarkey, qbool allowmodel, qbool quiet)
 {
 	int i;
-	qboolean fail = false;
+	qbool fail = false;
 	char vabuf[1024];
 	if (!allowstarkey && key[0] == '*')
 		fail = true;
@@ -1029,7 +1029,7 @@ void CL_SetEntityColormapColors(entity_render_t *ent, int colormap)
 }
 
 // note this is a recursive function, recursionlimit should be 32 or so on the initial call
-static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qboolean interpolate)
+static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qbool interpolate)
 {
 	const matrix4x4_t *matrix;
 	matrix4x4_t blendmatrix, tempmatrix, matrix2;

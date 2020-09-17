@@ -251,9 +251,9 @@ void EntityFrameQW_FreeDatabase(entityframeqw_database_t *d)
 	Mem_Free(d);
 }
 
-void EntityFrameQW_CL_ReadFrame(qboolean delta)
+void EntityFrameQW_CL_ReadFrame(qbool delta)
 {
-	qboolean invalid = false;
+	qbool invalid = false;
 	int number, oldsnapindex, newsnapindex, oldindex, newindex, oldnum, newnum;
 	entity_t *ent;
 	entityframeqw_database_t *d;

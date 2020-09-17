@@ -37,14 +37,14 @@ extern cvar_t r_shadow_scissor;
 // used by shader for bouncegrid feature
 typedef struct r_shadow_bouncegrid_settings_s
 {
-	qboolean staticmode;
-	qboolean directionalshading;
-	qboolean includedirectlighting;
-	qboolean blur;
-	qboolean normalizevectors;
+	qbool staticmode;
+	qbool directionalshading;
+	qbool includedirectlighting;
+	qbool blur;
+	qbool normalizevectors;
 	int floatcolors;
 	float dlightparticlemultiplier;
-	qboolean hitmodels;
+	qbool hitmodels;
 	float lightradiusscale;
 	int maxbounce;
 	float lightpathsize;
@@ -88,10 +88,10 @@ r_shadow_bouncegrid_photon_t;
 typedef struct r_shadow_bouncegrid_state_s
 {
 	r_shadow_bouncegrid_settings_t settings;
-	qboolean capable;
-	qboolean allowdirectionalshading;
-	qboolean directional; // copied from settings.directionalshading after createtexture is decided
-	qboolean createtexture; // set to true to recreate the texture rather than updating it - happens when size changes or directional changes
+	qbool capable;
+	qbool allowdirectionalshading;
+	qbool directional; // copied from settings.directionalshading after createtexture is decided
+	qbool createtexture; // set to true to recreate the texture rather than updating it - happens when size changes or directional changes
 	rtexture_t *texture;
 	matrix4x4_t matrix;
 	vec_t intensity;
@@ -133,7 +133,7 @@ r_shadow_bouncegrid_state_t;
 extern r_shadow_bouncegrid_state_t r_shadow_bouncegrid_state;
 
 void R_Shadow_Init(void);
-qboolean R_Shadow_ShadowMappingEnabled(void);
+qbool R_Shadow_ShadowMappingEnabled(void);
 void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, const int *elements, int numsidetris, const int *sidetotals, const unsigned char *sides, const int *sidetris);
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias);
 int R_Shadow_CalcSphereSideMask(const vec3_t p1, float radius, float bias);
@@ -142,14 +142,14 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 void R_Shadow_RenderMode_Begin(void);
 void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
 void R_Shadow_RenderMode_Reset(void);
-void R_Shadow_RenderMode_Lighting(qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
-void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping);
-void R_Shadow_RenderMode_VisibleLighting(qboolean transparent);
+void R_Shadow_RenderMode_Lighting(qbool transparent, qbool shadowmapping, qbool noselfshadowpass);
+void R_Shadow_RenderMode_DrawDeferredLight(qbool shadowmapping);
+void R_Shadow_RenderMode_VisibleLighting(qbool transparent);
 void R_Shadow_RenderMode_End(void);
 void R_Shadow_ClearStencil(void);
 void R_Shadow_SetupEntityLight(const entity_render_t *ent);
 
-qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
+qbool R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
 // these never change, they are used to create attenuation matrices
 extern matrix4x4_t matrix_attenuationxyz;

@@ -80,7 +80,7 @@ static int TaskQueue_ThreadFunc(void *d)
 	unsigned int sleepcounter = 0;
 	for (;;)
 	{
-		qboolean quit;
+		qbool quit;
 		while (s->dequeueposition != s->enqueueposition)
 		{
 			taskqueue_task_t *t = s->queue[s->dequeueposition % THREADTASKS];
@@ -136,7 +136,7 @@ void TaskQueue_Yield(taskqueue_task_t *t)
 	TaskQueue_Enqueue(1, t);
 }
 
-qboolean TaskQueue_IsDone(taskqueue_task_t *t)
+qbool TaskQueue_IsDone(taskqueue_task_t *t)
 {
 	return !!t->done;
 }
@@ -198,7 +198,7 @@ static void TaskQueue_DistributeTasks(void)
 
 void TaskQueue_WaitForTaskDone(taskqueue_task_t *t)
 {
-	qboolean done = false;
+	qbool done = false;
 	for (;;)
 	{
 		Thread_AtomicLock(&taskqueue_state.command_lock);
@@ -210,7 +210,7 @@ void TaskQueue_WaitForTaskDone(taskqueue_task_t *t)
 	}
 }
 
-void TaskQueue_Frame(qboolean shutdown)
+void TaskQueue_Frame(qbool shutdown)
 {
 	int i;
 	unsigned long long int avg;

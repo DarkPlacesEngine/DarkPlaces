@@ -106,8 +106,8 @@ typedef struct rtexture_s
 	// this is exposed (rather than private) for speed reasons only
 	int texnum; // GL texture slot number
 	int renderbuffernum; // GL renderbuffer slot number
-	qboolean dirty; // indicates that R_RealGetTexture should be called
-	qboolean glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
+	qbool dirty; // indicates that R_RealGetTexture should be called
+	qbool glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
 	int gltexturetypeenum; // used by R_Mesh_TexBind
 }
 rtexture_t;
@@ -147,12 +147,12 @@ extern cvar_t r_texture_dds_save;
 rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
 rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const unsigned char *data, textype_t textype, int flags, int miplevel, const unsigned int *palette);
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qboolean filter);
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qbool filter);
 rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype);
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel, qboolean optionaltexture);
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qbool srgb, int flags, qbool *hasalphaflag, float *avgcolor, int miplevel, qbool optionaltexture);
 
 // saves a texture to a DDS file
-int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha);
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qbool skipuncompressed, qbool hasalpha);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
@@ -193,7 +193,7 @@ void R_ClearTexture (rtexture_t *rt);
 // returns the desired picmip level for given TEXF_ flags
 int R_PicmipForFlags(int flags);
 
-void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal);
+void R_TextureStats_Print(qbool printeach, qbool printpool, qbool printtotal);
 
 #endif
 

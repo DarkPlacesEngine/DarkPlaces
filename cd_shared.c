@@ -85,9 +85,9 @@ cvar_t music_playlist_sampleposition[MAX_PLAYLISTS] =
 	{CVAR_CLIENT, "music_playlist_sampleposition9", "-1", "resume position for track, -1 restarts every time"},
 };
 
-static qboolean wasPlaying = false;
-static qboolean initialized = false;
-static qboolean enabled = false;
+static qbool wasPlaying = false;
+static qbool initialized = false;
+static qbool enabled = false;
 static float cdvolume;
 typedef char filename_t[MAX_QPATH];
 #ifdef MAXTRACKS
@@ -95,8 +95,8 @@ static filename_t remap[MAXTRACKS];
 #endif
 static int faketrack = -1;
 
-static qboolean cdPlaying = false;
-static qboolean cdPlayLooping = false;
+static qbool cdPlaying = false;
+static qbool cdPlayLooping = false;
 static unsigned char cdPlayTrack;
 
 static void CDAudio_Eject (void)
@@ -116,7 +116,7 @@ static int CDAudio_GetAudioDiskInfo (void)
 // Helper for CDAudio_Play, the "cd" command, and the music_playlist system.
 // Does _not_ act as NOP when a playlist is active, simply because this is used
 // _by_ playlist code. So beware when calling this.
-static void CDAudio_Play_byName (const char *trackname, qboolean looping, qboolean tryreal, float startposition)
+static void CDAudio_Play_byName (const char *trackname, qbool looping, qbool tryreal, float startposition)
 {
 	unsigned int track;
 	sfx_t* sfx;
@@ -208,7 +208,7 @@ static void CDAudio_Play_byName (const char *trackname, qboolean looping, qboole
 		CDAudio_Pause ();
 }
 
-void CDAudio_Play (int track, qboolean looping)
+void CDAudio_Play (int track, qbool looping)
 {
 	char buf[20];
 	if (music_playlist_index.integer >= 0)
@@ -444,7 +444,7 @@ static void CDAudio_StopPlaylistTrack(void)
 	music_playlist_playing = 0; // not playing
 }
 
-static void CDAudio_StartPlaylist(qboolean resume)
+static void CDAudio_StartPlaylist(qbool resume)
 {
 	const char *list;
 	const char *t;

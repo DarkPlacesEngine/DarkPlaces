@@ -175,7 +175,7 @@ int main (int argc, char **argv)
 	return 0;
 }
 
-qboolean sys_supportsdlgetticks = false;
+qbool sys_supportsdlgetticks = false;
 unsigned int Sys_SDL_GetTicks (void)
 {
 	Sys_Error("Called Sys_SDL_GetTicks on non-SDL target");

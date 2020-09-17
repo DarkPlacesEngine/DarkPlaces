@@ -1,7 +1,7 @@
 #include "quakedef.h"
 #include "hmac.h"
 
-qboolean hmac(
+qbool hmac(
 	hashfunc_t hfunc, int hlen, int hblock,
 	unsigned char *out,
 	const unsigned char *in, int n,

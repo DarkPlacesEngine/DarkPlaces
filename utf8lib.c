@@ -59,7 +59,7 @@ Uchar utf8_range[5] = {
  * @return        Whether or not another valid character is in the string
  */
 #define U8_ANALYZE_INFINITY 7
-static qboolean u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch, size_t _maxlen)
+static qbool u8_analyze(const char *_s, size_t *_start, size_t *_len, Uchar *_ch, size_t _maxlen)
 {
 	const unsigned char *s = (const unsigned char*)_s;
 	size_t i, j;
@@ -771,9 +771,9 @@ all characters until the zero terminator.
 ============
 */
 size_t
-COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
+COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid);
 size_t
-u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
+u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qbool *valid)
 {
 	const unsigned char *s = (const unsigned char*)_s;
 	const unsigned char *end;
@@ -877,7 +877,7 @@ u8_COM_StringLengthNoColors(const char *_s, size_t size_s, qboolean *valid)
  * @param maxwidth The maximum output width
  * @return        The number of bytes written, not including the terminating \0
  */
-size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth)
+size_t u8_strpad(char *out, size_t outsize, const char *in, qbool leftalign, size_t minwidth, size_t maxwidth)
 {
 	if(!utf8_enable.integer)
 	{
@@ -895,7 +895,7 @@ size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, 
 	}
 }
 
-size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth)
+size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qbool leftalign, size_t minwidth, size_t maxwidth)
 {
 	size_t l = u8_bytelen_colorcodes(in, maxwidth);
 	size_t actual_width = u8_strnlen_colorcodes(in, l);

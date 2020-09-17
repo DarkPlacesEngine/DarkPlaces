@@ -419,7 +419,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	int i, bodysupercontents;
 	int passedictprog;
 	float pitchsign = 1;
-	qboolean pointtrace;
+	qbool pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
 	// temporary storage because prvm_vec_t may differ from vec_t
@@ -1079,7 +1079,7 @@ in a frame.  Not used for pushmove objects, because they must be exact.
 Returns false if the entity removed itself.
 =============
 */
-static qboolean SV_RunThink (prvm_edict_t *ent)
+static qbool SV_RunThink (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int iterations;
@@ -1193,9 +1193,9 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 ============
 */
 static float SV_Gravity (prvm_edict_t *ent);
-static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean dolink);
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink);
 #define MAX_CLIP_PLANES 5
-static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
+static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int blocked, bumpcount;
@@ -1458,7 +1458,7 @@ PUSHMOVE
 ===============================================================================
 */
 
-static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
+static qbool SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int bump;
@@ -1539,7 +1539,7 @@ static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pi
 	return true;
 }
 
-qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
+qbool SV_NudgeOutOfSolid(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int bump, pass;
@@ -1588,7 +1588,7 @@ The trace struct is filled with the trace that has been done.
 Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
-static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean dolink)
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int solid;
@@ -1676,7 +1676,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	int i, e, index;
 	int pusherowner, pusherprog;
 	int checkcontents;
-	qboolean rotated;
+	qbool rotated;
 	float savesolid, movetime2, pushltime;
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, pushermins, pushermaxs, checkorigin, checkmins, checkmaxs;
 	int num_moved;
@@ -2090,7 +2090,7 @@ static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t o
 	return UNSTICK_STUCK;
 }
 
-qboolean SV_UnstickEntity (prvm_edict_t *ent)
+qbool SV_UnstickEntity (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
@@ -2154,7 +2154,7 @@ static void SV_CheckStuck (prvm_edict_t *ent)
 SV_CheckWater
 =============
 */
-static qboolean SV_CheckWater (prvm_edict_t *ent)
+static qbool SV_CheckWater (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int cont;
@@ -2308,7 +2308,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	int type;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity, entmins, entmaxs;
 	trace_t downtrace, trace;
-	qboolean applygravity;
+	qbool applygravity;
 
 	// if frametime is 0 (due to client sending the same timestamp twice),
 	// don't move
@@ -2839,7 +2839,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	// (if an ent spawns a higher numbered ent, it moves in the same frame,
 	//  but if it spawns a lower numbered ent, it doesn't - this never moves
 	//  ents in the first frame regardless)
-	qboolean runmove = ent->priv.server->move;
+	qbool runmove = ent->priv.server->move;
 	ent->priv.server->move = true;
 	if (!runmove && sv_gameplayfix_delayprojectiles.integer > 0)
 		return;

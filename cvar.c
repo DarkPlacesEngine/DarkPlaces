@@ -266,7 +266,7 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 	return buf;
 }
 
-void Cvar_PrintHelp(cvar_t *cvar, const char *name, qboolean full)
+void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full)
 {
 	// Aliases are purple, cvars are yellow
 	if (strcmp(cvar->name, name))
@@ -299,7 +299,7 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int needed
 }
 
 // check if a cvar is held by some progs
-static qboolean Cvar_IsAutoCvar(cvar_t *var)
+static qbool Cvar_IsAutoCvar(cvar_t *var)
 {
 	int i;
 	prvm_prog_t *prog;
@@ -373,7 +373,7 @@ Cvar_Set
 extern cvar_t sv_disablenotify;
 static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 {
-	qboolean changed;
+	qbool changed;
 	size_t valuelen;
 
 	changed = strcmp(var->string, value) != 0;
@@ -717,7 +717,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	return cvar;
 }
 
-qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name)
+qbool Cvar_Readonly (cvar_t *var, const char *cmd_name)
 {
 	if (var->flags & CVAR_READONLY)
 	{
@@ -737,7 +737,7 @@ Cvar_Command
 Handles variable inspection and changing from the console
 ============
 */
-qboolean	Cvar_Command (cmd_state_t *cmd)
+qbool	Cvar_Command (cmd_state_t *cmd)
 {
 	cvar_state_t	*cvars = cmd->cvars;
 	cvar_t			*v;
@@ -967,7 +967,7 @@ void Cvar_List_f(cmd_state_t *cmd)
 	cvar_t *cvar;
 	const char *partial;
 	int count;
-	qboolean ispattern;
+	qbool ispattern;
 	char vabuf[1024];
 
 	if (Cmd_Argc(cmd) > 1)
@@ -1123,7 +1123,7 @@ void Cvar_FillAll_f(cmd_state_t *cmd)
 	char *buf, *p, *q;
 	int n, i;
 	cvar_t *var;
-	qboolean verify;
+	qbool verify;
 	if(Cmd_Argc(cmd) != 2)
 	{
 		Con_Printf("Usage: %s length to plant rubbish\n", Cmd_Argv(cmd, 0));

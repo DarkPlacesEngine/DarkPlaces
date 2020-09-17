@@ -21,9 +21,9 @@
 #define SND_XMP_H
 
 
-qboolean XMP_OpenLibrary (void);
+qbool XMP_OpenLibrary (void);
 void XMP_CloseLibrary (void);
-qboolean XMP_LoadModFile (const char *filename, sfx_t *sfx);
+qbool XMP_LoadModFile (const char *filename, sfx_t *sfx);
 
 
 #endif
