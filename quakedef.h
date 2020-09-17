@@ -603,7 +603,7 @@ void Sys_Shared_Init(void);
 // In Quake, any char in 0..32 counts as whitespace
 //#define ISWHITESPACE(ch) ((unsigned char) ch <= (unsigned char) ' ')
 #define ISWHITESPACE(ch) (!(ch) || (ch) == ' ' || (ch) == '\t' || (ch) == '\r' || (ch) == '\n')
-
+#define ISCOMMENT(ch, pos) ch[pos] == '/' && ch[pos + 1] == '/' && (pos == 0 || ISWHITESPACE(ch[pos - 1]))
 // This also includes extended characters, and ALL control chars
 #define ISWHITESPACEORCONTROL(ch) ((signed char) (ch) <= (signed char) ' ')
 
