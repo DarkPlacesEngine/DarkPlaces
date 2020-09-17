@@ -134,7 +134,7 @@ typedef struct cmd_state_s
 }
 cmd_state_t;
 
-typedef struct cbuf_cmd_s
+typedef struct cmd_input_s
 {
 	llist_t list;
 	cmd_state_t *source;
@@ -142,7 +142,7 @@ typedef struct cbuf_cmd_s
 	size_t size;
 	char text[MAX_INPUTLINE];
 	qboolean pending;
-} cbuf_cmd_t;
+} cmd_input_t;
 
 typedef struct cbuf_s
 {
