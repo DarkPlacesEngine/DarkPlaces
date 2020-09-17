@@ -79,10 +79,10 @@ Cmd_Defer_f
 Cause a command to be executed after a delay.
 ============
 */
-static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing);
+static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing);
 static void Cmd_Defer_f (cmd_state_t *cmd)
 {
-	cbuf_cmd_t *current;
+	cmd_input_t *current;
 	cbuf_t *cbuf = cmd->cbuf;
 
 	if(Cmd_Argc(cmd) == 1)
@@ -94,7 +94,7 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 			llist_t *pos;
         	List_ForEach(pos, &cbuf->deferred)
     		{
-				current = List_Container(*pos, cbuf_cmd_t, list);
+				current = List_Container(*pos, cmd_input_t, list);
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
 			}
 		}
@@ -262,18 +262,18 @@ static qboolean Cbuf_ParseText(char **start, size_t *size)
 	return true;
 }
 
-static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
+static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing)
 {
-	cbuf_cmd_t *ret = NULL;
+	cmd_input_t *ret = NULL;
 	if(existing && existing->pending)
 		ret = existing;
 	else
 	{
 		if(!List_IsEmpty(&cbuf->free))
-			ret = List_Container(*cbuf->free.next, cbuf_cmd_t, list);
+			ret = List_Container(*cbuf->free.next, cmd_input_t, list);
 		else
 		{
-			ret = (cbuf_cmd_t *)Z_Malloc(sizeof(cbuf_cmd_t));
+			ret = (cmd_input_t *)Z_Malloc(sizeof(cmd_input_t));
 			ret->list.next = ret->list.prev = &ret->list;
 		}
 		ret->size = 0;
@@ -285,13 +285,13 @@ static cbuf_cmd_t *Cbuf_LinkGet(cbuf_t *cbuf, cbuf_cmd_t *existing)
 
 
 // Cloudwalk: Not happy with this, but it works.
-static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cbuf_cmd_t *existing, const char *text)
+static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
 	qboolean complete;
 	cbuf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
-	cbuf_cmd_t *current = NULL;
+	cmd_input_t *current = NULL;
 
 	// Slide the pointer down until we reach the end
 	while(in)
@@ -347,7 +347,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, (List_IsEmpty(&cbuf->start) ? NULL : List_Container(*cbuf->start.prev, cbuf_cmd_t, list)), text);
+		Cbuf_LinkCreate(cmd, &llist, (List_IsEmpty(&cbuf->start) ? NULL : List_Container(*cbuf->start.prev, cmd_input_t, list)), text);
 		if(!List_IsEmpty(&llist))
 			List_Splice_Tail(&llist, &cbuf->start);
 	}
@@ -375,7 +375,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, List_Container(*cbuf->start.next, cbuf_cmd_t, list), text);
+		Cbuf_LinkCreate(cmd, &llist, List_Container(*cbuf->start.next, cmd_input_t, list), text);
 		List_Splice(&llist, &cbuf->start);
 	}
 
@@ -390,7 +390,7 @@ Cbuf_Execute_Deferred --blub
 static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 {
 	llist_t *pos;
-	cbuf_cmd_t *current;
+	cmd_input_t *current;
 	double eat;
 
 	if (host.realtime - cbuf->deferred_oldtime < 0 || host.realtime - cbuf->deferred_oldtime > 1800)
@@ -402,7 +402,7 @@ static void Cbuf_Execute_Deferred (cbuf_t *cbuf)
 
     List_ForEach(pos, &cbuf->deferred)
 	{
-		current = List_Container(*pos, cbuf_cmd_t, list);
+		current = List_Container(*pos, cmd_input_t, list);
 		current->delay -= eat;
 		if(current->delay <= 0)
 		{
@@ -422,7 +422,7 @@ Cbuf_Execute
 static qboolean Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
 void Cbuf_Execute (cbuf_t *cbuf)
 {
-	cbuf_cmd_t *current;
+	cmd_input_t *current;
 	char preprocessed[MAX_INPUTLINE];
 	char *firstchar;
 
@@ -436,7 +436,7 @@ void Cbuf_Execute (cbuf_t *cbuf)
 		 * commands down. This is necessary because commands (exec, alias)
 		 * can insert data at the beginning of the text buffer
 		 */
-		current = List_Container(*cbuf->start.next, cbuf_cmd_t, list);
+		current = List_Container(*cbuf->start.next, cmd_input_t, list);
 
 		/*
 		 * Assume we're rolling with the current command-line and
