@@ -386,7 +386,8 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 	else
 	{
 		Cbuf_LinkCreate(cmd, &llist, List_Container(*cbuf->start.next, cmd_input_t, list), text);
-		List_Splice(&llist, &cbuf->start);
+		if(!List_IsEmpty(&llist))
+			List_Splice(&llist, &cbuf->start);
 	}
 
 	Cbuf_Unlock(cbuf);
