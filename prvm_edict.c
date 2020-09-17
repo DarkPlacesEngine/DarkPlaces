@@ -29,26 +29,26 @@ int		prvm_type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(v
 
 prvm_eval_t prvm_badvalue; // used only for error returns
 
-cvar_t prvm_language = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
+cvar_t prvm_language = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "prvm_language", "", "when set, loads PROGSFILE.LANGUAGENAME.po and common.LANGUAGENAME.po for string translations; when set to dump, PROGSFILE.pot is written from the strings in the progs"};
 // LadyHavoc: prints every opcode as it executes - warning: this is significant spew
-cvar_t prvm_traceqc = {CVAR_CLIENT | CVAR_SERVER, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
+cvar_t prvm_traceqc = {CF_CLIENT | CF_SERVER, "prvm_traceqc", "0", "prints every QuakeC statement as it is executed (only for really thorough debugging!)"};
 // LadyHavoc: counts usage of each QuakeC statement
-cvar_t prvm_statementprofiling = {CVAR_CLIENT | CVAR_SERVER, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
-cvar_t prvm_timeprofiling = {CVAR_CLIENT | CVAR_SERVER, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
-cvar_t prvm_coverage = {CVAR_CLIENT | CVAR_SERVER, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
-cvar_t prvm_backtraceforwarnings = {CVAR_CLIENT | CVAR_SERVER, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
-cvar_t prvm_leaktest = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
-cvar_t prvm_leaktest_follow_targetname = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest_follow_targetname", "0", "if set, target/targetname links are considered when leak testing; this should normally not be required, as entities created during startup - e.g. info_notnull - are never considered leaky"};
-cvar_t prvm_leaktest_ignore_classnames = {CVAR_CLIENT | CVAR_SERVER, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
-cvar_t prvm_errordump = {CVAR_CLIENT | CVAR_SERVER, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
-cvar_t prvm_breakpointdump = {CVAR_CLIENT | CVAR_SERVER, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
-cvar_t prvm_reuseedicts_startuptime = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
-cvar_t prvm_reuseedicts_neverinsameframe = {CVAR_CLIENT | CVAR_SERVER, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
-cvar_t prvm_garbagecollection_enable = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_enable", "1", "automatically scan for and free resources that are not referenced by the code being executed in the VM"};
-cvar_t prvm_garbagecollection_notify = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection"};
-cvar_t prvm_garbagecollection_scan_limit = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_scan_limit", "10000", "scan this many fields or resources per frame to free up unreferenced resources"};
-cvar_t prvm_garbagecollection_strings = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
-cvar_t prvm_stringdebug = {CVAR_CLIENT | CVAR_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
+cvar_t prvm_statementprofiling = {CF_CLIENT | CF_SERVER, "prvm_statementprofiling", "0", "counts how many times each QuakeC statement has been executed, these counts are displayed in prvm_printfunction output (if enabled)"};
+cvar_t prvm_timeprofiling = {CF_CLIENT | CF_SERVER, "prvm_timeprofiling", "0", "counts how long each function has been executed, these counts are displayed in prvm_profile output (if enabled)"};
+cvar_t prvm_coverage = {CF_CLIENT | CF_SERVER, "prvm_coverage", "0", "report and count coverage events (1: per-function, 2: coverage() builtin, 4: per-statement)"};
+cvar_t prvm_backtraceforwarnings = {CF_CLIENT | CF_SERVER, "prvm_backtraceforwarnings", "0", "print a backtrace for warnings too"};
+cvar_t prvm_leaktest = {CF_CLIENT | CF_SERVER, "prvm_leaktest", "0", "try to detect memory leaks in strings or entities"};
+cvar_t prvm_leaktest_follow_targetname = {CF_CLIENT | CF_SERVER, "prvm_leaktest_follow_targetname", "0", "if set, target/targetname links are considered when leak testing; this should normally not be required, as entities created during startup - e.g. info_notnull - are never considered leaky"};
+cvar_t prvm_leaktest_ignore_classnames = {CF_CLIENT | CF_SERVER, "prvm_leaktest_ignore_classnames", "", "classnames of entities to NOT leak check because they are found by find(world, classname, ...) but are actually spawned by QC code (NOT map entities)"};
+cvar_t prvm_errordump = {CF_CLIENT | CF_SERVER, "prvm_errordump", "0", "write a savegame on crash to crash-server.dmp"};
+cvar_t prvm_breakpointdump = {CF_CLIENT | CF_SERVER, "prvm_breakpointdump", "0", "write a savegame on breakpoint to breakpoint-server.dmp"};
+cvar_t prvm_reuseedicts_startuptime = {CF_CLIENT | CF_SERVER, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
+cvar_t prvm_reuseedicts_neverinsameframe = {CF_CLIENT | CF_SERVER, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
+cvar_t prvm_garbagecollection_enable = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_enable", "1", "automatically scan for and free resources that are not referenced by the code being executed in the VM"};
+cvar_t prvm_garbagecollection_notify = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection"};
+cvar_t prvm_garbagecollection_scan_limit = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_scan_limit", "10000", "scan this many fields or resources per frame to free up unreferenced resources"};
+cvar_t prvm_garbagecollection_strings = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
+cvar_t prvm_stringdebug = {CF_CLIENT | CF_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
 
 static double prvm_reuseedicts_always_allow = 0;
 qbool prvm_runawaycheck = true;
@@ -2645,7 +2645,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 					prog->error_cmd("PRVM_LoadProgs: could not create cvar for autocvar global %s in %s", name, prog->name);
 				cvar->globaldefindex[prog - prvm_prog_list] = i;
 			}
-			else if((cvar->flags & CVAR_PRIVATE) == 0)
+			else if((cvar->flags & CF_PRIVATE) == 0)
 			{
 				// MUST BE SYNCED WITH cvar.c Cvar_Set
 				int j;
@@ -3138,26 +3138,26 @@ PRVM_Init
 */
 void PRVM_Init (void)
 {
-	Cmd_AddCommand(CMD_SHARED, "prvm_edict", PRVM_ED_PrintEdict_f, "print all data about an entity number in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_edicts", PRVM_ED_PrintEdicts_f, "prints all data about all entities in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_edictcount", PRVM_ED_Count_f, "prints number of active entities in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_profile", PRVM_Profile_f, "prints execution statistics about the most used QuakeC functions in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_childprofile", PRVM_ChildProfile_f, "prints execution statistics about the most used QuakeC functions in the selected VM (server, client, menu), sorted by time taken in function with child calls");
-	Cmd_AddCommand(CMD_SHARED, "prvm_callprofile", PRVM_CallProfile_f, "prints execution statistics about the most time consuming QuakeC calls from the engine in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_fields", PRVM_Fields_f, "prints usage statistics on properties (how many entities have non-zero values) in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_globals", PRVM_Globals_f, "prints all global variables in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_global", PRVM_Global_f, "prints value of a specified global variable in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_globalset", PRVM_GlobalSet_f, "sets value of a specified global variable in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_edictset", PRVM_ED_EdictSet_f, "changes value of a specified property of a specified entity in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "prvm_edictget", PRVM_ED_EdictGet_f, "retrieves the value of a specified property of a specified entity in the selected VM (server, client menu) into a cvar or to the console");
-	Cmd_AddCommand(CMD_SHARED, "prvm_globalget", PRVM_ED_GlobalGet_f, "retrieves the value of a specified global variable in the selected VM (server, client menu) into a cvar or to the console");
-	Cmd_AddCommand(CMD_SHARED, "prvm_printfunction", PRVM_PrintFunction_f, "prints a disassembly (QuakeC instructions) of the specified function in the selected VM (server, client, menu)");
-	Cmd_AddCommand(CMD_SHARED, "cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
-	Cmd_AddCommand(CMD_SHARED, "menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
-	Cmd_AddCommand(CMD_SHARED, "sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
-	Cmd_AddCommand(CMD_SHARED, "prvm_breakpoint", PRVM_Breakpoint_f, "marks a statement or function as breakpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear breakpoint");
-	Cmd_AddCommand(CMD_SHARED, "prvm_globalwatchpoint", PRVM_GlobalWatchpoint_f, "marks a global as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
-	Cmd_AddCommand(CMD_SHARED, "prvm_edictwatchpoint", PRVM_EdictWatchpoint_f, "marks an entity field as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
+	Cmd_AddCommand(CF_SHARED, "prvm_edict", PRVM_ED_PrintEdict_f, "print all data about an entity number in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_edicts", PRVM_ED_PrintEdicts_f, "prints all data about all entities in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_edictcount", PRVM_ED_Count_f, "prints number of active entities in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_profile", PRVM_Profile_f, "prints execution statistics about the most used QuakeC functions in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_childprofile", PRVM_ChildProfile_f, "prints execution statistics about the most used QuakeC functions in the selected VM (server, client, menu), sorted by time taken in function with child calls");
+	Cmd_AddCommand(CF_SHARED, "prvm_callprofile", PRVM_CallProfile_f, "prints execution statistics about the most time consuming QuakeC calls from the engine in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_fields", PRVM_Fields_f, "prints usage statistics on properties (how many entities have non-zero values) in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_globals", PRVM_Globals_f, "prints all global variables in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_global", PRVM_Global_f, "prints value of a specified global variable in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_globalset", PRVM_GlobalSet_f, "sets value of a specified global variable in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_edictset", PRVM_ED_EdictSet_f, "changes value of a specified property of a specified entity in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "prvm_edictget", PRVM_ED_EdictGet_f, "retrieves the value of a specified property of a specified entity in the selected VM (server, client menu) into a cvar or to the console");
+	Cmd_AddCommand(CF_SHARED, "prvm_globalget", PRVM_ED_GlobalGet_f, "retrieves the value of a specified global variable in the selected VM (server, client menu) into a cvar or to the console");
+	Cmd_AddCommand(CF_SHARED, "prvm_printfunction", PRVM_PrintFunction_f, "prints a disassembly (QuakeC instructions) of the specified function in the selected VM (server, client, menu)");
+	Cmd_AddCommand(CF_SHARED, "cl_cmd", PRVM_GameCommand_Client_f, "calls the client QC function GameCommand with the supplied string as argument");
+	Cmd_AddCommand(CF_SHARED, "menu_cmd", PRVM_GameCommand_Menu_f, "calls the menu QC function GameCommand with the supplied string as argument");
+	Cmd_AddCommand(CF_SHARED, "sv_cmd", PRVM_GameCommand_Server_f, "calls the server QC function GameCommand with the supplied string as argument");
+	Cmd_AddCommand(CF_SHARED, "prvm_breakpoint", PRVM_Breakpoint_f, "marks a statement or function as breakpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear breakpoint");
+	Cmd_AddCommand(CF_SHARED, "prvm_globalwatchpoint", PRVM_GlobalWatchpoint_f, "marks a global as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
+	Cmd_AddCommand(CF_SHARED, "prvm_edictwatchpoint", PRVM_EdictWatchpoint_f, "marks an entity field as watchpoint (when this is executed, a stack trace is printed); to actually halt and investigate state, combine this with a gdb breakpoint on PRVM_Breakpoint, or with prvm_breakpointdump; run with just progs name to clear watchpoint");
 
 	Cvar_RegisterVariable (&prvm_language);
 	Cvar_RegisterVariable (&prvm_traceqc);

@@ -32,80 +32,80 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
 
-cvar_t csqc_progname = {CVAR_CLIENT | CVAR_SERVER, "csqc_progname","csprogs.dat","name of csprogs.dat file to load"};
-cvar_t csqc_progcrc = {CVAR_CLIENT | CVAR_READONLY, "csqc_progcrc","-1","CRC of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
-cvar_t csqc_progsize = {CVAR_CLIENT | CVAR_READONLY, "csqc_progsize","-1","file size of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
-cvar_t csqc_usedemoprogs = {CVAR_CLIENT, "csqc_usedemoprogs","1","use csprogs stored in demos"};
-cvar_t csqc_polygons_defaultmaterial_nocullface = {CVAR_CLIENT, "csqc_polygons_defaultmaterial_nocullface", "0", "use 'cull none' behavior in the default shader for rendering R_PolygonBegin - warning: enabling this is not consistent with FTEQW behavior on this feature"};
+cvar_t csqc_progname = {CF_CLIENT | CF_SERVER, "csqc_progname","csprogs.dat","name of csprogs.dat file to load"};
+cvar_t csqc_progcrc = {CF_CLIENT | CF_READONLY, "csqc_progcrc","-1","CRC of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
+cvar_t csqc_progsize = {CF_CLIENT | CF_READONLY, "csqc_progsize","-1","file size of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
+cvar_t csqc_usedemoprogs = {CF_CLIENT, "csqc_usedemoprogs","1","use csprogs stored in demos"};
+cvar_t csqc_polygons_defaultmaterial_nocullface = {CF_CLIENT, "csqc_polygons_defaultmaterial_nocullface", "0", "use 'cull none' behavior in the default shader for rendering R_PolygonBegin - warning: enabling this is not consistent with FTEQW behavior on this feature"};
 
-cvar_t cl_shownet = {CVAR_CLIENT, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
-cvar_t cl_nolerp = {CVAR_CLIENT, "cl_nolerp", "0","network update smoothing"};
-cvar_t cl_lerpexcess = {CVAR_CLIENT, "cl_lerpexcess", "0","maximum allowed lerp excess (hides, not fixes, some packet loss)"};
-cvar_t cl_lerpanim_maxdelta_server = {CVAR_CLIENT, "cl_lerpanim_maxdelta_server", "0.1","maximum frame delta for smoothing between server-controlled animation frames (when 0, one network frame)"};
-cvar_t cl_lerpanim_maxdelta_framegroups = {CVAR_CLIENT, "cl_lerpanim_maxdelta_framegroups", "0.1","maximum frame delta for smoothing between framegroups (when 0, one network frame)"};
+cvar_t cl_shownet = {CF_CLIENT, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
+cvar_t cl_nolerp = {CF_CLIENT, "cl_nolerp", "0","network update smoothing"};
+cvar_t cl_lerpexcess = {CF_CLIENT, "cl_lerpexcess", "0","maximum allowed lerp excess (hides, not fixes, some packet loss)"};
+cvar_t cl_lerpanim_maxdelta_server = {CF_CLIENT, "cl_lerpanim_maxdelta_server", "0.1","maximum frame delta for smoothing between server-controlled animation frames (when 0, one network frame)"};
+cvar_t cl_lerpanim_maxdelta_framegroups = {CF_CLIENT, "cl_lerpanim_maxdelta_framegroups", "0.1","maximum frame delta for smoothing between framegroups (when 0, one network frame)"};
 
-cvar_t cl_itembobheight = {CVAR_CLIENT, "cl_itembobheight", "0","how much items bob up and down (try 8)"};
-cvar_t cl_itembobspeed = {CVAR_CLIENT, "cl_itembobspeed", "0.5","how frequently items bob up and down"};
+cvar_t cl_itembobheight = {CF_CLIENT, "cl_itembobheight", "0","how much items bob up and down (try 8)"};
+cvar_t cl_itembobspeed = {CF_CLIENT, "cl_itembobspeed", "0.5","how frequently items bob up and down"};
 
-cvar_t lookspring = {CVAR_CLIENT | CVAR_SAVE, "lookspring","0","returns pitch to level with the floor when no longer holding a pitch key"};
-cvar_t lookstrafe = {CVAR_CLIENT | CVAR_SAVE, "lookstrafe","0","move instead of turning"};
-cvar_t sensitivity = {CVAR_CLIENT | CVAR_SAVE, "sensitivity","3","mouse speed multiplier"};
+cvar_t lookspring = {CF_CLIENT | CF_ARCHIVE, "lookspring","0","returns pitch to level with the floor when no longer holding a pitch key"};
+cvar_t lookstrafe = {CF_CLIENT | CF_ARCHIVE, "lookstrafe","0","move instead of turning"};
+cvar_t sensitivity = {CF_CLIENT | CF_ARCHIVE, "sensitivity","3","mouse speed multiplier"};
 
-cvar_t m_pitch = {CVAR_CLIENT | CVAR_SAVE, "m_pitch","0.022","mouse pitch speed multiplier"};
-cvar_t m_yaw = {CVAR_CLIENT | CVAR_SAVE, "m_yaw","0.022","mouse yaw speed multiplier"};
-cvar_t m_forward = {CVAR_CLIENT | CVAR_SAVE, "m_forward","1","mouse forward speed multiplier"};
-cvar_t m_side = {CVAR_CLIENT | CVAR_SAVE, "m_side","0.8","mouse side speed multiplier"};
+cvar_t m_pitch = {CF_CLIENT | CF_ARCHIVE, "m_pitch","0.022","mouse pitch speed multiplier"};
+cvar_t m_yaw = {CF_CLIENT | CF_ARCHIVE, "m_yaw","0.022","mouse yaw speed multiplier"};
+cvar_t m_forward = {CF_CLIENT | CF_ARCHIVE, "m_forward","1","mouse forward speed multiplier"};
+cvar_t m_side = {CF_CLIENT | CF_ARCHIVE, "m_side","0.8","mouse side speed multiplier"};
 
-cvar_t freelook = {CVAR_CLIENT | CVAR_SAVE, "freelook", "1","mouse controls pitch instead of forward/back"};
+cvar_t freelook = {CF_CLIENT | CF_ARCHIVE, "freelook", "1","mouse controls pitch instead of forward/back"};
 
-cvar_t cl_autodemo = {CVAR_CLIENT | CVAR_SAVE, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
-cvar_t cl_autodemo_nameformat = {CVAR_CLIENT | CVAR_SAVE, "cl_autodemo_nameformat", "autodemos/%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name (the date is encoded using strftime escapes)" };
-cvar_t cl_autodemo_delete = {CVAR_CLIENT, "cl_autodemo_delete", "0", "Delete demos after recording.  This is a bitmask, bit 1 gives the default, bit 0 the value for the current demo.  Thus, the values are: 0 = disabled; 1 = delete current demo only; 2 = delete all demos except the current demo; 3 = delete all demos from now on" };
+cvar_t cl_autodemo = {CF_CLIENT | CF_ARCHIVE, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
+cvar_t cl_autodemo_nameformat = {CF_CLIENT | CF_ARCHIVE, "cl_autodemo_nameformat", "autodemos/%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name (the date is encoded using strftime escapes)" };
+cvar_t cl_autodemo_delete = {CF_CLIENT, "cl_autodemo_delete", "0", "Delete demos after recording.  This is a bitmask, bit 1 gives the default, bit 0 the value for the current demo.  Thus, the values are: 0 = disabled; 1 = delete current demo only; 2 = delete all demos except the current demo; 3 = delete all demos from now on" };
 
-cvar_t r_draweffects = {CVAR_CLIENT, "r_draweffects", "1","renders temporary sprite effects"};
+cvar_t r_draweffects = {CF_CLIENT, "r_draweffects", "1","renders temporary sprite effects"};
 
-cvar_t cl_explosions_alpha_start = {CVAR_CLIENT | CVAR_SAVE, "cl_explosions_alpha_start", "1.5","starting alpha of an explosion shell"};
-cvar_t cl_explosions_alpha_end = {CVAR_CLIENT | CVAR_SAVE, "cl_explosions_alpha_end", "0","end alpha of an explosion shell (just before it disappears)"};
-cvar_t cl_explosions_size_start = {CVAR_CLIENT | CVAR_SAVE, "cl_explosions_size_start", "16","starting size of an explosion shell"};
-cvar_t cl_explosions_size_end = {CVAR_CLIENT | CVAR_SAVE, "cl_explosions_size_end", "128","ending alpha of an explosion shell (just before it disappears)"};
-cvar_t cl_explosions_lifetime = {CVAR_CLIENT | CVAR_SAVE, "cl_explosions_lifetime", "0.5","how long an explosion shell lasts"};
+cvar_t cl_explosions_alpha_start = {CF_CLIENT | CF_ARCHIVE, "cl_explosions_alpha_start", "1.5","starting alpha of an explosion shell"};
+cvar_t cl_explosions_alpha_end = {CF_CLIENT | CF_ARCHIVE, "cl_explosions_alpha_end", "0","end alpha of an explosion shell (just before it disappears)"};
+cvar_t cl_explosions_size_start = {CF_CLIENT | CF_ARCHIVE, "cl_explosions_size_start", "16","starting size of an explosion shell"};
+cvar_t cl_explosions_size_end = {CF_CLIENT | CF_ARCHIVE, "cl_explosions_size_end", "128","ending alpha of an explosion shell (just before it disappears)"};
+cvar_t cl_explosions_lifetime = {CF_CLIENT | CF_ARCHIVE, "cl_explosions_lifetime", "0.5","how long an explosion shell lasts"};
 
-cvar_t cl_stainmaps = {CVAR_CLIENT | CVAR_SAVE, "cl_stainmaps", "0","stains lightmaps, much faster than decals but blurred"};
-cvar_t cl_stainmaps_clearonload = {CVAR_CLIENT | CVAR_SAVE, "cl_stainmaps_clearonload", "1","clear stainmaps on map restart"};
+cvar_t cl_stainmaps = {CF_CLIENT | CF_ARCHIVE, "cl_stainmaps", "0","stains lightmaps, much faster than decals but blurred"};
+cvar_t cl_stainmaps_clearonload = {CF_CLIENT | CF_ARCHIVE, "cl_stainmaps_clearonload", "1","clear stainmaps on map restart"};
 
-cvar_t cl_beams_polygons = {CVAR_CLIENT | CVAR_SAVE, "cl_beams_polygons", "1","use beam polygons instead of models"};
-cvar_t cl_beams_quakepositionhack = {CVAR_CLIENT | CVAR_SAVE, "cl_beams_quakepositionhack", "1", "makes your lightning gun appear to fire from your waist (as in Quake and QuakeWorld)"};
-cvar_t cl_beams_instantaimhack = {CVAR_CLIENT | CVAR_SAVE, "cl_beams_instantaimhack", "0", "makes your lightning gun aiming update instantly"};
-cvar_t cl_beams_lightatend = {CVAR_CLIENT | CVAR_SAVE, "cl_beams_lightatend", "0", "make a light at the end of the beam"};
+cvar_t cl_beams_polygons = {CF_CLIENT | CF_ARCHIVE, "cl_beams_polygons", "1","use beam polygons instead of models"};
+cvar_t cl_beams_quakepositionhack = {CF_CLIENT | CF_ARCHIVE, "cl_beams_quakepositionhack", "1", "makes your lightning gun appear to fire from your waist (as in Quake and QuakeWorld)"};
+cvar_t cl_beams_instantaimhack = {CF_CLIENT | CF_ARCHIVE, "cl_beams_instantaimhack", "0", "makes your lightning gun aiming update instantly"};
+cvar_t cl_beams_lightatend = {CF_CLIENT | CF_ARCHIVE, "cl_beams_lightatend", "0", "make a light at the end of the beam"};
 
-cvar_t cl_deathfade = {CVAR_CLIENT | CVAR_SAVE, "cl_deathfade", "0", "fade screen to dark red when dead, value represents how fast the fade is (higher is faster)"};
+cvar_t cl_deathfade = {CF_CLIENT | CF_ARCHIVE, "cl_deathfade", "0", "fade screen to dark red when dead, value represents how fast the fade is (higher is faster)"};
 
-cvar_t cl_noplayershadow = {CVAR_CLIENT | CVAR_SAVE, "cl_noplayershadow", "0","hide player shadow"};
+cvar_t cl_noplayershadow = {CF_CLIENT | CF_ARCHIVE, "cl_noplayershadow", "0","hide player shadow"};
 
-cvar_t cl_dlights_decayradius = {CVAR_CLIENT | CVAR_SAVE, "cl_dlights_decayradius", "1", "reduces size of light flashes over time"};
-cvar_t cl_dlights_decaybrightness = {CVAR_CLIENT | CVAR_SAVE, "cl_dlights_decaybrightness", "1", "reduces brightness of light flashes over time"};
+cvar_t cl_dlights_decayradius = {CF_CLIENT | CF_ARCHIVE, "cl_dlights_decayradius", "1", "reduces size of light flashes over time"};
+cvar_t cl_dlights_decaybrightness = {CF_CLIENT | CF_ARCHIVE, "cl_dlights_decaybrightness", "1", "reduces brightness of light flashes over time"};
 
-cvar_t qport = {CVAR_CLIENT, "qport", "0", "identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)"};
+cvar_t qport = {CF_CLIENT, "qport", "0", "identification key for playing on qw servers (allows you to maintain a connection to a quakeworld server even if your port changes)"};
 
-cvar_t cl_prydoncursor = {CVAR_CLIENT, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
-cvar_t cl_prydoncursor_notrace = {CVAR_CLIENT, "cl_prydoncursor_notrace", "0", "disables traceline used in prydon cursor reporting to the game, saving some cpu time"};
+cvar_t cl_prydoncursor = {CF_CLIENT, "cl_prydoncursor", "0", "enables a mouse pointer which is able to click on entities in the world, useful for point and click mods, see PRYDON_CLIENTCURSOR extension in dpextensions.qc"};
+cvar_t cl_prydoncursor_notrace = {CF_CLIENT, "cl_prydoncursor_notrace", "0", "disables traceline used in prydon cursor reporting to the game, saving some cpu time"};
 
-cvar_t cl_deathnoviewmodel = {CVAR_CLIENT, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
+cvar_t cl_deathnoviewmodel = {CF_CLIENT, "cl_deathnoviewmodel", "1", "hides gun model when dead"};
 
-cvar_t cl_locs_enable = {CVAR_CLIENT | CVAR_SAVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
-cvar_t cl_locs_show = {CVAR_CLIENT, "locs_show", "0", "shows defined locations for editing purposes"};
+cvar_t cl_locs_enable = {CF_CLIENT | CF_ARCHIVE, "locs_enable", "1", "enables replacement of certain % codes in chat messages: %l (location), %d (last death location), %h (health), %a (armor), %x (rockets), %c (cells), %r (rocket launcher status), %p (powerup status), %w (weapon status), %t (current time in level)"};
+cvar_t cl_locs_show = {CF_CLIENT, "locs_show", "0", "shows defined locations for editing purposes"};
 
-cvar_t cl_minfps = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
-cvar_t cl_minfps_fade = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
-cvar_t cl_minfps_qualitymax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
-cvar_t cl_minfps_qualitymin = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
-cvar_t cl_minfps_qualitymultiply = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
-cvar_t cl_minfps_qualityhysteresis = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
-cvar_t cl_minfps_qualitystepmax = {CVAR_CLIENT | CVAR_SAVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
-cvar_t cl_minfps_force = {CVAR_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
-cvar_t cl_maxfps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
-cvar_t cl_maxfps_alwayssleep = {CVAR_CLIENT | CVAR_SAVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
-cvar_t cl_maxidlefps = {CVAR_CLIENT | CVAR_SAVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
+cvar_t cl_minfps = {CF_CLIENT | CF_ARCHIVE, "cl_minfps", "40", "minimum fps target - while the rendering performance is below this, it will drift toward lower quality"};
+cvar_t cl_minfps_fade = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_fade", "1", "how fast the quality adapts to varying framerate"};
+cvar_t cl_minfps_qualitymax = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_qualitymax", "1", "highest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymin = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_qualitymin", "0.25", "lowest allowed drawdistance multiplier"};
+cvar_t cl_minfps_qualitymultiply = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_qualitymultiply", "0.2", "multiplier for quality changes in quality change per second render time (1 assumes linearity of quality and render time)"};
+cvar_t cl_minfps_qualityhysteresis = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_qualityhysteresis", "0.05", "reduce all quality increments by this to reduce flickering"};
+cvar_t cl_minfps_qualitystepmax = {CF_CLIENT | CF_ARCHIVE, "cl_minfps_qualitystepmax", "0.1", "maximum quality change in a single frame"};
+cvar_t cl_minfps_force = {CF_CLIENT, "cl_minfps_force", "0", "also apply quality reductions in timedemo/capturevideo"};
+cvar_t cl_maxfps = {CF_CLIENT | CF_ARCHIVE, "cl_maxfps", "0", "maximum fps cap, 0 = unlimited, if game is running faster than this it will wait before running another frame (useful to make cpu time available to other programs)"};
+cvar_t cl_maxfps_alwayssleep = {CF_CLIENT | CF_ARCHIVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
+cvar_t cl_maxidlefps = {CF_CLIENT | CF_ARCHIVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
 client_static_t	cls;
 client_state_t	cl;
@@ -2916,7 +2916,7 @@ void CL_Init (void)
 {
 	if (cls.state == ca_dedicated)
 	{
-		Cmd_AddCommand(CMD_SERVER, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CF_SERVER, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
 	}
 	else
 	{
@@ -2983,20 +2983,20 @@ void CL_Init (void)
 
 		CL_Demo_Init();
 
-		Cmd_AddCommand(CMD_CLIENT, "entities", CL_PrintEntities_f, "print information on network entities known to client");
-		Cmd_AddCommand(CMD_CLIENT, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
-		Cmd_AddCommand(CMD_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
-		Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
+		Cmd_AddCommand(CF_CLIENT, "entities", CL_PrintEntities_f, "print information on network entities known to client");
+		Cmd_AddCommand(CF_CLIENT, "disconnect", CL_Disconnect_f, "disconnect from server (or disconnect all clients if running a server)");
+		Cmd_AddCommand(CF_CLIENT, "connect", CL_Connect_f, "connect to a server by IP address or hostname");
+		Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "reconnect", CL_Reconnect_f, "reconnect to the last server you were on, or resets a quakeworld connection (do not use if currently playing on a netquake server)");
 
 		// Support Client-side Model Index List
-		Cmd_AddCommand(CMD_CLIENT, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
+		Cmd_AddCommand(CF_CLIENT, "cl_modelindexlist", CL_ModelIndexList_f, "list information on all models in the client modelindex");
 		// Support Client-side Sound Index List
-		Cmd_AddCommand(CMD_CLIENT, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
+		Cmd_AddCommand(CF_CLIENT, "cl_soundindexlist", CL_SoundIndexList_f, "list all sounds in the client soundindex");
 
-		Cmd_AddCommand(CMD_CLIENT, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
-		Cmd_AddCommand(CMD_CLIENT, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
+		Cmd_AddCommand(CF_CLIENT, "fog", CL_Fog_f, "set global fog parameters (density red green blue [alpha [mindist [maxdist [top [fadedepth]]]]])");
+		Cmd_AddCommand(CF_CLIENT, "fog_heighttexture", CL_Fog_HeightTexture_f, "set global fog parameters (density red green blue alpha mindist maxdist top depth textures/mapname/fogheight.tga)");
 
-		Cmd_AddCommand(CMD_CLIENT, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
+		Cmd_AddCommand(CF_CLIENT, "cl_areastats", CL_AreaStats_f, "prints statistics on entity culling during collision traces");
 
 		Cvar_RegisterVariable(&r_draweffects);
 		Cvar_RegisterVariable(&cl_explosions_alpha_start);
@@ -3023,15 +3023,15 @@ void CL_Init (void)
 		Cvar_RegisterVariable(&qport);
 		Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
 
-		Cmd_AddCommand(CMD_CLIENT, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
+		Cmd_AddCommand(CF_CLIENT, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
 		Cvar_RegisterVariable(&cl_locs_enable);
 		Cvar_RegisterVariable(&cl_locs_show);
-		Cmd_AddCommand(CMD_CLIENT, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
-		Cmd_AddCommand(CMD_CLIENT, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
-		Cmd_AddCommand(CMD_CLIENT, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
-		Cmd_AddCommand(CMD_CLIENT, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
-		Cmd_AddCommand(CMD_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
+		Cmd_AddCommand(CF_CLIENT, "locs_add", CL_Locs_Add_f, "add a point or box location (usage: x y z[ x y z] \"name\", if two sets of xyz are supplied it is a box, otherwise point)");
+		Cmd_AddCommand(CF_CLIENT, "locs_removenearest", CL_Locs_RemoveNearest_f, "remove the nearest point or box (note: you need to be very near a box to remove it)");
+		Cmd_AddCommand(CF_CLIENT, "locs_clear", CL_Locs_Clear_f, "remove all loc points/boxes");
+		Cmd_AddCommand(CF_CLIENT, "locs_reload", CL_Locs_Reload_f, "reload .loc file for this map");
+		Cmd_AddCommand(CF_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
 

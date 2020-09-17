@@ -32,115 +32,115 @@ when crossing a water boudnary.
 
 */
 
-cvar_t cl_rollspeed = {CVAR_CLIENT, "cl_rollspeed", "200", "how much strafing is necessary to tilt the view"};
-cvar_t cl_rollangle = {CVAR_CLIENT, "cl_rollangle", "2.0", "how much to tilt the view when strafing"};
+cvar_t cl_rollspeed = {CF_CLIENT, "cl_rollspeed", "200", "how much strafing is necessary to tilt the view"};
+cvar_t cl_rollangle = {CF_CLIENT, "cl_rollangle", "2.0", "how much to tilt the view when strafing"};
 
-cvar_t cl_bob = {CVAR_CLIENT | CVAR_SAVE, "cl_bob","0.02", "view bobbing amount"};
-cvar_t cl_bobcycle = {CVAR_CLIENT | CVAR_SAVE, "cl_bobcycle","0.6", "view bobbing speed"};
-cvar_t cl_bobup = {CVAR_CLIENT | CVAR_SAVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
-cvar_t cl_bob2 = {CVAR_CLIENT | CVAR_SAVE, "cl_bob2","0", "sideways view bobbing amount"};
-cvar_t cl_bob2cycle = {CVAR_CLIENT | CVAR_SAVE, "cl_bob2cycle","0.6", "sideways view bobbing speed"};
-cvar_t cl_bob2smooth = {CVAR_CLIENT | CVAR_SAVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
-cvar_t cl_bobfall = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfall","0", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
-cvar_t cl_bobfallcycle = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallcycle","3", "speed of the bobfall swing"};
-cvar_t cl_bobfallminspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
-cvar_t cl_bobmodel = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel", "1", "enables gun bobbing"};
-cvar_t cl_bobmodel_side = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_side", "0", "gun bobbing sideways sway amount"};
-cvar_t cl_bobmodel_up = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_up", "0", "gun bobbing upward movement amount"};
-cvar_t cl_bobmodel_forward = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_forward", "0.25", "gun bobbing forward movement amount"};
-cvar_t cl_bobmodel_classic = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_classic", "1", "classic Quake-style forward gun bobbing"};
-cvar_t cl_bobmodel_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_bobmodel_speed", "6", "gun bobbing speed"};
-cvar_t cl_bob_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit", "4", "limits bobbing to this much distance from view_ofs"};
-cvar_t cl_bob_limit_heightcheck = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck", "0", "check ceiling and floor height against cl_bob_limit and scale down all view bobbing if could result in camera being in solid"};
-cvar_t cl_bob_limit_heightcheck_dontcrosswatersurface = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_limit_heightcheck_dontcrosswatersurface", "1", "limit cl_bob_limit to not crossing liquid surfaces also"};
-cvar_t cl_bob_velocity_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_bob_velocity_limit", "400", "limits the xyspeed value in the bobbing code"};
+cvar_t cl_bob = {CF_CLIENT | CF_ARCHIVE, "cl_bob","0.02", "view bobbing amount"};
+cvar_t cl_bobcycle = {CF_CLIENT | CF_ARCHIVE, "cl_bobcycle","0.6", "view bobbing speed"};
+cvar_t cl_bobup = {CF_CLIENT | CF_ARCHIVE, "cl_bobup","0.5", "view bobbing adjustment that makes the up or down swing of the bob last longer"};
+cvar_t cl_bob2 = {CF_CLIENT | CF_ARCHIVE, "cl_bob2","0", "sideways view bobbing amount"};
+cvar_t cl_bob2cycle = {CF_CLIENT | CF_ARCHIVE, "cl_bob2cycle","0.6", "sideways view bobbing speed"};
+cvar_t cl_bob2smooth = {CF_CLIENT | CF_ARCHIVE, "cl_bob2smooth","0.05", "how fast the view goes back when you stop touching the ground"};
+cvar_t cl_bobfall = {CF_CLIENT | CF_ARCHIVE, "cl_bobfall","0", "how much the view swings down when falling (influenced by the speed you hit the ground with)"};
+cvar_t cl_bobfallcycle = {CF_CLIENT | CF_ARCHIVE, "cl_bobfallcycle","3", "speed of the bobfall swing"};
+cvar_t cl_bobfallminspeed = {CF_CLIENT | CF_ARCHIVE, "cl_bobfallminspeed","200", "necessary amount of speed for bob-falling to occur"};
+cvar_t cl_bobmodel = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel", "1", "enables gun bobbing"};
+cvar_t cl_bobmodel_side = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel_side", "0", "gun bobbing sideways sway amount"};
+cvar_t cl_bobmodel_up = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel_up", "0", "gun bobbing upward movement amount"};
+cvar_t cl_bobmodel_forward = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel_forward", "0.25", "gun bobbing forward movement amount"};
+cvar_t cl_bobmodel_classic = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel_classic", "1", "classic Quake-style forward gun bobbing"};
+cvar_t cl_bobmodel_speed = {CF_CLIENT | CF_ARCHIVE, "cl_bobmodel_speed", "6", "gun bobbing speed"};
+cvar_t cl_bob_limit = {CF_CLIENT | CF_ARCHIVE, "cl_bob_limit", "4", "limits bobbing to this much distance from view_ofs"};
+cvar_t cl_bob_limit_heightcheck = {CF_CLIENT | CF_ARCHIVE, "cl_bob_limit_heightcheck", "0", "check ceiling and floor height against cl_bob_limit and scale down all view bobbing if could result in camera being in solid"};
+cvar_t cl_bob_limit_heightcheck_dontcrosswatersurface = {CF_CLIENT | CF_ARCHIVE, "cl_bob_limit_heightcheck_dontcrosswatersurface", "1", "limit cl_bob_limit to not crossing liquid surfaces also"};
+cvar_t cl_bob_velocity_limit = {CF_CLIENT | CF_ARCHIVE, "cl_bob_velocity_limit", "400", "limits the xyspeed value in the bobbing code"};
 
-cvar_t cl_leanmodel = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel", "0", "enables gun leaning"};
-cvar_t cl_leanmodel_side_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_side_speed", "0.7", "gun leaning sideways speed"};
-cvar_t cl_leanmodel_side_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
-cvar_t cl_leanmodel_side_highpass1 = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_side_highpass1", "30", "gun leaning sideways pre-highpass in 1/s"};
-cvar_t cl_leanmodel_side_highpass = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_side_highpass", "3", "gun leaning sideways highpass in 1/s"};
-cvar_t cl_leanmodel_side_lowpass = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_side_lowpass", "20", "gun leaning sideways lowpass in 1/s"};
-cvar_t cl_leanmodel_up_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_up_speed", "0.65", "gun leaning upward speed"};
-cvar_t cl_leanmodel_up_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_up_limit", "50", "gun leaning upward limit"};
-cvar_t cl_leanmodel_up_highpass1 = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_up_highpass1", "5", "gun leaning upward pre-highpass in 1/s"};
-cvar_t cl_leanmodel_up_highpass = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_up_highpass", "15", "gun leaning upward highpass in 1/s"};
-cvar_t cl_leanmodel_up_lowpass = {CVAR_CLIENT | CVAR_SAVE, "cl_leanmodel_up_lowpass", "20", "gun leaning upward lowpass in 1/s"};
+cvar_t cl_leanmodel = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel", "0", "enables gun leaning"};
+cvar_t cl_leanmodel_side_speed = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_side_speed", "0.7", "gun leaning sideways speed"};
+cvar_t cl_leanmodel_side_limit = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_side_limit", "35", "gun leaning sideways limit"};
+cvar_t cl_leanmodel_side_highpass1 = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_side_highpass1", "30", "gun leaning sideways pre-highpass in 1/s"};
+cvar_t cl_leanmodel_side_highpass = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_side_highpass", "3", "gun leaning sideways highpass in 1/s"};
+cvar_t cl_leanmodel_side_lowpass = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_side_lowpass", "20", "gun leaning sideways lowpass in 1/s"};
+cvar_t cl_leanmodel_up_speed = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_up_speed", "0.65", "gun leaning upward speed"};
+cvar_t cl_leanmodel_up_limit = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_up_limit", "50", "gun leaning upward limit"};
+cvar_t cl_leanmodel_up_highpass1 = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_up_highpass1", "5", "gun leaning upward pre-highpass in 1/s"};
+cvar_t cl_leanmodel_up_highpass = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_up_highpass", "15", "gun leaning upward highpass in 1/s"};
+cvar_t cl_leanmodel_up_lowpass = {CF_CLIENT | CF_ARCHIVE, "cl_leanmodel_up_lowpass", "20", "gun leaning upward lowpass in 1/s"};
 
-cvar_t cl_followmodel = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel", "0", "enables gun following"};
-cvar_t cl_followmodel_side_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_side_speed", "0.25", "gun following sideways speed"};
-cvar_t cl_followmodel_side_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_side_limit", "6", "gun following sideways limit"};
-cvar_t cl_followmodel_side_highpass1 = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_side_highpass1", "30", "gun following sideways pre-highpass in 1/s"};
-cvar_t cl_followmodel_side_highpass = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_side_highpass", "5", "gun following sideways highpass in 1/s"};
-cvar_t cl_followmodel_side_lowpass = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_side_lowpass", "10", "gun following sideways lowpass in 1/s"};
-cvar_t cl_followmodel_up_speed = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_up_speed", "0.5", "gun following upward speed"};
-cvar_t cl_followmodel_up_limit = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_up_limit", "5", "gun following upward limit"};
-cvar_t cl_followmodel_up_highpass1 = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_up_highpass1", "60", "gun following upward pre-highpass in 1/s"};
-cvar_t cl_followmodel_up_highpass = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_up_highpass", "2", "gun following upward highpass in 1/s"};
-cvar_t cl_followmodel_up_lowpass = {CVAR_CLIENT | CVAR_SAVE, "cl_followmodel_up_lowpass", "10", "gun following upward lowpass in 1/s"};
+cvar_t cl_followmodel = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel", "0", "enables gun following"};
+cvar_t cl_followmodel_side_speed = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_side_speed", "0.25", "gun following sideways speed"};
+cvar_t cl_followmodel_side_limit = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_side_limit", "6", "gun following sideways limit"};
+cvar_t cl_followmodel_side_highpass1 = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_side_highpass1", "30", "gun following sideways pre-highpass in 1/s"};
+cvar_t cl_followmodel_side_highpass = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_side_highpass", "5", "gun following sideways highpass in 1/s"};
+cvar_t cl_followmodel_side_lowpass = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_side_lowpass", "10", "gun following sideways lowpass in 1/s"};
+cvar_t cl_followmodel_up_speed = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_up_speed", "0.5", "gun following upward speed"};
+cvar_t cl_followmodel_up_limit = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_up_limit", "5", "gun following upward limit"};
+cvar_t cl_followmodel_up_highpass1 = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_up_highpass1", "60", "gun following upward pre-highpass in 1/s"};
+cvar_t cl_followmodel_up_highpass = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_up_highpass", "2", "gun following upward highpass in 1/s"};
+cvar_t cl_followmodel_up_lowpass = {CF_CLIENT | CF_ARCHIVE, "cl_followmodel_up_lowpass", "10", "gun following upward lowpass in 1/s"};
 
-cvar_t cl_viewmodel_scale = {CVAR_CLIENT, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
+cvar_t cl_viewmodel_scale = {CF_CLIENT, "cl_viewmodel_scale", "1", "changes size of gun model, lower values prevent poking into walls but cause strange artifacts on lighting and especially r_stereo/vid_stereobuffer options where the size of the gun becomes visible"};
 
-cvar_t v_kicktime = {CVAR_CLIENT, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
-cvar_t v_kickroll = {CVAR_CLIENT, "v_kickroll", "0.6", "how much a view kick from damage rolls your view"};
-cvar_t v_kickpitch = {CVAR_CLIENT, "v_kickpitch", "0.6", "how much a view kick from damage pitches your view"};
+cvar_t v_kicktime = {CF_CLIENT, "v_kicktime", "0.5", "how long a view kick from damage lasts"};
+cvar_t v_kickroll = {CF_CLIENT, "v_kickroll", "0.6", "how much a view kick from damage rolls your view"};
+cvar_t v_kickpitch = {CF_CLIENT, "v_kickpitch", "0.6", "how much a view kick from damage pitches your view"};
 
-cvar_t v_iyaw_cycle = {CVAR_CLIENT, "v_iyaw_cycle", "2", "v_idlescale yaw speed"};
-cvar_t v_iroll_cycle = {CVAR_CLIENT, "v_iroll_cycle", "0.5", "v_idlescale roll speed"};
-cvar_t v_ipitch_cycle = {CVAR_CLIENT, "v_ipitch_cycle", "1", "v_idlescale pitch speed"};
-cvar_t v_iyaw_level = {CVAR_CLIENT, "v_iyaw_level", "0.3", "v_idlescale yaw amount"};
-cvar_t v_iroll_level = {CVAR_CLIENT, "v_iroll_level", "0.1", "v_idlescale roll amount"};
-cvar_t v_ipitch_level = {CVAR_CLIENT, "v_ipitch_level", "0.3", "v_idlescale pitch amount"};
+cvar_t v_iyaw_cycle = {CF_CLIENT, "v_iyaw_cycle", "2", "v_idlescale yaw speed"};
+cvar_t v_iroll_cycle = {CF_CLIENT, "v_iroll_cycle", "0.5", "v_idlescale roll speed"};
+cvar_t v_ipitch_cycle = {CF_CLIENT, "v_ipitch_cycle", "1", "v_idlescale pitch speed"};
+cvar_t v_iyaw_level = {CF_CLIENT, "v_iyaw_level", "0.3", "v_idlescale yaw amount"};
+cvar_t v_iroll_level = {CF_CLIENT, "v_iroll_level", "0.1", "v_idlescale roll amount"};
+cvar_t v_ipitch_level = {CF_CLIENT, "v_ipitch_level", "0.3", "v_idlescale pitch amount"};
 
-cvar_t v_idlescale = {CVAR_CLIENT, "v_idlescale", "0", "how much of the quake 'drunken view' effect to use"};
+cvar_t v_idlescale = {CF_CLIENT, "v_idlescale", "0", "how much of the quake 'drunken view' effect to use"};
 
-cvar_t v_isometric = {CVAR_CLIENT, "v_isometric", "0", "changes view to isometric (non-perspective)"};
-cvar_t v_isometric_verticalfov = {CVAR_CLIENT, "v_isometric_verticalfov", "512", "vertical field of view in game units (horizontal is computed using aspect ratio based on this)"};
-cvar_t v_isometric_xx = {CVAR_CLIENT, "v_isometric_xx", "1", "camera matrix"};
-cvar_t v_isometric_xy = {CVAR_CLIENT, "v_isometric_xy", "0", "camera matrix"};
-cvar_t v_isometric_xz = {CVAR_CLIENT, "v_isometric_xz", "0", "camera matrix"};
-cvar_t v_isometric_yx = {CVAR_CLIENT, "v_isometric_yx", "0", "camera matrix"};
-cvar_t v_isometric_yy = {CVAR_CLIENT, "v_isometric_yy", "1", "camera matrix"};
-cvar_t v_isometric_yz = {CVAR_CLIENT, "v_isometric_yz", "0", "camera matrix"};
-cvar_t v_isometric_zx = {CVAR_CLIENT, "v_isometric_zx", "0", "camera matrix"};
-cvar_t v_isometric_zy = {CVAR_CLIENT, "v_isometric_zy", "0", "camera matrix"};
-cvar_t v_isometric_zz = {CVAR_CLIENT, "v_isometric_zz", "1", "camera matrix"};
-cvar_t v_isometric_tx = {CVAR_CLIENT, "v_isometric_tx", "0", "camera position (player-relative)"};
-cvar_t v_isometric_ty = {CVAR_CLIENT, "v_isometric_ty", "0", "camera position (player-relative)"};
-cvar_t v_isometric_tz = {CVAR_CLIENT, "v_isometric_tz", "0", "camera position (player-relative)"};
-cvar_t v_isometric_rot_pitch = {CVAR_CLIENT, "v_isometric_rot_pitch", "60", "camera rotation"};
-cvar_t v_isometric_rot_yaw = {CVAR_CLIENT, "v_isometric_rot_yaw", "135", "camera rotation"};
-cvar_t v_isometric_rot_roll = {CVAR_CLIENT, "v_isometric_rot_roll", "0", "camera rotation"};
-cvar_t v_isometric_relx = {CVAR_CLIENT, "v_isometric_relx", "0", "camera position*forward"};
-cvar_t v_isometric_rely = {CVAR_CLIENT, "v_isometric_rely", "0", "camera position*left"};
-cvar_t v_isometric_relz = {CVAR_CLIENT, "v_isometric_relz", "0", "camera position*up"};
-cvar_t v_isometric_flipcullface = {CVAR_CLIENT, "v_isometric_flipcullface", "0", "flips the backface culling"};
-cvar_t v_isometric_locked_orientation = {CVAR_CLIENT, "v_isometric_locked_orientation", "1", "camera rotation is fixed"};
-cvar_t v_isometric_usevieworiginculling = {CVAR_CLIENT, "v_isometric_usevieworiginculling", "0", "check visibility to the player location (can look pretty weird)"};
+cvar_t v_isometric = {CF_CLIENT, "v_isometric", "0", "changes view to isometric (non-perspective)"};
+cvar_t v_isometric_verticalfov = {CF_CLIENT, "v_isometric_verticalfov", "512", "vertical field of view in game units (horizontal is computed using aspect ratio based on this)"};
+cvar_t v_isometric_xx = {CF_CLIENT, "v_isometric_xx", "1", "camera matrix"};
+cvar_t v_isometric_xy = {CF_CLIENT, "v_isometric_xy", "0", "camera matrix"};
+cvar_t v_isometric_xz = {CF_CLIENT, "v_isometric_xz", "0", "camera matrix"};
+cvar_t v_isometric_yx = {CF_CLIENT, "v_isometric_yx", "0", "camera matrix"};
+cvar_t v_isometric_yy = {CF_CLIENT, "v_isometric_yy", "1", "camera matrix"};
+cvar_t v_isometric_yz = {CF_CLIENT, "v_isometric_yz", "0", "camera matrix"};
+cvar_t v_isometric_zx = {CF_CLIENT, "v_isometric_zx", "0", "camera matrix"};
+cvar_t v_isometric_zy = {CF_CLIENT, "v_isometric_zy", "0", "camera matrix"};
+cvar_t v_isometric_zz = {CF_CLIENT, "v_isometric_zz", "1", "camera matrix"};
+cvar_t v_isometric_tx = {CF_CLIENT, "v_isometric_tx", "0", "camera position (player-relative)"};
+cvar_t v_isometric_ty = {CF_CLIENT, "v_isometric_ty", "0", "camera position (player-relative)"};
+cvar_t v_isometric_tz = {CF_CLIENT, "v_isometric_tz", "0", "camera position (player-relative)"};
+cvar_t v_isometric_rot_pitch = {CF_CLIENT, "v_isometric_rot_pitch", "60", "camera rotation"};
+cvar_t v_isometric_rot_yaw = {CF_CLIENT, "v_isometric_rot_yaw", "135", "camera rotation"};
+cvar_t v_isometric_rot_roll = {CF_CLIENT, "v_isometric_rot_roll", "0", "camera rotation"};
+cvar_t v_isometric_relx = {CF_CLIENT, "v_isometric_relx", "0", "camera position*forward"};
+cvar_t v_isometric_rely = {CF_CLIENT, "v_isometric_rely", "0", "camera position*left"};
+cvar_t v_isometric_relz = {CF_CLIENT, "v_isometric_relz", "0", "camera position*up"};
+cvar_t v_isometric_flipcullface = {CF_CLIENT, "v_isometric_flipcullface", "0", "flips the backface culling"};
+cvar_t v_isometric_locked_orientation = {CF_CLIENT, "v_isometric_locked_orientation", "1", "camera rotation is fixed"};
+cvar_t v_isometric_usevieworiginculling = {CF_CLIENT, "v_isometric_usevieworiginculling", "0", "check visibility to the player location (can look pretty weird)"};
 
-cvar_t crosshair = {CVAR_CLIENT | CVAR_SAVE, "crosshair", "0", "selects crosshair to use (0 is none)"};
+cvar_t crosshair = {CF_CLIENT | CF_ARCHIVE, "crosshair", "0", "selects crosshair to use (0 is none)"};
 
-cvar_t v_centermove = {CVAR_CLIENT, "v_centermove", "0.15", "how long before the view begins to center itself (if freelook/+mlook/+jlook/+klook are off)"};
-cvar_t v_centerspeed = {CVAR_CLIENT, "v_centerspeed","500", "how fast the view centers itself"};
+cvar_t v_centermove = {CF_CLIENT, "v_centermove", "0.15", "how long before the view begins to center itself (if freelook/+mlook/+jlook/+klook are off)"};
+cvar_t v_centerspeed = {CF_CLIENT, "v_centerspeed","500", "how fast the view centers itself"};
 
-cvar_t cl_stairsmoothspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
+cvar_t cl_stairsmoothspeed = {CF_CLIENT | CF_ARCHIVE, "cl_stairsmoothspeed", "160", "how fast your view moves upward/downward when running up/down stairs"};
 
-cvar_t cl_smoothviewheight = {CVAR_CLIENT | CVAR_SAVE, "cl_smoothviewheight", "0", "time of the averaging to the viewheight value so that it creates a smooth transition. higher values = longer transition, 0 for instant transition."};
+cvar_t cl_smoothviewheight = {CF_CLIENT | CF_ARCHIVE, "cl_smoothviewheight", "0", "time of the averaging to the viewheight value so that it creates a smooth transition. higher values = longer transition, 0 for instant transition."};
 
-cvar_t chase_back = {CVAR_CLIENT | CVAR_SAVE, "chase_back", "48", "chase cam distance from the player"};
-cvar_t chase_up = {CVAR_CLIENT | CVAR_SAVE, "chase_up", "24", "chase cam distance from the player"};
-cvar_t chase_active = {CVAR_CLIENT | CVAR_SAVE, "chase_active", "0", "enables chase cam"};
-cvar_t chase_overhead = {CVAR_CLIENT | CVAR_SAVE, "chase_overhead", "0", "chase cam looks straight down if this is not zero"};
+cvar_t chase_back = {CF_CLIENT | CF_ARCHIVE, "chase_back", "48", "chase cam distance from the player"};
+cvar_t chase_up = {CF_CLIENT | CF_ARCHIVE, "chase_up", "24", "chase cam distance from the player"};
+cvar_t chase_active = {CF_CLIENT | CF_ARCHIVE, "chase_active", "0", "enables chase cam"};
+cvar_t chase_overhead = {CF_CLIENT | CF_ARCHIVE, "chase_overhead", "0", "chase cam looks straight down if this is not zero"};
 // GAME_GOODVSBAD2
-cvar_t chase_stevie = {CVAR_CLIENT, "chase_stevie", "0", "(GOODVSBAD2 only) chase cam view from above"};
+cvar_t chase_stevie = {CF_CLIENT, "chase_stevie", "0", "(GOODVSBAD2 only) chase cam view from above"};
 
-cvar_t v_deathtilt = {CVAR_CLIENT, "v_deathtilt", "1", "whether to use sideways view when dead"};
-cvar_t v_deathtiltangle = {CVAR_CLIENT, "v_deathtiltangle", "80", "what roll angle to use when tilting the view while dead"};
+cvar_t v_deathtilt = {CF_CLIENT, "v_deathtilt", "1", "whether to use sideways view when dead"};
+cvar_t v_deathtiltangle = {CF_CLIENT, "v_deathtiltangle", "80", "what roll angle to use when tilting the view while dead"};
 
 // Prophecy camera pitchangle by Alexander "motorsep" Zubov
-cvar_t chase_pitchangle = {CVAR_CLIENT | CVAR_SAVE, "chase_pitchangle", "55", "chase cam pitch angle"};
+cvar_t chase_pitchangle = {CF_CLIENT | CF_ARCHIVE, "chase_pitchangle", "55", "chase cam pitch angle"};
 
-cvar_t v_yshearing = {CVAR_CLIENT, "v_yshearing", "0", "be all out of gum (set this to the maximum angle to allow Y shearing for - try values like 75)"};
+cvar_t v_yshearing = {CF_CLIENT, "v_yshearing", "0", "be all out of gum (set this to the maximum angle to allow Y shearing for - try values like 75)"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -1183,9 +1183,9 @@ V_Init
 */
 void V_Init (void)
 {
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "v_cshift", V_cshift_f, "sets tint color of view");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
-	Cmd_AddCommand(CMD_CLIENT, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "v_cshift", V_cshift_f, "sets tint color of view");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "bf", V_BonusFlash_f, "briefly flashes a bright color tint on view (used when items are picked up); optionally takes R G B [A [alphafade]] arguments to specify how the flash looks");
+	Cmd_AddCommand(CF_CLIENT, "centerview", V_StartPitchDrift_f, "gradually recenter view (stop looking up/down)");
 
 	Cvar_RegisterVariable (&v_centermove);
 	Cvar_RegisterVariable (&v_centerspeed);

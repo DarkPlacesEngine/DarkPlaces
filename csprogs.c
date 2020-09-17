@@ -562,8 +562,8 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		// temporarily so that it can be set by the cvar command,
 		// and then reprotect it afterwards
 		int crcflags = csqc_progcrc.flags;
-		csqc_progcrc.flags &= ~CVAR_READONLY;
-		csqc_progsize.flags &= ~CVAR_READONLY;
+		csqc_progcrc.flags &= ~CF_READONLY;
+		csqc_progsize.flags &= ~CF_READONLY;
 		Cmd_ExecuteString(&cmd_client, msg, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;

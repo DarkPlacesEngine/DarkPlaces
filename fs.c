@@ -382,9 +382,9 @@ char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 gamedir_t *fs_all_gamedirs = NULL;
 int fs_all_gamedirs_count = 0;
 
-cvar_t scr_screenshot_name = {CVAR_CLIENT | CVAR_NORESETTODEFAULTS, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
-cvar_t fs_empty_files_in_pack_mark_deletions = {CVAR_CLIENT | CVAR_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
-cvar_t cvar_fs_gamedir = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY | CVAR_NORESETTODEFAULTS, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
+cvar_t scr_screenshot_name = {CF_CLIENT | CF_PERSISTENT, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
+cvar_t fs_empty_files_in_pack_mark_deletions = {CF_CLIENT | CF_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
+cvar_t cvar_fs_gamedir = {CF_CLIENT | CF_SERVER | CF_READONLY | CF_PERSISTENT, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
 
 
 /*
@@ -1967,12 +1967,12 @@ void FS_Init_Commands(void)
 	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
 	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
-	Cmd_AddCommand(CMD_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
-	Cmd_AddCommand(CMD_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
-	Cmd_AddCommand(CMD_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
-	Cmd_AddCommand(CMD_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
-	Cmd_AddCommand(CMD_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
-	Cmd_AddCommand(CMD_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+	Cmd_AddCommand(CF_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(CF_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
+	Cmd_AddCommand(CF_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand(CF_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand(CF_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand(CF_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
 }
 
 static void FS_Init_Dir (void)

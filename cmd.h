@@ -42,15 +42,25 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 struct cmd_state_s;
 
 // Command flags
-#define CMD_CLIENT				(1<<0)
-#define CMD_SERVER				(1<<1)
-#define CMD_CLIENT_FROM_SERVER	(1<<2)
-#define CMD_SERVER_FROM_CLIENT	(1<<3)
-#define CMD_USERINFO			(1<<4)
-#define CMD_CHEAT				(1<<5)
+#define CF_NONE 0
+#define CF_CLIENT               (1<<0)  // cvar/command that only the client can change/execute
+#define CF_SERVER               (1<<1)  // cvar/command that only the server can change/execute
+#define CF_CLIENT_FROM_SERVER   (1<<2)  // command that the server is allowed to execute on the client
+#define CF_SERVER_FROM_CLIENT   (1<<3)  // command the client is allowed to execute on the server as a stringcmd
+#define CF_CHEAT                (1<<4)  // command or cvar that gives an unfair advantage over other players and is blocked unless sv_cheats is 1
+#define CF_ARCHIVE              (1<<5)  // cvar should have its set value saved to config.cfg and persist across sessions
+#define CF_READONLY             (1<<6)  // cvar cannot be changed from the console or the command buffer
+#define CF_NOTIFY               (1<<7)  // cvar should trigger a chat notification to all connected clients when changed
+#define CF_SERVERINFO           (1<<8)  // command or cvar relevant to serverinfo string handling
+#define CF_USERINFO             (1<<9)  // command or cvar used to communicate userinfo to the server
+#define CF_PERSISTENT           (1<<10) // cvar must not be reset on gametype switch (such as scr_screenshot_name, which otherwise isn't set to the mod name properly)
+#define CF_PRIVATE              (1<<11) // cvar should not be $ expanded or sent to the server under any circumstances (rcon_password, etc)
+#define CF_MAXFLAGSVAL          4095    // used to determine if flags is valid
+// for internal use only!
+#define CF_DEFAULTSET (1<<30)
+#define CF_ALLOCATED (1<<31)
 
-
-#define CMD_SHARED 3
+#define CF_SHARED 3
 
 typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
@@ -111,14 +121,14 @@ typedef struct cmd_state_s
 	cmd_function_t *engine_functions;
 
 	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
-	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
+	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
 
 	int cmd_flags; // cmd flags that identify this interpreter
 
 	/*
 	 * If a requested flag matches auto_flags, a command will be
 	 * added to a given interpreter with auto_function. For example,
-	 * a CMD_SERVER_FROM_CLIENT command should be automatically added
+	 * a CF_SERVER_FROM_CLIENT command should be automatically added
 	 * to the client interpreter as CL_ForwardToServer_f. It can be
 	 * overridden at any time.
 	 */

@@ -28,16 +28,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef SSE_POSSIBLE
 static qbool r_skeletal_use_sse_defined = false;
-cvar_t r_skeletal_use_sse = {CVAR_CLIENT, "r_skeletal_use_sse", "1", "use SSE for skeletal model animation"};
+cvar_t r_skeletal_use_sse = {CF_CLIENT, "r_skeletal_use_sse", "1", "use SSE for skeletal model animation"};
 #endif
-cvar_t r_skeletal_debugbone = {CVAR_CLIENT, "r_skeletal_debugbone", "-1", "development cvar for testing skeletal model code"};
-cvar_t r_skeletal_debugbonecomponent = {CVAR_CLIENT, "r_skeletal_debugbonecomponent", "3", "development cvar for testing skeletal model code"};
-cvar_t r_skeletal_debugbonevalue = {CVAR_CLIENT, "r_skeletal_debugbonevalue", "100", "development cvar for testing skeletal model code"};
-cvar_t r_skeletal_debugtranslatex = {CVAR_CLIENT, "r_skeletal_debugtranslatex", "1", "development cvar for testing skeletal model code"};
-cvar_t r_skeletal_debugtranslatey = {CVAR_CLIENT, "r_skeletal_debugtranslatey", "1", "development cvar for testing skeletal model code"};
-cvar_t r_skeletal_debugtranslatez = {CVAR_CLIENT, "r_skeletal_debugtranslatez", "1", "development cvar for testing skeletal model code"};
-cvar_t mod_alias_supporttagscale = {CVAR_CLIENT | CVAR_SERVER, "mod_alias_supporttagscale", "1", "support scaling factors in bone/tag attachment matrices as supported by MD3"};
-cvar_t mod_alias_force_animated = {CVAR_CLIENT | CVAR_SERVER, "mod_alias_force_animated", "", "if set to an non-empty string, overrides the is-animated flag of any alias models (for benchmarking)"};
+cvar_t r_skeletal_debugbone = {CF_CLIENT, "r_skeletal_debugbone", "-1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugbonecomponent = {CF_CLIENT, "r_skeletal_debugbonecomponent", "3", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugbonevalue = {CF_CLIENT, "r_skeletal_debugbonevalue", "100", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatex = {CF_CLIENT, "r_skeletal_debugtranslatex", "1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatey = {CF_CLIENT, "r_skeletal_debugtranslatey", "1", "development cvar for testing skeletal model code"};
+cvar_t r_skeletal_debugtranslatez = {CF_CLIENT, "r_skeletal_debugtranslatez", "1", "development cvar for testing skeletal model code"};
+cvar_t mod_alias_supporttagscale = {CF_CLIENT | CF_SERVER, "mod_alias_supporttagscale", "1", "support scaling factors in bone/tag attachment matrices as supported by MD3"};
+cvar_t mod_alias_force_animated = {CF_CLIENT | CF_SERVER, "mod_alias_force_animated", "", "if set to an non-empty string, overrides the is-animated flag of any alias models (for benchmarking)"};
 
 float mod_md3_sin[320];
 
