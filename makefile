@@ -101,6 +101,7 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
+	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
@@ -130,6 +131,7 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 		CFLAGS_MAKEDEP=
 	endif
 
+	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=dlopen
 	DP_LINK_ODE?=dlopen
@@ -165,6 +167,7 @@ ifeq ($(DP_MAKE_TARGET), sunos)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
+	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
@@ -191,6 +194,7 @@ ifeq ($(DP_MAKE_TARGET), bsd)
 	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
+	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=shared
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
@@ -236,6 +240,7 @@ ifeq ($(DP_MAKE_TARGET), mingw)
 	EXE_SVNEXUIZ=$(EXE_WINSVNEXUIZ)
 	EXE_SDLNEXUIZ=$(EXE_WINSDLNEXUIZ)
 
+	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=dlopen
 	DP_LINK_JPEG?=shared
 	DP_LINK_ODE?=dlopen
@@ -246,6 +251,13 @@ endif
 
 # set these to "" if you want to use dynamic loading instead
 # zlib
+ifeq ($(DP_LINK_SDL), shared)
+	SDL_LIBS=$(SDLCONFIG_LIBS)
+endif
+ifeq ($(DP_LINK_SDL), static)
+	SDL_LIBS=$(SDLCONFIG_STATICLIBS)
+endif
+
 ifeq ($(DP_LINK_ZLIB), shared)
 	CFLAGS_LIBZ=-DLINK_TO_ZLIB
 	LIB_Z=-lz
