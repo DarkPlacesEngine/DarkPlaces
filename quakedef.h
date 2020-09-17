@@ -369,6 +369,7 @@ extern char engineversion[128];
 //===========================================
 
 #include "zone.h"
+#include "thread.h"
 #include "fs.h"
 #include "common.h"
 #include "com_list.h"
