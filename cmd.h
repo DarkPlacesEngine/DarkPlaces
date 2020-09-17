@@ -64,7 +64,7 @@ struct cmd_state_s;
 
 typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
-typedef enum
+typedef enum cmd_source_s
 {
 	src_client,		///< came in over a net connection as a clc_stringcmd
 					///< host_client will be valid during this state.
@@ -103,6 +103,20 @@ typedef struct cmd_userdefined_s
 }
 cmd_userdefined_t;
 
+typedef struct cmd_buf_s
+{
+	llist_t start;
+	llist_t deferred;
+	llist_t free;
+	qbool wait;
+	size_t maxsize;
+	size_t size;
+	char tokenizebuffer[CMD_TOKENIZELENGTH];
+	int tokenizebufferpos;
+	double deferred_oldtime;
+	void *lock;
+} cmd_buf_t;
+
 /// command interpreter state - the tokenizing and execution of commands, as well as pointers to which cvars and aliases they can access
 typedef struct cmd_state_s
 {
@@ -114,7 +128,7 @@ typedef struct cmd_state_s
 	const char *args;
 	cmd_source_t source;
 
-	struct cbuf_s *cbuf;
+	cmd_buf_t *cbuf;
 
 	cmd_userdefined_t *userdefined; // possible csqc functions and aliases to execute
 
@@ -148,20 +162,6 @@ typedef struct cmd_input_s
 	qbool pending;
 } cmd_input_t;
 
-typedef struct cbuf_s
-{
-	llist_t start;
-	llist_t deferred;
-	llist_t free;
-	qbool wait;
-	size_t maxsize;
-	size_t size;
-	char tokenizebuffer[CMD_TOKENIZELENGTH];
-	int tokenizebufferpos;
-	double deferred_oldtime;
-	void *lock;
-} cbuf_t;
-
 extern cmd_userdefined_t cmd_userdefined_all; // aliases and csqc functions
 extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
 
@@ -177,8 +177,8 @@ extern cmd_state_t cmd_serverfromclient;
 
 extern qbool host_stuffcmdsrun;
 
-void Cbuf_Lock(cbuf_t *cbuf);
-void Cbuf_Unlock(cbuf_t *cbuf);
+void Cbuf_Lock(cmd_buf_t *cbuf);
+void Cbuf_Unlock(cmd_buf_t *cbuf);
 
 /*! as new commands are generated from the console or keybindings,
  * the text is added to the end of the command buffer.
@@ -196,9 +196,9 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text);
  * Normally called once per frame, but may be explicitly invoked.
  * \note Do not call inside a command function!
  */
-void Cbuf_Execute (cbuf_t *cbuf);
+void Cbuf_Execute (cmd_buf_t *cbuf);
 /*! Performs deferred commands and runs Cbuf_Execute, called by Host_Frame */
-void Cbuf_Frame (cbuf_t *cbuf);
+void Cbuf_Frame (cmd_buf_t *cbuf);
 
 //===========================================================================
 
