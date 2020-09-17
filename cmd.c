@@ -176,153 +176,163 @@ static void Cmd_Centerprint_f (cmd_state_t *cmd)
 =============================================================================
 */
 
-/*
-============
-Cbuf_ParseText
-
-Parses Quake console command-line
-Returns true if command is complete
-============
-*/
-static qbool Cbuf_ParseText(char **start, size_t *size)
-{
-	int i = 0;
-	qbool quotes = false;
-	qbool comment = false; // Does not imply end because we might be starting the line with a comment.
-	qbool escaped = false;
-	qbool end = false; // Reached the end of a valid command
-	char *offset = NULL; // Non-NULL if valid command. Used by the caller to know where to start copying.
-	size_t cmdsize = 0; // Non-zero if valid command. Basically bytes to copy for the caller.
-
-	/*
-	 * Allow escapes in quotes. Ignore newlines and
-	 * comments. Return 0 if input consists solely
-	 * of either of those, and ignore blank input.
-	 */
-	while(!end)
-	{
-		switch ((*start)[i])
-		{
-			case '/':
-				if(!quotes && (*start)[i+1] == '/' && (i == 0 || ISWHITESPACE((*start)[i-1])))
-					comment = true;
-				break;
-			case 0:
-				if(!end && cmdsize)
-					return false;
-				comment = false;
-				end = true;
-				break;
-			case '\r':
-			case '\n':
-				comment = false;
-				quotes = false;
-				end = true;
-				break;
-		}
-
-		if(!comment)
-		{
-			switch ((*start)[i])
-			{
-				case ';':
-					if(!quotes)
-						end = true;
-					break;
-				case '"':
-					if (!escaped)
-						quotes = !quotes;
-					else
-						escaped = false;
-					break;
-				case '\\':
-					if (!escaped && quotes)
-						escaped = true;
-					else if (escaped)
-						escaped = false;
-					break;
-			}
-
-			if(!offset)
-			{
-				if(!end)
-					offset = (char *)&(*start)[i];
-				else if ((*start)[i])
-					end = false;
-			}
-			else
-				cmdsize++;
-		}
-		i++;
-	}
-
-	*start = offset;
-	*size = cmdsize;
-
-	return true;
-}
-
 static cmd_input_t *Cbuf_LinkGet(cbuf_t *cbuf, cmd_input_t *existing)
 {
 	cmd_input_t *ret = NULL;
 	if(existing && existing->pending)
 		ret = existing;
-	else
+	else if(!List_IsEmpty(&cbuf->free))
 	{
-		if(!List_IsEmpty(&cbuf->free))
-			ret = List_Container(*cbuf->free.next, cmd_input_t, list);
-		else
-		{
-			ret = (cmd_input_t *)Z_Malloc(sizeof(cmd_input_t));
-			ret->list.next = ret->list.prev = &ret->list;
-		}
-		ret->size = 0;
+		ret = List_Container(*cbuf->free.next, cmd_input_t, list);
+		ret->length = 0;
 		ret->pending = false;
 	}
-
 	return ret;
 }
 
+static cmd_input_t *Cmd_AllocInputNode(void)
+{
+	cmd_input_t *node = (cmd_input_t *)Z_Malloc(sizeof(cmd_input_t));
+	node->list.prev = node->list.next = &node->list;
+	node->size = node->length = node->pending = 0;
+	return node;
+}
+
+static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
+{
+	size_t pos, cmdsize = 0, start = 0;
+	qbool command = false, lookahead = false;
+	qbool quotes = false, comment = false;
+	qbool escaped = false;
+
+	/*
+	 * The Quake command-line is super basic. It can be entered in the console
+	 * or in config files. A semicolon is used to terminate a command and chain
+	 * them together. Otherwise, a newline delineates command input.
+	 * 
+	 * In most engines, the Quake command-line is a simple linear text buffer that
+	 * is parsed when it executes. In Darkplaces, we use a linked list of command
+	 * input and parse the input on the spot.
+	 * 
+	 * This was done because Darkplaces allows multiple command interpreters on the
+	 * same thread. Previously, each interpreter maintained its own buffer and this
+	 * caused problems related to execution order, and maintaining a single simple
+	 * buffer for all interpreters makes it non-trivial to keep track of which
+	 * command should execute on which interpreter.
+	 */
+
+	// Run until command and lookahead are both true, or until we run out of input.
+	for (pos = 0; (*input)[pos]; pos++)
+	{
+		// Look for newlines and semicolons. Ignore semicolons in quotes.
+		switch((*input)[pos])
+		{
+		case '\r':
+		case '\n':
+			command = false;
+			comment = false;
+			break;
+		default: 
+			if(!comment) // Not a newline so far. Still not a valid command yet.
+			{
+				if(!quotes && (*input)[pos] == ';') // Ignore semicolons in quotes.
+					command = false;
+				else if (ISCOMMENT((*input), pos)) // Comments
+				{
+					comment = true;
+					command = false;
+				}
+				else
+				{
+					command = true;
+					if(!lookahead)
+					{
+						if(!cmdsize)
+							start = pos;
+						cmdsize++;
+					}
+
+					switch((*input)[pos])
+					{
+					case '"':
+						if (!escaped)
+							quotes = !quotes;
+						else
+							escaped = false;
+						break;
+					case '\\':
+						if (!escaped && quotes)
+							escaped = true;
+						else if (escaped)
+							escaped = false;
+						break;
+					}
+				}
+			}
+		}
+		if(cmdsize && !command)
+			lookahead = true;
+
+		if(command && lookahead)
+			break;
+	}
+
+	if(cmdsize)
+	{
+		size_t offset = 0;
+
+		if(!*output)
+			*output = Cmd_AllocInputNode();
+
+		if((*output)->pending)
+			offset = (*output)->length;
+
+		(*output)->length += cmdsize;
+
+		if((*output)->size < (*output)->length + 1)
+		{
+			(*output)->text = (char *)Mem_Realloc(tempmempool, (*output)->text, (*output)->size + cmdsize + 1);
+			(*output)->size = (*output)->length + 1;
+		}
+
+		strlcpy(&(*output)->text[offset], &(*input)[start], cmdsize + 1);
+		(*output)->pending = !lookahead;
+	}
+
+	// Set input to its new position. Can be NULL.
+	*input = &(*input)[pos];
+
+	return cmdsize;
+}
 
 // Cloudwalk: Not happy with this, but it works.
 static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text)
 {
 	char *in = (char *)&text[0];
-	qbool complete;
 	cbuf_t *cbuf = cmd->cbuf;
 	size_t totalsize = 0, newsize = 0;
 	cmd_input_t *current = NULL;
 
 	// Slide the pointer down until we reach the end
-	while(in)
+	while(*in)
 	{
-		/*
-		 * FIXME: Upon reaching a terminator, we make a redundant
-		 * call just to say "it's the end of the input stream".
-		 */
-		complete = Cbuf_ParseText(&in, &newsize);
+		current = Cbuf_LinkGet(cbuf, existing);
+		newsize = Cmd_ParseInput(&current, &in);
 
 		// Valid command
 		if(newsize)
 		{
-			if(!current)
-				current = Cbuf_LinkGet(cbuf, existing);
-
-			if(!current->pending)
+			if(current != existing)
 			{
 				current->source = cmd;
 				List_Move_Tail(&current->list, head);
 			}
 
-			current->pending = complete;
 			totalsize += newsize;
-			strlcpy(&current->text[current->size], in, newsize + 1);
-			current->size += newsize;
 		}
-		else if (existing && !totalsize)
-			existing->pending = false;
+		else if (current == existing && !totalsize)
+			current->pending = false;
 		current = NULL;
-		in = &in[newsize];
 	}
 
 	cbuf->size += totalsize;
@@ -445,7 +455,7 @@ void Cbuf_Execute (cbuf_t *cbuf)
 		 */
 		current->pending = false;
 
-		cbuf->size -= current->size;
+		cbuf->size -= current->length;
 
 		firstchar = current->text;
 		while(*firstchar && ISWHITESPACE(*firstchar))
