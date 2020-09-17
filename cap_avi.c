@@ -18,7 +18,7 @@ typedef struct capturevideostate_avi_formatspecific_s
 	fs_offset_t videofile_ix_master_video_start_offset;
 	fs_offset_t videofile_ix_movistart;
 	fs_offset_t position;
-	qboolean canseek;
+	qbool canseek;
 	sizebuf_t riffbuffer;
 	unsigned char riffbufferdata[128];
 	sizebuf_t riffindexbuffer;
@@ -269,7 +269,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	FS_Seek(cls.capturevideo.videofile, 0, SEEK_END); // return value doesn't matter here
 }
 
-static void SCR_CaptureVideo_RIFF_Finish(qboolean final)
+static void SCR_CaptureVideo_RIFF_Finish(qbool final)
 {
 	LOAD_FORMATSPECIFIC_AVI();
 	// close the "movi" list

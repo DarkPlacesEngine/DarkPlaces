@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
-typedef bool qboolean;
+typedef bool qbool;
 
 #ifndef NULL
 #define NULL ((void *)0)

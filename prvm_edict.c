@@ -51,7 +51,7 @@ cvar_t prvm_garbagecollection_strings = {CVAR_CLIENT | CVAR_SERVER, "prvm_garbag
 cvar_t prvm_stringdebug = {CVAR_CLIENT | CVAR_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
 
 static double prvm_reuseedicts_always_allow = 0;
-qboolean prvm_runawaycheck = true;
+qbool prvm_runawaycheck = true;
 
 //============================================================================
 // mempool handling
@@ -233,7 +233,7 @@ PRVM_ED_CanAlloc
 Returns if this particular edict could get allocated by PRVM_ED_Alloc
 =================
 */
-qboolean PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e)
+qbool PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e)
 {
 	if(!e->priv.required->free)
 		return false;
@@ -977,7 +977,7 @@ Can parse either fields or globals
 returns false if error
 =============
 */
-qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qboolean parsebackslash)
+qbool PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qbool parsebackslash)
 {
 	int i, l;
 	char *new_p;
@@ -1270,8 +1270,8 @@ Used for initial level load and for savegames.
 const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent)
 {
 	mdef_t *key;
-	qboolean anglehack;
-	qboolean init;
+	qbool anglehack;
+	qbool init;
 	char keyname[256];
 	size_t n;
 
@@ -1369,7 +1369,7 @@ void PRVM_ED_CallPrespawnFunction(prvm_prog_t *prog, prvm_edict_t *ent)
 	}
 }
 
-qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start)
+qbool PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start)
 {
 	const char *funcname;
 	mfunction_t *func;
@@ -2500,7 +2500,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	// in CSQC we really shouldn't be able to change how stuff works... sorry for now
 	// later idea: include a list of authorized .po file checksums with the csprogs
 	{
-		qboolean deftrans = prog == CLVM_prog;
+		qbool deftrans = prog == CLVM_prog;
 		const char *realfilename = (prog != CLVM_prog ? filename : csqc_progname.string);
 		if(deftrans) // once we have dotranslate_ strings, ALWAYS use the opt-in method!
 		{
@@ -3428,7 +3428,7 @@ void PRVM_FreeString(prvm_prog_t *prog, int num)
 		prog->error_cmd("PRVM_FreeString: invalid string offset %i", num);
 }
 
-static qboolean PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
+static qbool PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
 {
 	int i, j;
 
@@ -3459,7 +3459,7 @@ static qboolean PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
 	return false;
 }
 
-static qboolean PRVM_IsEdictRelevant(prvm_prog_t *prog, prvm_edict_t *edict)
+static qbool PRVM_IsEdictRelevant(prvm_prog_t *prog, prvm_edict_t *edict)
 {
 	char vabuf[1024];
 	char vabuf2[1024];
@@ -3511,7 +3511,7 @@ static qboolean PRVM_IsEdictRelevant(prvm_prog_t *prog, prvm_edict_t *edict)
 	return false;
 }
 
-static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, int mark)
+static qbool PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, int mark)
 {
 	int i, j;
 	int edictnum = PRVM_NUM_FOR_EDICT(edict);
@@ -3554,7 +3554,7 @@ static qboolean PRVM_IsEdictReferenced(prvm_prog_t *prog, prvm_edict_t *edict, i
 static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 {
 	int i, j;
-	qboolean found_new;
+	qbool found_new;
 	int stage;
 
 	// Stage 1: world, all entities that are relevant, and all entities that are referenced by globals.
@@ -3607,7 +3607,7 @@ static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 void PRVM_LeakTest(prvm_prog_t *prog)
 {
 	int i, j;
-	qboolean leaked = false;
+	qbool leaked = false;
 
 	if(!prog->leaktest_active)
 		return;

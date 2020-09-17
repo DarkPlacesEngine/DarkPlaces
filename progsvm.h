@@ -69,7 +69,7 @@ typedef struct prvm_required_field_s
 //     it belongs to prvm.
 typedef struct prvm_edict_private_s
 {
-	qboolean free;
+	qbool free;
 	double freetime; // realtime of last change to "free" (i.e. also set on allocation)
 	int mark; // used during leaktest (0 = unref, >0 = referenced); special values during server physics:
 #define PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN -1
@@ -99,7 +99,7 @@ typedef struct prvm_edict_s
 		//		... } server_edict_private_t;
 		// or:
 		//	typedef struct server_edict_private_s {
-		//		qboolean free;
+		//		qbool free;
 		//		float freetime;
 		//		vec3_t moved_from;
 		//      vec3_t moved_fromangles;
@@ -641,7 +641,7 @@ typedef struct prvm_prog_s
 	// note that in FTEQW polygonbegin with 2 args is handled very differently,
 	// where the behavior is always 3D unless DRAWFLAG_2D is passed, but
 	// DRAWFLAG_2D conflicts with our DRAWFLAG_SCREEN.
-	qboolean			polygonbegin_guess2d;
+	qbool			polygonbegin_guess2d;
 	// the texture name and drawflags provided to polygonbegin
 	char				polygonbegin_texname[MAX_QPATH];
 	int					polygonbegin_drawflags;
@@ -677,7 +677,7 @@ typedef struct prvm_prog_s
 
 	// allow writing to world entity fields, this is set by server init and
 	// cleared before first server frame
-	qboolean			allowworldwrites;
+	qbool			allowworldwrites;
 
 	// name of the prog, e.g. "Server", "Client" or "Menu" (used for text output)
 	const char			*name; // [INIT]
@@ -687,11 +687,11 @@ typedef struct prvm_prog_s
 
 	const char			**extensionstring; // [INIT]
 
-	qboolean			loadintoworld; // [INIT]
+	qbool			loadintoworld; // [INIT]
 
 	// used to indicate whether a prog is loaded
-	qboolean			loaded;
-	qboolean			leaktest_active;
+	qbool			loaded;
+	qbool			leaktest_active;
 
 	// translation buffer (only needs to be freed on unloading progs, type is private to prvm_edict.c)
 	void *po;
@@ -722,7 +722,7 @@ typedef struct prvm_prog_s
 
 	void				(*count_edicts)(struct prvm_prog_s *prog); // [INIT] used by PRVM_ED_Count_f
 
-	qboolean			(*load_edict)(struct prvm_prog_s *prog, prvm_edict_t *ent); // [INIT] used by PRVM_ED_LoadFromFile
+	qbool			(*load_edict)(struct prvm_prog_s *prog, prvm_edict_t *ent); // [INIT] used by PRVM_ED_LoadFromFile
 
 	void				(*init_cmd)(struct prvm_prog_s *prog); // [INIT] used by PRVM_InitProg
 	void				(*reset_cmd)(struct prvm_prog_s *prog); // [INIT] used by PRVM_ResetProg
@@ -826,7 +826,7 @@ func_t PRVM_ED_FindFunctionOffset(prvm_prog_t *prog, const char *name);
 
 void PRVM_MEM_IncreaseEdicts(prvm_prog_t *prog);
 
-qboolean PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e);
+qbool PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e);
 prvm_edict_t *PRVM_ED_Alloc(prvm_prog_t *prog);
 void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed);
 void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e);
@@ -840,7 +840,7 @@ void PRVM_ED_WriteGlobals(prvm_prog_t *prog, qfile_t *f);
 void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
 
 void PRVM_ED_CallPrespawnFunction(prvm_prog_t *prog, prvm_edict_t *ent);
-qboolean PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start);
+qbool PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char *data, const char *start);
 void PRVM_ED_CallPostspawnFunction (prvm_prog_t *prog, prvm_edict_t *ent);
 
 void PRVM_ED_LoadFromFile(prvm_prog_t *prog, const char *data);
@@ -892,7 +892,7 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer);
 void PRVM_FreeString(prvm_prog_t *prog, int num);
 
 mdef_t *PRVM_ED_FieldAtOfs(prvm_prog_t *prog, unsigned int ofs);
-qboolean PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qboolean parsebackslash);
+qbool PRVM_ED_ParseEpair(prvm_prog_t *prog, prvm_edict_t *ent, mdef_t *key, const char *s, qbool parsebackslash);
 char *PRVM_UglyValueString(prvm_prog_t *prog, etype_t type, prvm_eval_t *val, char *line, size_t linelength);
 char *PRVM_GlobalString(prvm_prog_t *prog, int ofs, char *line, size_t linelength);
 char *PRVM_GlobalStringNoContents(prvm_prog_t *prog, int ofs, char *line, size_t linelength);

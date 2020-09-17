@@ -647,7 +647,7 @@ void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, ve
 }
 
 // LadyHavoc: calculates pitch/yaw/roll angles from forward and up vectors
-void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch)
+void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qbool flippitch)
 {
 	if (forward[0] == 0 && forward[1] == 0)
 	{

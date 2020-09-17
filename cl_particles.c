@@ -114,7 +114,7 @@ typedef struct particleeffectinfo_s
 	float lightradiusfade;
 	float lighttime;
 	float lightcolor[3];
-	qboolean lightshadow;
+	qbool lightshadow;
 	int lightcubemapnum;
 	float lightcorona[2];
 	unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
@@ -264,7 +264,7 @@ particleeffectinfo_t baselineparticleeffectinfo =
 	0.0f, //float lightradiusfade;
 	16777216.0f, //float lighttime;
 	{1.0f, 1.0f, 1.0f}, //float lightcolor[3];
-	true, //qboolean lightshadow;
+	true, //qbool lightshadow;
 	0, //int lightcubemapnum;
 	{1.0f, 0.25f}, //float lightcorona[2];
 	{(unsigned int)-1, (unsigned int)-1}, //unsigned int staincolor[2]; // note: 0x808080 = neutral (particle's own color), these are modding factors for the particle's original color!
@@ -650,7 +650,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 // stainsize: size of the stain as factor for palpha
 // angle: base rotation of the particle geometry around its center normal
 // spin: rotation speed of the particle geometry around its center normal
-particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qboolean pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex, float stainalpha, float stainsize, float angle, float spin, float tint[4])
+particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qbool pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex, float stainalpha, float stainsize, float angle, float spin, float tint[4])
 {
 	int l1, l2, r, g, b;
 	particle_t *part;
@@ -890,8 +890,8 @@ static char *LightCubemapNumToName(char *vabuf, size_t vasize, int lightcubemapn
 
 static void CL_Sparks(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float sparkcount);
 static void CL_Smoke(const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, float smokecount);
-static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail);
-static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, qboolean wanttrail)
+static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qbool spawndlight, qbool spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qbool wanttrail);
+static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qbool spawndlight, qbool spawnparticles, qbool wanttrail)
 {
 	vec3_t center;
 	matrix4x4_t lightmatrix;
@@ -1014,7 +1014,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 		else
 		{
 			static double bloodaccumulator = 0;
-			qboolean immediatebloodstain = (cl_decals_newsystem_immediatebloodstain.integer >= 1);
+			qbool immediatebloodstain = (cl_decals_newsystem_immediatebloodstain.integer >= 1);
 			//CL_NewParticle(center, pt_alphastatic, 0x4f0000,0x7f0000, tex_particle, 2.5, 0, 256, 256, 0, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), 0, 0, 0, 1, 4, 0, 0, true, 0, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, NULL);
 			bloodaccumulator += count * 0.333 * cl_particles_quality.value;
 			for (;bloodaccumulator > 0;bloodaccumulator--)
@@ -1419,9 +1419,9 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 
 // this is also called on point effects with spawndlight = true and
 // spawnparticles = true
-static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qboolean wanttrail)
+static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qbool spawndlight, qbool spawnparticles, float tintmins[4], float tintmaxs[4], float fade, qbool wanttrail)
 {
-	qboolean found = false;
+	qbool found = false;
 	char vabuf[1024];
 	if (effectnameindex < 1 || effectnameindex >= MAX_PARTICLEEFFECTNAME || !particleeffectname[effectnameindex][0])
 	{
@@ -1445,8 +1445,8 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		vec3_t up;
 		vec_t traillen;
 		vec_t trailstep;
-		qboolean underwater;
-		qboolean immediatebloodstain;
+		qbool underwater;
+		qbool immediatebloodstain;
 		particle_t *part;
 		float avgtint[4], tint[4], tintlerp;
 		// note this runs multiple effects with the same name, each one spawns only one kind of particle, so some effects need more than one
@@ -1468,9 +1468,9 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		{
 			if ((info->effectnameindex == effectnameindex) && (info->flags & PARTICLEEFFECT_DEFINED))
 			{
-				qboolean definedastrail = info->trailspacing > 0;
+				qbool definedastrail = info->trailspacing > 0;
 
-				qboolean drawastrail = wanttrail;
+				qbool drawastrail = wanttrail;
 				if (cl_particles_forcetraileffects.integer)
 					drawastrail = drawastrail || definedastrail;
 
@@ -1640,12 +1640,12 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 		CL_ParticleEffect_Fallback(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, wanttrail);
 }
 
-void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
+void CL_ParticleTrail(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qbool spawndlight, qbool spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
 {
 	CL_NewParticlesFromEffectinfo(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, tintmins, tintmaxs, fade, true);
 }
 
-void CL_ParticleBox(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qboolean spawndlight, qboolean spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
+void CL_ParticleBox(int effectnameindex, float pcount, const vec3_t originmins, const vec3_t originmaxs, const vec3_t velocitymins, const vec3_t velocitymaxs, entity_t *ent, int palettecolor, qbool spawndlight, qbool spawnparticles, float tintmins[4], float tintmaxs[4], float fade)
 {
 	CL_NewParticlesFromEffectinfo(effectnameindex, pcount, originmins, originmaxs, velocitymins, velocitymaxs, ent, palettecolor, spawndlight, spawnparticles, tintmins, tintmaxs, fade, false);
 }
@@ -2462,7 +2462,7 @@ static void R_DrawParticle_TransparentCallback(const entity_render_t *ent, const
 	float palpha, spintime, spinrad, spincos, spinsin, spinm1, spinm2, spinm3, spinm4;
 	vec4_t colormultiplier;
 	float minparticledist_start, minparticledist_end;
-	qboolean dofade;
+	qbool dofade;
 
 	RSurf_ActiveModelEntity(r_refdef.scene.worldentity, false, false, false);
 
@@ -2740,7 +2740,7 @@ void R_DrawParticles (void)
 	float drawdist2;
 	int hitent;
 	trace_t trace;
-	qboolean update;
+	qbool update;
 
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
 	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);

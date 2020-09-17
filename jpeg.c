@@ -454,12 +454,12 @@ static dllfunction_t jpegfuncs[] =
 
 // Handle for JPEG DLL
 dllhandle_t jpeg_dll = NULL;
-qboolean jpeg_tried_loading = 0;
+qbool jpeg_tried_loading = 0;
 #endif
 
 static unsigned char jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 static jmp_buf error_in_jpeg;
-static qboolean jpeg_toolarge;
+static qbool jpeg_toolarge;
 
 // Our own output manager for JPEG compression
 typedef struct
@@ -488,7 +488,7 @@ JPEG_OpenLibrary
 Try to load the JPEG DLL
 ====================
 */
-qboolean JPEG_OpenLibrary (void)
+qbool JPEG_OpenLibrary (void)
 {
 #ifdef LINK_TO_LIBJPEG
 	return true;
@@ -814,7 +814,7 @@ JPEG_SaveImage_preflipped
 Save a preflipped JPEG image to a file
 ====================
 */
-qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data)
+qbool JPEG_SaveImage_preflipped (const char *filename, int width, int height, unsigned char *data)
 {
 	struct jpeg_compress_struct cinfo;
 	struct jpeg_error_mgr jerr;
@@ -1043,7 +1043,7 @@ static CompressedImageCacheItem *CompressedImageCache_Find(const char *imagename
 	return NULL;
 }
 
-qboolean Image_Compress(const char *imagename, size_t maxsize, void **buf, size_t *size)
+qbool Image_Compress(const char *imagename, size_t maxsize, void **buf, size_t *size)
 {
 	unsigned char *imagedata, *newimagedata;
 	int maxPixelCount;

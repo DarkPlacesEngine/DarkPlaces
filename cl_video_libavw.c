@@ -355,7 +355,7 @@ static void libavw_message(int level, const char *message)
 		Con_Printf(CON_ERROR "LibAvcodec panic: %s\n", message);
 }
 
-qboolean LibAvW_OpenLibrary(void)
+qbool LibAvW_OpenLibrary(void)
 {
 	int errorcode;
 

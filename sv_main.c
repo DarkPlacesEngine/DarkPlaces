@@ -733,7 +733,7 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int nvolume, float attenuation, qboolean reliable, float speed)
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int nvolume, float attenuation, qbool reliable, float speed)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	sizebuf_t *dest;
@@ -1167,7 +1167,7 @@ Called when the player is getting totally kicked off the host
 if (crash = true), don't bother sending signofs
 =====================
 */
-void SV_DropClient(qboolean crash)
+void SV_DropClient(qbool crash)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
@@ -1299,7 +1299,7 @@ crosses a waterline.
 =============================================================================
 */
 
-static qboolean SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int enumber)
+static qbool SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, int enumber)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
@@ -1628,7 +1628,7 @@ static void SV_PrepareEntitiesForSending(void)
 
 #define MAX_LINEOFSIGHTTRACES 64
 
-qboolean SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qbool SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	float pitchsign;
@@ -1975,11 +1975,11 @@ void SV_AddCameraEyes(void)
 static void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	qboolean need_empty = false;
+	qbool need_empty = false;
 	int i, numsendstates, numcsqcsendstates;
 	entity_state_t *s;
 	prvm_edict_t *camera;
-	qboolean success;
+	qbool success;
 	vec3_t eye;
 
 	// if there isn't enough space to accomplish anything, skip it
@@ -2822,7 +2822,7 @@ static void Download_CheckExtensions(cmd_state_t *cmd)
 static void SV_Download_f(cmd_state_t *cmd)
 {
 	const char *whichpack, *whichpack2, *extension;
-	qboolean is_csqc; // so we need to check only once
+	qbool is_csqc; // so we need to check only once
 
 	if (Cmd_Argc(cmd) < 2)
 	{
@@ -3884,7 +3884,7 @@ static void SVVM_count_edicts(prvm_prog_t *prog)
 	Con_Printf("step      :%3i\n", step);
 }
 
-static qboolean SVVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
+static qbool SVVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	// remove things from different skill levels or deathmatch
 	if (gamemode != GAME_TRANSFUSION) //Transfusion does this in QC
@@ -4104,7 +4104,7 @@ double SV_Frame(double time)
 	static double sv_timer;
 	int i;
 	char vabuf[1024];
-	qboolean playing = false;
+	qbool playing = false;
 
 	if (!svs.threaded)
 	{
@@ -4272,7 +4272,7 @@ double SV_Frame(double time)
 static int SV_ThreadFunc(void *voiddata)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	qboolean playing = false;
+	qbool playing = false;
 	double sv_timer = 0;
 	double sv_deltarealtime, sv_oldrealtime, sv_realtime;
 	double wait;

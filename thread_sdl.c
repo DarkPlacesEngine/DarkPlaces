@@ -15,7 +15,7 @@ void Thread_Shutdown(void)
 {
 }
 
-qboolean Thread_HasThreads(void)
+qbool Thread_HasThreads(void)
 {
 #ifdef THREADDISABLE
 	return false;
@@ -200,7 +200,7 @@ void _Thread_AtomicIncRef(Thread_Atomic *a, const char *filename, int fileline)
 	SDL_AtomicIncRef((SDL_atomic_t *)a);
 }
 
-qboolean _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileline)
+qbool _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p atomic decref %s:%i\n", a, filename, fileline);
@@ -208,7 +208,7 @@ qboolean _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileli
 	return SDL_AtomicDecRef((SDL_atomic_t *)a) != SDL_FALSE;
 }
 
-qboolean _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline)
+qbool _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline)
 {
 #ifdef THREADDEBUG
 	Sys_PrintfToTerminal("%p atomic try lock %s:%i\n", lock, filename, fileline);

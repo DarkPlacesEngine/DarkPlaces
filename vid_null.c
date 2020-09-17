@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int cl_available = false;
 
-qboolean vid_supportrefreshrate = false;
+qbool vid_supportrefreshrate = false;
 
 void VID_Shutdown(void)
 {
@@ -51,7 +51,7 @@ static void InitSig(void)
 #endif
 }
 
-void VID_SetMouse (qboolean fullscreengrab, qboolean relative, qboolean hidecursor)
+void VID_SetMouse (qbool fullscreengrab, qbool relative, qbool hidecursor)
 {
 }
 
@@ -64,7 +64,7 @@ void VID_Init(void)
 	InitSig(); // trap evil signals
 }
 
-qboolean VID_InitMode(viddef_mode_t *mode)
+qbool VID_InitMode(viddef_mode_t *mode)
 {
 	return false;
 }
@@ -96,7 +96,7 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 	return 0;
 }
 
-qboolean GL_ExtensionSupported(const char *name)
+qbool GL_ExtensionSupported(const char *name)
 {
 	return false;
 }

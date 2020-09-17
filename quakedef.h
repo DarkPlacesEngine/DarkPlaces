@@ -404,7 +404,7 @@ extern char engineversion[128];
 #endif
 #include "csprogs.h"
 
-extern qboolean noclip_anglehack;
+extern qbool noclip_anglehack;
 
 extern cvar_t developer;
 extern cvar_t developer_entityparsing;
@@ -521,8 +521,8 @@ extern cvar_t sessionid;
 
 #ifdef SSE_POSSIBLE
 // runtime detection of SSE/SSE2 capabilities for x86
-qboolean Sys_HaveSSE(void);
-qboolean Sys_HaveSSE2(void);
+qbool Sys_HaveSSE(void);
+qbool Sys_HaveSSE2(void);
 #else
 #define Sys_HaveSSE() false
 #define Sys_HaveSSE2() false
@@ -547,8 +547,8 @@ typedef struct host_s
 	double realtime; // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
 	double dirtytime; // the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
 	double sleeptime; // time spent sleeping overall
-	qboolean restless; // don't sleep
-	qboolean paused; // global paused state, pauses both client and server
+	qbool restless; // don't sleep
+	qbool paused; // global paused state, pauses both client and server
 	cbuf_t *cbuf;
 
 	struct

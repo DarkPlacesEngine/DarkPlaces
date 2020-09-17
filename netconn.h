@@ -182,7 +182,7 @@ typedef struct netconn_s
 	struct netconn_qw_s
 	{
 		// QW protocol
-		qboolean	fatal_error;
+		qbool	fatal_error;
 
 		float		last_received;		// for timeouts
 
@@ -199,11 +199,11 @@ typedef struct netconn_s
 	// sequencing variables
 		unsigned int		incoming_sequence;
 		unsigned int		incoming_acknowledged;
-		qboolean		incoming_reliable_acknowledged;	///< single bit
+		qbool		incoming_reliable_acknowledged;	///< single bit
 
-		qboolean		incoming_reliable_sequence;		///< single bit, maintained local
+		qbool		incoming_reliable_sequence;		///< single bit, maintained local
 
-		qboolean		reliable_sequence;			///< single bit
+		qbool		reliable_sequence;			///< single bit
 		unsigned int		last_reliable_sequence;		///< sequence number of last send
 	}
 	qw;
@@ -303,7 +303,7 @@ typedef struct serverlist_info_s
 	// categorized sorting
 	int category;
 	/// favorite server flag
-	qboolean isfavorite;
+	qbool isfavorite;
 } serverlist_info_t;
 
 typedef enum
@@ -363,7 +363,7 @@ typedef struct serverlist_entry_s
 
 typedef struct serverlist_mask_s
 {
-	qboolean			active;
+	qbool			active;
 	serverlist_maskop_t  tests[SLIF_COUNT];
 	serverlist_info_t info;
 } serverlist_mask_t;
@@ -387,7 +387,7 @@ extern int serverlist_cachecount;
 extern serverlist_entry_t *serverlist_cache;
 extern const serverlist_entry_t *serverlist_callbackentry;
 
-extern qboolean serverlist_consoleoutput;
+extern qbool serverlist_consoleoutput;
 
 void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer);
 #endif
@@ -430,10 +430,10 @@ extern cvar_t net_address_ipv6;
 extern cvar_t net_usesizelimit;
 extern cvar_t net_burstreserve;
 
-qboolean NetConn_CanSend(netconn_t *conn);
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qboolean quakesignon_suppressreliables);
-qboolean NetConn_HaveClientPorts(void);
-qboolean NetConn_HaveServerPorts(void);
+qbool NetConn_CanSend(netconn_t *conn);
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qbool quakesignon_suppressreliables);
+qbool NetConn_HaveClientPorts(void);
+qbool NetConn_HaveServerPorts(void);
 void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
 void NetConn_CloseServerPorts(void);
@@ -445,7 +445,7 @@ void NetConn_Init(void);
 void NetConn_Shutdown(void);
 netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn);
-void NetConn_Listen(qboolean state);
+void NetConn_Listen(qbool state);
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress);
 int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const lhnetaddress_t *peeraddress);
 int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnetaddress_t *peeraddress);
@@ -457,7 +457,7 @@ void NetConn_Heartbeat(int priority);
 void Net_Stats_f(cmd_state_t *cmd);
 
 #ifdef CONFIG_MENU
-void NetConn_QueryMasters(qboolean querydp, qboolean queryqw);
+void NetConn_QueryMasters(qbool querydp, qbool queryqw);
 void NetConn_QueryQueueFrame(void);
 void Net_Slist_f(cmd_state_t *cmd);
 void Net_SlistQW_f(cmd_state_t *cmd);
@@ -467,7 +467,7 @@ void Net_Refresh_f(cmd_state_t *cmd);
 /// manually refresh the view set, do this after having changed the mask or any other flag
 void ServerList_RebuildViewList(void);
 void ServerList_ResetMasks(void);
-void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryqw, qboolean consoleoutput);
+void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput);
 
 /// called whenever net_slist_favorites changes
 void NetConn_UpdateFavorites_c(cvar_t *var);

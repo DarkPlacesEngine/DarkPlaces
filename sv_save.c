@@ -37,7 +37,7 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 	int		i, k, l, numbuffers, lightstyles = 64;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 	char	line[MAX_INPUTLINE];
-	qboolean isserver;
+	qbool isserver;
 	char	*s;
 
 	// first we have to figure out if this can be saved in 64 lightstyles
@@ -185,7 +185,7 @@ void SV_Savegame_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char	name[MAX_QPATH];
-	qboolean deadflag = false;
+	qbool deadflag = false;
 
 	if (!sv.active)
 	{

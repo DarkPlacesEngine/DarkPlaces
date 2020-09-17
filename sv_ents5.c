@@ -407,7 +407,7 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 	}
 }
 
-qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, unsigned int movesequence, qboolean need_empty)
+qbool EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, unsigned int movesequence, qbool need_empty)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	const entity_state_t *n;

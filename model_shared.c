@@ -210,7 +210,7 @@ void Mod_RenderInit(void)
 void Mod_UnloadModel (dp_model_t *mod)
 {
 	char name[MAX_QPATH];
-	qboolean used;
+	qbool used;
 	dp_model_t *parentmodel;
 
 	if (developer_loading.integer)
@@ -257,7 +257,7 @@ static void R_Model_Null_Draw(entity_render_t *ent)
 }
 
 
-typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qboolean loop, const char *name, void *pass);
+typedef void (*mod_framegroupify_parsegroups_t) (unsigned int i, int start, int len, float fps, qbool loop, const char *name, void *pass);
 
 static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_parsegroups_t cb, void *pass)
 {
@@ -265,7 +265,7 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 	int start, len;
 	float fps;
 	unsigned int i;
-	qboolean loop;
+	qbool loop;
 	char name[64];
 
 	bufptr = buf;
@@ -332,7 +332,7 @@ static int Mod_FrameGroupify_ParseGroups(const char *buf, mod_framegroupify_pars
 	return i;
 }
 
-static void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qboolean loop, const char *name, void *pass)
+static void Mod_FrameGroupify_ParseGroups_Store (unsigned int i, int start, int len, float fps, qbool loop, const char *name, void *pass)
 {
 	dp_model_t *mod = (dp_model_t *) pass;
 	animscene_t *anim = &mod->animscenes[i];
@@ -402,7 +402,7 @@ Mod_LoadModel
 Loads a model
 ==================
 */
-dp_model_t *Mod_LoadModel(dp_model_t *mod, qboolean crash, qboolean checkdisk)
+dp_model_t *Mod_LoadModel(dp_model_t *mod, qbool crash, qbool checkdisk)
 {
 	unsigned int crc;
 	void *buf;
@@ -633,7 +633,7 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-dp_model_t *Mod_ForName(const char *name, qboolean crash, qboolean checkdisk, const char *parentname)
+dp_model_t *Mod_ForName(const char *name, qbool crash, qbool checkdisk, const char *parentname)
 {
 	dp_model_t *model;
 	model = Mod_FindName(name, parentname);
@@ -726,7 +726,7 @@ int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, 
 	return count;
 }
 
-qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline)
+qbool Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline)
 {
 	int first = firstvertex, last = first + numvertices - 1, numelements = numtriangles * 3;
 	int i;
@@ -794,7 +794,7 @@ qboolean Mod_ValidateElements(int *element3i, unsigned short *element3s, int num
 }
 
 // warning: this is an expensive function!
-void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qboolean areaweighting)
+void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f, qbool areaweighting)
 {
 	int i, j;
 	const int *element;
@@ -881,7 +881,7 @@ static void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *
 #endif
 
 // warning: this is a very expensive function!
-void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qboolean areaweighting)
+void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qbool areaweighting)
 {
 	int i, tnum;
 	float sdir[3], tdir[3], normal[3], *svec, *tvec;
@@ -961,7 +961,7 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 	}
 }
 
-void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean lightmapoffsets, qboolean vertexcolors)
+void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qbool lightmapoffsets, qbool vertexcolors)
 {
 	unsigned char *data;
 	data = (unsigned char *)Mem_Alloc(mempool, numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0));
@@ -1081,7 +1081,7 @@ static void Mod_ShadowMesh_CreateVBOs(shadowmesh_t *mesh)
 	}
 }
 
-shadowmesh_t *Mod_ShadowMesh_Finish(shadowmesh_t *mesh, qboolean createvbo)
+shadowmesh_t *Mod_ShadowMesh_Finish(shadowmesh_t *mesh, qbool createvbo)
 {
 	if (mesh->numverts >= 3 && mesh->numtriangles >= 1)
 	{
@@ -1181,7 +1181,7 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
 void Mod_CreateCollisionMesh(dp_model_t *mod)
 {
 	int k, numcollisionmeshtriangles;
-	qboolean usesinglecollisionmesh = false;
+	qbool usesinglecollisionmesh = false;
 	const msurface_t *surface = NULL;
 
 	mempool_t *mempool = mod->mempool;
@@ -1462,7 +1462,7 @@ void Mod_LoadQ3Shaders(void)
 	char *custsurfaceparmnames[256]; // VorteX: q3map2 has 64 but well, someone will need more
 	unsigned long custsurfaceflags[256]; 
 	int numcustsurfaceflags;
-	qboolean dpshaderkill;
+	qbool dpshaderkill;
 
 	Mod_FreeQ3Shaders();
 
@@ -2257,10 +2257,10 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, 
 	return shaderpass;
 }
 
-qboolean Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qboolean warnmissing, qboolean fallback, int defaulttexflags, int defaultmaterialflags)
+qbool Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qbool warnmissing, qbool fallback, int defaulttexflags, int defaultmaterialflags)
 {
 	int texflagsmask, texflagsor;
-	qboolean success = true;
+	qbool success = true;
 	shader_t *shader;
 	if (!name)
 		name = "";
@@ -2672,7 +2672,7 @@ void Mod_LoadCustomMaterial(mempool_t *mempool, texture_t *texture, const char *
 	texture->backgroundcurrentskinframe = NULL;
 }
 
-void Mod_UnloadCustomMaterial(texture_t *texture, qboolean purgeskins)
+void Mod_UnloadCustomMaterial(texture_t *texture, qbool purgeskins)
 {
 	long unsigned int i, j;
 	for (i = 0; i < sizeof(texture->shaderpasses) / sizeof(texture->shaderpasses[0]); i++)
@@ -3101,7 +3101,7 @@ static void Mod_Decompile_OBJ(dp_model_t *model, const char *filename, const cha
 	Con_Printf("Wrote %s (%i bytes, %i vertices, %i faces, %i surfaces with %i distinct textures)\n", filename, (int)outbufferpos, countvertices, countfaces, countsurfaces, counttextures);
 }
 
-static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int firstpose, int numposes, qboolean writetriangles)
+static void Mod_Decompile_SMD(dp_model_t *model, const char *filename, int firstpose, int numposes, qbool writetriangles)
 {
 	int countnodes = 0, counttriangles = 0, countframes = 0;
 	int surfaceindex;
@@ -3429,7 +3429,7 @@ void Mod_AllocLightmap_Free(mod_alloclightmap_state_t *state)
 	memset(state, 0, sizeof(*state));
 }
 
-qboolean Mod_AllocLightmap_Block(mod_alloclightmap_state_t *state, int blockwidth, int blockheight, int *outx, int *outy)
+qbool Mod_AllocLightmap_Block(mod_alloclightmap_state_t *state, int blockwidth, int blockheight, int *outx, int *outy)
 {
 	mod_alloclightmap_row_t *row;
 	int y;
@@ -3715,7 +3715,7 @@ static void Mod_GenerateLightmaps_DestroyLights(dp_model_t *model)
 	mod_generatelightmaps_numlights = 0;
 }
 
-static qboolean Mod_GenerateLightmaps_SamplePoint_SVBSP(const svbsp_t *svbsp, const float *pos)
+static qbool Mod_GenerateLightmaps_SamplePoint_SVBSP(const svbsp_t *svbsp, const float *pos)
 {
 	const svbsp_node_t *node;
 	const svbsp_node_t *nodes = svbsp->nodes;
@@ -4473,7 +4473,7 @@ texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdra
 	return t;
 }
 
-msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qboolean batchwithprevioussurface)
+msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qbool batchwithprevioussurface)
 {
 	msurface_t *surf;
 	// batch if possible; primarily useful for UI rendering where bounding boxes don't matter
@@ -4688,7 +4688,7 @@ static void Mod_Mesh_ComputeBounds(dp_model_t *mod)
 void Mod_Mesh_Validate(dp_model_t *mod)
 {
 	int i;
-	qboolean warned = false;
+	qbool warned = false;
 	for (i = 0; i < mod->num_surfaces; i++)
 	{
 		msurface_t *surf = mod->data_surfaces + i;

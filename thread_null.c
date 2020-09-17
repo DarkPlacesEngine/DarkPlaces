@@ -10,7 +10,7 @@ void Thread_Shutdown(void)
 {
 }
 
-qboolean Thread_HasThreads(void)
+qbool Thread_HasThreads(void)
 {
 	return false;
 }
@@ -105,12 +105,12 @@ void _Thread_AtomicIncRef(Thread_Atomic *a, const char *filename, int fileline)
 	a->value++;
 }
 
-qboolean _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileline)
+qbool _Thread_AtomicDecRef(Thread_Atomic *a, const char *filename, int fileline)
 {
 	return a->value++ == 1;
 }
 
-qboolean _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline)
+qbool _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline)
 {
 	return true;
 }

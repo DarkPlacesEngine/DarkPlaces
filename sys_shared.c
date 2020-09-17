@@ -65,7 +65,7 @@ void Sys_Quit (int returnvalue)
 #ifdef __cplusplus
 extern "C"
 #endif
-void Sys_AllowProfiling(qboolean enable)
+void Sys_AllowProfiling(qbool enable)
 {
 #ifdef __ANDROID__
 #ifdef USE_PROFILER
@@ -91,7 +91,7 @@ DLL MANAGEMENT
 ===============================================================================
 */
 
-static qboolean Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qboolean complain, qboolean has_next)
+static qbool Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qbool complain, qbool has_next)
 {
 	const dllfunction_t *func;
 	if(dllhandle)
@@ -116,7 +116,7 @@ static qboolean Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunctio
 	return false;
 }
 
-qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
+qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
 #ifdef SUPPORTDLL
 	const dllfunction_t *func;
@@ -580,7 +580,7 @@ static int CPUID_Features(void)
 #endif
 
 #ifdef SSE_POSSIBLE
-qboolean Sys_HaveSSE(void)
+qbool Sys_HaveSSE(void)
 {
 	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
 	if(Sys_CheckParm("-nosse"))
@@ -597,7 +597,7 @@ qboolean Sys_HaveSSE(void)
 #endif
 }
 
-qboolean Sys_HaveSSE2(void)
+qbool Sys_HaveSSE2(void)
 {
 	// COMMANDLINEOPTION: SSE2: -nosse2 disables SSE2 support and detection
 	if(Sys_CheckParm("-nosse") || Sys_CheckParm("-nosse2"))

@@ -20,8 +20,8 @@ void CL_Screen_Init(void);
 void CL_Screen_Shutdown(void);
 void CL_UpdateScreen(void);
 
-qboolean R_Stereo_Active(void);
-qboolean R_Stereo_ColorMasking(void);
+qbool R_Stereo_Active(void);
+qbool R_Stereo_ColorMasking(void);
 
 #endif
 

@@ -97,14 +97,14 @@ cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send 
 int con_linewidth;
 int con_vislines;
 
-qboolean con_initialized;
+qbool con_initialized;
 
 // used for server replies to rcon command
 lhnetsocket_t *rcon_redirect_sock = NULL;
 lhnetaddress_t *rcon_redirect_dest = NULL;
 int rcon_redirect_bufferpos = 0;
 char rcon_redirect_buffer[1400];
-qboolean rcon_redirect_proquakeprotocol = false;
+qbool rcon_redirect_proquakeprotocol = false;
 
 // generic functions for console buffers
 
@@ -431,7 +431,7 @@ static void Log_DestBuffer_Flush_NoLock(void)
 	lhnetaddress_t log_dest_addr;
 	lhnetsocket_t *log_dest_socket;
 	const char *s = log_dest_udp.string;
-	qboolean have_opened_temp_sockets = false;
+	qbool have_opened_temp_sockets = false;
 	if(s) if(log_dest_buffer_pos > 5)
 	{
 		++log_dest_buffer_appending;
@@ -584,7 +584,7 @@ Log_ConPrint
 */
 void Log_ConPrint (const char *msg)
 {
-	static qboolean inprogress = false;
+	static qbool inprogress = false;
 
 	// don't allow feedback loops with memory error reports
 	if (inprogress)
@@ -998,7 +998,7 @@ static void Con_PrintToHistory(const char *txt, int mask)
 	}
 }
 
-void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean proquakeprotocol)
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qbool proquakeprotocol)
 {
 	rcon_redirect_sock = sock;
 	rcon_redirect_dest = dest;
@@ -1153,7 +1153,7 @@ Con_MaskPrint
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
-extern qboolean sys_nostdout;
+extern qbool sys_nostdout;
 void Con_MaskPrint(int additionalmask, const char *msg)
 {
 	static int mask = 0;
@@ -1524,7 +1524,7 @@ The input line scrolls horizontally if typing goes beyond the right edge
 Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 ================
 */
-static void Con_DrawInput(qboolean is_console, float x, float v, float inputsize)
+static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 {
 	int y, i, col_out, linepos, text_start, prefix_start;
 	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
@@ -1672,7 +1672,7 @@ static float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length,
 	}
 }
 
-static int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qbool isContinuation)
 {
 	(void) passthrough;
 	(void) line;
@@ -1682,7 +1682,7 @@ static int Con_CountLineFunc(void *passthrough, const char *line, size_t length,
 	return 1;
 }
 
-static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, float width, qbool isContinuation)
 {
 	con_text_info_t *ti = (con_text_info_t *) passthrough;
 
@@ -2115,7 +2115,7 @@ its format (q1/q2/q3/hl) and even its message
 //LadyHavoc: rewrote bsp type detection, rewrote message extraction to do proper worldspawn parsing
 //LadyHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
 //LadyHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
-qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
+qbool GetMapList (const char *s, char *completedname, int completednamebufferlength)
 {
 	fssearch_t	*t;
 	char		message[1024];
@@ -2370,7 +2370,7 @@ static int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 	// if A contains a non-alphanumeric, B must contain it as well though!
 	while(a_len)
 	{
-		qboolean alnum_a, alnum_b;
+		qbool alnum_a, alnum_b;
 
 		if(tolower(*a) == tolower(*b))
 		{
@@ -2405,7 +2405,7 @@ static int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 
    Count the number of possible nicks to complete
  */
-static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
+static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qbool isCon)
 {
 	char name[MAX_SCOREBOARDNAME];
 	int i, p;
@@ -2663,7 +2663,7 @@ static const char **Nicks_CompleteBuildList(int count)
 */
 static int Nicks_AddLastColor(char *buffer, int pos)
 {
-	qboolean quote_added = false;
+	qbool quote_added = false;
 	int match;
 	int color = STRING_COLOR_DEFAULT + '0';
 	char r = 0, g = 0, b = 0;
@@ -2733,7 +2733,7 @@ static int Nicks_AddLastColor(char *buffer, int pos)
 	Enhanced to tab-complete map names by [515]
 
 */
-int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
+int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 {
 	const char *text = "";
 	char *s;

@@ -67,7 +67,7 @@ typedef struct clvideo_s
 	// used to determine whether the video's resources should be freed or not
     double  lasttime;
 	// when lasttime - realtime > THRESHOLD, all but the stream is freed
-	qboolean suspended;
+	qbool suspended;
 
 	char	filename[MAX_QPATH];
 } clvideo_t;
@@ -93,6 +93,6 @@ void CL_VideoStop( void );
 
 // new function used for fullscreen videos
 // TODO: Andreas Kirsch: move this subsystem somewhere else (preferably host) since the cl_video system shouldnt do such work like managing key events..
-void CL_Video_KeyEvent( int key, int ascii, qboolean down );
+void CL_Video_KeyEvent( int key, int ascii, qbool down );
 
 #endif

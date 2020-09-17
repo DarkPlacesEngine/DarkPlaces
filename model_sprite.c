@@ -57,7 +57,7 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_track_sprites_scaleh);
 }
 
-static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, qboolean fullbright, qboolean additive)
+static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, qbool fullbright, qbool additive)
 {
 	if (!skinframe)
 		skinframe = R_SkinFrame_LoadMissing();
@@ -88,10 +88,10 @@ static void Mod_SpriteSetupTexture(texture_t *texture, skinframe_t *skinframe, q
 
 extern cvar_t gl_texturecompression_sprites;
 
-static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, qboolean additive)
+static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version, const unsigned int *palette, qbool additive)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
-	qboolean			fullbright;
+	qbool			fullbright;
 	dspriteframetype_t	*pinframetype;
 	dspriteframe_t		*pinframe;
 	dspritegroup_t		*pingroup;
@@ -379,7 +379,7 @@ void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 {
 	int i, version;
-	qboolean fullbright;
+	qbool fullbright;
 	const dsprite2_t *pinqsprite;
 	skinframe_t *skinframe;
 	float modelradius;
