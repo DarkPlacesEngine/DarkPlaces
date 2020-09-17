@@ -448,7 +448,10 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		 * can insert data at the beginning of the text buffer
 		 */
 		current = List_Container(*cbuf->start.next, cmd_input_t, list);
-
+		
+		// Recycle memory so using WASD doesn't cause a malloc and free
+		List_Move_Tail(&current->list, &cbuf->free);
+		
 		/*
 		 * Assume we're rolling with the current command-line and
 		 * always set this false because alias expansion or cbuf insertion
@@ -472,9 +475,6 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		{
 			Cmd_ExecuteString (current->source, current->text, src_local, false);
 		}
-
-		// Recycle memory so using WASD doesn't cause a malloc and free
-		List_Move_Tail(&current->list, &cbuf->free);
 
 		current = NULL;
 
