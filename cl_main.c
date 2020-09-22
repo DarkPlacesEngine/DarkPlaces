@@ -147,7 +147,7 @@ void CL_ClearState(void)
 
 	// tweak these if the game runs out
 	cl.max_csqcrenderentities = 0;
-	cl.max_entities = MAX_ENITIES_INITIAL;
+	cl.max_entities = MAX_ENTITIES_INITIAL;
 	cl.max_static_entities = MAX_STATICENTITIES;
 	cl.max_effects = MAX_EFFECTS;
 	cl.max_beams = MAX_BEAMS;
