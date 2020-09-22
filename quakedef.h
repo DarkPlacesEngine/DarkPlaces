@@ -114,7 +114,7 @@ extern char engineversion[128];
 #define	MAX_BINDMAPS			8
 #define	MAX_PARTICLES_INITIAL	8192
 #define	MAX_PARTICLES			8192
-#define	MAX_ENITIES_INITIAL		256
+#define	MAX_ENTITIES_INITIAL	256
 #define	MAX_STATICENTITIES		256
 #define	MAX_EFFECTS				16
 #define	MAX_BEAMS				16
@@ -132,7 +132,7 @@ extern char engineversion[128];
 #define	CMDBUFSIZE				655360 ///< maximum script size that can be loaded by the exec command (8192 in Quake)
 #define	MAX_ARGS				80 ///< maximum number of parameters to a console command or alias
 
-#define	NET_MAXMESSAGE			65536 ///< max reliable packet size (sent as multiple fragments of MAX_PACKETFRAGMENT)
+#define	NET_MAXMESSAGE			131072 ///< max reliable packet size (sent as multiple fragments of MAX_PACKETFRAGMENT)
 #define	MAX_PACKETFRAGMENT		1024 ///< max length of packet fragment
 #define	MAX_EDICTS				32768 ///< max number of objects in game world at once (32768 protocol limit)
 #define	MAX_MODELS				8192 ///< max number of models loaded at once (including during level transitions)
@@ -184,8 +184,8 @@ extern char engineversion[128];
 #define	MAX_BINDMAPS			8
 #define	MAX_PARTICLES_INITIAL	8192 ///< initial allocation for cl.particles
 #define	MAX_PARTICLES			1048576 ///< upper limit on cl.particles size
-#define	MAX_ENITIES_INITIAL		256 ///< initial size of cl.entities
-#define	MAX_STATICENTITIES		1024 ///< limit on size of cl.static_entities
+#define	MAX_ENTITIES_INITIAL		256 ///< initial size of cl.entities
+#define	MAX_STATICENTITIES		4096 ///< limit on size of cl.static_entities
 #define	MAX_EFFECTS				256 ///< limit on size of cl.effects
 #define	MAX_BEAMS				256 ///< limit on size of cl.beams
 #define	MAX_TEMPENTITIES		4096 ///< max number of temporary models visible per frame (certain sprite effects, certain types of CSQC entities also use this)
