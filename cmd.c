@@ -41,6 +41,7 @@ static cmd_iter_t cmd_iter_all[] = {
 	{NULL},
 };
 
+mempool_t *cbuf_mempool;
 
 // we only run the +whatever commandline arguments once
 qbool host_stuffcmdsrun = false;
@@ -192,7 +193,7 @@ static cmd_input_t *Cbuf_LinkGet(cmd_buf_t *cbuf, cmd_input_t *existing)
 
 static cmd_input_t *Cmd_AllocInputNode(void)
 {
-	cmd_input_t *node = (cmd_input_t *)Z_Malloc(sizeof(cmd_input_t));
+	cmd_input_t *node = (cmd_input_t *)Mem_Alloc(cbuf_mempool, sizeof(cmd_input_t));
 	node->list.prev = node->list.next = &node->list;
 	node->size = node->length = node->pending = 0;
 	return node;
@@ -291,7 +292,7 @@ static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 
 		if((*output)->size < (*output)->length + 1)
 		{
-			(*output)->text = (char *)Mem_Realloc(tempmempool, (*output)->text, (*output)->size + cmdsize + 1);
+			(*output)->text = (char *)Mem_Realloc(cbuf_mempool, (*output)->text, (*output)->length + 1);
 			(*output)->size = (*output)->length + 1;
 		}
 
@@ -1604,7 +1605,9 @@ Cmd_Init
 void Cmd_Init(void)
 {
 	cmd_iter_t *cmd_iter;
-	cmd_buf_t *cbuf = (cmd_buf_t *)Z_Malloc(sizeof(cmd_buf_t));
+	cmd_buf_t *cbuf;
+	cbuf_mempool = Mem_AllocPool("Command buffer", 0, NULL);
+	cbuf = (cmd_buf_t *)Mem_Alloc(cbuf_mempool, sizeof(cmd_buf_t));
 	cbuf->maxsize = 655360;
 	cbuf->lock = Thread_CreateMutex();
 	cbuf->wait = false;
