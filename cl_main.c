@@ -529,14 +529,13 @@ void CL_EstablishConnection(const char *address, int firstarg)
 	M_Update_Return_Reason("");
 #endif
 
-	// Disconnect from the current server, or stop a running demo.
-	CL_Disconnect();
-
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
 
 	if (LHNETADDRESS_FromString(&cls.connect_address, address, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
+		// Disconnect from the current server, or stop a running demo.
+		CL_Disconnect();
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
