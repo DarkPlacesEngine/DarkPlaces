@@ -583,6 +583,12 @@ int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_e
 
 qbool SV_CanSeeBox(int numsamples, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
 
+void SV_MarkWriteEntityStateToClient(entity_state_t *s);
+
+void SV_SendServerinfo(client_t *client);
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize);
+void SV_AddCameraEyes(void);
+
 int SV_PointSuperContents(const vec3_t point);
 
 void SV_FlushBroadcastMessages(void);
@@ -621,7 +627,4 @@ void SV_PreSpawn_f(cmd_state_t *cmd);
 void SV_Spawn_f(cmd_state_t *cmd);
 void SV_Begin_f(cmd_state_t *cmd);
 
-void SV_SendServerinfo(client_t *client);
-
 #endif
-
