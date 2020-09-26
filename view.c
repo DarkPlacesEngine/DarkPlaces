@@ -645,8 +645,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 			VectorAdd(vieworg, cl.punchvector, vieworg);
 			if (!cldead)
 			{
-				double xyspeed, bob, bobfall;
-				double cycle; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
+				double xyspeed = 0, bob = 0, bobfall = 0;
+				double cycle = 0; // double-precision because cl.time can be a very large number, where float would get stuttery at high time values
 				vec_t frametime;
 
 				frametime = (cl.time - cl.calcrefdef_prevtime) * cl.movevars_timescale;
@@ -847,7 +847,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				}
 
 				// gun model bobbing code
-				if (cl_bobmodel.value)
+				if (cl_bobmodel.value && bob)
 				{
 					vec3_t forward, right, up;
 					AngleVectors (gunangles, forward, right, up);
@@ -889,9 +889,6 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 						VectorMA (gunorg, bob, right, gunorg);
 						bob = bspeed * cl_bobmodel_up.value * cl_viewmodel_scale.value * cos (s * 2) * t;
 						VectorMA (gunorg, bob, up, gunorg);
-
-						//bob = (bspeed * cl_bobmodel_forward.value * cos(s * 2) * t) * cl_viewmodel_scale.value;
-
 					}
 					else
 					{
@@ -901,6 +898,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 						for (int i=0 ; i<3 ; i++)
 							gunorg[i] += forward[i]*bob*0.4;
 						gunorg[2] += bob;
+
 						if (r_viewmodel_quake.value)
 						{
 							if (scr_viewsize.value == 110)
