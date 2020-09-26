@@ -2061,7 +2061,7 @@ void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size
 void V_DriftPitch(void);
 void V_FadeViewFlashs(void);
 void V_CalcViewBlend(void);
-void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qbool teleported, qbool clonground, qbool clcmdjump, float clstatsviewheight, qbool cldead, qbool clintermission, const vec3_t clvelocity);
+void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qbool teleported, qbool clonground, qbool clcmdjump, float clstatsviewheight, qbool cldead, const vec3_t clvelocity);
 void V_CalcRefdef(void);
 void V_MakeViewIsometric(void);
 void V_MakeViewIsometric(void);

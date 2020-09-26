@@ -869,11 +869,11 @@ Used by view and sv_user
 */
 float Com_CalcRoll (const vec3_t angles, const vec3_t velocity, const vec_t angleval, const vec_t velocityval)
 {
-	vec3_t	right;
+	vec3_t	forward, right, up;
 	float	sign;
 	float	side;
 
-	AngleVectors (angles, NULL, right, NULL);
+	AngleVectors (angles, forward, right, up);
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
 	side = fabs(side);
