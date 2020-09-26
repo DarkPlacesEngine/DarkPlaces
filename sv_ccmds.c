@@ -416,16 +416,10 @@ static void SV_Pause_f(cmd_state_t *cmd)
 	else
 		print = SV_ClientPrintf;
 
-	if (!pausable.integer)
+	if (!pausable.integer && cmd->source == src_client && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 	{
-		if (cmd->source == src_client)
-		{
-			if(cls.state == ca_dedicated || host_client != &svs.clients[0]) // non-admin
-			{
-				print("Pause not allowed.\n");
-				return;
-			}
-		}
+		print("Pause not allowed.\n");
+		return;
 	}
 	
 	sv.paused ^= 1;
@@ -496,7 +490,7 @@ static void SV_Say(cmd_state_t *cmd, qbool teamonly)
 			SV_ClientPrint(text);
 	host_client = save;
 
-	if (cls.state == ca_dedicated)
+	if(!host_isclient.integer)
 		Con_Print(&text[1]);
 }
 
@@ -1137,7 +1131,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 	{
 		if (cmd->source == src_local)
 		{
-			if (cls.state == ca_dedicated)
+			if(!host_isclient.integer)
 				who = "Console";
 			else
 				who = cl_name.string;
@@ -1470,7 +1464,7 @@ static void SV_SendCvar_f(cmd_state_t *cmd)
 	cvarname = Cmd_Argv(cmd, 1);
 
 	old = host_client;
-	if (cls.state != ca_dedicated)
+	if(host_isclient.integer)
 		i = 1;
 	else
 		i = 0;

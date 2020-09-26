@@ -572,6 +572,6 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 		Con_Printf("SV_Loadgame_f: finished\n");
 
 	// make sure we're connected to loopback
-	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1", -2);
+	if(sv.active && host.hook.ConnectLocal)
+		host.hook.ConnectLocal();
 }

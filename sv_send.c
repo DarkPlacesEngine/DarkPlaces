@@ -101,7 +101,7 @@ void SV_BroadcastPrint(const char *msg)
 		}
 	}
 
-	if (sv_echobprint.integer && cls.state == ca_dedicated)
+	if (sv_echobprint.integer && !host_isclient.integer)
 		Con_Print(msg);
 }
 
