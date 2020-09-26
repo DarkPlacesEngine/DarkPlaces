@@ -290,10 +290,10 @@ static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 
 		(*output)->length += cmdsize;
 
-		if((*output)->size < (*output)->length + 1)
+		if((*output)->size < (*output)->length)
 		{
 			(*output)->text = (char *)Mem_Realloc(cbuf_mempool, (*output)->text, (*output)->length + 1);
-			(*output)->size = (*output)->length + 1;
+			(*output)->size = (*output)->length;
 		}
 
 		strlcpy(&(*output)->text[offset], &(*input)[start], cmdsize + 1);
