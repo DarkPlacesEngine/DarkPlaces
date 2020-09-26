@@ -892,10 +892,8 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					}
 					else
 					{
-						vieworg[2] += viewheight;
 						// Classic Quake bobbing
-						gunorg[2] += viewheight;
-						for (int i=0 ; i<3 ; i++)
+						for (int i = 0; i < 3; i++)
 							gunorg[i] += forward[i]*bob*0.4;
 						gunorg[2] += bob;
 
