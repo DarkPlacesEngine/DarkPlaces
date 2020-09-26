@@ -352,7 +352,7 @@ This is also called on Host_Error, so it shouldn't cause any errors
 */
 void CL_Disconnect(void)
 {
-	if (cls.state == ca_dedicated)
+	if (cls.state == ca_dedicated || cls.state != ca_connected || !cls.demoplayback)
 		return;
 
 	if (Sys_CheckParm("-profilegameonly"))
