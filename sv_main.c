@@ -1669,6 +1669,13 @@ void SV_SaveSpawnparms (void)
 	}
 }
 
+qbool SV_IsLocalServer(void)
+{
+	if(host_isclient.integer && host_client && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
+		return true;
+	return false;
+}
+
 /*
 ================
 SV_SpawnServer
@@ -1703,10 +1710,9 @@ void SV_SpawnServer (const char *map)
 
 //	SV_LockThreadMutex();
 
-	if(cls.state == ca_dedicated)
+	if(!host_isclient.integer)
 		Sys_MakeProcessNice();
-
-	if (cls.state != ca_dedicated)
+	else
 	{
 		SCR_BeginLoadingPlaque(false);
 		S_StopAllSounds();
@@ -1741,7 +1747,7 @@ void SV_SpawnServer (const char *map)
 	{
 		Con_Printf("Couldn't load map %s\n", modelname);
 
-		if(cls.state == ca_dedicated)
+		if(!host_isclient.integer)
 			Sys_MakeProcessMean();
 
 //		SV_UnlockThreadMutex();
@@ -1933,7 +1939,7 @@ void SV_SpawnServer (const char *map)
 	// Once all init frames have been run, we consider svqc code fully initialized.
 	prog->inittime = host.realtime;
 
-	if (cls.state == ca_dedicated)
+	if(!host_isclient.integer)
 		Mod_PurgeUnused();
 
 // create a baseline for more efficient communications
@@ -1977,7 +1983,7 @@ void SV_SpawnServer (const char *map)
 	Con_Printf("Server spawned.\n");
 	NetConn_Heartbeat (2);
 
-	if(cls.state == ca_dedicated)
+	if(!host_isclient.integer)
 		Sys_MakeProcessMean();
 
 //	SV_UnlockThreadMutex();

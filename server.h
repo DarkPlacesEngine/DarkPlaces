@@ -598,6 +598,8 @@ void VM_SV_MoveToGoal(prvm_prog_t *prog);
 
 void SV_ApplyClientMove (void);
 void SV_SaveSpawnparms (void);
+
+qbool SV_IsLocalServer(void);
 void SV_SpawnServer (const char *map);
 
 void SV_CheckVelocity (prvm_edict_t *ent);

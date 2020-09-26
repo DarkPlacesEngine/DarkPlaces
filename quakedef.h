@@ -559,6 +559,7 @@ typedef struct host_s
 } host_t;
 
 extern host_t host;
+extern cvar_t host_isclient;
 
 void Host_InitCommands(void);
 void Host_Main(void);

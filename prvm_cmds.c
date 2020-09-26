@@ -1335,7 +1335,7 @@ coredump()
 */
 void VM_coredump(prvm_prog_t *prog)
 {
-	cmd_state_t *cmd = cls.state == ca_dedicated ? &cmd_server : &cmd_client;
+	cmd_state_t *cmd = 	!host_isclient.integer ? &cmd_server : &cmd_client;
 	VM_SAFEPARMCOUNT(0,VM_coredump);
 
 	Cbuf_AddText(cmd, "prvm_edicts ");
