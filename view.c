@@ -711,7 +711,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				// vertical view bobbing code
 				if (cl_bob.value && cl_bobcycle.value)
 				{
-					float bob_limit = cl_bob_limit.value;
+					float bob_limit = cl_bobmodel_classic.integer ? 4 : cl_bob_limit.value;
 
 					if (cl_bob_limit_heightcheck.integer)
 					{
@@ -750,7 +750,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 					// (don't count Z, or jumping messes it up)
 					bob = xyspeed * cl_bob.value;
 					bob = bob*0.3 + bob*0.7*sin(cycle);
-					bob = bound(-7, bob, 4);
+					bob = bound(-7, bob, bob_limit);
 
 					vieworg[2] += bob;
 
