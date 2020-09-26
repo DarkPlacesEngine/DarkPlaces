@@ -1,6 +1,8 @@
 #include "quakedef.h"
 #include "protocol.h"
 
+extern cvar_t sv_cullentities_trace_prediction_time;
+
 int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 {
 	unsigned int bits;
@@ -330,4 +332,136 @@ qbool EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t
 	MSG_WriteShort(msg, 0xFFFF);
 
 	return true;
+}
+
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	qbool need_empty = false;
+	int i, numsendstates, numcsqcsendstates;
+	entity_state_t *s;
+	prvm_edict_t *camera;
+	qbool success;
+	vec3_t eye;
+
+	// if there isn't enough space to accomplish anything, skip it
+	if (msg->cursize + 25 > maxsize)
+		return;
+
+	sv.writeentitiestoclient_msg = msg;
+	sv.writeentitiestoclient_clientnumber = client - svs.clients;
+
+	sv.writeentitiestoclient_stats_culled_pvs = 0;
+	sv.writeentitiestoclient_stats_culled_trace = 0;
+	sv.writeentitiestoclient_stats_visibleentities = 0;
+	sv.writeentitiestoclient_stats_totalentities = 0;
+	sv.writeentitiestoclient_numeyes = 0;
+
+	// get eye location
+	sv.writeentitiestoclient_cliententitynumber = PRVM_EDICT_TO_PROG(clent); // LadyHavoc: for comparison purposes
+	camera = PRVM_EDICT_NUM( client->clientcamera );
+	VectorAdd(PRVM_serveredictvector(camera, origin), PRVM_serveredictvector(clent, view_ofs), eye);
+	sv.writeentitiestoclient_pvsbytes = 0;
+	// get the PVS values for the eye location, later FatPVS calls will merge
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, eye, 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), sv.writeentitiestoclient_pvsbytes != 0);
+
+	// add the eye to a list for SV_CanSeeBox tests
+	VectorCopy(eye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
+	sv.writeentitiestoclient_numeyes++;
+
+	// calculate predicted eye origin for SV_CanSeeBox tests
+	if (sv_cullentities_trace_prediction.integer)
+	{
+		vec_t predtime = bound(0, host_client->ping, sv_cullentities_trace_prediction_time.value);
+		vec3_t predeye;
+		VectorMA(eye, predtime, PRVM_serveredictvector(camera, velocity), predeye);
+		if (SV_CanSeeBox(1, 0, 0, 0, eye, predeye, predeye))
+		{
+			VectorCopy(predeye, sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
+			sv.writeentitiestoclient_numeyes++;
+		}
+		//if (!sv.writeentitiestoclient_useprediction)
+		//	Con_DPrintf("Trying to walk into solid in a pingtime... not predicting for culling\n");
+	}
+
+	SV_AddCameraEyes();
+
+	// build PVS from the new eyes
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		for(i = 1; i < sv.writeentitiestoclient_numeyes; ++i)
+			sv.writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv.writeentitiestoclient_eyes[i], 8, sv.writeentitiestoclient_pvs, sizeof(sv.writeentitiestoclient_pvs), sv.writeentitiestoclient_pvsbytes != 0);
+
+	sv.sententitiesmark++;
+
+	for (i = 0;i < sv.numsendentities;i++)
+		SV_MarkWriteEntityStateToClient(sv.sendentities + i);
+
+	numsendstates = 0;
+	numcsqcsendstates = 0;
+	for (i = 0;i < sv.numsendentities;i++)
+	{
+		s = &sv.sendentities[i];
+		if (sv.sententities[s->number] == sv.sententitiesmark)
+		{
+			if(s->active == ACTIVE_NETWORK)
+			{
+				if (s->exteriormodelforclient)
+				{
+					if (s->exteriormodelforclient == sv.writeentitiestoclient_cliententitynumber)
+						s->flags |= RENDER_EXTERIORMODEL;
+					else
+						s->flags &= ~RENDER_EXTERIORMODEL;
+				}
+				sv.writeentitiestoclient_sendstates[numsendstates++] = s;
+			}
+			else if(sv.sendentities[i].active == ACTIVE_SHARED)
+				sv.writeentitiestoclient_csqcsendstates[numcsqcsendstates++] = s->number;
+			else
+				Con_Printf("entity %d is in sv.sendentities and marked, but not active, please breakpoint me\n", s->number);
+		}
+	}
+
+	if (sv_cullentities_stats.integer)
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv.writeentitiestoclient_stats_totalentities, sv.writeentitiestoclient_stats_visibleentities, sv.writeentitiestoclient_stats_culled_pvs + sv.writeentitiestoclient_stats_culled_trace, sv.writeentitiestoclient_stats_culled_pvs, sv.writeentitiestoclient_stats_culled_trace);
+
+	if(client->entitydatabase5)
+		need_empty = EntityFrameCSQC_WriteFrame(msg, maxsize, numcsqcsendstates, sv.writeentitiestoclient_csqcsendstates, client->entitydatabase5->latestframenum + 1);
+	else
+		EntityFrameCSQC_WriteFrame(msg, maxsize, numcsqcsendstates, sv.writeentitiestoclient_csqcsendstates, 0);
+
+	// force every 16th frame to be not empty (or cl_movement replay takes
+	// too long)
+	// BTW, this should normally not kick in any more due to the check
+	// below, except if the client stopped sending movement frames
+	if(client->num_skippedentityframes >= 16)
+		need_empty = true;
+
+	// help cl_movement a bit more
+	if(client->movesequence != client->lastmovesequence)
+		need_empty = true;
+	client->lastmovesequence = client->movesequence;
+
+	if (client->entitydatabase5)
+		success = EntityFrame5_WriteFrame(msg, maxsize, client->entitydatabase5, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1, client->movesequence, need_empty);
+	else if (client->entitydatabase4)
+	{
+		success = EntityFrame4_WriteFrame(msg, maxsize, client->entitydatabase4, numsendstates, sv.writeentitiestoclient_sendstates);
+		Protocol_WriteStatsReliable();
+	}
+	else if (client->entitydatabase)
+	{
+		success = EntityFrame_WriteFrame(msg, maxsize, client->entitydatabase, numsendstates, sv.writeentitiestoclient_sendstates, client - svs.clients + 1);
+		Protocol_WriteStatsReliable();
+	}
+	else
+	{
+		success = EntityFrameQuake_WriteFrame(msg, maxsize, numsendstates, sv.writeentitiestoclient_sendstates);
+		Protocol_WriteStatsReliable();
+	}
+
+	if(success)
+		client->num_skippedentityframes = 0;
+	else
+		++client->num_skippedentityframes;
 }
