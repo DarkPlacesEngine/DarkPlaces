@@ -847,7 +847,7 @@ void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewa
 				}
 
 				// gun model bobbing code
-				if (cl_bobmodel.value && bob)
+				if (cl_bobmodel.value)
 				{
 					vec3_t forward, right, up;
 					AngleVectors (gunangles, forward, right, up);
