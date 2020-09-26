@@ -113,8 +113,7 @@ void SV_Spawn_f(cmd_state_t *cmd)
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 		prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
 
-		if (cls.state == ca_dedicated)
-			Con_Printf("%s connected\n", host_client->name);
+		Con_Printf("%s connected\n", host_client->name);
 
 		PRVM_serverglobalfloat(time) = sv.time;
 		prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");

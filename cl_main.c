@@ -2922,6 +2922,8 @@ void CL_Init (void)
 	{
 		Con_Printf("Initializing client\n");
 
+		Cvar_SetValueQuick(&host_isclient, 1);
+
 		R_Modules_Init();
 		Palette_Init();
 #ifdef CONFIG_MENU
