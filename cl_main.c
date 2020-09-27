@@ -352,7 +352,7 @@ This is also called on Host_Error, so it shouldn't cause any errors
 */
 void CL_Disconnect(void)
 {
-	if (cls.state == ca_dedicated || cls.state != ca_connected || !cls.demoplayback)
+	if (cls.state == ca_dedicated)
 		return;
 
 	if (Sys_CheckParm("-profilegameonly"))
@@ -535,7 +535,6 @@ void CL_EstablishConnection(const char *address, int firstarg)
 	if (LHNETADDRESS_FromString(&cls.connect_address, address, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		// Disconnect from the current server, or stop a running demo.
-		CL_Disconnect();
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
