@@ -1519,6 +1519,8 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
+	if(cls.state == ca_connected || cls.demoplayback)
+		CL_Disconnect();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	crypto = &cls.netcon->crypto;
