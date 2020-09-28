@@ -109,14 +109,19 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 	{
 		const char *text = Cmd_Argv(cmd, 2);
 		current = Cbuf_LinkGet(cbuf, NULL);
-		current->size = strlen(text);
+		current->length = strlen(text);
 		current->source = cmd;
 		current->delay = atof(Cmd_Argv(cmd, 1));
 
-		memcpy(current->text, text, current->size + 1);
+		if(current->size < current->length)
+		{
+			current->text = (char *)Mem_Realloc(cbuf_mempool, current->text, current->length + 1);
+			current->size = current->length;
+		}
+
+		strlcpy(current->text, text, current->length + 1);
 
 		List_Move_Tail(&current->list, &cbuf->deferred);
-
 	}
 	else
 	{
@@ -382,7 +387,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 	Cbuf_Lock(cbuf);
 
 	// we need to memmove the existing text and stuff this in before it...
-	if (cbuf->size + l >= (size_t)cbuf->maxsize)
+	if (cbuf->size + l >= cbuf->maxsize)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
