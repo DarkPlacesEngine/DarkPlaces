@@ -412,6 +412,7 @@
     <ClInclude Include="timing.h" />
     <ClInclude Include="utf8lib.h" />
     <ClInclude Include="vid.h" />
+    <ClInclude Include="view.h" />
     <ClInclude Include="wad.h" />
     <ClInclude Include="world.h" />
     <ClInclude Include="zone.h" />
