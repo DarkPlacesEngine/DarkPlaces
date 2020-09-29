@@ -1801,8 +1801,6 @@ void CL_RelinkLightFlashes(void);
 void CL_Beam_AddPolygons(const beam_t *b);
 void Sbar_ShowFPS(void);
 void Sbar_ShowFPS_Update(void);
-void Host_SaveConfig(void);
-void Host_LoadConfig_f(cmd_state_t *cmd);
 void CL_UpdateMoveVars(void);
 void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
 void V_DriftPitch(void);
