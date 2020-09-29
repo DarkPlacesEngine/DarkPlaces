@@ -40,9 +40,11 @@ double Host_Frame(double time);
 void Host_Shutdown(void);
 void Host_StartVideo(void);
 void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
-void Host_NoOperation_f(cmd_state_t *cmd);
 void Host_LockSession(void);
 void Host_UnlockSession(void);
 void Host_AbortCurrentFrame(void);
+void Host_SaveConfig(void);
+void Host_LoadConfig_f(cmd_state_t *cmd);
+void Host_NoOperation_f(cmd_state_t *cmd);
 
 #endif
