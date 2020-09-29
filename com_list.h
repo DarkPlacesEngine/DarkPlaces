@@ -20,6 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // com_list.c - generic doubly linked list interface, inspired by Linux list.h
 
+#ifndef LIST_H
+#define LIST_H
+
 #include <stddef.h>
 
 typedef struct llist_s
@@ -54,3 +57,5 @@ void List_Splice_Tail(const llist_t *list, llist_t *head);
 qbool List_IsFirst(llist_t *list, llist_t *start);
 qbool List_IsLast(llist_t *list, llist_t *start);
 qbool List_IsEmpty(const llist_t *list);
+
+#endif
