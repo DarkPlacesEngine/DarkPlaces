@@ -6956,6 +6956,7 @@ static void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend
 			for (axis = 0;axis < BIH_MAXUNORDEREDCHILDREN && node->children[axis] >= 0;axis++)
 			{
 				leaf = bih->leafs + node->children[axis];
+				// TODO: This is very expensive in Steel Storm. Framerate halved during even light combat.
 				if (!BoxesOverlap(sweepnodemins, sweepnodemaxs, leaf->mins, leaf->maxs))
 					continue;
 				switch(leaf->type)
