@@ -29,6 +29,8 @@ typedef struct host_s
 	struct
 	{
 		void (*ConnectLocal)(void);
+		qbool (*CL_Intermission)(void); // Quake compatibility
+		qbool (*SV_CanSave)(void); // Quake compatibility
 	} hook;
 } host_t;
 

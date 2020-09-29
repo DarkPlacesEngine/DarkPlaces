@@ -572,6 +572,11 @@ static void CL_EstablishConnection_Local(void)
 		CL_EstablishConnection("local:1", -2);
 }
 
+static qbool CL_Intermission(void)
+{
+	return cl.intermission;
+}
+
 /*
 ==============
 CL_PrintEntities_f
@@ -3055,5 +3060,6 @@ void CL_Init (void)
 		CL_Video_Init();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
+		host.hook.CL_Intermission = CL_Intermission;
 	}
 }
