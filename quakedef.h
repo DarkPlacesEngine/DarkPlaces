@@ -571,7 +571,6 @@ void Host_Quit_f(cmd_state_t *cmd);
 void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 double SV_Frame(double time);
 void SV_Shutdown(void);
-void CL_Reconnect_f(cmd_state_t *cmd);
 void Host_NoOperation_f(cmd_state_t *cmd);
 void Host_LockSession(void);
 void Host_UnlockSession(void);
