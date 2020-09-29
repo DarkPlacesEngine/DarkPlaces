@@ -17,7 +17,7 @@
 #endif
 
 #ifndef STANDALONETEST
-#include "quakedef.h"
+#include "darkplaces.h"
 #endif
 
 #include <stdlib.h>

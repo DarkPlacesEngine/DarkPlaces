@@ -12,7 +12,7 @@
 
 #include <signal.h>
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 sys_t sys;
 

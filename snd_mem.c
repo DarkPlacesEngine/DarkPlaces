@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 #include "snd_main.h"
 #include "snd_ogg.h"
@@ -28,6 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_xmp.h"
 #endif
 
+void SCR_PushLoadingScreen (const char *, float);
+void SCR_PopLoadingScreen (qbool);
 
 /*
 ====================

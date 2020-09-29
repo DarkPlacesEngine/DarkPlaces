@@ -5,7 +5,7 @@
 #include <dirent.h>
 #endif
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 // LadyHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
 

@@ -19,8 +19,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // Z_zone.c
 
-#include "quakedef.h"
-#include "thread.h"
+#include "darkplaces.h"
+
+void R_TextureStats_Print(qbool, qbool, qbool);
+void GL_Mesh_ListVBOs(qbool);
 
 #ifdef WIN32
 #include <windows.h>
@@ -29,11 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <unistd.h>
 #endif
 
-#ifdef _MSC_VER
-#include <vadefs.h>
-#else
-#include <stdint.h>
-#endif
 #define MEMHEADER_SENTINEL_FOR_ADDRESS(p) ((sentinel_seed ^ (unsigned int) (uintptr_t) (p)) + sentinel_seed)
 unsigned int sentinel_seed;
 
