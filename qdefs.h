@@ -169,4 +169,33 @@
 
 #define	NET_MINRATE		1000 ///< limits "rate" and "sv_maxrate" cvars
 
+// In Quake, any char in 0..32 counts as whitespace
+//#define ISWHITESPACE(ch) ((unsigned char) ch <= (unsigned char) ' ')
+#define ISWHITESPACE(ch) (!(ch) || (ch) == ' ' || (ch) == '\t' || (ch) == '\r' || (ch) == '\n')
+#define ISCOMMENT(ch, pos) ch[pos] == '/' && ch[pos + 1] == '/' && (pos == 0 || ISWHITESPACE(ch[pos - 1]))
+// This also includes extended characters, and ALL control chars
+#define ISWHITESPACEORCONTROL(ch) ((signed char) (ch) <= (signed char) ' ')
+
+#ifdef PRVM_64
+#define FLOAT_IS_TRUE_FOR_INT(x) ((x) & 0x7FFFFFFFFFFFFFFF) // also match "negative zero" doubles of value 0x8000000000000000
+#define FLOAT_LOSSLESS_FORMAT "%.17g"
+#define VECTOR_LOSSLESS_FORMAT "%.17g %.17g %.17g"
+#else
+#define FLOAT_IS_TRUE_FOR_INT(x) ((x) & 0x7FFFFFFF) // also match "negative zero" floats of value 0x80000000
+#define FLOAT_LOSSLESS_FORMAT "%.9g"
+#define VECTOR_LOSSLESS_FORMAT "%.9g %.9g %.9g"
+#endif
+
+// originally this was _MSC_VER
+// but here we want to test the system libc, which on win32 is borked, and NOT the compiler
+#ifdef WIN32
+#define INT_LOSSLESS_FORMAT_SIZE "I64"
+#define INT_LOSSLESS_FORMAT_CONVERT_S(x) ((__int64)(x))
+#define INT_LOSSLESS_FORMAT_CONVERT_U(x) ((unsigned __int64)(x))
+#else
+#define INT_LOSSLESS_FORMAT_SIZE "j"
+#define INT_LOSSLESS_FORMAT_CONVERT_S(x) ((intmax_t)(x))
+#define INT_LOSSLESS_FORMAT_CONVERT_U(x) ((uintmax_t)(x))
+#endif
+
 #endif

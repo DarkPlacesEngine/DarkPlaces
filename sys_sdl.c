@@ -1,3 +1,4 @@
+#include "darkplaces.h"
 
 #ifdef WIN32
 #include <io.h>
@@ -22,8 +23,6 @@
 #pragma comment(lib, "sdl2main.lib")
 #endif
 #endif
-
-#include "quakedef.h"
 
 sys_t sys;
 

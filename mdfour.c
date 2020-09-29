@@ -27,9 +27,8 @@
 	$Id$
 */
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
-#include <string.h>		/* XoXus: needed for memset call */
 #include "mdfour.h"
 
 /* NOTE: This code makes no attempt to be fast!

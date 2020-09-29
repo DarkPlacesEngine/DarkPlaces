@@ -26,7 +26,7 @@
 //
 //LadyHavoc: rewrote most of this.
 
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "image.h"
 #include "image_png.h"
 

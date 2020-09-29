@@ -25,6 +25,9 @@
 #ifndef SND_WAV_H
 #define SND_WAV_H
 
+#include "qtypes.h"
+#include "sound.h"
+#include "snd_main.h"
 
 extern const snd_fetcher_t wav_fetcher;
 

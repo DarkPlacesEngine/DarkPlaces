@@ -338,6 +338,7 @@
     <ClInclude Include="csprogs.h" />
     <ClInclude Include="curves.h" />
     <ClInclude Include="cvar.h" />
+    <ClInclude Include="darkplaces.h" />
     <ClInclude Include="dpvsimpledecode.h" />
     <ClInclude Include="draw.h" />
     <ClInclude Include="fs.h" />
