@@ -521,6 +521,7 @@ clean:
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
+	-$(CMD_RM) *.gch
 	-$(CMD_RM) build-obj/
 
 clean-profile: clean
