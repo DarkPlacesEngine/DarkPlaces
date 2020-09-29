@@ -1,5 +1,6 @@
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "utf8lib.h"
+#include "draw.h"
 
 /*
 ================================================================================

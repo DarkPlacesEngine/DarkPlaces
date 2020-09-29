@@ -22,7 +22,8 @@
 */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
+#include "cl_screen.h"
 #include "image.h"
 #include "jpeg.h"
 #include "image_png.h"

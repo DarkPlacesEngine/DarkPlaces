@@ -25,6 +25,116 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qtypes.h"
 #include "cvar.h"
 
+/* Preprocessor macros to identify platform
+    DP_OS_NAME 	- "friendly" name of the OS, for humans to read
+    DP_OS_STR	- "identifier" of the OS, more suited for code to use
+    DP_ARCH_STR	- "identifier" of the processor architecture
+ */
+#if defined(__ANDROID__) /* must come first because it also defines linux */
+# define DP_OS_NAME		"Android"
+# define DP_OS_STR		"android"
+# define USE_GLES2		1
+# define USE_RWOPS		1
+# define LINK_TO_ZLIB	1
+# define LINK_TO_LIBVORBIS 1
+#ifdef USEXMP
+# define LINK_TO_LIBXMP 1 // nyov: if someone can test with the android NDK compiled libxmp?
+#endif
+# define DP_MOBILETOUCH	1
+# define DP_FREETYPE_STATIC 1
+#elif TARGET_OS_IPHONE /* must come first because it also defines MACOSX */
+# define DP_OS_NAME		"iPhoneOS"
+# define DP_OS_STR		"iphoneos"
+# define USE_GLES2		1
+# define LINK_TO_ZLIB	1
+# define LINK_TO_LIBVORBIS 1
+# define DP_MOBILETOUCH	1
+# define DP_FREETYPE_STATIC 1
+#elif defined(__linux__)
+# define DP_OS_NAME		"Linux"
+# define DP_OS_STR		"linux"
+#elif defined(_WIN64)
+# define DP_OS_NAME		"Windows64"
+# define DP_OS_STR		"win64"
+#elif defined(WIN32)
+# define DP_OS_NAME		"Windows"
+# define DP_OS_STR		"win32"
+#elif defined(__FreeBSD__)
+# define DP_OS_NAME		"FreeBSD"
+# define DP_OS_STR		"freebsd"
+#elif defined(__NetBSD__)
+# define DP_OS_NAME		"NetBSD"
+# define DP_OS_STR		"netbsd"
+#elif defined(__OpenBSD__)
+# define DP_OS_NAME		"OpenBSD"
+# define DP_OS_STR		"openbsd"
+#elif defined(__DragonFly__)
+# define DP_OS_NAME		"DragonFlyBSD"
+# define DP_OS_STR		"dragonflybsd"
+#elif defined(MACOSX)
+# define DP_OS_NAME		"Mac OS X"
+# define DP_OS_STR		"osx"
+#elif defined(__MORPHOS__)
+# define DP_OS_NAME		"MorphOS"
+# define DP_OS_STR		"morphos"
+#elif defined (sun) || defined (__sun)
+# if defined (__SVR4) || defined (__svr4__)
+#  define DP_OS_NAME	"Solaris"
+#  define DP_OS_STR		"solaris"
+# else
+#  define DP_OS_NAME	"SunOS"
+#  define DP_OS_STR		"sunos"
+# endif
+#else
+# define DP_OS_NAME		"Unknown"
+# define DP_OS_STR		"unknown"
+#endif
+
+#if defined(__GNUC__) || (__clang__)
+# if defined(__i386__)
+#  define DP_ARCH_STR		"686"
+#  define SSE_POSSIBLE
+#  ifdef __SSE__
+#   define SSE_PRESENT
+#  endif
+#  ifdef __SSE2__
+#   define SSE2_PRESENT
+#  endif
+# elif defined(__x86_64__)
+#  define DP_ARCH_STR		"x86_64"
+#  define SSE_PRESENT
+#  define SSE2_PRESENT
+# elif defined(__powerpc__)
+#  define DP_ARCH_STR		"ppc"
+# endif
+#elif defined(_WIN64)
+# define DP_ARCH_STR		"x86_64"
+# define SSE_PRESENT
+# define SSE2_PRESENT
+#elif defined(WIN32)
+# define DP_ARCH_STR		"x86"
+# define SSE_POSSIBLE
+#endif
+
+#ifdef SSE_PRESENT
+# define SSE_POSSIBLE
+#endif
+
+#ifdef NO_SSE
+# undef SSE_PRESENT
+# undef SSE_POSSIBLE
+# undef SSE2_PRESENT
+#endif
+
+#ifdef SSE_POSSIBLE
+// runtime detection of SSE/SSE2 capabilities for x86
+qbool Sys_HaveSSE(void);
+qbool Sys_HaveSSE2(void);
+#else
+#define Sys_HaveSSE() false
+#define Sys_HaveSSE2() false
+#endif
+
 typedef struct sys_s
 {
 	int argc;

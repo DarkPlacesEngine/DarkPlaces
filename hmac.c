@@ -1,4 +1,4 @@
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "hmac.h"
 
 qbool hmac(

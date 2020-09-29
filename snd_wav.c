@@ -22,7 +22,7 @@
 */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "snd_main.h"
 #include "snd_wav.h"
 
