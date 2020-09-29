@@ -3287,7 +3287,7 @@ static void M_Quit_Key(cmd_state_t *cmd, int key, int ascii)
 
 	case 'Y':
 	case 'y':
-		Host_Quit_f(cmd);
+		host.state = host_shutdown;
 		break;
 
 	default:
