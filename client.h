@@ -1539,8 +1539,6 @@ extern int cl_ignoremousemoves;
 
 
 float CL_KeyState (kbutton_t *key);
-const char *Key_KeynumToString (int keynum, char *buf, size_t buflength);
-int Key_StringToKeynum (const char *str);
 
 //
 // cl_cmd.c
