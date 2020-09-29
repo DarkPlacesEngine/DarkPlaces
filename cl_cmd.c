@@ -297,6 +297,68 @@ static void CL_Color_f(cmd_state_t *cmd)
 
 /*
 ====================
+CL_User_f
+
+user <name or userid>
+
+Dump userdata / masterdata for a user
+====================
+*/
+static void CL_User_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	int		uid;
+	int		i;
+
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Printf ("Usage: user <username / userid>\n");
+		return;
+	}
+
+	uid = atoi(Cmd_Argv(cmd, 1));
+
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (!cl.scores[i].name[0])
+			continue;
+		if (cl.scores[i].qw_userid == uid || !strcasecmp(cl.scores[i].name, Cmd_Argv(cmd, 1)))
+		{
+			InfoString_Print(cl.scores[i].qw_userinfo);
+			return;
+		}
+	}
+	Con_Printf ("User not in server.\n");
+}
+
+/*
+====================
+CL_Users_f
+
+Dump userids for all current players
+====================
+*/
+static void CL_Users_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	int		i;
+	int		c;
+
+	c = 0;
+	Con_Printf ("userid frags name\n");
+	Con_Printf ("------ ----- ----\n");
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (cl.scores[i].name[0])
+		{
+			Con_Printf ("%6i %4i %s\n", cl.scores[i].qw_userid, cl.scores[i].frags, cl.scores[i].name);
+			c++;
+		}
+	}
+
+	Con_Printf ("%i total users\n", c);
+}
+
+/*
+====================
 CL_Packet_f
 
 packet <destination> <contents>
@@ -661,6 +723,8 @@ void CL_InitCommands(void)
 	Cmd_AddCommand(CF_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand(CF_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
 	Cmd_AddCommand(CF_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand(CF_SHARED, "user", CL_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand(CF_SHARED, "users", CL_Users_f, "prints additional information about all players on the scoreboard");
 	Cmd_AddCommand(CF_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(CF_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand(CF_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
