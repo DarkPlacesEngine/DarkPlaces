@@ -1,6 +1,8 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include "qtypes.h"
+
 // enable Sys_PrintfToTerminal calls on nearly every threading call
 //#define THREADDEBUG
 //#define THREADDISABLE

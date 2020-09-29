@@ -21,6 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef MENU_H
 #define MENU_H
 
+#include "qtypes.h"
+
+typedef struct serverlist_entry_s serverlist_entry_t;
+
 enum m_state_e {
 	m_none,
 	m_main,

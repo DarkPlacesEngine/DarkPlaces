@@ -22,6 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SYS_H
 #define SYS_H
 
+#include "qtypes.h"
+#include "cvar.h"
+
 typedef struct sys_s
 {
 	int argc;

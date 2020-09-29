@@ -2,6 +2,8 @@
 #ifndef MATRIXLIB_H
 #define MATRIXLIB_H
 
+#include "qtypes.h"
+
 //#define MATRIX4x4_OPENGLORIENTATION
 
 typedef struct matrix4x4_s

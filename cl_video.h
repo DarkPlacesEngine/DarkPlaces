@@ -2,6 +2,8 @@
 #ifndef CL_VIDEO_H
 #define CL_VIDEO_H
 
+#include "draw.h"
+
 #define CLVIDEOPREFIX	"video/"
 #define CLTHRESHOLD		2.0
 

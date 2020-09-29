@@ -1,3 +1,7 @@
+#include <stddef.h>
+#include "qtypes.h"
+#include "qdefs.h"
+
 enum
 {
 	CURLCBSTATUS_OK = 0,

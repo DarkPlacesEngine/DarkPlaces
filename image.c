@@ -1842,10 +1842,8 @@ void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned cha
 	}
 }
 
-static const unsigned char concharimage[] =
-{
+
 #include "lhfont.h"
-};
 
 static unsigned char *Image_GenerateConChars(void)
 {

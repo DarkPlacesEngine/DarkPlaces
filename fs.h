@@ -25,6 +25,11 @@
 #ifndef FS_H
 #define FS_H
 
+#include <stddef.h>
+#include <stdarg.h>
+#include "qtypes.h"
+#include "qdefs.h"
+#include "zone.h"
 
 // ------ Types ------ //
 

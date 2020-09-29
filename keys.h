@@ -28,6 +28,9 @@
 #define __KEYS_H
 
 #include "qtypes.h"
+#include "qdefs.h"
+#include "fs.h"
+#include "cmd.h"
 
 //
 // these are the key numbers that should be passed to Key_Event

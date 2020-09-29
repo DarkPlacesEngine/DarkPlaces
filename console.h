@@ -21,6 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cmd.h"
+#include "lhnet.h"
+
 //
 // console
 //

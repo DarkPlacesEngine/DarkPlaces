@@ -20,6 +20,8 @@
 #ifndef SND_XMP_H
 #define SND_XMP_H
 
+#include "qtypes.h"
+#include "sound.h"
 
 qbool XMP_OpenLibrary (void);
 void XMP_CloseLibrary (void);

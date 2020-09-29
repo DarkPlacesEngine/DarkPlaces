@@ -1,6 +1,11 @@
 #ifndef HOST_H
 #define HOST_H
 
+#include <setjmp.h>
+#include "qtypes.h"
+#include "qdefs.h"
+#include "cmd.h"
+
 typedef enum host_state_e
 {
 	host_shutdown,
@@ -39,3 +44,5 @@ void Host_NoOperation_f(cmd_state_t *cmd);
 void Host_LockSession(void);
 void Host_UnlockSession(void);
 void Host_AbortCurrentFrame(void);
+
+#endif
