@@ -321,6 +321,7 @@
     <ClInclude Include="cdaudio.h" />
     <ClInclude Include="cl_collision.h" />
     <ClInclude Include="cl_gecko.h" />
+	<ClInclude Include="cl_parse.h" />
     <ClInclude Include="cl_screen.h" />
     <ClInclude Include="cl_video.h" />
     <ClInclude Include="cl_video_libavw.h" />
