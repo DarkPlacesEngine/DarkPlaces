@@ -345,6 +345,7 @@
     <ClInclude Include="gl_backend.h" />
     <ClInclude Include="glquake.h" />
     <ClInclude Include="hmac.h" />
+    <ClInclude Include="host.h" />
     <ClInclude Include="image.h" />
     <ClInclude Include="image_png.h" />
     <ClInclude Include="input.h" />
