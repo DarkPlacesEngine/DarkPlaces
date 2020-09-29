@@ -430,7 +430,7 @@ This command causes the client to wait for the signon messages again.
 This is sent just before a server changes levels
 ==================
 */
-void CL_Reconnect_f(cmd_state_t *cmd)
+static void CL_Reconnect_f(cmd_state_t *cmd)
 {
 	char temp[128];
 	// if not connected, reconnect to the most recent server
