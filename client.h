@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "view.h"
 #include "cap.h"
+#include "cl_parse.h"
 
 // NOTE: r_stat_name[] must match this indexing
 typedef enum r_stat_e
@@ -1572,17 +1573,6 @@ void CL_TimeDemo_f(cmd_state_t *cmd);
 
 void CL_Demo_Init(void);
 
-//
-// cl_parse.c
-//
-void CL_Parse_Init(void);
-void CL_Parse_Shutdown(void);
-void CL_ParseServerMessage(void);
-void CL_Parse_DumpPacket(void);
-void CL_Parse_ErrorCleanUp(void);
-void QW_CL_StartUpload(unsigned char *data, int size);
-extern cvar_t qport;
-void CL_KeepaliveMessage(qbool readmessages); // call this during loading of large content
 
 //
 // cl_part
