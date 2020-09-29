@@ -98,7 +98,7 @@ void CL_StopPlayback (void)
 
 	if (!cls.demostarting) // only quit if not starting another demo
 		if (Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
-			Host_Quit_f(&cmd_client);
+			host.state = host_shutdown;
 
 }
 
@@ -579,11 +579,11 @@ static void CL_FinishTimeDemo (void)
 				}
 				Z_Free(history);
 				history = NULL;
-				Host_Quit_f(&cmd_client);
+				host.state = host_shutdown;
 			}
 		}
 		else
-			Host_Quit_f(&cmd_client);
+			host.state = host_shutdown;
 	}
 }
 
