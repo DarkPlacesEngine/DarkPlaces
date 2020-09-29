@@ -1,3 +1,6 @@
+#ifndef HOST_H
+#define HOST_H
+
 typedef enum host_state_e
 {
 	host_shutdown,
