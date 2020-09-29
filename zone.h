@@ -21,6 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef ZONE_H
 #define ZONE_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "qdefs.h"
+
 extern qbool mem_bigendian;
 
 // div0: heap overflow detection paranoia

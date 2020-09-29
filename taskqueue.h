@@ -2,6 +2,7 @@
 #ifndef TASKQUEUE_H
 #define TASKQUEUE_H
 
+#include <stddef.h>
 #include "qtypes.h"
 #include "thread.h"
 

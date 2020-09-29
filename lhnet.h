@@ -4,6 +4,8 @@
 #ifndef LHNET_H
 #define LHNET_H
 
+#include <stddef.h>
+
 typedef enum lhnetaddresstype_e
 {
 	LHNETADDRESSTYPE_NONE,

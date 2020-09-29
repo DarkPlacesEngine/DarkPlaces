@@ -19,9 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // cvar.h
 
-struct cmd_state_s;
-typedef struct cmd_state_s cmd_state_t;
-
 /*
 
 cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly
@@ -58,6 +55,11 @@ interface from being ambiguous.
 
 #ifndef CVAR_H
 #define CVAR_H
+
+#include "qtypes.h"
+#include "qdefs.h"
+typedef struct cmd_state_s cmd_state_t;
+typedef struct qfile_s qfile_t;
 
 typedef struct cvar_s
 {

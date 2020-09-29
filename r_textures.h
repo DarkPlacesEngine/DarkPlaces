@@ -2,6 +2,9 @@
 #ifndef R_TEXTURES_H
 #define R_TEXTURES_H
 
+#include "qtypes.h"
+#include "cvar.h"
+
 // transparent
 #define TEXF_ALPHA 0x00000001
 // mipmapped

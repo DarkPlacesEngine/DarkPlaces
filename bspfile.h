@@ -18,6 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef BSPFILE_H
+#define BSPFILE_H
 
 #define MAX_MAP_HULLS 16 // Q1BSP has 4, Hexen2 Q1BSP has 8, MCBSP has 16
 
@@ -322,3 +324,4 @@ typedef struct dleaf_s
 } dleaf_t;
 */
 
+#endif

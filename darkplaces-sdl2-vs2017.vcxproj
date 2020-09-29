@@ -383,6 +383,8 @@
     <ClInclude Include="protocol.h" />
     <ClInclude Include="prvm_cmds.h" />
     <ClInclude Include="prvm_execprogram.h" />
+    <ClInclude Include="qdefs.h" />
+    <ClInclude Include="qstats.h" />
     <ClInclude Include="qtypes.h" />
     <ClInclude Include="quakedef.h" />
     <ClInclude Include="r_lerpanim.h" />

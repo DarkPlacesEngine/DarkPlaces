@@ -2,7 +2,11 @@
 #ifndef DPVSIMPLEDECODE_H
 #define DPVSIMPLEDECODE_H
 
+#include "qtypes.h"
+#include "qdefs.h"
+#include "cvar.h"
 #include "cl_video.h"
+#include "draw.h"
 
 #define DPVSIMPLEDECODEERROR_NONE 0
 #define DPVSIMPLEDECODEERROR_EOF 1
