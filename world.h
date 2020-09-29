@@ -22,7 +22,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef WORLD_H
 #define WORLD_H
 
+#include "qtypes.h"
+#include "qdefs.h"
+#include "cvar.h"
+#include "com_list.h"
 #include "collision.h"
+#include "matrixlib.h"
+#include "r_textures.h"
+typedef struct model_s dp_model_t;
 
 #define MOVE_NORMAL     0
 #define MOVE_NOMONSTERS 1

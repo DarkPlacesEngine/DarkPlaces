@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef VID_H
 #define VID_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cmd.h"
+
 #define ENGINE_ICON ( (gamemode == GAME_NEXUIZ) ? nexuiz_xpm : darkplaces_xpm )
 
 extern int cl_available;

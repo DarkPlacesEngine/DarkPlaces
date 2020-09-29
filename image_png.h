@@ -24,6 +24,8 @@
 #ifndef PNG_H
 #define PNG_H
 
+#include "qtypes.h"
+
 qbool PNG_OpenLibrary (void);
 void PNG_CloseLibrary (void);
 unsigned char* PNG_LoadImage_BGRA (const unsigned char *f, int filesize, int *miplevel);

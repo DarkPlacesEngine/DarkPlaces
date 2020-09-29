@@ -22,7 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef NET_H
 #define NET_H
 
+#include <stdarg.h>
+#include "qtypes.h"
+#include "cmd.h"
+#include "cvar.h"
+#include "crypto.h"
 #include "lhnet.h"
+#include "common.h"
 
 #define NET_HEADERSIZE		(2 * sizeof(unsigned int))
 

@@ -24,6 +24,8 @@
 #ifndef JPEG_H
 #define JPEG_H
 
+#include <stddef.h>
+#include "qtypes.h"
 
 qbool JPEG_OpenLibrary (void);
 void JPEG_CloseLibrary (void);

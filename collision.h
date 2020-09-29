@@ -2,6 +2,12 @@
 #ifndef COLLISION_H
 #define COLLISION_H
 
+#include "cvar.h"
+#include "matrixlib.h"
+#include "zone.h"
+typedef struct texture_s texture_t;
+typedef struct model_s dp_model_t;
+
 typedef union plane_s
 {
 	struct

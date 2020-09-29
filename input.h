@@ -22,6 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "qtypes.h"
+#include "cvar.h"
+
 extern cvar_t in_pitch_min;
 extern cvar_t in_pitch_max;
 

@@ -21,6 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <stdarg.h>
+#include "qtypes.h"
+#include "qdefs.h"
 
 /// MSVC has a different name for several standard functions
 #ifdef WIN32

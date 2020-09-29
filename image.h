@@ -2,6 +2,11 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cvar.h"
+#include "r_textures.h"
+
 extern int image_width, image_height;
 
 unsigned char *Image_GenerateNoTexture(void);

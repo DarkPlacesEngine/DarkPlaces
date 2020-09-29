@@ -1,6 +1,11 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cvar.h"
+#include "lhnet.h"
+
 extern cvar_t crypto_developer;
 extern cvar_t crypto_aeslevel;
 #define ENCRYPTION_REQUIRED (crypto_aeslevel.integer >= 3)
@@ -10,8 +15,6 @@ extern int crypto_keyfp_recommended_length; // applies to LOCAL IDs, and to ALL 
 #define CRYPTO_HEADERSIZE 31
 // AES case causes 16 to 31 bytes overhead
 // SHA256 case causes 16 bytes overhead as we truncate to 128bit
-
-#include "lhnet.h"
 
 #define FP64_SIZE 44
 #define DHKEY_SIZE 16

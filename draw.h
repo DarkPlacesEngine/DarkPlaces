@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef DRAW_H
 #define DRAW_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "r_textures.h"
+
 typedef struct cachepic_s cachepic_t;
 
 typedef enum cachepicflags_e

@@ -4,7 +4,9 @@
 #ifndef UTF8LIB_H__
 #define UTF8LIB_H__
 
+#include <stddef.h>
 #include "qtypes.h"
+#include "cvar.h"
 
 // types for unicode strings
 // let them be 32 bit for now
