@@ -512,6 +512,8 @@ extern client_t *host_client;
 //===========================================================
 
 void SV_Init (void);
+double SV_Frame(double time);
+void SV_Shutdown(void);
 
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
@@ -520,6 +522,8 @@ void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float at
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
 void SV_DropClient (qbool crash);
+
+void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 void SV_SendClientMessages(void);
 
