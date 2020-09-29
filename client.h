@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "matrixlib.h"
 #include "snd_main.h"
+#include "view.h"
 
 // NOTE: r_stat_name[] must match this indexing
 typedef enum r_stat_e
@@ -1639,16 +1640,6 @@ extern cvar_t qport;
 void CL_KeepaliveMessage(qbool readmessages); // call this during loading of large content
 
 //
-// view
-//
-void V_StartPitchDrift_f(cmd_state_t *cmd);
-void V_StopPitchDrift (void);
-
-void V_Init (void);
-void V_UpdateBlends (void);
-void V_ParseDamage (void);
-
-//
 // cl_part
 //
 
@@ -1801,14 +1792,6 @@ void CL_RelinkLightFlashes(void);
 void CL_Beam_AddPolygons(const beam_t *b);
 void CL_UpdateMoveVars(void);
 void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
-void V_DriftPitch(void);
-void V_FadeViewFlashs(void);
-void V_CalcViewBlend(void);
-void V_CalcRefdefUsing (const matrix4x4_t *entrendermatrix, const vec3_t clviewangles, qbool teleported, qbool clonground, qbool clcmdjump, float clstatsviewheight, qbool cldead, const vec3_t clvelocity);
-void V_CalcRefdef(void);
-void V_MakeViewIsometric(void);
-void V_MakeViewIsometric(void);
-void V_StartPitchDrift(void);
 void CL_Locs_Reload_f(cmd_state_t *cmd);
 
 #endif
