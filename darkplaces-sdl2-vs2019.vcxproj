@@ -316,6 +316,7 @@
   <ItemGroup>
     <ClInclude Include="bih.h" />
     <ClInclude Include="bspfile.h" />
+    <ClInclude Include="cap.h" />
     <ClInclude Include="cap_avi.h" />
     <ClInclude Include="cap_ogg.h" />
     <ClInclude Include="cdaudio.h" />
