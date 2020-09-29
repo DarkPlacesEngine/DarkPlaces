@@ -22,8 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SCREEN_H
 #define SCREEN_H
 
+#include <stddef.h>
 #include "qtypes.h"
 #include "cvar.h"
+#include "snd_main.h"
 
 void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
@@ -40,6 +42,8 @@ void SCR_UpdateLoadingScreenIfShown(void);
 void SCR_PushLoadingScreen (const char *msg, float len_in_parent);
 void SCR_PopLoadingScreen (qbool redraw);
 void SCR_ClearLoadingScreen (qbool redraw);
+
+void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length);
 
 extern float scr_con_current; // current height of displayed console
 
