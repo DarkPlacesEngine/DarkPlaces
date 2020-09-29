@@ -515,6 +515,8 @@ void SV_Init (void);
 double SV_Frame(double time);
 void SV_Shutdown(void);
 
+int SV_IsLocalGame(void);
+
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
 void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qbool reliable, float speed);
