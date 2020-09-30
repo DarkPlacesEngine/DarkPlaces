@@ -423,7 +423,7 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 		current->delay -= eat;
 		if(current->delay <= 0)
 		{
-			cbuf->size += current->size;
+			cbuf->size += current->length;
 			List_Move(pos, &cbuf->start);
 			// We must return and come back next frame or the engine will freeze. Fragile... like glass :3
 			return;
