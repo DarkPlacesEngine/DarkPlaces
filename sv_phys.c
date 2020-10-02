@@ -46,7 +46,7 @@ void SV_Physics_Toss (prvm_edict_t *ent);
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent)
 {
-	dp_model_t *model;
+	model_t *model;
 	if (
 			(model = SV_GetModelFromEdict(ent))
 			?
@@ -122,7 +122,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -274,7 +274,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -437,7 +437,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -618,7 +618,7 @@ int SV_PointSuperContents(const vec3_t point)
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	int frame;
 	// list of entities to test for collisions
 	int numtouchedicts;
@@ -804,7 +804,7 @@ SV_LinkEdict
 void SV_LinkEdict (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	dp_model_t *model;
+	model_t *model;
 	vec3_t mins, maxs, entmins, entmaxs, entangles;
 	int modelindex;
 
@@ -1682,7 +1682,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	int num_moved;
 	int numcheckentities;
 	static prvm_edict_t *checkentities[MAX_EDICTS];
-	dp_model_t *pushermodel;
+	model_t *pushermodel;
 	trace_t trace, trace2;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 	static unsigned short moved_edicts[MAX_EDICTS];

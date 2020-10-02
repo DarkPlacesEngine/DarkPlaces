@@ -1445,7 +1445,7 @@ static void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *bru
 
 typedef struct collision_cachedtrace_parameters_s
 {
-	dp_model_t *model;
+	model_t *model;
 	vec3_t end;
 	vec3_t start;
 	int hitsupercontentsmask;
@@ -1580,7 +1580,7 @@ static unsigned int Collision_Cache_HashIndexForArray(unsigned int *array, unsig
 	return hashindex;
 }
 
-static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+static collision_cachedtrace_t *Collision_Cache_Lookup(model_t *model, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int hashindex = 0;
 	unsigned int fullhashindex;
@@ -1688,7 +1688,7 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	return cached;
 }
 
-void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, matrix, inversematrix, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 	if (cached->valid)
@@ -1702,7 +1702,7 @@ void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t 
 	cached->result = *trace;
 }
 
-void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, &identitymatrix, &identitymatrix, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 	if (cached->valid)
@@ -1788,7 +1788,7 @@ static void Collision_ClipExtendFinish(extendtraceinfo_t *extendtraceinfo)
 	VectorMA(extendtraceinfo->realstart, trace->fraction, extendtraceinfo->realdelta, trace->endpos);
 }
 
-void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
+void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 {
 	vec3_t starttransformed, endtransformed;
 	extendtraceinfo_t extendtraceinfo;
@@ -1831,7 +1831,7 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const fram
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
+void Collision_ClipToWorld(trace_t *trace, model_t *model, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 {
 	extendtraceinfo_t extendtraceinfo;
 	Collision_ClipExtendPrepare(&extendtraceinfo, trace, tstart, tend, extend);
@@ -1841,7 +1841,7 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstar
 	Collision_ClipExtendFinish(&extendtraceinfo);
 }
 
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
+void Collision_ClipLineToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
 {
 	vec3_t starttransformed, endtransformed;
 	extendtraceinfo_t extendtraceinfo;
@@ -1867,7 +1867,7 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const 
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
+void Collision_ClipLineToWorld(trace_t *trace, model_t *model, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
 {
 	extendtraceinfo_t extendtraceinfo;
 	Collision_ClipExtendPrepare(&extendtraceinfo, trace, tstart, tend, extend);
@@ -1880,7 +1880,7 @@ void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t t
 	Collision_ClipExtendFinish(&extendtraceinfo);
 }
 
-void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_ClipPointToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	float starttransformed[3];
 	memset(trace, 0, sizeof(*trace));
@@ -1902,7 +1902,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_ClipPointToWorld(trace_t *trace, model_t *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;

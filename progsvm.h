@@ -634,7 +634,7 @@ typedef struct prvm_prog_s
 
 	// this tracks the last polygonbegin's choice of
 	// CL_Mesh_CSQC or CL_Mesh_UI for this polygon
-	dp_model_t			*polygonbegin_model;
+	model_t			*polygonbegin_model;
 	// indicates if polygonbegin should be interpreted as 2d
 	// (clearscene sets this to false, renderscene sets this to true, drawpic
 	//  also sets this to true)
@@ -917,8 +917,8 @@ void PRVM_Watchpoint(prvm_prog_t *prog, int stack_index, const char *text, etype
 void VM_Warning(prvm_prog_t *prog, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
 void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroupblend, const prvm_edict_t *ed);
-void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model, double curtime);
-void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend);
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const model_t *model, double curtime);
+void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const model_t *edmodel, const frameblend_t *frameblend);
 void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed);
 
 void PRVM_ExplicitCoverageEvent(prvm_prog_t *prog, mfunction_t *func, int statement);

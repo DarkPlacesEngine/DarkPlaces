@@ -1278,7 +1278,7 @@ static void SV_Viewmodel_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
-	dp_model_t	*m;
+	model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1307,7 +1307,7 @@ static void SV_Viewframe_f(cmd_state_t *cmd)
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
 	int		f;
-	dp_model_t	*m;
+	model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1325,7 +1325,7 @@ static void SV_Viewframe_f(cmd_state_t *cmd)
 	}
 }
 
-static void PrintFrameName (dp_model_t *m, int frame)
+static void PrintFrameName (model_t *m, int frame)
 {
 	if (m->animscenes)
 		Con_Printf("frame %i: %s\n", frame, m->animscenes[frame].name);
@@ -1342,7 +1342,7 @@ static void SV_Viewnext_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
-	dp_model_t	*m;
+	model_t	*m;
 
 	if (!sv.active)
 		return;
@@ -1369,7 +1369,7 @@ static void SV_Viewprev_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t	*e;
-	dp_model_t	*m;
+	model_t	*m;
 
 	if (!sv.active)
 		return;

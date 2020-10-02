@@ -239,7 +239,7 @@ void R_TimeReport_BeginFrame(void)
 	}
 }
 
-static int R_CountLeafTriangles(const dp_model_t *model, const mleaf_t *leaf)
+static int R_CountLeafTriangles(const model_t *model, const mleaf_t *leaf)
 {
 	int i, triangles = 0;
 	for (i = 0;i < leaf->numleafsurfaces;i++)

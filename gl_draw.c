@@ -782,7 +782,7 @@ qbool r_draw2d_force = false;
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -810,7 +810,7 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	float cosaf = cos(af);
 	float sinar = sin(ar);
 	float cosar = cos(ar);
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -1095,7 +1095,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	size_t bytes_left;
 	float dw, dh;
 	const float *width_of;
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf = NULL;
 	int e0, e1, e2, e3;
 	int tw, th;
@@ -1384,7 +1384,7 @@ static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char
 
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -1406,7 +1406,7 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 
 void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	float offsetx, offsety;
@@ -1473,7 +1473,7 @@ void DrawQ_RecalcView(void)
 
 void DrawQ_FlushUI(void)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	if (mod->num_surfaces == 0)
 		return;
 

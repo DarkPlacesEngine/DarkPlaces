@@ -148,7 +148,7 @@ void Mod_BrushInit(void)
 	mod_q1bsp_texture_water.supercontents = SUPERCONTENTS_WATER;
 }
 
-static mleaf_t *Mod_BSP_PointInLeaf(dp_model_t *model, const vec3_t p)
+static mleaf_t *Mod_BSP_PointInLeaf(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 
@@ -164,7 +164,7 @@ static mleaf_t *Mod_BSP_PointInLeaf(dp_model_t *model, const vec3_t p)
 	return (mleaf_t *)node;
 }
 
-static void Mod_Q1BSP_AmbientSoundLevelsForPoint(dp_model_t *model, const vec3_t p, unsigned char *out, int outsize)
+static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p, unsigned char *out, int outsize)
 {
 	int i;
 	mleaf_t *leaf;
@@ -183,7 +183,7 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(dp_model_t *model, const vec3_t
 		memset(out, 0, outsize);
 }
 
-static int Mod_BSP_FindBoxClusters(dp_model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
+static int Mod_BSP_FindBoxClusters(model_t *model, const vec3_t mins, const vec3_t maxs, int maxclusters, int *clusterlist)
 {
 	int numclusters = 0;
 	int nodestackindex = 0;
@@ -249,7 +249,7 @@ static int Mod_BSP_FindBoxClusters(dp_model_t *model, const vec3_t mins, const v
 	return numclusters;
 }
 
-static int Mod_BSP_BoxTouchingPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingPVS(model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -320,7 +320,7 @@ static int Mod_BSP_BoxTouchingPVS(dp_model_t *model, const unsigned char *pvs, c
 	return false;
 }
 
-static int Mod_BSP_BoxTouchingLeafPVS(dp_model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingLeafPVS(model_t *model, const unsigned char *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -391,7 +391,7 @@ static int Mod_BSP_BoxTouchingLeafPVS(dp_model_t *model, const unsigned char *pv
 	return false;
 }
 
-static int Mod_BSP_BoxTouchingVisibleLeafs(dp_model_t *model, const unsigned char *visibleleafs, const vec3_t mins, const vec3_t maxs)
+static int Mod_BSP_BoxTouchingVisibleLeafs(model_t *model, const unsigned char *visibleleafs, const vec3_t mins, const vec3_t maxs)
 {
 	int nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -467,7 +467,7 @@ typedef struct findnonsolidlocationinfo_s
 	vec_t radius;
 	vec3_t nudge;
 	vec_t bestdist;
-	dp_model_t *model;
+	model_t *model;
 }
 findnonsolidlocationinfo_t;
 
@@ -595,7 +595,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, m
 	}
 }
 
-static void Mod_BSP_FindNonSolidLocation(dp_model_t *model, const vec3_t in, vec3_t out, float radius)
+static void Mod_BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, float radius)
 {
 	int i;
 	findnonsolidlocationinfo_t info;
@@ -1183,7 +1183,7 @@ static qbool Mod_Q1BSP_TraceLineOfSight(struct model_s *model, const vec3_t star
 	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
-static int Mod_BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
+static int Mod_BSP_LightPoint_RecursiveBSPNode(model_t *model, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)
 {
 	int side;
 	float front, back;
@@ -1327,7 +1327,7 @@ static int Mod_BSP_LightPoint_RecursiveBSPNode(dp_model_t *model, vec3_t ambient
 	return false;
 }
 
-static void Mod_BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+static void Mod_BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	// pretend lighting is coming down from above (due to lack of a lightgrid to know primary lighting direction)
 	VectorSet(diffusenormal, 0, 0, 1);
@@ -1342,7 +1342,7 @@ static void Mod_BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambient
 	Mod_BSP_LightPoint_RecursiveBSPNode(model, ambientcolor, diffusecolor, diffusenormal, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, p[0], p[1], p[2] + 0.125, p[2] - 65536);
 }
 
-static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, double mid[3])
+static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(RecursiveHullCheckTraceInfo_t *t, const model_t *model, const mnode_t *node, double mid[3])
 {
 	unsigned int i;
 	int j;
@@ -1413,7 +1413,7 @@ static const texture_t *Mod_Q1BSP_TraceLineAgainstSurfacesFindTextureOnNode(Recu
 	return NULL;
 }
 
-static int Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(RecursiveHullCheckTraceInfo_t *t, const dp_model_t *model, const mnode_t *node, const double p1[3], const double p2[3])
+static int Mod_Q1BSP_TraceLineAgainstSurfacesRecursiveBSPNode(RecursiveHullCheckTraceInfo_t *t, const model_t *model, const mnode_t *node, const double p1[3], const double p2[3])
 {
 	const mplane_t *plane;
 	double t1, t2;
@@ -3244,7 +3244,7 @@ static void Mod_Q1BSP_LoadPlanes(sizebuf_t *sb)
 }
 
 // fixes up sky surfaces that have SKY contents behind them, so that they do not cast shadows (e1m5 logo shadow trick).
-static void Mod_Q1BSP_AssignNoShadowSkySurfaces(dp_model_t *mod)
+static void Mod_Q1BSP_AssignNoShadowSkySurfaces(model_t *mod)
 {
 	int i;
 	msurface_t *surface;
@@ -3764,7 +3764,7 @@ static void Mod_BSP_MakePortals(void)
 
 //Returns PVS data for a given point
 //(note: can return NULL)
-static unsigned char *Mod_BSP_GetPVS(dp_model_t *model, const vec3_t p)
+static unsigned char *Mod_BSP_GetPVS(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 	node = model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode;
@@ -3776,7 +3776,7 @@ static unsigned char *Mod_BSP_GetPVS(dp_model_t *model, const vec3_t p)
 		return NULL;
 }
 
-static void Mod_BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbytes, mnode_t *node)
+static void Mod_BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	while (node->plane)
 	{
@@ -3804,7 +3804,7 @@ static void Mod_BSP_FatPVS_RecursiveBSPNode(dp_model_t *model, const vec3_t org,
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
 //of the given point.
-static int Mod_BSP_FatPVS(dp_model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qbool merge)
+static int Mod_BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qbool merge)
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
@@ -3819,7 +3819,7 @@ static int Mod_BSP_FatPVS(dp_model_t *model, const vec3_t org, vec_t radius, uns
 	return bytes;
 }
 
-static void Mod_Q1BSP_RoundUpToHullSize(dp_model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
+static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
 {
 	vec3_t size;
 	const hull_t *hull;
@@ -3852,9 +3852,9 @@ static void Mod_Q1BSP_RoundUpToHullSize(dp_model_t *cmodel, const vec3_t inmins,
 	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
-void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceLineAgainstSurfaces(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 
-void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_2PSB_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	mod->brush.isbsp2 = true;
 	mod->brush.isbsp2rmqe = true; // like bsp2 except leaf/node bounds are 16bit (unexpanded)
@@ -3862,21 +3862,21 @@ void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q1BSP_Load(mod, buffer, bufferend);
 }
 
-void Mod_BSP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_BSP2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	mod->brush.isbsp2 = true;
 	mod->modeldatatypestring = "Q1BSP2";
 	Mod_Q1BSP_Load(mod, buffer, bufferend);
 }
 
-void Mod_HLBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_HLBSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	mod->brush.ishlbsp = true;
 	mod->modeldatatypestring = "HLBSP";
 	Mod_Q1BSP_Load(mod, buffer, bufferend);
 }
 
-void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
 	sizebuf_t lumpsb[HEADER_LUMPS];
@@ -4014,7 +4014,7 @@ void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->numskins = 1;
 
 	if (loadmodel->brush.numsubmodels)
-		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	// LadyHavoc: to clear the fog around the original quake submodel code, I
 	// will explain:
@@ -4812,7 +4812,7 @@ static void Mod_Q2BSP_LoadAreaPortals(sizebuf_t *sb)
 	sb->readcount = sb->cursize;
 }
 
-static void Mod_Q2BSP_FindSubmodelBrushRange_r(dp_model_t *mod, mnode_t *node, int *first, int *last)
+static void Mod_Q2BSP_FindSubmodelBrushRange_r(model_t *mod, mnode_t *node, int *first, int *last)
 {
 	int i;
 	mleaf_t *leaf;
@@ -4832,7 +4832,7 @@ static void Mod_Q2BSP_FindSubmodelBrushRange_r(dp_model_t *mod, mnode_t *node, i
 	}
 }
 
-static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+static void Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k;
 	sizebuf_t lumpsb[Q2HEADER_LUMPS];
@@ -4963,7 +4963,7 @@ static void Mod_Q2BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	mod->numskins = 1;
 
 	if (loadmodel->brush.numsubmodels)
-		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	totalstylesurfaces = 0;
 	totalstyles = 0;
@@ -6641,7 +6641,7 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	memcpy(loadmodel->brush.data_pvsclusters, (unsigned char *)(in + 1), totalchains);
 }
 
-static void Mod_Q3BSP_LightPoint(dp_model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	int i, j, k, index[3];
 	float transformed[3], blend1, blend2, blend, stylescale = 1;
@@ -6789,7 +6789,7 @@ static qbool Mod_Q3BSP_TraceLineOfSight(struct model_s *model, const vec3_t star
 	}
 }
 
-void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TracePoint(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	const bih_t *bih;
 	const bih_leaf_t *leaf;
@@ -6855,7 +6855,7 @@ void Mod_CollisionBIH_TracePoint(dp_model_t *model, const frameblend_t *frameble
 	}
 }
 
-static void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, const bih_t *bih)
+static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, const bih_t *bih)
 {
 	const bih_leaf_t *leaf;
 	const bih_node_t *node;
@@ -6983,7 +6983,7 @@ static void Mod_CollisionBIH_TraceLineShared(dp_model_t *model, const frameblend
 	}
 }
 
-void Mod_CollisionBIH_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TraceLine(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	if (VectorCompare(start, end))
 	{
@@ -6993,7 +6993,7 @@ void Mod_CollisionBIH_TraceLine(dp_model_t *model, const frameblend_t *frameblen
 	Mod_CollisionBIH_TraceLineShared(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, &model->collision_bih);
 }
 
-void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *thisbrush_start, colbrushf_t *thisbrush_end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, colbrushf_t *thisbrush_start, colbrushf_t *thisbrush_end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	const bih_t *bih;
 	const bih_leaf_t *leaf;
@@ -7138,7 +7138,7 @@ void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const frameblend_t *frameble
 	}
 }
 
-void Mod_CollisionBIH_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TraceBox(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	colboxbrushf_t thisbrush_start, thisbrush_end;
 	vec3_t boxstartmins, boxstartmaxs, boxendmins, boxendmaxs;
@@ -7168,7 +7168,7 @@ qbool Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t star
 	return trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, acceptmins, acceptmaxs);
 }
 
-void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TracePoint_Mesh(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 #if 0
 	// broken - needs to be modified to count front faces and backfaces to figure out if it is in solid
@@ -7212,13 +7212,13 @@ int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, c
 #endif
 }
 
-void Mod_CollisionBIH_TraceLineAgainstSurfaces(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Mod_CollisionBIH_TraceLineAgainstSurfaces(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	Mod_CollisionBIH_TraceLineShared(model, frameblend, skeleton, trace, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, &model->render_bih);
 }
 
 
-bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qbool userendersurfaces, bih_t *out)
+bih_t *Mod_MakeCollisionBIH(model_t *model, qbool userendersurfaces, bih_t *out)
 {
 	int j;
 	int bihnumleafs;
@@ -7426,7 +7426,7 @@ static void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 		loadmodel->brush.num_leafs = numleafs;
 }
 
-static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, lumps;
 	q3dheader_t *header;
@@ -7562,7 +7562,7 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
 
 	if (loadmodel->brush.numsubmodels)
-		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
@@ -7693,7 +7693,7 @@ static void Mod_Q3BSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	Con_DPrintf("Stats for q3bsp model \"%s\": %i faces, %i nodes, %i leafs, %i clusters, %i clusterportals, mesh: %i vertices, %i triangles, %i surfaces\n", loadmodel->name, loadmodel->num_surfaces, loadmodel->brush.num_nodes, loadmodel->brush.num_leafs, mod->brush.num_pvsclusters, loadmodel->brush.num_portals, loadmodel->surfmesh.num_vertices, loadmodel->surfmesh.num_triangles, loadmodel->num_surfaces);
 }
 
-void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i = LittleLong(((int *)buffer)[1]);
 	if (i == Q3BSPVERSION || i == Q3BSPVERSION_IG || i == Q3BSPVERSION_LIVE)
@@ -7704,7 +7704,7 @@ void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i", i);
 }
 
-void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	Host_Error("Mod_MAP_Load: not yet implemented");
 }
@@ -7722,7 +7722,7 @@ objvertex_t;
 
 static unsigned char nobsp_pvs[1] = {1};
 
-void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	const char *textbase = (char *)buffer, *text = textbase;
 	char *s;
@@ -8135,8 +8135,8 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	// allocate storage for final mesh data
 	loadmodel->num_textures = numtextures * loadmodel->numskins;
 	loadmodel->num_texturesperskin = numtextures;
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
-	loadmodel->brush.submodels = (dp_model_t **)data;data += loadmodel->brush.numsubmodels * sizeof(dp_model_t *);
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + numtriangles * sizeof(int[3]) + (numvertices <= 65536 ? numtriangles * sizeof(unsigned short[3]) : 0) + numvertices * sizeof(float[14]) + loadmodel->brush.numsubmodels * sizeof(model_t *));
+	loadmodel->brush.submodels = (model_t **)data;data += loadmodel->brush.numsubmodels * sizeof(model_t *);
 	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = numvertices;
@@ -8211,7 +8211,7 @@ void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.supportwateralpha = true;
 
 	if (loadmodel->brush.numsubmodels)
-		loadmodel->brush.submodels = (dp_model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(dp_model_t *));
+		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	mod = loadmodel;
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
