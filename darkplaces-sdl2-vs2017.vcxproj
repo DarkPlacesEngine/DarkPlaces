@@ -275,6 +275,7 @@
     <ClCompile Include="r_lightning.c" />
     <ClCompile Include="r_modules.c" />
     <ClCompile Include="r_shadow.c" />
+    <ClInclude Include="r_stats.c" />
     <ClCompile Include="r_sky.c" />
     <ClCompile Include="r_sprites.c" />
     <ClCompile Include="sbar.c" />
@@ -394,6 +395,7 @@
     <ClInclude Include="r_lerpanim.h" />
     <ClInclude Include="r_modules.h" />
     <ClInclude Include="r_shadow.h" />
+    <ClInclude Include="r_stats.h" />
     <ClInclude Include="r_textures.h" />
     <ClInclude Include="render.h" />
     <ClInclude Include="resource.h" />

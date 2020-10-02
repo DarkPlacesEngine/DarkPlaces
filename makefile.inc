@@ -151,6 +151,7 @@ OBJ_COMMON= \
 	r_shadow.o \
 	r_sky.o \
 	r_sprites.o \
+	r_stats.o \
 	sbar.o \
 	sv_ccmds.o \
 	sv_demo.o \
