@@ -28,21 +28,11 @@
 #ifndef _MDFOUR_H
 #define _MDFOUR_H
 
-#ifndef int32
-#define int32 int
-#endif
-
-#if SIZEOF_INT > 4
-#define LARGE_INT32
-#endif
-
-#ifndef uint32
-#define uint32 unsigned int32
-#endif
+#include <stdint.h>
 
 struct mdfour_s {
-	uint32 A, B, C, D;
-	uint32 totalN;
+	uint32_t A, B, C, D;
+	uint32_t totalN;
 };
 
 void mdfour_begin(struct mdfour_s *md); // old: MD4Init
