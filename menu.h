@@ -22,8 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MENU_H
 
 #include "qtypes.h"
-
-typedef struct serverlist_entry_s serverlist_entry_t;
+struct serverlist_entry_s;
 
 enum m_state_e {
 	m_none,
@@ -85,7 +84,7 @@ extern void (*MR_Draw) (void);
 extern void (*MR_ToggleMenu) (int mode);
 extern void (*MR_Shutdown) (void);
 extern void (*MR_NewMap) (void);
-extern int (*MR_GetServerListEntryCategory) (const serverlist_entry_t *entry);
+extern int (*MR_GetServerListEntryCategory) (const struct serverlist_entry_s *entry);
 
 typedef struct video_resolution_s
 {

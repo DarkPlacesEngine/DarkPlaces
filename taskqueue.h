@@ -4,7 +4,6 @@
 
 #include <stddef.h>
 #include "qtypes.h"
-#include "thread.h"
 
 typedef struct taskqueue_task_s
 {

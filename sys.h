@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SYS_H
 
 #include "qtypes.h"
-#include "cvar.h"
+#include "qdefs.h"
 
 /* Preprocessor macros to identify platform
     DP_OS_NAME 	- "friendly" name of the OS, for humans to read
@@ -148,7 +148,7 @@ typedef struct sys_s
 
 extern sys_t sys;
 
-extern cvar_t sys_usenoclockbutbenchmark;
+extern struct cvar_s sys_usenoclockbutbenchmark;
 
 //
 // DLL management

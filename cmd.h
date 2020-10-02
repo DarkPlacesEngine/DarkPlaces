@@ -38,10 +38,8 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 #define CMD_H
 
 #include "qtypes.h"
+#include "qdefs.h"
 #include "com_list.h"
-#include "cvar.h"
-#include "thread.h"
-#include "zone.h"
 
 struct cmd_state_s;
 
@@ -124,7 +122,7 @@ typedef struct cmd_buf_s
 /// command interpreter state - the tokenizing and execution of commands, as well as pointers to which cvars and aliases they can access
 typedef struct cmd_state_s
 {
-	mempool_t *mempool;
+	struct mempool_s *mempool;
 
 	int argc;
 	const char *argv[MAX_ARGS];
@@ -138,7 +136,7 @@ typedef struct cmd_state_s
 
 	cmd_function_t *engine_functions;
 
-	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
+	struct cvar_state_s *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
 	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
 
 	int cmd_flags; // cmd flags that identify this interpreter
