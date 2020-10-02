@@ -58,8 +58,8 @@ interface from being ambiguous.
 
 #include "qtypes.h"
 #include "qdefs.h"
-typedef struct cmd_state_s cmd_state_t;
-typedef struct qfile_s qfile_t;
+struct cmd_state_s;
+struct qfile_s;
 
 typedef struct cvar_s
 {
@@ -159,7 +159,7 @@ void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full);
 
 void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
 
-qbool Cvar_Command (cmd_state_t *cmd);
+qbool Cvar_Command (struct cmd_state_s *cmd);
 // called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
@@ -167,13 +167,13 @@ qbool Cvar_Command (cmd_state_t *cmd);
 void Cvar_SaveInitState(cvar_state_t *cvars);
 void Cvar_RestoreInitState(cvar_state_t *cvars);
 
-void Cvar_UnlockDefaults(cmd_state_t *cmd);
-void Cvar_LockDefaults_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd);
+void Cvar_UnlockDefaults(struct cmd_state_s *cmd);
+void Cvar_LockDefaults_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_All_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_NoSaveOnly_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_SaveOnly_f(struct cmd_state_s *cmd);
 
-void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f);
+void Cvar_WriteVariables (cvar_state_t *cvars, struct qfile_s *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
@@ -190,11 +190,11 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 /// Referenced in cmd.c in Cmd_Init hence it's inclusion here.
 /// Added by EvilTypeGuy eviltypeguy@qeradiant.com
 /// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
-void Cvar_List_f(cmd_state_t *cmd);
+void Cvar_List_f(struct cmd_state_s *cmd);
 
-void Cvar_Set_f(cmd_state_t *cmd);
-void Cvar_SetA_f(cmd_state_t *cmd);
-void Cvar_Del_f(cmd_state_t *cmd);
+void Cvar_Set_f(struct cmd_state_s *cmd);
+void Cvar_SetA_f(struct cmd_state_s *cmd);
+void Cvar_Del_f(struct cmd_state_s *cmd);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 

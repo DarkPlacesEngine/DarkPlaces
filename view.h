@@ -3,7 +3,7 @@
 
 #include "qtypes.h"
 #include "matrixlib.h"
-#include "cmd.h"
+struct cmd_state_s;
 
 void V_Init (void);
 void V_UpdateBlends (void);
@@ -16,6 +16,6 @@ void V_CalcRefdef(void);
 void V_MakeViewIsometric(void);
 void V_StartPitchDrift(void);
 void V_StopPitchDrift (void);
-void V_StartPitchDrift_f(cmd_state_t *cmd);
+void V_StartPitchDrift_f(struct cmd_state_s *cmd);
 
 #endif

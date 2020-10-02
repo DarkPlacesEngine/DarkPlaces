@@ -26,6 +26,7 @@
 #include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_wav.h"
+#include "sound.h"
 
 #ifdef LINK_TO_LIBVORBIS
 #define OV_EXCLUDE_STATIC_CALLBACKS

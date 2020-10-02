@@ -21,13 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SBAR_H
 #define SBAR_H
 
-#include "cvar.h"
-
 #define	SBAR_HEIGHT		24
 
 extern	int			sb_lines;			///< scan lines to draw
-extern	cvar_t		sbar_alpha_bg;
-extern	cvar_t		sbar_alpha_fg;
+extern	struct cvar_s		sbar_alpha_bg;
+extern	struct cvar_s		sbar_alpha_fg;
 
 void Sbar_Init (void);
 
