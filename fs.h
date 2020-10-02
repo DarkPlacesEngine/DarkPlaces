@@ -34,15 +34,7 @@
 // ------ Types ------ //
 
 typedef struct qfile_s qfile_t;
-
-#ifdef WIN32
-//typedef long fs_offset_t; // 32bit
-typedef __int64 fs_offset_t; ///< 64bit (lots of warnings, and read/write still don't take 64bit on win64)
-#else
-typedef long long fs_offset_t;
-#endif
-
-
+typedef int64_t fs_offset_t;
 
 // ------ Variables ------ //
 
