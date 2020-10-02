@@ -371,6 +371,9 @@
     <ClInclude Include="model_dpmodel.h" />
     <ClInclude Include="model_iqm.h" />
     <ClInclude Include="model_psk.h" />
+    <ClInclude Include="model_q1bsp.h" />
+    <ClInclude Include="model_q2bsp.h" />
+    <ClInclude Include="model_q3bsp.h" />
     <ClInclude Include="model_shared.h" />
     <ClInclude Include="model_sprite.h" />
     <ClInclude Include="model_zymotic.h" />
@@ -394,6 +397,7 @@
     <ClInclude Include="quakedef.h" />
     <ClInclude Include="r_lerpanim.h" />
     <ClInclude Include="r_modules.h" />
+    <ClInclude Include="r_qshader.h" />
     <ClInclude Include="r_shadow.h" />
     <ClInclude Include="r_stats.h" />
     <ClInclude Include="r_textures.h" />
