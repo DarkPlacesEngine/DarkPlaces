@@ -438,13 +438,13 @@ static qbool SV_CanSave(void)
 	if(SV_IsLocalGame() == 1)
 	{
 		// singleplayer checks
-		if (!(svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
+		if ((svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
 		{
 			Con_Print("Can't savegame with a dead player\n");
 			return false;
 		}
 
-		if(!host.hook.CL_Intermission || !host.hook.CL_Intermission())
+		if(host.hook.CL_Intermission && host.hook.CL_Intermission())
 		{
 			Con_Print("Can't save in intermission.\n");
 			return false;
@@ -2020,7 +2020,7 @@ void SV_SpawnServer (const char *map)
  */
 int SV_IsLocalGame(void)
 {
-	if (sv.active && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
+	if (sv.active && &svs.clients[0] && LHNETADDRESS_GetAddressType(&svs.clients[0].netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
 		return svs.maxclients;
 	return 0;
 }
