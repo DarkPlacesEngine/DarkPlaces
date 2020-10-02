@@ -3,11 +3,10 @@
 
 #include <stddef.h>
 #include "qtypes.h"
-#include "cvar.h"
-#include "lhnet.h"
+struct lhnetaddress_s;
 
-extern cvar_t crypto_developer;
-extern cvar_t crypto_aeslevel;
+extern struct cvar_s crypto_developer;
+extern struct cvar_s crypto_aeslevel;
 #define ENCRYPTION_REQUIRED (crypto_aeslevel.integer >= 3)
 
 extern int crypto_keyfp_recommended_length; // applies to LOCAL IDs, and to ALL keys
@@ -46,19 +45,19 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 #define CRYPTO_MATCH 1          // process as usual (packet was used)
 #define CRYPTO_DISCARD 2        // discard this packet
 #define CRYPTO_REPLACE 3        // make the buffer the current packet
-int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress);
-int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress);
+int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, struct lhnetaddress_s *peeraddress);
+int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, struct lhnetaddress_s *peeraddress);
 
 // if len_out is nonzero, the packet is to be sent to the client
 
 qbool Crypto_ServerAppendToChallenge(const char *data_in, size_t len_in, char *data_out, size_t *len_out, size_t maxlen);
-crypto_t *Crypto_ServerGetInstance(lhnetaddress_t *peeraddress);
+crypto_t *Crypto_ServerGetInstance(struct lhnetaddress_s *peeraddress);
 qbool Crypto_FinishInstance(crypto_t *out, crypto_t *in); // also clears allocated memory, and frees the instance received by ServerGetInstance
 const char *Crypto_GetInfoResponseDataString(void);
 
 // retrieves a host key for an address (can be exposed to menuqc, or used by the engine to look up stored keys e.g. for server bookmarking)
 // pointers may be NULL
-qbool Crypto_RetrieveHostKey(lhnetaddress_t *peeraddress, int *keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, int *aeslevel, qbool *issigned);
+qbool Crypto_RetrieveHostKey(struct lhnetaddress_s *peeraddress, int *keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, int *aeslevel, qbool *issigned);
 int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp, size_t idfplen, qbool *issigned); // return value: -1 if more to come, +1 if valid, 0 if end of list
 
 size_t Crypto_SignData(const void *data, size_t datasize, int keyid, void *signed_data, size_t signed_size);

@@ -23,6 +23,7 @@
 #include "darkplaces.h"
 #include "snd_main.h"
 #include "snd_xmp.h"
+#include "sound.h"
 
 #ifdef LINK_TO_LIBXMP
 #include <xmp.h>

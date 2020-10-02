@@ -24,11 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <stdarg.h>
 #include "qtypes.h"
-#include "cmd.h"
-#include "cvar.h"
 #include "crypto.h"
 #include "lhnet.h"
 #include "common.h"
+struct cmd_state_s;
 
 #define NET_HEADERSIZE		(2 * sizeof(unsigned int))
 
@@ -245,10 +244,10 @@ typedef struct netconn_s
 } netconn_t;
 
 extern netconn_t *netconn_list;
-extern mempool_t *netconn_mempool;
+extern struct mempool_s *netconn_mempool;
 
-extern cvar_t hostname;
-extern cvar_t developer_networking;
+extern struct cvar_s hostname;
+extern struct cvar_s developer_networking;
 
 #ifdef CONFIG_MENU
 #define SERVERLIST_VIEWLISTSIZE		SERVERLIST_TOTALSIZE
@@ -425,16 +424,16 @@ extern sizebuf_t sv_message;
 extern char cl_readstring[MAX_INPUTLINE];
 extern char sv_readstring[MAX_INPUTLINE];
 
-extern cvar_t sv_public;
+extern struct cvar_s sv_public;
 
-extern cvar_t net_fakelag;
+extern struct cvar_s net_fakelag;
 
-extern cvar_t cl_netport;
-extern cvar_t sv_netport;
-extern cvar_t net_address;
-extern cvar_t net_address_ipv6;
-extern cvar_t net_usesizelimit;
-extern cvar_t net_burstreserve;
+extern struct cvar_s cl_netport;
+extern struct cvar_s sv_netport;
+extern struct cvar_s net_address;
+extern struct cvar_s net_address_ipv6;
+extern struct cvar_s net_usesizelimit;
+extern struct cvar_s net_burstreserve;
 
 qbool NetConn_CanSend(netconn_t *conn);
 int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qbool quakesignon_suppressreliables);
@@ -460,14 +459,14 @@ void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
 void NetConn_SleepMicroseconds(int microseconds);
 void NetConn_Heartbeat(int priority);
-void Net_Stats_f(cmd_state_t *cmd);
+void Net_Stats_f(struct cmd_state_s *cmd);
 
 #ifdef CONFIG_MENU
 void NetConn_QueryMasters(qbool querydp, qbool queryqw);
 void NetConn_QueryQueueFrame(void);
-void Net_Slist_f(cmd_state_t *cmd);
-void Net_SlistQW_f(cmd_state_t *cmd);
-void Net_Refresh_f(cmd_state_t *cmd);
+void Net_Slist_f(struct cmd_state_s *cmd);
+void Net_SlistQW_f(struct cmd_state_s *cmd);
+void Net_Refresh_f(struct cmd_state_s *cmd);
 
 /// ServerList interface (public)
 /// manually refresh the view set, do this after having changed the mask or any other flag
@@ -476,7 +475,7 @@ void ServerList_ResetMasks(void);
 void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput);
 
 /// called whenever net_slist_favorites changes
-void NetConn_UpdateFavorites_c(cvar_t *var);
+void NetConn_UpdateFavorites_c(struct cvar_s *var);
 #endif
 
 #define MAX_CHALLENGES 128

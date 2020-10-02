@@ -3,7 +3,6 @@
 #define R_TEXTURES_H
 
 #include "qtypes.h"
-#include "cvar.h"
 
 // transparent
 #define TEXF_ALPHA 0x00000001
@@ -130,19 +129,19 @@ rtexturepool_t *R_AllocTexturePool(void);
 void R_FreeTexturePool(rtexturepool_t **rtexturepool);
 
 // the color/normal/etc cvars should be checked by callers of R_LoadTexture* functions to decide whether to add TEXF_COMPRESS to the flags
-extern cvar_t gl_texturecompression;
-extern cvar_t gl_texturecompression_color;
-extern cvar_t gl_texturecompression_normal;
-extern cvar_t gl_texturecompression_gloss;
-extern cvar_t gl_texturecompression_glow;
-extern cvar_t gl_texturecompression_2d;
-extern cvar_t gl_texturecompression_q3bsplightmaps;
-extern cvar_t gl_texturecompression_q3bspdeluxemaps;
-extern cvar_t gl_texturecompression_sky;
-extern cvar_t gl_texturecompression_lightcubemaps;
-extern cvar_t gl_texturecompression_reflectmask;
-extern cvar_t r_texture_dds_load;
-extern cvar_t r_texture_dds_save;
+extern struct cvar_s gl_texturecompression;
+extern struct cvar_s gl_texturecompression_color;
+extern struct cvar_s gl_texturecompression_normal;
+extern struct cvar_s gl_texturecompression_gloss;
+extern struct cvar_s gl_texturecompression_glow;
+extern struct cvar_s gl_texturecompression_2d;
+extern struct cvar_s gl_texturecompression_q3bsplightmaps;
+extern struct cvar_s gl_texturecompression_q3bspdeluxemaps;
+extern struct cvar_s gl_texturecompression_sky;
+extern struct cvar_s gl_texturecompression_lightcubemaps;
+extern struct cvar_s gl_texturecompression_reflectmask;
+extern struct cvar_s r_texture_dds_load;
+extern struct cvar_s r_texture_dds_save;
 
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)

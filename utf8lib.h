@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 #include "qtypes.h"
-#include "cvar.h"
 
 // types for unicode strings
 // let them be 32 bit for now
@@ -21,7 +20,7 @@ typedef int32_t Uchar;
 // a non-utf8 version to work: u8_strlen() will wrap to strlen()
 // u8_byteofs() and u8_charidx() will simply return whatever is passed as index parameter
 // u8_getchar() will will just return the next byte, u8_fromchar will write one byte, ...
-extern cvar_t    utf8_enable;
+extern struct cvar_s utf8_enable;
 void   u8_Init(void);
 
 size_t u8_strlen(const char*);

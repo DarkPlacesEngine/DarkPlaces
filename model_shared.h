@@ -21,12 +21,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef MODEL_SHARED_H
 #define MODEL_SHARED_H
 
+#include <stddef.h>
+#include "qdefs.h"
 #include "bspfile.h"
 #include "r_qshader.h"
-#include "protocol.h"
-#include "r_textures.h"
 #include "matrixlib.h"
-
+struct rtexture_s;
+struct mempool_s;
+struct skeleton_s;
 typedef enum synctype_e {ST_SYNC=0, ST_RAND } synctype_t;
 
 /*
@@ -50,16 +52,16 @@ animscene_t;
 
 typedef struct skinframe_s
 {
-	rtexture_t *stain; // inverse modulate with background (used for decals and such)
-	rtexture_t *merged; // original texture without glow
-	rtexture_t *base; // original texture without pants/shirt/glow
-	rtexture_t *pants; // pants only (in greyscale)
-	rtexture_t *shirt; // shirt only (in greyscale)
-	rtexture_t *nmap; // normalmap (bumpmap for dot3)
-	rtexture_t *gloss; // glossmap (for dot3)
-	rtexture_t *glow; // glow only (fullbrights)
-	rtexture_t *fog; // alpha of the base texture (if not opaque)
-	rtexture_t *reflect; // colored mask for cubemap reflections
+	struct rtexture_s *stain; // inverse modulate with background (used for decals and such)
+	struct rtexture_s *merged; // original texture without glow
+	struct rtexture_s *base; // original texture without pants/shirt/glow
+	struct rtexture_s *pants; // pants only (in greyscale)
+	struct rtexture_s *shirt; // shirt only (in greyscale)
+	struct rtexture_s *nmap; // normalmap (bumpmap for dot3)
+	struct rtexture_s *gloss; // glossmap (for dot3)
+	struct rtexture_s *glow; // glow only (fullbrights)
+	struct rtexture_s *fog; // alpha of the base texture (if not opaque)
+	struct rtexture_s *reflect; // colored mask for cubemap reflections
 	// accounting data for hash searches:
 	// the compare variables are used to identify internal skins from certain
 	// model formats
@@ -197,7 +199,7 @@ shadowmeshvertexhash_t;
 
 typedef struct shadowmesh_s
 {
-	mempool_t *mempool;
+	struct mempool_s *mempool;
 
 	int numverts;
 	int maxverts;
@@ -288,19 +290,19 @@ typedef struct texture_s
 	unsigned char endpostshaderpass; // number of postshaderpasses
 
 	qbool colormapping;
-	rtexture_t *basetexture; // original texture without pants/shirt/glow
-	rtexture_t *pantstexture; // pants only (in greyscale)
-	rtexture_t *shirttexture; // shirt only (in greyscale)
-	rtexture_t *nmaptexture; // normalmap (bumpmap for dot3)
-	rtexture_t *glosstexture; // glossmap (for dot3)
-	rtexture_t *glowtexture; // glow only (fullbrights)
-	rtexture_t *fogtexture; // alpha of the base texture (if not opaque)
-	rtexture_t *reflectmasktexture; // mask for fake reflections
-	rtexture_t *reflectcubetexture; // fake reflections cubemap
-	rtexture_t *backgroundbasetexture; // original texture without pants/shirt/glow
-	rtexture_t *backgroundnmaptexture; // normalmap (bumpmap for dot3)
-	rtexture_t *backgroundglosstexture; // glossmap (for dot3)
-	rtexture_t *backgroundglowtexture; // glow only (fullbrights)
+	struct rtexture_s *basetexture; // original texture without pants/shirt/glow
+	struct rtexture_s *pantstexture; // pants only (in greyscale)
+	struct rtexture_s *shirttexture; // shirt only (in greyscale)
+	struct rtexture_s *nmaptexture; // normalmap (bumpmap for dot3)
+	struct rtexture_s *glosstexture; // glossmap (for dot3)
+	struct rtexture_s *glowtexture; // glow only (fullbrights)
+	struct rtexture_s *fogtexture; // alpha of the base texture (if not opaque)
+	struct rtexture_s *reflectmasktexture; // mask for fake reflections
+	struct rtexture_s *reflectcubetexture; // fake reflections cubemap
+	struct rtexture_s *backgroundbasetexture; // original texture without pants/shirt/glow
+	struct rtexture_s *backgroundnmaptexture; // normalmap (bumpmap for dot3)
+	struct rtexture_s *backgroundglosstexture; // glossmap (for dot3)
+	struct rtexture_s *backgroundglowtexture; // glow only (fullbrights)
 	float specularpower;
 
 	// rendering parameters - updated by R_GetCurrentTexture using rsurface.render_* fields
@@ -417,9 +419,9 @@ typedef struct msurface_s
 	// the texture to use on the surface
 	texture_t *texture;
 	// the lightmap texture fragment to use on the rendering mesh
-	rtexture_t *lightmaptexture;
+	struct rtexture_s *lightmaptexture;
 	// the lighting direction texture fragment to use on the rendering mesh
-	rtexture_t *deluxemaptexture;
+	struct rtexture_s *deluxemaptexture;
 	// lightmaptexture rebuild information not used in q3bsp
 	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
 	// fog volume info in q3bsp
@@ -469,7 +471,7 @@ typedef struct model_s
 	// mod_brush, mod_alias, mod_sprite
 	modtype_t		type;
 	// memory pool for allocations
-	mempool_t		*mempool;
+	struct mempool_s		*mempool;
 	// all models use textures...
 	rtexturepool_t	*texturepool;
 	// EF_* flags (translated from the model file's different flags layout)
@@ -597,22 +599,22 @@ typedef struct modloader_s
 } modloader_t;
 
 // sky/water subdivision
-//extern cvar_t gl_subdivide_size;
+//extern struct cvar_s gl_subdivide_size;
 // texture fullbrights
-extern cvar_t r_fullbrights;
+extern struct cvar_s r_fullbrights;
 
-extern cvar_t mod_noshader_default_offsetmapping;
-extern cvar_t mod_q3shader_default_offsetmapping;
-extern cvar_t mod_q3shader_default_offsetmapping_scale;
-extern cvar_t mod_q3shader_default_offsetmapping_bias;
-extern cvar_t mod_q3shader_default_polygonoffset;
-extern cvar_t mod_q3shader_default_polygonfactor;
-extern cvar_t mod_q3shader_default_refractive_index;
-extern cvar_t mod_q3shader_force_addalpha;
-extern cvar_t mod_q3shader_force_terrain_alphaflag;
-extern cvar_t mod_q3bsp_lightgrid_texture;
-extern cvar_t mod_q3bsp_lightgrid_world_surfaces;
-extern cvar_t mod_q3bsp_lightgrid_bsp_surfaces;
+extern struct cvar_s mod_noshader_default_offsetmapping;
+extern struct cvar_s mod_q3shader_default_offsetmapping;
+extern struct cvar_s mod_q3shader_default_offsetmapping_scale;
+extern struct cvar_s mod_q3shader_default_offsetmapping_bias;
+extern struct cvar_s mod_q3shader_default_polygonoffset;
+extern struct cvar_s mod_q3shader_default_polygonfactor;
+extern struct cvar_s mod_q3shader_default_refractive_index;
+extern struct cvar_s mod_q3shader_force_addalpha;
+extern struct cvar_s mod_q3shader_force_terrain_alphaflag;
+extern struct cvar_s mod_q3bsp_lightgrid_texture;
+extern struct cvar_s mod_q3bsp_lightgrid_world_surfaces;
+extern struct cvar_s mod_q3bsp_lightgrid_bsp_surfaces;
 
 void Mod_Init (void);
 void Mod_Reload (void);
@@ -633,17 +635,17 @@ void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const 
 void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const float *normal3f, const int *elements, float *svector3f, float *tvector3f, qbool areaweighting);
 
 qbool Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline);
-void Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qbool lightmapoffsets, qbool vertexcolors);
+void Mod_AllocSurfMesh(struct mempool_s *mempool, int numvertices, int numtriangles, qbool lightmapoffsets, qbool vertexcolors);
 void Mod_MakeSortedSurfaces(dp_model_t *mod);
 
 // called specially by brush model loaders before generating submodels
 // automatically called after model loader returns
 void Mod_BuildVBOs(void);
 
-shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles);
+shadowmesh_t *Mod_ShadowMesh_Alloc(struct mempool_s *mempool, int maxverts, int maxtriangles);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, const float *vertex3f);
 void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtris, const int *element3i);
-shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles);
+shadowmesh_t *Mod_ShadowMesh_Begin(struct mempool_s *mempool, int maxverts, int maxtriangles);
 shadowmesh_t *Mod_ShadowMesh_Finish(shadowmesh_t *firstmesh, qbool createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
@@ -653,16 +655,16 @@ void Mod_CreateCollisionMesh(dp_model_t *mod);
 void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
 shader_t *Mod_LookupQ3Shader(const char *name);
-qbool Mod_LoadTextureFromQ3Shader(mempool_t *mempool, const char *modelname, texture_t *texture, const char *name, qbool warnmissing, qbool fallback, int defaulttexflags, int defaultmaterialflags);
-texture_shaderpass_t *Mod_CreateShaderPass(mempool_t *mempool, skinframe_t *skinframe);
-texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, const char *modelname, q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
+qbool Mod_LoadTextureFromQ3Shader(struct mempool_s *mempool, const char *modelname, texture_t *texture, const char *name, qbool warnmissing, qbool fallback, int defaulttexflags, int defaultmaterialflags);
+texture_shaderpass_t *Mod_CreateShaderPass(struct mempool_s *mempool, skinframe_t *skinframe);
+texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(struct mempool_s *mempool, const char *modelname, q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
 /// Sets up a material to render the provided skinframe.  See also R_SkinFrame_LoadInternalBGRA.
-void Mod_LoadCustomMaterial(mempool_t *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
+void Mod_LoadCustomMaterial(struct mempool_s *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
 /// Removes all shaderpasses from material, and optionally deletes the textures in the skinframes.
 void Mod_UnloadCustomMaterial(texture_t *texture, qbool purgeskins);
 
-extern cvar_t r_mipskins;
-extern cvar_t r_mipnormalmaps;
+extern struct cvar_s r_mipskins;
+extern struct cvar_s r_mipnormalmaps;
 
 typedef struct skinfileitem_s
 {
@@ -704,7 +706,7 @@ typedef struct mod_alloclightmap_state_s
 }
 mod_alloclightmap_state_t;
 
-void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, mempool_t *mempool, int width, int height);
+void Mod_AllocLightmap_Init(mod_alloclightmap_state_t *state, struct mempool_s *mempool, int width, int height);
 void Mod_AllocLightmap_Free(mod_alloclightmap_state_t *state);
 void Mod_AllocLightmap_Reset(mod_alloclightmap_state_t *state);
 qbool Mod_AllocLightmap_Block(mod_alloclightmap_state_t *state, int blockwidth, int blockheight, int *outx, int *outy);
@@ -743,11 +745,11 @@ void Mod_Mesh_Validate(dp_model_t *mod);
 void Mod_Mesh_Finalize(dp_model_t *mod);
 
 // Collision optimization using Bounding Interval Hierarchy
-void Mod_CollisionBIH_TracePoint(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceLine(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceBox(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, struct colbrushf_s *start, struct colbrushf_s *end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const struct frameblend_s *frameblend, const skeleton_t *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TracePoint(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceLine(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceBox(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, struct colbrushf_s *start, struct colbrushf_s *end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 qbool Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs);
 int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point);
 int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, const vec3_t point);
