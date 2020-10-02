@@ -1226,7 +1226,7 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qbool isstatic, sfx_t *sfx)
 		}
 		else if (cl.entities[ch->entnum].state_current.active)
 		{
-			dp_model_t *model;
+			model_t *model;
 			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl.entities[ch->entnum].state_current.origin[0], cl.entities[ch->entnum].state_current.origin[1], cl.entities[ch->entnum].state_current.origin[2]);
 			model = CL_GetModelByIndex(cl.entities[ch->entnum].state_current.modelindex);
 			if (model && model->soundfromcenter)

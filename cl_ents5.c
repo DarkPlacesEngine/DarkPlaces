@@ -119,7 +119,7 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 	if (bits & E5_COMPLEXANIMATION)
 	{
 		skeleton_t *skeleton;
-		const dp_model_t *model;
+		const model_t *model;
 		int modelindex;
 		int type;
 		int bonenum;

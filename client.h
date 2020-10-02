@@ -54,7 +54,7 @@ tridecal_t;
 
 typedef struct decalsystem_s
 {
-	dp_model_t *model;
+	model_t *model;
 	double lastupdatetime;
 	int maxdecals;
 	int freedecal;
@@ -74,7 +74,7 @@ typedef struct effect_s
 	vec3_t origin;
 	double starttime;
 	float framerate;
-	dp_model_t *model;
+	model_t *model;
 	int startframe;
 	int endframe;
 	// these are for interpolation
@@ -341,7 +341,7 @@ typedef struct entity_render_s
 	float transparent_offset;
 
 	// NULL = no model
-	dp_model_t *model;
+	model_t *model;
 	// number of the entity represents, or 0 for non-network entities
 	int entitynumber;
 	// literal colormap colors for renderer, if both are 0 0 0 it is not colormapped
@@ -944,10 +944,10 @@ typedef struct client_state_s
 	int gametype;
 
 	// models and sounds used by engine code (particularly cl_parse.c)
-	dp_model_t *model_bolt;
-	dp_model_t *model_bolt2;
-	dp_model_t *model_bolt3;
-	dp_model_t *model_beam;
+	model_t *model_bolt;
+	model_t *model_bolt2;
+	model_t *model_bolt3;
+	model_t *model_beam;
 	sfx_t *sfx_wizhit;
 	sfx_t *sfx_knighthit;
 	sfx_t *sfx_tink1;
@@ -1278,7 +1278,7 @@ void CL_ValidateState(entity_state_t *s);
 void CL_MoveLerpEntityStates(entity_t *ent);
 void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
-void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning);
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning);
 void CL_RelinkBeams (void);
 void CL_Beam_CalculatePositions (const beam_t *b, vec3_t start, vec3_t end);
 void CL_ClientMovement_Replay(void);
@@ -1286,7 +1286,7 @@ void CL_ClientMovement_Replay(void);
 void CL_ClearTempEntities (void);
 entity_render_t *CL_NewTempEntity (double shadertime);
 
-void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate);
+void CL_Effect(vec3_t org, model_t *model, int startframe, int framecount, float framerate);
 
 void CL_ClearState (void);
 void CL_ExpandEntities(int num);
@@ -1385,7 +1385,7 @@ typedef enum meshname_e {
 	NUM_MESHENTITIES,
 } meshname_t;
 extern entity_t cl_meshentities[NUM_MESHENTITIES];
-extern dp_model_t cl_meshentitymodels[NUM_MESHENTITIES];
+extern model_t cl_meshentitymodels[NUM_MESHENTITIES];
 extern const char *cl_meshentitynames[NUM_MESHENTITIES];
 #define CL_Mesh_Scene() (&cl_meshentitymodels[MESH_SCENE])
 #define CL_Mesh_UI() (&cl_meshentitymodels[MESH_UI])

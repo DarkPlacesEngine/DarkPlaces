@@ -612,7 +612,7 @@ List information on all models in the client modelindex
 static void CL_ModelIndexList_f(cmd_state_t *cmd)
 {
 	int i;
-	dp_model_t *model;
+	model_t *model;
 
 	// Print Header
 	Con_Printf("%3s: %-30s %-8s %-8s\n", "ID", "Name", "Type", "Triangles");
@@ -659,7 +659,7 @@ void CL_UpdateRenderEntity(entity_render_t *ent)
 {
 	vec3_t org;
 	vec_t scale;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	// update the inverse matrix for the renderer
 	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 	// update the animation blend state
@@ -769,7 +769,7 @@ entity_render_t *CL_NewTempEntity(double shadertime)
 	return render;
 }
 
-void CL_Effect(vec3_t org, dp_model_t *model, int startframe, int framecount, float framerate)
+void CL_Effect(vec3_t org, model_t *model, int startframe, int framecount, float framerate)
 {
 	int i;
 	cl_effect_t *e;
@@ -2466,7 +2466,7 @@ void CL_Locs_Reload_f(cmd_state_t *cmd)
 }
 
 entity_t cl_meshentities[NUM_MESHENTITIES];
-dp_model_t cl_meshentitymodels[NUM_MESHENTITIES];
+model_t cl_meshentitymodels[NUM_MESHENTITIES];
 const char *cl_meshentitynames[NUM_MESHENTITIES] =
 {
 	"MESH_SCENE",

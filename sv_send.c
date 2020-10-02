@@ -402,7 +402,7 @@ static qbool SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, 
 	float f;
 	prvm_vec_t *v;
 	vec3_t cullmins, cullmaxs;
-	dp_model_t *model;
+	model_t *model;
 
 	// fast path for games that do not use legacy entity networking
 	// note: still networks clients even if they are legacy
@@ -733,7 +733,7 @@ qbool SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec_t entboxex
 	int numtouchedicts = 0;
 	int touchindex;
 	matrix4x4_t matrix, imatrix;
-	dp_model_t *model;
+	model_t *model;
 	prvm_edict_t *touch;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
 	vec3_t eyemins, eyemaxs, start;
@@ -863,7 +863,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int isbmodel;
-	dp_model_t *model;
+	model_t *model;
 	prvm_edict_t *ed;
 	if (sv.sententitiesconsideration[s->number] == sv.sententitiesmark)
 		return;

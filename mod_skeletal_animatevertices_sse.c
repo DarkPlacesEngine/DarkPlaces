@@ -8,7 +8,7 @@
 
 #include <xmmintrin.h>
 
-void Mod_Skeletal_AnimateVertices_SSE(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+void Mod_Skeletal_AnimateVertices_SSE(const model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex weighted skeletal
 	int i, k;

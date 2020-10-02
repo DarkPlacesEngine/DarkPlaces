@@ -87,7 +87,7 @@ void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroup
 // LadyHavoc: quite tempting to break apart this function to reuse the
 //            duplicated code, but I suspect it is better for performance
 //            this way
-void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model, double curtime)
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const model_t *model, double curtime)
 {
 	int sub2, numframes, f, i, k;
 	int isfirstframegroup = true;
@@ -188,7 +188,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 	}
 }
 
-void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend)
+void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const model_t *edmodel, const frameblend_t *frameblend)
 {
 	if (ed->priv.server->skeleton.model != edmodel)
 	{
@@ -6869,7 +6869,7 @@ finished:
 
 // surface querying
 
-static dp_model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
+static model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
 {
 	if (prog == SVVM_prog)
 		return SV_GetModelFromEdict(ed);
@@ -6881,7 +6881,7 @@ static dp_model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
 
 struct animatemodel_cache
 {
-	dp_model_t *model;
+	model_t *model;
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	skeleton_t *skeleton_p;
 	skeleton_t skeleton;
@@ -6907,7 +6907,7 @@ static void animatemodel_reset(prvm_prog_t *prog)
 	Mem_Free(prog->animatemodel_cache);
 }
 
-static void animatemodel(prvm_prog_t *prog, dp_model_t *model, prvm_edict_t *ed)
+static void animatemodel(prvm_prog_t *prog, model_t *model, prvm_edict_t *ed)
 {
 	skeleton_t *skeleton;
 	int skeletonindex = -1;
@@ -7005,7 +7005,7 @@ static void applytransform_forward_normal(prvm_prog_t *prog, const vec3_t in, pr
 	VectorCopy(p, out);
 }
 
-static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
+static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
@@ -7042,7 +7042,7 @@ static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, dp_model_t *
 	}
 }
 
-static msurface_t *getsurface(dp_model_t *model, int surfacenum)
+static msurface_t *getsurface(model_t *model, int surfacenum)
 {
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
@@ -7053,7 +7053,7 @@ static msurface_t *getsurface(dp_model_t *model, int surfacenum)
 //PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
 void VM_getsurfacenumpoints(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacenumpoints);
 	// return 0 if no such surface
@@ -7070,7 +7070,7 @@ void VM_getsurfacenumpoints(prvm_prog_t *prog)
 void VM_getsurfacepoint(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	vec3_t result;
@@ -7098,7 +7098,7 @@ void VM_getsurfacepoint(prvm_prog_t *prog)
 void VM_getsurfacepointattribute(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	int attributetype;
@@ -7168,7 +7168,7 @@ void VM_getsurfacepointattribute(prvm_prog_t *prog)
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 void VM_getsurfacenormal(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
 	vec3_t result;
@@ -7187,7 +7187,7 @@ void VM_getsurfacenormal(prvm_prog_t *prog)
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 void VM_getsurfacetexture(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
@@ -7202,7 +7202,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 	vec3_t clipped, p;
 	vec_t dist, bestdist;
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t point;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacenearpoint);
@@ -7249,7 +7249,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t p, out, inp;
 	VM_SAFEPARMCOUNT(3, VM_getsurfaceclippedpoint);
@@ -7267,7 +7267,7 @@ void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 //PF_getsurfacenumtriangles, // #??? float(entity e, float s) getsurfacenumtriangles = #???;
 void VM_getsurfacenumtriangles(prvm_prog_t *prog)
 {
-       dp_model_t *model;
+       model_t *model;
        msurface_t *surface;
        VM_SAFEPARMCOUNT(2, VM_getsurfacenumtriangles);
        // return 0 if no such surface
@@ -7284,7 +7284,7 @@ void VM_getsurfacetriangle(prvm_prog_t *prog)
 {
        const vec3_t d = {-1, -1, -1};
        prvm_edict_t *ed;
-       dp_model_t *model;
+       model_t *model;
        msurface_t *surface;
        int trinum;
        VM_SAFEPARMCOUNT(3, VM_getsurfacetriangle);

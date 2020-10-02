@@ -113,7 +113,7 @@ void CSQC_Think(prvm_edict_t *ed);
 qbool CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum);//csprogs.c
 void CSQC_R_RecalcView(void);
 
-dp_model_t *CL_GetModelByIndex(int modelindex);
+model_t *CL_GetModelByIndex(int modelindex);
 
 int CL_VM_GetViewEntity(void);
 

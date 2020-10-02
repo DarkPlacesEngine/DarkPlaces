@@ -541,12 +541,12 @@ typedef struct model_s
 
 	qbool nolerp;
 }
-dp_model_t;
+model_t;
 
 //============================================================================
 
 // model loading
-extern dp_model_t *loadmodel;
+extern model_t *loadmodel;
 extern unsigned char *mod_base;
 
 typedef struct modloader_s
@@ -554,7 +554,7 @@ typedef struct modloader_s
 	const char *extension;
 	const char *header;
 	size_t headersize; // The header might not be NULL terminated
-	void (*Load)(dp_model_t *, void *, void *);
+	void (*Load)(model_t *, void *, void *);
 } modloader_t;
 
 // sky/water subdivision
@@ -577,16 +577,16 @@ extern struct cvar_s mod_q3bsp_lightgrid_bsp_surfaces;
 
 void Mod_Init (void);
 void Mod_Reload (void);
-dp_model_t *Mod_LoadModel(dp_model_t *mod, qbool crash, qbool checkdisk);
-dp_model_t *Mod_FindName (const char *name, const char *parentname);
-dp_model_t *Mod_ForName (const char *name, qbool crash, qbool checkdisk, const char *parentname);
-void Mod_UnloadModel (dp_model_t *mod);
+model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk);
+model_t *Mod_FindName (const char *name, const char *parentname);
+model_t *Mod_ForName (const char *name, qbool crash, qbool checkdisk, const char *parentname);
+void Mod_UnloadModel (model_t *mod);
 
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);
-void Mod_RemoveStaleWorldModels(dp_model_t *skip); // only used during loading!
+void Mod_RemoveStaleWorldModels(model_t *skip); // only used during loading!
 
-extern dp_model_t *loadmodel;
+extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
 int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, int numvertices, int *remapvertices);
@@ -595,7 +595,7 @@ void Mod_BuildTextureVectorsFromNormals(int firstvertex, int numvertices, int nu
 
 qbool Mod_ValidateElements(int *element3i, unsigned short *element3s, int numtriangles, int firstvertex, int numvertices, const char *filename, int fileline);
 void Mod_AllocSurfMesh(struct mempool_s *mempool, int numvertices, int numtriangles, qbool lightmapoffsets, qbool vertexcolors);
-void Mod_MakeSortedSurfaces(dp_model_t *mod);
+void Mod_MakeSortedSurfaces(model_t *mod);
 
 // called specially by brush model loaders before generating submodels
 // automatically called after model loader returns
@@ -609,7 +609,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(shadowmesh_t *firstmesh, qbool createvbo);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
-void Mod_CreateCollisionMesh(dp_model_t *mod);
+void Mod_CreateCollisionMesh(model_t *mod);
 
 void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
@@ -693,34 +693,34 @@ void R_Mod_DrawShadowMap(int side, struct entity_render_s *ent, const vec3_t rel
 void R_Mod_DrawLight(struct entity_render_s *ent, int numsurfaces, const int *surfacelist, const unsigned char *trispvs);
 
 // dynamic mesh building (every frame) for debugging and other uses
-void Mod_Mesh_Create(dp_model_t *mod, const char *name);
-void Mod_Mesh_Destroy(dp_model_t *mod);
-void Mod_Mesh_Reset(dp_model_t *mod);
-texture_t *Mod_Mesh_GetTexture(dp_model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
-msurface_t *Mod_Mesh_AddSurface(dp_model_t *mod, texture_t *tex, qbool batchwithprevioussurface);
-int Mod_Mesh_IndexForVertex(dp_model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
-void Mod_Mesh_AddTriangle(dp_model_t *mod, msurface_t *surf, int e0, int e1, int e2);
-void Mod_Mesh_Validate(dp_model_t *mod);
-void Mod_Mesh_Finalize(dp_model_t *mod);
+void Mod_Mesh_Create(model_t *mod, const char *name);
+void Mod_Mesh_Destroy(model_t *mod);
+void Mod_Mesh_Reset(model_t *mod);
+texture_t *Mod_Mesh_GetTexture(model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
+msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithprevioussurface);
+int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
+void Mod_Mesh_AddTriangle(model_t *mod, msurface_t *surf, int e0, int e1, int e2);
+void Mod_Mesh_Validate(model_t *mod);
+void Mod_Mesh_Finalize(model_t *mod);
 
 // Collision optimization using Bounding Interval Hierarchy
-void Mod_CollisionBIH_TracePoint(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceLine(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceBox(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TraceBrush(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, struct colbrushf_s *start, struct colbrushf_s *end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Mod_CollisionBIH_TracePoint_Mesh(dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TracePoint(model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceLine(model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceBox(model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TraceBrush(model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, struct colbrushf_s *start, struct colbrushf_s *end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Mod_CollisionBIH_TracePoint_Mesh(model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, struct trace_s *trace, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 qbool Mod_CollisionBIH_TraceLineOfSight(struct model_s *model, const vec3_t start, const vec3_t end, const vec3_t acceptmins, const vec3_t acceptmaxs);
 int Mod_CollisionBIH_PointSuperContents(struct model_s *model, int frame, const vec3_t point);
 int Mod_CollisionBIH_PointSuperContents_Mesh(struct model_s *model, int frame, const vec3_t point);
-bih_t *Mod_MakeCollisionBIH(dp_model_t *model, qbool userendersurfaces, bih_t *out);
+bih_t *Mod_MakeCollisionBIH(model_t *model, qbool userendersurfaces, bih_t *out);
 
 // alias models
 struct frameblend_s;
 struct skeleton_s;
 void Mod_AliasInit(void);
-int Mod_Alias_GetTagMatrix(const dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, matrix4x4_t *outmatrix);
-int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname);
-int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
+int Mod_Alias_GetTagMatrix(const model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, matrix4x4_t *outmatrix);
+int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname);
+int Mod_Alias_GetExtendedTagInfoForIndex(const model_t *model, unsigned int skin, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix);
 
 void Mod_Skeletal_FreeBuffers(void);
 
@@ -728,22 +728,22 @@ void Mod_Skeletal_FreeBuffers(void);
 void Mod_SpriteInit(void);
 
 // loaders
-void Mod_2PSB_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_BSP2_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_HLBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_Q1BSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IBSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_MAP_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_OBJ_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend);
-void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend);
+void Mod_2PSB_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_BSP2_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_HLBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend);
 
 #endif	// MODEL_SHARED_H
 

@@ -83,7 +83,7 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
-dp_model_t *CL_GetModelByIndex(int modelindex)
+model_t *CL_GetModelByIndex(int modelindex)
 {
 	if(!modelindex)
 		return NULL;
@@ -101,7 +101,7 @@ dp_model_t *CL_GetModelByIndex(int modelindex)
 	return NULL;
 }
 
-dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
+model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	if (!ed || ed->priv.server->free)
@@ -124,7 +124,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 	if (PRVM_clientedictfloat(ent, solid) == SOLID_BSP)
 	{
-		dp_model_t *model = CL_GetModelByIndex( (int)PRVM_clientedictfloat(ent, modelindex) );
+		model_t *model = CL_GetModelByIndex( (int)PRVM_clientedictfloat(ent, modelindex) );
 		if (model == NULL)
 		{
 			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
@@ -223,7 +223,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -444,7 +444,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -672,7 +672,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -914,7 +914,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
