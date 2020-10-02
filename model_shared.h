@@ -29,6 +29,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 struct rtexture_s;
 struct mempool_s;
 struct skeleton_s;
+struct skinframe_s;
+
 typedef enum synctype_e {ST_SYNC=0, ST_RAND } synctype_t;
 
 /*
@@ -49,49 +51,6 @@ typedef struct animscene_s
 	float framerate;
 }
 animscene_t;
-
-typedef struct skinframe_s
-{
-	struct rtexture_s *stain; // inverse modulate with background (used for decals and such)
-	struct rtexture_s *merged; // original texture without glow
-	struct rtexture_s *base; // original texture without pants/shirt/glow
-	struct rtexture_s *pants; // pants only (in greyscale)
-	struct rtexture_s *shirt; // shirt only (in greyscale)
-	struct rtexture_s *nmap; // normalmap (bumpmap for dot3)
-	struct rtexture_s *gloss; // glossmap (for dot3)
-	struct rtexture_s *glow; // glow only (fullbrights)
-	struct rtexture_s *fog; // alpha of the base texture (if not opaque)
-	struct rtexture_s *reflect; // colored mask for cubemap reflections
-	// accounting data for hash searches:
-	// the compare variables are used to identify internal skins from certain
-	// model formats
-	// (so that two q1bsp maps with the same texture name for different
-	//  textures do not have any conflicts)
-	struct skinframe_s *next; // next on hash chain
-	char basename[MAX_QPATH]; // name of this
-	int textureflags; // texture flags to use
-	int comparewidth;
-	int compareheight;
-	int comparecrc;
-	// mark and sweep garbage collection, this value is updated to a new value
-	// on each level change for the used skinframes, if some are not used they
-	// are freed
-	unsigned int loadsequence;
-	// indicates whether this texture has transparent pixels
-	qbool hasalpha;
-	// average texture color, if applicable
-	float avgcolor[4];
-	// for mdl skins, we actually only upload on first use (many are never used, and they are almost never used in both base+pants+shirt and merged modes)
-	unsigned char *qpixels;
-	int qwidth;
-	int qheight;
-	qbool qhascolormapping;
-	qbool qgeneratebase;
-	qbool qgeneratemerged;
-	qbool qgeneratenmap;
-	qbool qgenerateglow;
-}
-skinframe_t;
 
 struct md3vertex_s;
 struct trivertx_s;
@@ -249,9 +208,9 @@ typedef struct texture_s
 	float biaspolygonoffset;
 
 	// textures to use when rendering this material (derived from materialshaderpass)
-	skinframe_t *currentskinframe;
+	struct skinframe_s *currentskinframe;
 	// textures to use for terrain texture blending (derived from backgroundshaderpass)
-	skinframe_t *backgroundcurrentskinframe;
+	struct skinframe_s *backgroundcurrentskinframe;
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -656,10 +615,10 @@ void Mod_FreeQ3Shaders(void);
 void Mod_LoadQ3Shaders(void);
 shader_t *Mod_LookupQ3Shader(const char *name);
 qbool Mod_LoadTextureFromQ3Shader(struct mempool_s *mempool, const char *modelname, texture_t *texture, const char *name, qbool warnmissing, qbool fallback, int defaulttexflags, int defaultmaterialflags);
-texture_shaderpass_t *Mod_CreateShaderPass(struct mempool_s *mempool, skinframe_t *skinframe);
+texture_shaderpass_t *Mod_CreateShaderPass(struct mempool_s *mempool, struct skinframe_s *skinframe);
 texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(struct mempool_s *mempool, const char *modelname, q3shaderinfo_layer_t *layer, int layerindex, int texflags, const char *texturename);
 /// Sets up a material to render the provided skinframe.  See also R_SkinFrame_LoadInternalBGRA.
-void Mod_LoadCustomMaterial(struct mempool_s *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, skinframe_t *skinframe);
+void Mod_LoadCustomMaterial(struct mempool_s *mempool, texture_t *texture, const char *name, int supercontents, int materialflags, struct skinframe_s *skinframe);
 /// Removes all shaderpasses from material, and optionally deletes the textures in the skinframes.
 void Mod_UnloadCustomMaterial(texture_t *texture, qbool purgeskins);
 
