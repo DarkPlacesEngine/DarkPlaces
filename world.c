@@ -2118,7 +2118,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	dMass mass;
 	const dReal *ovelocity, *ospinvelocity;
 	void *dataID;
-	dp_model_t *model;
+	model_t *model;
 	float *ov;
 	int *oe;
 	int axisindex;

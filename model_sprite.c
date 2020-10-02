@@ -263,7 +263,7 @@ static void Mod_Sprite_SharedSetup(const unsigned char *datapointer, int version
 	loadmodel->radius2 = modelradius * modelradius;
 }
 
-void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int version;
 	const unsigned char *datapointer;
@@ -376,7 +376,7 @@ void Mod_IDSP_Load(dp_model_t *mod, void *buffer, void *bufferend)
 }
 
 
-void Mod_IDS2_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, version;
 	qbool fullbright;

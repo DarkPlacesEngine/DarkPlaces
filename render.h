@@ -354,7 +354,7 @@ typedef struct r_refdef_scene_s {
 	entity_render_t *worldentity;
 
 	// same as worldentity->model
-	dp_model_t *worldmodel;
+	model_t *worldmodel;
 
 	// renderable entities (excluding world)
 	entity_render_t **entities;

@@ -293,7 +293,7 @@ qbool CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 	int c;
 	float scale;
 	entity_render_t *entrender;
-	dp_model_t *model;
+	model_t *model;
 	prvm_vec3_t modellight_origin;
 
 	model = CL_GetModelFromEdict(ed);
@@ -1172,7 +1172,7 @@ qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	prvm_edict_t *ed;
-	dp_model_t *mod;
+	model_t *mod;
 	matrix4x4_t matrix;
 	qbool r = 0;
 

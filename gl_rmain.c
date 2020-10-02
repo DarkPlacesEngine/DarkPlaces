@@ -3851,7 +3851,7 @@ void R_AnimCache_ClearCache(void)
 
 qbool R_AnimCache_GetEntity(entity_render_t *ent, qbool wantnormals, qbool wanttangents)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	int numvertices;
 
 	// see if this ent is worth caching
@@ -3957,7 +3957,7 @@ qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t en
 	vec3_t padmins, padmaxs;
 	vec3_t start;
 	vec3_t end;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	static vec3_t positions[] = {
 		{ 0.5f, 0.5f, 0.5f },
 		{ 0.0f, 0.0f, 0.0f },
@@ -6598,7 +6598,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 {
 	int i, q;
 	const entity_render_t *ent = rsurface.entity;
-	dp_model_t *model = ent->model; // when calling this, ent must not be NULL
+	model_t *model = ent->model; // when calling this, ent must not be NULL
 	q3shaderinfo_layer_tcmod_t *tcmod;
 	float specularscale = 0.0f;
 
@@ -6968,7 +6968,7 @@ rsurfacestate_t rsurface;
 
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qbool wantnormals, qbool wanttangents, qbool prepass)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
 	//	return;
 	rsurface.entity = (entity_render_t *)ent;
@@ -9310,7 +9310,7 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
 	qbool dynamic;
-	dp_model_t *model;
+	model_t *model;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
 	const int *surfacelist;
@@ -9777,7 +9777,7 @@ static void R_DrawDebugModel(void)
 	entity_render_t *ent = rsurface.entity;
 	int i, j, flagsmask;
 	const msurface_t *surface;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 
 	if (!sv.active  && !cls.demoplayback && ent != r_refdef.scene.worldentity)
 		return;
@@ -9995,7 +9995,7 @@ const msurface_t **r_surfacelist = NULL;
 void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedepth, qbool depthonly, qbool debug, qbool prepass, qbool ui)
 {
 	int i, j, endj, flagsmask;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	msurface_t *surfaces;
 	unsigned char *update;
 	int numsurfacelist = 0;
@@ -10112,7 +10112,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 
 void R_DebugLine(vec3_t start, vec3_t end)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	float offsetx, offsety, x1, y1, x2, y2, width = 1.0f;

@@ -540,8 +540,8 @@ int SV_SoundIndex(const char *s, int precachemode);
 
 int SV_ParticleEffectIndex(const char *name);
 
-dp_model_t *SV_GetModelByIndex(int modelindex);
-dp_model_t *SV_GetModelFromEdict(prvm_edict_t *ed);
+model_t *SV_GetModelByIndex(int modelindex);
+model_t *SV_GetModelFromEdict(prvm_edict_t *ed);
 
 void SV_SetIdealPitch (void);
 

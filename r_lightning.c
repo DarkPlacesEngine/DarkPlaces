@@ -105,7 +105,7 @@ void R_LightningBeams_Init(void)
 	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap, NULL, NULL);
 }
 
-static void CL_Beam_AddQuad(dp_model_t *mod, msurface_t *surf, const vec3_t start, const vec3_t end, const vec3_t offset, float t1, float t2)
+static void CL_Beam_AddQuad(model_t *mod, msurface_t *surf, const vec3_t start, const vec3_t end, const vec3_t offset, float t1, float t2)
 {
 	int e0, e1, e2, e3;
 	vec3_t n;
@@ -132,7 +132,7 @@ void CL_Beam_AddPolygons(const beam_t *b)
 	vec_t beamscroll = r_refdef.scene.time * -r_lightningbeam_scroll.value;
 	vec_t beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
 	float length, t1, t2;
-	dp_model_t *mod;
+	model_t *mod;
 	msurface_t *surf;
 
 	if (r_lightningbeam_qmbtexture.integer && cl_beams_externaltexture.currentskinframe == NULL)

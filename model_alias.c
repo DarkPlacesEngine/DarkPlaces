@@ -62,7 +62,7 @@ void *Mod_Skeletal_AnimateVertices_AllocBuffers(size_t nbytes)
 	return Mod_Skeletal_AnimateVertices_bonepose;
 }
 
-void Mod_Skeletal_BuildTransforms(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT bonepose, float * RESTRICT boneposerelative)
+void Mod_Skeletal_BuildTransforms(const model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT bonepose, float * RESTRICT boneposerelative)
 {
 	int i, blends;
 	float m[12];
@@ -160,7 +160,7 @@ void Mod_Skeletal_BuildTransforms(const dp_model_t * RESTRICT model, const frame
 	}
 }
 
-static void Mod_Skeletal_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_Skeletal_AnimateVertices(const model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 
 	if (!model->surfmesh.num_vertices)
@@ -213,7 +213,7 @@ void Mod_AliasInit (void)
 #endif
 }
 
-static int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newweights)
+static int Mod_Skeletal_AddBlend(model_t *model, const blendweights_t *newweights)
 {
 	int i;
 	blendweights_t *weights;
@@ -230,7 +230,7 @@ static int Mod_Skeletal_AddBlend(dp_model_t *model, const blendweights_t *newwei
 	return model->num_bones + i;
 }
 
-static int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, const float *newinfluence)
+static int Mod_Skeletal_CompressBlend(model_t *model, const int *newindex, const float *newinfluence)
 {
 	int i, total;
 	float scale;
@@ -273,7 +273,7 @@ static int Mod_Skeletal_CompressBlend(dp_model_t *model, const int *newindex, co
 	return Mod_Skeletal_AddBlend(model, &newweights);
 }
 
-static void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_MD3_AnimateVertices(const model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -361,7 +361,7 @@ static void Mod_MD3_AnimateVertices(const dp_model_t * RESTRICT model, const fra
 		}
 	}
 }
-static void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
+static void Mod_MDL_AnimateVertices(const model_t * RESTRICT model, const frameblend_t * RESTRICT frameblend, const skeleton_t *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f)
 {
 	// vertex morph
 	int i, numblends, blendnum;
@@ -458,7 +458,7 @@ static void Mod_MDL_AnimateVertices(const dp_model_t * RESTRICT model, const fra
 	}
 }
 
-int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, matrix4x4_t *outmatrix)
+int Mod_Alias_GetTagMatrix(const model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, matrix4x4_t *outmatrix)
 {
 	matrix4x4_t temp;
 	matrix4x4_t parentbonematrix;
@@ -525,7 +525,7 @@ int Mod_Alias_GetTagMatrix(const dp_model_t *model, const frameblend_t *frameble
 	return 0;
 }
 
-int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int skin, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
+int Mod_Alias_GetExtendedTagInfoForIndex(const model_t *model, unsigned int skin, const frameblend_t *frameblend, const skeleton_t *skeleton, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
 	int blendindex;
 	int k;
@@ -582,7 +582,7 @@ int Mod_Alias_GetExtendedTagInfoForIndex(const dp_model_t *model, unsigned int s
 	return 2;
 }
 
-int Mod_Alias_GetTagIndexForName(const dp_model_t *model, unsigned int skin, const char *tagname)
+int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname)
 {
 	int i;
 	if(skin >= (unsigned int)model->numskins)
@@ -752,7 +752,7 @@ static void Mod_Alias_MorphMesh_CompileFrames(void)
 	}
 }
 
-static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+static void Mod_MDLMD2MD3_TraceLine(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
@@ -791,7 +791,7 @@ static void Mod_MDLMD2MD3_TraceLine(dp_model_t *model, const frameblend_t *frame
 		Mem_Free(freevertex3f);
 }
 
-static void Mod_MDLMD2MD3_TraceBox(dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+static void Mod_MDLMD2MD3_TraceBox(model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, trace_t *trace, const vec3_t start, const vec3_t boxmins, const vec3_t boxmaxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int i;
 	vec3_t shiftstart, shiftend;
@@ -969,7 +969,7 @@ void Mod_BuildAliasSkinsFromSkinFiles(texture_t *skin, skinfile_t *skinfile, con
 extern cvar_t r_nolerp_list;
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)", loadmodel->name, VALUE, MIN, MAX);
-void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, version, totalskins, skinwidth, skinheight, groupframes, groupskins, numverts;
 	float scales, scalet, interval;
@@ -1331,7 +1331,7 @@ void Mod_IDP0_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 }
 
-void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, hashindex, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end;
 	float iskinwidth, iskinheight;
@@ -1595,7 +1595,7 @@ void Mod_IDP2_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 }
 
-void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, k, version, meshvertices, meshtriangles;
 	unsigned char *data;
@@ -1785,7 +1785,7 @@ void Mod_IDP3_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 }
 
-void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	zymtype1header_t *pinmodel, *pheader;
 	unsigned char *pbase;
@@ -2178,7 +2178,7 @@ void Mod_ZYMOTICMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 }
 
-void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	dpmheader_t *pheader;
 	dpmframe_t *frames;
@@ -2554,7 +2554,7 @@ void Mod_DARKPLACESMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 
 // no idea why PSK/PSA files contain weird quaternions but they do...
 #define PSKQUATNEGATIONS
-void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	int i, j, index, version, recordsize, numrecords, meshvertices, meshtriangles;
 	int numpnts, numvtxw, numfaces, nummatts, numbones, numrawweights, numanimbones, numanims, numanimkeys;
@@ -3223,7 +3223,7 @@ void Mod_PSKMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
 	}
 }
 
-void Mod_INTERQUAKEMODEL_Load(dp_model_t *mod, void *buffer, void *bufferend)
+void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	unsigned char *data;
 	const char *text;

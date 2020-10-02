@@ -1519,12 +1519,12 @@ int SV_ParticleEffectIndex(const char *name)
 	return 0;
 }
 
-dp_model_t *SV_GetModelByIndex(int modelindex)
+model_t *SV_GetModelByIndex(int modelindex)
 {
 	return (modelindex > 0 && modelindex < MAX_MODELS) ? sv.models[modelindex] : NULL;
 }
 
-dp_model_t *SV_GetModelFromEdict(prvm_edict_t *ed)
+model_t *SV_GetModelFromEdict(prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int modelindex;
@@ -1715,7 +1715,7 @@ void SV_SpawnServer (const char *map)
 	prvm_edict_t *ent;
 	int i;
 	char *entities;
-	dp_model_t *worldmodel;
+	model_t *worldmodel;
 	char modelname[sizeof(sv.worldname)];
 	char vabuf[1024];
 
