@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_H
 
 #include "svbsp.h"
+#include "r_stats.h"
 
 typedef enum glsl_attrib_e
 {
