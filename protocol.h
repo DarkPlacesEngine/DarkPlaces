@@ -371,6 +371,40 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_CUSTOMIZEDMODELLIGHT 4096
 #define RENDER_DYNAMICMODELLIGHT 8388608 // origin dependent model light
 
+typedef struct usercmd_s
+{
+	vec3_t	viewangles;
+
+// intended velocities
+	float	forwardmove;
+	float	sidemove;
+	float	upmove;
+
+	vec3_t	cursor_screen;
+	vec3_t	cursor_start;
+	vec3_t	cursor_end;
+	vec3_t	cursor_impact;
+	vec3_t	cursor_normal;
+	vec_t	cursor_fraction;
+	int		cursor_entitynumber;
+
+	double time; // time the move is executed for (cl_movement: clienttime, non-cl_movement: receivetime)
+	double receivetime; // time the move was received at
+	double clienttime; // time to which server state the move corresponds to
+	int msec; // for predicted moves
+	int buttons;
+	int impulse;
+	unsigned int sequence;
+	qbool applied; // if false we're still accumulating a move
+	qbool predicted; // if true the sequence should be sent as 0
+
+	// derived properties
+	double frametime;
+	qbool canjump;
+	qbool jump;
+	qbool crouch;
+} usercmd_t;
+
 #define MAX_FRAMEGROUPBLENDS 4
 typedef struct framegroupblend_s
 {
