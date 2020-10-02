@@ -3,6 +3,7 @@
 #define R_TEXTURES_H
 
 #include "qtypes.h"
+#include "qdefs.h"
 
 // transparent
 #define TEXF_ALPHA 0x00000001
@@ -120,6 +121,49 @@ typedef struct rtexturepool_s
 	int useless;
 }
 rtexturepool_t;
+
+typedef struct skinframe_s
+{
+	struct rtexture_s *stain; // inverse modulate with background (used for decals and such)
+	struct rtexture_s *merged; // original texture without glow
+	struct rtexture_s *base; // original texture without pants/shirt/glow
+	struct rtexture_s *pants; // pants only (in greyscale)
+	struct rtexture_s *shirt; // shirt only (in greyscale)
+	struct rtexture_s *nmap; // normalmap (bumpmap for dot3)
+	struct rtexture_s *gloss; // glossmap (for dot3)
+	struct rtexture_s *glow; // glow only (fullbrights)
+	struct rtexture_s *fog; // alpha of the base texture (if not opaque)
+	struct rtexture_s *reflect; // colored mask for cubemap reflections
+	// accounting data for hash searches:
+	// the compare variables are used to identify internal skins from certain
+	// model formats
+	// (so that two q1bsp maps with the same texture name for different
+	//  textures do not have any conflicts)
+	struct skinframe_s *next; // next on hash chain
+	char basename[MAX_QPATH]; // name of this
+	int textureflags; // texture flags to use
+	int comparewidth;
+	int compareheight;
+	int comparecrc;
+	// mark and sweep garbage collection, this value is updated to a new value
+	// on each level change for the used skinframes, if some are not used they
+	// are freed
+	unsigned int loadsequence;
+	// indicates whether this texture has transparent pixels
+	qbool hasalpha;
+	// average texture color, if applicable
+	float avgcolor[4];
+	// for mdl skins, we actually only upload on first use (many are never used, and they are almost never used in both base+pants+shirt and merged modes)
+	unsigned char *qpixels;
+	int qwidth;
+	int qheight;
+	qbool qhascolormapping;
+	qbool qgeneratebase;
+	qbool qgeneratemerged;
+	qbool qgeneratenmap;
+	qbool qgenerateglow;
+}
+skinframe_t;
 
 typedef void (*updatecallback_t)(rtexture_t *rt, void *data);
 
