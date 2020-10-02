@@ -47,6 +47,14 @@ extern char fs_userdir [MAX_OSPATH];
 extern int fs_numgamedirs;
 extern char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
+typedef struct vfs_s
+{
+	char gamedir[MAX_OSPATH];
+	char basedir[MAX_OSPATH];
+	char userdir[MAX_OSPATH];
+	int numgamedirs;
+	char gamedirs[MAX_GAMEDIRS][MAX_QPATH];
+} vfs_t;
 
 // ------ Main functions ------ //
 
