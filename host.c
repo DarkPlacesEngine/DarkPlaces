@@ -616,6 +616,12 @@ static void Host_Init (void)
 	char vabuf[1024];
 	cmd_state_t *cmd = &cmd_client;
 
+	host.hook.ConnectLocal = NULL;
+	host.hook.Disconnect = NULL;
+	host.hook.ToggleMenu = NULL;
+	host.hook.CL_Intermission = NULL;
+	host.hook.SV_CanSave = NULL;
+
 	host.state = host_init;
 
 	if (setjmp(host.abortframe)) // Huh?!
