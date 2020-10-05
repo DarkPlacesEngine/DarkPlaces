@@ -562,13 +562,13 @@ static void SV_AirMove (void)
 
 /*
 ===================
-SV_ClientThink
+SV_PlayerPhysics
 
 the move fields specify an intended velocity in pix/sec
 the angle fields specify an exact angular motion in degrees
 ===================
 */
-void SV_ClientThink (void)
+void SV_PlayerPhysics (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t v_angle, angles, velocity;
@@ -579,7 +579,7 @@ void SV_ClientThink (void)
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(host_client->edict);
 
-	// LadyHavoc: QuakeC replacement for SV_ClientThink (player movement)
+	// LadyHavoc: QuakeC replacement for SV_PlayerPhysics (player movement)
 	if (PRVM_serverfunction(SV_PlayerPhysics) && sv_playerphysicsqc.integer)
 	{
 		PRVM_serverglobalfloat(time) = sv.time;

@@ -2965,7 +2965,7 @@ void SV_Physics_ClientMove(void)
 
 	// call player physics, this needs the proper frametime
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
-	SV_ClientThink();
+	SV_PlayerPhysics();
 
 	// call standard client pre-think, with frametime = 0
 	PRVM_serverglobalfloat(time) = sv.time;
@@ -3013,7 +3013,7 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 	// don't run physics here if running asynchronously
 	if (host_client->clmovement_inputtimeout <= 0)
 	{
-		SV_ClientThink();
+		SV_PlayerPhysics();
 		//host_client->cmd.time = max(host_client->cmd.time, sv.time);
 	}
 

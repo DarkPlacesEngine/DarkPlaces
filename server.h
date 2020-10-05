@@ -547,7 +547,7 @@ void SV_SetIdealPitch (void);
 
 void SV_AddUpdates (void);
 
-void SV_ClientThink (void);
+void SV_PlayerPhysics (void);
 
 void SV_ClientPrint(const char *msg);
 void SV_ClientPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
