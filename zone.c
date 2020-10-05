@@ -21,9 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "darkplaces.h"
 
-void R_TextureStats_Print(qbool, qbool, qbool);
-void GL_Mesh_ListVBOs(qbool);
-
 #ifdef WIN32
 #include <windows.h>
 #include <winbase.h>
@@ -866,8 +863,6 @@ static void MemList_f(cmd_state_t *cmd)
 static void MemStats_f(cmd_state_t *cmd)
 {
 	Mem_CheckSentinelsGlobal();
-	R_TextureStats_Print(false, false, true);
-	GL_Mesh_ListVBOs(false);
 	Mem_PrintStats();
 }
 
