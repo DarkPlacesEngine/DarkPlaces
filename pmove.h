@@ -1,6 +1,18 @@
 #ifndef PMOVE_H
 #define PMOVE_H
 
+#include "qtypes.h"
+#include "protocol.h"
+
+typedef enum waterlevel_e
+{
+	WATERLEVEL_NONE,
+	WATERLEVEL_WETFEET,
+	WATERLEVEL_SWIMMING,
+	WATERLEVEL_SUBMERGED
+}
+waterlevel_t;
+
 typedef struct playermove_s
 {
 	// entity to be ignored for movement
@@ -8,6 +20,8 @@ typedef struct playermove_s
 	// position
 	vec3_t origin;
 	vec3_t velocity;
+	vec3_t angles;
+	vec3_t movedir;
 	// current bounding box (different if crouched vs standing)
 	vec3_t mins;
 	vec3_t maxs;
@@ -22,6 +36,8 @@ typedef struct playermove_s
 	// weird hacks when jumping out of water
 	// (this is in seconds and counts down to 0)
 	float waterjumptime;
+
+	int movetype;
 
 	// user command
 	usercmd_t cmd;
@@ -65,6 +81,5 @@ typedef struct movevars_s
 	float ticrate;
 	float airspeedlimit_nonqw;
 } movevars_t;
-
 
 #endif
