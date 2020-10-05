@@ -3703,7 +3703,9 @@ void CL_ParseServerMessage(void)
 					for (i = 1;i < cl.maxclients;i++)
 						cl.entities_active[i] = false;
 				}
+#ifndef SERVERONLY
 				EntityStateQW_ReadPlayerUpdate();
+#endif
 				break;
 
 			case qw_svc_nails:
@@ -3726,7 +3728,9 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_packetentities:
+#ifndef SERVERONLY
 				EntityFrameQW_CL_ReadFrame(false);
+#endif
 				// first update is the final signon stage
 				if (cls.signon == SIGNONS - 1)
 				{
@@ -3736,7 +3740,9 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_deltapacketentities:
+#ifndef SERVERONLY
 				EntityFrameQW_CL_ReadFrame(true);
+#endif
 				// first update is the final signon stage
 				if (cls.signon == SIGNONS - 1)
 				{
@@ -3807,7 +3813,9 @@ void CL_ParseServerMessage(void)
 					cls.signon = SIGNONS;
 					CL_SignonReply ();
 				}
+#ifndef SERVERONLY
 				EntityFrameQuake_ReadEntity (cmd&127);
+#endif
 				continue;
 			}
 
@@ -4208,12 +4216,14 @@ void CL_ParseServerMessage(void)
 					cls.signon = SIGNONS;
 					CL_SignonReply ();
 				}
+#ifndef SERVERONLY
 				if (cls.protocol == PROTOCOL_DARKPLACES1 || cls.protocol == PROTOCOL_DARKPLACES2 || cls.protocol == PROTOCOL_DARKPLACES3)
 					EntityFrame_CL_ReadFrame();
 				else if (cls.protocol == PROTOCOL_DARKPLACES4)
 					EntityFrame4_CL_ReadFrame();
 				else
 					EntityFrame5_CL_ReadFrame();
+#endif
 				break;
 			case svc_csqcentities:
 				CSQC_ReadEntities();
@@ -4238,8 +4248,9 @@ void CL_ParseServerMessage(void)
 	if (cls.signon == SIGNONS)
 		CL_UpdateItemsAndWeapon();
 //	R_TimeReport("UpdateItems");
-
+#ifndef SERVERONLY
 	EntityFrameQuake_ISeeDeadEntities();
+#endif
 //	R_TimeReport("ISeeDeadEntities");
 
 	CL_UpdateMoveVars();
