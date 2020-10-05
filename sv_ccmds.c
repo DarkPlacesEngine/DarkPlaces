@@ -61,9 +61,9 @@ static void SV_Map_f(cmd_state_t *cmd)
 	if (gamemode == GAME_DELUXEQUAKE)
 		Cvar_Set(&cvars_all, "warpmark", "");
 
-	cls.demonum = -1;		// stop demo loop in case this fails
+	if(host.hook.Disconnect)
+		host.hook.Disconnect();
 
-	CL_Disconnect ();
 	SV_Shutdown();
 
 	if(svs.maxclients != svs.maxclients_next)
@@ -74,12 +74,8 @@ static void SV_Map_f(cmd_state_t *cmd)
 		svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 	}
 
-#ifdef CONFIG_MENU
-	// remove menu
-	if (key_dest == key_menu || key_dest == key_menu_grabbed)
-		MR_ToggleMenu(0);
-#endif
-	key_dest = key_game;
+	if(host.hook.ToggleMenu)
+		host.hook.ToggleMenu();
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
@@ -112,12 +108,8 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 		return;
 	}
 
-#ifdef CONFIG_MENU
-	// remove menu
-	if (key_dest == key_menu || key_dest == key_menu_grabbed)
-		MR_ToggleMenu(0);
-#endif
-	key_dest = key_game;
+	if(host.hook.ToggleMenu)
+		host.hook.ToggleMenu();
 
 	SV_SaveSpawnparms ();
 	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
@@ -149,12 +141,8 @@ static void SV_Restart_f(cmd_state_t *cmd)
 		return;
 	}
 
-#ifdef CONFIG_MENU
-	// remove menu
-	if (key_dest == key_menu || key_dest == key_menu_grabbed)
-		MR_ToggleMenu(0);
-#endif
-	key_dest = key_game;
+	if(host.hook.ToggleMenu)
+		host.hook.ToggleMenu();
 
 	strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
