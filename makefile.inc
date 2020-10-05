@@ -82,11 +82,6 @@ OBJ_COMMON= \
 	cl_cmd.o \
 	cl_collision.o \
 	cl_demo.o \
-	cl_ents.o \
-	cl_ents4.o \
-	cl_ents5.o \
-	cl_ents_nq.o \
-	cl_ents_qw.o \
 	cl_input.o \
 	cl_main.o \
 	cl_parse.o \
@@ -176,6 +171,13 @@ OBJ_COMMON= \
 	world.o \
 	zone.o
 
+OBJ_CL= \
+	cl_ents.o \
+	cl_ents4.o \
+	cl_ents5.o \
+	cl_ents_qw.o \
+	cl_ents_nq.o
+
 OBJ_MENU= \
 	menu.o \
 	mvm_cmds.o
@@ -202,7 +204,7 @@ endif
 
 CFLAGS_COMMON=$(CFLAGS_STANDARD) $(CFLAGS_TCC) $(CFLAGS_MAKEDEP) $(CFLAGS_PRELOAD) $(CFLAGS_FS) $(CFLAGS_WARNINGS) $(CFLAGS_LIBZ) $(CFLAGS_LIBJPEG) $(CFLAGS_SND_XMP) $(CFLAGS_NET) $(CFLAGS_SDL) -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES -I../../../
 CFLAGS_CLIENT=-DCONFIG_MENU $(CFLAGS_VIDEO_CAPTURE)
-CFLAGS_SERVER=
+CFLAGS_SERVER=-DSERVERONLY
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb -fprofile-arcs
 CFLAGS_RELEASE=
@@ -503,7 +505,7 @@ $(EXE_SV): $(OBJ_SV) $(OBJ_ICON)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
-$(EXE_SDL): $(OBJ_SDL) $(OBJ_ICON)
+$(EXE_SDL): $(OBJ_CL) $(OBJ_SDL) $(OBJ_ICON)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
@@ -511,7 +513,7 @@ $(EXE_SVNEXUIZ): $(OBJ_SV) $(OBJ_ICON_NEXUIZ)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
-$(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
+$(EXE_SDLNEXUIZ): $(OBJ_CL) $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
