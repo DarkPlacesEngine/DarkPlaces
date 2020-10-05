@@ -2478,9 +2478,6 @@ static int SV_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 // 3 - null or non-precached model
 // 4 - no tags with requested index
 // 5 - runaway loop at attachment chain
-extern cvar_t cl_bob;
-extern cvar_t cl_bobcycle;
-extern cvar_t cl_bobup;
 static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
 	int ret;
@@ -2539,29 +2536,6 @@ static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *e
 
 		SV_GetEntityMatrix(prog, ent, &entitymatrix, true);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-
-		/*
-		// Cl_bob, ported from rendering code
-		if (PRVM_serveredictfloat(ent, health) > 0 && cl_bob.value && cl_bobcycle.value)
-		{
-			double bob, cycle;
-			// LadyHavoc: this code is *weird*, but not replacable (I think it
-			// should be done in QC on the server, but oh well, quake is quake)
-			// LadyHavoc: figured out bobup: the time at which the sin is at 180
-			// degrees (which allows lengthening or squishing the peak or valley)
-			cycle = sv.time/cl_bobcycle.value;
-			cycle -= (int)cycle;
-			if (cycle < cl_bobup.value)
-				cycle = sin(M_PI * cycle / cl_bobup.value);
-			else
-				cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-			// bob is proportional to velocity in the xy plane
-			// (don't count Z, or jumping messes it up)
-			bob = sqrt(PRVM_serveredictvector(ent, velocity)[0]*PRVM_serveredictvector(ent, velocity)[0] + PRVM_serveredictvector(ent, velocity)[1]*PRVM_serveredictvector(ent, velocity)[1])*cl_bob.value;
-			bob = bob*0.3 + bob*0.7*cycle;
-			Matrix4x4_AdjustOrigin(out, 0, 0, bound(-7, bob, 4));
-		}
-		*/
 	}
 	return 0;
 }
