@@ -621,16 +621,6 @@ void SV_PlayerPhysics (void)
 		return;
 	}
 
-	/*
-	// Player is (somehow) outside of the map, or flying, or noclipping
-	if (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP && (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict)))
-	//if (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_NOCLIP || PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict))
-	{
-		SV_FreeMove ();
-		return;
-	}
-	*/
-
 	// walk
 	if ((PRVM_serveredictfloat(host_client->edict, waterlevel) >= 2) && (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP))
 	{
