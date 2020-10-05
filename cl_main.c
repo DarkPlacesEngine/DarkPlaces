@@ -340,6 +340,16 @@ void CL_ExpandCSQCRenderEntities(int num)
 	}
 }
 
+static void CL_ToggleMenu_Hook(void)
+{
+#ifdef CONFIG_MENU
+	// remove menu
+	if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		MR_ToggleMenu(0);
+#endif
+	key_dest = key_game;
+}
+
 extern cvar_t rcon_secure;
 
 /*
@@ -3060,6 +3070,8 @@ void CL_Init (void)
 		CL_Video_Init();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
+		host.hook.Disconnect = CL_Disconnect;
 		host.hook.CL_Intermission = CL_Intermission;
+		host.hook.ToggleMenu = CL_ToggleMenu_Hook;
 	}
 }

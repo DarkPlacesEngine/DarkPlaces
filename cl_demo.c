@@ -100,6 +100,8 @@ void CL_StopPlayback (void)
 		if (Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
 			host.state = host_shutdown;
 
+	cls.demonum = -1;
+
 }
 
 /*
