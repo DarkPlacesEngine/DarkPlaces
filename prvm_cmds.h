@@ -323,8 +323,6 @@ void VM_strdecolorize(prvm_prog_t *prog);
 void VM_strtolower(prvm_prog_t *prog);
 void VM_strtoupper(prvm_prog_t *prog);
 
-void VM_clcommand (prvm_prog_t *prog);
-
 void VM_tokenize (prvm_prog_t *prog);
 void VM_tokenizebyseparator (prvm_prog_t *prog);
 void VM_argv (prvm_prog_t *prog);
