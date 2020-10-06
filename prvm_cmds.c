@@ -2558,36 +2558,6 @@ void VM_strunzone(prvm_prog_t *prog)
 
 /*
 =========
-VM_command (used by client and menu)
-
-clientcommand(float client, string s) (for client and menu)
-=========
-*/
-//void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
-//this function originally written by KrimZon, made shorter by LadyHavoc
-void VM_clcommand (prvm_prog_t *prog)
-{
-	client_t *temp_client;
-	int i;
-
-	VM_SAFEPARMCOUNT(2,VM_clcommand);
-
-	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
-	{
-		VM_Warning(prog, "VM_clientcommand: %s: invalid client/server is not active !\n", prog->name);
-		return;
-	}
-
-	temp_client = host_client;
-	host_client = svs.clients + i;
-	Cmd_ExecuteString (&cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
-	host_client = temp_client;
-}
-
-
-/*
-=========
 VM_tokenize
 
 float tokenize(string s)
