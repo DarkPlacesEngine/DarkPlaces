@@ -89,7 +89,7 @@ typedef struct cmd_function_s
 	const char *name;
 	const char *description;
 	xcommand_t function;
-	qbool csqcfunc;
+	qbool qcfunc;
 	qbool autofunc;
 	qbool initstate; // indicates this command existed at init
 } cmd_function_t;
@@ -98,7 +98,7 @@ typedef struct cmd_function_s
 typedef struct cmd_userdefined_s
 {
 	// csqc functions - this is a mess
-	cmd_function_t *csqc_functions;
+	cmd_function_t *qc_functions;
 
 	// aliases
 	cmd_alias_t *alias;

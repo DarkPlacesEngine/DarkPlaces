@@ -1506,7 +1506,7 @@ static void Cmd_List_f (cmd_state_t *cmd)
 	}
 
 	count = 0;
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 	{
 		if (partial && (ispattern ? !matchpattern_with_separator(func->name, partial, false, "", false) : strncmp(partial, func->name, len)))
 			continue;
@@ -1574,7 +1574,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 			}
 		}
 	}
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 	{
 		if (!matchpattern_with_separator(func->name, partial, true, "", false))
 			if (!matchpattern_with_separator(func->description, partial, true, "", false))
@@ -1875,12 +1875,12 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 			}
 			else
 			{
-				// mark csqcfunc if the function already exists in the csqc_functions list
-				for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+				// mark qcfunc if the function already exists in the qc_functions list
+				for (func = cmd->userdefined->qc_functions; func; func = func->next)
 				{
 					if (!strcmp(cmd_name, func->name))
 					{
-						func->csqcfunc = true; //[515]: csqc
+						func->qcfunc = true; //[515]: csqc
 						continue;
 					}
 				}
@@ -1890,18 +1890,18 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->name = cmd_name;
 				func->function = function;
 				func->description = description;
-				func->csqcfunc = true; //[515]: csqc
-				func->next = cmd->userdefined->csqc_functions;
+				func->qcfunc = true; //[515]: csqc
+				func->next = cmd->userdefined->qc_functions;
 				func->autofunc = false;
 
 				// insert it at the right alphanumeric position
-				for (prev = NULL, current = cmd->userdefined->csqc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
+				for (prev = NULL, current = cmd->userdefined->qc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
 					;
 				if (prev) {
 					prev->next = func;
 				}
 				else {
-					cmd->userdefined->csqc_functions = func;
+					cmd->userdefined->qc_functions = func;
 				}
 				func->next = current;
 			}
@@ -1923,7 +1923,7 @@ qbool Cmd_Exists (cmd_state_t *cmd, const char *cmd_name)
 {
 	cmd_function_t	*func;
 
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strcmp(cmd_name, func->name))
 			return true;
 
@@ -1951,7 +1951,7 @@ const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial)
 		return NULL;
 
 // check functions
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			return func->name;
 
@@ -1984,7 +1984,7 @@ int Cmd_CompleteCountPossible (cmd_state_t *cmd, const char *partial)
 		return 0;
 
 	// Loop through the command list and count all partial matches
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			h++;
 
@@ -2015,7 +2015,7 @@ const char **Cmd_CompleteBuildList (cmd_state_t *cmd, const char *partial)
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the functions lists and print all matches
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			buf[bpos++] = func->name;
 	for (func = cmd->engine_functions; func; func = func->next)
@@ -2032,7 +2032,7 @@ void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial)
 	cmd_function_t *func;
 	size_t len = strlen(partial);
 	// Loop through the command list and print all matches
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strncasecmp(partial, func->name, len))
 			Con_Printf("^2%s^7: %s\n", func->name, func->description);
 	for (func = cmd->engine_functions; func; func = func->next)
@@ -2141,7 +2141,7 @@ const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd)
 {
 	cmd_function_t *func;
-	cmd_function_t **next = &cmd->userdefined->csqc_functions;
+	cmd_function_t **next = &cmd->userdefined->qc_functions;
 	
 	while(*next)
 	{
@@ -2178,13 +2178,17 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		goto done; // no tokens
 
 // check functions
-	for (func = cmd->userdefined->csqc_functions; func; func = func->next)
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 	{
 		if (!strcasecmp(cmd->argv[0], func->name))
 		{
-			if (func->csqcfunc && CL_VM_ConsoleCommand(text))	//[515]: csqc
-				goto done;
-			break;
+			if(func->qcfunc)
+			{
+				if((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text))
+					goto done;
+				else if((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text))
+					goto done;
+			}
 		}
 	}
 
@@ -2276,7 +2280,7 @@ void Cmd_SaveInitState(void)
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f;
 		cmd_alias_t *a;
-		for (f = cmd->userdefined->csqc_functions; f; f = f->next)
+		for (f = cmd->userdefined->qc_functions; f; f = f->next)
 			f->initstate = true;
 		for (f = cmd->engine_functions; f; f = f->next)
 			f->initstate = true;
@@ -2297,7 +2301,7 @@ void Cmd_RestoreInitState(void)
 		cmd_state_t *cmd = cmd_iter->cmd;
 		cmd_function_t *f, **fp;
 		cmd_alias_t *a, **ap;
-		for (fp = &cmd->userdefined->csqc_functions; (f = *fp);)
+		for (fp = &cmd->userdefined->qc_functions; (f = *fp);)
 		{
 			if (f->initstate)
 				fp = &f->next;

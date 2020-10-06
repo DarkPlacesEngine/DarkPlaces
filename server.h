@@ -635,4 +635,6 @@ void SV_PreSpawn_f(cmd_state_t *cmd);
 void SV_Spawn_f(cmd_state_t *cmd);
 void SV_Begin_f(cmd_state_t *cmd);
 
+qbool SV_VM_ConsoleCommand (const char *text);
+
 #endif
