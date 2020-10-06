@@ -932,6 +932,123 @@ static void VM_M_crypto_getmyidstatus(prvm_prog_t *prog)
 	}
 }
 
+// CL_Video interface functions
+
+/*
+========================
+VM_cin_open
+
+float cin_open(string file, string name)
+========================
+*/
+void VM_cin_open(prvm_prog_t *prog)
+{
+	const char *file;
+	const char *name;
+
+	VM_SAFEPARMCOUNT( 2, VM_cin_open );
+
+	file = PRVM_G_STRING( OFS_PARM0 );
+	name = PRVM_G_STRING( OFS_PARM1 );
+
+	VM_CheckEmptyString(prog,  file );
+    VM_CheckEmptyString(prog,  name );
+
+	if( CL_OpenVideo( file, name, MENUOWNER, "" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = 1;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_close
+
+void cin_close(string name)
+========================
+*/
+void VM_cin_close(prvm_prog_t *prog)
+{
+	const char *name;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_close );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	CL_CloseVideo( CL_GetVideoByName( name ) );
+}
+
+/*
+========================
+VM_cin_setstate
+void cin_setstate(string name, float type)
+========================
+*/
+void VM_cin_setstate(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideostate_t 	state;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 2, VM_cin_setstate );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	state = (clvideostate_t)((int)PRVM_G_FLOAT( OFS_PARM1 ));
+
+	video = CL_GetVideoByName( name );
+	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
+		CL_SetVideoState( video, state );
+}
+
+/*
+========================
+VM_cin_getstate
+
+float cin_getstate(string name)
+========================
+*/
+void VM_cin_getstate(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_getstate );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	video = CL_GetVideoByName( name );
+	if( video )
+		PRVM_G_FLOAT( OFS_RETURN ) = (int)video->state;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_restart
+
+void cin_restart(string name)
+========================
+*/
+void VM_cin_restart(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_restart );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	video = CL_GetVideoByName( name );
+	if( video )
+		CL_RestartVideo( video );
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 NULL,									//   #0 NULL function (not callable)
 VM_checkextension,				//   #1
