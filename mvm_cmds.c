@@ -996,7 +996,7 @@ VM_argv,								//  #59
 VM_isserver,						//  #60
 VM_clientcount,					//  #61
 VM_clientstate,					//  #62
-VM_clcommand,						//  #63
+NULL,						//  #63 FIXME
 VM_changelevel,					//  #64
 VM_localsound,						//  #65
 VM_M_getmousepos,					//  #66
