@@ -1887,6 +1887,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 
 
 				func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
+				func->flags = flags;
 				func->name = cmd_name;
 				func->function = function;
 				func->description = description;
