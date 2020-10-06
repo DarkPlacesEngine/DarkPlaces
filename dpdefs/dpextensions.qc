@@ -2632,3 +2632,11 @@ float(string pattern, float caseinsensitive, float quiet, string packfile) searc
 //description:
 //extension to search_begin (DP_QC_FS_SEARCH), performs a filename search with the specified pattern (for example "maps/*.bsp") and stores the results in a search slot (minimum of 128 supported by any engine with this extension), the other functions take this returned search slot number, be sure to search_free when done (they are also freed on progs reload).
 //only searches for files within the specified packfile, which is expected to match the results of whichpack().
+
+//EXT_CSQC (registercommand for SSQC)
+//idea: probably Spoike
+//darkplaces implementation: Cloudwalk
+//builtin definitions:
+void(string cmdname) registercommand = #352;
+//description:
+//the registercommand builtin but the server can use it

@@ -2847,6 +2847,39 @@ static void VM_SV_pointparticles(prvm_prog_t *prog)
 	SV_FlushBroadcastMessages();
 }
 
+qbool SV_VM_ConsoleCommand (const char *text)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int restorevm_tempstringsbuf_cursize;
+	int save_self;
+	qbool r = false;
+
+	if(!sv.active || !prog || !prog->loaded)
+		return false;
+
+	if (PRVM_serverfunction(ConsoleCmd))
+	{
+		save_self = PRVM_serverglobaledict(self);
+		PRVM_serverglobalfloat(time) = sv.time;
+		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(sv.world.prog->edicts);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(ConsoleCmd), "QC function ConsoleCmd is missing");
+		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+		PRVM_serverglobaledict(self) = save_self;
+		r = (int) PRVM_G_FLOAT(OFS_RETURN) != 0;
+	}
+	return r;
+}
+
+// #352 void(string cmdname) registercommand (EXT_CSQC)
+static void VM_SV_registercommand (prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(1, VM_SV_registercmd);
+	if(!Cmd_Exists(&cmd_server, PRVM_G_STRING(OFS_PARM0)))
+		Cmd_AddCommand(CF_SERVER, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+}
+
 //PF_setpause,    // void(float pause) setpause	= #531;
 static void VM_SV_setpause(prvm_prog_t *prog) {
 	int pauseValue;
@@ -3528,7 +3561,7 @@ NULL,							// #348 string(float playernum, string keyname) getplayerkeyvalue (E
 NULL,							// #349 float() isdemo (EXT_CSQC)
 VM_isserver,					// #350 float() isserver (EXT_CSQC)
 NULL,							// #351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
-NULL,							// #352 void(string cmdname) registercommand (EXT_CSQC)
+VM_SV_registercommand,			// #352 void(string cmdname) registercommand (EXT_CSQC)
 VM_wasfreed,					// #353 float(entity ent) wasfreed (EXT_CSQC) (should be availabe on server too)
 VM_SV_serverkey,				// #354 string(string key) serverkey (EXT_CSQC)
 NULL,							// #355
