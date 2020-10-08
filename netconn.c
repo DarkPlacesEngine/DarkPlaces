@@ -3610,15 +3610,6 @@ void NetConn_ServerFrame(void)
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-	{
-		// never timeout loopback connections
-		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-		{
-			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
-			SV_DropClient(false);
-		}
-	}
 }
 
 void NetConn_SleepMicroseconds(int microseconds)

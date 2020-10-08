@@ -2403,6 +2403,21 @@ static void SV_VM_Setup(void)
 	SV_Prepare_CSQC();
 }
 
+static void SV_CheckTimeouts(void)
+{
+	int i;
+
+	// never timeout loopback connections
+	for (i = (host_isclient.integer ? 1 : 0), host_client = &svs.clients[i]; i < svs.maxclients; i++, host_client++)
+	{
+		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout)
+		{
+			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+			SV_DropClient(false);
+		}
+	}
+}
+
 extern cvar_t host_maxwait;
 extern cvar_t host_framerate;
 extern cvar_t cl_maxphysicsframesperserverframe;
@@ -2456,7 +2471,10 @@ double SV_Frame(double time)
 		 * be undersleeping due to select() detecting a new packet
 		 */
 		if (sv.active)
+		{
 			NetConn_ServerFrame();
+			SV_CheckTimeouts();
+		}
 	}
 
 	/*
@@ -2635,7 +2653,10 @@ static int SV_ThreadFunc(void *voiddata)
 
 		// get new packets
 		if (sv.active)
+		{
 			NetConn_ServerFrame();
+			SV_CheckTimeouts();
+		}
 
 		// if the accumulators haven't become positive yet, wait a while
 		wait = sv_timer * -1000000.0;
