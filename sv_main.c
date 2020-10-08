@@ -435,7 +435,7 @@ static void SV_AreaStats_f(cmd_state_t *cmd)
 static qbool SV_CanSave(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	if(SV_IsLocalGame() == 1)
+	if(SV_IsLocalServer() == 1)
 	{
 		// singleplayer checks
 		if ((svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
@@ -1694,11 +1694,10 @@ void SV_SaveSpawnparms (void)
 	}
 }
 
-qbool SV_IsLocalServer(void)
+// Returns 1 if we're singleplayer, > 1 if we're a listen server
+int SV_IsLocalServer(void)
 {
-	if(host_isclient.integer && host_client && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
-		return true;
-	return false;
+	return (host_isclient.integer && sv.active ? svs.maxclients : 0);
 }
 
 /*
@@ -2012,17 +2011,6 @@ void SV_SpawnServer (const char *map)
 		Sys_MakeProcessMean();
 
 //	SV_UnlockThreadMutex();
-}
-
-/*
- * Returns number of slots if we're a listen server.
- * Returns 0 if we're a dedicated server.
- */
-int SV_IsLocalGame(void)
-{
-	if (sv.active && &svs.clients[0] && LHNETADDRESS_GetAddressType(&svs.clients[0].netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
-		return svs.maxclients;
-	return 0;
 }
 
 /*
