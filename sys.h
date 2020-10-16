@@ -171,6 +171,8 @@ typedef struct dllfunction_s
 }
 dllfunction_t;
 
+qbool Sys_LoadSelf(dllhandle_t *handle);
+
 /*! Loads a library. 
  * \param dllnames a NULL terminated array of possible names for the DLL you want to load.
  * \param handle

@@ -116,6 +116,21 @@ static qbool Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t
 	return false;
 }
 
+qbool Sys_LoadSelf(dllhandle_t *handle)
+{
+	dllhandle_t dllhandle = 0;
+
+	if (handle == NULL)
+		return false;
+#ifdef WIN32
+	dllhandle = LoadLibrary (NULL);
+#else
+	dllhandle = dlopen (NULL, RTLD_NOW | RTLD_GLOBAL);
+#endif
+	*handle = dllhandle;
+	return true;
+}
+
 qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
 #ifdef SUPPORTDLL
