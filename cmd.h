@@ -125,6 +125,7 @@ typedef struct cmd_state_s
 	struct mempool_s *mempool;
 
 	int argc;
+	const char *cmdline;
 	const char *argv[MAX_ARGS];
 	const char *null_string;
 	const char *args;

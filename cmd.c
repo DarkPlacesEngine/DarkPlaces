@@ -1761,6 +1761,7 @@ static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 
 	cmd->argc = 0;
 	cmd->args = NULL;
+	cmd->cmdline = NULL;
 
 	while (1)
 	{
@@ -1784,6 +1785,8 @@ static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 		if (!*text)
 			return;
 
+		if(!cmd->argc)
+			cmd->cmdline = text;
 		if (cmd->argc == 1)
 			cmd->args = text;
 
