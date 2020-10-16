@@ -2300,7 +2300,7 @@ static void CL_ParseStaticSound (int large)
 	int			sound_num, vol, atten;
 
 	MSG_ReadVector(&cl_message, org, cls.protocol);
-	if (large || cls.protocol == PROTOCOL_NEHAHRABJP2)
+	if (large)
 		sound_num = (unsigned short) MSG_ReadShort(&cl_message);
 	else
 		sound_num = MSG_ReadByte(&cl_message);
@@ -3976,7 +3976,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sound:
-				CL_ParseStartSoundPacket(false);
+				CL_ParseStartSoundPacket(cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 ? true : false);
 				break;
 
 			case svc_precache:
@@ -4125,7 +4125,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_spawnstaticsound:
-				CL_ParseStaticSound (false);
+				CL_ParseStaticSound (cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 ? true : false);
 				break;
 
 			case svc_spawnstaticsound2:
