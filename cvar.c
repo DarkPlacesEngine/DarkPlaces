@@ -443,14 +443,6 @@ void Cvar_Set(cvar_state_t *cvars, const char *var_name, const char *value)
 	Cvar_SetQuick(var, value);
 }
 
-void Cvar_Set_NoCallback(cvar_t *var, const char *value)
-{
-	void (*callback_save)(cvar_t *) = var->callback;
-	var->callback = NULL;
-	Cvar_SetQuick_Internal(var, value);
-	var->callback = callback_save;
-}
-
 /*
 ============
 Cvar_SetValue
