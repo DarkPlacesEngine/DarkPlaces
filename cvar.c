@@ -546,8 +546,6 @@ void Cvar_RegisterVariable (cvar_t *variable)
 {
 	cvar_state_t *cvars = NULL;
 	cvar_t *current, *cvar;
-	char *oldstr;
-	size_t alloclen;
 	int i;
 
 	switch (variable->flags & (CF_CLIENT | CF_SERVER))
@@ -622,12 +620,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// copy the value off, because future sets will Z_Free it
-	oldstr = (char *)variable->string;
-	alloclen = strlen(variable->string) + 1;
-	variable->string = (char *)Z_Malloc (alloclen);
-	memcpy ((char *)variable->string, oldstr, alloclen);
-	variable->defstring = (char *)Z_Malloc (alloclen);
-	memcpy ((char *)variable->defstring, oldstr, alloclen);
+	variable->name = (char *)Mem_strdup(zonemempool, variable->name);
+	variable->string = (char *)Mem_strdup(zonemempool, variable->string);
+	variable->defstring = (char *)Mem_strdup(zonemempool, variable->string);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 	variable->aliasindex = 0;
