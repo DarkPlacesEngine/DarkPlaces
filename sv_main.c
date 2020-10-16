@@ -2480,6 +2480,9 @@ double SV_Frame(double time)
 	char vabuf[1024];
 	qbool playing = false;
 
+	if(!sv.active)
+		return 0;
+
 	if (!svs.threaded)
 	{
 		svs.perf_acc_sleeptime = host.sleeptime;
@@ -2522,11 +2525,8 @@ double SV_Frame(double time)
 		 * Receive packets on each main loop iteration, as the main loop may
 		 * be undersleeping due to select() detecting a new packet
 		 */
-		if (sv.active)
-		{
-			NetConn_ServerFrame();
-			SV_CheckTimeouts();
-		}
+		NetConn_ServerFrame();
+		SV_CheckTimeouts();
 	}
 
 	/*
@@ -2545,7 +2545,7 @@ double SV_Frame(double time)
 		sv_timer = 0.1;
 	}
 
-	if (sv.active && sv_timer > 0 && !svs.threaded)
+	if (sv_timer > 0 && !svs.threaded)
 	{
 		/*
 		 * Execute one or more server frames, with an upper limit on how much
