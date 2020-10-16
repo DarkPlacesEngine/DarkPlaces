@@ -456,6 +456,56 @@ static qbool SV_CanSave(void)
 	
 }
 
+static void SV_ServerOptions (void)
+{
+	int i;
+
+	// general default
+	svs.maxclients = 8;
+
+// COMMANDLINEOPTION: Server: -dedicated [playerlimit] starts a dedicated server (with a command console), default playerlimit is 8
+// COMMANDLINEOPTION: Server: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
+	// if no client is in the executable or -dedicated is specified on
+	// commandline, start a dedicated server
+	i = Sys_CheckParm ("-dedicated");
+	if (i || !cl_available)
+	{
+		cls.state = ca_dedicated;
+		// check for -dedicated specifying how many players
+		if (i && i + 1 < sys.argc && atoi (sys.argv[i+1]) >= 1)
+			svs.maxclients = atoi (sys.argv[i+1]);
+		if (Sys_CheckParm ("-listen"))
+			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
+		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
+		Cvar_SetValue(&cvars_all, "sv_public", 1);
+	}
+	else if (cl_available)
+	{
+		// client exists and not dedicated, check if -listen is specified
+		cls.state = ca_disconnected;
+		i = Sys_CheckParm ("-listen");
+		if (i)
+		{
+			// default players unless specified
+			if (i + 1 < sys.argc && atoi (sys.argv[i+1]) >= 1)
+				svs.maxclients = atoi (sys.argv[i+1]);
+		}
+		else
+		{
+			// default players in some games, singleplayer in most
+			if (gamemode != GAME_GOODVSBAD2 && !IS_NEXUIZ_DERIVED(gamemode) && gamemode != GAME_BATTLEMECH)
+				svs.maxclients = 1;
+		}
+	}
+
+	svs.maxclients = svs.maxclients_next = bound(1, svs.maxclients, MAX_SCOREBOARD);
+
+	svs.clients = (client_t *)Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
+
+	if (svs.maxclients > 1 && !deathmatch.integer && !coop.integer)
+		Cvar_SetValueQuick(&deathmatch, 1);
+}
+
 /*
 ===============
 SV_Init
@@ -655,6 +705,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
+	SV_ServerOptions();
 	SV_InitOperatorCommands();
 	host.hook.SV_CanSave = SV_CanSave;
 

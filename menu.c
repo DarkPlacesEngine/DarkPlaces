@@ -5470,7 +5470,7 @@ static void Call_MR_ToggleMenu_f(cmd_state_t *cmd)
 {
 	int m;
 	m = ((Cmd_Argc(cmd) < 2) ? -1 : atoi(Cmd_Argv(cmd, 1)));
-	Host_StartVideo();
+	CL_StartVideo();
 	if(MR_ToggleMenu)
 		MR_ToggleMenu(m);
 }
