@@ -23,12 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <time.h>
 #include "libcurl.h"
-#include "cdaudio.h"
-#include "cl_video.h"
-#include "progsvm.h"
-#include "csprogs.h"
-#include "sv_demo.h"
-#include "snd_main.h"
 #include "taskqueue.h"
 #include "utf8lib.h"
 
