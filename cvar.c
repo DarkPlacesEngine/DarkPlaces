@@ -505,6 +505,38 @@ void Cvar_RegisterAlias(cvar_t *variable, const char *alias )
 
 /*
 ============
+Cvar_Link
+
+Links a variable to the variable list and hashtable
+============
+*/
+static void Cvar_Link(cvar_t *variable, cvar_state_t *cvars)
+{
+	cvar_t *current, *next;
+	cvar_hash_t *hash;
+	int hashindex;
+	/*
+	 * Link the variable in
+	 * alphanumerical order
+	 */
+	for( current = NULL, next = cvars->vars ; next && strcmp( next->name, variable->name ) < 0 ; current = next, next = next->next )
+		;
+	if(current)
+		current->next = variable;
+	else
+		cvars->vars = variable;
+	variable->next = next;
+
+	// link to head of list in this hash table index
+	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
+	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name)) % CVAR_HASHSIZE;
+	hash->next = cvars->hashtable[hashindex];
+	hash->cvar = variable;
+	cvars->hashtable[hashindex] = hash;
+}
+
+/*
+============
 Cvar_RegisterVariable
 
 Adds a freestanding variable to the variable list.
@@ -513,9 +545,7 @@ Adds a freestanding variable to the variable list.
 void Cvar_RegisterVariable (cvar_t *variable)
 {
 	cvar_state_t *cvars = NULL;
-	int hashindex;
-	cvar_hash_t *hash;
-	cvar_t *current, *next, *cvar;
+	cvar_t *current, *cvar;
 	char *oldstr;
 	size_t alloclen;
 	int i;
@@ -606,23 +636,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	for (i = 0;i < PRVM_PROG_MAX;i++)
 		variable->globaldefindex[i] = -1;
 
-// link the variable in
-// alphanumerical order
-	for( current = NULL, next = cvars->vars ; next && strcmp( next->name, variable->name ) < 0 ; current = next, next = next->next )
-		;
-	if( current ) {
-		current->next = variable;
-	} else {
-		cvars->vars = variable;
-	}
-	variable->next = next;
-
-	// link to head of list in this hash table index
-	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
-	hashindex = CRC_Block((const unsigned char *)variable->name, strlen(variable->name)) % CVAR_HASHSIZE;
-	hash->next = cvars->hashtable[hashindex];
-	hash->cvar = variable;
-	cvars->hashtable[hashindex] = hash;
+	Cvar_Link(variable, cvars);
 }
 
 /*
@@ -634,9 +648,7 @@ Adds a newly allocated variable to the variable list or sets its value.
 */
 cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int flags, const char *newdescription)
 {
-	int hashindex;
-	cvar_hash_t *hash;
-	cvar_t *current, *next, *cvar;
+	cvar_t *cvar;
 	int i;
 
 	if (developer_extra.integer)
@@ -697,22 +709,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	for (i = 0;i < PRVM_PROG_MAX;i++)
 		cvar->globaldefindex[i] = -1;
 
-// link the variable in
-// alphanumerical order
-	for( current = NULL, next = cvars->vars ; next && strcmp( next->name, cvar->name ) < 0 ; current = next, next = next->next )
-		;
-	if( current )
-		current->next = cvar;
-	else
-		cvars->vars = cvar;
-	cvar->next = next;
-
-	// link to head of list in this hash table index
-	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
-	hashindex = CRC_Block((const unsigned char *)cvar->name, strlen(cvar->name)) % CVAR_HASHSIZE;
-	hash->next = cvars->hashtable[hashindex];
-	cvars->hashtable[hashindex] = hash;
-	hash->cvar = cvar;
+	Cvar_Link(cvar, cvars);
 
 	return cvar;
 }
