@@ -90,7 +90,7 @@
 #define	CMDBUFSIZE				655360 ///< maximum script size that can be loaded by the exec command (8192 in Quake)
 #define	MAX_ARGS				80 ///< maximum number of parameters to a console command or alias
 
-#define	NET_MAXMESSAGE			131072 ///< max reliable packet size (sent as multiple fragments of MAX_PACKETFRAGMENT)
+#define	NET_MAXMESSAGE			65536 ///< max reliable packet size (sent as multiple fragments of MAX_PACKETFRAGMENT)
 #define	MAX_PACKETFRAGMENT		1024 ///< max length of packet fragment
 #define	MAX_EDICTS				32768 ///< max number of objects in game world at once (32768 protocol limit)
 #define	MAX_MODELS				8192 ///< max number of models loaded at once (including during level transitions)
