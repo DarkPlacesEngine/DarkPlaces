@@ -223,27 +223,43 @@ CL_Color_f
 */
 cvar_t cl_color = {CF_CLIENT | CF_ARCHIVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 
-// Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
+// HACK: Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
 static void CL_Color_c(cvar_t *var)
 {
 	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
-	Cvar_Set_NoCallback(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
+	void (*callback_save)(cvar_t *);
+
+	callback_save = cl_topcolor.callback;
+	cl_topcolor.callback = NULL;
+	Cvar_SetQuick(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
+	cl_topcolor.callback = callback_save;
+
+	callback_save = cl_bottomcolor.callback;
+	cl_bottomcolor.callback = NULL;
+	Cvar_SetQuick(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
+	cl_bottomcolor.callback = callback_save;
 }
 
 static void CL_Topcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
+	void (*callback_save)(cvar_t *);
+
+	callback_save = cl_color.callback;
+	cl_color.callback = NULL;
+	Cvar_SetQuick(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
+	cl_color.callback = callback_save;
 }
 
 static void CL_Bottomcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
+	void (*callback_save)(cvar_t *);
 
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
+	callback_save = cl_color.callback;
+	cl_color.callback = NULL;
+	Cvar_SetQuick(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
+	cl_color.callback = callback_save;
 }
 
 static void CL_Color_f(cmd_state_t *cmd)
