@@ -705,11 +705,12 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
-	SV_ServerOptions();
 	SV_InitOperatorCommands();
 	host.hook.SV_CanSave = SV_CanSave;
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
+
+	SV_ServerOptions();
 }
 
 static void SV_SaveEntFile_f(cmd_state_t *cmd)
