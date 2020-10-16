@@ -715,6 +715,9 @@ extern cvar_t prvm_errordump;
 void PRVM_Crash(prvm_prog_t *prog)
 {
 	char vabuf[1024];
+
+	cl.csqc_loaded = false;
+
 	if (prog == NULL)
 		return;
 	if (!prog->loaded)

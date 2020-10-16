@@ -641,7 +641,7 @@ model_t *Mod_ForName(const char *name, qbool crash, qbool checkdisk, const char 
 
 	// FIXME: So we don't crash if a server is started early.
 	if(!vid_opened)
-		Host_StartVideo();
+		CL_StartVideo();
 
 	model = Mod_FindName(name, parentname);
 	if (!model->loaded || checkdisk)

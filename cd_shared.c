@@ -122,7 +122,7 @@ static void CDAudio_Play_byName (const char *trackname, qbool looping, qbool try
 	sfx_t* sfx;
 	char filename[MAX_QPATH];
 
-	Host_StartVideo();
+	CL_StartVideo();
 
 	if (!enabled)
 		return;
@@ -275,7 +275,7 @@ static void CD_f(cmd_state_t *cmd)
 	command = Cmd_Argv(cmd, 1);
 
 	if (strcasecmp(command, "remap") != 0)
-		Host_StartVideo();
+		CL_StartVideo();
 
 	if (strcasecmp(command, "on") == 0)
 	{

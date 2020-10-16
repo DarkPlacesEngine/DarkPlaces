@@ -577,7 +577,7 @@ void CL_DrawVideo(void)
 
 void CL_VideoStart(char *filename, const char *subtitlesfile)
 {
-	Host_StartVideo();
+	CL_StartVideo();
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
@@ -615,7 +615,7 @@ static void CL_PlayVideo_f(cmd_state_t *cmd)
 	char name[MAX_QPATH], subtitlesfile[MAX_QPATH];
 	const char *extension;
 
-	Host_StartVideo();
+	CL_StartVideo();
 
 	if (Sys_CheckParm("-benchmark"))
 		return;

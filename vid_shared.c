@@ -1501,7 +1501,7 @@ const char *vidfallbacks[][2] =
 	{NULL, NULL}
 };
 
-// this is only called once by Host_StartVideo and again on each FS_GameDir_f
+// this is only called once by CL_StartVideo and again on each FS_GameDir_f
 void VID_Start(void)
 {
 	int i = 0;
