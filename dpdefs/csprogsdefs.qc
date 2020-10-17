@@ -1474,3 +1474,4 @@ vector gettaginfo_forward;
 vector gettaginfo_right;
 vector gettaginfo_up;
 float checkpvs(vector viewpos, entity viewee) = #240;
+float mod(float dividend, float divisor) = #245;

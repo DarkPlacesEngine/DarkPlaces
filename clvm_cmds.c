@@ -5183,7 +5183,7 @@ NULL,							// #241
 NULL,							// #242
 NULL,							// #243
 NULL,							// #244
-NULL,							// #245
+VM_modulo,						// #245
 NULL,							// #246
 NULL,							// #247
 NULL,							// #248
