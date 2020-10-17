@@ -2640,3 +2640,5 @@ float(string pattern, float caseinsensitive, float quiet, string packfile) searc
 void(string cmdname) registercommand = #352;
 //description:
 //the registercommand builtin but the server can use it
+
+float(float dividend, float divisor) mod = #245;
