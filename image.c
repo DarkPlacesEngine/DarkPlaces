@@ -970,46 +970,28 @@ imageformat_t;
 imageformat_t imageformats_tenebrae[] =
 {
 	{"override/%s.tga", LoadTGA_BGRA},
-	{"override/%s.TGA", LoadTGA_BGRA},
 	{"override/%s.png", PNG_LoadImage_BGRA},
-	{"override/%s.PNG", PNG_LoadImage_BGRA},
 	{"override/%s.jpg", JPEG_LoadImage_BGRA},
-	{"override/%s.JPG", JPEG_LoadImage_BGRA},
 	{"override/%s.pcx", LoadPCX_BGRA},
-	{"override/%s.PCX", LoadPCX_BGRA},	
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_nopath[] =
 {
 	{"override/%s.tga", LoadTGA_BGRA},
-	{"override/%s.TGA", LoadTGA_BGRA},
 	{"override/%s.png", PNG_LoadImage_BGRA},
-	{"override/%s.PNG", PNG_LoadImage_BGRA},
 	{"override/%s.jpg", JPEG_LoadImage_BGRA},
-	{"override/%s.JPG", JPEG_LoadImage_BGRA},
 	{"textures/%s.tga", LoadTGA_BGRA},
-	{"textures/%s.TGA", LoadTGA_BGRA},
 	{"textures/%s.png", PNG_LoadImage_BGRA},
-	{"textures/%s.PNG", PNG_LoadImage_BGRA},
 	{"textures/%s.jpg", JPEG_LoadImage_BGRA},
-	{"textures/%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
@@ -1021,58 +1003,39 @@ imageformat_t imageformats_nopath[] =
 imageformat_t imageformats_dq[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},	
 	{"texturemaps/%s.tga", LoadTGA_BGRA},
-	{"texturemaps/%s.TGA", LoadTGA_BGRA},	
 	{"texturemaps/%s.jpg", JPEG_LoadImage_BGRA},
-	{"texturemaps/%s.JPG", JPEG_LoadImage_BGRA},	
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_textures[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.wal", LoadWAL_BGRA},
-	{"%s.WAL", LoadWAL_BGRA},	
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_gfx[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.lmp", LoadLMP_BGRA},
-	{"%s.LMP", LoadLMP_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_other[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.lmp", LoadLMP_BGRA},
-	{"%s.LMP", LoadLMP_BGRA},	
 	{NULL, NULL}
 };
 
