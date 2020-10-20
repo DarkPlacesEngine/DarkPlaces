@@ -182,18 +182,12 @@ void MSG_WriteUnterminatedString (sizebuf_t *sb, const char *s)
 
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
 {
-	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f * 8.0 + 0.5));
-	else
-		MSG_WriteShort (sb, (int)(f * 8.0 - 0.5));
+	MSG_WriteShort (sb, Q_rint(f*8));
 }
 
 void MSG_WriteCoord16i (sizebuf_t *sb, float f)
 {
-	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f + 0.5));
-	else
-		MSG_WriteShort (sb, (int)(f - 0.5));
+	MSG_WriteShort (sb, Q_rint(f));
 }
 
 void MSG_WriteCoord32f (sizebuf_t *sb, float f)
@@ -223,18 +217,12 @@ void MSG_WriteVector (sizebuf_t *sb, const vec3_t v, protocolversion_t protocol)
 // LadyHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 void MSG_WriteAngle8i (sizebuf_t *sb, float f)
 {
-	if (f >= 0)
-		MSG_WriteByte (sb, (int)(f*(256.0/360.0) + 0.5) & 255);
-	else
-		MSG_WriteByte (sb, (int)(f*(256.0/360.0) - 0.5) & 255);
+	MSG_WriteByte (sb, (int)Q_rint(f*(256.0/360.0)) & 255);
 }
 
 void MSG_WriteAngle16i (sizebuf_t *sb, float f)
 {
-	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f*(65536.0/360.0) + 0.5) & 65535);
-	else
-		MSG_WriteShort (sb, (int)(f*(65536.0/360.0) - 0.5) & 65535);
+	MSG_WriteShort (sb, (int)Q_rint(f*(65536.0/360.0)) & 65535);
 }
 
 void MSG_WriteAngle32f (sizebuf_t *sb, float f)
