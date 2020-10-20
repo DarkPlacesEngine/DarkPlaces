@@ -4139,17 +4139,7 @@ static void R_DrawModels(void)
 			continue;
 		ent = r_refdef.scene.entities[i];
 		r_refdef.stats[r_stat_entities]++;
-		/*
-		if (ent->model && !strncmp(ent->model->name, "models/proto_", 13))
-		{
-			vec3_t f, l, u, o;
-			Matrix4x4_ToVectors(&ent->matrix, f, l, u, o);
-			Con_Printf("R_DrawModels\n");
-			Con_Printf("model %s O %f %f %f F %f %f %f L %f %f %f U %f %f %f\n", ent->model->name, o[0], o[1], o[2], f[0], f[1], f[2], l[0], l[1], l[2], u[0], u[1], u[2]);
-			Con_Printf("group: %i %f %i %f %i %f %i %f\n", ent->framegroupblend[0].frame, ent->framegroupblend[0].lerp, ent->framegroupblend[1].frame, ent->framegroupblend[1].lerp, ent->framegroupblend[2].frame, ent->framegroupblend[2].lerp, ent->framegroupblend[3].frame, ent->framegroupblend[3].lerp);
-			Con_Printf("blend: %i %f %i %f %i %f %i %f %i %f %i %f %i %f %i %f\n", ent->frameblend[0].subframe, ent->frameblend[0].lerp, ent->frameblend[1].subframe, ent->frameblend[1].lerp, ent->frameblend[2].subframe, ent->frameblend[2].lerp, ent->frameblend[3].subframe, ent->frameblend[3].lerp, ent->frameblend[4].subframe, ent->frameblend[4].lerp, ent->frameblend[5].subframe, ent->frameblend[5].lerp, ent->frameblend[6].subframe, ent->frameblend[6].lerp, ent->frameblend[7].subframe, ent->frameblend[7].lerp);
-		}
-		*/
+
 		if (ent->model && ent->model->Draw != NULL)
 			ent->model->Draw(ent);
 		else
