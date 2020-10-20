@@ -595,7 +595,7 @@ void R_View_WorldVisibility(qbool forcenovis)
 				}
 			}
 		}
-		R_View_WorldVisibility_CullSurfaces();	
+		R_View_WorldVisibility_CullSurfaces();
 	}
 }
 
