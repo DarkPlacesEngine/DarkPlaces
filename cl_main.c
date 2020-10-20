@@ -2754,9 +2754,6 @@ double CL_Frame (double time)
 	static double wait;
 	int pass1, pass2, pass3;
 
-	if(!host_isclient.integer)
-		return 0;
-
 	CL_VM_PreventInformationLeaks();
 
 	// get new key events
