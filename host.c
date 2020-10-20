@@ -363,10 +363,12 @@ double Host_Frame(double time)
 	Mem_CheckSentinelsGlobal();
 
 	// if the accumulators haven't become positive yet, wait a while
-	if(!sv_timer || !cl_timer)
-		wait = min(cl_timer, sv_timer) * -1000000.0;
+	if (cls.state == ca_dedicated)
+		wait = sv_timer * -1000000.0; // dedicated
+	else if (!sv.active || svs.threaded)
+		wait = cl_timer * -1000000.0; // connected to server, main menu, or server is on different thread
 	else
-		wait = max(cl_timer, sv_timer) * -1000000.0;
+		wait = max(cl_timer, sv_timer) * -1000000.0; // listen server or singleplayer
 
 	if (!host.restless && wait >= 1)
 		return wait;
@@ -387,8 +389,7 @@ static inline void Host_Sleep(double time)
 		time = 1; // because we cast to int
 
 	time0 = Sys_DirtyTime();
-	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded)
-	{
+	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
 		NetConn_SleepMicroseconds((int)time);
 		if (cls.state != ca_dedicated)
 			NetConn_ClientFrame(); // helps server browser get good ping values
