@@ -4071,6 +4071,11 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
+			if (ent != &cl.viewent.render && r_refdef.viewcache.world_novis)
+			{
+				r_refdef.viewcache.entityvisible[i] = false;
+				continue;
+			}
 			if (!(ent->flags & renderimask))
 			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_WORLDOBJECT | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
