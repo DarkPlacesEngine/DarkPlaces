@@ -386,12 +386,12 @@ void R_DrawPortals(void)
 	model_t *model = r_refdef.scene.worldmodel;
 	if (model == NULL)
 		return;
-	for (leafnum = 0;leafnum < r_refdef.scene.worldmodel->brush.num_leafs;leafnum++)
+	for (leafnum = 0;leafnum < model->brush.num_leafs;leafnum++)
 	{
 		if (r_refdef.viewcache.world_leafvisible[leafnum])
 		{
 			//for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
-			for (portal = r_refdef.scene.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
+			for (portal = model->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
 			{
 				if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 				if (!R_CullBox(portal->mins, portal->maxs))
