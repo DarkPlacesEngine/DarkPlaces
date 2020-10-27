@@ -744,8 +744,8 @@ void CL_InitCommands(void)
 	Cmd_AddCommand(CF_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
 	Cmd_AddCommand(CF_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
 	Cmd_AddCommand(CF_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(CF_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 	Cmd_AddCommand(CF_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
+	host.hook.CL_SendCvar = CL_SendCvar_f;
 
 	// commands that are only sent by server to client for execution
 	Cmd_AddCommand(CF_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
