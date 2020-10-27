@@ -282,7 +282,7 @@ static void M_ToggleMenu(int mode)
 	{
 		if(mode == 0)
 			return; // the menu is off, and we want it off
-		M_Menu_Main_f (&cmd_client);
+		M_Menu_Main_f (&cmd_local);
 	}
 	else
 	{
@@ -4910,7 +4910,7 @@ void M_Draw (void)
 
 void M_KeyEvent (int key, int ascii, qbool downevent)
 {
-	cmd_state_t *cmd = &cmd_client;
+	cmd_state_t *cmd = &cmd_local;
 	if (!downevent)
 		return;
 	switch (m_state)
@@ -5378,7 +5378,7 @@ static void MP_Shutdown (void)
 static void MP_Init (void)
 {
 	prvm_prog_t *prog = MVM_prog;
-	PRVM_Prog_Init(prog, &cmd_client);
+	PRVM_Prog_Init(prog, &cmd_local);
 
 	prog->edictprivate_size = 0; // no private struct used
 	prog->name = "menu";

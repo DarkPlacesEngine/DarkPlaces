@@ -331,16 +331,16 @@ static void Curl_CheckCommandWhenDone(void)
 		if(numdownloads_fail == 0)
 		{
 			Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
-			Cbuf_AddText(&cmd_client, "\n");
-			Cbuf_AddText(&cmd_client, command_when_done);
-			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(&cmd_local, "\n");
+			Cbuf_AddText(&cmd_local, command_when_done);
+			Cbuf_AddText(&cmd_local, "\n");
 		}
 		else
 		{
 			Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
-			Cbuf_AddText(&cmd_client, "\n");
-			Cbuf_AddText(&cmd_client, command_when_error);
-			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(&cmd_local, "\n");
+			Cbuf_AddText(&cmd_local, command_when_error);
+			Cbuf_AddText(&cmd_local, "\n");
 		}
 		Curl_Clear_forthismap();
 	}
@@ -1553,7 +1553,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
 	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
-	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
+	//Cmd_AddCommand(&cmd_local, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
 /*

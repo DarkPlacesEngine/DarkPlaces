@@ -2879,7 +2879,7 @@ qbool SV_VM_ConsoleCommand (const char *text)
 static void VM_SV_registercommand (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_SV_registercmd);
-	if(!Cmd_Exists(&cmd_server, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(&cmd_local, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_SERVER, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 

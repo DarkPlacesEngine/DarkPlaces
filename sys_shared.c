@@ -48,10 +48,10 @@ char *Sys_TimeString(const char *timeformat)
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	if ((&cmd_client)->cbuf->lock)
-		Cbuf_Unlock((&cmd_client)->cbuf);
-	if ((&cmd_server)->cbuf->lock)
-		Cbuf_Unlock((&cmd_server)->cbuf);
+	if ((&cmd_local)->cbuf->lock)
+		Cbuf_Unlock((&cmd_local)->cbuf);
+	if ((&cmd_local)->cbuf->lock)
+		Cbuf_Unlock((&cmd_local)->cbuf);
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 
