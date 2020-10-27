@@ -167,6 +167,21 @@ static void Host_Framerate_c(cvar_t *var)
 		Cvar_SetValueQuick(var, 0);
 }
 
+// TODO: Find a better home for this.
+static void SendCvar_f(cmd_state_t *cmd)
+{
+	if(cmd->source == src_local && host.hook.SV_SendCvar)
+	{
+		host.hook.SV_SendCvar(cmd);
+		return;
+	}
+	if(cmd->source == src_client && host.hook.CL_SendCvar)
+	{
+		host.hook.CL_SendCvar(cmd);
+		return;
+	}
+}
+
 /*
 =======================
 Host_InitLocal
@@ -182,6 +197,7 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand(CF_SHARED, "version", Host_Version_f, "print engine version");
 	Cmd_AddCommand(CF_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand(CF_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
+	Cmd_AddCommand(CF_SHARED, "sendcvar", SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterCallback (&host_framerate, Host_Framerate_c);
