@@ -6,6 +6,8 @@
 #include "qdefs.h"
 #include "cmd.h"
 
+struct cmd_state_s;
+
 typedef enum host_state_e
 {
 	host_shutdown,
@@ -33,6 +35,8 @@ typedef struct host_s
 		void (*ToggleMenu)(void);
 		qbool (*CL_Intermission)(void); // Quake compatibility
 		qbool (*SV_CanSave)(void); // Quake compatibility
+		void (*CL_SendCvar)(struct cmd_state_s *);
+		void (*SV_SendCvar)(struct cmd_state_s *);
 	} hook;
 } host_t;
 
