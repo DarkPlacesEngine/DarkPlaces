@@ -372,7 +372,7 @@ static void R_Shadow_SetShadowMode(void)
 	}
 
 	if(R_CompileShader_CheckStaticParms())
-		R_GLSL_Restart_f(&cmd_client);
+		R_GLSL_Restart_f(&cmd_local);
 }
 
 qbool R_Shadow_ShadowMappingEnabled(void)
@@ -597,7 +597,7 @@ static void r_shadow_newmap(void)
 	if (r_editlights_sprcubemapnoshadowlight) { R_SkinFrame_MarkUsed(r_editlights_sprcubemapnoshadowlight); }
 	if (r_editlights_sprselection)            { R_SkinFrame_MarkUsed(r_editlights_sprselection); }
 	if (strncmp(cl.worldname, r_shadow_mapname, sizeof(r_shadow_mapname)))
-		R_Shadow_EditLights_Reload_f(&cmd_client);
+		R_Shadow_EditLights_Reload_f(&cmd_local);
 }
 
 void R_Shadow_Init(void)
@@ -5742,7 +5742,7 @@ static void R_Shadow_EditLights_EditAll_f(cmd_state_t *cmd)
 		if (!light)
 			continue;
 		R_Shadow_SelectLight(light);
-		R_Shadow_EditLights_Edit_f(&cmd_client);
+		R_Shadow_EditLights_Edit_f(&cmd_local);
 	}
 	// return to old selected (to not mess editing once selection is locked)
 	R_Shadow_SelectLight(oldselected);
