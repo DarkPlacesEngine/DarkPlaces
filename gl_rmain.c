@@ -10017,26 +10017,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	surfaces = model->data_surfaces;
 	update = model->brushq1.lightmapupdateflags;
 
-	// update light styles
-	if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
-	{
-		model_brush_lightstyleinfo_t *style;
-		// Iterate over each active style
-		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
-		{
-			if (style->value != r_refdef.scene.lightstylevalue[style->style])
-			{
-				int *list = style->surfacelist;
-				style->value = r_refdef.scene.lightstylevalue[style->style];
-				// Iterate over every surface this style applies to
-				for (j = 0;j < style->numsurfaces;j++)
-					// Update brush entities even if not visible otherwise they'll render solid black.
-					if(r_refdef.viewcache.world_surfacevisible[list[j]] || ent != r_refdef.scene.worldentity)
-						update[list[j]] = true;
-			}
-		}
-	}
-
 	flagsmask = skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL;
 
 	if (debug)
@@ -10055,6 +10035,25 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	// add visible surfaces to draw list
 	if (ent == r_refdef.scene.worldentity)
 	{
+		// update light styles
+		if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
+		{
+			model_brush_lightstyleinfo_t *style;
+			// Iterate over each active style
+			for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
+			{
+				if (style->value != r_refdef.scene.lightstylevalue[style->style])
+				{
+					int *list = style->surfacelist;
+					style->value = r_refdef.scene.lightstylevalue[style->style];
+					// Iterate over every surface this style applies to
+					for (j = 0;j < style->numsurfaces;j++)
+						// Update brush entities even if not visible otherwise they'll render solid black.
+						if(r_refdef.viewcache.world_surfacevisible[list[j]])
+							update[list[j]] = true;
+				}
+			}
+		}
 		// for the world entity, check surfacevisible
 		for (i = 0;i < model->nummodelsurfaces;i++)
 		{
@@ -10071,6 +10070,23 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	}
 	else
 	{
+		// update light styles
+		if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
+		{
+			model_brush_lightstyleinfo_t *style;
+			// Iterate over each active style
+			for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
+			{
+				if (style->value != r_refdef.scene.lightstylevalue[style->style])
+				{
+					int *list = style->surfacelist;
+					style->value = r_refdef.scene.lightstylevalue[style->style];
+					// Iterate over every surface this style applies to
+					for (j = 0;j < style->numsurfaces;j++)
+						update[list[j]] = true;
+				}
+			}
+		}
 		// add all surfaces
 		for (i = 0; i < model->nummodelsurfaces; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
