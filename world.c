@@ -147,10 +147,10 @@ void World_UnlinkAll(world_t *world)
 	// unlink all entities one by one
 	grid = &world->areagrid_outside;
 	while (grid->list.next != &grid->list)
-		World_UnlinkEdict(PRVM_EDICT_NUM(List_Container(*grid->list.next, link_t, list)->entitynumber));
+		World_UnlinkEdict(PRVM_EDICT_NUM(List_Entry(*grid->list.next, link_t, list)->entitynumber));
 	for (i = 0, grid = world->areagrid;i < AREA_GRIDNODES;i++, grid++)
 		while (grid->list.next != &grid->list)
-			World_UnlinkEdict(PRVM_EDICT_NUM(List_Container(*grid->list.next, link_t, list)->entitynumber));
+			World_UnlinkEdict(PRVM_EDICT_NUM(List_Entry(*grid->list.next, link_t, list)->entitynumber));
 }
 
 /*
@@ -215,9 +215,9 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	if (world->areagrid_outside.list.next)
 	{
 		grid = &world->areagrid_outside;
-		List_ForEach(pos, &grid->list)
+		List_For_Each(pos, &grid->list)
 		{
-			l = List_Container(*pos, link_t, list);
+			l = List_Entry(*pos, link_t, list);
 			ent = PRVM_EDICT_NUM(l->entitynumber);
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
@@ -240,9 +240,9 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 		{
 			if (grid->list.next)
 			{
-				List_ForEach(pos, &grid->list)
+				List_For_Each(pos, &grid->list)
 				{
-					l = List_Container(*pos, link_t, list);
+					l = List_Entry(*pos, link_t, list);
 					ent = PRVM_EDICT_NUM(l->entitynumber);
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{

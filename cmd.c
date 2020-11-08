@@ -86,21 +86,21 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 
 	if(Cmd_Argc(cmd) == 1)
 	{
-		if(List_IsEmpty(&cbuf->deferred))
+		if(List_Is_Empty(&cbuf->deferred))
 			Con_Printf("No commands are pending.\n");
 		else
 		{
 			llist_t *pos;
-        	List_ForEach(pos, &cbuf->deferred)
+        	List_For_Each(pos, &cbuf->deferred)
     		{
-				current = List_Container(*pos, cmd_input_t, list);
+				current = List_Entry(*pos, cmd_input_t, list);
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
 			}
 		}
 	}
 	else if(Cmd_Argc(cmd) == 2 && !strcasecmp("clear", Cmd_Argv(cmd, 1)))
 	{
-		while(!List_IsEmpty(&cbuf->deferred))
+		while(!List_Is_Empty(&cbuf->deferred))
 			List_Move_Tail(cbuf->deferred.next, &cbuf->free);
 	}
 	else if(Cmd_Argc(cmd) == 3)
@@ -185,9 +185,9 @@ static cmd_input_t *Cbuf_LinkGet(cmd_buf_t *cbuf, cmd_input_t *existing)
 	cmd_input_t *ret = NULL;
 	if(existing && existing->pending)
 		ret = existing;
-	else if(!List_IsEmpty(&cbuf->free))
+	else if(!List_Is_Empty(&cbuf->free))
 	{
-		ret = List_Container(*cbuf->free.next, cmd_input_t, list);
+		ret = List_Entry(*cbuf->free.next, cmd_input_t, list);
 		ret->length = 0;
 		ret->pending = false;
 	}
@@ -361,8 +361,8 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, (List_IsEmpty(&cbuf->start) ? NULL : List_Container(*cbuf->start.prev, cmd_input_t, list)), text);
-		if(!List_IsEmpty(&llist))
+		Cbuf_LinkCreate(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(*cbuf->start.prev, cmd_input_t, list)), text);
+		if(!List_Is_Empty(&llist))
 			List_Splice_Tail(&llist, &cbuf->start);
 	}
 	Cbuf_Unlock(cbuf);
@@ -389,8 +389,8 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, List_Container(*cbuf->start.next, cmd_input_t, list), text);
-		if(!List_IsEmpty(&llist))
+		Cbuf_LinkCreate(cmd, &llist, List_Entry(*cbuf->start.next, cmd_input_t, list), text);
+		if(!List_Is_Empty(&llist))
 			List_Splice(&llist, &cbuf->start);
 	}
 
@@ -415,9 +415,9 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
-    List_ForEach(pos, &cbuf->deferred)
+    List_For_Each(pos, &cbuf->deferred)
 	{
-		current = List_Container(*pos, cmd_input_t, list);
+		current = List_Entry(*pos, cmd_input_t, list);
 		current->delay -= eat;
 		if(current->delay <= 0)
 		{
@@ -444,14 +444,14 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cbuf->tokenizebufferpos = 0;
 
-	while (!List_IsEmpty(&cbuf->start))
+	while (!List_Is_Empty(&cbuf->start))
 	{
 		/*
 		 * Delete the text from the command buffer and move remaining
 		 * commands down. This is necessary because commands (exec, alias)
 		 * can insert data at the beginning of the text buffer
 		 */
-		current = List_Container(*cbuf->start.next, cmd_input_t, list);
+		current = List_Entry(*cbuf->start.next, cmd_input_t, list);
 		
 		// Recycle memory so using WASD doesn't cause a malloc and free
 		List_Move_Tail(&current->list, &cbuf->free);
