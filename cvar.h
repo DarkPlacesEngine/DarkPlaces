@@ -81,15 +81,7 @@ typedef struct cvar_s
 	char **aliases;
 	int aliasindex;
 
-	// values at init (for Cvar_RestoreInitState)
-	qbool initstate; // indicates this existed at init
-	int initflags;
-	const char *initstring;
-	const char *initdescription;
-	int initinteger;
-	float initvalue;
-	float initvector[3];
-	const char *initdefstring;
+	struct cvar_s *initstate; // snapshot of cvar during init
 
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];

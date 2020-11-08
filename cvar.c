@@ -618,6 +618,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 	variable->aliasindex = 0;
+	variable->initstate = NULL;
 
 	// Mark it as not an autocvar.
 	for (i = 0;i < PRVM_PROG_MAX;i++)
@@ -685,6 +686,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 	cvar->aliases = (char **)Z_Malloc(sizeof(char **));
+	cvar->initstate = NULL;
 	memset(cvar->aliases, 0, sizeof(char *));
 
 	if(newdescription && *newdescription)
@@ -785,13 +787,8 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 	cvar_t *c;
 	for (c = cvars->vars;c;c = c->next)
 	{
-		c->initstate = true;
-		c->initflags = c->flags;
-		c->initdefstring = Mem_strdup(zonemempool, c->defstring);
-		c->initstring = Mem_strdup(zonemempool, c->string);
-		c->initvalue = c->value;
-		c->initinteger = c->integer;
-		VectorCopy(c->vector, c->initvector);
+		c->initstate = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+		memcpy(c->initstate, c, sizeof(cvar_t));
 	}
 }
 
@@ -805,22 +802,22 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 		if (c->initstate)
 		{
 			// restore this cvar, it existed at init
-			if (((c->flags ^ c->initflags) & CF_MAXFLAGSVAL)
-			 || strcmp(c->defstring ? c->defstring : "", c->initdefstring ? c->initdefstring : "")
-			 || strcmp(c->string ? c->string : "", c->initstring ? c->initstring : ""))
+			if (((c->flags ^ c->initstate->flags) & CF_MAXFLAGSVAL)
+			 || strcmp(c->defstring ? c->defstring : "", c->initstate->defstring ? c->initstate->defstring : "")
+			 || strcmp(c->string ? c->string : "", c->initstate->string ? c->initstate->string : ""))
 			{
 				Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", c->name);
 				if (c->defstring)
 					Z_Free((char *)c->defstring);
-				c->defstring = Mem_strdup(zonemempool, c->initdefstring);
+				c->defstring = Mem_strdup(zonemempool, c->initstate->defstring);
 				if (c->string)
 					Z_Free((char *)c->string);
-				c->string = Mem_strdup(zonemempool, c->initstring);
+				c->string = Mem_strdup(zonemempool, c->initstate->string);
 			}
-			c->flags = c->initflags;
-			c->value = c->initvalue;
-			c->integer = c->initinteger;
-			VectorCopy(c->initvector, c->vector);
+			c->flags = c->initstate->flags;
+			c->value = c->initstate->value;
+			c->integer = c->initstate->integer;
+			VectorCopy(c->initstate->vector, c->vector);
 			cp = &c->next;
 		}
 		else
