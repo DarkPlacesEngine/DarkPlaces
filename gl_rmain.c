@@ -4071,7 +4071,7 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
-			if (ent != &cl.viewent.render && r_refdef.viewcache.world_novis)
+			if (r_refdef.viewcache.world_novis && !(ent->flags & RENDER_VIEWMODEL))
 			{
 				r_refdef.viewcache.entityvisible[i] = false;
 				continue;
