@@ -1536,6 +1536,8 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 			continue;
 		}
 
+		SV_LinkEdict(ent);
+
 		if(!PRVM_ED_CallSpawnFunction(prog, ent, data, start))
 			continue;
 		
