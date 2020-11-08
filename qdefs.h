@@ -1,6 +1,10 @@
 #ifndef QDEFS_H
 #define QDEFS_H
 
+#if defined (__GNUC__) || defined (__clang__) || defined (__TINYC__)
+#define DP_GCC_COMPATIBLE
+#endif
+
 #if (__GNUC__ > 2) || defined (__clang__) || (__TINYC__)
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
@@ -9,6 +13,12 @@
 #define DP_FUNC_PRINTF(n)
 #define DP_FUNC_PURE
 #define DP_FUNC_NORETURN
+#endif
+
+#ifdef DP_GCC_COMPATIBLE
+#define Q_typeof(var) typeof(var)
+#elif defined (MSVC)
+#define Q_typeof(var) decltype(var)
 #endif
 
 #define MAX_NUM_ARGVS	50
