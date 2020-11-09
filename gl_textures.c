@@ -27,7 +27,7 @@ cvar_t gl_texturecompression_sky = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompressi
 cvar_t gl_texturecompression_lightcubemaps = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_texturecompression_sprites = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_sprites", "1", "whether to compress sprites"};
-cvar_t gl_nopartialtextureupdates = {CF_CLIENT | CF_ARCHIVE, "gl_nopartialtextureupdates", "1", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
+cvar_t gl_nopartialtextureupdates = {CF_CLIENT | CF_ARCHIVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 cvar_t r_texture_dds_load_alphamode = {CF_CLIENT, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
 cvar_t r_texture_dds_load_logfailure = {CF_CLIENT, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log, 0: done log, 1: log with no optional textures (_norm, glow etc.). 2: log all"};
 cvar_t r_texture_dds_swdecode = {CF_CLIENT, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
@@ -174,6 +174,9 @@ typedef struct gltexture_s
 
 	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
 	unsigned char *bufferpixels;
+	unsigned char *modifiedpixels;
+	int modified_width, modified_height, modified_depth;
+	int modified_offset_x, modified_offset_y, modified_offset_z;
 	qbool buffermodified;
 
 	// pointer to texturepool (check this to see if the texture is allocated)
@@ -1313,8 +1316,11 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	}
 
 	R_UploadFullTexture(glt, data);
-	if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
+	if (glt->flags & TEXF_ALLOWUPDATES)
 		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+
+	glt->modifiedpixels = NULL;	
+	glt->modified_width = glt->modified_height = glt->modified_depth = glt->modified_offset_x = glt->modified_offset_y = glt->modified_offset_z = 0;
 
 	// free any temporary processing buffer we allocated...
 	if (temppixels)
@@ -2271,7 +2277,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		return;
 	}
 	// update part of the texture
-	if (glt->bufferpixels)
+	if (glt->bufferpixels && (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth))
 	{
 		int j;
 		int bpp = glt->bytesperpixel;
@@ -2299,14 +2305,44 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 			height = glt->tileheight - y;
 		if (width < 1 || height < 1)
 			return;
-		glt->dirty = true;
-		glt->buffermodified = true;
+
 		output += y*outputskip + x*bpp;
+
+		// TODO: Optimize this further.
+		if(!gl_nopartialtextureupdates.integer)
+		{
+			// Calculate the modified region, and resize it as it gets bigger.
+			if(!glt->buffermodified)
+			{
+				glt->modified_offset_x = x;
+				glt->modified_offset_y = y;
+				glt->modified_offset_z = z;
+
+				glt->modified_width = width;
+				glt->modified_height = height;
+				glt->modified_depth = depth;
+			}
+			else
+			{
+				if(x < glt->modified_offset_x) glt->modified_offset_x = x;
+				if(y < glt->modified_offset_y) glt->modified_offset_y = y;
+				if(z < glt->modified_offset_z) glt->modified_offset_z = z;
+
+				if(width + x > glt->modified_width) glt->modified_width = width + x;
+				if(height + y > glt->modified_height) glt->modified_height = height + y;
+				if(depth + z > glt->modified_depth) glt->modified_depth = depth + z;
+			}
+
+			if(!&glt->modifiedpixels || &output < &glt->modifiedpixels)
+				glt->modifiedpixels = output;
+		}
+
 		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
 			memcpy(output, input, width*bpp);
+
+		glt->dirty = true;
+		glt->buffermodified = true;
 	}
-	else if (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)
-		R_UploadPartialTexture(glt, data, x, y, z, width, height, depth);
 	else
 		R_UploadFullTexture(glt, data);
 }
@@ -2322,8 +2358,13 @@ int R_RealGetTexture(rtexture_t *rt)
 		if (glt->buffermodified && glt->bufferpixels)
 		{
 			glt->buffermodified = false;
-			R_UploadFullTexture(glt, glt->bufferpixels);
+			if(!glt->modifiedpixels)
+				R_UploadFullTexture(glt, glt->bufferpixels);
+			else
+				R_UploadPartialTexture(glt, glt->modifiedpixels, glt->modified_offset_x, glt->modified_offset_y, glt->modified_offset_z, glt->modified_width, glt->modified_height, glt->modified_depth);
 		}
+		glt->modified_offset_x = glt->modified_offset_y = glt->modified_offset_z = glt->modified_width = glt->modified_height = glt->modified_depth = 0;
+		glt->modifiedpixels = NULL;
 		glt->dirty = false;
 		return glt->texnum;
 	}
