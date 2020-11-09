@@ -67,7 +67,7 @@ void CL_NextDemo (void)
 	}
 
 	dpsnprintf (str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
-	Cbuf_InsertText(&cmd_local, str);
+	Cbuf_InsertText(&cmd_client, str);
 	cls.demonum++;
 }
 
@@ -277,7 +277,7 @@ void CL_ReadDemoMessage(void)
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
-				Cbuf_Execute((&cmd_local)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
+				Cbuf_Execute((&cmd_client)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
@@ -532,7 +532,7 @@ static void CL_FinishTimeDemo (void)
 			if(atoi(sys.argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
-				Cbuf_AddText(&cmd_local, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
+				Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
 				// cannot execute here
 			}
 			else

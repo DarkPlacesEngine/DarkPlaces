@@ -608,7 +608,7 @@ void VM_localcmd_client(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_client);
 	VM_VarString(prog, 0, string, sizeof(string));
-	Cbuf_AddText(&cmd_local, string);
+	Cbuf_AddText(&cmd_client, string);
 }
 
 /*
@@ -626,7 +626,7 @@ void VM_localcmd_server(prvm_prog_t *prog)
 	char string[VM_STRINGTEMP_LENGTH];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_server);
 	VM_VarString(prog, 0, string, sizeof(string));
-	Cbuf_AddText(&cmd_local, string);
+	Cbuf_AddText(&cmd_server, string);
 }
 
 static qbool PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
@@ -1335,7 +1335,7 @@ coredump()
 */
 void VM_coredump(prvm_prog_t *prog)
 {
-	cmd_state_t *cmd = 	!host_isclient.integer ? &cmd_local : &cmd_local;
+	cmd_state_t *cmd = 	!host_isclient.integer ? &cmd_server : &cmd_client;
 	VM_SAFEPARMCOUNT(0,VM_coredump);
 
 	Cbuf_AddText(cmd, "prvm_edicts ");
@@ -1521,7 +1521,7 @@ void VM_changelevel(prvm_prog_t *prog)
 		return;
 	svs.changelevel_issued = true;
 
-	Cbuf_AddText(&cmd_local, va(vabuf, sizeof(vabuf), "changelevel %s\n", PRVM_G_STRING(OFS_PARM0)));
+	Cbuf_AddText(&cmd_server, va(vabuf, sizeof(vabuf), "changelevel %s\n", PRVM_G_STRING(OFS_PARM0)));
 }
 
 /*
@@ -1669,7 +1669,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 
 // check for overlap with a command
-	if (Cmd_Exists(&cmd_local, name) || Cmd_Exists(&cmd_local, name))
+	if (Cmd_Exists(&cmd_client, name) || Cmd_Exists(&cmd_server, name))
 	{
 		VM_Warning(prog, "VM_registercvar: %s is a command\n", name);
 		return;
