@@ -2923,7 +2923,7 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(&cmd_local, s, src_local, true);
+				Cmd_ExecuteString(&cmd_server, s, src_local, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}

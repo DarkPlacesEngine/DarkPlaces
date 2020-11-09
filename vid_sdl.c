@@ -894,7 +894,7 @@ static void IN_Move_TouchScreen_Quake(void)
 		if (!VID_ShowingKeyboard())
 		{
 			// user entered a command, close the console now
-			Con_ToggleConsole_f(&cmd_local);
+			Con_ToggleConsole_f(&cmd_client);
 		}
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, NULL, &buttons[15], (keynum_t)0, NULL, 0, 0, 0, true);
 		VID_TouchscreenArea( 0,   0,   0,   0,   0, NULL                         , 0.0f, NULL, move, &buttons[0], K_MOUSE4, NULL, 0, 0, 0, true);
@@ -1179,7 +1179,7 @@ void Sys_SendKeyEvents( void )
 							// so, let's better queue it for next frame
 							if(!sdl_needs_restart)
 							{
-								Cbuf_AddText(&cmd_local, "\nr_restart\n");
+								Cbuf_AddText(&cmd_client, "\nr_restart\n");
 								sdl_needs_restart = true;
 							}
 #endif

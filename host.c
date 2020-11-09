@@ -293,10 +293,10 @@ void Host_LoadConfig_f(cmd_state_t *cmd)
 	Cmd_RestoreInitState();
 #ifdef CONFIG_MENU
 	// prepend a menu restart command to execute after the config
-	Cbuf_InsertText(&cmd_local, "\nmenu_restart\n");
+	Cbuf_InsertText(&cmd_client, "\nmenu_restart\n");
 #endif
 	// reset cvars to their defaults, and then exec startup scripts again
-	Host_AddConfigText(&cmd_local);
+	Host_AddConfigText(&cmd_client);
 }
 
 //============================================================================
@@ -315,9 +315,9 @@ static void Host_GetConsoleCommands (void)
 	while ((line = Sys_ConsoleInput()))
 	{
 		if (cls.state == ca_dedicated)
-			Cbuf_AddText(&cmd_local, line);
+			Cbuf_AddText(&cmd_server, line);
 		else
-			Cbuf_AddText(&cmd_local, line);
+			Cbuf_AddText(&cmd_client, line);
 	}
 }
 
@@ -558,7 +558,7 @@ static void Host_Init (void)
 	int i;
 	const char* os;
 	char vabuf[1024];
-	cmd_state_t *cmd = &cmd_local;
+	cmd_state_t *cmd = &cmd_client;
 
 	host.hook.ConnectLocal = NULL;
 	host.hook.Disconnect = NULL;
@@ -699,8 +699,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(&cmd_local, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute((&cmd_local)->cbuf);
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute((&cmd_client)->cbuf);
 	}
 
 	// check for special demo mode
@@ -709,8 +709,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(&cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute((&cmd_local)->cbuf);
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute((&cmd_client)->cbuf);
 	}
 
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -719,24 +719,24 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(&cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
-		Cbuf_Execute((&cmd_local)->cbuf);
+		Cbuf_AddText(&cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
+		Cbuf_Execute((&cmd_client)->cbuf);
 	}
 #endif
 
 	if (cls.state == ca_dedicated || Sys_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(&cmd_local, "startmap_dm\n");
-		Cbuf_Execute((&cmd_local)->cbuf);
+		Cbuf_AddText(&cmd_client, "startmap_dm\n");
+		Cbuf_Execute((&cmd_client)->cbuf);
 	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
 #ifdef CONFIG_MENU
-		Cbuf_AddText(&cmd_local, "togglemenu 1\n");
+		Cbuf_AddText(&cmd_client, "togglemenu 1\n");
 #endif
-		Cbuf_Execute((&cmd_local)->cbuf);
+		Cbuf_Execute((&cmd_client)->cbuf);
 	}
 
 	Con_DPrint("========Initialized=========\n");
