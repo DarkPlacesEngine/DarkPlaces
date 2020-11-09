@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "thread.h"
 
-cmd_state_t cmd_local;
+cmd_state_t cmd_client;
+cmd_state_t cmd_server;
 cmd_state_t cmd_serverfromclient;
 
 cmd_userdefined_t cmd_userdefined_all;
@@ -34,7 +35,8 @@ typedef struct cmd_iter_s {
 cmd_iter_t;
 
 static cmd_iter_t cmd_iter_all[] = {
-	{&cmd_local},
+	{&cmd_client},
+	{&cmd_server},
 	{&cmd_serverfromclient},
 	{NULL},
 };
@@ -1629,12 +1631,19 @@ void Cmd_Init(void)
 		cmd->null_string = "";
 	}
 	// client console can see server cvars because the user may start a server
-	cmd_local.cvars = &cvars_all;
-	cmd_local.cvars_flagsmask = CF_CLIENT | CF_SERVER;
-	cmd_local.cmd_flags = CF_SERVER | CF_CLIENT | CF_CLIENT_FROM_SERVER;
-	cmd_local.auto_flags = CF_SERVER_FROM_CLIENT;
-	cmd_local.auto_function = CL_ForwardToServer_f; // FIXME: Move this to the client.
-	cmd_local.userdefined = &cmd_userdefined_all;
+	cmd_client.cvars = &cvars_all;
+	cmd_client.cvars_flagsmask = CF_CLIENT | CF_SERVER;
+	cmd_client.cmd_flags = CF_CLIENT | CF_CLIENT_FROM_SERVER;
+	cmd_client.auto_flags = CF_SERVER_FROM_CLIENT;
+	cmd_client.auto_function = CL_ForwardToServer_f; // FIXME: Move this to the client.
+	cmd_client.userdefined = &cmd_userdefined_all;
+	// dedicated server console can only see server cvars, there is no client
+	cmd_server.cvars = &cvars_all;
+	cmd_server.cvars_flagsmask = CF_SERVER;
+	cmd_server.cmd_flags = CF_SERVER;
+	cmd_server.auto_flags = 0;
+	cmd_server.auto_function = NULL;
+	cmd_server.userdefined = &cmd_userdefined_all;
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_serverfromclient.cvars = &cvars_null;
 	cmd_serverfromclient.cvars_flagsmask = 0;
@@ -1815,7 +1824,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	qbool auto_add = false;
 	int i;
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 3; i++)
 	{
 		cmd = cmd_iter_all[i].cmd;
 		if ((flags & cmd->cmd_flags) || (flags & cmd->auto_flags))

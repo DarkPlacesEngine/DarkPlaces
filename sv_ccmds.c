@@ -1635,7 +1635,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CF_SHARED, "maxplayers", SV_MaxPlayers_f, "sets limit on how many players (or bots) may be connected to the server at once");
 	host.hook.SV_SendCvar = SV_SendCvar_f;
 
-	// commands that do not have automatic forwarding from cmd_local, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
+	// commands that do not have automatic forwarding from cmd_client, these are internal details of the network protocol and not of interest to users (if they know what they are doing they can still use a generic "cmd prespawn" or similar)
 	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "prespawn", SV_PreSpawn_f, "internal use - signon 1 (client acknowledges that server information has been received)");
 	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "spawn", SV_Spawn_f, "internal use - signon 2 (client has sent player information, and is asking server to send scoreboard rankings)");
 	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "begin", SV_Begin_f, "internal use - signon 3 (client asks server to start sending entities, and will go to signon 4 (playing) when the first entity update is received)");

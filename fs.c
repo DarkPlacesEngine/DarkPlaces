@@ -1574,15 +1574,15 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 
 	if (cls.demoplayback)
 	{
-		CL_Disconnect_f(&cmd_local);
+		CL_Disconnect_f(&cmd_client);
 		cls.demonum = 0;
 	}
 
 	// unload all sounds so they will be reloaded from the new files as needed
-	S_UnloadAllSounds_f(&cmd_local);
+	S_UnloadAllSounds_f(&cmd_client);
 
 	// restart the video subsystem after the config is executed
-	Cbuf_InsertText(&cmd_local, "\nloadconfig\nvid_restart\n\n");
+	Cbuf_InsertText(&cmd_client, "\nloadconfig\nvid_restart\n\n");
 
 	return true;
 }
