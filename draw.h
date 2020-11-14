@@ -174,7 +174,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height);
 // reset the clipping area
 void DrawQ_ResetClipArea(void);
 // draw a line
-void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags);
+void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags, qbool fast);
 
 const char *Draw_GetPicName(cachepic_t *pic);
 int Draw_GetPicWidth(cachepic_t *pic);
