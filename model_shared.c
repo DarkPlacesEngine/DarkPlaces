@@ -4506,9 +4506,30 @@ msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithpre
 	return surf;
 }
 
-int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
+static void Mod_Mesh_RebuildHashTable(model_t *mod, msurface_t *surf)
 {
 	int hashindex, h, vnum, mask;
+	surfmesh_t *mesh = &mod->surfmesh;
+
+	// rebuild the hash table
+	mesh->num_vertexhashsize = 4 * mesh->max_vertices;
+	mesh->num_vertexhashsize &= ~(mesh->num_vertexhashsize - 1); // round down to pow2
+	mesh->data_vertexhash = (int *)Mem_Realloc(mod->mempool, mesh->data_vertexhash, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
+	memset(mesh->data_vertexhash, -1, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
+	mask = mod->surfmesh.num_vertexhashsize - 1;
+	// no need to hash the vertices for the entire model, the latest surface will suffice.
+	for (vnum = surf ? surf->num_firstvertex : 0; vnum < mesh->num_vertices; vnum++)
+	{
+		// this uses prime numbers intentionally for computing the hash
+		hashindex = (unsigned int)(mesh->data_vertex3f[vnum * 3 + 0] * 2003 + mesh->data_vertex3f[vnum * 3 + 1] * 4001 + mesh->data_vertex3f[vnum * 3 + 2] * 7919 + mesh->data_normal3f[vnum * 3 + 0] * 4097 + mesh->data_normal3f[vnum * 3 + 1] * 257 + mesh->data_normal3f[vnum * 3 + 2] * 17) & mask;
+		for (h = hashindex; mesh->data_vertexhash[h] >= 0; h = (h + 1) & mask)
+			; // just iterate until we find the terminator
+		mesh->data_vertexhash[h] = vnum;
+	}
+}
+
+void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf)
+{
 	surfmesh_t *mesh = &mod->surfmesh;
 	if (mesh->max_vertices == mesh->num_vertices)
 	{
@@ -4520,36 +4541,15 @@ int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, fl
 		mesh->data_texcoordtexture2f = (float *)Mem_Realloc(mod->mempool, mesh->data_texcoordtexture2f, mesh->max_vertices * sizeof(float[2]));
 		mesh->data_texcoordlightmap2f = (float *)Mem_Realloc(mod->mempool, mesh->data_texcoordlightmap2f, mesh->max_vertices * sizeof(float[2]));
 		mesh->data_lightmapcolor4f = (float *)Mem_Realloc(mod->mempool, mesh->data_lightmapcolor4f, mesh->max_vertices * sizeof(float[4]));
-		// rebuild the hash table
-		mesh->num_vertexhashsize = 4 * mesh->max_vertices;
-		mesh->num_vertexhashsize &= ~(mesh->num_vertexhashsize - 1); // round down to pow2
-		mesh->data_vertexhash = (int *)Mem_Realloc(mod->mempool, mesh->data_vertexhash, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
-		memset(mesh->data_vertexhash, -1, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
-		mask = mod->surfmesh.num_vertexhashsize - 1;
-		// no need to hash the vertices for the entire model, the latest surface will suffice.
-		for (vnum = surf ? surf->num_firstvertex : 0; vnum < mesh->num_vertices; vnum++)
-		{
-			// this uses prime numbers intentionally for computing the hash
-			hashindex = (unsigned int)(mesh->data_vertex3f[vnum * 3 + 0] * 2003 + mesh->data_vertex3f[vnum * 3 + 1] * 4001 + mesh->data_vertex3f[vnum * 3 + 2] * 7919 + mesh->data_normal3f[vnum * 3 + 0] * 4097 + mesh->data_normal3f[vnum * 3 + 1] * 257 + mesh->data_normal3f[vnum * 3 + 2] * 17) & mask;
-			for (h = hashindex; mesh->data_vertexhash[h] >= 0; h = (h + 1) & mask)
-				; // just iterate until we find the terminator
-			mesh->data_vertexhash[h] = vnum;
-		}
+		Mod_Mesh_RebuildHashTable(mod, surf);
 	}
-	mask = mod->surfmesh.num_vertexhashsize - 1;
-	// this uses prime numbers intentionally for computing the hash
-	hashindex = (unsigned int)(x * 2003 + y * 4001 + z * 7919 + nx * 4097 + ny * 257 + nz * 17) & mask;
-	// when possible find an identical vertex within the same surface and return it
-	for(h = hashindex;(vnum = mesh->data_vertexhash[h]) >= 0;h = (h + 1) & mask)
-	{
-		if (vnum >= surf->num_firstvertex
-		 && mesh->data_vertex3f[vnum * 3 + 0] == x && mesh->data_vertex3f[vnum * 3 + 1] == y && mesh->data_vertex3f[vnum * 3 + 2] == z
-		 && mesh->data_normal3f[vnum * 3 + 0] == nx && mesh->data_normal3f[vnum * 3 + 1] == ny && mesh->data_normal3f[vnum * 3 + 2] == nz
-		 && mesh->data_texcoordtexture2f[vnum * 2 + 0] == s && mesh->data_texcoordtexture2f[vnum * 2 + 1] == t
-		 && mesh->data_texcoordlightmap2f[vnum * 2 + 0] == u && mesh->data_texcoordlightmap2f[vnum * 2 + 1] == v
-		 && mesh->data_lightmapcolor4f[vnum * 4 + 0] == r && mesh->data_lightmapcolor4f[vnum * 4 + 1] == g && mesh->data_lightmapcolor4f[vnum * 4 + 2] == b && mesh->data_lightmapcolor4f[vnum * 4 + 3] == a)
-			return vnum;
-	}
+}
+
+int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
+{
+	int vnum;
+	surfmesh_t *mesh = &mod->surfmesh;
+
 	// add the new vertex
 	vnum = mesh->num_vertices++;
 	if (surf->num_vertices > 0)
@@ -4567,7 +4567,6 @@ int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, fl
 		VectorSet(surf->maxs, x, y, z);
 	}
 	surf->num_vertices = mesh->num_vertices - surf->num_firstvertex;
-	mesh->data_vertexhash[h] = vnum;
 	mesh->data_vertex3f[vnum * 3 + 0] = x;
 	mesh->data_vertex3f[vnum * 3 + 1] = y;
 	mesh->data_vertex3f[vnum * 3 + 2] = z;
@@ -4582,6 +4581,32 @@ int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, fl
 	mesh->data_lightmapcolor4f[vnum * 4 + 1] = g;
 	mesh->data_lightmapcolor4f[vnum * 4 + 2] = b;
 	mesh->data_lightmapcolor4f[vnum * 4 + 3] = a;
+	return vnum;
+}
+
+int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
+{
+	int hashindex, h, vnum, mask;
+	surfmesh_t *mesh = &mod->surfmesh;
+
+	Mod_Mesh_CheckResize_Vertex(mod, surf);
+
+	mask = mod->surfmesh.num_vertexhashsize - 1;
+	// this uses prime numbers intentionally for computing the hash
+	hashindex = (unsigned int)(x * 2003 + y * 4001 + z * 7919 + nx * 4097 + ny * 257 + nz * 17) & mask;
+	// when possible find an identical vertex within the same surface and return it
+	for(h = hashindex;(vnum = mesh->data_vertexhash[h]) >= 0;h = (h + 1) & mask)
+	{
+		if (vnum >= surf->num_firstvertex
+		 && mesh->data_vertex3f[vnum * 3 + 0] == x && mesh->data_vertex3f[vnum * 3 + 1] == y && mesh->data_vertex3f[vnum * 3 + 2] == z
+		 && mesh->data_normal3f[vnum * 3 + 0] == nx && mesh->data_normal3f[vnum * 3 + 1] == ny && mesh->data_normal3f[vnum * 3 + 2] == nz
+		 && mesh->data_texcoordtexture2f[vnum * 2 + 0] == s && mesh->data_texcoordtexture2f[vnum * 2 + 1] == t
+		 && mesh->data_texcoordlightmap2f[vnum * 2 + 0] == u && mesh->data_texcoordlightmap2f[vnum * 2 + 1] == v
+		 && mesh->data_lightmapcolor4f[vnum * 4 + 0] == r && mesh->data_lightmapcolor4f[vnum * 4 + 1] == g && mesh->data_lightmapcolor4f[vnum * 4 + 2] == b && mesh->data_lightmapcolor4f[vnum * 4 + 3] == a)
+			return vnum;
+	}
+	vnum = Mod_Mesh_AddVertex(mod, surf, x, y, z, nx, ny, nz, s, t, u, v, r, g, b, a);
+	mesh->data_vertexhash[h] = vnum;
 	return vnum;
 }
 
