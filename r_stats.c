@@ -504,7 +504,7 @@ void R_TimeReport_EndFrame(void)
 					i++;
 					x2 = max(x, x + width - sum * scalex);
 					y2 = y + height - (data[index] - range_min) * scaley;
-					DrawQ_Line(1, x1, y1, x2, y2, r_speeds_graph_colors[color][0], r_speeds_graph_colors[color][1], r_speeds_graph_colors[color][2], r_speeds_graph_colors[color][3], 0);
+					DrawQ_Line(1, x1, y1, x2, y2, r_speeds_graph_colors[color][0], r_speeds_graph_colors[color][1], r_speeds_graph_colors[color][2], r_speeds_graph_colors[color][3], 0, true);
 				}
 			}
 		}

@@ -698,6 +698,8 @@ void Mod_Mesh_Destroy(model_t *mod);
 void Mod_Mesh_Reset(model_t *mod);
 texture_t *Mod_Mesh_GetTexture(model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
 msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithprevioussurface);
+void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf);
+int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(model_t *mod, msurface_t *surf, int e0, int e1, int e2);
 void Mod_Mesh_Validate(model_t *mod);
