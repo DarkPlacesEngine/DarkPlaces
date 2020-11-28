@@ -2059,8 +2059,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		dprograms_v7_t *v7 = (dprograms_v7_t*)dprograms;
 		structtype = LittleLong(v7->secondaryversion);
 		if (structtype == PROG_SECONDARYVERSION16 ||
-			structtype == PROG_SECONDARYVERSION32)
-			;//supported
+			structtype == PROG_SECONDARYVERSION32) // barely supported
+			Con_Printf(CON_WARN "WARNING: %s: %s targets FTEQW, for which support is incomplete. Proceed at your own risk.\n", prog->name, filename);
 		else
 			prog->error_cmd("%s: %s targets unknown engine", prog->name, filename);
 
