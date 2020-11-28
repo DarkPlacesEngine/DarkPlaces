@@ -220,7 +220,7 @@ dstatement32_t;
 
 typedef struct ddef16_s
 {
-	unsigned short	type;		// if DEF_SAVEGLOBGAL bit is set
+	unsigned short	type;		// if DEF_SAVEGLOBAL bit is set
 								// the variable needs to be saved in savegames
 	unsigned short	ofs;
 	int			s_name;
@@ -228,7 +228,7 @@ typedef struct ddef16_s
 ddef16_t;
 typedef struct ddef32_s
 {
-	unsigned int	type;		// if DEF_SAVEGLOBGAL bit is set
+	unsigned int	type;		// if DEF_SAVEGLOBAL bit is set
 								// the variable needs to be saved in savegames
 	unsigned int	ofs;
 	int			s_name;
