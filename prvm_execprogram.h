@@ -1020,8 +1020,7 @@ int i;
 			HANDLE_OPCODE(OP_GLOAD_ENT):
 			HANDLE_OPCODE(OP_GLOAD_S):
 			HANDLE_OPCODE(OP_GLOAD_FNC):
-				// FIXME?: Is this correct?             vvvvvvvvvvvvv
-				if (OPA->_int < 0 || OPA->_int >= prog->numglobaldefs)
+				if (OPA->_int < 0 || OPA->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
@@ -1031,8 +1030,7 @@ int i;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GLOAD_V):
-				// FIXME?: Is this correct?                 vvvvvvvvvvvvv
-				if (OPA->_int < 0 || OPA->_int + 2 >= prog->numglobaldefs)
+				if (OPA->_int < 0 || OPA->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
