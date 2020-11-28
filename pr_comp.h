@@ -120,22 +120,93 @@ typedef enum opcode_e
 	OP_BITAND,
 	OP_BITOR,
 
-	OP_STORE_I = 113,
+	// TODO: actually support Hexen 2?
+	
+	OP_MULSTORE_F,	//66 redundant, for h2 compat
+	OP_MULSTORE_VF,	//67 redundant, for h2 compat
+	OP_MULSTOREP_F,	//68
+	OP_MULSTOREP_VF,//69
 
-	OP_ADD_I = 116,
+	OP_DIVSTORE_F,	//70 redundant, for h2 compat
+	OP_DIVSTOREP_F,	//71
+
+	OP_ADDSTORE_F,	//72 redundant, for h2 compat
+	OP_ADDSTORE_V,	//73 redundant, for h2 compat
+	OP_ADDSTOREP_F,	//74
+	OP_ADDSTOREP_V,	//75
+
+	OP_SUBSTORE_F,	//76 redundant, for h2 compat
+	OP_SUBSTORE_V,	//77 redundant, for h2 compat
+	OP_SUBSTOREP_F,	//78
+	OP_SUBSTOREP_V,	//79
+
+	OP_FETCH_GBL_F,	//80 has built-in bounds check
+	OP_FETCH_GBL_V,	//81 has built-in bounds check
+	OP_FETCH_GBL_S,	//82 has built-in bounds check
+	OP_FETCH_GBL_E,	//83 has built-in bounds check
+	OP_FETCH_GBL_FNC,//84 has built-in bounds check
+
+	OP_CSTATE,		//85
+	OP_CWSTATE,		//86
+
+	OP_THINKTIME,	//87 shortcut for OPA.nextthink=time+OPB
+
+	OP_BITSETSTORE_F,	//88 redundant, for h2 compat
+	OP_BITSETSTOREP_F,	//89
+	OP_BITCLRSTORE_F,	//90
+	OP_BITCLRSTOREP_F,	//91
+
+	OP_RAND0,		//92	OPC = random()
+	OP_RAND1,		//93	OPC = random()*OPA
+	OP_RAND2,		//94	OPC = random()*(OPB-OPA)+OPA
+	OP_RANDV0,		//95	//3d/box versions of the above.
+	OP_RANDV1,		//96
+	OP_RANDV2,		//97
+
+	OP_SWITCH_F,	//98	switchref=OPA; PC += OPB   --- the jump allows the jump table (such as it is) to be inserted after the block.
+	OP_SWITCH_V,	//99
+	OP_SWITCH_S,	//100
+	OP_SWITCH_E,	//101
+	OP_SWITCH_FNC,	//102
+
+	OP_CASE,		//103	if (OPA===switchref) PC += OPB
+	OP_CASERANGE,	//104   if (OPA<=switchref&&switchref<=OPB) PC += OPC
+
+	//hexen2 calling convention (-TH2 requires us to remap OP_CALLX to these on load, -TFTE just uses these directly.)
+	OP_CALL1H,	//OFS_PARM0=OPB
+	OP_CALL2H,	//OFS_PARM0,1=OPB,OPC
+	OP_CALL3H,	//no extra args
+	OP_CALL4H,
+	OP_CALL5H,
+	OP_CALL6H,
+	OP_CALL7H,
+	OP_CALL8H,
+
+	OP_STORE_I,
+	OP_STORE_IF,
+	OP_STORE_FI,
+
+	OP_ADD_I,
 	OP_ADD_FI,
 	OP_ADD_IF,
 
 	OP_SUB_I,
 	OP_SUB_FI,
 	OP_SUB_IF,
+
 	OP_CONV_IF,
 	OP_CONV_FI,
+	
+	OP_LOADP_IF,
+	OP_LOADP_FI,
 
-	OP_LOAD_I = 126,
+	OP_LOAD_I,
+
 	OP_STOREP_I,
+	OP_STOREP_IF,
+	OP_STOREP_FI,
 
-	OP_BITAND_I = 130,
+	OP_BITAND_I,
 	OP_BITOR_I,
 
 	OP_MUL_I,
@@ -143,13 +214,41 @@ typedef enum opcode_e
 	OP_EQ_I,
 	OP_NE_I,
 
-	OP_NOT_I = 138,
+	OP_IFNOT_S,
+
+	OP_IF_S,
+
+	OP_NOT_I,
 
 	OP_DIV_VF,
-	
-	OP_STORE_P = 152,
 
-	OP_LE_I = 161,
+	OP_BITXOR_I,
+	OP_RSHIFT_I,
+	OP_LSHIFT_I,
+
+	OP_GLOBALADDRESS,
+	OP_ADD_PIW,
+
+	OP_LOADA_F,
+	OP_LOADA_V,	
+	OP_LOADA_S,
+	OP_LOADA_ENT,
+	OP_LOADA_FLD,
+	OP_LOADA_FNC,
+	OP_LOADA_I,
+
+	OP_STORE_P,
+	OP_LOAD_P,
+
+	OP_LOADP_F,
+	OP_LOADP_V,	
+	OP_LOADP_S,
+	OP_LOADP_ENT,
+	OP_LOADP_FLD,
+	OP_LOADP_FNC,
+	OP_LOADP_I,
+
+	OP_LE_I,
 	OP_GE_I,
 	OP_LT_I,
 	OP_GT_I,
@@ -167,10 +266,16 @@ typedef enum opcode_e
 	OP_EQ_IF,
 	OP_EQ_FI,
 
-	OP_MUL_IF = 179,
+	OP_ADD_SF,
+	OP_SUB_S,
+	OP_STOREP_C,
+	OP_LOADP_C,
+
+	OP_MUL_IF,
 	OP_MUL_FI,
 	OP_MUL_VI,
-	OP_DIV_IF = 183,
+	OP_MUL_IV,
+	OP_DIV_IF,
 	OP_DIV_FI,
 	OP_BITAND_IF,
 	OP_BITOR_IF,
@@ -200,7 +305,21 @@ typedef enum opcode_e
 	OP_GLOAD_S,
 	OP_GLOAD_FNC,
 	OP_BOUNDCHECK,
-	OP_GLOAD_V = 216
+
+	OP_UNUSED,	//used to be OP_STOREP_P, which is now emulated with OP_STOREP_I, fteqcc nor fte generated it
+	OP_PUSH,	//push 4octets onto the local-stack (which is ALWAYS poped on function return). Returns a pointer.
+	OP_POP,		//pop those ones that were pushed (don't over do it). Needs assembler.
+	OP_SWITCH_I,
+
+	OP_GLOAD_V,
+
+	OP_IF_F,		//compares as an actual float, instead of treating -0 as positive.
+	OP_IFNOT_F,
+
+	OP_STOREF_V,	//3 elements...
+	OP_STOREF_F,	//1 fpu element...
+	OP_STOREF_S,	//1 string reference
+	OP_STOREF_I,	//1 non-string reference/int
 }
 opcode_t;
 
