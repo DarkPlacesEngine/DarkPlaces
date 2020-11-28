@@ -2460,7 +2460,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			if ( a >= prog->progs_numglobals)
 				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, prog->name);
 			if (b || c)	//Spike -- added this check just as a diagnostic...
-				Con_DPrintf("PRVM_LoadProgs: unxpected offset on call opcode in %s. Hexen2 format is not supported\n", prog->name);
+				Con_DPrintf("PRVM_LoadProgs: unexpected offset on call opcode in %s. Hexen2 format is not supported\n", prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
