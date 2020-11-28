@@ -487,9 +487,16 @@ qbool CL_VM_UpdateView (double frametime)
 		prog->polygonbegin_guess2d = false;
 		// free memory for resources that are no longer referenced
 		PRVM_GarbageCollection(prog);
-		// pass in width and height as parameters (EXT_CSQC_1)
+		// pass in width and height and menu/focus state as parameters (EXT_CSQC_1)
 		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
 		PRVM_G_FLOAT(OFS_PARM1) = vid.height;
+		/*
+		 * This should be fine for now but FTEQW uses flags for keydest
+		 * and checks that an array called "eyeoffset" is 0
+		 * 
+		 * Just a note in case there's compatibility problems later
+		 */
+		PRVM_G_FLOAT(OFS_PARM2) = key_dest == key_game;
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_UpdateView), "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here
