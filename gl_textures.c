@@ -2277,7 +2277,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		return;
 	}
 	// update part of the texture
-	if (glt->bufferpixels && (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth))
+	if (glt->bufferpixels || (glt->bufferpixels && (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)))
 	{
 		int j;
 		int bpp = glt->bytesperpixel;
@@ -2307,7 +2307,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 			return;
 
 		output += y*outputskip + x*bpp;
-
+		/* Cloudwalk FIXME: Broken shit, disabled for now.
 		// TODO: Optimize this further.
 		if(!gl_nopartialtextureupdates.integer)
 		{
@@ -2336,6 +2336,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 			if(!&glt->modifiedpixels || &output < &glt->modifiedpixels)
 				glt->modifiedpixels = output;
 		}
+		*/
 
 		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
 			memcpy(output, input, width*bpp);
