@@ -2274,7 +2274,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		return;
 	}
 	// update part of the texture
-	if (glt->bufferpixels || (glt->bufferpixels && (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)))
+	if (glt->bufferpixels)
 	{
 		size_t j, bpp = glt->bytesperpixel;
 
