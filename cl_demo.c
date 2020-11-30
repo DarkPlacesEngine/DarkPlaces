@@ -99,9 +99,6 @@ void CL_StopPlayback (void)
 	if (!cls.demostarting) // only quit if not starting another demo
 		if (Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
 			host.state = host_shutdown;
-
-	cls.demonum = -1;
-
 }
 
 /*
@@ -409,7 +406,7 @@ void CL_Record_f(cmd_state_t *cmd)
 ====================
 CL_PlayDemo_f
 
-play [demoname]
+playdemo [demoname]
 ====================
 */
 void CL_PlayDemo_f(cmd_state_t *cmd)
@@ -421,7 +418,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 
 	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Print("play <demoname> : plays a demo\n");
+		Con_Print("playdemo <demoname> : plays a demo\n");
 		return;
 	}
 
@@ -439,8 +436,10 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 	cls.demostarting = true;
 
 	// disconnect from server
-	CL_Disconnect ();
-	SV_Shutdown ();
+	if(cls.state == ca_connected)
+		CL_Disconnect();
+	if(sv.active)
+		SV_Shutdown();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -695,8 +694,7 @@ static void CL_Stopdemo_f(cmd_state_t *cmd)
 {
 	if (!cls.demoplayback)
 		return;
-	CL_Disconnect ();
-	SV_Shutdown ();
+	CL_Disconnect();
 }
 
 // LadyHavoc: pausedemo command
