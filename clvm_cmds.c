@@ -3706,12 +3706,12 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
 	}
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
-	
+
 	if (prog->argc < 3) // global-set particle
 	{
 		part = CL_NewParticle(org,
@@ -3750,7 +3750,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 			NULL);
 		if (!part)
 		{
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		if (PRVM_clientglobalfloat(particle_delayspawn))
@@ -3764,7 +3764,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
 			VM_Warning(prog, "VM_CL_SpawnParticle: bad theme number %i\n", themenum);
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
@@ -3804,7 +3804,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 			NULL);
 		if (!part)
 		{
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		if (theme->delayspawn)
@@ -3812,7 +3812,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 		//if (theme->delaycollision)
 		//	part->delayedcollisions = cl.time + theme->delaycollision;
 	}
-	PRVM_G_FLOAT(OFS_RETURN) = 1; 
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
 // float(vector org, vector dir, float spawndelay, float collisiondelay, [float theme]) delayedparticle
@@ -3828,7 +3828,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticleDelayed: particle spawner not initialized\n");
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
 	}
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
@@ -3874,7 +3874,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
 			VM_Warning(prog, "VM_CL_SpawnParticleDelayed: bad theme number %i\n", themenum);
-			PRVM_G_FLOAT(OFS_RETURN) = 0;  
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
@@ -3913,10 +3913,10 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 			theme->spin,
 			NULL);
 	}
-	if (!part) 
-	{ 
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
-		return; 
+	if (!part)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
 	}
 	part->delayedspawn = cl.time + PRVM_G_FLOAT(OFS_PARM2);
 	//part->delayedcollisions = cl.time + PRVM_G_FLOAT(OFS_PARM3);
@@ -3952,7 +3952,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 		case 1: // origin
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
 			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
-			break; 
+			break;
 		case 2: // forward
 			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
 			VectorCopy(forward, PRVM_G_VECTOR(OFS_RETURN));
@@ -3967,17 +3967,17 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			break;
 		case 5: // scale
 			PRVM_G_FLOAT(OFS_RETURN) = Matrix4x4_ScaleFromMatrix(&cl.entities[entnum].render.matrix);
-			break;	
+			break;
 		case 6: // origin + v_forward, v_right, v_up
 			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
 			VectorCopy(forward, PRVM_clientglobalvector(v_forward));
 			VectorNegate(left, PRVM_clientglobalvector(v_right));
 			VectorCopy(up, PRVM_clientglobalvector(v_up));
 			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
-			break;	
+			break;
 		case 7: // alpha
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.alpha;
-			break;	
+			break;
 		case 8: // colormor
 			VectorCopy(cl.entities[entnum].render.colormod, PRVM_G_VECTOR(OFS_RETURN));
 			break;
@@ -3989,24 +3989,24 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			break;
 		case 11: // skinnum
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.skinnum;
-			break;	
+			break;
 		case 12: // mins
-			VectorCopy(cl.entities[entnum].render.mins, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorCopy(cl.entities[entnum].render.mins, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 13: // maxs
-			VectorCopy(cl.entities[entnum].render.maxs, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorCopy(cl.entities[entnum].render.maxs, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 14: // absmin
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
-			VectorAdd(cl.entities[entnum].render.mins, org, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorAdd(cl.entities[entnum].render.mins, org, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 15: // absmax
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
-			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));		
+			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case 16: // light
 			VectorMA(cl.entities[entnum].render.render_modellight_ambient, 0.5, cl.entities[entnum].render.render_modellight_diffuse, PRVM_G_VECTOR(OFS_RETURN));
-			break;	
+			break;
 		default:
 			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			break;
@@ -5266,7 +5266,7 @@ VM_drawfill,					// #323 float(vector position, vector size, vector rgb, float a
 VM_drawsetcliparea,				// #324 void(float x, float y, float width, float height) drawsetcliparea
 VM_drawresetcliparea,			// #325 void(void) drawresetcliparea
 VM_drawcolorcodedstring,		// #326 float drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag) (EXT_CSQC)
-VM_stringwidth,                 // #327 // FIXME is this okay?
+VM_stringwidth,					// #327 // FIXME is this okay?
 VM_drawsubpic,					// #328 // FIXME is this okay?
 VM_drawrotpic,					// #329 // FIXME is this okay?
 VM_CL_getstatf,					// #330 float(float stnum) getstatf (EXT_CSQC)
