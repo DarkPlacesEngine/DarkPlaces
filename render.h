@@ -205,6 +205,11 @@ extern cvar_t r_fullbright;
 extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
 
+extern cvar_t r_q1bsp_lightmap_updates_enabled;
+extern cvar_t r_q1bsp_lightmap_updates_combine;
+extern cvar_t r_q1bsp_lightmap_updates_combine_full_texture;
+extern cvar_t r_q1bsp_lightmap_updates_hidden_surfaces;
+
 void R_NewExplosion(const vec3_t org);
 void R_UpdateVariables(void); // must call after setting up most of r_refdef, but before calling R_RenderView
 void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height); // must set r_refdef and call R_UpdateVariables and CL_UpdateEntityShading first
@@ -976,7 +981,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void);
 void R_DecalSystem_Reset(decalsystem_t *decalsystem);
 void R_Shadow_UpdateBounceGridTexture(void);
 void R_DrawPortals(void);
-void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface);
+void R_BuildLightMap(const entity_render_t *ent, msurface_t *surface, int combine);
 void R_Water_AddWaterPlane(msurface_t *surface, int entno);
 int R_Shadow_GetRTLightInfo(unsigned int lightindex, float *origin, float *radius, float *color);
 dp_font_t *FindFont(const char *title, qbool allocate_new);

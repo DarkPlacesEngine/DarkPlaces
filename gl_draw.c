@@ -267,7 +267,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 		if (pic->flags & CACHEPICFLAG_NEWPIC && pic->skinframe && pic->skinframe->base && pic->width == width && pic->height == height)
 		{
 			Con_DPrintf("Draw_NewPic(\"%s\"): frame %i: updating texture\n", picname, draw_frame);
-			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1);
+			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1, 0);
 			R_SkinFrame_MarkUsed(pic->skinframe);
 			pic->lastusedframe = draw_frame;
 			return pic;
