@@ -206,7 +206,8 @@ void R_FreeTexture(rtexture_t *rt);
 // update a portion of the image data of a texture, used by lightmap updates
 // and procedural textures such as video playback, actual uploads may be
 // delayed by gl_nopartialtextureupdates cvar until R_Mesh_TexBind uses it
-void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth);
+// combine has 3 values: 0 = immediately upload (glTexSubImage2D), 1 = combine with other updates (glTexSubImage2D on next draw), 2 = combine with other updates and never upload partial images (glTexImage2D on next draw)
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth, int combine);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)

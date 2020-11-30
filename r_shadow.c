@@ -2530,7 +2530,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		}
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixelsbgra8, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixelsbgra8, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixelsbgra8, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
@@ -2581,7 +2581,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		}
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba16f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba16f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba16f, TEXTYPE_COLORBUFFER16F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
@@ -2590,7 +2590,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		pixelsrgba32f = highpixels;
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba32f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba32f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba32f, TEXTYPE_COLORBUFFER32F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
