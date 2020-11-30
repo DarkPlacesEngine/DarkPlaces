@@ -256,6 +256,10 @@ cvar_t r_buffermegs[R_BUFFERDATA_COUNT] =
 	{CF_CLIENT | CF_ARCHIVE, "r_buffermegs_uniform", "0.25", "uniform buffer size for one frame"},
 };
 
+cvar_t r_q1bsp_lightmap_updates_enabled = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_enabled", "1", "allow lightmaps to be updated on Q1BSP maps (don't turn this off except for debugging)"};
+cvar_t r_q1bsp_lightmap_updates_combine = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_combine", "2", "combine lightmap texture updates to make fewer glTexSubImage2D calls, modes: 0 = immediately upload lightmaps (may be thousands of small 3x3 updates), 1 = combine to one call, 2 = combine to one full texture update (glTexImage2D) which tells the driver it does not need to lock the resource (faster on most drivers)"};
+cvar_t r_q1bsp_lightmap_updates_hidden_surfaces = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_hidden_surfaces", "0", "update lightmaps on surfaces that are not visible, so that updates only occur on frames where lightstyles changed value (animation or light switches), only makes sense with combine = 2"};
+
 extern cvar_t v_glslgamma_2d;
 
 extern qbool v_flipped_state;
@@ -511,8 +515,8 @@ static void R_BuildFogTexture(void)
 	}
 	if (r_texture_fogattenuation)
 	{
-		R_UpdateTexture(r_texture_fogattenuation, &data1[0][0], 0, 0, 0, FOGWIDTH, 1, 1);
-		//R_UpdateTexture(r_texture_fogattenuation, &data2[0][0], 0, 0, 0, FOGWIDTH, 1, 1);
+		R_UpdateTexture(r_texture_fogattenuation, &data1[0][0], 0, 0, 0, FOGWIDTH, 1, 1, 0);
+		//R_UpdateTexture(r_texture_fogattenuation, &data2[0][0], 0, 0, 0, FOGWIDTH, 1, 1, 0);
 	}
 	else
 	{
@@ -3409,6 +3413,9 @@ void GL_Main_Init(void)
 	for (i = 0;i < R_BUFFERDATA_COUNT;i++)
 		Cvar_RegisterVariable(&r_buffermegs[i]);
 	Cvar_RegisterVariable(&r_batch_dynamicbuffer);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_enabled);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_combine);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_hidden_surfaces);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue(&cvars_all, "r_fullbrights", 0);
 #ifdef DP_MOBILETOUCH
@@ -5577,7 +5584,7 @@ void R_UpdateVariables(void)
 				}
 				if (r_texture_gammaramps)
 				{
-					R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, 0, RAMPWIDTH, 1, 1);
+					R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, 0, RAMPWIDTH, 1, 1, 0);
 				}
 				else
 				{
@@ -9989,7 +9996,7 @@ int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
 void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedepth, qbool depthonly, qbool debug, qbool prepass, qbool ui)
 {
-	int i, j, endj, flagsmask;
+	int i, j, flagsmask;
 	model_t *model = ent->model;
 	msurface_t *surfaces;
 	unsigned char *update;
@@ -10026,34 +10033,20 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 		return;
 	}
 
+	// check if this is an empty model
+	if (model->nummodelsurfaces == 0)
+		return;
+
 	rsurface.lightmaptexture = NULL;
 	rsurface.deluxemaptexture = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
+
 	// add visible surfaces to draw list
 	if (ent == r_refdef.scene.worldentity)
 	{
-		// update light styles
-		if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
-		{
-			model_brush_lightstyleinfo_t *style;
-			// Iterate over each active style
-			for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
-			{
-				if (style->value != r_refdef.scene.lightstylevalue[style->style])
-				{
-					int *list = style->surfacelist;
-					style->value = r_refdef.scene.lightstylevalue[style->style];
-					// Iterate over every surface this style applies to
-					for (j = 0;j < style->numsurfaces;j++)
-						// Update brush entities even if not visible otherwise they'll render solid black.
-						if(r_refdef.viewcache.world_surfacevisible[list[j]])
-							update[list[j]] = true;
-				}
-			}
-		}
 		// for the world entity, check surfacevisible
 		for (i = 0;i < model->nummodelsurfaces;i++)
 		{
@@ -10061,49 +10054,60 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				r_surfacelist[numsurfacelist++] = surfaces + j;
 		}
+
+		// don't do anything if there were no surfaces added (none of the world entity is visible)
+		if (!numsurfacelist)
+		{
+			rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
+			return;
+		}
 	}
 	else if (ui)
 	{
-		// for ui we have to preserve the order of surfaces
+		// for ui we have to preserve the order of surfaces (not using sortedmodelsurfaces)
 		for (i = 0; i < model->nummodelsurfaces; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + model->firstmodelsurface + i;
 	}
 	else
 	{
-		// update light styles
-		if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
-		{
-			model_brush_lightstyleinfo_t *style;
-			// Iterate over each active style
-			for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
-			{
-				if (style->value != r_refdef.scene.lightstylevalue[style->style])
-				{
-					int *list = style->surfacelist;
-					style->value = r_refdef.scene.lightstylevalue[style->style];
-					// Iterate over every surface this style applies to
-					for (j = 0;j < style->numsurfaces;j++)
-						update[list[j]] = true;
-				}
-			}
-		}
 		// add all surfaces
 		for (i = 0; i < model->nummodelsurfaces; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
 	}
-	// don't do anything if there were no surfaces
-	if (!numsurfacelist)
+
+	// mark lightmaps as dirty if their lightstyle's value changed
+	// we do this by using style chains because most styles do not change on most frames,
+	// and most surfaces do not have styles on them
+	// map packs like Arcane Dimensions (e.g. ad_sepulcher) break this rule and animate most surfaces
+	if (update && !skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0 && r_q1bsp_lightmap_updates_enabled.integer)
 	{
-		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
-		return;
-	}
-	// update lightmaps if needed
-	if (update)
-	{
-		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
+		model_brush_lightstyleinfo_t* style;
+		// for each lightstyle, check if its value changed and mark the lightmaps as dirty if so
+		for (i = 0, style = model->brushq1.data_lightstyleinfo; i < model->brushq1.num_lightstyles; i++, style++)
 		{
-			if (update[j])
-				R_BuildLightMap(ent, surfaces + j);
+			if (style->value != r_refdef.scene.lightstylevalue[style->style])
+			{
+				int* list = style->surfacelist;
+				style->value = r_refdef.scene.lightstylevalue[style->style];
+				// value changed - mark the surfaces belonging to this style chain as dirty
+				for (j = 0; j < style->numsurfaces; j++)
+					update[list[j]] = true;
+			}
+		}
+		// now check if update flags are set on any surfaces that are visible
+		if (r_q1bsp_lightmap_updates_hidden_surfaces.integer)
+		{
+			// we can do less frequent texture uploads (approximately 10hz for animated lightstyles) by rebuilding lightmaps on surfaces that are not currently visible
+			// for optimal efficiency, this includes the submodels of the worldmodel, so we use model->num_surfaces, not nummodelsurfaces
+			for (i = 0; i < model->num_surfaces;i++)
+				if (update[i])
+					R_BuildLightMap(ent, surfaces + i, r_q1bsp_lightmap_updates_combine.integer);
+		}
+		else
+		{
+			for (i = 0; i < numsurfacelist; i++)
+				if (update[r_surfacelist[i] - surfaces])
+					R_BuildLightMap(ent, (msurface_t *)r_surfacelist[i], r_q1bsp_lightmap_updates_combine.integer);
 		}
 	}
 

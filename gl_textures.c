@@ -27,7 +27,6 @@ cvar_t gl_texturecompression_sky = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompressi
 cvar_t gl_texturecompression_lightcubemaps = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
 cvar_t gl_texturecompression_reflectmask = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
 cvar_t gl_texturecompression_sprites = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_sprites", "1", "whether to compress sprites"};
-cvar_t gl_nopartialtextureupdates = {CF_CLIENT | CF_ARCHIVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
 cvar_t r_texture_dds_load_alphamode = {CF_CLIENT, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
 cvar_t r_texture_dds_load_logfailure = {CF_CLIENT, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log, 0: done log, 1: log with no optional textures (_norm, glow etc.). 2: log all"};
 cvar_t r_texture_dds_swdecode = {CF_CLIENT, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
@@ -172,11 +171,9 @@ typedef struct gltexture_s
 	void *updatecallback_data;
 	// --- [11/22/2007 Black]
 
-	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
+	// stores backup copy of texture for deferred texture updates (R_UpdateTexture when combine = true)
 	unsigned char *bufferpixels;
-	unsigned char *modifiedpixels;
-	int modified_width, modified_height, modified_depth;
-	int modified_offset_x, modified_offset_y, modified_offset_z;
+	int modified_mins[3], modified_maxs[3];
 	qbool buffermodified;
 
 	// pointer to texturepool (check this to see if the texture is allocated)
@@ -727,7 +724,6 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_texturecompression_sprites);
-	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 	Cvar_RegisterVariable (&r_texture_dds_load_alphamode);
 	Cvar_RegisterVariable (&r_texture_dds_load_logfailure);
 	Cvar_RegisterVariable (&r_texture_dds_swdecode);
@@ -1319,8 +1315,9 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (glt->flags & TEXF_ALLOWUPDATES)
 		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
 
-	glt->modifiedpixels = NULL;	
-	glt->modified_width = glt->modified_height = glt->modified_depth = glt->modified_offset_x = glt->modified_offset_y = glt->modified_offset_z = 0;
+	glt->buffermodified = false;
+	VectorClear(glt->modified_mins);
+	VectorClear(glt->modified_maxs);
 
 	// free any temporary processing buffer we allocated...
 	if (temppixels)
@@ -2264,7 +2261,7 @@ int R_TextureFlags(rtexture_t *rt)
 	return rt ? ((gltexture_t *)rt)->flags : 0;
 }
 
-void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth)
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth, int combine)
 {
 	gltexture_t *glt = (gltexture_t *)rt;
 	if (data == NULL)
@@ -2279,70 +2276,59 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 	// update part of the texture
 	if (glt->bufferpixels || (glt->bufferpixels && (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)))
 	{
-		int j;
-		int bpp = glt->bytesperpixel;
-		int inputskip = width*bpp;
-		int outputskip = glt->tilewidth*bpp;
-		const unsigned char *input = data;
-		unsigned char *output = glt->bufferpixels;
+		size_t j, bpp = glt->bytesperpixel;
+
+		// depth and sides are not fully implemented here - can still do full updates but not partial.
 		if (glt->inputdepth != 1 || glt->sides != 1)
-			Sys_Error("R_UpdateTexture on buffered texture that is not 2D\n");
-		if (x < 0)
-		{
-			width += x;
-			input -= x*bpp;
-			x = 0;
-		}
-		if (y < 0)
-		{
-			height += y;
-			input -= y*inputskip;
-			y = 0;
-		}
-		if (width > glt->tilewidth - x)
-			width = glt->tilewidth - x;
-		if (height > glt->tileheight - y)
-			height = glt->tileheight - y;
-		if (width < 1 || height < 1)
-			return;
+			Host_Error("R_UpdateTexture on buffered texture that is not 2D\n");
+		if (x < 0 || y < 0 || z < 0 || glt->tilewidth < x + width || glt->tileheight < y + height || glt->tiledepth < z + depth)
+			Host_Error("R_UpdateTexture on buffered texture with out of bounds coordinates (%i %i %i to %i %i %i is not within 0 0 0 to %i %i %i)", x, y, z, x + width, y + height, z + depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 
-		output += y*outputskip + x*bpp;
-		/* Cloudwalk FIXME: Broken shit, disabled for now.
-		// TODO: Optimize this further.
-		if(!gl_nopartialtextureupdates.integer)
+		for (j = 0; j < height; j++)
+			memcpy(glt->bufferpixels + ((y + j) * glt->tilewidth + x) * bpp, data + j * width * bpp, width * bpp);
+
+		switch(combine)
 		{
-			// Calculate the modified region, and resize it as it gets bigger.
-			if(!glt->buffermodified)
+		case 0:
+			// immediately update the part of the texture, no combining
+			R_UploadPartialTexture(glt, data, x, y, z, width, height, depth);
+			break;
+		case 1:
+			// keep track of the region that is modified, decide later how big the partial update area is
+			if (glt->buffermodified)
 			{
-				glt->modified_offset_x = x;
-				glt->modified_offset_y = y;
-				glt->modified_offset_z = z;
-
-				glt->modified_width = width;
-				glt->modified_height = height;
-				glt->modified_depth = depth;
+				glt->modified_mins[0] = min(glt->modified_mins[0], x);
+				glt->modified_mins[1] = min(glt->modified_mins[1], y);
+				glt->modified_mins[2] = min(glt->modified_mins[2], z);
+				glt->modified_maxs[0] = max(glt->modified_maxs[0], x + width);
+				glt->modified_maxs[1] = max(glt->modified_maxs[1], y + height);
+				glt->modified_maxs[2] = max(glt->modified_maxs[2], z + depth);
 			}
 			else
 			{
-				if(x < glt->modified_offset_x) glt->modified_offset_x = x;
-				if(y < glt->modified_offset_y) glt->modified_offset_y = y;
-				if(z < glt->modified_offset_z) glt->modified_offset_z = z;
-
-				if(width + x > glt->modified_width) glt->modified_width = width + x;
-				if(height + y > glt->modified_height) glt->modified_height = height + y;
-				if(depth + z > glt->modified_depth) glt->modified_depth = depth + z;
+				glt->buffermodified = true;
+				glt->modified_mins[0] = x;
+				glt->modified_mins[1] = y;
+				glt->modified_mins[2] = z;
+				glt->modified_maxs[0] = x + width;
+				glt->modified_maxs[1] = y + height;
+				glt->modified_maxs[2] = z + depth;
 			}
-
-			if(!&glt->modifiedpixels || &output < &glt->modifiedpixels)
-				glt->modifiedpixels = output;
+			glt->dirty = true;
+			break;
+		default:
+		case 2:
+			// mark the entire texture as dirty, it will be uploaded later
+			glt->buffermodified = true;
+			glt->modified_mins[0] = 0;
+			glt->modified_mins[1] = 0;
+			glt->modified_mins[2] = 0;
+			glt->modified_maxs[0] = glt->tilewidth;
+			glt->modified_maxs[1] = glt->tileheight;
+			glt->modified_maxs[2] = glt->tiledepth;
+			glt->dirty = true;
+			break;
 		}
-		*/
-
-		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
-			memcpy(output, input, width*bpp);
-
-		glt->dirty = true;
-		glt->buffermodified = true;
 	}
 	else
 		R_UploadFullTexture(glt, data);
@@ -2359,13 +2345,17 @@ int R_RealGetTexture(rtexture_t *rt)
 		if (glt->buffermodified && glt->bufferpixels)
 		{
 			glt->buffermodified = false;
-			if(!glt->modifiedpixels)
+			// Because we currently don't set the relevant upload stride parameters, just make it full width.
+			glt->modified_mins[0] = 0;
+			glt->modified_maxs[0] = glt->tilewidth;
+			// Check also if it's updating at least half the height of the texture.
+			if (glt->modified_maxs[1] - glt->modified_mins[1] > glt->tileheight / 2)
 				R_UploadFullTexture(glt, glt->bufferpixels);
 			else
-				R_UploadPartialTexture(glt, glt->modifiedpixels, glt->modified_offset_x, glt->modified_offset_y, glt->modified_offset_z, glt->modified_width, glt->modified_height, glt->modified_depth);
+				R_UploadPartialTexture(glt, glt->bufferpixels + (size_t)glt->modified_mins[1] * glt->tilewidth * glt->bytesperpixel, glt->modified_mins[0], glt->modified_mins[1], glt->modified_mins[2], glt->modified_maxs[0] - glt->modified_mins[0], glt->modified_maxs[1] - glt->modified_mins[1], glt->modified_maxs[2] - glt->modified_mins[2]);
 		}
-		glt->modified_offset_x = glt->modified_offset_y = glt->modified_offset_z = glt->modified_width = glt->modified_height = glt->modified_depth = 0;
-		glt->modifiedpixels = NULL;
+		VectorClear(glt->modified_mins);
+		VectorClear(glt->modified_maxs);
 		glt->dirty = false;
 		return glt->texnum;
 	}

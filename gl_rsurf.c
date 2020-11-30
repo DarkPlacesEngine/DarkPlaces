@@ -47,7 +47,7 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
+void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface, int combine)
 {
 	int smax, tmax, i, size, size3, maps, l;
 	int *bl, scale;
@@ -131,7 +131,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 
 	if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 		Image_MakesRGBColorsFromLinear_Lightmap(templight, templight, size);
-	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
+	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1, combine);
 
 	// update the surface's deluxemap if it has one
 	if (surface->deluxemaptexture != r_texture_blanknormalmap)
@@ -169,7 +169,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 			l = (int)(n[2] * 128 + 128);out[0] = bound(0, l, 255);
 			out[3] = 255;
 		}
-		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
+		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1, r_q1bsp_lightmap_updates_combine.integer);
 	}
 }
 
