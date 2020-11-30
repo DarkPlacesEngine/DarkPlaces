@@ -27,7 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  * Creates a new linked list. Initializes the head to point to itself.
  * If it's a list header, the result is an empty list.
  */
-inline void List_Create(llist_t *list)
+void List_Create(llist_t *list)
 {
 	list->next = list->prev = NULL;
 }
@@ -37,7 +37,7 @@ inline void List_Create(llist_t *list)
  * 
  * Only use when prev and next are known.
  */
-static inline void __List_Add(llist_t *node, llist_t *prev, llist_t *next)
+static void __List_Add(llist_t *node, llist_t *prev, llist_t *next)
 {
 	next->prev = node;
 	node->next = next;
@@ -48,7 +48,7 @@ static inline void __List_Add(llist_t *node, llist_t *prev, llist_t *next)
 /*
  * Insert a node immediately after head.
  */
-inline void List_Add(llist_t *node, llist_t *head)
+void List_Add(llist_t *node, llist_t *head)
 {
 	__List_Add(node, head, head->next);
 }
@@ -56,7 +56,7 @@ inline void List_Add(llist_t *node, llist_t *head)
 /*
  * Insert a node immediately before head.
  */
-inline void List_Add_Tail(llist_t *node, llist_t *head)
+void List_Add_Tail(llist_t *node, llist_t *head)
 {
 	__List_Add(node, head->prev, head);
 }
@@ -81,7 +81,7 @@ static inline void __List_Delete_Node(llist_t *node)
 /*
  * Removes a node from its list. Sets its pointers to NULL.
  */
-inline void List_Delete(llist_t *node)
+void List_Delete(llist_t *node)
 {
 	__List_Delete_Node(node);
 	node->next = node->prev = NULL;
@@ -90,7 +90,7 @@ inline void List_Delete(llist_t *node)
 /*
  * Removes a node from its list. Reinitialize it.
  */
-inline void List_Delete_Init(llist_t *node)
+void List_Delete_Init(llist_t *node)
 {
 	__List_Delete_Node(node);
 	node->next = node->prev = node;
@@ -99,7 +99,7 @@ inline void List_Delete_Init(llist_t *node)
 /*
  * Replace old with new. Old is overwritten if empty.
  */
-inline void List_Replace(llist_t *old, llist_t *_new)
+void List_Replace(llist_t *old, llist_t *_new)
 {
 	_new->next = old->next;
 	_new->next->prev = _new;
@@ -112,7 +112,7 @@ inline void List_Replace(llist_t *old, llist_t *_new)
  * Replace old with new. Initialize old.
  * Old is overwritten if empty.
  */
-inline void List_Replace_Init(llist_t *old, llist_t *_new)
+void List_Replace_Init(llist_t *old, llist_t *_new)
 {
 	List_Replace(old, _new);
 	List_Create(old);
@@ -121,7 +121,7 @@ inline void List_Replace_Init(llist_t *old, llist_t *_new)
 /*
  * Swap node1 with node2 in place.
  */
-inline void List_Swap(llist_t *node1, llist_t *node2)
+void List_Swap(llist_t *node1, llist_t *node2)
 {
 	llist_t *pos = node2->prev;
 	List_Delete_Init(node2);
@@ -134,7 +134,7 @@ inline void List_Swap(llist_t *node1, llist_t *node2)
 /*
  * Delete list from its... list, then insert after head.
  */
-inline void List_Move(llist_t *list, llist_t *head)
+void List_Move(llist_t *list, llist_t *head)
 {
 	__List_Delete_Node(list);
 	List_Add(list, head);
@@ -143,7 +143,7 @@ inline void List_Move(llist_t *list, llist_t *head)
 /*
  * Delete list from its... list, then insert before head.
  */
-inline void List_Move_Tail(llist_t *list, llist_t *head)
+void List_Move_Tail(llist_t *list, llist_t *head)
 {
 	__List_Delete_Node(list);
 	List_Add_Tail(list, head);
@@ -154,7 +154,7 @@ inline void List_Move_Tail(llist_t *list, llist_t *head)
  * All three parameters must belong to the same list.
  */
 
-inline void List_Bulk_Move_Tail(llist_t *head, llist_t *first, llist_t *last)
+void List_Bulk_Move_Tail(llist_t *head, llist_t *first, llist_t *last)
 {
 	first->prev->next = last->next;
 	last->next->prev = first->prev;
@@ -170,7 +170,7 @@ inline void List_Bulk_Move_Tail(llist_t *head, llist_t *first, llist_t *last)
  * Shift the head to the right (like rotating a wheel counterclockwise).
  * The node immediately to the right becomes the new head.
  */
-inline void List_Rotate_Left(llist_t *head)
+void List_Rotate_Left(llist_t *head)
 {
 	llist_t *first;
 
@@ -184,7 +184,7 @@ inline void List_Rotate_Left(llist_t *head)
 /*
  * Make list the new head.
  */
-inline void List_Rotate_To_Front(llist_t *list, llist_t *head)
+void List_Rotate_To_Front(llist_t *list, llist_t *head)
 {
 	List_Move_Tail(head, list);
 }
@@ -207,7 +207,7 @@ static inline void __List_Splice(const llist_t *list, llist_t *prev, llist_t *ne
 /*
  * Concatenate two lists. The first node of list will be inserted after head.
  */
-inline void List_Splice(const llist_t *list, llist_t *head)
+void List_Splice(const llist_t *list, llist_t *head)
 {
 	if(!List_Is_Empty(list))
 		__List_Splice(list, head, head->next);
@@ -216,23 +216,23 @@ inline void List_Splice(const llist_t *list, llist_t *head)
 /*
  * Concatenate two lists. The tail of list will be inserted before head.
  */
-inline void List_Splice_Tail(const llist_t *list, llist_t *head)
+void List_Splice_Tail(const llist_t *list, llist_t *head)
 {
 	if (!List_Is_Empty(list))
 		__List_Splice(list, head->prev, head);
 }
 
-inline qbool List_Is_First(llist_t *list, llist_t *start)
+qbool List_Is_First(llist_t *list, llist_t *start)
 {
 	return list->prev == start;
 }
 
-inline qbool List_Is_Last(llist_t *list, llist_t *start)
+qbool List_Is_Last(llist_t *list, llist_t *start)
 {
 	return list->next == start;
 }
 
-inline qbool List_Is_Empty(const llist_t *list)
+qbool List_Is_Empty(const llist_t *list)
 {
 	return list->next == list;
 }
