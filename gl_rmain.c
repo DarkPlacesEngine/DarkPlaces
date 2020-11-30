@@ -10075,30 +10075,37 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
 	}
 
-	// mark lightmaps as dirty if their lightstyle's value changed
-	// we do this by using style chains because most styles do not change on most frames,
-	// and most surfaces do not have styles on them
-	// map packs like Arcane Dimensions (e.g. ad_sepulcher) break this rule and animate most surfaces
+	/*
+	 * Mark lightmaps as dirty if their lightstyle's value changed. We do this by
+	 * using style chains because most styles do not change on most frames, and most
+	 * surfaces do not have styles on them. Mods like Arcane Dimensions (e.g. ad_necrokeep)
+	 * break this rule and animate most surfaces.
+	 */
 	if (update && !skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0 && r_q1bsp_lightmap_updates_enabled.integer)
 	{
-		model_brush_lightstyleinfo_t* style;
-		// for each lightstyle, check if its value changed and mark the lightmaps as dirty if so
+		model_brush_lightstyleinfo_t *style;
+
+		// For each lightstyle, check if its value changed and mark the lightmaps as dirty if so
 		for (i = 0, style = model->brushq1.data_lightstyleinfo; i < model->brushq1.num_lightstyles; i++, style++)
 		{
 			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
 				int* list = style->surfacelist;
 				style->value = r_refdef.scene.lightstylevalue[style->style];
-				// value changed - mark the surfaces belonging to this style chain as dirty
+				// Value changed - mark the surfaces belonging to this style chain as dirty
 				for (j = 0; j < style->numsurfaces; j++)
 					update[list[j]] = true;
 			}
 		}
-		// now check if update flags are set on any surfaces that are visible
+		// Now check if update flags are set on any surfaces that are visible
 		if (r_q1bsp_lightmap_updates_hidden_surfaces.integer)
 		{
-			// we can do less frequent texture uploads (approximately 10hz for animated lightstyles) by rebuilding lightmaps on surfaces that are not currently visible
-			// for optimal efficiency, this includes the submodels of the worldmodel, so we use model->num_surfaces, not nummodelsurfaces
+			/* 
+			 * We can do less frequent texture uploads (approximately 10hz for animated
+			 * lightstyles) by rebuilding lightmaps on surfaces that are not currently visible.
+			 * For optimal efficiency, this includes the submodels of the worldmodel, so we
+			 * use model->num_surfaces, not nummodelsurfaces.
+			 */
 			for (i = 0; i < model->num_surfaces;i++)
 				if (update[i])
 					R_BuildLightMap(ent, surfaces + i, r_q1bsp_lightmap_updates_combine.integer);
