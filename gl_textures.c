@@ -2284,7 +2284,7 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 		if (x < 0 || y < 0 || z < 0 || glt->tilewidth < x + width || glt->tileheight < y + height || glt->tiledepth < z + depth)
 			Host_Error("R_UpdateTexture on buffered texture with out of bounds coordinates (%i %i %i to %i %i %i is not within 0 0 0 to %i %i %i)", x, y, z, x + width, y + height, z + depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
 
-		for (j = 0; j < height; j++)
+		for (j = 0; j < (size_t)height; j++)
 			memcpy(glt->bufferpixels + ((y + j) * glt->tilewidth + x) * bpp, data + j * width * bpp, width * bpp);
 
 		switch(combine)
