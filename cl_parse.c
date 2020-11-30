@@ -3491,11 +3491,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_disconnect:
-				Con_Printf("Server disconnected\n");
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
+				{
+					Con_Printf("Server disconnected\n");
 					CL_Disconnect();
+				}
 				return;
 
 			case qw_svc_print:
@@ -3872,11 +3874,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_disconnect:
-				Con_Printf ("Server disconnected\n");
 				if (cls.demonum != -1)
 					CL_NextDemo ();
 				else
+				{
+					Con_Printf ("Server disconnected\n");
 					CL_Disconnect ();
+				}
 				break;
 
 			case svc_print:
