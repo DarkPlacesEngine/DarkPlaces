@@ -1051,312 +1051,312 @@ void VM_cin_restart(prvm_prog_t *prog)
 
 prvm_builtin_t vm_m_builtins[] = {
 NULL,									//   #0 NULL function (not callable)
-VM_checkextension,				//   #1
-VM_error,							//   #2
-VM_objerror,						//   #3
-VM_print,							//   #4
-VM_bprint,							//   #5
-VM_sprint,							//   #6
-VM_centerprint,					//   #7
-VM_normalize,						//   #8
-VM_vlen,								//   #9
-VM_vectoyaw,						//  #10
-VM_vectoangles,					//  #11
-VM_random,							//  #12
-VM_localcmd_client,						//  #13
-VM_cvar,								//  #14
-VM_cvar_set,						//  #15
-VM_dprint,							//  #16
-VM_ftos,								//  #17
-VM_fabs,								//  #18
-VM_vtos,								//  #19
-VM_etos,								//  #20
-VM_stof,								//  #21
-VM_spawn,							//  #22
-VM_remove,							//  #23
-VM_find,								//  #24
-VM_findfloat,						//  #25
-VM_findchain,						//  #26
-VM_findchainfloat,				//  #27
-VM_precache_file,					//  #28
-VM_precache_sound,				//  #29
-VM_coredump,						//  #30
-VM_traceon,							//  #31
-VM_traceoff,						//  #32
-VM_eprint,							//  #33
-VM_rint,								//  #34
-VM_floor,							//  #35
-VM_ceil,								//  #36
-VM_nextent,							//  #37
-VM_sin,								//  #38
-VM_cos,								//  #39
-VM_sqrt,								//  #40
-VM_randomvec,						//  #41
-VM_registercvar,					//  #42
-VM_min,								//  #43
-VM_max,								//  #44
-VM_bound,							//  #45
-VM_pow,								//  #46
-VM_M_copyentity,					//  #47
-VM_fopen,							//  #48
-VM_fclose,							//  #49
-VM_fgets,							//  #50
-VM_fputs,							//  #51
-VM_strlen,							//  #52
-VM_strcat,							//  #53
-VM_substring,						//  #54
-VM_stov,								//  #55
-VM_strzone,							//  #56
-VM_strunzone,						//  #57
-VM_tokenize,						//  #58
-VM_argv,								//  #59
-VM_isserver,						//  #60
-VM_clientcount,					//  #61
-VM_clientstate,					//  #62
-NULL,						//  #63 FIXME
-VM_changelevel,					//  #64
-VM_localsound,						//  #65
-VM_M_getmousepos,					//  #66
-VM_gettime,							//  #67
-VM_loadfromdata,					//  #68
-VM_loadfromfile,					//  #69
-VM_modulo,							//  #70
-VM_cvar_string,					//  #71
-VM_crash,							//  #72
-VM_stackdump,						//  #73
-VM_search_begin,					//  #74
-VM_search_end,						//  #75
-VM_search_getsize,				//  #76
-VM_search_getfilename,			//  #77
-VM_chr,								//  #78
-VM_itof,								//  #79
-VM_ftoe,								//  #80
-VM_itof,								//  #81 isString
-VM_altstr_count,					//  #82
-VM_altstr_prepare,				//  #83
-VM_altstr_get,						//  #84
-VM_altstr_set,						//  #85
-VM_altstr_ins,						//  #86
-VM_findflags,						//  #87
-VM_findchainflags,				//  #88
-VM_cvar_defstring,				//  #89
+{VM_checkextension},				//   #1
+{VM_error},							//   #2
+{VM_objerror},						//   #3
+{VM_print},							//   #4
+{VM_bprint},							//   #5
+{VM_sprint},							//   #6
+{VM_centerprint},					//   #7
+{VM_normalize},						//   #8
+{VM_vlen},								//   #9
+{VM_vectoyaw},						//  #10
+{VM_vectoangles},					//  #11
+{VM_random},							//  #12
+{VM_localcmd_client},						//  #13
+{VM_cvar},								//  #14
+{VM_cvar_set},						//  #15
+{VM_dprint},							//  #16
+{VM_ftos},								//  #17
+{VM_fabs},								//  #18
+{VM_vtos},								//  #19
+{VM_etos},								//  #20
+{VM_stof},								//  #21
+{VM_spawn},							//  #22
+{VM_remove},							//  #23
+{VM_find},								//  #24
+{VM_findfloat},						//  #25
+{VM_findchain},						//  #26
+{VM_findchainfloat},				//  #27
+{VM_precache_file},					//  #28
+{VM_precache_sound},				//  #29
+{VM_coredump},						//  #30
+{VM_traceon},							//  #31
+{VM_traceoff},						//  #32
+{VM_eprint},							//  #33
+{VM_rint},								//  #34
+{VM_floor},							//  #35
+{VM_ceil},								//  #36
+{VM_nextent},							//  #37
+{VM_sin},								//  #38
+{VM_cos},								//  #39
+{VM_sqrt},								//  #40
+{VM_randomvec},						//  #41
+{VM_registercvar},					//  #42
+{VM_min},								//  #43
+{VM_max},								//  #44
+{VM_bound},							//  #45
+{VM_pow},								//  #46
+{VM_M_copyentity},					//  #47
+{VM_fopen},							//  #48
+{VM_fclose},							//  #49
+{VM_fgets},							//  #50
+{VM_fputs},							//  #51
+{VM_strlen},							//  #52
+{VM_strcat},							//  #53
+{VM_substring},						//  #54
+{VM_stov},								//  #55
+{VM_strzone},							//  #56
+{VM_strunzone},						//  #57
+{VM_tokenize},						//  #58
+{VM_argv},								//  #59
+{VM_isserver},						//  #60
+{VM_clientcount},					//  #61
+{VM_clientstate},					//  #62
+{NULL, 0, 0},						//  #63 FIXME
+{VM_changelevel},					//  #64
+{VM_localsound},						//  #65
+{VM_M_getmousepos},					//  #66
+{VM_gettime},							//  #67
+{VM_loadfromdata},					//  #68
+{VM_loadfromfile},					//  #69
+{VM_modulo},							//  #70
+{VM_cvar_string},					//  #71
+{VM_crash},							//  #72
+{VM_stackdump},						//  #73
+{VM_search_begin},					//  #74
+{VM_search_end},						//  #75
+{VM_search_getsize},				//  #76
+{VM_search_getfilename},			//  #77
+{VM_chr},								//  #78
+{VM_itof},								//  #79
+{VM_ftoe},								//  #80
+{VM_itof},								//  #81 isString
+{VM_altstr_count},					//  #82
+{VM_altstr_prepare},				//  #83
+{VM_altstr_get},						//  #84
+{VM_altstr_set},						//  #85
+{VM_altstr_ins},						//  #86
+{VM_findflags},						//  #87
+{VM_findchainflags},				//  #88
+{VM_cvar_defstring},				//  #89
 // deactivate support for model rendering in the menu until someone has time to do it right [3/2/2008 Andreas]
 #if 0
 VM_CL_setmodel,					// #90 void(entity e, string m) setmodel (QUAKE)
 VM_CL_precache_model,			// #91 void(string s) precache_model (QUAKE)
 VM_CL_setorigin,				// #92 void(entity e, vector o) setorigin (QUAKE)
 #else
-NULL,
-NULL,
-NULL,
+{NULL, 0, 0},
+{NULL, 0, 0},
+{NULL, 0, 0},
 #endif
-NULL,									//  #93
-NULL,									//  #94
-NULL,									//  #95
-NULL,									//  #96
-NULL,									//  #97
-NULL,									//  #98
-NULL,									//  #99
-NULL,									// #100
-NULL,									// #101
-NULL,									// #102
-NULL,									// #103
-NULL,									// #104
-NULL,									// #105
-NULL,									// #106
-NULL,									// #107
-NULL,									// #108
-NULL,									// #109
-NULL,									// #110
-NULL,									// #111
-NULL,									// #112
-NULL,									// #113
-NULL,									// #114
-NULL,									// #115
-NULL,									// #116
-NULL,									// #117
-NULL,									// #118
-NULL,									// #119
-NULL,									// #120
-NULL,									// #121
-NULL,									// #122
-NULL,									// #123
-NULL,									// #124
-NULL,									// #125
-NULL,									// #126
-NULL,									// #127
-NULL,									// #128
-NULL,									// #129
-NULL,									// #130
-NULL,									// #131
-NULL,									// #132
-NULL,									// #133
-NULL,									// #134
-NULL,									// #135
-NULL,									// #136
-NULL,									// #137
-NULL,									// #138
-NULL,									// #139
-NULL,									// #140
-NULL,									// #141
-NULL,									// #142
-NULL,									// #143
-NULL,									// #144
-NULL,									// #145
-NULL,									// #146
-NULL,									// #147
-NULL,									// #148
-NULL,									// #149
-NULL,									// #150
-NULL,									// #151
-NULL,									// #152
-NULL,									// #153
-NULL,									// #154
-NULL,									// #155
-NULL,									// #156
-NULL,									// #157
-NULL,									// #158
-NULL,									// #159
-NULL,									// #160
-NULL,									// #161
-NULL,									// #162
-NULL,									// #163
-NULL,									// #164
-NULL,									// #165
-NULL,									// #166
-NULL,									// #167
-NULL,									// #168
-NULL,									// #169
-NULL,									// #170
-NULL,									// #171
-NULL,									// #172
-NULL,									// #173
-NULL,									// #174
-NULL,									// #175
-NULL,									// #176
-NULL,									// #177
-NULL,									// #178
-NULL,									// #179
-NULL,									// #180
-NULL,									// #181
-NULL,									// #182
-NULL,									// #183
-NULL,									// #184
-NULL,									// #185
-NULL,									// #186
-NULL,									// #187
-NULL,									// #188
-NULL,									// #189
-NULL,									// #190
-NULL,									// #191
-NULL,									// #192
-NULL,									// #193
-NULL,									// #194
-NULL,									// #195
-NULL,									// #196
-NULL,									// #197
-NULL,									// #198
-NULL,									// #199
-NULL,									// #200
-NULL,									// #201
-NULL,									// #202
-NULL,									// #203
-NULL,									// #204
-NULL,									// #205
-NULL,									// #206
-NULL,									// #207
-NULL,									// #208
-NULL,									// #209
-NULL,									// #210
-NULL,									// #211
-NULL,									// #212
-NULL,									// #213
-NULL,									// #214
-NULL,									// #215
-NULL,									// #216
-NULL,									// #217
-NULL,									// #218
-NULL,									// #219
-NULL,									// #220
-VM_strstrofs,						// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
-VM_str2chr,						// #222 float(string str, float ofs) str2chr (FTE_STRINGS)
-VM_chr2str,						// #223 string(float c, ...) chr2str (FTE_STRINGS)
-VM_strconv,						// #224 string(float ccase, float calpha, float cnum, string s, ...) strconv (FTE_STRINGS)
-VM_strpad,						// #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
-VM_infoadd,						// #226 string(string info, string key, string value, ...) infoadd (FTE_STRINGS)
-VM_infoget,						// #227 string(string info, string key) infoget (FTE_STRINGS)
-VM_strncmp,							// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
-VM_strncasecmp,					// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
-VM_strncasecmp,					// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
-NULL,									// #231
-NULL,									// #232
-NULL,									// #233
-NULL,									// #234
-NULL,									// #235
-NULL,									// #236
-NULL,									// #237
-NULL,									// #238
-NULL,									// #239
-NULL,									// #240
-NULL,									// #241
-NULL,									// #242
-NULL,									// #243
-NULL,									// #244
-NULL,									// #245
-NULL,									// #246
-NULL,									// #247
-NULL,									// #248
-NULL,									// #249
-NULL,									// #250
-NULL,									// #251
-NULL,									// #252
-NULL,									// #253
-NULL,									// #254
-NULL,									// #255
-NULL,									// #256
-NULL,									// #257
-NULL,									// #258
-NULL,									// #259
-NULL,									// #260
-NULL,									// #261
-NULL,									// #262
-NULL,									// #263
-NULL,									// #264
-NULL,									// #265
-NULL,									// #266
-NULL,									// #267
-NULL,									// #268
-NULL,									// #269
-NULL,									// #270
-NULL,									// #271
-NULL,									// #272
-NULL,									// #273
-NULL,									// #274
-NULL,									// #275
-NULL,									// #276
-NULL,									// #277
-NULL,									// #278
-NULL,									// #279
-NULL,									// #280
-NULL,									// #281
-NULL,									// #282
-NULL,									// #283
-NULL,									// #284
-NULL,									// #285
-NULL,									// #286
-NULL,									// #287
-NULL,									// #288
-NULL,									// #289
-NULL,									// #290
-NULL,									// #291
-NULL,									// #292
-NULL,									// #293
-NULL,									// #294
-NULL,									// #295
-NULL,									// #296
-NULL,									// #297
-NULL,									// #298
-NULL,									// #299
+{NULL, 0, 0},									//  #93
+{NULL, 0, 0},									//  #94
+{NULL, 0, 0},									//  #95
+{NULL, 0, 0},									//  #96
+{NULL, 0, 0},									//  #97
+{NULL, 0, 0},									//  #98
+{NULL, 0, 0},									//  #99
+{NULL, 0, 0},									// #100
+{NULL, 0, 0},									// #101
+{NULL, 0, 0},									// #102
+{NULL, 0, 0},									// #103
+{NULL, 0, 0},									// #104
+{NULL, 0, 0},									// #105
+{NULL, 0, 0},									// #106
+{NULL, 0, 0},									// #107
+{NULL, 0, 0},									// #108
+{NULL, 0, 0},									// #109
+{NULL, 0, 0},									// #110
+{NULL, 0, 0},									// #111
+{NULL, 0, 0},									// #112
+{NULL, 0, 0},									// #113
+{NULL, 0, 0},									// #114
+{NULL, 0, 0},									// #115
+{NULL, 0, 0},									// #116
+{NULL, 0, 0},									// #117
+{NULL, 0, 0},									// #118
+{NULL, 0, 0},									// #119
+{NULL, 0, 0},									// #120
+{NULL, 0, 0},									// #121
+{NULL, 0, 0},									// #122
+{NULL, 0, 0},									// #123
+{NULL, 0, 0},									// #124
+{NULL, 0, 0},									// #125
+{NULL, 0, 0},									// #126
+{NULL, 0, 0},									// #127
+{NULL, 0, 0},									// #128
+{NULL, 0, 0},									// #129
+{NULL, 0, 0},									// #130
+{NULL, 0, 0},									// #131
+{NULL, 0, 0},									// #132
+{NULL, 0, 0},									// #133
+{NULL, 0, 0},									// #134
+{NULL, 0, 0},									// #135
+{NULL, 0, 0},									// #136
+{NULL, 0, 0},									// #137
+{NULL, 0, 0},									// #138
+{NULL, 0, 0},									// #139
+{NULL, 0, 0},									// #140
+{NULL, 0, 0},									// #141
+{NULL, 0, 0},									// #142
+{NULL, 0, 0},									// #143
+{NULL, 0, 0},									// #144
+{NULL, 0, 0},									// #145
+{NULL, 0, 0},									// #146
+{NULL, 0, 0},									// #147
+{NULL, 0, 0},									// #148
+{NULL, 0, 0},									// #149
+{NULL, 0, 0},									// #150
+{NULL, 0, 0},									// #151
+{NULL, 0, 0},									// #152
+{NULL, 0, 0},									// #153
+{NULL, 0, 0},									// #154
+{NULL, 0, 0},									// #155
+{NULL, 0, 0},									// #156
+{NULL, 0, 0},									// #157
+{NULL, 0, 0},									// #158
+{NULL, 0, 0},									// #159
+{NULL, 0, 0},									// #160
+{NULL, 0, 0},									// #161
+{NULL, 0, 0},									// #162
+{NULL, 0, 0},									// #163
+{NULL, 0, 0},									// #164
+{NULL, 0, 0},									// #165
+{NULL, 0, 0},									// #166
+{NULL, 0, 0},									// #167
+{NULL, 0, 0},									// #168
+{NULL, 0, 0},									// #169
+{NULL, 0, 0},									// #170
+{NULL, 0, 0},									// #171
+{NULL, 0, 0},									// #172
+{NULL, 0, 0},									// #173
+{NULL, 0, 0},									// #174
+{NULL, 0, 0},									// #175
+{NULL, 0, 0},									// #176
+{NULL, 0, 0},									// #177
+{NULL, 0, 0},									// #178
+{NULL, 0, 0},									// #179
+{NULL, 0, 0},									// #180
+{NULL, 0, 0},									// #181
+{NULL, 0, 0},									// #182
+{NULL, 0, 0},									// #183
+{NULL, 0, 0},									// #184
+{NULL, 0, 0},									// #185
+{NULL, 0, 0},									// #186
+{NULL, 0, 0},									// #187
+{NULL, 0, 0},									// #188
+{NULL, 0, 0},									// #189
+{NULL, 0, 0},									// #190
+{NULL, 0, 0},									// #191
+{NULL, 0, 0},									// #192
+{NULL, 0, 0},									// #193
+{NULL, 0, 0},									// #194
+{NULL, 0, 0},									// #195
+{NULL, 0, 0},									// #196
+{NULL, 0, 0},									// #197
+{NULL, 0, 0},									// #198
+{NULL, 0, 0},									// #199
+{NULL, 0, 0},									// #200
+{NULL, 0, 0},									// #201
+{NULL, 0, 0},									// #202
+{NULL, 0, 0},									// #203
+{NULL, 0, 0},									// #204
+{NULL, 0, 0},									// #205
+{NULL, 0, 0},									// #206
+{NULL, 0, 0},									// #207
+{NULL, 0, 0},									// #208
+{NULL, 0, 0},									// #209
+{NULL, 0, 0},									// #210
+{NULL, 0, 0},									// #211
+{NULL, 0, 0},									// #212
+{NULL, 0, 0},									// #213
+{NULL, 0, 0},									// #214
+{NULL, 0, 0},									// #215
+{NULL, 0, 0},									// #216
+{NULL, 0, 0},									// #217
+{NULL, 0, 0},									// #218
+{NULL, 0, 0},									// #219
+{NULL, 0, 0},									// #220
+{VM_strstrofs},						// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
+{VM_str2chr},						// #222 float(string str, float ofs) str2chr (FTE_STRINGS)
+{VM_chr2str},						// #223 string(float c, ...) chr2str (FTE_STRINGS)
+{VM_strconv},						// #224 string(float ccase, float calpha, float cnum, string s, ...) strconv (FTE_STRINGS)
+{VM_strpad},						// #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
+{VM_infoadd},						// #226 string(string info, string key, string value, ...) infoadd (FTE_STRINGS)
+{VM_infoget},						// #227 string(string info, string key) infoget (FTE_STRINGS)
+{VM_strncmp},							// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
+{VM_strncasecmp},					// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
+{VM_strncasecmp},					// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
+{NULL, 0, 0},									// #231
+{NULL, 0, 0},									// #232
+{NULL, 0, 0},									// #233
+{NULL, 0, 0},									// #234
+{NULL, 0, 0},									// #235
+{NULL, 0, 0},									// #236
+{NULL, 0, 0},									// #237
+{NULL, 0, 0},									// #238
+{NULL, 0, 0},									// #239
+{NULL, 0, 0},									// #240
+{NULL, 0, 0},									// #241
+{NULL, 0, 0},									// #242
+{NULL, 0, 0},									// #243
+{NULL, 0, 0},									// #244
+{NULL, 0, 0},									// #245
+{NULL, 0, 0},									// #246
+{NULL, 0, 0},									// #247
+{NULL, 0, 0},									// #248
+{NULL, 0, 0},									// #249
+{NULL, 0, 0},									// #250
+{NULL, 0, 0},									// #251
+{NULL, 0, 0},									// #252
+{NULL, 0, 0},									// #253
+{NULL, 0, 0},									// #254
+{NULL, 0, 0},									// #255
+{NULL, 0, 0},									// #256
+{NULL, 0, 0},									// #257
+{NULL, 0, 0},									// #258
+{NULL, 0, 0},									// #259
+{NULL, 0, 0},									// #260
+{NULL, 0, 0},									// #261
+{NULL, 0, 0},									// #262
+{NULL, 0, 0},									// #263
+{NULL, 0, 0},									// #264
+{NULL, 0, 0},									// #265
+{NULL, 0, 0},									// #266
+{NULL, 0, 0},									// #267
+{NULL, 0, 0},									// #268
+{NULL, 0, 0},									// #269
+{NULL, 0, 0},									// #270
+{NULL, 0, 0},									// #271
+{NULL, 0, 0},									// #272
+{NULL, 0, 0},									// #273
+{NULL, 0, 0},									// #274
+{NULL, 0, 0},									// #275
+{NULL, 0, 0},									// #276
+{NULL, 0, 0},									// #277
+{NULL, 0, 0},									// #278
+{NULL, 0, 0},									// #279
+{NULL, 0, 0},									// #280
+{NULL, 0, 0},									// #281
+{NULL, 0, 0},									// #282
+{NULL, 0, 0},									// #283
+{NULL, 0, 0},									// #284
+{NULL, 0, 0},									// #285
+{NULL, 0, 0},									// #286
+{NULL, 0, 0},									// #287
+{NULL, 0, 0},									// #288
+{NULL, 0, 0},									// #289
+{NULL, 0, 0},									// #290
+{NULL, 0, 0},									// #291
+{NULL, 0, 0},									// #292
+{NULL, 0, 0},									// #293
+{NULL, 0, 0},									// #294
+{NULL, 0, 0},									// #295
+{NULL, 0, 0},									// #296
+{NULL, 0, 0},									// #297
+{NULL, 0, 0},									// #298
+{NULL, 0, 0},									// #299
 // deactivate support for model rendering in the menu until someone has time to do it right [3/2/2008 Andreas]
 #if 0
 // CSQC range #300-#399
@@ -1376,352 +1376,352 @@ VM_CL_gettagindex,				// #311 float(entity ent, string tagname) gettagindex (DP_
 VM_CL_gettaginfo,					// #312 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO) (DP_QC_RENDER_SCENE)
 #else
 // CSQC range #300-#399
-NULL,		
-NULL,		
-NULL,		
-NULL,		
-NULL,		
-NULL,		
-NULL,		
-NULL,	
-NULL,	
-NULL,
-NULL,	
-NULL,	
-NULL,	
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},		
+{NULL, 0, 0},	
+{NULL, 0, 0},	
+{NULL, 0, 0},
+{NULL, 0, 0},	
+{NULL, 0, 0},	
+{NULL, 0, 0},	
 #endif
-NULL,									// #313
-NULL,									// #314
-NULL,									// #315
-NULL,									// #316
-NULL,									// #317
-NULL,									// #318
-NULL,									// #319
-NULL,									// #320
-NULL,									// #321
-NULL,									// #322
-NULL,									// #323
-NULL,									// #324
-NULL,									// #325
-NULL,									// #326
-NULL,									// #327
-NULL,									// #328
-NULL,									// #329
-NULL,									// #330
-NULL,									// #331
-NULL,									// #332
-NULL,									// #333
-NULL,									// #334
-NULL,									// #335
-NULL,									// #336
-NULL,									// #337
-NULL,									// #338
-NULL,									// #339
-VM_keynumtostring,				// #340 string keynumtostring(float keynum)
-VM_stringtokeynum,				// #341 float stringtokeynum(string key)
-VM_getkeybind,							// #342 string(float keynum[, float bindmap]) getkeybind (EXT_CSQC)
-NULL,									// #343
-NULL,									// #344
-NULL,									// #345
-NULL,									// #346
-NULL,									// #347
-NULL,									// #348
-VM_CL_isdemo,							// #349
-NULL,									// #350
-NULL,									// #351
-NULL,									// #352
-VM_wasfreed,							// #353 float(entity ent) wasfreed
-NULL,									// #354
-VM_CL_videoplaying,						// #355
-VM_findfont,							// #356 float(string fontname) loadfont (DP_GFX_FONTS)
-VM_loadfont,							// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
-NULL,									// #358
-NULL,									// #359
-NULL,									// #360
-NULL,									// #361
-NULL,									// #362
-NULL,									// #363
-NULL,									// #364
-NULL,									// #365
-NULL,									// #366
-NULL,									// #367
-NULL,									// #368
-NULL,									// #369
-NULL,									// #370
-NULL,									// #371
-NULL,									// #372
-NULL,									// #373
-NULL,									// #374
-NULL,									// #375
-NULL,									// #376
-NULL,									// #377
-NULL,									// #378
-NULL,									// #379
-NULL,									// #380
-NULL,									// #381
-NULL,									// #382
-NULL,									// #383
-NULL,									// #384
-NULL,									// #385
-NULL,									// #386
-NULL,									// #387
-NULL,									// #388
-NULL,									// #389
-NULL,									// #390
-NULL,									// #391
-NULL,									// #392
-NULL,									// #393
-NULL,									// #394
-NULL,									// #395
-NULL,									// #396
-NULL,									// #397
-NULL,									// #398
-NULL,									// #399
-NULL,									// #400
-VM_M_WriteByte,					// #401
-VM_M_WriteChar,					// #402
-VM_M_WriteShort,					// #403
-VM_M_WriteLong,					// #404
-VM_M_WriteAngle,					// #405
-VM_M_WriteCoord,					// #406
-VM_M_WriteString,					// #407
-VM_M_WriteEntity,					// #408
-NULL,									// #409
-NULL,									// #410
-NULL,									// #411
-NULL,									// #412
-NULL,									// #413
-NULL,									// #414
-NULL,									// #415
-NULL,									// #416
-NULL,									// #417
-NULL,									// #418
-NULL,									// #419
-NULL,									// #420
-NULL,									// #421
-NULL,									// #422
-NULL,									// #423
-NULL,									// #424
-NULL,									// #425
-NULL,									// #426
-NULL,									// #427
-NULL,									// #428
-NULL,									// #429
-NULL,									// #430
-NULL,									// #431
-NULL,									// #432
-NULL,									// #433
-NULL,									// #434
-NULL,									// #435
-NULL,									// #436
-NULL,									// #437
-NULL,									// #438
-NULL,									// #439
-VM_buf_create,					// #440 float() buf_create (DP_QC_STRINGBUFFERS)
-VM_buf_del,						// #441 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
-VM_buf_getsize,					// #442 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
-VM_buf_copy,					// #443 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
-VM_buf_sort,					// #444 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
-VM_buf_implode,					// #445 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
-VM_bufstr_get,					// #446 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
-VM_bufstr_set,					// #447 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
-VM_bufstr_add,					// #448 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
-VM_bufstr_free,					// #449 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
-NULL,									// #450
-VM_iscachedpic,					// #451 draw functions...
-VM_precache_pic,					// #452
-VM_freepic,							// #453
-VM_drawcharacter,					// #454
-VM_drawstring,						// #455
-VM_drawpic,							// #456
-VM_drawfill,						// #457
-VM_drawsetcliparea,				// #458
-VM_drawresetcliparea,			// #459
-VM_getimagesize,					// #460
-VM_cin_open,						// #461
-VM_cin_close,						// #462
-VM_cin_setstate,					// #463
-VM_cin_getstate,					// #464
-VM_cin_restart, 					// #465
-VM_drawline,						// #466
-VM_drawcolorcodedstring,		// #467
-VM_stringwidth,					// #468
-VM_drawsubpic,						// #469
-VM_drawrotpic,						// #470
-VM_asin,								// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
-VM_acos,								// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
-VM_atan,								// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
-VM_atan2,							// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
-VM_tan,								// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
-VM_strlennocol,					// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
-VM_strdecolorize,					// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
-VM_strftime,						// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
-VM_tokenizebyseparator,			// #479 float(string s) tokenizebyseparator (DP_QC_TOKENIZEBYSEPARATOR)
-VM_strtolower,						// #480 string(string s) VM_strtolower : DRESK - Return string as lowercase
-VM_strtoupper,						// #481 string(string s) VM_strtoupper : DRESK - Return string as uppercase
-NULL,									// #482
-NULL,									// #483
-VM_strreplace,						// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
-VM_strireplace,					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
-NULL,									// #486
-VM_gecko_create,					// #487 float gecko_create( string name )
-VM_gecko_destroy,					// #488 void gecko_destroy( string name )
-VM_gecko_navigate,				// #489 void gecko_navigate( string name, string URI )
-VM_gecko_keyevent,				// #490 float gecko_keyevent( string name, float key, float eventtype )
-VM_gecko_movemouse,				// #491 void gecko_mousemove( string name, float x, float y )
-VM_gecko_resize,					// #492 void gecko_resize( string name, float w, float h )
-VM_gecko_get_texture_extent,	// #493 vector gecko_get_texture_extent( string name )
-VM_crc16,						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
-VM_cvar_type,					// #495 float(string name) cvar_type = #495; (DP_QC_CVAR_TYPE)
-VM_numentityfields,				// #496 float() numentityfields = #496; (QP_QC_ENTITYDATA)
-VM_entityfieldname,				// #497 string(float fieldnum) entityfieldname = #497; (DP_QC_ENTITYDATA)
-VM_entityfieldtype,				// #498 float(float fieldnum) entityfieldtype = #498; (DP_QC_ENTITYDATA)
-VM_getentityfieldstring,		// #499 string(float fieldnum, entity ent) getentityfieldstring = #499; (DP_QC_ENTITYDATA)
-VM_putentityfieldstring,		// #500 float(float fieldnum, entity ent, string s) putentityfieldstring = #500; (DP_QC_ENTITYDATA)
-NULL,									// #501
-NULL,									// #502
-VM_whichpack,					// #503 string(string) whichpack = #503;
-NULL,									// #504
-NULL,									// #505
-NULL,									// #506
-NULL,									// #507
-NULL,									// #508
-NULL,									// #509
-VM_uri_escape,					// #510 string(string in) uri_escape = #510;
-VM_uri_unescape,				// #511 string(string in) uri_unescape = #511;
-VM_etof,					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
-VM_uri_get,						// #513 float(string uri, float id, [string post_contenttype, string post_delim, [float buf]]) uri_get = #513; (DP_QC_URI_GET, DP_QC_URI_POST)
-VM_tokenize_console,					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
-VM_argv_start_index,					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
-VM_argv_end_index,						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
-VM_buf_cvarlist,						// #517 void(float buf, string prefix, string antiprefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
-VM_cvar_description,					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
-NULL,									// #519
-NULL,									// #520
-NULL,									// #521
-NULL,									// #522
-NULL,									// #523
-NULL,									// #524
-NULL,									// #525
-NULL,									// #526
-NULL,									// #527
-NULL,									// #528
-NULL,									// #529
-NULL,									// #530
-NULL,									// #531
-VM_log,									// #532
-VM_getsoundtime,						// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
-VM_soundlength,							// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
-VM_buf_loadfile,                        // #535 float(string filename, float bufhandle) buf_loadfile (DP_QC_STRINGBUFFERS_EXT_WIP)
-VM_buf_writefile,                       // #536 float(float filehandle, float bufhandle, float startpos, float numstrings) buf_writefile (DP_QC_STRINGBUFFERS_EXT_WIP)
-VM_bufstr_find,                         // #537 float(float bufhandle, string match, float matchrule, float startpos) bufstr_find (DP_QC_STRINGBUFFERS_EXT_WIP)
-VM_matchpattern,                        // #538 float(string s, string pattern, float matchrule) matchpattern (DP_QC_STRINGBUFFERS_EXT_WIP)
-NULL,									// #539
-NULL,									// #540
-NULL,									// #541
-NULL,									// #542
-NULL,									// #543
-NULL,									// #544
-NULL,									// #545
-NULL,									// #546
-NULL,									// #547
-NULL,									// #548
-NULL,									// #549
-NULL,									// #550
-NULL,									// #551
-NULL,									// #552
-NULL,									// #553
-NULL,									// #554
-NULL,									// #555
-NULL,									// #556
-NULL,									// #557
-NULL,									// #558
-NULL,									// #559
-NULL,									// #560
-NULL,									// #561
-NULL,									// #562
-NULL,									// #563
-NULL,									// #564
-NULL,									// #565
-NULL,									// #566
-NULL,									// #567
-NULL,									// #568
-NULL,									// #569
-NULL,									// #570
-NULL,									// #571
-NULL,									// #572
-NULL,									// #573
-NULL,									// #574
-NULL,									// #575
-NULL,									// #576
-NULL,									// #577
-NULL,									// #578
-NULL,									// #579
-NULL,									// #580
-NULL,									// #581
-NULL,									// #582
-NULL,									// #583
-NULL,									// #584
-NULL,									// #585
-NULL,									// #586
-NULL,									// #587
-NULL,									// #588
-NULL,									// #589
-NULL,									// #590
-NULL,									// #591
-NULL,									// #592
-NULL,									// #593
-NULL,									// #594
-NULL,									// #595
-NULL,									// #596
-NULL,									// #597
-NULL,									// #598
-NULL,									// #599
-NULL,									// #600
-VM_M_setkeydest,					// #601 void setkeydest(float dest)
-VM_M_getkeydest,					// #602 float getkeydest(void)
-VM_M_setmousetarget,				// #603 void setmousetarget(float trg)
-VM_M_getmousetarget,				// #604 float getmousetarget(void)
-VM_callfunction,				// #605 void callfunction(...)
-VM_writetofile,					// #606 void writetofile(float fhandle, entity ent)
-VM_isfunction,					// #607 float isfunction(string function_name)
-VM_M_getresolution,				// #608 vector getresolution(float number, [float forfullscreen])
-VM_keynumtostring,				// #609 string keynumtostring(float keynum)
-VM_findkeysforcommand,		// #610 string findkeysforcommand(string command[, float bindmap])
-VM_M_getserverliststat,			// #611 float gethostcachevalue(float type)
-VM_M_getserverliststring,		// #612 string gethostcachestring(float type, float hostnr)
-VM_parseentitydata,				// #613 void parseentitydata(entity ent, string data)
-VM_stringtokeynum,				// #614 float stringtokeynum(string key)
-VM_M_resetserverlistmasks,		// #615 void resethostcachemasks(void)
-VM_M_setserverlistmaskstring,	// #616 void sethostcachemaskstring(float mask, float fld, string str, float op)
-VM_M_setserverlistmasknumber,	// #617 void sethostcachemasknumber(float mask, float fld, float num, float op)
-VM_M_resortserverlist,			// #618 void resorthostcache(void)
-VM_M_setserverlistsort,			// #619 void sethostcachesort(float fld, float descending)
-VM_M_refreshserverlist,			// #620 void refreshhostcache(void)
-VM_M_getserverlistnumber,		// #621 float gethostcachenumber(float fld, float hostnr)
-VM_M_getserverlistindexforkey,// #622 float gethostcacheindexforkey(string key)
-VM_M_addwantedserverlistkey,	// #623 void addwantedhostcachekey(string key)
-VM_CL_getextresponse,			// #624 string getextresponse(void)
-VM_netaddress_resolve,          // #625 string netaddress_resolve(string, float)
-VM_M_getgamedirinfo,            // #626 string getgamedirinfo(float n, float prop)
-VM_sprintf,                     // #627 string sprintf(string format, ...)
-NULL, // #628
-NULL, // #629
-VM_setkeybind,						// #630 float(float key, string bind[, float bindmap]) setkeybind
-VM_getbindmaps,						// #631 vector(void) getbindmap
-VM_setbindmaps,						// #632 float(vector bm) setbindmap
-VM_M_crypto_getkeyfp,					// #633 string(string addr) crypto_getkeyfp
-VM_M_crypto_getidfp,					// #634 string(string addr) crypto_getidfp
-VM_M_crypto_getencryptlevel,				// #635 string(string addr) crypto_getencryptlevel
-VM_M_crypto_getmykeyfp,					// #636 string(float addr) crypto_getmykeyfp
-VM_M_crypto_getmyidfp,					// #637 string(float addr) crypto_getmyidfp
-NULL,							// #638
-VM_digest_hex,						// #639
-NULL,							// #640
-VM_M_crypto_getmyidstatus,				// #641 float(float i) crypto_getmyidstatus
-VM_coverage,						// #642
-VM_M_crypto_getidstatus,				// #643 float(string addr) crypto_getidstatus
-NULL
+{NULL, 0, 0},									// #313
+{NULL, 0, 0},									// #314
+{NULL, 0, 0},									// #315
+{NULL, 0, 0},									// #316
+{NULL, 0, 0},									// #317
+{NULL, 0, 0},									// #318
+{NULL, 0, 0},									// #319
+{NULL, 0, 0},									// #320
+{NULL, 0, 0},									// #321
+{NULL, 0, 0},									// #322
+{NULL, 0, 0},									// #323
+{NULL, 0, 0},									// #324
+{NULL, 0, 0},									// #325
+{NULL, 0, 0},									// #326
+{NULL, 0, 0},									// #327
+{NULL, 0, 0},									// #328
+{NULL, 0, 0},									// #329
+{NULL, 0, 0},									// #330
+{NULL, 0, 0},									// #331
+{NULL, 0, 0},									// #332
+{NULL, 0, 0},									// #333
+{NULL, 0, 0},									// #334
+{NULL, 0, 0},									// #335
+{NULL, 0, 0},									// #336
+{NULL, 0, 0},									// #337
+{NULL, 0, 0},									// #338
+{NULL, 0, 0},									// #339
+{VM_keynumtostring},				// #340 string keynumtostring(float keynum)
+{VM_stringtokeynum},				// #341 float stringtokeynum(string key)
+{VM_getkeybind},							// #342 string(float keynum[, float bindmap]) getkeybind (EXT_CSQC)
+{NULL, 0, 0},									// #343
+{NULL, 0, 0},									// #344
+{NULL, 0, 0},									// #345
+{NULL, 0, 0},									// #346
+{NULL, 0, 0},									// #347
+{NULL, 0, 0},									// #348
+{VM_CL_isdemo},							// #349
+{NULL, 0, 0},									// #350
+{NULL, 0, 0},									// #351
+{NULL, 0, 0},									// #352
+{VM_wasfreed},							// #353 float(entity ent) wasfreed
+{NULL, 0, 0},									// #354
+{VM_CL_videoplaying},						// #355
+{VM_findfont},							// #356 float(string fontname) loadfont (DP_GFX_FONTS)
+{VM_loadfont},							// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
+{NULL, 0, 0},									// #358
+{NULL, 0, 0},									// #359
+{NULL, 0, 0},									// #360
+{NULL, 0, 0},									// #361
+{NULL, 0, 0},									// #362
+{NULL, 0, 0},									// #363
+{NULL, 0, 0},									// #364
+{NULL, 0, 0},									// #365
+{NULL, 0, 0},									// #366
+{NULL, 0, 0},									// #367
+{NULL, 0, 0},									// #368
+{NULL, 0, 0},									// #369
+{NULL, 0, 0},									// #370
+{NULL, 0, 0},									// #371
+{NULL, 0, 0},									// #372
+{NULL, 0, 0},									// #373
+{NULL, 0, 0},									// #374
+{NULL, 0, 0},									// #375
+{NULL, 0, 0},									// #376
+{NULL, 0, 0},									// #377
+{NULL, 0, 0},									// #378
+{NULL, 0, 0},									// #379
+{NULL, 0, 0},									// #380
+{NULL, 0, 0},									// #381
+{NULL, 0, 0},									// #382
+{NULL, 0, 0},									// #383
+{NULL, 0, 0},									// #384
+{NULL, 0, 0},									// #385
+{NULL, 0, 0},									// #386
+{NULL, 0, 0},									// #387
+{NULL, 0, 0},									// #388
+{NULL, 0, 0},									// #389
+{NULL, 0, 0},									// #390
+{NULL, 0, 0},									// #391
+{NULL, 0, 0},									// #392
+{NULL, 0, 0},									// #393
+{NULL, 0, 0},									// #394
+{NULL, 0, 0},									// #395
+{NULL, 0, 0},									// #396
+{NULL, 0, 0},									// #397
+{NULL, 0, 0},									// #398
+{NULL, 0, 0},									// #399
+{NULL, 0, 0},									// #400
+{VM_M_WriteByte},					// #401
+{VM_M_WriteChar},					// #402
+{VM_M_WriteShort},					// #403
+{VM_M_WriteLong},					// #404
+{VM_M_WriteAngle},					// #405
+{VM_M_WriteCoord},					// #406
+{VM_M_WriteString},					// #407
+{VM_M_WriteEntity},					// #408
+{NULL, 0, 0},									// #409
+{NULL, 0, 0},									// #410
+{NULL, 0, 0},									// #411
+{NULL, 0, 0},									// #412
+{NULL, 0, 0},									// #413
+{NULL, 0, 0},									// #414
+{NULL, 0, 0},									// #415
+{NULL, 0, 0},									// #416
+{NULL, 0, 0},									// #417
+{NULL, 0, 0},									// #418
+{NULL, 0, 0},									// #419
+{NULL, 0, 0},									// #420
+{NULL, 0, 0},									// #421
+{NULL, 0, 0},									// #422
+{NULL, 0, 0},									// #423
+{NULL, 0, 0},									// #424
+{NULL, 0, 0},									// #425
+{NULL, 0, 0},									// #426
+{NULL, 0, 0},									// #427
+{NULL, 0, 0},									// #428
+{NULL, 0, 0},									// #429
+{NULL, 0, 0},									// #430
+{NULL, 0, 0},									// #431
+{NULL, 0, 0},									// #432
+{NULL, 0, 0},									// #433
+{NULL, 0, 0},									// #434
+{NULL, 0, 0},									// #435
+{NULL, 0, 0},									// #436
+{NULL, 0, 0},									// #437
+{NULL, 0, 0},									// #438
+{NULL, 0, 0},									// #439
+{VM_buf_create},					// #440 float() buf_create (DP_QC_STRINGBUFFERS)
+{VM_buf_del},						// #441 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
+{VM_buf_getsize},					// #442 float(float bufhandle) buf_getsize (DP_QC_STRINGBUFFERS)
+{VM_buf_copy},					// #443 void(float bufhandle_from, float bufhandle_to) buf_copy (DP_QC_STRINGBUFFERS)
+{VM_buf_sort},					// #444 void(float bufhandle, float sortpower, float backward) buf_sort (DP_QC_STRINGBUFFERS)
+{VM_buf_implode},					// #445 string(float bufhandle, string glue) buf_implode (DP_QC_STRINGBUFFERS)
+{VM_bufstr_get},					// #446 string(float bufhandle, float string_index) bufstr_get (DP_QC_STRINGBUFFERS)
+{VM_bufstr_set},					// #447 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
+{VM_bufstr_add},					// #448 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
+{VM_bufstr_free},					// #449 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
+{NULL, 0, 0},									// #450
+{VM_iscachedpic},					// #451 draw functions...
+{VM_precache_pic},					// #452
+{VM_freepic},							// #453
+{VM_drawcharacter},					// #454
+{VM_drawstring},						// #455
+{VM_drawpic},							// #456
+{VM_drawfill},						// #457
+{VM_drawsetcliparea},				// #458
+{VM_drawresetcliparea},			// #459
+{VM_getimagesize},					// #460
+{VM_cin_open},						// #461
+{VM_cin_close},						// #462
+{VM_cin_setstate},					// #463
+{VM_cin_getstate},					// #464
+{VM_cin_restart}, 					// #465
+{VM_drawline},						// #466
+{VM_drawcolorcodedstring},		// #467
+{VM_stringwidth},					// #468
+{VM_drawsubpic},						// #469
+{VM_drawrotpic},						// #470
+{VM_asin},								// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
+{VM_acos},								// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
+{VM_atan},								// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
+{VM_atan2},							// #474 float(float c, float s) VM_atan2 (DP_QC_ASINACOSATANATAN2TAN)
+{VM_tan},								// #475 float(float a) VM_tan (DP_QC_ASINACOSATANATAN2TAN)
+{VM_strlennocol},					// #476 float(string s) : DRESK - String Length (not counting color codes) (DP_QC_STRINGCOLORFUNCTIONS)
+{VM_strdecolorize},					// #477 string(string s) : DRESK - Decolorized String (DP_QC_STRINGCOLORFUNCTIONS)
+{VM_strftime},						// #478 string(float uselocaltime, string format, ...) (DP_QC_STRFTIME)
+{VM_tokenizebyseparator},			// #479 float(string s) tokenizebyseparator (DP_QC_TOKENIZEBYSEPARATOR)
+{VM_strtolower},						// #480 string(string s) VM_strtolower : DRESK - Return string as lowercase
+{VM_strtoupper},						// #481 string(string s) VM_strtoupper : DRESK - Return string as uppercase
+{NULL, 0, 0},									// #482
+{NULL, 0, 0},									// #483
+{VM_strreplace},						// #484 string(string search, string replace, string subject) strreplace (DP_QC_STRREPLACE)
+{VM_strireplace},					// #485 string(string search, string replace, string subject) strireplace (DP_QC_STRREPLACE)
+{NULL, 0, 0},									// #486
+{VM_gecko_create},					// #487 float gecko_create( string name )
+{VM_gecko_destroy},					// #488 void gecko_destroy( string name )
+{VM_gecko_navigate},				// #489 void gecko_navigate( string name, string URI )
+{VM_gecko_keyevent},				// #490 float gecko_keyevent( string name, float key, float eventtype )
+{VM_gecko_movemouse},				// #491 void gecko_mousemove( string name, float x, float y )
+{VM_gecko_resize},					// #492 void gecko_resize( string name, float w, float h )
+{VM_gecko_get_texture_extent},	// #493 vector gecko_get_texture_extent( string name )
+{VM_crc16},						// #494 float(float caseinsensitive, string s, ...) crc16 = #494 (DP_QC_CRC16)
+{VM_cvar_type},					// #495 float(string name) cvar_type = #495; (DP_QC_CVAR_TYPE)
+{VM_numentityfields},				// #496 float() numentityfields = #496; (QP_QC_ENTITYDATA)
+{VM_entityfieldname},				// #497 string(float fieldnum) entityfieldname = #497; (DP_QC_ENTITYDATA)
+{VM_entityfieldtype},				// #498 float(float fieldnum) entityfieldtype = #498; (DP_QC_ENTITYDATA)
+{VM_getentityfieldstring},		// #499 string(float fieldnum, entity ent) getentityfieldstring = #499; (DP_QC_ENTITYDATA)
+{VM_putentityfieldstring},		// #500 float(float fieldnum, entity ent, string s) putentityfieldstring = #500; (DP_QC_ENTITYDATA)
+{NULL, 0, 0},									// #501
+{NULL, 0, 0},									// #502
+{VM_whichpack},					// #503 string(string) whichpack = #503;
+{NULL, 0, 0},									// #504
+{NULL, 0, 0},									// #505
+{NULL, 0, 0},									// #506
+{NULL, 0, 0},									// #507
+{NULL, 0, 0},									// #508
+{NULL, 0, 0},									// #509
+{VM_uri_escape},					// #510 string(string in) uri_escape = #510;
+{VM_uri_unescape},				// #511 string(string in) uri_unescape = #511;
+{VM_etof},					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
+{VM_uri_get},						// #513 float(string uri, float id, [string post_contenttype, string post_delim, [float buf]]) uri_get = #513; (DP_QC_URI_GET, DP_QC_URI_POST)
+{VM_tokenize_console},					// #514 float(string str) tokenize_console = #514; (DP_QC_TOKENIZE_CONSOLE)
+{VM_argv_start_index},					// #515 float(float idx) argv_start_index = #515; (DP_QC_TOKENIZE_CONSOLE)
+{VM_argv_end_index},						// #516 float(float idx) argv_end_index = #516; (DP_QC_TOKENIZE_CONSOLE)
+{VM_buf_cvarlist},						// #517 void(float buf, string prefix, string antiprefix) buf_cvarlist = #517; (DP_QC_STRINGBUFFERS_CVARLIST)
+{VM_cvar_description},					// #518 float(string name) cvar_description = #518; (DP_QC_CVAR_DESCRIPTION)
+{NULL, 0, 0},									// #519
+{NULL, 0, 0},									// #520
+{NULL, 0, 0},									// #521
+{NULL, 0, 0},									// #522
+{NULL, 0, 0},									// #523
+{NULL, 0, 0},									// #524
+{NULL, 0, 0},									// #525
+{NULL, 0, 0},									// #526
+{NULL, 0, 0},									// #527
+{NULL, 0, 0},									// #528
+{NULL, 0, 0},									// #529
+{NULL, 0, 0},									// #530
+{NULL, 0, 0},									// #531
+{VM_log},									// #532
+{VM_getsoundtime},						// #533 float(entity e, float channel) getsoundtime = #533; (DP_SND_GETSOUNDTIME)
+{VM_soundlength},							// #534 float(string sample) soundlength = #534; (DP_SND_GETSOUNDTIME)
+{VM_buf_loadfile},                        // #535 float(string filename, float bufhandle) buf_loadfile (DP_QC_STRINGBUFFERS_EXT_WIP)
+{VM_buf_writefile},                       // #536 float(float filehandle, float bufhandle, float startpos, float numstrings) buf_writefile (DP_QC_STRINGBUFFERS_EXT_WIP)
+{VM_bufstr_find},                         // #537 float(float bufhandle, string match, float matchrule, float startpos) bufstr_find (DP_QC_STRINGBUFFERS_EXT_WIP)
+{VM_matchpattern},                        // #538 float(string s, string pattern, float matchrule) matchpattern (DP_QC_STRINGBUFFERS_EXT_WIP)
+{NULL, 0, 0},									// #539
+{NULL, 0, 0},									// #540
+{NULL, 0, 0},									// #541
+{NULL, 0, 0},									// #542
+{NULL, 0, 0},									// #543
+{NULL, 0, 0},									// #544
+{NULL, 0, 0},									// #545
+{NULL, 0, 0},									// #546
+{NULL, 0, 0},									// #547
+{NULL, 0, 0},									// #548
+{NULL, 0, 0},									// #549
+{NULL, 0, 0},									// #550
+{NULL, 0, 0},									// #551
+{NULL, 0, 0},									// #552
+{NULL, 0, 0},									// #553
+{NULL, 0, 0},									// #554
+{NULL, 0, 0},									// #555
+{NULL, 0, 0},									// #556
+{NULL, 0, 0},									// #557
+{NULL, 0, 0},									// #558
+{NULL, 0, 0},									// #559
+{NULL, 0, 0},									// #560
+{NULL, 0, 0},									// #561
+{NULL, 0, 0},									// #562
+{NULL, 0, 0},									// #563
+{NULL, 0, 0},									// #564
+{NULL, 0, 0},									// #565
+{NULL, 0, 0},									// #566
+{NULL, 0, 0},									// #567
+{NULL, 0, 0},									// #568
+{NULL, 0, 0},									// #569
+{NULL, 0, 0},									// #570
+{NULL, 0, 0},									// #571
+{NULL, 0, 0},									// #572
+{NULL, 0, 0},									// #573
+{NULL, 0, 0},									// #574
+{NULL, 0, 0},									// #575
+{NULL, 0, 0},									// #576
+{NULL, 0, 0},									// #577
+{NULL, 0, 0},									// #578
+{NULL, 0, 0},									// #579
+{NULL, 0, 0},									// #580
+{NULL, 0, 0},									// #581
+{NULL, 0, 0},									// #582
+{NULL, 0, 0},									// #583
+{NULL, 0, 0},									// #584
+{NULL, 0, 0},									// #585
+{NULL, 0, 0},									// #586
+{NULL, 0, 0},									// #587
+{NULL, 0, 0},									// #588
+{NULL, 0, 0},									// #589
+{NULL, 0, 0},									// #590
+{NULL, 0, 0},									// #591
+{NULL, 0, 0},									// #592
+{NULL, 0, 0},									// #593
+{NULL, 0, 0},									// #594
+{NULL, 0, 0},									// #595
+{NULL, 0, 0},									// #596
+{NULL, 0, 0},									// #597
+{NULL, 0, 0},									// #598
+{NULL, 0, 0},									// #599
+{NULL, 0, 0},									// #600
+{VM_M_setkeydest},					// #601 void setkeydest(float dest)
+{VM_M_getkeydest},					// #602 float getkeydest(void)
+{VM_M_setmousetarget},				// #603 void setmousetarget(float trg)
+{VM_M_getmousetarget},				// #604 float getmousetarget(void)
+{VM_callfunction},				// #605 void callfunction(...)
+{VM_writetofile},					// #606 void writetofile(float fhandle, entity ent)
+{VM_isfunction},					// #607 float isfunction(string function_name)
+{VM_M_getresolution},				// #608 vector getresolution(float number, [float forfullscreen])
+{VM_keynumtostring},				// #609 string keynumtostring(float keynum)
+{VM_findkeysforcommand},		// #610 string findkeysforcommand(string command[, float bindmap])
+{VM_M_getserverliststat},			// #611 float gethostcachevalue(float type)
+{VM_M_getserverliststring},		// #612 string gethostcachestring(float type, float hostnr)
+{VM_parseentitydata},				// #613 void parseentitydata(entity ent, string data)
+{VM_stringtokeynum},				// #614 float stringtokeynum(string key)
+{VM_M_resetserverlistmasks},		// #615 void resethostcachemasks(void)
+{VM_M_setserverlistmaskstring},	// #616 void sethostcachemaskstring(float mask, float fld, string str, float op)
+{VM_M_setserverlistmasknumber},	// #617 void sethostcachemasknumber(float mask, float fld, float num, float op)
+{VM_M_resortserverlist},			// #618 void resorthostcache(void)
+{VM_M_setserverlistsort},			// #619 void sethostcachesort(float fld, float descending)
+{VM_M_refreshserverlist},			// #620 void refreshhostcache(void)
+{VM_M_getserverlistnumber},		// #621 float gethostcachenumber(float fld, float hostnr)
+{VM_M_getserverlistindexforkey},// #622 float gethostcacheindexforkey(string key)
+{VM_M_addwantedserverlistkey},	// #623 void addwantedhostcachekey(string key)
+{VM_CL_getextresponse},			// #624 string getextresponse(void)
+{VM_netaddress_resolve},          // #625 string netaddress_resolve(string, float)
+{VM_M_getgamedirinfo},            // #626 string getgamedirinfo(float n, float prop)
+{VM_sprintf},                     // #627 string sprintf(string format, ...)
+{NULL, 0, 0}, // #628
+{NULL, 0, 0}, // #629
+{VM_setkeybind},						// #630 float(float key, string bind[, float bindmap]) setkeybind
+{VM_getbindmaps},						// #631 vector(void) getbindmap
+{VM_setbindmaps},						// #632 float(vector bm) setbindmap
+{VM_M_crypto_getkeyfp},					// #633 string(string addr) crypto_getkeyfp
+{VM_M_crypto_getidfp},					// #634 string(string addr) crypto_getidfp
+{VM_M_crypto_getencryptlevel},				// #635 string(string addr) crypto_getencryptlevel
+{VM_M_crypto_getmykeyfp},					// #636 string(float addr) crypto_getmykeyfp
+{VM_M_crypto_getmyidfp},					// #637 string(float addr) crypto_getmyidfp
+{NULL, 0, 0},							// #638
+{VM_digest_hex},						// #639
+{NULL, 0, 0},							// #640
+{VM_M_crypto_getmyidstatus},				// #641 float(float i) crypto_getmyidstatus
+{VM_coverage},						// #642
+{VM_M_crypto_getidstatus},				// #643 float(string addr) crypto_getidstatus
+{NULL, 0, 0}
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
