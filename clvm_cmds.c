@@ -4936,12 +4936,12 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 // "\n\n+" with "\n\n"
 
 prvm_builtin_t vm_cl_builtins[] = {
-NULL,							// #0 NULL function (not callable) (QUAKE)
+{NULL, 0, 0},							// #0 NULL function (not callable) (QUAKE)
 {VM_CL_makevectors, 1, 1},				// #1 void(vector ang) makevectors (QUAKE)
 {VM_CL_setorigin, 2, 2},				// #2 void(entity e, vector o) setorigin (QUAKE)
 {VM_CL_setmodel, 2, 2},					// #3 void(entity e, string m) setmodel (QUAKE)
 {VM_CL_setsize, 3, 3},					// #4 void(entity e, vector min, vector max) setsize (QUAKE)
-NULL,							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
+{NULL, 0, 0},							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
 {VM_break, 0, 0},						// #6 void() break (QUAKE)
 {VM_random, 0, 0},						// #7 float() random (QUAKE)
 {VM_CL_sound, 5, 7},					// #8 void(entity e, float chan, string samp, float volume, float atten[, float pitchchange[, float flags]]) sound (QUAKE)
@@ -4953,14 +4953,14 @@ NULL,							// #5 void(entity e, vector min, vector max) setabssize (QUAKE)
 {VM_CL_spawn, 0, 0},					// #14 entity() spawn (QUAKE)
 {VM_remove, 1, 1},						// #15 void(entity e) remove (QUAKE)
 {VM_CL_traceline, 4, 4},				// #16 void(vector v1, vector v2, float tryents, entity ignoreentity) traceline (QUAKE)
-NULL,							// #17 entity() checkclient (QUAKE)
+{NULL, 0, 0},							// #17 entity() checkclient (QUAKE)
 {VM_find, 3, 3},						// #18 entity(entity start, .string fld, string match) find (QUAKE)
 {VM_precache_sound, 1, 1},				// #19 void(string s) precache_sound (QUAKE)
 {VM_CL_precache_model, 1, 1},			// #20 void(string s) precache_model (QUAKE)
-NULL,							// #21 void(entity client, string s, ...) stuffcmd (QUAKE)
+{NULL, 0, 0},							// #21 void(entity client, string s, ...) stuffcmd (QUAKE)
 {VM_CL_findradius, 2, 3},				// #22 entity(vector org, float rad) findradius (QUAKE)
-NULL,							// #23 void(string s, ...) bprint (QUAKE)
-NULL,							// #24 void(entity client, string s, ...) sprint (QUAKE)
+{NULL, 0, 0},							// #23 void(string s, ...) bprint (QUAKE)
+{NULL, 0, 0},							// #24 void(entity client, string s, ...) sprint (QUAKE)
 {VM_dprint, 1, 8},						// #25 void(string s, ...) dprint (QUAKE)
 {VM_ftos, 1, 1},						// #26 string(float f) ftos (QUAKE)
 {VM_vtos, 1, 1},						// #27 string(vector v) vtos (QUAKE)
@@ -4969,63 +4969,63 @@ NULL,							// #24 void(entity client, string s, ...) sprint (QUAKE)
 {VM_traceoff, 0, 0},					// #30 void() traceoff (QUAKE)
 {VM_eprint, 1, 1},						// #31 void(entity e) eprint (QUAKE)
 {VM_CL_walkmove, 2, 3},					// #32 float(float yaw, float dist[, float settrace]) walkmove (QUAKE)
-NULL,							// #33 (QUAKE)
+{NULL, 0, 0},							// #33 (QUAKE)
 {VM_CL_droptofloor, 0, 2},				// #34 float() droptofloor (QUAKE)
 {VM_CL_lightstyle, 2, 2},				// #35 void(float style, string value) lightstyle (QUAKE)
 {VM_rint, 1, 1},						// #36 float(float v) rint (QUAKE)
 {VM_floor, 1, 1},						// #37 float(float v) floor (QUAKE)
 {VM_ceil, 1, 1},						// #38 float(float v) ceil (QUAKE)
-NULL,							// #39 (QUAKE)
+{NULL, 0, 0},							// #39 (QUAKE)
 {VM_CL_checkbottom, 1, 1},				// #40 float(entity e) checkbottom (QUAKE)
 {VM_CL_pointcontents, 1, 1},			// #41 float(vector v) pointcontents (QUAKE)
-NULL,							// #42 (QUAKE)
+{NULL, 0, 0},							// #42 (QUAKE)
 {VM_fabs, 1, 1},						// #43 float(float f) fabs (QUAKE)
-NULL,							// #44 vector(entity e, float speed) aim (QUAKE)
+{NULL, 0, 0},							// #44 vector(entity e, float speed) aim (QUAKE)
 {VM_cvar, 1, 8},						// #45 float(string s) cvar (QUAKE)
 {VM_localcmd_client, 1, 8},				// #46 void(string s) localcmd (QUAKE)
 {VM_nextent, 1, 1},						// #47 entity(entity e) nextent (QUAKE)
 {VM_CL_particle, 4, 4},					// #48 void(vector o, vector d, float color, float count) particle (QUAKE)
 {VM_changeyaw, 0, 0},					// #49 void() ChangeYaw (QUAKE)
-NULL,							// #50 (QUAKE)
+{NULL, 0, 0},							// #50 (QUAKE)
 {VM_vectoangles, 1, 2},					// #51 vector(vector v) vectoangles (QUAKE)
-NULL,							// #52 void(float to, float f) WriteByte (QUAKE)
-NULL,							// #53 void(float to, float f) WriteChar (QUAKE)
-NULL,							// #54 void(float to, float f) WriteShort (QUAKE)
-NULL,							// #55 void(float to, float f) WriteLong (QUAKE)
-NULL,							// #56 void(float to, float f) WriteCoord (QUAKE)
-NULL,							// #57 void(float to, float f) WriteAngle (QUAKE)
-NULL,							// #58 void(float to, string s) WriteString (QUAKE)
-NULL,							// #59 (QUAKE)
+{NULL, 0, 0},							// #52 void(float to, float f) WriteByte (QUAKE)
+{NULL, 0, 0},							// #53 void(float to, float f) WriteChar (QUAKE)
+{NULL, 0, 0},							// #54 void(float to, float f) WriteShort (QUAKE)
+{NULL, 0, 0},							// #55 void(float to, float f) WriteLong (QUAKE)
+{NULL, 0, 0},							// #56 void(float to, float f) WriteCoord (QUAKE)
+{NULL, 0, 0},							// #57 void(float to, float f) WriteAngle (QUAKE)
+{NULL, 0, 0},							// #58 void(float to, string s) WriteString (QUAKE)
+{NULL, 0, 0},							// #59 (QUAKE)
 {VM_sin, 1, 1},							// #60 float(float f) sin (DP_QC_SINCOSSQRTPOW)
 {VM_cos, 1, 1},							// #61 float(float f) cos (DP_QC_SINCOSSQRTPOW)
 {VM_sqrt, 1, 1},						// #62 float(float f) sqrt (DP_QC_SINCOSSQRTPOW)
 {VM_changepitch, 1, 1},					// #63 void(entity ent) changepitch (DP_QC_CHANGEPITCH)
 {VM_CL_tracetoss, 2, 2},				// #64 void(entity e, entity ignore) tracetoss (DP_QC_TRACETOSS)
 {VM_etos, 1, 1},						// #65 string(entity ent) etos (DP_QC_ETOS)
-NULL,							// #66 (QUAKE)
-NULL,							// #67 void(float step) movetogoal (QUAKE)
+{NULL, 0, 0},							// #66 (QUAKE)
+{NULL, 0, 0},							// #67 void(float step) movetogoal (QUAKE)
 {VM_precache_file, 1, 1},				// #68 string(string s) precache_file (QUAKE)
 {VM_CL_makestatic, 1, 1},				// #69 void(entity e) makestatic (QUAKE)
-NULL,							// #70 void(string s) changelevel (QUAKE)
-NULL,							// #71 (QUAKE)
+{NULL, 0, 0},							// #70 void(string s) changelevel (QUAKE)
+{NULL, 0, 0},							// #71 (QUAKE)
 {VM_cvar_set, 2, 8},					// #72 void(string var, string val) cvar_set (QUAKE)
-NULL,							// #73 void(entity client, strings) centerprint (QUAKE)
+{NULL, 0, 0},							// #73 void(entity client, strings) centerprint (QUAKE)
 {VM_CL_ambientsound, 4, 4},				// #74 void(vector pos, string samp, float vol, float atten) ambientsound (QUAKE)
 {VM_CL_precache_model, 1, 1},			// #75 string(string s) precache_model2 (QUAKE)
 {VM_precache_sound, 1, 1},				// #76 string(string s) precache_sound2 (QUAKE)
 {VM_precache_file, 1, 1},				// #77 string(string s) precache_file2 (QUAKE)
-NULL,							// #78 void(entity e) setspawnparms (QUAKE)
-NULL,							// #79 void(entity killer, entity killee) logfrag (QUAKEWORLD)
-NULL,							// #80 string(entity e, string keyname) infokey (QUAKEWORLD)
+{NULL, 0, 0},							// #78 void(entity e) setspawnparms (QUAKE)
+{NULL, 0, 0},							// #79 void(entity killer, entity killee) logfrag (QUAKEWORLD)
+{NULL, 0, 0},							// #80 string(entity e, string keyname) infokey (QUAKEWORLD)
 {VM_stof, 1, 8},						// #81 float(string s) stof (FRIK_FILE)
-NULL,							// #82 void(vector where, float set) multicast (QUAKEWORLD)
-NULL,							// #83 (QUAKE)
-NULL,							// #84 (QUAKE)
-NULL,							// #85 (QUAKE)
-NULL,							// #86 (QUAKE)
-NULL,							// #87 (QUAKE)
-NULL,							// #88 (QUAKE)
-NULL,							// #89 (QUAKE)
+{NULL, 0, 0},							// #82 void(vector where, float set) multicast (QUAKEWORLD)
+{NULL, 0, 0},							// #83 (QUAKE)
+{NULL, 0, 0},							// #84 (QUAKE)
+{NULL, 0, 0},							// #85 (QUAKE)
+{NULL, 0, 0},							// #86 (QUAKE)
+{NULL, 0, 0},							// #87 (QUAKE)
+{NULL, 0, 0},							// #88 (QUAKE)
+{NULL, 0, 0},							// #89 (QUAKE)
 {VM_CL_tracebox, 6, 8},					// #90 void(vector v1, vector min, vector max, vector v2, float nomonsters, entity forent) tracebox (DP_QC_TRACEBOX)
 {VM_randomvec, 0, 0},					// #91 vector() randomvec (DP_QC_RANDOMVEC)
 {VM_CL_getlight, 1, 3},					// #92 vector(vector org) getlight (DP_QC_GETLIGHT)
@@ -5037,16 +5037,16 @@ NULL,							// #89 (QUAKE)
 {VM_findfloat, 3, 3},					// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
 {VM_checkextension, 1, 1},				// #99 float(string s) checkextension (the basis of the extension system)
 // FrikaC and Telejano range #100-#199
-NULL,							// #100
-NULL,							// #101
-NULL,							// #102
-NULL,							// #103
-NULL,							// #104
-NULL,							// #105
-NULL,							// #106
-NULL,							// #107
-NULL,							// #108
-NULL,							// #109
+{NULL, 0, 0},							// #100
+{NULL, 0, 0},							// #101
+{NULL, 0, 0},							// #102
+{NULL, 0, 0},							// #103
+{NULL, 0, 0},							// #104
+{NULL, 0, 0},							// #105
+{NULL, 0, 0},							// #106
+{NULL, 0, 0},							// #107
+{NULL, 0, 0},							// #108
+{NULL, 0, 0},							// #109
 {VM_fopen, 2, 2},						// #110 float(string filename, float mode) fopen (FRIK_FILE)
 {VM_fclose, 1, 1},						// #111 void(float fhandle) fclose (FRIK_FILE)
 {VM_fgets, 1, 1},						// #112 string(float fhandle) fgets (FRIK_FILE)
@@ -5057,108 +5057,108 @@ NULL,							// #109
 {VM_stov, 1, 1},						// #117 vector(string) stov (FRIK_FILE)
 {VM_strzone, 1, 1},						// #118 string(string s) strzone (FRIK_FILE)
 {VM_strunzone, 1, 1},					// #119 void(string s) strunzone (FRIK_FILE)
-NULL,							// #120
-NULL,							// #121
-NULL,							// #122
-NULL,							// #123
-NULL,							// #124
-NULL,							// #125
-NULL,							// #126
-NULL,							// #127
-NULL,							// #128
-NULL,							// #129
-NULL,							// #130
-NULL,							// #131
-NULL,							// #132
-NULL,							// #133
-NULL,							// #134
-NULL,							// #135
-NULL,							// #136
-NULL,							// #137
-NULL,							// #138
-NULL,							// #139
-NULL,							// #140
-NULL,							// #141
-NULL,							// #142
-NULL,							// #143
-NULL,							// #144
-NULL,							// #145
-NULL,							// #146
-NULL,							// #147
-NULL,							// #148
-NULL,							// #149
-NULL,							// #150
-NULL,							// #151
-NULL,							// #152
-NULL,							// #153
-NULL,							// #154
-NULL,							// #155
-NULL,							// #156
-NULL,							// #157
-NULL,							// #158
-NULL,							// #159
-NULL,							// #160
-NULL,							// #161
-NULL,							// #162
-NULL,							// #163
-NULL,							// #164
-NULL,							// #165
-NULL,							// #166
-NULL,							// #167
-NULL,							// #168
-NULL,							// #169
-NULL,							// #170
-NULL,							// #171
-NULL,							// #172
-NULL,							// #173
-NULL,							// #174
-NULL,							// #175
-NULL,							// #176
-NULL,							// #177
-NULL,							// #178
-NULL,							// #179
-NULL,							// #180
-NULL,							// #181
-NULL,							// #182
-NULL,							// #183
-NULL,							// #184
-NULL,							// #185
-NULL,							// #186
-NULL,							// #187
-NULL,							// #188
-NULL,							// #189
-NULL,							// #190
-NULL,							// #191
-NULL,							// #192
-NULL,							// #193
-NULL,							// #194
-NULL,							// #195
-NULL,							// #196
-NULL,							// #197
-NULL,							// #198
-NULL,							// #199
+{NULL, 0, 0},							// #120
+{NULL, 0, 0},							// #121
+{NULL, 0, 0},							// #122
+{NULL, 0, 0},							// #123
+{NULL, 0, 0},							// #124
+{NULL, 0, 0},							// #125
+{NULL, 0, 0},							// #126
+{NULL, 0, 0},							// #127
+{NULL, 0, 0},							// #128
+{NULL, 0, 0},							// #129
+{NULL, 0, 0},							// #130
+{NULL, 0, 0},							// #131
+{NULL, 0, 0},							// #132
+{NULL, 0, 0},							// #133
+{NULL, 0, 0},							// #134
+{NULL, 0, 0},							// #135
+{NULL, 0, 0},							// #136
+{NULL, 0, 0},							// #137
+{NULL, 0, 0},							// #138
+{NULL, 0, 0},							// #139
+{NULL, 0, 0},							// #140
+{NULL, 0, 0},							// #141
+{NULL, 0, 0},							// #142
+{NULL, 0, 0},							// #143
+{NULL, 0, 0},							// #144
+{NULL, 0, 0},							// #145
+{NULL, 0, 0},							// #146
+{NULL, 0, 0},							// #147
+{NULL, 0, 0},							// #148
+{NULL, 0, 0},							// #149
+{NULL, 0, 0},							// #150
+{NULL, 0, 0},							// #151
+{NULL, 0, 0},							// #152
+{NULL, 0, 0},							// #153
+{NULL, 0, 0},							// #154
+{NULL, 0, 0},							// #155
+{NULL, 0, 0},							// #156
+{NULL, 0, 0},							// #157
+{NULL, 0, 0},							// #158
+{NULL, 0, 0},							// #159
+{NULL, 0, 0},							// #160
+{NULL, 0, 0},							// #161
+{NULL, 0, 0},							// #162
+{NULL, 0, 0},							// #163
+{NULL, 0, 0},							// #164
+{NULL, 0, 0},							// #165
+{NULL, 0, 0},							// #166
+{NULL, 0, 0},							// #167
+{NULL, 0, 0},							// #168
+{NULL, 0, 0},							// #169
+{NULL, 0, 0},							// #170
+{NULL, 0, 0},							// #171
+{NULL, 0, 0},							// #172
+{NULL, 0, 0},							// #173
+{NULL, 0, 0},							// #174
+{NULL, 0, 0},							// #175
+{NULL, 0, 0},							// #176
+{NULL, 0, 0},							// #177
+{NULL, 0, 0},							// #178
+{NULL, 0, 0},							// #179
+{NULL, 0, 0},							// #180
+{NULL, 0, 0},							// #181
+{NULL, 0, 0},							// #182
+{NULL, 0, 0},							// #183
+{NULL, 0, 0},							// #184
+{NULL, 0, 0},							// #185
+{NULL, 0, 0},							// #186
+{NULL, 0, 0},							// #187
+{NULL, 0, 0},							// #188
+{NULL, 0, 0},							// #189
+{NULL, 0, 0},							// #190
+{NULL, 0, 0},							// #191
+{NULL, 0, 0},							// #192
+{NULL, 0, 0},							// #193
+{NULL, 0, 0},							// #194
+{NULL, 0, 0},							// #195
+{NULL, 0, 0},							// #196
+{NULL, 0, 0},							// #197
+{NULL, 0, 0},							// #198
+{NULL, 0, 0},							// #199
 // FTEQW range #200-#299
-NULL,							// #200
-NULL,							// #201
-NULL,							// #202
-NULL,							// #203
-NULL,							// #204
-NULL,							// #205
-NULL,							// #206
-NULL,							// #207
-NULL,							// #208
-NULL,							// #209
-NULL,							// #210
-NULL,							// #211
-NULL,							// #212
-NULL,							// #213
-NULL,							// #214
-NULL,							// #215
-NULL,							// #216
-NULL,							// #217
+{NULL, 0, 0},							// #200
+{NULL, 0, 0},							// #201
+{NULL, 0, 0},							// #202
+{NULL, 0, 0},							// #203
+{NULL, 0, 0},							// #204
+{NULL, 0, 0},							// #205
+{NULL, 0, 0},							// #206
+{NULL, 0, 0},							// #207
+{NULL, 0, 0},							// #208
+{NULL, 0, 0},							// #209
+{NULL, 0, 0},							// #210
+{NULL, 0, 0},							// #211
+{NULL, 0, 0},							// #212
+{NULL, 0, 0},							// #213
+{NULL, 0, 0},							// #214
+{NULL, 0, 0},							// #215
+{NULL, 0, 0},							// #216
+{NULL, 0, 0},							// #217
 {VM_bitshift, 2, 2},					// #218 float(float number, float quantity) bitshift (EXT_BITSHIFT)
-NULL,							// #219
-NULL,							// #220
+{NULL, 0, 0},							// #219
+{NULL, 0, 0},							// #220
 {VM_strstrofs, 2, 3},					// #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
 {VM_str2chr, 2, 2},						// #222 float(string str, float ofs) str2chr (FTE_STRINGS)
 {VM_chr2str, 1, -1},						// #223 string(float c, ...) chr2str (FTE_STRINGS)
@@ -5169,38 +5169,38 @@ NULL,							// #220
 {VM_strncmp, 2, 3},						// #228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
 {VM_strncasecmp, 2, 3},					// #229 float(string s1, string s2) strcasecmp (FTE_STRINGS)
 {VM_strncasecmp, 2, 3},					// #230 float(string s1, string s2, float len) strncasecmp (FTE_STRINGS)
-NULL,							// #231
-NULL,							// #232 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
-NULL,							// #233
-NULL,							// #234
-NULL,							// #235
-NULL,							// #236
-NULL,							// #237
-NULL,							// #238
-NULL,							// #239
+{NULL, 0, 0},							// #231
+{NULL, 0, 0},							// #232 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
+{NULL, 0, 0},							// #233
+{NULL, 0, 0},							// #234
+{NULL, 0, 0},							// #235
+{NULL, 0, 0},							// #236
+{NULL, 0, 0},							// #237
+{NULL, 0, 0},							// #238
+{NULL, 0, 0},							// #239
 {VM_CL_checkpvs, 2, 2},					// #240
-NULL,							// #241
-NULL,							// #242
-NULL,							// #243
-NULL,							// #244
+{NULL, 0, 0},							// #241
+{NULL, 0, 0},							// #242
+{NULL, 0, 0},							// #243
+{NULL, 0, 0},							// #244
 {VM_modulo, 2, 2},						// #245
-NULL,							// #246
-NULL,							// #247
-NULL,							// #248
-NULL,							// #249
-NULL,							// #250
-NULL,							// #251
-NULL,							// #252
-NULL,							// #253
-NULL,							// #254
-NULL,							// #255
-NULL,							// #256
-NULL,							// #257
-NULL,							// #258
-NULL,							// #259
-NULL,							// #260
-NULL,							// #261
-NULL,							// #262
+{NULL, 0, 0},							// #246
+{NULL, 0, 0},							// #247
+{NULL, 0, 0},							// #248
+{NULL, 0, 0},							// #249
+{NULL, 0, 0},							// #250
+{NULL, 0, 0},							// #251
+{NULL, 0, 0},							// #252
+{NULL, 0, 0},							// #253
+{NULL, 0, 0},							// #254
+{NULL, 0, 0},							// #255
+{NULL, 0, 0},							// #256
+{NULL, 0, 0},							// #257
+{NULL, 0, 0},							// #258
+{NULL, 0, 0},							// #259
+{NULL, 0, 0},							// #260
+{NULL, 0, 0},							// #261
+{NULL, 0, 0},							// #262
 {VM_CL_skel_create, 1, 1},				// #263 float(float modlindex) skel_create = #263; // (FTE_CSQC_SKELETONOBJECTS) create a skeleton (be sure to assign this value into .skeletonindex for use), returns skeleton index (1 or higher) on success, returns 0 on failure  (for example if the modelindex is not skeletal), it is recommended that you create a new skeleton if you change modelindex.
 {VM_CL_skel_build, 6, 6},				// #264 float(float skel, entity ent, float modlindex, float retainfrac, float firstbone, float lastbone) skel_build = #264; // (FTE_CSQC_SKELETONOBJECTS) blend in a percentage of standard animation, 0 replaces entirely, 1 does nothing, 0.5 blends half, etc, and this only alters the bones in the specified range for which out of bounds values like 0,100000 are safe (uses .frame, .frame2, .frame3, .frame4, .lerpfrac, .lerpfrac3, .lerpfrac4, .frame1time, .frame2time, .frame3time, .frame4time), returns skel on success, 0 on failure
 {VM_CL_skel_get_numbones, 1, 1},		// #265 float(float skel) skel_get_numbones = #265; // (FTE_CSQC_SKELETONOBJECTS) returns how many bones exist in the created skeleton
@@ -5216,28 +5216,28 @@ NULL,							// #262
 {VM_CL_skel_delete, 1, 1},				// #275 void(float skel) skel_delete = #275; // (FTE_CSQC_SKELETONOBJECTS) deletes skeleton at the beginning of the next frame (you can add the entity, delete the skeleton, renderscene, and it will still work)
 {VM_CL_frameforname, 2, 2},				// #276 float(float modlindex, string framename) frameforname = #276; // (FTE_CSQC_SKELETONOBJECTS) finds number of a specified frame in the animation, returns -1 if no match found
 {VM_CL_frameduration, 2, 2},			// #277 float(float modlindex, float framenum) frameduration = #277; // (FTE_CSQC_SKELETONOBJECTS) returns the intended play time (in seconds) of the specified framegroup, if it does not exist the result is 0, if it is a single frame it may be a small value around 0.1 or 0.
-NULL,							// #278
-NULL,							// #279
-NULL,							// #280
-NULL,							// #281
-NULL,							// #282
-NULL,							// #283
-NULL,							// #284
-NULL,							// #285
-NULL,							// #286
-NULL,							// #287
-NULL,							// #288
-NULL,							// #289
-NULL,							// #290
-NULL,							// #291
-NULL,							// #292
-NULL,							// #293
-NULL,							// #294
-NULL,							// #295
-NULL,							// #296
-NULL,							// #297
-NULL,							// #298
-NULL,							// #299
+{NULL, 0, 0},							// #278
+{NULL, 0, 0},							// #279
+{NULL, 0, 0},							// #280
+{NULL, 0, 0},							// #281
+{NULL, 0, 0},							// #282
+{NULL, 0, 0},							// #283
+{NULL, 0, 0},							// #284
+{NULL, 0, 0},							// #285
+{NULL, 0, 0},							// #286
+{NULL, 0, 0},							// #287
+{NULL, 0, 0},							// #288
+{NULL, 0, 0},							// #289
+{NULL, 0, 0},							// #290
+{NULL, 0, 0},							// #291
+{NULL, 0, 0},							// #292
+{NULL, 0, 0},							// #293
+{NULL, 0, 0},							// #294
+{NULL, 0, 0},							// #295
+{NULL, 0, 0},							// #296
+{NULL, 0, 0},							// #297
+{NULL, 0, 0},							// #298
+{NULL, 0, 0},							// #299
 // CSQC range #300-#399
 {VM_CL_R_ClearScene, 0, 0},				// #300 void() clearscene (EXT_CSQC)
 {VM_CL_R_AddEntities, 1, 1},			// #301 void(float mask) addentities (EXT_CSQC)
@@ -5251,9 +5251,9 @@ NULL,							// #299
 {VM_CL_R_SetView, 1, 3},				// #309 float(float property) getproperty (EXT_CSQC)
 {VM_CL_unproject, 1, 1},				// #310 vector (vector v) cs_unproject (EXT_CSQC)
 {VM_CL_project, 1, 1},					// #311 vector (vector v) cs_project (EXT_CSQC)
-NULL,							// #312
-NULL,							// #313
-NULL,							// #314
+{NULL, 0, 0},							// #312
+{NULL, 0, 0},							// #313
+{NULL, 0, 0},							// #314
 {VM_drawline, 6, 6},					// #315 void(float width, vector pos1, vector pos2, float flag) drawline (EXT_CSQC)
 {VM_iscachedpic, 1, 1},					// #316 float(string name) iscachedpic (EXT_CSQC)
 {VM_precache_pic, 1, 2},				// #317 string(string name, float trywad) precache_pic (EXT_CSQC)
@@ -5298,7 +5298,7 @@ NULL,							// #314
 {VM_findfont, 1, 1},					// #356 float(string fontname) loadfont (DP_GFX_FONTS)
 {VM_loadfont, 3, 6},					// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
 {VM_CL_loadcubemap, 1, 1},				// #358 void(string cubemapname) loadcubemap (DP_GFX_)
-NULL,							// #359
+{NULL, 0, 0},							// #359
 {VM_CL_ReadByte, 0, 0},					// #360 float() readbyte (EXT_CSQC)
 {VM_CL_ReadChar, 0, 0},					// #361 float() readchar (EXT_CSQC)
 {VM_CL_ReadShort, 0, 0},				// #362 float() readshort (EXT_CSQC)
@@ -5307,41 +5307,41 @@ NULL,							// #359
 {VM_CL_ReadAngle, 0, 0},				// #365 float() readangle (EXT_CSQC)
 {VM_CL_ReadString, 0, 0},				// #366 string() readstring (EXT_CSQC)
 {VM_CL_ReadFloat, 0, 0},				// #367 float() readfloat (EXT_CSQC)
-NULL,						// #368
-NULL,							// #369
-NULL,							// #370
-NULL,							// #371
-NULL,							// #372
-NULL,							// #373
-NULL,							// #374
-NULL,							// #375
-NULL,							// #376
-NULL,							// #377
-NULL,							// #378
-NULL,							// #379
-NULL,							// #380
-NULL,							// #381
-NULL,							// #382
-NULL,							// #383
-NULL,							// #384
-NULL,							// #385
-NULL,							// #386
-NULL,							// #387
-NULL,							// #388
-NULL,							// #389
-NULL,							// #390
-NULL,							// #391
-NULL,							// #392
-NULL,							// #393
-NULL,							// #394
-NULL,							// #395
-NULL,							// #396
-NULL,							// #397
-NULL,							// #398
-NULL,							// #399
+{NULL, 0, 0},						// #368
+{NULL, 0, 0},							// #369
+{NULL, 0, 0},							// #370
+{NULL, 0, 0},							// #371
+{NULL, 0, 0},							// #372
+{NULL, 0, 0},							// #373
+{NULL, 0, 0},							// #374
+{NULL, 0, 0},							// #375
+{NULL, 0, 0},							// #376
+{NULL, 0, 0},							// #377
+{NULL, 0, 0},							// #378
+{NULL, 0, 0},							// #379
+{NULL, 0, 0},							// #380
+{NULL, 0, 0},							// #381
+{NULL, 0, 0},							// #382
+{NULL, 0, 0},							// #383
+{NULL, 0, 0},							// #384
+{NULL, 0, 0},							// #385
+{NULL, 0, 0},							// #386
+{NULL, 0, 0},							// #387
+{NULL, 0, 0},							// #388
+{NULL, 0, 0},							// #389
+{NULL, 0, 0},							// #390
+{NULL, 0, 0},							// #391
+{NULL, 0, 0},							// #392
+{NULL, 0, 0},							// #393
+{NULL, 0, 0},							// #394
+{NULL, 0, 0},							// #395
+{NULL, 0, 0},							// #396
+{NULL, 0, 0},							// #397
+{NULL, 0, 0},							// #398
+{NULL, 0, 0},							// #399
 // LadyHavoc's range #400-#499
 {VM_CL_copyentity, 2, 2},				// #400 void(entity from, entity to) copyentity (DP_QC_COPYENTITY)
-NULL,							// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
+{NULL, 0, 0},							// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
 {VM_findchain, 2, 3},					// #402 entity(.string fld, string match) findchain (DP_QC_FINDCHAIN)
 {VM_findchainfloat, 2, 3},				// #403 entity(.float fld, float match) findchainfloat (DP_QC_FINDCHAINFLOAT)
 {VM_CL_effect, 5, 5},					// #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
@@ -5380,7 +5380,7 @@ NULL,							// #401 void(entity ent, float colors) setcolor (DP_QC_SETCOLOR)
 {VM_getsurfacetexture, 2, 2},		// #437 string(entity e, float s) getsurfacetexture (DP_QC_GETSURFACE)
 {VM_getsurfacenearpoint, 2, 2},		// #438 float(entity e, vector p) getsurfacenearpoint (DP_QC_GETSURFACE)
 {VM_getsurfaceclippedpoint, 3, 3},	// #439 vector(entity e, float s, vector p) getsurfaceclippedpoint (DP_QC_GETSURFACE)
-NULL,							// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
+{NULL, 0, 0},							// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
 {VM_tokenize, 1, 1},					// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
 {VM_argv, 1, 1},						// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
 {VM_CL_setattachment, 3, 3},			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
@@ -5393,12 +5393,12 @@ NULL,							// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIE
 {VM_findchainflags, 2, 3},				// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
 {VM_CL_gettagindex, 2, 2},				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
 {VM_CL_gettaginfo, 2, 2},				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
-NULL,							// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
-NULL,							// #454 entity() spawnclient (DP_SV_BOTCLIENT)
-NULL,							// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
-NULL,							// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
+{NULL, 0, 0},							// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
+{NULL, 0, 0},							// #454 entity() spawnclient (DP_SV_BOTCLIENT)
+{NULL, 0, 0},							// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
+{NULL, 0, 0},							// #456 void(float to, string s) WriteUnterminatedString (DP_SV_WRITEUNTERMINATEDSTRING)
 {VM_CL_te_flamejet, 3, 3},				// #457 void(vector org, vector vel, float howmany) te_flamejet (DP_TE_FLAMEJET)
-NULL,							// #458
+{NULL, 0, 0},							// #458
 {VM_ftoe, 1, 1},						// #459 entity(float num) entitybyindex (DP_QC_EDICT_NUM)
 {VM_buf_create, 0, 2},					// #460 float() buf_create (DP_QC_STRINGBUFFERS)
 {VM_buf_del, 1, 1},						// #461 void(float bufhandle) buf_del (DP_QC_STRINGBUFFERS)
@@ -5410,7 +5410,7 @@ NULL,							// #458
 {VM_bufstr_set, 3, 3},					// #467 void(float bufhandle, float string_index, string str) bufstr_set (DP_QC_STRINGBUFFERS)
 {VM_bufstr_add, 3, 3},					// #468 float(float bufhandle, string str, float order) bufstr_add (DP_QC_STRINGBUFFERS)
 {VM_bufstr_free, 2, 2},					// #469 void(float bufhandle, float string_index) bufstr_free (DP_QC_STRINGBUFFERS)
-NULL,							// #470 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
+{NULL, 0, 0},							// #470 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
 {VM_asin, 1, 1},						// #471 float(float s) VM_asin (DP_QC_ASINACOSATANATAN2TAN)
 {VM_acos, 1, 1},						// #472 float(float c) VM_acos (DP_QC_ASINACOSATANATAN2TAN)
 {VM_atan, 1, 1},						// #473 float(float t) VM_atan (DP_QC_ASINACOSATANATAN2TAN)
@@ -5445,11 +5445,11 @@ NULL,							// #470 void(float index, float type, .void field) SV_AddStat (EXT_C
 {VM_CL_boxparticles, 7, 8},				// #502 void(float effectnum, entity own, vector origin_from, vector origin_to, vector dir_from, vector dir_to, float count) boxparticles (DP_CSQC_BOXPARTICLES)
 {VM_whichpack, 1, 1},					// #503 string(string) whichpack = #503;
 {VM_CL_GetEntity, 2, 2},				// #504 float(float entitynum, float fldnum) getentity = #504; vector(float entitynum, float fldnum) getentityvec = #504;
-NULL,							// #505
-NULL,							// #506
-NULL,							// #507
-NULL,							// #508
-NULL,							// #509
+{NULL, 0, 0},							// #505
+{NULL, 0, 0},							// #506
+{NULL, 0, 0},							// #507
+{NULL, 0, 0},							// #508
+{NULL, 0, 0},							// #509
 {VM_uri_escape, 1, 8},					// #510 string(string in) uri_escape = #510;
 {VM_uri_unescape, 1, 8},				// #511 string(string in) uri_unescape = #511;
 {VM_etof, 1, 1},					// #512 float(entity ent) num_for_edict = #512 (DP_QC_NUM_FOR_EDICT)
@@ -5479,111 +5479,111 @@ NULL,							// #509
 {VM_buf_writefile, 2, 4},               // #536 float(float filehandle, float bufhandle, float startpos, float numstrings) buf_writefile (DP_QC_STRINGBUFFERS_EXT_WIP)
 {VM_bufstr_find, 3, 5},                 // #537 float(float bufhandle, string match, float matchrule, float startpos) bufstr_find (DP_QC_STRINGBUFFERS_EXT_WIP)
 {VM_matchpattern, 2, 4},                // #538 float(string s, string pattern, float matchrule) matchpattern (DP_QC_STRINGBUFFERS_EXT_WIP)
-NULL,							// #539
+{NULL, 0, 0},							// #539
 {VM_physics_enable, 2, 2},				// #540 void(entity e, float physics_enabled) physics_enable = #540; (DP_PHYSICS_ODE)
 {VM_physics_addforce, 3, 3},			// #541 void(entity e, vector force, vector relative_ofs) physics_addforce = #541; (DP_PHYSICS_ODE)
 {VM_physics_addtorque, 2, 2},			// #542 void(entity e, vector torque) physics_addtorque = #542; (DP_PHYSICS_ODE)
-NULL,							// #543
-NULL,							// #544
-NULL,							// #545
-NULL,							// #546
-NULL,							// #547
-NULL,							// #548
-NULL,							// #549
-NULL,							// #550
-NULL,							// #551
-NULL,							// #552
-NULL,							// #553
-NULL,							// #554
-NULL,							// #555
-NULL,							// #556
-NULL,							// #557
-NULL,							// #558
-NULL,							// #559
-NULL,							// #560
-NULL,							// #561
-NULL,							// #562
-NULL,							// #563
-NULL,							// #564
-NULL,							// #565
-NULL,							// #566
-NULL,							// #567
-NULL,							// #568
-NULL,							// #569
-NULL,							// #570
-NULL,							// #571
-NULL,							// #572
-NULL,							// #573
-NULL,							// #574
-NULL,							// #575
-NULL,							// #576
-NULL,							// #577
-NULL,							// #578
-NULL,							// #579
-NULL,							// #580
-NULL,							// #581
-NULL,							// #582
-NULL,							// #583
-NULL,							// #584
-NULL,							// #585
-NULL,							// #586
-NULL,							// #587
-NULL,							// #588
-NULL,							// #589
-NULL,							// #590
-NULL,							// #591
-NULL,							// #592
-NULL,							// #593
-NULL,							// #594
-NULL,							// #595
-NULL,							// #596
-NULL,							// #597
-NULL,							// #598
-NULL,							// #599
-NULL,							// #600
-NULL,							// #601
-NULL,							// #602
-NULL,							// #603
-NULL,							// #604
+{NULL, 0, 0},							// #543
+{NULL, 0, 0},							// #544
+{NULL, 0, 0},							// #545
+{NULL, 0, 0},							// #546
+{NULL, 0, 0},							// #547
+{NULL, 0, 0},							// #548
+{NULL, 0, 0},							// #549
+{NULL, 0, 0},							// #550
+{NULL, 0, 0},							// #551
+{NULL, 0, 0},							// #552
+{NULL, 0, 0},							// #553
+{NULL, 0, 0},							// #554
+{NULL, 0, 0},							// #555
+{NULL, 0, 0},							// #556
+{NULL, 0, 0},							// #557
+{NULL, 0, 0},							// #558
+{NULL, 0, 0},							// #559
+{NULL, 0, 0},							// #560
+{NULL, 0, 0},							// #561
+{NULL, 0, 0},							// #562
+{NULL, 0, 0},							// #563
+{NULL, 0, 0},							// #564
+{NULL, 0, 0},							// #565
+{NULL, 0, 0},							// #566
+{NULL, 0, 0},							// #567
+{NULL, 0, 0},							// #568
+{NULL, 0, 0},							// #569
+{NULL, 0, 0},							// #570
+{NULL, 0, 0},							// #571
+{NULL, 0, 0},							// #572
+{NULL, 0, 0},							// #573
+{NULL, 0, 0},							// #574
+{NULL, 0, 0},							// #575
+{NULL, 0, 0},							// #576
+{NULL, 0, 0},							// #577
+{NULL, 0, 0},							// #578
+{NULL, 0, 0},							// #579
+{NULL, 0, 0},							// #580
+{NULL, 0, 0},							// #581
+{NULL, 0, 0},							// #582
+{NULL, 0, 0},							// #583
+{NULL, 0, 0},							// #584
+{NULL, 0, 0},							// #585
+{NULL, 0, 0},							// #586
+{NULL, 0, 0},							// #587
+{NULL, 0, 0},							// #588
+{NULL, 0, 0},							// #589
+{NULL, 0, 0},							// #590
+{NULL, 0, 0},							// #591
+{NULL, 0, 0},							// #592
+{NULL, 0, 0},							// #593
+{NULL, 0, 0},							// #594
+{NULL, 0, 0},							// #595
+{NULL, 0, 0},							// #596
+{NULL, 0, 0},							// #597
+{NULL, 0, 0},							// #598
+{NULL, 0, 0},							// #599
+{NULL, 0, 0},							// #600
+{NULL, 0, 0},							// #601
+{NULL, 0, 0},							// #602
+{NULL, 0, 0},							// #603
+{NULL, 0, 0},							// #604
 {VM_callfunction, 1, 8},				// #605
 {VM_writetofile, 2, 2},					// #606
 {VM_isfunction, 1, 1},					// #607
-NULL,							// #608
-NULL,							// #609
+{NULL, 0, 0},							// #608
+{NULL, 0, 0},							// #609
 {VM_findkeysforcommand, 1, 2},			// #610 string findkeysforcommand(string command[, float bindmap])
-NULL,							// #611
-NULL,							// #612
+{NULL, 0, 0},							// #611
+{NULL, 0, 0},							// #612
 {VM_parseentitydata, 2, 2},				// #613
-NULL,							// #614
-NULL,							// #615
-NULL,							// #616
-NULL,							// #617
-NULL,							// #618
-NULL,							// #619
-NULL,							// #620
-NULL,							// #621
-NULL,							// #622
-NULL,							// #623
+{NULL, 0, 0},							// #614
+{NULL, 0, 0},							// #615
+{NULL, 0, 0},							// #616
+{NULL, 0, 0},							// #617
+{NULL, 0, 0},							// #618
+{NULL, 0, 0},							// #619
+{NULL, 0, 0},							// #620
+{NULL, 0, 0},							// #621
+{NULL, 0, 0},							// #622
+{NULL, 0, 0},							// #623
 {VM_CL_getextresponse, 0, 0},			// #624 string getextresponse(void)
-NULL,							// #625
-NULL,							// #626
+{NULL, 0, 0},							// #625
+{NULL, 0, 0},							// #626
 {VM_sprintf, 1, -1},                     // #627 string sprintf(string format, ...)
 {VM_getsurfacenumtriangles, 2, 2},		// #628 float(entity e, float s) getsurfacenumpoints (DP_QC_GETSURFACETRIANGLE)
 {VM_getsurfacetriangle, 3, 3},			// #629 vector(entity e, float s, float n) getsurfacepoint (DP_QC_GETSURFACETRIANGLE)
 {VM_setkeybind, 2, 3},						// #630 float(float key, string bind[, float bindmap]) setkeybind
 {VM_getbindmaps, 0, 0},						// #631 vector(void) getbindmap
 {VM_setbindmaps, 1, 1},						// #632 float(vector bm) setbindmap
-NULL,							// #633
-NULL,							// #634
-NULL,							// #635
-NULL,							// #636
-NULL,							// #637
+{NULL, 0, 0},							// #633
+{NULL, 0, 0},							// #634
+{NULL, 0, 0},							// #635
+{NULL, 0, 0},							// #636
+{NULL, 0, 0},							// #637
 {VM_CL_RotateMoves, 1, 1},					// #638
 {VM_digest_hex, 2, 8},						// #639
 {VM_CL_V_CalcRefdef, 2, 2},					// #640 void(entity e) V_CalcRefdef (DP_CSQC_V_CALCREFDEF)
-NULL,							// #641
+{NULL, 0, 0},							// #641
 {VM_coverage, 0, 0},						// #642
-NULL
+{NULL, 0, 0}
 };
 
 const int vm_cl_numbuiltins = sizeof(vm_cl_builtins) / sizeof(prvm_builtin_t);
