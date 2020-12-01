@@ -246,7 +246,11 @@ extern prvm_eval_t prvm_badvalue;
 #endif
 
 struct prvm_prog_s;
-typedef void (*prvm_builtin_t) (struct prvm_prog_s *prog);
+typedef struct prvm_builtin_s
+{
+	void (*func) (struct prvm_prog_s *prog);
+	int minargs, maxargs;
+} prvm_builtin_t;
 
 // NOTE: field offsets use -1 for NULL
 typedef struct prvm_prog_fieldoffsets_s
