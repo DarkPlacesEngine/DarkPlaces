@@ -1050,7 +1050,7 @@ void VM_cin_restart(prvm_prog_t *prog)
 }
 
 prvm_builtin_t vm_m_builtins[] = {
-NULL,									//   #0 NULL function (not callable)
+{NULL, 0, 0},									//   #0 NULL function (not callable)
 {VM_checkextension},				//   #1
 {VM_error},							//   #2
 {VM_objerror},						//   #3
