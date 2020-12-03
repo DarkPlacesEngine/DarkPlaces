@@ -817,7 +817,7 @@ rsurfacepass_t;
 void R_SetupShader_Generic(rtexture_t *t, qbool usegamma, qbool notrippy, qbool suppresstexalpha);
 void R_SetupShader_Generic_NoTexture(qbool usegamma, qbool notrippy);
 void R_SetupShader_DepthOrShadow(qbool notrippy, qbool depthrgb, qbool skeletal);
-void R_SetupShader_Surface(const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qbool notrippy);
+void R_SetupShader_Surface(const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *waterplane, qbool notrippy, qbool ui);
 void R_SetupShader_DeferredLight(const rtlight_t *rtlight);
 
 typedef struct r_rendertarget_s {
