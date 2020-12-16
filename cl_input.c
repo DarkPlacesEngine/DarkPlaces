@@ -1046,11 +1046,8 @@ static void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	}
 
 	// split wishvel into wishspeed and wishdir
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed)
-		VectorScale(wishvel, 1 / wishspeed, wishdir);
-	else
-		VectorSet( wishdir, 0.0, 0.0, 0.0 );
+	VectorCopy(wishvel, wishdir);
+	wishspeed = VectorNormalizeLength(wishdir);
 	wishspeed = min(wishspeed, cl.movevars_maxspeed) * 0.7;
 
 	if (s->crouched)
@@ -1333,11 +1330,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	VectorMAM(s->cmd.forwardmove, forward, s->cmd.sidemove, right, wishvel);
 
 	// split wishvel into wishspeed and wishdir
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed)
-		VectorScale(wishvel, 1 / wishspeed, wishdir);
-	else
-		VectorSet( wishdir, 0.0, 0.0, 0.0 );
+	VectorCopy(wishvel, wishdir);
+	wishspeed = VectorNormalizeLength(wishdir);
+
 	// check if onground
 	if (s->onground)
 	{
