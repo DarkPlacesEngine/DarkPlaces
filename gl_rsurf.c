@@ -447,13 +447,18 @@ void R_View_WorldVisibility(qbool forcenovis)
 	if (!model)
 		return;
 
+	if (r_lockvisibility.integer)
+		return;
+
+	// clear the visible surface and leaf flags arrays
+	memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
+	if(!r_lockpvs.integer)
+		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
+
+	r_refdef.viewcache.world_novis = false;
+
 	if (r_refdef.view.usecustompvs)
 	{
-		// clear the visible surface and leaf flags arrays
-		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
-		r_refdef.viewcache.world_novis = false;
-
 		// simply cull each marked leaf to the frustum (view pyramid)
 		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 		{
@@ -467,23 +472,14 @@ void R_View_WorldVisibility(qbool forcenovis)
 						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 			}
 		}
-		R_View_WorldVisibility_CullSurfaces();
-		return;
 	}
-
-	// if possible find the leaf the view origin is in
-	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
-	// if possible fetch the visible cluster bits
-	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
-
-	if (!r_lockvisibility.integer)
+	else
 	{
-		// clear the visible surface and leaf flags arrays
-		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
-
-		r_refdef.viewcache.world_novis = false;
+		// if possible find the leaf the view origin is in
+		viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
+		// if possible fetch the visible cluster bits
+		if (!r_lockpvs.integer && model->brush.FatPVS)
+			model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
@@ -595,8 +591,10 @@ void R_View_WorldVisibility(qbool forcenovis)
 				}
 			}
 		}
-		R_View_WorldVisibility_CullSurfaces();
 	}
+
+	// Cull the rest
+	R_View_WorldVisibility_CullSurfaces();
 }
 
 void R_Mod_DrawSky(entity_render_t *ent)

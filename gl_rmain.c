@@ -4256,7 +4256,7 @@ static void R_View_SetFrustum(const int *scissor)
 	int i;
 	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
-	if(r_lockvisibility.integer || r_lockpvs.integer)
+	if(r_lockvisibility.integer)
 		return;
 	if(scissor)
 	{
