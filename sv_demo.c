@@ -29,7 +29,7 @@ void SV_StartDemoRecording(client_t *client, const char *filename, int forcetrac
 	FS_Printf(client->sv_demo_file, "%i\n", forcetrack);
 }
 
-void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qboolean clienttoserver)
+void SV_WriteDemoMessage(client_t *client, sizebuf_t *sendbuffer, qbool clienttoserver)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int len, i;

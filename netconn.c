@@ -33,33 +33,33 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DPMASTER_PORT 27950
 
 // note this defaults on for dedicated servers, off for listen servers
-cvar_t sv_public = {CVAR_SERVER, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
-cvar_t sv_public_rejectreason = {CVAR_SERVER, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
-static cvar_t sv_heartbeatperiod = {CVAR_SERVER | CVAR_SAVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
+cvar_t sv_public = {CF_SERVER, "sv_public", "0", "1: advertises this server on the master server (so that players can find it in the server browser); 0: allow direct queries only; -1: do not respond to direct queries; -2: do not allow anyone to connect; -3: already block at getchallenge level"};
+cvar_t sv_public_rejectreason = {CF_SERVER, "sv_public_rejectreason", "The server is closing.", "Rejection reason for connects when sv_public is -2"};
+static cvar_t sv_heartbeatperiod = {CF_SERVER | CF_ARCHIVE, "sv_heartbeatperiod", "120", "how often to send heartbeat in seconds (only used if sv_public is 1)"};
 extern cvar_t sv_status_privacy;
 
 static cvar_t sv_masters [] =
 {
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master1", "", "user-chosen master server 1"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master2", "", "user-chosen master server 2"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master3", "", "user-chosen master server 3"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_master4", "", "user-chosen master server 4"},
-	{CVAR_CLIENT | CVAR_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"}, // admin: Willis
-	{CVAR_CLIENT | CVAR_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"}, // admin: tChr
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master1", "", "user-chosen master server 1"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master2", "", "user-chosen master server 2"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master3", "", "user-chosen master server 3"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master4", "", "user-chosen master server 4"},
+	{CF_CLIENT | CF_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"}, // admin: Willis
+	{CF_CLIENT | CF_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"}, // admin: tChr
 	{0, NULL, NULL, NULL}
 };
 
 #ifdef CONFIG_MENU
 static cvar_t sv_qwmasters [] =
 {
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
-	{CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
-	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
-	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
-	{CVAR_CLIENT | CVAR_SERVER, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
+	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
+	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
+	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
 	{0, NULL, NULL, NULL}
 };
 #endif
@@ -73,34 +73,34 @@ static unsigned char sv_message_buf[NET_MAXMESSAGE];
 char cl_readstring[MAX_INPUTLINE];
 char sv_readstring[MAX_INPUTLINE];
 
-cvar_t net_test = {CVAR_CLIENT | CVAR_SERVER, "net_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
-cvar_t net_usesizelimit = {CVAR_SERVER, "net_usesizelimit", "2", "use packet size limiting (0: never, 1: in non-CSQC mode, 2: always)"};
-cvar_t net_burstreserve = {CVAR_SERVER, "net_burstreserve", "0.3", "how much of the burst time to reserve for packet size spikes"};
-cvar_t net_messagetimeout = {CVAR_CLIENT | CVAR_SERVER, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
-cvar_t net_connecttimeout = {CVAR_CLIENT | CVAR_SERVER, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
-cvar_t net_connectfloodblockingtimeout = {CVAR_SERVER, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
-cvar_t net_challengefloodblockingtimeout = {CVAR_SERVER, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
-cvar_t net_getstatusfloodblockingtimeout = {CVAR_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
-cvar_t net_sourceaddresscheck = {CVAR_CLIENT, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
-cvar_t hostname = {CVAR_SERVER | CVAR_SAVE, "hostname", "UNNAMED", "server message to show in server browser"};
-cvar_t developer_networking = {CVAR_CLIENT | CVAR_SERVER, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
+cvar_t net_test = {CF_CLIENT | CF_SERVER, "net_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
+cvar_t net_usesizelimit = {CF_SERVER, "net_usesizelimit", "2", "use packet size limiting (0: never, 1: in non-CSQC mode, 2: always)"};
+cvar_t net_burstreserve = {CF_SERVER, "net_burstreserve", "0.3", "how much of the burst time to reserve for packet size spikes"};
+cvar_t net_messagetimeout = {CF_CLIENT | CF_SERVER, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
+cvar_t net_connecttimeout = {CF_CLIENT | CF_SERVER, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
+cvar_t net_connectfloodblockingtimeout = {CF_SERVER, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
+cvar_t net_challengefloodblockingtimeout = {CF_SERVER, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
+cvar_t net_getstatusfloodblockingtimeout = {CF_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
+cvar_t net_sourceaddresscheck = {CF_CLIENT, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
+cvar_t hostname = {CF_SERVER | CF_ARCHIVE, "hostname", "UNNAMED", "server message to show in server browser"};
+cvar_t developer_networking = {CF_CLIENT | CF_SERVER, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
 
-cvar_t net_fakelag = {CVAR_CLIENT, "net_fakelag","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
-static cvar_t net_fakeloss_send = {CVAR_CLIENT, "net_fakeloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
-static cvar_t net_fakeloss_receive = {CVAR_CLIENT, "net_fakeloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
-static cvar_t net_slist_queriespersecond = {CVAR_CLIENT, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
-static cvar_t net_slist_queriesperframe = {CVAR_CLIENT, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
-static cvar_t net_slist_timeout = {CVAR_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
-static cvar_t net_slist_pause = {CVAR_CLIENT, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
-static cvar_t net_slist_maxtries = {CVAR_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
-static cvar_t net_slist_favorites = {CVAR_CLIENT | CVAR_SAVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
-static cvar_t net_tos_dscp = {CVAR_CLIENT | CVAR_SAVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
-static cvar_t gameversion = {CVAR_SERVER, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
-static cvar_t gameversion_min = {CVAR_CLIENT | CVAR_SERVER, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
-static cvar_t gameversion_max = {CVAR_CLIENT | CVAR_SERVER, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
-static cvar_t rcon_restricted_password = {CVAR_SERVER | CVAR_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-static cvar_t rcon_restricted_commands = {CVAR_SERVER, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
-static cvar_t rcon_secure_maxdiff = {CVAR_SERVER, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
+cvar_t net_fakelag = {CF_CLIENT, "net_fakelag","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
+static cvar_t net_fakeloss_send = {CF_CLIENT, "net_fakeloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
+static cvar_t net_fakeloss_receive = {CF_CLIENT, "net_fakeloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
+static cvar_t net_slist_queriespersecond = {CF_CLIENT, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
+static cvar_t net_slist_queriesperframe = {CF_CLIENT, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
+static cvar_t net_slist_timeout = {CF_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
+static cvar_t net_slist_pause = {CF_CLIENT, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
+static cvar_t net_slist_maxtries = {CF_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
+static cvar_t net_slist_favorites = {CF_CLIENT | CF_ARCHIVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
+static cvar_t net_tos_dscp = {CF_CLIENT | CF_ARCHIVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
+static cvar_t gameversion = {CF_SERVER, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
+static cvar_t gameversion_min = {CF_CLIENT | CF_SERVER, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
+static cvar_t gameversion_max = {CF_CLIENT | CF_SERVER, "gameversion_max", "-1", "maximum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
+static cvar_t rcon_restricted_password = {CF_SERVER | CF_PRIVATE, "rcon_restricted_password", "", "password to authenticate rcon commands in restricted mode; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
+static cvar_t rcon_restricted_commands = {CF_SERVER, "rcon_restricted_commands", "", "allowed commands for rcon when the restricted mode password was used"};
+static cvar_t rcon_secure_maxdiff = {CF_SERVER, "rcon_secure_maxdiff", "5", "maximum time difference between rcon request and server system clock (to protect against replay attack)"};
 extern cvar_t rcon_secure;
 extern cvar_t rcon_secure_challengetimeout;
 
@@ -114,8 +114,8 @@ challenge_t challenges[MAX_CHALLENGES];
 
 #ifdef CONFIG_MENU
 /// this is only false if there are still servers left to query
-static qboolean serverlist_querysleep = true;
-static qboolean serverlist_paused = false;
+static qbool serverlist_querysleep = true;
+static qbool serverlist_paused = false;
 /// this is pushed a second or two ahead of realtime whenever a master server
 /// reply is received, to avoid issuing queries while master replies are still
 /// flooding in (which would make a mess of the ping times)
@@ -131,10 +131,10 @@ netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;
 void *netconn_mutex = NULL;
 
-cvar_t cl_netport = {CVAR_CLIENT, "cl_port", "0", "forces client to use chosen port number if not 0"};
-cvar_t sv_netport = {CVAR_SERVER, "port", "26000", "server port for players to connect to"};
-cvar_t net_address = {CVAR_CLIENT | CVAR_SERVER, "net_address", "", "network address to open ipv4 ports on (if empty, use default interfaces)"};
-cvar_t net_address_ipv6 = {CVAR_CLIENT | CVAR_SERVER, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
+cvar_t cl_netport = {CF_CLIENT, "cl_port", "0", "forces client to use chosen port number if not 0"};
+cvar_t sv_netport = {CF_SERVER, "port", "26000", "server port for players to connect to"};
+cvar_t net_address = {CF_CLIENT | CF_SERVER, "net_address", "", "network address to open ipv4 ports on (if empty, use default interfaces)"};
+cvar_t net_address_ipv6 = {CF_CLIENT | CF_SERVER, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
 
 char cl_net_extresponse[NET_EXTRESPONSE_MAX][1400];
 int cl_net_extresponse_count = 0;
@@ -159,7 +159,7 @@ int serverlist_maxcachecount = 0;
 int serverlist_cachecount = 0;
 serverlist_entry_t *serverlist_cache = NULL;
 
-qboolean serverlist_consoleoutput;
+qbool serverlist_consoleoutput;
 
 static int nFavorites = 0;
 static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
@@ -215,7 +215,7 @@ static void _ServerList_ViewList_Helper_Remove( int index )
 }
 
 /// \returns true if A should be inserted before B
-static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_entry_t *B )
+static qbool _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_entry_t *B )
 {
 	int result = 0; // > 0 if for numbers A > B and for text if A < B
 
@@ -297,7 +297,7 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 	return A < B;
 }
 
-static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
+static qbool _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 {
 	// This should actually be done with some intermediate and end-of-function return
 	switch( op ) {
@@ -323,7 +323,7 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 	}
 }
 
-static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
+static qbool _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
 {
 	int i;
 	char bufferA[ 1400 ], bufferB[ 1400 ]; // should be more than enough
@@ -365,7 +365,7 @@ static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, c
 	}
 }
 
-static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info_t *info )
+static qbool _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info_t *info )
 {
 	if( !_ServerList_CompareInt( info->ping, mask->tests[SLIF_PING], mask->info.ping ) )
 		return false;
@@ -576,7 +576,7 @@ static void _ServerList_Test(void)
 }
 #endif
 
-void ServerList_QueryList(qboolean resetcache, qboolean querydp, qboolean queryqw, qboolean consoleoutput)
+void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput)
 {
 	masterquerytime = host.realtime;
 	masterquerycount = 0;
@@ -668,7 +668,7 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 	return NetConn_Write(mysocket, string, (int)strlen(string), peeraddress);
 }
 
-qboolean NetConn_CanSend(netconn_t *conn)
+qbool NetConn_CanSend(netconn_t *conn)
 {
 	conn->outgoing_packetcounter = (conn->outgoing_packetcounter + 1) % NETGRAPH_PACKETS;
 	conn->outgoing_netgraph[conn->outgoing_packetcounter].time            = host.realtime;
@@ -723,7 +723,7 @@ static int NetConn_AddCryptoFlag(crypto_t *crypto)
 	return flag;
 }
 
-int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qboolean quakesignon_suppressreliables)
+int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolversion_t protocol, int rate, int burstsize, qbool quakesignon_suppressreliables)
 {
 	int totallen = 0;
 	unsigned char sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
@@ -740,7 +740,7 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
 		int packetLen;
-		qboolean sendreliable;
+		qbool sendreliable;
 
 		// note that it is ok to send empty messages to the qw server,
 		// otherwise it won't respond to us at all
@@ -931,12 +931,12 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data, protocolvers
 	return 0;
 }
 
-qboolean NetConn_HaveClientPorts(void)
+qbool NetConn_HaveClientPorts(void)
 {
 	return !!cl_numsockets;
 }
 
-qboolean NetConn_HaveServerPorts(void)
+qbool NetConn_HaveServerPorts(void)
 {
 	return !!sv_numsockets;
 }
@@ -1007,7 +1007,7 @@ void NetConn_CloseServerPorts(void)
 			LHNET_CloseSocket(sv_sockets[sv_numsockets - 1]);
 }
 
-static qboolean NetConn_OpenServerPort(const char *addressstring, lhnetaddresstype_t addresstype, int defaultport, int range)
+static qbool NetConn_OpenServerPort(const char *addressstring, lhnetaddresstype_t addresstype, int defaultport, int range)
 {
 	lhnetaddress_t address;
 	lhnetsocket_t *s;
@@ -1067,7 +1067,7 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (opennetports)
 	{
 #ifndef NOSUPPORTIPV6
-		qboolean ip4success = NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
+		qbool ip4success = NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
 		NetConn_OpenServerPort(net_address_ipv6.string, LHNETADDRESSTYPE_INET6, port, ip4success ? 1 : 100);
 #else
 		NetConn_OpenServerPort(net_address.string, LHNETADDRESSTYPE_INET4, port, 100);
@@ -1207,7 +1207,7 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 	if (protocol == PROTOCOL_QUAKEWORLD)
 	{
 		unsigned int sequence, sequence_ack;
-		qboolean reliable_ack, reliable_message;
+		qbool reliable_ack, reliable_message;
 		int count;
 		//int qport;
 
@@ -1519,6 +1519,8 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 		SV_Shutdown ();
 		SV_UnlockThreadMutex();
 	}
+	if(cls.state == ca_connected || cls.demoplayback)
+		CL_Disconnect();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	crypto = &cls.netcon->crypto;
@@ -1661,7 +1663,7 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 }
 
 // returns true, if it's sensible to continue the processing
-static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring, qboolean isfavorite ) {
+static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring, qbool isfavorite ) {
 	int n;
 	serverlist_entry_t *entry;
 
@@ -1704,7 +1706,7 @@ static qboolean NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol,
 	return true;
 }
 
-static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *senderaddress, const unsigned char *data, int length, qboolean isextended)
+static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *senderaddress, const unsigned char *data, int length, qbool isextended)
 {
 	masterreplycount++;
 	if (serverlist_consoleoutput)
@@ -1783,7 +1785,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *data, int length, lhnetaddress_t *peeraddress)
 {
-	qboolean fromserver;
+	qbool fromserver;
 	int ret, c;
 	char *string, addressstring2[128];
 	char stringbuf[16384];
@@ -2502,7 +2504,7 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 }
 
 /// (div0) build the full response only if possible; better a getinfo response than no response at all if getstatus won't fit
-static qboolean NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qboolean fullstatus)
+static qbool NetConn_BuildStatusResponse(const char* challenge, char* out_msg, size_t out_size, qbool fullstatus)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char qcstatus[256];
@@ -2668,7 +2670,7 @@ bad:
 	return false;
 }
 
-static qboolean NetConn_PreventFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floodlist, size_t floodlength, double floodtime, qboolean renew)
+static qbool NetConn_PreventFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floodlist, size_t floodlength, double floodtime, qbool renew)
 {
 	size_t floodslotnum, bestfloodslotnum;
 	double bestfloodtime;
@@ -2731,9 +2733,9 @@ void NetConn_ClearFlood(lhnetaddress_t *peeraddress, server_floodaddress_t *floo
 	}
 }
 
-typedef qboolean (*rcon_matchfunc_t) (lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen);
+typedef qbool (*rcon_matchfunc_t) (lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen);
 
-static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
+static qbool hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	char mdfourbuf[16];
 	long t1, t2;
@@ -2754,7 +2756,7 @@ static qboolean hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const cha
 	return !memcmp(mdfourbuf, hash, 16);
 }
 
-static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
+static qbool hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	char mdfourbuf[16];
 	int i;
@@ -2788,7 +2790,7 @@ static qboolean hmac_mdfour_challenge_matching(lhnetaddress_t *peeraddress, cons
 	return true;
 }
 
-static qboolean plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
+static qbool plaintext_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen)
 {
 	if (!password[0]) {
 		Con_Print(CON_ERROR "LOGIC ERROR: RCon_Authenticate should never call the comparator with an empty password. Please report.\n");
@@ -2803,9 +2805,9 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 {
 	const char *text, *userpass_start, *userpass_end, *userpass_startpass;
 	static char buf[MAX_INPUTLINE];
-	qboolean hasquotes;
-	qboolean restricted = false;
-	qboolean have_usernames = false;
+	qbool hasquotes;
+	qbool restricted = false;
+	qbool have_usernames = false;
 	static char vabuf[1024];
 
 	userpass_start = rcon_password.string;
@@ -2897,7 +2899,7 @@ allow:
 	return va(vabuf, sizeof(vabuf), "%srcon", restricted ? "restricted " : "");
 }
 
-static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos, qboolean proquakeprotocol)
+static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, const char *addressstring2, const char *userlevel, const char *s, const char *endpos, qbool proquakeprotocol)
 {
 	if(userlevel)
 	{
@@ -2921,7 +2923,7 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(&cmd_server, s, src_command, true);
+				Cmd_ExecuteString(&cmd_server, s, src_local, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
@@ -2941,7 +2943,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	double besttime;
 	char *string, response[2800], addressstring2[128];
 	static char stringbuf[16384]; // server only
-	qboolean islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
+	qbool islocal = (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP);
 	char senddata[NET_HEADERSIZE+NET_MAXMESSAGE+CRYPTO_HEADERSIZE];
 	size_t sendlength, response_len;
 	char infostringvalue[MAX_INPUTLINE];
@@ -3545,7 +3547,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 				// find the search start location
 				prevCvarName = MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring));
-				var = Cvar_FindVarAfter(&cvars_all, prevCvarName, CVAR_NOTIFY);
+				var = Cvar_FindVarAfter(&cvars_all, prevCvarName, CF_NOTIFY);
 
 				// send the response
 				SZ_Clear(&sv_message);
@@ -3608,15 +3610,6 @@ void NetConn_ServerFrame(void)
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-	{
-		// never timeout loopback connections
-		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-		{
-			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
-			SV_DropClient(false);
-		}
-	}
 }
 
 void NetConn_SleepMicroseconds(int microseconds)
@@ -3625,7 +3618,7 @@ void NetConn_SleepMicroseconds(int microseconds)
 }
 
 #ifdef CONFIG_MENU
-void NetConn_QueryMasters(qboolean querydp, qboolean queryqw)
+void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 {
 	int i, j;
 	int masternum;
@@ -3870,13 +3863,13 @@ void NetConn_Init(void)
 	int i;
 	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
-	Cmd_AddCommand(CMD_SHARED, "net_stats", Net_Stats_f, "print network statistics");
+	Cmd_AddCommand(CF_SHARED, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
-	Cmd_AddCommand(CMD_CLIENT, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
-	Cmd_AddCommand(CMD_CLIENT, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
-	Cmd_AddCommand(CMD_CLIENT, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
+	Cmd_AddCommand(CF_CLIENT, "net_slist", Net_Slist_f, "query dp master servers and print all server information");
+	Cmd_AddCommand(CF_CLIENT, "net_slistqw", Net_SlistQW_f, "query qw master servers and print all server information");
+	Cmd_AddCommand(CF_CLIENT, "net_refresh", Net_Refresh_f, "query dp master servers and refresh all server information");
 #endif
-	Cmd_AddCommand(CMD_SERVER, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
+	Cmd_AddCommand(CF_SERVER, "heartbeat", Net_Heartbeat_f, "send a heartbeat to the master server (updates your server information)");
 	Cvar_RegisterVariable(&net_test);
 	Cvar_RegisterVariable(&net_usesizelimit);
 	Cvar_RegisterVariable(&net_burstreserve);
@@ -3921,7 +3914,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);
 // COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
-	if ((i = COM_CheckParm("-ip")) && i + 1 < sys.argc)
+	if ((i = Sys_CheckParm("-ip")) && i + 1 < sys.argc)
 	{
 		if (LHNETADDRESS_FromString(&tempaddress, sys.argv[i + 1], 0) == 1)
 		{
@@ -3932,7 +3925,7 @@ void NetConn_Init(void)
 			Con_Printf(CON_ERROR "-ip option used, but unable to parse the address \"%s\"\n", sys.argv[i + 1]);
 	}
 // COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
-	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < sys.argc)
+	if (((i = Sys_CheckParm("-port")) || (i = Sys_CheckParm("-ipport")) || (i = Sys_CheckParm("-udpport"))) && i + 1 < sys.argc)
 	{
 		i = atoi(sys.argv[i + 1]);
 		if (i >= 0 && i < 65536)

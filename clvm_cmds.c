@@ -91,7 +91,7 @@ static void VM_CL_setmodel (prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
 	const char		*m;
-	dp_model_t *mod;
+	model_t *mod;
 	int				i;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_setmodel);
@@ -420,7 +420,7 @@ static void VM_CL_precache_model (prvm_prog_t *prog)
 {
 	const char	*name;
 	int			i;
-	dp_model_t		*m;
+	model_t		*m;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_precache_model);
 
@@ -441,7 +441,7 @@ static void VM_CL_precache_model (prvm_prog_t *prog)
 		{
 			if (!cl.csqc_model_precache[i])
 			{
-				cl.csqc_model_precache[i] = (dp_model_t*)m;
+				cl.csqc_model_precache[i] = (model_t*)m;
 				PRVM_G_FLOAT(OFS_RETURN) = -(i+1);
 				return;
 			}
@@ -1104,7 +1104,7 @@ static void VM_CL_R_AddDynamicLight (prvm_prog_t *prog)
 	int pflags = PFLAGS_CORONA | PFLAGS_FULLDYNAMIC;
 	float coronaintensity = 1;
 	float coronasizescale = 0.25;
-	qboolean castshadow = true;
+	qbool castshadow = true;
 	float ambientscale = 0;
 	float diffusescale = 1;
 	float specularscale = 1;
@@ -1187,6 +1187,781 @@ static void VM_CL_project (prvm_prog_t *prog)
 	// explanation:
 	// after transforming, relative position to viewport (0..1) = 0.5 * (1 + v[2]/v[0]/-frustum_{x \or y})
 	// as 2D drawing honors the viewport too, to get the same pixel, we simply multiply this by conwidth/height
+}
+
+//=============================================================================
+// Draw builtins (client & menu)
+
+/*
+========================
+VM_drawline
+
+void drawline(float width, vector pos1, vector pos2, vector rgb, float alpha, float flags)
+========================
+*/
+void VM_drawline (prvm_prog_t *prog)
+{
+	prvm_vec_t	*c1, *c2, *rgb;
+	float	alpha, width;
+	unsigned char	flags;
+
+	VM_SAFEPARMCOUNT(6, VM_drawline);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	width	= PRVM_G_FLOAT(OFS_PARM0);
+	c1		= PRVM_G_VECTOR(OFS_PARM1);
+	c2		= PRVM_G_VECTOR(OFS_PARM2);
+	rgb		= PRVM_G_VECTOR(OFS_PARM3);
+	alpha	= PRVM_G_FLOAT(OFS_PARM4);
+	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
+	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags, false);
+}
+
+/*
+=========
+VM_iscachedpic
+
+float	iscachedpic(string pic)
+=========
+*/
+void VM_iscachedpic(prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(1,VM_iscachedpic);
+
+	// drawq hasnt such a function, thus always return true
+	PRVM_G_FLOAT(OFS_RETURN) = false;
+}
+
+/*
+=========
+VM_precache_pic
+
+string	precache_pic(string pic)
+=========
+*/
+#define PRECACHE_PIC_FROMWAD 1 /* FTEQW, not supported here */
+#define PRECACHE_PIC_NOTPERSISTENT 2
+//#define PRECACHE_PIC_NOCLAMP 4
+#define PRECACHE_PIC_MIPMAP 8
+void VM_precache_pic(prvm_prog_t *prog)
+{
+	const char	*s;
+	int flags = CACHEPICFLAG_FAILONMISSING;
+
+	VM_SAFEPARMCOUNTRANGE(1, 2, VM_precache_pic);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+	VM_CheckEmptyString(prog, s);
+
+	if(prog->argc >= 2)
+	{
+		int f = PRVM_G_FLOAT(OFS_PARM1);
+		if(f & PRECACHE_PIC_NOTPERSISTENT)
+			flags |= CACHEPICFLAG_NOTPERSISTENT;
+		//if(f & PRECACHE_PIC_NOCLAMP)
+		//	flags |= CACHEPICFLAG_NOCLAMP;
+		if(f & PRECACHE_PIC_MIPMAP)
+			flags |= CACHEPICFLAG_MIPMAP;
+	}
+
+	if( !Draw_IsPicLoaded(Draw_CachePic_Flags(s, flags | CACHEPICFLAG_QUIET)) )
+		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
+}
+
+/*
+=========
+VM_freepic
+
+freepic(string s)
+=========
+*/
+void VM_freepic(prvm_prog_t *prog)
+{
+	const char *s;
+
+	VM_SAFEPARMCOUNT(1,VM_freepic);
+
+	s = PRVM_G_STRING(OFS_PARM0);
+	VM_CheckEmptyString(prog, s);
+
+	Draw_FreePic(s);
+}
+
+static void getdrawfontscale(prvm_prog_t *prog, float *sx, float *sy)
+{
+	vec3_t v;
+	*sx = *sy = 1;
+	VectorCopy(PRVM_drawglobalvector(drawfontscale), v);
+	if(VectorLength2(v) > 0)
+	{
+		*sx = v[0];
+		*sy = v[1];
+	}
+}
+
+static dp_font_t *getdrawfont(prvm_prog_t *prog)
+{
+	int f = (int) PRVM_drawglobalfloat(drawfont);
+	if(f < 0 || f >= dp_fonts.maxsize)
+		return FONT_DEFAULT;
+	return &dp_fonts.f[f];
+}
+
+/*
+=========
+VM_drawcharacter
+
+float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawcharacter(prvm_prog_t *prog)
+{
+	prvm_vec_t *pos,*scale,*rgb;
+	char   character;
+	int flag;
+	float sx, sy;
+	VM_SAFEPARMCOUNT(6,VM_drawcharacter);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	character = (char) PRVM_G_FLOAT(OFS_PARM1);
+	if(character == 0)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning(prog, "VM_drawcharacter: %s passed null character !\n",prog->name);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	scale = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(pos[2] || scale[2])
+		VM_Warning(prog, "VM_drawcharacter: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+
+	if(!scale[0] || !scale[1])
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning(prog, "VM_drawcharacter: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		return;
+	}
+
+	getdrawfontscale(prog, &sx, &sy);
+	DrawQ_String_Scale(pos[0], pos[1], &character, 1, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont(prog));
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_drawstring
+
+float	drawstring(vector position, string text, vector scale, vector rgb, float alpha[, float flag])
+=========
+*/
+void VM_drawstring(prvm_prog_t *prog)
+{
+	prvm_vec_t *pos,*scale,*rgb;
+	const char  *string;
+	int flag = 0;
+	float sx, sy;
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawstring);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	string = PRVM_G_STRING(OFS_PARM1);
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	scale = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	if (prog->argc >= 6)
+		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(!scale[0] || !scale[1])
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning(prog, "VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		return;
+	}
+
+	if(pos[2] || scale[2])
+		VM_Warning(prog, "VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+
+	getdrawfontscale(prog, &sx, &sy);
+	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont(prog));
+	//Font_DrawString(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_drawcolorcodedstring
+
+float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
+/
+float	drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawcolorcodedstring(prvm_prog_t *prog)
+{
+	prvm_vec_t *pos, *scale;
+	const char  *string;
+	int flag;
+	vec3_t rgb;
+	float sx, sy, alpha;
+
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawcolorcodedstring);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	if (prog->argc == 6) // full 6 parms, like normal drawstring
+	{
+		pos = PRVM_G_VECTOR(OFS_PARM0);
+		string = PRVM_G_STRING(OFS_PARM1);
+		scale = PRVM_G_VECTOR(OFS_PARM2);
+		VectorCopy(PRVM_G_VECTOR(OFS_PARM3), rgb); 
+		alpha = PRVM_G_FLOAT(OFS_PARM4);
+		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
+	}
+	else
+	{
+		pos = PRVM_G_VECTOR(OFS_PARM0);
+		string = PRVM_G_STRING(OFS_PARM1);
+		scale = PRVM_G_VECTOR(OFS_PARM2);
+		rgb[0] = 1.0;
+		rgb[1] = 1.0;
+		rgb[2] = 1.0;
+		alpha = PRVM_G_FLOAT(OFS_PARM3);
+		flag = (int)PRVM_G_FLOAT(OFS_PARM4);
+	}
+
+	if(flag < DRAWFLAG_NORMAL || flag >= DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawcolorcodedstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(!scale[0] || !scale[1])
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning(prog, "VM_drawcolorcodedstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
+		return;
+	}
+
+	if(pos[2] || scale[2])
+		VM_Warning(prog, "VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+
+	getdrawfontscale(prog, &sx, &sy);
+	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], alpha, flag, NULL, false, getdrawfont(prog));
+	if (prog->argc == 6) // also return vector of last color
+		VectorCopy(DrawQ_Color, PRVM_G_VECTOR(OFS_RETURN));
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+/*
+=========
+VM_stringwidth
+
+float	stringwidth(string text, float allowColorCodes, float size)
+=========
+*/
+void VM_stringwidth(prvm_prog_t *prog)
+{
+	const char  *string;
+	vec2_t szv;
+	float mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
+	int colors;
+	float sx, sy;
+	size_t maxlen = 0;
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_stringwidth);
+
+	getdrawfontscale(prog, &sx, &sy);
+	if(prog->argc == 3)
+	{
+		Vector2Copy(PRVM_G_VECTOR(OFS_PARM2), szv);
+		mult = 1;
+	}
+	else
+	{
+		// we want the width for 8x8 font size, divided by 8
+		Vector2Set(szv, 8, 8);
+		mult = 0.125;
+		// to make sure snapping is turned off, ALWAYS use a nontrivial scale in this case
+		if(sx >= 0.9 && sx <= 1.1)
+		{
+			mult *= 2;
+			sx /= 2;
+			sy /= 2;
+		}
+	}
+
+	string = PRVM_G_STRING(OFS_PARM0);
+	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_UntilWidth_TrackColors_Scale(string, &maxlen, szv[0], szv[1], sx, sy, NULL, !colors, getdrawfont(prog), 1000000000) * mult;
+/*
+	if(prog->argc == 3)
+	{
+		mult = sz = PRVM_G_FLOAT(OFS_PARM2);
+	}
+	else
+	{
+		sz = 8;
+		mult = 1;
+	}
+
+	string = PRVM_G_STRING(OFS_PARM0);
+	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
+*/
+}
+
+/*
+=========
+VM_findfont
+
+float findfont(string s)
+=========
+*/
+
+static float getdrawfontnum(const char *fontname)
+{
+	int i;
+
+	for(i = 0; i < dp_fonts.maxsize; ++i)
+		if(!strcmp(dp_fonts.f[i].title, fontname))
+			return i;
+	return -1;
+}
+
+void VM_findfont(prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(1,VM_findfont);
+	PRVM_G_FLOAT(OFS_RETURN) = getdrawfontnum(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=========
+VM_loadfont
+
+float loadfont(string fontname, string fontmaps, string sizes, float slot)
+=========
+*/
+
+void VM_loadfont(prvm_prog_t *prog)
+{
+	const char *fontname, *filelist, *sizes, *c, *cm;
+	char mainfont[MAX_QPATH];
+	int i, numsizes;
+	float sz, scale, voffset;
+	dp_font_t *f;
+
+	VM_SAFEPARMCOUNTRANGE(3,6,VM_loadfont);
+
+	fontname = PRVM_G_STRING(OFS_PARM0);
+	if (!fontname[0])
+		fontname = "default";
+
+	filelist = PRVM_G_STRING(OFS_PARM1);
+	if (!filelist[0])
+		filelist = "gfx/conchars";
+
+	sizes = PRVM_G_STRING(OFS_PARM2);
+	if (!sizes[0])
+		sizes = "10";
+
+	// find a font
+	f = NULL;
+	if (prog->argc >= 4)
+	{
+		i = PRVM_G_FLOAT(OFS_PARM3);
+		if (i >= 0 && i < dp_fonts.maxsize)
+		{
+			f = &dp_fonts.f[i];
+			strlcpy(f->title, fontname, sizeof(f->title)); // replace name
+		}
+	}
+	if (!f)
+		f = FindFont(fontname, true);
+	if (!f)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		return; // something go wrong
+	}
+
+	memset(f->fallbacks, 0, sizeof(f->fallbacks));
+	memset(f->fallback_faces, 0, sizeof(f->fallback_faces));
+
+	// first font is handled "normally"
+	c = strchr(filelist, ':');
+	cm = strchr(filelist, ',');
+	if(c && (!cm || c < cm))
+		f->req_face = atoi(c+1);
+	else
+	{
+		f->req_face = 0;
+		c = cm;
+	}
+	if(!c || (c - filelist) > MAX_QPATH)
+		strlcpy(mainfont, filelist, sizeof(mainfont));
+	else
+	{
+		memcpy(mainfont, filelist, c - filelist);
+		mainfont[c - filelist] = 0;
+	}
+
+	// handle fallbacks
+	for(i = 0; i < MAX_FONT_FALLBACKS; ++i)
+	{
+		c = strchr(filelist, ',');
+		if(!c)
+			break;
+		filelist = c + 1;
+		if(!*filelist)
+			break;
+		c = strchr(filelist, ':');
+		cm = strchr(filelist, ',');
+		if(c && (!cm || c < cm))
+			f->fallback_faces[i] = atoi(c+1);
+		else
+		{
+			f->fallback_faces[i] = 0; // f->req_face; could make it stick to the default-font's face index
+			c = cm;
+		}
+		if(!c || (c-filelist) > MAX_QPATH)
+		{
+			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
+		}
+		else
+		{
+			memcpy(f->fallbacks[i], filelist, c - filelist);
+			f->fallbacks[i][c - filelist] = 0;
+		}
+	}
+
+	// handle sizes
+	for(i = 0; i < MAX_FONT_SIZES; ++i)
+		f->req_sizes[i] = -1;
+	for (numsizes = 0,c = sizes;;)
+	{
+		if (!COM_ParseToken_VM_Tokenize(&c, 0))
+			break;
+		sz = atof(com_token);
+		// detect crap size
+		if (sz < 0.001f || sz > 1000.0f)
+		{
+			VM_Warning(prog, "VM_loadfont: crap size %s", com_token);
+			continue;
+		}
+		// check overflow
+		if (numsizes == MAX_FONT_SIZES)
+		{
+			VM_Warning(prog, "VM_loadfont: MAX_FONT_SIZES = %i exceeded", MAX_FONT_SIZES);
+			break;
+		}
+		f->req_sizes[numsizes] = sz;
+		numsizes++;
+	}
+
+	// additional scale/hoffset parms
+	scale = 1;
+	voffset = 0;
+	if (prog->argc >= 5)
+	{
+		scale = PRVM_G_FLOAT(OFS_PARM4);
+		if (scale <= 0)
+			scale = 1;
+	}
+	if (prog->argc >= 6)
+		voffset = PRVM_G_FLOAT(OFS_PARM5);
+
+	// load
+	LoadFont(true, mainfont, f, scale, voffset);
+
+	// return index of loaded font
+	PRVM_G_FLOAT(OFS_RETURN) = (f - dp_fonts.f);
+}
+
+/*
+=========
+VM_drawpic
+
+float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawpic(prvm_prog_t *prog)
+{
+	const char *picname;
+	prvm_vec_t *size, *pos, *rgb;
+	int flag = 0;
+
+	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawpic);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	picname = PRVM_G_STRING(OFS_PARM1);
+	VM_CheckEmptyString(prog, picname);
+
+	// is pic cached ? no function yet for that
+	if(!1)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning(prog, "VM_drawpic: %s: %s not cached !\n", prog->name, picname);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM2);
+	rgb = PRVM_G_VECTOR(OFS_PARM3);
+	if (prog->argc >= 6)
+		flag = (int) PRVM_G_FLOAT(OFS_PARM5);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(pos[2] || size[2])
+		VM_Warning(prog, "VM_drawpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
+	DrawQ_Pic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+/*
+=========
+VM_drawrotpic
+
+float	drawrotpic(vector position, string pic, vector size, vector org, float angle, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawrotpic(prvm_prog_t *prog)
+{
+	const char *picname;
+	prvm_vec_t *size, *pos, *org, *rgb;
+	int flag;
+
+	VM_SAFEPARMCOUNT(8,VM_drawrotpic);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	picname = PRVM_G_STRING(OFS_PARM1);
+	VM_CheckEmptyString(prog, picname);
+
+	// is pic cached ? no function yet for that
+	if(!1)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning(prog, "VM_drawrotpic: %s: %s not cached !\n", prog->name, picname);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM2);
+	org = PRVM_G_VECTOR(OFS_PARM3);
+	rgb = PRVM_G_VECTOR(OFS_PARM5);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawrotpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(pos[2] || size[2] || org[2])
+		VM_Warning(prog, "VM_drawrotpic: z value from pos/size/org discarded\n");
+
+	DrawQ_RotPic(pos[0], pos[1], Draw_CachePic_Flags(picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], org[0], org[1], PRVM_G_FLOAT(OFS_PARM4), rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM6), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+/*
+=========
+VM_drawsubpic
+
+float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)
+
+=========
+*/
+void VM_drawsubpic(prvm_prog_t *prog)
+{
+	const char *picname;
+	prvm_vec_t *size, *pos, *rgb, *srcPos, *srcSize, alpha;
+	int flag;
+
+	VM_SAFEPARMCOUNT(8,VM_drawsubpic);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	picname = PRVM_G_STRING(OFS_PARM2);
+	VM_CheckEmptyString(prog, picname);
+
+	// is pic cached ? no function yet for that
+	if(!1)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning(prog, "VM_drawsubpic: %s: %s not cached !\n", prog->name, picname);
+		return;
+	}
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM1);
+	srcPos = PRVM_G_VECTOR(OFS_PARM3);
+	srcSize = PRVM_G_VECTOR(OFS_PARM4);
+	rgb = PRVM_G_VECTOR(OFS_PARM5);
+	alpha = PRVM_G_FLOAT(OFS_PARM6);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawsubpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(pos[2] || size[2])
+		VM_Warning(prog, "VM_drawsubpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
+	DrawQ_SuperPic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT),
+		size[0], size[1],
+		srcPos[0],              srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0] + srcSize[0], srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0],              srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
+		srcPos[0] + srcSize[0], srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
+		flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_drawfill
+
+float drawfill(vector position, vector size, vector rgb, float alpha, float flag)
+=========
+*/
+void VM_drawfill(prvm_prog_t *prog)
+{
+	prvm_vec_t *size, *pos, *rgb;
+	int flag;
+
+	VM_SAFEPARMCOUNT(5,VM_drawfill);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	pos = PRVM_G_VECTOR(OFS_PARM0);
+	size = PRVM_G_VECTOR(OFS_PARM1);
+	rgb = PRVM_G_VECTOR(OFS_PARM2);
+	flag = (int) PRVM_G_FLOAT(OFS_PARM4);
+
+	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_drawfill: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		return;
+	}
+
+	if(pos[2] || size[2])
+		VM_Warning(prog, "VM_drawfill: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
+	DrawQ_Fill(pos[0], pos[1], size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+}
+
+/*
+=========
+VM_drawsetcliparea
+
+drawsetcliparea(float x, float y, float width, float height)
+=========
+*/
+void VM_drawsetcliparea(prvm_prog_t *prog)
+{
+	float x,y,w,h;
+	VM_SAFEPARMCOUNT(4,VM_drawsetcliparea);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid_conwidth.integer);
+	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid_conheight.integer);
+	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid_conwidth.integer  - x));
+	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid_conheight.integer - y));
+
+	DrawQ_SetClipArea(x, y, w, h);
+}
+
+/*
+=========
+VM_drawresetcliparea
+
+drawresetcliparea()
+=========
+*/
+void VM_drawresetcliparea(prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(0,VM_drawresetcliparea);
+
+	// polygonbegin without draw2d arg has to guess
+	prog->polygonbegin_guess2d = true;
+
+	DrawQ_ResetClipArea();
+}
+
+/*
+=========
+VM_getimagesize
+
+vector	getimagesize(string pic)
+=========
+*/
+void VM_getimagesize(prvm_prog_t *prog)
+{
+	const char *p;
+	cachepic_t *pic;
+
+	VM_SAFEPARMCOUNT(1,VM_getimagesize);
+
+	p = PRVM_G_STRING(OFS_PARM0);
+	VM_CheckEmptyString(prog, p);
+
+	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOTPERSISTENT);
+	if (!Draw_IsPicLoaded(pic))
+	{
+		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
+	}
+	else
+	{
+		PRVM_G_VECTOR(OFS_RETURN)[0] = Draw_GetPicWidth(pic);
+		PRVM_G_VECTOR(OFS_RETURN)[1] = Draw_GetPicHeight(pic);
+	}
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
 //#330 float(float stnum) getstatf (EXT_CSQC)
@@ -1300,7 +2075,7 @@ static void VM_CL_setmodelindex (prvm_prog_t *prog)
 //#334 string(float mdlindex) modelnameforindex (EXT_CSQC)
 static void VM_CL_modelnameforindex (prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 
 	VM_SAFEPARMCOUNT(1, VM_CL_modelnameforindex);
 
@@ -1363,7 +2138,7 @@ static void VM_CL_boxparticles (prvm_prog_t *prog)
 	vec3_t origin_from, origin_to, dir_from, dir_to;
 	float count;
 	int flags;
-	qboolean istrail;
+	qbool istrail;
 	float tintmins[4], tintmaxs[4], fade;
 	VM_SAFEPARMCOUNTRANGE(7, 8, VM_CL_boxparticles);
 
@@ -1629,7 +2404,7 @@ static void VM_CL_registercmd (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
 	if(!Cmd_Exists(&cmd_client, PRVM_G_STRING(OFS_PARM0)))
-		Cmd_AddCommand(CMD_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
 //#360 float() readbyte (EXT_CSQC)
@@ -1873,7 +2648,7 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 // #404 void(vector org, string modelname, float startframe, float endframe, float framerate) effect (DP_SV_EFFECT)
 static void VM_CL_effect (prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	vec3_t org;
 	VM_SAFEPARMCOUNT(5, VM_CL_effect);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
@@ -2303,7 +3078,7 @@ static void VM_CL_setattachment (prvm_prog_t *prog)
 	const char *tagname;
 	int modelindex;
 	int tagindex;
-	dp_model_t *model;
+	model_t *model;
 	VM_SAFEPARMCOUNT(3, VM_CL_setattachment);
 
 	e = PRVM_G_EDICT(OFS_PARM0);
@@ -2348,7 +3123,7 @@ static void VM_CL_setattachment (prvm_prog_t *prog)
 
 static int CL_GetTagIndex (prvm_prog_t *prog, prvm_edict_t *e, const char *tagname)
 {
-	dp_model_t *model = CL_GetModelFromEdict(e);
+	model_t *model = CL_GetModelFromEdict(e);
 	if (model)
 		return Mod_Alias_GetTagIndexForName(model, (int)PRVM_clientedictfloat(e, skin), tagname);
 	else
@@ -2358,7 +3133,7 @@ static int CL_GetTagIndex (prvm_prog_t *prog, prvm_edict_t *e, const char *tagna
 static int CL_GetExtendedTagInfo (prvm_prog_t *prog, prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
 	int r;
-	dp_model_t *model;
+	model_t *model;
 
 	*tagname = NULL;
 	*parentindex = 0;
@@ -2381,13 +3156,13 @@ static int CL_GetExtendedTagInfo (prvm_prog_t *prog, prvm_edict_t *e, int tagind
 
 int CL_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent)
 {
-	dp_model_t *model;
+	model_t *model;
 	if ((model = CL_GetModelFromEdict(ent)) && model->type == mod_alias)
 		return -1;
 	return 1;
 }
 
-void CL_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
+void CL_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix)
 {
 	float scale;
 	float pitchsign = 1;
@@ -2419,7 +3194,7 @@ void CL_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out,
 
 static int CL_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
 {
-	dp_model_t *model;
+	model_t *model;
 	if (tagindex >= 0
 	 && (model = CL_GetModelFromEdict(ent))
 	 && model->animscenes)
@@ -2448,7 +3223,7 @@ int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int
 	int ret;
 	int attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	dp_model_t *model;
+	model_t *model;
 	vec3_t shadingorigin;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
@@ -2577,7 +3352,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 	const char *tagname;
 	int returncode;
 	vec3_t forward, left, up, origin;
-	const dp_model_t *model;
+	const model_t *model;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_gettaginfo);
 
@@ -2634,7 +3409,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 typedef struct vmparticletheme_s
 {
 	unsigned short typeindex;
-	qboolean initialized;
+	qbool initialized;
 	pblend_t blendmode;
 	porientation_t orientation;
 	int color1;
@@ -2650,7 +3425,7 @@ typedef struct vmparticletheme_s
 	float liquidfriction;
 	float originjitter;
 	float velocityjitter;
-	qboolean qualityreduction;
+	qbool qualityreduction;
 	float lifetime;
 	float stretch;
 	int staincolor1;
@@ -2668,8 +3443,8 @@ typedef struct vmparticletheme_s
 typedef struct vmparticlespawner_s
 {
 	mempool_t			*pool;
-	qboolean			initialized;
-	qboolean			verified;
+	qbool			initialized;
+	qbool			verified;
 	vmparticletheme_t	*themes;
 	int					max_themes;
 }vmparticlespawner_t;
@@ -2932,12 +3707,12 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticle: particle spawner not initialized\n");
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
 	}
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), dir);
-	
+
 	if (prog->argc < 3) // global-set particle
 	{
 		part = CL_NewParticle(org,
@@ -2976,7 +3751,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 			NULL);
 		if (!part)
 		{
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		if (PRVM_clientglobalfloat(particle_delayspawn))
@@ -2990,7 +3765,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
 			VM_Warning(prog, "VM_CL_SpawnParticle: bad theme number %i\n", themenum);
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
@@ -3030,7 +3805,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 			NULL);
 		if (!part)
 		{
-			PRVM_G_FLOAT(OFS_RETURN) = 0; 
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		if (theme->delayspawn)
@@ -3038,7 +3813,7 @@ static void VM_CL_SpawnParticle (prvm_prog_t *prog)
 		//if (theme->delaycollision)
 		//	part->delayedcollisions = cl.time + theme->delaycollision;
 	}
-	PRVM_G_FLOAT(OFS_RETURN) = 1; 
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
 // float(vector org, vector dir, float spawndelay, float collisiondelay, [float theme]) delayedparticle
@@ -3054,7 +3829,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 	if (vmpartspawner.verified == false)
 	{
 		VM_Warning(prog, "VM_CL_SpawnParticleDelayed: particle spawner not initialized\n");
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		return;
 	}
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), org);
@@ -3100,7 +3875,7 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 		if (themenum <= 0 || themenum >= vmpartspawner.max_themes)
 		{
 			VM_Warning(prog, "VM_CL_SpawnParticleDelayed: bad theme number %i\n", themenum);
-			PRVM_G_FLOAT(OFS_RETURN) = 0;  
+			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			return;
 		}
 		theme = &vmpartspawner.themes[themenum];
@@ -3139,10 +3914,10 @@ static void VM_CL_SpawnParticleDelayed (prvm_prog_t *prog)
 			theme->spin,
 			NULL);
 	}
-	if (!part) 
-	{ 
-		PRVM_G_FLOAT(OFS_RETURN) = 0; 
-		return; 
+	if (!part)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
 	}
 	part->delayedspawn = cl.time + PRVM_G_FLOAT(OFS_PARM2);
 	//part->delayedcollisions = cl.time + PRVM_G_FLOAT(OFS_PARM3);
@@ -3178,7 +3953,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 		case 1: // origin
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
 			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
-			break; 
+			break;
 		case 2: // forward
 			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
 			VectorCopy(forward, PRVM_G_VECTOR(OFS_RETURN));
@@ -3193,17 +3968,17 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			break;
 		case 5: // scale
 			PRVM_G_FLOAT(OFS_RETURN) = Matrix4x4_ScaleFromMatrix(&cl.entities[entnum].render.matrix);
-			break;	
+			break;
 		case 6: // origin + v_forward, v_right, v_up
 			Matrix4x4_ToVectors(&cl.entities[entnum].render.matrix, forward, left, up, org);
 			VectorCopy(forward, PRVM_clientglobalvector(v_forward));
 			VectorNegate(left, PRVM_clientglobalvector(v_right));
 			VectorCopy(up, PRVM_clientglobalvector(v_up));
 			VectorCopy(org, PRVM_G_VECTOR(OFS_RETURN));
-			break;	
+			break;
 		case 7: // alpha
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.alpha;
-			break;	
+			break;
 		case 8: // colormor
 			VectorCopy(cl.entities[entnum].render.colormod, PRVM_G_VECTOR(OFS_RETURN));
 			break;
@@ -3215,24 +3990,24 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 			break;
 		case 11: // skinnum
 			PRVM_G_FLOAT(OFS_RETURN) = cl.entities[entnum].render.skinnum;
-			break;	
+			break;
 		case 12: // mins
-			VectorCopy(cl.entities[entnum].render.mins, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorCopy(cl.entities[entnum].render.mins, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 13: // maxs
-			VectorCopy(cl.entities[entnum].render.maxs, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorCopy(cl.entities[entnum].render.maxs, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 14: // absmin
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
-			VectorAdd(cl.entities[entnum].render.mins, org, PRVM_G_VECTOR(OFS_RETURN));		
-			break;	
+			VectorAdd(cl.entities[entnum].render.mins, org, PRVM_G_VECTOR(OFS_RETURN));
+			break;
 		case 15: // absmax
 			Matrix4x4_OriginFromMatrix(&cl.entities[entnum].render.matrix, org);
-			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));		
+			VectorAdd(cl.entities[entnum].render.maxs, org, PRVM_G_VECTOR(OFS_RETURN));
 			break;
 		case 16: // light
 			VectorMA(cl.entities[entnum].render.render_modellight_ambient, 0.5, cl.entities[entnum].render.render_modellight_diffuse, PRVM_G_VECTOR(OFS_RETURN));
-			break;	
+			break;
 		default:
 			PRVM_G_FLOAT(OFS_RETURN) = 0;
 			break;
@@ -3249,7 +4024,7 @@ static void VM_CL_GetEntity (prvm_prog_t *prog)
 // --blub
 static void VM_CL_R_RenderScene (prvm_prog_t *prog)
 {
-	qboolean ismain = r_refdef.view.ismain;
+	qbool ismain = r_refdef.view.ismain;
 	double t = Sys_DirtyTime();
 	VM_SAFEPARMCOUNT(0, VM_CL_R_RenderScene);
 
@@ -3292,8 +4067,8 @@ static void VM_CL_R_PolygonBegin (prvm_prog_t *prog)
 {
 	const char *texname;
 	int drawflags;
-	qboolean draw2d;
-	dp_model_t *mod;
+	qbool draw2d;
+	model_t *mod;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_R_PolygonBegin);
 
@@ -3329,7 +4104,7 @@ static void VM_CL_R_PolygonVertex (prvm_prog_t *prog)
 	const prvm_vec_t *c = PRVM_G_VECTOR(OFS_PARM2);
 	const prvm_vec_t a = PRVM_G_FLOAT(OFS_PARM3);
 	float *o;
-	dp_model_t *mod = prog->polygonbegin_model;
+	model_t *mod = prog->polygonbegin_model;
 
 	VM_SAFEPARMCOUNT(4, VM_CL_R_PolygonVertex);
 
@@ -3362,11 +4137,11 @@ static void VM_CL_R_PolygonVertex (prvm_prog_t *prog)
 static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 {
 	int i;
-	qboolean hascolor;
-	qboolean hasalpha;
+	qbool hascolor;
+	qbool hasalpha;
 	int e0 = 0, e1 = 0, e2 = 0;
 	float *o;
-	dp_model_t *mod = prog->polygonbegin_model;
+	model_t *mod = prog->polygonbegin_model;
 	msurface_t *surf;
 	texture_t *tex;
 	int materialflags;
@@ -3430,7 +4205,7 @@ is not a staircase.
 
 =============
 */
-static qboolean CL_CheckBottom (prvm_edict_t *ent)
+static qbool CL_CheckBottom (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	vec3_t	mins, maxs, start, stop;
@@ -3500,7 +4275,7 @@ The move will be adjusted for slopes and stairs, but if the move isn't
 possible, no move is done and false is returned
 =============
 */
-static qboolean CL_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace)
+static qbool CL_movestep (prvm_edict_t *ent, vec3_t move, qbool relink, qbool noenemy, qbool settrace)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	float		dz, stepheight;
@@ -3632,7 +4407,7 @@ static void VM_CL_walkmove (prvm_prog_t *prog)
 	vec3_t	move;
 	mfunction_t	*oldf;
 	int 	oldself;
-	qboolean	settrace;
+	qbool	settrace;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_CL_walkmove);
 
@@ -3764,7 +4539,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 static void VM_CL_skel_create(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = CL_GetModelByIndex(modelindex);
+	model_t *model = CL_GetModelByIndex(modelindex);
 	skeleton_t *skeleton;
 	int i;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -3794,7 +4569,7 @@ static void VM_CL_skel_build(prvm_prog_t *prog)
 	float retainfrac = PRVM_G_FLOAT(OFS_PARM3);
 	int firstbone = PRVM_G_FLOAT(OFS_PARM4) - 1;
 	int lastbone = PRVM_G_FLOAT(OFS_PARM5) - 1;
-	dp_model_t *model = CL_GetModelByIndex(modelindex);
+	model_t *model = CL_GetModelByIndex(modelindex);
 	int numblends;
 	int bonenum;
 	int blendindex;
@@ -4037,7 +4812,7 @@ static void VM_CL_skel_delete(prvm_prog_t *prog)
 static void VM_CL_frameforname(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = CL_GetModelByIndex(modelindex);
+	model_t *model = CL_GetModelByIndex(modelindex);
 	const char *name = PRVM_G_STRING(OFS_PARM1);
 	int i;
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
@@ -4057,7 +4832,7 @@ static void VM_CL_frameforname(prvm_prog_t *prog)
 static void VM_CL_frameduration(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = CL_GetModelByIndex(modelindex);
+	model_t *model = CL_GetModelByIndex(modelindex);
 	int framenum = (int)PRVM_G_FLOAT(OFS_PARM1);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 	if (!model || !model->animscenes || framenum < 0 || framenum >= model->numframes)
@@ -4124,11 +4899,10 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	matrix4x4_t entrendermatrix;
 	vec3_t clviewangles;
 	vec3_t clvelocity;
-	qboolean teleported;
-	qboolean clonground;
-	qboolean clcmdjump;
-	qboolean cldead;
-	qboolean clintermission;
+	qbool teleported;
+	qbool clonground;
+	qbool clcmdjump;
+	qbool cldead;
 	float clstatsviewheight;
 	prvm_edict_t *ent;
 	int flags;
@@ -4146,10 +4920,10 @@ static void VM_CL_V_CalcRefdef(prvm_prog_t *prog)
 	clcmdjump = (flags & REFDEFFLAG_JUMPING) != 0;
 	clstatsviewheight = PRVM_clientedictvector(ent, view_ofs)[2];
 	cldead = (flags & REFDEFFLAG_DEAD) != 0;
-	clintermission = (flags & REFDEFFLAG_INTERMISSION) != 0;
+	cl.intermission = (flags & REFDEFFLAG_INTERMISSION) != 0;
 	VectorCopy(PRVM_clientedictvector(ent, velocity), clvelocity);
 
-	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight, cldead, clintermission, clvelocity);
+	V_CalcRefdefUsing(&entrendermatrix, clviewangles, teleported, clonground, clcmdjump, clstatsviewheight, cldead, clvelocity);
 
 	VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 	VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
@@ -4413,7 +5187,7 @@ NULL,							// #241
 NULL,							// #242
 NULL,							// #243
 NULL,							// #244
-NULL,							// #245
+VM_modulo,						// #245
 NULL,							// #246
 NULL,							// #247
 NULL,							// #248
@@ -4496,7 +5270,7 @@ VM_drawfill,					// #323 float(vector position, vector size, vector rgb, float a
 VM_drawsetcliparea,				// #324 void(float x, float y, float width, float height) drawsetcliparea
 VM_drawresetcliparea,			// #325 void(void) drawresetcliparea
 VM_drawcolorcodedstring,		// #326 float drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag) (EXT_CSQC)
-VM_stringwidth,                 // #327 // FIXME is this okay?
+VM_stringwidth,					// #327 // FIXME is this okay?
 VM_drawsubpic,					// #328 // FIXME is this okay?
 VM_drawrotpic,					// #329 // FIXME is this okay?
 VM_CL_getstatf,					// #330 float(float stnum) getstatf (EXT_CSQC)

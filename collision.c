@@ -10,15 +10,15 @@
 #define COLLISION_SNAP2 (2.0f / COLLISION_SNAPSCALE)
 #define COLLISION_PLANE_DIST_EPSILON (2.0f / COLLISION_SNAPSCALE)
 
-cvar_t collision_impactnudge = {CVAR_CLIENT | CVAR_SERVER, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
-cvar_t collision_extendmovelength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
-cvar_t collision_extendtraceboxlength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
-cvar_t collision_extendtracelinelength = {CVAR_CLIENT | CVAR_SERVER, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
-cvar_t collision_debug_tracelineasbox = {CVAR_CLIENT | CVAR_SERVER, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
-cvar_t collision_cache = {CVAR_CLIENT | CVAR_SERVER, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
-cvar_t collision_triangle_bevelsides = {CVAR_CLIENT | CVAR_SERVER, "collision_triangle_bevelsides", "0", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
-cvar_t collision_triangle_axialsides = {CVAR_CLIENT | CVAR_SERVER, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
-cvar_t collision_bih_fullrecursion = {CVAR_CLIENT | CVAR_SERVER, "collision_bih_fullrecursion", "0", "debugging option to disable the bih recursion optimizations by iterating the entire tree"};
+cvar_t collision_impactnudge = {CF_CLIENT | CF_SERVER, "collision_impactnudge", "0.03125", "how much to back off from the impact"};
+cvar_t collision_extendmovelength = {CF_CLIENT | CF_SERVER, "collision_extendmovelength", "16", "internal bias on trace length to ensure detection of collisions within the collision_impactnudge distance so that short moves do not degrade across frames (this does not alter the final trace length)"};
+cvar_t collision_extendtraceboxlength = {CF_CLIENT | CF_SERVER, "collision_extendtraceboxlength", "1", "internal bias for tracebox() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
+cvar_t collision_extendtracelinelength = {CF_CLIENT | CF_SERVER, "collision_extendtracelinelength", "1", "internal bias for traceline() qc builtin to account for collision_impactnudge (this does not alter the final trace length)"};
+cvar_t collision_debug_tracelineasbox = {CF_CLIENT | CF_SERVER, "collision_debug_tracelineasbox", "0", "workaround for any bugs in Collision_TraceLineBrushFloat by using Collision_TraceBrushBrushFloat"};
+cvar_t collision_cache = {CF_CLIENT | CF_SERVER, "collision_cache", "1", "store results of collision traces for next frame to reuse if possible (optimization)"};
+cvar_t collision_triangle_bevelsides = {CF_CLIENT | CF_SERVER, "collision_triangle_bevelsides", "0", "generate sloped edge planes on triangles - if 0, see axialedgeplanes"};
+cvar_t collision_triangle_axialsides = {CF_CLIENT | CF_SERVER, "collision_triangle_axialsides", "1", "generate axially-aligned edge planes on triangles - otherwise use perpendicular edge planes"};
+cvar_t collision_bih_fullrecursion = {CF_CLIENT | CF_SERVER, "collision_bih_fullrecursion", "0", "debugging option to disable the bih recursion optimizations by iterating the entire tree"};
 
 mempool_t *collision_mempool;
 
@@ -907,7 +907,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	}
 }
 
-qboolean Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush)
+qbool Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush)
 {
 	int nplane;
 	const colplanef_t *plane;
@@ -1445,7 +1445,7 @@ static void Collision_TransformBrush(const matrix4x4_t *matrix, colbrushf_t *bru
 
 typedef struct collision_cachedtrace_parameters_s
 {
-	dp_model_t *model;
+	model_t *model;
 	vec3_t end;
 	vec3_t start;
 	int hitsupercontentsmask;
@@ -1457,7 +1457,7 @@ collision_cachedtrace_parameters_t;
 
 typedef struct collision_cachedtrace_s
 {
-	qboolean valid;
+	qbool valid;
 	collision_cachedtrace_parameters_t p;
 	trace_t result;
 }
@@ -1475,9 +1475,9 @@ static unsigned int *collision_cachedtrace_arrayfullhashindex;
 static unsigned int *collision_cachedtrace_arrayhashindex;
 static unsigned int *collision_cachedtrace_arraynext;
 static unsigned char *collision_cachedtrace_arrayused;
-static qboolean collision_cachedtrace_rebuildhash;
+static qbool collision_cachedtrace_rebuildhash;
 
-void Collision_Cache_Reset(qboolean resetlimits)
+void Collision_Cache_Reset(qbool resetlimits)
 {
 	if (collision_cachedtrace_hash)
 		Mem_Free(collision_cachedtrace_hash);
@@ -1580,7 +1580,7 @@ static unsigned int Collision_Cache_HashIndexForArray(unsigned int *array, unsig
 	return hashindex;
 }
 
-static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+static collision_cachedtrace_t *Collision_Cache_Lookup(model_t *model, const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	int hashindex = 0;
 	unsigned int fullhashindex;
@@ -1688,7 +1688,7 @@ static collision_cachedtrace_t *Collision_Cache_Lookup(dp_model_t *model, const 
 	return cached;
 }
 
-void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, matrix, inversematrix, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 	if (cached->valid)
@@ -1702,7 +1702,7 @@ void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t 
 	cached->result = *trace;
 }
 
-void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	collision_cachedtrace_t *cached = Collision_Cache_Lookup(model, &identitymatrix, &identitymatrix, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
 	if (cached->valid)
@@ -1788,7 +1788,7 @@ static void Collision_ClipExtendFinish(extendtraceinfo_t *extendtraceinfo)
 	VectorMA(extendtraceinfo->realstart, trace->fraction, extendtraceinfo->realdelta, trace->endpos);
 }
 
-void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
+void Collision_ClipToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 {
 	vec3_t starttransformed, endtransformed;
 	extendtraceinfo_t extendtraceinfo;
@@ -1831,7 +1831,7 @@ void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const fram
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
+void Collision_ClipToWorld(trace_t *trace, model_t *model, const vec3_t tstart, const vec3_t mins, const vec3_t maxs, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 {
 	extendtraceinfo_t extendtraceinfo;
 	Collision_ClipExtendPrepare(&extendtraceinfo, trace, tstart, tend, extend);
@@ -1841,7 +1841,7 @@ void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstar
 	Collision_ClipExtendFinish(&extendtraceinfo);
 }
 
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitsurfaces)
+void Collision_ClipLineToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
 {
 	vec3_t starttransformed, endtransformed;
 	extendtraceinfo_t extendtraceinfo;
@@ -1867,7 +1867,7 @@ void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const 
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitsurfaces)
+void Collision_ClipLineToWorld(trace_t *trace, model_t *model, const vec3_t tstart, const vec3_t tend, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces)
 {
 	extendtraceinfo_t extendtraceinfo;
 	Collision_ClipExtendPrepare(&extendtraceinfo, trace, tstart, tend, extend);
@@ -1880,7 +1880,7 @@ void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t t
 	Collision_ClipExtendFinish(&extendtraceinfo);
 }
 
-void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_ClipPointToGenericEntity(trace_t *trace, model_t *model, const frameblend_t *frameblend, const skeleton_t *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	float starttransformed[3];
 	memset(trace, 0, sizeof(*trace));
@@ -1902,7 +1902,7 @@ void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const
 	Matrix4x4_TransformPositivePlane(matrix, trace->plane.normal[0], trace->plane.normal[1], trace->plane.normal[2], trace->plane.dist, trace->plane.normal_and_dist);
 }
 
-void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+void Collision_ClipPointToWorld(trace_t *trace, model_t *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
 {
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
@@ -1911,7 +1911,7 @@ void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t 
 	VectorCopy(start, trace->endpos);
 }
 
-void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel)
+void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qbool isbmodel)
 {
 	// take the 'best' answers from the new trace and combine with existing data
 	if (trace->allsolid)

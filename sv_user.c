@@ -113,8 +113,7 @@ void SV_Spawn_f(cmd_state_t *cmd)
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 		prog->ExecuteProgram(prog, PRVM_serverfunction(ClientConnect), "QC function ClientConnect is missing");
 
-		if (cls.state == ca_dedicated)
-			Con_Printf("%s connected\n", host_client->name);
+		Con_Printf("%s connected\n", host_client->name);
 
 		PRVM_serverglobalfloat(time) = sv.time;
 		prog->ExecuteProgram(prog, PRVM_serverfunction(PutClientInServer), "QC function PutClientInServer is missing");
@@ -306,7 +305,7 @@ void SV_SetIdealPitch (void)
 static vec3_t wishdir, forward, right, up;
 static float wishspeed;
 
-static qboolean onground;
+static qbool onground;
 
 /*
 ==================
@@ -563,13 +562,13 @@ static void SV_AirMove (void)
 
 /*
 ===================
-SV_ClientThink
+SV_PlayerPhysics
 
 the move fields specify an intended velocity in pix/sec
 the angle fields specify an exact angular motion in degrees
 ===================
 */
-void SV_ClientThink (void)
+void SV_PlayerPhysics (void)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t v_angle, angles, velocity;
@@ -580,7 +579,7 @@ void SV_ClientThink (void)
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(host_client->edict);
 
-	// LadyHavoc: QuakeC replacement for SV_ClientThink (player movement)
+	// LadyHavoc: QuakeC replacement for SV_PlayerPhysics (player movement)
 	if (PRVM_serverfunction(SV_PlayerPhysics) && sv_playerphysicsqc.integer)
 	{
 		PRVM_serverglobalfloat(time) = sv.time;
@@ -621,16 +620,6 @@ void SV_ClientThink (void)
 		SV_CheckVelocity(host_client->edict);
 		return;
 	}
-
-	/*
-	// Player is (somehow) outside of the map, or flying, or noclipping
-	if (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP && (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict)))
-	//if (PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_NOCLIP || PRVM_serveredictfloat(host_client->edict, movetype) == MOVETYPE_FLY || SV_TestEntityPosition (host_client->edict))
-	{
-		SV_FreeMove ();
-		return;
-	}
-	*/
 
 	// walk
 	if ((PRVM_serveredictfloat(host_client->edict, waterlevel) >= 2) && (PRVM_serveredictfloat(host_client->edict, movetype) != MOVETYPE_NOCLIP))
@@ -973,7 +962,7 @@ void SV_ApplyClientMove (void)
 	PRVM_serveredictfloat(host_client->edict, ping_movementloss) = movementloss / (float) NETGRAPH_PACKETS;
 }
 
-static qboolean SV_FrameLost(int framenum)
+static qbool SV_FrameLost(int framenum)
 {
 	if (host_client->entitydatabase5)
 	{

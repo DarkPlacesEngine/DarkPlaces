@@ -50,19 +50,19 @@ struct cachepic_s
 dp_fonts_t dp_fonts;
 static mempool_t *fonts_mempool = NULL;
 
-cvar_t r_textshadow = {CVAR_CLIENT | CVAR_SAVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
-cvar_t r_textbrightness = {CVAR_CLIENT | CVAR_SAVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
-cvar_t r_textcontrast = {CVAR_CLIENT | CVAR_SAVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
+cvar_t r_textshadow = {CF_CLIENT | CF_ARCHIVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
+cvar_t r_textbrightness = {CF_CLIENT | CF_ARCHIVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
+cvar_t r_textcontrast = {CF_CLIENT | CF_ARCHIVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
 
-cvar_t r_font_postprocess_blur = {CVAR_CLIENT | CVAR_SAVE, "r_font_postprocess_blur", "0", "font blur amount"};
-cvar_t r_font_postprocess_outline = {CVAR_CLIENT | CVAR_SAVE, "r_font_postprocess_outline", "0", "font outline amount"};
-cvar_t r_font_postprocess_shadow_x = {CVAR_CLIENT | CVAR_SAVE, "r_font_postprocess_shadow_x", "0", "font shadow X shift amount, applied during outlining"};
-cvar_t r_font_postprocess_shadow_y = {CVAR_CLIENT | CVAR_SAVE, "r_font_postprocess_shadow_y", "0", "font shadow Y shift amount, applied during outlining"};
-cvar_t r_font_postprocess_shadow_z = {CVAR_CLIENT | CVAR_SAVE, "r_font_postprocess_shadow_z", "0", "font shadow Z shift amount, applied during blurring"};
-cvar_t r_font_hinting = {CVAR_CLIENT | CVAR_SAVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
-cvar_t r_font_antialias = {CVAR_CLIENT | CVAR_SAVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
-cvar_t r_nearest_2d = {CVAR_CLIENT | CVAR_SAVE, "r_nearest_2d", "0", "use nearest filtering on all 2d textures (including conchars)"};
-cvar_t r_nearest_conchars = {CVAR_CLIENT | CVAR_SAVE, "r_nearest_conchars", "0", "use nearest filtering on conchars texture"};
+cvar_t r_font_postprocess_blur = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_blur", "0", "font blur amount"};
+cvar_t r_font_postprocess_outline = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_outline", "0", "font outline amount"};
+cvar_t r_font_postprocess_shadow_x = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_shadow_x", "0", "font shadow X shift amount, applied during outlining"};
+cvar_t r_font_postprocess_shadow_y = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_shadow_y", "0", "font shadow Y shift amount, applied during outlining"};
+cvar_t r_font_postprocess_shadow_z = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_shadow_z", "0", "font shadow Z shift amount, applied during blurring"};
+cvar_t r_font_hinting = {CF_CLIENT | CF_ARCHIVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
+cvar_t r_font_antialias = {CF_CLIENT | CF_ARCHIVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
+cvar_t r_nearest_2d = {CF_CLIENT | CF_ARCHIVE, "r_nearest_2d", "0", "use nearest filtering on all 2d textures (including conchars)"};
+cvar_t r_nearest_conchars = {CF_CLIENT | CF_ARCHIVE, "r_nearest_conchars", "0", "use nearest filtering on conchars texture"};
 
 //=============================================================================
 /* Support Routines */
@@ -206,7 +206,7 @@ int Draw_GetPicHeight(cachepic_t *pic)
 	return pic->height;
 }
 
-qboolean Draw_IsPicLoaded(cachepic_t *pic)
+qbool Draw_IsPicLoaded(cachepic_t *pic)
 {
 	if (pic == NULL)
 		return false;
@@ -267,7 +267,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 		if (pic->flags & CACHEPICFLAG_NEWPIC && pic->skinframe && pic->skinframe->base && pic->width == width && pic->height == height)
 		{
 			Con_DPrintf("Draw_NewPic(\"%s\"): frame %i: updating texture\n", picname, draw_frame);
-			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1);
+			R_UpdateTexture(pic->skinframe->base, pixels_bgra, 0, 0, 0, width, height, 1, 0);
 			R_SkinFrame_MarkUsed(pic->skinframe);
 			pic->lastusedframe = draw_frame;
 			return pic;
@@ -323,7 +323,7 @@ void Draw_FreePic(const char *picname)
 	}
 }
 
-qboolean Draw_PicExists(const char *name) {
+qbool Draw_PicExists(const char *name) {
 	char vabuf[1024] = { 0 };
 	const char *checkfmt[] = { "%s.tga", "%s.png", "%s.jpg", "%s.pcx" };
 	long unsigned int i;
@@ -336,7 +336,7 @@ qboolean Draw_PicExists(const char *name) {
 
 static float snap_to_pixel_x(float x, float roundUpAt);
 extern int con_linewidth; // to force rewrapping
-void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, float voffset)
+void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, float voffset)
 {
 	int i, ch;
 	float maxwidth;
@@ -486,7 +486,7 @@ void LoadFont(qboolean override, const char *name, dp_font_t *fnt, float scale, 
 }
 
 extern cvar_t developer_font;
-dp_font_t *FindFont(const char *title, qboolean allocate_new)
+dp_font_t *FindFont(const char *title, qbool allocate_new)
 {
 	int i, oldsize;
 
@@ -779,7 +779,7 @@ void GL_Draw_Init (void)
 		if(!FONT_USER(i)->title[0])
 			dpsnprintf(FONT_USER(i)->title, sizeof(FONT_USER(i)->title), "user%d", j++);
 
-	Cmd_AddCommand(CMD_CLIENT, "loadfont", LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
+	Cmd_AddCommand(CF_CLIENT, "loadfont", LoadFont_f, "loadfont function tganame loads a font; example: loadfont console gfx/veramono; loadfont without arguments lists the available functions");
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap, NULL, NULL);
 }
 
@@ -789,11 +789,11 @@ void DrawQ_Start(void)
 	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
 }
 
-qboolean r_draw2d_force = false;
+qbool r_draw2d_force = false;
 
 void DrawQ_Pic(float x, float y, cachepic_t *pic, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -821,7 +821,7 @@ void DrawQ_RotPic(float x, float y, cachepic_t *pic, float width, float height, 
 	float cosaf = cos(af);
 	float sinar = sin(ar);
 	float cosar = cos(ar);
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -876,7 +876,7 @@ static const vec4_t string_colors[] =
 
 #define STRING_COLORS_COUNT	(sizeof(string_colors) / sizeof(vec4_t))
 
-static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qboolean shadow)
+static void DrawQ_GetTextColor(float color[4], int colorindex, float r, float g, float b, float a, qbool shadow)
 {
 	float C = r_textcontrast.value;
 	float B = r_textbrightness.value;
@@ -921,7 +921,7 @@ static int RGBstring_to_colorindex(const char *str)
 }
 
 // NOTE: this function always draws exactly one character if maxwidth <= 0
-float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	const char *text_start = text;
 	int colorindex;
@@ -937,8 +937,8 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	//ft2_font_map_t *prevmap = NULL;
 	ft2_font_t *ft2 = fnt->ft2;
 	// float ftbase_x;
-	qboolean snap = true;
-	qboolean least_one = false;
+	qbool snap = true;
+	qbool least_one = false;
 	float dw; // display w
 	//float dh; // display h
 	const float *width_of;
@@ -1086,7 +1086,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 }
 
 float DrawQ_Color[4];
-float DrawQ_String_Scale(float startx, float starty, const char *text, size_t maxlen, float w, float h, float sw, float sh, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_String_Scale(float startx, float starty, const char *text, size_t maxlen, float w, float h, float sw, float sh, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	int shadow, colorindex = STRING_COLOR_DEFAULT;
 	size_t i;
@@ -1101,12 +1101,12 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	const char *text_start = text;
 	float kx, ky;
 	ft2_font_t *ft2 = fnt->ft2;
-	qboolean snap = true;
+	qbool snap = true;
 	float pix_x, pix_y;
 	size_t bytes_left;
 	float dw, dh;
 	const float *width_of;
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf = NULL;
 	int e0, e1, e2, e3;
 	int tw, th;
@@ -1333,22 +1333,22 @@ out:
 	return x;
 }
 
-float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_String(float startx, float starty, const char *text, size_t maxlen, float w, float h, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_String_Scale(startx, starty, text, maxlen, w, h, 1, 1, basered, basegreen, baseblue, basealpha, flags, outcolor, ignorecolorcodes, fnt);
 }
 
-float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
+float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth)
 {
 	return DrawQ_TextWidth_UntilWidth_TrackColors_Scale(text, maxlen, w, h, 1, 1, outcolor, ignorecolorcodes, fnt, maxwidth);
 }
 
-float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt)
+float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt)
 {
 	return DrawQ_TextWidth_UntilWidth(text, &maxlen, w, h, ignorecolorcodes, fnt, 1000000000);
 }
 
-float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
+float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt, float maxWidth)
 {
 	return DrawQ_TextWidth_UntilWidth_TrackColors(text, maxlen, w, h, NULL, ignorecolorcodes, fnt, maxWidth);
 }
@@ -1356,7 +1356,7 @@ float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, floa
 #if 0
 // not used
 // no ^xrgb management
-static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qboolean ignorecolorcodes, int *outcolor)
+static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char *text, int maxreadchars, qbool ignorecolorcodes, int *outcolor)
 {
 	int color, numchars = 0;
 	char *outputend2c = output2c + maxoutchars - 2;
@@ -1395,7 +1395,7 @@ static int DrawQ_BuildColoredText(char *output2c, size_t maxoutchars, const char
 
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	if (!pic)
@@ -1415,9 +1415,9 @@ void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height
 	Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
 }
 
-void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags)
+void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags, qbool fast)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	float offsetx, offsety;
@@ -1433,10 +1433,21 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 		offsety = 0;
 	}
 	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW), true);
-	e0 = Mod_Mesh_IndexForVertex(mod, surf, x1 - offsetx, y1 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
-	e1 = Mod_Mesh_IndexForVertex(mod, surf, x2 - offsetx, y2 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
-	e2 = Mod_Mesh_IndexForVertex(mod, surf, x2 + offsetx, y2 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
-	e3 = Mod_Mesh_IndexForVertex(mod, surf, x1 + offsetx, y1 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+	if (fast)
+	{
+		Mod_Mesh_CheckResize_Vertex(mod, surf);
+		e0 = Mod_Mesh_AddVertex(mod, surf, x1 - offsetx, y1 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e1 = Mod_Mesh_AddVertex(mod, surf, x2 - offsetx, y2 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e2 = Mod_Mesh_AddVertex(mod, surf, x2 + offsetx, y2 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e3 = Mod_Mesh_AddVertex(mod, surf, x1 + offsetx, y1 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+	}
+	else
+	{
+		e0 = Mod_Mesh_IndexForVertex(mod, surf, x1 - offsetx, y1 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e1 = Mod_Mesh_IndexForVertex(mod, surf, x2 - offsetx, y2 - offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e2 = Mod_Mesh_IndexForVertex(mod, surf, x2 + offsetx, y2 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+		e3 = Mod_Mesh_IndexForVertex(mod, surf, x1 + offsetx, y1 + offsety, 10, 0, 0, -1, 0, 0, 0, 0, r, g, b, alpha);
+	}
 	Mod_Mesh_AddTriangle(mod, surf, e0, e1, e2);
 	Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
 }
@@ -1484,7 +1495,7 @@ void DrawQ_RecalcView(void)
 
 void DrawQ_FlushUI(void)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	if (mod->num_surfaces == 0)
 		return;
 

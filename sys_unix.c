@@ -12,7 +12,7 @@
 
 #include <signal.h>
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 sys_t sys;
 
@@ -75,64 +75,61 @@ void Sys_PrintToTerminal(const char *text)
 
 char *Sys_ConsoleInput(void)
 {
-	//if (cls.state == ca_dedicated)
-	{
-		static char text[MAX_INPUTLINE];
-		static unsigned int len = 0;
+	static char text[MAX_INPUTLINE];
+	static unsigned int len = 0;
 #ifdef WIN32
-		int c;
+	int c;
 
-		// read a line out
-		while (_kbhit ())
+	// read a line out
+	while (_kbhit ())
+	{
+		c = _getch ();
+		if (c == '\r')
 		{
-			c = _getch ();
-			if (c == '\r')
-			{
-				text[len] = '\0';
-				_putch ('\n');
-				len = 0;
-				return text;
-			}
-			if (c == '\b')
-			{
-				if (len)
-				{
-					_putch (c);
-					_putch (' ');
-					_putch (c);
-					len--;
-				}
-				continue;
-			}
-			if (len < sizeof (text) - 1)
+			text[len] = '\0';
+			_putch ('\n');
+			len = 0;
+			return text;
+		}
+		if (c == '\b')
+		{
+			if (len)
 			{
 				_putch (c);
-				text[len] = c;
-				len++;
+				_putch (' ');
+				_putch (c);
+				len--;
 			}
+			continue;
 		}
-#else
-		fd_set fdset;
-		struct timeval timeout;
-		FD_ZERO(&fdset);
-		FD_SET(0, &fdset); // stdin
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
-		if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
+		if (len < sizeof (text) - 1)
 		{
-			len = read (0, text, sizeof(text) - 1);
-			if (len >= 1)
-			{
-				// rip off the \n and terminate
-				// div0: WHY? console code can deal with \n just fine
-				// this caused problems with pasting stuff into a terminal window
-				// so, not ripping off the \n, but STILL keeping a NUL terminator
-				text[len] = 0;
-				return text;
-			}
+			_putch (c);
+			text[len] = c;
+			len++;
 		}
-#endif
 	}
+#else
+	fd_set fdset;
+	struct timeval timeout;
+	FD_ZERO(&fdset);
+	FD_SET(0, &fdset); // stdin
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 0;
+	if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
+	{
+		len = read (0, text, sizeof(text) - 1);
+		if (len >= 1)
+		{
+			// rip off the \n and terminate
+			// div0: WHY? console code can deal with \n just fine
+			// this caused problems with pasting stuff into a terminal window
+			// so, not ripping off the \n, but STILL keeping a NUL terminator
+			text[len] = 0;
+			return text;
+		}
+	}
+#endif
 	return NULL;
 }
 
@@ -154,10 +151,10 @@ int main (int argc, char **argv)
 	Sys_ProvideSelfFD();
 
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
-	if(COM_CheckParm("-noterminal"))
+	if(Sys_CheckParm("-noterminal"))
 		sys.outfd = -1;
 	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
-	else if(COM_CheckParm("-stderr"))
+	else if(Sys_CheckParm("-stderr"))
 		sys.outfd = 2;
 	else
 		sys.outfd = 1;
@@ -175,7 +172,7 @@ int main (int argc, char **argv)
 	return 0;
 }
 
-qboolean sys_supportsdlgetticks = false;
+qbool sys_supportsdlgetticks = false;
 unsigned int Sys_SDL_GetTicks (void)
 {
 	Sys_Error("Called Sys_SDL_GetTicks on non-SDL target");

@@ -269,7 +269,7 @@ static void VM_SV_setorigin(prvm_prog_t *prog)
 }
 
 // TODO: rotate param isnt used.. could be a bug. please check this and remove it if possible [1/10/2008 Black]
-static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, float *min, float *max, qboolean rotate)
+static void SetMinMaxSize (prvm_prog_t *prog, prvm_edict_t *e, float *min, float *max, qbool rotate)
 {
 	int		i;
 
@@ -330,7 +330,7 @@ static vec3_t quakemins = {-16, -16, -16}, quakemaxs = {16, 16, 16};
 static void VM_SV_setmodel(prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
-	dp_model_t	*mod;
+	model_t	*mod;
 	int		i;
 
 	VM_SAFEPARMCOUNT(2, VM_SV_setmodel);
@@ -491,6 +491,9 @@ static void VM_SV_ambientsound(prvm_prog_t *prog)
 	if (soundnum >= 256)
 		large = true;
 
+	if(sv.protocol == PROTOCOL_NEHAHRABJP)
+		large = false;
+
 	// add an svc_spawnambient command to the level signon packet
 
 	if (large)
@@ -500,7 +503,7 @@ static void VM_SV_ambientsound(prvm_prog_t *prog)
 
 	MSG_WriteVector(&sv.signon, pos, sv.protocol);
 
-	if (large || sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
+	if (large || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 		MSG_WriteShort (&sv.signon, soundnum);
 	else
 		MSG_WriteByte (&sv.signon, soundnum);
@@ -1083,7 +1086,7 @@ static void VM_SV_walkmove(prvm_prog_t *prog)
 	vec3_t	move;
 	mfunction_t	*oldf;
 	int 	oldself;
-	qboolean	settrace;
+	qbool	settrace;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_walkmove);
 
@@ -1140,7 +1143,7 @@ static void VM_SV_walkmovedist(prvm_prog_t *prog)
 	vec3_t	move, oldorg, neworg;
 	mfunction_t	*oldf;
 	int 	oldself;
-	qboolean	settrace;
+	qbool	settrace;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_walkmovedist);
 
@@ -1610,17 +1613,17 @@ static void VM_SV_makestatic(prvm_prog_t *prog)
 	if (PRVM_serveredictfloat(ent, modelindex) >= 256 || PRVM_serveredictfloat(ent, frame) >= 256)
 		large = true;
 
-	if (large)
-	{
-		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
-		MSG_WriteShort (&sv.signon, (int)PRVM_serveredictfloat(ent, modelindex));
-		MSG_WriteShort (&sv.signon, (int)PRVM_serveredictfloat(ent, frame));
-	}
-	else if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
+	if (sv.protocol == PROTOCOL_NEHAHRABJP || sv.protocol == PROTOCOL_NEHAHRABJP2 || sv.protocol == PROTOCOL_NEHAHRABJP3)
 	{
 		MSG_WriteByte (&sv.signon,svc_spawnstatic);
 		MSG_WriteShort (&sv.signon, (int)PRVM_serveredictfloat(ent, modelindex));
 		MSG_WriteByte (&sv.signon, (int)PRVM_serveredictfloat(ent, frame));
+	}
+	else if (large)
+	{
+		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
+		MSG_WriteShort (&sv.signon, (int)PRVM_serveredictfloat(ent, modelindex));
+		MSG_WriteShort (&sv.signon, (int)PRVM_serveredictfloat(ent, frame));
 	}
 	else
 	{
@@ -2434,7 +2437,7 @@ static void VM_SV_setattachment(prvm_prog_t *prog)
 	prvm_edict_t *e = PRVM_G_EDICT(OFS_PARM0);
 	prvm_edict_t *tagentity = PRVM_G_EDICT(OFS_PARM1);
 	const char *tagname = PRVM_G_STRING(OFS_PARM2);
-	dp_model_t *model;
+	model_t *model;
 	int tagindex;
 	VM_SAFEPARMCOUNT(3, VM_SV_setattachment);
 
@@ -2488,7 +2491,7 @@ static int SV_GetTagIndex (prvm_prog_t *prog, prvm_edict_t *e, const char *tagna
 static int SV_GetExtendedTagInfo (prvm_prog_t *prog, prvm_edict_t *e, int tagindex, int *parentindex, const char **tagname, matrix4x4_t *tag_localmatrix)
 {
 	int r;
-	dp_model_t *model;
+	model_t *model;
 
 	*tagname = NULL;
 	*parentindex = 0;
@@ -2507,7 +2510,7 @@ static int SV_GetExtendedTagInfo (prvm_prog_t *prog, prvm_edict_t *e, int tagind
 	return 1;
 }
 
-void SV_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix)
+void SV_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix)
 {
 	float scale;
 	float pitchsign = 1;
@@ -2527,7 +2530,7 @@ void SV_GetEntityMatrix (prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out,
 
 static int SV_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int tagindex, matrix4x4_t *out)
 {
-	dp_model_t *model;
+	model_t *model;
 	if (tagindex >= 0 && (model = SV_GetModelFromEdict(ent)) && model->animscenes)
 	{
 		VM_GenerateFrameGroupBlend(prog, ent->priv.server->framegroupblend, ent);
@@ -2546,15 +2549,12 @@ static int SV_GetEntityLocalTagMatrix(prvm_prog_t *prog, prvm_edict_t *ent, int 
 // 3 - null or non-precached model
 // 4 - no tags with requested index
 // 5 - runaway loop at attachment chain
-extern cvar_t cl_bob;
-extern cvar_t cl_bobcycle;
-extern cvar_t cl_bobup;
 static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex)
 {
 	int ret;
 	int modelindex, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
-	dp_model_t *model;
+	model_t *model;
 
 	*out = identitymatrix; // warnings and errors return identical matrix
 
@@ -2607,29 +2607,6 @@ static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *e
 
 		SV_GetEntityMatrix(prog, ent, &entitymatrix, true);
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-
-		/*
-		// Cl_bob, ported from rendering code
-		if (PRVM_serveredictfloat(ent, health) > 0 && cl_bob.value && cl_bobcycle.value)
-		{
-			double bob, cycle;
-			// LadyHavoc: this code is *weird*, but not replacable (I think it
-			// should be done in QC on the server, but oh well, quake is quake)
-			// LadyHavoc: figured out bobup: the time at which the sin is at 180
-			// degrees (which allows lengthening or squishing the peak or valley)
-			cycle = sv.time/cl_bobcycle.value;
-			cycle -= (int)cycle;
-			if (cycle < cl_bobup.value)
-				cycle = sin(M_PI * cycle / cl_bobup.value);
-			else
-				cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-			// bob is proportional to velocity in the xy plane
-			// (don't count Z, or jumping messes it up)
-			bob = sqrt(PRVM_serveredictvector(ent, velocity)[0]*PRVM_serveredictvector(ent, velocity)[0] + PRVM_serveredictvector(ent, velocity)[1]*PRVM_serveredictvector(ent, velocity)[1])*cl_bob.value;
-			bob = bob*0.3 + bob*0.7*cycle;
-			Matrix4x4_AdjustOrigin(out, 0, 0, bound(-7, bob, 4));
-		}
-		*/
 	}
 	return 0;
 }
@@ -2682,7 +2659,7 @@ static void VM_SV_gettaginfo(prvm_prog_t *prog)
 	const char *tagname;
 	int returncode;
 	vec3_t forward, left, up, origin;
-	const dp_model_t *model;
+	const model_t *model;
 
 	VM_SAFEPARMCOUNT(2, VM_SV_gettaginfo);
 
@@ -2811,7 +2788,7 @@ static void VM_SV_serverkey(prvm_prog_t *prog)
 static void VM_SV_setmodelindex(prvm_prog_t *prog)
 {
 	prvm_edict_t	*e;
-	dp_model_t	*mod;
+	model_t	*mod;
 	int		i;
 	VM_SAFEPARMCOUNT(2, VM_SV_setmodelindex);
 
@@ -2941,6 +2918,39 @@ static void VM_SV_pointparticles(prvm_prog_t *prog)
 	SV_FlushBroadcastMessages();
 }
 
+qbool SV_VM_ConsoleCommand (const char *text)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	int restorevm_tempstringsbuf_cursize;
+	int save_self;
+	qbool r = false;
+
+	if(!sv.active || !prog || !prog->loaded)
+		return false;
+
+	if (PRVM_serverfunction(ConsoleCmd))
+	{
+		save_self = PRVM_serverglobaledict(self);
+		PRVM_serverglobalfloat(time) = sv.time;
+		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(sv.world.prog->edicts);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(ConsoleCmd), "QC function ConsoleCmd is missing");
+		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+		PRVM_serverglobaledict(self) = save_self;
+		r = (int) PRVM_G_FLOAT(OFS_RETURN) != 0;
+	}
+	return r;
+}
+
+// #352 void(string cmdname) registercommand (EXT_CSQC)
+static void VM_SV_registercommand (prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(1, VM_SV_registercmd);
+	if(!Cmd_Exists(&cmd_server, PRVM_G_STRING(OFS_PARM0)))
+		Cmd_AddCommand(CF_SERVER, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+}
+
 //PF_setpause,    // void(float pause) setpause	= #531;
 static void VM_SV_setpause(prvm_prog_t *prog) {
 	int pauseValue;
@@ -2963,7 +2973,7 @@ static void VM_SV_setpause(prvm_prog_t *prog) {
 static void VM_SV_skel_create(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = SV_GetModelByIndex(modelindex);
+	model_t *model = SV_GetModelByIndex(modelindex);
 	skeleton_t *skeleton;
 	int i;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
@@ -2993,7 +3003,7 @@ static void VM_SV_skel_build(prvm_prog_t *prog)
 	float retainfrac = PRVM_G_FLOAT(OFS_PARM3);
 	int firstbone = PRVM_G_FLOAT(OFS_PARM4) - 1;
 	int lastbone = PRVM_G_FLOAT(OFS_PARM5) - 1;
-	dp_model_t *model = SV_GetModelByIndex(modelindex);
+	model_t *model = SV_GetModelByIndex(modelindex);
 	int numblends;
 	int bonenum;
 	int blendindex;
@@ -3236,7 +3246,7 @@ static void VM_SV_skel_delete(prvm_prog_t *prog)
 static void VM_SV_frameforname(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = SV_GetModelByIndex(modelindex);
+	model_t *model = SV_GetModelByIndex(modelindex);
 	const char *name = PRVM_G_STRING(OFS_PARM1);
 	int i;
 	PRVM_G_FLOAT(OFS_RETURN) = -1;
@@ -3256,7 +3266,7 @@ static void VM_SV_frameforname(prvm_prog_t *prog)
 static void VM_SV_frameduration(prvm_prog_t *prog)
 {
 	int modelindex = (int)PRVM_G_FLOAT(OFS_PARM0);
-	dp_model_t *model = SV_GetModelByIndex(modelindex);
+	model_t *model = SV_GetModelByIndex(modelindex);
 	int framenum = (int)PRVM_G_FLOAT(OFS_PARM1);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 	if (!model || !model->animscenes || framenum < 0 || framenum >= model->numframes)
@@ -3886,7 +3896,7 @@ NULL,							// #241
 NULL,							// #242
 NULL,							// #243
 NULL,							// #244
-NULL,							// #245
+VM_modulo,						// #245
 NULL,							// #246
 NULL,							// #247
 NULL,							// #248
@@ -3994,7 +4004,7 @@ NULL,							// #348 string(float playernum, string keyname) getplayerkeyvalue (E
 NULL,							// #349 float() isdemo (EXT_CSQC)
 VM_isserver,					// #350 float() isserver (EXT_CSQC)
 NULL,							// #351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
-NULL,							// #352 void(string cmdname) registercommand (EXT_CSQC)
+VM_SV_registercommand,			// #352 void(string cmdname) registercommand (EXT_CSQC)
 VM_wasfreed,					// #353 float(entity ent) wasfreed (EXT_CSQC) (should be availabe on server too)
 VM_SV_serverkey,				// #354 string(string key) serverkey (EXT_CSQC)
 NULL,							// #355

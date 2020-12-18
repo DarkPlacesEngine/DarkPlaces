@@ -22,61 +22,67 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SCREEN_H
 #define SCREEN_H
 
+#include <stddef.h>
+#include "qtypes.h"
+struct portable_samplepair_s;
+
 void CL_Screen_Init (void);
 void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
 void SCR_SetLoadingSplash (const char *mapname);
 
-void SCR_BeginLoadingPlaque (qboolean startup);
+void SCR_BeginLoadingPlaque (qbool startup);
 void SCR_EndLoadingPlaque (void);
 
 // invoke refresh of loading plaque (nothing else seen)
-void SCR_UpdateLoadingScreen(qboolean clear, qboolean startup);
+void SCR_UpdateLoadingScreen(qbool clear, qbool startup);
 void SCR_UpdateLoadingScreenIfShown(void);
 
 // pushes an item on the loading screen
 void SCR_PushLoadingScreen (const char *msg, float len_in_parent);
-void SCR_PopLoadingScreen (qboolean redraw);
-void SCR_ClearLoadingScreen (qboolean redraw);
+void SCR_PopLoadingScreen (qbool redraw);
+void SCR_ClearLoadingScreen (qbool redraw);
 
 // returns true if the loading screen is waiting for a key press
-qboolean SCR_LoadingScreenWaiting(void);
+qbool SCR_LoadingScreenWaiting(void);
+
+void SCR_CaptureVideo_SoundFrame(const struct portable_samplepair_s *paintbuffer, size_t length);
 
 extern float scr_con_current; // current height of displayed console
 
 extern int sb_lines;
 
-extern cvar_t scr_viewsize;
-extern cvar_t scr_fov;
-extern cvar_t cl_showfps;
-extern cvar_t cl_showtime;
-extern cvar_t cl_showdate;
+extern struct cvar_s scr_viewsize;
+extern struct cvar_s scr_fov;
+extern struct cvar_s cl_showfps;
+extern struct cvar_s cl_showtime;
+extern struct cvar_s cl_showdate;
 
-extern cvar_t crosshair;
-extern cvar_t crosshair_size;
+extern struct cvar_s crosshair;
+extern struct cvar_s crosshair_size;
 
-extern cvar_t scr_conalpha;
-extern cvar_t scr_conalphafactor;
-extern cvar_t scr_conalpha2factor;
-extern cvar_t scr_conalpha3factor;
-extern cvar_t scr_conscroll_x;
-extern cvar_t scr_conscroll_y;
-extern cvar_t scr_conscroll2_x;
-extern cvar_t scr_conscroll2_y;
-extern cvar_t scr_conscroll3_x;
-extern cvar_t scr_conscroll3_y;
-extern cvar_t scr_conbrightness;
-extern cvar_t r_letterbox;
+extern struct cvar_s scr_conalpha;
+extern struct cvar_s scr_conalphafactor;
+extern struct cvar_s scr_conalpha2factor;
+extern struct cvar_s scr_conalpha3factor;
+extern struct cvar_s scr_conscroll_x;
+extern struct cvar_s scr_conscroll_y;
+extern struct cvar_s scr_conscroll2_x;
+extern struct cvar_s scr_conscroll2_y;
+extern struct cvar_s scr_conscroll3_x;
+extern struct cvar_s scr_conscroll3_y;
+extern struct cvar_s scr_conbrightness;
+extern struct cvar_s r_letterbox;
 
-extern cvar_t scr_aspectname;
+extern struct cvar_s scr_aspectname;
 
-extern cvar_t scr_refresh;
-extern cvar_t scr_stipple;
+extern struct cvar_s scr_refresh;
+extern struct cvar_s scr_stipple;
 
-extern cvar_t r_stereo_separation;
-extern cvar_t r_stereo_angle;
-qboolean R_Stereo_Active(void);
+extern struct cvar_s r_stereo_separation;
+extern struct cvar_s r_stereo_angle;
+qbool R_Stereo_Active(void);
 extern int r_stereo_side;
 
 typedef struct scr_touchscreenarea_s

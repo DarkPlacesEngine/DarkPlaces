@@ -4,17 +4,17 @@
 
 #define MAX_RENDERTARGETS 4
 
-cvar_t gl_debug = {CVAR_CLIENT, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
-cvar_t gl_paranoid = {CVAR_CLIENT, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
-cvar_t gl_printcheckerror = {CVAR_CLIENT, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
+cvar_t gl_debug = {CF_CLIENT, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
+cvar_t gl_paranoid = {CF_CLIENT, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
+cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
-cvar_t r_render = {CVAR_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
-cvar_t r_renderview = {CVAR_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
-cvar_t r_waterwarp = {CVAR_CLIENT | CVAR_SAVE, "r_waterwarp", "1", "warp view while underwater"};
-cvar_t gl_polyblend = {CVAR_CLIENT | CVAR_SAVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
+cvar_t r_render = {CF_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
+cvar_t r_renderview = {CF_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
+cvar_t r_waterwarp = {CF_CLIENT | CF_ARCHIVE, "r_waterwarp", "1", "warp view while underwater"};
+cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 
-cvar_t v_flipped = {CVAR_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
-qboolean v_flipped_state = false;
+cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
+qbool v_flipped_state = false;
 
 r_viewport_t gl_viewport;
 matrix4x4_t gl_modelmatrix;
@@ -24,7 +24,7 @@ matrix4x4_t gl_projectionmatrix;
 matrix4x4_t gl_modelviewprojectionmatrix;
 float gl_modelview16f[16];
 float gl_modelviewprojection16f[16];
-qboolean gl_modelmatrixchanged;
+qbool gl_modelmatrixchanged;
 
 #ifdef DEBUGGL
 int gl_errornumber = 0;
@@ -135,14 +135,14 @@ typedef struct gl_state_s
 	int cullfaceenable;
 	int blendfunc1;
 	int blendfunc2;
-	qboolean blend;
+	qbool blend;
 	GLboolean depthmask;
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
 	int depthfunc;
 	float depthrange[2];
 	float polygonoffset[2];
-	qboolean alphatocoverage;
+	qbool alphatocoverage;
 	int scissortest;
 	unsigned int unit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
@@ -154,7 +154,7 @@ typedef struct gl_state_s
 	int uniformbufferobject;
 	int framebufferobject;
 	int defaultframebufferobject; // deal with platforms that use a non-zero default fbo
-	qboolean pointer_color_enabled;
+	qbool pointer_color_enabled;
 
 	// GL3.2 Core requires that we have a GL_VERTEX_ARRAY_OBJECT, but... just one.
 	unsigned int defaultvao;
@@ -179,7 +179,7 @@ typedef struct gl_state_s
 
 	memexpandablearray_t meshbufferarray;
 
-	qboolean active;
+	qbool active;
 }
 gl_state_t;
 
@@ -374,12 +374,12 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 
-	Cmd_AddCommand(CMD_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
+	Cmd_AddCommand(CF_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap, gl_backend_devicelost, gl_backend_devicerestored);
 }
 
-void GL_SetMirrorState(qboolean state);
+void GL_SetMirrorState(qbool state);
 
 void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t out)
 {
@@ -428,7 +428,7 @@ static int bboxedges[12][2] =
 	{3, 7}, // XY, +Z
 };
 
-qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
+qbool R_ScissorForBBox(const float *mins, const float *maxs, int *scissor)
 {
 	int i, ix1, iy1, ix2, iy2;
 	float x1, y1, x2, y2;
@@ -1166,7 +1166,7 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 {
 	if (gl_state.blendfunc1 != blendfunc1 || gl_state.blendfunc2 != blendfunc2)
 	{
-		qboolean blendenable;
+		qbool blendenable;
 		gl_state.blendfunc1 = blendfunc1;
 		gl_state.blendfunc2 = blendfunc2;
 		blendenable = (gl_state.blendfunc1 != GL_ONE || gl_state.blendfunc2 != GL_ZERO);
@@ -1276,7 +1276,7 @@ void GL_DepthRange(float nearfrac, float farfrac)
 	}
 }
 
-void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask)
+void R_SetStencil(qbool enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask)
 {
 	switch (vid.renderpath)
 	{
@@ -1316,7 +1316,7 @@ void GL_PolygonOffset(float planeoffset, float depthoffset)
 	}
 }
 
-void GL_SetMirrorState(qboolean state)
+void GL_SetMirrorState(qbool state)
 {
 	if (v_flipped_state != state)
 	{
@@ -1379,7 +1379,7 @@ void GL_CullFace(int state)
 	}
 }
 
-void GL_AlphaToCoverage(qboolean state)
+void GL_AlphaToCoverage(qbool state)
 {
 	if (gl_state.alphatocoverage != state)
 	{
@@ -1560,7 +1560,7 @@ void R_Mesh_Start(void)
 	}
 }
 
-static qboolean GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
+static qbool GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
 {
 	int shaderobject;
 	int shadercompiled;
@@ -1763,7 +1763,7 @@ void R_Mesh_Finish(void)
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
 }
 
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isuniformbuffer, qboolean isdynamic, qboolean isindex16)
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qbool isindexbuffer, qbool isuniformbuffer, qbool isdynamic, qbool isindex16)
 {
 	r_meshbuffer_t *buffer;
 	buffer = (r_meshbuffer_t *)Mem_ExpandableArray_AllocRecord(&gl_state.meshbufferarray);
@@ -1780,7 +1780,7 @@ r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const cha
 	return buffer;
 }
 
-void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qboolean subdata, size_t offset)
+void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qbool subdata, size_t offset)
 {
 	if (!buffer)
 		return;
@@ -1853,7 +1853,7 @@ void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer)
 }
 
 static const char *buffertypename[R_BUFFERDATA_COUNT] = {"vertex", "index16", "index32", "uniform"};
-void GL_Mesh_ListVBOs(qboolean printeach)
+void GL_Mesh_ListVBOs(qbool printeach)
 {
 	int i, endindex;
 	int type;
@@ -2204,7 +2204,7 @@ void R_Mesh_PrepareVertices_Mesh_Arrays(int numvertices, const float *vertex3f, 
 	R_Mesh_TexCoordPointer(7, 4, GL_UNSIGNED_BYTE, sizeof(unsigned char[4]), NULL              , NULL                     , 0                              );
 }
 
-void GL_BlendEquationSubtract(qboolean negated)
+void GL_BlendEquationSubtract(qbool negated)
 {
 	CHECKGLERROR
 	if(negated)

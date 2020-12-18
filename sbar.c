@@ -53,7 +53,7 @@ cachepic_t *sb_face_quad;
 cachepic_t *sb_face_invuln;
 cachepic_t *sb_face_invis_invuln;
 
-qboolean sb_showscores;
+qbool sb_showscores;
 
 int sb_lines;			// scan lines to draw
 
@@ -85,35 +85,35 @@ cachepic_t *sb_complete;
 cachepic_t *sb_inter;
 cachepic_t *sb_finale;
 
-cvar_t cl_showfps = {CVAR_CLIENT | CVAR_SAVE, "cl_showfps", "0", "shows your rendered fps (frames per second)"};
-cvar_t cl_showsound = {CVAR_CLIENT | CVAR_SAVE, "cl_showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
-cvar_t cl_showblur = {CVAR_CLIENT | CVAR_SAVE, "cl_showblur", "0", "shows the current alpha level of motionblur"};
-cvar_t cl_showspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
-cvar_t cl_showspeed_factor = {CVAR_CLIENT | CVAR_SAVE, "cl_showspeed_factor", "2.54", "multiplier of the centimeter for cl_showspeed. 1 unit = 1 inch in Quake, so this should be 2.54 for Quake, etc"};
-cvar_t cl_showtopspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from cl_showspeed, otherwise it's an unit number just like in cl_showspeed"};
-cvar_t cl_showtime = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime", "0", "shows current time of day (useful on screenshots)"};
-cvar_t cl_showtime_format = {CVAR_CLIENT | CVAR_SAVE, "cl_showtime_format", "%H:%M:%S", "format string for time of day"};
-cvar_t cl_showdate = {CVAR_CLIENT | CVAR_SAVE, "cl_showdate", "0", "shows current date (useful on screenshots)"};
-cvar_t cl_showdate_format = {CVAR_CLIENT | CVAR_SAVE, "cl_showdate_format", "%Y-%m-%d", "format string for date"};
-cvar_t cl_showtex = {CVAR_CLIENT, "cl_showtex", "0", "shows the name of the texture on the crosshair (for map debugging)"};
+cvar_t cl_showfps = {CF_CLIENT | CF_ARCHIVE, "cl_showfps", "0", "shows your rendered fps (frames per second)"};
+cvar_t cl_showsound = {CF_CLIENT | CF_ARCHIVE, "cl_showsound", "0", "shows number of active sound sources, sound latency, and other statistics"};
+cvar_t cl_showblur = {CF_CLIENT | CF_ARCHIVE, "cl_showblur", "0", "shows the current alpha level of motionblur"};
+cvar_t cl_showspeed = {CF_CLIENT | CF_ARCHIVE, "cl_showspeed", "0", "shows your current speed (qu per second); number selects unit: 1 = qu/s, 2 = m/s, 3 = km/h, 4 = mph, 5 = knots"};
+cvar_t cl_showspeed_factor = {CF_CLIENT | CF_ARCHIVE, "cl_showspeed_factor", "2.54", "multiplier of the centimeter for cl_showspeed. 1 unit = 1 inch in Quake, so this should be 2.54 for Quake, etc"};
+cvar_t cl_showtopspeed = {CF_CLIENT | CF_ARCHIVE, "cl_showtopspeed", "0", "shows your top speed (kept on screen for max 3 seconds); value -1 takes over the unit from cl_showspeed, otherwise it's an unit number just like in cl_showspeed"};
+cvar_t cl_showtime = {CF_CLIENT | CF_ARCHIVE, "cl_showtime", "0", "shows current time of day (useful on screenshots)"};
+cvar_t cl_showtime_format = {CF_CLIENT | CF_ARCHIVE, "cl_showtime_format", "%H:%M:%S", "format string for time of day"};
+cvar_t cl_showdate = {CF_CLIENT | CF_ARCHIVE, "cl_showdate", "0", "shows current date (useful on screenshots)"};
+cvar_t cl_showdate_format = {CF_CLIENT | CF_ARCHIVE, "cl_showdate_format", "%Y-%m-%d", "format string for date"};
+cvar_t cl_showtex = {CF_CLIENT, "cl_showtex", "0", "shows the name of the texture on the crosshair (for map debugging)"};
 
-cvar_t sbar_alpha_bg = {CVAR_CLIENT | CVAR_SAVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
-cvar_t sbar_alpha_fg = {CVAR_CLIENT | CVAR_SAVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
-cvar_t sbar_hudselector = {CVAR_CLIENT | CVAR_SAVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
-cvar_t sbar_scorerank = {CVAR_CLIENT | CVAR_SAVE, "sbar_scorerank", "1", "shows an overlay for your score (or team score) and rank in the scoreboard"};
-cvar_t sbar_gametime = {CVAR_CLIENT | CVAR_SAVE, "sbar_gametime", "1", "shows an overlay for the time left in the current match/level (or current game time if there is no timelimit set)"};
-cvar_t sbar_miniscoreboard_size = {CVAR_CLIENT | CVAR_SAVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
-cvar_t sbar_flagstatus_right = {CVAR_CLIENT | CVAR_SAVE, "sbar_flagstatus_right", "0", "moves Nexuiz flag status icons to the right"};
-cvar_t sbar_flagstatus_pos = {CVAR_CLIENT | CVAR_SAVE, "sbar_flagstatus_pos", "115", "pixel position of the Nexuiz flag status icons, from the bottom"};
-cvar_t sbar_info_pos = {CVAR_CLIENT | CVAR_SAVE, "sbar_info_pos", "0", "pixel position of the info strings (such as showfps), from the bottom"};
+cvar_t sbar_alpha_bg = {CF_CLIENT | CF_ARCHIVE, "sbar_alpha_bg", "0.4", "opacity value of the statusbar background image"};
+cvar_t sbar_alpha_fg = {CF_CLIENT | CF_ARCHIVE, "sbar_alpha_fg", "1", "opacity value of the statusbar weapon/item icons and numbers"};
+cvar_t sbar_hudselector = {CF_CLIENT | CF_ARCHIVE, "sbar_hudselector", "0", "selects which of the builtin hud layouts to use (meaning is somewhat dependent on gamemode, so nexuiz has a very different set of hud layouts than quake for example)"};
+cvar_t sbar_scorerank = {CF_CLIENT | CF_ARCHIVE, "sbar_scorerank", "1", "shows an overlay for your score (or team score) and rank in the scoreboard"};
+cvar_t sbar_gametime = {CF_CLIENT | CF_ARCHIVE, "sbar_gametime", "1", "shows an overlay for the time left in the current match/level (or current game time if there is no timelimit set)"};
+cvar_t sbar_miniscoreboard_size = {CF_CLIENT | CF_ARCHIVE, "sbar_miniscoreboard_size", "-1", "sets the size of the mini deathmatch overlay in items, or disables it when set to 0, or sets it to a sane default when set to -1"};
+cvar_t sbar_flagstatus_right = {CF_CLIENT | CF_ARCHIVE, "sbar_flagstatus_right", "0", "moves Nexuiz flag status icons to the right"};
+cvar_t sbar_flagstatus_pos = {CF_CLIENT | CF_ARCHIVE, "sbar_flagstatus_pos", "115", "pixel position of the Nexuiz flag status icons, from the bottom"};
+cvar_t sbar_info_pos = {CF_CLIENT | CF_ARCHIVE, "sbar_info_pos", "0", "pixel position of the info strings (such as showfps), from the bottom"};
 
-cvar_t cl_deathscoreboard = {CVAR_CLIENT, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
+cvar_t cl_deathscoreboard = {CF_CLIENT, "cl_deathscoreboard", "1", "shows scoreboard (+showscores) while dead"};
 
-cvar_t crosshair_color_red = {CVAR_CLIENT | CVAR_SAVE, "crosshair_color_red", "1", "customizable crosshair color"};
-cvar_t crosshair_color_green = {CVAR_CLIENT | CVAR_SAVE, "crosshair_color_green", "0", "customizable crosshair color"};
-cvar_t crosshair_color_blue = {CVAR_CLIENT | CVAR_SAVE, "crosshair_color_blue", "0", "customizable crosshair color"};
-cvar_t crosshair_color_alpha = {CVAR_CLIENT | CVAR_SAVE, "crosshair_color_alpha", "1", "how opaque the crosshair should be"};
-cvar_t crosshair_size = {CVAR_CLIENT | CVAR_SAVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
+cvar_t crosshair_color_red = {CF_CLIENT | CF_ARCHIVE, "crosshair_color_red", "1", "customizable crosshair color"};
+cvar_t crosshair_color_green = {CF_CLIENT | CF_ARCHIVE, "crosshair_color_green", "0", "customizable crosshair color"};
+cvar_t crosshair_color_blue = {CF_CLIENT | CF_ARCHIVE, "crosshair_color_blue", "0", "customizable crosshair color"};
+cvar_t crosshair_color_alpha = {CF_CLIENT | CF_ARCHIVE, "crosshair_color_alpha", "1", "how opaque the crosshair should be"};
+cvar_t crosshair_size = {CF_CLIENT | CF_ARCHIVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
 
 static void Sbar_MiniDeathmatchOverlay (int x, int y);
 static void Sbar_DeathmatchOverlay (void);
@@ -361,8 +361,8 @@ void Sbar_Init (void)
 {
 	if(gamemode == GAME_NORMAL) // Workaround so Quake doesn't trample on Xonotic.
 	{
-		Cmd_AddCommand(CMD_CLIENT, "+showscores", Sbar_ShowScores_f, "show scoreboard");
-		Cmd_AddCommand(CMD_CLIENT, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
+		Cmd_AddCommand(CF_CLIENT, "+showscores", Sbar_ShowScores_f, "show scoreboard");
+		Cmd_AddCommand(CF_CLIENT, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
 	}
 	Cvar_RegisterVariable(&cl_showfps);
 	Cvar_RegisterVariable(&cl_showsound);
@@ -1112,7 +1112,7 @@ void Sbar_ShowFPS(void)
 	char topspeedstring[48];
 	char texstring[MAX_QPATH];
 	char entstring[32];
-	qboolean red = false;
+	qbool red = false;
 	soundstring[0] = 0;
 	fpsstring[0] = 0;
 	timedemostring1[0] = 0;
@@ -1176,7 +1176,7 @@ void Sbar_ShowFPS(void)
 		}
 		if (cl_showtopspeed.integer)
 		{
-			qboolean topspeed_latched = false, topspeedxy_latched = false;
+			qbool topspeed_latched = false, topspeedxy_latched = false;
 			get_showspeed_unit(cl_showtopspeed.integer, &f, &unit);
 			if (speed >= topspeed || current_time - top_time > 3)
 			{
@@ -1798,7 +1798,7 @@ Sbar_DeathmatchOverlay
 static float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
 	int minutes;
-	qboolean myself = false;
+	qbool myself = false;
 	unsigned char *c;
 	char vabuf[1024];
 	minutes = (int)((cl.intermission ? cl.completed_time - s->qw_entertime : cl.time - s->qw_entertime) / 60.0);

@@ -22,6 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef WAD_H
 #define WAD_H
 
+#include <stdint.h>
+struct sizebuf_s;
+
 //===============
 //   TYPES
 //===============
@@ -66,12 +69,12 @@ typedef struct lumpinfo_s
 } lumpinfo_t;
 
 void W_UnloadAll(void);
-unsigned char *W_GetLumpName(const char *name, fs_offset_t *returnfilesize);
+unsigned char *W_GetLumpName(const char *name, int64_t *returnfilesize);
 
 // halflife texture wads
 void W_LoadTextureWadFile(char *filename, int complain);
 unsigned char *W_GetTextureBGRA(char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
-unsigned char *W_ConvertWAD3TextureBGRA(sizebuf_t *sb); // returns tempmempool allocated image data, width and height are in image_width and image_height
+unsigned char *W_ConvertWAD3TextureBGRA(struct sizebuf_s *sb); // returns tempmempool allocated image data, width and height are in image_width and image_height
 
 #endif
 

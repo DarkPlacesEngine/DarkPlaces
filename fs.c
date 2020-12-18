@@ -330,7 +330,7 @@ typedef struct pack_s
 	filedesc_t handle;
 	int ignorecase;  ///< PK3 ignores case
 	int numfiles;
-	qboolean vpack;
+	qbool vpack;
 	packfile_t *files;
 } pack_t;
 //@}
@@ -357,7 +357,7 @@ void FS_Dir_f(cmd_state_t *cmd);
 void FS_Ls_f(cmd_state_t *cmd);
 void FS_Which_f(cmd_state_t *cmd);
 
-static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet);
+static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									fs_offset_t offset, fs_offset_t packsize,
 									fs_offset_t realsize, int flags);
@@ -392,9 +392,9 @@ char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 gamedir_t *fs_all_gamedirs = NULL;
 int fs_all_gamedirs_count = 0;
 
-cvar_t scr_screenshot_name = {CVAR_CLIENT | CVAR_NORESETTODEFAULTS, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
-cvar_t fs_empty_files_in_pack_mark_deletions = {CVAR_CLIENT | CVAR_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
-cvar_t cvar_fs_gamedir = {CVAR_CLIENT | CVAR_SERVER | CVAR_READONLY | CVAR_NORESETTODEFAULTS, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
+cvar_t scr_screenshot_name = {CF_CLIENT | CF_PERSISTENT, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
+cvar_t fs_empty_files_in_pack_mark_deletions = {CF_CLIENT | CF_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
+cvar_t cvar_fs_gamedir = {CF_CLIENT | CF_SERVER | CF_READONLY | CF_PERSISTENT, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
 
 
 /*
@@ -517,7 +517,7 @@ PK3_OpenLibrary
 Try to load the Zlib DLL
 ====================
 */
-static qboolean PK3_OpenLibrary (void)
+static qbool PK3_OpenLibrary (void)
 {
 #ifdef LINK_TO_ZLIB
 	return true;
@@ -556,7 +556,7 @@ FS_HasZlib
 See if zlib is available
 ====================
 */
-qboolean FS_HasZlib(void)
+qbool FS_HasZlib(void)
 {
 #ifdef LINK_TO_ZLIB
 	return true;
@@ -573,7 +573,7 @@ PK3_GetEndOfCentralDir
 Extract the end of the central directory from a PK3 package
 ====================
 */
-static qboolean PK3_GetEndOfCentralDir (const char *packfile, filedesc_t packhandle, pk3_endOfCentralDir_t *eocd)
+static qbool PK3_GetEndOfCentralDir (const char *packfile, filedesc_t packhandle, pk3_endOfCentralDir_t *eocd)
 {
 	fs_offset_t filesize, maxsize;
 	unsigned char *buffer, *ptr;
@@ -772,7 +772,7 @@ FS_LoadPackPK3
 Create a package entry associated with a PK3 file
 ====================
 */
-static pack_t *FS_LoadPackPK3FromFD (const char *packfile, filedesc_t packhandle, qboolean silent)
+static pack_t *FS_LoadPackPK3FromFD (const char *packfile, filedesc_t packhandle, qbool silent)
 {
 	pk3_endOfCentralDir_t eocd;
 	pack_t *pack;
@@ -826,7 +826,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, filedesc_t packhandle
 	return pack;
 }
 
-static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qboolean nonblocking);
+static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbool nonblocking);
 static pack_t *FS_LoadPackPK3 (const char *packfile)
 {
 	filedesc_t packhandle;
@@ -844,7 +844,7 @@ PK3_GetTrueFileOffset
 Find where the true file data offset is
 ====================
 */
-static qboolean PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
+static qbool PK3_GetTrueFileOffset (packfile_t *pfile, pack_t *pack)
 {
 	unsigned char buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
 	fs_offset_t count;
@@ -938,7 +938,7 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 
 static void FS_mkdir (const char *path)
 {
-	if(COM_CheckParm("-readonly"))
+	if(Sys_CheckParm("-readonly"))
 		return;
 
 #if WIN32
@@ -1181,7 +1181,7 @@ FS_AddPack_Fullpath
  * plain directories.
  *
  */
-static qboolean FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qboolean *already_loaded, qboolean keep_plain_dirs)
+static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbool *already_loaded, qbool keep_plain_dirs)
 {
 	searchpath_t *search;
 	pack_t *pak = NULL;
@@ -1295,7 +1295,7 @@ FS_AddPack
  * If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
  * plain directories.
  */
-qboolean FS_AddPack(const char *pakfile, qboolean *already_loaded, qboolean keep_plain_dirs)
+qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_dirs)
 {
 	char fullpath[MAX_OSPATH];
 	int index;
@@ -1479,8 +1479,8 @@ FS_Rescan
 void FS_Rescan (void)
 {
 	int i;
-	qboolean fs_modified = false;
-	qboolean reset = false;
+	qbool fs_modified = false;
+	qbool reset = false;
 	char gamedirbuf[MAX_INPUTLINE];
 	char vabuf[1024];
 
@@ -1537,11 +1537,11 @@ void FS_Rescan (void)
 	else
 		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 	
-	if((i = COM_CheckParm("-modname")) && i < sys.argc - 1)
+	if((i = Sys_CheckParm("-modname")) && i < sys.argc - 1)
 		strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
 
 	// If "-condebug" is in the command line, remove the previous log file
-	if (COM_CheckParm ("-condebug") != 0)
+	if (Sys_CheckParm ("-condebug") != 0)
 		unlink (va(vabuf, sizeof(vabuf), "%s/qconsole.log", fs_gamedir));
 
 	// look for the pop.lmp file and set registered to true if it is found
@@ -1586,8 +1586,8 @@ static void FS_Rescan_f(cmd_state_t *cmd)
 FS_ChangeGameDirs
 ================
 */
-extern qboolean vid_opened;
-qboolean FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qboolean complain, qboolean failmissing)
+extern qbool vid_opened;
+qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool complain, qbool failmissing)
 {
 	int i;
 	const char *p;
@@ -1695,7 +1695,7 @@ static void FS_GameDir_f(cmd_state_t *cmd)
 
 static const char *FS_SysCheckGameDir(const char *gamedir, char *buf, size_t buflength)
 {
-	qboolean success;
+	qbool success;
 	qfile_t *f;
 	stringlist_t list;
 	fs_offset_t n;
@@ -2030,12 +2030,12 @@ void FS_Init_Commands(void)
 	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
 	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
-	Cmd_AddCommand(CMD_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
-	Cmd_AddCommand(CMD_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
-	Cmd_AddCommand(CMD_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
-	Cmd_AddCommand(CMD_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
-	Cmd_AddCommand(CMD_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
-	Cmd_AddCommand(CMD_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+	Cmd_AddCommand(CF_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(CF_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
+	Cmd_AddCommand(CF_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
+	Cmd_AddCommand(CF_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
+	Cmd_AddCommand(CF_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
+	Cmd_AddCommand(CF_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
 }
 
 static void FS_Init_Dir (void)
@@ -2050,7 +2050,7 @@ static void FS_Init_Dir (void)
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
 // COMMANDLINEOPTION: Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
-	i = COM_CheckParm ("-basedir");
+	i = Sys_CheckParm ("-basedir");
 	if (i && i < sys.argc-1)
 	{
 		strlcpy (fs_basedir, sys.argv[i+1], sizeof (fs_basedir));
@@ -2104,9 +2104,9 @@ static void FS_Init_Dir (void)
 		strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	// Add the personal game directory
-	if((i = COM_CheckParm("-userdir")) && i < sys.argc - 1)
+	if((i = Sys_CheckParm("-userdir")) && i < sys.argc - 1)
 		dpsnprintf(fs_userdir, sizeof(fs_userdir), "%s/", sys.argv[i+1]);
-	else if (COM_CheckParm("-nohome"))
+	else if (Sys_CheckParm("-nohome"))
 		*fs_userdir = 0; // user wants roaming installation, no userdir
 	else
 	{
@@ -2123,9 +2123,9 @@ static void FS_Init_Dir (void)
 			preferreduserdirmode = USERDIRMODE_NOHOME;
 # endif
 		// check what limitations the user wants to impose
-		if (COM_CheckParm("-home")) preferreduserdirmode = USERDIRMODE_HOME;
-		if (COM_CheckParm("-mygames")) preferreduserdirmode = USERDIRMODE_MYGAMES;
-		if (COM_CheckParm("-savedgames")) preferreduserdirmode = USERDIRMODE_SAVEDGAMES;
+		if (Sys_CheckParm("-home")) preferreduserdirmode = USERDIRMODE_HOME;
+		if (Sys_CheckParm("-mygames")) preferreduserdirmode = USERDIRMODE_MYGAMES;
+		if (Sys_CheckParm("-savedgames")) preferreduserdirmode = USERDIRMODE_SAVEDGAMES;
 		// gather the status of the possible userdirs
 		for (dirmode = 0;dirmode < USERDIRMODE_COUNT;dirmode++)
 		{
@@ -2211,7 +2211,7 @@ void FS_Init_SelfPack (void)
 	char *buf;
 
 	// Load darkplaces.opt from the FS.
-	if (!COM_CheckParm("-noopt"))
+	if (!Sys_CheckParm("-noopt"))
 	{
 		buf = (char *) FS_SysLoadFile("darkplaces.opt", tempmempool, true, NULL);
 		if(buf)
@@ -2223,13 +2223,13 @@ void FS_Init_SelfPack (void)
 
 #ifndef USE_RWOPS
 	// Provide the SelfPack.
-	if (!COM_CheckParm("-noselfpack") && sys.selffd >= 0)
+	if (!Sys_CheckParm("-noselfpack") && sys.selffd >= 0)
 	{
 		fs_selfpack = FS_LoadPackPK3FromFD(sys.argv[0], sys.selffd, true);
 		if(fs_selfpack)
 		{
 			FS_AddSelfPack();
-			if (!COM_CheckParm("-noopt"))
+			if (!Sys_CheckParm("-noopt"))
 			{
 				buf = (char *) FS_LoadFile("darkplaces.opt", tempmempool, true, NULL);
 				if(buf)
@@ -2290,12 +2290,12 @@ void FS_Shutdown (void)
 		Thread_DestroyMutex(fs_mutex);
 }
 
-static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qboolean nonblocking)
+static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbool nonblocking)
 {
 	filedesc_t handle = FILEDESC_INVALID;
 	int mod, opt;
 	unsigned int ind;
-	qboolean dolock = false;
+	qbool dolock = false;
 
 	// Parse the mode string
 	switch (mode[0])
@@ -2338,7 +2338,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	if (nonblocking)
 		opt |= O_NONBLOCK;
 
-	if(COM_CheckParm("-readonly") && mod != O_RDONLY)
+	if(Sys_CheckParm("-readonly") && mod != O_RDONLY)
 		return FILEDESC_INVALID;
 
 #if USE_RWOPS
@@ -2373,7 +2373,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	return handle;
 }
 
-int FS_SysOpenFD(const char *filepath, const char *mode, qboolean nonblocking)
+int FS_SysOpenFD(const char *filepath, const char *mode, qbool nonblocking)
 {
 #ifdef USE_RWOPS
 	return -1;
@@ -2389,7 +2389,7 @@ FS_SysOpen
 Internal function used to create a qfile_t and open the relevant non-packed file on disk
 ====================
 */
-qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean nonblocking)
+qfile_t* FS_SysOpen (const char* filepath, const char* mode, qbool nonblocking)
 {
 	qfile_t* file;
 
@@ -2523,7 +2523,7 @@ Return true if the path should be rejected due to one of the following:
    or are just not a good idea for a mod to be using.
 ====================
 */
-int FS_CheckNastyPath (const char *path, qboolean isgamedir)
+int FS_CheckNastyPath (const char *path, qbool isgamedir)
 {
 	// all: never allow an empty path, as for gamedir it would access the parent directory and a non-gamedir path it is just useless
 	if (!path[0])
@@ -2581,7 +2581,7 @@ Return the searchpath where the file was found (or NULL)
 and the file index in the package if relevant
 ====================
 */
-static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
+static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet)
 {
 	searchpath_t *search;
 	pack_t *pak;
@@ -2670,7 +2670,7 @@ FS_OpenReadFile
 Look for a file in the search paths and open it in read-only mode
 ===========
 */
-static qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet, qboolean nonblocking, int symlinkLevels)
+static qfile_t *FS_OpenReadFile (const char *filename, qbool quiet, qbool nonblocking, int symlinkLevels)
 {
 	searchpath_t *search;
 	int pack_ind;
@@ -2785,7 +2785,7 @@ Open a file in the userpath. The syntax is the same as fopen
 Used for savegame scanning in menu, and all file writing.
 ====================
 */
-qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qboolean quiet)
+qfile_t* FS_OpenRealFile (const char* filepath, const char* mode, qbool quiet)
 {
 	char real_path [MAX_OSPATH];
 
@@ -2812,7 +2812,7 @@ FS_OpenVirtualFile
 Open a file. The syntax is the same as fopen
 ====================
 */
-qfile_t* FS_OpenVirtualFile (const char* filepath, qboolean quiet)
+qfile_t* FS_OpenVirtualFile (const char* filepath, qbool quiet)
 {
 	qfile_t *result = NULL;
 	if (FS_CheckNastyPath(filepath, false))
@@ -2835,7 +2835,7 @@ FS_FileFromData
 Open a file. The syntax is the same as fopen
 ====================
 */
-qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qboolean quiet)
+qfile_t* FS_FileFromData (const unsigned char *data, const size_t size, qbool quiet)
 {
 	qfile_t* file;
 	file = (qfile_t *)Mem_Alloc (fs_mempool, sizeof (*file));
@@ -3387,7 +3387,7 @@ Loads full content of a qfile_t and closes it.
 Always appends a 0 byte.
 ============
 */
-static unsigned char *FS_LoadAndCloseQFile (qfile_t *file, const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+static unsigned char *FS_LoadAndCloseQFile (qfile_t *file, const char *path, mempool_t *pool, qbool quiet, fs_offset_t *filesizepointer)
 {
 	unsigned char *buf = NULL;
 	fs_offset_t filesize = 0;
@@ -3424,7 +3424,7 @@ Filename are relative to the quake directory.
 Always appends a 0 byte.
 ============
 */
-unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+unsigned char *FS_LoadFile (const char *path, mempool_t *pool, qbool quiet, fs_offset_t *filesizepointer)
 {
 	qfile_t *file = FS_OpenVirtualFile(path, quiet);
 	return FS_LoadAndCloseQFile(file, path, pool, quiet, filesizepointer);
@@ -3439,7 +3439,7 @@ Filename are OS paths.
 Always appends a 0 byte.
 ============
 */
-unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qboolean quiet, fs_offset_t *filesizepointer)
+unsigned char *FS_SysLoadFile (const char *path, mempool_t *pool, qbool quiet, fs_offset_t *filesizepointer)
 {
 	qfile_t *file = FS_SysOpen(path, "rb", false);
 	return FS_LoadAndCloseQFile(file, path, pool, quiet, filesizepointer);
@@ -3453,7 +3453,7 @@ FS_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean FS_WriteFileInBlocks (const char *filename, const void *const *data, const fs_offset_t *len, size_t count)
+qbool FS_WriteFileInBlocks (const char *filename, const void *const *data, const fs_offset_t *len, size_t count)
 {
 	qfile_t *file;
 	size_t i;
@@ -3476,7 +3476,7 @@ qboolean FS_WriteFileInBlocks (const char *filename, const void *const *data, co
 	return true;
 }
 
-qboolean FS_WriteFile (const char *filename, const void *data, fs_offset_t len)
+qbool FS_WriteFile (const char *filename, const void *data, fs_offset_t len)
 {
 	return FS_WriteFileInBlocks(filename, &data, &len, 1);
 }
@@ -3575,7 +3575,7 @@ FS_FileExists
 Look for a file in the packages and in the filesystem
 ==================
 */
-qboolean FS_FileExists (const char *filename)
+qbool FS_FileExists (const char *filename)
 {
 	return (FS_FindFile (filename, NULL, true) != NULL);
 }
@@ -3621,7 +3621,7 @@ int FS_SysFileType (const char *path)
 #endif
 }
 
-qboolean FS_SysFileExists (const char *path)
+qbool FS_SysFileExists (const char *path)
 {
 	return FS_SysFileType (path) != FS_FILETYPE_NONE;
 }
@@ -3989,7 +3989,7 @@ Look for a proof of purchase file file in the requested package
 If it is found, this file should NOT be downloaded.
 ====================
 */
-qboolean FS_IsRegisteredQuakePack(const char *name)
+qbool FS_IsRegisteredQuakePack(const char *name)
 {
 	searchpath_t *search;
 	pack_t *pak;

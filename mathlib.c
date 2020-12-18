@@ -647,7 +647,7 @@ void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, ve
 }
 
 // LadyHavoc: calculates pitch/yaw/roll angles from forward and up vectors
-void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch)
+void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qbool flippitch)
 {
 	if (forward[0] == 0 && forward[1] == 0)
 	{
@@ -762,21 +762,14 @@ void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]
 // LadyHavoc: renamed this to Length, and made the normal one a #define
 float VectorNormalizeLength (vec3_t v)
 {
-	float length, ilength;
+	float length;
 
-	length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-	length = sqrt (length);
+	length = sqrt(DotProduct(v,v));
 
 	if (length)
-	{
-		ilength = 1/length;
-		v[0] *= ilength;
-		v[1] *= ilength;
-		v[2] *= ilength;
-	}
+		VectorScale(v, 1 / length, v);
 
 	return length;
-
 }
 
 

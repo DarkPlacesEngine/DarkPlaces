@@ -2,6 +2,10 @@
 #ifndef COLLISION_H
 #define COLLISION_H
 
+#include "matrixlib.h"
+struct mempool_s;
+struct model_s;
+
 typedef union plane_s
 {
 	struct
@@ -71,8 +75,8 @@ void Collision_Init(void);
 void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, int boxsupercontents, int boxq3surfaceflags, const texture_t *boxtexture);
 void Collision_ClipTrace_Point(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, int boxsupercontents, int boxq3surfaceflags, const texture_t *boxtexture);
 
-void Collision_Cache_Reset(qboolean resetlimits);
-void Collision_Cache_Init(mempool_t *mempool);
+void Collision_Cache_Reset(qbool resetlimits);
+void Collision_Cache_Init(struct mempool_s *mempool);
 void Collision_Cache_NewFrame(void);
 
 typedef struct colpointf_s
@@ -137,13 +141,13 @@ typedef struct colboxbrushf_s
 colboxbrushf_t;
 
 void Collision_CalcPlanesForTriangleBrushFloat(colbrushf_t *brush);
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, const texture_t *texture, int hasaabbplanes);
+colbrushf_t *Collision_NewBrushFromPlanes(struct mempool_s *mempool, int numoriginalplanes, const colplanef_t *originalplanes, int supercontents, int q3surfaceflags, const texture_t *texture, int hasaabbplanes);
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
 void Collision_TraceBrushTriangleMeshFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, const texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs);
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end);
 void Collision_TraceLineTriangleMeshFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, int numtriangles, const int *element3i, const float *vertex3f, int stride, float *bbox6f, int supercontents, int q3surfaceflags, const texture_t *texture, const vec3_t segmentmins, const vec3_t segmentmaxs);
 void Collision_TracePointBrushFloat(trace_t *trace, const vec3_t point, const colbrushf_t *thatbrush);
-qboolean Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush);
+qbool Collision_PointInsideBrushFloat(const vec3_t point, const colbrushf_t *brush);
 
 void Collision_BrushForBox(colboxbrushf_t *boxbrush, const vec3_t mins, const vec3_t maxs, int supercontents, int q3surfaceflags, const texture_t *texture);
 
@@ -167,20 +171,20 @@ void Collision_TraceBrushTriangleFloat(trace_t *trace, const colbrushf_t *thisbr
 // passedict is excluded from clipping checks
 struct frameblend_s;
 struct skeleton_s;
-void Collision_ClipToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend);
-void Collision_ClipLineToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitsurfaces);
-void Collision_ClipPointToGenericEntity(trace_t *trace, dp_model_t *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Collision_ClipToGenericEntity(trace_t *trace, struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend);
+void Collision_ClipLineToGenericEntity(trace_t *trace, struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces);
+void Collision_ClipPointToGenericEntity(trace_t *trace, struct model_s *model, const struct frameblend_s *frameblend, const struct skeleton_s *skeleton, const vec3_t bodymins, const vec3_t bodymaxs, int bodysupercontents, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 // like above but does not do a transform and does nothing if model is NULL
-void Collision_ClipToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend);
-void Collision_ClipLineToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitsurfaces);
-void Collision_ClipPointToWorld(trace_t *trace, dp_model_t *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Collision_ClipToWorld(trace_t *trace, struct model_s *model, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend);
+void Collision_ClipLineToWorld(trace_t *trace, struct model_s *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitsurfaces);
+void Collision_ClipPointToWorld(trace_t *trace, struct model_s *model, const vec3_t start, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 // caching surface trace for renderer (NOT THREAD SAFE)
-void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, dp_model_t *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
-void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, dp_model_t *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Collision_Cache_ClipLineToGenericEntitySurfaces(trace_t *trace, struct model_s *model, matrix4x4_t *matrix, matrix4x4_t *inversematrix, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
+void Collision_Cache_ClipLineToWorldSurfaces(trace_t *trace, struct model_s *model, const vec3_t start, const vec3_t end, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 // combines data from two traces:
 // merges contents flags, startsolid, allsolid, inwater
 // updates fraction, endpos, plane and surface info if new fraction is shorter
-void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qboolean isbmodel);
+void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *touch, qbool isbmodel);
 
 // this enables rather large debugging spew!
 // settings:
@@ -190,10 +194,10 @@ void Collision_CombineTraces(trace_t *cliptrace, const trace_t *trace, void *tou
 // 3 = spew detailed trace flow (bsp tree recursion info)
 #define COLLISIONPARANOID 0
 
-extern cvar_t collision_impactnudge;
-extern cvar_t collision_extendtracelinelength;
-extern cvar_t collision_extendtraceboxlength;
-extern cvar_t collision_extendmovelength;
-extern cvar_t collision_bih_fullrecursion;
+extern struct cvar_s collision_impactnudge;
+extern struct cvar_s collision_extendtracelinelength;
+extern struct cvar_s collision_extendtraceboxlength;
+extern struct cvar_s collision_extendmovelength;
+extern struct cvar_s collision_bih_fullrecursion;
 
 #endif

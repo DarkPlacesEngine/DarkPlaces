@@ -24,6 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef DRAW_H
 #define DRAW_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "r_textures.h"
+
 typedef struct cachepic_s cachepic_t;
 
 typedef enum cachepicflags_e
@@ -47,7 +51,7 @@ cachepic_t *Draw_CachePic (const char *path); // standard function with no optio
 cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned char *pixels, textype_t textype, int texflags);
 // free the texture memory used by a pic (the cachepic_t itself is eternal)
 void Draw_FreePic(const char *picname);
-qboolean Draw_PicExists(const char *picname);
+qbool Draw_PicExists(const char *picname);
 
 // a triangle mesh..
 // each vertex is 3 floats
@@ -158,12 +162,12 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 // the color is tinted by the provided base color
 // if r_textshadow is not zero, an additional instance of the text is drawn first at an offset with an inverted shade of gray (black text produces a white shadow, brightly colored text produces a black shadow)
 extern float DrawQ_Color[4];
-float DrawQ_String(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
-float DrawQ_String_Scale(float x, float y, const char *text, size_t maxlen, float sizex, float sizey, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt);
-float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt);
-float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
-float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
-float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qboolean ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
+float DrawQ_String(float x, float y, const char *text, size_t maxlen, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt);
+float DrawQ_String_Scale(float x, float y, const char *text, size_t maxlen, float sizex, float sizey, float scalex, float scaley, float basered, float basegreen, float baseblue, float basealpha, int flags, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt);
+float DrawQ_TextWidth(const char *text, size_t maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt);
+float DrawQ_TextWidth_UntilWidth(const char *text, size_t *maxlen, float w, float h, qbool ignorecolorcodes, const dp_font_t *fnt, float maxWidth);
+float DrawQ_TextWidth_UntilWidth_TrackColors(const char *text, size_t *maxlen, float w, float h, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
+float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *maxlen, float w, float h, float sw, float sh, int *outcolor, qbool ignorecolorcodes, const dp_font_t *fnt, float maxwidth);
 // draw a very fancy pic (per corner texcoord/color control), the order is tl, tr, bl, br
 void DrawQ_SuperPic(float x, float y, cachepic_t *pic, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags);
 // set the clipping area
@@ -171,12 +175,12 @@ void DrawQ_SetClipArea(float x, float y, float width, float height);
 // reset the clipping area
 void DrawQ_ResetClipArea(void);
 // draw a line
-void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags);
+void DrawQ_Line(float width, float x1, float y1, float x2, float y2, float r, float g, float b, float alpha, int flags, qbool fast);
 
 const char *Draw_GetPicName(cachepic_t *pic);
 int Draw_GetPicWidth(cachepic_t *pic);
 int Draw_GetPicHeight(cachepic_t *pic);
-qboolean Draw_IsPicLoaded(cachepic_t *pic);
+qbool Draw_IsPicLoaded(cachepic_t *pic);
 rtexture_t *Draw_GetPicTexture(cachepic_t *pic);
 
 extern rtexturepool_t *drawtexturepool; // used by ft2.c

@@ -1,8 +1,10 @@
 #ifndef HMAC_H
 #define HMAC_H
 
+#include "qtypes.h"
+
 typedef void (*hashfunc_t) (unsigned char *out, const unsigned char *in, int n);
-qboolean hmac(
+qbool hmac(
 	hashfunc_t hfunc, int hlen, int hblock,
 	unsigned char *out,
 	const unsigned char *in, int n,

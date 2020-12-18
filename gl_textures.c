@@ -5,34 +5,33 @@
 #include "image_png.h"
 #include "intoverflow.h"
 
-cvar_t gl_max_size = {CVAR_CLIENT | CVAR_SAVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
-cvar_t gl_max_lightmapsize = {CVAR_CLIENT | CVAR_SAVE, "gl_max_lightmapsize", "1024", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
-cvar_t gl_picmip = {CVAR_CLIENT | CVAR_SAVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
-cvar_t gl_picmip_world = {CVAR_CLIENT | CVAR_SAVE, "gl_picmip_world", "0", "extra picmip level for world textures (may be negative, which will then reduce gl_picmip for these)"};
-cvar_t r_picmipworld = {CVAR_CLIENT | CVAR_SAVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too (setting this to 0 is a shorthand for gl_picmip_world -9999999)"};
-cvar_t gl_picmip_sprites = {CVAR_CLIENT | CVAR_SAVE, "gl_picmip_sprites", "0", "extra picmip level for sprite textures (may be negative, which will then reduce gl_picmip for these)"};
-cvar_t r_picmipsprites = {CVAR_CLIENT | CVAR_SAVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games) (setting this to 0 is a shorthand for gl_picmip_sprites -9999999)"};
-cvar_t gl_picmip_other = {CVAR_CLIENT | CVAR_SAVE, "gl_picmip_other", "0", "extra picmip level for other textures (may be negative, which will then reduce gl_picmip for these)"};
-cvar_t r_lerpimages = {CVAR_CLIENT | CVAR_SAVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
-cvar_t gl_texture_anisotropy = {CVAR_CLIENT | CVAR_SAVE, "gl_texture_anisotropy", "1", "anisotropic filtering quality (if supported by hardware), 1 sample (no anisotropy) and 8 sample (8 tap anisotropy) are recommended values"};
-cvar_t gl_texturecompression = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression", "0", "whether to compress textures, a value of 0 disables compression (even if the individual cvars are 1), 1 enables fast (low quality) compression at startup, 2 enables slow (high quality) compression at startup"};
-cvar_t gl_texturecompression_color = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_color", "1", "whether to compress colormap (diffuse) textures"};
-cvar_t gl_texturecompression_normal = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_normal", "0", "whether to compress normalmap (normalmap) textures"};
-cvar_t gl_texturecompression_gloss = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_gloss", "1", "whether to compress glossmap (specular) textures"};
-cvar_t gl_texturecompression_glow = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_glow", "1", "whether to compress glowmap (luma) textures"};
-cvar_t gl_texturecompression_2d = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_2d", "0", "whether to compress 2d (hud/menu) textures other than the font"};
-cvar_t gl_texturecompression_q3bsplightmaps = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_q3bsplightmaps", "0", "whether to compress lightmaps in q3bsp format levels"};
-cvar_t gl_texturecompression_q3bspdeluxemaps = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
-cvar_t gl_texturecompression_sky = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
-cvar_t gl_texturecompression_lightcubemaps = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
-cvar_t gl_texturecompression_reflectmask = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
-cvar_t gl_texturecompression_sprites = {CVAR_CLIENT | CVAR_SAVE, "gl_texturecompression_sprites", "1", "whether to compress sprites"};
-cvar_t gl_nopartialtextureupdates = {CVAR_CLIENT | CVAR_SAVE, "gl_nopartialtextureupdates", "0", "use alternate path for dynamic lightmap updates that avoids a possibly slow code path in the driver"};
-cvar_t r_texture_dds_load_alphamode = {CVAR_CLIENT, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
-cvar_t r_texture_dds_load_logfailure = {CVAR_CLIENT, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log, 0: done log, 1: log with no optional textures (_norm, glow etc.). 2: log all"};
-cvar_t r_texture_dds_swdecode = {CVAR_CLIENT, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
+cvar_t gl_max_size = {CF_CLIENT | CF_ARCHIVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
+cvar_t gl_max_lightmapsize = {CF_CLIENT | CF_ARCHIVE, "gl_max_lightmapsize", "512", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};
+cvar_t gl_picmip = {CF_CLIENT | CF_ARCHIVE, "gl_picmip", "0", "reduces resolution of textures by powers of 2, for example 1 will halve width/height, reducing texture memory usage by 75%"};
+cvar_t gl_picmip_world = {CF_CLIENT | CF_ARCHIVE, "gl_picmip_world", "0", "extra picmip level for world textures (may be negative, which will then reduce gl_picmip for these)"};
+cvar_t r_picmipworld = {CF_CLIENT | CF_ARCHIVE, "r_picmipworld", "1", "whether gl_picmip shall apply to world textures too (setting this to 0 is a shorthand for gl_picmip_world -9999999)"};
+cvar_t gl_picmip_sprites = {CF_CLIENT | CF_ARCHIVE, "gl_picmip_sprites", "0", "extra picmip level for sprite textures (may be negative, which will then reduce gl_picmip for these)"};
+cvar_t r_picmipsprites = {CF_CLIENT | CF_ARCHIVE, "r_picmipsprites", "1", "make gl_picmip affect sprites too (saves some graphics memory in sprite heavy games) (setting this to 0 is a shorthand for gl_picmip_sprites -9999999)"};
+cvar_t gl_picmip_other = {CF_CLIENT | CF_ARCHIVE, "gl_picmip_other", "0", "extra picmip level for other textures (may be negative, which will then reduce gl_picmip for these)"};
+cvar_t r_lerpimages = {CF_CLIENT | CF_ARCHIVE, "r_lerpimages", "1", "bilinear filters images when scaling them up to power of 2 size (mode 1), looks better than glquake (mode 0)"};
+cvar_t gl_texture_anisotropy = {CF_CLIENT | CF_ARCHIVE, "gl_texture_anisotropy", "1", "anisotropic filtering quality (if supported by hardware), 1 sample (no anisotropy) and 8 sample (8 tap anisotropy) are recommended values"};
+cvar_t gl_texturecompression = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression", "0", "whether to compress textures, a value of 0 disables compression (even if the individual cvars are 1), 1 enables fast (low quality) compression at startup, 2 enables slow (high quality) compression at startup"};
+cvar_t gl_texturecompression_color = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_color", "1", "whether to compress colormap (diffuse) textures"};
+cvar_t gl_texturecompression_normal = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_normal", "0", "whether to compress normalmap (normalmap) textures"};
+cvar_t gl_texturecompression_gloss = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_gloss", "1", "whether to compress glossmap (specular) textures"};
+cvar_t gl_texturecompression_glow = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_glow", "1", "whether to compress glowmap (luma) textures"};
+cvar_t gl_texturecompression_2d = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_2d", "0", "whether to compress 2d (hud/menu) textures other than the font"};
+cvar_t gl_texturecompression_q3bsplightmaps = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_q3bsplightmaps", "0", "whether to compress lightmaps in q3bsp format levels"};
+cvar_t gl_texturecompression_q3bspdeluxemaps = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_q3bspdeluxemaps", "0", "whether to compress deluxemaps in q3bsp format levels (only levels compiled with q3map2 -deluxe have these)"};
+cvar_t gl_texturecompression_sky = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_sky", "0", "whether to compress sky textures"};
+cvar_t gl_texturecompression_lightcubemaps = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_lightcubemaps", "1", "whether to compress light cubemaps (spotlights and other light projection images)"};
+cvar_t gl_texturecompression_reflectmask = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_reflectmask", "1", "whether to compress reflection cubemap masks (mask of which areas of the texture should reflect the generic shiny cubemap)"};
+cvar_t gl_texturecompression_sprites = {CF_CLIENT | CF_ARCHIVE, "gl_texturecompression_sprites", "1", "whether to compress sprites"};
+cvar_t r_texture_dds_load_alphamode = {CF_CLIENT, "r_texture_dds_load_alphamode", "1", "0: trust DDPF_ALPHAPIXELS flag, 1: texture format and brute force search if ambiguous, 2: texture format only"};
+cvar_t r_texture_dds_load_logfailure = {CF_CLIENT, "r_texture_dds_load_logfailure", "0", "log missing DDS textures to ddstexturefailures.log, 0: done log, 1: log with no optional textures (_norm, glow etc.). 2: log all"};
+cvar_t r_texture_dds_swdecode = {CF_CLIENT, "r_texture_dds_swdecode", "0", "0: don't software decode DDS, 1: software decode DDS if unsupported, 2: always software decode DDS"};
 
-qboolean	gl_filter_force = false;
+qbool	gl_filter_force = false;
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
 
@@ -163,8 +162,8 @@ typedef struct gltexture_s
 	// speed reasons, must be identical in rtexture_t!
 	int texnum; // GL texture slot number
 	int renderbuffernum; // GL renderbuffer slot number
-	qboolean dirty; // indicates that R_RealGetTexture should be called
-	qboolean glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
+	qbool dirty; // indicates that R_RealGetTexture should be called
+	qbool glisdepthstencil; // indicates that FBO attachment has to be GL_DEPTH_STENCIL_ATTACHMENT
 	int gltexturetypeenum; // used by R_Mesh_TexBind
 
 	// dynamic texture stuff [11/22/2007 Black]
@@ -172,9 +171,10 @@ typedef struct gltexture_s
 	void *updatecallback_data;
 	// --- [11/22/2007 Black]
 
-	// stores backup copy of texture for deferred texture updates (gl_nopartialtextureupdates cvar)
+	// stores backup copy of texture for deferred texture updates (R_UpdateTexture when combine = true)
 	unsigned char *bufferpixels;
-	qboolean buffermodified;
+	int modified_mins[3], modified_maxs[3];
+	qbool buffermodified;
 
 	// pointer to texturepool (check this to see if the texture is allocated)
 	struct gltexturepool_s *pool;
@@ -560,7 +560,7 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 	return (int)(size * glt->textype->glinternalbytesperpixel) * glt->sides;
 }
 
-void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
+void R_TextureStats_Print(qbool printeach, qbool printpool, qbool printtotal)
 {
 	int glsize;
 	int isloaded;
@@ -700,8 +700,8 @@ static void r_textures_devicerestored(void)
 
 void R_Textures_Init (void)
 {
-	Cmd_AddCommand(CMD_CLIENT, "gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
-	Cmd_AddCommand(CMD_CLIENT, "r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
+	Cmd_AddCommand(CF_CLIENT, "gl_texturemode", &GL_TextureMode_f, "set texture filtering mode (GL_NEAREST, GL_LINEAR, GL_LINEAR_MIPMAP_LINEAR, etc); an additional argument 'force' forces the texture mode even in cases where it may not be appropriate");
+	Cmd_AddCommand(CF_CLIENT, "r_texturestats", R_TextureStats_f, "print information about all loaded textures and some statistics");
 	Cvar_RegisterVariable (&gl_max_size);
 	Cvar_RegisterVariable (&gl_picmip);
 	Cvar_RegisterVariable (&gl_picmip_world);
@@ -724,7 +724,6 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&gl_texturecompression_lightcubemaps);
 	Cvar_RegisterVariable (&gl_texturecompression_reflectmask);
 	Cvar_RegisterVariable (&gl_texturecompression_sprites);
-	Cvar_RegisterVariable (&gl_nopartialtextureupdates);
 	Cvar_RegisterVariable (&r_texture_dds_load_alphamode);
 	Cvar_RegisterVariable (&r_texture_dds_load_logfailure);
 	Cvar_RegisterVariable (&r_texture_dds_swdecode);
@@ -736,7 +735,7 @@ void R_Textures_Frame (void)
 {
 #ifdef GL_TEXTURE_MAX_ANISOTROPY_EXT
 	static int old_aniso = 0;
-	static qboolean first_time_aniso = true;
+	static qbool first_time_aniso = true;
 #endif
 
 	// could do procedural texture animation here, if we keep track of which
@@ -1112,7 +1111,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	gltexturepool_t *pool = (gltexturepool_t *)rtexturepool;
 	textypeinfo_t *texinfo, *texinfo2;
 	unsigned char *temppixels = NULL;
-	qboolean swaprb;
+	qbool swaprb;
 
 	if (cls.state == ca_dedicated)
 		return NULL;
@@ -1162,7 +1161,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	// if sRGB texture formats are not supported, convert input to linear and upload as normal types
 	if (!vid.support.ext_texture_srgb)
 	{
-		qboolean convertsRGB = false;
+		qbool convertsRGB = false;
 		switch(textype)
 		{
 		case TEXTYPE_SRGB_DXT1:    textype = TEXTYPE_DXT1   ;convertsRGB = true;break;
@@ -1313,8 +1312,12 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	}
 
 	R_UploadFullTexture(glt, data);
-	if ((glt->flags & TEXF_ALLOWUPDATES) && gl_nopartialtextureupdates.integer)
+	if (glt->flags & TEXF_ALLOWUPDATES)
 		glt->bufferpixels = (unsigned char *)Mem_Alloc(texturemempool, glt->tilewidth*glt->tileheight*glt->tiledepth*glt->sides*glt->bytesperpixel);
+
+	glt->buffermodified = false;
+	VectorClear(glt->modified_mins);
+	VectorClear(glt->modified_maxs);
 
 	// free any temporary processing buffer we allocated...
 	if (temppixels)
@@ -1342,7 +1345,7 @@ rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *ident
 	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, miplevel, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
-rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qboolean filter)
+rtexture_t *R_LoadTextureShadowMap2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, textype_t textype, qbool filter)
 {
 	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, TEXF_RENDERTARGET | TEXF_CLAMP | (filter ? TEXF_FORCELINEAR : TEXF_FORCENEAREST), -1, textype, GLTEXTURETYPE_2D, NULL, NULL);
 }
@@ -1406,7 +1409,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 	return (rtexture_t *)glt;
 }
 
-int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipuncompressed, qboolean hasalpha)
+int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qbool skipuncompressed, qbool hasalpha)
 {
 #ifdef USE_GLES2
 	return -1; // unsupported on this platform
@@ -1544,7 +1547,7 @@ int R_SaveTextureDDSFile(rtexture_t *rt, const char *filename, qboolean skipunco
 #include "ktx10/include/ktx.h"
 #endif
 
-rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qboolean srgb, int flags, qboolean *hasalphaflag, float *avgcolor, int miplevel, qboolean optionaltexture) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
+rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filename, qbool srgb, int flags, qbool *hasalphaflag, float *avgcolor, int miplevel, qbool optionaltexture) // DDS textures are opaque, so miplevel isn't a pointer but just seen as a hint
 {
 	int i, size, dds_format_flags, dds_miplevels, dds_width, dds_height;
 	//int dds_flags;
@@ -1563,7 +1566,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	unsigned char *dds;
 	fs_offset_t ddsfilesize;
 	unsigned int ddssize;
-	qboolean force_swdecode;
+	qbool force_swdecode;
 #ifdef __ANDROID__
 	// ELUAN: FIXME: separate this code
 	char vabuf[1024];
@@ -2258,7 +2261,7 @@ int R_TextureFlags(rtexture_t *rt)
 	return rt ? ((gltexture_t *)rt)->flags : 0;
 }
 
-void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth)
+void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, int z, int width, int height, int depth, int combine)
 {
 	gltexture_t *glt = (gltexture_t *)rt;
 	if (data == NULL)
@@ -2273,40 +2276,60 @@ void R_UpdateTexture(rtexture_t *rt, const unsigned char *data, int x, int y, in
 	// update part of the texture
 	if (glt->bufferpixels)
 	{
-		int j;
-		int bpp = glt->bytesperpixel;
-		int inputskip = width*bpp;
-		int outputskip = glt->tilewidth*bpp;
-		const unsigned char *input = data;
-		unsigned char *output = glt->bufferpixels;
+		size_t j, bpp = glt->bytesperpixel;
+
+		// depth and sides are not fully implemented here - can still do full updates but not partial.
 		if (glt->inputdepth != 1 || glt->sides != 1)
-			Sys_Error("R_UpdateTexture on buffered texture that is not 2D\n");
-		if (x < 0)
+			Host_Error("R_UpdateTexture on buffered texture that is not 2D\n");
+		if (x < 0 || y < 0 || z < 0 || glt->tilewidth < x + width || glt->tileheight < y + height || glt->tiledepth < z + depth)
+			Host_Error("R_UpdateTexture on buffered texture with out of bounds coordinates (%i %i %i to %i %i %i is not within 0 0 0 to %i %i %i)", x, y, z, x + width, y + height, z + depth, glt->tilewidth, glt->tileheight, glt->tiledepth);
+
+		for (j = 0; j < (size_t)height; j++)
+			memcpy(glt->bufferpixels + ((y + j) * glt->tilewidth + x) * bpp, data + j * width * bpp, width * bpp);
+
+		switch(combine)
 		{
-			width += x;
-			input -= x*bpp;
-			x = 0;
+		case 0:
+			// immediately update the part of the texture, no combining
+			R_UploadPartialTexture(glt, data, x, y, z, width, height, depth);
+			break;
+		case 1:
+			// keep track of the region that is modified, decide later how big the partial update area is
+			if (glt->buffermodified)
+			{
+				glt->modified_mins[0] = min(glt->modified_mins[0], x);
+				glt->modified_mins[1] = min(glt->modified_mins[1], y);
+				glt->modified_mins[2] = min(glt->modified_mins[2], z);
+				glt->modified_maxs[0] = max(glt->modified_maxs[0], x + width);
+				glt->modified_maxs[1] = max(glt->modified_maxs[1], y + height);
+				glt->modified_maxs[2] = max(glt->modified_maxs[2], z + depth);
+			}
+			else
+			{
+				glt->buffermodified = true;
+				glt->modified_mins[0] = x;
+				glt->modified_mins[1] = y;
+				glt->modified_mins[2] = z;
+				glt->modified_maxs[0] = x + width;
+				glt->modified_maxs[1] = y + height;
+				glt->modified_maxs[2] = z + depth;
+			}
+			glt->dirty = true;
+			break;
+		default:
+		case 2:
+			// mark the entire texture as dirty, it will be uploaded later
+			glt->buffermodified = true;
+			glt->modified_mins[0] = 0;
+			glt->modified_mins[1] = 0;
+			glt->modified_mins[2] = 0;
+			glt->modified_maxs[0] = glt->tilewidth;
+			glt->modified_maxs[1] = glt->tileheight;
+			glt->modified_maxs[2] = glt->tiledepth;
+			glt->dirty = true;
+			break;
 		}
-		if (y < 0)
-		{
-			height += y;
-			input -= y*inputskip;
-			y = 0;
-		}
-		if (width > glt->tilewidth - x)
-			width = glt->tilewidth - x;
-		if (height > glt->tileheight - y)
-			height = glt->tileheight - y;
-		if (width < 1 || height < 1)
-			return;
-		glt->dirty = true;
-		glt->buffermodified = true;
-		output += y*outputskip + x*bpp;
-		for (j = 0;j < height;j++, output += outputskip, input += inputskip)
-			memcpy(output, input, width*bpp);
 	}
-	else if (x || y || z || width != glt->inputwidth || height != glt->inputheight || depth != glt->inputdepth)
-		R_UploadPartialTexture(glt, data, x, y, z, width, height, depth);
 	else
 		R_UploadFullTexture(glt, data);
 }
@@ -2322,8 +2345,17 @@ int R_RealGetTexture(rtexture_t *rt)
 		if (glt->buffermodified && glt->bufferpixels)
 		{
 			glt->buffermodified = false;
-			R_UploadFullTexture(glt, glt->bufferpixels);
+			// Because we currently don't set the relevant upload stride parameters, just make it full width.
+			glt->modified_mins[0] = 0;
+			glt->modified_maxs[0] = glt->tilewidth;
+			// Check also if it's updating at least half the height of the texture.
+			if (glt->modified_maxs[1] - glt->modified_mins[1] > glt->tileheight / 2)
+				R_UploadFullTexture(glt, glt->bufferpixels);
+			else
+				R_UploadPartialTexture(glt, glt->bufferpixels + (size_t)glt->modified_mins[1] * glt->tilewidth * glt->bytesperpixel, glt->modified_mins[0], glt->modified_mins[1], glt->modified_mins[2], glt->modified_maxs[0] - glt->modified_mins[0], glt->modified_maxs[1] - glt->modified_mins[1], glt->modified_maxs[2] - glt->modified_mins[2]);
 		}
+		VectorClear(glt->modified_mins);
+		VectorClear(glt->modified_maxs);
 		glt->dirty = false;
 		return glt->texnum;
 	}

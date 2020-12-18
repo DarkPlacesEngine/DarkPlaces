@@ -25,20 +25,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "image.h"
 
-cvar_t r_ambient = {CVAR_CLIENT, "r_ambient", "0", "brightens map, value is 0-128"};
-cvar_t r_lockpvs = {CVAR_CLIENT, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
-cvar_t r_lockvisibility = {CVAR_CLIENT, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
-cvar_t r_useportalculling = {CVAR_CLIENT, "r_useportalculling", "1", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
-cvar_t r_usesurfaceculling = {CVAR_CLIENT, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
-cvar_t r_vis_trace = {CVAR_CLIENT, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
-cvar_t r_vis_trace_samples = {CVAR_CLIENT, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
-cvar_t r_vis_trace_delay = {CVAR_CLIENT, "r_vis_trace_delay", "1", "keep a portal visible for this many seconds"};
-cvar_t r_vis_trace_eyejitter = {CVAR_CLIENT, "r_vis_trace_eyejitter", "8", "use a random offset of this much on the start of each traceline"};
-cvar_t r_vis_trace_enlarge = {CVAR_CLIENT, "r_vis_trace_enlarge", "0", "make portal bounds bigger for tests by (1+this)*size"};
-cvar_t r_vis_trace_expand = {CVAR_CLIENT, "r_vis_trace_expand", "0", "make portal bounds bigger for tests by this many units"};
-cvar_t r_vis_trace_pad = {CVAR_CLIENT, "r_vis_trace_pad", "8", "accept traces that hit within this many units of the portal"};
-cvar_t r_vis_trace_surfaces = {CVAR_CLIENT, "r_vis_trace_surfaces", "0", "also use tracelines to cull surfaces"};
-cvar_t r_q3bsp_renderskydepth = {CVAR_CLIENT, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
+cvar_t r_ambient = {CF_CLIENT, "r_ambient", "0", "brightens map, value is 0-128"};
+cvar_t r_lockpvs = {CF_CLIENT, "r_lockpvs", "0", "disables pvs switching, allows you to walk around and inspect what is visible from a given location in the map (anything not visible from your current location will not be drawn)"};
+cvar_t r_lockvisibility = {CF_CLIENT, "r_lockvisibility", "0", "disables visibility updates, allows you to walk around and inspect what is visible from a given viewpoint in the map (anything offscreen at the moment this is enabled will not be drawn)"};
+cvar_t r_useportalculling = {CF_CLIENT, "r_useportalculling", "1", "improve framerate with r_novis 1 by using portal culling - still not as good as compiled visibility data in the map, but it helps (a value of 2 forces use of this even with vis data, which improves framerates in maps without too much complexity, but hurts in extremely complex maps, which is why 2 is not the default mode)"};
+cvar_t r_usesurfaceculling = {CF_CLIENT, "r_usesurfaceculling", "1", "skip off-screen surfaces (1 = cull surfaces if the map is likely to benefit, 2 = always cull surfaces)"};
+cvar_t r_vis_trace = {CF_CLIENT, "r_vis_trace", "0", "test if each portal or leaf is visible using tracelines"};
+cvar_t r_vis_trace_samples = {CF_CLIENT, "r_vis_trace_samples", "1", "use this many randomly positioned tracelines each frame to refresh the visible timer"};
+cvar_t r_vis_trace_delay = {CF_CLIENT, "r_vis_trace_delay", "1", "keep a portal visible for this many seconds"};
+cvar_t r_vis_trace_eyejitter = {CF_CLIENT, "r_vis_trace_eyejitter", "8", "use a random offset of this much on the start of each traceline"};
+cvar_t r_vis_trace_enlarge = {CF_CLIENT, "r_vis_trace_enlarge", "0", "make portal bounds bigger for tests by (1+this)*size"};
+cvar_t r_vis_trace_expand = {CF_CLIENT, "r_vis_trace_expand", "0", "make portal bounds bigger for tests by this many units"};
+cvar_t r_vis_trace_pad = {CF_CLIENT, "r_vis_trace_pad", "8", "accept traces that hit within this many units of the portal"};
+cvar_t r_vis_trace_surfaces = {CF_CLIENT, "r_vis_trace_surfaces", "0", "also use tracelines to cull surfaces"};
+cvar_t r_q3bsp_renderskydepth = {CF_CLIENT, "r_q3bsp_renderskydepth", "0", "draws sky depth masking in q3 maps (as in q1 maps), this means for example that sky polygons can hide other things"};
 
 /*
 ===============
@@ -47,12 +47,12 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
+void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface, int combine)
 {
 	int smax, tmax, i, size, size3, maps, l;
 	int *bl, scale;
 	unsigned char *lightmap, *out, *stain;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	int *intblocklights;
 	unsigned char *templight;
 
@@ -131,7 +131,7 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 
 	if(vid_sRGB.integer && vid_sRGB_fallback.integer && !vid.sRGB3D)
 		Image_MakesRGBColorsFromLinear_Lightmap(templight, templight, size);
-	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
+	R_UpdateTexture(surface->lightmaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1, combine);
 
 	// update the surface's deluxemap if it has one
 	if (surface->deluxemaptexture != r_texture_blanknormalmap)
@@ -169,11 +169,11 @@ void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 			l = (int)(n[2] * 128 + 128);out[0] = bound(0, l, 255);
 			out[3] = 255;
 		}
-		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1);
+		R_UpdateTexture(surface->deluxemaptexture, templight, surface->lightmapinfo->lightmaporigin[0], surface->lightmapinfo->lightmaporigin[1], 0, smax, tmax, 1, r_q1bsp_lightmap_updates_combine.integer);
 	}
 }
 
-static void R_StainNode (mnode_t *node, dp_model_t *model, const vec3_t origin, float radius, const float fcolor[8])
+static void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])
 {
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surface, *endsurface;
@@ -300,7 +300,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	int n;
 	float fcolor[8];
 	entity_render_t *ent;
-	dp_model_t *model;
+	model_t *model;
 	vec3_t org;
 	if (r_refdef.scene.worldmodel == NULL || !r_refdef.scene.worldmodel->brush.data_nodes || !r_refdef.scene.worldmodel->brushq1.lightdata)
 		return;
@@ -346,7 +346,7 @@ static void R_DrawPortal_Callback(const entity_render_t *ent, const rtlight_t *r
 	// called with a batch, so numsurfaces is always 1, and the surfacelist
 	// contains only a leaf number for coloring purposes
 	const mportal_t *portal = (mportal_t *)ent;
-	qboolean isvis;
+	qbool isvis;
 	int i, numpoints;
 	float *v;
 	float vertex3f[POLYGONELEMENTS_MAXPOINTS*3];
@@ -383,15 +383,15 @@ void R_DrawPortals(void)
 	int i, leafnum;
 	mportal_t *portal;
 	float center[3], f;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	if (model == NULL)
 		return;
-	for (leafnum = 0;leafnum < r_refdef.scene.worldmodel->brush.num_leafs;leafnum++)
+	for (leafnum = 0;leafnum < model->brush.num_leafs;leafnum++)
 	{
 		if (r_refdef.viewcache.world_leafvisible[leafnum])
 		{
 			//for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
-			for (portal = r_refdef.scene.worldmodel->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
+			for (portal = model->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
 			{
 				if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 				if (!R_CullBox(portal->mins, portal->maxs))
@@ -415,7 +415,7 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	int surfaceindexend;
 	unsigned char *surfacevisible;
 	msurface_t *surfaces;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	if (!model)
 		return;
 	if (r_trippy.integer)
@@ -437,23 +437,28 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	}
 }
 
-void R_View_WorldVisibility(qboolean forcenovis)
+void R_View_WorldVisibility(qbool forcenovis)
 {
 	int i, j, *mark;
 	mleaf_t *leaf;
 	mleaf_t *viewleaf;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 
 	if (!model)
 		return;
 
+	if (r_lockvisibility.integer)
+		return;
+
+	// clear the visible surface and leaf flags arrays
+	memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
+	if(!r_lockpvs.integer)
+		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
+
+	r_refdef.viewcache.world_novis = false;
+
 	if (r_refdef.view.usecustompvs)
 	{
-		// clear the visible surface and leaf flags arrays
-		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
-		r_refdef.viewcache.world_novis = false;
-
 		// simply cull each marked leaf to the frustum (view pyramid)
 		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 		{
@@ -467,23 +472,14 @@ void R_View_WorldVisibility(qboolean forcenovis)
 						r_refdef.viewcache.world_surfacevisible[*mark] = true;
 			}
 		}
-		R_View_WorldVisibility_CullSurfaces();
-		return;
 	}
-
-	// if possible find the leaf the view origin is in
-	viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
-	// if possible fetch the visible cluster bits
-	if (!r_lockpvs.integer && model->brush.FatPVS)
-		model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
-
-	if (!r_lockvisibility.integer)
+	else
 	{
-		// clear the visible surface and leaf flags arrays
-		memset(r_refdef.viewcache.world_surfacevisible, 0, model->num_surfaces);
-		memset(r_refdef.viewcache.world_leafvisible, 0, model->brush.num_leafs);
-
-		r_refdef.viewcache.world_novis = false;
+		// if possible find the leaf the view origin is in
+		viewleaf = model->brush.PointInLeaf ? model->brush.PointInLeaf(model, r_refdef.view.origin) : NULL;
+		// if possible fetch the visible cluster bits
+		if (!r_lockpvs.integer && model->brush.FatPVS)
+			model->brush.FatPVS(model, r_refdef.view.origin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
 
 		// if floating around in the void (no pvs data available, and no
 		// portals available), simply use all on-screen leafs.
@@ -595,8 +591,10 @@ void R_View_WorldVisibility(qboolean forcenovis)
 				}
 			}
 		}
-		R_View_WorldVisibility_CullSurfaces();	
 	}
+
+	// Cull the rest
+	R_View_WorldVisibility_CullSurfaces();
 }
 
 void R_Mod_DrawSky(entity_render_t *ent)
@@ -609,7 +607,7 @@ void R_Mod_DrawSky(entity_render_t *ent)
 void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 {
 	int i, j, n, flagsmask;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	msurface_t *surfaces;
 	if (model == NULL)
 		return;
@@ -648,7 +646,7 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 
 void R_Mod_Draw(entity_render_t *ent)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, false, true, false, false, false, false);
@@ -656,7 +654,7 @@ void R_Mod_Draw(entity_render_t *ent)
 
 void R_Mod_DrawDepth(entity_render_t *ent)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	if (model == NULL || model->surfmesh.isanimated)
 		return;
 	GL_ColorMask(0,0,0,0);
@@ -678,7 +676,7 @@ void R_Mod_DrawDebug(entity_render_t *ent)
 
 void R_Mod_DrawPrepass(entity_render_t *ent)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	R_DrawModelSurfaces(ent, false, true, false, false, true, false);
@@ -686,7 +684,7 @@ void R_Mod_DrawPrepass(entity_render_t *ent)
 
 typedef struct r_q1bsp_getlightinfo_s
 {
-	dp_model_t *model;
+	model_t *model;
 	vec3_t relativelightorigin;
 	float lightradius;
 	int *outleaflist;
@@ -704,10 +702,10 @@ typedef struct r_q1bsp_getlightinfo_s
 	vec3_t lightmins;
 	vec3_t lightmaxs;
 	const unsigned char *pvs;
-	qboolean svbsp_active;
-	qboolean svbsp_insertoccluder;
-	qboolean noocclusion; // avoids PVS culling
-	qboolean frontsidecasting; // casts shadows from surfaces facing the light (otherwise ones facing away)
+	qbool svbsp_active;
+	qbool svbsp_insertoccluder;
+	qbool noocclusion; // avoids PVS culling
+	qbool frontsidecasting; // casts shadows from surfaces facing the light (otherwise ones facing away)
 	int numfrustumplanes;
 	const mplane_t *frustumplanes;
 }
@@ -715,7 +713,7 @@ r_q1bsp_getlightinfo_t;
 
 #define GETLIGHTINFO_MAXNODESTACK 4096
 
-static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboolean skipsurfaces)
+static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qbool skipsurfaces)
 {
 	// nodestack
 	mnode_t *nodestack[GETLIGHTINFO_MAXNODESTACK];
@@ -733,17 +731,17 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 	int surfaceindex;
 	int triangleindex, t;
 	int currentmaterialflags;
-	qboolean castshadow;
+	qbool castshadow;
 	const int *e;
 	const vec_t *v[3];
 	float v2[3][3];
-	qboolean insidebox;
-	qboolean noocclusion = info->noocclusion;
-	qboolean frontsidecasting = info->frontsidecasting;
-	qboolean svbspactive = info->svbsp_active;
-	qboolean svbspinsertoccluder = info->svbsp_insertoccluder;
+	qbool insidebox;
+	qbool noocclusion = info->noocclusion;
+	qbool frontsidecasting = info->frontsidecasting;
+	qbool svbspactive = info->svbsp_active;
+	qbool svbspinsertoccluder = info->svbsp_insertoccluder;
 	const int *leafsurfaceindices;
-	qboolean addedtris;
+	qbool addedtris;
 	int i;
 	mportal_t *portal;
 	static float points[128][3];
@@ -989,9 +987,9 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 	int t;
 	int nodeleafindex;
 	int currentmaterialflags;
-	qboolean castshadow;
-	qboolean noocclusion = info->noocclusion;
-	qboolean frontsidecasting = info->frontsidecasting;
+	qbool castshadow;
+	qbool noocclusion = info->noocclusion;
+	qbool frontsidecasting = info->frontsidecasting;
 	msurface_t *surface;
 	const int *e;
 	const vec_t *v[3];
@@ -1109,7 +1107,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 	}
 }
 
-static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboolean use_svbsp)
+static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qbool use_svbsp)
 {
 	extern cvar_t r_shadow_usebihculling;
 	if (use_svbsp)
@@ -1211,7 +1209,7 @@ static int R_Q1BSP_GetLightInfo_comparefunc(const void *ap, const void *bp)
 
 extern cvar_t r_shadow_sortsurfaces;
 
-void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qboolean noocclusion)
+void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outleaflist, unsigned char *outleafpvs, int *outnumleafspointer, int *outsurfacelist, unsigned char *outsurfacepvs, int *outnumsurfacespointer, unsigned char *outshadowtrispvs, unsigned char *outlighttrispvs, unsigned char *visitingleafpvs, int numfrustumplanes, const mplane_t *frustumplanes, qbool noocclusion)
 {
 	r_q1bsp_getlightinfo_t info;
 	info.frontsidecasting = r_shadow_frontsidecasting.integer != 0;
@@ -1297,7 +1295,7 @@ void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float 
 
 void R_Mod_CompileShadowMap(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativelightdirection, float lightradius, int numsurfaces, const int *surfacelist)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	msurface_t *surface;
 	int surfacelistindex;
 	int sidetotals[6] = { 0, 0, 0, 0, 0, 0 }, sidemasks = 0;
@@ -1328,7 +1326,7 @@ static const msurface_t *batchsurfacelist[RSURF_MAX_BATCHSURFACES];
 
 void R_Mod_DrawShadowMap(int side, entity_render_t *ent, const vec3_t relativelightorigin, const vec3_t relativelightdirection, float lightradius, int modelnumsurfaces, const int *modelsurfacelist, const unsigned char *surfacesides, const vec3_t lightmins, const vec3_t lightmaxs)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	const msurface_t *surface;
 	int modelsurfacelistindex, batchnumsurfaces;
 	// check the box in modelspace, it was already checked in worldspace
@@ -1404,10 +1402,10 @@ static void R_Q1BSP_DrawLight_TransparentCallback(const entity_render_t *ent, co
 	R_FrameData_ReturnToMark();
 }
 
-extern qboolean r_shadow_usingdeferredprepass;
+extern qbool r_shadow_usingdeferredprepass;
 void R_Mod_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfacelist, const unsigned char *lighttrispvs)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	const msurface_t *surface;
 	int i, k, kend, l, endsurface, batchnumsurfaces, texturenumsurfaces;
 	const msurface_t **texturesurfacelist;
@@ -1491,7 +1489,7 @@ void R_Mod_DrawLight(entity_render_t *ent, int numsurfaces, const int *surfaceli
 //Made by [515]
 static void R_ReplaceWorldTexture_f(cmd_state_t *cmd)
 {
-	dp_model_t		*m;
+	model_t		*m;
 	texture_t	*t;
 	int			i;
 	const char	*r, *newt;
@@ -1540,7 +1538,7 @@ static void R_ReplaceWorldTexture_f(cmd_state_t *cmd)
 //Made by [515]
 static void R_ListWorldTextures_f(cmd_state_t *cmd)
 {
-	dp_model_t		*m;
+	model_t		*m;
 	texture_t	*t;
 	int			i;
 	if (!r_refdef.scene.worldmodel)
@@ -1588,8 +1586,8 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_vis_trace_surfaces);
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 
-	Cmd_AddCommand(CMD_CLIENT, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
-	Cmd_AddCommand(CMD_CLIENT, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
+	Cmd_AddCommand(CF_CLIENT, "r_replacemaptexture", R_ReplaceWorldTexture_f, "override a map texture for testing purposes");
+	Cmd_AddCommand(CF_CLIENT, "r_listmaptextures", R_ListWorldTextures_f, "list all textures used by the current map");
 
 	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

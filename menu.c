@@ -28,8 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
-static cvar_t forceqmenu = {CVAR_CLIENT, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)"};
-static cvar_t menu_progs = {CVAR_CLIENT, "menu_progs", "menu.dat", "name of quakec menu.dat file"};
+static cvar_t forceqmenu = {CF_CLIENT, "forceqmenu", "0", "enables the quake menu instead of the quakec menu.dat (if present)"};
+static cvar_t menu_progs = {CF_CLIENT, "menu_progs", "menu.dat", "name of quakec menu.dat file"};
 
 static int NehGameType;
 
@@ -106,7 +106,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii);
 static void M_ServerList_Key(cmd_state_t *cmd, int key, int ascii);
 static void M_ModList_Key(cmd_state_t *cmd, int key, int ascii);
 
-static qboolean	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
+static qbool	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
 
 void M_Update_Return_Reason(const char *s)
 {
@@ -355,7 +355,7 @@ static void M_Demo_Key (cmd_state_t *cmd, int k, int ascii)
 /* MAIN MENU */
 
 static int	m_main_cursor;
-static qboolean m_missingdata = false;
+static qbool m_missingdata = false;
 
 static int MAIN_ITEMS = 4; // Nehahra: Menu Disable
 
@@ -2103,7 +2103,7 @@ static void M_Options_Graphics_Key (cmd_state_t *cmd, int k, int ascii)
 static int		options_colorcontrol_cursor;
 
 // intensity value to match up to 50% dither to 'correct' quake
-static cvar_t menu_options_colorcontrol_correctionvalue = {CVAR_CLIENT, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
+static cvar_t menu_options_colorcontrol_correctionvalue = {CF_CLIENT, "menu_options_colorcontrol_correctionvalue", "0.5", "intensity value that matches up to white/black dither pattern, should be 0.5 for linear color"};
 
 void M_Menu_Options_ColorControl_f(cmd_state_t *cmd)
 {
@@ -2873,9 +2873,9 @@ video_resolution_t video_resolutions_hardcoded[] =
 // this is the number of the default mode (640x480) in the list above
 int video_resolutions_hardcoded_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 
-#define VIDEO_ITEMS 11
+#define VIDEO_ITEMS 10
 static int video_cursor = 0;
-static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152, 168};
+static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152};
 static int menu_video_resolution;
 
 video_resolution_t *video_resolutions;
@@ -2883,7 +2883,7 @@ int video_resolutions_count;
 
 static video_resolution_t *menu_video_resolutions;
 static int menu_video_resolutions_count;
-static qboolean menu_video_resolutions_forfullscreen;
+static qbool menu_video_resolutions_forfullscreen;
 
 static void M_Menu_Video_FindResolution(int w, int h, float a)
 {
@@ -3203,7 +3203,7 @@ static void M_Credits_Key(cmd_state_t *cmd, int key, int ascii)
 
 static const char *m_quit_message[9];
 static int		m_quit_prevstate;
-static qboolean	wasInMenus;
+static qbool	wasInMenus;
 
 
 static int M_QuitMessage(const char *line1, const char *line2, const char *line3, const char *line4, const char *line5, const char *line6, const char *line7, const char *line8)
@@ -3322,7 +3322,7 @@ static void M_Quit_Key(cmd_state_t *cmd, int key, int ascii)
 
 	case 'Y':
 	case 'y':
-		Host_Quit_f(cmd);
+		host.state = host_shutdown;
 		break;
 
 	default:
@@ -3984,7 +3984,7 @@ static gamelevels_t *gameoptions_levels  = NULL;
 static int	startepisode;
 static int	startlevel;
 static int maxplayers;
-static qboolean m_serverInfoMessage = false;
+static qbool m_serverInfoMessage = false;
 static double m_serverInfoMessageTime;
 
 void M_Menu_GameOptions_f(cmd_state_t *cmd)
@@ -4541,7 +4541,7 @@ static int modlist_numenabled;			//number of enabled (or in process to be..) mod
 
 typedef struct modlist_entry_s
 {
-	qboolean loaded;	// used to determine whether this entry is loaded and running
+	qbool loaded;	// used to determine whether this entry is loaded and running
 	int enabled;		// index to array of modlist_enabled
 
 	// name of the modification, this is (will...be) displayed on the menu entry
@@ -4763,7 +4763,7 @@ static void M_ModList_Key(cmd_state_t *cmd, int k, int ascii)
 //=============================================================================
 /* Menu Subsystem */
 
-static void M_KeyEvent(int key, int ascii, qboolean downevent);
+static void M_KeyEvent(int key, int ascii, qbool downevent);
 static void M_Draw(void);
 void M_ToggleMenu(int mode);
 static void M_Shutdown(void);
@@ -4773,25 +4773,25 @@ static void M_Init (void)
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
-	Cmd_AddCommand(CMD_CLIENT, "menu_main", M_Menu_Main_f, "open the main menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_load", M_Menu_Load_f, "open the loadgame menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_save", M_Menu_Save_f, "open the savegame menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_setup", M_Menu_Setup_f, "open the player setup menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_options", M_Menu_Options_f, "open the options menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_keys", M_Menu_Keys_f, "open the key binding menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_video", M_Menu_Video_f, "open the video options menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_mods", M_Menu_ModList_f, "open the mods browser menu");
-	Cmd_AddCommand(CMD_CLIENT, "help", M_Menu_Help_f, "open the help menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_quit", M_Menu_Quit_f, "open the quit menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
-	Cmd_AddCommand(CMD_CLIENT, "menu_credits", M_Menu_Credits_f, "open the credits menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_main", M_Menu_Main_f, "open the main menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_singleplayer", M_Menu_SinglePlayer_f, "open the singleplayer menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_load", M_Menu_Load_f, "open the loadgame menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_save", M_Menu_Save_f, "open the savegame menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_multiplayer", M_Menu_MultiPlayer_f, "open the multiplayer menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_setup", M_Menu_Setup_f, "open the player setup menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_options", M_Menu_Options_f, "open the options menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_options_effects", M_Menu_Options_Effects_f, "open the effects options menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_options_graphics", M_Menu_Options_Graphics_f, "open the graphics options menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_options_colorcontrol", M_Menu_Options_ColorControl_f, "open the color control menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_keys", M_Menu_Keys_f, "open the key binding menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_video", M_Menu_Video_f, "open the video options menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_reset", M_Menu_Reset_f, "open the reset to defaults menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_mods", M_Menu_ModList_f, "open the mods browser menu");
+	Cmd_AddCommand(CF_CLIENT, "help", M_Menu_Help_f, "open the help menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_quit", M_Menu_Quit_f, "open the quit menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_transfusion_episode", M_Menu_Transfusion_Episode_f, "open the transfusion episode select menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_transfusion_skill", M_Menu_Transfusion_Skill_f, "open the transfusion skill select menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_credits", M_Menu_Credits_f, "open the credits menu");
 }
 
 void M_Draw (void)
@@ -4943,7 +4943,7 @@ void M_Draw (void)
 }
 
 
-void M_KeyEvent (int key, int ascii, qboolean downevent)
+void M_KeyEvent (int key, int ascii, qbool downevent)
 {
 	cmd_state_t *cmd = &cmd_client;
 	if (!downevent)
@@ -5234,19 +5234,23 @@ static prvm_required_field_t m_required_globals[] =
 
 static int m_numrequiredglobals = sizeof(m_required_globals) / sizeof(m_required_globals[0]);
 
-void MR_SetRouting (qboolean forceold);
+void MR_SetRouting (qbool forceold);
 
 void MVM_error_cmd(const char *format, ...) DP_FUNC_PRINTF(1);
 void MVM_error_cmd(const char *format, ...)
 {
 	prvm_prog_t *prog = MVM_prog;
-	static qboolean processingError = false;
+	static qbool processingError = false;
 	char errorstring[MAX_INPUTLINE];
 	va_list argptr;
 
 	va_start (argptr, format);
 	dpvsnprintf (errorstring, sizeof(errorstring), format, argptr);
 	va_end (argptr);
+
+	if (host.framecount < 3)
+		Sys_Error("Menu_Error: %s\n", errorstring);
+
 	Con_Printf( "Menu_Error: %s\n", errorstring );
 
 	if( !processingError ) {
@@ -5271,8 +5275,7 @@ void MVM_error_cmd(const char *format, ...)
 	R_SelectScene( RST_CLIENT );
 
 	// Let video start at least
-	if(host.state != host_init)
-		Host_AbortCurrentFrame();
+	Host_AbortCurrentFrame();
 }
 
 static void MVM_begin_increase_edicts(prvm_prog_t *prog)
@@ -5310,12 +5313,12 @@ static void MVM_count_edicts(prvm_prog_t *prog)
 	Con_Printf("active    :%3i\n", active);
 }
 
-static qboolean MVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
+static qbool MVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	return true;
 }
 
-static void MP_KeyEvent (int key, int ascii, qboolean downevent)
+static void MP_KeyEvent (int key, int ascii, qbool downevent)
 {
 	prvm_prog_t *prog = MVM_prog;
 
@@ -5452,14 +5455,14 @@ static void MP_Init (void)
 //============================================================================
 // Menu router
 
-void (*MR_KeyEvent) (int key, int ascii, qboolean downevent);
+void (*MR_KeyEvent) (int key, int ascii, qbool downevent);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu) (int mode);
 void (*MR_Shutdown) (void);
 void (*MR_NewMap) (void);
 int (*MR_GetServerListEntryCategory) (const serverlist_entry_t *entry);
 
-void MR_SetRouting(qboolean forceold)
+void MR_SetRouting(qbool forceold)
 {
 	// if the menu prog isnt available or forceqmenu ist set, use the old menu
 	if(!FS_FileExists(menu_progs.string) || forceqmenu.integer || forceold)
@@ -5502,19 +5505,9 @@ static void Call_MR_ToggleMenu_f(cmd_state_t *cmd)
 {
 	int m;
 	m = ((Cmd_Argc(cmd) < 2) ? -1 : atoi(Cmd_Argv(cmd, 1)));
-	Host_StartVideo();
+	CL_StartVideo();
 	if(MR_ToggleMenu)
 		MR_ToggleMenu(m);
-}
-
-static qboolean menu_active;
-
-static void MR_Start_f(cmd_state_t *cmd)
-{
-	if(menu_active || cls.state == ca_dedicated)
-		return;
-	MR_Init();
-	
 }
 
 void MR_Init_Commands(void)
@@ -5523,9 +5516,8 @@ void MR_Init_Commands(void)
 	Cvar_RegisterVariable (&forceqmenu);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cvar_RegisterVariable (&menu_progs);
-	Cmd_AddCommand(CMD_CLIENT, "menu_start", MR_Start_f, "initialize the menu system");
-	Cmd_AddCommand(CMD_CLIENT, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
-	Cmd_AddCommand(CMD_CLIENT, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
+	Cmd_AddCommand(CF_CLIENT, "menu_restart", MR_Restart_f, "restart menu system (reloads menu.dat)");
+	Cmd_AddCommand(CF_CLIENT, "togglemenu", Call_MR_ToggleMenu_f, "opens or closes menu");
 }
 
 void MR_Init(void)
@@ -5655,14 +5647,13 @@ void MR_Init(void)
 
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 // COMMANDLINEOPTION: Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)
-	if(COM_CheckParm("-forceqmenu"))
+	if(Sys_CheckParm("-forceqmenu"))
 		Cvar_SetValueQuick(&forceqmenu,1);
 	// use -useqmenu for debugging proposes, cause it starts
 	// the normal quake menu only the first time
 // COMMANDLINEOPTION: Client: -useqmenu causes the first time you open the menu to use the quake menu, then reverts to menu.dat (if forceqmenu is 0)
-	if(COM_CheckParm("-useqmenu"))
+	if(Sys_CheckParm("-useqmenu"))
 		MR_SetRouting (true);
 	else
 		MR_SetRouting (false);
-	menu_active = true;
 }

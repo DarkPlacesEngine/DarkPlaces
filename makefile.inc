@@ -101,6 +101,7 @@ OBJ_COMMON= \
 	com_ents.o \
 	com_ents4.o \
 	com_game.o \
+	com_list.o \
 	com_msg.o \
 	common.o \
 	console.o \
@@ -151,6 +152,7 @@ OBJ_COMMON= \
 	r_shadow.o \
 	r_sky.o \
 	r_sprites.o \
+	r_stats.o \
 	sbar.o \
 	sv_ccmds.o \
 	sv_demo.o \
@@ -241,7 +243,7 @@ LDFLAGS_UNIXSV_PRELOAD=-lz -ljpeg -lpng -lcurl
 LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lvorbisfile -lcurl -lxmp
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
-LDFLAGS_UNIXSDL=$(SDLCONFIG_LIBS) #-lGLESv2
+LDFLAGS_UNIXSDL=$(SDL_LIBS) #-lGLESv2
 EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
@@ -289,7 +291,7 @@ WINDRES ?= windres
 # Link
 # see LDFLAGS_WINCOMMON in makefile
 LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(SDLCONFIG_LIBS) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(LDFLAGS_UNIXSDL) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
@@ -521,6 +523,7 @@ clean:
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o
 	-$(CMD_RM) *.d
+	-$(CMD_RM) *.gch
 	-$(CMD_RM) build-obj/
 
 clean-profile: clean

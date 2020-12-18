@@ -34,8 +34,8 @@ r_shadow_rendermode_t r_shadow_lightingrendermode = R_SHADOW_RENDERMODE_NONE;
 int r_shadow_scenemaxlights;
 int r_shadow_scenenumlights;
 rtlight_t **r_shadow_scenelightlist; // includes both static lights and dlights, as filtered by appropriate flags
-qboolean r_shadow_usingshadowmap2d;
-qboolean r_shadow_usingshadowmaportho;
+qbool r_shadow_usingshadowmap2d;
+qbool r_shadow_usingshadowmaportho;
 int r_shadow_shadowmapside;
 float r_shadow_lightshadowmap_texturescale[4]; // xy = scale, zw = offset
 float r_shadow_lightshadowmap_parameters[4]; // x = frustum width in pixels (excludes border), y = z scale, z = size of viewport, w = z center
@@ -54,15 +54,15 @@ int r_shadow_shadowmapfilterquality;
 int r_shadow_shadowmapdepthbits;
 int r_shadow_shadowmapmaxsize;
 int r_shadow_shadowmaptexturesize;
-qboolean r_shadow_shadowmapvsdct;
-qboolean r_shadow_shadowmapsampler;
-qboolean r_shadow_shadowmapshadowsampler;
+qbool r_shadow_shadowmapvsdct;
+qbool r_shadow_shadowmapsampler;
+qbool r_shadow_shadowmapshadowsampler;
 int r_shadow_shadowmappcf;
 int r_shadow_shadowmapborder;
 matrix4x4_t r_shadow_shadowmapmatrix;
 int r_shadow_lightscissor[4];
-qboolean r_shadow_usingdeferredprepass;
-qboolean r_shadow_shadowmapdepthtexture;
+qbool r_shadow_usingdeferredprepass;
+qbool r_shadow_shadowmapdepthtexture;
 mod_alloclightmap_state_t r_shadow_shadowmapatlas_state;
 int r_shadow_shadowmapatlas_modelshadows_x;
 int r_shadow_shadowmapatlas_modelshadows_y;
@@ -138,123 +138,123 @@ unsigned int r_shadow_occlusion_buf = 0;
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
-cvar_t r_shadow_bumpscale_basetexture = {CVAR_CLIENT, "r_shadow_bumpscale_basetexture", "0", "generate fake bumpmaps from diffuse textures at this bumpyness, try 4 to match tenebrae, higher values increase depth, requires r_restart to take effect"};
-cvar_t r_shadow_bumpscale_bumpmap = {CVAR_CLIENT, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
-cvar_t r_shadow_debuglight = {CVAR_CLIENT, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
-cvar_t r_shadow_deferred = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_deferred", "0", "uses image-based lighting instead of geometry-based lighting, the method used renders a depth image and a normalmap image, renders lights into separate diffuse and specular images, and then combines this into the normal rendering, requires r_shadow_shadowmapping"};
-cvar_t r_shadow_usebihculling = {CVAR_CLIENT, "r_shadow_usebihculling", "1", "use BIH (Bounding Interval Hierarchy) for culling lit surfaces instead of BSP (Binary Space Partitioning)"};
-cvar_t r_shadow_usenormalmap = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_usenormalmap", "1", "enables use of directional shading on lights"};
-cvar_t r_shadow_gloss = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
-cvar_t r_shadow_gloss2intensity = {CVAR_CLIENT, "r_shadow_gloss2intensity", "0.125", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
-cvar_t r_shadow_glossintensity = {CVAR_CLIENT, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
-cvar_t r_shadow_glossexponent = {CVAR_CLIENT, "r_shadow_glossexponent", "32", "how 'sharp' the gloss should appear (specular power)"};
-cvar_t r_shadow_gloss2exponent = {CVAR_CLIENT, "r_shadow_gloss2exponent", "32", "same as r_shadow_glossexponent but for forced gloss (gloss 2) surfaces"};
-cvar_t r_shadow_glossexact = {CVAR_CLIENT, "r_shadow_glossexact", "0", "use exact reflection math for gloss (slightly slower, but should look a tad better)"};
-cvar_t r_shadow_lightattenuationdividebias = {CVAR_CLIENT, "r_shadow_lightattenuationdividebias", "1", "changes attenuation texture generation"};
-cvar_t r_shadow_lightattenuationlinearscale = {CVAR_CLIENT, "r_shadow_lightattenuationlinearscale", "2", "changes attenuation texture generation"};
-cvar_t r_shadow_lightintensityscale = {CVAR_CLIENT, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
-cvar_t r_shadow_lightradiusscale = {CVAR_CLIENT, "r_shadow_lightradiusscale", "1", "renders all world lights larger or smaller"};
-cvar_t r_shadow_projectdistance = {CVAR_CLIENT, "r_shadow_projectdistance", "0", "how far to cast shadows"};
-cvar_t r_shadow_frontsidecasting = {CVAR_CLIENT, "r_shadow_frontsidecasting", "1", "whether to cast shadows from illuminated triangles (front side of model) or unlit triangles (back side of model)"};
-cvar_t r_shadow_realtime_dlight = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_realtime_dlight", "1", "enables rendering of dynamic lights such as explosions and rocket light"};
-cvar_t r_shadow_realtime_dlight_shadows = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "1", "enables rendering of shadows from dynamic lights"};
-cvar_t r_shadow_realtime_dlight_svbspculling = {CVAR_CLIENT, "r_shadow_realtime_dlight_svbspculling", "0", "enables svbsp optimization on dynamic lights (very slow!)"};
-cvar_t r_shadow_realtime_dlight_portalculling = {CVAR_CLIENT, "r_shadow_realtime_dlight_portalculling", "0", "enables portal optimization on dynamic lights (slow!)"};
-cvar_t r_shadow_realtime_world = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
-cvar_t r_shadow_realtime_world_importlightentitiesfrommap = {CVAR_CLIENT, "r_shadow_realtime_world_importlightentitiesfrommap", "1", "load lights from .ent file or map entities at startup if no .rtlights or .lights file is present (if set to 2, always use the .ent or map entities)"};
-cvar_t r_shadow_realtime_world_lightmaps = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
-cvar_t r_shadow_realtime_world_shadows = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
-cvar_t r_shadow_realtime_world_compile = {CVAR_CLIENT, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
-cvar_t r_shadow_realtime_world_compileshadow = {CVAR_CLIENT, "r_shadow_realtime_world_compileshadow", "1", "enables compilation of shadows from world lights for higher performance rendering"};
-cvar_t r_shadow_realtime_world_compilesvbsp = {CVAR_CLIENT, "r_shadow_realtime_world_compilesvbsp", "1", "enables svbsp optimization during compilation (slower than compileportalculling but more exact)"};
-cvar_t r_shadow_realtime_world_compileportalculling = {CVAR_CLIENT, "r_shadow_realtime_world_compileportalculling", "1", "enables portal-based culling optimization during compilation (overrides compilesvbsp)"};
-cvar_t r_shadow_scissor = {CVAR_CLIENT, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
-cvar_t r_shadow_shadowmapping = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping", "1", "enables use of shadowmapping (shadow rendering by depth texture sampling)"};
-cvar_t r_shadow_shadowmapping_filterquality = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
-cvar_t r_shadow_shadowmapping_useshadowsampler = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_useshadowsampler", "1", "whether to use sampler2DShadow if available"};
-cvar_t r_shadow_shadowmapping_depthbits = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
-cvar_t r_shadow_shadowmapping_vsdct = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
-cvar_t r_shadow_shadowmapping_minsize = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_minsize", "32", "limit of shadowmap side size - must be at least r_shadow_shadowmapping_bordersize+2"};
-cvar_t r_shadow_shadowmapping_maxsize = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_maxsize", "512", "limit of shadowmap side size - can not be more than 1/8th of atlassize because lights store 6 sides (2x3 grid) and sometimes 12 sides (4x3 grid for shadows from EF_NOSELFSHADOW entities) and there are multiple lights..."};
-cvar_t r_shadow_shadowmapping_texturesize = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_texturesize", "8192", "size of shadowmap atlas texture - all shadowmaps are packed into this texture at frame start"};
-cvar_t r_shadow_shadowmapping_precision = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_precision", "1", "makes shadowmaps have a maximum resolution of this number of pixels per light source radius unit such that, for example, at precision 0.5 a light with radius 200 will have a maximum resolution of 100 pixels"};
-//cvar_t r_shadow_shadowmapping_lod_bias = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_lod_bias", "16", "shadowmap size bias"};
-//cvar_t r_shadow_shadowmapping_lod_scale = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_lod_scale", "128", "shadowmap size scaling parameter"};
-cvar_t r_shadow_shadowmapping_bordersize = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_bordersize", "5", "shadowmap size bias for filtering"};
-cvar_t r_shadow_shadowmapping_nearclip = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_nearclip", "1", "shadowmap nearclip in world units"};
-cvar_t r_shadow_shadowmapping_bias = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_bias", "0.03", "shadowmap bias parameter (this is multiplied by nearclip * 1024 / lodsize)"};
-cvar_t r_shadow_shadowmapping_polygonfactor = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
-cvar_t r_shadow_shadowmapping_polygonoffset = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
-cvar_t r_shadow_sortsurfaces = {CVAR_CLIENT, "r_shadow_sortsurfaces", "1", "improve performance by sorting illuminated surfaces by texture"};
-cvar_t r_shadow_culllights_pvs = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
-cvar_t r_shadow_culllights_trace = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
-cvar_t r_shadow_culllights_trace_eyejitter = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_eyejitter", "16", "offset eye location randomly by this much"};
-cvar_t r_shadow_culllights_trace_enlarge = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_enlarge", "0", "make light bounds bigger by *(1.0+enlarge)"};
-cvar_t r_shadow_culllights_trace_expand = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_expand", "8", "make light bounds bigger by this many units"};
-cvar_t r_shadow_culllights_trace_pad = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_pad", "8", "accept traces that hit within this many units of the light bounds"};
-cvar_t r_shadow_culllights_trace_samples = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_samples", "16", "use this many traces to random positions (in addition to center trace)"};
-cvar_t r_shadow_culllights_trace_tempsamples = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_tempsamples", "16", "use this many traces if the light was created by csqc (no inter-frame caching), -1 disables the check (to avoid flicker entirely)"};
-cvar_t r_shadow_culllights_trace_delay = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_culllights_trace_delay", "1", "light will be considered visible for this many seconds after any trace connects"};
-cvar_t r_shadow_bouncegrid = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
-cvar_t r_shadow_bouncegrid_blur = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_blur", "0", "apply a 1-radius blur on bouncegrid to denoise it and deal with boundary issues with surfaces"};
-cvar_t r_shadow_bouncegrid_dynamic_bounceminimumintensity = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_bounceminimumintensity", "0.05", "stop bouncing once intensity drops below this fraction of the original particle color"};
-cvar_t r_shadow_bouncegrid_dynamic_culllightpaths = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_culllightpaths", "0", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
-cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_directionalshading", "1", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
-cvar_t r_shadow_bouncegrid_dynamic_dlightparticlemultiplier = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_dlightparticlemultiplier", "1", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
-cvar_t r_shadow_bouncegrid_dynamic_hitmodels = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
-cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1)"};
-cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0)"};
-cvar_t r_shadow_bouncegrid_dynamic_maxphotons = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by energyperphoton"};
-cvar_t r_shadow_bouncegrid_dynamic_quality = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_quality", "1", "amount of photons that should be fired (this is multiplied by spacing ^ 2 to make it adaptive with spacing changes)"};
-cvar_t r_shadow_bouncegrid_dynamic_spacing = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_spacing", "64", "unit size of bouncegrid pixel"};
-cvar_t r_shadow_bouncegrid_dynamic_updateinterval = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
-cvar_t r_shadow_bouncegrid_dynamic_x = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_x", "64", "maximum texture size of bouncegrid on X axis"};
-cvar_t r_shadow_bouncegrid_dynamic_y = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_y", "64", "maximum texture size of bouncegrid on Y axis"};
-cvar_t r_shadow_bouncegrid_dynamic_z = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_dynamic_z", "32", "maximum texture size of bouncegrid on Z axis"};
-cvar_t r_shadow_bouncegrid_floatcolors = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_floatcolors", "1", "upload texture as RGBA16F (or RGBA32F when set to 2) rather than RGBA8 format - this gives more dynamic range and accuracy"};
-cvar_t r_shadow_bouncegrid_includedirectlighting = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
-cvar_t r_shadow_bouncegrid_intensity = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_lightpathsize = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_lightpathsize", "64", "radius (in game units) of the light path for accumulation of light in the bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_normalizevectors = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_normalizevectors", "1", "normalize random vectors (otherwise their length can vary, which dims the lighting further from the light)"};
-cvar_t r_shadow_bouncegrid_particlebounceintensity = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
-cvar_t r_shadow_bouncegrid_particleintensity = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_particleintensity", "1", "brightness of particles contributing to bouncegrid texture"};
-cvar_t r_shadow_bouncegrid_rng_seed = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_rng_seed", "0", "0+ = use this number as RNG seed, -1 = use time instead for disco-like craziness in dynamic mode"};
-cvar_t r_shadow_bouncegrid_rng_type = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_rng_type", "0", "0 = Lehmer 128bit RNG (slow but high quality), 1 = lhcheeserand 32bit RNG (quick)"};
-cvar_t r_shadow_bouncegrid_static = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
-cvar_t r_shadow_bouncegrid_static_bounceminimumintensity = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_bounceminimumintensity", "0.01", "stop bouncing once intensity drops below this fraction of the original particle color"};
-cvar_t r_shadow_bouncegrid_static_directionalshading = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
-cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
-cvar_t r_shadow_bouncegrid_static_maxbounce = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
-cvar_t r_shadow_bouncegrid_static_maxphotons = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_maxphotons", "250000", "upper bound on photons in static mode"};
-cvar_t r_shadow_bouncegrid_static_quality = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_quality", "16", "amount of photons that should be fired (this is multiplied by spacing ^ 2 to make it adaptive with spacing changes)"};
-cvar_t r_shadow_bouncegrid_static_spacing = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_static_spacing", "64", "unit size of bouncegrid pixel when in static mode"};
-cvar_t r_shadow_bouncegrid_subsamples = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_subsamples", "1", "when generating the texture, sample this many points along each dimension (multisampling uses more compute but not more memory bandwidth)"};
-cvar_t r_shadow_bouncegrid_threaded = {CVAR_CLIENT | CVAR_SAVE, "r_shadow_bouncegrid_threaded", "1", "enables use of taskqueue_maxthreads to perform the traces and slice rendering of bouncegrid"};
-cvar_t r_coronas = {CVAR_CLIENT | CVAR_SAVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
-cvar_t r_coronas_occlusionsizescale = {CVAR_CLIENT | CVAR_SAVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
-cvar_t r_coronas_occlusionquery = {CVAR_CLIENT | CVAR_SAVE, "r_coronas_occlusionquery", "0", "fades coronas according to visibility"};
-cvar_t gl_flashblend = {CVAR_CLIENT | CVAR_SAVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
-cvar_t r_editlights = {CVAR_CLIENT, "r_editlights", "0", "enables .rtlights file editing mode"};
-cvar_t r_editlights_cursordistance = {CVAR_CLIENT, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
-cvar_t r_editlights_cursorpushback = {CVAR_CLIENT, "r_editlights_cursorpushback", "0", "how far to pull the cursor back toward the eye"};
-cvar_t r_editlights_cursorpushoff = {CVAR_CLIENT, "r_editlights_cursorpushoff", "4", "how far to push the cursor off the impacted surface"};
-cvar_t r_editlights_cursorgrid = {CVAR_CLIENT, "r_editlights_cursorgrid", "4", "snaps cursor to this grid size"};
-cvar_t r_editlights_quakelightsizescale = {CVAR_CLIENT | CVAR_SAVE, "r_editlights_quakelightsizescale", "1", "changes size of light entities loaded from a map"};
-cvar_t r_editlights_drawproperties = {CVAR_CLIENT, "r_editlights_drawproperties", "1", "draw properties of currently selected light"};
-cvar_t r_editlights_current_origin = {CVAR_CLIENT, "r_editlights_current_origin", "0 0 0", "origin of selected light"};
-cvar_t r_editlights_current_angles = {CVAR_CLIENT, "r_editlights_current_angles", "0 0 0", "angles of selected light"};
-cvar_t r_editlights_current_color = {CVAR_CLIENT, "r_editlights_current_color", "1 1 1", "color of selected light"};
-cvar_t r_editlights_current_radius = {CVAR_CLIENT, "r_editlights_current_radius", "0", "radius of selected light"};
-cvar_t r_editlights_current_corona = {CVAR_CLIENT, "r_editlights_current_corona", "0", "corona intensity of selected light"};
-cvar_t r_editlights_current_coronasize = {CVAR_CLIENT, "r_editlights_current_coronasize", "0", "corona size of selected light"};
-cvar_t r_editlights_current_style = {CVAR_CLIENT, "r_editlights_current_style", "0", "style of selected light"};
-cvar_t r_editlights_current_shadows = {CVAR_CLIENT, "r_editlights_current_shadows", "0", "shadows flag of selected light"};
-cvar_t r_editlights_current_cubemap = {CVAR_CLIENT, "r_editlights_current_cubemap", "0", "cubemap of selected light"};
-cvar_t r_editlights_current_ambient = {CVAR_CLIENT, "r_editlights_current_ambient", "0", "ambient intensity of selected light"};
-cvar_t r_editlights_current_diffuse = {CVAR_CLIENT, "r_editlights_current_diffuse", "1", "diffuse intensity of selected light"};
-cvar_t r_editlights_current_specular = {CVAR_CLIENT, "r_editlights_current_specular", "1", "specular intensity of selected light"};
-cvar_t r_editlights_current_normalmode = {CVAR_CLIENT, "r_editlights_current_normalmode", "0", "normalmode flag of selected light"};
-cvar_t r_editlights_current_realtimemode = {CVAR_CLIENT, "r_editlights_current_realtimemode", "0", "realtimemode flag of selected light"};
+cvar_t r_shadow_bumpscale_basetexture = {CF_CLIENT, "r_shadow_bumpscale_basetexture", "0", "generate fake bumpmaps from diffuse textures at this bumpyness, try 4 to match tenebrae, higher values increase depth, requires r_restart to take effect"};
+cvar_t r_shadow_bumpscale_bumpmap = {CF_CLIENT, "r_shadow_bumpscale_bumpmap", "4", "what magnitude to interpret _bump.tga textures as, higher values increase depth, requires r_restart to take effect"};
+cvar_t r_shadow_debuglight = {CF_CLIENT, "r_shadow_debuglight", "-1", "renders only one light, for level design purposes or debugging"};
+cvar_t r_shadow_deferred = {CF_CLIENT | CF_ARCHIVE, "r_shadow_deferred", "0", "uses image-based lighting instead of geometry-based lighting, the method used renders a depth image and a normalmap image, renders lights into separate diffuse and specular images, and then combines this into the normal rendering, requires r_shadow_shadowmapping"};
+cvar_t r_shadow_usebihculling = {CF_CLIENT, "r_shadow_usebihculling", "1", "use BIH (Bounding Interval Hierarchy) for culling lit surfaces instead of BSP (Binary Space Partitioning)"};
+cvar_t r_shadow_usenormalmap = {CF_CLIENT | CF_ARCHIVE, "r_shadow_usenormalmap", "1", "enables use of directional shading on lights"};
+cvar_t r_shadow_gloss = {CF_CLIENT | CF_ARCHIVE, "r_shadow_gloss", "1", "0 disables gloss (specularity) rendering, 1 uses gloss if textures are found, 2 forces a flat metallic specular effect on everything without textures (similar to tenebrae)"};
+cvar_t r_shadow_gloss2intensity = {CF_CLIENT, "r_shadow_gloss2intensity", "0.125", "how bright the forced flat gloss should look if r_shadow_gloss is 2"};
+cvar_t r_shadow_glossintensity = {CF_CLIENT, "r_shadow_glossintensity", "1", "how bright textured glossmaps should look if r_shadow_gloss is 1 or 2"};
+cvar_t r_shadow_glossexponent = {CF_CLIENT, "r_shadow_glossexponent", "32", "how 'sharp' the gloss should appear (specular power)"};
+cvar_t r_shadow_gloss2exponent = {CF_CLIENT, "r_shadow_gloss2exponent", "32", "same as r_shadow_glossexponent but for forced gloss (gloss 2) surfaces"};
+cvar_t r_shadow_glossexact = {CF_CLIENT, "r_shadow_glossexact", "0", "use exact reflection math for gloss (slightly slower, but should look a tad better)"};
+cvar_t r_shadow_lightattenuationdividebias = {CF_CLIENT, "r_shadow_lightattenuationdividebias", "1", "changes attenuation texture generation"};
+cvar_t r_shadow_lightattenuationlinearscale = {CF_CLIENT, "r_shadow_lightattenuationlinearscale", "2", "changes attenuation texture generation"};
+cvar_t r_shadow_lightintensityscale = {CF_CLIENT, "r_shadow_lightintensityscale", "1", "renders all world lights brighter or darker"};
+cvar_t r_shadow_lightradiusscale = {CF_CLIENT, "r_shadow_lightradiusscale", "1", "renders all world lights larger or smaller"};
+cvar_t r_shadow_projectdistance = {CF_CLIENT, "r_shadow_projectdistance", "0", "how far to cast shadows"};
+cvar_t r_shadow_frontsidecasting = {CF_CLIENT, "r_shadow_frontsidecasting", "1", "whether to cast shadows from illuminated triangles (front side of model) or unlit triangles (back side of model)"};
+cvar_t r_shadow_realtime_dlight = {CF_CLIENT | CF_ARCHIVE, "r_shadow_realtime_dlight", "1", "enables rendering of dynamic lights such as explosions and rocket light"};
+cvar_t r_shadow_realtime_dlight_shadows = {CF_CLIENT | CF_ARCHIVE, "r_shadow_realtime_dlight_shadows", "1", "enables rendering of shadows from dynamic lights"};
+cvar_t r_shadow_realtime_dlight_svbspculling = {CF_CLIENT, "r_shadow_realtime_dlight_svbspculling", "0", "enables svbsp optimization on dynamic lights (very slow!)"};
+cvar_t r_shadow_realtime_dlight_portalculling = {CF_CLIENT, "r_shadow_realtime_dlight_portalculling", "0", "enables portal optimization on dynamic lights (slow!)"};
+cvar_t r_shadow_realtime_world = {CF_CLIENT | CF_ARCHIVE, "r_shadow_realtime_world", "0", "enables rendering of full world lighting (whether loaded from the map, or a .rtlights file, or a .ent file, or a .lights file produced by hlight)"};
+cvar_t r_shadow_realtime_world_importlightentitiesfrommap = {CF_CLIENT, "r_shadow_realtime_world_importlightentitiesfrommap", "1", "load lights from .ent file or map entities at startup if no .rtlights or .lights file is present (if set to 2, always use the .ent or map entities)"};
+cvar_t r_shadow_realtime_world_lightmaps = {CF_CLIENT | CF_ARCHIVE, "r_shadow_realtime_world_lightmaps", "0", "brightness to render lightmaps when using full world lighting, try 0.5 for a tenebrae-like appearance"};
+cvar_t r_shadow_realtime_world_shadows = {CF_CLIENT | CF_ARCHIVE, "r_shadow_realtime_world_shadows", "1", "enables rendering of shadows from world lights"};
+cvar_t r_shadow_realtime_world_compile = {CF_CLIENT, "r_shadow_realtime_world_compile", "1", "enables compilation of world lights for higher performance rendering"};
+cvar_t r_shadow_realtime_world_compileshadow = {CF_CLIENT, "r_shadow_realtime_world_compileshadow", "1", "enables compilation of shadows from world lights for higher performance rendering"};
+cvar_t r_shadow_realtime_world_compilesvbsp = {CF_CLIENT, "r_shadow_realtime_world_compilesvbsp", "1", "enables svbsp optimization during compilation (slower than compileportalculling but more exact)"};
+cvar_t r_shadow_realtime_world_compileportalculling = {CF_CLIENT, "r_shadow_realtime_world_compileportalculling", "1", "enables portal-based culling optimization during compilation (overrides compilesvbsp)"};
+cvar_t r_shadow_scissor = {CF_CLIENT, "r_shadow_scissor", "1", "use scissor optimization of light rendering (restricts rendering to the portion of the screen affected by the light)"};
+cvar_t r_shadow_shadowmapping = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping", "1", "enables use of shadowmapping (shadow rendering by depth texture sampling)"};
+cvar_t r_shadow_shadowmapping_filterquality = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_filterquality", "-1", "shadowmap filter modes: -1 = auto-select, 0 = no filtering, 1 = bilinear, 2 = bilinear 2x2 blur (fast), 3 = 3x3 blur (moderate), 4 = 4x4 blur (slow)"};
+cvar_t r_shadow_shadowmapping_useshadowsampler = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_useshadowsampler", "1", "whether to use sampler2DShadow if available"};
+cvar_t r_shadow_shadowmapping_depthbits = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_depthbits", "24", "requested minimum shadowmap texture depth bits"};
+cvar_t r_shadow_shadowmapping_vsdct = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_vsdct", "1", "enables use of virtual shadow depth cube texture"};
+cvar_t r_shadow_shadowmapping_minsize = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_minsize", "32", "limit of shadowmap side size - must be at least r_shadow_shadowmapping_bordersize+2"};
+cvar_t r_shadow_shadowmapping_maxsize = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_maxsize", "512", "limit of shadowmap side size - can not be more than 1/8th of atlassize because lights store 6 sides (2x3 grid) and sometimes 12 sides (4x3 grid for shadows from EF_NOSELFSHADOW entities) and there are multiple lights..."};
+cvar_t r_shadow_shadowmapping_texturesize = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_texturesize", "8192", "size of shadowmap atlas texture - all shadowmaps are packed into this texture at frame start"};
+cvar_t r_shadow_shadowmapping_precision = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_precision", "1", "makes shadowmaps have a maximum resolution of this number of pixels per light source radius unit such that, for example, at precision 0.5 a light with radius 200 will have a maximum resolution of 100 pixels"};
+//cvar_t r_shadow_shadowmapping_lod_bias = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_lod_bias", "16", "shadowmap size bias"};
+//cvar_t r_shadow_shadowmapping_lod_scale = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_lod_scale", "128", "shadowmap size scaling parameter"};
+cvar_t r_shadow_shadowmapping_bordersize = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_bordersize", "5", "shadowmap size bias for filtering"};
+cvar_t r_shadow_shadowmapping_nearclip = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_nearclip", "1", "shadowmap nearclip in world units"};
+cvar_t r_shadow_shadowmapping_bias = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_bias", "0.03", "shadowmap bias parameter (this is multiplied by nearclip * 1024 / lodsize)"};
+cvar_t r_shadow_shadowmapping_polygonfactor = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_polygonfactor", "2", "slope-dependent shadowmapping bias"};
+cvar_t r_shadow_shadowmapping_polygonoffset = {CF_CLIENT | CF_ARCHIVE, "r_shadow_shadowmapping_polygonoffset", "0", "constant shadowmapping bias"};
+cvar_t r_shadow_sortsurfaces = {CF_CLIENT, "r_shadow_sortsurfaces", "1", "improve performance by sorting illuminated surfaces by texture"};
+cvar_t r_shadow_culllights_pvs = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_pvs", "1", "check if light overlaps any visible bsp leafs when determining if the light is visible"};
+cvar_t r_shadow_culllights_trace = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace", "1", "use raytraces from the eye to random places within light bounds to determine if the light is visible"};
+cvar_t r_shadow_culllights_trace_eyejitter = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_eyejitter", "16", "offset eye location randomly by this much"};
+cvar_t r_shadow_culllights_trace_enlarge = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_enlarge", "0", "make light bounds bigger by *(1.0+enlarge)"};
+cvar_t r_shadow_culllights_trace_expand = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_expand", "8", "make light bounds bigger by this many units"};
+cvar_t r_shadow_culllights_trace_pad = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_pad", "8", "accept traces that hit within this many units of the light bounds"};
+cvar_t r_shadow_culllights_trace_samples = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_samples", "16", "use this many traces to random positions (in addition to center trace)"};
+cvar_t r_shadow_culllights_trace_tempsamples = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_tempsamples", "16", "use this many traces if the light was created by csqc (no inter-frame caching), -1 disables the check (to avoid flicker entirely)"};
+cvar_t r_shadow_culllights_trace_delay = {CF_CLIENT | CF_ARCHIVE, "r_shadow_culllights_trace_delay", "1", "light will be considered visible for this many seconds after any trace connects"};
+cvar_t r_shadow_bouncegrid = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid", "0", "perform particle tracing for indirect lighting (Global Illumination / radiosity) using a 3D texture covering the scene, only active on levels with realtime lights active (r_shadow_realtime_world is usually required for these)"};
+cvar_t r_shadow_bouncegrid_blur = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_blur", "0", "apply a 1-radius blur on bouncegrid to denoise it and deal with boundary issues with surfaces"};
+cvar_t r_shadow_bouncegrid_dynamic_bounceminimumintensity = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_bounceminimumintensity", "0.05", "stop bouncing once intensity drops below this fraction of the original particle color"};
+cvar_t r_shadow_bouncegrid_dynamic_culllightpaths = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_culllightpaths", "0", "skip accumulating light in the bouncegrid texture where the light paths are out of view (dynamic mode only)"};
+cvar_t r_shadow_bouncegrid_dynamic_directionalshading = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_directionalshading", "1", "use diffuse shading rather than ambient, 3D texture becomes 8x as many pixels to hold the additional data"};
+cvar_t r_shadow_bouncegrid_dynamic_dlightparticlemultiplier = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_dlightparticlemultiplier", "1", "if set to a high value like 16 this can make dlights look great, but 0 is recommended for performance reasons"};
+cvar_t r_shadow_bouncegrid_dynamic_hitmodels = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_hitmodels", "0", "enables hitting character model geometry (SLOW)"};
+cvar_t r_shadow_bouncegrid_dynamic_lightradiusscale = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxbounce = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0)"};
+cvar_t r_shadow_bouncegrid_dynamic_maxphotons = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_maxphotons", "25000", "upper bound on photons to shoot per update, divided proportionately between lights - normally the number of photons is calculated by energyperphoton"};
+cvar_t r_shadow_bouncegrid_dynamic_quality = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_quality", "1", "amount of photons that should be fired (this is multiplied by spacing ^ 2 to make it adaptive with spacing changes)"};
+cvar_t r_shadow_bouncegrid_dynamic_spacing = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_spacing", "64", "unit size of bouncegrid pixel"};
+cvar_t r_shadow_bouncegrid_dynamic_updateinterval = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_updateinterval", "0", "update bouncegrid texture once per this many seconds, useful values are 0, 0.05, or 1000000"};
+cvar_t r_shadow_bouncegrid_dynamic_x = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_x", "64", "maximum texture size of bouncegrid on X axis"};
+cvar_t r_shadow_bouncegrid_dynamic_y = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_y", "64", "maximum texture size of bouncegrid on Y axis"};
+cvar_t r_shadow_bouncegrid_dynamic_z = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_dynamic_z", "32", "maximum texture size of bouncegrid on Z axis"};
+cvar_t r_shadow_bouncegrid_floatcolors = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_floatcolors", "1", "upload texture as RGBA16F (or RGBA32F when set to 2) rather than RGBA8 format - this gives more dynamic range and accuracy"};
+cvar_t r_shadow_bouncegrid_includedirectlighting = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_includedirectlighting", "0", "allows direct lighting to be recorded, not just indirect (gives an effect somewhat like r_shadow_realtime_world_lightmaps)"};
+cvar_t r_shadow_bouncegrid_intensity = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_intensity", "4", "overall brightness of bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_lightpathsize = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_lightpathsize", "64", "radius (in game units) of the light path for accumulation of light in the bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_normalizevectors = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_normalizevectors", "1", "normalize random vectors (otherwise their length can vary, which dims the lighting further from the light)"};
+cvar_t r_shadow_bouncegrid_particlebounceintensity = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_particlebounceintensity", "4", "amount of energy carried over after each bounce, this is a multiplier of texture color and the result is clamped to 1 or less, to prevent adding energy on each bounce"};
+cvar_t r_shadow_bouncegrid_particleintensity = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_particleintensity", "1", "brightness of particles contributing to bouncegrid texture"};
+cvar_t r_shadow_bouncegrid_rng_seed = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_rng_seed", "0", "0+ = use this number as RNG seed, -1 = use time instead for disco-like craziness in dynamic mode"};
+cvar_t r_shadow_bouncegrid_rng_type = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_rng_type", "0", "0 = Lehmer 128bit RNG (slow but high quality), 1 = lhcheeserand 32bit RNG (quick)"};
+cvar_t r_shadow_bouncegrid_static = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static", "1", "use static radiosity solution (high quality) rather than dynamic (splotchy)"};
+cvar_t r_shadow_bouncegrid_static_bounceminimumintensity = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_bounceminimumintensity", "0.01", "stop bouncing once intensity drops below this fraction of the original particle color"};
+cvar_t r_shadow_bouncegrid_static_directionalshading = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_directionalshading", "1", "whether to use directionalshading when in static mode"};
+cvar_t r_shadow_bouncegrid_static_lightradiusscale = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_lightradiusscale", "5", "particles stop at this fraction of light radius (can be more than 1) when in static mode"};
+cvar_t r_shadow_bouncegrid_static_maxbounce = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_maxbounce", "5", "maximum number of bounces for a particle (minimum is 0) in static mode"};
+cvar_t r_shadow_bouncegrid_static_maxphotons = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_maxphotons", "250000", "upper bound on photons in static mode"};
+cvar_t r_shadow_bouncegrid_static_quality = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_quality", "16", "amount of photons that should be fired (this is multiplied by spacing ^ 2 to make it adaptive with spacing changes)"};
+cvar_t r_shadow_bouncegrid_static_spacing = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_static_spacing", "64", "unit size of bouncegrid pixel when in static mode"};
+cvar_t r_shadow_bouncegrid_subsamples = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_subsamples", "1", "when generating the texture, sample this many points along each dimension (multisampling uses more compute but not more memory bandwidth)"};
+cvar_t r_shadow_bouncegrid_threaded = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_threaded", "1", "enables use of taskqueue_maxthreads to perform the traces and slice rendering of bouncegrid"};
+cvar_t r_coronas = {CF_CLIENT | CF_ARCHIVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
+cvar_t r_coronas_occlusionsizescale = {CF_CLIENT | CF_ARCHIVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
+cvar_t r_coronas_occlusionquery = {CF_CLIENT | CF_ARCHIVE, "r_coronas_occlusionquery", "0", "fades coronas according to visibility"};
+cvar_t gl_flashblend = {CF_CLIENT | CF_ARCHIVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
+cvar_t r_editlights = {CF_CLIENT, "r_editlights", "0", "enables .rtlights file editing mode"};
+cvar_t r_editlights_cursordistance = {CF_CLIENT, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
+cvar_t r_editlights_cursorpushback = {CF_CLIENT, "r_editlights_cursorpushback", "0", "how far to pull the cursor back toward the eye"};
+cvar_t r_editlights_cursorpushoff = {CF_CLIENT, "r_editlights_cursorpushoff", "4", "how far to push the cursor off the impacted surface"};
+cvar_t r_editlights_cursorgrid = {CF_CLIENT, "r_editlights_cursorgrid", "4", "snaps cursor to this grid size"};
+cvar_t r_editlights_quakelightsizescale = {CF_CLIENT | CF_ARCHIVE, "r_editlights_quakelightsizescale", "1", "changes size of light entities loaded from a map"};
+cvar_t r_editlights_drawproperties = {CF_CLIENT, "r_editlights_drawproperties", "1", "draw properties of currently selected light"};
+cvar_t r_editlights_current_origin = {CF_CLIENT, "r_editlights_current_origin", "0 0 0", "origin of selected light"};
+cvar_t r_editlights_current_angles = {CF_CLIENT, "r_editlights_current_angles", "0 0 0", "angles of selected light"};
+cvar_t r_editlights_current_color = {CF_CLIENT, "r_editlights_current_color", "1 1 1", "color of selected light"};
+cvar_t r_editlights_current_radius = {CF_CLIENT, "r_editlights_current_radius", "0", "radius of selected light"};
+cvar_t r_editlights_current_corona = {CF_CLIENT, "r_editlights_current_corona", "0", "corona intensity of selected light"};
+cvar_t r_editlights_current_coronasize = {CF_CLIENT, "r_editlights_current_coronasize", "0", "corona size of selected light"};
+cvar_t r_editlights_current_style = {CF_CLIENT, "r_editlights_current_style", "0", "style of selected light"};
+cvar_t r_editlights_current_shadows = {CF_CLIENT, "r_editlights_current_shadows", "0", "shadows flag of selected light"};
+cvar_t r_editlights_current_cubemap = {CF_CLIENT, "r_editlights_current_cubemap", "0", "cubemap of selected light"};
+cvar_t r_editlights_current_ambient = {CF_CLIENT, "r_editlights_current_ambient", "0", "ambient intensity of selected light"};
+cvar_t r_editlights_current_diffuse = {CF_CLIENT, "r_editlights_current_diffuse", "1", "diffuse intensity of selected light"};
+cvar_t r_editlights_current_specular = {CF_CLIENT, "r_editlights_current_specular", "1", "specular intensity of selected light"};
+cvar_t r_editlights_current_normalmode = {CF_CLIENT, "r_editlights_current_normalmode", "0", "normalmode flag of selected light"};
+cvar_t r_editlights_current_realtimemode = {CF_CLIENT, "r_editlights_current_realtimemode", "0", "realtimemode flag of selected light"};
 
 r_shadow_bouncegrid_state_t r_shadow_bouncegrid_state;
 
@@ -274,7 +274,7 @@ static memexpandablearray_t r_shadow_worldlightsarray;
 dlight_t *r_shadow_selectedlight;
 dlight_t r_shadow_bufferlight;
 vec3_t r_editlights_cursorlocation;
-qboolean r_editlights_lockcursor;
+qbool r_editlights_lockcursor;
 
 extern int con_vislines;
 
@@ -375,7 +375,7 @@ static void R_Shadow_SetShadowMode(void)
 		R_GLSL_Restart_f(&cmd_client);
 }
 
-qboolean R_Shadow_ShadowMappingEnabled(void)
+qbool R_Shadow_ShadowMappingEnabled(void)
 {
 	switch (r_shadow_shadowmode)
 	{
@@ -1526,7 +1526,7 @@ void R_Shadow_ClearShadowMapTexture(void)
 		GL_Clear(GL_DEPTH_BUFFER_BIT, clearcolor, 1.0f, 0);
 }
 
-static void R_Shadow_SetShadowmapParametersForLight(qboolean noselfshadowpass)
+static void R_Shadow_SetShadowmapParametersForLight(qbool noselfshadowpass)
 {
 	int size = rsurface.rtlight->shadowmapatlassidesize;
 	float nearclip = r_shadow_shadowmapping_nearclip.value / rsurface.rtlight->radius;
@@ -1596,7 +1596,7 @@ static void R_Shadow_RenderMode_ShadowMap(int side, int size, int x, int y)
 	r_shadow_shadowmapside = side;
 }
 
-void R_Shadow_RenderMode_Lighting(qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass)
+void R_Shadow_RenderMode_Lighting(qbool transparent, qbool shadowmapping, qbool noselfshadowpass)
 {
 	R_Mesh_ResetTextureState();
 	if (transparent)
@@ -1641,7 +1641,7 @@ static const float bboxpoints[8][3] =
 	{ 1, 1, 1},
 };
 
-void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping)
+void R_Shadow_RenderMode_DrawDeferredLight(qbool shadowmapping)
 {
 	int i;
 	float vertex3f[8*3];
@@ -1673,9 +1673,9 @@ void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping)
 	R_Mesh_Draw(0, 8, 0, 12, NULL, NULL, 0, bboxelements, NULL, 0);
 }
 
-static qboolean R_Shadow_BounceGrid_CheckEnable(int flag)
+static qbool R_Shadow_BounceGrid_CheckEnable(int flag)
 {
-	qboolean enable = r_shadow_bouncegrid_state.capable && r_shadow_bouncegrid.integer != 0 && r_refdef.scene.worldmodel;
+	qbool enable = r_shadow_bouncegrid_state.capable && r_shadow_bouncegrid.integer != 0 && r_refdef.scene.worldmodel;
 	int lightindex;
 	int range;
 	dlight_t *light;
@@ -1709,7 +1709,7 @@ static qboolean R_Shadow_BounceGrid_CheckEnable(int flag)
 
 static void R_Shadow_BounceGrid_GenerateSettings(r_shadow_bouncegrid_settings_t *settings)
 {
-	qboolean s = r_shadow_bouncegrid_static.integer != 0;
+	qbool s = r_shadow_bouncegrid_static.integer != 0;
 	float spacing = bound(1.0f, s ? r_shadow_bouncegrid_static_spacing.value : r_shadow_bouncegrid_dynamic_spacing.value, 1024.0f);
 	float quality = bound(0.0001f, (s ? r_shadow_bouncegrid_static_quality.value : r_shadow_bouncegrid_dynamic_quality.value), 1024.0f);
 	float bounceminimumintensity = s ? r_shadow_bouncegrid_static_bounceminimumintensity.value : r_shadow_bouncegrid_dynamic_bounceminimumintensity.value;
@@ -1776,7 +1776,7 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	{
 		int lightindex;
 		int range;
-		qboolean bounds_set = false;
+		qbool bounds_set = false;
 		dlight_t *light;
 		rtlight_t *rtlight;
 
@@ -2530,7 +2530,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		}
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixelsbgra8, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, pixelsbgra8, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, pixelsbgra8, TEXTYPE_BGRA, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
@@ -2581,7 +2581,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		}
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba16f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba16f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba16f, TEXTYPE_COLORBUFFER16F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
@@ -2590,7 +2590,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 		pixelsrgba32f = highpixels;
 
 		if (!r_shadow_bouncegrid_state.createtexture)
-			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba32f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands);
+			R_UpdateTexture(r_shadow_bouncegrid_state.texture, (const unsigned char *)pixelsrgba32f, 0, 0, 0, resolution[0], resolution[1], resolution[2]*pixelbands, 0);
 		else
 			r_shadow_bouncegrid_state.texture = R_LoadTexture3D(r_shadow_texturepool, "bouncegrid", resolution[0], resolution[1], resolution[2]*pixelbands, (const unsigned char *)pixelsrgba32f, TEXTYPE_COLORBUFFER32F, TEXF_CLAMP | TEXF_ALPHA | TEXF_FORCELINEAR, 0, NULL);
 		break;
@@ -2635,7 +2635,7 @@ static void R_Shadow_BounceGrid_TracePhotons_Shot(r_shadow_bouncegrid_photon_t *
 	VectorCopy(cliptrace.endpos, shothit);
 	if ((remainingbounces == r_shadow_bouncegrid_state.settings.maxbounce || r_shadow_bouncegrid_state.settings.includedirectlighting) && p->numpaths < PHOTON_MAX_PATHS)
 	{
-		qboolean notculled = true;
+		qbool notculled = true;
 		// cull paths that fail R_CullBox in dynamic mode
 		if (!r_shadow_bouncegrid_state.settings.staticmode
 			&& r_shadow_bouncegrid_dynamic_culllightpaths.integer)
@@ -2766,8 +2766,8 @@ void R_Shadow_UpdateBounceGridTexture(void)
 {
 	int flag = r_refdef.scene.rtworld ? LIGHTFLAG_REALTIMEMODE : LIGHTFLAG_NORMALMODE;
 	r_shadow_bouncegrid_settings_t settings;
-	qboolean enable = false;
-	qboolean settingschanged;
+	qbool enable = false;
+	qbool settingschanged;
 
 	enable = R_Shadow_BounceGrid_CheckEnable(flag);
 	
@@ -2883,7 +2883,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 	}
 }
 
-void R_Shadow_RenderMode_VisibleLighting(qboolean transparent)
+void R_Shadow_RenderMode_VisibleLighting(qbool transparent)
 {
 	R_Shadow_RenderMode_Reset();
 	GL_BlendFunc(GL_ONE, GL_ONE);
@@ -2923,7 +2923,7 @@ int bboxedges[12][2] =
 	{3, 7}, // XY, +Z
 };
 
-qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
+qbool R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 {
 	if (!r_shadow_scissor.integer || r_shadow_usingdeferredprepass || r_trippy.integer)
 	{
@@ -2954,14 +2954,14 @@ static void R_Shadow_RenderLighting_VisibleLighting(int texturenumsurfaces, cons
 static void R_Shadow_RenderLighting_Light_GLSL(int texturenumsurfaces, const msurface_t **texturesurfacelist, const float ambientcolor[3], const float diffusecolor[3], const float specularcolor[3])
 {
 	// ARB2 GLSL shader path (GFFX5200, Radeon 9500)
-	R_SetupShader_Surface(ambientcolor, diffusecolor, specularcolor, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false);
+	R_SetupShader_Surface(ambientcolor, diffusecolor, specularcolor, RSURFPASS_RTLIGHT, texturenumsurfaces, texturesurfacelist, NULL, false, false);
 	RSurf_DrawBatch();
 }
 
 extern cvar_t gl_lightmaps;
 void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **texturesurfacelist)
 {
-	qboolean negated;
+	qbool negated;
 	float ambientcolor[3], diffusecolor[3], specularcolor[3];
 	VectorM(rsurface.rtlight->ambientscale + rsurface.texture->rtlightambient, rsurface.texture->render_rtlight_diffuse, ambientcolor);
 	VectorM(rsurface.rtlight->diffusescale * max(0, 1.0 - rsurface.texture->rtlightambient), rsurface.texture->render_rtlight_diffuse, diffusecolor);
@@ -3052,7 +3052,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 	int numsurfaces, numleafs, numleafpvsbytes, numshadowtrispvsbytes, numlighttrispvsbytes;
 	int lighttris, shadowtris;
 	entity_render_t *ent = r_refdef.scene.worldentity;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	unsigned char *data;
 
 	// compile the light
@@ -3409,7 +3409,7 @@ static void R_Shadow_DrawWorldLight(int numsurfaces, int *surfacelist, const uns
 
 static void R_Shadow_DrawEntityLight(entity_render_t *ent)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	if (!model->DrawLight)
 		return;
 
@@ -3439,8 +3439,8 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	static entity_render_t *lightentities_noselfshadow[MAX_EDICTS];
 	static entity_render_t *shadowentities[MAX_EDICTS];
 	static entity_render_t *shadowentities_noselfshadow[MAX_EDICTS];
-	qboolean nolight;
-	qboolean castshadows;
+	qbool nolight;
+	qbool castshadows;
 
 	rtlight->draw = false;
 	rtlight->cached_numlightentities = 0;
@@ -3580,7 +3580,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	// add dynamic entities that are lit by the light
 	for (i = 0; i < r_refdef.scene.numentities; i++)
 	{
-		dp_model_t *model;
+		model_t *model;
 		entity_render_t *ent = r_refdef.scene.entities[i];
 		vec3_t org;
 		if (!BoxesOverlap(ent->mins, ent->maxs, rtlight->cached_cullmins, rtlight->cached_cullmaxs))
@@ -3875,7 +3875,7 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 	entity_render_t **lightentities;
 	entity_render_t **lightentities_noselfshadow;
 	int *surfacelist;
-	qboolean castshadows;
+	qbool castshadows;
 
 	// check if we cached this light this frame (meaning it is worth drawing)
 	if (!rtlight->draw)
@@ -4047,7 +4047,7 @@ void R_Shadow_DrawPrepass(void)
 }
 
 #define MAX_SCENELIGHTS 65536
-static qboolean R_Shadow_PrepareLights_AddSceneLight(rtlight_t *rtlight)
+static qbool R_Shadow_PrepareLights_AddSceneLight(rtlight_t *rtlight)
 {
 	if (r_shadow_scenemaxlights <= r_shadow_scenenumlights)
 	{
@@ -4456,7 +4456,7 @@ static void R_Shadow_DrawModelShadowMaps(void)
 	Matrix4x4_Concat(&r_shadow_shadowmapmatrix, &texmatrix, &invmvpmatrix);
 }
 
-static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qboolean usequery)
+static void R_BeginCoronaQuery(rtlight_t *rtlight, float scale, qbool usequery)
 {
 	float zdist;
 	vec3_t centerorigin;
@@ -4550,7 +4550,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 	if (VectorLength(color) > (1.0f / 256.0f))
 	{
 		float vertex3f[12];
-		qboolean negated = (color[0] + color[1] + color[2] < 0);
+		qbool negated = (color[0] + color[1] + color[2] < 0);
 		if(negated)
 		{
 			VectorNegate(color, color);
@@ -4567,7 +4567,7 @@ static void R_DrawCorona(rtlight_t *rtlight, float cscale, float scale)
 void R_Shadow_DrawCoronas(void)
 {
 	int i, flag;
-	qboolean usequery = false;
+	qbool usequery = false;
 	size_t lightindex;
 	dlight_t *light;
 	rtlight_t *rtlight;
@@ -6022,21 +6022,21 @@ static void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_current_specular);
 	Cvar_RegisterVariable(&r_editlights_current_normalmode);
 	Cvar_RegisterVariable(&r_editlights_current_realtimemode);
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
-	Cmd_AddCommand(CMD_CLIENT, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_help", R_Shadow_EditLights_Help_f, "prints documentation on console commands and variables in rtlight editing system");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_clear", R_Shadow_EditLights_Clear_f, "removes all world lights (let there be darkness!)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_reload", R_Shadow_EditLights_Reload_f, "reloads rtlights file (or imports from .lights file or .ent file or the map itself)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_save", R_Shadow_EditLights_Save_f, "save .rtlights file for current level");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_spawn", R_Shadow_EditLights_Spawn_f, "creates a light with default properties (let there be light!)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_edit", R_Shadow_EditLights_Edit_f, "changes a property on the selected light");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_editall", R_Shadow_EditLights_EditAll_f, "changes a property on ALL lights at once (tip: use radiusscale and colorscale to alter these properties)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_remove", R_Shadow_EditLights_Remove_f, "remove selected light");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f, "toggle on/off the shadow option on the selected light");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f, "toggle on/off the corona option on the selected light");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f, "load lights from .ent file or map entities (ignoring .rtlights or .lights file)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f, "load lights from .lights file (ignoring .rtlights or .ent files and map entities)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f, "store a copy of all properties (except origin) of the selected light");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f, "apply the stored properties onto the selected light (making it exactly identical except for origin)");
+	Cmd_AddCommand(CF_CLIENT, "r_editlights_lock", R_Shadow_EditLights_Lock_f, "lock selection to current light, if already locked - unlock");
 }
 
 

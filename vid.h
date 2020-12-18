@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef VID_H
 #define VID_H
 
+#include <stddef.h>
+#include "qtypes.h"
+struct cmd_state_s;
+
 #define ENGINE_ICON ( (gamemode == GAME_NEXUIZ) ? nexuiz_xpm : darkplaces_xpm )
 
 extern int cl_available;
@@ -38,12 +42,12 @@ renderpath_t;
 typedef struct viddef_support_s
 {
 	int glshaderversion; // this is at least 150 (GL 3.2)
-	qboolean amd_texture_texture4;
-	qboolean arb_texture_gather;
-	qboolean ext_texture_compression_s3tc;
-	qboolean ext_texture_filter_anisotropic;
-	qboolean ext_texture_srgb;
-	qboolean arb_debug_output;
+	qbool amd_texture_texture4;
+	qbool arb_texture_gather;
+	qbool ext_texture_compression_s3tc;
+	qbool ext_texture_filter_anisotropic;
+	qbool ext_texture_srgb;
+	qbool arb_debug_output;
 }
 viddef_support_t;
 
@@ -52,10 +56,10 @@ typedef struct viddef_mode_s
 	int width;
 	int height;
 	int bitsperpixel;
-	qboolean fullscreen;
+	qbool fullscreen;
 	float refreshrate;
-	qboolean userefreshrate;
-	qboolean stereobuffer;
+	qbool userefreshrate;
+	qbool stereobuffer;
 	int samples;
 }
 viddef_mode_t;
@@ -68,19 +72,19 @@ typedef struct viddef_s
 	int width;
 	int height;
 	int bitsperpixel;
-	qboolean fullscreen;
+	qbool fullscreen;
 	float refreshrate;
-	qboolean userefreshrate;
-	qboolean stereobuffer;
+	qbool userefreshrate;
+	qbool stereobuffer;
 	int samples;
-	qboolean stencil;
-	qboolean sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
-	qboolean sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
-	qboolean sRGBcapable2D; // whether 2D rendering can be sRGB corrected (renderpath)
-	qboolean sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath)
+	qbool stencil;
+	qbool sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
+	qbool sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
+	qbool sRGBcapable2D; // whether 2D rendering can be sRGB corrected (renderpath)
+	qbool sRGBcapable3D; // whether 3D rendering can be sRGB corrected (renderpath)
 
 	renderpath_t renderpath;
-	qboolean allowalphatocoverage; // indicates the GL_AlphaToCoverage function works on this renderpath and framebuffer
+	qbool allowalphatocoverage; // indicates the GL_AlphaToCoverage function works on this renderpath and framebuffer
 
 	unsigned int maxtexturesize_2d;
 	unsigned int maxtexturesize_3d;
@@ -105,16 +109,16 @@ typedef struct vid_joystate_s
 {
 	float axis[MAXJOYAXIS]; // -1 to +1
 	unsigned char button[MAXJOYBUTTON]; // 0 or 1
-	qboolean is360; // indicates this joystick is a Microsoft Xbox 360 Controller For Windows
+	qbool is360; // indicates this joystick is a Microsoft Xbox 360 Controller For Windows
 }
 vid_joystate_t;
 
 extern vid_joystate_t vid_joystate;
 
-extern cvar_t joy_index;
-extern cvar_t joy_enable;
-extern cvar_t joy_detected;
-extern cvar_t joy_active;
+extern struct cvar_s joy_index;
+extern struct cvar_s joy_enable;
+extern struct cvar_s joy_detected;
+extern struct cvar_s joy_active;
 
 float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone);
 void VID_ApplyJoyState(vid_joystate_t *joystate);
@@ -122,57 +126,57 @@ void VID_BuildJoyState(vid_joystate_t *joystate);
 void VID_Shared_BuildJoyState_Begin(vid_joystate_t *joystate);
 void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate);
 int VID_Shared_SetJoystick(int index);
-qboolean VID_JoyBlockEmulatedKeys(int keycode);
-void VID_EnableJoystick(qboolean enable);
+qbool VID_JoyBlockEmulatedKeys(int keycode);
+void VID_EnableJoystick(qbool enable);
 
-extern qboolean vid_hidden;
-extern qboolean vid_activewindow;
-extern qboolean vid_supportrefreshrate;
+extern qbool vid_hidden;
+extern qbool vid_activewindow;
+extern qbool vid_supportrefreshrate;
 
-extern cvar_t vid_fullscreen;
-extern cvar_t vid_borderless;
-extern cvar_t vid_width;
-extern cvar_t vid_height;
-extern cvar_t vid_bitsperpixel;
-extern cvar_t vid_samples;
-extern cvar_t vid_refreshrate;
-extern cvar_t vid_userefreshrate;
-extern cvar_t vid_touchscreen_density;
-extern cvar_t vid_touchscreen_xdpi;
-extern cvar_t vid_touchscreen_ydpi;
-extern cvar_t vid_vsync;
-extern cvar_t vid_mouse;
-extern cvar_t vid_mouse_clickthrough;
-extern cvar_t vid_grabkeyboard;
-extern cvar_t vid_touchscreen;
-extern cvar_t vid_touchscreen_showkeyboard;
-extern cvar_t vid_touchscreen_supportshowkeyboard;
-extern cvar_t vid_stick_mouse;
-extern cvar_t vid_resizable;
-extern cvar_t vid_desktopfullscreen;
+extern struct cvar_s vid_fullscreen;
+extern struct cvar_s vid_borderless;
+extern struct cvar_s vid_width;
+extern struct cvar_s vid_height;
+extern struct cvar_s vid_bitsperpixel;
+extern struct cvar_s vid_samples;
+extern struct cvar_s vid_refreshrate;
+extern struct cvar_s vid_userefreshrate;
+extern struct cvar_s vid_touchscreen_density;
+extern struct cvar_s vid_touchscreen_xdpi;
+extern struct cvar_s vid_touchscreen_ydpi;
+extern struct cvar_s vid_vsync;
+extern struct cvar_s vid_mouse;
+extern struct cvar_s vid_mouse_clickthrough;
+extern struct cvar_s vid_grabkeyboard;
+extern struct cvar_s vid_touchscreen;
+extern struct cvar_s vid_touchscreen_showkeyboard;
+extern struct cvar_s vid_touchscreen_supportshowkeyboard;
+extern struct cvar_s vid_stick_mouse;
+extern struct cvar_s vid_resizable;
+extern struct cvar_s vid_desktopfullscreen;
 #ifdef WIN32
-extern cvar_t vid_ignore_taskbar;
+extern struct cvar_s vid_ignore_taskbar;
 #endif
-extern cvar_t vid_minwidth;
-extern cvar_t vid_minheight;
-extern cvar_t vid_sRGB;
-extern cvar_t vid_sRGB_fallback;
+extern struct cvar_s vid_minwidth;
+extern struct cvar_s vid_minheight;
+extern struct cvar_s vid_sRGB;
+extern struct cvar_s vid_sRGB_fallback;
 
-extern cvar_t gl_finish;
+extern struct cvar_s gl_finish;
 
-extern cvar_t v_gamma;
-extern cvar_t v_contrast;
-extern cvar_t v_brightness;
-extern cvar_t v_color_enable;
-extern cvar_t v_color_black_r;
-extern cvar_t v_color_black_g;
-extern cvar_t v_color_black_b;
-extern cvar_t v_color_grey_r;
-extern cvar_t v_color_grey_g;
-extern cvar_t v_color_grey_b;
-extern cvar_t v_color_white_r;
-extern cvar_t v_color_white_g;
-extern cvar_t v_color_white_b;
+extern struct cvar_s v_gamma;
+extern struct cvar_s v_contrast;
+extern struct cvar_s v_brightness;
+extern struct cvar_s v_color_enable;
+extern struct cvar_s v_color_black_r;
+extern struct cvar_s v_color_black_g;
+extern struct cvar_s v_color_black_b;
+extern struct cvar_s v_color_grey_r;
+extern struct cvar_s v_color_grey_g;
+extern struct cvar_s v_color_grey_b;
+extern struct cvar_s v_color_white_r;
+extern struct cvar_s v_color_white_g;
+extern struct cvar_s v_color_white_b;
 
 // brand of graphics chip
 extern const char *gl_vendor;
@@ -188,8 +192,8 @@ extern const char *gl_platform;
 extern char gl_driver[256];
 
 void *GL_GetProcAddress(const char *name);
-qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent);
-qboolean GL_ExtensionSupported(const char *name);
+qbool GL_CheckExtension(const char *name, const char *disableparm, int silent);
+qbool GL_ExtensionSupported(const char *name);
 
 void VID_Shared_Init(void);
 
@@ -207,7 +211,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-qboolean VID_InitMode(viddef_mode_t *mode);
+qbool VID_InitMode(viddef_mode_t *mode);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 
@@ -215,20 +219,20 @@ qboolean VID_InitMode(viddef_mode_t *mode);
 // (ONLY to be called from VID_Finish!)
 void VID_UpdateGamma(void);
 
-qboolean VID_HasScreenKeyboardSupport(void);
-void VID_ShowKeyboard(qboolean show);
-qboolean VID_ShowingKeyboard(void);
+qbool VID_HasScreenKeyboardSupport(void);
+void VID_ShowKeyboard(qbool show);
+qbool VID_ShowingKeyboard(void);
 
-void VID_SetMouse (qboolean fullscreengrab, qboolean relative, qboolean hidecursor);
+void VID_SetMouse (qbool fullscreengrab, qbool relative, qbool hidecursor);
 void VID_Finish (void);
 
-void VID_Restart_f(cmd_state_t *cmd);
+void VID_Restart_f(struct cmd_state_s *cmd);
 
 void VID_Start(void);
 void VID_Stop(void);
 
 extern unsigned int vid_gammatables_serial; // so other subsystems can poll if gamma parameters have changed; this starts with 0 and gets increased by 1 each time the gamma parameters get changed and VID_BuildGammaTables should be called again
-extern qboolean vid_gammatables_trivial; // this is set to true if all color control values are at default setting, and it therefore would make no sense to use the gamma table
+extern qbool vid_gammatables_trivial; // this is set to true if all color control values are at default setting, and it therefore would make no sense to use the gamma table
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize); // builds the current gamma tables into an array (needs 3*rampsize items)
 void VID_ApplyGammaToColor(const float *rgb, float *out); // applies current gamma settings to a color (0-1 range)
 
@@ -240,7 +244,7 @@ typedef struct
 vid_mode_t;
 vid_mode_t *VID_GetDesktopMode(void);
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount);
-size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean userefreshrate, qboolean useaspect);
+size_t VID_SortModes(vid_mode_t *modes, size_t count, qbool usebpp, qbool userefreshrate, qbool useaspect);
 void VID_Soft_SharedSetup(void);
 
 #endif

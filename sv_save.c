@@ -37,7 +37,7 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 	int		i, k, l, numbuffers, lightstyles = 64;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 	char	line[MAX_INPUTLINE];
-	qboolean isserver;
+	qbool isserver;
 	char	*s;
 
 	// first we have to figure out if this can be saved in 64 lightstyles
@@ -185,7 +185,6 @@ void SV_Savegame_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	char	name[MAX_QPATH];
-	qboolean deadflag = false;
 
 	if (!sv.active)
 	{
@@ -193,25 +192,11 @@ void SV_Savegame_f(cmd_state_t *cmd)
 		return;
 	}
 
-	deadflag = cl.islocalgame && svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag);
-
-	if (cl.islocalgame)
+	if(host.hook.SV_CanSave)
 	{
-		// singleplayer checks
-		if (cl.intermission)
-		{
-			Con_Print("Can't save in intermission.\n");
+		if(!host.hook.SV_CanSave())
 			return;
-		}
-
-		if (deadflag)
-		{
-			Con_Print("Can't savegame with a dead player\n");
-			return;
-		}
 	}
-	else
-		Con_Print(CON_WARN "Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
 
 	if (Cmd_Argc(cmd) != 2)
 	{
@@ -572,6 +557,6 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 		Con_Printf("SV_Loadgame_f: finished\n");
 
 	// make sure we're connected to loopback
-	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local:1", -2);
+	if(sv.active && host.hook.ConnectLocal)
+		host.hook.ConnectLocal();
 }

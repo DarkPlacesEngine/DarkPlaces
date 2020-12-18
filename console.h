@@ -21,14 +21,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cmd.h"
+#include "lhnet.h"
+
 //
 // console
 //
 extern int con_totallines;
 extern int con_backscroll;
-extern qboolean con_initialized;
+extern qbool con_initialized;
 
-void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean proquakeprotocol);
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qbool proquakeprotocol);
 void Con_Rcon_Redirect_End(void);
 void Con_Rcon_Redirect_Abort(void);
 
@@ -63,13 +68,13 @@ void Con_DrawNotify (void);
 void Con_ClearNotify (void);
 void Con_ToggleConsole_f(cmd_state_t *cmd);
 
-qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength);
+qbool GetMapList (const char *s, char *completedname, int completednamebufferlength);
 
 /// wrapper function to attempt to either complete the command line
 /// or to list possible matches grouped by type
 /// (i.e. will display possible variables, aliases, commands
 /// that match what they've typed so far)
-int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console);
+int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console);
 
 /// Generic libs/util/console.c function to display a list
 /// formatted in columns on the console
@@ -112,7 +117,7 @@ con_lineinfo_t;
 
 typedef struct conbuffer_s
 {
-	qboolean active;
+	qbool active;
 	int textsize;
 	char *text;
 	int maxlines;

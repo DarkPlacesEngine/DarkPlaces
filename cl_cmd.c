@@ -28,16 +28,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_collision.h"
 
-cvar_t cl_name = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "name", "player", "change your player name"};
-cvar_t cl_rate = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate", "20000", "change your connection speed"};
-cvar_t cl_rate_burstsize = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
-cvar_t cl_topcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "topcolor", "0", "change the color of your shirt"};
-cvar_t cl_bottomcolor = {CVAR_CLIENT | CVAR_SAVE | CVAR_USERINFO, "bottomcolor", "0", "change the color of your pants"};
-cvar_t cl_team = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "team", "none", "QW team (4 character limit, example: blue)"};
-cvar_t cl_skin = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "skin", "", "QW player skin name (example: base)"};
-cvar_t cl_noaim = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "noaim", "1", "QW option to disable vertical autoaim"};
-cvar_t cl_pmodel = {CVAR_CLIENT | CVAR_USERINFO | CVAR_SAVE, "pmodel", "0", "current player model number in nehahra"};
-cvar_t r_fixtrans_auto = {CVAR_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
+cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "name", "player", "change your player name"};
+cvar_t cl_rate = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate", "20000", "change your connection speed"};
+cvar_t cl_rate_burstsize = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
+cvar_t cl_topcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "topcolor", "0", "change the color of your shirt"};
+cvar_t cl_bottomcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "bottomcolor", "0", "change the color of your pants"};
+cvar_t cl_team = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "team", "none", "QW team (4 character limit, example: blue)"};
+cvar_t cl_skin = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "skin", "", "QW player skin name (example: base)"};
+cvar_t cl_noaim = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "noaim", "1", "QW option to disable vertical autoaim"};
+cvar_t cl_pmodel = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "pmodel", "0", "current player model number in nehahra"};
+cvar_t r_fixtrans_auto = {CF_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
 extern cvar_t rcon_secure;
 extern cvar_t rcon_secure_challengetimeout;
@@ -205,10 +205,10 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 	cvarname = Cmd_Argv(cmd, 1);
 	if (cls.state == ca_connected)
 	{
-		c = Cvar_FindVar(&cvars_all, cvarname, CVAR_CLIENT | CVAR_SERVER);
+		c = Cvar_FindVar(&cvars_all, cvarname, CF_CLIENT | CF_SERVER);
 		// LadyHavoc: if there is no such cvar or if it is private, send a
 		// reply indicating that it has no value
-		if(!c || (c->flags & CVAR_PRIVATE))
+		if(!c || (c->flags & CF_PRIVATE))
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
 		else
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
@@ -221,29 +221,45 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 CL_Color_f
 ==================
 */
-cvar_t cl_color = {CVAR_CLIENT | CVAR_SAVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
+cvar_t cl_color = {CF_CLIENT | CF_ARCHIVE, "_cl_color", "0", "internal storage cvar for current player colors (changed by color command)"};
 
-// Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
+// HACK: Ignore the callbacks so this two-to-three way synchronization doesn't cause an infinite loop.
 static void CL_Color_c(cvar_t *var)
 {
 	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
-	Cvar_Set_NoCallback(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
+	void (*callback_save)(cvar_t *);
+
+	callback_save = cl_topcolor.callback;
+	cl_topcolor.callback = NULL;
+	Cvar_SetQuick(&cl_topcolor, va(vabuf, sizeof(vabuf), "%i", ((var->integer >> 4) & 15)));
+	cl_topcolor.callback = callback_save;
+
+	callback_save = cl_bottomcolor.callback;
+	cl_bottomcolor.callback = NULL;
+	Cvar_SetQuick(&cl_bottomcolor, va(vabuf, sizeof(vabuf), "%i", (var->integer & 15)));
+	cl_bottomcolor.callback = callback_save;
 }
 
 static void CL_Topcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
-	
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
+	void (*callback_save)(cvar_t *);
+
+	callback_save = cl_color.callback;
+	cl_color.callback = NULL;
+	Cvar_SetQuick(&cl_color, va(vabuf, sizeof(vabuf), "%i", var->integer*16 + cl_bottomcolor.integer));
+	cl_color.callback = callback_save;
 }
 
 static void CL_Bottomcolor_c(cvar_t *var)
 {
 	char vabuf[1024];
+	void (*callback_save)(cvar_t *);
 
-	Cvar_Set_NoCallback(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
+	callback_save = cl_color.callback;
+	cl_color.callback = NULL;
+	Cvar_SetQuick(&cl_color, va(vabuf, sizeof(vabuf), "%i", cl_topcolor.integer*16 + var->integer));
+	cl_color.callback = callback_save;
 }
 
 static void CL_Color_f(cmd_state_t *cmd)
@@ -252,7 +268,7 @@ static void CL_Color_f(cmd_state_t *cmd)
 
 	if (Cmd_Argc(cmd) == 1)
 	{
-		if (cmd->source == src_command)
+		if (cmd->source == src_local)
 		{
 			Con_Printf("\"color\" is \"%i %i\"\n", cl_topcolor.integer, cl_bottomcolor.integer);
 			Con_Print("color <0-15> [0-15]\n");
@@ -287,12 +303,74 @@ static void CL_Color_f(cmd_state_t *cmd)
 	//if (bottom > 13)
 	//	bottom = 13;
 
-	if (cmd->source == src_command)
+	if (cmd->source == src_local)
 	{
 		Cvar_SetValueQuick(&cl_topcolor, top);
 		Cvar_SetValueQuick(&cl_bottomcolor, bottom);
 		return;
 	}
+}
+
+/*
+====================
+CL_User_f
+
+user <name or userid>
+
+Dump userdata / masterdata for a user
+====================
+*/
+static void CL_User_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	int		uid;
+	int		i;
+
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Printf ("Usage: user <username / userid>\n");
+		return;
+	}
+
+	uid = atoi(Cmd_Argv(cmd, 1));
+
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (!cl.scores[i].name[0])
+			continue;
+		if (cl.scores[i].qw_userid == uid || !strcasecmp(cl.scores[i].name, Cmd_Argv(cmd, 1)))
+		{
+			InfoString_Print(cl.scores[i].qw_userinfo);
+			return;
+		}
+	}
+	Con_Printf ("User not in server.\n");
+}
+
+/*
+====================
+CL_Users_f
+
+Dump userids for all current players
+====================
+*/
+static void CL_Users_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
+{
+	int		i;
+	int		c;
+
+	c = 0;
+	Con_Printf ("userid frags name\n");
+	Con_Printf ("------ ----- ----\n");
+	for (i = 0;i < cl.maxclients;i++)
+	{
+		if (cl.scores[i].name[0])
+		{
+			Con_Printf ("%6i %4i %s\n", cl.scores[i].qw_userid, cl.scores[i].frags, cl.scores[i].name);
+			c++;
+		}
+	}
+
+	Con_Printf ("%i total users\n", c);
 }
 
 /*
@@ -656,18 +734,20 @@ void CL_InitCommands(void)
 	Cvar_RegisterVariable(&cl_skin);
 	Cvar_RegisterVariable(&cl_noaim);	
 
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cmd", CL_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
-	Cmd_AddCommand(CMD_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
-	Cmd_AddCommand(CMD_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
-	Cmd_AddCommand(CMD_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
-	Cmd_AddCommand(CMD_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
-	Cmd_AddCommand(CMD_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
-	Cmd_AddCommand(CMD_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
-	Cmd_AddCommand(CMD_CLIENT, "sendcvar", CL_SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
-	Cmd_AddCommand(CMD_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "cmd", CL_ForwardToServer_f, "send a console commandline to the server (used by some mods)");
+	Cmd_AddCommand(CF_CLIENT, "color", CL_Color_f, "change your player shirt and pants colors");
+	Cmd_AddCommand(CF_CLIENT, "rcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); note: if rcon_secure is set, client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CF_CLIENT, "srcon", CL_Rcon_f, "sends a command to the server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's); this always works as if rcon_secure is set; note: client and server clocks must be synced e.g. via NTP");
+	Cmd_AddCommand(CF_CLIENT, "pqrcon", CL_PQRcon_f, "sends a command to a proquake server console (if your rcon_password matches the server's rcon_password), or to the address specified by rcon_address when not connected (again rcon_password must match the server's)");
+	Cmd_AddCommand(CF_SHARED, "user", CL_User_f, "prints additional information about a player number or name on the scoreboard");
+	Cmd_AddCommand(CF_SHARED, "users", CL_Users_f, "prints additional information about all players on the scoreboard");
+	Cmd_AddCommand(CF_CLIENT, "packet", CL_Packet_f, "send a packet to the specified address:port containing a text string");
+	Cmd_AddCommand(CF_CLIENT, "fullinfo", CL_FullInfo_f, "allows client to modify their userinfo");
+	Cmd_AddCommand(CF_CLIENT, "setinfo", CL_SetInfo_f, "modifies your userinfo");
+	Cmd_AddCommand(CF_CLIENT, "fixtrans", Image_FixTransparentPixels_f, "change alpha-zero pixels in an image file to sensible values, and write out a new TGA (warning: SLOW)");
+	host.hook.CL_SendCvar = CL_SendCvar_f;
 
 	// commands that are only sent by server to client for execution
-	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
-	Cmd_AddCommand(CMD_CLIENT_FROM_SERVER, "fullserverinfo", CL_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
+	Cmd_AddCommand(CF_CLIENT_FROM_SERVER, "pingplreport", CL_PingPLReport_f, "command sent by server containing client ping and packet loss values for scoreboard, triggered by pings command from client (not used by QW servers)");
+	Cmd_AddCommand(CF_CLIENT_FROM_SERVER, "fullserverinfo", CL_FullServerinfo_f, "internal use only, sent by server to client to update client's local copy of serverinfo string");
 }

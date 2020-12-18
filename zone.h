@@ -21,7 +21,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef ZONE_H
 #define ZONE_H
 
-extern qboolean mem_bigendian;
+#include <stddef.h>
+#include "qtypes.h"
+#include "qdefs.h"
+
+extern qbool mem_bigendian;
 
 // div0: heap overflow detection paranoia
 #define MEMPARANOIA 0
@@ -100,7 +104,7 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);
 void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 // if pool is NULL this searches ALL pools for the allocation
-qboolean Mem_IsAllocated(mempool_t *pool, void *data);
+qbool Mem_IsAllocated(mempool_t *pool, void *data);
 
 char* Mem_strdup (mempool_t *pool, const char* s);
 

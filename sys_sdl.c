@@ -1,3 +1,4 @@
+#include "darkplaces.h"
 
 #ifdef WIN32
 #include <io.h>
@@ -23,8 +24,6 @@
 #endif
 #endif
 
-#include "quakedef.h"
-
 sys_t sys;
 
 // =======================================================================
@@ -43,7 +42,7 @@ void Sys_Shutdown (void)
 	SDL_Quit();
 }
 
-static qboolean nocrashdialog;
+static qbool nocrashdialog;
 void Sys_Error (const char *error, ...)
 {
 	va_list argptr;
@@ -104,61 +103,58 @@ void Sys_PrintToTerminal(const char *text)
 
 char *Sys_ConsoleInput(void)
 {
-//	if (cls.state == ca_dedicated)
-	{
-		static char text[MAX_INPUTLINE];
-		int len = 0;
+	static char text[MAX_INPUTLINE];
+	int len = 0;
 #ifdef WIN32
-		int c;
+	int c;
 
-		// read a line out
-		while (_kbhit ())
+	// read a line out
+	while (_kbhit ())
+	{
+		c = _getch ();
+		_putch (c);
+		if (c == '\r')
 		{
-			c = _getch ();
-			_putch (c);
-			if (c == '\r')
-			{
-				text[len] = 0;
-				_putch ('\n');
-				len = 0;
-				return text;
-			}
-			if (c == 8)
-			{
-				if (len)
-				{
-					_putch (' ');
-					_putch (c);
-					len--;
-					text[len] = 0;
-				}
-				continue;
-			}
-			text[len] = c;
-			len++;
 			text[len] = 0;
-			if (len == sizeof (text))
-				len = 0;
+			_putch ('\n');
+			len = 0;
+			return text;
 		}
-#else
-		fd_set fdset;
-		struct timeval timeout;
-		FD_ZERO(&fdset);
-		FD_SET(0, &fdset); // stdin
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
-		if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
+		if (c == 8)
 		{
-			len = read (0, text, sizeof(text));
-			if (len >= 1)
+			if (len)
 			{
-				// rip off the \n and terminate
-				text[len-1] = 0;
-				return text;
+				_putch (' ');
+				_putch (c);
+				len--;
+				text[len] = 0;
 			}
+			continue;
 		}
-#endif
+		text[len] = c;
+		len++;
+		text[len] = 0;
+		if (len == sizeof (text))
+			len = 0;
 	}
+#else
+	fd_set fdset;
+	struct timeval timeout;
+	FD_ZERO(&fdset);
+	FD_SET(0, &fdset); // stdin
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 0;
+	if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
+	{
+		len = read (0, text, sizeof(text));
+		if (len >= 1)
+		{
+			// rip off the \n and terminate
+			text[len-1] = 0;
+			return text;
+		}
+	}
+#endif
 	return NULL;
 }
 
@@ -202,13 +198,13 @@ int main (int argc, char *argv[])
 	Sys_ProvideSelfFD();
 
 	// COMMANDLINEOPTION: -nocrashdialog disables "Engine Error" crash dialog boxes
-	if(!COM_CheckParm("-nocrashdialog"))
+	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
 	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
-	if(COM_CheckParm("-noterminal"))
+	if(Sys_CheckParm("-noterminal"))
 		sys.outfd = -1;
 	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
-	else if(COM_CheckParm("-stderr"))
+	else if(Sys_CheckParm("-stderr"))
 		sys.outfd = 2;
 	else
 		sys.outfd = 1;
@@ -230,7 +226,7 @@ int main (int argc, char *argv[])
 	return 0;
 }
 
-qboolean sys_supportsdlgetticks = true;
+qbool sys_supportsdlgetticks = true;
 unsigned int Sys_SDL_GetTicks (void)
 {
 	return SDL_GetTicks();

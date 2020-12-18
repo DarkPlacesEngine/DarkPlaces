@@ -31,7 +31,7 @@ typedef struct server_static_s
 	/// episode completion information
 	int serverflags;
 	/// cleared when at SV_SpawnServer
-	qboolean changelevel_issued;
+	qbool changelevel_issued;
 	/// server infostring
 	char serverinfo[MAX_SERVERINFO_STRING];
 	// performance data
@@ -55,8 +55,8 @@ typedef struct server_static_s
 	unsigned char *csqc_progdata_deflated;
 
 	// independent server thread (when running client)
-	qboolean threaded; // true if server is running on separate thread
-	qboolean volatile threadstop;
+	qbool threaded; // true if server is running on separate thread
+	qbool volatile threadstop;
 	void *threadmutex;
 	void *thread;
 } server_static_t;
@@ -77,12 +77,12 @@ server_floodaddress_t;
 typedef struct server_s
 {
 	/// false if only a net client
-	qboolean active;
+	qbool active;
 
-	qboolean paused;
+	qbool paused;
 	double pausedstart;
 	/// handle connections specially
-	qboolean loadgame;
+	qbool loadgame;
 
 	/// one of the PROTOCOL_ values
 	protocolversion_t protocol;
@@ -141,7 +141,7 @@ typedef struct server_s
 	server_floodaddress_t connectfloodaddresses[MAX_CONNECTFLOODADDRESSES];
 	server_floodaddress_t getstatusfloodaddresses[MAX_GETSTATUSFLOODADDRESSES];
 
-	qboolean particleeffectnamesloaded;
+	qbool particleeffectnamesloaded;
 	char particleeffectname[MAX_PARTICLEEFFECTNAME][MAX_QPATH];
 
 	int writeentitiestoclient_stats_culled_pvs;
@@ -187,15 +187,15 @@ typedef struct csqcentityframedb_s
 typedef struct client_s
 {
 	/// false = empty client slot
-	qboolean active;
+	qbool active;
 	/// false = don't do ClientDisconnect on drop
-	qboolean clientconnectcalled;
+	qbool clientconnectcalled;
 	/// false = don't allow spawn
-	qboolean prespawned;
+	qbool prespawned;
 	/// false = don't allow begin
-	qboolean spawned;
+	qbool spawned;
 	/// false = don't send datagrams
-	qboolean begun;
+	qbool begun;
 	/// 1 = send svc_serverinfo and advance to 2, 2 doesn't send, then advances to 0 (allowing unlimited sending) when prespawn is received
 	int sendsignon;
 
@@ -295,12 +295,12 @@ typedef struct client_s
 	// information on an active download if any
 	qfile_t *download_file;
 	int download_expectedposition; ///< next position the client should ack
-	qboolean download_started;
+	qbool download_started;
 	char download_name[MAX_QPATH];
-	qboolean download_deflate;
+	qbool download_deflate;
 
 	// fixangle data
-	qboolean fixangle_angles_set;
+	qbool fixangle_angles_set;
 	vec3_t fixangle_angles;
 
 	/// demo recording
@@ -512,14 +512,20 @@ extern client_t *host_client;
 //===========================================================
 
 void SV_Init (void);
+double SV_Frame(double time);
+void SV_Shutdown(void);
+
+int SV_IsLocalServer(void);
 
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
 void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
-void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qboolean reliable, float speed);
+void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int volume, float attenuation, qbool reliable, float speed);
 void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation, float speed);
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
-void SV_DropClient (qboolean crash);
+void SV_DropClient (qbool crash);
+
+void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 void SV_SendClientMessages(void);
 
@@ -534,14 +540,14 @@ int SV_SoundIndex(const char *s, int precachemode);
 
 int SV_ParticleEffectIndex(const char *name);
 
-dp_model_t *SV_GetModelByIndex(int modelindex);
-dp_model_t *SV_GetModelFromEdict(prvm_edict_t *ed);
+model_t *SV_GetModelByIndex(int modelindex);
+model_t *SV_GetModelFromEdict(prvm_edict_t *ed);
 
 void SV_SetIdealPitch (void);
 
 void SV_AddUpdates (void);
 
-void SV_ClientThink (void);
+void SV_PlayerPhysics (void);
 
 void SV_ClientPrint(const char *msg);
 void SV_ClientPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
@@ -552,9 +558,9 @@ void SV_Physics (void);
 void SV_Physics_ClientMove (void);
 //void SV_Physics_ClientEntity (prvm_edict_t *ent);
 
-qboolean SV_PlayerCheckGround (prvm_edict_t *ent);
-qboolean SV_CheckBottom (prvm_edict_t *ent);
-qboolean SV_movestep (prvm_edict_t *ent, vec3_t move, qboolean relink, qboolean noenemy, qboolean settrace);
+qbool SV_PlayerCheckGround (prvm_edict_t *ent);
+qbool SV_CheckBottom (prvm_edict_t *ent);
+qbool SV_movestep (prvm_edict_t *ent, vec3_t move, qbool relink, qbool noenemy, qbool settrace);
 
 /*! Needs to be called any time an entity changes origin, mins, maxs, or solid
  * sets ent->v.absmin and ent->v.absmax
@@ -567,11 +573,11 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); //
 /*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
  * returns true if it found a better place
  */
-qboolean SV_UnstickEntity (prvm_edict_t *ent);
+qbool SV_UnstickEntity (prvm_edict_t *ent);
 /*! move an entity that is stuck out of the surface it is stuck in (can move large amounts)
  * returns true if it found a better place
  */
-qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent);
+qbool SV_NudgeOutOfSolid(prvm_edict_t *ent);
 
 /// calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);
@@ -581,7 +587,13 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask);
 int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_edict_t **resultedicts);
 
-qboolean SV_CanSeeBox(int numsamples, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
+qbool SV_CanSeeBox(int numsamples, vec_t eyejitter, vec_t enlarge, vec_t entboxexpand, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
+
+void SV_MarkWriteEntityStateToClient(entity_state_t *s);
+
+void SV_SendServerinfo(client_t *client);
+void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *msg, int maxsize);
+void SV_AddCameraEyes(void);
 
 int SV_PointSuperContents(const vec3_t point);
 
@@ -592,6 +604,7 @@ void VM_SV_MoveToGoal(prvm_prog_t *prog);
 
 void SV_ApplyClientMove (void);
 void SV_SaveSpawnparms (void);
+
 void SV_SpawnServer (const char *map);
 
 void SV_CheckVelocity (prvm_edict_t *ent);
@@ -601,7 +614,7 @@ void SV_SetupVM(void);
 const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
-void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
+void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix);
 
 void SV_StartThread(void);
 void SV_StopThread(void);
@@ -621,7 +634,6 @@ void SV_PreSpawn_f(cmd_state_t *cmd);
 void SV_Spawn_f(cmd_state_t *cmd);
 void SV_Begin_f(cmd_state_t *cmd);
 
-void SV_SendServerinfo(client_t *client);
+qbool SV_VM_ConsoleCommand (const char *text);
 
 #endif
-

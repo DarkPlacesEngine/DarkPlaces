@@ -3,18 +3,18 @@
 #include "cl_video.h"
 
 // cvars
-cvar_t cl_video_subtitles = {CVAR_CLIENT | CVAR_SAVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are present)"};
-cvar_t cl_video_subtitles_lines = {CVAR_CLIENT | CVAR_SAVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
-cvar_t cl_video_subtitles_textsize = {CVAR_CLIENT | CVAR_SAVE, "cl_video_subtitles_textsize", "16", "textsize for subtitles"};
-cvar_t cl_video_scale = {CVAR_CLIENT | CVAR_SAVE, "cl_video_scale", "1", "scale of video, 1 = fullscreen, 0.75 - 3/4 of screen etc."};
-cvar_t cl_video_scale_vpos = {CVAR_CLIENT | CVAR_SAVE, "cl_video_scale_vpos", "0", "vertical align of scaled video, -1 is top, 1 is bottom"};
-cvar_t cl_video_stipple = {CVAR_CLIENT | CVAR_SAVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
-cvar_t cl_video_brightness = {CVAR_CLIENT | CVAR_SAVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
-cvar_t cl_video_keepaspectratio = {CVAR_CLIENT | CVAR_SAVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with top & bottom being sliced out"};
-cvar_t cl_video_fadein = {CVAR_CLIENT | CVAR_SAVE, "cl_video_fadein", "0", "fading-from-black effect once video is started, in seconds"};
-cvar_t cl_video_fadeout = {CVAR_CLIENT | CVAR_SAVE, "cl_video_fadeout", "0", "fading-to-black effect once video is ended, in seconds"};
+cvar_t cl_video_subtitles = {CF_CLIENT | CF_ARCHIVE, "cl_video_subtitles", "0", "show subtitles for videos (if they are present)"};
+cvar_t cl_video_subtitles_lines = {CF_CLIENT | CF_ARCHIVE, "cl_video_subtitles_lines", "4", "how many lines to occupy for subtitles"};
+cvar_t cl_video_subtitles_textsize = {CF_CLIENT | CF_ARCHIVE, "cl_video_subtitles_textsize", "16", "textsize for subtitles"};
+cvar_t cl_video_scale = {CF_CLIENT | CF_ARCHIVE, "cl_video_scale", "1", "scale of video, 1 = fullscreen, 0.75 - 3/4 of screen etc."};
+cvar_t cl_video_scale_vpos = {CF_CLIENT | CF_ARCHIVE, "cl_video_scale_vpos", "0", "vertical align of scaled video, -1 is top, 1 is bottom"};
+cvar_t cl_video_stipple = {CF_CLIENT | CF_ARCHIVE, "cl_video_stipple", "0", "draw interlacing-like effect on videos, similar to scr_stipple but static and used only with video playing."};
+cvar_t cl_video_brightness = {CF_CLIENT | CF_ARCHIVE, "cl_video_brightness", "1", "brightness of video, 1 = fullbright, 0.75 - 3/4 etc."};
+cvar_t cl_video_keepaspectratio = {CF_CLIENT | CF_ARCHIVE, "cl_video_keepaspectratio", "0", "keeps aspect ratio of fullscreen videos, leaving black color on unfilled areas, a value of 2 let video to be stretched horizontally with top & bottom being sliced out"};
+cvar_t cl_video_fadein = {CF_CLIENT | CF_ARCHIVE, "cl_video_fadein", "0", "fading-from-black effect once video is started, in seconds"};
+cvar_t cl_video_fadeout = {CF_CLIENT | CF_ARCHIVE, "cl_video_fadeout", "0", "fading-to-black effect once video is ended, in seconds"};
 
-cvar_t v_glslgamma_video = {CVAR_CLIENT | CVAR_SAVE, "v_glslgamma_video", "1", "applies GLSL gamma to played video, could be a fraction, requires r_glslgamma_2d 1."};
+cvar_t v_glslgamma_video = {CF_CLIENT | CF_ARCHIVE, "v_glslgamma_video", "1", "applies GLSL gamma to played video, could be a fraction, requires r_glslgamma_2d 1."};
 
 // DPV stream decoder
 #include "dpvsimpledecode.h"
@@ -46,7 +46,7 @@ static clvideo_t *FindUnusedVid( void )
 	return NULL;
 }
 
-static qboolean OpenStream( clvideo_t * video )
+static qbool OpenStream( clvideo_t * video )
 {
 	const char *errorstring;
 
@@ -104,7 +104,7 @@ static void SuspendVideo( clvideo_t * video )
 	}
 }
 
-static qboolean WakeVideo( clvideo_t * video )
+static qbool WakeVideo( clvideo_t * video )
 {
 	if( !video->suspended )
 		return true;
@@ -137,7 +137,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 		char overridename[MAX_QPATH];
 		cvar_t *langcvar;
 
-		langcvar = Cvar_FindVar(&cvars_all, "language", CVAR_CLIENT | CVAR_SERVER);
+		langcvar = Cvar_FindVar(&cvars_all, "language", CF_CLIENT | CF_SERVER);
 		subtitle_text = NULL;
 		if (langcvar)
 		{
@@ -199,7 +199,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 	if (numsubs > 0) // make true len for prev sub, autofix overlapping subtitles
 	{
 		if (video->subtitle_end[numsubs-1] <= 0)
-			video->subtitle_end[numsubs-1] = 99999999; // fixme: make it end when video ends?
+			video->subtitle_end[numsubs-1] = (float)99999999; // fixme: make it end when video ends?
 		else
 			video->subtitle_end[numsubs-1] = video->subtitle_start[numsubs-1] + video->subtitle_end[numsubs-1];
 	}
@@ -444,7 +444,7 @@ static float CL_DrawVideo_WordWidthFunc(void *passthrough, const char *w, size_t
 		return 0;
 }
 
-static int CL_DrawVideo_DisplaySubtitleLine(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int CL_DrawVideo_DisplaySubtitleLine(void *passthrough, const char *line, size_t length, float width, qbool isContinuation)
 {
 	cl_video_subtitle_info_t *si = (cl_video_subtitle_info_t *) passthrough;
 
@@ -577,7 +577,7 @@ void CL_DrawVideo(void)
 
 void CL_VideoStart(char *filename, const char *subtitlesfile)
 {
-	Host_StartVideo();
+	CL_StartVideo();
 
 	if( cl_videos->state != CLVIDEO_UNUSED )
 		CL_CloseVideo( cl_videos );
@@ -593,7 +593,7 @@ void CL_VideoStart(char *filename, const char *subtitlesfile)
 	CL_RestartVideo( cl_videos );
 }
 
-void CL_Video_KeyEvent( int key, int ascii, qboolean down ) 
+void CL_Video_KeyEvent( int key, int ascii, qbool down ) 
 {
 	// only react to up events, to allow the user to delay the abortion point if it suddenly becomes interesting..
 	if( !down ) {
@@ -615,9 +615,9 @@ static void CL_PlayVideo_f(cmd_state_t *cmd)
 	char name[MAX_QPATH], subtitlesfile[MAX_QPATH];
 	const char *extension;
 
-	Host_StartVideo();
+	CL_StartVideo();
 
-	if (COM_CheckParm("-benchmark"))
+	if (Sys_CheckParm("-benchmark"))
 		return;
 
 	if (Cmd_Argc(cmd) < 2)
@@ -689,8 +689,8 @@ void CL_Video_Init( void )
 	bgra.i = 0;bgra.b[1] = 0xFF;cl_videogmask = bgra.i;
 	bgra.i = 0;bgra.b[2] = 0xFF;cl_videormask = bgra.i;
 
-	Cmd_AddCommand(CMD_CLIENT, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
-	Cmd_AddCommand(CMD_CLIENT, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
+	Cmd_AddCommand(CF_CLIENT, "playvideo", CL_PlayVideo_f, "play a .dpv video file" );
+	Cmd_AddCommand(CF_CLIENT, "stopvideo", CL_StopVideo_f, "stop playing a .dpv video file" );
 
 	Cvar_RegisterVariable(&cl_video_subtitles);
 	Cvar_RegisterVariable(&cl_video_subtitles_lines);

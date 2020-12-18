@@ -22,10 +22,10 @@
 */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "snd_main.h"
 #include "snd_wav.h"
-
+#include "sound.h"
 
 typedef struct wavinfo_s
 {
@@ -265,7 +265,7 @@ const snd_fetcher_t wav_fetcher = { WAV_GetSamplesFloat, NULL, WAV_FreeSfx };
 S_LoadWavFile
 ==============
 */
-qboolean S_LoadWavFile (const char *filename, sfx_t *sfx)
+qbool S_LoadWavFile (const char *filename, sfx_t *sfx)
 {
 	fs_offset_t filesize;
 	unsigned char *data;

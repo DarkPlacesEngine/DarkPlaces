@@ -5,7 +5,7 @@
 #include <dirent.h>
 #endif
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 // LadyHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
 
@@ -16,7 +16,7 @@ int matchpattern(const char *in, const char *pattern, int caseinsensitive)
 
 // wildcard_least_one: if true * matches 1 or more characters
 //                     if false * matches 0 or more characters
-int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qboolean wildcard_least_one)
+int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qbool wildcard_least_one)
 {
 	int c1, c2;
 	while (*pattern)
@@ -122,7 +122,7 @@ static int stringlistsort_cmp(const void *a, const void *b)
 	return strcasecmp(*(const char **)a, *(const char **)b);
 }
 
-void stringlistsort(stringlist_t *list, qboolean uniq)
+void stringlistsort(stringlist_t *list, qbool uniq)
 {
 	int i, j;
 	if(list->numstrings < 1)

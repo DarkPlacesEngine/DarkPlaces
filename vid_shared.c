@@ -56,7 +56,7 @@ xinput_keystroke_t;
 DWORD (WINAPI *qXInputGetState)(DWORD index, xinput_state_t *state);
 DWORD (WINAPI *qXInputGetKeystroke)(DWORD index, DWORD reserved, xinput_keystroke_t *keystroke);
 
-qboolean vid_xinputinitialized = false;
+qbool vid_xinputinitialized = false;
 int vid_xinputindex = -1;
 #endif
 
@@ -64,126 +64,126 @@ int vid_xinputindex = -1;
 viddef_t vid;
 
 // AK FIXME -> input_dest
-qboolean in_client_mouse = true;
+qbool in_client_mouse = true;
 
 // AK where should it be placed ?
 float in_mouse_x, in_mouse_y;
 float in_windowmouse_x, in_windowmouse_y;
 
 // LadyHavoc: if window is hidden, don't update screen
-qboolean vid_hidden = true;
+qbool vid_hidden = true;
 // LadyHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
-qboolean vid_activewindow = true;
+qbool vid_activewindow = true;
 
 vid_joystate_t vid_joystate;
 
 #ifdef WIN32
-cvar_t joy_xinputavailable = {CVAR_CLIENT | CVAR_READONLY, "joy_xinputavailable", "0", "indicates which devices are being reported by the Windows XInput API (first controller = 1, second = 2, third = 4, fourth = 8, added together)"};
+cvar_t joy_xinputavailable = {CF_CLIENT | CF_READONLY, "joy_xinputavailable", "0", "indicates which devices are being reported by the Windows XInput API (first controller = 1, second = 2, third = 4, fourth = 8, added together)"};
 #endif
-cvar_t joy_active = {CVAR_CLIENT | CVAR_READONLY, "joy_active", "0", "indicates that a joystick is active (detected and enabled)"};
-cvar_t joy_detected = {CVAR_CLIENT | CVAR_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
-cvar_t joy_enable = {CVAR_CLIENT | CVAR_SAVE, "joy_enable", "0", "enables joystick support"};
-cvar_t joy_index = {CVAR_CLIENT, "joy_index", "0", "selects which joystick to use if you have multiple (0 uses the first controller, 1 uses the second, ...)"};
-cvar_t joy_axisforward = {CVAR_CLIENT, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
-cvar_t joy_axisside = {CVAR_CLIENT, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
-cvar_t joy_axisup = {CVAR_CLIENT, "joy_axisup", "-1", "which joystick axis to query for up/down movement"};
-cvar_t joy_axispitch = {CVAR_CLIENT, "joy_axispitch", "3", "which joystick axis to query for looking up/down"};
-cvar_t joy_axisyaw = {CVAR_CLIENT, "joy_axisyaw", "2", "which joystick axis to query for looking right/left"};
-cvar_t joy_axisroll = {CVAR_CLIENT, "joy_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
-cvar_t joy_deadzoneforward = {CVAR_CLIENT, "joy_deadzoneforward", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneside = {CVAR_CLIENT, "joy_deadzoneside", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneup = {CVAR_CLIENT, "joy_deadzoneup", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzonepitch = {CVAR_CLIENT, "joy_deadzonepitch", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneyaw = {CVAR_CLIENT, "joy_deadzoneyaw", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_deadzoneroll = {CVAR_CLIENT, "joy_deadzoneroll", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_sensitivityforward = {CVAR_CLIENT, "joy_sensitivityforward", "-1", "movement multiplier"};
-cvar_t joy_sensitivityside = {CVAR_CLIENT, "joy_sensitivityside", "1", "movement multiplier"};
-cvar_t joy_sensitivityup = {CVAR_CLIENT, "joy_sensitivityup", "1", "movement multiplier"};
-cvar_t joy_sensitivitypitch = {CVAR_CLIENT, "joy_sensitivitypitch", "1", "movement multiplier"};
-cvar_t joy_sensitivityyaw = {CVAR_CLIENT, "joy_sensitivityyaw", "-1", "movement multiplier"};
-cvar_t joy_sensitivityroll = {CVAR_CLIENT, "joy_sensitivityroll", "1", "movement multiplier"};
-cvar_t joy_axiskeyevents = {CVAR_CLIENT | CVAR_SAVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
-cvar_t joy_axiskeyevents_deadzone = {CVAR_CLIENT | CVAR_SAVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
-cvar_t joy_x360_axisforward = {CVAR_CLIENT, "joy_x360_axisforward", "1", "which joystick axis to query for forward/backward movement"};
-cvar_t joy_x360_axisside = {CVAR_CLIENT, "joy_x360_axisside", "0", "which joystick axis to query for right/left movement"};
-cvar_t joy_x360_axisup = {CVAR_CLIENT, "joy_x360_axisup", "-1", "which joystick axis to query for up/down movement"};
-cvar_t joy_x360_axispitch = {CVAR_CLIENT, "joy_x360_axispitch", "3", "which joystick axis to query for looking up/down"};
-cvar_t joy_x360_axisyaw = {CVAR_CLIENT, "joy_x360_axisyaw", "2", "which joystick axis to query for looking right/left"};
-cvar_t joy_x360_axisroll = {CVAR_CLIENT, "joy_x360_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
-cvar_t joy_x360_deadzoneforward = {CVAR_CLIENT, "joy_x360_deadzoneforward", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_deadzoneside = {CVAR_CLIENT, "joy_x360_deadzoneside", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_deadzoneup = {CVAR_CLIENT, "joy_x360_deadzoneup", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_deadzonepitch = {CVAR_CLIENT, "joy_x360_deadzonepitch", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_deadzoneyaw = {CVAR_CLIENT, "joy_x360_deadzoneyaw", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_deadzoneroll = {CVAR_CLIENT, "joy_x360_deadzoneroll", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
-cvar_t joy_x360_sensitivityforward = {CVAR_CLIENT, "joy_x360_sensitivityforward", "1", "movement multiplier"};
-cvar_t joy_x360_sensitivityside = {CVAR_CLIENT, "joy_x360_sensitivityside", "1", "movement multiplier"};
-cvar_t joy_x360_sensitivityup = {CVAR_CLIENT, "joy_x360_sensitivityup", "1", "movement multiplier"};
-cvar_t joy_x360_sensitivitypitch = {CVAR_CLIENT, "joy_x360_sensitivitypitch", "-1", "movement multiplier"};
-cvar_t joy_x360_sensitivityyaw = {CVAR_CLIENT, "joy_x360_sensitivityyaw", "-1", "movement multiplier"};
-cvar_t joy_x360_sensitivityroll = {CVAR_CLIENT, "joy_x360_sensitivityroll", "1", "movement multiplier"};
+cvar_t joy_active = {CF_CLIENT | CF_READONLY, "joy_active", "0", "indicates that a joystick is active (detected and enabled)"};
+cvar_t joy_detected = {CF_CLIENT | CF_READONLY, "joy_detected", "0", "number of joysticks detected by engine"};
+cvar_t joy_enable = {CF_CLIENT | CF_ARCHIVE, "joy_enable", "0", "enables joystick support"};
+cvar_t joy_index = {CF_CLIENT, "joy_index", "0", "selects which joystick to use if you have multiple (0 uses the first controller, 1 uses the second, ...)"};
+cvar_t joy_axisforward = {CF_CLIENT, "joy_axisforward", "1", "which joystick axis to query for forward/backward movement"};
+cvar_t joy_axisside = {CF_CLIENT, "joy_axisside", "0", "which joystick axis to query for right/left movement"};
+cvar_t joy_axisup = {CF_CLIENT, "joy_axisup", "-1", "which joystick axis to query for up/down movement"};
+cvar_t joy_axispitch = {CF_CLIENT, "joy_axispitch", "3", "which joystick axis to query for looking up/down"};
+cvar_t joy_axisyaw = {CF_CLIENT, "joy_axisyaw", "2", "which joystick axis to query for looking right/left"};
+cvar_t joy_axisroll = {CF_CLIENT, "joy_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
+cvar_t joy_deadzoneforward = {CF_CLIENT, "joy_deadzoneforward", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneside = {CF_CLIENT, "joy_deadzoneside", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneup = {CF_CLIENT, "joy_deadzoneup", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzonepitch = {CF_CLIENT, "joy_deadzonepitch", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneyaw = {CF_CLIENT, "joy_deadzoneyaw", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_deadzoneroll = {CF_CLIENT, "joy_deadzoneroll", "0", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_sensitivityforward = {CF_CLIENT, "joy_sensitivityforward", "-1", "movement multiplier"};
+cvar_t joy_sensitivityside = {CF_CLIENT, "joy_sensitivityside", "1", "movement multiplier"};
+cvar_t joy_sensitivityup = {CF_CLIENT, "joy_sensitivityup", "1", "movement multiplier"};
+cvar_t joy_sensitivitypitch = {CF_CLIENT, "joy_sensitivitypitch", "1", "movement multiplier"};
+cvar_t joy_sensitivityyaw = {CF_CLIENT, "joy_sensitivityyaw", "-1", "movement multiplier"};
+cvar_t joy_sensitivityroll = {CF_CLIENT, "joy_sensitivityroll", "1", "movement multiplier"};
+cvar_t joy_axiskeyevents = {CF_CLIENT | CF_ARCHIVE, "joy_axiskeyevents", "0", "generate uparrow/leftarrow etc. keyevents for joystick axes, use if your joystick driver is not generating them"};
+cvar_t joy_axiskeyevents_deadzone = {CF_CLIENT | CF_ARCHIVE, "joy_axiskeyevents_deadzone", "0.5", "deadzone value for axes"};
+cvar_t joy_x360_axisforward = {CF_CLIENT, "joy_x360_axisforward", "1", "which joystick axis to query for forward/backward movement"};
+cvar_t joy_x360_axisside = {CF_CLIENT, "joy_x360_axisside", "0", "which joystick axis to query for right/left movement"};
+cvar_t joy_x360_axisup = {CF_CLIENT, "joy_x360_axisup", "-1", "which joystick axis to query for up/down movement"};
+cvar_t joy_x360_axispitch = {CF_CLIENT, "joy_x360_axispitch", "3", "which joystick axis to query for looking up/down"};
+cvar_t joy_x360_axisyaw = {CF_CLIENT, "joy_x360_axisyaw", "2", "which joystick axis to query for looking right/left"};
+cvar_t joy_x360_axisroll = {CF_CLIENT, "joy_x360_axisroll", "-1", "which joystick axis to query for tilting head right/left"};
+cvar_t joy_x360_deadzoneforward = {CF_CLIENT, "joy_x360_deadzoneforward", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneside = {CF_CLIENT, "joy_x360_deadzoneside", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneup = {CF_CLIENT, "joy_x360_deadzoneup", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzonepitch = {CF_CLIENT, "joy_x360_deadzonepitch", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneyaw = {CF_CLIENT, "joy_x360_deadzoneyaw", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_deadzoneroll = {CF_CLIENT, "joy_x360_deadzoneroll", "0.266", "deadzone tolerance, suggested values are in the range 0 to 0.01"};
+cvar_t joy_x360_sensitivityforward = {CF_CLIENT, "joy_x360_sensitivityforward", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivityside = {CF_CLIENT, "joy_x360_sensitivityside", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivityup = {CF_CLIENT, "joy_x360_sensitivityup", "1", "movement multiplier"};
+cvar_t joy_x360_sensitivitypitch = {CF_CLIENT, "joy_x360_sensitivitypitch", "-1", "movement multiplier"};
+cvar_t joy_x360_sensitivityyaw = {CF_CLIENT, "joy_x360_sensitivityyaw", "-1", "movement multiplier"};
+cvar_t joy_x360_sensitivityroll = {CF_CLIENT, "joy_x360_sensitivityroll", "1", "movement multiplier"};
 
 // VorteX: more info cvars, mostly set in VID_CheckExtensions
-cvar_t gl_info_vendor = {CVAR_CLIENT | CVAR_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
-cvar_t gl_info_renderer = {CVAR_CLIENT | CVAR_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
-cvar_t gl_info_version = {CVAR_CLIENT | CVAR_READONLY, "gl_info_version", "", "indicates version of current renderer. begins with 1.0.0, 1.1.0, 1.2.0, 1.3.1 etc."};
-cvar_t gl_info_extensions = {CVAR_CLIENT | CVAR_READONLY, "gl_info_extensions", "", "indicates extension list found by engine, space separated."};
-cvar_t gl_info_platform = {CVAR_CLIENT | CVAR_READONLY, "gl_info_platform", "", "indicates GL platform: WGL, GLX, or AGL."};
-cvar_t gl_info_driver = {CVAR_CLIENT | CVAR_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
+cvar_t gl_info_vendor = {CF_CLIENT | CF_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
+cvar_t gl_info_renderer = {CF_CLIENT | CF_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
+cvar_t gl_info_version = {CF_CLIENT | CF_READONLY, "gl_info_version", "", "indicates version of current renderer. begins with 1.0.0, 1.1.0, 1.2.0, 1.3.1 etc."};
+cvar_t gl_info_extensions = {CF_CLIENT | CF_READONLY, "gl_info_extensions", "", "indicates extension list found by engine, space separated."};
+cvar_t gl_info_platform = {CF_CLIENT | CF_READONLY, "gl_info_platform", "", "indicates GL platform: WGL, GLX, or AGL."};
+cvar_t gl_info_driver = {CF_CLIENT | CF_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
 
-cvar_t vid_fullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
-cvar_t vid_borderless = {CVAR_CLIENT | CVAR_SAVE, "vid_borderless", "0", "make the window borderless by removing all window decorations. has no effect in fullscreen mode"};
-cvar_t vid_width = {CVAR_CLIENT | CVAR_SAVE, "vid_width", "640", "resolution"};
-cvar_t vid_height = {CVAR_CLIENT | CVAR_SAVE, "vid_height", "480", "resolution"};
-cvar_t vid_bitsperpixel = {CVAR_CLIENT | CVAR_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
-cvar_t vid_samples = {CVAR_CLIENT | CVAR_SAVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
-cvar_t vid_refreshrate = {CVAR_CLIENT | CVAR_SAVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
-cvar_t vid_userefreshrate = {CVAR_CLIENT | CVAR_SAVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
-cvar_t vid_stereobuffer = {CVAR_CLIENT | CVAR_SAVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
+cvar_t vid_fullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
+cvar_t vid_borderless = {CF_CLIENT | CF_ARCHIVE, "vid_borderless", "0", "make the window borderless by removing all window decorations. has no effect in fullscreen mode"};
+cvar_t vid_width = {CF_CLIENT | CF_ARCHIVE, "vid_width", "640", "resolution"};
+cvar_t vid_height = {CF_CLIENT | CF_ARCHIVE, "vid_height", "480", "resolution"};
+cvar_t vid_bitsperpixel = {CF_CLIENT | CF_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
+cvar_t vid_samples = {CF_CLIENT | CF_ARCHIVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
+cvar_t vid_refreshrate = {CF_CLIENT | CF_ARCHIVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
+cvar_t vid_userefreshrate = {CF_CLIENT | CF_ARCHIVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
+cvar_t vid_stereobuffer = {CF_CLIENT | CF_ARCHIVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
 // the density cvars are completely optional, set and use when something needs to have a density-independent size.
 // TODO: set them when changing resolution, setting them from the commandline will be independent from the resolution - use only if you have a native fixed resolution.
 // values for the Samsung Galaxy SIII, Snapdragon version: 2.000000 density, 304.799988 xdpi, 303.850464 ydpi
-cvar_t vid_touchscreen_density = {CVAR_CLIENT, "vid_touchscreen_density", "2.0", "Standard quantized screen density multiplier (see Android documentation for DisplayMetrics), similar values are given on iPhoneOS"};
-cvar_t vid_touchscreen_xdpi = {CVAR_CLIENT, "vid_touchscreen_xdpi", "300", "Horizontal DPI of the screen (only valid on Android currently)"};
-cvar_t vid_touchscreen_ydpi = {CVAR_CLIENT, "vid_touchscreen_ydpi", "300", "Vertical DPI of the screen (only valid on Android currently)"};
+cvar_t vid_touchscreen_density = {CF_CLIENT, "vid_touchscreen_density", "2.0", "Standard quantized screen density multiplier (see Android documentation for DisplayMetrics), similar values are given on iPhoneOS"};
+cvar_t vid_touchscreen_xdpi = {CF_CLIENT, "vid_touchscreen_xdpi", "300", "Horizontal DPI of the screen (only valid on Android currently)"};
+cvar_t vid_touchscreen_ydpi = {CF_CLIENT, "vid_touchscreen_ydpi", "300", "Vertical DPI of the screen (only valid on Android currently)"};
 
-cvar_t vid_vsync = {CVAR_CLIENT | CVAR_SAVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
-cvar_t vid_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse", "1", "whether to use the mouse in windowed mode (fullscreen always does)"};
-cvar_t vid_mouse_clickthrough = {CVAR_CLIENT | CVAR_SAVE, "vid_mouse_clickthrough", "0", "mouse behavior in windowed mode: 0 = click to focus, 1 = allow interaction even if the window is not focused (click-through behaviour, can be useful when using third-party game overlays)"};
-cvar_t vid_grabkeyboard = {CVAR_CLIENT | CVAR_SAVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
-cvar_t vid_minwidth = {CVAR_CLIENT, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
-cvar_t vid_minheight = {CVAR_CLIENT, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
-cvar_t gl_finish = {CVAR_CLIENT | CVAR_CLIENT, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
-cvar_t vid_sRGB = {CVAR_CLIENT | CVAR_SAVE, "vid_sRGB", "0", "if hardware is capable, modify rendering to be gamma corrected for the sRGB color standard (computer monitors, TVs), recommended"};
-cvar_t vid_sRGB_fallback = {CVAR_CLIENT | CVAR_SAVE, "vid_sRGB_fallback", "0", "do an approximate sRGB fallback if not properly supported by hardware (2: also use the fallback if framebuffer is 8bit, 3: always use the fallback even if sRGB is supported)"};
+cvar_t vid_vsync = {CF_CLIENT | CF_ARCHIVE, "vid_vsync", "0", "sync to vertical blank, prevents 'tearing' (seeing part of one frame and part of another on the screen at the same time), automatically disabled when doing timedemo benchmarks"};
+cvar_t vid_mouse = {CF_CLIENT | CF_ARCHIVE, "vid_mouse", "1", "whether to use the mouse in windowed mode (fullscreen always does)"};
+cvar_t vid_mouse_clickthrough = {CF_CLIENT | CF_ARCHIVE, "vid_mouse_clickthrough", "0", "mouse behavior in windowed mode: 0 = click to focus, 1 = allow interaction even if the window is not focused (click-through behaviour, can be useful when using third-party game overlays)"};
+cvar_t vid_grabkeyboard = {CF_CLIENT | CF_ARCHIVE, "vid_grabkeyboard", "0", "whether to grab the keyboard when mouse is active (prevents use of volume control keys, music player keys, etc on some keyboards)"};
+cvar_t vid_minwidth = {CF_CLIENT, "vid_minwidth", "0", "minimum vid_width that is acceptable (to be set in default.cfg in mods)"};
+cvar_t vid_minheight = {CF_CLIENT, "vid_minheight", "0", "minimum vid_height that is acceptable (to be set in default.cfg in mods)"};
+cvar_t gl_finish = {CF_CLIENT | CF_CLIENT, "gl_finish", "0", "make the cpu wait for the graphics processor at the end of each rendered frame (can help with strange input or video lag problems on some machines)"};
+cvar_t vid_sRGB = {CF_CLIENT | CF_ARCHIVE, "vid_sRGB", "0", "if hardware is capable, modify rendering to be gamma corrected for the sRGB color standard (computer monitors, TVs), recommended"};
+cvar_t vid_sRGB_fallback = {CF_CLIENT | CF_ARCHIVE, "vid_sRGB_fallback", "0", "do an approximate sRGB fallback if not properly supported by hardware (2: also use the fallback if framebuffer is 8bit, 3: always use the fallback even if sRGB is supported)"};
 
-cvar_t vid_touchscreen = {CVAR_CLIENT, "vid_touchscreen", "0", "Use touchscreen-style input (no mouse grab, track mouse motion only while button is down, screen areas for mimicing joystick axes and buttons"};
-cvar_t vid_touchscreen_showkeyboard = {CVAR_CLIENT, "vid_touchscreen_showkeyboard", "0", "shows the platform's screen keyboard for text entry, can be set by csqc or menu qc if it wants to receive text input, does nothing if the platform has no screen keyboard"};
-cvar_t vid_touchscreen_supportshowkeyboard = {CVAR_CLIENT | CVAR_READONLY, "vid_touchscreen_supportshowkeyboard", "0", "indicates if the platform supports a virtual keyboard"};
-cvar_t vid_stick_mouse = {CVAR_CLIENT | CVAR_SAVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
-cvar_t vid_resizable = {CVAR_CLIENT | CVAR_SAVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
-cvar_t vid_desktopfullscreen = {CVAR_CLIENT | CVAR_SAVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
+cvar_t vid_touchscreen = {CF_CLIENT, "vid_touchscreen", "0", "Use touchscreen-style input (no mouse grab, track mouse motion only while button is down, screen areas for mimicing joystick axes and buttons"};
+cvar_t vid_touchscreen_showkeyboard = {CF_CLIENT, "vid_touchscreen_showkeyboard", "0", "shows the platform's screen keyboard for text entry, can be set by csqc or menu qc if it wants to receive text input, does nothing if the platform has no screen keyboard"};
+cvar_t vid_touchscreen_supportshowkeyboard = {CF_CLIENT | CF_READONLY, "vid_touchscreen_supportshowkeyboard", "0", "indicates if the platform supports a virtual keyboard"};
+cvar_t vid_stick_mouse = {CF_CLIENT | CF_ARCHIVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
+cvar_t vid_resizable = {CF_CLIENT | CF_ARCHIVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
+cvar_t vid_desktopfullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
 #ifdef WIN32
-cvar_t vid_ignore_taskbar = {CVAR_CLIENT | CVAR_SAVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
+cvar_t vid_ignore_taskbar = {CF_CLIENT | CF_ARCHIVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
 #endif
 
-cvar_t v_gamma = {CVAR_CLIENT | CVAR_SAVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
-cvar_t v_contrast = {CVAR_CLIENT | CVAR_SAVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
-cvar_t v_brightness = {CVAR_CLIENT | CVAR_SAVE, "v_brightness", "0", "brightness of black, useful for monitors that are too dark"};
-cvar_t v_contrastboost = {CVAR_CLIENT | CVAR_SAVE, "v_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
-cvar_t v_color_enable = {CVAR_CLIENT | CVAR_SAVE, "v_color_enable", "0", "enables black-grey-white color correction curve controls"};
-cvar_t v_color_black_r = {CVAR_CLIENT | CVAR_SAVE, "v_color_black_r", "0", "desired color of black"};
-cvar_t v_color_black_g = {CVAR_CLIENT | CVAR_SAVE, "v_color_black_g", "0", "desired color of black"};
-cvar_t v_color_black_b = {CVAR_CLIENT | CVAR_SAVE, "v_color_black_b", "0", "desired color of black"};
-cvar_t v_color_grey_r = {CVAR_CLIENT | CVAR_SAVE, "v_color_grey_r", "0.5", "desired color of grey"};
-cvar_t v_color_grey_g = {CVAR_CLIENT | CVAR_SAVE, "v_color_grey_g", "0.5", "desired color of grey"};
-cvar_t v_color_grey_b = {CVAR_CLIENT | CVAR_SAVE, "v_color_grey_b", "0.5", "desired color of grey"};
-cvar_t v_color_white_r = {CVAR_CLIENT | CVAR_SAVE, "v_color_white_r", "1", "desired color of white"};
-cvar_t v_color_white_g = {CVAR_CLIENT | CVAR_SAVE, "v_color_white_g", "1", "desired color of white"};
-cvar_t v_color_white_b = {CVAR_CLIENT | CVAR_SAVE, "v_color_white_b", "1", "desired color of white"};
-cvar_t v_glslgamma_2d = {CVAR_CLIENT | CVAR_SAVE, "v_glslgamma_2d", "1", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
-cvar_t v_psycho = {CVAR_CLIENT, "v_psycho", "0", "easter egg - R.I.P. zinx http://obits.al.com/obituaries/birmingham/obituary.aspx?n=christopher-robert-lais&pid=186080667"};
+cvar_t v_gamma = {CF_CLIENT | CF_ARCHIVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
+cvar_t v_contrast = {CF_CLIENT | CF_ARCHIVE, "v_contrast", "1", "brightness of white (values above 1 give a brighter image with increased color saturation, unlike v_gamma)"};
+cvar_t v_brightness = {CF_CLIENT | CF_ARCHIVE, "v_brightness", "0", "brightness of black, useful for monitors that are too dark"};
+cvar_t v_contrastboost = {CF_CLIENT | CF_ARCHIVE, "v_contrastboost", "1", "by how much to multiply the contrast in dark areas (1 is no change)"};
+cvar_t v_color_enable = {CF_CLIENT | CF_ARCHIVE, "v_color_enable", "0", "enables black-grey-white color correction curve controls"};
+cvar_t v_color_black_r = {CF_CLIENT | CF_ARCHIVE, "v_color_black_r", "0", "desired color of black"};
+cvar_t v_color_black_g = {CF_CLIENT | CF_ARCHIVE, "v_color_black_g", "0", "desired color of black"};
+cvar_t v_color_black_b = {CF_CLIENT | CF_ARCHIVE, "v_color_black_b", "0", "desired color of black"};
+cvar_t v_color_grey_r = {CF_CLIENT | CF_ARCHIVE, "v_color_grey_r", "0.5", "desired color of grey"};
+cvar_t v_color_grey_g = {CF_CLIENT | CF_ARCHIVE, "v_color_grey_g", "0.5", "desired color of grey"};
+cvar_t v_color_grey_b = {CF_CLIENT | CF_ARCHIVE, "v_color_grey_b", "0.5", "desired color of grey"};
+cvar_t v_color_white_r = {CF_CLIENT | CF_ARCHIVE, "v_color_white_r", "1", "desired color of white"};
+cvar_t v_color_white_g = {CF_CLIENT | CF_ARCHIVE, "v_color_white_g", "1", "desired color of white"};
+cvar_t v_color_white_b = {CF_CLIENT | CF_ARCHIVE, "v_color_white_b", "1", "desired color of white"};
+cvar_t v_glslgamma_2d = {CF_CLIENT | CF_ARCHIVE, "v_glslgamma_2d", "1", "applies GLSL gamma to 2d pictures (HUD, fonts)"};
+cvar_t v_psycho = {CF_CLIENT, "v_psycho", "0", "easter egg - R.I.P. zinx http://obits.al.com/obituaries/birmingham/obituary.aspx?n=christopher-robert-lais&pid=186080667"};
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -635,7 +635,7 @@ static glfunction_t openglfuncs[] =
 };
 #endif
 
-qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent)
+qbool GL_CheckExtension(const char *name, const char *disableparm, int silent)
 {
 	int failed = false;
 	const glfunction_t *func;
@@ -643,7 +643,7 @@ qboolean GL_CheckExtension(const char *name, const char *disableparm, int silent
 
 	Con_DPrintf("checking for %s...  ", name);
 
-	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
+	if (disableparm && (Sys_CheckParm(disableparm) || Sys_CheckParm("-safe")))
 	{
 		Con_DPrint("disabled by commandline\n");
 		return false;
@@ -692,7 +692,7 @@ void GL_Setup(void)
 	int j;
 	GLint numextensions = 0;
 	const glfunction_t *func;
-	qboolean missingrequiredfuncs = false;
+	qbool missingrequiredfuncs = false;
 	static char missingfuncs[16384];
 
 #ifndef USE_GLES2
@@ -845,7 +845,7 @@ float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float fsens
 	return value * fsensitivity;
 }
 
-qboolean VID_JoyBlockEmulatedKeys(int keycode)
+qbool VID_JoyBlockEmulatedKeys(int keycode)
 {
 	int j;
 	vid_joystate_t joystate;
@@ -927,7 +927,7 @@ void VID_Shared_BuildJoyState_Finish(vid_joystate_t *joystate)
 	joystate->button[35] = r < 0.0f;
 }
 
-static void VID_KeyEventForButton(qboolean oldbutton, qboolean newbutton, int key, double *timer)
+static void VID_KeyEventForButton(qbool oldbutton, qbool newbutton, int key, double *timer)
 {
 	if (oldbutton)
 	{
@@ -1097,7 +1097,7 @@ void VID_ApplyGammaToColor(const float *rgb, float *out)
 }
 
 unsigned int vid_gammatables_serial = 0; // so other subsystems can poll if gamma parameters have changed
-qboolean vid_gammatables_trivial = true;
+qbool vid_gammatables_trivial = true;
 void VID_BuildGammaTables(unsigned short *ramps, int rampsize)
 {
 	if (cachecolorenable)
@@ -1166,7 +1166,7 @@ void VID_UpdateGamma(void)
 {
 	cvar_t *c;
 	float f;
-	qboolean gamma_changed = false;
+	qbool gamma_changed = false;
 
 #define BOUNDCVAR(cvar, m1, m2) c = &(cvar);f = bound(m1, c->value, m2);if (c->value != f) Cvar_SetValueQuick(c, f);
 	BOUNDCVAR(v_gamma, 0.1, 5);
@@ -1363,8 +1363,8 @@ void VID_Shared_Init(void)
 	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
 #endif
 
-	Cmd_AddCommand(CMD_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
-	Cmd_AddCommand(CMD_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+	Cmd_AddCommand(CF_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
+	Cmd_AddCommand(CF_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
 }
 
 static int VID_Mode(int fullscreen, int width, int height, int bpp, float refreshrate, int stereobuffer)
@@ -1465,8 +1465,8 @@ static void VID_CloseSystems(void)
 	Key_ReleaseAll();
 }
 
-qboolean vid_commandlinecheck = true;
-extern qboolean vid_opened;
+qbool vid_commandlinecheck = true;
+extern qbool vid_opened;
 
 void VID_Restart_f(cmd_state_t *cmd)
 {
@@ -1508,7 +1508,7 @@ const char *vidfallbacks[][2] =
 	{NULL, NULL}
 };
 
-// this is only called once by Host_StartVideo and again on each FS_GameDir_f
+// this is only called once by CL_StartVideo and again on each FS_GameDir_f
 void VID_Start(void)
 {
 	int i = 0;
@@ -1518,24 +1518,24 @@ void VID_Start(void)
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
 // COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
-		if (COM_CheckParm("-window") || COM_CheckParm("-safe") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
+		if (Sys_CheckParm("-window") || Sys_CheckParm("-safe") || ((i = Sys_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 0))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 // COMMANDLINEOPTION: Video: -borderless performs +vid_borderless 1
-		if (COM_CheckParm("-borderless") || ((i = COM_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
+		if (Sys_CheckParm("-borderless") || ((i = Sys_CheckParm("+vid_borderless")) != 0 && atoi(sys.argv[i+1]) == 1))
 		{
 			Cvar_SetValueQuick(&vid_borderless, true);
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 		}
 // COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
-		if (COM_CheckParm("-fullscreen") || ((i = COM_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
+		if (Sys_CheckParm("-fullscreen") || ((i = Sys_CheckParm("+vid_fullscreen")) != 0 && atoi(sys.argv[i+1]) == 1))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
 // COMMANDLINEOPTION: Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-width")) != 0 || ((i = COM_CheckParm("+vid_width")) != 0))
+		if ((i = Sys_CheckParm("-width")) != 0 || ((i = Sys_CheckParm("+vid_width")) != 0))
 			width = atoi(sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
-		if ((i = COM_CheckParm("-height")) != 0 || ((i = COM_CheckParm("+vid_height")) != 0))
+		if ((i = Sys_CheckParm("-height")) != 0 || ((i = Sys_CheckParm("+vid_height")) != 0))
 			height = atoi(sys.argv[i+1]);
 		if (width == 0)
 			width = height * 4 / 3;
@@ -1546,13 +1546,13 @@ void VID_Start(void)
 		if (height)
 			Cvar_SetValueQuick(&vid_height, height);
 // COMMANDLINEOPTION: Video: -density <multiplier> performs +vid_touchscreen_density <multiplier> (example -density 1 or -density 1.5)
-		if ((i = COM_CheckParm("-density")) != 0)
+		if ((i = Sys_CheckParm("-density")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_density, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -xdpi <dpi> performs +vid_touchscreen_xdpi <dpi> (example -xdpi 160 or -xdpi 320)
-		if ((i = COM_CheckParm("-touchscreen_xdpi")) != 0)
+		if ((i = Sys_CheckParm("-touchscreen_xdpi")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_xdpi, sys.argv[i+1]);
 // COMMANDLINEOPTION: Video: -ydpi <dpi> performs +vid_touchscreen_ydpi <dpi> (example -ydpi 160 or -ydpi 320)
-		if ((i = COM_CheckParm("-touchscreen_ydpi")) != 0)
+		if ((i = Sys_CheckParm("-touchscreen_ydpi")) != 0)
 			Cvar_SetQuick(&vid_touchscreen_ydpi, sys.argv[i+1]);
 	}
 
@@ -1603,7 +1603,7 @@ static int VID_SortModes_Compare(const void *a_, const void *b_)
 		return -1;
 	return 0;
 }
-size_t VID_SortModes(vid_mode_t *modes, size_t count, qboolean usebpp, qboolean userefreshrate, qboolean useaspect)
+size_t VID_SortModes(vid_mode_t *modes, size_t count, qbool usebpp, qbool userefreshrate, qbool useaspect)
 {
 	size_t i;
 	if(count == 0)

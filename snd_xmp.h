@@ -20,10 +20,12 @@
 #ifndef SND_XMP_H
 #define SND_XMP_H
 
+#include "qtypes.h"
+struct sfx_s;
 
-qboolean XMP_OpenLibrary (void);
+qbool XMP_OpenLibrary (void);
 void XMP_CloseLibrary (void);
-qboolean XMP_LoadModFile (const char *filename, sfx_t *sfx);
+qbool XMP_LoadModFile (const char *filename, struct sfx_s *sfx);
 
 
 #endif

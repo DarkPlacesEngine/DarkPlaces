@@ -2,13 +2,13 @@
 #include "quakedef.h"
 #include "image.h"
 
-cvar_t r_lightningbeam_thickness = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_thickness", "8", "thickness of the lightning beam effect"};
-cvar_t r_lightningbeam_scroll = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_scroll", "5", "speed of texture scrolling on the lightning beam effect"};
-cvar_t r_lightningbeam_repeatdistance = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_repeatdistance", "128", "how far to stretch the texture along the lightning beam effect"};
-cvar_t r_lightningbeam_color_red = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_color_red", "1", "color of the lightning beam effect"};
-cvar_t r_lightningbeam_color_green = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_color_green", "1", "color of the lightning beam effect"};
-cvar_t r_lightningbeam_color_blue = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_color_blue", "1", "color of the lightning beam effect"};
-cvar_t r_lightningbeam_qmbtexture = {CVAR_CLIENT | CVAR_SAVE, "r_lightningbeam_qmbtexture", "0", "load the qmb textures/particles/lightning.pcx texture instead of generating one, can look better"};
+cvar_t r_lightningbeam_thickness = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_thickness", "8", "thickness of the lightning beam effect"};
+cvar_t r_lightningbeam_scroll = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_scroll", "5", "speed of texture scrolling on the lightning beam effect"};
+cvar_t r_lightningbeam_repeatdistance = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_repeatdistance", "128", "how far to stretch the texture along the lightning beam effect"};
+cvar_t r_lightningbeam_color_red = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_color_red", "1", "color of the lightning beam effect"};
+cvar_t r_lightningbeam_color_green = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_color_green", "1", "color of the lightning beam effect"};
+cvar_t r_lightningbeam_color_blue = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_color_blue", "1", "color of the lightning beam effect"};
+cvar_t r_lightningbeam_qmbtexture = {CF_CLIENT | CF_ARCHIVE, "r_lightningbeam_qmbtexture", "0", "load the qmb textures/particles/lightning.pcx texture instead of generating one, can look better"};
 
 static texture_t cl_beams_externaltexture;
 static texture_t cl_beams_builtintexture;
@@ -105,7 +105,7 @@ void R_LightningBeams_Init(void)
 	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap, NULL, NULL);
 }
 
-static void CL_Beam_AddQuad(dp_model_t *mod, msurface_t *surf, const vec3_t start, const vec3_t end, const vec3_t offset, float t1, float t2)
+static void CL_Beam_AddQuad(model_t *mod, msurface_t *surf, const vec3_t start, const vec3_t end, const vec3_t offset, float t1, float t2)
 {
 	int e0, e1, e2, e3;
 	vec3_t n;
@@ -132,7 +132,7 @@ void CL_Beam_AddPolygons(const beam_t *b)
 	vec_t beamscroll = r_refdef.scene.time * -r_lightningbeam_scroll.value;
 	vec_t beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
 	float length, t1, t2;
-	dp_model_t *mod;
+	model_t *mod;
 	msurface_t *surf;
 
 	if (r_lightningbeam_qmbtexture.integer && cl_beams_externaltexture.currentskinframe == NULL)

@@ -22,12 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
-cvar_t mastervolume = {CVAR_SAVE, "mastervolume", "1", "master volume"};
-cvar_t volume = {CVAR_SAVE, "volume", "0.7", "volume of sound effects"};
-cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
-cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
-cvar_t snd_mutewhenidle = {CVAR_SAVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
+cvar_t bgmvolume = {CF_ARCHIVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
+cvar_t mastervolume = {CF_ARCHIVE, "mastervolume", "1", "master volume"};
+cvar_t volume = {CF_ARCHIVE, "volume", "0.7", "volume of sound effects"};
+cvar_t snd_staticvolume = {CF_ARCHIVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
+cvar_t snd_initialized = { CF_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+cvar_t snd_mutewhenidle = {CF_ARCHIVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
 
 void S_Init (void)
 {
@@ -74,11 +74,11 @@ int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, ve
 	return -1;
 }
 
-void S_StopChannel (unsigned int channel_ind, qboolean lockmutex, qboolean freesfx)
+void S_StopChannel (unsigned int channel_ind, qbool lockmutex, qbool freesfx)
 {
 }
 
-qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value)
+qbool S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qbool value)
 {
 	return false;
 }
@@ -87,7 +87,7 @@ void S_StopSound (int entnum, int entchannel)
 {
 }
 
-void S_PauseGameSounds (qboolean toggle)
+void S_PauseGameSounds (qbool toggle)
 {
 }
 
@@ -95,7 +95,7 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean levelsound)
+sfx_t *S_PrecacheSound (const char *sample, qbool complain, qbool levelsound)
 {
 	return NULL;
 }
@@ -105,7 +105,7 @@ float S_SoundLength(const char *name)
 	return -1;
 }
 
-qboolean S_IsSoundPrecached (const sfx_t *sfx)
+qbool S_IsSoundPrecached (const sfx_t *sfx)
 {
 	return false;
 }
@@ -131,7 +131,7 @@ void S_ExtraUpdate (void)
 {
 }
 
-qboolean S_LocalSound (const char *s)
+qbool S_LocalSound (const char *s)
 {
 	return false;
 }

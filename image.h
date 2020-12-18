@@ -2,6 +2,11 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "cvar.h"
+#include "r_textures.h"
+
 extern int image_width, image_height;
 
 unsigned char *Image_GenerateNoTexture(void);
@@ -10,7 +15,7 @@ unsigned char *Image_GenerateNoTexture(void);
 // (warning: input must be different than output due to non-linear read/write)
 // (tip: component indices can contain values | 0x80000000 to tell it to
 // store them directly into output, so 255 | 0x80000000 would write 255)
-void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices);
+void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qbool inputflipx, qbool inputflipy, qbool inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices);
 
 // applies gamma correction to RGB pixels, in can be the same as out
 void Image_GammaRemapRGB(const unsigned char *in, unsigned char *out, int pixels, const unsigned char *gammar, const unsigned char *gammag, const unsigned char *gammab);
@@ -24,28 +29,28 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out);
 unsigned char *LoadTGA_BGRA (const unsigned char *f, int filesize, int *miplevel);
 
 // loads a texture, as pixel data
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB, int *miplevel);
+unsigned char *loadimagepixelsbgra (const char *filename, qbool complain, qbool allowFixtrans, qbool convertsRGB, int *miplevel);
 
 // searches for lmp and wad pics of the provided name and returns true and their dimensions if found
-qboolean Image_GetStockPicSize(const char *filename, int *returnwidth, int *returnheight);
+qbool Image_GetStockPicSize(const char *filename, int *returnwidth, int *returnheight);
 
 // loads an 8bit pcx image into a 296x194x8bit buffer, with cropping as needed
-qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);
+qbool LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight);
 
 // loads the palette from an 8bit pcx image into your provided array
-qboolean LoadPCX_PaletteOnly(const unsigned char *f, int filesize, unsigned char *palette768b);
+qbool LoadPCX_PaletteOnly(const unsigned char *f, int filesize, unsigned char *palette768b);
 
 // get the metadata from a Quake2 wal file
-qboolean LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c);
+qbool LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c);
 
 // loads a texture, as a texture
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean sRGB);
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qbool complain, int flags, qbool allowFixtrans, qbool sRGB);
 
 // writes an upside down BGR image into a TGA
-qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data);
+qbool Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data);
 
 // writes a BGRA image into a TGA file
-qboolean Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data);
+qbool Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data);
 
 // resizes the image (in can not be the same as out)
 void Image_Resample32(const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int quality);

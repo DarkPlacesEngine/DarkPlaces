@@ -9,7 +9,7 @@
 
 typedef struct glyph_slot_s
 {
-	qboolean image;
+	qbool image;
 	// we keep the quad coords here only currently
 	// if you need other info, make Font_LoadMapForIndex fill it into this slot
 	float txmin; // texture coordinate in [0,1]
@@ -35,7 +35,7 @@ struct ft2_font_map_s
 	int                    glyphSize;
 
 	cachepic_t            *pic;
-	qboolean               static_tex;
+	qbool               static_tex;
 	glyph_slot_t           glyphs[FONT_CHARS_PER_MAP];
 
 	// contains the kerning information for the first 256 characters
@@ -54,8 +54,8 @@ struct ft2_attachment_s
 	fs_offset_t    size;
 };
 
-//qboolean Font_LoadMapForIndex(ft2_font_t *font, Uchar _ch, ft2_font_map_t **outmap);
-qboolean Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_font_map_t **outmap);
+//qbool Font_LoadMapForIndex(ft2_font_t *font, Uchar _ch, ft2_font_map_t **outmap);
+qbool Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_font_map_t **outmap);
 
 void font_start(void);
 void font_shutdown(void);

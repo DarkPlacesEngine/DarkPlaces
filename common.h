@@ -21,6 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <stdarg.h>
+#include "qtypes.h"
+#include "qdefs.h"
 
 /// MSVC has a different name for several standard functions
 #ifdef WIN32
@@ -38,15 +41,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //============================================================================
 
+#define ContainerOf(ptr, type, member) ((type *)((char *)&(ptr) - offsetof(type, member)))
+
 typedef struct sizebuf_s
 {
-	qboolean	allowoverflow;	///< if false, do a Sys_Error
-	qboolean	overflowed;		///< set to true if the buffer size failed
+	qbool	allowoverflow;	///< if false, do a Sys_Error
+	qbool	overflowed;		///< set to true if the buffer size failed
 	unsigned char		*data;
 	int			maxsize;
 	int			cursize;
 	int			readcount;
-	qboolean	badread;		// set if a read goes beyond end of message
+	qbool	badread;		// set if a read goes beyond end of message
 } sizebuf_t;
 
 void SZ_Clear (sizebuf_t *buf);
@@ -193,17 +198,16 @@ float MSG_ReadAngle (sizebuf_t *sb, protocolversion_t protocol);
 //============================================================================
 
 typedef float (*COM_WordWidthFunc_t) (void *passthrough, const char *w, size_t *length, float maxWidth); // length is updated to the longest fitting string into maxWidth; if maxWidth < 0, all characters are used and length is used as is
-typedef int (*COM_LineProcessorFunc) (void *passthrough, const char *line, size_t length, float width, qboolean isContination);
+typedef int (*COM_LineProcessorFunc) (void *passthrough, const char *line, size_t length, float width, qbool isContination);
 int COM_Wordwrap(const char *string, size_t length, float continuationSize, float maxWidth, COM_WordWidthFunc_t wordWidth, void *passthroughCW, COM_LineProcessorFunc processLine, void *passthroughPL);
 
 extern char com_token[MAX_INPUTLINE];
 
-int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash, qboolean parsecomments);
-int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline);
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline);
+int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments);
+int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline);
+int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline);
 int COM_ParseToken_Console(const char **datapointer);
 
-int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_Shutdown (void);
 void COM_InitGameType (void);
@@ -321,8 +325,8 @@ int COM_StringBeginsWith(const char *s, const char *match);
 
 int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize, const char *commentprefix);
 
-size_t COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
-qboolean COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets);
+size_t COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid);
+qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets);
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
@@ -335,11 +339,11 @@ typedef struct stringlist_s
 } stringlist_t;
 
 int matchpattern(const char *in, const char *pattern, int caseinsensitive);
-int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qboolean wildcard_least_one);
+int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qbool wildcard_least_one);
 void stringlistinit(stringlist_t *list);
 void stringlistfreecontents(stringlist_t *list);
 void stringlistappend(stringlist_t *list, const char *text);
-void stringlistsort(stringlist_t *list, qboolean uniq);
+void stringlistsort(stringlist_t *list, qbool uniq);
 void listdirectory(stringlist_t *list, const char *basepath, const char *path);
 
 char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);

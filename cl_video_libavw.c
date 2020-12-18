@@ -117,9 +117,9 @@ typedef struct libavwstream_s
 }
 libavwstream_t;
 
-cvar_t cl_video_libavw_minwidth  = {CVAR_SAVE, "cl_video_libavw_minwidth", "0", "if videos width is lesser than minimal, thay will be upscaled"};
-cvar_t cl_video_libavw_minheight = {CVAR_SAVE, "cl_video_libavw_minheight", "0", "if videos height is lesser than minimal, thay will be upscaled"};
-cvar_t cl_video_libavw_scaler    = {CVAR_SAVE, "cl_video_libavw_scaler", "1", "selects a scaler for libavcode played videos. Scalers are: 0 - bilinear, 1 - bicubic, 2 - x, 3 - point, 4 - area, 5 - bicublin, 6 - gauss, 7 - sinc, 8 - lanczos, 9 - spline."};
+cvar_t cl_video_libavw_minwidth  = {CF_ARCHIVE, "cl_video_libavw_minwidth", "0", "if videos width is lesser than minimal, thay will be upscaled"};
+cvar_t cl_video_libavw_minheight = {CF_ARCHIVE, "cl_video_libavw_minheight", "0", "if videos height is lesser than minimal, thay will be upscaled"};
+cvar_t cl_video_libavw_scaler    = {CF_ARCHIVE, "cl_video_libavw_scaler", "1", "selects a scaler for libavcode played videos. Scalers are: 0 - bilinear, 1 - bicubic, 2 - x, 3 - point, 4 - area, 5 - bicublin, 6 - gauss, 7 - sinc, 8 - lanczos, 9 - spline."};
 
 // video extensions
 const char* libavw_extensions[] =
@@ -355,12 +355,12 @@ static void libavw_message(int level, const char *message)
 		Con_Printf(CON_ERROR "LibAvcodec panic: %s\n", message);
 }
 
-qboolean LibAvW_OpenLibrary(void)
+qbool LibAvW_OpenLibrary(void)
 {
 	int errorcode;
 
 	// COMMANDLINEOPTION: Video: -nolibavw disables libavcodec wrapper support
-	if (COM_CheckParm("-nolibavw"))
+	if (Sys_CheckParm("-nolibavw"))
 		return false;
 
 	// load DLL's

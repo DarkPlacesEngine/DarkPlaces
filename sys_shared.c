@@ -55,7 +55,7 @@ void Sys_Quit (int returnvalue)
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 
-	if (COM_CheckParm("-profilegameonly"))
+	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 	host.state = host_shutdown;
 	Host_Shutdown();
@@ -65,7 +65,7 @@ void Sys_Quit (int returnvalue)
 #ifdef __cplusplus
 extern "C"
 #endif
-void Sys_AllowProfiling(qboolean enable)
+void Sys_AllowProfiling(qbool enable)
 {
 #ifdef __ANDROID__
 #ifdef USE_PROFILER
@@ -91,7 +91,7 @@ DLL MANAGEMENT
 ===============================================================================
 */
 
-static qboolean Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qboolean complain, qboolean has_next)
+static qbool Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qbool complain, qbool has_next)
 {
 	const dllfunction_t *func;
 	if(dllhandle)
@@ -116,7 +116,22 @@ static qboolean Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunctio
 	return false;
 }
 
-qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
+qbool Sys_LoadSelf(dllhandle_t *handle)
+{
+	dllhandle_t dllhandle = 0;
+
+	if (handle == NULL)
+		return false;
+#ifdef WIN32
+	dllhandle = LoadLibrary (NULL);
+#else
+	dllhandle = dlopen (NULL, RTLD_NOW | RTLD_GLOBAL);
+#endif
+	*handle = dllhandle;
+	return true;
+}
+
+qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
 #ifdef SUPPORTDLL
 	const dllfunction_t *func;
@@ -268,20 +283,43 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 #endif
 
 // this one is referenced elsewhere
-cvar_t sys_usenoclockbutbenchmark = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
+cvar_t sys_usenoclockbutbenchmark = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
 
 // these are not
-static cvar_t sys_debugsleep = {CVAR_CLIENT | CVAR_SERVER, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
-static cvar_t sys_usesdlgetticks = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
-static cvar_t sys_usesdldelay = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
+static cvar_t sys_debugsleep = {CF_CLIENT | CF_SERVER, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
+static cvar_t sys_usesdlgetticks = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
+static cvar_t sys_usesdldelay = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
 #if HAVE_QUERYPERFORMANCECOUNTER
-static cvar_t sys_usequeryperformancecounter = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
+static cvar_t sys_usequeryperformancecounter = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
 #endif
 #if HAVE_CLOCKGETTIME
-static cvar_t sys_useclockgettime = {CVAR_CLIENT | CVAR_SERVER | CVAR_SAVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
+static cvar_t sys_useclockgettime = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
 #endif
 
 static double benchmark_time; // actually always contains an integer amount of milliseconds, will eventually "overflow"
+
+/*
+================
+Sys_CheckParm
+
+Returns the position (1 to argc-1) in the program's argument list
+where the given parameter apears, or 0 if not present
+================
+*/
+int Sys_CheckParm (const char *parm)
+{
+	int i;
+
+	for (i=1 ; i<sys.argc ; i++)
+	{
+		if (!sys.argv[i])
+			continue;               // NEXTSTEP sometimes clears appkit vars.
+		if (!strcmp (parm,sys.argv[i]))
+			return i;
+	}
+
+	return 0;
+}
 
 void Sys_Init_Commands (void)
 {
@@ -530,7 +568,7 @@ void Sys_ProvideSelfFD(void)
 static int CPUID_Features(void)
 {
 	int features = 0;
-# if defined((__GNUC__) || (__clang__) || (__TINYC__)) && defined(__i386__)
+# if (defined(__GNUC__) || defined(__clang__) || defined(__TINYC__)) && defined(__i386__)
         __asm__ (
 "        movl    %%ebx,%%edi\n"
 "        xorl    %%eax,%%eax                                           \n"
@@ -557,16 +595,16 @@ static int CPUID_Features(void)
 #endif
 
 #ifdef SSE_POSSIBLE
-qboolean Sys_HaveSSE(void)
+qbool Sys_HaveSSE(void)
 {
 	// COMMANDLINEOPTION: SSE: -nosse disables SSE support and detection
-	if(COM_CheckParm("-nosse"))
+	if(Sys_CheckParm("-nosse"))
 		return false;
 #ifdef SSE_PRESENT
 	return true;
 #else
 	// COMMANDLINEOPTION: SSE: -forcesse enables SSE support and disables detection
-	if(COM_CheckParm("-forcesse") || COM_CheckParm("-forcesse2"))
+	if(Sys_CheckParm("-forcesse") || Sys_CheckParm("-forcesse2"))
 		return true;
 	if(CPUID_Features() & (1 << 25))
 		return true;
@@ -574,16 +612,16 @@ qboolean Sys_HaveSSE(void)
 #endif
 }
 
-qboolean Sys_HaveSSE2(void)
+qbool Sys_HaveSSE2(void)
 {
 	// COMMANDLINEOPTION: SSE2: -nosse2 disables SSE2 support and detection
-	if(COM_CheckParm("-nosse") || COM_CheckParm("-nosse2"))
+	if(Sys_CheckParm("-nosse") || Sys_CheckParm("-nosse2"))
 		return false;
 #ifdef SSE2_PRESENT
 	return true;
 #else
 	// COMMANDLINEOPTION: SSE2: -forcesse2 enables SSE2 support and disables detection
-	if(COM_CheckParm("-forcesse2"))
+	if(Sys_CheckParm("-forcesse2"))
 		return true;
 	if((CPUID_Features() & (3 << 25)) == (3 << 25)) // SSE is 1<<25, SSE2 is 1<<26
 		return true;
@@ -601,7 +639,7 @@ void Sys_InitProcessNice (void)
 {
 	struct rlimit lim;
 	sys.nicepossible = false;
-	if(COM_CheckParm("-nonice"))
+	if(Sys_CheckParm("-nonice"))
 		return;
 	errno = 0;
 	sys.nicelevel = getpriority(PRIO_PROCESS, 0);

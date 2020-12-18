@@ -7,14 +7,14 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-static cvar_t cl_curl_maxdownloads = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t cl_curl_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
-static cvar_t sv_curl_defaulturl = {CVAR_SERVER | CVAR_SAVE, "sv_curl_defaulturl","", "default autodownload source URL"};
-static cvar_t sv_curl_serverpackages = {CVAR_SERVER | CVAR_SAVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
-static cvar_t sv_curl_maxspeed = {CVAR_SERVER | CVAR_SAVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
-static cvar_t cl_curl_enabled = {CVAR_CLIENT | CVAR_SAVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
-static cvar_t cl_curl_useragent = {CVAR_CLIENT, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
-static cvar_t cl_curl_useragent_append = {CVAR_CLIENT, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
+static cvar_t cl_curl_maxdownloads = {CF_CLIENT | CF_ARCHIVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
+static cvar_t cl_curl_maxspeed = {CF_CLIENT | CF_ARCHIVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
+static cvar_t sv_curl_defaulturl = {CF_SERVER | CF_ARCHIVE, "sv_curl_defaulturl","", "default autodownload source URL"};
+static cvar_t sv_curl_serverpackages = {CF_SERVER | CF_ARCHIVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
+static cvar_t sv_curl_maxspeed = {CF_SERVER | CF_ARCHIVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
+static cvar_t cl_curl_enabled = {CF_CLIENT | CF_ARCHIVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
+static cvar_t cl_curl_useragent = {CF_CLIENT, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
+static cvar_t cl_curl_useragent_append = {CF_CLIENT, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
 
 /*
 =================================================================
@@ -204,13 +204,13 @@ typedef struct downloadinfo_s
 	qfile_t *stream;
 	fs_offset_t startpos;
 	CURL *curle;
-	qboolean started;
+	qbool started;
 	int loadtype;
 	size_t bytes_received; // for buffer
 	double bytes_received_curl; // for throttling
 	double bytes_sent_curl; // for throttling
 	struct downloadinfo_s *next, *prev;
-	qboolean forthismap;
+	qbool forthismap;
 	double maxspeed;
 	curl_slist *slist; // http headers
 
@@ -228,7 +228,7 @@ downloadinfo;
 static downloadinfo *downloads = NULL;
 static int numdownloads = 0;
 
-static qboolean noclear = false;
+static qbool noclear = false;
 
 static int numdownloads_fail = 0;
 static int numdownloads_success = 0;
@@ -301,7 +301,7 @@ Curl_Have_forthismap
 Returns true if a download needed for the current game is running.
 ====================
 */
-qboolean Curl_Have_forthismap(void)
+qbool Curl_Have_forthismap(void)
 {
 	return numdownloads_added != 0;
 }
@@ -353,7 +353,7 @@ CURL_CloseLibrary
 Load the cURL DLL
 ====================
 */
-static qboolean CURL_OpenLibrary (void)
+static qbool CURL_OpenLibrary (void)
 {
 	const char* dllnames [] =
 	{
@@ -509,11 +509,11 @@ CURL_DOWNLOAD_FAILED or CURL_DOWNLOAD_ABORTED) and in the second case the error
 code from libcurl, or 0, if another error has occurred.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
+static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qbool forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata);
 static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error, const char *content_type_)
 {
 	char content_type[64];
-	qboolean ok = false;
+	qbool ok = false;
 	if(!curl_dll)
 		return;
 	switch(status)
@@ -875,7 +875,7 @@ Starts a download of a given URL to the file name portion of this URL (or name
 if given) in the "dlcache/" folder.
 ====================
 */
-static qboolean Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qboolean forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspeed, const char *name, int loadtype, qbool forthismap, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	if(buf)
 		if(loadtype != LOADTYPE_NONE)
@@ -989,7 +989,7 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 			{
 				if(loadtype == LOADTYPE_PAK)
 				{
-					qboolean already_loaded;
+					qbool already_loaded;
 					if(FS_AddPack(fn, &already_loaded, true))
 					{
 						Con_DPrintf("%s already exists, not downloading!\n", fn);
@@ -1104,15 +1104,15 @@ static qboolean Curl_Begin(const char *URL, const char *extraheaders, double max
 	}
 }
 
-qboolean Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, int loadtype, qboolean forthismap)
+qbool Curl_Begin_ToFile(const char *URL, double maxspeed, const char *name, int loadtype, qbool forthismap)
 {
 	return Curl_Begin(URL, NULL, maxspeed, name, loadtype, forthismap, NULL, NULL, 0, NULL, 0, NULL, NULL);
 }
-qboolean Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+qbool Curl_Begin_ToMemory(const char *URL, double maxspeed, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	return Curl_Begin(URL, NULL, maxspeed, NULL, false, false, NULL, NULL, 0, buf, bufsize, callback, cbdata);
 }
-qboolean Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
+qbool Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double maxspeed, const char *post_content_type, const unsigned char *postbuf, size_t postbufsize, unsigned char *buf, size_t bufsize, curl_callback_t callback, void *cbdata)
 {
 	return Curl_Begin(URL, extraheaders, maxspeed, NULL, false, false, post_content_type, postbuf, postbufsize, buf, bufsize, callback, cbdata);
 }
@@ -1271,7 +1271,7 @@ Curl_Running
 returns true iff there is a download running.
 ====================
 */
-qboolean Curl_Running(void)
+qbool Curl_Running(void)
 {
 	if(!curl_dll)
 		return false;
@@ -1394,7 +1394,7 @@ static void Curl_Curl_f(cmd_state_t *cmd)
 	int i;
 	int end;
 	int loadtype = LOADTYPE_NONE;
-	qboolean forthismap = false;
+	qbool forthismap = false;
 	const char *url;
 	const char *name = 0;
 
@@ -1552,7 +1552,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
@@ -1666,7 +1666,7 @@ static const char *Curl_FindPackURL(const char *filename)
 		// read lines of format "pattern url"
 		char *p = buf;
 		char *pattern = NULL, *patternend = NULL, *url = NULL, *urlend = NULL;
-		qboolean eof = false;
+		qbool eof = false;
 
 		pattern = p;
 		while(!eof)
@@ -1772,7 +1772,7 @@ This is done by sending him the following console commands:
 	curl --finish_autodownload
 ====================
 */
-static qboolean Curl_SendRequirement(const char *filename, qboolean foundone, char *sendbuffer, size_t sendbuffer_len)
+static qbool Curl_SendRequirement(const char *filename, qbool foundone, char *sendbuffer, size_t sendbuffer_len)
 {
 	const char *p;
 	const char *thispack = FS_WhichPack(filename);
@@ -1813,7 +1813,7 @@ void Curl_SendRequirements(void)
 	// for each requirement, find the pack name
 	char sendbuffer[4096] = "";
 	requirement *req;
-	qboolean foundone = false;
+	qbool foundone = false;
 	const char *p;
 
 	for(req = requirements; req; req = req->next)

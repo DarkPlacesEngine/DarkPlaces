@@ -97,9 +97,8 @@ void CL_StopPlayback (void)
 		CL_FinishTimeDemo ();
 
 	if (!cls.demostarting) // only quit if not starting another demo
-		if (COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
-			Host_Quit_f(&cmd_client);
-
+		if (Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
+			host.state = host_shutdown;
 }
 
 /*
@@ -382,7 +381,7 @@ void CL_Record_f(cmd_state_t *cmd)
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_command, false);
+		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_local, false);
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
@@ -407,19 +406,19 @@ void CL_Record_f(cmd_state_t *cmd)
 ====================
 CL_PlayDemo_f
 
-play [demoname]
+playdemo [demoname]
 ====================
 */
 void CL_PlayDemo_f(cmd_state_t *cmd)
 {
 	char	name[MAX_QPATH];
 	int c;
-	qboolean neg = false;
+	qbool neg = false;
 	qfile_t *f;
 
 	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Print("play <demoname> : plays a demo\n");
+		Con_Print("playdemo <demoname> : plays a demo\n");
 		return;
 	}
 
@@ -437,8 +436,10 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 	cls.demostarting = true;
 
 	// disconnect from server
-	CL_Disconnect ();
-	SV_Shutdown ();
+	if(cls.state == ca_connected)
+		CL_Disconnect();
+	if(sv.active)
+		SV_Shutdown();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -510,10 +511,10 @@ static void CL_FinishTimeDemo (void)
 	// LadyHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
 	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | run %d | result %i frames %5.7f seconds %5.7f fps, one-second fps min/avg/max: %.0f %.0f %.0f (%i seconds)\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, benchmark_runs + 1, frames, time, totalfpsavg, fpsmin, fpsavg, fpsmax, cls.td_onesecondavgcount);
-	if (COM_CheckParm("-benchmark"))
+	if (Sys_CheckParm("-benchmark"))
 	{
 		++benchmark_runs;
-		i = COM_CheckParm("-benchmarkruns");
+		i = Sys_CheckParm("-benchmarkruns");
 		if(i && i + 1 < sys.argc)
 		{
 			static benchmarkhistory_t *history = NULL;
@@ -536,7 +537,7 @@ static void CL_FinishTimeDemo (void)
 			else
 			{
 				// print statistics
-				int first = COM_CheckParm("-benchmarkruns_skipfirst") ? 1 : 0;
+				int first = Sys_CheckParm("-benchmarkruns_skipfirst") ? 1 : 0;
 				if(benchmark_runs > first)
 				{
 #define DO_MIN(f) \
@@ -579,11 +580,11 @@ static void CL_FinishTimeDemo (void)
 				}
 				Z_Free(history);
 				history = NULL;
-				Host_Quit_f(&cmd_client);
+				host.state = host_shutdown;
 			}
 		}
 		else
-			Host_Quit_f(&cmd_client);
+			host.state = host_shutdown;
 	}
 }
 
@@ -637,7 +638,7 @@ static void CL_Startdemos_f(cmd_state_t *cmd)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated || COM_CheckParm("-listen") || COM_CheckParm("-benchmark") || COM_CheckParm("-demo") || COM_CheckParm("-capturedemo"))
+	if (cls.state == ca_dedicated || Sys_CheckParm("-listen") || Sys_CheckParm("-benchmark") || Sys_CheckParm("-demo") || Sys_CheckParm("-capturedemo"))
 		return;
 
 	c = Cmd_Argc(cmd) - 1;
@@ -693,8 +694,7 @@ static void CL_Stopdemo_f(cmd_state_t *cmd)
 {
 	if (!cls.demoplayback)
 		return;
-	CL_Disconnect ();
-	SV_Shutdown ();
+	CL_Disconnect();
 }
 
 // LadyHavoc: pausedemo command
@@ -709,15 +709,15 @@ static void CL_PauseDemo_f(cmd_state_t *cmd)
 
 void CL_Demo_Init(void)
 {
-	Cmd_AddCommand(CMD_CLIENT, "record", CL_Record_f, "record a demo");
-	Cmd_AddCommand(CMD_CLIENT, "stop", CL_Stop_f, "stop recording or playing a demo");
-	Cmd_AddCommand(CMD_CLIENT, "playdemo", CL_PlayDemo_f, "watch a demo file");
-	Cmd_AddCommand(CMD_CLIENT, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
-	Cmd_AddCommand(CMD_CLIENT, "startdemos", CL_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
-	Cmd_AddCommand(CMD_CLIENT, "demos", CL_Demos_f, "restart looping demos defined by the last startdemos command");
-	Cmd_AddCommand(CMD_CLIENT, "stopdemo", CL_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
+	Cmd_AddCommand(CF_CLIENT, "record", CL_Record_f, "record a demo");
+	Cmd_AddCommand(CF_CLIENT, "stop", CL_Stop_f, "stop recording or playing a demo");
+	Cmd_AddCommand(CF_CLIENT, "playdemo", CL_PlayDemo_f, "watch a demo file");
+	Cmd_AddCommand(CF_CLIENT, "timedemo", CL_TimeDemo_f, "play back a demo as fast as possible and save statistics to benchmark.log");
+	Cmd_AddCommand(CF_CLIENT, "startdemos", CL_Startdemos_f, "start playing back the selected demos sequentially (used at end of startup script)");
+	Cmd_AddCommand(CF_CLIENT, "demos", CL_Demos_f, "restart looping demos defined by the last startdemos command");
+	Cmd_AddCommand(CF_CLIENT, "stopdemo", CL_Stopdemo_f, "stop playing or recording demo (like stop command) and return to looping demos");
 	// LadyHavoc: added pausedemo
-	Cmd_AddCommand(CMD_CLIENT, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
+	Cmd_AddCommand(CF_CLIENT, "pausedemo", CL_PauseDemo_f, "pause demo playback (can also safely pause demo recording if using QUAKE, QUAKEDP or NEHAHRAMOVIE protocol, useful for making movies)");
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 	Cvar_RegisterVariable (&cl_autodemo_delete);

@@ -44,222 +44,226 @@ rtexturepool_t *r_main_texturepool;
 
 int r_textureframe = 0; ///< used only by R_GetCurrentTexture, incremented per view and per UI render
 
-static qboolean r_loadnormalmap;
-static qboolean r_loadgloss;
-qboolean r_loadfog;
-static qboolean r_loaddds;
-static qboolean r_savedds;
-static qboolean r_gpuskeletal;
+static qbool r_loadnormalmap;
+static qbool r_loadgloss;
+qbool r_loadfog;
+static qbool r_loaddds;
+static qbool r_savedds;
+static qbool r_gpuskeletal;
 
 //
 // screen size info
 //
 r_refdef_t r_refdef;
 
-cvar_t r_motionblur = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur", "0", "screen motionblur - value represents intensity, somewhere around 0.5 recommended - NOTE: bad performance on multi-gpu!"};
-cvar_t r_damageblur = {CVAR_CLIENT | CVAR_SAVE, "r_damageblur", "0", "screen motionblur based on damage - value represents intensity, somewhere around 0.5 recommended - NOTE: bad performance on multi-gpu!"};
-cvar_t r_motionblur_averaging = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_averaging", "0.1", "sliding average reaction time for velocity (higher = slower adaption to change)"};
-cvar_t r_motionblur_randomize = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
-cvar_t r_motionblur_minblur = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_minblur", "0.5", "factor of blur to apply at all times (always have this amount of blur no matter what the other factors are)"};
-cvar_t r_motionblur_maxblur = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_maxblur", "0.9", "maxmimum amount of blur"};
-cvar_t r_motionblur_velocityfactor = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_velocityfactor", "1", "factoring in of player velocity to the blur equation - the faster the player moves around the map, the more blur they get"};
-cvar_t r_motionblur_velocityfactor_minspeed = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_velocityfactor_minspeed", "400", "lower value of velocity when it starts to factor into blur equation"};
-cvar_t r_motionblur_velocityfactor_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_velocityfactor_maxspeed", "800", "upper value of velocity when it reaches the peak factor into blur equation"};
-cvar_t r_motionblur_mousefactor = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_mousefactor", "2", "factoring in of mouse acceleration to the blur equation - the faster the player turns their mouse, the more blur they get"};
-cvar_t r_motionblur_mousefactor_minspeed = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_mousefactor_minspeed", "0", "lower value of mouse acceleration when it starts to factor into blur equation"};
-cvar_t r_motionblur_mousefactor_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "r_motionblur_mousefactor_maxspeed", "50", "upper value of mouse acceleration when it reaches the peak factor into blur equation"};
+cvar_t r_motionblur = {CF_CLIENT | CF_ARCHIVE, "r_motionblur", "0", "screen motionblur - value represents intensity, somewhere around 0.5 recommended - NOTE: bad performance on multi-gpu!"};
+cvar_t r_damageblur = {CF_CLIENT | CF_ARCHIVE, "r_damageblur", "0", "screen motionblur based on damage - value represents intensity, somewhere around 0.5 recommended - NOTE: bad performance on multi-gpu!"};
+cvar_t r_motionblur_averaging = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_averaging", "0.1", "sliding average reaction time for velocity (higher = slower adaption to change)"};
+cvar_t r_motionblur_randomize = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_randomize", "0.1", "randomizing coefficient to workaround ghosting"};
+cvar_t r_motionblur_minblur = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_minblur", "0.5", "factor of blur to apply at all times (always have this amount of blur no matter what the other factors are)"};
+cvar_t r_motionblur_maxblur = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_maxblur", "0.9", "maxmimum amount of blur"};
+cvar_t r_motionblur_velocityfactor = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_velocityfactor", "1", "factoring in of player velocity to the blur equation - the faster the player moves around the map, the more blur they get"};
+cvar_t r_motionblur_velocityfactor_minspeed = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_velocityfactor_minspeed", "400", "lower value of velocity when it starts to factor into blur equation"};
+cvar_t r_motionblur_velocityfactor_maxspeed = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_velocityfactor_maxspeed", "800", "upper value of velocity when it reaches the peak factor into blur equation"};
+cvar_t r_motionblur_mousefactor = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_mousefactor", "2", "factoring in of mouse acceleration to the blur equation - the faster the player turns their mouse, the more blur they get"};
+cvar_t r_motionblur_mousefactor_minspeed = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_mousefactor_minspeed", "0", "lower value of mouse acceleration when it starts to factor into blur equation"};
+cvar_t r_motionblur_mousefactor_maxspeed = {CF_CLIENT | CF_ARCHIVE, "r_motionblur_mousefactor_maxspeed", "50", "upper value of mouse acceleration when it reaches the peak factor into blur equation"};
 
-cvar_t r_depthfirst = {CVAR_CLIENT | CVAR_SAVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
-cvar_t r_useinfinitefarclip = {CVAR_CLIENT | CVAR_SAVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
-cvar_t r_farclip_base = {CVAR_CLIENT, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
-cvar_t r_farclip_world = {CVAR_CLIENT, "r_farclip_world", "2", "adds map size to farclip multiplied by this value"};
-cvar_t r_nearclip = {CVAR_CLIENT, "r_nearclip", "1", "distance from camera of nearclip plane" };
-cvar_t r_deformvertexes = {CVAR_CLIENT, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
-cvar_t r_transparent = {CVAR_CLIENT, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
-cvar_t r_transparent_alphatocoverage = {CVAR_CLIENT, "r_transparent_alphatocoverage", "1", "enables GL_ALPHA_TO_COVERAGE antialiasing technique on alphablend and alphatest surfaces when using vid_samples 2 or higher"};
-cvar_t r_transparent_sortsurfacesbynearest = {CVAR_CLIENT, "r_transparent_sortsurfacesbynearest", "1", "sort entity and world surfaces by nearest point on bounding box instead of using the center of the bounding box, usually reduces sorting artifacts"};
-cvar_t r_transparent_useplanardistance = {CVAR_CLIENT, "r_transparent_useplanardistance", "0", "sort transparent meshes by distance from view plane rather than spherical distance to the chosen point"};
-cvar_t r_showoverdraw = {CVAR_CLIENT, "r_showoverdraw", "0", "shows overlapping geometry"};
-cvar_t r_showbboxes = {CVAR_CLIENT, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
-cvar_t r_showbboxes_client = {CVAR_CLIENT, "r_showbboxes_client", "0", "shows bounding boxes of clientside qc entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
-cvar_t r_showsurfaces = {CVAR_CLIENT, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
-cvar_t r_showtris = {CVAR_CLIENT, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
-cvar_t r_shownormals = {CVAR_CLIENT, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
-cvar_t r_showlighting = {CVAR_CLIENT, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
-cvar_t r_showcollisionbrushes = {CVAR_CLIENT, "r_showcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
-cvar_t r_showcollisionbrushes_polygonfactor = {CVAR_CLIENT, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
-cvar_t r_showcollisionbrushes_polygonoffset = {CVAR_CLIENT, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
-cvar_t r_showdisabledepthtest = {CVAR_CLIENT, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing"};
-cvar_t r_showspriteedges = {CVAR_CLIENT, "r_showspriteedges", "0", "renders a debug outline to show the polygon shape of each sprite frame rendered (may be 2 or more in case of interpolated animations), for debugging rendering bugs with specific view types"};
-cvar_t r_showparticleedges = {CVAR_CLIENT, "r_showparticleedges", "0", "renders a debug outline to show the polygon shape of each particle, for debugging rendering bugs with specific view types"};
-cvar_t r_drawportals = {CVAR_CLIENT, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
-cvar_t r_drawentities = {CVAR_CLIENT, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
-cvar_t r_draw2d = {CVAR_CLIENT, "r_draw2d","1", "draw 2D stuff (dangerous to turn off)"};
-cvar_t r_drawworld = {CVAR_CLIENT, "r_drawworld","1", "draw world (most static stuff)"};
-cvar_t r_drawviewmodel = {CVAR_CLIENT, "r_drawviewmodel","1", "draw your weapon model"};
-cvar_t r_drawexteriormodel = {CVAR_CLIENT, "r_drawexteriormodel","1", "draw your player model (e.g. in chase cam, reflections)"};
-cvar_t r_cullentities_trace = {CVAR_CLIENT, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
-cvar_t r_cullentities_trace_entityocclusion = {CVAR_CLIENT, "r_cullentities_trace_entityocclusion", "1", "check for occluding entities such as doors, not just world hull"};
-cvar_t r_cullentities_trace_samples = {CVAR_CLIENT, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
-cvar_t r_cullentities_trace_tempentitysamples = {CVAR_CLIENT, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
-cvar_t r_cullentities_trace_enlarge = {CVAR_CLIENT, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
-cvar_t r_cullentities_trace_expand = {CVAR_CLIENT, "r_cullentities_trace_expand", "0", "box expanded by this many units for entity culling"};
-cvar_t r_cullentities_trace_pad = {CVAR_CLIENT, "r_cullentities_trace_pad", "8", "accept traces that hit within this many units of the box"};
-cvar_t r_cullentities_trace_delay = {CVAR_CLIENT, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
-cvar_t r_cullentities_trace_eyejitter = {CVAR_CLIENT, "r_cullentities_trace_eyejitter", "16", "randomly offset rays from the eye by this much to reduce the odds of flickering"};
-cvar_t r_sortentities = {CVAR_CLIENT, "r_sortentities", "0", "sort entities before drawing (might be faster)"};
-cvar_t r_speeds = {CVAR_CLIENT, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
-cvar_t r_fullbright = {CVAR_CLIENT, "r_fullbright","0", "makes map very bright and renders faster"};
+cvar_t r_depthfirst = {CF_CLIENT | CF_ARCHIVE, "r_depthfirst", "0", "renders a depth-only version of the scene before normal rendering begins to eliminate overdraw, values: 0 = off, 1 = world depth, 2 = world and model depth"};
+cvar_t r_useinfinitefarclip = {CF_CLIENT | CF_ARCHIVE, "r_useinfinitefarclip", "1", "enables use of a special kind of projection matrix that has an extremely large farclip"};
+cvar_t r_farclip_base = {CF_CLIENT, "r_farclip_base", "65536", "farclip (furthest visible distance) for rendering when r_useinfinitefarclip is 0"};
+cvar_t r_farclip_world = {CF_CLIENT, "r_farclip_world", "2", "adds map size to farclip multiplied by this value"};
+cvar_t r_nearclip = {CF_CLIENT, "r_nearclip", "1", "distance from camera of nearclip plane" };
+cvar_t r_deformvertexes = {CF_CLIENT, "r_deformvertexes", "1", "allows use of deformvertexes in shader files (can be turned off to check performance impact)"};
+cvar_t r_transparent = {CF_CLIENT, "r_transparent", "1", "allows use of transparent surfaces (can be turned off to check performance impact)"};
+cvar_t r_transparent_alphatocoverage = {CF_CLIENT, "r_transparent_alphatocoverage", "1", "enables GL_ALPHA_TO_COVERAGE antialiasing technique on alphablend and alphatest surfaces when using vid_samples 2 or higher"};
+cvar_t r_transparent_sortsurfacesbynearest = {CF_CLIENT, "r_transparent_sortsurfacesbynearest", "1", "sort entity and world surfaces by nearest point on bounding box instead of using the center of the bounding box, usually reduces sorting artifacts"};
+cvar_t r_transparent_useplanardistance = {CF_CLIENT, "r_transparent_useplanardistance", "0", "sort transparent meshes by distance from view plane rather than spherical distance to the chosen point"};
+cvar_t r_showoverdraw = {CF_CLIENT, "r_showoverdraw", "0", "shows overlapping geometry"};
+cvar_t r_showbboxes = {CF_CLIENT, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
+cvar_t r_showbboxes_client = {CF_CLIENT, "r_showbboxes_client", "0", "shows bounding boxes of clientside qc entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
+cvar_t r_showsurfaces = {CF_CLIENT, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
+cvar_t r_showtris = {CF_CLIENT, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
+cvar_t r_shownormals = {CF_CLIENT, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
+cvar_t r_showlighting = {CF_CLIENT, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
+cvar_t r_showcollisionbrushes = {CF_CLIENT, "r_showcollisionbrushes", "0", "draws collision brushes in quake3 maps (mode 1), mode 2 disables rendering of world (trippy!)"};
+cvar_t r_showcollisionbrushes_polygonfactor = {CF_CLIENT, "r_showcollisionbrushes_polygonfactor", "-1", "expands outward the brush polygons a little bit, used to make collision brushes appear infront of walls"};
+cvar_t r_showcollisionbrushes_polygonoffset = {CF_CLIENT, "r_showcollisionbrushes_polygonoffset", "0", "nudges brush polygon depth in hardware depth units, used to make collision brushes appear infront of walls"};
+cvar_t r_showdisabledepthtest = {CF_CLIENT, "r_showdisabledepthtest", "0", "disables depth testing on r_show* cvars, allowing you to see what hidden geometry the graphics card is processing"};
+cvar_t r_showspriteedges = {CF_CLIENT, "r_showspriteedges", "0", "renders a debug outline to show the polygon shape of each sprite frame rendered (may be 2 or more in case of interpolated animations), for debugging rendering bugs with specific view types"};
+cvar_t r_showparticleedges = {CF_CLIENT, "r_showparticleedges", "0", "renders a debug outline to show the polygon shape of each particle, for debugging rendering bugs with specific view types"};
+cvar_t r_drawportals = {CF_CLIENT, "r_drawportals", "0", "shows portals (separating polygons) in world interior in quake1 maps"};
+cvar_t r_drawentities = {CF_CLIENT, "r_drawentities","1", "draw entities (doors, players, projectiles, etc)"};
+cvar_t r_draw2d = {CF_CLIENT, "r_draw2d","1", "draw 2D stuff (dangerous to turn off)"};
+cvar_t r_drawworld = {CF_CLIENT, "r_drawworld","1", "draw world (most static stuff)"};
+cvar_t r_drawviewmodel = {CF_CLIENT, "r_drawviewmodel","1", "draw your weapon model"};
+cvar_t r_drawexteriormodel = {CF_CLIENT, "r_drawexteriormodel","1", "draw your player model (e.g. in chase cam, reflections)"};
+cvar_t r_cullentities_trace = {CF_CLIENT, "r_cullentities_trace", "1", "probabistically cull invisible entities"};
+cvar_t r_cullentities_trace_entityocclusion = {CF_CLIENT, "r_cullentities_trace_entityocclusion", "1", "check for occluding entities such as doors, not just world hull"};
+cvar_t r_cullentities_trace_samples = {CF_CLIENT, "r_cullentities_trace_samples", "2", "number of samples to test for entity culling (in addition to center sample)"};
+cvar_t r_cullentities_trace_tempentitysamples = {CF_CLIENT, "r_cullentities_trace_tempentitysamples", "-1", "number of samples to test for entity culling of temp entities (including all CSQC entities), -1 disables trace culling on these entities to prevent flicker (pvs still applies)"};
+cvar_t r_cullentities_trace_enlarge = {CF_CLIENT, "r_cullentities_trace_enlarge", "0", "box enlargement for entity culling"};
+cvar_t r_cullentities_trace_expand = {CF_CLIENT, "r_cullentities_trace_expand", "0", "box expanded by this many units for entity culling"};
+cvar_t r_cullentities_trace_pad = {CF_CLIENT, "r_cullentities_trace_pad", "8", "accept traces that hit within this many units of the box"};
+cvar_t r_cullentities_trace_delay = {CF_CLIENT, "r_cullentities_trace_delay", "1", "number of seconds until the entity gets actually culled"};
+cvar_t r_cullentities_trace_eyejitter = {CF_CLIENT, "r_cullentities_trace_eyejitter", "16", "randomly offset rays from the eye by this much to reduce the odds of flickering"};
+cvar_t r_sortentities = {CF_CLIENT, "r_sortentities", "0", "sort entities before drawing (might be faster)"};
+cvar_t r_speeds = {CF_CLIENT, "r_speeds","0", "displays rendering statistics and per-subsystem timings"};
+cvar_t r_fullbright = {CF_CLIENT, "r_fullbright","0", "makes map very bright and renders faster"};
 
-cvar_t r_fullbright_directed = {CVAR_CLIENT, "r_fullbright_directed", "0", "render fullbright things (unlit worldmodel and EF_FULLBRIGHT entities, but not fullbright shaders) using a constant light direction instead to add more depth while keeping uniform brightness"};
-cvar_t r_fullbright_directed_ambient = {CVAR_CLIENT, "r_fullbright_directed_ambient", "0.5", "ambient light multiplier for directed fullbright"};
-cvar_t r_fullbright_directed_diffuse = {CVAR_CLIENT, "r_fullbright_directed_diffuse", "0.75", "diffuse light multiplier for directed fullbright"};
-cvar_t r_fullbright_directed_pitch = {CVAR_CLIENT, "r_fullbright_directed_pitch", "20", "constant pitch direction ('height') of the fake light source to use for fullbright"};
-cvar_t r_fullbright_directed_pitch_relative = {CVAR_CLIENT, "r_fullbright_directed_pitch_relative", "0", "whether r_fullbright_directed_pitch is interpreted as absolute (0) or relative (1) pitch"};
+cvar_t r_fullbright_directed = {CF_CLIENT, "r_fullbright_directed", "0", "render fullbright things (unlit worldmodel and EF_FULLBRIGHT entities, but not fullbright shaders) using a constant light direction instead to add more depth while keeping uniform brightness"};
+cvar_t r_fullbright_directed_ambient = {CF_CLIENT, "r_fullbright_directed_ambient", "0.5", "ambient light multiplier for directed fullbright"};
+cvar_t r_fullbright_directed_diffuse = {CF_CLIENT, "r_fullbright_directed_diffuse", "0.75", "diffuse light multiplier for directed fullbright"};
+cvar_t r_fullbright_directed_pitch = {CF_CLIENT, "r_fullbright_directed_pitch", "20", "constant pitch direction ('height') of the fake light source to use for fullbright"};
+cvar_t r_fullbright_directed_pitch_relative = {CF_CLIENT, "r_fullbright_directed_pitch_relative", "0", "whether r_fullbright_directed_pitch is interpreted as absolute (0) or relative (1) pitch"};
 
-cvar_t r_wateralpha = {CVAR_CLIENT | CVAR_SAVE, "r_wateralpha","1", "opacity of water polygons"};
-cvar_t r_dynamic = {CVAR_CLIENT | CVAR_SAVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
-cvar_t r_fullbrights = {CVAR_CLIENT | CVAR_SAVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
-cvar_t r_shadows = {CVAR_CLIENT | CVAR_SAVE, "r_shadows", "0", "casts fake stencil shadows from models onto the world (rtlights are unaffected by this); when set to 2, always cast the shadows in the direction set by r_shadows_throwdirection, otherwise use the model lighting."};
-cvar_t r_shadows_darken = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_darken", "0.5", "how much shadowed areas will be darkened"};
-cvar_t r_shadows_throwdistance = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_throwdistance", "500", "how far to cast shadows from models"};
-cvar_t r_shadows_throwdirection = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_throwdirection", "0 0 -1", "override throwing direction for r_shadows 2"};
-cvar_t r_shadows_drawafterrtlighting = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_drawafterrtlighting", "0", "draw fake shadows AFTER realtime lightning is drawn. May be useful for simulating fast sunlight on large outdoor maps with only one noshadow rtlight. The price is less realistic appearance of dynamic light shadows."};
-cvar_t r_shadows_castfrombmodels = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
-cvar_t r_shadows_focus = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_focus", "0 0 0", "offset the shadowed area focus"};
-cvar_t r_shadows_shadowmapscale = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_shadowmapscale", "0.25", "higher values increase shadowmap quality at a cost of area covered (multiply global shadowmap precision) for fake shadows. Needs shadowmapping ON."};
-cvar_t r_shadows_shadowmapbias = {CVAR_CLIENT | CVAR_SAVE, "r_shadows_shadowmapbias", "-1", "sets shadowmap bias for fake shadows. -1 sets the value of r_shadow_shadowmapping_bias. Needs shadowmapping ON."};
-cvar_t r_q1bsp_skymasking = {CVAR_CLIENT, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
-cvar_t r_polygonoffset_submodel_factor = {CVAR_CLIENT, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
-cvar_t r_polygonoffset_submodel_offset = {CVAR_CLIENT, "r_polygonoffset_submodel_offset", "14", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
-cvar_t r_polygonoffset_decals_factor = {CVAR_CLIENT, "r_polygonoffset_decals_factor", "0", "biases depth values of decals to prevent z-fighting artifacts"};
-cvar_t r_polygonoffset_decals_offset = {CVAR_CLIENT, "r_polygonoffset_decals_offset", "-14", "biases depth values of decals to prevent z-fighting artifacts"};
-cvar_t r_fog_exp2 = {CVAR_CLIENT, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
-cvar_t r_fog_clear = {CVAR_CLIENT, "r_fog_clear", "1", "clears renderbuffer with fog color before render starts"};
-cvar_t r_drawfog = {CVAR_CLIENT | CVAR_SAVE, "r_drawfog", "1", "allows one to disable fog rendering"};
-cvar_t r_transparentdepthmasking = {CVAR_CLIENT | CVAR_SAVE, "r_transparentdepthmasking", "0", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
-cvar_t r_transparent_sortmindist = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sortmindist", "0", "lower distance limit for transparent sorting"};
-cvar_t r_transparent_sortmaxdist = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
-cvar_t r_transparent_sortarraysize = {CVAR_CLIENT | CVAR_SAVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
-cvar_t r_celshading = {CVAR_CLIENT | CVAR_SAVE, "r_celshading", "0", "cartoon-style light shading (OpenGL 2.x only)"}; // FIXME remove OpenGL 2.x only once implemented for DX9
-cvar_t r_celoutlines = {CVAR_CLIENT | CVAR_SAVE, "r_celoutlines", "0", "cartoon-style outlines (requires r_shadow_deferred)"};
+cvar_t r_wateralpha = {CF_CLIENT | CF_ARCHIVE, "r_wateralpha","1", "opacity of water polygons"};
+cvar_t r_dynamic = {CF_CLIENT | CF_ARCHIVE, "r_dynamic","1", "enables dynamic lights (rocket glow and such)"};
+cvar_t r_fullbrights = {CF_CLIENT | CF_ARCHIVE, "r_fullbrights", "1", "enables glowing pixels in quake textures (changes need r_restart to take effect)"};
+cvar_t r_shadows = {CF_CLIENT | CF_ARCHIVE, "r_shadows", "0", "casts fake stencil shadows from models onto the world (rtlights are unaffected by this); when set to 2, always cast the shadows in the direction set by r_shadows_throwdirection, otherwise use the model lighting."};
+cvar_t r_shadows_darken = {CF_CLIENT | CF_ARCHIVE, "r_shadows_darken", "0.5", "how much shadowed areas will be darkened"};
+cvar_t r_shadows_throwdistance = {CF_CLIENT | CF_ARCHIVE, "r_shadows_throwdistance", "500", "how far to cast shadows from models"};
+cvar_t r_shadows_throwdirection = {CF_CLIENT | CF_ARCHIVE, "r_shadows_throwdirection", "0 0 -1", "override throwing direction for r_shadows 2"};
+cvar_t r_shadows_drawafterrtlighting = {CF_CLIENT | CF_ARCHIVE, "r_shadows_drawafterrtlighting", "0", "draw fake shadows AFTER realtime lightning is drawn. May be useful for simulating fast sunlight on large outdoor maps with only one noshadow rtlight. The price is less realistic appearance of dynamic light shadows."};
+cvar_t r_shadows_castfrombmodels = {CF_CLIENT | CF_ARCHIVE, "r_shadows_castfrombmodels", "0", "do cast shadows from bmodels"};
+cvar_t r_shadows_focus = {CF_CLIENT | CF_ARCHIVE, "r_shadows_focus", "0 0 0", "offset the shadowed area focus"};
+cvar_t r_shadows_shadowmapscale = {CF_CLIENT | CF_ARCHIVE, "r_shadows_shadowmapscale", "0.25", "higher values increase shadowmap quality at a cost of area covered (multiply global shadowmap precision) for fake shadows. Needs shadowmapping ON."};
+cvar_t r_shadows_shadowmapbias = {CF_CLIENT | CF_ARCHIVE, "r_shadows_shadowmapbias", "-1", "sets shadowmap bias for fake shadows. -1 sets the value of r_shadow_shadowmapping_bias. Needs shadowmapping ON."};
+cvar_t r_q1bsp_skymasking = {CF_CLIENT, "r_q1bsp_skymasking", "1", "allows sky polygons in quake1 maps to obscure other geometry"};
+cvar_t r_polygonoffset_submodel_factor = {CF_CLIENT, "r_polygonoffset_submodel_factor", "0", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_submodel_offset = {CF_CLIENT, "r_polygonoffset_submodel_offset", "14", "biases depth values of world submodels such as doors, to prevent z-fighting artifacts in Quake maps"};
+cvar_t r_polygonoffset_decals_factor = {CF_CLIENT, "r_polygonoffset_decals_factor", "0", "biases depth values of decals to prevent z-fighting artifacts"};
+cvar_t r_polygonoffset_decals_offset = {CF_CLIENT, "r_polygonoffset_decals_offset", "-14", "biases depth values of decals to prevent z-fighting artifacts"};
+cvar_t r_fog_exp2 = {CF_CLIENT, "r_fog_exp2", "0", "uses GL_EXP2 fog (as in Nehahra) rather than realistic GL_EXP fog"};
+cvar_t r_fog_clear = {CF_CLIENT, "r_fog_clear", "1", "clears renderbuffer with fog color before render starts"};
+cvar_t r_drawfog = {CF_CLIENT | CF_ARCHIVE, "r_drawfog", "1", "allows one to disable fog rendering"};
+cvar_t r_transparentdepthmasking = {CF_CLIENT | CF_ARCHIVE, "r_transparentdepthmasking", "0", "enables depth writes on transparent meshes whose materially is normally opaque, this prevents seeing the inside of a transparent mesh"};
+cvar_t r_transparent_sortmindist = {CF_CLIENT | CF_ARCHIVE, "r_transparent_sortmindist", "0", "lower distance limit for transparent sorting"};
+cvar_t r_transparent_sortmaxdist = {CF_CLIENT | CF_ARCHIVE, "r_transparent_sortmaxdist", "32768", "upper distance limit for transparent sorting"};
+cvar_t r_transparent_sortarraysize = {CF_CLIENT | CF_ARCHIVE, "r_transparent_sortarraysize", "4096", "number of distance-sorting layers"};
+cvar_t r_celshading = {CF_CLIENT | CF_ARCHIVE, "r_celshading", "0", "cartoon-style light shading (OpenGL 2.x only)"}; // FIXME remove OpenGL 2.x only once implemented for DX9
+cvar_t r_celoutlines = {CF_CLIENT | CF_ARCHIVE, "r_celoutlines", "0", "cartoon-style outlines (requires r_shadow_deferred)"};
 
-cvar_t gl_fogenable = {CVAR_CLIENT, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
-cvar_t gl_fogdensity = {CVAR_CLIENT, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
-cvar_t gl_fogred = {CVAR_CLIENT, "gl_fogred","0.3", "nehahra fog color red value (for Nehahra compatibility only)"};
-cvar_t gl_foggreen = {CVAR_CLIENT, "gl_foggreen","0.3", "nehahra fog color green value (for Nehahra compatibility only)"};
-cvar_t gl_fogblue = {CVAR_CLIENT, "gl_fogblue","0.3", "nehahra fog color blue value (for Nehahra compatibility only)"};
-cvar_t gl_fogstart = {CVAR_CLIENT, "gl_fogstart", "0", "nehahra fog start distance (for Nehahra compatibility only)"};
-cvar_t gl_fogend = {CVAR_CLIENT, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
-cvar_t gl_skyclip = {CVAR_CLIENT, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
+cvar_t gl_fogenable = {CF_CLIENT, "gl_fogenable", "0", "nehahra fog enable (for Nehahra compatibility only)"};
+cvar_t gl_fogdensity = {CF_CLIENT, "gl_fogdensity", "0.25", "nehahra fog density (recommend values below 0.1) (for Nehahra compatibility only)"};
+cvar_t gl_fogred = {CF_CLIENT, "gl_fogred","0.3", "nehahra fog color red value (for Nehahra compatibility only)"};
+cvar_t gl_foggreen = {CF_CLIENT, "gl_foggreen","0.3", "nehahra fog color green value (for Nehahra compatibility only)"};
+cvar_t gl_fogblue = {CF_CLIENT, "gl_fogblue","0.3", "nehahra fog color blue value (for Nehahra compatibility only)"};
+cvar_t gl_fogstart = {CF_CLIENT, "gl_fogstart", "0", "nehahra fog start distance (for Nehahra compatibility only)"};
+cvar_t gl_fogend = {CF_CLIENT, "gl_fogend","0", "nehahra fog end distance (for Nehahra compatibility only)"};
+cvar_t gl_skyclip = {CF_CLIENT, "gl_skyclip", "4608", "nehahra farclip distance - the real fog end (for Nehahra compatibility only)"};
 
-cvar_t r_texture_dds_load = {CVAR_CLIENT | CVAR_SAVE, "r_texture_dds_load", "0", "load compressed dds/filename.dds texture instead of filename.tga, if the file exists (requires driver support)"};
-cvar_t r_texture_dds_save = {CVAR_CLIENT | CVAR_SAVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
+cvar_t r_texture_dds_load = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_load", "0", "load compressed dds/filename.dds texture instead of filename.tga, if the file exists (requires driver support)"};
+cvar_t r_texture_dds_save = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
 
-cvar_t r_textureunits = {CVAR_CLIENT, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
-static cvar_t gl_combine = {CVAR_CLIENT | CVAR_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
-static cvar_t r_glsl = {CVAR_CLIENT | CVAR_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
+cvar_t r_textureunits = {CF_CLIENT, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
+static cvar_t gl_combine = {CF_CLIENT | CF_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
+static cvar_t r_glsl = {CF_CLIENT | CF_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
 
-cvar_t r_usedepthtextures = {CVAR_CLIENT | CVAR_SAVE, "r_usedepthtextures", "1", "use depth texture instead of depth renderbuffer where possible, uses less video memory but may render slower (or faster) depending on hardware"};
-cvar_t r_viewfbo = {CVAR_CLIENT | CVAR_SAVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
-cvar_t r_rendertarget_debug = {CVAR_CLIENT, "r_rendertarget_debug", "-1", "replaces the view with the contents of the specified render target (by number - note that these can fluctuate depending on scene)"};
-cvar_t r_viewscale = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
-cvar_t r_viewscale_fpsscaling = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling", "0", "change resolution based on framerate"};
-cvar_t r_viewscale_fpsscaling_min = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling_min", "0.0625", "worst acceptable quality"};
-cvar_t r_viewscale_fpsscaling_multiply = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling_multiply", "5", "adjust quality up or down by the frametime difference from 1.0/target, multiplied by this factor"};
-cvar_t r_viewscale_fpsscaling_stepsize = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling_stepsize", "0.01", "smallest adjustment to hit the target framerate (this value prevents minute oscillations)"};
-cvar_t r_viewscale_fpsscaling_stepmax = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling_stepmax", "1.00", "largest adjustment to hit the target framerate (this value prevents wild overshooting of the estimate)"};
-cvar_t r_viewscale_fpsscaling_target = {CVAR_CLIENT | CVAR_SAVE, "r_viewscale_fpsscaling_target", "70", "desired framerate"};
+cvar_t r_usedepthtextures = {CF_CLIENT | CF_ARCHIVE, "r_usedepthtextures", "1", "use depth texture instead of depth renderbuffer where possible, uses less video memory but may render slower (or faster) depending on hardware"};
+cvar_t r_viewfbo = {CF_CLIENT | CF_ARCHIVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
+cvar_t r_rendertarget_debug = {CF_CLIENT, "r_rendertarget_debug", "-1", "replaces the view with the contents of the specified render target (by number - note that these can fluctuate depending on scene)"};
+cvar_t r_viewscale = {CF_CLIENT | CF_ARCHIVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
+cvar_t r_viewscale_fpsscaling = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling", "0", "change resolution based on framerate"};
+cvar_t r_viewscale_fpsscaling_min = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling_min", "0.0625", "worst acceptable quality"};
+cvar_t r_viewscale_fpsscaling_multiply = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling_multiply", "5", "adjust quality up or down by the frametime difference from 1.0/target, multiplied by this factor"};
+cvar_t r_viewscale_fpsscaling_stepsize = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling_stepsize", "0.01", "smallest adjustment to hit the target framerate (this value prevents minute oscillations)"};
+cvar_t r_viewscale_fpsscaling_stepmax = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling_stepmax", "1.00", "largest adjustment to hit the target framerate (this value prevents wild overshooting of the estimate)"};
+cvar_t r_viewscale_fpsscaling_target = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling_target", "70", "desired framerate"};
 
-cvar_t r_glsl_skeletal = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_skeletal", "1", "render skeletal models faster using a gpu-skinning technique"};
-cvar_t r_glsl_deluxemapping = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
-cvar_t r_glsl_offsetmapping = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
-cvar_t r_glsl_offsetmapping_steps = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_steps", "2", "offset mapping steps (note: too high values may be not supported by your GPU)"};
-cvar_t r_glsl_offsetmapping_reliefmapping = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
-cvar_t r_glsl_offsetmapping_reliefmapping_steps = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping_steps", "10", "relief mapping steps (note: too high values may be not supported by your GPU)"};
-cvar_t r_glsl_offsetmapping_reliefmapping_refinesteps = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_reliefmapping_refinesteps", "5", "relief mapping refine steps (these are a binary search executed as the last step as given by r_glsl_offsetmapping_reliefmapping_steps)"};
-cvar_t r_glsl_offsetmapping_scale = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
-cvar_t r_glsl_offsetmapping_lod = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_lod", "0", "apply distance-based level-of-detail correction to number of offsetmappig steps, effectively making it render faster on large open-area maps"};
-cvar_t r_glsl_offsetmapping_lod_distance = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_offsetmapping_lod_distance", "32", "first LOD level distance, second level (-50% steps) is 2x of this, third (33%) - 3x etc."};
-cvar_t r_glsl_postprocess = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
-cvar_t r_glsl_postprocess_color_lut = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_color_lut", "", "color lookup table for post, empty string for default"};
-cvar_t r_glsl_postprocess_uservec1 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec1", "0 0 0 0", "a 4-component vector to pass as uservec1 to the postprocessing shader (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec2 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec3 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec4 = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec1_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec1_enable", "1", "enables postprocessing uservec1 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec2_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec2_enable", "1", "enables postprocessing uservec2 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec3_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec3_enable", "1", "enables postprocessing uservec3 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
-cvar_t r_glsl_postprocess_uservec4_enable = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_postprocess_uservec4_enable", "1", "enables postprocessing uservec4 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
-cvar_t r_colorfringe = {CVAR_CLIENT | CVAR_SAVE, "r_colorfringe", "0", "Chromatic aberration. Values higher than 0.025 will noticeably distort the image"};
+cvar_t r_glsl_skeletal = {CF_CLIENT | CF_ARCHIVE, "r_glsl_skeletal", "1", "render skeletal models faster using a gpu-skinning technique"};
+cvar_t r_glsl_deluxemapping = {CF_CLIENT | CF_ARCHIVE, "r_glsl_deluxemapping", "1", "use per pixel lighting on deluxemap-compiled q3bsp maps (or a value of 2 forces deluxemap shading even without deluxemaps)"};
+cvar_t r_glsl_offsetmapping = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping", "0", "offset mapping effect (also known as parallax mapping or virtual displacement mapping)"};
+cvar_t r_glsl_offsetmapping_steps = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_steps", "2", "offset mapping steps (note: too high values may be not supported by your GPU)"};
+cvar_t r_glsl_offsetmapping_reliefmapping = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_reliefmapping", "0", "relief mapping effect (higher quality)"};
+cvar_t r_glsl_offsetmapping_reliefmapping_steps = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_reliefmapping_steps", "10", "relief mapping steps (note: too high values may be not supported by your GPU)"};
+cvar_t r_glsl_offsetmapping_reliefmapping_refinesteps = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_reliefmapping_refinesteps", "5", "relief mapping refine steps (these are a binary search executed as the last step as given by r_glsl_offsetmapping_reliefmapping_steps)"};
+cvar_t r_glsl_offsetmapping_scale = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_scale", "0.04", "how deep the offset mapping effect is"};
+cvar_t r_glsl_offsetmapping_lod = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_lod", "0", "apply distance-based level-of-detail correction to number of offsetmappig steps, effectively making it render faster on large open-area maps"};
+cvar_t r_glsl_offsetmapping_lod_distance = {CF_CLIENT | CF_ARCHIVE, "r_glsl_offsetmapping_lod_distance", "32", "first LOD level distance, second level (-50% steps) is 2x of this, third (33%) - 3x etc."};
+cvar_t r_glsl_postprocess = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess", "0", "use a GLSL postprocessing shader"};
+cvar_t r_glsl_postprocess_color_lut = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_color_lut", "", "color lookup table for post, empty string for default"};
+cvar_t r_glsl_postprocess_uservec1 = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec1", "0 0 0 0", "a 4-component vector to pass as uservec1 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec2 = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec2", "0 0 0 0", "a 4-component vector to pass as uservec2 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec3 = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec3", "0 0 0 0", "a 4-component vector to pass as uservec3 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec4 = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec4", "0 0 0 0", "a 4-component vector to pass as uservec4 to the postprocessing shader (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec1_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec1_enable", "1", "enables postprocessing uservec1 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec2_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec2_enable", "1", "enables postprocessing uservec2 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec3_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec3_enable", "1", "enables postprocessing uservec3 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_glsl_postprocess_uservec4_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec4_enable", "1", "enables postprocessing uservec4 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
+cvar_t r_colorfringe = {CF_CLIENT | CF_ARCHIVE, "r_colorfringe", "0", "Chromatic aberration. Values higher than 0.025 will noticeably distort the image"};
 
-cvar_t r_water = {CVAR_CLIENT | CVAR_SAVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
-cvar_t r_water_cameraentitiesonly = {CVAR_CLIENT | CVAR_SAVE, "r_water_cameraentitiesonly", "0", "whether to only show QC-defined reflections/refractions (typically used for camera- or portal-like effects)"};
-cvar_t r_water_clippingplanebias = {CVAR_CLIENT | CVAR_SAVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
-cvar_t r_water_resolutionmultiplier = {CVAR_CLIENT | CVAR_SAVE, "r_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
-cvar_t r_water_refractdistort = {CVAR_CLIENT | CVAR_SAVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
-cvar_t r_water_reflectdistort = {CVAR_CLIENT | CVAR_SAVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
-cvar_t r_water_scissormode = {CVAR_CLIENT, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
-cvar_t r_water_lowquality = {CVAR_CLIENT, "r_water_lowquality", "0", "special option to accelerate water rendering: 1 disables all dynamic lights, 2 disables particles too"};
-cvar_t r_water_hideplayer = {CVAR_CLIENT | CVAR_SAVE, "r_water_hideplayer", "0", "if set to 1 then player will be hidden in refraction views, if set to 2 then player will also be hidden in reflection views, player is always visible in camera views"};
+cvar_t r_water = {CF_CLIENT | CF_ARCHIVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
+cvar_t r_water_cameraentitiesonly = {CF_CLIENT | CF_ARCHIVE, "r_water_cameraentitiesonly", "0", "whether to only show QC-defined reflections/refractions (typically used for camera- or portal-like effects)"};
+cvar_t r_water_clippingplanebias = {CF_CLIENT | CF_ARCHIVE, "r_water_clippingplanebias", "1", "a rather technical setting which avoids black pixels around water edges"};
+cvar_t r_water_resolutionmultiplier = {CF_CLIENT | CF_ARCHIVE, "r_water_resolutionmultiplier", "0.5", "multiplier for screen resolution when rendering refracted/reflected scenes, 1 is full quality, lower values are faster"};
+cvar_t r_water_refractdistort = {CF_CLIENT | CF_ARCHIVE, "r_water_refractdistort", "0.01", "how much water refractions shimmer"};
+cvar_t r_water_reflectdistort = {CF_CLIENT | CF_ARCHIVE, "r_water_reflectdistort", "0.01", "how much water reflections shimmer"};
+cvar_t r_water_scissormode = {CF_CLIENT, "r_water_scissormode", "3", "scissor (1) or cull (2) or both (3) water renders"};
+cvar_t r_water_lowquality = {CF_CLIENT, "r_water_lowquality", "0", "special option to accelerate water rendering: 1 disables all dynamic lights, 2 disables particles too"};
+cvar_t r_water_hideplayer = {CF_CLIENT | CF_ARCHIVE, "r_water_hideplayer", "0", "if set to 1 then player will be hidden in refraction views, if set to 2 then player will also be hidden in reflection views, player is always visible in camera views"};
 
-cvar_t r_lerpsprites = {CVAR_CLIENT | CVAR_SAVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
-cvar_t r_lerpmodels = {CVAR_CLIENT | CVAR_SAVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
-cvar_t r_nolerp_list = {CVAR_CLIENT | CVAR_SAVE, "r_nolerp_list", "progs/v_nail.mdl,progs/v_nail2.mdl,progs/flame.mdl,progs/flame2.mdl,progs/braztall.mdl,progs/brazshrt.mdl,progs/longtrch.mdl,progs/flame_pyre.mdl,progs/v_saw.mdl,progs/v_xfist.mdl,progs/h2stuff/newfire.mdl", "comma separated list of models that will not have their animations smoothed"};
-cvar_t r_lerplightstyles = {CVAR_CLIENT | CVAR_SAVE, "r_lerplightstyles", "0", "enable animation smoothing on flickering lights"};
-cvar_t r_waterscroll = {CVAR_CLIENT | CVAR_SAVE, "r_waterscroll", "1", "makes water scroll around, value controls how much"};
+cvar_t r_lerpsprites = {CF_CLIENT | CF_ARCHIVE, "r_lerpsprites", "0", "enables animation smoothing on sprites"};
+cvar_t r_lerpmodels = {CF_CLIENT | CF_ARCHIVE, "r_lerpmodels", "1", "enables animation smoothing on models"};
+cvar_t r_nolerp_list = {CF_CLIENT | CF_ARCHIVE, "r_nolerp_list", "progs/v_nail.mdl,progs/v_nail2.mdl,progs/flame.mdl,progs/flame2.mdl,progs/braztall.mdl,progs/brazshrt.mdl,progs/longtrch.mdl,progs/flame_pyre.mdl,progs/v_saw.mdl,progs/v_xfist.mdl,progs/h2stuff/newfire.mdl", "comma separated list of models that will not have their animations smoothed"};
+cvar_t r_lerplightstyles = {CF_CLIENT | CF_ARCHIVE, "r_lerplightstyles", "0", "enable animation smoothing on flickering lights"};
+cvar_t r_waterscroll = {CF_CLIENT | CF_ARCHIVE, "r_waterscroll", "1", "makes water scroll around, value controls how much"};
 
-cvar_t r_bloom = {CVAR_CLIENT | CVAR_SAVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
-cvar_t r_bloom_colorscale = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorscale", "1", "how bright the glow is"};
+cvar_t r_bloom = {CF_CLIENT | CF_ARCHIVE, "r_bloom", "0", "enables bloom effect (makes bright pixels affect neighboring pixels)"};
+cvar_t r_bloom_colorscale = {CF_CLIENT | CF_ARCHIVE, "r_bloom_colorscale", "1", "how bright the glow is"};
 
-cvar_t r_bloom_brighten = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_brighten", "1", "how bright the glow is, after subtract/power"};
-cvar_t r_bloom_blur = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_blur", "4", "how large the glow is"};
-cvar_t r_bloom_resolution = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
-cvar_t r_bloom_colorexponent = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
-cvar_t r_bloom_colorsubtract = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_colorsubtract", "0.1", "reduces bloom colors by a certain amount"};
-cvar_t r_bloom_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_bloom_scenebrightness", "1", "global rendering brightness when bloom is enabled"};
+cvar_t r_bloom_brighten = {CF_CLIENT | CF_ARCHIVE, "r_bloom_brighten", "1", "how bright the glow is, after subtract/power"};
+cvar_t r_bloom_blur = {CF_CLIENT | CF_ARCHIVE, "r_bloom_blur", "4", "how large the glow is"};
+cvar_t r_bloom_resolution = {CF_CLIENT | CF_ARCHIVE, "r_bloom_resolution", "320", "what resolution to perform the bloom effect at (independent of screen resolution)"};
+cvar_t r_bloom_colorexponent = {CF_CLIENT | CF_ARCHIVE, "r_bloom_colorexponent", "1", "how exaggerated the glow is"};
+cvar_t r_bloom_colorsubtract = {CF_CLIENT | CF_ARCHIVE, "r_bloom_colorsubtract", "0.1", "reduces bloom colors by a certain amount"};
+cvar_t r_bloom_scenebrightness = {CF_CLIENT | CF_ARCHIVE, "r_bloom_scenebrightness", "1", "global rendering brightness when bloom is enabled"};
 
-cvar_t r_hdr_scenebrightness = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
-cvar_t r_hdr_glowintensity = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
-cvar_t r_hdr_irisadaptation = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation", "0", "adjust scene brightness according to light intensity at player location"};
-cvar_t r_hdr_irisadaptation_multiplier = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_multiplier", "2", "brightness at which value will be 1.0"};
-cvar_t r_hdr_irisadaptation_minvalue = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_minvalue", "0.5", "minimum value that can result from multiplier / brightness"};
-cvar_t r_hdr_irisadaptation_maxvalue = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_maxvalue", "4", "maximum value that can result from multiplier / brightness"};
-cvar_t r_hdr_irisadaptation_value = {CVAR_CLIENT, "r_hdr_irisadaptation_value", "1", "current value as scenebrightness multiplier, changes continuously when irisadaptation is active"};
-cvar_t r_hdr_irisadaptation_fade_up = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_fade_up", "0.1", "fade rate at which value adjusts to darkness"};
-cvar_t r_hdr_irisadaptation_fade_down = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_fade_down", "0.5", "fade rate at which value adjusts to brightness"};
-cvar_t r_hdr_irisadaptation_radius = {CVAR_CLIENT | CVAR_SAVE, "r_hdr_irisadaptation_radius", "15", "lighting within this many units of the eye is averaged"};
+cvar_t r_hdr_scenebrightness = {CF_CLIENT | CF_ARCHIVE, "r_hdr_scenebrightness", "1", "global rendering brightness"};
+cvar_t r_hdr_glowintensity = {CF_CLIENT | CF_ARCHIVE, "r_hdr_glowintensity", "1", "how bright light emitting textures should appear"};
+cvar_t r_hdr_irisadaptation = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation", "0", "adjust scene brightness according to light intensity at player location"};
+cvar_t r_hdr_irisadaptation_multiplier = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_multiplier", "2", "brightness at which value will be 1.0"};
+cvar_t r_hdr_irisadaptation_minvalue = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_minvalue", "0.5", "minimum value that can result from multiplier / brightness"};
+cvar_t r_hdr_irisadaptation_maxvalue = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_maxvalue", "4", "maximum value that can result from multiplier / brightness"};
+cvar_t r_hdr_irisadaptation_value = {CF_CLIENT, "r_hdr_irisadaptation_value", "1", "current value as scenebrightness multiplier, changes continuously when irisadaptation is active"};
+cvar_t r_hdr_irisadaptation_fade_up = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_fade_up", "0.1", "fade rate at which value adjusts to darkness"};
+cvar_t r_hdr_irisadaptation_fade_down = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_fade_down", "0.5", "fade rate at which value adjusts to brightness"};
+cvar_t r_hdr_irisadaptation_radius = {CF_CLIENT | CF_ARCHIVE, "r_hdr_irisadaptation_radius", "15", "lighting within this many units of the eye is averaged"};
 
-cvar_t r_smoothnormals_areaweighting = {CVAR_CLIENT, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
+cvar_t r_smoothnormals_areaweighting = {CF_CLIENT, "r_smoothnormals_areaweighting", "1", "uses significantly faster (and supposedly higher quality) area-weighted vertex normals and tangent vectors rather than summing normalized triangle normals and tangents"};
 
-cvar_t developer_texturelogging = {CVAR_CLIENT, "developer_texturelogging", "0", "produces a textures.log file containing names of skins and map textures the engine tried to load"};
+cvar_t developer_texturelogging = {CF_CLIENT, "developer_texturelogging", "0", "produces a textures.log file containing names of skins and map textures the engine tried to load"};
 
-cvar_t gl_lightmaps = {CVAR_CLIENT, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers), a value of 2 keeps normalmap shading"};
+cvar_t gl_lightmaps = {CF_CLIENT, "gl_lightmaps", "0", "draws only lightmaps, no texture (for level designers), a value of 2 keeps normalmap shading"};
 
-cvar_t r_test = {CVAR_CLIENT, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
+cvar_t r_test = {CF_CLIENT, "r_test", "0", "internal development use only, leave it alone (usually does nothing anyway)"};
 
-cvar_t r_batch_multidraw = {CVAR_CLIENT | CVAR_SAVE, "r_batch_multidraw", "1", "issue multiple glDrawElements calls when rendering a batch of surfaces with the same texture (otherwise the index data is copied to make it one draw)"};
-cvar_t r_batch_multidraw_mintriangles = {CVAR_CLIENT | CVAR_SAVE, "r_batch_multidraw_mintriangles", "0", "minimum number of triangles to activate multidraw path (copying small groups of triangles may be faster)"};
-cvar_t r_batch_debugdynamicvertexpath = {CVAR_CLIENT | CVAR_SAVE, "r_batch_debugdynamicvertexpath", "0", "force the dynamic batching code path for debugging purposes"};
-cvar_t r_batch_dynamicbuffer = {CVAR_CLIENT | CVAR_SAVE, "r_batch_dynamicbuffer", "0", "use vertex/index buffers for drawing dynamic and copytriangles batches"};
+cvar_t r_batch_multidraw = {CF_CLIENT | CF_ARCHIVE, "r_batch_multidraw", "1", "issue multiple glDrawElements calls when rendering a batch of surfaces with the same texture (otherwise the index data is copied to make it one draw)"};
+cvar_t r_batch_multidraw_mintriangles = {CF_CLIENT | CF_ARCHIVE, "r_batch_multidraw_mintriangles", "0", "minimum number of triangles to activate multidraw path (copying small groups of triangles may be faster)"};
+cvar_t r_batch_debugdynamicvertexpath = {CF_CLIENT | CF_ARCHIVE, "r_batch_debugdynamicvertexpath", "0", "force the dynamic batching code path for debugging purposes"};
+cvar_t r_batch_dynamicbuffer = {CF_CLIENT | CF_ARCHIVE, "r_batch_dynamicbuffer", "0", "use vertex/index buffers for drawing dynamic and copytriangles batches"};
 
-cvar_t r_glsl_saturation = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
-cvar_t r_glsl_saturation_redcompensate = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
+cvar_t r_glsl_saturation = {CF_CLIENT | CF_ARCHIVE, "r_glsl_saturation", "1", "saturation multiplier (only working in glsl!)"};
+cvar_t r_glsl_saturation_redcompensate = {CF_CLIENT | CF_ARCHIVE, "r_glsl_saturation_redcompensate", "0", "a 'vampire sight' addition to desaturation effect, does compensation for red color, r_glsl_restart is required"};
 
-cvar_t r_glsl_vertextextureblend_usebothalphas = {CVAR_CLIENT | CVAR_SAVE, "r_glsl_vertextextureblend_usebothalphas", "0", "use both alpha layers on vertex blended surfaces, each alpha layer sets amount of 'blend leak' on another layer, requires mod_q3shader_force_terrain_alphaflag on."};
+cvar_t r_glsl_vertextextureblend_usebothalphas = {CF_CLIENT | CF_ARCHIVE, "r_glsl_vertextextureblend_usebothalphas", "0", "use both alpha layers on vertex blended surfaces, each alpha layer sets amount of 'blend leak' on another layer, requires mod_q3shader_force_terrain_alphaflag on."};
 
-cvar_t r_framedatasize = {CVAR_CLIENT | CVAR_SAVE, "r_framedatasize", "0.5", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
+cvar_t r_framedatasize = {CF_CLIENT | CF_ARCHIVE, "r_framedatasize", "0.5", "size of renderer data cache used during one frame (for skeletal animation caching, light processing, etc)"};
 cvar_t r_buffermegs[R_BUFFERDATA_COUNT] =
 {
-	{CVAR_CLIENT | CVAR_SAVE, "r_buffermegs_vertex", "4", "vertex buffer size for one frame"},
-	{CVAR_CLIENT | CVAR_SAVE, "r_buffermegs_index16", "1", "index buffer size for one frame (16bit indices)"},
-	{CVAR_CLIENT | CVAR_SAVE, "r_buffermegs_index32", "1", "index buffer size for one frame (32bit indices)"},
-	{CVAR_CLIENT | CVAR_SAVE, "r_buffermegs_uniform", "0.25", "uniform buffer size for one frame"},
+	{CF_CLIENT | CF_ARCHIVE, "r_buffermegs_vertex", "4", "vertex buffer size for one frame"},
+	{CF_CLIENT | CF_ARCHIVE, "r_buffermegs_index16", "1", "index buffer size for one frame (16bit indices)"},
+	{CF_CLIENT | CF_ARCHIVE, "r_buffermegs_index32", "1", "index buffer size for one frame (32bit indices)"},
+	{CF_CLIENT | CF_ARCHIVE, "r_buffermegs_uniform", "0.25", "uniform buffer size for one frame"},
 };
+
+cvar_t r_q1bsp_lightmap_updates_enabled = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_enabled", "1", "allow lightmaps to be updated on Q1BSP maps (don't turn this off except for debugging)"};
+cvar_t r_q1bsp_lightmap_updates_combine = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_combine", "2", "combine lightmap texture updates to make fewer glTexSubImage2D calls, modes: 0 = immediately upload lightmaps (may be thousands of small 3x3 updates), 1 = combine to one call, 2 = combine to one full texture update (glTexImage2D) which tells the driver it does not need to lock the resource (faster on most drivers)"};
+cvar_t r_q1bsp_lightmap_updates_hidden_surfaces = {CF_CLIENT | CF_ARCHIVE, "r_q1bsp_lightmap_updates_hidden_surfaces", "0", "update lightmaps on surfaces that are not visible, so that updates only occur on frames where lightstyles changed value (animation or light switches), only makes sense with combine = 2"};
 
 extern cvar_t v_glslgamma_2d;
 
-extern qboolean v_flipped_state;
+extern qbool v_flipped_state;
 
 r_framebufferstate_t r_fb;
 
@@ -515,8 +519,8 @@ static void R_BuildFogTexture(void)
 	}
 	if (r_texture_fogattenuation)
 	{
-		R_UpdateTexture(r_texture_fogattenuation, &data1[0][0], 0, 0, 0, FOGWIDTH, 1, 1);
-		//R_UpdateTexture(r_texture_fogattenuation, &data2[0][0], 0, 0, 0, FOGWIDTH, 1, 1);
+		R_UpdateTexture(r_texture_fogattenuation, &data1[0][0], 0, 0, 0, FOGWIDTH, 1, 1, 0);
+		//R_UpdateTexture(r_texture_fogattenuation, &data2[0][0], 0, 0, 0, FOGWIDTH, 1, 1, 0);
 	}
 	else
 	{
@@ -720,7 +724,7 @@ typedef struct r_glsl_permutation_s
 	uint64_t permutation;
 
 	/// indicates if we have tried compiling this permutation already
-	qboolean compiled;
+	qbool compiled;
 	/// 0 if compilation failed
 	int program;
 	// texture units assigned to each detected uniform
@@ -885,9 +889,9 @@ static int shaderstaticparms_count = 0;
 static unsigned int r_compileshader_staticparms[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5] = {0};
 #define R_COMPILESHADER_STATICPARM_ENABLE(p) r_compileshader_staticparms[(p) >> 5] |= (1 << ((p) & 0x1F))
 
-extern qboolean r_shadow_shadowmapsampler;
+extern qbool r_shadow_shadowmapsampler;
 extern int r_shadow_shadowmappcf;
-qboolean R_CompileShader_CheckStaticParms(void)
+qbool R_CompileShader_CheckStaticParms(void)
 {
 	static int r_compileshader_staticparms_save[(SHADERSTATICPARMS_COUNT + 0x1F) >> 5];
 	memcpy(r_compileshader_staticparms_save, r_compileshader_staticparms, sizeof(r_compileshader_staticparms));
@@ -1029,7 +1033,7 @@ static void R_InitShaderModeInfo(void)
 	}
 }
 
-static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qboolean printfromdisknotice, qboolean builtinonly)
+static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qbool printfromdisknotice, qbool builtinonly)
 {
 	char *shaderstring;
 	// if the mode has no filename we have to return the builtin string
@@ -1486,7 +1490,7 @@ static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 	}
 }
 
-void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, qboolean suppresstexalpha)
+void R_SetupShader_Generic(rtexture_t *t, qbool usegamma, qbool notrippy, qbool suppresstexalpha)
 {
 	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
@@ -1515,12 +1519,12 @@ void R_SetupShader_Generic(rtexture_t *t, qboolean usegamma, qboolean notrippy, 
 	}
 }
 
-void R_SetupShader_Generic_NoTexture(qboolean usegamma, qboolean notrippy)
+void R_SetupShader_Generic_NoTexture(qbool usegamma, qbool notrippy)
 {
 	R_SetupShader_Generic(NULL, usegamma, notrippy, false);
 }
 
-void R_SetupShader_DepthOrShadow(qboolean notrippy, qboolean depthrgb, qboolean skeletal)
+void R_SetupShader_DepthOrShadow(qbool notrippy, qbool depthrgb, qbool skeletal)
 {
 	uint64_t permutation = 0;
 	if (r_trippy.integer && !notrippy)
@@ -1590,7 +1594,7 @@ static int R_BlendFuncFlags(int src, int dst)
 	return r;
 }
 
-void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qboolean notrippy)
+void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qbool notrippy, qbool ui)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -1857,7 +1861,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		// lightmapped wall
 		if ((t->glowtexture || t->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
-		if (r_refdef.fogenabled && !notrippy)
+		if (r_refdef.fogenabled && !ui)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
 		if (t->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
@@ -1929,7 +1933,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 	}
 	if(!(blendfuncflags & BLENDFUNC_ALLOWS_ANYFOG))
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
-	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA && !notrippy)
+	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA && !ui)
 		permutation |= SHADERPERMUTATION_FOGALPHAHACK;
 	switch(vid.renderpath)
 	{
@@ -1991,7 +1995,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, t->render_rtlight_specular[0], t->render_rtlight_specular[1], t->render_rtlight_specular[2]);
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (r_glsl_permutation->loc_FogColor >= 0 && !notrippy)
+			if (r_glsl_permutation->loc_FogColor >= 0 && !ui)
 			{
 				if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 					qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
@@ -2268,7 +2272,7 @@ skinframe_t *R_SkinFrame_FindNextByName( skinframe_t *last, const char *name ) {
 	return NULL;
 }
 
-skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qboolean add)
+skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewidth, int compareheight, int comparecrc, qbool add)
 {
 	skinframe_t *item;
 	int compareflags = textureflags & TEXF_IMPORTANTBITS;
@@ -2342,7 +2346,7 @@ skinframe_t *R_SkinFrame_Find(const char *name, int textureflags, int comparewid
 		skinframe->avgcolor[3] = avgcolor[4] / (255.0 * cnt); \
 	}
 
-skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
+skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qbool complain, qbool fallbacknotexture)
 {
 	skinframe_t *skinframe;
 
@@ -2359,7 +2363,7 @@ skinframe_t *R_SkinFrame_LoadExternal(const char *name, int textureflags, qboole
 }
 
 extern cvar_t gl_picmip;
-skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qboolean complain, qboolean fallbacknotexture)
+skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const char *name, int textureflags, qbool complain, qbool fallbacknotexture)
 {
 	int j;
 	unsigned char *pixels;
@@ -2368,7 +2372,7 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	int basepixels_width = 0;
 	int basepixels_height = 0;
 	rtexture_t *ddsbase = NULL;
-	qboolean ddshasalpha = false;
+	qbool ddshasalpha = false;
 	float ddsavgcolor[4];
 	char basename[MAX_QPATH];
 	int miplevel = R_PicmipForFlags(textureflags);
@@ -2574,7 +2578,7 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	return skinframe;
 }
 
-skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qboolean sRGB)
+skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qbool sRGB)
 {
 	int i;
 	skinframe_t *skinframe;
@@ -2704,7 +2708,7 @@ skinframe_t *R_SkinFrame_LoadInternalQuake(const char *name, int textureflags, i
 	return skinframe;
 }
 
-static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qboolean colormapped)
+static void R_SkinFrame_GenerateTexturesFromQPixels(skinframe_t *skinframe, qbool colormapped)
 {
 	int width;
 	int height;
@@ -2868,7 +2872,7 @@ skinframe_t *R_SkinFrame_LoadNoTexture(void)
 	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false);
 }
 
-skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qboolean sRGB)
+skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qbool sRGB)
 {
 	skinframe_t *skinframe;
 	if (cls.state == ca_dedicated)
@@ -2903,7 +2907,7 @@ skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int texturef
 typedef struct suffixinfo_s
 {
 	const char *suffix;
-	qboolean flipx, flipy, flipdiagonal;
+	qbool flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
 static suffixinfo_t suffix[3][6] =
@@ -3271,8 +3275,8 @@ void GL_Main_Init(void)
 	r_main_mempool = Mem_AllocPool("Renderer", 0, NULL);
 	R_InitShaderModeInfo();
 
-	Cmd_AddCommand(CMD_CLIENT, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
-	Cmd_AddCommand(CMD_CLIENT, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
+	Cmd_AddCommand(CF_CLIENT, "r_glsl_restart", R_GLSL_Restart_f, "unloads GLSL shaders, they will then be reloaded as needed");
+	Cmd_AddCommand(CF_CLIENT, "r_glsl_dumpshader", R_GLSL_DumpShader_f, "dumps the engine internal default.glsl shader into glsl/default.glsl");
 	// FIXME: the client should set up r_refdef.fog stuff including the fogmasktable
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -3392,7 +3396,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_lod);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_lod_distance);
 	Cvar_RegisterVariable(&r_glsl_postprocess);
-	Cvar_RegisterVariable(&r_glsl_postprocess_color_lut);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec1);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec2);
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec3);
@@ -3453,6 +3456,9 @@ void GL_Main_Init(void)
 	for (i = 0;i < R_BUFFERDATA_COUNT;i++)
 		Cvar_RegisterVariable(&r_buffermegs[i]);
 	Cvar_RegisterVariable(&r_batch_dynamicbuffer);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_enabled);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_combine);
+	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_hidden_surfaces);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue(&cvars_all, "r_fullbrights", 0);
 #ifdef DP_MOBILETOUCH
@@ -3607,7 +3613,7 @@ void R_FrameData_Reset(void)
 	}
 }
 
-static void R_FrameData_Resize(qboolean mustgrow)
+static void R_FrameData_Resize(qbool mustgrow)
 {
 	size_t wantedsize;
 	wantedsize = (size_t)(r_framedatasize.value * 1024*1024);
@@ -3740,7 +3746,7 @@ void R_BufferData_Reset(void)
 }
 
 // resize buffer as needed (this actually makes a new one, the old one will be recycled next frame)
-static void R_BufferData_Resize(r_bufferdata_type_t type, qboolean mustgrow, size_t minsize)
+static void R_BufferData_Resize(r_bufferdata_type_t type, qbool mustgrow, size_t minsize)
 {
 	r_bufferdata_buffer_t *mem = r_bufferdata_buffer[r_bufferdata_cycle][type];
 	size_t size;
@@ -3893,9 +3899,9 @@ void R_AnimCache_ClearCache(void)
 	}
 }
 
-qboolean R_AnimCache_GetEntity(entity_render_t *ent, qboolean wantnormals, qboolean wanttangents)
+qbool R_AnimCache_GetEntity(entity_render_t *ent, qbool wantnormals, qbool wanttangents)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	int numvertices;
 
 	// see if this ent is worth caching
@@ -3992,7 +3998,7 @@ void R_AnimCache_CacheVisibleEntities(void)
 
 //==================================================================================
 
-qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
+qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs)
 {
 	long unsigned int i;
 	int j;
@@ -4001,7 +4007,7 @@ qboolean R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t
 	vec3_t padmins, padmaxs;
 	vec3_t start;
 	vec3_t end;
-	dp_model_t *model = r_refdef.scene.worldmodel;
+	model_t *model = r_refdef.scene.worldmodel;
 	static vec3_t positions[] = {
 		{ 0.5f, 0.5f, 0.5f },
 		{ 0.0f, 0.0f, 0.0f },
@@ -4115,6 +4121,11 @@ static void R_View_UpdateEntityVisible (void)
 		for (i = 0;i < r_refdef.scene.numentities;i++)
 		{
 			ent = r_refdef.scene.entities[i];
+			if (r_refdef.viewcache.world_novis && !(ent->flags & RENDER_VIEWMODEL))
+			{
+				r_refdef.viewcache.entityvisible[i] = false;
+				continue;
+			}
 			if (!(ent->flags & renderimask))
 			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_WORLDOBJECT | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
@@ -4183,17 +4194,7 @@ static void R_DrawModels(void)
 			continue;
 		ent = r_refdef.scene.entities[i];
 		r_refdef.stats[r_stat_entities]++;
-		/*
-		if (ent->model && !strncmp(ent->model->name, "models/proto_", 13))
-		{
-			vec3_t f, l, u, o;
-			Matrix4x4_ToVectors(&ent->matrix, f, l, u, o);
-			Con_Printf("R_DrawModels\n");
-			Con_Printf("model %s O %f %f %f F %f %f %f L %f %f %f U %f %f %f\n", ent->model->name, o[0], o[1], o[2], f[0], f[1], f[2], l[0], l[1], l[2], u[0], u[1], u[2]);
-			Con_Printf("group: %i %f %i %f %i %f %i %f\n", ent->framegroupblend[0].frame, ent->framegroupblend[0].lerp, ent->framegroupblend[1].frame, ent->framegroupblend[1].lerp, ent->framegroupblend[2].frame, ent->framegroupblend[2].lerp, ent->framegroupblend[3].frame, ent->framegroupblend[3].lerp);
-			Con_Printf("blend: %i %f %i %f %i %f %i %f %i %f %i %f %i %f %i %f\n", ent->frameblend[0].subframe, ent->frameblend[0].lerp, ent->frameblend[1].subframe, ent->frameblend[1].lerp, ent->frameblend[2].subframe, ent->frameblend[2].lerp, ent->frameblend[3].subframe, ent->frameblend[3].lerp, ent->frameblend[4].subframe, ent->frameblend[4].lerp, ent->frameblend[5].subframe, ent->frameblend[5].lerp, ent->frameblend[6].subframe, ent->frameblend[6].lerp, ent->frameblend[7].subframe, ent->frameblend[7].lerp);
-		}
-		*/
+
 		if (ent->model && ent->model->Draw != NULL)
 			ent->model->Draw(ent);
 		else
@@ -4298,7 +4299,7 @@ static void R_View_SetFrustum(const int *scissor)
 	int i;
 	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
-	if(r_lockvisibility.integer || r_lockpvs.integer)
+	if(r_lockvisibility.integer)
 		return;
 	if(scissor)
 	{
@@ -4496,7 +4497,7 @@ static void R_View_Update(void)
 
 float viewscalefpsadjusted = 1.0f;
 
-void R_SetupView(qboolean allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
+void R_SetupView(qbool allowwaterclippingplane, int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
 	const float *customclipplane = NULL;
 	float plane[4];
@@ -4630,7 +4631,7 @@ void R_RenderView_UpdateViewVectors(void)
 	Matrix4x4_Invert_Full(&r_refdef.view.inverse_matrix, &r_refdef.view.matrix);
 }
 
-void R_RenderTarget_FreeUnused(qboolean force)
+void R_RenderTarget_FreeUnused(qbool force)
 {
 	unsigned int i, j, end;
 	end = (unsigned int)Mem_ExpandableArray_IndexRange(&r_fb.rendertargets); // checked
@@ -4671,7 +4672,7 @@ static void R_CalcTexCoordsForView(float x, float y, float w, float h, float tw,
 	texcoord2f[7] = y2;
 }
 
-r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qboolean depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3)
+r_rendertarget_t *R_RenderTarget_Get(int texturewidth, int textureheight, textype_t depthtextype, qbool depthisrenderbuffer, textype_t colortextype0, textype_t colortextype1, textype_t colortextype2, textype_t colortextype3)
 {
 	unsigned int i, j, end;
 	r_rendertarget_t *r = NULL;
@@ -5216,7 +5217,7 @@ static void R_Bloom_StartFrame(void)
 		if (r_fb.screentexturewidth && r_fb.screentextureheight)
 		{
 			if (r_motionblur.value > 0 || r_damageblur.value > 0)
-				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_CLAMP, -1, NULL);
+				r_fb.ghosttexture = R_LoadTexture2D(r_main_texturepool, "framebuffermotionblur", r_fb.screentexturewidth, r_fb.screentextureheight, NULL, r_fb.textype, TEXF_RENDERTARGET | TEXF_FORCELINEAR | TEXF_CLAMP, -1, NULL);
 			r_fb.ghosttexture_valid = false;
 		}
 	}
@@ -5642,7 +5643,7 @@ void R_UpdateVariables(void)
 				}
 				if (r_texture_gammaramps)
 				{
-					R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, 0, RAMPWIDTH, 1, 1);
+					R_UpdateTexture(r_texture_gammaramps, &rampbgr[0][0], 0, 0, 0, RAMPWIDTH, 1, 1, 0);
 				}
 				else
 				{
@@ -5682,7 +5683,7 @@ R_GetScenePointer
 */
 r_refdef_scene_t * R_GetScenePointer( r_refdef_scene_type_t scenetype )
 {
-	// of course, we could also add a qboolean that provides a lock state and a ReleaseScenePointer function..
+	// of course, we could also add a qbool that provides a lock state and a ReleaseScenePointer function..
 	if( scenetype == r_currentscenetype ) {
 		return &r_refdef.scene;
 	} else {
@@ -5909,11 +5910,11 @@ extern cvar_t cl_locs_show;
 static void R_DrawLocs(void);
 static void R_DrawEntityBBoxes(prvm_prog_t *prog);
 static void R_DrawModelDecals(void);
-extern qboolean r_shadow_usingdeferredprepass;
+extern qbool r_shadow_usingdeferredprepass;
 extern int r_shadow_shadowmapatlas_modelshadows_size;
 void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	qboolean shadowmapping = false;
+	qbool shadowmapping = false;
 
 	if (r_timereport_active)
 		R_TimeReport("beginscene");
@@ -6502,7 +6503,7 @@ void R_Mesh_AddBrushMeshFromPlanes(rmesh_t *mesh, int numplanes, mplane_t *plane
 	}
 }
 
-static qboolean R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
+static qbool R_TestQ3WaveFunc(q3wavefunc_t func, const float *parms)
 {
 	if(parms[0] == 0 && parms[1] == 0)
 		return false;
@@ -6658,7 +6659,7 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 {
 	int i, q;
 	const entity_render_t *ent = rsurface.entity;
-	dp_model_t *model = ent->model; // when calling this, ent must not be NULL
+	model_t *model = ent->model; // when calling this, ent must not be NULL
 	q3shaderinfo_layer_tcmod_t *tcmod;
 	float specularscale = 0.0f;
 
@@ -7026,9 +7027,9 @@ texture_t *R_GetCurrentTexture(texture_t *t)
 
 rsurfacestate_t rsurface;
 
-void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, qboolean wanttangents, qboolean prepass)
+void RSurf_ActiveModelEntity(const entity_render_t *ent, qbool wantnormals, qbool wanttangents, qbool prepass)
 {
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 	//if (rsurface.entity == ent && (!model->surfmesh.isanimated || (!wantnormals && !wanttangents)))
 	//	return;
 	rsurface.entity = (entity_render_t *)ent;
@@ -7251,7 +7252,7 @@ void RSurf_ActiveModelEntity(const entity_render_t *ent, qboolean wantnormals, q
 	rsurface.forcecurrenttextureupdate = false;
 }
 
-void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qboolean wantnormals, qboolean wanttangents)
+void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qbool wantnormals, qbool wanttangents)
 {
 	rsurface.entity = r_refdef.scene.worldentity;
 	if (r != 1.0f || g != 1.0f || b != 1.0f || a != 1.0f) {
@@ -7510,8 +7511,8 @@ void RSurf_PrepareVerticesForBatch(int batchneed, int texturenumsurfaces, const 
 	int batchnumvertices;
 	int batchnumtriangles;
 	int i, j;
-	qboolean gaps;
-	qboolean dynamicvertex;
+	qbool gaps;
+	qbool dynamicvertex;
 	float amplitude;
 	float animpos;
 	float center[3], forward[3], right[3], up[3], v[3], newforward[3], newright[3], newup[3];
@@ -8649,7 +8650,7 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 	vec3_t vert;
 	const float *v;
 	r_waterstate_waterplane_t *p;
-	qboolean prepared = false;
+	qbool prepared = false;
 	bestd = 0;
 	for (planeindex = 0, p = r_fb.water.waterplanes;planeindex < r_fb.water.numwaterplanes;planeindex++, p++)
 	{
@@ -8791,7 +8792,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 
 extern rtexture_t *r_shadow_prepasslightingdiffusetexture;
 extern rtexture_t *r_shadow_prepasslightingspeculartexture;
-static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
+static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool prepass, qbool ui)
 {
 	if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
 		return;
@@ -8799,7 +8800,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	{
 		// render screenspace normalmap to texture
 		GL_DepthMask(true);
-		R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false);
+		R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false, false);
 		RSurf_DrawBatch();
 		return;
 	}
@@ -8827,18 +8828,18 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 			{
 				// render water or distortion background
 				GL_DepthMask(true);
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false, false);
 				RSurf_DrawBatch();
 				// blend surface on top
 				GL_DepthMask(false);
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL, false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL, false, false);
 				RSurf_DrawBatch();
 			}
 			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION))
 			{
 				// render surface with reflection texture as input
 				GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false, false);
 				RSurf_DrawBatch();
 			}
 		}
@@ -8847,11 +8848,11 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0 || ui);
+	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0 || ui, ui);
 	RSurf_DrawBatch();
 }
 
-static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth)
+static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth)
 {
 	int vi;
 	int j;
@@ -8883,7 +8884,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	RSurf_DrawBatch();
 }
 
-static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean prepass, qboolean ui)
+static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool prepass, qbool ui)
 {
 	CHECKGLERROR
 	RSurf_SetupDepthAndCulling();
@@ -8914,7 +8915,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 
 	if (r_transparentdepthmasking.integer)
 	{
-		qboolean setup = false;
+		qbool setup = false;
 		for (i = 0;i < numsurfaces;i = j)
 		{
 			j = i + 1;
@@ -9029,7 +9030,7 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 	RSurf_DrawBatch();
 }
 
-static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
+static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool depthonly, qbool prepass, qbool ui)
 {
 	CHECKGLERROR
 	if (ui)
@@ -9063,7 +9064,7 @@ static void R_ProcessModelTextureSurfaceList(int texturenumsurfaces, const msurf
 	CHECKGLERROR
 }
 
-static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qboolean writedepth, qboolean depthonly, qboolean prepass, qboolean ui)
+static void R_QueueModelSurfaceList(entity_render_t *ent, int numsurfaces, const msurface_t **surfacelist, int flagsmask, qbool writedepth, qbool depthonly, qbool prepass, qbool ui)
 {
 	int i, j;
 	texture_t *texture;
@@ -9202,7 +9203,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	if (decalsystem->maxdecals <= decalsystem->numdecals)
 	{
 		decalsystem_t old = *decalsystem;
-		qboolean useshortelements;
+		qbool useshortelements;
 		decalsystem->maxdecals = max(16, decalsystem->maxdecals * 2);
 		useshortelements = decalsystem->maxdecals * 3 <= 65536;
 		decalsystem->decals = (tridecal_t *)Mem_Alloc(cls.levelmempool, decalsystem->maxdecals * (sizeof(tridecal_t) + sizeof(float[3][3]) + sizeof(float[3][2]) + sizeof(float[3][4]) + sizeof(int[3]) + (useshortelements ? sizeof(unsigned short[3]) : 0)));
@@ -9272,7 +9273,7 @@ extern cvar_t cl_decals_bias;
 extern cvar_t cl_decals_models;
 extern cvar_t cl_decals_newsystem_intensitymultiplier;
 // baseparms, parms, temps
-static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, unsigned int decalsequence, qboolean dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
+static void R_DecalSystem_SplatTriangle(decalsystem_t *decalsystem, float r, float g, float b, float a, float s1, float t1, float s2, float t2, unsigned int decalsequence, qbool dynamic, float (*planes)[4], matrix4x4_t *projection, int triangleindex, int surfaceindex)
 {
 	int cornerindex;
 	int index;
@@ -9369,8 +9370,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 {
 	matrix4x4_t projection;
 	decalsystem_t *decalsystem;
-	qboolean dynamic;
-	dp_model_t *model;
+	qbool dynamic;
+	model_t *model;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
 	const int *surfacelist;
@@ -9837,7 +9838,7 @@ static void R_DrawDebugModel(void)
 	entity_render_t *ent = rsurface.entity;
 	int i, j, flagsmask;
 	const msurface_t *surface;
-	dp_model_t *model = ent->model;
+	model_t *model = ent->model;
 
 	if (!sv.active  && !cls.demoplayback && ent != r_refdef.scene.worldentity)
 		return;
@@ -9886,7 +9887,7 @@ static void R_DrawDebugModel(void)
 	{
 		int triangleindex;
 		int bihleafindex;
-		qboolean cullbox = false;
+		qbool cullbox = false;
 		const q3mbrush_t *brush;
 		const bih_t *bih = &model->collision_bih;
 		const bih_leaf_t *bihleaf;
@@ -10052,10 +10053,10 @@ static void R_DrawDebugModel(void)
 
 int r_maxsurfacelist = 0;
 const msurface_t **r_surfacelist = NULL;
-void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean writedepth, qboolean depthonly, qboolean debug, qboolean prepass, qboolean ui)
+void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedepth, qbool depthonly, qbool debug, qbool prepass, qbool ui)
 {
-	int i, j, endj, flagsmask;
-	dp_model_t *model = ent->model;
+	int i, j, flagsmask;
+	model_t *model = ent->model;
 	msurface_t *surfaces;
 	unsigned char *update;
 	int numsurfacelist = 0;
@@ -10082,22 +10083,6 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 	surfaces = model->data_surfaces;
 	update = model->brushq1.lightmapupdateflags;
 
-	// update light styles
-	if (!skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0)
-	{
-		model_brush_lightstyleinfo_t *style;
-		for (i = 0, style = model->brushq1.data_lightstyleinfo;i < model->brushq1.num_lightstyles;i++, style++)
-		{
-			if (style->value != r_refdef.scene.lightstylevalue[style->style])
-			{
-				int *list = style->surfacelist;
-				style->value = r_refdef.scene.lightstylevalue[style->style];
-				for (j = 0;j < style->numsurfaces;j++)
-					update[list[j]] = true;
-			}
-		}
-	}
-
 	flagsmask = skysurfaces ? MATERIALFLAG_SKY : MATERIALFLAG_WALL;
 
 	if (debug)
@@ -10107,12 +10092,17 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		return;
 	}
 
+	// check if this is an empty model
+	if (model->nummodelsurfaces == 0)
+		return;
+
 	rsurface.lightmaptexture = NULL;
 	rsurface.deluxemaptexture = NULL;
 	rsurface.uselightmaptexture = false;
 	rsurface.texture = NULL;
 	rsurface.rtlight = NULL;
 	numsurfacelist = 0;
+
 	// add visible surfaces to draw list
 	if (ent == r_refdef.scene.worldentity)
 	{
@@ -10123,10 +10113,17 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				r_surfacelist[numsurfacelist++] = surfaces + j;
 		}
+
+		// don't do anything if there were no surfaces added (none of the world entity is visible)
+		if (!numsurfacelist)
+		{
+			rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
+			return;
+		}
 	}
 	else if (ui)
 	{
-		// for ui we have to preserve the order of surfaces
+		// for ui we have to preserve the order of surfaces (not using sortedmodelsurfaces)
 		for (i = 0; i < model->nummodelsurfaces; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + model->firstmodelsurface + i;
 	}
@@ -10136,24 +10133,47 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 		for (i = 0; i < model->nummodelsurfaces; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
 	}
-	// don't do anything if there were no surfaces
-	if (!numsurfacelist)
+
+	/*
+	 * Mark lightmaps as dirty if their lightstyle's value changed. We do this by
+	 * using style chains because most styles do not change on most frames, and most
+	 * surfaces do not have styles on them. Mods like Arcane Dimensions (e.g. ad_necrokeep)
+	 * break this rule and animate most surfaces.
+	 */
+	if (update && !skysurfaces && !depthonly && !prepass && model->brushq1.num_lightstyles && r_refdef.scene.lightmapintensity > 0 && r_q1bsp_lightmap_updates_enabled.integer)
 	{
-		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
-		return;
-	}
-	// update lightmaps if needed
-	if (update)
-	{
-		int updated = 0;
-		for (j = model->firstmodelsurface, endj = model->firstmodelsurface + model->nummodelsurfaces;j < endj;j++)
+		model_brush_lightstyleinfo_t *style;
+
+		// For each lightstyle, check if its value changed and mark the lightmaps as dirty if so
+		for (i = 0, style = model->brushq1.data_lightstyleinfo; i < model->brushq1.num_lightstyles; i++, style++)
 		{
-			// Update brush entities even if not visible otherwise they'll render solid black.
-			if (update[j] && (r_refdef.viewcache.world_surfacevisible[j] || ent != r_refdef.scene.worldentity))
+			if (style->value != r_refdef.scene.lightstylevalue[style->style])
 			{
-				updated++;
-				R_BuildLightMap(ent, surfaces + j);
+				int* list = style->surfacelist;
+				style->value = r_refdef.scene.lightstylevalue[style->style];
+				// Value changed - mark the surfaces belonging to this style chain as dirty
+				for (j = 0; j < style->numsurfaces; j++)
+					update[list[j]] = true;
 			}
+		}
+		// Now check if update flags are set on any surfaces that are visible
+		if (r_q1bsp_lightmap_updates_hidden_surfaces.integer)
+		{
+			/* 
+			 * We can do less frequent texture uploads (approximately 10hz for animated
+			 * lightstyles) by rebuilding lightmaps on surfaces that are not currently visible.
+			 * For optimal efficiency, this includes the submodels of the worldmodel, so we
+			 * use model->num_surfaces, not nummodelsurfaces.
+			 */
+			for (i = 0; i < model->num_surfaces;i++)
+				if (update[i])
+					R_BuildLightMap(ent, surfaces + i, r_q1bsp_lightmap_updates_combine.integer);
+		}
+		else
+		{
+			for (i = 0; i < numsurfacelist; i++)
+				if (update[r_surfacelist[i] - surfaces])
+					R_BuildLightMap(ent, (msurface_t *)r_surfacelist[i], r_q1bsp_lightmap_updates_combine.integer);
 		}
 	}
 
@@ -10172,7 +10192,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qboolean skysurfaces, qboolean wr
 
 void R_DebugLine(vec3_t start, vec3_t end)
 {
-	dp_model_t *mod = CL_Mesh_UI();
+	model_t *mod = CL_Mesh_UI();
 	msurface_t *surf;
 	int e0, e1, e2, e3;
 	float offsetx, offsety, x1, y1, x2, y2, width = 1.0f;
@@ -10215,7 +10235,7 @@ void R_DebugLine(vec3_t start, vec3_t end)
 }
 
 
-void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
+void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qbool writedepth, qbool prepass, qbool ui)
 {
 	static texture_t texture;
 
@@ -10235,7 +10255,7 @@ void R_DrawCustomSurface(skinframe_t *skinframe, const matrix4x4_t *texmatrix, i
 	R_DrawCustomSurface_Texture(&texture, texmatrix, materialflags, firstvertex, numvertices, firsttriangle, numtriangles, writedepth, prepass, ui);
 }
 
-void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qboolean writedepth, qboolean prepass, qboolean ui)
+void R_DrawCustomSurface_Texture(texture_t *texture, const matrix4x4_t *texmatrix, int materialflags, int firstvertex, int numvertices, int firsttriangle, int numtriangles, qbool writedepth, qbool prepass, qbool ui)
 {
 	static msurface_t surface;
 	const msurface_t *surfacelist = &surface;

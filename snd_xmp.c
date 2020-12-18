@@ -20,9 +20,10 @@
  */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
 #include "snd_main.h"
 #include "snd_xmp.h"
+#include "sound.h"
 
 #ifdef LINK_TO_LIBXMP
 #include <xmp.h>
@@ -69,7 +70,7 @@
 
 #define xmp_dll 1
 
-qboolean XMP_OpenLibrary (void) {return true;}
+qbool XMP_OpenLibrary (void) {return true;}
 void XMP_CloseLibrary (void) {}
 #else
 
@@ -345,7 +346,7 @@ XMP_OpenLibrary
 Try to load the libxmp DLL
 ====================
 */
-qboolean XMP_OpenLibrary (void)
+qbool XMP_OpenLibrary (void)
 {
 	const char* dllnames_xmp [] =
 	{
@@ -366,7 +367,7 @@ qboolean XMP_OpenLibrary (void)
 		return true;
 
 // COMMANDLINEOPTION: Sound: -noxmp disables xmp module sound support
-	if (COM_CheckParm("-noxmp"))
+	if (Sys_CheckParm("-noxmp"))
 		return false;
 
 	// Load the DLL
@@ -592,7 +593,7 @@ XMP_LoadModFile
 Load an XMP module file into memory
 ===============
 */
-qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
+qbool XMP_LoadModFile(const char *filename, sfx_t *sfx)
 {
 	fs_offset_t filesize;
 	unsigned char *data;
@@ -606,7 +607,7 @@ qboolean XMP_LoadModFile(const char *filename, sfx_t *sfx)
 #endif
 
 // COMMANDLINEOPTION: Sound: -noxmp disables xmp module sound support
-	if (COM_CheckParm("-noxmp"))
+	if (Sys_CheckParm("-noxmp"))
 		return false;
 
 	// Return if already loaded

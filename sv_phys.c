@@ -46,7 +46,7 @@ void SV_Physics_Toss (prvm_edict_t *ent);
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent)
 {
-	dp_model_t *model;
+	model_t *model;
 	if (
 			(model = SV_GetModelFromEdict(ent))
 			?
@@ -122,7 +122,7 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -165,8 +165,8 @@ trace_t SV_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -274,7 +274,7 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -320,8 +320,8 @@ trace_t SV_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -419,7 +419,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	int i, bodysupercontents;
 	int passedictprog;
 	float pitchsign = 1;
-	qboolean pointtrace;
+	qbool pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
 	// temporary storage because prvm_vec_t may differ from vec_t
@@ -437,7 +437,7 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -502,8 +502,8 @@ trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -618,7 +618,7 @@ int SV_PointSuperContents(const vec3_t point)
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	int frame;
 	// list of entities to test for collisions
 	int numtouchedicts;
@@ -804,7 +804,7 @@ SV_LinkEdict
 void SV_LinkEdict (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	dp_model_t *model;
+	model_t *model;
 	vec3_t mins, maxs, entmins, entmaxs, entangles;
 	int modelindex;
 
@@ -1079,7 +1079,7 @@ in a frame.  Not used for pushmove objects, because they must be exact.
 Returns false if the entity removed itself.
 =============
 */
-static qboolean SV_RunThink (prvm_edict_t *ent)
+static qbool SV_RunThink (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int iterations;
@@ -1193,9 +1193,9 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 ============
 */
 static float SV_Gravity (prvm_edict_t *ent);
-static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean dolink);
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink);
 #define MAX_CLIP_PLANES 5
-static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
+static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int blocked, bumpcount;
@@ -1207,7 +1207,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	vec3_t end;
 #endif
 	trace_t trace;
-	qboolean moving;
+	qbool moving;
 	if (time <= 0)
 		return 0;
 	gravity = 0;
@@ -1217,7 +1217,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qboolean applygravity, flo
 	if(applygravity)
 	{
 		gravity = SV_Gravity(ent);
-		moving = PRVM_serveredictvector(ent, velocity)[0] || PRVM_serveredictvector(ent, velocity)[1];
+
 		if(!sv_gameplayfix_nogravityonground.integer || !((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND))
 		{
 			if (sv_gameplayfix_gravityunaffectedbyticrate.integer)
@@ -1461,7 +1461,7 @@ PUSHMOVE
 ===============================================================================
 */
 
-static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
+static qbool SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int bump;
@@ -1542,7 +1542,7 @@ static qboolean SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pi
 	return true;
 }
 
-qboolean SV_NudgeOutOfSolid(prvm_edict_t *ent)
+qbool SV_NudgeOutOfSolid(prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int bump, pass;
@@ -1591,7 +1591,7 @@ The trace struct is filled with the trace that has been done.
 Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
-static qboolean SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboolean dolink)
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int solid;
@@ -1679,13 +1679,13 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 	int i, e, index;
 	int pusherowner, pusherprog;
 	int checkcontents;
-	qboolean rotated;
+	qbool rotated;
 	float savesolid, movetime2, pushltime;
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, pushermins, pushermaxs, checkorigin, checkmins, checkmaxs;
 	int num_moved;
 	int numcheckentities;
 	static prvm_edict_t *checkentities[MAX_EDICTS];
-	dp_model_t *pushermodel;
+	model_t *pushermodel;
 	trace_t trace, trace2;
 	matrix4x4_t pusherfinalmatrix, pusherfinalimatrix;
 	static unsigned short moved_edicts[MAX_EDICTS];
@@ -2093,7 +2093,7 @@ static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t o
 	return UNSTICK_STUCK;
 }
 
-qboolean SV_UnstickEntity (prvm_edict_t *ent)
+qbool SV_UnstickEntity (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
@@ -2157,7 +2157,7 @@ static void SV_CheckStuck (prvm_edict_t *ent)
 SV_CheckWater
 =============
 */
-static qboolean SV_CheckWater (prvm_edict_t *ent)
+static qbool SV_CheckWater (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int cont;
@@ -2311,7 +2311,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	int type;
 	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity, entmins, entmaxs;
 	trace_t downtrace, trace;
-	qboolean applygravity;
+	qbool applygravity;
 	float stepheight;
 
 	// if frametime is 0 (due to client sending the same timestamp twice),
@@ -2845,7 +2845,7 @@ static void SV_Physics_Entity (prvm_edict_t *ent)
 	// (if an ent spawns a higher numbered ent, it moves in the same frame,
 	//  but if it spawns a lower numbered ent, it doesn't - this never moves
 	//  ents in the first frame regardless)
-	qboolean runmove = ent->priv.server->move;
+	qbool runmove = ent->priv.server->move;
 	ent->priv.server->move = true;
 	if (!runmove && sv_gameplayfix_delayprojectiles.integer > 0)
 		return;
@@ -2971,7 +2971,7 @@ void SV_Physics_ClientMove(void)
 
 	// call player physics, this needs the proper frametime
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
-	SV_ClientThink();
+	SV_PlayerPhysics();
 
 	// call standard client pre-think, with frametime = 0
 	PRVM_serverglobalfloat(time) = sv.time;
@@ -3019,7 +3019,7 @@ static void SV_Physics_ClientEntity_PreThink(prvm_edict_t *ent)
 	// don't run physics here if running asynchronously
 	if (host_client->clmovement_inputtimeout <= 0)
 	{
-		SV_ClientThink();
+		SV_PlayerPhysics();
 		//host_client->cmd.time = max(host_client->cmd.time, sv.time);
 	}
 

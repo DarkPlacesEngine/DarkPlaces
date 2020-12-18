@@ -22,12 +22,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include <stddef.h>
+#include "qtypes.h"
+#include "qdefs.h"
+#include "qstats.h"
+struct mempool_s;
+struct sizebuf_s;
 // protocolversion_t is defined in common.h
+enum protocolversion_e;
 
-protocolversion_t Protocol_EnumForName(const char *s);
-const char *Protocol_NameForEnum(protocolversion_t p);
-protocolversion_t Protocol_EnumForNumber(int n);
-int Protocol_NumberForEnum(protocolversion_t p);
+enum protocolversion_e Protocol_EnumForName(const char *s);
+const char *Protocol_NameForEnum(enum protocolversion_e p);
+enum protocolversion_e Protocol_EnumForNumber(int n);
+int Protocol_NumberForEnum(enum protocolversion_e p);
 void Protocol_Names(char *buffer, size_t buffersize);
 
 #define ENTITYSIZEPROFILING_START(msg, num, flags) \
@@ -364,6 +371,40 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define RENDER_CUSTOMIZEDMODELLIGHT 4096
 #define RENDER_DYNAMICMODELLIGHT 8388608 // origin dependent model light
 
+typedef struct usercmd_s
+{
+	vec3_t	viewangles;
+
+// intended velocities
+	float	forwardmove;
+	float	sidemove;
+	float	upmove;
+
+	vec3_t	cursor_screen;
+	vec3_t	cursor_start;
+	vec3_t	cursor_end;
+	vec3_t	cursor_impact;
+	vec3_t	cursor_normal;
+	vec_t	cursor_fraction;
+	int		cursor_entitynumber;
+
+	double time; // time the move is executed for (cl_movement: clienttime, non-cl_movement: receivetime)
+	double receivetime; // time the move was received at
+	double clienttime; // time to which server state the move corresponds to
+	int msec; // for predicted moves
+	int buttons;
+	int impulse;
+	unsigned int sequence;
+	qbool applied; // if false we're still accumulating a move
+	qbool predicted; // if true the sequence should be sent as 0
+
+	// derived properties
+	double frametime;
+	qbool canjump;
+	qbool jump;
+	qbool crouch;
+} usercmd_t;
+
 #define MAX_FRAMEGROUPBLENDS 4
 typedef struct framegroupblend_s
 {
@@ -448,7 +489,7 @@ void Protocol_UpdateClientStats(const int *stats);
 void Protocol_WriteStatsReliable(void);
 // writes a list of quake entities to the network stream
 // (or as many will fit)
-qboolean EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, const entity_state_t **states);
+qbool EntityFrameQuake_WriteFrame(struct sizebuf_s *msg, int maxsize, int numstates, const entity_state_t **states);
 // cleans up dead entities each frame after ReadEntity (which doesn't clear unused entities)
 void EntityFrameQuake_ISeeDeadEntities(void);
 
@@ -610,18 +651,18 @@ entityframe_database_t;
 // returns difference between two states as E_ flags
 int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n);
 // write E_ flags to a msg
-void EntityState_WriteExtendBits(sizebuf_t *msg, unsigned int bits);
+void EntityState_WriteExtendBits(struct sizebuf_s *msg, unsigned int bits);
 // write values for the E_ flagged fields to a msg
-void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned int bits);
+void EntityState_WriteFields(const entity_state_t *ent, struct sizebuf_s *msg, unsigned int bits);
 // write entity number and E_ flags and their values, or a remove number, describing the change from delta to ent
-void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const entity_state_t *delta);
+void EntityState_WriteUpdate(const entity_state_t *ent, struct sizebuf_s *msg, const entity_state_t *delta);
 // read E_ flags
 int EntityState_ReadExtendBits(void);
 // read values for E_ flagged fields and apply them to a state
 void EntityState_ReadFields(entity_state_t *e, unsigned int bits);
 
 // (client and server) allocates a new empty database
-entityframe_database_t *EntityFrame_AllocDatabase(mempool_t *mempool);
+entityframe_database_t *EntityFrame_AllocDatabase(struct mempool_s *mempool);
 // (client and server) frees the database
 void EntityFrame_FreeDatabase(entityframe_database_t *d);
 // (server) clears the database to contain no frames (thus delta compression
@@ -638,7 +679,7 @@ void EntityFrame_AddFrame_Client(entityframe_database_t *d, vec3_t eye, int fram
 // (server) adds a entity_frame to the database, for future reference
 void EntityFrame_AddFrame_Server(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t **entitydata);
 // (server) writes a frame to network stream
-qboolean EntityFrame_WriteFrame(sizebuf_t *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t **states, int viewentnum);
+qbool EntityFrame_WriteFrame(struct sizebuf_s *msg, int maxsize, entityframe_database_t *d, int numstates, const entity_state_t **states, int viewentnum);
 // (client) reads a frame from network stream
 void EntityFrame_CL_ReadFrame(void);
 // (client) returns the frame number of the most recent frame recieved
@@ -659,7 +700,7 @@ entity_database4_commit_t;
 typedef struct entity_database4_s
 {
 	// what mempool to use for allocations
-	mempool_t *mempool;
+	struct mempool_s *mempool;
 	// reference frame
 	int referenceframenum;
 	// reference entities array is resized according to demand
@@ -684,7 +725,7 @@ entity_state_t *EntityFrame4_GetReferenceEntity(entityframe4_database_t *d, int 
 void EntityFrame4_AddCommitEntity(entityframe4_database_t *d, const entity_state_t *s);
 
 // allocate a database
-entityframe4_database_t *EntityFrame4_AllocDatabase(mempool_t *pool);
+entityframe4_database_t *EntityFrame4_AllocDatabase(struct mempool_s *pool);
 // free a database
 void EntityFrame4_FreeDatabase(entityframe4_database_t *d);
 // reset a database (resets compression but does not reallocate anything)
@@ -692,7 +733,7 @@ void EntityFrame4_ResetDatabase(entityframe4_database_t *d);
 // updates database to account for a frame-received acknowledgment
 int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermode);
 // writes a frame to the network stream
-qboolean EntityFrame4_WriteFrame(sizebuf_t *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states);
+qbool EntityFrame4_WriteFrame(struct sizebuf_s *msg, int maxsize, entityframe4_database_t *d, int numstates, const entity_state_t **states);
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(void);
 
@@ -847,16 +888,16 @@ typedef struct entityframe5_database_s
 }
 entityframe5_database_t;
 
-entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool);
+entityframe5_database_t *EntityFrame5_AllocDatabase(struct mempool_s *pool);
 void EntityFrame5_FreeDatabase(entityframe5_database_t *d);
-void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg);
+void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, struct sizebuf_s *msg);
 int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
 void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum);
 void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
-qboolean EntityFrame5_WriteFrame(sizebuf_t *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, unsigned int movesequence, qboolean need_empty);
+qbool EntityFrame5_WriteFrame(struct sizebuf_s *msg, int maxsize, entityframe5_database_t *d, int numstates, const entity_state_t **states, int viewentnum, unsigned int movesequence, qbool need_empty);
 
-extern cvar_t developer_networkentities;
+extern struct cvar_s developer_networkentities;
 
 // QUAKEWORLD
 // server to client
@@ -1016,7 +1057,7 @@ extern cvar_t developer_networkentities;
 typedef struct entityframeqw_snapshot_s
 {
 	double time;
-	qboolean invalid;
+	qbool invalid;
 	int num_entities;
 	entity_state_t entities[QW_MAX_PACKET_ENTITIES];
 }
@@ -1028,14 +1069,14 @@ typedef struct entityframeqw_database_s
 }
 entityframeqw_database_t;
 
-entityframeqw_database_t *EntityFrameQW_AllocDatabase(mempool_t *pool);
+entityframeqw_database_t *EntityFrameQW_AllocDatabase(struct mempool_s *pool);
 void EntityFrameQW_FreeDatabase(entityframeqw_database_t *d);
 void EntityStateQW_ReadPlayerUpdate(void);
-void EntityFrameQW_CL_ReadFrame(qboolean delta);
+void EntityFrameQW_CL_ReadFrame(qbool delta);
 
 struct client_s;
 void EntityFrameCSQC_LostFrame(struct client_s *client, int framenum);
-qboolean EntityFrameCSQC_WriteFrame (sizebuf_t *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum);
+qbool EntityFrameCSQC_WriteFrame (struct sizebuf_s *msg, int maxsize, int numnumbers, const unsigned short *numbers, int framenum);
 
 #endif
 

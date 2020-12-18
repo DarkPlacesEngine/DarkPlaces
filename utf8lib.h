@@ -4,6 +4,7 @@
 #ifndef UTF8LIB_H__
 #define UTF8LIB_H__
 
+#include <stddef.h>
 #include "qtypes.h"
 
 // types for unicode strings
@@ -19,7 +20,7 @@ typedef int32_t Uchar;
 // a non-utf8 version to work: u8_strlen() will wrap to strlen()
 // u8_byteofs() and u8_charidx() will simply return whatever is passed as index parameter
 // u8_getchar() will will just return the next byte, u8_fromchar will write one byte, ...
-extern cvar_t    utf8_enable;
+extern struct cvar_s utf8_enable;
 void   u8_Init(void);
 
 size_t u8_strlen(const char*);
@@ -33,13 +34,13 @@ Uchar  u8_getnchar_utf8_enabled(const char*, const char**, size_t);
 int    u8_fromchar(Uchar, char*, size_t);
 size_t u8_mbstowcs(Uchar *, const char *, size_t);
 size_t u8_wcstombs(char*, const Uchar*, size_t);
-size_t u8_COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid);
+size_t u8_COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid);
 
 // returns a static buffer, use this for inlining
 char  *u8_encodech(Uchar ch, size_t*, char*buf16);
 
-size_t u8_strpad(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
-size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qboolean leftalign, size_t minwidth, size_t maxwidth);
+size_t u8_strpad(char *out, size_t outsize, const char *in, qbool leftalign, size_t minwidth, size_t maxwidth);
+size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qbool leftalign, size_t minwidth, size_t maxwidth);
 
 /* Careful: if we disable utf8 but not freetype, we wish to see freetype chars
  * for normal letters. So use E000+x for special chars, but leave the freetype stuff for the

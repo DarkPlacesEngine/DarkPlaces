@@ -80,12 +80,10 @@ int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum, int servermo
 		// reset reference, but leave commits alone
 		d->referenceframenum = -1;
 		for (i = 0;i < d->maxreferenceentities;i++)
-		{
 			d->referenceentity[i] = defaultstate;
 		// if this is the server, remove commits
-			for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
-				commit->numentities = 0;
-		}
+		for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
+			commit->numentities = 0;
 		found = true;
 	}
 	else if (d->referenceframenum == framenum)

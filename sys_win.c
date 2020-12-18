@@ -243,7 +243,7 @@ void Sys_InitConsole (void)
 
 	// LadyHavoc: can't check cls.state because it hasn't been initialized yet
 	// if (cls.state == ca_dedicated)
-	if (COM_CheckParm("-dedicated"))
+	if (Sys_CheckParm("-dedicated"))
 	{
 		//if ((houtput == 0) || (houtput == INVALID_HANDLE_VALUE)) // LadyHavoc: on Windows XP this is never 0 or invalid, but hinput is invalid
 		{
@@ -261,19 +261,19 @@ void Sys_InitConsole (void)
 #define atoi _atoi64
 #endif
 	// give QHOST a chance to hook into the console
-		if ((t = COM_CheckParm ("-HFILE")) > 0)
+		if ((t = Sys_CheckParm ("-HFILE")) > 0)
 		{
 			if (t < sys.argc)
 				hFile = (HANDLE)atoi (sys.argv[t+1]);
 		}
 
-		if ((t = COM_CheckParm ("-HPARENT")) > 0)
+		if ((t = Sys_CheckParm ("-HPARENT")) > 0)
 		{
 			if (t < sys.argc)
 				heventParent = (HANDLE)atoi (sys.argv[t+1]);
 		}
 
-		if ((t = COM_CheckParm ("-HCHILD")) > 0)
+		if ((t = Sys_CheckParm ("-HCHILD")) > 0)
 		{
 			if (t < sys.argc)
 				heventChild = (HANDLE)atoi (sys.argv[t+1]);
@@ -395,7 +395,7 @@ int main (int argc, const char* argv[])
 }
 #endif
 
-qboolean sys_supportsdlgetticks = false;
+qbool sys_supportsdlgetticks = false;
 unsigned int Sys_SDL_GetTicks (void)
 {
 	Sys_Error("Called Sys_SDL_GetTicks on non-SDL target");

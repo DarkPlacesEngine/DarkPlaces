@@ -83,7 +83,7 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
-dp_model_t *CL_GetModelByIndex(int modelindex)
+model_t *CL_GetModelByIndex(int modelindex)
 {
 	if(!modelindex)
 		return NULL;
@@ -101,7 +101,7 @@ dp_model_t *CL_GetModelByIndex(int modelindex)
 	return NULL;
 }
 
-dp_model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
+model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	if (!ed || ed->priv.server->free)
@@ -124,7 +124,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 
 	if (PRVM_clientedictfloat(ent, solid) == SOLID_BSP)
 	{
-		dp_model_t *model = CL_GetModelByIndex( (int)PRVM_clientedictfloat(ent, modelindex) );
+		model_t *model = CL_GetModelByIndex( (int)PRVM_clientedictfloat(ent, modelindex) );
 		if (model == NULL)
 		{
 			Con_Printf("edict %i: SOLID_BSP with invalid modelindex!\n", PRVM_NUM_FOR_EDICT(ent));
@@ -203,7 +203,7 @@ int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)
 CL_Move
 ==================
 */
-trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
+trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, qbool hitnetworkbrushmodels, qbool hitnetworkplayers, int *hitnetworkentity, qbool hitcsqcentities)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int i, bodysupercontents;
@@ -223,7 +223,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -267,8 +267,8 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -424,7 +424,7 @@ finished:
 CL_TraceLine
 ==================
 */
-trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities, qboolean hitsurfaces)
+trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitnetworkbrushmodels, qbool hitnetworkplayers, int *hitnetworkentity, qbool hitcsqcentities, qbool hitsurfaces)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int i, bodysupercontents;
@@ -444,7 +444,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -491,8 +491,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -648,13 +648,13 @@ finished:
 CL_Move
 ==================
 */
-trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qboolean hitnetworkbrushmodels, qboolean hitnetworkplayers, int *hitnetworkentity, qboolean hitcsqcentities)
+trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend, qbool hitnetworkbrushmodels, qbool hitnetworkplayers, int *hitnetworkentity, qbool hitcsqcentities)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	vec3_t hullmins, hullmaxs;
 	int i, bodysupercontents;
 	int passedictprog;
-	qboolean pointtrace;
+	qbool pointtrace;
 	prvm_edict_t *traceowner, *touch;
 	trace_t trace;
 	// temporary storage because prvm_vec_t may need conversion
@@ -672,7 +672,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -740,8 +740,8 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
-		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = (vec_t)-999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  (vec_t)999999999;
 	}
 
 	// if the passedict is world, make it NULL (to avoid two checks each time)
@@ -914,7 +914,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 	// matrices to transform into/out of other entity's space
 	matrix4x4_t matrix, imatrix;
 	// model of other entity
-	dp_model_t *model;
+	model_t *model;
 	// list of entities to test for collisions
 	int numtouchedicts;
 	static prvm_edict_t *touchedicts[MAX_EDICTS];
@@ -978,7 +978,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 		if (!model)
 			continue;
 		// animated models are not suitable for caching
-		if ((touch->priv.server->frameblend && (touch->priv.server->frameblend[0].lerp != 1.0 || touch->priv.server->frameblend[0].subframe != 0)) || touch->priv.server->skeleton.relativetransforms)
+		if ((&touch->priv.server->frameblend[0] && (touch->priv.server->frameblend[0].lerp != 1.0 || touch->priv.server->frameblend[0].subframe != 0)) || touch->priv.server->skeleton.relativetransforms)
 			continue;
 		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
 			continue;

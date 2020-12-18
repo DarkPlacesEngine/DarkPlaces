@@ -62,22 +62,18 @@ void World_End(world_t *world)
 void World_ClearLink (link_t *l)
 {
 	l->entitynumber = 0;
-	l->prev = l->next = l;
+	l->list.prev = l->list.next = &l->list;
 }
 
 void World_RemoveLink (link_t *l)
 {
-	l->next->prev = l->prev;
-	l->prev->next = l->next;
+	List_Delete(&l->list);
 }
 
 void World_InsertLinkBefore (link_t *l, link_t *before, int entitynumber)
 {
 	l->entitynumber = entitynumber;
-	l->next = before;
-	l->prev = before->prev;
-	l->prev->next = l;
-	l->next->prev = l;
+	List_Add_Tail(&l->list, &before->list);
 }
 
 /*
@@ -150,11 +146,11 @@ void World_UnlinkAll(world_t *world)
 	link_t *grid;
 	// unlink all entities one by one
 	grid = &world->areagrid_outside;
-	while (grid->next != grid)
-		World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+	while (grid->list.next != &grid->list)
+		World_UnlinkEdict(PRVM_EDICT_NUM(List_Entry(*grid->list.next, link_t, list)->entitynumber));
 	for (i = 0, grid = world->areagrid;i < AREA_GRIDNODES;i++, grid++)
-		while (grid->next != grid)
-			World_UnlinkEdict(PRVM_EDICT_NUM(grid->next->entitynumber));
+		while (grid->list.next != &grid->list)
+			World_UnlinkEdict(PRVM_EDICT_NUM(List_Entry(*grid->list.next, link_t, list)->entitynumber));
 }
 
 /*
@@ -167,11 +163,8 @@ void World_UnlinkEdict(prvm_edict_t *ent)
 	int i;
 	for (i = 0;i < ENTITYGRIDAREAS;i++)
 	{
-		if (ent->priv.server->areagrid[i].prev)
-		{
+		if (ent->priv.server->areagrid[i].list.prev)
 			World_RemoveLink (&ent->priv.server->areagrid[i]);
-			ent->priv.server->areagrid[i].prev = ent->priv.server->areagrid[i].next = NULL;
-		}
 	}
 }
 
@@ -179,6 +172,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 {
 	prvm_prog_t *prog = world->prog;
 	int numlist;
+	llist_t *pos;
 	link_t *grid;
 	link_t *l;
 	prvm_edict_t *ent;
@@ -218,11 +212,12 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	numlist = 0;
 	// add entities not linked into areagrid because they are too big or
 	// outside the grid bounds
-	if (world->areagrid_outside.next)
+	if (world->areagrid_outside.list.next)
 	{
 		grid = &world->areagrid_outside;
-		for (l = grid->next;l != grid;l = l->next)
+		List_For_Each(pos, &grid->list)
 		{
+			l = List_Entry(*pos, link_t, list);
 			ent = PRVM_EDICT_NUM(l->entitynumber);
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
@@ -243,10 +238,11 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 		grid = world->areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
 		{
-			if (grid->next)
+			if (grid->list.next)
 			{
-				for (l = grid->next;l != grid;l = l->next)
+				List_For_Each(pos, &grid->list)
 				{
+					l = List_Entry(*pos, link_t, list);
 					ent = PRVM_EDICT_NUM(l->entitynumber);
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{
@@ -311,7 +307,7 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 {
 	prvm_prog_t *prog = world->prog;
 	// unlink from old position first
-	if (ent->priv.server->areagrid[0].prev)
+	if (ent->priv.server->areagrid[0].list.prev)
 		World_UnlinkEdict(ent);
 
 	// don't add the world
@@ -335,36 +331,36 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 //============================================================================
 
 #ifdef USEODE
-cvar_t physics_ode_quadtree_depth = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
-cvar_t physics_ode_allowconvex = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_allowconvex", "0", "allow usage of Convex Hull primitive type on trimeshes that have custom 'collisionconvex' mesh. If disabled, trimesh primitive type are used."};
-cvar_t physics_ode_contactsurfacelayer = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_contactsurfacelayer","1", "allows objects to overlap this many units to reduce jitter"};
-cvar_t physics_ode_worldstep_iterations = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_worldstep_iterations", "20", "parameter to dWorldQuickStep"};
-cvar_t physics_ode_contact_mu = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_contact_mu", "1", "contact solver mu parameter - friction pyramid approximation 1 (see ODE User Guide)"};
-cvar_t physics_ode_contact_erp = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_contact_erp", "0.96", "contact solver erp parameter - Error Restitution Percent (see ODE User Guide)"};
-cvar_t physics_ode_contact_cfm = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
-cvar_t physics_ode_contact_maxpoints = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_contact_maxpoints", "16", "maximal number of contact points between 2 objects, higher = stable (and slower), can be up to 32"};
-cvar_t physics_ode_world_erp = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_erp", "-1", "world solver erp parameter - Error Restitution Percent (see ODE User Guide); use defaults when set to -1"};
-cvar_t physics_ode_world_cfm = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_cfm", "-1", "world solver cfm parameter - Constraint Force Mixing (see ODE User Guide); not touched when -1"};
-cvar_t physics_ode_world_damping = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_damping", "1", "enabled damping scale (see ODE User Guide), this scales all damping values, be aware that behavior depends of step type"};
-cvar_t physics_ode_world_damping_linear = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_damping_linear", "0.01", "world linear damping scale (see ODE User Guide); use defaults when set to -1"};
-cvar_t physics_ode_world_damping_linear_threshold = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_damping_linear_threshold", "0.1", "world linear damping threshold (see ODE User Guide); use defaults when set to -1"};
-cvar_t physics_ode_world_damping_angular = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_damping_angular", "0.05", "world angular damping scale (see ODE User Guide); use defaults when set to -1"};
-cvar_t physics_ode_world_damping_angular_threshold = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_damping_angular_threshold", "0.1", "world angular damping threshold (see ODE User Guide); use defaults when set to -1"};
-cvar_t physics_ode_world_gravitymod = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_world_gravitymod", "1", "multiplies gravity got from sv_gravity, this may be needed to tweak if strong damping is used"};
-cvar_t physics_ode_iterationsperframe = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
-cvar_t physics_ode_constantstep = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_constantstep", "0", "use constant step instead of variable step which tends to increase stability, if set to 1 uses sys_ticrate, instead uses it's own value"};
-cvar_t physics_ode_autodisable = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable", "1", "automatic disabling of objects which dont move for long period of time, makes object stacking a lot faster"};
-cvar_t physics_ode_autodisable_steps = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable_steps", "10", "how many steps object should be dormant to be autodisabled"};
-cvar_t physics_ode_autodisable_time = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable_time", "0", "how many seconds object should be dormant to be autodisabled"};
-cvar_t physics_ode_autodisable_threshold_linear = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable_threshold_linear", "0.6", "body will be disabled if it's linear move below this value"};
-cvar_t physics_ode_autodisable_threshold_angular = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable_threshold_angular", "6", "body will be disabled if it's angular move below this value"};
-cvar_t physics_ode_autodisable_threshold_samples = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_autodisable_threshold_samples", "5", "average threshold with this number of samples"};
-cvar_t physics_ode_movelimit = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls, be aware that behavior depends of step type"};
-cvar_t physics_ode_spinlimit = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
-cvar_t physics_ode_trick_fixnan = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_trick_fixnan", "1", "engine trick that checks and fixes NaN velocity/origin/angles on objects, a value of 2 makes console prints on each fix"};
-cvar_t physics_ode_printstats = {CVAR_CLIENT | CVAR_SERVER, "physics_ode_printstats", "0", "print ODE stats each frame"};
+cvar_t physics_ode_quadtree_depth = {CF_CLIENT | CF_SERVER, "physics_ode_quadtree_depth","5", "desired subdivision level of quadtree culling space"};
+cvar_t physics_ode_allowconvex = {CF_CLIENT | CF_SERVER, "physics_ode_allowconvex", "0", "allow usage of Convex Hull primitive type on trimeshes that have custom 'collisionconvex' mesh. If disabled, trimesh primitive type are used."};
+cvar_t physics_ode_contactsurfacelayer = {CF_CLIENT | CF_SERVER, "physics_ode_contactsurfacelayer","1", "allows objects to overlap this many units to reduce jitter"};
+cvar_t physics_ode_worldstep_iterations = {CF_CLIENT | CF_SERVER, "physics_ode_worldstep_iterations", "20", "parameter to dWorldQuickStep"};
+cvar_t physics_ode_contact_mu = {CF_CLIENT | CF_SERVER, "physics_ode_contact_mu", "1", "contact solver mu parameter - friction pyramid approximation 1 (see ODE User Guide)"};
+cvar_t physics_ode_contact_erp = {CF_CLIENT | CF_SERVER, "physics_ode_contact_erp", "0.96", "contact solver erp parameter - Error Restitution Percent (see ODE User Guide)"};
+cvar_t physics_ode_contact_cfm = {CF_CLIENT | CF_SERVER, "physics_ode_contact_cfm", "0", "contact solver cfm parameter - Constraint Force Mixing (see ODE User Guide)"};
+cvar_t physics_ode_contact_maxpoints = {CF_CLIENT | CF_SERVER, "physics_ode_contact_maxpoints", "16", "maximal number of contact points between 2 objects, higher = stable (and slower), can be up to 32"};
+cvar_t physics_ode_world_erp = {CF_CLIENT | CF_SERVER, "physics_ode_world_erp", "-1", "world solver erp parameter - Error Restitution Percent (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_cfm = {CF_CLIENT | CF_SERVER, "physics_ode_world_cfm", "-1", "world solver cfm parameter - Constraint Force Mixing (see ODE User Guide); not touched when -1"};
+cvar_t physics_ode_world_damping = {CF_CLIENT | CF_SERVER, "physics_ode_world_damping", "1", "enabled damping scale (see ODE User Guide), this scales all damping values, be aware that behavior depends of step type"};
+cvar_t physics_ode_world_damping_linear = {CF_CLIENT | CF_SERVER, "physics_ode_world_damping_linear", "0.01", "world linear damping scale (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_linear_threshold = {CF_CLIENT | CF_SERVER, "physics_ode_world_damping_linear_threshold", "0.1", "world linear damping threshold (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_angular = {CF_CLIENT | CF_SERVER, "physics_ode_world_damping_angular", "0.05", "world angular damping scale (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_damping_angular_threshold = {CF_CLIENT | CF_SERVER, "physics_ode_world_damping_angular_threshold", "0.1", "world angular damping threshold (see ODE User Guide); use defaults when set to -1"};
+cvar_t physics_ode_world_gravitymod = {CF_CLIENT | CF_SERVER, "physics_ode_world_gravitymod", "1", "multiplies gravity got from sv_gravity, this may be needed to tweak if strong damping is used"};
+cvar_t physics_ode_iterationsperframe = {CF_CLIENT | CF_SERVER, "physics_ode_iterationsperframe", "1", "divisor for time step, runs multiple physics steps per frame"};
+cvar_t physics_ode_constantstep = {CF_CLIENT | CF_SERVER, "physics_ode_constantstep", "0", "use constant step instead of variable step which tends to increase stability, if set to 1 uses sys_ticrate, instead uses it's own value"};
+cvar_t physics_ode_autodisable = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable", "1", "automatic disabling of objects which dont move for long period of time, makes object stacking a lot faster"};
+cvar_t physics_ode_autodisable_steps = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable_steps", "10", "how many steps object should be dormant to be autodisabled"};
+cvar_t physics_ode_autodisable_time = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable_time", "0", "how many seconds object should be dormant to be autodisabled"};
+cvar_t physics_ode_autodisable_threshold_linear = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable_threshold_linear", "0.6", "body will be disabled if it's linear move below this value"};
+cvar_t physics_ode_autodisable_threshold_angular = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable_threshold_angular", "6", "body will be disabled if it's angular move below this value"};
+cvar_t physics_ode_autodisable_threshold_samples = {CF_CLIENT | CF_SERVER, "physics_ode_autodisable_threshold_samples", "5", "average threshold with this number of samples"};
+cvar_t physics_ode_movelimit = {CF_CLIENT | CF_SERVER, "physics_ode_movelimit", "0.5", "clamp velocity if a single move would exceed this percentage of object thickness, to prevent flying through walls, be aware that behavior depends of step type"};
+cvar_t physics_ode_spinlimit = {CF_CLIENT | CF_SERVER, "physics_ode_spinlimit", "10000", "reset spin velocity if it gets too large"};
+cvar_t physics_ode_trick_fixnan = {CF_CLIENT | CF_SERVER, "physics_ode_trick_fixnan", "1", "engine trick that checks and fixes NaN velocity/origin/angles on objects, a value of 2 makes console prints on each fix"};
+cvar_t physics_ode_printstats = {CF_CLIENT | CF_SERVER, "physics_ode_printstats", "0", "print ODE stats each frame"};
 
-cvar_t physics_ode = {CVAR_CLIENT | CVAR_SERVER, "physics_ode", "0", "run ODE physics (VERY experimental and potentially buggy)"};
+cvar_t physics_ode = {CF_CLIENT | CF_SERVER, "physics_ode", "0", "run ODE physics (VERY experimental and potentially buggy)"};
 
 // LadyHavoc: this large chunk of definitions comes from the ODE library
 // include files.
@@ -2122,7 +2118,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	dMass mass;
 	const dReal *ovelocity, *ospinvelocity;
 	void *dataID;
-	dp_model_t *model;
+	model_t *model;
 	float *ov;
 	int *oe;
 	int axisindex;
@@ -2134,7 +2130,7 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	int triangleindex;
 	int vertexindex;
 	mempool_t *mempool;
-	qboolean modified = false;
+	qbool modified = false;
 	vec3_t angles;
 	vec3_t avelocity;
 	vec3_t entmaxs;
@@ -2155,13 +2151,13 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 	vec3_t scale;
 	vec_t spinlimit;
 	vec_t test;
-	qboolean gravity;
-	qboolean geom_modified = false;
+	qbool gravity;
+	qbool geom_modified = false;
 	edict_odefunc_t *func, *nextf;
 
 	dReal *planes, *planesData, *pointsData;
 	unsigned int *polygons, *polygonsData, polyvert;
-	qboolean *mapped, *used, convex_compatible;
+	qbool *mapped, *used, convex_compatible;
 	int numplanes = 0, numpoints = 0, i;
 
 #ifndef LINK_TO_LIBODE
@@ -2378,10 +2374,10 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 				//              followed by that amount of indices to "points" in counter clockwise order
 				polygonsData = polygons = (unsigned int *)Mem_Alloc(mempool, numtriangles*sizeof(int)*4);
 				planesData = planes = (dReal *)Mem_Alloc(mempool, numtriangles*sizeof(dReal)*4);
-				mapped = (qboolean *)Mem_Alloc(mempool, numvertices*sizeof(qboolean));
-				used = (qboolean *)Mem_Alloc(mempool, numtriangles*sizeof(qboolean));
-				memset(mapped, 0, numvertices*sizeof(qboolean));
-				memset(used, 0, numtriangles*sizeof(qboolean));
+				mapped = (qbool *)Mem_Alloc(mempool, numvertices*sizeof(qbool));
+				used = (qbool *)Mem_Alloc(mempool, numtriangles*sizeof(qbool));
+				memset(mapped, 0, numvertices*sizeof(qbool));
+				memset(used, 0, numtriangles*sizeof(qbool));
 				numplanes = numpoints = polyvert = 0;
 				// build convex hull
 				// todo: merge duplicated verts here

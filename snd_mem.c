@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 
-#include "quakedef.h"
+#include "darkplaces.h"
 
 #include "snd_main.h"
 #include "snd_ogg.h"
@@ -27,7 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef USEXMP
 #include "snd_xmp.h"
 #endif
+#include "sound.h"
 
+void SCR_PushLoadingScreen (const char *, float);
+void SCR_PopLoadingScreen (qbool);
 
 /*
 ====================
@@ -81,7 +84,7 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 S_LoadSound
 ==============
 */
-qboolean S_LoadSound (sfx_t *sfx, qboolean complain)
+qbool S_LoadSound (sfx_t *sfx, qbool complain)
 {
 	char namebuffer[MAX_QPATH + 16];
 	size_t len;

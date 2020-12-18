@@ -37,38 +37,50 @@ The game starts with a Cbuf_AddText ("exec quake.rc\n"); Cbuf_Execute ();
 #ifndef CMD_H
 #define CMD_H
 
-#include "thread.h"
+#include "qtypes.h"
+#include "qdefs.h"
+#include "com_list.h"
 
 struct cmd_state_s;
 
 // Command flags
-#define CMD_CLIENT				(1<<0)
-#define CMD_SERVER				(1<<1)
-#define CMD_CLIENT_FROM_SERVER	(1<<2)
-#define CMD_SERVER_FROM_CLIENT	(1<<3)
-#define CMD_USERINFO			(1<<4)
-#define CMD_CHEAT				(1<<5)
+#define CF_NONE 0
+#define CF_CLIENT               (1<<0)  // cvar/command that only the client can change/execute
+#define CF_SERVER               (1<<1)  // cvar/command that only the server can change/execute
+#define CF_CLIENT_FROM_SERVER   (1<<2)  // command that the server is allowed to execute on the client
+#define CF_SERVER_FROM_CLIENT   (1<<3)  // command the client is allowed to execute on the server as a stringcmd
+#define CF_CHEAT                (1<<4)  // command or cvar that gives an unfair advantage over other players and is blocked unless sv_cheats is 1
+#define CF_ARCHIVE              (1<<5)  // cvar should have its set value saved to config.cfg and persist across sessions
+#define CF_READONLY             (1<<6)  // cvar cannot be changed from the console or the command buffer
+#define CF_NOTIFY               (1<<7)  // cvar should trigger a chat notification to all connected clients when changed
+#define CF_SERVERINFO           (1<<8)  // command or cvar relevant to serverinfo string handling
+#define CF_USERINFO             (1<<9)  // command or cvar used to communicate userinfo to the server
+#define CF_PERSISTENT           (1<<10) // cvar must not be reset on gametype switch (such as scr_screenshot_name, which otherwise isn't set to the mod name properly)
+#define CF_PRIVATE              (1<<11) // cvar should not be $ expanded or sent to the server under any circumstances (rcon_password, etc)
+#define CF_MAXFLAGSVAL          4095    // used to determine if flags is valid
+// for internal use only!
+#define CF_DEFAULTSET (1<<30)
+#define CF_ALLOCATED (1<<31)
 
-
-#define CMD_SHARED 3
+#define CF_SHARED 3
 
 typedef void(*xcommand_t) (struct cmd_state_s *cmd);
 
-typedef enum
+typedef enum cmd_source_s
 {
 	src_client,		///< came in over a net connection as a clc_stringcmd
 					///< host_client will be valid during this state.
-	src_command		///< from the command buffer
+	src_local		///< from the command buffer
 } cmd_source_t;
 
-typedef struct cmdalias_s
+typedef struct cmd_alias_s
 {
-	struct cmdalias_s *next;
+	struct cmd_alias_s *next;
 	char name[MAX_ALIAS_NAME];
 	char *value;
-	qboolean initstate; // indicates this command existed at init
+	qbool initstate; // indicates this command existed at init
 	char *initialvalue; // backup copy of value at init
-} cmdalias_t;
+} cmd_alias_t;
 
 typedef struct cmd_function_s
 {
@@ -77,55 +89,63 @@ typedef struct cmd_function_s
 	const char *name;
 	const char *description;
 	xcommand_t function;
-	qboolean csqcfunc;
-	qboolean autofunc;
-	qboolean initstate; // indicates this command existed at init
+	qbool qcfunc;
+	qbool autofunc;
+	qbool initstate; // indicates this command existed at init
 } cmd_function_t;
-
-typedef struct cmddeferred_s
-{
-	struct cmddeferred_s *next;
-	char *value;
-	double delay;
-} cmddeferred_t;
 
 /// container for user-defined QC functions and aliases, shared between different command interpreters
 typedef struct cmd_userdefined_s
 {
 	// csqc functions - this is a mess
-	cmd_function_t *csqc_functions;
+	cmd_function_t *qc_functions;
 
 	// aliases
-	cmdalias_t *alias;
+	cmd_alias_t *alias;
 }
 cmd_userdefined_t;
+
+typedef struct cmd_buf_s
+{
+	llist_t start;
+	llist_t deferred;
+	llist_t free;
+	qbool wait;
+	size_t maxsize;
+	size_t size;
+	char tokenizebuffer[CMD_TOKENIZELENGTH];
+	int tokenizebufferpos;
+	double deferred_oldtime;
+	void *lock;
+} cmd_buf_t;
 
 /// command interpreter state - the tokenizing and execution of commands, as well as pointers to which cvars and aliases they can access
 typedef struct cmd_state_s
 {
-	mempool_t *mempool;
+	struct mempool_s *mempool;
 
 	int argc;
+	const char *cmdline;
 	const char *argv[MAX_ARGS];
 	const char *null_string;
 	const char *args;
 	cmd_source_t source;
 
-	struct cbuf_s *cbuf;
+	cmd_buf_t *cbuf;
 
 	cmd_userdefined_t *userdefined; // possible csqc functions and aliases to execute
 
 	cmd_function_t *engine_functions;
 
-	cvar_state_t *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
-	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CVAR_CLIENT | CVAR_SERVER, or just CVAR_SERVER)
+	struct cvar_state_s *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
+	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
 
 	int cmd_flags; // cmd flags that identify this interpreter
 
 	/*
 	 * If a requested flag matches auto_flags, a command will be
 	 * added to a given interpreter with auto_function. For example,
-	 * a CMD_SERVER_FROM_CLIENT command should be automatically added
+	 * a CF_SERVER_FROM_CLIENT command should be automatically added
 	 * to the client interpreter as CL_ForwardToServer_f. It can be
 	 * overridden at any time.
 	 */
@@ -134,29 +154,16 @@ typedef struct cmd_state_s
 }
 cmd_state_t;
 
-typedef struct cbuf_cmd_s
+typedef struct cmd_input_s
 {
-	struct cbuf_cmd_s *prev, *next;
+	llist_t list;
 	cmd_state_t *source;
 	double delay;
 	size_t size;
-	char text[MAX_INPUTLINE];
-	qboolean pending;
-} cbuf_cmd_t;
-
-typedef struct cbuf_s
-{
-	cbuf_cmd_t *start;
-	cbuf_cmd_t *deferred;
-	cbuf_cmd_t *free;
-	qboolean wait;
-	size_t maxsize;
-	size_t size;
-	char tokenizebuffer[CMD_TOKENIZELENGTH];
-	int tokenizebufferpos;
-	double deferred_oldtime;
-	void *lock;
-} cbuf_t;
+	size_t length;
+	char *text;
+	qbool pending;
+} cmd_input_t;
 
 extern cmd_userdefined_t cmd_userdefined_all; // aliases and csqc functions
 extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
@@ -171,10 +178,10 @@ extern cmd_state_t cmd_server;
 // uses cmddefs_null
 extern cmd_state_t cmd_serverfromclient;
 
-extern qboolean host_stuffcmdsrun;
+extern qbool host_stuffcmdsrun;
 
-void Cbuf_Lock(cbuf_t *cbuf);
-void Cbuf_Unlock(cbuf_t *cbuf);
+void Cbuf_Lock(cmd_buf_t *cbuf);
+void Cbuf_Unlock(cmd_buf_t *cbuf);
 
 /*! as new commands are generated from the console or keybindings,
  * the text is added to the end of the command buffer.
@@ -192,9 +199,9 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text);
  * Normally called once per frame, but may be explicitly invoked.
  * \note Do not call inside a command function!
  */
-void Cbuf_Execute (cbuf_t *cbuf);
+void Cbuf_Execute (cmd_buf_t *cbuf);
 /*! Performs deferred commands and runs Cbuf_Execute, called by Host_Frame */
-void Cbuf_Frame (cbuf_t *cbuf);
+void Cbuf_Frame (cmd_buf_t *cbuf);
 
 //===========================================================================
 
@@ -222,10 +229,8 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
 
-cmd_function_t *Cmd_GetCommand(cmd_state_t *cmd, const char *partial, size_t len, qboolean casesensitive);
-
 /// used by the cvar code to check for cvar / command name overlap
-qboolean Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
+qbool Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
 
 /// attempts to match a partial command for automatic command line completion
 /// returns NULL if nothing fits
@@ -266,7 +271,7 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qboolean lockmutex);
+void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qbool lockmutex);
 
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies
@@ -274,7 +279,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 /// "\"\\$"). Returns true on success, and false on overrun (in which case out
 /// will contain a part of the quoted string). If putquotes is set, the
 /// enclosing quote marks are also put.
-qboolean Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qboolean putquotes);
+qbool Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qbool putquotes);
 
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd);
 

@@ -87,7 +87,7 @@ void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroup
 // LadyHavoc: quite tempting to break apart this function to reuse the
 //            duplicated code, but I suspect it is better for performance
 //            this way
-void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const dp_model_t *model, double curtime)
+void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroupblend_t *framegroupblend, const model_t *model, double curtime)
 {
 	int sub2, numframes, f, i, k;
 	int isfirstframegroup = true;
@@ -188,7 +188,7 @@ void VM_FrameBlendFromFrameGroupBlend(frameblend_t *frameblend, const framegroup
 	}
 }
 
-void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const dp_model_t *edmodel, const frameblend_t *frameblend)
+void VM_UpdateEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed, const model_t *edmodel, const frameblend_t *frameblend)
 {
 	if (ed->priv.server->skeleton.model != edmodel)
 	{
@@ -263,7 +263,7 @@ checkextension(extensionname)
 */
 
 // kind of helper function
-static qboolean checkextension(prvm_prog_t *prog, const char *name)
+static qbool checkextension(prvm_prog_t *prog, const char *name)
 {
 	const char **e;
 
@@ -629,11 +629,11 @@ void VM_localcmd_server(prvm_prog_t *prog)
 	Cbuf_AddText(&cmd_server, string);
 }
 
-static qboolean PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
+static qbool PRVM_Cvar_ReadOk(prvm_prog_t *prog, const char *string)
 {
 	cvar_t *cvar;
 	cvar = Cvar_FindVar(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask);
-	return ((cvar) && ((cvar->flags & CVAR_PRIVATE) == 0));
+	return ((cvar) && ((cvar->flags & CF_PRIVATE) == 0));
 }
 
 /*
@@ -684,15 +684,15 @@ void VM_cvar_type(prvm_prog_t *prog)
 	}
 
 	ret = 1; // CVAR_EXISTS
-	if(cvar->flags & CVAR_SAVE)
+	if(cvar->flags & CF_ARCHIVE)
 		ret |= 2; // CVAR_TYPE_SAVED
-	if(cvar->flags & CVAR_PRIVATE)
+	if(cvar->flags & CF_PRIVATE)
 		ret |= 4; // CVAR_TYPE_PRIVATE
-	if(!(cvar->flags & CVAR_ALLOCATED))
+	if(!(cvar->flags & CF_ALLOCATED))
 		ret |= 8; // CVAR_TYPE_ENGINE
 	if(cvar->description != cvar_dummy_description)
 		ret |= 16; // CVAR_TYPE_HASDESCRIPTION
-	if(cvar->flags & CVAR_READONLY)
+	if(cvar->flags & CF_READONLY)
 		ret |= 32; // CVAR_TYPE_READONLY
 	
 	PRVM_G_FLOAT(OFS_RETURN) = ret;
@@ -1335,7 +1335,7 @@ coredump()
 */
 void VM_coredump(prvm_prog_t *prog)
 {
-	cmd_state_t *cmd = cls.state == ca_dedicated ? &cmd_server : &cmd_client;
+	cmd_state_t *cmd = 	!host_isclient.integer ? &cmd_server : &cmd_client;
 	VM_SAFEPARMCOUNT(0,VM_coredump);
 
 	Cbuf_AddText(cmd, "prvm_edicts ");
@@ -1661,7 +1661,7 @@ void VM_registercvar(prvm_prog_t *prog)
 	flags = prog->argc >= 3 ? (int)PRVM_G_FLOAT(OFS_PARM2) : 0;
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
 
-	if(flags > CVAR_MAXFLAGSVAL)
+	if(flags > CF_MAXFLAGSVAL)
 		return;
 
 // first check to see if it has already been defined
@@ -2796,36 +2796,6 @@ void VM_strunzone(prvm_prog_t *prog)
 
 /*
 =========
-VM_command (used by client and menu)
-
-clientcommand(float client, string s) (for client and menu)
-=========
-*/
-//void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
-//this function originally written by KrimZon, made shorter by LadyHavoc
-void VM_clcommand (prvm_prog_t *prog)
-{
-	client_t *temp_client;
-	int i;
-
-	VM_SAFEPARMCOUNT(2,VM_clcommand);
-
-	i = (int)PRVM_G_FLOAT(OFS_PARM0);
-	if (!sv.active  || i < 0 || i >= svs.maxclients || !svs.clients[i].active)
-	{
-		VM_Warning(prog, "VM_clientcommand: %s: invalid client/server is not active !\n", prog->name);
-		return;
-	}
-
-	temp_client = host_client;
-	host_client = svs.clients + i;
-	Cmd_ExecuteString (&cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
-	host_client = temp_client;
-}
-
-
-/*
-=========
 VM_tokenize
 
 float tokenize(string s)
@@ -3489,754 +3459,6 @@ void VM_chr(prvm_prog_t *prog)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, tmp);
 }
 
-//=============================================================================
-// Draw builtins (client & menu)
-
-/*
-=========
-VM_iscachedpic
-
-float	iscachedpic(string pic)
-=========
-*/
-void VM_iscachedpic(prvm_prog_t *prog)
-{
-	VM_SAFEPARMCOUNT(1,VM_iscachedpic);
-
-	// drawq hasnt such a function, thus always return true
-	PRVM_G_FLOAT(OFS_RETURN) = false;
-}
-
-/*
-=========
-VM_precache_pic
-
-string	precache_pic(string pic)
-=========
-*/
-#define PRECACHE_PIC_FROMWAD 1 /* FTEQW, not supported here */
-#define PRECACHE_PIC_NOTPERSISTENT 2
-//#define PRECACHE_PIC_NOCLAMP 4
-#define PRECACHE_PIC_MIPMAP 8
-void VM_precache_pic(prvm_prog_t *prog)
-{
-	const char	*s;
-	int flags = CACHEPICFLAG_FAILONMISSING;
-
-	VM_SAFEPARMCOUNTRANGE(1, 2, VM_precache_pic);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-	VM_CheckEmptyString(prog, s);
-
-	if(prog->argc >= 2)
-	{
-		int f = PRVM_G_FLOAT(OFS_PARM1);
-		if(f & PRECACHE_PIC_NOTPERSISTENT)
-			flags |= CACHEPICFLAG_NOTPERSISTENT;
-		//if(f & PRECACHE_PIC_NOCLAMP)
-		//	flags |= CACHEPICFLAG_NOCLAMP;
-		if(f & PRECACHE_PIC_MIPMAP)
-			flags |= CACHEPICFLAG_MIPMAP;
-	}
-
-	if( !Draw_IsPicLoaded(Draw_CachePic_Flags(s, flags | CACHEPICFLAG_QUIET)) )
-		PRVM_G_INT(OFS_RETURN) = OFS_NULL;
-}
-
-/*
-=========
-VM_freepic
-
-freepic(string s)
-=========
-*/
-void VM_freepic(prvm_prog_t *prog)
-{
-	const char *s;
-
-	VM_SAFEPARMCOUNT(1,VM_freepic);
-
-	s = PRVM_G_STRING(OFS_PARM0);
-	VM_CheckEmptyString(prog, s);
-
-	Draw_FreePic(s);
-}
-
-static void getdrawfontscale(prvm_prog_t *prog, float *sx, float *sy)
-{
-	vec3_t v;
-	*sx = *sy = 1;
-	VectorCopy(PRVM_drawglobalvector(drawfontscale), v);
-	if(VectorLength2(v) > 0)
-	{
-		*sx = v[0];
-		*sy = v[1];
-	}
-}
-
-static dp_font_t *getdrawfont(prvm_prog_t *prog)
-{
-	int f = (int) PRVM_drawglobalfloat(drawfont);
-	if(f < 0 || f >= dp_fonts.maxsize)
-		return FONT_DEFAULT;
-	return &dp_fonts.f[f];
-}
-
-/*
-=========
-VM_drawcharacter
-
-float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
-=========
-*/
-void VM_drawcharacter(prvm_prog_t *prog)
-{
-	prvm_vec_t *pos,*scale,*rgb;
-	char   character;
-	int flag;
-	float sx, sy;
-	VM_SAFEPARMCOUNT(6,VM_drawcharacter);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	character = (char) PRVM_G_FLOAT(OFS_PARM1);
-	if(character == 0)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		VM_Warning(prog, "VM_drawcharacter: %s passed null character !\n",prog->name);
-		return;
-	}
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	scale = PRVM_G_VECTOR(OFS_PARM2);
-	rgb = PRVM_G_VECTOR(OFS_PARM3);
-	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(pos[2] || scale[2])
-		VM_Warning(prog, "VM_drawcharacter: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
-
-	if(!scale[0] || !scale[1])
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -3;
-		VM_Warning(prog, "VM_drawcharacter: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
-		return;
-	}
-
-	getdrawfontscale(prog, &sx, &sy);
-	DrawQ_String_Scale(pos[0], pos[1], &character, 1, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont(prog));
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-
-/*
-=========
-VM_drawstring
-
-float	drawstring(vector position, string text, vector scale, vector rgb, float alpha[, float flag])
-=========
-*/
-void VM_drawstring(prvm_prog_t *prog)
-{
-	prvm_vec_t *pos,*scale,*rgb;
-	const char  *string;
-	int flag = 0;
-	float sx, sy;
-	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawstring);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	string = PRVM_G_STRING(OFS_PARM1);
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	scale = PRVM_G_VECTOR(OFS_PARM2);
-	rgb = PRVM_G_VECTOR(OFS_PARM3);
-	if (prog->argc >= 6)
-		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(!scale[0] || !scale[1])
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -3;
-		VM_Warning(prog, "VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
-		return;
-	}
-
-	if(pos[2] || scale[2])
-		VM_Warning(prog, "VM_drawstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
-
-	getdrawfontscale(prog, &sx, &sy);
-	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true, getdrawfont(prog));
-	//Font_DrawString(pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag, NULL, true);
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-
-/*
-=========
-VM_drawcolorcodedstring
-
-float	drawcolorcodedstring(vector position, string text, vector scale, float alpha, float flag)
-/
-float	drawcolorcodedstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
-=========
-*/
-void VM_drawcolorcodedstring(prvm_prog_t *prog)
-{
-	prvm_vec_t *pos, *scale;
-	const char  *string;
-	int flag;
-	vec3_t rgb;
-	float sx, sy, alpha;
-
-	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawcolorcodedstring);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	if (prog->argc == 6) // full 6 parms, like normal drawstring
-	{
-		pos = PRVM_G_VECTOR(OFS_PARM0);
-		string = PRVM_G_STRING(OFS_PARM1);
-		scale = PRVM_G_VECTOR(OFS_PARM2);
-		VectorCopy(PRVM_G_VECTOR(OFS_PARM3), rgb); 
-		alpha = PRVM_G_FLOAT(OFS_PARM4);
-		flag = (int)PRVM_G_FLOAT(OFS_PARM5);
-	}
-	else
-	{
-		pos = PRVM_G_VECTOR(OFS_PARM0);
-		string = PRVM_G_STRING(OFS_PARM1);
-		scale = PRVM_G_VECTOR(OFS_PARM2);
-		rgb[0] = 1.0;
-		rgb[1] = 1.0;
-		rgb[2] = 1.0;
-		alpha = PRVM_G_FLOAT(OFS_PARM3);
-		flag = (int)PRVM_G_FLOAT(OFS_PARM4);
-	}
-
-	if(flag < DRAWFLAG_NORMAL || flag >= DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawcolorcodedstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(!scale[0] || !scale[1])
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -3;
-		VM_Warning(prog, "VM_drawcolorcodedstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
-		return;
-	}
-
-	if(pos[2] || scale[2])
-		VM_Warning(prog, "VM_drawcolorcodedstring: z value%s from %s discarded\n",(pos[2] && scale[2]) ? "s" : " ",((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
-
-	getdrawfontscale(prog, &sx, &sy);
-	DrawQ_String_Scale(pos[0], pos[1], string, 0, scale[0], scale[1], sx, sy, rgb[0], rgb[1], rgb[2], alpha, flag, NULL, false, getdrawfont(prog));
-	if (prog->argc == 6) // also return vector of last color
-		VectorCopy(DrawQ_Color, PRVM_G_VECTOR(OFS_RETURN));
-	else
-		PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-/*
-=========
-VM_stringwidth
-
-float	stringwidth(string text, float allowColorCodes, float size)
-=========
-*/
-void VM_stringwidth(prvm_prog_t *prog)
-{
-	const char  *string;
-	vec2_t szv;
-	float mult; // sz is intended font size so we can later add freetype support, mult is font size multiplier in pixels per character cell
-	int colors;
-	float sx, sy;
-	size_t maxlen = 0;
-	VM_SAFEPARMCOUNTRANGE(2, 3, VM_stringwidth);
-
-	getdrawfontscale(prog, &sx, &sy);
-	if(prog->argc == 3)
-	{
-		Vector2Copy(PRVM_G_VECTOR(OFS_PARM2), szv);
-		mult = 1;
-	}
-	else
-	{
-		// we want the width for 8x8 font size, divided by 8
-		Vector2Set(szv, 8, 8);
-		mult = 0.125;
-		// to make sure snapping is turned off, ALWAYS use a nontrivial scale in this case
-		if(sx >= 0.9 && sx <= 1.1)
-		{
-			mult *= 2;
-			sx /= 2;
-			sy /= 2;
-		}
-	}
-
-	string = PRVM_G_STRING(OFS_PARM0);
-	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
-
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth_UntilWidth_TrackColors_Scale(string, &maxlen, szv[0], szv[1], sx, sy, NULL, !colors, getdrawfont(prog), 1000000000) * mult;
-/*
-	if(prog->argc == 3)
-	{
-		mult = sz = PRVM_G_FLOAT(OFS_PARM2);
-	}
-	else
-	{
-		sz = 8;
-		mult = 1;
-	}
-
-	string = PRVM_G_STRING(OFS_PARM0);
-	colors = (int)PRVM_G_FLOAT(OFS_PARM1);
-
-	PRVM_G_FLOAT(OFS_RETURN) = DrawQ_TextWidth(string, 0, !colors, getdrawfont()) * mult; // 1x1 characters, don't actually draw
-*/
-}
-
-/*
-=========
-VM_findfont
-
-float findfont(string s)
-=========
-*/
-
-static float getdrawfontnum(const char *fontname)
-{
-	int i;
-
-	for(i = 0; i < dp_fonts.maxsize; ++i)
-		if(!strcmp(dp_fonts.f[i].title, fontname))
-			return i;
-	return -1;
-}
-
-void VM_findfont(prvm_prog_t *prog)
-{
-	VM_SAFEPARMCOUNT(1,VM_findfont);
-	PRVM_G_FLOAT(OFS_RETURN) = getdrawfontnum(PRVM_G_STRING(OFS_PARM0));
-}
-
-/*
-=========
-VM_loadfont
-
-float loadfont(string fontname, string fontmaps, string sizes, float slot)
-=========
-*/
-
-void VM_loadfont(prvm_prog_t *prog)
-{
-	const char *fontname, *filelist, *sizes, *c, *cm;
-	char mainfont[MAX_QPATH];
-	int i, numsizes;
-	float sz, scale, voffset;
-	dp_font_t *f;
-
-	VM_SAFEPARMCOUNTRANGE(3,6,VM_loadfont);
-
-	fontname = PRVM_G_STRING(OFS_PARM0);
-	if (!fontname[0])
-		fontname = "default";
-
-	filelist = PRVM_G_STRING(OFS_PARM1);
-	if (!filelist[0])
-		filelist = "gfx/conchars";
-
-	sizes = PRVM_G_STRING(OFS_PARM2);
-	if (!sizes[0])
-		sizes = "10";
-
-	// find a font
-	f = NULL;
-	if (prog->argc >= 4)
-	{
-		i = PRVM_G_FLOAT(OFS_PARM3);
-		if (i >= 0 && i < dp_fonts.maxsize)
-		{
-			f = &dp_fonts.f[i];
-			strlcpy(f->title, fontname, sizeof(f->title)); // replace name
-		}
-	}
-	if (!f)
-		f = FindFont(fontname, true);
-	if (!f)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		return; // something go wrong
-	}
-
-	memset(f->fallbacks, 0, sizeof(f->fallbacks));
-	memset(f->fallback_faces, 0, sizeof(f->fallback_faces));
-
-	// first font is handled "normally"
-	c = strchr(filelist, ':');
-	cm = strchr(filelist, ',');
-	if(c && (!cm || c < cm))
-		f->req_face = atoi(c+1);
-	else
-	{
-		f->req_face = 0;
-		c = cm;
-	}
-	if(!c || (c - filelist) > MAX_QPATH)
-		strlcpy(mainfont, filelist, sizeof(mainfont));
-	else
-	{
-		memcpy(mainfont, filelist, c - filelist);
-		mainfont[c - filelist] = 0;
-	}
-
-	// handle fallbacks
-	for(i = 0; i < MAX_FONT_FALLBACKS; ++i)
-	{
-		c = strchr(filelist, ',');
-		if(!c)
-			break;
-		filelist = c + 1;
-		if(!*filelist)
-			break;
-		c = strchr(filelist, ':');
-		cm = strchr(filelist, ',');
-		if(c && (!cm || c < cm))
-			f->fallback_faces[i] = atoi(c+1);
-		else
-		{
-			f->fallback_faces[i] = 0; // f->req_face; could make it stick to the default-font's face index
-			c = cm;
-		}
-		if(!c || (c-filelist) > MAX_QPATH)
-		{
-			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
-		}
-		else
-		{
-			memcpy(f->fallbacks[i], filelist, c - filelist);
-			f->fallbacks[i][c - filelist] = 0;
-		}
-	}
-
-	// handle sizes
-	for(i = 0; i < MAX_FONT_SIZES; ++i)
-		f->req_sizes[i] = -1;
-	for (numsizes = 0,c = sizes;;)
-	{
-		if (!COM_ParseToken_VM_Tokenize(&c, 0))
-			break;
-		sz = atof(com_token);
-		// detect crap size
-		if (sz < 0.001f || sz > 1000.0f)
-		{
-			VM_Warning(prog, "VM_loadfont: crap size %s", com_token);
-			continue;
-		}
-		// check overflow
-		if (numsizes == MAX_FONT_SIZES)
-		{
-			VM_Warning(prog, "VM_loadfont: MAX_FONT_SIZES = %i exceeded", MAX_FONT_SIZES);
-			break;
-		}
-		f->req_sizes[numsizes] = sz;
-		numsizes++;
-	}
-
-	// additional scale/hoffset parms
-	scale = 1;
-	voffset = 0;
-	if (prog->argc >= 5)
-	{
-		scale = PRVM_G_FLOAT(OFS_PARM4);
-		if (scale <= 0)
-			scale = 1;
-	}
-	if (prog->argc >= 6)
-		voffset = PRVM_G_FLOAT(OFS_PARM5);
-
-	// load
-	LoadFont(true, mainfont, f, scale, voffset);
-
-	// return index of loaded font
-	PRVM_G_FLOAT(OFS_RETURN) = (f - dp_fonts.f);
-}
-
-/*
-=========
-VM_drawpic
-
-float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
-=========
-*/
-void VM_drawpic(prvm_prog_t *prog)
-{
-	const char *picname;
-	prvm_vec_t *size, *pos, *rgb;
-	int flag = 0;
-
-	VM_SAFEPARMCOUNTRANGE(5,6,VM_drawpic);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	picname = PRVM_G_STRING(OFS_PARM1);
-	VM_CheckEmptyString(prog, picname);
-
-	// is pic cached ? no function yet for that
-	if(!1)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawpic: %s: %s not cached !\n", prog->name, picname);
-		return;
-	}
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	size = PRVM_G_VECTOR(OFS_PARM2);
-	rgb = PRVM_G_VECTOR(OFS_PARM3);
-	if (prog->argc >= 6)
-		flag = (int) PRVM_G_FLOAT(OFS_PARM5);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(pos[2] || size[2])
-		VM_Warning(prog, "VM_drawpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
-
-	DrawQ_Pic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-/*
-=========
-VM_drawrotpic
-
-float	drawrotpic(vector position, string pic, vector size, vector org, float angle, vector rgb, float alpha, float flag)
-=========
-*/
-void VM_drawrotpic(prvm_prog_t *prog)
-{
-	const char *picname;
-	prvm_vec_t *size, *pos, *org, *rgb;
-	int flag;
-
-	VM_SAFEPARMCOUNT(8,VM_drawrotpic);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	picname = PRVM_G_STRING(OFS_PARM1);
-	VM_CheckEmptyString(prog, picname);
-
-	// is pic cached ? no function yet for that
-	if(!1)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawrotpic: %s: %s not cached !\n", prog->name, picname);
-		return;
-	}
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	size = PRVM_G_VECTOR(OFS_PARM2);
-	org = PRVM_G_VECTOR(OFS_PARM3);
-	rgb = PRVM_G_VECTOR(OFS_PARM5);
-	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawrotpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(pos[2] || size[2] || org[2])
-		VM_Warning(prog, "VM_drawrotpic: z value from pos/size/org discarded\n");
-
-	DrawQ_RotPic(pos[0], pos[1], Draw_CachePic_Flags(picname, CACHEPICFLAG_NOTPERSISTENT), size[0], size[1], org[0], org[1], PRVM_G_FLOAT(OFS_PARM4), rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM6), flag);
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-/*
-=========
-VM_drawsubpic
-
-float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)
-
-=========
-*/
-void VM_drawsubpic(prvm_prog_t *prog)
-{
-	const char *picname;
-	prvm_vec_t *size, *pos, *rgb, *srcPos, *srcSize, alpha;
-	int flag;
-
-	VM_SAFEPARMCOUNT(8,VM_drawsubpic);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	picname = PRVM_G_STRING(OFS_PARM2);
-	VM_CheckEmptyString(prog, picname);
-
-	// is pic cached ? no function yet for that
-	if(!1)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawsubpic: %s: %s not cached !\n", prog->name, picname);
-		return;
-	}
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	size = PRVM_G_VECTOR(OFS_PARM1);
-	srcPos = PRVM_G_VECTOR(OFS_PARM3);
-	srcSize = PRVM_G_VECTOR(OFS_PARM4);
-	rgb = PRVM_G_VECTOR(OFS_PARM5);
-	alpha = PRVM_G_FLOAT(OFS_PARM6);
-	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawsubpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(pos[2] || size[2])
-		VM_Warning(prog, "VM_drawsubpic: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
-
-	DrawQ_SuperPic(pos[0], pos[1], Draw_CachePic_Flags (picname, CACHEPICFLAG_NOTPERSISTENT),
-		size[0], size[1],
-		srcPos[0],              srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
-		srcPos[0] + srcSize[0], srcPos[1],              rgb[0], rgb[1], rgb[2], alpha,
-		srcPos[0],              srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
-		srcPos[0] + srcSize[0], srcPos[1] + srcSize[1], rgb[0], rgb[1], rgb[2], alpha,
-		flag);
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-
-/*
-=========
-VM_drawfill
-
-float drawfill(vector position, vector size, vector rgb, float alpha, float flag)
-=========
-*/
-void VM_drawfill(prvm_prog_t *prog)
-{
-	prvm_vec_t *size, *pos, *rgb;
-	int flag;
-
-	VM_SAFEPARMCOUNT(5,VM_drawfill);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	pos = PRVM_G_VECTOR(OFS_PARM0);
-	size = PRVM_G_VECTOR(OFS_PARM1);
-	rgb = PRVM_G_VECTOR(OFS_PARM2);
-	flag = (int) PRVM_G_FLOAT(OFS_PARM4);
-
-	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
-	{
-		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawfill: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
-		return;
-	}
-
-	if(pos[2] || size[2])
-		VM_Warning(prog, "VM_drawfill: z value%s from %s discarded\n",(pos[2] && size[2]) ? "s" : " ",((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
-
-	DrawQ_Fill(pos[0], pos[1], size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
-	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}
-
-/*
-=========
-VM_drawsetcliparea
-
-drawsetcliparea(float x, float y, float width, float height)
-=========
-*/
-void VM_drawsetcliparea(prvm_prog_t *prog)
-{
-	float x,y,w,h;
-	VM_SAFEPARMCOUNT(4,VM_drawsetcliparea);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid_conwidth.integer);
-	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid_conheight.integer);
-	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid_conwidth.integer  - x));
-	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid_conheight.integer - y));
-
-	DrawQ_SetClipArea(x, y, w, h);
-}
-
-/*
-=========
-VM_drawresetcliparea
-
-drawresetcliparea()
-=========
-*/
-void VM_drawresetcliparea(prvm_prog_t *prog)
-{
-	VM_SAFEPARMCOUNT(0,VM_drawresetcliparea);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	DrawQ_ResetClipArea();
-}
-
-/*
-=========
-VM_getimagesize
-
-vector	getimagesize(string pic)
-=========
-*/
-void VM_getimagesize(prvm_prog_t *prog)
-{
-	const char *p;
-	cachepic_t *pic;
-
-	VM_SAFEPARMCOUNT(1,VM_getimagesize);
-
-	p = PRVM_G_STRING(OFS_PARM0);
-	VM_CheckEmptyString(prog, p);
-
-	pic = Draw_CachePic_Flags (p, CACHEPICFLAG_QUIET | CACHEPICFLAG_NOTPERSISTENT);
-	if (!Draw_IsPicLoaded(pic))
-	{
-		PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
-		PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
-	}
-	else
-	{
-		PRVM_G_VECTOR(OFS_RETURN)[0] = Draw_GetPicWidth(pic);
-		PRVM_G_VECTOR(OFS_RETURN)[1] = Draw_GetPicHeight(pic);
-	}
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
-}
-
 /*
 =========
 VM_keynumtostring
@@ -4378,123 +3600,6 @@ void VM_setbindmaps (prvm_prog_t *prog)
 			PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
-// CL_Video interface functions
-
-/*
-========================
-VM_cin_open
-
-float cin_open(string file, string name)
-========================
-*/
-void VM_cin_open(prvm_prog_t *prog)
-{
-	const char *file;
-	const char *name;
-
-	VM_SAFEPARMCOUNT( 2, VM_cin_open );
-
-	file = PRVM_G_STRING( OFS_PARM0 );
-	name = PRVM_G_STRING( OFS_PARM1 );
-
-	VM_CheckEmptyString(prog,  file );
-    VM_CheckEmptyString(prog,  name );
-
-	if( CL_OpenVideo( file, name, MENUOWNER, "" ) )
-		PRVM_G_FLOAT( OFS_RETURN ) = 1;
-	else
-		PRVM_G_FLOAT( OFS_RETURN ) = 0;
-}
-
-/*
-========================
-VM_cin_close
-
-void cin_close(string name)
-========================
-*/
-void VM_cin_close(prvm_prog_t *prog)
-{
-	const char *name;
-
-	VM_SAFEPARMCOUNT( 1, VM_cin_close );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString(prog,  name );
-
-	CL_CloseVideo( CL_GetVideoByName( name ) );
-}
-
-/*
-========================
-VM_cin_setstate
-void cin_setstate(string name, float type)
-========================
-*/
-void VM_cin_setstate(prvm_prog_t *prog)
-{
-	const char *name;
-	clvideostate_t 	state;
-	clvideo_t		*video;
-
-	VM_SAFEPARMCOUNT( 2, VM_cin_setstate );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString(prog,  name );
-
-	state = (clvideostate_t)((int)PRVM_G_FLOAT( OFS_PARM1 ));
-
-	video = CL_GetVideoByName( name );
-	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
-		CL_SetVideoState( video, state );
-}
-
-/*
-========================
-VM_cin_getstate
-
-float cin_getstate(string name)
-========================
-*/
-void VM_cin_getstate(prvm_prog_t *prog)
-{
-	const char *name;
-	clvideo_t		*video;
-
-	VM_SAFEPARMCOUNT( 1, VM_cin_getstate );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString(prog,  name );
-
-	video = CL_GetVideoByName( name );
-	if( video )
-		PRVM_G_FLOAT( OFS_RETURN ) = (int)video->state;
-	else
-		PRVM_G_FLOAT( OFS_RETURN ) = 0;
-}
-
-/*
-========================
-VM_cin_restart
-
-void cin_restart(string name)
-========================
-*/
-void VM_cin_restart(prvm_prog_t *prog)
-{
-	const char *name;
-	clvideo_t		*video;
-
-	VM_SAFEPARMCOUNT( 1, VM_cin_restart );
-
-	name = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString(prog,  name );
-
-	video = CL_GetVideoByName( name );
-	if( video )
-		CL_RestartVideo( video );
-}
-
 /*
 ========================
 VM_gecko_create
@@ -4616,33 +3721,6 @@ void VM_vectorvectors (prvm_prog_t *prog)
 	VectorCopy(forward, PRVM_gameglobalvector(v_forward));
 	VectorCopy(right, PRVM_gameglobalvector(v_right));
 	VectorCopy(up, PRVM_gameglobalvector(v_up));
-}
-
-/*
-========================
-VM_drawline
-
-void drawline(float width, vector pos1, vector pos2, vector rgb, float alpha, float flags)
-========================
-*/
-void VM_drawline (prvm_prog_t *prog)
-{
-	prvm_vec_t	*c1, *c2, *rgb;
-	float	alpha, width;
-	unsigned char	flags;
-
-	VM_SAFEPARMCOUNT(6, VM_drawline);
-
-	// polygonbegin without draw2d arg has to guess
-	prog->polygonbegin_guess2d = true;
-
-	width	= PRVM_G_FLOAT(OFS_PARM0);
-	c1		= PRVM_G_VECTOR(OFS_PARM1);
-	c2		= PRVM_G_VECTOR(OFS_PARM2);
-	rgb		= PRVM_G_VECTOR(OFS_PARM3);
-	alpha	= PRVM_G_FLOAT(OFS_PARM4);
-	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
-	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
 }
 
 // float(float number, float quantity) bitshift (EXT_BITSHIFT)
@@ -5586,7 +4664,7 @@ static const char *detect_match_rule(char *pattern, int *matchrule)
 }
 
 // todo: support UTF8
-static qboolean match_rule(const char *string, int max_string, const char *pattern, int patternlength, int rule)
+static qbool match_rule(const char *string, int max_string, const char *pattern, int patternlength, int rule)
 {
 	const char *mid;
 
@@ -5714,7 +4792,7 @@ void VM_buf_cvarlist(prvm_prog_t *prog)
 	const char *partial, *antipartial;
 	size_t len, antilen;
 	size_t alloclen;
-	qboolean ispattern, antiispattern;
+	qbool ispattern, antiispattern;
 	int n;
 	prvm_stringbuffer_t	*stringbuffer;
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_buf_cvarlist);
@@ -6475,7 +5553,7 @@ void VM_uri_get (prvm_prog_t *prog)
 {
 	const char *url;
 	float id;
-	qboolean ret;
+	qbool ret;
 	uri_to_prog_t *handle;
 	const char *posttype = NULL;
 	const char *postseparator = NULL;
@@ -7107,7 +6185,7 @@ finished:
 
 // surface querying
 
-static dp_model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
+static model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
 {
 	if (prog == SVVM_prog)
 		return SV_GetModelFromEdict(ed);
@@ -7119,7 +6197,7 @@ static dp_model_t *getmodel(prvm_prog_t *prog, prvm_edict_t *ed)
 
 struct animatemodel_cache
 {
-	dp_model_t *model;
+	model_t *model;
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	skeleton_t *skeleton_p;
 	skeleton_t skeleton;
@@ -7145,11 +6223,11 @@ static void animatemodel_reset(prvm_prog_t *prog)
 	Mem_Free(prog->animatemodel_cache);
 }
 
-static void animatemodel(prvm_prog_t *prog, dp_model_t *model, prvm_edict_t *ed)
+static void animatemodel(prvm_prog_t *prog, model_t *model, prvm_edict_t *ed)
 {
 	skeleton_t *skeleton;
 	int skeletonindex = -1;
-	qboolean need = false;
+	qbool need = false;
 	struct animatemodel_cache *animatemodel_cache;
 	if (!prog->animatemodel_cache)
 	{
@@ -7243,7 +6321,7 @@ static void applytransform_forward_normal(prvm_prog_t *prog, const vec3_t in, pr
 	VectorCopy(p, out);
 }
 
-static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, dp_model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
+static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, model_t *model, msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
@@ -7280,7 +6358,7 @@ static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, dp_model_t *
 	}
 }
 
-static msurface_t *getsurface(dp_model_t *model, int surfacenum)
+static msurface_t *getsurface(model_t *model, int surfacenum)
 {
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
@@ -7291,7 +6369,7 @@ static msurface_t *getsurface(dp_model_t *model, int surfacenum)
 //PF_getsurfacenumpoints, // #434 float(entity e, float s) getsurfacenumpoints = #434;
 void VM_getsurfacenumpoints(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacenumpoints);
 	// return 0 if no such surface
@@ -7308,7 +6386,7 @@ void VM_getsurfacenumpoints(prvm_prog_t *prog)
 void VM_getsurfacepoint(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	vec3_t result;
@@ -7336,7 +6414,7 @@ void VM_getsurfacepoint(prvm_prog_t *prog)
 void VM_getsurfacepointattribute(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	int pointnum;
 	int attributetype;
@@ -7406,7 +6484,7 @@ void VM_getsurfacepointattribute(prvm_prog_t *prog)
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 void VM_getsurfacenormal(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t normal;
 	vec3_t result;
@@ -7425,7 +6503,7 @@ void VM_getsurfacenormal(prvm_prog_t *prog)
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 void VM_getsurfacetexture(prvm_prog_t *prog)
 {
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	VM_SAFEPARMCOUNT(2, VM_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
@@ -7441,7 +6519,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 	vec3_t clipped, p;
 	vec_t dist, bestdist;
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t point;
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_getsurfacenearpoint);
@@ -7492,7 +6570,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 {
 	prvm_edict_t *ed;
-	dp_model_t *model;
+	model_t *model;
 	msurface_t *surface;
 	vec3_t p, out, inp;
 	VM_SAFEPARMCOUNT(3, VM_getsurfaceclippedpoint);
@@ -7510,7 +6588,7 @@ void VM_getsurfaceclippedpoint(prvm_prog_t *prog)
 //PF_getsurfacenumtriangles, // #??? float(entity e, float s) getsurfacenumtriangles = #???;
 void VM_getsurfacenumtriangles(prvm_prog_t *prog)
 {
-       dp_model_t *model;
+       model_t *model;
        msurface_t *surface;
        VM_SAFEPARMCOUNT(2, VM_getsurfacenumtriangles);
        // return 0 if no such surface
@@ -7527,7 +6605,7 @@ void VM_getsurfacetriangle(prvm_prog_t *prog)
 {
        const vec3_t d = {-1, -1, -1};
        prvm_edict_t *ed;
-       dp_model_t *model;
+       model_t *model;
        msurface_t *surface;
        int trinum;
        VM_SAFEPARMCOUNT(3, VM_getsurfacetriangle);

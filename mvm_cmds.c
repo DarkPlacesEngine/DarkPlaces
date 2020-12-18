@@ -599,7 +599,7 @@ refreshserverlist()
 */
 static void VM_M_refreshserverlist(prvm_prog_t *prog)
 {
-	qboolean do_reset = false;
+	qbool do_reset = false;
 	VM_SAFEPARMCOUNTRANGE( 0, 1, VM_M_refreshserverlist );
 	if (prog->argc >= 1 && PRVM_G_FLOAT(OFS_PARM0))
 		do_reset = true;
@@ -836,7 +836,7 @@ static void VM_M_crypto_getidstatus(prvm_prog_t *prog)
 {
 	lhnetaddress_t addr;
 	const char *s;
-	qboolean issigned;
+	qbool issigned;
 
 	VM_SAFEPARMCOUNT(1,VM_M_crypto_getidstatus);
 
@@ -912,7 +912,7 @@ static void VM_M_crypto_getmyidfp(prvm_prog_t *prog)
 static void VM_M_crypto_getmyidstatus(prvm_prog_t *prog)
 {
 	int i;
-	qboolean issigned;
+	qbool issigned;
 
 	VM_SAFEPARMCOUNT(1, VM_M_crypto_getmyidstatus);
 
@@ -930,6 +930,123 @@ static void VM_M_crypto_getmyidstatus(prvm_prog_t *prog)
 			PRVM_G_FLOAT( OFS_RETURN ) = issigned ? 2 : 1;
 			break;
 	}
+}
+
+// CL_Video interface functions
+
+/*
+========================
+VM_cin_open
+
+float cin_open(string file, string name)
+========================
+*/
+void VM_cin_open(prvm_prog_t *prog)
+{
+	const char *file;
+	const char *name;
+
+	VM_SAFEPARMCOUNT( 2, VM_cin_open );
+
+	file = PRVM_G_STRING( OFS_PARM0 );
+	name = PRVM_G_STRING( OFS_PARM1 );
+
+	VM_CheckEmptyString(prog,  file );
+    VM_CheckEmptyString(prog,  name );
+
+	if( CL_OpenVideo( file, name, MENUOWNER, "" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = 1;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_close
+
+void cin_close(string name)
+========================
+*/
+void VM_cin_close(prvm_prog_t *prog)
+{
+	const char *name;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_close );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	CL_CloseVideo( CL_GetVideoByName( name ) );
+}
+
+/*
+========================
+VM_cin_setstate
+void cin_setstate(string name, float type)
+========================
+*/
+void VM_cin_setstate(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideostate_t 	state;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 2, VM_cin_setstate );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	state = (clvideostate_t)((int)PRVM_G_FLOAT( OFS_PARM1 ));
+
+	video = CL_GetVideoByName( name );
+	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
+		CL_SetVideoState( video, state );
+}
+
+/*
+========================
+VM_cin_getstate
+
+float cin_getstate(string name)
+========================
+*/
+void VM_cin_getstate(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_getstate );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	video = CL_GetVideoByName( name );
+	if( video )
+		PRVM_G_FLOAT( OFS_RETURN ) = (int)video->state;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_restart
+
+void cin_restart(string name)
+========================
+*/
+void VM_cin_restart(prvm_prog_t *prog)
+{
+	const char *name;
+	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 1, VM_cin_restart );
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString(prog,  name );
+
+	video = CL_GetVideoByName( name );
+	if( video )
+		CL_RestartVideo( video );
 }
 
 prvm_builtin_t vm_m_builtins[] = {
@@ -996,7 +1113,7 @@ VM_argv,								//  #59
 VM_isserver,						//  #60
 VM_clientcount,					//  #61
 VM_clientstate,					//  #62
-VM_clcommand,						//  #63
+NULL,						//  #63 FIXME
 VM_changelevel,					//  #64
 VM_localsound,						//  #65
 VM_M_getmousepos,					//  #66

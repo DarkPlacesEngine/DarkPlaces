@@ -315,7 +315,7 @@ Returns 0.25 if a key was pressed and released during the frame,
 float CL_KeyState (kbutton_t *key)
 {
 	float		val;
-	qboolean	impulsedown, impulseup, down;
+	qbool	impulsedown, impulseup, down;
 
 	impulsedown = (key->state & 2) != 0;
 	impulseup = (key->state & 4) != 0;
@@ -361,60 +361,60 @@ float CL_KeyState (kbutton_t *key)
 
 //==========================================================================
 
-cvar_t cl_upspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_upspeed","400","vertical movement speed (while swimming or flying)"};
-cvar_t cl_forwardspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_forwardspeed","400","forward movement speed"};
-cvar_t cl_backspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_backspeed","400","backward movement speed"};
-cvar_t cl_sidespeed = {CVAR_CLIENT | CVAR_SAVE, "cl_sidespeed","350","strafe movement speed"};
+cvar_t cl_upspeed = {CF_CLIENT | CF_ARCHIVE, "cl_upspeed","400","vertical movement speed (while swimming or flying)"};
+cvar_t cl_forwardspeed = {CF_CLIENT | CF_ARCHIVE, "cl_forwardspeed","400","forward movement speed"};
+cvar_t cl_backspeed = {CF_CLIENT | CF_ARCHIVE, "cl_backspeed","400","backward movement speed"};
+cvar_t cl_sidespeed = {CF_CLIENT | CF_ARCHIVE, "cl_sidespeed","350","strafe movement speed"};
 
-cvar_t cl_movespeedkey = {CVAR_CLIENT | CVAR_SAVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
-cvar_t cl_movecliptokeyboard = {CVAR_CLIENT, "cl_movecliptokeyboard", "0", "if set to 1, any move is clipped to the nine keyboard states; if set to 2, only the direction is clipped, not the amount"};
+cvar_t cl_movespeedkey = {CF_CLIENT | CF_ARCHIVE, "cl_movespeedkey","2.0","how much +speed multiplies keyboard movement speed"};
+cvar_t cl_movecliptokeyboard = {CF_CLIENT, "cl_movecliptokeyboard", "0", "if set to 1, any move is clipped to the nine keyboard states; if set to 2, only the direction is clipped, not the amount"};
 
-cvar_t cl_yawspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_yawspeed","140","keyboard yaw turning speed"};
-cvar_t cl_pitchspeed = {CVAR_CLIENT | CVAR_SAVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
+cvar_t cl_yawspeed = {CF_CLIENT | CF_ARCHIVE, "cl_yawspeed","140","keyboard yaw turning speed"};
+cvar_t cl_pitchspeed = {CF_CLIENT | CF_ARCHIVE, "cl_pitchspeed","150","keyboard pitch turning speed"};
 
-cvar_t cl_anglespeedkey = {CVAR_CLIENT | CVAR_SAVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
+cvar_t cl_anglespeedkey = {CF_CLIENT | CF_ARCHIVE, "cl_anglespeedkey","1.5","how much +speed multiplies keyboard turning speed"};
 
-cvar_t cl_movement = {CVAR_CLIENT | CVAR_SAVE, "cl_movement", "0", "enables clientside prediction of your player movement on DP servers (use cl_nopred for QWSV servers)"};
-cvar_t cl_movement_replay = {CVAR_CLIENT, "cl_movement_replay", "1", "use engine prediction"};
-cvar_t cl_movement_nettimeout = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
-cvar_t cl_movement_minping = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
-cvar_t cl_movement_track_canjump = {CVAR_CLIENT | CVAR_SAVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
-cvar_t cl_movement_maxspeed = {CVAR_CLIENT, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
-cvar_t cl_movement_maxairspeed = {CVAR_CLIENT, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
-cvar_t cl_movement_stopspeed = {CVAR_CLIENT, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
-cvar_t cl_movement_friction = {CVAR_CLIENT, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
-cvar_t cl_movement_wallfriction = {CVAR_CLIENT, "cl_movement_wallfriction", "1", "how fast you slow down while sliding along a wall (should match sv_wallfriction)"};
-cvar_t cl_movement_waterfriction = {CVAR_CLIENT, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_waterfriction), if less than 0 the cl_movement_friction variable is used instead"};
-cvar_t cl_movement_edgefriction = {CVAR_CLIENT, "cl_movement_edgefriction", "1", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
-cvar_t cl_movement_stepheight = {CVAR_CLIENT, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
-cvar_t cl_movement_accelerate = {CVAR_CLIENT, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
-cvar_t cl_movement_airaccelerate = {CVAR_CLIENT, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
-cvar_t cl_movement_wateraccelerate = {CVAR_CLIENT, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
-cvar_t cl_movement_jumpvelocity = {CVAR_CLIENT, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
-cvar_t cl_movement_airaccel_qw = {CVAR_CLIENT, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
-cvar_t cl_movement_airaccel_sideways_friction = {CVAR_CLIENT, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
-cvar_t cl_nopred = {CVAR_CLIENT | CVAR_SAVE, "cl_nopred", "0", "(QWSV only) disables player movement prediction when playing on QWSV servers (this setting is separate from cl_movement because player expectations are different when playing on DP vs QW servers)"};
+cvar_t cl_movement = {CF_CLIENT | CF_ARCHIVE, "cl_movement", "0", "enables clientside prediction of your player movement on DP servers (use cl_nopred for QWSV servers)"};
+cvar_t cl_movement_replay = {CF_CLIENT, "cl_movement_replay", "1", "use engine prediction"};
+cvar_t cl_movement_nettimeout = {CF_CLIENT | CF_ARCHIVE, "cl_movement_nettimeout", "0.3", "stops predicting moves when server is lagging badly (avoids major performance problems), timeout in seconds"};
+cvar_t cl_movement_minping = {CF_CLIENT | CF_ARCHIVE, "cl_movement_minping", "0", "whether to use prediction when ping is lower than this value in milliseconds"};
+cvar_t cl_movement_track_canjump = {CF_CLIENT | CF_ARCHIVE, "cl_movement_track_canjump", "1", "track if the player released the jump key between two jumps to decide if he is able to jump or not; when off, this causes some \"sliding\" slightly above the floor when the jump key is held too long; if the mod allows repeated jumping by holding space all the time, this has to be set to zero too"};
+cvar_t cl_movement_maxspeed = {CF_CLIENT, "cl_movement_maxspeed", "320", "how fast you can move (should match sv_maxspeed)"};
+cvar_t cl_movement_maxairspeed = {CF_CLIENT, "cl_movement_maxairspeed", "30", "how fast you can move while in the air (should match sv_maxairspeed)"};
+cvar_t cl_movement_stopspeed = {CF_CLIENT, "cl_movement_stopspeed", "100", "speed below which you will be slowed rapidly to a stop rather than sliding endlessly (should match sv_stopspeed)"};
+cvar_t cl_movement_friction = {CF_CLIENT, "cl_movement_friction", "4", "how fast you slow down (should match sv_friction)"};
+cvar_t cl_movement_wallfriction = {CF_CLIENT, "cl_movement_wallfriction", "1", "how fast you slow down while sliding along a wall (should match sv_wallfriction)"};
+cvar_t cl_movement_waterfriction = {CF_CLIENT, "cl_movement_waterfriction", "-1", "how fast you slow down (should match sv_waterfriction), if less than 0 the cl_movement_friction variable is used instead"};
+cvar_t cl_movement_edgefriction = {CF_CLIENT, "cl_movement_edgefriction", "1", "how much to slow down when you may be about to fall off a ledge (should match edgefriction)"};
+cvar_t cl_movement_stepheight = {CF_CLIENT, "cl_movement_stepheight", "18", "how tall a step you can step in one instant (should match sv_stepheight)"};
+cvar_t cl_movement_accelerate = {CF_CLIENT, "cl_movement_accelerate", "10", "how fast you accelerate (should match sv_accelerate)"};
+cvar_t cl_movement_airaccelerate = {CF_CLIENT, "cl_movement_airaccelerate", "-1", "how fast you accelerate while in the air (should match sv_airaccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
+cvar_t cl_movement_wateraccelerate = {CF_CLIENT, "cl_movement_wateraccelerate", "-1", "how fast you accelerate while in water (should match sv_wateraccelerate), if less than 0 the cl_movement_accelerate variable is used instead"};
+cvar_t cl_movement_jumpvelocity = {CF_CLIENT, "cl_movement_jumpvelocity", "270", "how fast you move upward when you begin a jump (should match the quakec code)"};
+cvar_t cl_movement_airaccel_qw = {CF_CLIENT, "cl_movement_airaccel_qw", "1", "ratio of QW-style air control as opposed to simple acceleration (reduces speed gain when zigzagging) (should match sv_airaccel_qw); when < 0, the speed is clamped against the maximum allowed forward speed after the move"};
+cvar_t cl_movement_airaccel_sideways_friction = {CF_CLIENT, "cl_movement_airaccel_sideways_friction", "0", "anti-sideways movement stabilization (should match sv_airaccel_sideways_friction); when < 0, only so much friction is applied that braking (by accelerating backwards) cannot be stronger"};
+cvar_t cl_nopred = {CF_CLIENT | CF_ARCHIVE, "cl_nopred", "0", "(QWSV only) disables player movement prediction when playing on QWSV servers (this setting is separate from cl_movement because player expectations are different when playing on DP vs QW servers)"};
 
-cvar_t in_pitch_min = {CVAR_CLIENT, "in_pitch_min", "-90", "how far you can aim upward (quake used -70)"};
-cvar_t in_pitch_max = {CVAR_CLIENT, "in_pitch_max", "90", "how far you can aim downward (quake used 80)"};
+cvar_t in_pitch_min = {CF_CLIENT, "in_pitch_min", "-90", "how far you can aim upward (quake used -70)"};
+cvar_t in_pitch_max = {CF_CLIENT, "in_pitch_max", "90", "how far you can aim downward (quake used 80)"};
 
-cvar_t m_filter = {CVAR_CLIENT | CVAR_SAVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"}; 
-cvar_t m_accelerate = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate","1", "linear mouse acceleration factor (set to 1 to disable the linear acceleration and use only the power acceleration; set to 0 to disable all acceleration)"};
-cvar_t m_accelerate_minspeed = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_minspeed","5000", "below this speed in px/s, no acceleration is done, with a linear slope between (applied only on linear acceleration)"};
-cvar_t m_accelerate_maxspeed = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_maxspeed","10000", "above this speed in px/s, full acceleration is done, with a linear slope between (applied only on linear acceleration)"};
-cvar_t m_accelerate_filter = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_filter","0", "linear mouse acceleration factor filtering lowpass constant in seconds (set to 0 for no filtering)"};
-cvar_t m_accelerate_power_offset = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_power_offset","0", "below this speed in px/ms, no power acceleration is done"};
-cvar_t m_accelerate_power = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_power","2", "acceleration power (must be above 1 to be useful)"};
-cvar_t m_accelerate_power_senscap = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_power_senscap", "0", "maximum acceleration factor generated by power acceleration; use 0 for unbounded"};
-cvar_t m_accelerate_power_strength = {CVAR_CLIENT | CVAR_SAVE, "m_accelerate_power_strength", "0", "strength of the power mouse acceleration effect"};
+cvar_t m_filter = {CF_CLIENT | CF_ARCHIVE, "m_filter","0", "smoothes mouse movement, less responsive but smoother aiming"}; 
+cvar_t m_accelerate = {CF_CLIENT | CF_ARCHIVE, "m_accelerate","1", "linear mouse acceleration factor (set to 1 to disable the linear acceleration and use only the power acceleration; set to 0 to disable all acceleration)"};
+cvar_t m_accelerate_minspeed = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_minspeed","5000", "below this speed in px/s, no acceleration is done, with a linear slope between (applied only on linear acceleration)"};
+cvar_t m_accelerate_maxspeed = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_maxspeed","10000", "above this speed in px/s, full acceleration is done, with a linear slope between (applied only on linear acceleration)"};
+cvar_t m_accelerate_filter = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_filter","0", "linear mouse acceleration factor filtering lowpass constant in seconds (set to 0 for no filtering)"};
+cvar_t m_accelerate_power_offset = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_power_offset","0", "below this speed in px/ms, no power acceleration is done"};
+cvar_t m_accelerate_power = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_power","2", "acceleration power (must be above 1 to be useful)"};
+cvar_t m_accelerate_power_senscap = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_power_senscap", "0", "maximum acceleration factor generated by power acceleration; use 0 for unbounded"};
+cvar_t m_accelerate_power_strength = {CF_CLIENT | CF_ARCHIVE, "m_accelerate_power_strength", "0", "strength of the power mouse acceleration effect"};
 
-cvar_t cl_netfps = {CVAR_CLIENT | CVAR_SAVE, "cl_netfps","72", "how many input packets to send to server each second"};
-cvar_t cl_netrepeatinput = {CVAR_CLIENT | CVAR_SAVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
-cvar_t cl_netimmediatebuttons = {CVAR_CLIENT | CVAR_SAVE, "cl_netimmediatebuttons", "1", "sends extra packets whenever your buttons change or an impulse is used (basically: whenever you click fire or change weapon)"};
+cvar_t cl_netfps = {CF_CLIENT | CF_ARCHIVE, "cl_netfps","72", "how many input packets to send to server each second"};
+cvar_t cl_netrepeatinput = {CF_CLIENT | CF_ARCHIVE, "cl_netrepeatinput", "1", "how many packets in a row can be lost without movement issues when using cl_movement (technically how many input messages to repeat in each packet that have not yet been acknowledged by the server), only affects DP7 and later servers (Quake uses 0, QuakeWorld uses 2, and just for comparison Quake3 uses 1)"};
+cvar_t cl_netimmediatebuttons = {CF_CLIENT | CF_ARCHIVE, "cl_netimmediatebuttons", "1", "sends extra packets whenever your buttons change or an impulse is used (basically: whenever you click fire or change weapon)"};
 
-cvar_t cl_nodelta = {CVAR_CLIENT, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
+cvar_t cl_nodelta = {CF_CLIENT, "cl_nodelta", "0", "disables delta compression of non-player entities in QW network protocol"};
 
-cvar_t cl_csqc_generatemousemoveevents = {CVAR_CLIENT, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
+cvar_t cl_csqc_generatemousemoveevents = {CF_CLIENT, "cl_csqc_generatemousemoveevents", "1", "enables calls to CSQC_InputEvent with type 2, for compliance with EXT_CSQC spec"};
 
 extern cvar_t v_flipped;
 
@@ -837,7 +837,7 @@ static vec3_t offsets[NUMOFFSETS] =
 	{-0.125,  0.125, -0.125}, { 0.125,  0.125, -0.125},
 };
 
-static qboolean CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
+static qbool CL_ClientMovement_Unstick(cl_clientmovement_state_t *s)
 {
 	int i;
 	vec3_t neworigin;
@@ -1046,11 +1046,8 @@ static void CL_ClientMovement_Physics_Swim(cl_clientmovement_state_t *s)
 	}
 
 	// split wishvel into wishspeed and wishdir
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed)
-		VectorScale(wishvel, 1 / wishspeed, wishdir);
-	else
-		VectorSet( wishdir, 0.0, 0.0, 0.0 );
+	VectorCopy(wishvel, wishdir);
+	wishspeed = VectorNormalizeLength(wishdir);
 	wishspeed = min(wishspeed, cl.movevars_maxspeed) * 0.7;
 
 	if (s->crouched)
@@ -1297,23 +1294,8 @@ static void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t
     VectorMA( s->velocity, accelspeed, acceldir, s->velocity );
 }
 
-static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_Physics_CheckJump(cl_clientmovement_state_t *s)
 {
-	vec_t friction;
-	vec_t wishspeed;
-	vec_t addspeed;
-	vec_t accelspeed;
-	vec_t f;
-	vec_t gravity;
-	vec3_t forward;
-	vec3_t right;
-	vec3_t up;
-	vec3_t wishvel;
-	vec3_t wishdir;
-	vec3_t yawangles;
-	trace_t trace;
-	qboolean moving;
-
 	// jump if on ground with jump button pressed but only if it has been
 	// released at least once since the last jump
 	if (s->cmd.jump)
@@ -1327,6 +1309,26 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	}
 	else
 		s->cmd.canjump = true;
+}
+
+static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
+{
+	vec_t friction;
+	vec_t wishspeed;
+	vec_t addspeed;
+	vec_t accelspeed;
+	vec_t speed;
+	vec_t gravity;
+	vec3_t forward;
+	vec3_t right;
+	vec3_t up;
+	vec3_t wishvel;
+	vec3_t wishdir;
+	vec3_t yawangles;
+	trace_t trace;
+	qbool moving;
+
+	CL_ClientMovement_Physics_CheckJump(s);
 
 	// calculate movement vector
 	VectorSet(yawangles, 0, s->cmd.viewangles[1], 0);
@@ -1334,11 +1336,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	VectorMAM(s->cmd.forwardmove, forward, s->cmd.sidemove, right, wishvel);
 
 	// split wishvel into wishspeed and wishdir
-	wishspeed = VectorLength(wishvel);
-	if (wishspeed)
-		VectorScale(wishvel, 1 / wishspeed, wishdir);
-	else
-		VectorSet( wishdir, 0.0, 0.0, 0.0 );
+	VectorCopy(wishvel, wishdir);
+	wishspeed = VectorNormalizeLength(wishdir);
+
 	// check if onground
 	if (s->onground)
 	{
@@ -1347,8 +1347,8 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			wishspeed *= 0.5;
 
 		// apply edge friction
-		f = sqrt(s->velocity[0] * s->velocity[0] + s->velocity[1] * s->velocity[1]);
-		if (f > 0)
+		speed = VectorLength2(s->velocity);
+		if (speed > 0)
 		{
 			friction = cl.movevars_friction;
 			if (cl.movevars_edgefriction != 1)
@@ -1358,7 +1358,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 				// note: QW uses the full player box for the trace, and yet still
 				// uses s->origin[2] + s->mins[2], which is clearly an bug, but
 				// this mimics it for compatibility
-				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
+				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/speed), s->origin[1] + s->velocity[1]*(16/speed), s->origin[2] + s->mins[2]);
 				VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
 				if (cls.protocol == PROTOCOL_QUAKEWORLD)
 					trace = CL_TraceBox(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, 0, 0, collision_extendmovelength.value, true, true, NULL, true);
@@ -1368,9 +1368,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 					friction *= cl.movevars_edgefriction;
 			}
 			// apply ground friction
-			f = 1 - s->cmd.frametime * friction * ((f < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / f) : 1);
-			f = max(f, 0);
-			VectorScale(s->velocity, f, s->velocity);
+			speed = 1 - s->cmd.frametime * friction * ((speed < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / speed) : 1);
+			speed = max(speed, 0);
+			VectorScale(s->velocity, speed, s->velocity);
 		}
 		addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 		if (addspeed > 0)
@@ -1404,7 +1404,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 		{
 			// apply air speed limit
 			vec_t accel, wishspeed0, wishspeed2, accelqw, strafity;
-			qboolean accelerating;
+			qbool accelerating;
 
 			accelqw = cl.movevars_airaccel_qw;
 			wishspeed0 = wishspeed;
@@ -1762,8 +1762,8 @@ void CL_SendMove(void)
 	unsigned char data[1024];
 	double packettime;
 	int msecdelta;
-	qboolean quemove;
-	qboolean important;
+	qbool quemove;
+	qbool important;
 
 	// if playing a demo, do nothing
 	if (!cls.netcon)
@@ -2168,75 +2168,75 @@ CL_InitInput
 */
 void CL_InitInput (void)
 {
-	Cmd_AddCommand(CMD_CLIENT, "+moveup",IN_UpDown, "swim upward");
-	Cmd_AddCommand(CMD_CLIENT, "-moveup",IN_UpUp, "stop swimming upward");
-	Cmd_AddCommand(CMD_CLIENT, "+movedown",IN_DownDown, "swim downward");
-	Cmd_AddCommand(CMD_CLIENT, "-movedown",IN_DownUp, "stop swimming downward");
-	Cmd_AddCommand(CMD_CLIENT, "+left",IN_LeftDown, "turn left");
-	Cmd_AddCommand(CMD_CLIENT, "-left",IN_LeftUp, "stop turning left");
-	Cmd_AddCommand(CMD_CLIENT, "+right",IN_RightDown, "turn right");
-	Cmd_AddCommand(CMD_CLIENT, "-right",IN_RightUp, "stop turning right");
-	Cmd_AddCommand(CMD_CLIENT, "+forward",IN_ForwardDown, "move forward");
-	Cmd_AddCommand(CMD_CLIENT, "-forward",IN_ForwardUp, "stop moving forward");
-	Cmd_AddCommand(CMD_CLIENT, "+back",IN_BackDown, "move backward");
-	Cmd_AddCommand(CMD_CLIENT, "-back",IN_BackUp, "stop moving backward");
-	Cmd_AddCommand(CMD_CLIENT, "+lookup", IN_LookupDown, "look upward");
-	Cmd_AddCommand(CMD_CLIENT, "-lookup", IN_LookupUp, "stop looking upward");
-	Cmd_AddCommand(CMD_CLIENT, "+lookdown", IN_LookdownDown, "look downward");
-	Cmd_AddCommand(CMD_CLIENT, "-lookdown", IN_LookdownUp, "stop looking downward");
-	Cmd_AddCommand(CMD_CLIENT, "+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)");
-	Cmd_AddCommand(CMD_CLIENT, "-strafe", IN_StrafeUp, "deactivate strafing mode");
-	Cmd_AddCommand(CMD_CLIENT, "+moveleft", IN_MoveleftDown, "strafe left");
-	Cmd_AddCommand(CMD_CLIENT, "-moveleft", IN_MoveleftUp, "stop strafing left");
-	Cmd_AddCommand(CMD_CLIENT, "+moveright", IN_MoverightDown, "strafe right");
-	Cmd_AddCommand(CMD_CLIENT, "-moveright", IN_MoverightUp, "stop strafing right");
-	Cmd_AddCommand(CMD_CLIENT, "+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
-	Cmd_AddCommand(CMD_CLIENT, "-speed", IN_SpeedUp, "deactivate run mode");
-	Cmd_AddCommand(CMD_CLIENT, "+attack", IN_AttackDown, "begin firing");
-	Cmd_AddCommand(CMD_CLIENT, "-attack", IN_AttackUp, "stop firing");
-	Cmd_AddCommand(CMD_CLIENT, "+jump", IN_JumpDown, "jump");
-	Cmd_AddCommand(CMD_CLIENT, "-jump", IN_JumpUp, "end jump (so you can jump again)");
-	Cmd_AddCommand(CMD_CLIENT, "impulse", IN_Impulse, "send an impulse number to server (select weapon, use item, etc)");
-	Cmd_AddCommand(CMD_CLIENT, "+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
-	Cmd_AddCommand(CMD_CLIENT, "-klook", IN_KLookUp, "deactivate keyboard looking mode");
-	Cmd_AddCommand(CMD_CLIENT, "+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
-	Cmd_AddCommand(CMD_CLIENT, "-mlook", IN_MLookUp, "deactivate mouse looking mode");
+	Cmd_AddCommand(CF_CLIENT, "+moveup",IN_UpDown, "swim upward");
+	Cmd_AddCommand(CF_CLIENT, "-moveup",IN_UpUp, "stop swimming upward");
+	Cmd_AddCommand(CF_CLIENT, "+movedown",IN_DownDown, "swim downward");
+	Cmd_AddCommand(CF_CLIENT, "-movedown",IN_DownUp, "stop swimming downward");
+	Cmd_AddCommand(CF_CLIENT, "+left",IN_LeftDown, "turn left");
+	Cmd_AddCommand(CF_CLIENT, "-left",IN_LeftUp, "stop turning left");
+	Cmd_AddCommand(CF_CLIENT, "+right",IN_RightDown, "turn right");
+	Cmd_AddCommand(CF_CLIENT, "-right",IN_RightUp, "stop turning right");
+	Cmd_AddCommand(CF_CLIENT, "+forward",IN_ForwardDown, "move forward");
+	Cmd_AddCommand(CF_CLIENT, "-forward",IN_ForwardUp, "stop moving forward");
+	Cmd_AddCommand(CF_CLIENT, "+back",IN_BackDown, "move backward");
+	Cmd_AddCommand(CF_CLIENT, "-back",IN_BackUp, "stop moving backward");
+	Cmd_AddCommand(CF_CLIENT, "+lookup", IN_LookupDown, "look upward");
+	Cmd_AddCommand(CF_CLIENT, "-lookup", IN_LookupUp, "stop looking upward");
+	Cmd_AddCommand(CF_CLIENT, "+lookdown", IN_LookdownDown, "look downward");
+	Cmd_AddCommand(CF_CLIENT, "-lookdown", IN_LookdownUp, "stop looking downward");
+	Cmd_AddCommand(CF_CLIENT, "+strafe", IN_StrafeDown, "activate strafing mode (move instead of turn)");
+	Cmd_AddCommand(CF_CLIENT, "-strafe", IN_StrafeUp, "deactivate strafing mode");
+	Cmd_AddCommand(CF_CLIENT, "+moveleft", IN_MoveleftDown, "strafe left");
+	Cmd_AddCommand(CF_CLIENT, "-moveleft", IN_MoveleftUp, "stop strafing left");
+	Cmd_AddCommand(CF_CLIENT, "+moveright", IN_MoverightDown, "strafe right");
+	Cmd_AddCommand(CF_CLIENT, "-moveright", IN_MoverightUp, "stop strafing right");
+	Cmd_AddCommand(CF_CLIENT, "+speed", IN_SpeedDown, "activate run mode (faster movement and turning)");
+	Cmd_AddCommand(CF_CLIENT, "-speed", IN_SpeedUp, "deactivate run mode");
+	Cmd_AddCommand(CF_CLIENT, "+attack", IN_AttackDown, "begin firing");
+	Cmd_AddCommand(CF_CLIENT, "-attack", IN_AttackUp, "stop firing");
+	Cmd_AddCommand(CF_CLIENT, "+jump", IN_JumpDown, "jump");
+	Cmd_AddCommand(CF_CLIENT, "-jump", IN_JumpUp, "end jump (so you can jump again)");
+	Cmd_AddCommand(CF_CLIENT, "impulse", IN_Impulse, "send an impulse number to server (select weapon, use item, etc)");
+	Cmd_AddCommand(CF_CLIENT, "+klook", IN_KLookDown, "activate keyboard looking mode, do not recenter view");
+	Cmd_AddCommand(CF_CLIENT, "-klook", IN_KLookUp, "deactivate keyboard looking mode");
+	Cmd_AddCommand(CF_CLIENT, "+mlook", IN_MLookDown, "activate mouse looking mode, do not recenter view");
+	Cmd_AddCommand(CF_CLIENT, "-mlook", IN_MLookUp, "deactivate mouse looking mode");
 
 	// LadyHavoc: added lots of buttons
-	Cmd_AddCommand(CMD_CLIENT, "+use", IN_UseDown, "use something (may be used by some mods)");
-	Cmd_AddCommand(CMD_CLIENT, "-use", IN_UseUp, "stop using something");
-	Cmd_AddCommand(CMD_CLIENT, "+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button3", IN_Button3Up, "deactivate button3");
-	Cmd_AddCommand(CMD_CLIENT, "+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button4", IN_Button4Up, "deactivate button4");
-	Cmd_AddCommand(CMD_CLIENT, "+button5", IN_Button5Down, "activate button5 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button5", IN_Button5Up, "deactivate button5");
-	Cmd_AddCommand(CMD_CLIENT, "+button6", IN_Button6Down, "activate button6 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button6", IN_Button6Up, "deactivate button6");
-	Cmd_AddCommand(CMD_CLIENT, "+button7", IN_Button7Down, "activate button7 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button7", IN_Button7Up, "deactivate button7");
-	Cmd_AddCommand(CMD_CLIENT, "+button8", IN_Button8Down, "activate button8 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button8", IN_Button8Up, "deactivate button8");
-	Cmd_AddCommand(CMD_CLIENT, "+button9", IN_Button9Down, "activate button9 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button9", IN_Button9Up, "deactivate button9");
-	Cmd_AddCommand(CMD_CLIENT, "+button10", IN_Button10Down, "activate button10 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button10", IN_Button10Up, "deactivate button10");
-	Cmd_AddCommand(CMD_CLIENT, "+button11", IN_Button11Down, "activate button11 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button11", IN_Button11Up, "deactivate button11");
-	Cmd_AddCommand(CMD_CLIENT, "+button12", IN_Button12Down, "activate button12 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button12", IN_Button12Up, "deactivate button12");
-	Cmd_AddCommand(CMD_CLIENT, "+button13", IN_Button13Down, "activate button13 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button13", IN_Button13Up, "deactivate button13");
-	Cmd_AddCommand(CMD_CLIENT, "+button14", IN_Button14Down, "activate button14 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button14", IN_Button14Up, "deactivate button14");
-	Cmd_AddCommand(CMD_CLIENT, "+button15", IN_Button15Down, "activate button15 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button15", IN_Button15Up, "deactivate button15");
-	Cmd_AddCommand(CMD_CLIENT, "+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
-	Cmd_AddCommand(CMD_CLIENT, "-button16", IN_Button16Up, "deactivate button16");
+	Cmd_AddCommand(CF_CLIENT, "+use", IN_UseDown, "use something (may be used by some mods)");
+	Cmd_AddCommand(CF_CLIENT, "-use", IN_UseUp, "stop using something");
+	Cmd_AddCommand(CF_CLIENT, "+button3", IN_Button3Down, "activate button3 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button3", IN_Button3Up, "deactivate button3");
+	Cmd_AddCommand(CF_CLIENT, "+button4", IN_Button4Down, "activate button4 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button4", IN_Button4Up, "deactivate button4");
+	Cmd_AddCommand(CF_CLIENT, "+button5", IN_Button5Down, "activate button5 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button5", IN_Button5Up, "deactivate button5");
+	Cmd_AddCommand(CF_CLIENT, "+button6", IN_Button6Down, "activate button6 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button6", IN_Button6Up, "deactivate button6");
+	Cmd_AddCommand(CF_CLIENT, "+button7", IN_Button7Down, "activate button7 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button7", IN_Button7Up, "deactivate button7");
+	Cmd_AddCommand(CF_CLIENT, "+button8", IN_Button8Down, "activate button8 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button8", IN_Button8Up, "deactivate button8");
+	Cmd_AddCommand(CF_CLIENT, "+button9", IN_Button9Down, "activate button9 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button9", IN_Button9Up, "deactivate button9");
+	Cmd_AddCommand(CF_CLIENT, "+button10", IN_Button10Down, "activate button10 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button10", IN_Button10Up, "deactivate button10");
+	Cmd_AddCommand(CF_CLIENT, "+button11", IN_Button11Down, "activate button11 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button11", IN_Button11Up, "deactivate button11");
+	Cmd_AddCommand(CF_CLIENT, "+button12", IN_Button12Down, "activate button12 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button12", IN_Button12Up, "deactivate button12");
+	Cmd_AddCommand(CF_CLIENT, "+button13", IN_Button13Down, "activate button13 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button13", IN_Button13Up, "deactivate button13");
+	Cmd_AddCommand(CF_CLIENT, "+button14", IN_Button14Down, "activate button14 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button14", IN_Button14Up, "deactivate button14");
+	Cmd_AddCommand(CF_CLIENT, "+button15", IN_Button15Down, "activate button15 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button15", IN_Button15Up, "deactivate button15");
+	Cmd_AddCommand(CF_CLIENT, "+button16", IN_Button16Down, "activate button16 (behavior depends on mod)");
+	Cmd_AddCommand(CF_CLIENT, "-button16", IN_Button16Up, "deactivate button16");
 
 	// LadyHavoc: added bestweapon command
-	Cmd_AddCommand(CMD_CLIENT, "bestweapon", IN_BestWeapon_f, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
-	Cmd_AddCommand(CMD_CLIENT, "register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
+	Cmd_AddCommand(CF_CLIENT, "bestweapon", IN_BestWeapon_f, "send an impulse number to server to select the first usable weapon out of several (example: 8 7 6 5 4 3 2 1)");
+	Cmd_AddCommand(CF_CLIENT, "register_bestweapon", IN_BestWeapon_Register_f, "(for QC usage only) change weapon parameters to be used by bestweapon; stuffcmd this in ClientConnect");
 
 	Cvar_RegisterVariable(&cl_movecliptokeyboard);
 	Cvar_RegisterVariable(&cl_movement);

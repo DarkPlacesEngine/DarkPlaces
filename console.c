@@ -42,35 +42,35 @@ void *con_mutex = NULL;
 #define CON_LINES_LAST CONBUFFER_LINES_LAST(&con)
 #define CON_LINES_COUNT CONBUFFER_LINES_COUNT(&con)
 
-cvar_t con_notifytime = {CVAR_CLIENT | CVAR_SAVE, "con_notifytime","3", "how long notify lines last, in seconds"};
-cvar_t con_notify = {CVAR_CLIENT | CVAR_SAVE, "con_notify","4", "how many notify lines to show"};
-cvar_t con_notifyalign = {CVAR_CLIENT | CVAR_SAVE, "con_notifyalign", "", "how to align notify lines: 0 = left, 0.5 = center, 1 = right, empty string = game default)"};
+cvar_t con_notifytime = {CF_CLIENT | CF_ARCHIVE, "con_notifytime","3", "how long notify lines last, in seconds"};
+cvar_t con_notify = {CF_CLIENT | CF_ARCHIVE, "con_notify","4", "how many notify lines to show"};
+cvar_t con_notifyalign = {CF_CLIENT | CF_ARCHIVE, "con_notifyalign", "", "how to align notify lines: 0 = left, 0.5 = center, 1 = right, empty string = game default)"};
 
-cvar_t con_chattime = {CVAR_CLIENT | CVAR_SAVE, "con_chattime","30", "how long chat lines last, in seconds"};
-cvar_t con_chat = {CVAR_CLIENT | CVAR_SAVE, "con_chat","0", "how many chat lines to show in a dedicated chat area"};
-cvar_t con_chatpos = {CVAR_CLIENT | CVAR_SAVE, "con_chatpos","0", "where to put chat (negative: lines from bottom of screen, positive: lines below notify, 0: at top)"};
-cvar_t con_chatrect = {CVAR_CLIENT | CVAR_SAVE, "con_chatrect","0", "use con_chatrect_x and _y to position con_notify and con_chat freely instead of con_chatpos"};
-cvar_t con_chatrect_x = {CVAR_CLIENT | CVAR_SAVE, "con_chatrect_x","", "where to put chat, relative x coordinate of left edge on screen (use con_chatwidth for width)"};
-cvar_t con_chatrect_y = {CVAR_CLIENT | CVAR_SAVE, "con_chatrect_y","", "where to put chat, relative y coordinate of top edge on screen (use con_chat for line count)"};
-cvar_t con_chatwidth = {CVAR_CLIENT | CVAR_SAVE, "con_chatwidth","1.0", "relative chat window width"};
-cvar_t con_textsize = {CVAR_CLIENT | CVAR_SAVE, "con_textsize","8", "console text size in virtual 2D pixels"};
-cvar_t con_notifysize = {CVAR_CLIENT | CVAR_SAVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
-cvar_t con_chatsize = {CVAR_CLIENT | CVAR_SAVE, "con_chatsize","8", "chat text size in virtual 2D pixels (if con_chat is enabled)"};
-cvar_t con_chatsound = {CVAR_CLIENT | CVAR_SAVE, "con_chatsound","1", "enables chat sound to play on message"};
-cvar_t con_chatsound_file = {CVAR_CLIENT, "con_chatsound_file","sound/misc/talk.wav", "The sound to play for chat messages"};
-cvar_t con_chatsound_team_file = {CVAR_CLIENT, "con_chatsound_team_file","sound/misc/talk2.wav", "The sound to play for team chat messages"};
-cvar_t con_chatsound_team_mask = {CVAR_CLIENT, "con_chatsound_team_mask","40","Magic ASCII code that denotes a team chat message"};
+cvar_t con_chattime = {CF_CLIENT | CF_ARCHIVE, "con_chattime","30", "how long chat lines last, in seconds"};
+cvar_t con_chat = {CF_CLIENT | CF_ARCHIVE, "con_chat","0", "how many chat lines to show in a dedicated chat area"};
+cvar_t con_chatpos = {CF_CLIENT | CF_ARCHIVE, "con_chatpos","0", "where to put chat (negative: lines from bottom of screen, positive: lines below notify, 0: at top)"};
+cvar_t con_chatrect = {CF_CLIENT | CF_ARCHIVE, "con_chatrect","0", "use con_chatrect_x and _y to position con_notify and con_chat freely instead of con_chatpos"};
+cvar_t con_chatrect_x = {CF_CLIENT | CF_ARCHIVE, "con_chatrect_x","", "where to put chat, relative x coordinate of left edge on screen (use con_chatwidth for width)"};
+cvar_t con_chatrect_y = {CF_CLIENT | CF_ARCHIVE, "con_chatrect_y","", "where to put chat, relative y coordinate of top edge on screen (use con_chat for line count)"};
+cvar_t con_chatwidth = {CF_CLIENT | CF_ARCHIVE, "con_chatwidth","1.0", "relative chat window width"};
+cvar_t con_textsize = {CF_CLIENT | CF_ARCHIVE, "con_textsize","8", "console text size in virtual 2D pixels"};
+cvar_t con_notifysize = {CF_CLIENT | CF_ARCHIVE, "con_notifysize","8", "notify text size in virtual 2D pixels"};
+cvar_t con_chatsize = {CF_CLIENT | CF_ARCHIVE, "con_chatsize","8", "chat text size in virtual 2D pixels (if con_chat is enabled)"};
+cvar_t con_chatsound = {CF_CLIENT | CF_ARCHIVE, "con_chatsound","1", "enables chat sound to play on message"};
+cvar_t con_chatsound_file = {CF_CLIENT, "con_chatsound_file","sound/misc/talk.wav", "The sound to play for chat messages"};
+cvar_t con_chatsound_team_file = {CF_CLIENT, "con_chatsound_team_file","sound/misc/talk2.wav", "The sound to play for team chat messages"};
+cvar_t con_chatsound_team_mask = {CF_CLIENT, "con_chatsound_team_mask","40","Magic ASCII code that denotes a team chat message"};
 
-cvar_t sys_specialcharactertranslation = {CVAR_CLIENT | CVAR_SERVER, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
+cvar_t sys_specialcharactertranslation = {CF_CLIENT | CF_SERVER, "sys_specialcharactertranslation", "1", "terminal console conchars to ASCII translation (set to 0 if your conchars.tga is for an 8bit character set or if you want raw output)"};
 #ifdef WIN32
-cvar_t sys_colortranslation = {CVAR_CLIENT | CVAR_SERVER, "sys_colortranslation", "0", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
+cvar_t sys_colortranslation = {CF_CLIENT | CF_SERVER, "sys_colortranslation", "0", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
 #else
-cvar_t sys_colortranslation = {CVAR_CLIENT | CVAR_SERVER, "sys_colortranslation", "1", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
+cvar_t sys_colortranslation = {CF_CLIENT | CF_SERVER, "sys_colortranslation", "1", "terminal console color translation (supported values: 0 = strip color codes, 1 = translate to ANSI codes, 2 = no translation)"};
 #endif
 
 
-cvar_t con_nickcompletion = {CVAR_CLIENT | CVAR_SAVE, "con_nickcompletion", "1", "tab-complete nicks in console and message input"};
-cvar_t con_nickcompletion_flags = {CVAR_CLIENT | CVAR_SAVE, "con_nickcompletion_flags", "11", "Bitfield: "
+cvar_t con_nickcompletion = {CF_CLIENT | CF_ARCHIVE, "con_nickcompletion", "1", "tab-complete nicks in console and message input"};
+cvar_t con_nickcompletion_flags = {CF_CLIENT | CF_ARCHIVE, "con_nickcompletion_flags", "11", "Bitfield: "
 				   "0: add nothing after completion. "
 				   "1: add the last color after completion. "
 				   "2: add a quote when starting a quote instead of the color. "
@@ -83,28 +83,28 @@ cvar_t con_nickcompletion_flags = {CVAR_CLIENT | CVAR_SAVE, "con_nickcompletion_
 #define NICKS_ALPHANUMERICS_ONLY 8
 #define NICKS_NO_SPACES 16
 
-cvar_t con_completion_playdemo = {CVAR_CLIENT | CVAR_SAVE, "con_completion_playdemo", "*.dem", "completion pattern for the playdemo command"};
-cvar_t con_completion_timedemo = {CVAR_CLIENT | CVAR_SAVE, "con_completion_timedemo", "*.dem", "completion pattern for the timedemo command"};
-cvar_t con_completion_exec = {CVAR_CLIENT | CVAR_SAVE, "con_completion_exec", "*.cfg", "completion pattern for the exec command"};
+cvar_t con_completion_playdemo = {CF_CLIENT | CF_ARCHIVE, "con_completion_playdemo", "*.dem", "completion pattern for the playdemo command"};
+cvar_t con_completion_timedemo = {CF_CLIENT | CF_ARCHIVE, "con_completion_timedemo", "*.dem", "completion pattern for the timedemo command"};
+cvar_t con_completion_exec = {CF_CLIENT | CF_ARCHIVE, "con_completion_exec", "*.cfg", "completion pattern for the exec command"};
 
-cvar_t condump_stripcolors = {CVAR_CLIENT | CVAR_SERVER| CVAR_SAVE, "condump_stripcolors", "0", "strip color codes from console dumps"};
+cvar_t condump_stripcolors = {CF_CLIENT | CF_SERVER| CF_ARCHIVE, "condump_stripcolors", "0", "strip color codes from console dumps"};
 
-cvar_t rcon_password = {CVAR_CLIENT | CVAR_SERVER | CVAR_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
-cvar_t rcon_secure = {CVAR_CLIENT | CVAR_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
-cvar_t rcon_secure_challengetimeout = {CVAR_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
-cvar_t rcon_address = {CVAR_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
+cvar_t rcon_password = {CF_CLIENT | CF_SERVER | CF_PRIVATE, "rcon_password", "", "password to authenticate rcon commands; NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password; may be set to a string of the form user1:pass1 user2:pass2 user3:pass3 to allow multiple user accounts - the client then has to specify ONE of these combinations"};
+cvar_t rcon_secure = {CF_CLIENT | CF_SERVER, "rcon_secure", "0", "force secure rcon authentication (1 = time based, 2 = challenge based); NOTE: changing rcon_secure clears rcon_password, so set rcon_secure always before rcon_password"};
+cvar_t rcon_secure_challengetimeout = {CF_CLIENT, "rcon_secure_challengetimeout", "5", "challenge-based secure rcon: time out requests if no challenge came within this time interval"};
+cvar_t rcon_address = {CF_CLIENT, "rcon_address", "", "server address to send rcon commands to (when not connected to a server)"};
 
 int con_linewidth;
 int con_vislines;
 
-qboolean con_initialized;
+qbool con_initialized;
 
 // used for server replies to rcon command
 lhnetsocket_t *rcon_redirect_sock = NULL;
 lhnetaddress_t *rcon_redirect_dest = NULL;
 int rcon_redirect_bufferpos = 0;
 char rcon_redirect_buffer[1400];
-qboolean rcon_redirect_proquakeprotocol = false;
+qbool rcon_redirect_proquakeprotocol = false;
 
 // generic functions for console buffers
 
@@ -405,9 +405,9 @@ LOGGING
 
 /// \name Logging
 //@{
-cvar_t log_file = {CVAR_CLIENT | CVAR_SERVER, "log_file", "", "filename to log messages to"};
-cvar_t log_file_stripcolors = {CVAR_CLIENT | CVAR_SERVER, "log_file_stripcolors", "0", "strip color codes from log messages"};
-cvar_t log_dest_udp = {CVAR_CLIENT | CVAR_SERVER, "log_dest_udp", "", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
+cvar_t log_file = {CF_CLIENT | CF_SERVER, "log_file", "", "filename to log messages to"};
+cvar_t log_file_stripcolors = {CF_CLIENT | CF_SERVER, "log_file_stripcolors", "0", "strip color codes from log messages"};
+cvar_t log_dest_udp = {CF_CLIENT | CF_SERVER, "log_dest_udp", "", "UDP address to log messages to (in QW rcon compatible format); multiple destinations can be separated by spaces; DO NOT SPECIFY DNS NAMES HERE"};
 char log_dest_buffer[1400]; // UDP packet
 size_t log_dest_buffer_pos;
 unsigned int log_dest_buffer_appending;
@@ -431,7 +431,7 @@ static void Log_DestBuffer_Flush_NoLock(void)
 	lhnetaddress_t log_dest_addr;
 	lhnetsocket_t *log_dest_socket;
 	const char *s = log_dest_udp.string;
-	qboolean have_opened_temp_sockets = false;
+	qbool have_opened_temp_sockets = false;
 	if(s) if(log_dest_buffer_pos > 5)
 	{
 		++log_dest_buffer_appending;
@@ -584,7 +584,7 @@ Log_ConPrint
 */
 void Log_ConPrint (const char *msg)
 {
-	static qboolean inprogress = false;
+	static qbool inprogress = false;
 
 	// don't allow feedback loops with memory error reports
 	if (inprogress)
@@ -686,7 +686,7 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f(cmd_state_t *cmd)
 {
-	if (COM_CheckParm ("-noconsole"))
+	if (Sys_CheckParm ("-noconsole"))
 		if (!(key_consoleactive & KEY_CONSOLEACTIVE_USER))
 			return; // only allow the key bind to turn off console
 
@@ -882,7 +882,7 @@ void Con_Init (void)
 
 	// support for the classic Quake option
 // COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
-	if (COM_CheckParm ("-condebug") != 0)
+	if (Sys_CheckParm ("-condebug") != 0)
 		Cvar_SetQuick (&log_file, "qconsole.log");
 
 	// register our cvars
@@ -921,13 +921,13 @@ void Con_Init (void)
 	Cvar_RegisterVariable(&rcon_password);
 
 	// register our commands
-	Cmd_AddCommand(CMD_CLIENT, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
-	Cmd_AddCommand(CMD_CLIENT, "messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
-	Cmd_AddCommand(CMD_CLIENT, "messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
-	Cmd_AddCommand(CMD_CLIENT, "commandmode", Con_CommandMode_f, "input a console command");
-	Cmd_AddCommand(CMD_SHARED, "clear", Con_Clear_f, "clear console history");
-	Cmd_AddCommand(CMD_SHARED, "maps", Con_Maps_f, "list information about available maps");
-	Cmd_AddCommand(CMD_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
+	Cmd_AddCommand(CF_CLIENT, "toggleconsole", Con_ToggleConsole_f, "opens or closes the console");
+	Cmd_AddCommand(CF_CLIENT, "messagemode", Con_MessageMode_f, "input a chat message to say to everyone");
+	Cmd_AddCommand(CF_CLIENT, "messagemode2", Con_MessageMode2_f, "input a chat message to say to only your team");
+	Cmd_AddCommand(CF_CLIENT, "commandmode", Con_CommandMode_f, "input a console command");
+	Cmd_AddCommand(CF_SHARED, "clear", Con_Clear_f, "clear console history");
+	Cmd_AddCommand(CF_SHARED, "maps", Con_Maps_f, "list information about available maps");
+	Cmd_AddCommand(CF_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
 	// initialize console window (only used by sys_win.c)
@@ -998,7 +998,7 @@ static void Con_PrintToHistory(const char *txt, int mask)
 	}
 }
 
-void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qboolean proquakeprotocol)
+void Con_Rcon_Redirect_Init(lhnetsocket_t *sock, lhnetaddress_t *dest, qbool proquakeprotocol)
 {
 	rcon_redirect_sock = sock;
 	rcon_redirect_dest = dest;
@@ -1153,7 +1153,7 @@ Con_MaskPrint
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
-extern qboolean sys_nostdout;
+extern qbool sys_nostdout;
 void Con_MaskPrint(int additionalmask, const char *msg)
 {
 	static int mask = 0;
@@ -1524,7 +1524,7 @@ The input line scrolls horizontally if typing goes beyond the right edge
 Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 ================
 */
-static void Con_DrawInput(qboolean is_console, float x, float v, float inputsize)
+static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 {
 	int y, i, col_out, linepos, text_start, prefix_start;
 	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
@@ -1672,7 +1672,7 @@ static float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length,
 	}
 }
 
-static int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int Con_CountLineFunc(void *passthrough, const char *line, size_t length, float width, qbool isContinuation)
 {
 	(void) passthrough;
 	(void) line;
@@ -1682,7 +1682,7 @@ static int Con_CountLineFunc(void *passthrough, const char *line, size_t length,
 	return 1;
 }
 
-static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, float width, qboolean isContinuation)
+static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t length, float width, qbool isContinuation)
 {
 	con_text_info_t *ti = (con_text_info_t *) passthrough;
 
@@ -2115,7 +2115,7 @@ its format (q1/q2/q3/hl) and even its message
 //LadyHavoc: rewrote bsp type detection, rewrote message extraction to do proper worldspawn parsing
 //LadyHavoc: added .ent file loading, and redesigned error handling to still try the .ent file even if the map format is not recognized, this also eliminated one goto
 //LadyHavoc: FIXME: man this GetMapList is STILL ugly code even after my cleanups...
-qboolean GetMapList (const char *s, char *completedname, int completednamebufferlength)
+qbool GetMapList (const char *s, char *completedname, int completednamebufferlength)
 {
 	fssearch_t	*t;
 	char		message[1024];
@@ -2370,7 +2370,7 @@ static int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 	// if A contains a non-alphanumeric, B must contain it as well though!
 	while(a_len)
 	{
-		qboolean alnum_a, alnum_b;
+		qbool alnum_a, alnum_b;
 
 		if(tolower(*a) == tolower(*b))
 		{
@@ -2405,7 +2405,7 @@ static int Nicks_strncasecmp(char *a, char *b, unsigned int a_len)
 
    Count the number of possible nicks to complete
  */
-static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qboolean isCon)
+static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qbool isCon)
 {
 	char name[MAX_SCOREBOARDNAME];
 	int i, p;
@@ -2663,7 +2663,7 @@ static const char **Nicks_CompleteBuildList(int count)
 */
 static int Nicks_AddLastColor(char *buffer, int pos)
 {
-	qboolean quote_added = false;
+	qbool quote_added = false;
 	int match;
 	int color = STRING_COLOR_DEFAULT + '0';
 	char r = 0, g = 0, b = 0;
@@ -2733,7 +2733,7 @@ static int Nicks_AddLastColor(char *buffer, int pos)
 	Enhanced to tab-complete map names by [515]
 
 */
-int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
+int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 {
 	const char *text = "";
 	char *s;
@@ -2786,7 +2786,7 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 	{
 		strlcpy(command, line + 1, min(sizeof(command), (unsigned int)(space - line)));
 
-		patterns = Cvar_VariableString(cmd->cvars, va(vabuf, sizeof(vabuf), "con_completion_%s", command), CVAR_CLIENT | CVAR_SERVER); // TODO maybe use a better place for this?
+		patterns = Cvar_VariableString(cmd->cvars, va(vabuf, sizeof(vabuf), "con_completion_%s", command), CF_CLIENT | CF_SERVER); // TODO maybe use a better place for this?
 		if(patterns && !*patterns)
 			patterns = NULL; // get rid of the empty string
 
@@ -2963,11 +2963,11 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qboolean is_console)
 		Con_Printf("\n%i possible command%s\n", c, (c > 1) ? "s: " : ":");
 		Cmd_CompleteCommandPrint(cmd, s);
 	}
-	v = Cvar_CompleteCountPossible(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
+	v = Cvar_CompleteCountPossible(cmd->cvars, s, CF_CLIENT | CF_SERVER);
 	if (v)
 	{
 		Con_Printf("\n%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
-		Cvar_CompleteCvarPrint(cmd->cvars, s, CVAR_CLIENT | CVAR_SERVER);
+		Cvar_CompleteCvarPrint(cmd->cvars, s, CF_CLIENT | CF_SERVER);
 	}
 	a = Cmd_CompleteAliasCountPossible(cmd, s);
 	if (a)

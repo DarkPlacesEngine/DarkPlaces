@@ -286,14 +286,14 @@ void CSQC_Think (prvm_edict_t *ed)
 }
 
 extern cvar_t cl_noplayershadow;
-qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
+qbool CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int renderflags;
 	int c;
 	float scale;
 	entity_render_t *entrender;
-	dp_model_t *model;
+	model_t *model;
 	prvm_vec3_t modellight_origin;
 
 	model = CL_GetModelFromEdict(ed);
@@ -434,10 +434,10 @@ qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum)
 // 1 = keyup, key, character (EXT_CSQC)
 // 2 = mousemove relative, x, y (EXT_CSQC)
 // 3 = mousemove absolute, x, y (DP_CSQC)
-qboolean CL_VM_InputEvent (int eventtype, float x, float y)
+qbool CL_VM_InputEvent (int eventtype, float x, float y)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	qboolean r;
+	qbool r;
 
 	if(!cl.csqc_loaded)
 		return false;
@@ -461,7 +461,7 @@ CSQC_END
 
 extern r_refdef_view_t csqc_original_r_refdef_view;
 extern r_refdef_view_t csqc_main_r_refdef_view;
-qboolean CL_VM_UpdateView (double frametime)
+qbool CL_VM_UpdateView (double frametime)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	vec3_t emptyvector;
@@ -487,9 +487,16 @@ qboolean CL_VM_UpdateView (double frametime)
 		prog->polygonbegin_guess2d = false;
 		// free memory for resources that are no longer referenced
 		PRVM_GarbageCollection(prog);
-		// pass in width and height as parameters (EXT_CSQC_1)
+		// pass in width and height and menu/focus state as parameters (EXT_CSQC_1)
 		PRVM_G_FLOAT(OFS_PARM0) = vid.width;
 		PRVM_G_FLOAT(OFS_PARM1) = vid.height;
+		/*
+		 * This should be fine for now but FTEQW uses flags for keydest
+		 * and checks that an array called "eyeoffset" is 0
+		 * 
+		 * Just a note in case there's compatibility problems later
+		 */
+		PRVM_G_FLOAT(OFS_PARM2) = key_dest == key_game;
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_UpdateView), "QC function CSQC_UpdateView is missing");
 		//VectorCopy(oldangles, cl.viewangles);
 		// Dresk : Reset Dmg Globals Here
@@ -502,11 +509,11 @@ qboolean CL_VM_UpdateView (double frametime)
 	return true;
 }
 
-qboolean CL_VM_ConsoleCommand (const char *text)
+qbool CL_VM_ConsoleCommand (const char *text)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
-	qboolean r = false;
+	qbool r = false;
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
@@ -524,11 +531,11 @@ qboolean CL_VM_ConsoleCommand (const char *text)
 	return r;
 }
 
-qboolean CL_VM_Parse_TempEntity (void)
+qbool CL_VM_Parse_TempEntity (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int			t;
-	qboolean	r = false;
+	qbool	r = false;
 	if(!cl.csqc_loaded)
 		return false;
 	CSQC_BEGIN
@@ -562,9 +569,9 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		// temporarily so that it can be set by the cvar command,
 		// and then reprotect it afterwards
 		int crcflags = csqc_progcrc.flags;
-		csqc_progcrc.flags &= ~CVAR_READONLY;
-		csqc_progsize.flags &= ~CVAR_READONLY;
-		Cmd_ExecuteString(&cmd_client, msg, src_command, true);
+		csqc_progcrc.flags &= ~CF_READONLY;
+		csqc_progsize.flags &= ~CF_READONLY;
+		Cmd_ExecuteString(&cmd_client, msg, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
@@ -596,7 +603,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 				l = sizeof(buf) - 1;
 			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
 
-			Cmd_ExecuteString(&cmd_client, buf, src_command, true);
+			Cmd_ExecuteString(&cmd_client, buf, src_local, true);
 
 			p += l;
 			if(*p == '\n')
@@ -604,7 +611,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 			else
 				break; // end of string or overflow
 		}
-		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_command, true); // don't inhibit CSQC loading
+		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
 		return;
 	}
 
@@ -708,10 +715,10 @@ void CL_VM_UpdateShowingScoresState (int showingscores)
 		CSQC_END
 	}
 }
-qboolean CL_VM_Event_Sound(int sound_num, float fvolume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed)
+qbool CL_VM_Event_Sound(int sound_num, float fvolume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	qboolean r = false;
+	qbool r = false;
 	if(cl.csqc_loaded)
 	{
 		CSQC_BEGIN
@@ -923,14 +930,14 @@ static void CLVM_count_edicts(prvm_prog_t *prog)
 	Con_Printf("touch     :%3i\n", solid);
 }
 
-static qboolean CLVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
+static qbool CLVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	return true;
 }
 
 // returns true if the packet is valid, false if end of file is reached
 // used for dumping the CSQC download into demo files
-qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t len, int crc, int cnt, sizebuf_t *buf, int protocol)
+qbool MakeDownloadPacket(const char *filename, unsigned char *data, size_t len, int crc, int cnt, sizebuf_t *buf, int protocol)
 {
 	int packetsize = buf->maxsize - 7; // byte short long
 	int npackets = ((int)len + packetsize - 1) / (packetsize);
@@ -1168,13 +1175,13 @@ CSQC_END
 	cl.csqc_loaded = false;
 }
 
-qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
+qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	prvm_edict_t *ed;
-	dp_model_t *mod;
+	model_t *mod;
 	matrix4x4_t matrix;
-	qboolean r = 0;
+	qbool r = 0;
 
 	CSQC_BEGIN;
 
@@ -1196,10 +1203,10 @@ qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 	return r;
 }
 
-qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin)
+qbool CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	qboolean ret = false;
+	qbool ret = false;
 	prvm_edict_t *ed;
 	vec3_t forward, left, up, origin, ang;
 	matrix4x4_t mat, matq;

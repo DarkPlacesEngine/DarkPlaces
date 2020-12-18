@@ -25,7 +25,7 @@
 #include "utf8lib.h"
 #include "csprogs.h"
 
-cvar_t con_closeontoggleconsole = {CVAR_CLIENT | CVAR_SAVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
+cvar_t con_closeontoggleconsole = {CF_CLIENT | CF_ARCHIVE, "con_closeontoggleconsole","1", "allows toggleconsole binds to close the console as well; when set to 2, this even works when not at the start of the line in console input; when set to 3, this works even if the toggleconsole key is the color tag"};
 
 /*
 key up events are sent even if in console mode
@@ -33,7 +33,7 @@ key up events are sent even if in console mode
 
 char		key_line[MAX_INPUTLINE];
 int			key_linepos;
-qboolean	key_insert = true;	// insert key toggle (for editing)
+qbool	key_insert = true;	// insert key toggle (for editing)
 keydest_t	key_dest;
 int			key_consoleactive;
 char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
@@ -41,7 +41,7 @@ char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 int			history_line;
 char		history_savedline[MAX_INPUTLINE];
 char		history_searchstring[MAX_INPUTLINE];
-qboolean	history_matchfound = false;
+qbool	history_matchfound = false;
 conbuffer_t history;
 
 extern cvar_t	con_textsize;
@@ -123,7 +123,7 @@ static void Key_History_Push(void)
 		history_matchfound = false;
 }
 
-static qboolean Key_History_Get_foundCommand(void)
+static qbool Key_History_Get_foundCommand(void)
 {
 	if (!history_matchfound)
 		return false;
@@ -663,7 +663,7 @@ static const keyname_t   keynames[] = {
 ==============================================================================
 */
 
-int Key_ClearEditLine(qboolean is_console)
+int Key_ClearEditLine(qbool is_console)
 {
 	if (is_console)
 	{
@@ -698,7 +698,7 @@ int chat_mode; // 0 for say, 1 for say_team, -1 for command
 char chat_buffer[MAX_INPUTLINE];
 int chat_bufferpos = 0;
 
-int Key_AddChar(int unicode, qboolean is_console)
+int Key_AddChar(int unicode, qbool is_console)
 {
 	char *line;
 	char buf[16];
@@ -745,7 +745,7 @@ int Key_AddChar(int unicode, qboolean is_console)
 // returns -1 if no key has been recognized
 // returns linepos (>= 0) otherwise
 // if is_console is true can modify key_line (doesn't change key_linepos)
-int Key_Parse_CommonKeys(cmd_state_t *cmd, qboolean is_console, int key, int unicode)
+int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicode)
 {
 	char *line;
 	int linepos, linestart;
@@ -840,7 +840,7 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qboolean is_console, int key, int uni
 			linepos += cvar_len;
 
 			// save the content of the variable in cvar_str
-			cvar_str = Cvar_VariableString(&cvars_all, cvar, CVAR_CLIENT | CVAR_SERVER);
+			cvar_str = Cvar_VariableString(&cvars_all, cvar, CF_CLIENT | CF_SERVER);
 			cvar_str_len = (int)strlen(cvar_str);
 			if (cvar_str_len==0)
 				return linepos;
@@ -1278,7 +1278,7 @@ Key_Console(cmd_state_t *cmd, int key, int unicode)
 		// text zoom reset
 		if ((key == '0' || key == K_KP_INS) && KM_CTRL)
 		{
-			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CVAR_CLIENT | CVAR_SERVER)));
+			Cvar_SetValueQuick(&con_textsize, atoi(Cvar_VariableDefString(&cvars_all, "con_textsize", CF_CLIENT | CF_SERVER)));
 			return;
 		}
 	}
@@ -1305,7 +1305,7 @@ Key_Message (cmd_state_t *cmd, int key, int ascii)
 	if (key == K_ENTER || key == K_KP_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
-			Cmd_ExecuteString(cmd, chat_buffer, src_command, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
+			Cmd_ExecuteString(cmd, chat_buffer, src_local, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
 		else
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
@@ -1401,7 +1401,7 @@ Key_KeynumToString (int keynum, char *tinystr, size_t tinystrlength)
 }
 
 
-qboolean
+qbool
 Key_SetBinding (int keynum, int bindmap, const char *binding)
 {
 	char *newbinding;
@@ -1436,7 +1436,7 @@ void Key_GetBindMap(int *fg, int *bg)
 		*bg = key_bmap2;
 }
 
-qboolean Key_SetBindMap(int fg, int bg)
+qbool Key_SetBindMap(int fg, int bg)
 {
 	if(fg >= MAX_BINDMAPS)
 		return false;
@@ -1711,18 +1711,18 @@ Key_Init (void)
 //
 // register our functions
 //
-	Cmd_AddCommand(CMD_CLIENT, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
-	Cmd_AddCommand(CMD_CLIENT, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
-	Cmd_AddCommand(CMD_CLIENT, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
+	Cmd_AddCommand(CF_CLIENT, "in_bind", Key_In_Bind_f, "binds a command to the specified key in the selected bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_unbind", Key_In_Unbind_f, "removes command on the specified key in the selected bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_bindlist", Key_In_BindList_f, "bindlist: displays bound keys for all bindmaps, or the given bindmap");
+	Cmd_AddCommand(CF_CLIENT, "in_bindmap", Key_In_Bindmap_f, "selects active foreground and background (used only if a key is not bound in the foreground) bindmaps for typing");
+	Cmd_AddCommand(CF_CLIENT, "in_releaseall", Key_ReleaseAll_f, "releases all currently pressed keys (debug command)");
 
-	Cmd_AddCommand(CMD_CLIENT, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
-	Cmd_AddCommand(CMD_CLIENT, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
-	Cmd_AddCommand(CMD_CLIENT, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
-	Cmd_AddCommand(CMD_CLIENT, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
+	Cmd_AddCommand(CF_CLIENT, "bind", Key_Bind_f, "binds a command to the specified key in bindmap 0");
+	Cmd_AddCommand(CF_CLIENT, "unbind", Key_Unbind_f, "removes a command on the specified key in bindmap 0");
+	Cmd_AddCommand(CF_CLIENT, "bindlist", Key_BindList_f, "bindlist: displays bound keys for bindmap 0 bindmaps");
+	Cmd_AddCommand(CF_CLIENT, "unbindall", Key_Unbindall_f, "removes all commands from all keys in all bindmaps (leaving only shift-escape and escape)");
 
-	Cmd_AddCommand(CMD_CLIENT, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
+	Cmd_AddCommand(CF_CLIENT, "history", Key_History_f, "prints the history of executed commands (history X prints the last X entries, history -c clears the whole history)");
 
 	Cvar_RegisterVariable (&con_closeontoggleconsole);
 }
@@ -1794,14 +1794,14 @@ typedef struct eventqueueitem_s
 {
 	int key;
 	int ascii;
-	qboolean down;
+	qbool down;
 }
 eventqueueitem_t;
 static int events_blocked = 0;
 static eventqueueitem_t eventqueue[32];
 static unsigned eventqueue_idx = 0;
 
-static void Key_EventQueue_Add(int key, int ascii, qboolean down)
+static void Key_EventQueue_Add(int key, int ascii, qbool down)
 {
 	if(eventqueue_idx < sizeof(eventqueue) / sizeof(*eventqueue))
 	{
@@ -1829,11 +1829,11 @@ void Key_EventQueue_Unblock(void)
 }
 
 void
-Key_Event (int key, int ascii, qboolean down)
+Key_Event (int key, int ascii, qbool down)
 {
 	cmd_state_t *cmd = &cmd_client;
 	const char *bind;
-	qboolean q;
+	qbool q;
 	keydest_t keydest = key_dest;
 	char vabuf[1024];
 	long curtime;
@@ -2008,7 +2008,7 @@ Key_Event (int key, int ascii, qboolean down)
 			return;
 		}
 
-		if (COM_CheckParm ("-noconsole"))
+		if (Sys_CheckParm ("-noconsole"))
 			return; // only allow the key bind to turn off console
 
 		Key_Console (cmd, key, ascii);

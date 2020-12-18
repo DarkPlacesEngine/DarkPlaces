@@ -10,7 +10,7 @@ extern matrix4x4_t gl_projectionmatrix;
 extern matrix4x4_t gl_modelviewprojectionmatrix;
 extern float gl_modelview16f[16];
 extern float gl_modelviewprojection16f[16];
-extern qboolean gl_modelmatrixchanged;
+extern qbool gl_modelmatrixchanged;
 
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelement3i[(POLYGONELEMENTS_MAXPOINTS-2)*3];
@@ -20,7 +20,7 @@ extern int quadelement3i[QUADELEMENTS_MAXQUADS*6];
 extern unsigned short quadelement3s[QUADELEMENTS_MAXQUADS*6];
 
 void R_Viewport_TransformToScreen(const r_viewport_t *v, const vec4_t in, vec4_t out);
-qboolean R_ScissorForBBox(const float *mins, const float *maxs, int *scissor);
+qbool R_ScissorForBBox(const float *mins, const float *maxs, int *scissor);
 void R_Viewport_InitOrtho(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float x1, float y1, float x2, float y2, float zNear, float zFar, const float *nearplane);
 void R_Viewport_InitOrtho3D(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float nearclip, float farclip, const float *nearplane);
 void R_Viewport_InitPerspective(r_viewport_t *v, const matrix4x4_t *cameramatrix, int x, int y, int width, int height, float frustumx, float frustumy, float zNear, float zFar, const float *nearplane);
@@ -32,15 +32,15 @@ void R_GetViewport(r_viewport_t *v);
 void GL_Finish(void);
 
 void GL_BlendFunc(int blendfunc1, int blendfunc2);
-void GL_BlendEquationSubtract(qboolean negated);
+void GL_BlendEquationSubtract(qbool negated);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_DepthFunc(int state);
 void GL_DepthRange(float nearfrac, float farfrac);
-void R_SetStencil(qboolean enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask);
+void R_SetStencil(qbool enable, int writemask, int fail, int zfail, int zpass, int compare, int comparereference, int comparemask);
 void GL_PolygonOffset(float planeoffset, float depthoffset);
 void GL_CullFace(int state);
-void GL_AlphaToCoverage(qboolean state);
+void GL_AlphaToCoverage(qbool state);
 void GL_ColorMask(int r, int g, int b, int a);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ActiveTexture(unsigned int num);
@@ -71,10 +71,10 @@ void R_Mesh_Finish(void);
 
 
 // vertex buffer and index buffer creation/updating/freeing
-r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qboolean isindexbuffer, qboolean isuniformbuffer, qboolean isdynamic, qboolean isindex16);
-void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qboolean subdata, size_t offset);
+r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qbool isindexbuffer, qbool isuniformbuffer, qbool isdynamic, qbool isindex16);
+void R_Mesh_UpdateMeshBuffer(r_meshbuffer_t *buffer, const void *data, size_t size, qbool subdata, size_t offset);
 void R_Mesh_DestroyMeshBuffer(r_meshbuffer_t *buffer);
-void GL_Mesh_ListVBOs(qboolean printeach);
+void GL_Mesh_ListVBOs(qbool printeach);
 
 void R_Mesh_PrepareVertices_Vertex3f(int numvertices, const float *vertex3f, const r_meshbuffer_t *buffer, int bufferoffset);
 void R_Mesh_PrepareVertices_Generic_Arrays(int numvertices, const float *vertex3f, const float *color4f, const float *texcoord2f);
@@ -103,9 +103,9 @@ void R_Mesh_ClearBindingsForTexture(int texnum);
 void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtriangles, const int *element3i, const r_meshbuffer_t *element3i_indexbuffer, int element3i_bufferoffset, const unsigned short *element3s, const r_meshbuffer_t *element3s_indexbuffer, int element3s_bufferoffset);
 
 // saves a section of the rendered frame to a .tga or .jpg file
-qboolean SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg, qboolean png, qboolean gammacorrect, qboolean keep_alpha);
+qbool SCR_ScreenShot(char *filename, unsigned char *buffer1, unsigned char *buffer2, int x, int y, int width, int height, qbool flipx, qbool flipy, qbool flipdiagonal, qbool jpeg, qbool png, qbool gammacorrect, qbool keep_alpha);
 // used by R_Envmap_f and internally in backend, clears the frame
-void R_ClearScreen(qboolean fogcolor);
+void R_ClearScreen(qbool fogcolor);
 
 #endif
 

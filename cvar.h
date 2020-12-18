@@ -19,9 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // cvar.h
 
-struct cmd_state_s;
-typedef struct cmd_state_s cmd_state_t;
-
 /*
 
 cvar_t variables are used to hold scalar or string variables that can be changed or displayed at the console or prog code as well as accessed directly
@@ -59,61 +56,10 @@ interface from being ambiguous.
 #ifndef CVAR_H
 #define CVAR_H
 
-// cvar flags
-
-#define CVAR_SAVE 1
-#define CVAR_NOTIFY 2
-#define CVAR_READONLY 4
-#define CVAR_SERVERINFO 8
-#define CVAR_USERINFO 16
-// CVAR_PRIVATE means do not $ expand or sendcvar this cvar under any circumstances (rcon_password uses this)
-#define CVAR_PRIVATE 32
-// for engine-owned cvars that must not be reset on gametype switch (e.g. scr_screenshot_name, which otherwise isn't set to the mod name properly)
-#define CVAR_NORESETTODEFAULTS 64
-// cvar is accessible in client
-#define CVAR_CLIENT 128
-// cvar is accessible in dedicated server
-#define CVAR_SERVER 256
-// used to determine if flags is valid
-#define CVAR_MAXFLAGSVAL 511
-// for internal use only!
-#define CVAR_DEFAULTSET (1<<30)
-#define CVAR_ALLOCATED (1<<31)
-
-/*
-// type of a cvar for menu purposes
-#define CVARMENUTYPE_FLOAT 1
-#define CVARMENUTYPE_INTEGER 2
-#define CVARMENUTYPE_SLIDER 3
-#define CVARMENUTYPE_BOOL 4
-#define CVARMENUTYPE_STRING 5
-#define CVARMENUTYPE_OPTION 6
-
-// which menu to put a cvar in
-#define CVARMENU_GRAPHICS 1
-#define CVARMENU_SOUND 2
-#define CVARMENU_INPUT 3
-#define CVARMENU_NETWORK 4
-#define CVARMENU_SERVER 5
-
-#define MAX_CVAROPTIONS 16
-
-typedef struct cvaroption_s
-{
-	int value;
-	const char *name;
-}
-cvaroption_t;
-
-typedef struct menucvar_s
-{
-	int type;
-	float valuemin, valuemax, valuestep;
-	int numoptions;
-	cvaroption_t optionlist[MAX_CVAROPTIONS];
-}
-menucvar_t;
-*/
+#include "qtypes.h"
+#include "qdefs.h"
+struct cmd_state_s;
+struct qfile_s;
 
 typedef struct cvar_s
 {
@@ -130,25 +76,16 @@ typedef struct cvar_s
 	const char *defstring;
 
 	void (*callback)(struct cvar_s *var);
-	qboolean ignore_callback;
+	qbool ignore_callback;
 
 	char **aliases;
 	int aliasindex;
 
-	// values at init (for Cvar_RestoreInitState)
-	qboolean initstate; // indicates this existed at init
-	int initflags;
-	const char *initstring;
-	const char *initdescription;
-	int initinteger;
-	float initvalue;
-	float initvector[3];
-	const char *initdefstring;
+	struct cvar_s *initstate; // snapshot of cvar during init
 
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];
 
-	//menucvar_t menuinfo;
 	struct cvar_s *next;
 } cvar_t;
 
@@ -168,16 +105,6 @@ cvar_state_t;
 extern cvar_state_t cvars_all;
 extern cvar_state_t cvars_null; // used by cmd_serverfromclient which intentionally has no cvars available
 
-/*
-void Cvar_MenuSlider(cvar_t *variable, int menu, float slider_min, float slider_max, float slider_step);
-void Cvar_MenuBool(cvar_t *variable, int menu, const char *name_false, const char *name_true);
-void Cvar_MenuFloat(cvar_t *variable, int menu, float range_min, float range_max);
-void Cvar_MenuInteger(cvar_t *variable, int menu, int range_min, int range_max);
-void Cvar_MenuString(cvar_t *variable, int menu);
-void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name[16]);
-*/
-
-
 void Cvar_RegisterAlias(cvar_t *variable, const char *alias );
 
 void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
@@ -186,11 +113,10 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
 /// archive elements set.
 void Cvar_RegisterVariable(cvar_t *variable);
 
-qboolean Cvar_Readonly (cvar_t *var, const char *cmd_name);
+qbool Cvar_Readonly (cvar_t *var, const char *cmd_name);
 
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
-void Cvar_Set_NoCallback (cvar_t *var, const char *value);
 
 /// expands value to a string and calls Cvar_Set
 void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, float value);
@@ -220,11 +146,11 @@ const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, int
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
-void Cvar_PrintHelp(cvar_t *cvar, const char *name, qboolean full);
+void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full);
 
 void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
 
-qboolean Cvar_Command (cmd_state_t *cmd);
+qbool Cvar_Command (struct cmd_state_s *cmd);
 // called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
@@ -232,13 +158,13 @@ qboolean Cvar_Command (cmd_state_t *cmd);
 void Cvar_SaveInitState(cvar_state_t *cvars);
 void Cvar_RestoreInitState(cvar_state_t *cvars);
 
-void Cvar_UnlockDefaults(cmd_state_t *cmd);
-void Cvar_LockDefaults_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd);
-void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd);
+void Cvar_UnlockDefaults(struct cmd_state_s *cmd);
+void Cvar_LockDefaults_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_All_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_NoSaveOnly_f(struct cmd_state_s *cmd);
+void Cvar_ResetToDefaults_SaveOnly_f(struct cmd_state_s *cmd);
 
-void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f);
+void Cvar_WriteVariables (cvar_state_t *cvars, struct qfile_s *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
@@ -255,11 +181,11 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 /// Referenced in cmd.c in Cmd_Init hence it's inclusion here.
 /// Added by EvilTypeGuy eviltypeguy@qeradiant.com
 /// Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
-void Cvar_List_f(cmd_state_t *cmd);
+void Cvar_List_f(struct cmd_state_s *cmd);
 
-void Cvar_Set_f(cmd_state_t *cmd);
-void Cvar_SetA_f(cmd_state_t *cmd);
-void Cvar_Del_f(cmd_state_t *cmd);
+void Cvar_Set_f(struct cmd_state_s *cmd);
+void Cvar_SetA_f(struct cmd_state_s *cmd);
+void Cvar_Del_f(struct cmd_state_s *cmd);
 // commands to create new cvars (or set existing ones)
 // seta creates an archived cvar (saved to config)
 

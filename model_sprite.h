@@ -37,5 +37,12 @@ typedef struct mspriteframe_s
 	float	up, down, left, right;
 } mspriteframe_t;
 
+typedef struct model_sprite_s
+{
+	int				sprnum_type;
+	mspriteframe_t	*sprdata_frames;
+}
+model_sprite_t;
+
 #endif
 

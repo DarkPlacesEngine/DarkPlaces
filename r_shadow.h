@@ -2,49 +2,54 @@
 #ifndef R_SHADOW_H
 #define R_SHADOW_H
 
+#include "qtypes.h"
 #include "taskqueue.h"
+#include "matrixlib.h"
+struct rtlight_s;
+struct msurface_s;
+struct entity_render_s;
 
 #define R_SHADOW_SHADOWMAP_NUMCUBEMAPS 8
 
-extern cvar_t r_shadow_bumpscale_basetexture;
-extern cvar_t r_shadow_bumpscale_bumpmap;
-extern cvar_t r_shadow_debuglight;
-extern cvar_t r_shadow_gloss;
-extern cvar_t r_shadow_gloss2intensity;
-extern cvar_t r_shadow_glossintensity;
-extern cvar_t r_shadow_glossexponent;
-extern cvar_t r_shadow_gloss2exponent;
-extern cvar_t r_shadow_glossexact;
-extern cvar_t r_shadow_lightattenuationpower;
-extern cvar_t r_shadow_lightattenuationscale;
-extern cvar_t r_shadow_lightintensityscale;
-extern cvar_t r_shadow_lightradiusscale;
-extern cvar_t r_shadow_projectdistance;
-extern cvar_t r_shadow_frontsidecasting;
-extern cvar_t r_shadow_realtime_dlight;
-extern cvar_t r_shadow_realtime_dlight_shadows;
-extern cvar_t r_shadow_realtime_dlight_svbspculling;
-extern cvar_t r_shadow_realtime_dlight_portalculling;
-extern cvar_t r_shadow_realtime_world;
-extern cvar_t r_shadow_realtime_world_lightmaps;
-extern cvar_t r_shadow_realtime_world_shadows;
-extern cvar_t r_shadow_realtime_world_compile;
-extern cvar_t r_shadow_realtime_world_compileshadow;
-extern cvar_t r_shadow_realtime_world_compilesvbsp;
-extern cvar_t r_shadow_realtime_world_compileportalculling;
-extern cvar_t r_shadow_scissor;
+extern struct cvar_s r_shadow_bumpscale_basetexture;
+extern struct cvar_s r_shadow_bumpscale_bumpmap;
+extern struct cvar_s r_shadow_debuglight;
+extern struct cvar_s r_shadow_gloss;
+extern struct cvar_s r_shadow_gloss2intensity;
+extern struct cvar_s r_shadow_glossintensity;
+extern struct cvar_s r_shadow_glossexponent;
+extern struct cvar_s r_shadow_gloss2exponent;
+extern struct cvar_s r_shadow_glossexact;
+extern struct cvar_s r_shadow_lightattenuationpower;
+extern struct cvar_s r_shadow_lightattenuationscale;
+extern struct cvar_s r_shadow_lightintensityscale;
+extern struct cvar_s r_shadow_lightradiusscale;
+extern struct cvar_s r_shadow_projectdistance;
+extern struct cvar_s r_shadow_frontsidecasting;
+extern struct cvar_s r_shadow_realtime_dlight;
+extern struct cvar_s r_shadow_realtime_dlight_shadows;
+extern struct cvar_s r_shadow_realtime_dlight_svbspculling;
+extern struct cvar_s r_shadow_realtime_dlight_portalculling;
+extern struct cvar_s r_shadow_realtime_world;
+extern struct cvar_s r_shadow_realtime_world_lightmaps;
+extern struct cvar_s r_shadow_realtime_world_shadows;
+extern struct cvar_s r_shadow_realtime_world_compile;
+extern struct cvar_s r_shadow_realtime_world_compileshadow;
+extern struct cvar_s r_shadow_realtime_world_compilesvbsp;
+extern struct cvar_s r_shadow_realtime_world_compileportalculling;
+extern struct cvar_s r_shadow_scissor;
 
 // used by shader for bouncegrid feature
 typedef struct r_shadow_bouncegrid_settings_s
 {
-	qboolean staticmode;
-	qboolean directionalshading;
-	qboolean includedirectlighting;
-	qboolean blur;
-	qboolean normalizevectors;
+	qbool staticmode;
+	qbool directionalshading;
+	qbool includedirectlighting;
+	qbool blur;
+	qbool normalizevectors;
 	int floatcolors;
 	float dlightparticlemultiplier;
-	qboolean hitmodels;
+	qbool hitmodels;
 	float lightradiusscale;
 	int maxbounce;
 	float lightpathsize;
@@ -88,11 +93,11 @@ r_shadow_bouncegrid_photon_t;
 typedef struct r_shadow_bouncegrid_state_s
 {
 	r_shadow_bouncegrid_settings_t settings;
-	qboolean capable;
-	qboolean allowdirectionalshading;
-	qboolean directional; // copied from settings.directionalshading after createtexture is decided
-	qboolean createtexture; // set to true to recreate the texture rather than updating it - happens when size changes or directional changes
-	rtexture_t *texture;
+	qbool capable;
+	qbool allowdirectionalshading;
+	qbool directional; // copied from settings.directionalshading after createtexture is decided
+	qbool createtexture; // set to true to recreate the texture rather than updating it - happens when size changes or directional changes
+	struct rtexture_s *texture;
 	matrix4x4_t matrix;
 	vec_t intensity;
 	double lastupdatetime;
@@ -133,23 +138,23 @@ r_shadow_bouncegrid_state_t;
 extern r_shadow_bouncegrid_state_t r_shadow_bouncegrid_state;
 
 void R_Shadow_Init(void);
-qboolean R_Shadow_ShadowMappingEnabled(void);
+qbool R_Shadow_ShadowMappingEnabled(void);
 void R_Shadow_ShadowMapFromList(int numverts, int numtris, const float *vertex3f, const int *elements, int numsidetris, const int *sidetotals, const unsigned char *sides, const int *sidetris);
 int R_Shadow_CalcTriangleSideMask(const vec3_t p1, const vec3_t p2, const vec3_t p3, float bias);
 int R_Shadow_CalcSphereSideMask(const vec3_t p1, float radius, float bias);
 int R_Shadow_ChooseSidesFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const matrix4x4_t *worldtolight, const vec3_t projectorigin, const vec3_t projectdirection, const vec3_t lightmins, const vec3_t lightmaxs, const vec3_t surfacemins, const vec3_t surfacemaxs, int *totals);
-void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **texturesurfacelist);
+void R_Shadow_RenderLighting(int texturenumsurfaces, const struct msurface_s **texturesurfacelist);
 void R_Shadow_RenderMode_Begin(void);
-void R_Shadow_RenderMode_ActiveLight(const rtlight_t *rtlight);
+void R_Shadow_RenderMode_ActiveLight(const struct rtlight_s *rtlight);
 void R_Shadow_RenderMode_Reset(void);
-void R_Shadow_RenderMode_Lighting(qboolean transparent, qboolean shadowmapping, qboolean noselfshadowpass);
-void R_Shadow_RenderMode_DrawDeferredLight(qboolean shadowmapping);
-void R_Shadow_RenderMode_VisibleLighting(qboolean transparent);
+void R_Shadow_RenderMode_Lighting(qbool transparent, qbool shadowmapping, qbool noselfshadowpass);
+void R_Shadow_RenderMode_DrawDeferredLight(qbool shadowmapping);
+void R_Shadow_RenderMode_VisibleLighting(qbool transparent);
 void R_Shadow_RenderMode_End(void);
 void R_Shadow_ClearStencil(void);
-void R_Shadow_SetupEntityLight(const entity_render_t *ent);
+void R_Shadow_SetupEntityLight(const struct entity_render_s *ent);
 
-qboolean R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
+qbool R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
 // these never change, they are used to create attenuation matrices
 extern matrix4x4_t matrix_attenuationxyz;
@@ -157,11 +162,11 @@ extern matrix4x4_t matrix_attenuationz;
 
 void R_Shadow_UpdateWorldLightSelection(void);
 
-extern rtlight_t *r_shadow_compilingrtlight;
+extern struct rtlight_s *r_shadow_compilingrtlight;
 
-void R_RTLight_Update(rtlight_t *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, int shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
-void R_RTLight_Compile(rtlight_t *rtlight);
-void R_RTLight_Uncompile(rtlight_t *rtlight);
+void R_RTLight_Update(struct rtlight_s *rtlight, int isstatic, matrix4x4_t *matrix, vec3_t color, int style, const char *cubemapname, int shadow, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);
+void R_RTLight_Compile(struct rtlight_s *rtlight);
+void R_RTLight_Uncompile(struct rtlight_s *rtlight);
 
 void R_Shadow_PrepareLights(void);
 void R_Shadow_ClearShadowMapTexture(void);

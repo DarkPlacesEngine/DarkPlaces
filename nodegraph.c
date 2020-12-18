@@ -101,7 +101,7 @@ static int nodegraph_query_sort_function(const void *left, const void *right)
 }
 
 // ============================================================================
-static qboolean nodegraph_graph_queries_clear(short graphid)
+static qbool nodegraph_graph_queries_clear(short graphid)
 {
 	short i;
 
@@ -125,7 +125,7 @@ static qboolean nodegraph_graph_queries_clear(short graphid)
 }
 
 // ============================================================================
-static qboolean nodegraph_graph_rebuild_floyd_warshall_matrices(void)
+static qbool nodegraph_graph_rebuild_floyd_warshall_matrices(void)
 {
 	short graphid, i, j, k;
 
@@ -196,7 +196,7 @@ static qboolean nodegraph_graph_rebuild_floyd_warshall_matrices(void)
 }
 
 // ============================================================================
-qboolean nodegraph_graphset_clear(void)
+qbool nodegraph_graphset_clear(void)
 {
 	short i;
 
@@ -209,12 +209,12 @@ qboolean nodegraph_graphset_clear(void)
 }
 
 // ============================================================================
-qboolean nodegraph_graphset_load(void)
+qbool nodegraph_graphset_load(void)
 {
 	char vabuf[1024];
 	char *graphset_data;
 
-	qboolean nodegraph_graphset_has_been_loaded;
+	qbool nodegraph_graphset_has_been_loaded;
 
 	nodegraph_graphset_has_been_loaded = (graphset_data = (char *)FS_LoadFile(va(vabuf, sizeof(vabuf), "%s.qng", sv.worldnamenoextension), tempmempool, true, NULL)) != NULL;
 
@@ -258,7 +258,7 @@ qboolean nodegraph_graphset_load(void)
 					for (j = 0; j < nodegraph->nodes_count; j++)
 					{
 						int entryindex = GRAPH_MATRIX_ELEMENT_INDEX_SIZED(i, j, nodegraph->nodes_count);
-						qboolean does_link_exist = ((nodegraph_links_sub_matrix[entryindex / 8] & (1 << (entryindex % 8))) != 0);
+						qbool does_link_exist = ((nodegraph_links_sub_matrix[entryindex / 8] & (1 << (entryindex % 8))) != 0);
 
 						if (does_link_exist)
 						{
@@ -300,14 +300,14 @@ qboolean nodegraph_graphset_load(void)
 }
 
 // ============================================================================
-qboolean nodegraph_graphset_save(void)
+qbool nodegraph_graphset_save(void)
 {   
 	char vabuf[1024];
 
 	char *graphset_data;
 	size_t graphset_data_size;
 
-	qboolean nodegraph_graphset_has_been_saved;
+	qbool nodegraph_graphset_has_been_saved;
 
 	short graphid;
 	short graphset_nodes_count[NODEGRAPH_GRAPHSET_SIZE_LIMIT];
@@ -406,7 +406,7 @@ qboolean nodegraph_graphset_save(void)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_clear(short graphid)
+qbool nodegraph_graph_clear(short graphid)
 {
 	nodegraph_t *nodegraph;
 	nodegraph_floyd_warshall_matrix_t *floyd_matrix;
@@ -445,7 +445,7 @@ short nodegraph_graph_nodes_count(short graphid)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_add_node(short graphid, const vec3_t node)
+qbool nodegraph_graph_add_node(short graphid, const vec3_t node)
 {
 	nodegraph_t *nodegraph;
 
@@ -472,7 +472,7 @@ qboolean nodegraph_graph_add_node(short graphid, const vec3_t node)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_remove_node(short graphid, short nodeid)
+qbool nodegraph_graph_remove_node(short graphid, short nodeid)
 {
 	nodegraph_t *nodegraph;
 
@@ -512,7 +512,7 @@ qboolean nodegraph_graph_remove_node(short graphid, short nodeid)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_is_node_valid(short graphid, short nodeid)
+qbool nodegraph_graph_is_node_valid(short graphid, short nodeid)
 {
 	nodegraph_t *nodegraph;
 
@@ -533,7 +533,7 @@ qboolean nodegraph_graph_is_node_valid(short graphid, short nodeid)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_get_node(short graphid, short nodeid, vec3_t outnode)
+qbool nodegraph_graph_get_node(short graphid, short nodeid, vec3_t outnode)
 {
 	nodegraph_t *nodegraph;
 
@@ -559,7 +559,7 @@ qboolean nodegraph_graph_get_node(short graphid, short nodeid, vec3_t outnode)
 }
 
 // ============================================================================
-qboolean nodegraph_graph_add_link(short graphid, short nodeidfrom, short nodeidto)
+qbool nodegraph_graph_add_link(short graphid, short nodeidfrom, short nodeidto)
 {
 	nodegraph_t *nodegraph;
 
@@ -592,7 +592,7 @@ qboolean nodegraph_graph_add_link(short graphid, short nodeidfrom, short nodeidt
 }
 
 // ============================================================================
-qboolean nodegraph_graph_remove_link(short graphid, short nodeidfrom, short nodeidto)
+qbool nodegraph_graph_remove_link(short graphid, short nodeidfrom, short nodeidto)
 {
 	nodegraph_t *nodegraph;
 
@@ -625,7 +625,7 @@ qboolean nodegraph_graph_remove_link(short graphid, short nodeidfrom, short node
 }
 
 // ============================================================================
-qboolean nodegraph_graph_does_link_exist(short graphid, short nodeidfrom, short nodeidto)
+qbool nodegraph_graph_does_link_exist(short graphid, short nodeidfrom, short nodeidto)
 {
 	nodegraph_t *nodegraph;
 
@@ -904,7 +904,7 @@ short nodegraph_graph_query_nodes_in_radius(short graphid, const vec3_t position
 }
 
 // ============================================================================
-qboolean nodegraph_query_release(short queryid)
+qbool nodegraph_query_release(short queryid)
 {
 	nodegraph_query_t *query;
 
@@ -937,7 +937,7 @@ short nodegraph_query_entries_count(short queryid)
 }
 
 // ============================================================================
-qboolean nodegraph_query_is_valid(short queryid)
+qbool nodegraph_query_is_valid(short queryid)
 {
 	nodegraph_query_t *query;
 
@@ -996,14 +996,14 @@ short nodegraph_query_get_nodeid(short queryid, short entryid)
 }
 
 // ============================================================================
-qboolean nodegraph_moveprobe_fly(const vec3_t nodefrom, const vec3_t nodeto, const vec3_t mins, const vec3_t maxs, short type)
+qbool nodegraph_moveprobe_fly(const vec3_t nodefrom, const vec3_t nodeto, const vec3_t mins, const vec3_t maxs, short type)
 {
 	int contents = SUPERCONTENTS_SOLID | SUPERCONTENTS_MONSTERCLIP | SUPERCONTENTS_BOTCLIP;
 
 	vec3_t from, to;
 	trace_t trace;
 
-	qboolean connected;
+	qbool connected;
 
 	if (type == NODEGRAPH_MOVEPROBE_TYPE_FLY_AIR || type == NODEGRAPH_MOVEPROBE_TYPE_FLY_WATER)
 	{
@@ -1036,7 +1036,7 @@ qboolean nodegraph_moveprobe_fly(const vec3_t nodefrom, const vec3_t nodeto, con
 }
 
 // ============================================================================
-qboolean nodegraph_moveprobe_walk(const vec3_t nodefrom, const vec3_t nodeto, const vec3_t mins, const vec3_t maxs, float stepheight, float dropheight)
+qbool nodegraph_moveprobe_walk(const vec3_t nodefrom, const vec3_t nodeto, const vec3_t mins, const vec3_t maxs, float stepheight, float dropheight)
 {
 	int contents = SUPERCONTENTS_SOLID | SUPERCONTENTS_MONSTERCLIP | SUPERCONTENTS_BOTCLIP;
 
@@ -1045,7 +1045,7 @@ qboolean nodegraph_moveprobe_walk(const vec3_t nodefrom, const vec3_t nodeto, co
 
 	vec3_t from, to, direction, destination;
 
-	qboolean connected = false;
+	qbool connected = false;
 
 	VectorSubtract(nodeto, nodefrom, direction);
 	distance = VectorLength(direction);

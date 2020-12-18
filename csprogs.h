@@ -80,27 +80,27 @@ extern cvar_t csqc_polygons_defaultmaterial_nocullface;
 
 void CL_VM_PreventInformationLeaks(void);
 
-qboolean MakeDownloadPacket(const char *filename, unsigned char *data, size_t len, int crc, int cnt, sizebuf_t *buf, int protocol);
+qbool MakeDownloadPacket(const char *filename, unsigned char *data, size_t len, int crc, int cnt, sizebuf_t *buf, int protocol);
 
-qboolean CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
+qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out);
 
-qboolean CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin);
+qbool CL_VM_TransformView(int entnum, matrix4x4_t *viewmatrix, mplane_t *clipplane, vec3_t visorigin);
 
 void CL_VM_Init(void);
 void CL_VM_ShutDown(void);
 void CL_VM_UpdateIntermissionState(int intermission);
 void CL_VM_UpdateShowingScoresState(int showingscores);
-qboolean CL_VM_InputEvent(int eventtype, float x, float y);
-qboolean CL_VM_ConsoleCommand(const char *text);
+qbool CL_VM_InputEvent(int eventtype, float x, float y);
+qbool CL_VM_ConsoleCommand(const char *text);
 void CL_VM_UpdateDmgGlobals(int dmg_take, int dmg_save, vec3_t dmg_origin);
 void CL_VM_UpdateIntermissionState(int intermission);
-qboolean CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed);
-qboolean CL_VM_Parse_TempEntity(void);
+qbool CL_VM_Event_Sound(int sound_num, float volume, int channel, float attenuation, int ent, vec3_t pos, int flags, float speed);
+qbool CL_VM_Parse_TempEntity(void);
 void CL_VM_Parse_StuffCmd(const char *msg);
 void CL_VM_Parse_CenterPrint(const char *msg);
 int CL_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
 int CL_GetTagMatrix(prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int tagindex, prvm_vec_t *shadingorigin);
-void CL_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qboolean viewmatrix);
+void CL_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix);
 void QW_CL_StartUpload(unsigned char *data, int size);
 
 void CSQC_UpdateNetworkTimes(double newtime, double oldtime);
@@ -110,10 +110,10 @@ void CSQC_RelinkAllEntities(int drawmask);
 void CSQC_RelinkCSQCEntities(void);
 void CSQC_Predraw(prvm_edict_t *ed);
 void CSQC_Think(prvm_edict_t *ed);
-qboolean CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum);//csprogs.c
+qbool CSQC_AddRenderEdict(prvm_edict_t *ed, int edictnum);//csprogs.c
 void CSQC_R_RecalcView(void);
 
-dp_model_t *CL_GetModelByIndex(int modelindex);
+model_t *CL_GetModelByIndex(int modelindex);
 
 int CL_VM_GetViewEntity(void);
 

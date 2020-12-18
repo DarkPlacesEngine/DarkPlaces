@@ -1,6 +1,8 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include "qtypes.h"
+
 // enable Sys_PrintfToTerminal calls on nearly every threading call
 //#define THREADDEBUG
 //#define THREADDISABLE
@@ -35,7 +37,7 @@ typedef struct {int value;} Thread_Atomic;
 
 int Thread_Init(void);
 void Thread_Shutdown(void);
-qboolean Thread_HasThreads(void);
+qbool Thread_HasThreads(void);
 void *_Thread_CreateMutex(const char *filename, int fileline);
 void _Thread_DestroyMutex(void *mutex, const char *filename, int fileline);
 int _Thread_LockMutex(void *mutex, const char *filename, int fileline);
@@ -54,8 +56,8 @@ int _Thread_AtomicGet(Thread_Atomic *ref, const char *filename, int fileline);
 int _Thread_AtomicSet(Thread_Atomic *ref, int v, const char *filename, int fileline);
 int _Thread_AtomicAdd(Thread_Atomic *ref, int v, const char *filename, int fileline);
 void _Thread_AtomicIncRef(Thread_Atomic *ref, const char *filename, int fileline);
-qboolean _Thread_AtomicDecRef(Thread_Atomic *ref, const char *filename, int fileline);
-qboolean _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline);
+qbool _Thread_AtomicDecRef(Thread_Atomic *ref, const char *filename, int fileline);
+qbool _Thread_AtomicTryLock(Thread_SpinLock *lock, const char *filename, int fileline);
 void _Thread_AtomicLock(Thread_SpinLock *lock, const char *filename, int fileline);
 void _Thread_AtomicUnlock(Thread_SpinLock *lock, const char *filename, int fileline);
 

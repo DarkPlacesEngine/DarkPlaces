@@ -164,36 +164,36 @@ const char *qw_svc_strings[128] =
 
 //=============================================================================
 
-cvar_t cl_worldmessage = {CVAR_CLIENT | CVAR_READONLY, "cl_worldmessage", "", "title of current level"};
-cvar_t cl_worldname = {CVAR_CLIENT | CVAR_READONLY, "cl_worldname", "", "name of current worldmodel"};
-cvar_t cl_worldnamenoextension = {CVAR_CLIENT | CVAR_READONLY, "cl_worldnamenoextension", "", "name of current worldmodel without extension"};
-cvar_t cl_worldbasename = {CVAR_CLIENT | CVAR_READONLY, "cl_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
+cvar_t cl_worldmessage = {CF_CLIENT | CF_READONLY, "cl_worldmessage", "", "title of current level"};
+cvar_t cl_worldname = {CF_CLIENT | CF_READONLY, "cl_worldname", "", "name of current worldmodel"};
+cvar_t cl_worldnamenoextension = {CF_CLIENT | CF_READONLY, "cl_worldnamenoextension", "", "name of current worldmodel without extension"};
+cvar_t cl_worldbasename = {CF_CLIENT | CF_READONLY, "cl_worldbasename", "", "name of current worldmodel without maps/ prefix or extension"};
 
-cvar_t developer_networkentities = {CVAR_CLIENT, "developer_networkentities", "0", "prints received entities, value is 0-10 (higher for more info, 10 being the most verbose)"};
-cvar_t cl_gameplayfix_soundsmovewithentities = {CVAR_CLIENT, "cl_gameplayfix_soundsmovewithentities", "1", "causes sounds made by lifts, players, projectiles, and any other entities, to move with the entity, so for example a rocket noise follows the rocket rather than staying at the starting position"};
-cvar_t cl_sound_wizardhit = {CVAR_CLIENT, "cl_sound_wizardhit", "wizard/hit.wav", "sound to play during TE_WIZSPIKE (empty cvar disables sound)"};
-cvar_t cl_sound_hknighthit = {CVAR_CLIENT, "cl_sound_hknighthit", "hknight/hit.wav", "sound to play during TE_KNIGHTSPIKE (empty cvar disables sound)"};
-cvar_t cl_sound_tink1 = {CVAR_CLIENT, "cl_sound_tink1", "weapons/tink1.wav", "sound to play with 80% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
-cvar_t cl_sound_ric1 = {CVAR_CLIENT, "cl_sound_ric1", "weapons/ric1.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
-cvar_t cl_sound_ric2 = {CVAR_CLIENT, "cl_sound_ric2", "weapons/ric2.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
-cvar_t cl_sound_ric3 = {CVAR_CLIENT, "cl_sound_ric3", "weapons/ric3.wav", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
-cvar_t cl_readpicture_force = {CVAR_CLIENT, "cl_readpicture_force", "0", "when enabled, the low quality pictures read by ReadPicture() are preferred over the high quality pictures on the file system"};
+cvar_t developer_networkentities = {CF_CLIENT, "developer_networkentities", "0", "prints received entities, value is 0-10 (higher for more info, 10 being the most verbose)"};
+cvar_t cl_gameplayfix_soundsmovewithentities = {CF_CLIENT, "cl_gameplayfix_soundsmovewithentities", "1", "causes sounds made by lifts, players, projectiles, and any other entities, to move with the entity, so for example a rocket noise follows the rocket rather than staying at the starting position"};
+cvar_t cl_sound_wizardhit = {CF_CLIENT, "cl_sound_wizardhit", "wizard/hit.wav", "sound to play during TE_WIZSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_hknighthit = {CF_CLIENT, "cl_sound_hknighthit", "hknight/hit.wav", "sound to play during TE_KNIGHTSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_tink1 = {CF_CLIENT, "cl_sound_tink1", "weapons/tink1.wav", "sound to play with 80% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric1 = {CF_CLIENT, "cl_sound_ric1", "weapons/ric1.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric2 = {CF_CLIENT, "cl_sound_ric2", "weapons/ric2.wav", "sound to play with 5% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_sound_ric3 = {CF_CLIENT, "cl_sound_ric3", "weapons/ric3.wav", "sound to play with 10% chance during TE_SPIKE/TE_SUPERSPIKE (empty cvar disables sound)"};
+cvar_t cl_readpicture_force = {CF_CLIENT, "cl_readpicture_force", "0", "when enabled, the low quality pictures read by ReadPicture() are preferred over the high quality pictures on the file system"};
 
 #define RIC_GUNSHOT		1
 #define RIC_GUNSHOTQUAD	2
-cvar_t cl_sound_ric_gunshot = {CVAR_CLIENT, "cl_sound_ric_gunshot", "0", "specifies if and when the related cl_sound_ric and cl_sound_tink sounds apply to TE_GUNSHOT/TE_GUNSHOTQUAD, 0 = no sound, 1 = TE_GUNSHOT, 2 = TE_GUNSHOTQUAD, 3 = TE_GUNSHOT and TE_GUNSHOTQUAD"};
-cvar_t cl_sound_r_exp3 = {CVAR_CLIENT, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
-cvar_t cl_serverextension_download = {CVAR_CLIENT, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
-cvar_t cl_joinbeforedownloadsfinish = {CVAR_CLIENT | CVAR_SAVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
-cvar_t cl_nettimesyncfactor = {CVAR_CLIENT | CVAR_SAVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (bounding still applies)"};
-cvar_t cl_nettimesyncboundmode = {CVAR_CLIENT | CVAR_SAVE, "cl_nettimesyncboundmode", "6", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3, 5 = slighttly nicer version of Quake3 method, 6 = bounding + Quake3"};
-cvar_t cl_nettimesyncboundtolerance = {CVAR_CLIENT | CVAR_SAVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1)"};
-cvar_t cl_iplog_name = {CVAR_CLIENT | CVAR_SAVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
+cvar_t cl_sound_ric_gunshot = {CF_CLIENT, "cl_sound_ric_gunshot", "0", "specifies if and when the related cl_sound_ric and cl_sound_tink sounds apply to TE_GUNSHOT/TE_GUNSHOTQUAD, 0 = no sound, 1 = TE_GUNSHOT, 2 = TE_GUNSHOTQUAD, 3 = TE_GUNSHOT and TE_GUNSHOTQUAD"};
+cvar_t cl_sound_r_exp3 = {CF_CLIENT, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
+cvar_t cl_serverextension_download = {CF_CLIENT, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
+cvar_t cl_joinbeforedownloadsfinish = {CF_CLIENT | CF_ARCHIVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
+cvar_t cl_nettimesyncfactor = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (bounding still applies)"};
+cvar_t cl_nettimesyncboundmode = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundmode", "6", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3, 5 = slighttly nicer version of Quake3 method, 6 = bounding + Quake3"};
+cvar_t cl_nettimesyncboundtolerance = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1)"};
+cvar_t cl_iplog_name = {CF_CLIENT | CF_ARCHIVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
-static qboolean QW_CL_CheckOrDownloadFile(const char *filename);
+static qbool QW_CL_CheckOrDownloadFile(const char *filename);
 static void QW_CL_RequestNextDownload(void);
 static void QW_CL_NextUpload_f(cmd_state_t *cmd);
-//static qboolean QW_CL_IsUploading(void);
+//static qbool QW_CL_IsUploading(void);
 static void QW_CL_StopUpload_f(cmd_state_t *cmd);
 
 /*
@@ -301,17 +301,17 @@ so the server doesn't disconnect.
 */
 
 static unsigned char olddata[NET_MAXMESSAGE];
-void CL_KeepaliveMessage (qboolean readmessages)
+void CL_KeepaliveMessage (qbool readmessages)
 {
 	static double lastdirtytime = 0;
-	static qboolean recursive = false;
+	static qbool recursive = false;
 	double dirtytime;
 	double deltatime;
 	static double countdownmsg = 0;
 	static double countdownupdate = 0;
 	sizebuf_t old;
 
-	qboolean thisrecursive;
+	qbool thisrecursive;
 
 	thisrecursive = recursive;
 	recursive = true;
@@ -376,7 +376,7 @@ void CL_KeepaliveMessage (qboolean readmessages)
 
 void CL_ParseEntityLump(char *entdata)
 {
-	qboolean loadedsky = false;
+	qbool loadedsky = false;
 	const char *data;
 	char key[128], value[MAX_INPUTLINE];
 	FOG_clear(); // LadyHavoc: no fog until set
@@ -531,7 +531,7 @@ static void CL_SetupWorldModel(void)
 	}
 }
 
-static qboolean QW_CL_CheckOrDownloadFile(const char *filename)
+static qbool QW_CL_CheckOrDownloadFile(const char *filename)
 {
 	qfile_t *file;
 	char vabuf[1024];
@@ -953,7 +953,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 }
 
 #if 0
-qboolean QW_CL_IsUploading(void)
+qbool QW_CL_IsUploading(void)
 {
 	return cls.qw_uploaddata != NULL;
 }
@@ -1078,7 +1078,7 @@ static void CL_UpdateItemsAndWeapon(void)
 #define LOADPROGRESSWEIGHT_WORLDMODEL      30.0
 #define LOADPROGRESSWEIGHT_WORLDMODEL_INIT  2.0
 
-static void CL_BeginDownloads(qboolean aborteddownload)
+static void CL_BeginDownloads(qbool aborteddownload)
 {
 	char vabuf[1024];
 	// quakeworld works differently
@@ -1659,7 +1659,7 @@ static void CL_SignonReply (void)
 		S_PurgeUnused();
 
 		Con_ClearNotify();
-		if (COM_CheckParm("-profilegameonly"))
+		if (Sys_CheckParm("-profilegameonly"))
 			Sys_AllowProfiling(true);
 		
 		if (gamemode == GAME_WRATH)
@@ -1967,7 +1967,7 @@ static void CL_ParseServerInfo (void)
 
 void CL_ValidateState(entity_state_t *s)
 {
-	dp_model_t *model;
+	model_t *model;
 
 	if (!s->active)
 		return;
@@ -2314,7 +2314,7 @@ static void CL_ParseStaticSound (int large)
 	int			sound_num, vol, atten;
 
 	MSG_ReadVector(&cl_message, org, cls.protocol);
-	if (large || cls.protocol == PROTOCOL_NEHAHRABJP2)
+	if (large)
 		sound_num = (unsigned short) MSG_ReadShort(&cl_message);
 	else
 		sound_num = MSG_ReadByte(&cl_message);
@@ -2359,7 +2359,7 @@ static void CL_ParseEffect2 (void)
 	CL_Effect(org, CL_GetModelByIndex(modelindex), startframe, framecount, framerate);
 }
 
-void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning)
+void CL_NewBeam (int ent, vec3_t start, vec3_t end, model_t *m, int lightning)
 {
 	int i;
 	beam_t *b = NULL;
@@ -2398,7 +2398,7 @@ void CL_NewBeam (int ent, vec3_t start, vec3_t end, dp_model_t *m, int lightning
 		Con_DPrint("beam list overflow!\n");
 }
 
-static void CL_ParseBeam (dp_model_t *m, int lightning)
+static void CL_ParseBeam (model_t *m, int lightning)
 {
 	int ent;
 	vec3_t start, end;
@@ -2991,13 +2991,13 @@ typedef struct cl_iplog_item_s
 }
 cl_iplog_item_t;
 
-static qboolean cl_iplog_loaded = false;
+static qbool cl_iplog_loaded = false;
 static int cl_iplog_numitems = 0;
 static int cl_iplog_maxitems = 0;
 static cl_iplog_item_t *cl_iplog_items;
 
 static void CL_IPLog_Load(void);
-static void CL_IPLog_Add(const char *address, const char *name, qboolean checkexisting, qboolean addtofile)
+static void CL_IPLog_Add(const char *address, const char *name, qbool checkexisting, qbool addtofile)
 {
 	int i;
 	size_t sz_name, sz_address;
@@ -3145,7 +3145,7 @@ static void CL_IPLog_List_f(cmd_state_t *cmd)
 }
 
 // look for anything interesting like player IP addresses or ping reports
-static qboolean CL_ExaminePrintString(const char *text)
+static qbool CL_ExaminePrintString(const char *text)
 {
 	int len;
 	const char *t;
@@ -3177,7 +3177,7 @@ static qboolean CL_ExaminePrintString(const char *text)
 	if (cl.parsingtextmode == CL_PARSETEXTMODE_PING)
 	{
 		// if anything goes wrong, we'll assume this is not a ping report
-		qboolean expected = cl.parsingtextexpectingpingforscores != 0;
+		qbool expected = cl.parsingtextexpectingpingforscores != 0;
 		cl.parsingtextexpectingpingforscores = 0;
 		cl.parsingtextmode = CL_PARSETEXTMODE_NONE;
 		t = text;
@@ -3404,8 +3404,8 @@ void CL_ParseServerMessage(void)
 	unsigned char		cmdlog[32];
 	const char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
-	qboolean	qwplayerupdatereceived;
-	qboolean	strip_pqc;
+	qbool	qwplayerupdatereceived;
+	qbool	strip_pqc;
 	char vabuf[1024];
 
 	// LadyHavoc: moved demo message writing from before the packet parse to
@@ -3505,11 +3505,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_disconnect:
-				Con_Printf("Server disconnected\n");
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
+				{
+					Con_Printf("Server disconnected\n");
 					CL_Disconnect();
+				}
 				return;
 
 			case qw_svc_print:
@@ -3672,7 +3674,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_sellscreen:
-				Cmd_ExecuteString(&cmd_client, "help", src_command, true);
+				Cmd_ExecuteString(&cmd_client, "help", src_local, true);
 				break;
 
 			case qw_svc_smallkick:
@@ -3886,11 +3888,13 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_disconnect:
-				Con_Printf ("Server disconnected\n");
 				if (cls.demonum != -1)
 					CL_NextDemo ();
 				else
+				{
+					Con_Printf ("Server disconnected\n");
 					CL_Disconnect ();
+				}
 				break;
 
 			case svc_print:
@@ -3990,7 +3994,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sound:
-				CL_ParseStartSoundPacket(false);
+				CL_ParseStartSoundPacket(cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 ? true : false);
 				break;
 
 			case svc_precache:
@@ -4008,7 +4012,7 @@ void CL_ParseServerMessage(void)
 					{
 						if (i >= 1 && i < MAX_MODELS)
 						{
-							dp_model_t *model = Mod_ForName(s, false, false, s[0] == '*' ? cl.model_name[1] : NULL);
+							model_t *model = Mod_ForName(s, false, false, s[0] == '*' ? cl.model_name[1] : NULL);
 							if (!model)
 								Con_DPrintf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
 							cl.model_precache[i] = model;
@@ -4139,7 +4143,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_spawnstaticsound:
-				CL_ParseStaticSound (false);
+				CL_ParseStaticSound (cls.protocol == PROTOCOL_NEHAHRABJP2 || cls.protocol == PROTOCOL_NEHAHRABJP3 ? true : false);
 				break;
 
 			case svc_spawnstaticsound2:
@@ -4179,7 +4183,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sellscreen:
-				Cmd_ExecuteString(&cmd_client, "help", src_command, true);
+				Cmd_ExecuteString(&cmd_client, "help", src_local, true);
 				break;
 			case svc_hidelmp:
 				if (gamemode == GAME_TENEBRAE)
@@ -4315,15 +4319,15 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_iplog_name);
 	Cvar_RegisterVariable(&cl_readpicture_force);
 
-	Cmd_AddCommand(CMD_CLIENT, "nextul", QW_CL_NextUpload_f, "sends next fragment of current upload buffer (screenshot for example)");
-	Cmd_AddCommand(CMD_CLIENT, "stopul", QW_CL_StopUpload_f, "aborts current upload (screenshot for example)");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
-	Cmd_AddCommand(CMD_CLIENT, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
-	Cmd_AddCommand(CMD_CLIENT, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "stopdownload", CL_StopDownload_f, "terminates a download");
-	Cmd_AddCommand(CMD_CLIENT | CMD_CLIENT_FROM_SERVER, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
-	Cmd_AddCommand(CMD_CLIENT, "iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
+	Cmd_AddCommand(CF_CLIENT, "nextul", QW_CL_NextUpload_f, "sends next fragment of current upload buffer (screenshot for example)");
+	Cmd_AddCommand(CF_CLIENT, "stopul", QW_CL_StopUpload_f, "aborts current upload (screenshot for example)");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "skins", QW_CL_Skins_f, "downloads missing qw skins from server");
+	Cmd_AddCommand(CF_CLIENT, "changing", QW_CL_Changing_f, "sent by qw servers to tell client to wait for level change");
+	Cmd_AddCommand(CF_CLIENT, "cl_begindownloads", CL_BeginDownloads_f, "used internally by darkplaces client while connecting (causes loading of models and sounds or triggers downloads for missing ones)");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "cl_downloadbegin", CL_DownloadBegin_f, "(networking) informs client of download file information, client replies with sv_startsoundload to begin the transfer");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "stopdownload", CL_StopDownload_f, "terminates a download");
+	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "cl_downloadfinished", CL_DownloadFinished_f, "signals that a download has finished and provides the client with file size and crc to check its integrity");
+	Cmd_AddCommand(CF_CLIENT, "iplog_list", CL_IPLog_List_f, "lists names of players whose IP address begins with the supplied text (example: iplog_list 123.456.789)");
 }
 
 void CL_Parse_Shutdown(void)

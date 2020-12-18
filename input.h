@@ -22,10 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef INPUT_H
 #define INPUT_H
 
+#include "qtypes.h"
+#include "cvar.h"
+
 extern cvar_t in_pitch_min;
 extern cvar_t in_pitch_max;
 
-extern qboolean in_client_mouse;
+extern qbool in_client_mouse;
 extern float in_windowmouse_x, in_windowmouse_y;
 extern float in_mouse_x, in_mouse_y;
 

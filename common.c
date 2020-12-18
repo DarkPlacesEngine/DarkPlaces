@@ -28,12 +28,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "utf8lib.h"
 
-cvar_t registered = {CVAR_CLIENT | CVAR_SERVER, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
-cvar_t cmdline = {CVAR_CLIENT | CVAR_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
+cvar_t registered = {CF_CLIENT | CF_SERVER, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
+cvar_t cmdline = {CF_CLIENT | CF_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
 
 // FIXME: Find a better place for these.
-cvar_t cl_playermodel = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
-cvar_t cl_playerskin = {CVAR_CLIENT | CVAR_SERVER | CVAR_USERINFO | CVAR_SAVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
+cvar_t cl_playermodel = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};
+cvar_t cl_playerskin = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
 
 char com_token[MAX_INPUTLINE];
 
@@ -180,7 +180,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 	//     If it fits, append it. Continue.
 	//     If it doesn't fit, output current line, advance to next line. Append the word. This is a continuation. Continue.
 
-	qboolean isContinuation = false;
+	qbool isContinuation = false;
 	float spaceWidth;
 	const char *startOfLine = string;
 	const char *cursor = string;
@@ -258,7 +258,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 	return result;
 
 /*
-	qboolean isContinuation = false;
+	qbool isContinuation = false;
 	float currentWordSpace = 0;
 	const char *currentWord = 0;
 	float minReserve = 0;
@@ -457,7 +457,7 @@ COM_ParseToken_Simple
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, qboolean returnnewline, qboolean parsebackslash, qboolean parsecomments)
+int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
 {
 	int len;
 	int c;
@@ -570,7 +570,7 @@ COM_ParseToken_QuakeC
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_QuakeC(const char **datapointer, qboolean returnnewline)
+int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -684,7 +684,7 @@ COM_ParseToken_VM_Tokenize
 Parse a token out of a string
 ==============
 */
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qboolean returnnewline)
+int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -860,30 +860,6 @@ skipwhite:
 	return true;
 }
 
-
-/*
-================
-COM_CheckParm
-
-Returns the position (1 to argc-1) in the program's argument list
-where the given parameter apears, or 0 if not present
-================
-*/
-int COM_CheckParm (const char *parm)
-{
-	int i;
-
-	for (i=1 ; i<sys.argc ; i++)
-	{
-		if (!sys.argv[i])
-			continue;               // NEXTSTEP sometimes clears appkit vars.
-		if (!strcmp (parm,sys.argv[i]))
-			return i;
-	}
-
-	return 0;
-}
-
 /*
 ===============
 Com_CalcRoll
@@ -893,11 +869,11 @@ Used by view and sv_user
 */
 float Com_CalcRoll (const vec3_t angles, const vec3_t velocity, const vec_t angleval, const vec_t velocityval)
 {
-	vec3_t	right;
+	vec3_t	forward, right, up;
 	float	sign;
 	float	side;
 
-	AngleVectors (angles, NULL, right, NULL);
+	AngleVectors (angles, forward, right, up);
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
 	side = fabs(side);
@@ -1187,7 +1163,7 @@ all characters until the zero terminator.
 ============
 */
 size_t
-COM_StringLengthNoColors(const char *s, size_t size_s, qboolean *valid)
+COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid)
 {
 	const char *end = size_s ? (s + size_s) : NULL;
 	size_t len = 0;
@@ -1260,8 +1236,8 @@ For size_in, specify the maximum number of characters from in to use, or 0 to us
 all characters until the zero terminator.
 ============
 */
-qboolean
-COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qboolean escape_carets)
+qbool
+COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
 {
 #define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return false; } } while(0)
 	const char *end = size_in ? (in + size_in) : NULL;

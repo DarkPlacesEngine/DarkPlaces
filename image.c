@@ -21,7 +21,7 @@ static void Image_CopyAlphaFromBlueBGRA(unsigned char *outpixels, const unsigned
 
 #if 1
 // written by LadyHavoc in a readable way, optimized by Vic, further optimized by LadyHavoc (the non-special index case), readable version preserved below this
-void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
+void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qbool inputflipx, qbool inputflipy, qbool inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
 	const unsigned char *in, *line;
@@ -70,7 +70,7 @@ void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int 
 }
 #else
 // intentionally readable version
-void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
+void Image_CopyMux(unsigned char *outpixels, const unsigned char *inpixels, int inputwidth, int inputheight, qbool inputflipx, qbool inputflipy, qbool inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
 	const unsigned char *in, *inrow, *incolumn;
@@ -283,7 +283,7 @@ static unsigned char* LoadPCX_BGRA (const unsigned char *f, int filesize, int *m
 LoadPCX
 ============
 */
-qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight)
+qbool LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pixels, int outwidth, int outheight)
 {
 	pcx_t pcx;
 	unsigned char *a;
@@ -362,7 +362,7 @@ qboolean LoadPCX_QWSkin(const unsigned char *f, int filesize, unsigned char *pix
 LoadPCX
 ============
 */
-qboolean LoadPCX_PaletteOnly(const unsigned char *f, int filesize, unsigned char *palette768b)
+qbool LoadPCX_PaletteOnly(const unsigned char *f, int filesize, unsigned char *palette768b)
 {
 	if (filesize < 768)
 		return false;
@@ -797,7 +797,7 @@ static unsigned char *LoadWAL_BGRA (const unsigned char *f, int filesize, int *m
 	return image_buffer;
 }
 
-qboolean LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c)
+qbool LoadWAL_GetMetadata(const unsigned char *f, int filesize, int *retwidth, int *retheight, int *retflags, int *retvalue, int *retcontents, char *retanimname32c)
 {
 	const q2wal_t *inwal = (const q2wal_t *)f;
 
@@ -970,46 +970,28 @@ imageformat_t;
 imageformat_t imageformats_tenebrae[] =
 {
 	{"override/%s.tga", LoadTGA_BGRA},
-	{"override/%s.TGA", LoadTGA_BGRA},
 	{"override/%s.png", PNG_LoadImage_BGRA},
-	{"override/%s.PNG", PNG_LoadImage_BGRA},
 	{"override/%s.jpg", JPEG_LoadImage_BGRA},
-	{"override/%s.JPG", JPEG_LoadImage_BGRA},
 	{"override/%s.pcx", LoadPCX_BGRA},
-	{"override/%s.PCX", LoadPCX_BGRA},	
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_nopath[] =
 {
 	{"override/%s.tga", LoadTGA_BGRA},
-	{"override/%s.TGA", LoadTGA_BGRA},
 	{"override/%s.png", PNG_LoadImage_BGRA},
-	{"override/%s.PNG", PNG_LoadImage_BGRA},
 	{"override/%s.jpg", JPEG_LoadImage_BGRA},
-	{"override/%s.JPG", JPEG_LoadImage_BGRA},
 	{"textures/%s.tga", LoadTGA_BGRA},
-	{"textures/%s.TGA", LoadTGA_BGRA},
 	{"textures/%s.png", PNG_LoadImage_BGRA},
-	{"textures/%s.PNG", PNG_LoadImage_BGRA},
 	{"textures/%s.jpg", JPEG_LoadImage_BGRA},
-	{"textures/%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{NULL, NULL}
 };
 
@@ -1021,63 +1003,44 @@ imageformat_t imageformats_nopath[] =
 imageformat_t imageformats_dq[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},	
 	{"texturemaps/%s.tga", LoadTGA_BGRA},
-	{"texturemaps/%s.TGA", LoadTGA_BGRA},	
 	{"texturemaps/%s.jpg", JPEG_LoadImage_BGRA},
-	{"texturemaps/%s.JPG", JPEG_LoadImage_BGRA},	
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_textures[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.wal", LoadWAL_BGRA},
-	{"%s.WAL", LoadWAL_BGRA},	
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_gfx[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.lmp", LoadLMP_BGRA},
-	{"%s.LMP", LoadLMP_BGRA},
 	{NULL, NULL}
 };
 
 imageformat_t imageformats_other[] =
 {
 	{"%s.tga", LoadTGA_BGRA},
-	{"%s.TGA", LoadTGA_BGRA},
 	{"%s.png", PNG_LoadImage_BGRA},
-	{"%s.PNG", PNG_LoadImage_BGRA},
 	{"%s.jpg", JPEG_LoadImage_BGRA},
-	{"%s.JPG", JPEG_LoadImage_BGRA},
 	{"%s.pcx", LoadPCX_BGRA},
-	{"%s.PCX", LoadPCX_BGRA},
 	{"%s.lmp", LoadLMP_BGRA},
-	{"%s.LMP", LoadLMP_BGRA},	
 	{NULL, NULL}
 };
 
 int fixtransparentpixels(unsigned char *data, int w, int h);
-unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qboolean allowFixtrans, qboolean convertsRGB, int *miplevel)
+unsigned char *loadimagepixelsbgra (const char *filename, qbool complain, qbool allowFixtrans, qbool convertsRGB, int *miplevel)
 {
 	fs_offset_t filesize;
 	imageformat_t *firstformat, *format;
@@ -1121,8 +1084,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	for (format = firstformat;format->formatstring;format++)
 	{
 		dpsnprintf (name, sizeof(name), format->formatstring, basename);
-		f = FS_LoadFile(name, tempmempool, true, &filesize);
-		if (f)
+		if(FS_FileExists(name) && (f = FS_LoadFile(name, tempmempool, true, &filesize)) != NULL)
 		{
 			mymiplevel = miplevel ? *miplevel : 0;
 			image_width = 0;
@@ -1228,7 +1190,7 @@ unsigned char *loadimagepixelsbgra (const char *filename, qboolean complain, qbo
 	return NULL;
 }
 
-qboolean Image_GetStockPicSize(const char *filename, int *returnwidth, int *returnheight)
+qbool Image_GetStockPicSize(const char *filename, int *returnwidth, int *returnheight)
 {
 	unsigned char *data;
 	fs_offset_t filesize;
@@ -1277,7 +1239,7 @@ qboolean Image_GetStockPicSize(const char *filename, int *returnwidth, int *retu
 }
 
 extern cvar_t gl_picmip;
-rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qboolean complain, int flags, qboolean allowFixtrans, qboolean sRGB)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, qbool complain, int flags, qbool allowFixtrans, qbool sRGB)
 {
 	unsigned char *data;
 	rtexture_t *rt;
@@ -1444,9 +1406,9 @@ void Image_FixTransparentPixels_f(cmd_state_t *cmd)
 	FS_FreeSearch(search);
 }
 
-qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data)
+qbool Image_WriteTGABGR_preflipped (const char *filename, int width, int height, const unsigned char *data)
 {
-	qboolean ret;
+	qbool ret;
 	unsigned char buffer[18];
 	const void *buffers[2];
 	fs_offset_t sizes[2];
@@ -1468,12 +1430,12 @@ qboolean Image_WriteTGABGR_preflipped (const char *filename, int width, int heig
 	return ret;
 }
 
-qboolean Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data)
+qbool Image_WriteTGABGRA (const char *filename, int width, int height, const unsigned char *data)
 {
 	int y;
 	unsigned char *buffer, *out;
 	const unsigned char *in, *end;
-	qboolean ret;
+	qbool ret;
 
 	buffer = (unsigned char *)Mem_Alloc(tempmempool, width*height*4 + 18);
 
@@ -1842,10 +1804,8 @@ void Image_HeightmapToNormalmap_BGRA(const unsigned char *inpixels, unsigned cha
 	}
 }
 
-static const unsigned char concharimage[] =
-{
+
 #include "lhfont.h"
-};
 
 static unsigned char *Image_GenerateConChars(void)
 {

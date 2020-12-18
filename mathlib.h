@@ -83,6 +83,8 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) ((a) - 360.0 * floor((a) / 360.0))
 
+#define Q_rint(x) ((x) > 0 ? (int)((x) + 0.5) : (int)((x) - 0.5)) //johnfitz -- from joequake
+
 #define DotProduct2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
 #define Vector2Clear(a) ((a)[0]=(a)[1]=0)
 #define Vector2Compare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1]))
@@ -258,7 +260,7 @@ void AngleVectorsDuke3DFLU (const vec3_t angles, vec3_t forward, vec3_t left, ve
 /// LadyHavoc: builds a [3][4] matrix
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
 /// LadyHavoc: calculates pitch/yaw/roll angles from forward and up vectors
-void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qboolean flippitch);
+void AnglesFromVectors (vec3_t angles, const vec3_t forward, const vec3_t up, qbool flippitch);
 
 /// LadyHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);

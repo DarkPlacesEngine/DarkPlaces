@@ -492,7 +492,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
@@ -510,7 +510,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				// refresh the garbage collection on the string - this guards
@@ -534,7 +534,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "assignment to world.%s (field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
@@ -547,7 +547,7 @@ int i;
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to address an out of bounds edict number", prog->name);
+					prog->error_cmd("%s attempted to address an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
@@ -560,7 +560,7 @@ int i;
 				if (OPA->edict == 0 && !cached_allowworldwrites)
 				{
 					PRE_ERROR();
-					prog->error_cmd("forbidden assignment to null/world entity in %s", prog->name);
+					prog->error_cmd("Forbidden assignment to NULL entity in %s", prog->name);
 					goto cleanup;
 				}
 #endif
@@ -574,7 +574,7 @@ int i;
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
+					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
@@ -590,7 +590,7 @@ int i;
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
+					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
@@ -613,7 +613,7 @@ int i;
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
+					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if ((prvm_uint_t)OPB->_int > cached_entityfields_3)
@@ -711,7 +711,7 @@ int i;
 				if(!OPA->function || OPA->function < 0 || OPA->function >= prog->numfunctions)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s CALL outside the program", prog->name);
+					prog->error_cmd("%s attempted CALL outside the program", prog->name);
 					goto cleanup;
 				}
 
@@ -751,7 +751,7 @@ int i;
 							goto chooseexecprogram;
 					}
 					else
-						prog->error_cmd("No such builtin #%i in %s; most likely cause: outdated engine build. Try updating!", builtinnumber, prog->name);
+						prog->error_cmd("No such builtin #%i in %s. This program is corrupt or incompatible with DarkPlaces (or this version of it)", builtinnumber, prog->name);
 				}
 				else
 					st = cached_statements + PRVM_EnterFunction(prog, enterfunc);
@@ -951,7 +951,7 @@ int i;
 				if (OPB->_int < 0 || OPB->_int + 4 > pr_edictareasize)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to write to an out of bounds edict", prog->name);
+					prog->error_cmd("%s attempted to write to an out of bounds edict", prog->name);
 					goto cleanup;
 				}
 #endif
@@ -963,13 +963,13 @@ int i;
 				if (OPA->edict < 0 || OPA->edict >= prog->max_edicts)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an out of bounds edict number", prog->name);
+					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
 				if (OPB->_int < 0 || OPB->_int >= progs->entityfields.ip)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an invalid field in an edict", prog->name);
+					prog->error_cmd("%s attempted to read an invalid field in an edict", prog->name);
 					goto cleanup;
 				}
 #endif
@@ -986,7 +986,7 @@ int i;
 				if (OPB->_int < 0 || OPB->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
+					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
 				prog->globals.ip[OPB->_int] = OPA->_int;
@@ -995,7 +995,7 @@ int i;
 				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to write to an invalid indexed global", prog->name);
+					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
 					goto cleanup;
 				}
 				prog->globals.ip[OPB->_int  ] = OPA->ivector[0];
@@ -1008,7 +1008,7 @@ int i;
 				if (i < 0 || i >= prog->numglobaldefs)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to address an out of bounds global", prog->name);
+					prog->error_cmd("%s attempted to address an out of bounds global", prog->name);
 					goto cleanup;
 				}
 				OPC->_int = prog->globals.ip[i];
@@ -1020,22 +1020,20 @@ int i;
 			HANDLE_OPCODE(OP_GLOAD_ENT):
 			HANDLE_OPCODE(OP_GLOAD_S):
 			HANDLE_OPCODE(OP_GLOAD_FNC):
-				// FIXME?: Is this correct?             vvvvvvvvvvvvv
-				if (OPA->_int < 0 || OPA->_int >= prog->numglobaldefs)
+				if (OPA->_int < 0 || OPA->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
+					prog->error_cmd("%s attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
 				OPC->_int = prog->globals.ip[OPA->_int];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GLOAD_V):
-				// FIXME?: Is this correct?                 vvvvvvvvvvvvv
-				if (OPA->_int < 0 || OPA->_int + 2 >= prog->numglobaldefs)
+				if (OPA->_int < 0 || OPA->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s Progs attempted to read an invalid indexed global", prog->name);
+					prog->error_cmd("%s attempted to read an invalid indexed global", prog->name);
 					goto cleanup;
 				}
 				OPC->ivector[0] = prog->globals.ip[OPA->_int  ];
@@ -1055,7 +1053,7 @@ int i;
 #if !USE_COMPUTED_GOTOS
 			default:
 				PRE_ERROR();
-				prog->error_cmd("Bad opcode %i in %s", st->op, prog->name);
+				prog->error_cmd("Bad opcode %i in %s. This program is corrupt or incompatible with DarkPlaces (or this version of it)", st->op, prog->name);
 				goto cleanup;
 			}
 #if PRVMSLOWINTERPRETER
