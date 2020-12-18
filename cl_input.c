@@ -1294,22 +1294,8 @@ static void CL_ClientMovement_Physics_PM_AirAccelerate(cl_clientmovement_state_t
     VectorMA( s->velocity, accelspeed, acceldir, s->velocity );
 }
 
-static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
+static void CL_ClientMovement_Physics_CheckJump(cl_clientmovement_state_t *s)
 {
-	vec_t friction;
-	vec_t wishspeed;
-	vec_t addspeed;
-	vec_t accelspeed;
-	vec_t f;
-	vec_t gravity;
-	vec3_t forward;
-	vec3_t right;
-	vec3_t up;
-	vec3_t wishvel;
-	vec3_t wishdir;
-	vec3_t yawangles;
-	trace_t trace;
-
 	// jump if on ground with jump button pressed but only if it has been
 	// released at least once since the last jump
 	if (s->cmd.jump)
@@ -1323,6 +1309,25 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 	}
 	else
 		s->cmd.canjump = true;
+}
+
+static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
+{
+	vec_t friction;
+	vec_t wishspeed;
+	vec_t addspeed;
+	vec_t accelspeed;
+	vec_t speed;
+	vec_t gravity;
+	vec3_t forward;
+	vec3_t right;
+	vec3_t up;
+	vec3_t wishvel;
+	vec3_t wishdir;
+	vec3_t yawangles;
+	trace_t trace;
+
+	CL_ClientMovement_Physics_CheckJump(s);
 
 	// calculate movement vector
 	VectorSet(yawangles, 0, s->cmd.viewangles[1], 0);
@@ -1341,8 +1346,8 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			wishspeed *= 0.5;
 
 		// apply edge friction
-		f = sqrt(s->velocity[0] * s->velocity[0] + s->velocity[1] * s->velocity[1]);
-		if (f > 0)
+		speed = VectorLength2(s->velocity);
+		if (speed > 0)
 		{
 			friction = cl.movevars_friction;
 			if (cl.movevars_edgefriction != 1)
@@ -1352,7 +1357,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 				// note: QW uses the full player box for the trace, and yet still
 				// uses s->origin[2] + s->mins[2], which is clearly an bug, but
 				// this mimics it for compatibility
-				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/f), s->origin[1] + s->velocity[1]*(16/f), s->origin[2] + s->mins[2]);
+				VectorSet(neworigin2, s->origin[0] + s->velocity[0]*(16/speed), s->origin[1] + s->velocity[1]*(16/speed), s->origin[2] + s->mins[2]);
 				VectorSet(neworigin3, neworigin2[0], neworigin2[1], neworigin2[2] - 34);
 				if (cls.protocol == PROTOCOL_QUAKEWORLD)
 					trace = CL_TraceBox(neworigin2, s->mins, s->maxs, neworigin3, MOVE_NORMAL, s->self, SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP, 0, 0, collision_extendmovelength.value, true, true, NULL, true);
@@ -1362,9 +1367,9 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 					friction *= cl.movevars_edgefriction;
 			}
 			// apply ground friction
-			f = 1 - s->cmd.frametime * friction * ((f < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / f) : 1);
-			f = max(f, 0);
-			VectorScale(s->velocity, f, s->velocity);
+			speed = 1 - s->cmd.frametime * friction * ((speed < cl.movevars_stopspeed) ? (cl.movevars_stopspeed / speed) : 1);
+			speed = max(speed, 0);
+			VectorScale(s->velocity, speed, s->velocity);
 		}
 		addspeed = wishspeed - DotProduct(s->velocity, wishdir);
 		if (addspeed > 0)
