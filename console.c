@@ -1526,7 +1526,7 @@ Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 */
 static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 {
-	int y, i, col_out, linepos, text_start, prefix_start;
+	int y, i, col_out, linepos, text_start, prefix_start = 0;
 	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
 	float xo;
 	size_t len_out;
