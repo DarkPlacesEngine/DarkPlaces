@@ -1020,11 +1020,12 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->AnimateVertices = Mod_MDL_AnimateVertices;
 
 	loadmodel->num_surfaces = 1;
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->sortedmodelsurfaces[0] = 0;
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted[0] = 0;
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
 	BOUNDI(loadmodel->numskins,0,65536);
@@ -1411,11 +1412,12 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	iskinheight = 1.0f / skinheight;
 
 	loadmodel->num_surfaces = 1;
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->numframes * sizeof(animscene_t) + loadmodel->numframes * sizeof(float[6]) + loadmodel->surfmesh.num_triangles * sizeof(int[3]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->sortedmodelsurfaces[0] = 0;
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted[0] = 0;
 	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	loadmodel->surfmesh.data_morphmd2framesize6f = (float *)data;data += loadmodel->numframes * sizeof(float[6]);
 	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
@@ -1692,12 +1694,13 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 		meshtriangles += LittleLong(pinmesh->num_triangles);
 	}
 
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * sizeof(float[2]) + meshvertices * loadmodel->numframes * sizeof(md3vertex_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
@@ -1717,7 +1720,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		if (memcmp(pinmesh->identifier, "IDP3", 4))
 			Host_Error("Mod_IDP3_Load: invalid mesh identifier (not IDP3)");
-		loadmodel->sortedmodelsurfaces[i] = i;
+		loadmodel->modelsurfaces_sorted[i] = i;
 		surface = loadmodel->data_surfaces + i;
 		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = meshtriangles;
@@ -1959,12 +1962,13 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	meshvertices = pheader->numverts;
 	meshtriangles = pheader->numtris;
 
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short) + sizeof(unsigned char[2][4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
@@ -2107,7 +2111,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		if (renderlist + count * 3 > renderlistend || (i == pheader->numshaders - 1 && renderlist + count * 3 != renderlistend))
 			Host_Error("%s corrupt renderlist (wrong size)", loadmodel->name);
 
-		loadmodel->sortedmodelsurfaces[i] = i;
+		loadmodel->modelsurfaces_sorted[i] = i;
 		surface = loadmodel->data_surfaces + i;
 		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = meshtriangles;
@@ -2283,13 +2287,14 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->numframes = pheader->num_frames;
 	loadmodel->num_bones = pheader->num_bones;
 	loadmodel->num_poses = loadmodel->numframes;
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = pheader->num_meshs;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces = pheader->num_meshs;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	// do most allocations as one merged chunk
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * (sizeof(float[14]) + sizeof(unsigned short) + sizeof(unsigned char[2][4])) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
@@ -2413,7 +2418,7 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		const float *intexcoord;
 		msurface_t *surface;
 
-		loadmodel->sortedmodelsurfaces[i] = i;
+		loadmodel->modelsurfaces_sorted[i] = i;
 		surface = loadmodel->data_surfaces + i;
 		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = meshtriangles;
@@ -2944,7 +2949,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->numskins = 1;
 	loadmodel->num_bones = numbones;
 	loadmodel->num_poses = loadmodel->numframes;
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = nummatts;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces = nummatts;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 	loadmodel->surfmesh.num_vertices = meshvertices;
@@ -2953,7 +2959,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	size = loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + loadmodel->surfmesh.num_triangles * sizeof(int[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[3]) + loadmodel->surfmesh.num_vertices * sizeof(float[2]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]) + loadmodel->surfmesh.num_vertices * sizeof(unsigned short) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t) + ((loadmodel->surfmesh.num_vertices <= 65536) ? (loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3])) : 0);
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, size);
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.data_element3i = (int *)data;data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
 	loadmodel->surfmesh.data_vertex3f = (float *)data;data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
@@ -2989,7 +2995,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		// since psk models do not have named sections, reuse their shader name as the section name
 		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->data_textures + index, skinfiles, matts[index].name, matts[index].name);
-		loadmodel->sortedmodelsurfaces[index] = index;
+		loadmodel->modelsurfaces_sorted[index] = index;
 		loadmodel->data_surfaces[index].texture = loadmodel->data_textures + index;
 		loadmodel->data_surfaces[index].num_firstvertex = 0;
 		loadmodel->data_surfaces[index].num_vertices = loadmodel->surfmesh.num_vertices;
@@ -3429,7 +3435,8 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->numframes = max(header.num_anims, 1);
 	loadmodel->num_bones = header.num_joints;
 	loadmodel->num_poses = max(header.num_frames, 1);
-	loadmodel->nummodelsurfaces = loadmodel->num_surfaces = header.num_meshes;
+	loadmodel->submodelsurfaces_start = 0;
+	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces = header.num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
 
@@ -3439,7 +3446,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// do most allocations as one merged chunk
 	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * (sizeof(unsigned short) + sizeof(unsigned char[2][4])) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
 	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->sortedmodelsurfaces = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
 	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
 	loadmodel->surfmesh.num_vertices = meshvertices;
 	loadmodel->surfmesh.num_triangles = meshtriangles;
@@ -3922,7 +3929,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		mesh.first_triangle = LittleLong(meshes[i].first_triangle);
 		mesh.num_triangles = LittleLong(meshes[i].num_triangles);
 
-		loadmodel->sortedmodelsurfaces[i] = i;
+		loadmodel->modelsurfaces_sorted[i] = i;
 		surface = loadmodel->data_surfaces + i;
 		surface->texture = loadmodel->data_textures + i;
 		surface->num_firsttriangle = mesh.first_triangle;

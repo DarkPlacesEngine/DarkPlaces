@@ -411,8 +411,6 @@ void R_DrawPortals(void)
 static void R_View_WorldVisibility_CullSurfaces(void)
 {
 	int surfaceindex;
-	int surfaceindexstart;
-	int surfaceindexend;
 	unsigned char *surfacevisible;
 	msurface_t *surfaces;
 	model_t *model = r_refdef.scene.worldmodel;
@@ -422,11 +420,9 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 		return;
 	if (r_usesurfaceculling.integer < 1)
 		return;
-	surfaceindexstart = model->firstmodelsurface;
-	surfaceindexend = surfaceindexstart + model->nummodelsurfaces;
 	surfaces = model->data_surfaces;
 	surfacevisible = r_refdef.viewcache.world_surfacevisible;
-	for (surfaceindex = surfaceindexstart; surfaceindex < surfaceindexend; surfaceindex++)
+	for (surfaceindex = model->submodelsurfaces_start; surfaceindex < model->submodelsurfaces_end; surfaceindex++)
 	{
 		if (surfacevisible[surfaceindex])
 		{
@@ -620,9 +616,9 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 	// add visible surfaces to draw list
 	if (ent == r_refdef.scene.worldentity)
 	{
-		for (i = 0;i < model->nummodelsurfaces;i++)
+		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
 		{
-			j = model->sortedmodelsurfaces[i];
+			j = model->modelsurfaces_sorted[i];
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				if (surfaces[j].texture->basematerialflags & flagsmask)
 					R_Water_AddWaterPlane(surfaces + j, 0);
@@ -634,9 +630,9 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 			n = ent->entitynumber;
 		else
 			n = 0;
-		for (i = 0;i < model->nummodelsurfaces;i++)
+		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
 		{
-			j = model->sortedmodelsurfaces[i];
+			j = model->modelsurfaces_sorted[i];
 			if (surfaces[j].texture->basematerialflags & flagsmask)
 				R_Water_AddWaterPlane(surfaces + j, n);
 		}
@@ -1140,7 +1136,7 @@ static void R_Q1BSP_CallRecursiveGetLightInfo(r_q1bsp_getlightinfo_t *info, qboo
 		info->outnumleafs = 0;
 		info->outnumsurfaces = 0;
 		memset(info->outleafpvs, 0, (info->model->brush.num_leafs + 7) >> 3);
-		memset(info->outsurfacepvs, 0, (info->model->nummodelsurfaces + 7) >> 3);
+		memset(info->outsurfacepvs, 0, (info->model->num_surfaces + 7) >> 3);
 		memset(info->outshadowtrispvs, 0, (info->model->surfmesh.num_triangles + 7) >> 3);
 		memset(info->outlighttrispvs, 0, (info->model->surfmesh.num_triangles + 7) >> 3);
 	}
@@ -1246,7 +1242,7 @@ void R_Mod_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float 
 	VectorCopy(info.relativelightorigin, info.outmaxs);
 	memset(visitingleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
 	memset(outleafpvs, 0, (info.model->brush.num_leafs + 7) >> 3);
-	memset(outsurfacepvs, 0, (info.model->nummodelsurfaces + 7) >> 3);
+	memset(outsurfacepvs, 0, (info.model->num_surfaces + 7) >> 3);
 	memset(outshadowtrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	memset(outlighttrispvs, 0, (info.model->surfmesh.num_triangles + 7) >> 3);
 	if (info.model->brush.GetPVS && !info.noocclusion)
