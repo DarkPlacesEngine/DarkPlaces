@@ -201,14 +201,14 @@ static void *Clump_AllocBlock(size_t size)
 #if MEMCLUMPING
 	if (size <= MEMCLUMPSIZE)
 	{
-		int index;
-		unsigned int bit;
-		unsigned int needbits;
-		unsigned int startbit;
-		unsigned int endbit;
-		unsigned int needints;
-		int startindex;
-		int endindex;
+		intptr_t index;
+		size_t bit;
+		size_t needbits;
+		size_t startbit;
+		size_t endbit;
+		size_t needints;
+		intptr_t startindex;
+		intptr_t endindex;
 		unsigned int value;
 		unsigned int mask;
 		unsigned int *array;
@@ -312,10 +312,10 @@ nofreeblock:
 static void Clump_FreeBlock(void *base, size_t size)
 {
 #if MEMCLUMPING
-	unsigned int needbits;
-	unsigned int startbit;
-	unsigned int endbit;
-	unsigned int bit;
+	size_t needbits;
+	size_t startbit;
+	size_t endbit;
+	size_t bit;
 	memclump_t **clumpchainpointer;
 	memclump_t *clump;
 	unsigned char *start = (unsigned char *)base;
