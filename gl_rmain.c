@@ -9315,11 +9315,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	model_t *model;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
-	const int *surfacelist;
 	const texture_t *texture;
 	int numtriangles;
-	int numsurfacelist;
-	int surfacelistindex;
 	int surfaceindex;
 	int triangleindex;
 	float localorigin[3];
@@ -9412,8 +9409,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 #endif
 
 	dynamic = model->surfmesh.isanimated;
-	numsurfacelist = model->nummodelsurfaces;
-	surfacelist = model->sortedmodelsurfaces;
 	surfaces = model->data_surfaces;
 
 	bih = NULL;
@@ -9449,9 +9444,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	}
 	else
 	{
-		for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
+		for (surfaceindex = model->submodelsurfaces_start;surfaceindex < model->submodelsurfaces_end;surfaceindex++)
 		{
-			surfaceindex = surfacelist[surfacelistindex];
 			surface = surfaces + surfaceindex;
 			// check cull box first because it rejects more than any other check
 			if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
@@ -9777,7 +9771,7 @@ static void R_DrawModelDecals(void)
 static void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
-	int i, j, flagsmask;
+	int j, flagsmask;
 	const msurface_t *surface;
 	model_t *model = ent->model;
 
@@ -9793,10 +9787,11 @@ static void R_DrawDebugModel(void)
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start;j < model->submodelsurfaces_end;j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -9887,10 +9882,11 @@ static void R_DrawDebugModel(void)
 			GL_DepthMask(true);
 		}
 		qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);CHECKGLERROR
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start; j < model->submodelsurfaces_end; j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -9925,10 +9921,11 @@ static void R_DrawDebugModel(void)
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthMask(true);
 		}
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start; j < model->submodelsurfaces_end; j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -10034,7 +10031,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	}
 
 	// check if this is an empty model
-	if (model->nummodelsurfaces == 0)
+	if (model->submodelsurfaces_start >= model->submodelsurfaces_end)
 		return;
 
 	rsurface.lightmaptexture = NULL;
@@ -10048,9 +10045,9 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	if (ent == r_refdef.scene.worldentity)
 	{
 		// for the world entity, check surfacevisible
-		for (i = 0;i < model->nummodelsurfaces;i++)
+		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
 		{
-			j = model->sortedmodelsurfaces[i];
+			j = model->modelsurfaces_sorted[i];
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				r_surfacelist[numsurfacelist++] = surfaces + j;
 		}
@@ -10065,14 +10062,14 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	else if (ui)
 	{
 		// for ui we have to preserve the order of surfaces (not using sortedmodelsurfaces)
-		for (i = 0; i < model->nummodelsurfaces; i++)
-			r_surfacelist[numsurfacelist++] = surfaces + model->firstmodelsurface + i;
+		for (i = model->submodelsurfaces_start; i < model->submodelsurfaces_end; i++)
+			r_surfacelist[numsurfacelist++] = surfaces + i;
 	}
 	else
 	{
 		// add all surfaces
-		for (i = 0; i < model->nummodelsurfaces; i++)
-			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
+		for (i = model->submodelsurfaces_start; i < model->submodelsurfaces_end; i++)
+			r_surfacelist[numsurfacelist++] = surfaces + model->modelsurfaces_sorted[i];
 	}
 
 	/*

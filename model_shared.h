@@ -370,36 +370,40 @@ typedef struct msurface_lightmapinfo_s
 msurface_lightmapinfo_t;
 
 struct q3deffect_s;
+
+/// <summary>
+///  describes the textures to use on a range of triangles in the model, and mins/maxs (AABB) for culling.
+/// </summary>
 typedef struct msurface_s
 {
-	// bounding box for onscreen checks
+	/// range of triangles and vertices in model->surfmesh
+	int num_triangles; // triangles
+	int num_firsttriangle; // first element is this *3
+	int num_vertices; // length of the range referenced by elements
+	int num_firstvertex; // min vertex referenced by elements
+
+	/// the texture to use on the surface
+	texture_t *texture;
+	/// the lightmap texture fragment to use on the rendering mesh
+	struct rtexture_s *lightmaptexture;
+	/// the lighting direction texture fragment to use on the rendering mesh
+	struct rtexture_s *deluxemaptexture;
+
+	// the following fields are used situationally and are not part of rendering in typical usage
+
+	/// bounding box for onscreen checks
 	vec3_t mins;
 	vec3_t maxs;
-	// the texture to use on the surface
-	texture_t *texture;
-	// the lightmap texture fragment to use on the rendering mesh
-	struct rtexture_s *lightmaptexture;
-	// the lighting direction texture fragment to use on the rendering mesh
-	struct rtexture_s *deluxemaptexture;
-	// lightmaptexture rebuild information not used in q3bsp
-	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
-	// fog volume info in q3bsp
-	struct q3deffect_s *effect; // q3bsp
-	// mesh information for collisions (only used by q3bsp curves)
-	int num_firstcollisiontriangle;
 
-	// surfaces own ranges of vertices and triangles in the model->surfmesh
-	int num_triangles; // number of triangles
-	int num_firsttriangle; // first triangle
-	int num_vertices; // number of vertices
-	int num_firstvertex; // first vertex
+	/// lightmaptexture rebuild information not used in q3bsp
+	msurface_lightmapinfo_t* lightmapinfo; // q1bsp
+	/// fog volume info in q3bsp
+	struct q3deffect_s* effect; // q3bsp
 
-	// mesh information for collisions (only used by q3bsp curves)
-	int num_collisiontriangles; // q3bsp
-	int num_collisionvertices; // q3bsp
-
-	// used by Mod_Mesh_Finalize when building sortedmodelsurfaces
-	qbool included;
+	/// mesh information for collisions (only used by q3bsp curves)
+	int num_firstcollisiontriangle; // q3bsp only
+	int num_collisiontriangles; // number of triangles (if surface has collisions enabled)
+	int num_collisionvertices; // number of vertices referenced by collision triangles (if surface has collisions enabled)
 }
 msurface_t;
 
@@ -455,10 +459,11 @@ typedef struct model_s
 	animscene_t		*skinscenes; // [numskins]
 	// skin animation info
 	animscene_t		*animscenes; // [numframes]
-	// range of surface numbers in this (sub)model
-	int				firstmodelsurface;
-	int				nummodelsurfaces;
-	int				*sortedmodelsurfaces;
+	// range of surface numbers in this model
+	int				submodelsurfaces_start;
+	int				submodelsurfaces_end;
+	/// surface indices of model in an optimal draw order (submodelindex -> texture -> lightmap -> index)
+	int				*modelsurfaces_sorted; // same size as num_surfaces
 	// range of collision brush numbers in this (sub)model
 	int				firstmodelbrush;
 	int				nummodelbrushes;

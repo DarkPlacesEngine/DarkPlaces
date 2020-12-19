@@ -6122,9 +6122,9 @@ static void clippointtosurface(prvm_prog_t *prog, prvm_edict_t *ed, model_t *mod
 
 static msurface_t *getsurface(model_t *model, int surfacenum)
 {
-	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
+	if (surfacenum < 0 || surfacenum >= model->submodelsurfaces_end - model->submodelsurfaces_start)
 		return NULL;
-	return model->data_surfaces + surfacenum + model->firstmodelsurface;
+	return model->data_surfaces + surfacenum + model->submodelsurfaces_start;
 }
 
 
@@ -6299,9 +6299,9 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 	applytransform_inverted(prog, point, ed, p);
 	best = -1;
 	bestdist = 1000000000;
-	for (surfacenum = 0;surfacenum < model->nummodelsurfaces;surfacenum++)
+	for (surfacenum = model->submodelsurfaces_start;surfacenum < model->submodelsurfaces_end;surfacenum++)
 	{
-		surface = model->data_surfaces + surfacenum + model->firstmodelsurface;
+		surface = model->data_surfaces + surfacenum;
 		// first see if the nearest point on the surface's box is closer than the previous match
 		clipped[0] = bound(surface->mins[0], p[0], surface->maxs[0]) - p[0];
 		clipped[1] = bound(surface->mins[1], p[1], surface->maxs[1]) - p[1];
@@ -6316,7 +6316,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 			if (dist < bestdist)
 			{
 				// that's closer too, store it as the best match
-				best = surfacenum;
+				best = surfacenum - model->submodelsurfaces_start;
 				bestdist = dist;
 			}
 		}

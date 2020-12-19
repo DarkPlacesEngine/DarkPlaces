@@ -3376,7 +3376,7 @@ static void R_Shadow_DrawEntityShadow(entity_render_t *ent)
 	relativeshadowmaxs[0] = relativeshadoworigin[0] + relativeshadowradius;
 	relativeshadowmaxs[1] = relativeshadoworigin[1] + relativeshadowradius;
 	relativeshadowmaxs[2] = relativeshadoworigin[2] + relativeshadowradius;
-	ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
+	ent->model->DrawShadowMap(r_shadow_shadowmapside, ent, relativeshadoworigin, NULL, relativeshadowradius, ent->model->submodelsurfaces_end - ent->model->submodelsurfaces_start, ent->model->modelsurfaces_sorted + ent->model->submodelsurfaces_start, NULL, relativeshadowmins, relativeshadowmaxs);
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
 
@@ -3415,7 +3415,7 @@ static void R_Shadow_DrawEntityLight(entity_render_t *ent)
 
 	R_Shadow_SetupEntityLight(ent);
 
-	model->DrawLight(ent, model->nummodelsurfaces, model->sortedmodelsurfaces, NULL);
+	model->DrawLight(ent, model->submodelsurfaces_end - model->submodelsurfaces_start, model->modelsurfaces_sorted + model->submodelsurfaces_start, NULL);
 
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
@@ -4431,7 +4431,7 @@ static void R_Shadow_DrawModelShadowMaps(void)
 		relativeshadowmaxs[1] = relativelightorigin[1] + r_shadows_throwdistance.value * fabs(relativelightdirection[1]) + radius * (fabs(relativeforward[1]) + fabs(relativeright[1]));
 		relativeshadowmaxs[2] = relativelightorigin[2] + r_shadows_throwdistance.value * fabs(relativelightdirection[2]) + radius * (fabs(relativeforward[2]) + fabs(relativeright[2]));
 		RSurf_ActiveModelEntity(ent, false, false, false);
-		ent->model->DrawShadowMap(0, ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->nummodelsurfaces, ent->model->sortedmodelsurfaces, NULL, relativeshadowmins, relativeshadowmaxs);
+		ent->model->DrawShadowMap(0, ent, relativelightorigin, relativelightdirection, relativethrowdistance, ent->model->submodelsurfaces_end - ent->model->submodelsurfaces_start, ent->model->modelsurfaces_sorted + ent->model->submodelsurfaces_start, NULL, relativeshadowmins, relativeshadowmaxs);
 		rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 	}
 

@@ -1197,9 +1197,9 @@ void Mod_CreateCollisionMesh(model_t *mod)
 	// make a single combined collision mesh for physics engine use
 	// TODO rewrite this to use the collision brushes as source, to fix issues with e.g. common/caulk which creates no drawsurface
 	numcollisionmeshtriangles = 0;
-	for (k = 0;k < mod->nummodelsurfaces;k++)
+	for (k = mod->submodelsurfaces_start;k < mod->submodelsurfaces_end;k++)
 	{
-		surface = mod->data_surfaces + mod->firstmodelsurface + k;
+		surface = mod->data_surfaces + k;
 		if (!strcmp(surface->texture->name, "collision") || !strcmp(surface->texture->name, "collisionconvex")) // found collision mesh
 		{
 			usesinglecollisionmesh = true;
@@ -1215,9 +1215,9 @@ void Mod_CreateCollisionMesh(model_t *mod)
 		Mod_ShadowMesh_AddMesh(mod->brush.collisionmesh, mod->surfmesh.data_vertex3f, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
 	else
 	{
-		for (k = 0;k < mod->nummodelsurfaces;k++)
+		for (k = mod->submodelsurfaces_start; k < mod->submodelsurfaces_end; k++)
 		{
-			surface = mod->data_surfaces + mod->firstmodelsurface + k;
+			surface = mod->data_surfaces + k;
 			if (!(surface->texture->supercontents & SUPERCONTENTS_SOLID))
 				continue;
 			Mod_ShadowMesh_AddMesh(mod->brush.collisionmesh, mod->surfmesh.data_vertex3f, surface->num_triangles, (mod->surfmesh.data_element3i + 3 * surface->num_firsttriangle));
@@ -2881,41 +2881,65 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 		*lastvertexpointer = lastvertex;
 }
 
+typedef struct Mod_MakeSortedSurfaces_qsortsurface_s
+{
+	int submodel;
+	int surfaceindex;
+	q3deffect_t* effect;
+	texture_t* texture;
+	rtexture_t* lightmaptexture;
+}
+Mod_MakeSortedSurfaces_qsortsurface_t;
+
+int Mod_MakeSortedSurfaces_qsortfunc(const void *a, const void *b)
+{
+	const Mod_MakeSortedSurfaces_qsortsurface_t* l = (Mod_MakeSortedSurfaces_qsortsurface_t*)a;
+	const Mod_MakeSortedSurfaces_qsortsurface_t* r = (Mod_MakeSortedSurfaces_qsortsurface_t*)b;
+	if (l->submodel < r->submodel)
+		return -1;
+	if (l->submodel > r->submodel)
+		return 1;
+	if (l->effect < r->effect)
+		return -1;
+	if (l->effect > r->effect)
+		return 1;
+	if (l->texture < r->texture)
+		return -1;
+	if (l->texture > r->texture)
+		return 1;
+	if (l->lightmaptexture < r->lightmaptexture)
+		return -1;
+	if (l->lightmaptexture > r->lightmaptexture)
+		return 1;
+	if (l->surfaceindex < r->surfaceindex)
+		return -1;
+	if (l->surfaceindex > r->surfaceindex)
+		return 1;
+	return 0;
+}
+
 void Mod_MakeSortedSurfaces(model_t *mod)
 {
 	// make an optimal set of texture-sorted batches to draw...
-	int j, t;
-	int *firstsurfacefortexture;
-	int *numsurfacesfortexture;
-	if (!mod->sortedmodelsurfaces)
-		mod->sortedmodelsurfaces = (int *) Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->sortedmodelsurfaces));
-	firstsurfacefortexture = (int *) Mem_Alloc(tempmempool, mod->num_textures * sizeof(*firstsurfacefortexture));
-	numsurfacesfortexture = (int *) Mem_Alloc(tempmempool, mod->num_textures * sizeof(*numsurfacesfortexture));
-	memset(numsurfacesfortexture, 0, mod->num_textures * sizeof(*numsurfacesfortexture));
-	for (j = 0;j < mod->nummodelsurfaces;j++)
+	int j, k;
+	Mod_MakeSortedSurfaces_qsortsurface_t *info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
+	if (!mod->modelsurfaces_sorted)
+		mod->modelsurfaces_sorted = (int *) Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
+	// the goal is to sort by submodel (can't change which submodel a surface belongs to), and then by effects and textures
+	for (j = 0; j < mod->num_surfaces; j++)
 	{
-		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
-		if(!surface->texture)
-			continue;
-		t = (int)(surface->texture - mod->data_textures);
-		numsurfacesfortexture[t]++;
+		info[j].submodel = 0;
+		info[j].surfaceindex = j;
+		info[j].effect = mod->data_surfaces[j].effect;
+		info[j].texture = mod->data_surfaces[j].texture;
+		info[j].lightmaptexture = mod->data_surfaces[j].lightmaptexture;
 	}
-	j = 0;
-	for (t = 0;t < mod->num_textures;t++)
-	{
-		firstsurfacefortexture[t] = j;
-		j += numsurfacesfortexture[t];
-	}
-	for (j = 0;j < mod->nummodelsurfaces;j++)
-	{
-		const msurface_t *surface = mod->data_surfaces + j + mod->firstmodelsurface;
-		if (!surface->texture)
-			continue;
-		t = (int)(surface->texture - mod->data_textures);
-		mod->sortedmodelsurfaces[firstsurfacefortexture[t]++] = j + mod->firstmodelsurface;
-	}
-	Mem_Free(firstsurfacefortexture);
-	Mem_Free(numsurfacesfortexture);
+	for (k = 0; k < mod->brush.numsubmodels; k++)
+		for (j = mod->brush.submodels[k]->submodelsurfaces_start; j < mod->brush.submodels[k]->submodelsurfaces_end; j++)
+			info[j].submodel = k;
+	qsort(info, mod->num_surfaces, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
+	for (j = 0; j < mod->num_surfaces; j++)
+		mod->modelsurfaces_sorted[j] = info[j].surfaceindex;
 }
 
 void Mod_BuildVBOs(void)
@@ -3068,9 +3092,9 @@ static void Mod_Decompile_OBJ(model_t *model, const char *filename, const char *
 		if (l > 0)
 			outbufferpos += l;
 		submodel = model->brush.numsubmodels ? model->brush.submodels[submodelindex] : model;
-		for (surfaceindex = 0;surfaceindex < submodel->nummodelsurfaces;surfaceindex++)
+		for (surfaceindex = submodel->submodelsurfaces_start;surfaceindex < submodel->submodelsurfaces_end;surfaceindex++)
 		{
-			surface = model->data_surfaces + submodel->sortedmodelsurfaces[surfaceindex];
+			surface = model->data_surfaces + surfaceindex;
 			l = dpsnprintf(outbuffer + outbufferpos, outbuffermax - outbufferpos, "usemtl %s\n", (surface->texture && surface->texture->name[0]) ? surface->texture->name : "default");
 			if (l > 0)
 				outbufferpos += l;
@@ -3614,8 +3638,9 @@ static void Mod_GenerateLightmaps_CreateLights_ComputeSVBSP_InsertSurfaces(const
 	const int *element3i = model->surfmesh.data_element3i;
 	const int *e;
 	float v2[3][3];
-	for (surfaceindex = 0, surface = model->data_surfaces;surfaceindex < model->nummodelsurfaces;surfaceindex++, surface++)
+	for (surfaceindex = model->submodelsurfaces_start;surfaceindex < model->submodelsurfaces_end;surfaceindex++)
 	{
+		surface = model->data_surfaces + surfaceindex;
 		if (!BoxesOverlap(surface->mins, surface->maxs, mins, maxs))
 			continue;
 		if (surface->texture->basematerialflags & MATERIALFLAG_NOSHADOW)
@@ -4491,7 +4516,7 @@ msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithpre
 	{
 		mod->max_surfaces = 2 * max(mod->num_surfaces, 64);
 		mod->data_surfaces = (msurface_t *)Mem_Realloc(mod->mempool, mod->data_surfaces, mod->max_surfaces * sizeof(*mod->data_surfaces));
-		mod->sortedmodelsurfaces = (int *)Mem_Realloc(mod->mempool, mod->sortedmodelsurfaces, mod->max_surfaces * sizeof(*mod->sortedmodelsurfaces));
+		mod->modelsurfaces_sorted = (int *)Mem_Realloc(mod->mempool, mod->modelsurfaces_sorted, mod->max_surfaces * sizeof(*mod->modelsurfaces_sorted));
 	}
 	surf = mod->data_surfaces + mod->num_surfaces;
 	mod->num_surfaces++;
@@ -4633,29 +4658,26 @@ static void Mod_Mesh_MakeSortedSurfaces(model_t *mod)
 {
 	int i, j;
 	texture_t *tex;
-	msurface_t *surf, *surf2;
+	unsigned char* included = R_FrameData_Alloc(mod->num_surfaces * sizeof(unsigned char));
 
 	// build the sorted surfaces list properly to reduce material setup
 	// this is easy because we're just sorting on texture and don't care about the order of textures
-	mod->nummodelsurfaces = 0;
+	mod->submodelsurfaces_start = 0;
+	mod->submodelsurfaces_end = 0;
 	for (i = 0; i < mod->num_surfaces; i++)
-		mod->data_surfaces[i].included = false;
+		included[i] = 0;
 	for (i = 0; i < mod->num_surfaces; i++)
 	{
-		surf = mod->data_surfaces + i;
-		if (surf->included)
+		if (included[i])
 			continue;
-		tex = surf->texture;
+		tex = mod->data_surfaces[i].texture;
 		// j = i is intentional
 		for (j = i; j < mod->num_surfaces; j++)
 		{
-			surf2 = mod->data_surfaces + j;
-			if (surf2->included)
-				continue;
-			if (surf2->texture == tex)
+			if (!included[j] && mod->data_surfaces[j].texture == tex)
 			{
-				surf2->included = true;
-				mod->sortedmodelsurfaces[mod->nummodelsurfaces++] = j;
+				included[j] = 1;
+				mod->modelsurfaces_sorted[mod->submodelsurfaces_end++] = j;
 			}
 		}
 	}
