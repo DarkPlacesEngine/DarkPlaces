@@ -365,6 +365,18 @@ void Cvar_UpdateAllAutoCvars(cvar_state_t *cvars)
 		Cvar_UpdateAutoCvar(var);
 }
 
+void Cvar_Callback(cvar_t *var)
+{
+	if (var == NULL)
+	{
+		Con_Print("Cvar_Callback: var == NULL\n");
+		return;
+	}
+
+	if(var->callback)
+		var->callback(var);
+}
+
 /*
 ============
 Cvar_Set
@@ -413,8 +425,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	Cvar_UpdateAutoCvar(var);
 
 	// Call the function stored in the cvar for bounds checking, cleanup, etc
-	if (var->callback)
-		var->callback(var);
+	Cvar_Callback(var);
 }
 
 void Cvar_SetQuick (cvar_t *var, const char *value)
@@ -472,6 +483,11 @@ void Cvar_SetValue(cvar_state_t *cvars, const char *var_name, float value)
 
 void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 {
+	if (variable == NULL)
+	{
+		Con_Print("Cvar_RegisterCallback: var == NULL\n");
+		return;
+	}
 	variable->callback = callback;
 }
 
