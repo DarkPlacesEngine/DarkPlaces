@@ -115,6 +115,8 @@ void Cvar_RegisterVariable(cvar_t *variable);
 
 qbool Cvar_Readonly (cvar_t *var, const char *cmd_name);
 
+void Cvar_Callback(cvar_t *var);
+
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
 
