@@ -2891,7 +2891,7 @@ typedef struct Mod_MakeSortedSurfaces_qsortsurface_s
 }
 Mod_MakeSortedSurfaces_qsortsurface_t;
 
-int Mod_MakeSortedSurfaces_qsortfunc(const void *a, const void *b)
+static int Mod_MakeSortedSurfaces_qsortfunc(const void *a, const void *b)
 {
 	const Mod_MakeSortedSurfaces_qsortsurface_t* l = (Mod_MakeSortedSurfaces_qsortsurface_t*)a;
 	const Mod_MakeSortedSurfaces_qsortsurface_t* r = (Mod_MakeSortedSurfaces_qsortsurface_t*)b;
@@ -4658,7 +4658,7 @@ static void Mod_Mesh_MakeSortedSurfaces(model_t *mod)
 {
 	int i, j;
 	texture_t *tex;
-	unsigned char* included = R_FrameData_Alloc(mod->num_surfaces * sizeof(unsigned char));
+	unsigned char* included = (unsigned char *)R_FrameData_Alloc(mod->num_surfaces * sizeof(unsigned char));
 
 	// build the sorted surfaces list properly to reduce material setup
 	// this is easy because we're just sorting on texture and don't care about the order of textures
