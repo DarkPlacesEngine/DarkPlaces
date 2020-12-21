@@ -1459,9 +1459,9 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 		}
 
 		/*
-		* This is mostly for dedicated server console, but if the
-		* player gave a custom origin, we can ignore the traceline.
-		*/
+		 * This is mostly for dedicated server console, but if the
+		 * player gave a custom origin, we can ignore the traceline.
+		 */
 		if(!strcmp(Cmd_Argv(cmd, i), "origin"))
 			haveorigin = true;
 
