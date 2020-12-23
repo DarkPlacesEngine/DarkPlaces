@@ -87,6 +87,7 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_MOONHELM,				GAME_MOONHELM,				"moonhelm",				"-moonhelm",				"MoonHelm",					"MoonHelm",					"data",		NULL,			"mh",				"moonhelm"				}, // COMMANDLINEOPTION: Game: -moonhelm runs the game MoonHelm
 { GAME_VORETOURNAMENT,			GAME_VORETOURNAMENT,		"voretournament",		"-voretournament",			"Vore Tournament",			"Vore_Tournament",			"data",		NULL,			"voretournament",	"voretournament"		}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
 { GAME_DOOMBRINGER,				GAME_DOOMBRINGER,			"doombringer",			"-doombringer",				"DOOMBRINGER",				"DOOMBRINGER",				"dbdata",	NULL,			"doombringer",		"doombringer"			}, // COMMANDLINEOPTION: Game: -doombringer runs the game DOOMBRINGER
+{ GAME_BATTLEMETAL,				GAME_NORMAL,				"battlemetal",			"-battlemetal",				"battlemetal",				"battlemetal",				"metaldata",	NULL,		"battlemetal",		"battlemetal"			}, // COMMANDLINEOPTION: Game: -battlemetal runs the game battleMETAL
 };
 
 static void COM_SetGameType(int index);
