@@ -2290,9 +2290,9 @@ static void World_Physics_Frame_BodyFromEntity(world_t *world, prvm_edict_t *ed)
 
 			// check if trimesh can be defined with convex
 			convex_compatible = false;
-			for (i = 0;i < model->nummodelsurfaces;i++)
+			for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
 			{
-				if (!strcmp(((msurface_t *)(model->data_surfaces + model->firstmodelsurface + i))->texture->name, "collisionconvex"))
+				if (!strcmp(model->data_surfaces[i].texture->name, "collisionconvex"))
 				{
 					convex_compatible = true;
 					break;

@@ -1411,7 +1411,6 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	int i;
 	qbool haveorigin;
 
-	qbool expectval = false;
 	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
 
 	if(!Cmd_Argc(cmd))
@@ -1450,31 +1449,24 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	}
 
 	// Allow more than one key/value pair by cycling between expecting either one.
-	for(i = 2; i < Cmd_Argc(cmd); i++)
+	for(i = 2; i < Cmd_Argc(cmd); i += 2)
 	{
-		if(!expectval)
+		if(!(key = PRVM_ED_FindField(prog, Cmd_Argv(cmd, i))))
 		{
-			if(!(key = PRVM_ED_FindField(prog, Cmd_Argv(cmd, i))))
-			{
-				print("Key %s not found!\n", Cmd_Argv(cmd, i));
-				PRVM_ED_Free(prog, ed);
-				return;
-			}
-
-			/*
-			 * This is mostly for dedicated server console, but if the
-			 * player gave a custom origin, we can ignore the traceline.
-			 */
-			if(!strcmp(Cmd_Argv(cmd, i), "origin"))
-				haveorigin = true;
-
-			expectval = true;
+			print("Key %s not found!\n", Cmd_Argv(cmd, i));
+			PRVM_ED_Free(prog, ed);
+			return;
 		}
-		else
-		{
-			PRVM_ED_ParseEpair(prog, ed, key, Cmd_Argv(cmd, i), false);
-			expectval = false;
-		}
+
+		/*
+		 * This is mostly for dedicated server console, but if the
+		 * player gave a custom origin, we can ignore the traceline.
+		 */
+		if(!strcmp(Cmd_Argv(cmd, i), "origin"))
+			haveorigin = true;
+
+		if (i + 1 < Cmd_Argc(cmd))
+			PRVM_ED_ParseEpair(prog, ed, key, Cmd_Argv(cmd, i+1), false);
 	}
 
 	if(!haveorigin)
@@ -1509,7 +1501,7 @@ static void SV_Ent_Remove_f(cmd_state_t *cmd)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	prvm_edict_t *ed;
-	int i, ednum;
+	int i, ednum = 0;
 	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
 
 	if(!Cmd_Argc(cmd))
