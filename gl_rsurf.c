@@ -602,7 +602,7 @@ void R_Mod_DrawSky(entity_render_t *ent)
 
 void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 {
-	int i, j, n, flagsmask;
+	int i, n, flagsmask;
 	model_t *model = ent->model;
 	msurface_t *surfaces;
 	if (model == NULL)
@@ -617,12 +617,9 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 	if (ent == r_refdef.scene.worldentity)
 	{
 		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
-		{
-			j = model->modelsurfaces_sorted[i];
-			if (r_refdef.viewcache.world_surfacevisible[j])
-				if (surfaces[j].texture->basematerialflags & flagsmask)
-					R_Water_AddWaterPlane(surfaces + j, 0);
-		}
+			if (r_refdef.viewcache.world_surfacevisible[i])
+				if (surfaces[i].texture->basematerialflags & flagsmask)
+					R_Water_AddWaterPlane(surfaces + i, 0);
 	}
 	else
 	{
@@ -631,11 +628,8 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 		else
 			n = 0;
 		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
-		{
-			j = model->modelsurfaces_sorted[i];
-			if (surfaces[j].texture->basematerialflags & flagsmask)
-				R_Water_AddWaterPlane(surfaces + j, n);
-		}
+			if (surfaces[i].texture->basematerialflags & flagsmask)
+				R_Water_AddWaterPlane(surfaces + i, n);
 	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }

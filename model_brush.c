@@ -4123,26 +4123,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
-		// this gets altered below if sky or water is used
-		mod->DrawSky = NULL;
-		mod->DrawAddWaterPlanes = NULL;
+		Mod_SetDrawSkyAndWater(mod);
 
-		// scan surfaces for sky and water and flag the submodel as possessing these features or not
-		// build lightstyle lists for quick marking of dirty lightmaps when lightstyles flicker
 		if (mod->submodelsurfaces_start < mod->submodelsurfaces_end)
 		{
-			for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
-				if (mod->data_surfaces[j].texture->basematerialflags & MATERIALFLAG_SKY)
-					break;
-			if (j < mod->submodelsurfaces_end)
-				mod->DrawSky = R_Mod_DrawSky;
-
-			for (j = mod->submodelsurfaces_start;j < mod->submodelsurfaces_end;j++)
-				if (mod->data_surfaces[j].texture && mod->data_surfaces[j].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-					break;
-			if (j < mod->submodelsurfaces_end)
-				mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
 			// when d_lightstylevalue changes)
@@ -5066,26 +5050,11 @@ static void Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
-		// this gets altered below if sky or water is used
-		mod->DrawSky = NULL;
-		mod->DrawAddWaterPlanes = NULL;
+		Mod_SetDrawSkyAndWater(mod);
 
-		// scan surfaces for sky and water and flag the submodel as possessing these features or not
 		// build lightstyle lists for quick marking of dirty lightmaps when lightstyles flicker
 		if (mod->submodelsurfaces_start < mod->submodelsurfaces_end)
 		{
-			for (j = mod->submodelsurfaces_start;j < mod->submodelsurfaces_end;j++)
-				if (mod->data_surfaces[j].texture && (mod->data_surfaces[j].texture->basematerialflags & MATERIALFLAG_SKY))
-					break;
-			if (j < mod->submodelsurfaces_end)
-				mod->DrawSky = R_Mod_DrawSky;
-
-			for (j = mod->submodelsurfaces_start;j < mod->submodelsurfaces_end;j++)
-				if (mod->data_surfaces[j].texture && (mod->data_surfaces[j].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA)))
-					break;
-			if (j < mod->submodelsurfaces_end)
-				mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-
 			// build lightstyle update chains
 			// (used to rapidly mark lightmapupdateflags on many surfaces
 			// when d_lightstylevalue changes)
@@ -7564,6 +7533,7 @@ static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->brush.submodels = (model_t **)Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
 
 	mod = loadmodel;
+	mod->modelsurfaces_sorted = (int*)Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
 	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
 	{
 		if (i > 0)
@@ -7598,7 +7568,6 @@ static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->submodelsurfaces_end = mod->brushq3.data_models[i].firstface + mod->brushq3.data_models[i].numfaces;
 		mod->firstmodelbrush = mod->brushq3.data_models[i].firstbrush;
 		mod->nummodelbrushes = mod->brushq3.data_models[i].numbrushes;
-		mod->modelsurfaces_sorted = (int *)Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
 
 		VectorCopy(mod->brushq3.data_models[i].mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_models[i].maxs, mod->normalmaxs);
@@ -7610,7 +7579,7 @@ static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		//printf("Editing model %d... BEFORE re-bounding: %f %f %f - %f %f %f\n", i, mod->normalmins[0], mod->normalmins[1], mod->normalmins[2], mod->normalmaxs[0], mod->normalmaxs[1], mod->normalmaxs[2]);
 		for (j = mod->submodelsurfaces_start;j < mod->submodelsurfaces_end;j++)
 		{
-			const msurface_t *surface = mod->data_surfaces + j + mod->submodelsurfaces_start;
+			const msurface_t *surface = mod->data_surfaces + j;
 			const float *v = mod->surfmesh.data_vertex3f + 3 * surface->num_firstvertex;
 			int k;
 			if (!surface->num_vertices)
@@ -7640,22 +7609,7 @@ static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
-		// this gets altered below if sky or water is used
-		mod->DrawSky = NULL;
-		mod->DrawAddWaterPlanes = NULL;
-
-		for (j = mod->submodelsurfaces_start;j < mod->submodelsurfaces_end;j++)
-			if (mod->data_surfaces[j].texture && mod->data_surfaces[j].texture->basematerialflags & MATERIALFLAG_SKY)
-				break;
-		if (j < mod->submodelsurfaces_end)
-			mod->DrawSky = R_Mod_DrawSky;
-
-		for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
-			if (mod->data_surfaces[j].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-				break;
-		if (j < mod->submodelsurfaces_end)
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-
+		Mod_SetDrawSkyAndWater(mod);
 		Mod_MakeCollisionBIH(mod, false, &mod->collision_bih);
 		Mod_MakeCollisionBIH(mod, true, &mod->render_bih);
 
@@ -8291,21 +8245,7 @@ void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend)
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
 
-		// this gets altered below if sky or water is used
-		mod->DrawSky = NULL;
-		mod->DrawAddWaterPlanes = NULL;
-
-		for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
-			if (mod->data_surfaces[j].texture->basematerialflags & MATERIALFLAG_SKY)
-				break;
-		if (j < mod->submodelsurfaces_end)
-			mod->DrawSky = R_Mod_DrawSky;
-
-		for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
-			if (mod->data_surfaces[j].texture->basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-				break;
-		if (j < mod->submodelsurfaces_end)
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
+		Mod_SetDrawSkyAndWater(mod);
 
 		Mod_MakeCollisionBIH(mod, true, &mod->collision_bih);
 		mod->render_bih = mod->collision_bih;

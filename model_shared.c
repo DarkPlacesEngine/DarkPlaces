@@ -540,6 +540,7 @@ model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk)
 					Mem_Free(buf);
 				}
 
+				Mod_SetDrawSkyAndWater(mod);
 				Mod_BuildVBOs();
 				break;
 			}
@@ -2881,9 +2882,25 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 		*lastvertexpointer = lastvertex;
 }
 
+void Mod_SetDrawSkyAndWater(model_t* mod)
+{
+	size_t j;
+	uint64_t basematerialflags = 0;
+	// by default assume there is no sky or water used in this model
+	mod->DrawSky = NULL;
+	mod->DrawAddWaterPlanes = NULL;
+	// combine all basematerialflags observed in the submodelsurfaces range, then check for special flags
+	for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
+		if (mod->data_surfaces[j].texture)
+			basematerialflags |= mod->data_surfaces[j].texture->basematerialflags;
+	if (basematerialflags & MATERIALFLAG_SKY)
+		mod->DrawSky = R_Mod_DrawSky;
+	if (basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+		mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
+}
+
 typedef struct Mod_MakeSortedSurfaces_qsortsurface_s
 {
-	int submodel;
 	int surfaceindex;
 	q3deffect_t* effect;
 	texture_t* texture;
@@ -2895,10 +2912,6 @@ static int Mod_MakeSortedSurfaces_qsortfunc(const void *a, const void *b)
 {
 	const Mod_MakeSortedSurfaces_qsortsurface_t* l = (Mod_MakeSortedSurfaces_qsortsurface_t*)a;
 	const Mod_MakeSortedSurfaces_qsortsurface_t* r = (Mod_MakeSortedSurfaces_qsortsurface_t*)b;
-	if (l->submodel < r->submodel)
-		return -1;
-	if (l->submodel > r->submodel)
-		return 1;
 	if (l->effect < r->effect)
 		return -1;
 	if (l->effect > r->effect)
@@ -2928,16 +2941,14 @@ void Mod_MakeSortedSurfaces(model_t *mod)
 	// the goal is to sort by submodel (can't change which submodel a surface belongs to), and then by effects and textures
 	for (j = 0; j < mod->num_surfaces; j++)
 	{
-		info[j].submodel = 0;
 		info[j].surfaceindex = j;
 		info[j].effect = mod->data_surfaces[j].effect;
 		info[j].texture = mod->data_surfaces[j].texture;
 		info[j].lightmaptexture = mod->data_surfaces[j].lightmaptexture;
 	}
 	for (k = 0; k < mod->brush.numsubmodels; k++)
-		for (j = mod->brush.submodels[k]->submodelsurfaces_start; j < mod->brush.submodels[k]->submodelsurfaces_end; j++)
-			info[j].submodel = k;
-	qsort(info, mod->num_surfaces, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
+		if (mod->brush.submodels[k]->submodelsurfaces_end > mod->brush.submodels[k]->submodelsurfaces_start + 1)
+			qsort(info + mod->brush.submodels[k]->submodelsurfaces_start, (size_t)mod->brush.submodels[k]->submodelsurfaces_end - mod->brush.submodels[k]->submodelsurfaces_start, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
 	for (j = 0; j < mod->num_surfaces; j++)
 		mod->modelsurfaces_sorted[j] = info[j].surfaceindex;
 }
