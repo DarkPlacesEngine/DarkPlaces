@@ -1004,8 +1004,6 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->modeldatatypestring = "MDL";
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -1321,15 +1319,6 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1364,8 +1353,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->modeldatatypestring = "MD2";
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -1586,15 +1573,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1624,8 +1602,6 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->modeldatatypestring = "MD3";
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -1777,15 +1753,6 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -1860,8 +1827,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -2171,15 +2136,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -2238,8 +2194,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -2546,15 +2500,6 @@ void Mod_DARKPLACESMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 // no idea why PSK/PSA files contain weird quaternions but they do...
@@ -2588,8 +2533,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->modeldatatypestring = "PSK";
 
 	loadmodel->type = mod_alias;
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -3218,15 +3161,6 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->TracePoint = Mod_CollisionBIH_TracePoint_Mesh;
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }
 
 void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
@@ -3413,8 +3347,6 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 
 	text = header.num_text && header.ofs_text ? (const char *)(pbase + header.ofs_text) : "";
 
-	loadmodel->DrawSky = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 	loadmodel->Draw = R_Mod_Draw;
 	loadmodel->DrawDepth = R_Mod_DrawDepth;
 	loadmodel->DrawDebug = R_Mod_DrawDebug;
@@ -3966,13 +3898,4 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	if (joint1       ) Mem_Free(joint1       );joint1        = NULL;
 	if (pose         ) Mem_Free(pose         );pose          = NULL;
 	if (pose1        ) Mem_Free(pose1        );pose1         = NULL;
-
-	// because shaders can do somewhat unexpected things, check for unusual features now
-	for (i = 0;i < loadmodel->num_textures;i++)
-	{
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_SKY))
-			mod->DrawSky = R_Mod_DrawSky;
-		if (loadmodel->data_textures[i].basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
-			mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
-	}
 }

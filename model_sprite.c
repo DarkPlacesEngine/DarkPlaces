@@ -274,11 +274,9 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->type = mod_sprite;
 
-	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Sprite_Draw;
 	loadmodel->DrawDepth = NULL;
 	loadmodel->DrawLight = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 
 	version = LittleLong(((dsprite_t *)buffer)->version);
 	if (version == SPRITE_VERSION || version == SPRITE32_VERSION)
@@ -389,11 +387,9 @@ void Mod_IDS2_Load(model_t *mod, void *buffer, void *bufferend)
 
 	loadmodel->type = mod_sprite;
 
-	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Sprite_Draw;
 	loadmodel->DrawDepth = NULL;
 	loadmodel->DrawLight = NULL;
-	loadmodel->DrawAddWaterPlanes = NULL;
 
 	pinqsprite = (dsprite2_t *)buffer;
 
