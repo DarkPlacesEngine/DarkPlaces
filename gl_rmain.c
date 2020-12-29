@@ -10065,7 +10065,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	}
 	else if (ui)
 	{
-		// for ui we have to preserve the order of surfaces (not using sortedmodelsurfaces)
+		// for ui we have to preserve the order of surfaces (not using modelsurfaces_sorted)
 		for (i = model->submodelsurfaces_start; i < model->submodelsurfaces_end; i++)
 			r_surfacelist[numsurfacelist++] = surfaces + i;
 	}
