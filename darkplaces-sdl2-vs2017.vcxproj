@@ -374,6 +374,7 @@
     <ClInclude Include="model_q1bsp.h" />
     <ClInclude Include="model_q2bsp.h" />
     <ClInclude Include="model_q3bsp.h" />
+    <ClInclude Include="model_vbsp.h" />
     <ClInclude Include="model_shared.h" />
     <ClInclude Include="model_sprite.h" />
     <ClInclude Include="model_zymotic.h" />
