@@ -7660,6 +7660,11 @@ void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i", i);
 }
 
+void Mod_VBSP_Load(model_t *mod, void *buffer, void *bufferend)
+{
+	Host_Error("Mod_VBSP_Load: not yet implemented");
+}
+
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
 {
 	Host_Error("Mod_MAP_Load: not yet implemented");

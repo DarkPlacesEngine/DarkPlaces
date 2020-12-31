@@ -413,6 +413,7 @@ msurface_t;
 #include "model_q1bsp.h"
 #include "model_q2bsp.h"
 #include "model_q3bsp.h"
+#include "model_vbsp.h"
 #include "model_sprite.h"
 #include "model_alias.h"
 
@@ -745,6 +746,7 @@ void Mod_BSP2_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_HLBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_VBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);

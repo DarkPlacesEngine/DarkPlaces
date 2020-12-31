@@ -55,6 +55,7 @@ static modloader_t loader[] =
 	{NULL, "BSP2", 4, Mod_BSP2_Load},
 	{NULL, "2PSB", 4, Mod_2PSB_Load},
 	{NULL, "IBSP", 4, Mod_IBSP_Load},
+	{NULL, "VBSP", 4, Mod_VBSP_Load},
 	{NULL, "ZYMOTICMODEL", 13, Mod_ZYMOTICMODEL_Load},
 	{NULL, "DARKPLACESMODEL", 16, Mod_DARKPLACESMODEL_Load},
 	{NULL, "PSKMODEL", 9, Mod_PSKMODEL_Load},
