@@ -18,15 +18,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef MODEL_HLMDL_H
+#define MODEL_HLMDL_H
+
+#include "qtypes.h"
+#include "qdefs.h"
+
 /*
  * The Half-Life MDL format is Valve's format for models in GoldSrc engine.
  * 
  * These headers were added based on information found at
  * https://github.com/malortie/assimp/wiki/MDL:-Half-Life-1-file-format
  */
-
-#include "qtypes.h"
-#include "qdefs.h"
 
 #define HLPOLYHEADER (('T' << 24) + ('S' << 16) + ('D' << 8) + 'I')
 #define HLMDLHEADER "IDST"
@@ -242,3 +245,5 @@ typedef struct dhlmdl_trivert_s
 	int16_t normindex;
 	int16_t s, t;
 } dhlmdl_trivert_t;
+
+#endif
