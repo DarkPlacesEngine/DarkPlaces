@@ -2212,6 +2212,8 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 				lumplen = LittleLong(header->lumps[HL2LUMP_ENTITIES].filelen);
 				dpsnprintf(desc, sizeof(desc), "VBSP%i", LittleLong(((int *)buf)[1]));
 			}
+			else
+				dpsnprintf(desc, sizeof(desc), "unknown%i", BuffLittleLong(buf));
 			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
 			memcpy(entfilename + strlen(entfilename) - 4, ".ent", 5);
 			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);
