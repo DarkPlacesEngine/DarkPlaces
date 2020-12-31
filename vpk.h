@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef VPK_H
+#define VPK_H
+
 #include "qtypes.h"
 #include "qdefs.h"
 
@@ -96,3 +99,5 @@ typedef struct dvpk_signature_entry_s
 	uint32_t signaturesize; // Always 128
 	int8_t signature[128];
 } dvpk_signature_entry_t;
+
+#endif
