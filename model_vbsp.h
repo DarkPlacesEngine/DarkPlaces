@@ -18,6 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#ifndef MODEL_VBSP_H
+#define MODEL_VBSP_H
+
 #include "qtypes.h"
 #include "qdefs.h"
 
@@ -154,3 +157,5 @@ typedef struct hl2dheader_s
 	hl2lump_t lumps[HL2HEADER_LUMPS];
 	int32_t revision;
 } hl2dheader_t;
+
+#endif
