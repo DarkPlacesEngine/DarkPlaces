@@ -33,6 +33,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  * VBSP version number the same.
  */
 
+#define VBSPVERSION ('V' + 'B' * 256 + 'S' * 65536 + 'P' * 16777216)
+
 // Content flags
 #define HL2CONTENTS_NONE 0
 #define HL2CONTENTS_SOLID 0x1
