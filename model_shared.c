@@ -2885,7 +2885,7 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 
 void Mod_SetDrawSkyAndWater(model_t* mod)
 {
-	size_t j;
+	int j;
 	uint64_t basematerialflags = 0;
 	// by default assume there is no sky or water used in this model
 	mod->DrawSky = NULL;
