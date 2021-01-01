@@ -154,7 +154,7 @@ typedef struct hl2lump_s
 
 typedef struct hl2dheader_s
 {
-	int32_t id;
+	int32_t ident;
 	int32_t version;
 	hl2lump_t lumps[HL2HEADER_LUMPS];
 	int32_t revision;

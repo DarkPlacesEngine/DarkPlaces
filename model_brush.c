@@ -7660,9 +7660,196 @@ void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend)
 		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i", i);
 }
 
+static void Mod_VBSP_LoadEntities(sizebuf_t *sb)
+{
+	loadmodel->brush.entities = NULL;
+	if (!sb->cursize)
+		return;
+	loadmodel->brush.entities = (char *)Mem_Alloc(loadmodel->mempool, sb->cursize + 1);
+	MSG_ReadBytes(sb, sb->cursize, (unsigned char *)loadmodel->brush.entities);
+	loadmodel->brush.entities[sb->cursize] = 0;
+}
+
+static void Mod_VBSP_LoadVertexes(sizebuf_t *sb)
+{
+	mvertex_t	*out;
+	int			i, count;
+	int			structsize = 12;
+
+	if (sb->cursize % structsize)
+		Host_Error("Mod_VBSP_LoadVertexes: funny lump size in %s",loadmodel->name);
+	count = sb->cursize / structsize;
+	out = (mvertex_t *)Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
+
+	loadmodel->brushq1.vertexes = out;
+	loadmodel->brushq1.numvertexes = count;
+
+	for ( i=0 ; i<count ; i++, out++)
+	{
+		out->position[0] = MSG_ReadLittleFloat(sb);
+		out->position[1] = MSG_ReadLittleFloat(sb);
+		out->position[2] = MSG_ReadLittleFloat(sb);
+	}
+}
+
+static void Mod_VBSP_LoadEdges(sizebuf_t *sb)
+{
+	medge_t *out;
+	int 	i, count;
+	int		structsize = 4;
+
+	if (sb->cursize % structsize)
+		Host_Error("Mod_VBSP_LoadEdges: funny lump size in %s",loadmodel->name);
+	count = sb->cursize / structsize;
+	out = (medge_t *)Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel->brushq1.edges = out;
+	loadmodel->brushq1.numedges = count;
+
+	for ( i=0 ; i<count ; i++, out++)
+	{
+		out->v[0] = (unsigned short)MSG_ReadLittleShort(sb);
+		out->v[1] = (unsigned short)MSG_ReadLittleShort(sb);
+		
+		if ((int)out->v[0] >= loadmodel->brushq1.numvertexes || (int)out->v[1] >= loadmodel->brushq1.numvertexes)
+		{
+			Con_Printf("Mod_VBSP_LoadEdges: %s has invalid vertex indices in edge %i (vertices %i %i >= numvertices %i)\n", loadmodel->name, i, out->v[0], out->v[1], loadmodel->brushq1.numvertexes);
+			if(!loadmodel->brushq1.numvertexes)
+				Host_Error("Mod_VBSP_LoadEdges: %s has edges but no vertexes, cannot fix\n", loadmodel->name);
+				
+			out->v[0] = 0;
+			out->v[1] = 0;
+		}
+	}
+}
+
+static void Mod_VBSP_LoadSurfedges(sizebuf_t *sb)
+{
+	int		i;
+	int structsize = 4;
+
+	if (sb->cursize % structsize)
+		Host_Error("Mod_VBSP_LoadSurfedges: funny lump size in %s",loadmodel->name);
+	loadmodel->brushq1.numsurfedges = sb->cursize / structsize;
+	loadmodel->brushq1.surfedges = (int *)Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numsurfedges * sizeof(int));
+
+	for (i = 0;i < loadmodel->brushq1.numsurfedges;i++)
+		loadmodel->brushq1.surfedges[i] = MSG_ReadLittleLong(sb);
+}
+
+static void Mod_VBSP_LoadTextures(sizebuf_t *sb)
+{
+	Con_Printf(CON_WARN "Mod_VBSP_LoadTextures: Don't know how to do this yet\n");
+}
+
+static void Mod_VBSP_LoadPlanes(sizebuf_t *sb)
+{
+	int			i;
+	mplane_t	*out;
+	int structsize = 20;
+
+	if (sb->cursize % structsize)
+		Host_Error("Mod_VBSP_LoadPlanes: funny lump size in %s", loadmodel->name);
+	loadmodel->brush.num_planes = sb->cursize / structsize;
+	loadmodel->brush.data_planes = out = (mplane_t *)Mem_Alloc(loadmodel->mempool, loadmodel->brush.num_planes * sizeof(*out));
+
+	for (i = 0;i < loadmodel->brush.num_planes;i++, out++)
+	{
+		out->normal[0] = MSG_ReadLittleFloat(sb);
+		out->normal[1] = MSG_ReadLittleFloat(sb);
+		out->normal[2] = MSG_ReadLittleFloat(sb);
+		out->dist = MSG_ReadLittleFloat(sb);
+		MSG_ReadLittleLong(sb); // type is not used, we use PlaneClassify
+		PlaneClassify(out);
+	}
+}
+
+// Valve BSP loader
+// Cloudwalk: Wasn't sober when I wrote this. I screamed and ran away at the face loader
 void Mod_VBSP_Load(model_t *mod, void *buffer, void *bufferend)
 {
-	Host_Error("Mod_VBSP_Load: not yet implemented");
+	static cvar_t *testing = NULL; // TEMPORARY
+	int i;
+	sizebuf_t sb;
+	sizebuf_t lumpsb[HL2HEADER_LUMPS];
+
+	if(!testing || !testing->integer)
+	{
+		if(!testing)
+			testing = Cvar_Get(&cvars_all, "mod_bsp_vbsptest", "0", CF_CLIENT | CF_SERVER, "uhhh");
+		Host_Error("Mod_VBSP_Load: not yet fully implemented. Change the now-generated \"mod_bsp_vbsptest\" to 1 if you wish to test this");
+	}
+	else
+	{
+
+		MSG_InitReadBuffer(&sb, (unsigned char *)buffer, (unsigned char *)bufferend - (unsigned char *)buffer);
+
+		mod->type = mod_brushhl2;
+
+		MSG_ReadLittleLong(&sb);
+		MSG_ReadLittleLong(&sb); // TODO version check
+
+		mod->modeldatatypestring = "VBSP";
+
+		// read lumps
+		for (i = 0; i < HL2HEADER_LUMPS; i++)
+		{
+			int offset = MSG_ReadLittleLong(&sb);
+			int size = MSG_ReadLittleLong(&sb);
+			MSG_ReadLittleLong(&sb); // TODO support version
+			MSG_ReadLittleLong(&sb); // TODO support ident
+			if (offset < 0 || offset + size > sb.cursize)
+				Host_Error("Mod_VBSP_Load: %s has invalid lump %i (offset %i, size %i, file size %i)\n", mod->name, i, offset, size, (int)sb.cursize);
+			MSG_InitReadBuffer(&lumpsb[i], sb.data + offset, size);
+		}
+		MSG_ReadLittleLong(&sb); // TODO support revision field
+
+		mod->soundfromcenter = true;
+		mod->TraceBox = Mod_CollisionBIH_TraceBox;
+		mod->TraceBrush = Mod_CollisionBIH_TraceBrush;
+		mod->TraceLine = Mod_CollisionBIH_TraceLine;
+		mod->TracePoint = Mod_CollisionBIH_TracePoint;
+		mod->PointSuperContents = Mod_CollisionBIH_PointSuperContents;
+		mod->TraceLineAgainstSurfaces = Mod_CollisionBIH_TraceLine;
+		mod->brush.TraceLineOfSight = Mod_Q3BSP_TraceLineOfSight; // probably not correct
+		mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents; // probably not correct
+		mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents; // probably not correct
+		mod->brush.GetPVS = Mod_BSP_GetPVS;
+		mod->brush.FatPVS = Mod_BSP_FatPVS;
+		mod->brush.BoxTouchingPVS = Mod_BSP_BoxTouchingPVS;
+		mod->brush.BoxTouchingLeafPVS = Mod_BSP_BoxTouchingLeafPVS;
+		mod->brush.BoxTouchingVisibleLeafs = Mod_BSP_BoxTouchingVisibleLeafs;
+		mod->brush.FindBoxClusters = Mod_BSP_FindBoxClusters;
+		mod->brush.LightPoint = Mod_Q3BSP_LightPoint; // probably not correct
+		mod->brush.FindNonSolidLocation = Mod_BSP_FindNonSolidLocation;
+		mod->brush.AmbientSoundLevelsForPoint = NULL;
+		mod->brush.RoundUpToHullSize = NULL;
+		mod->brush.PointInLeaf = Mod_BSP_PointInLeaf;
+		mod->Draw = R_Mod_Draw;
+		mod->DrawDepth = R_Mod_DrawDepth;
+		mod->DrawDebug = R_Mod_DrawDebug;
+		mod->DrawPrepass = R_Mod_DrawPrepass;
+		mod->GetLightInfo = R_Mod_GetLightInfo;
+		mod->CompileShadowMap = R_Mod_CompileShadowMap;
+		mod->DrawShadowMap = R_Mod_DrawShadowMap;
+		mod->DrawLight = R_Mod_DrawLight;
+
+		// allocate a texture pool if we need it
+		if (mod->texturepool == NULL)
+			mod->texturepool = R_AllocTexturePool();
+
+		Mod_VBSP_LoadEntities(&lumpsb[HL2LUMP_ENTITIES]);
+		Mod_VBSP_LoadVertexes(&lumpsb[HL2LUMP_VERTEXES]);
+		Mod_VBSP_LoadEdges(&lumpsb[HL2LUMP_EDGES]);
+		Mod_VBSP_LoadSurfedges(&lumpsb[HL2LUMP_SURFEDGES]);
+		Mod_VBSP_LoadTextures(&lumpsb[HL2LUMP_TEXDATA/*?*/]);
+		//Mod_VBSP_LoadLighting(&lumpsb[HL2LUMP_LIGHTING]);
+		Mod_VBSP_LoadPlanes(&lumpsb[HL2LUMP_PLANES]);
+		//Mod_VBSP_LoadTexinfo(&lumpsb[HL2LUMP_TEXINFO]);
+
+		// AHHHHHHH
+		//Mod_VBSP_LoadFaces(&lumpsb[HL2LUMP_FACES]);
+	}
 }
 
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend)
