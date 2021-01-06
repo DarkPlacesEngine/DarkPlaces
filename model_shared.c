@@ -518,10 +518,10 @@ model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk)
 		// all models use memory, so allocate a memory pool
 		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
 
-		// call the apropriate loader
+		// We need to have a reference to the base model in case we're parsing submodels
 		loadmodel = mod;
 
-		// Try matching magic bytes.
+		// Call the appropriate loader. Try matching magic bytes.
 		for (i = 0; loader[i].Load; i++)
 		{
 			// Headerless formats can just load based on extension. Otherwise match the magic string.
