@@ -2936,7 +2936,12 @@ void Mod_MakeSortedSurfaces(model_t *mod)
 {
 	// make an optimal set of texture-sorted batches to draw...
 	int j, k;
-	Mod_MakeSortedSurfaces_qsortsurface_t *info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
+	Mod_MakeSortedSurfaces_qsortsurface_t *info;
+
+	if(cls.state == ca_dedicated)
+		return;
+
+	info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
 	if (!mod->modelsurfaces_sorted)
 		mod->modelsurfaces_sorted = (int *) Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
 	// the goal is to sort by submodel (can't change which submodel a surface belongs to), and then by effects and textures
