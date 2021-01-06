@@ -471,7 +471,7 @@ typedef struct findnonsolidlocationinfo_s
 }
 findnonsolidlocationinfo_t;
 
-static void Mod_Q1BSP_FindNonSolidLocation_r_Triangle(findnonsolidlocationinfo_t *info, msurface_t *surface, int k)
+static void Mod_BSP_FindNonSolidLocation_r_Triangle(findnonsolidlocationinfo_t *info, msurface_t *surface, int k)
 {
 	int i, *tri;
 	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
@@ -559,7 +559,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Triangle(findnonsolidlocationinfo_t
 	}
 }
 
-static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
+static void Mod_BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
 {
 	int surfacenum, k, *mark;
 	msurface_t *surface;
@@ -572,26 +572,26 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 		{
 			for (k = 0;k < surface->num_triangles;k++)
 			{
-				Mod_Q1BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
+				Mod_BSP_FindNonSolidLocation_r_Triangle(info, surface, k);
 			}
 		}
 	}
 }
 
-static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
+static void Mod_BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
 {
 	if (node->plane)
 	{
 		float f = PlaneDiff(info->center, node->plane);
 		if (f >= -info->bestdist)
-			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[0]);
+			Mod_BSP_FindNonSolidLocation_r(info, node->children[0]);
 		if (f <= info->bestdist)
-			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[1]);
+			Mod_BSP_FindNonSolidLocation_r(info, node->children[1]);
 	}
 	else
 	{
 		if (((mleaf_t *)node)->numleafsurfaces)
-			Mod_Q1BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
+			Mod_BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
 	}
 }
 
@@ -620,7 +620,7 @@ static void Mod_BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t
 		info.absmax[0] += info.radius + 1;
 		info.absmax[1] += info.radius + 1;
 		info.absmax[2] += info.radius + 1;
-		Mod_Q1BSP_FindNonSolidLocation_r(&info, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
+		Mod_BSP_FindNonSolidLocation_r(&info, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
 		VectorAdd(info.center, info.nudge, info.center);
 	}
 	while (info.bestdist < radius && ++i < 10);
@@ -3375,15 +3375,15 @@ portal_t;
 
 static memexpandablearray_t portalarray;
 
-static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
+static void Mod_BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 {
 	// process only nodes (leafs already had their box calculated)
 	if (!node->plane)
 		return;
 
 	// calculate children first
-	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[0]);
-	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
+	Mod_BSP_RecursiveRecalcNodeBBox(node->children[0]);
+	Mod_BSP_RecursiveRecalcNodeBBox(node->children[1]);
 
 	// make combined bounding box from children
 	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
@@ -3517,7 +3517,7 @@ static void Mod_BSP_FinalizePortals(void)
 	}
 	// now recalculate the node bounding boxes from the leafs
 	if (mod_recalculatenodeboxes.integer)
-		Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
+		Mod_BSP_RecursiveRecalcNodeBBox(loadmodel->brush.data_nodes + loadmodel->brushq1.hulls[0].firstclipnode);
 }
 
 /*
