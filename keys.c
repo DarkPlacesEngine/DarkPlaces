@@ -743,7 +743,8 @@ Key_Console (int key, int unicode)
 				}
 				else if (*p == '\n' || *p == '\r' || *p == '\b')
 					*p++ = ';';
-				p++;
+				else
+					p++;
 			}
 #else
 			strtok(cbd, "\n\r\b");
