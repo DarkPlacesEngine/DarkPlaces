@@ -782,7 +782,8 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicod
 				}
 				else if (*p == '\n' || *p == '\r' || *p == '\b')
 					*p++ = ';';
-				p++;
+				else
+					p++;
 			}
 #else
 			strtok(cbd, "\n\r\b");
