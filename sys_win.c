@@ -135,25 +135,16 @@ char *Sys_ConsoleInput (void)
 	for ( ;; )
 	{
 		if (!GetNumberOfConsoleInputEvents (hinput, &numevents))
-		{
-			cls.state = ca_disconnected;
 			Sys_Error ("Error getting # of console events (error code %x)", (unsigned int)GetLastError());
-		}
 
 		if (numevents <= 0)
 			break;
 
 		if (!ReadConsoleInput(hinput, recs, 1, &numread))
-		{
-			cls.state = ca_disconnected;
 			Sys_Error ("Error reading console input (error code %x)", (unsigned int)GetLastError());
-		}
 
 		if (numread != 1)
-		{
-			cls.state = ca_disconnected;
 			Sys_Error ("Couldn't read console input (error code %x)", (unsigned int)GetLastError());
-		}
 
 		if (recs[0].EventType == KEY_EVENT)
 		{
