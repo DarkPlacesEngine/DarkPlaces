@@ -377,7 +377,7 @@ static qbool CURL_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &curl_dll, curlfuncs);
+	return Sys_LoadDependency (dllnames, &curl_dll, curlfuncs);
 }
 
 

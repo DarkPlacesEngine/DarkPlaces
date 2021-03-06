@@ -371,7 +371,7 @@ qbool XMP_OpenLibrary (void)
 		return false;
 
 	// Load the DLL
-	if (Sys_LoadLibrary (dllnames_xmp, &xmp_dll, xmpfuncs))
+	if (Sys_LoadDependency (dllnames_xmp, &xmp_dll, xmpfuncs))
 	{
 		if (*qxmp_vercode < 0x040200)
 		{
