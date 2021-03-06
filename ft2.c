@@ -327,7 +327,7 @@ void Font_CloseLibrary (void)
 		font_ft2lib = NULL;
 	}
 #ifndef DP_FREETYPE_STATIC
-	Sys_UnloadLibrary (&ft2_dll);
+	Sys_FreeLibrary (&ft2_dll);
 #endif
 	pp.buf = NULL;
 }

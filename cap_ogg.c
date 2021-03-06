@@ -596,10 +596,10 @@ qbool SCR_CaptureVideo_Ogg_Available(void)
 
 void SCR_CaptureVideo_Ogg_CloseDLL(void)
 {
-	Sys_UnloadLibrary (&ve_dll);
-	Sys_UnloadLibrary (&vo_dll);
-	Sys_UnloadLibrary (&th_dll);
-	Sys_UnloadLibrary (&og_dll);
+	Sys_FreeLibrary (&ve_dll);
+	Sys_FreeLibrary (&vo_dll);
+	Sys_FreeLibrary (&th_dll);
+	Sys_FreeLibrary (&og_dll);
 }
 
 // this struct should not be needed

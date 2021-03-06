@@ -151,7 +151,7 @@ qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunc
 		return true;
 	}
 	else
-		Sys_UnloadLibrary(&dllhandle);
+		Sys_FreeLibrary(&dllhandle);
 notfound:
 #endif
 #endif
@@ -181,7 +181,7 @@ notfound:
 		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
 			break;
 		else
-			Sys_UnloadLibrary (&dllhandle);
+			Sys_FreeLibrary (&dllhandle);
 	}
 
 	// see if the names can be loaded relative to the executable path
@@ -205,7 +205,7 @@ notfound:
 			if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, dllnames[i+1] != NULL))
 				break;
 			else
-				Sys_UnloadLibrary (&dllhandle);
+				Sys_FreeLibrary (&dllhandle);
 		}
 	}
 
@@ -226,7 +226,7 @@ notfound:
 #endif
 }
 
-void Sys_UnloadLibrary (dllhandle_t* handle)
+void Sys_FreeLibrary (dllhandle_t* handle)
 {
 #ifdef SUPPORTDLL
 	if (handle == NULL || *handle == NULL)
