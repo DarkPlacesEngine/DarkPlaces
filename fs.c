@@ -535,7 +535,7 @@ static qbool PK3_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs);
+	return Sys_LoadDependency (dllnames, &zlib_dll, zlibfuncs);
 #endif
 }
 
@@ -1823,7 +1823,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		break;
 	case USERDIRMODE_MYGAMES:
 		if (!shfolder_dll)
-			Sys_LoadLibrary(shfolderdllnames, &shfolder_dll, shfolderfuncs);
+			Sys_LoadDependency(shfolderdllnames, &shfolder_dll, shfolderfuncs);
 		mydocsdir[0] = 0;
 		if (qSHGetFolderPath && qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK)
 		{
@@ -1849,9 +1849,9 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		return -1;
 	case USERDIRMODE_SAVEDGAMES:
 		if (!shell32_dll)
-			Sys_LoadLibrary(shell32dllnames, &shell32_dll, shell32funcs);
+			Sys_LoadDependency(shell32dllnames, &shell32_dll, shell32funcs);
 		if (!ole32_dll)
-			Sys_LoadLibrary(ole32dllnames, &ole32_dll, ole32funcs);
+			Sys_LoadDependency(ole32dllnames, &ole32_dll, ole32funcs);
 		if (qSHGetKnownFolderPath && qCoInitializeEx && qCoTaskMemFree && qCoUninitialize)
 		{
 			savedgamesdir[0] = 0;

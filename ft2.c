@@ -367,7 +367,7 @@ qbool Font_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (!Sys_LoadLibrary (dllnames, &ft2_dll, ft2funcs))
+	if (!Sys_LoadDependency (dllnames, &ft2_dll, ft2funcs))
 		return false;
 #endif
 	return true;
