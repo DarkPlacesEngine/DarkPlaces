@@ -538,7 +538,7 @@ Unload the JPEG DLL
 void JPEG_CloseLibrary (void)
 {
 #ifndef LINK_TO_LIBJPEG
-	Sys_UnloadLibrary (&jpeg_dll);
+	Sys_FreeLibrary (&jpeg_dll);
 	jpeg_tried_loading = false; // allow retry
 #endif
 }
