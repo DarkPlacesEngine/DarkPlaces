@@ -364,7 +364,7 @@ qbool LibAvW_OpenLibrary(void)
 		return false;
 
 	// load DLL's
-	Sys_LoadLibrary(dllnames_libavw, &libavw_dll, libavwfuncs);
+	Sys_LoadDependency(dllnames_libavw, &libavw_dll, libavwfuncs);
 	if (!libavw_dll)
 		return false;
 

@@ -172,10 +172,10 @@ qbool PNG_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if(!Sys_LoadLibrary (dllnames, &png_dll, pngfuncs))
+	if(!Sys_LoadDependency (dllnames, &png_dll, pngfuncs))
 		return false;
 	if(qpng_access_version_number() / 100 >= 104)
-		if(!Sys_LoadLibrary (dllnames, &png14_dll, png14funcs))
+		if(!Sys_LoadDependency (dllnames, &png14_dll, png14funcs))
 		{
 			Sys_FreeLibrary (&png_dll);
 			return false;

@@ -279,7 +279,7 @@ static qbool Crypto_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &d0_blind_id_dll, d0_blind_id_funcs);
+	return Sys_LoadDependency (dllnames, &d0_blind_id_dll, d0_blind_id_funcs);
 }
 
 static void Crypto_CloseLibrary (void)
@@ -348,7 +348,7 @@ static qbool Crypto_Rijndael_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &d0_rijndael_dll, d0_rijndael_funcs);
+	return Sys_LoadDependency (dllnames, &d0_rijndael_dll, d0_rijndael_funcs);
 }
 
 static void Crypto_Rijndael_CloseLibrary (void)

@@ -1522,7 +1522,7 @@ static void World_Physics_Init(void)
 
 #ifndef LINK_TO_LIBODE
 	// Load the DLL
-	if (Sys_LoadLibrary (dllnames, &ode_dll, odefuncs))
+	if (Sys_LoadDependency (dllnames, &ode_dll, odefuncs))
 #endif
 	{
 		dInitODE();

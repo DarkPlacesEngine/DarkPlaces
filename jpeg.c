@@ -523,7 +523,7 @@ qbool JPEG_OpenLibrary (void)
 #endif
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
+	return Sys_LoadDependency (dllnames, &jpeg_dll, jpegfuncs);
 #endif
 }
 
