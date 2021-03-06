@@ -177,7 +177,7 @@ qbool PNG_OpenLibrary (void)
 	if(qpng_access_version_number() / 100 >= 104)
 		if(!Sys_LoadLibrary (dllnames, &png14_dll, png14funcs))
 		{
-			Sys_UnloadLibrary (&png_dll);
+			Sys_FreeLibrary (&png_dll);
 			return false;
 		}
 	return true;
@@ -193,8 +193,8 @@ Unload the PNG DLL
 */
 void PNG_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&png14_dll);
-	Sys_UnloadLibrary (&png_dll);
+	Sys_FreeLibrary (&png14_dll);
+	Sys_FreeLibrary (&png_dll);
 }
 
 /*

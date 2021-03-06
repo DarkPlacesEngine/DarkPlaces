@@ -495,7 +495,7 @@ Unload the Zlib DLL
 static void PK3_CloseLibrary (void)
 {
 #ifndef LINK_TO_ZLIB
-	Sys_UnloadLibrary (&zlib_dll);
+	Sys_FreeLibrary (&zlib_dll);
 #endif
 }
 
@@ -2218,9 +2218,9 @@ void FS_Shutdown (void)
 	PK3_CloseLibrary ();
 
 #ifdef WIN32
-	Sys_UnloadLibrary (&shfolder_dll);
-	Sys_UnloadLibrary (&shell32_dll);
-	Sys_UnloadLibrary (&ole32_dll);
+	Sys_FreeLibrary (&shfolder_dll);
+	Sys_FreeLibrary (&shell32_dll);
+	Sys_FreeLibrary (&ole32_dll);
 #endif
 
 	if (fs_mutex)

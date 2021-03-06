@@ -284,7 +284,7 @@ static qbool Crypto_OpenLibrary (void)
 
 static void Crypto_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&d0_blind_id_dll);
+	Sys_FreeLibrary (&d0_blind_id_dll);
 }
 
 #endif
@@ -353,7 +353,7 @@ static qbool Crypto_Rijndael_OpenLibrary (void)
 
 static void Crypto_Rijndael_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&d0_rijndael_dll);
+	Sys_FreeLibrary (&d0_rijndael_dll);
 }
 
 #endif

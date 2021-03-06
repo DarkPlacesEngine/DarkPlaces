@@ -319,8 +319,8 @@ Unload the VorbisFile DLL
 */
 void OGG_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&vf_dll);
-	Sys_UnloadLibrary (&vo_dll);
+	Sys_FreeLibrary (&vf_dll);
+	Sys_FreeLibrary (&vo_dll);
 }
 
 #endif

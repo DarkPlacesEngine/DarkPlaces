@@ -179,7 +179,7 @@ qbool Sys_LoadSelf(dllhandle_t *handle);
  * \param fcts
  */
 qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts);
-void Sys_UnloadLibrary (dllhandle_t* handle);
+void Sys_FreeLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
 int Sys_CheckParm (const char *parm);

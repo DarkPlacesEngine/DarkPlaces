@@ -372,7 +372,7 @@ qbool LibAvW_OpenLibrary(void)
 	if ((errorcode = qLibAvW_Init(&libavw_message)))
 	{
 		Con_Printf(CON_ERROR "LibAvW failed to initialize: %s\n", qLibAvW_ErrorString(errorcode));
-		Sys_UnloadLibrary(&libavw_dll);
+		Sys_FreeLibrary(&libavw_dll);
 	}
 
 	Cvar_RegisterVariable(&cl_video_libavw_minwidth);
@@ -384,5 +384,5 @@ qbool LibAvW_OpenLibrary(void)
 
 void LibAvW_CloseLibrary(void)
 {
-	Sys_UnloadLibrary(&libavw_dll);
+	Sys_FreeLibrary(&libavw_dll);
 }

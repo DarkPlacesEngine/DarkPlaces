@@ -390,7 +390,7 @@ Unload the cURL DLL
 */
 static void CURL_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&curl_dll);
+	Sys_FreeLibrary (&curl_dll);
 }
 
 
