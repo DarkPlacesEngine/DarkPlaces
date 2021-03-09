@@ -2402,7 +2402,7 @@ static void VM_CL_setlistener (prvm_prog_t *prog)
 static void VM_CL_registercmd (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
-	if(!Cmd_Exists(&cmd_client, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(cmd_client, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
