@@ -22,9 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "thread.h"
 
-cmd_state_t cmd_client;
-cmd_state_t cmd_server;
-cmd_state_t cmd_serverfromclient;
+cmd_state_t *cmd_client;
+cmd_state_t *cmd_server;
+cmd_state_t *cmd_serverfromclient;
 
 cmd_userdefined_t cmd_userdefined_all;
 cmd_userdefined_t cmd_userdefined_null;
@@ -34,12 +34,7 @@ typedef struct cmd_iter_s {
 }
 cmd_iter_t;
 
-static cmd_iter_t cmd_iter_all[] = {
-	{&cmd_client},
-	{&cmd_server},
-	{&cmd_serverfromclient},
-	{NULL},
-};
+static cmd_iter_t *cmd_iter_all;
 
 mempool_t *cbuf_mempool;
 
@@ -1602,6 +1597,25 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
 }
 
+static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined, int autoflags, xcommand_t autofunction)
+{
+	cmd_state_t *cmd = (cmd_state_t *)Mem_Alloc(tempmempool, sizeof(cmd_state_t));
+	
+	cmd->mempool = Mem_AllocPool("commands", 0, NULL);
+	// space for commands and script files
+	cmd->cbuf = cbuf;
+	cmd->null_string = "";
+
+	cmd->cvars = cvars;
+	cmd->cvars_flagsmask = cvars_flagsmask;
+	cmd->cmd_flags = cmds_flagsmask;
+	cmd->auto_flags = autoflags;
+	cmd->auto_function = autofunction;
+	cmd->userdefined = userdefined;
+
+	return cmd;
+}
+
 /*
 ============
 Cmd_Init
@@ -1609,7 +1623,6 @@ Cmd_Init
 */
 void Cmd_Init(void)
 {
-	cmd_iter_t *cmd_iter;
 	cmd_buf_t *cbuf;
 	cbuf_mempool = Mem_AllocPool("Command buffer", 0, NULL);
 	cbuf = (cmd_buf_t *)Mem_Alloc(cbuf_mempool, sizeof(cmd_buf_t));
@@ -1622,36 +1635,19 @@ void Cmd_Init(void)
 	cbuf->deferred.prev = cbuf->deferred.next = &(cbuf->deferred);
 	cbuf->free.prev = cbuf->free.next = &(cbuf->free);
 
-	for (cmd_iter = cmd_iter_all; cmd_iter->cmd; cmd_iter++)
-	{
-		cmd_state_t *cmd = cmd_iter->cmd;
-		cmd->mempool = Mem_AllocPool("commands", 0, NULL);
-		// space for commands and script files
-		cmd->cbuf = cbuf;
-		cmd->null_string = "";
-	}
-	// client console can see server cvars because the user may start a server
-	cmd_client.cvars = &cvars_all;
-	cmd_client.cvars_flagsmask = CF_CLIENT | CF_SERVER;
-	cmd_client.cmd_flags = CF_CLIENT | CF_CLIENT_FROM_SERVER;
-	cmd_client.auto_flags = CF_SERVER_FROM_CLIENT;
-	cmd_client.auto_function = CL_ForwardToServer_f; // FIXME: Move this to the client.
-	cmd_client.userdefined = &cmd_userdefined_all;
-	// dedicated server console can only see server cvars, there is no client
-	cmd_server.cvars = &cvars_all;
-	cmd_server.cvars_flagsmask = CF_SERVER;
-	cmd_server.cmd_flags = CF_SERVER;
-	cmd_server.auto_flags = 0;
-	cmd_server.auto_function = NULL;
-	cmd_server.userdefined = &cmd_userdefined_all;
-	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
-	cmd_serverfromclient.cvars = &cvars_null;
-	cmd_serverfromclient.cvars_flagsmask = 0;
-	cmd_serverfromclient.cmd_flags = CF_SERVER_FROM_CLIENT | CF_USERINFO;
-	cmd_serverfromclient.auto_flags = 0;
-	cmd_serverfromclient.auto_function = NULL;
-	cmd_serverfromclient.userdefined = &cmd_userdefined_null;
+	// FIXME: Get rid of cmd_iter_all eventually. This is just a hack to reduce the amount of work to make the interpreters dynamic.
+	cmd_iter_all = (cmd_iter_t *)Mem_Alloc(tempmempool, sizeof(cmd_iter_t) * 4);
 
+	// client console can see server cvars because the user may start a server
+	cmd_iter_all[0].cmd = cmd_client = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER, &cmd_userdefined_all, CF_SERVER_FROM_CLIENT, CL_ForwardToServer_f);
+
+	// dedicated server console can only see server cvars, there is no client
+	cmd_iter_all[1].cmd = cmd_server = Cmd_AddInterpreter(cbuf, &cvars_all, CF_SERVER, CF_SERVER, &cmd_userdefined_all, 0, NULL);
+
+	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
+	cmd_iter_all[2].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null, 0, NULL);
+
+	cmd_iter_all[3].cmd = NULL;
 //
 // register our commands
 //

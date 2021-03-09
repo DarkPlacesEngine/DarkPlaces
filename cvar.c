@@ -621,7 +621,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// check for overlap with a command
-	if (Cmd_Exists(&cmd_client, variable->name) || Cmd_Exists(&cmd_server, variable->name))
+	if (Cmd_Exists(cmd_client, variable->name) || Cmd_Exists(cmd_server, variable->name))
 	{
 		Con_Printf("Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
@@ -685,7 +685,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	}
 
 	// check for overlap with a command
-	if (Cmd_Exists(&cmd_client, name) || Cmd_Exists(&cmd_server, name))
+	if (Cmd_Exists(cmd_client, name) || Cmd_Exists(cmd_server, name))
 	{
 		Con_Printf("Cvar_Get: %s is a command\n", name);
 		return NULL;

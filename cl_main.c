@@ -397,7 +397,7 @@ void CL_Disconnect(void)
 		sizebuf_t buf;
 		unsigned char bufdata[8];
 		if (cls.demorecording)
-			CL_Stop_f(&cmd_client);
+			CL_Stop_f(cmd_client);
 
 		// send disconnect message 3 times to improve chances of server
 		// receiving it (but it still fails sometimes)
@@ -553,8 +553,8 @@ void CL_EstablishConnection(const char *address, int firstarg)
 		{
 			int i;
 			*cls.connect_userinfo = 0;
-			for(i = firstarg; i+2 <= Cmd_Argc(&cmd_client); i += 2)
-				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(&cmd_client, i), Cmd_Argv(&cmd_client, i+1));
+			for(i = firstarg; i+2 <= Cmd_Argc(cmd_client); i += 2)
+				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(cmd_client, i), Cmd_Argv(cmd_client, i+1));
 		}
 		else if(firstarg < -1)
 		{

@@ -571,7 +571,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		int crcflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CF_READONLY;
 		csqc_progsize.flags &= ~CF_READONLY;
-		Cmd_ExecuteString(&cmd_client, msg, src_local, true);
+		Cmd_ExecuteString(cmd_client, msg, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
@@ -603,7 +603,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 				l = sizeof(buf) - 1;
 			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
 
-			Cmd_ExecuteString(&cmd_client, buf, src_local, true);
+			Cmd_ExecuteString(cmd_client, buf, src_local, true);
 
 			p += l;
 			if(*p == '\n')
@@ -611,13 +611,13 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 			else
 				break; // end of string or overflow
 		}
-		Cmd_ExecuteString(&cmd_client, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
+		Cmd_ExecuteString(cmd_client, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
 		return;
 	}
 
 	if(!cl.csqc_loaded)
 	{
-		Cbuf_AddText(&cmd_client, msg);
+		Cbuf_AddText(cmd_client, msg);
 		return;
 	}
 	CSQC_BEGIN
@@ -631,7 +631,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
-		Cbuf_AddText(&cmd_client, msg);
+		Cbuf_AddText(cmd_client, msg);
 	CSQC_END
 }
 
@@ -1056,7 +1056,7 @@ void CL_VM_Init (void)
 		return;
 	}
 
-	PRVM_Prog_Init(prog, &cmd_client);
+	PRVM_Prog_Init(prog, cmd_client);
 
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);
@@ -1156,7 +1156,7 @@ void CL_VM_Init (void)
 void CL_VM_ShutDown (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	Cmd_ClearCSQCCommands(&cmd_client);
+	Cmd_ClearCSQCCommands(cmd_client);
 	//Cvar_SetValueQuick(&csqc_progcrc, -1);
 	//Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!cl.csqc_loaded)
