@@ -2359,7 +2359,7 @@ static void VM_SV_clientcommand(prvm_prog_t *prog)
 
 	temp_client = host_client;
 	host_client = svs.clients + i;
-	Cmd_ExecuteString(&cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
+	Cmd_ExecuteString(cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
 	host_client = temp_client;
 }
 
@@ -2879,7 +2879,7 @@ qbool SV_VM_ConsoleCommand (const char *text)
 static void VM_SV_registercommand (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_SV_registercmd);
-	if(!Cmd_Exists(&cmd_server, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(cmd_server, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_SERVER, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
