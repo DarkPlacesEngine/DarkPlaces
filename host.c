@@ -189,6 +189,7 @@ Host_InitLocal
 */
 void Host_SaveConfig_f(cmd_state_t *cmd);
 void Host_LoadConfig_f(cmd_state_t *cmd);
+void Json_Test_f(cmd_state_t *cmd);
 extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
 static void Host_InitLocal (void)
@@ -198,6 +199,7 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand(CF_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand(CF_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 	Cmd_AddCommand(CF_SHARED, "sendcvar", SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	Cmd_AddCommand(CF_SHARED, "json_test", Json_Test_f, "test the json parser");
 	Cvar_RegisterVariable (&cl_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterCallback (&host_framerate, Host_Framerate_c);

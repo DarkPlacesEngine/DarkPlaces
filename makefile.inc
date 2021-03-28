@@ -124,6 +124,7 @@ OBJ_COMMON= \
 	image.o \
 	image_png.o \
 	jpeg.o \
+	json.o \
 	keys.o \
 	lhnet.o \
 	libcurl.o \
