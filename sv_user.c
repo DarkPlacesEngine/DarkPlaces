@@ -738,7 +738,8 @@ static void SV_ReadClientMove (void)
 		sv_readmoves[sv_numreadmoves++] = *move;
 
 	// movement packet loss tracking
-	if(move->sequence)
+	// bones_was_here: checking begun prevents heavy loss detection right after a map change
+	if(move->sequence && host_client->begun)
 	{
 		if(move->sequence > host_client->movement_highestsequence_seen)
 		{
