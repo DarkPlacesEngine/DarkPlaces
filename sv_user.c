@@ -654,7 +654,7 @@ static void SV_ReadClientMove (void)
 	// read ping time
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
 		move->sequence = MSG_ReadLong(&sv_message);
-	move->time = move->clienttime = MSG_ReadFloat(&sv_message);
+	move->time = MSG_ReadFloat(&sv_message);
 	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = (float)sv.time;
 
@@ -779,9 +779,7 @@ static void SV_ExecuteClientMoves(void)
 	double moveframetime;
 	double oldframetime;
 	double oldframetime2;
-#ifdef NUM_PING_TIMES
-	double total;
-#endif
+
 	if (sv_numreadmoves < 1)
 		return;
 	// only start accepting input once the player is spawned
@@ -886,17 +884,9 @@ static void SV_ExecuteClientMoves(void)
 		host_client->movesequence = 0;
 		// make sure that normal physics takes over immediately
 		host_client->clmovement_inputtimeout = 0;
+		// update ping time
+		host_client->ping = host_client->cmd.receivetime - sv_readmoves[sv_numreadmoves-1].time;
 	}
-
-	// calculate average ping time
-	host_client->ping = host_client->cmd.receivetime - host_client->cmd.clienttime;
-#ifdef NUM_PING_TIMES
-	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = host_client->cmd.receivetime - host_client->cmd.clienttime;
-	host_client->num_pings++;
-	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-		total += host_client->ping_times[i];
-	host_client->ping = total / NUM_PING_TIMES;
-#endif
 }
 
 void SV_ApplyClientMove (void)
