@@ -1791,15 +1791,6 @@ void SV_SpawnServer (const char *map)
 
 	if(sv.active)
 	{
-		client_t *client;
-		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
-		{
-			if (client->netconnection)
-			{
-				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
-				MSG_WriteString(&client->netconnection->message, "reconnect\n");
-			}
-		}
 		World_End(&sv.world);
 		if(PRVM_serverfunction(SV_Shutdown))
 		{
@@ -1842,8 +1833,23 @@ void SV_SpawnServer (const char *map)
 //
 // tell all connected clients that we are going to a new level
 //
-	if (!sv.active)
+	if (sv.active)
+	{
+		client_t *client;
+		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+		{
+			if (client->netconnection)
+			{
+				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
+				MSG_WriteString(&client->netconnection->message, "reconnect\n");
+			}
+		}
+	}
+	else
+	{
+		// open server port
 		NetConn_OpenServerPorts(true);
+	}
 
 //
 // make cvars consistant
