@@ -775,7 +775,7 @@ static void SV_ExecuteClientMoves(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int moveindex;
-	float moveframetime;
+	double moveframetime;
 	double oldframetime;
 	double oldframetime2;
 #ifdef NUM_PING_TIMES
@@ -811,7 +811,8 @@ static void SV_ExecuteClientMoves(void)
 				// this is a new move
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
-				moveframetime = bound(0, move->time - host_client->cmd.time, min(0.1, sv_clmovement_inputtimeout.value));
+				// bones_was_here: limit moveframetime to a multiple of sv.frametime to match inputtimeout behaviour
+				moveframetime = min(move->time - host_client->cmd.time, min(0.1, sys_ticrate.value > 0.0 ? sv.frametime * ceil(sv_clmovement_inputtimeout.value / sv.frametime) : sv_clmovement_inputtimeout.value));
 
 				// discard (treat like lost) moves with too low distance from
 				// the previous one to prevent hacks using float inaccuracy
@@ -855,7 +856,7 @@ static void SV_ExecuteClientMoves(void)
 				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
 				PRVM_serverglobalfloat(frametime) = oldframetime;
-				host_client->clmovement_inputtimeout = sv_clmovement_inputtimeout.value;
+				host_client->clmovement_inputtimeout = min(0.1, sv_clmovement_inputtimeout.value);
 			}
 		}
 	}
