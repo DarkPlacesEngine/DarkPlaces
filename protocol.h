@@ -389,7 +389,7 @@ typedef struct usercmd_s
 	int		cursor_entitynumber;
 
 	double time; // time the move is executed for (non-cl_movement is executed at receivetime)
-	double receivetime; // time the move was received at (used for ping)
+	float receivetime; // time the move was received at (used for ping)
 	int msec; // for predicted moves
 	int buttons;
 	int impulse;
