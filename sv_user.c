@@ -663,7 +663,7 @@ static void SV_ReadClientMove (void)
 #endif
 	// limit reported time to current time
 	// (incase the client is trying to cheat)
-	move->time = min(move->time, move->receivetime + sv.frametime);
+	move->time = min(move->time, sv.time + sv.frametime);
 
 	// read current angles
 	for (i = 0;i < 3;i++)
