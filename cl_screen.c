@@ -2309,7 +2309,11 @@ void CL_UpdateScreen(void)
 		memcpy(palette_rgb_shirtscoreboard[15], palette_rgb_shirtcolormap[15], sizeof(*palette_rgb_shirtcolormap));
 	}
 
+#ifdef CONFIG_VIDEO_CAPTURE
+	if (vid_hidden && !cls.capturevideo.active && !cl_capturevideo.integer)
+#else
 	if (vid_hidden)
+#endif
 	{
 		VID_Finish();
 		return;
