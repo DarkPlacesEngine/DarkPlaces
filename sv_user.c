@@ -840,8 +840,6 @@ static void SV_ExecuteClientMoves(void)
 				//  with this approach, and if they don't send input for a while they
 				//  start moving anyway, so the longest 'lagaport' possible is
 				//  determined by the sv_clmovement_inputtimeout cvar)
-				if (moveframetime <= 0)
-					continue;
 				oldframetime = PRVM_serverglobalfloat(frametime);
 				oldframetime2 = sv.frametime;
 				// update ping time for qc to see while executing this move
