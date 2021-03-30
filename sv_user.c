@@ -811,7 +811,7 @@ static void SV_ExecuteClientMoves(void)
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
 				// bones_was_here: limit moveframetime to a multiple of sv.frametime to match inputtimeout behaviour
-				moveframetime = min(move->time - host_client->cmd.time, min(0.1, sys_ticrate.value > 0.0 && sv.frametime ? sv.frametime * ceil(sv_clmovement_inputtimeout.value / sv.frametime) : sv_clmovement_inputtimeout.value));
+				moveframetime = min(move->time - host_client->cmd.time, min(0.1, sys_ticrate.value > 0.0 && sv.frametime > 0.0 ? sv.frametime * ceil(sv_clmovement_inputtimeout.value / sv.frametime) : sv_clmovement_inputtimeout.value));
 
 
 				// discard (treat like lost) moves with too low distance from
