@@ -40,6 +40,7 @@ struct cmd_state_s;
 #define CHANNELFLAG_LOCALSOUND	(1 << 2) // INTERNAL USE. Not settable by S_SetChannelFlag
 #define CHANNELFLAG_PAUSED	(1 << 3) // pause status
 #define CHANNELFLAG_FULLVOLUME	(1 << 4) // isn't affected by the general volume
+#define CHANNELFLAG_BGMVOLUME	(1 << 8) // uses bgmvolume instead of volume
 
 // ====================================================================
 // Types and variables

@@ -359,7 +359,7 @@ static void sbar_newmap(void)
 
 void Sbar_Init (void)
 {
-	if(gamemode == GAME_NORMAL) // Workaround so Quake doesn't trample on Xonotic.
+	if(gamemode == GAME_NORMAL || gamemode == GAME_DOOMBRINGER ) // Workaround so Quake doesn't trample on Xonotic.
 	{
 		Cmd_AddCommand(CF_CLIENT, "+showscores", Sbar_ShowScores_f, "show scoreboard");
 		Cmd_AddCommand(CF_CLIENT, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");

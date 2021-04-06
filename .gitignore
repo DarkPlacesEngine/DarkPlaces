@@ -8,6 +8,8 @@ darkplaces-agl
 darkplaces-glx
 darkplaces-sdl
 darkplaces-dedicated
+doombringer-lx
+doombringer-lx-ded
 gmon.out
 *.ncb
 *.opt

@@ -234,6 +234,7 @@ static void CSQC_SetGlobals (double frametime)
 		VectorCopy(cl.viewangles, PRVM_clientglobalvector(input_angles));
 		// // FIXME: this actually belongs into getinputstate().. [12/17/2007 Black]
 		PRVM_clientglobalfloat(input_buttons) = cl.movecmd[0].buttons;
+		PRVM_clientglobalfloat(input_impulse) = cl.movecmd[0].impulse;
 		VectorSet(PRVM_clientglobalvector(input_movevalues), cl.movecmd[0].forwardmove, cl.movecmd[0].sidemove, cl.movecmd[0].upmove);
 		VectorCopy(cl.csqc_vieworiginfromengine, cl.csqc_vieworigin);
 		VectorCopy(cl.csqc_viewanglesfromengine, cl.csqc_viewangles);
@@ -253,6 +254,12 @@ static void CSQC_SetGlobals (double frametime)
 		PRVM_clientglobalfloat(maxclients) = cl.maxclients;
 
 		PRVM_clientglobalfloat(player_localentnum) = cl.viewentity;
+		
+		char temp[128];
+		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
+		PRVM_clientglobalstring(server_ip) = PRVM_SetEngineString(prog, temp);
+		//Con_Printf(PRVM_clientglobalstring(server_ip));
+		//Con_Printf("\n");
 
 		CSQC_R_RecalcView();
 	CSQC_END

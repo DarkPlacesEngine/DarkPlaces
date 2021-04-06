@@ -168,6 +168,8 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 		}
 		if (o->traileffectnum != n->traileffectnum)
 			bits |= E5_TRAILEFFECTNUM;
+		if (o->solid != n->solid)
+			bits |= E5_SOLID;
 	}
 	else
 		if (o->active == ACTIVE_NETWORK)
@@ -402,6 +404,20 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			}
 			if (bits & E5_TRAILEFFECTNUM)
 				MSG_WriteShort(msg, s->traileffectnum);
+			if (bits & E5_SOLID)
+			{
+				MSG_WriteByte(msg, s->solid);
+				
+				if (s->solid != SOLID_NOT && s->solid != SOLID_BSP)
+				{
+					MSG_WriteCoord32f(msg, s->mins[0]);
+					MSG_WriteCoord32f(msg, s->mins[1]);
+					MSG_WriteCoord32f(msg, s->mins[2]);
+					MSG_WriteCoord32f(msg, s->maxs[0]);
+					MSG_WriteCoord32f(msg, s->maxs[1]);
+					MSG_WriteCoord32f(msg, s->maxs[2]);
+				}
+			}
 			ENTITYSIZEPROFILING_END(msg, s->number, bits);
 		}
 	}

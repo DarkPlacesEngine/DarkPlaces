@@ -566,7 +566,7 @@ static void VM_SV_sound(prvm_prog_t *prog)
 	else
 	{
 		// LadyHavoc: we only let the qc set certain flags, others are off-limits
-		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED | CHANNELFLAG_FULLVOLUME);
+		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED | CHANNELFLAG_FULLVOLUME | CHANNELFLAG_BGMVOLUME);
 	}
 
 	if (nvolume < 0 || nvolume > 255)
@@ -3207,6 +3207,13 @@ static void VM_SV_frameduration(prvm_prog_t *prog)
 		PRVM_G_FLOAT(OFS_RETURN) = model->animscenes[framenum].framecount / model->animscenes[framenum].framerate;
 }
 
+// #277 void(entity e) touchtriggers = #279;
+static void VM_SV_touchtriggers(prvm_prog_t *prog)
+{
+	prvm_edict_t *ed = PRVM_G_EDICT(OFS_PARM0);
+	SV_LinkEdict_TouchAreaGrid(ed);
+}
+
 
 prvm_builtin_t vm_sv_builtins[] = {
 NULL,							// #0 NULL function (not callable) (QUAKE)
@@ -3490,7 +3497,7 @@ VM_SV_skel_delete,				// #275 void(float skel) skel_delete = #275; // (DP_SKELET
 VM_SV_frameforname,				// #276 float(float modlindex, string framename) frameforname = #276; // (DP_SKELETONOBJECTS) finds number of a specified frame in the animation, returns -1 if no match found
 VM_SV_frameduration,			// #277 float(float modlindex, float framenum) frameduration = #277; // (DP_SKELETONOBJECTS) returns the intended play time (in seconds) of the specified framegroup, if it does not exist the result is 0, if it is a single frame it may be a small value around 0.1 or 0.
 NULL,							// #278
-NULL,							// #279
+VM_SV_touchtriggers,			// #279
 NULL,							// #280
 NULL,							// #281
 NULL,							// #282

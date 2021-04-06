@@ -220,6 +220,20 @@ static void EntityState5_ReadUpdate(entity_state_t *s, int number)
 	}
 	if (bits & E5_TRAILEFFECTNUM)
 		s->traileffectnum = (unsigned short) MSG_ReadShort(&cl_message);
+	if (bits & E5_SOLID)
+	{
+		s->solid = MSG_ReadByte(&cl_message);
+		
+		if (s->solid != SOLID_NOT && s->solid != SOLID_BSP)
+		{
+			s->mins[0] = MSG_ReadCoord32f(&cl_message);
+			s->mins[1] = MSG_ReadCoord32f(&cl_message);
+			s->mins[2] = MSG_ReadCoord32f(&cl_message);
+			s->maxs[0] = MSG_ReadCoord32f(&cl_message);
+			s->maxs[1] = MSG_ReadCoord32f(&cl_message);
+			s->maxs[2] = MSG_ReadCoord32f(&cl_message);
+		}
+	}
 
 
 	bytes = cl_message.readcount - startoffset;

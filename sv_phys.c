@@ -1428,7 +1428,9 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 				PRVM_serveredictvector(ent, velocity)[2] -= gravity * 0.5f;
 		}
 	}
-
+	
+	//Con_Printf("SSQC: %d\n", blocked);
+	
 	return blocked;
 }
 
@@ -2329,7 +2331,6 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	VectorCopy (PRVM_serveredictvector(ent, velocity), start_velocity);
 
 	clip = SV_FlyMove (ent, sv.frametime, applygravity, NULL, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, sv_gameplayfix_stepmultipletimes.integer ? sv_stepheight.value : 0);
-
 	if(sv_gameplayfix_downtracesupportsongroundflag.integer)
 	if(!(clip & 1))
 	{
@@ -2966,6 +2967,10 @@ void SV_Physics_ClientMove(void)
 	// call player physics, this needs the proper frametime
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
 	SV_PlayerPhysics();
+	
+	// perform movetype behaviour
+	// note: will always be MOVETYPE_WALK if disableclientprediction = 0
+	SV_Physics_ClientEntity_NoThink (ent);
 
 	// call standard client pre-think, with frametime = 0
 	PRVM_serverglobalfloat(time) = sv.time;
@@ -2976,10 +2981,6 @@ void SV_Physics_ClientMove(void)
 
 	// make sure the velocity is sane (not a NaN)
 	SV_CheckVelocity(ent);
-
-	// perform movetype behaviour
-	// note: will always be MOVETYPE_WALK if disableclientprediction = 0
-	SV_Physics_ClientEntity_NoThink (ent);
 
 	// call standard player post-think, with frametime = 0
 	PRVM_serverglobalfloat(time) = sv.time;

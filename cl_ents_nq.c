@@ -79,8 +79,10 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_GLOWTRAIL) s.flags |= RENDER_GLOWTRAIL;
 	if (bits & U_FRAME2)	s.frame = (s.frame & 0x00FF) | (MSG_ReadByte(&cl_message) << 8);
 	if (bits & U_MODEL2)	s.modelindex = (s.modelindex & 0x00FF) | (MSG_ReadByte(&cl_message) << 8);
+	if (bits & U_SOLID)		s.solid = MSG_ReadByte(&cl_message);
 	if (bits & U_VIEWMODEL)	s.flags |= RENDER_VIEWMODEL;
 	if (bits & U_EXTERIORMODEL)	s.flags |= RENDER_EXTERIORMODEL;
+	
 
 	// LadyHavoc: to allow playback of the Nehahra movie
 	if (cls.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))

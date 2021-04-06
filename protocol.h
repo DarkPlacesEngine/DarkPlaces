@@ -145,7 +145,7 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define U_FRAME2		(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
 #define U_MODEL2		(1<<27) // 1 byte, this is .modelindex & 0xFF00 (second byte)
 #define U_EXTERIORMODEL	(1<<28) // causes this model to not be drawn when using a first person view (third person will draw it, first person will not)
-#define U_UNUSED29		(1<<29) // future expansion
+#define U_SOLID			(1<<29) // REKI: Solid state
 #define U_UNUSED30		(1<<30) // future expansion
 #define U_EXTEND3		(1<<31) // another byte to follow, future expansion
 
@@ -470,6 +470,9 @@ typedef struct entity_state_s
 	unsigned char tagindex;
 	unsigned char colormod[3];
 	unsigned char glowmod[3];
+	unsigned char solid;
+	float mins[3];
+	float maxs[3];
 	// LadyHavoc: very big data here :(
 	framegroupblend_t framegroupblend[4];
 	skeleton_t skeletonobject;
@@ -737,6 +740,11 @@ qbool EntityFrame4_WriteFrame(struct sizebuf_s *msg, int maxsize, entityframe4_d
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(void);
 
+
+//CSQC Flags
+#define CSQCFLAG_SOLIDITY (1<<0)
+
+
 // reset all entity fields (typically used if status changed)
 #define E5_FULLUPDATE (1<<0)
 // E5_ORIGIN32=0: short[3] = s->origin[0] * 8, s->origin[1] * 8, s->origin[2] * 8
@@ -810,8 +818,8 @@ void EntityFrame4_CL_ReadFrame(void);
 #define E5_COMPLEXANIMATION (1<<25)
 // ushort traileffectnum
 #define E5_TRAILEFFECTNUM (1<<26)
-// unused
-#define E5_UNUSED27 (1<<27)
+// REKI: solid flag for prediction
+#define E5_SOLID (1<<27)
 // unused
 #define E5_UNUSED28 (1<<28)
 // unused

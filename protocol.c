@@ -1,6 +1,6 @@
 #include "quakedef.h"
 
-// this is 88 bytes (must match entity_state_t in protocol.h)
+// this is 89 bytes (must match entity_state_t in protocol.h)
 entity_state_t defaultstate =
 {
 	// ! means this is not sent to client
@@ -35,6 +35,7 @@ entity_state_t defaultstate =
 	0,//unsigned char tagindex;
 	{32, 32, 32},//unsigned char colormod[3];
 	{32, 32, 32},//unsigned char glowmod[3];
+	SOLID_NOTNETWORKED,//unsigned char solid; <-- Added by Reki for DOOMBRINGER
 };
 
 // LadyHavoc: I own protocol ranges 96, 97, 3500-3599

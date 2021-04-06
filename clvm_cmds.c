@@ -207,7 +207,7 @@ static void VM_CL_sound (prvm_prog_t *prog)
 	else
 	{
 		// LadyHavoc: we only let the qc set certain flags, others are off-limits
-		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED | CHANNELFLAG_FULLVOLUME);
+		flags = (int)PRVM_G_FLOAT(OFS_PARM6) & (CHANNELFLAG_RELIABLE | CHANNELFLAG_FORCELOOP | CHANNELFLAG_PAUSED | CHANNELFLAG_FULLVOLUME | CHANNELFLAG_BGMVOLUME);
 	}
 
 	// sound_starttime exists instead of sound_startposition because in a
@@ -707,6 +707,13 @@ static void VM_CL_getlight (prvm_prog_t *prog)
 	if (PRVM_clientglobalvector(getlight_dir))
 		VectorCopy(diffusenormal, PRVM_clientglobalvector(getlight_dir));
 }
+
+
+// DOOMBRINGER extensions
+
+
+
+
 
 //============================================================================
 //[515]: SCENE MANAGER builtins
@@ -2232,6 +2239,7 @@ static void VM_CL_getinputstate (prvm_prog_t *prog)
 		{
 			VectorCopy(cl.movecmd[i].viewangles, PRVM_clientglobalvector(input_angles));
 			PRVM_clientglobalfloat(input_buttons) = cl.movecmd[i].buttons; // FIXME: this should not be directly exposed to csqc (translation layer needed?)
+			PRVM_clientglobalfloat(input_impulse) = cl.movecmd[i].impulse;
 			PRVM_clientglobalvector(input_movevalues)[0] = cl.movecmd[i].forwardmove;
 			PRVM_clientglobalvector(input_movevalues)[1] = cl.movecmd[i].sidemove;
 			PRVM_clientglobalvector(input_movevalues)[2] = cl.movecmd[i].upmove;
@@ -2304,6 +2312,7 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 	s.cmd.sidemove = PRVM_clientglobalvector(input_movevalues)[1];
 	s.cmd.upmove = PRVM_clientglobalvector(input_movevalues)[2];
 	s.cmd.buttons = PRVM_clientglobalfloat(input_buttons);
+	s.cmd.impulse = PRVM_clientglobalfloat(input_impulse);
 	s.cmd.frametime = PRVM_clientglobalfloat(input_timelength);
 	s.cmd.jump = (s.cmd.buttons & 2) != 0;
 	s.cmd.crouch = (s.cmd.buttons & 16) != 0;
@@ -5036,7 +5045,7 @@ VM_bound,						// #96 float(float minimum, float val, float maximum) bound (DP_Q
 VM_pow,							// #97 float(float f, float f) pow (DP_QC_SINCOSSQRTPOW)
 VM_findfloat,					// #98 entity(entity start, .float fld, float match) findfloat (DP_QC_FINDFLOAT)
 VM_checkextension,				// #99 float(string s) checkextension (the basis of the extension system)
-// FrikaC and Telejano range #100-#199
+// FrikaC and Telejano range #100-#179
 NULL,							// #100
 NULL,							// #101
 NULL,							// #102
@@ -5117,6 +5126,7 @@ NULL,							// #176
 NULL,							// #177
 NULL,							// #178
 NULL,							// #179
+// DOOMBRINGER range #180-#199
 NULL,							// #180
 NULL,							// #181
 NULL,							// #182

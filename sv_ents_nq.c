@@ -84,6 +84,8 @@ qbool EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, co
 			bits |= U_GLOWCOLOR;
 		if (!VectorCompare(baseline.colormod, s->colormod))
 			bits |= U_COLORMOD;
+		if (baseline.solid != s->solid)
+			bits |= U_SOLID;
 
 		// if extensions are disabled, clear the relevant update flags
 		if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_NEHAHRAMOVIE)
@@ -139,7 +141,8 @@ qbool EntityFrameQuake_WriteFrame(sizebuf_t *msg, int maxsize, int numstates, co
 			if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[1] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[2] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
 			if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
 			if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
-
+			if (bits & U_SOLID)			MSG_WriteByte(&buf, s->solid);
+			
 			// the nasty protocol
 			if ((bits & U_EXTEND1) && sv.protocol == PROTOCOL_NEHAHRAMOVIE)
 			{

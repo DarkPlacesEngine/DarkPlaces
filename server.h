@@ -346,6 +346,7 @@ typedef struct client_s
 #define	SOLID_BSP				4		///< bsp clip, touch on edge, block
 // LadyHavoc: corpse code
 #define	SOLID_CORPSE			5		///< same as SOLID_BBOX, except it behaves as SOLID_NOT against SOLID_SLIDEBOX objects (players/monsters)
+#define	SOLID_NOTNETWORKED		11		///< Reki: added this to keep old "assumed" behavior for networked objects
 // LadyHavoc: physics
 // VorteX: now these fields are deprecated, as geomtype is more flexible
 #define	SOLID_PHYSICS_BOX		32		///< physics object (mins, maxs, mass, origin, axis_forward, axis_left, axis_up, velocity, spinvelocity)

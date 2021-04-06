@@ -1331,7 +1331,12 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qbool isstatic, sfx_t *sfx)
 
 	// If this channel does not manage its own volume (like CD tracks)
 	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
-		mastervol *= volume.value;
+	{
+		if ((ch->flags & CHANNELFLAG_BGMVOLUME))
+			mastervol *= bgmvolume.value;
+		else
+			mastervol *= volume.value;
+	}
 
 	if(snd_maxchannelvolume.value > 0)
 	{
@@ -1700,6 +1705,7 @@ qbool S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qbool value)
 	if (flag != CHANNELFLAG_FORCELOOP &&
 		flag != CHANNELFLAG_PAUSED &&
 		flag != CHANNELFLAG_FULLVOLUME &&
+		flag != CHANNELFLAG_BGMVOLUME &&
 		flag != CHANNELFLAG_LOCALSOUND)
 		return false;
 

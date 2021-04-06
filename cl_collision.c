@@ -282,12 +282,15 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 	traceowner = passedict ? PRVM_PROG_TO_EDICT(PRVM_clientedictedict(passedict, owner)) : NULL;
 
 	clipgroup = passedict ? (int)PRVM_clientedictfloat(passedict, clipgroup) : 0;
-
 	// collide against network entities
 	if (hitnetworkbrushmodels)
 	{
 		for (i = 0;i < cl.num_brushmodel_entities;i++)
 		{
+			entity_state_t *ent_fields = &cl.entities[cl.brushmodel_entities[i]].state_current;
+			if (ent_fields->solid == SOLID_NOT)
+				continue;
+			
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
@@ -295,6 +298,36 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
+		}
+		
+		
+		
+		
+		vec3_t origin, entmins, entmaxs;
+		matrix4x4_t entmatrix, entinversematrix;
+		
+		for (i = cl.maxclients;i < cl.num_entities;i++)
+		{
+			entity_render_t *ent = &cl.entities[i].render;
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
+			
+			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT || ent_fields->solid == SOLID_NOTNETWORKED)
+				continue;
+
+			Matrix4x4_OriginFromMatrix(&ent->matrix, origin);
+			VectorAdd(origin, ent_fields->mins, entmins);
+			VectorAdd(origin, ent_fields->maxs, entmaxs);
+			if (!BoxesOverlap(clipboxmins, clipboxmaxs, entmins, entmaxs))
+				continue;
+			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
+			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
+			Collision_ClipPointToGenericEntity(&trace, NULL, NULL, NULL, ent_fields->mins, ent_fields->maxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
+				*hitnetworkentity = i;
+			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
 	}
 
@@ -314,13 +347,16 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		for (i = 1;i <= cl.maxclients;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
-
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
+			
 			// don't hit ourselves
 			if (i == cl.playerentity)
 				continue;
-
+			
 			// don't hit players that don't exist
 			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT)
 				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;
@@ -512,6 +548,10 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 	{
 		for (i = 0;i < cl.num_brushmodel_entities;i++)
 		{
+			entity_state_t *ent_fields = &cl.entities[cl.brushmodel_entities[i]].state_current;
+			if (ent_fields->solid == SOLID_NOT)
+				continue;
+			
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
@@ -519,6 +559,37 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
+		}
+		
+		
+		
+		
+		
+		vec3_t origin, entmins, entmaxs;
+		matrix4x4_t entmatrix, entinversematrix;
+		
+		for (i = cl.maxclients;i < cl.num_entities;i++)
+		{
+			entity_render_t *ent = &cl.entities[i].render;
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
+			
+			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT || ent_fields->solid == SOLID_NOTNETWORKED)
+				continue;
+
+			Matrix4x4_OriginFromMatrix(&ent->matrix, origin);
+			VectorAdd(origin, ent_fields->mins, entmins);
+			VectorAdd(origin, ent_fields->maxs, entmaxs);
+			if (!BoxesOverlap(clipboxmins, clipboxmaxs, entmins, entmaxs))
+				continue;
+			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
+			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
+			Collision_ClipLineToGenericEntity(&trace, NULL, NULL, NULL, ent_fields->mins, ent_fields->maxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend, hitsurfaces);
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
+				*hitnetworkentity = i;
+			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
 	}
 
@@ -538,6 +609,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		for (i = 1;i <= cl.maxclients;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
 
 			// don't hit ourselves
 			if (i == cl.playerentity)
@@ -545,6 +617,8 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 
 			// don't hit players that don't exist
 			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT)
 				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;
@@ -763,6 +837,10 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 	{
 		for (i = 0;i < cl.num_brushmodel_entities;i++)
 		{
+			entity_state_t *ent_fields = &cl.entities[cl.brushmodel_entities[i]].state_current;
+			if (ent_fields->solid == SOLID_NOT)
+				continue;
+			
 			entity_render_t *ent = &cl.entities[cl.brushmodel_entities[i]].render;
 			if (!BoxesOverlap(clipboxmins, clipboxmaxs, ent->mins, ent->maxs))
 				continue;
@@ -770,6 +848,39 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
 				*hitnetworkentity = cl.brushmodel_entities[i];
 			Collision_CombineTraces(&cliptrace, &trace, NULL, true);
+		}
+		
+		
+		vec3_t origin, entmins, entmaxs;
+		matrix4x4_t entmatrix, entinversematrix;
+		
+		for (i = cl.maxclients;i < cl.num_entities;i++)
+		{
+			entity_render_t *ent = &cl.entities[i].render;
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
+			
+			// don't hit players that don't exist
+			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT || ent_fields->solid == SOLID_NOTNETWORKED)
+				continue;
+
+			Matrix4x4_OriginFromMatrix(&ent->matrix, origin);
+			VectorAdd(origin, ent_fields->mins, entmins);
+			VectorAdd(origin, ent_fields->maxs, entmaxs);
+			if (!BoxesOverlap(clipboxmins, clipboxmaxs, entmins, entmaxs))
+				continue;
+			Matrix4x4_CreateTranslate(&entmatrix, origin[0], origin[1], origin[2]);
+			Matrix4x4_CreateTranslate(&entinversematrix, -origin[0], -origin[1], -origin[2]);
+			
+			//if (ent_fields->solid == SOLID_BSP)
+			//	Collision_ClipToGenericEntity(&trace, ent->model, ent->frameblend, ent->skeleton, vec3_origin, vec3_origin, 0, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend);
+			//else
+				Collision_ClipToGenericEntity(&trace, NULL, NULL, NULL, ent_fields->mins, ent_fields->maxs, SUPERCONTENTS_BODY, &entmatrix, &entinversematrix, start, mins, maxs, end, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend);
+			
+			if (cliptrace.fraction > trace.fraction && hitnetworkentity)
+				*hitnetworkentity = i;
+			Collision_CombineTraces(&cliptrace, &trace, NULL, false);
 		}
 	}
 
@@ -789,6 +900,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		for (i = 1;i <= cl.maxclients;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
+			entity_state_t *ent_fields = &cl.entities[i].state_current;
 
 			// don't hit ourselves
 			if (i == cl.playerentity)
@@ -796,6 +908,8 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 
 			// don't hit players that don't exist
 			if (!cl.entities_active[i])
+				continue;
+			if (ent_fields->solid == SOLID_NOT)
 				continue;
 			if (!cl.scores[i-1].name[0])
 				continue;

@@ -613,7 +613,6 @@ void SV_PlayerPhysics (void)
 		PRVM_serveredictvector(host_client->edict, angles)[PITCH] = -v_angle[PITCH]/3;
 		PRVM_serveredictvector(host_client->edict, angles)[YAW] = v_angle[YAW];
 	}
-
 	if ( (int)PRVM_serveredictfloat(host_client->edict, flags) & FL_WATERJUMP )
 	{
 		SV_WaterJump ();

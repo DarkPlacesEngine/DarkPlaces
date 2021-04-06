@@ -1818,7 +1818,7 @@ void CL_SendMove(void)
 	// ridiculous value rejection (matches qw)
 	if (cl.cmd.msec > 250)
 		cl.cmd.msec = 100;
-	cl.cmd.frametime = cl.cmd.msec * (1.0 / 1000.0);
+	cl.cmd.frametime = cl.cmd.time - (cl.movecmd[1].time);//cl.cmd.msec * (1.0 / 1000.0);
 
 	switch(cls.protocol)
 	{

@@ -73,7 +73,7 @@ for os in "$@"; do
         DP_LINK_ODE=dlopen
         DP_LINK_ZLIB=dlopen'
       maketargets='release'
-      outputs='darkplaces-sdl.exe:darkplaces-x86.exe darkplaces-dedicated.exe:darkplaces-x86-dedicated.exe'
+      outputs='doombringer.exe:darkplaces-x86.exe darkplaces-dedicated.exe:darkplaces-x86-dedicated.exe'
       ;;
     win64)
       chroot=
@@ -91,7 +91,7 @@ for os in "$@"; do
         DP_LINK_ODE=dlopen
         DP_LINK_ZLIB=dlopen'
       maketargets='release'
-      outputs='darkplaces-sdl.exe:darkplaces.exe darkplaces-dedicated.exe:darkplaces-dedicated.exe'
+      outputs='doombringer.exe:darkplaces.exe darkplaces-dedicated.exe:darkplaces-dedicated.exe'
       ;;
     osx)
       chroot=

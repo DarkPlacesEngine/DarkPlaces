@@ -518,6 +518,14 @@ static qbool SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, 
 	cs->tagindex = (unsigned char)PRVM_serveredictfloat(ent, tag_index);
 	cs->glowsize = glowsize;
 	cs->traileffectnum = PRVM_serveredictfloat(ent, traileffectnum);
+	
+	int csqcflags = (int)(PRVM_serveredictfloat(ent, csqcflags));
+	if (csqcflags & CSQCFLAG_SOLIDITY)
+	{
+		cs->solid = PRVM_serveredictfloat(ent, solid);
+		VectorCopy(PRVM_serveredictvector(ent, mins), cs->mins);
+		VectorCopy(PRVM_serveredictvector(ent, maxs), cs->maxs);
+	}
 
 	// don't need to init cs->colormod because the defaultstate did that for us
 	//cs->colormod[0] = cs->colormod[1] = cs->colormod[2] = 32;
