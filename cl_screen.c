@@ -395,7 +395,7 @@ static void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	DrawQ_Pic (64, 0, Draw_CachePic ("gfx/net"), 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (200, 20, Draw_CachePic ("gfx/net"), 128, 100, 1, 1, 1, 1, 0);
 }
 
 /*
