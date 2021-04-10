@@ -4177,10 +4177,11 @@ static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 	materialflags = MATERIALFLAG_WALL;
 	if (csqc_polygons_defaultmaterial_nocullface.integer)
 		materialflags |= MATERIALFLAG_NOCULLFACE;
-	if (hascolor)
+	if (hascolor || prog->polygonbegin_guess2d) // added 2d check because fog is drawing over my shit
 		materialflags |= MATERIALFLAG_VERTEXCOLOR;
 	if (hasalpha)
 		materialflags |= MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW;
+	
 	tex = Mod_Mesh_GetTexture(mod, prog->polygonbegin_texname, prog->polygonbegin_drawflags, TEXF_ALPHA, materialflags);
 	surf = Mod_Mesh_AddSurface(mod, tex, false);
 	// create triangle fan
