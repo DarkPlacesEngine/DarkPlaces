@@ -394,8 +394,7 @@ double Host_Frame(double time)
 
 static inline void Host_Sleep(double time)
 {
-	static double delta;
-	double time0;
+	double delta, time0;
 
 	if(host_maxwait.value <= 0)
 		time = min(time, 1000000.0);
