@@ -1041,8 +1041,8 @@ typedef struct client_state_s
 	// use cl.scores[cl.playerentity-1].qw_spectator instead
 	//qbool qw_spectator;
 
-	// last time an input packet was sent
-	double lastpackettime;
+	// time accumulated since an input packet was sent
+	float timesincepacket;
 
 	// movement parameters for client prediction
 	unsigned int moveflags;
