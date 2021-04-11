@@ -3449,102 +3449,42 @@ void Render_Init(void)
 	Mod_RenderInit();
 }
 
-int R_CullBox(const vec3_t mins, const vec3_t maxs)
+static void R_GetCornerOfBox(vec3_t out, const vec3_t mins, const vec3_t maxs, int signbits)
 {
-	int i;
-	mplane_t *p;
-	if (r_trippy.integer)
-		return false;
-	for (i = 0;i < r_refdef.view.numfrustumplanes;i++)
-	{
-		p = r_refdef.view.frustum + i;
-		switch(p->signbits)
-		{
-		default:
-		case 0:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 1:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 2:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 3:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 4:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 5:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 6:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 7:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		}
-	}
-	return false;
+	out[0] = ((signbits & 1) ? mins : maxs)[0];
+	out[1] = ((signbits & 2) ? mins : maxs)[1];
+	out[2] = ((signbits & 4) ? mins : maxs)[2];
 }
 
-int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes)
+static qbool _R_CullBox(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes, int ignore)
 {
 	int i;
 	const mplane_t *p;
+	vec3_t corner;
 	if (r_trippy.integer)
 		return false;
 	for (i = 0;i < numplanes;i++)
 	{
+		if(i == ignore)
+			continue;
 		p = planes + i;
-		switch(p->signbits)
-		{
-		default:
-		case 0:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 1:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 2:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 3:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 4:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 5:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 6:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 7:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		}
+		R_GetCornerOfBox(corner, mins, maxs, p->signbits);
+		if (DotProduct(p->normal, corner) < p->dist)
+			return true;
 	}
 	return false;
+}
+
+qbool R_CullFrustum(const vec3_t mins, const vec3_t maxs)
+{
+	// skip nearclip plane, it often culls portals when you are very close, and is almost never useful
+	return _R_CullBox(mins, maxs, r_refdef.view.numfrustumplanes, r_refdef.view.frustum, 4);
+}
+
+qbool R_CullBox(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes)
+{
+	// nothing to ignore
+	return _R_CullBox(mins, maxs, numplanes, planes, -1);
 }
 
 //==================================================================================
@@ -4088,7 +4028,7 @@ static void R_View_UpdateEntityVisible (void)
 				continue;
 			}
 			if (!(ent->flags & renderimask))
-			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+			if (!R_CullFrustum(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_WORLDOBJECT | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
@@ -4100,7 +4040,7 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.scene.entities[i];
 			if (!(ent->flags & renderimask))
-			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+			if (!R_CullFrustum(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
@@ -9835,7 +9775,7 @@ static void R_DrawDebugModel(void)
 		GL_PolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);
 		for (bihleafindex = 0, bihleaf = bih->leafs;bihleafindex < bih->numleafs;bihleafindex++, bihleaf++)
 		{
-			if (cullbox && R_CullBox(bihleaf->mins, bihleaf->maxs))
+			if (cullbox && R_CullFrustum(bihleaf->mins, bihleaf->maxs))
 				continue;
 			switch (bihleaf->type)
 			{
