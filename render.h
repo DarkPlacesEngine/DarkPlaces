@@ -501,8 +501,8 @@ void R_DrawExplosions(void);
 #define gl_solid_format 3
 #define gl_alpha_format 4
 
-int R_CullBox(const vec3_t mins, const vec3_t maxs);
-int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes);
+qbool R_CullFrustum(const vec3_t mins, const vec3_t maxs);
+qbool R_CullBox(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes);
 qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t entboxexpand, vec_t pad, vec3_t eye, vec3_t entboxmins, vec3_t entboxmaxs);
 
 #include "r_modules.h"
