@@ -2465,7 +2465,11 @@ static void SV_CheckTimeouts(void)
 	{
 		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout)
 		{
-			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+			if (host_client->begun)
+				SV_BroadcastPrintf("Client \"%s\" connection timed out\n", host_client->name);
+			else
+				Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+
 			SV_DropClient(false);
 		}
 	}
