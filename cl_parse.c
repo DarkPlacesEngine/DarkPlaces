@@ -3303,20 +3303,23 @@ static void CL_NetworkTimeReceived(double newtime)
 		}
 		cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
 		timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
-		if (cl_nettimesyncboundmode.integer == 1)
-			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-		else if (cl_nettimesyncboundmode.integer == 2)
+		switch (cl_nettimesyncboundmode.integer)
 		{
+		case 1:
+			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
+			break;
+
+		case 2:
 			if (cl.time < cl.mtime[1] || cl.time > timehigh)
 				cl.time = cl.mtime[1];
-		}
-		else if (cl_nettimesyncboundmode.integer == 3)
-		{
+			break;
+
+		case 3:
 			if ((cl.time < cl.mtime[1] && cl.oldtime < cl.mtime[1]) || (cl.time > timehigh && cl.oldtime > timehigh))
 				cl.time = cl.mtime[1];
-		}
-		else if (cl_nettimesyncboundmode.integer == 4)
-		{
+			break;
+
+		case 4:
 			if (fabs(cl.time - cl.mtime[1]) > 0.5)
 				cl.time = cl.mtime[1]; // reset
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
@@ -3325,20 +3328,22 @@ static void CL_NetworkTimeReceived(double newtime)
 				cl.time -= 0.002 * cl.movevars_timescale; // fall into the past by 2ms
 			else
 				cl.time += 0.001 * cl.movevars_timescale; // creep forward 1ms
-		}
-		else if (cl_nettimesyncboundmode.integer == 5)
-		{
+			break;
+
+		case 5:
 			if (fabs(cl.time - cl.mtime[1]) > 0.5)
 				cl.time = cl.mtime[1]; // reset
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
 				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
 			else
 				cl.time = bound(cl.time - 0.002 * cl.movevars_timescale, cl.mtime[1], cl.time + 0.001 * cl.movevars_timescale);
-		}
-		else if (cl_nettimesyncboundmode.integer == 6)
-		{
+			break;
+
+		case 6:
 			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 			cl.time = bound(cl.time - 0.002 * cl.movevars_timescale, cl.mtime[1], cl.time + 0.001 * cl.movevars_timescale);
+			break;
+
 		}
 	}
 	// this packet probably contains a player entity update, so we will need
