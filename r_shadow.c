@@ -2023,7 +2023,7 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 					continue;
 			}
 			// skip if expanded light box is offscreen
-			if (R_CullBox(cullmins, cullmaxs))
+			if (R_CullFrustum(cullmins, cullmaxs))
 				continue;
 			// skip if overall light intensity is zero
 			if (w * VectorLength2(rtlight->color) == 0.0f)
@@ -2636,7 +2636,7 @@ static void R_Shadow_BounceGrid_TracePhotons_Shot(r_shadow_bouncegrid_photon_t *
 	if ((remainingbounces == r_shadow_bouncegrid_state.settings.maxbounce || r_shadow_bouncegrid_state.settings.includedirectlighting) && p->numpaths < PHOTON_MAX_PATHS)
 	{
 		qbool notculled = true;
-		// cull paths that fail R_CullBox in dynamic mode
+		// cull paths that fail R_CullFrustum in dynamic mode
 		if (!r_shadow_bouncegrid_state.settings.staticmode
 			&& r_shadow_bouncegrid_dynamic_culllightpaths.integer)
 		{
@@ -2647,7 +2647,7 @@ static void R_Shadow_BounceGrid_TracePhotons_Shot(r_shadow_bouncegrid_photon_t *
 			cullmaxs[0] = max(shotstart[0], shothit[0]) + r_shadow_bouncegrid_state.settings.spacing[0] + r_shadow_bouncegrid_state.settings.lightpathsize;
 			cullmaxs[1] = max(shotstart[1], shothit[1]) + r_shadow_bouncegrid_state.settings.spacing[1] + r_shadow_bouncegrid_state.settings.lightpathsize;
 			cullmaxs[2] = max(shotstart[2], shothit[2]) + r_shadow_bouncegrid_state.settings.spacing[2] + r_shadow_bouncegrid_state.settings.lightpathsize;
-			if (R_CullBox(cullmins, cullmaxs))
+			if (R_CullFrustum(cullmins, cullmaxs))
 				notculled = false;
 		}
 		if (notculled)
@@ -3507,7 +3507,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 	}
 
 	// skip if the light box is off screen
-	if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
+	if (R_CullFrustum(rtlight->cullmins, rtlight->cullmaxs))
 		return;
 
 	// in the typical case this will be quickly replaced by GetLightInfo
@@ -3546,7 +3546,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 		shadowtrispvs = r_shadow_buffer_shadowtrispvs;
 		lighttrispvs = r_shadow_buffer_lighttrispvs;
 		// if the reduced leaf bounds are offscreen, skip it
-		if (R_CullBox(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
+		if (R_CullFrustum(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
 			return;
 	}
 	else
@@ -3587,7 +3587,7 @@ static void R_Shadow_PrepareLight(rtlight_t *rtlight)
 			continue;
 		// skip the object entirely if it is not within the valid
 		// shadow-casting region (which includes the lit region)
-		if (R_CullBoxCustomPlanes(ent->mins, ent->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
+		if (R_CullBox(ent->mins, ent->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
 			continue;
 		if (!(model = ent->model))
 			continue;
