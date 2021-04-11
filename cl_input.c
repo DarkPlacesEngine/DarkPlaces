@@ -1517,7 +1517,7 @@ void CL_UpdateMoveVars(void)
 	else
 	{
 		cl.moveflags = 0;
-		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : host_timescale.value) / bound(1.0f, cl_netfps.value, 1000.0f);
+		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : host_timescale.value) / bound(10.0f, cl_netfps.value, 1000.0f);
 		cl.movevars_timescale = (cls.demoplayback ? 1.0f : host_timescale.value);
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
@@ -1756,7 +1756,7 @@ void CL_SendMove(void)
 	usercmd_t *cmd;
 	sizebuf_t buf;
 	unsigned char data[1024];
-	double packettime;
+	float packettime;
 	int msecdelta;
 	qbool quemove;
 	qbool important;
@@ -1870,30 +1870,47 @@ void CL_SendMove(void)
 		cl.movecmd[0] = cl.cmd;
 
 	// don't predict more than 200fps
-	if (host.realtime >= cl.lastpackettime + 0.005)
+	if (cl.timesincepacket >= 0.005)
 		cl.movement_replay = true; // redo the prediction
 
 	// now decide whether to actually send this move
 	// (otherwise it is only for prediction)
 
-	// don't send too often or else network connections can get clogged by a
-	// high renderer framerate
-	packettime = 1.0 / bound(1, cl_netfps.value, 1000);
-	if (cl.movevars_timescale && cl.movevars_ticrate)
-	{
-		float maxtic = cl.movevars_ticrate / cl.movevars_timescale;
-		packettime = min(packettime, maxtic);
-	}
-
 	// do not send 0ms packets because they mess up physics
 	if(cl.cmd.msec == 0 && cl.time > cl.oldtime && (cls.protocol == PROTOCOL_QUAKEWORLD || cls.signon == SIGNONS))
 		return;
+
+	// don't send too often or else network connections can get clogged by a
+	// high renderer framerate
+	packettime = 1.0f / bound(10.0f, cl_netfps.value, 1000.0f);
+	if (cl.movevars_timescale && cl.movevars_ticrate)
+	{
+		// try to ensure at least 1 packet per server frame
+		// and apply soft limit of 2, hard limit < 4 (packettime reduced further below)
+		float maxtic = cl.movevars_ticrate / cl.movevars_timescale;
+		packettime = bound(maxtic * 0.5f, packettime, maxtic);
+	}
+	// bones_was_here: reduce packettime to (largest multiple of realframetime) <= packettime
+	// prevents packet rates lower than cl_netfps or server frame rate
+	// eg: cl_netfps 60 and cl_maxfps 250 would otherwise send only 50 netfps
+	// with this line that config sends 62.5 netfps
+	// (this causes it to emit packets at a steady beat)
+	packettime = floor(packettime / (float)cl.realframetime) * (float)cl.realframetime;
+
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
 	important = (cl.cmd.impulse || (cl_netimmediatebuttons.integer && cl.cmd.buttons != cl.movecmd[1].buttons));
-	// don't send too often (cl_netfps)
-	if (!important && host.realtime < cl.lastpackettime + packettime)
+
+	// don't send too often (cl_netfps), allowing a small margin for float error
+	// bones_was_here: accumulate realframetime to prevent low packet rates
+	// previously with cl_maxfps == cl_netfps it did not send every frame as
+	// host.realtime - cl.lastpackettime was often well below (or above) packettime
+	if (!important && cl.timesincepacket < packettime * 0.99999f)
+	{
+		cl.timesincepacket += cl.realframetime;
 		return;
+	}
+
 	// don't choke the connection with packets (obey rate limit)
 	// it is important that this check be last, because it adds a new
 	// frame to the shownetgraph output and any cancelation after this
@@ -1901,12 +1918,9 @@ void CL_SendMove(void)
 	// we also still send if it is important
 	if (!NetConn_CanSend(cls.netcon) && !important)
 		return;
-	// try to round off the lastpackettime to a multiple of the packet interval
-	// (this causes it to emit packets at a steady beat)
-	if (packettime > 0)
-		cl.lastpackettime = floor(host.realtime / packettime) * packettime;
-	else
-		cl.lastpackettime = host.realtime;
+
+	// reset the packet timing accumulator
+	cl.timesincepacket = cl.realframetime;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
