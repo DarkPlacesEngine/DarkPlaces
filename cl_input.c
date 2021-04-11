@@ -1757,7 +1757,6 @@ void CL_SendMove(void)
 	sizebuf_t buf;
 	unsigned char data[1024];
 	float packettime;
-	int msecdelta;
 	qbool quemove;
 	qbool important;
 
@@ -1813,12 +1812,14 @@ void CL_SendMove(void)
 	// set viewangles
 	VectorCopy(cl.viewangles, cl.cmd.viewangles);
 
-	msecdelta = (int)(floor(cl.cmd.time * 1000) - floor(cl.movecmd[1].time * 1000));
-	cl.cmd.msec = (unsigned char)bound(0, msecdelta, 255);
+	// bones_was_here: previously cl.cmd.frametime was floored to nearest millisec
+	// this meant the smoothest async movement required integer millisec
+	// client and server frame times (eg 125fps)
+	cl.cmd.frametime = bound(0.0, cl.cmd.time - cl.movecmd[1].time, 0.255);
 	// ridiculous value rejection (matches qw)
-	if (cl.cmd.msec > 250)
-		cl.cmd.msec = 100;
-	cl.cmd.frametime = cl.cmd.msec * (1.0 / 1000.0);
+	if (cl.cmd.frametime > 0.25)
+		cl.cmd.frametime = 0.1;
+	cl.cmd.msec = (unsigned char)floor(cl.cmd.frametime * 1000);
 
 	switch(cls.protocol)
 	{

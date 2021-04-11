@@ -390,7 +390,7 @@ typedef struct usercmd_s
 
 	double time; // time the move is executed for (non-cl_movement is executed at receivetime)
 	float receivetime; // time the move was received at (used for ping)
-	int msec; // for predicted moves
+	unsigned char msec; // for predicted moves
 	int buttons;
 	int impulse;
 	unsigned int sequence;
