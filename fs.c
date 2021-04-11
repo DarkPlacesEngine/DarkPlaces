@@ -2507,6 +2507,24 @@ int FS_CheckNastyPath (const char *path, qbool isgamedir)
 	return false;
 }
 
+/*
+====================
+FS_SanitizePath
+
+Sanitize path (replace non-portable characters 
+with portable ones in-place, etc)
+====================
+*/
+void FS_SanitizePath(char *path)
+{
+	int i, size;
+
+	for(i = 0, size = strlen(path); i < size; i++)
+	{
+		if(path[i] == '\\')
+			path[i] = '/';
+	}
+}
 
 /*
 ====================
