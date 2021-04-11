@@ -3278,7 +3278,6 @@ extern cvar_t host_timescale;
 extern cvar_t cl_lerpexcess;
 static void CL_NetworkTimeReceived(double newtime)
 {
-	double timehigh;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
 	if (cl_nolerp.integer || cls.timedemo || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
@@ -3293,7 +3292,9 @@ static void CL_NetworkTimeReceived(double newtime)
 	}
 	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
+		double timehigh;
 		cl.mtime[1] = max(cl.mtime[1], cl.mtime[0] - 0.1);
+
 		if (developer_extra.integer && vid_activewindow)
 		{
 			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
@@ -3301,8 +3302,14 @@ static void CL_NetworkTimeReceived(double newtime)
 			else if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
 				Con_DPrintf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 		}
-		cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
-		timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
+
+		if (cl_nettimesyncboundmode.integer < 4)
+		{
+			// doesn't make sense for modes > 3
+			cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
+			timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
+		}
+
 		switch (cl_nettimesyncboundmode.integer)
 		{
 		case 1:
