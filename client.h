@@ -870,7 +870,12 @@ typedef struct client_state_s
 	// how long it has been since the previous client frame in real time
 	// (not game time, for that use cl.time - cl.oldtime)
 	double realframetime;
-	
+
+	// used by cl_nettimesyncboundmode 7
+#define NUM_TS_ERRORS 32 // max 256
+	unsigned char ts_error_num;
+	float ts_error_stor[NUM_TS_ERRORS];
+
 	// fade var for fading while dead
 	float deathfade;
 
