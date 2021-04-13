@@ -101,7 +101,6 @@ OBJ_COMMON= \
 	com_ents.o \
 	com_ents4.o \
 	com_game.o \
-	com_list.o \
 	com_msg.o \
 	common.o \
 	console.o \
