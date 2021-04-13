@@ -355,7 +355,7 @@ double Host_Frame(double time)
 
 	Log_DestBuffer_Flush();
 
-	Curl_Run();
+	Curl_Frame();
 
 	// check for commands typed to the host
 	Host_GetConsoleCommands();
