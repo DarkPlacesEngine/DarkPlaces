@@ -1119,13 +1119,13 @@ qbool Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double
 
 /*
 ====================
-Curl_Run
+Curl_Frame
 
 call this regularily as this will always download as much as possible without
 blocking.
 ====================
 */
-void Curl_Run(void)
+void Curl_Frame(void)
 {
 	double maxspeed;
 	downloadinfo *di;
@@ -1268,7 +1268,7 @@ void Curl_CancelAll(void)
 ====================
 Curl_Running
 
-returns true iff there is a download running.
+returns true if there is a download running.
 ====================
 */
 qbool Curl_Running(void)
