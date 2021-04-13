@@ -302,26 +302,6 @@ void Host_LoadConfig_f(cmd_state_t *cmd)
 //============================================================================
 
 /*
-===================
-Host_GetConsoleCommands
-
-Add them exactly as if they had been typed at the console
-===================
-*/
-static void Host_GetConsoleCommands (void)
-{
-	char *line;
-
-	while ((line = Sys_ConsoleInput()))
-	{
-		if (cls.state == ca_dedicated)
-			Cbuf_AddText(cmd_server, line);
-		else
-			Cbuf_AddText(cmd_client, line);
-	}
-}
-
-/*
 ==================
 Host_TimeReport
 
@@ -355,17 +335,11 @@ double Host_Frame(double time)
 
 	Log_DestBuffer_Flush();
 
+	// Run any downloads
 	Curl_Frame();
-
-	// check for commands typed to the host
-	Host_GetConsoleCommands();
-
-//	R_TimeReport("preconsole");
 
 	// process console commands
 	Cbuf_Frame(host.cbuf);
-
-//	R_TimeReport("console");
 
 	R_TimeReport("---");
 
