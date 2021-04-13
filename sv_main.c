@@ -711,6 +711,7 @@ void SV_Init (void)
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 
 	SV_ServerOptions();
+	Cvar_Callback(&sv_netport);
 }
 
 static void SV_SaveEntFile_f(cmd_state_t *cmd)
