@@ -491,8 +491,34 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 	}
 }
 
+/*
+===================
+Cbuf_Frame_Input
+
+Add them exactly as if they had been typed at the console
+===================
+*/
+static void Cbuf_Frame_Input(void)
+{
+	char *line;
+
+	while ((line = Sys_ConsoleInput()))
+	{
+		if (cls.state == ca_dedicated)
+			Cbuf_AddText(cmd_server, line);
+		else
+			Cbuf_AddText(cmd_client, line);
+	}
+}
+
 void Cbuf_Frame(cmd_buf_t *cbuf)
 {
+	// check for commands typed to the host
+	Cbuf_Frame_Input();
+
+//	R_TimeReport("preconsole");
+
+	// execute commands queued with the defer command
 	Cbuf_Execute_Deferred(cbuf);
 	if (cbuf->size)
 	{
@@ -500,6 +526,8 @@ void Cbuf_Frame(cmd_buf_t *cbuf)
 		Cbuf_Execute(cbuf);
 		SV_UnlockThreadMutex();
 	}
+
+//	R_TimeReport("console");
 }
 
 /*
