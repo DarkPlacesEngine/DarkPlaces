@@ -428,6 +428,8 @@ void CL_Disconnect(void)
 	cls.demoplayback = cls.timedemo = host.restless = false;
 	cls.signon = 0;
 
+	Cvar_Callback(&cl_netport);
+
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
 	SCR_ClearLoadingScreen(false);
 }
@@ -3083,6 +3085,8 @@ void CL_Init (void)
 		CL_MeshEntities_Init();
 
 		CL_Video_Init();
+
+		NetConn_UpdateSockets_Client();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
 		host.hook.Disconnect = CL_Disconnect;
