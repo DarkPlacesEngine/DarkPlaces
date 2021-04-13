@@ -343,9 +343,7 @@ Runs all active servers
 static void Host_Init(void);
 double Host_Frame(double time)
 {
-	double cl_timer = 0;
-	double sv_timer = 0;
-	static double wait;
+	double cl_wait, sv_wait;
 
 	TaskQueue_Frame(false);
 
@@ -362,34 +360,32 @@ double Host_Frame(double time)
 	// check for commands typed to the host
 	Host_GetConsoleCommands();
 
-	// process console commands
-//		R_TimeReport("preconsole");
+//	R_TimeReport("preconsole");
 
+	// process console commands
 	Cbuf_Frame(host.cbuf);
 
-//		R_TimeReport("console");
-
-	//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
+//	R_TimeReport("console");
 
 	R_TimeReport("---");
 
-	sv_timer = SV_Frame(time);
-	cl_timer = CL_Frame(time);
+	sv_wait = SV_Frame(time);
+	cl_wait = CL_Frame(time);
+
+//	Con_Printf("%6.0f %6.0f\n", cl_wait * 1000000.0, sv_wait * 1000000.0);
 
 	Mem_CheckSentinelsGlobal();
 
+	if(host.restless)
+		return 0;
+
 	// if the accumulators haven't become positive yet, wait a while
 	if (cls.state == ca_dedicated)
-		wait = sv_timer * -1000000.0; // dedicated
+		return sv_wait * -1000000.0; // dedicated
 	else if (!sv.active || svs.threaded)
-		wait = cl_timer * -1000000.0; // connected to server, main menu, or server is on different thread
+		return cl_wait * -1000000.0; // connected to server, main menu, or server is on different thread
 	else
-		wait = max(cl_timer, sv_timer) * -1000000.0; // listen server or singleplayer
-
-	if (!host.restless && wait >= 1)
-		return wait;
-	else
-		return 0;
+		return max(cl_wait, sv_wait) * -1000000.0; // listen server or singleplayer
 }
 
 static inline void Host_Sleep(double time)
@@ -466,7 +462,7 @@ void Host_Main(void)
 		sleeptime = Host_Frame(time);
 		oldtime = newtime;
 
-		if (sleeptime)
+		if (sleeptime >= 1)
 		{
 			Host_Sleep(sleeptime);
 			continue;
