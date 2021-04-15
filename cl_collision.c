@@ -306,7 +306,7 @@ trace_t CL_TracePoint(const vec3_t start, int type, prvm_edict_t *passedict, int
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 		
-		for (i = cl.maxclients;i < cl.num_entities;i++)
+		for (i = cl.maxclients + 1;i < cl.num_entities;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
 			entity_state_t *ent_fields = &cl.entities[i].state_current;
@@ -568,7 +568,7 @@ trace_t CL_TraceLine(const vec3_t start, const vec3_t end, int type, prvm_edict_
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 		
-		for (i = cl.maxclients;i < cl.num_entities;i++)
+		for (i = cl.maxclients + 1;i < cl.num_entities;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
 			entity_state_t *ent_fields = &cl.entities[i].state_current;
@@ -854,7 +854,7 @@ trace_t CL_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, co
 		vec3_t origin, entmins, entmaxs;
 		matrix4x4_t entmatrix, entinversematrix;
 		
-		for (i = cl.maxclients;i < cl.num_entities;i++)
+		for (i = cl.maxclients + 1;i < cl.num_entities;i++)
 		{
 			entity_render_t *ent = &cl.entities[i].render;
 			entity_state_t *ent_fields = &cl.entities[i].state_current;
