@@ -168,7 +168,7 @@ static int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t 
 		}
 		if (o->traileffectnum != n->traileffectnum)
 			bits |= E5_TRAILEFFECTNUM;
-		if (o->solid != n->solid)
+		if (o->solid != n->solid && sv.protocol >= PROTOCOL_DOOMBRINGER1)
 			bits |= E5_SOLID;
 	}
 	else

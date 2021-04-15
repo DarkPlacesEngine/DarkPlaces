@@ -3910,6 +3910,7 @@ void CL_ParseServerMessage(void)
 						strip_pqc = true;
 						break;
 					case PROTOCOL_DARKPLACES7:
+					case PROTOCOL_DOOMBRINGER1:
 					default:
 						// ProQuake does not support
 						// these protocols

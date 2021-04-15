@@ -1771,7 +1771,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 		if (serverlist_consoleoutput && developer_networking.integer)
 			Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
 		
-		if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring, false ) ) {
+		if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DOOMBRINGER1, ipstring, false ) ) {
 			break;
 		}
 
@@ -3690,7 +3690,7 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af)
 					{
 						if(LHNETADDRESS_ToString(&favorites[j], request, sizeof(request), true))
-							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, request, true );
+							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DOOMBRINGER1, request, true );
 					}
 				}
 			}

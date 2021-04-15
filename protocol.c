@@ -48,6 +48,7 @@ struct protocolversioninfo_s
 }
 protocolversioninfo[] =
 {
+	{ 3601, PROTOCOL_DOOMBRINGER1, "DB1"},
 	{ 3504, PROTOCOL_DARKPLACES7 , "DP7"},
 	{ 3503, PROTOCOL_DARKPLACES6 , "DP6"},
 	{ 3502, PROTOCOL_DARKPLACES5 , "DP5"},

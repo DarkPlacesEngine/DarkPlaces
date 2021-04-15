@@ -1830,6 +1830,9 @@ void CL_SendMove(void)
 	case PROTOCOL_DARKPLACES7:
 		cl.cmd.predicted = cl_movement.integer != 0;
 		break;
+	case PROTOCOL_DOOMBRINGER1:
+		cl.cmd.predicted = cl_movement.integer != 0;
+		break;
 	default:
 		cl.cmd.predicted = false;
 		break;
@@ -1859,6 +1862,10 @@ void CL_SendMove(void)
 		break;
 	case PROTOCOL_DARKPLACES6:
 	case PROTOCOL_DARKPLACES7:
+		// FIXME: cl.cmd.buttons & 16 is +button5, Nexuiz/Xonotic specific
+		cl.cmd.crouch = (cl.cmd.buttons & 16) != 0;
+		break;
+	case PROTOCOL_DOOMBRINGER1:
 		// FIXME: cl.cmd.buttons & 16 is +button5, Nexuiz/Xonotic specific
 		cl.cmd.crouch = (cl.cmd.buttons & 16) != 0;
 		break;
@@ -2024,6 +2031,51 @@ void CL_SendMove(void)
 			MSG_WriteByte (&buf, cl.cmd.impulse);
 		case PROTOCOL_DARKPLACES6:
 		case PROTOCOL_DARKPLACES7:
+			// set the maxusercmds variable to limit how many should be sent
+			maxusercmds = bound(1, cl_netrepeatinput.integer + 1, min(3, CL_MAX_USERCMDS));
+			// when movement prediction is off, there's not much point in repeating old input as it will just be ignored
+			if (!cl.cmd.predicted)
+				maxusercmds = 1;
+
+			// send the latest moves in order, the old ones will be
+			// ignored by the server harmlessly, however if the previous
+			// packets were lost these moves will be used
+			//
+			// this reduces packet loss impact on gameplay.
+			for (j = 0, cmd = &cl.movecmd[maxusercmds-1];j < maxusercmds;j++, cmd--)
+			{
+				// don't repeat any stale moves
+				if (cmd->sequence && cmd->sequence < cls.servermovesequence)
+					continue;
+				// 5/9 bytes
+				MSG_WriteByte (&buf, clc_move);
+				if (cls.protocol != PROTOCOL_DARKPLACES6)
+					MSG_WriteLong (&buf, cmd->predicted ? cmd->sequence : 0);
+				MSG_WriteFloat (&buf, cmd->time); // last server packet time
+				// 6 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle16i (&buf, cmd->viewangles[i]);
+				// 6 bytes
+				MSG_WriteCoord16i (&buf, cmd->forwardmove);
+				MSG_WriteCoord16i (&buf, cmd->sidemove);
+				MSG_WriteCoord16i (&buf, cmd->upmove);
+				// 5 bytes
+				MSG_WriteLong (&buf, cmd->buttons);
+				MSG_WriteByte (&buf, cmd->impulse);
+				// PRYDON_CLIENTCURSOR
+				// 30 bytes
+				MSG_WriteShort (&buf, (short)(cmd->cursor_screen[0] * 32767.0f));
+				MSG_WriteShort (&buf, (short)(cmd->cursor_screen[1] * 32767.0f));
+				MSG_WriteFloat (&buf, cmd->cursor_start[0]);
+				MSG_WriteFloat (&buf, cmd->cursor_start[1]);
+				MSG_WriteFloat (&buf, cmd->cursor_start[2]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[0]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[1]);
+				MSG_WriteFloat (&buf, cmd->cursor_impact[2]);
+				MSG_WriteShort (&buf, cmd->cursor_entitynumber);
+			}
+			break;
+		case PROTOCOL_DOOMBRINGER1:
 			// set the maxusercmds variable to limit how many should be sent
 			maxusercmds = bound(1, cl_netrepeatinput.integer + 1, min(3, CL_MAX_USERCMDS));
 			// when movement prediction is off, there's not much point in repeating old input as it will just be ignored
