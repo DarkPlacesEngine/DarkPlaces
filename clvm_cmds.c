@@ -275,7 +275,7 @@ static void CL_VM_SetTraceGlobals(prvm_prog_t *prog, const trace_t *trace, int s
 }
 
 #define CL_HitNetworkBrushModels(move) !((move) == MOVE_WORLDONLY)
-#define CL_HitNetworkPlayers(move)     !((move) == MOVE_WORLDONLY || (move) == MOVE_NOMONSTERS)
+#define CL_HitNetworkPlayers(move)     FALSE//!((move) == MOVE_WORLDONLY || (move) == MOVE_NOMONSTERS)
 
 // #16 void(vector v1, vector v2, float movetype, entity ignore) traceline
 static void VM_CL_traceline (prvm_prog_t *prog)
