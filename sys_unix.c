@@ -42,7 +42,7 @@ void Sys_Error (const char *error, ...)
 
 	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
 
-	Host_Shutdown ();
+	//Host_Shutdown ();
 	exit (1);
 }
 
