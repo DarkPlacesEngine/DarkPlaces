@@ -512,23 +512,7 @@ qbool CL_VM_UpdateView (double frametime)
 qbool CL_VM_ConsoleCommand (const char *text)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	int restorevm_tempstringsbuf_cursize;
-	qbool r = false;
-	if(!cl.csqc_loaded)
-		return false;
-	CSQC_BEGIN
-	if (PRVM_clientfunction(CSQC_ConsoleCommand))
-	{
-		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
-		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
-		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_ConsoleCommand), "QC function CSQC_ConsoleCommand is missing");
-		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-		r = CSQC_RETURNVAL != 0;
-	}
-	CSQC_END
-	return r;
+	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, cl.csqc_loaded, "QC function CSQC_ConsoleCommand is missing");
 }
 
 qbool CL_VM_Parse_TempEntity (void)
