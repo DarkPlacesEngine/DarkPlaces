@@ -1625,7 +1625,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
 }
 
-static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined, int autoflags, xcommand_t autofunction)
+static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined)
 {
 	cmd_state_t *cmd = (cmd_state_t *)Mem_Alloc(tempmempool, sizeof(cmd_state_t));
 	
@@ -1637,8 +1637,6 @@ static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int
 	cmd->cvars = cvars;
 	cmd->cvars_flagsmask = cvars_flagsmask;
 	cmd->cmd_flags = cmds_flagsmask;
-	cmd->auto_flags = autoflags;
-	cmd->auto_function = autofunction;
 	cmd->userdefined = userdefined;
 
 	return cmd;
@@ -1667,13 +1665,19 @@ void Cmd_Init(void)
 	cmd_iter_all = (cmd_iter_t *)Mem_Alloc(tempmempool, sizeof(cmd_iter_t) * 4);
 
 	// client console can see server cvars because the user may start a server
-	cmd_iter_all[0].cmd = cmd_client = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER, &cmd_userdefined_all, CF_SERVER_FROM_CLIENT, CL_ForwardToServer_f);
+	cmd_iter_all[0].cmd = cmd_client = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER, &cmd_userdefined_all);
+	cmd_client->Handle = Cmd_CL_Callback;
+	cmd_client->NotFound = NULL;
 
 	// dedicated server console can only see server cvars, there is no client
-	cmd_iter_all[1].cmd = cmd_server = Cmd_AddInterpreter(cbuf, &cvars_all, CF_SERVER, CF_SERVER, &cmd_userdefined_all, 0, NULL);
+	cmd_iter_all[1].cmd = cmd_server = Cmd_AddInterpreter(cbuf, &cvars_all, CF_SERVER, CF_SERVER, &cmd_userdefined_all);
+	cmd_server->Handle = Cmd_SV_Callback;
+	cmd_server->NotFound = NULL;
 
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
-	cmd_iter_all[2].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null, 0, NULL);
+	cmd_iter_all[2].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null);
+	cmd_serverfromclient->Handle = Cmd_SV_Callback;
+	cmd_serverfromclient->NotFound = Cmd_SV_NotFound;
 
 	cmd_iter_all[3].cmd = NULL;
 //
@@ -1844,22 +1848,13 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	cmd_function_t *func;
 	cmd_function_t *prev, *current;
 	cmd_state_t *cmd;
-	xcommand_t save = NULL;
-	qbool auto_add = false;
 	int i;
 
 	for (i = 0; i < 3; i++)
 	{
 		cmd = cmd_iter_all[i].cmd;
-		if ((flags & cmd->cmd_flags) || (flags & cmd->auto_flags))
+		if (flags & cmd->cmd_flags)
 		{
-			if((flags & cmd->auto_flags) && cmd->auto_function)
-			{
-				save = function;
-				function = cmd->auto_function;
-				auto_add = true;
-			}
-
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 			{
@@ -1874,10 +1869,8 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				{
 					if (!strcmp(cmd_name, func->name))
 					{
-						if(func->autofunc && !auto_add)
-							break;
 						Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-						goto next;
+						continue;
 					}
 				}
 
@@ -1887,7 +1880,6 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->function = function;
 				func->description = description;
 				func->next = cmd->engine_functions;
-				func->autofunc = auto_add;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1920,7 +1912,6 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->description = description;
 				func->qcfunc = true; //[515]: csqc
 				func->next = cmd->userdefined->qc_functions;
-				func->autofunc = false;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->userdefined->qc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1933,12 +1924,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				}
 				func->next = current;
 			}
-			if (save)
-				function = save;
 		}
-next:
-		auto_add = false;
-		continue;
 	}
 }
 
@@ -2181,6 +2167,53 @@ void Cmd_ClearCSQCCommands (cmd_state_t *cmd)
 
 extern cvar_t sv_cheats;
 
+qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if (func->function)
+		func->function(cmd);
+	else
+		Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+	return true;
+}
+
+qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if(func->qcfunc && (func->flags & CF_CLIENT))
+		return CL_VM_ConsoleCommand(text);
+	else if ((func->flags & CF_SERVER_FROM_CLIENT) && src == src_local)
+	{
+		CL_ForwardToServer_f(cmd);
+		return true;
+	}
+	else
+		return Cmd_Callback(cmd, func, text, src);
+}
+
+qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if(func->qcfunc && (func->flags & CF_SERVER))
+		return SV_VM_ConsoleCommand(text);
+	else if (src == src_client)
+	{
+		if((func->flags & CF_CHEAT) && !sv_cheats.integer)
+			SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
+		else
+			func->function(cmd);
+		return true;
+	}
+	else
+		return Cmd_Callback(cmd, func, text, src);
+}
+
+qbool Cmd_SV_NotFound(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if (cmd->source == src_client)
+	{
+		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
+		return true;
+	}
+	return false;
+}
 /*
 ============
 Cmd_ExecuteString
@@ -2210,13 +2243,8 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp(cmd->argv[0], func->name))
 		{
-			if(func->qcfunc)
-			{
-				if((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text))
-					goto done;
-				else if((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text))
-					goto done;
-			}
+			if(cmd->Handle(cmd, func, text, src))
+				goto done;
 		}
 	}
 
@@ -2224,33 +2252,16 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp (cmd->argv[0], func->name))
 		{
-			switch (src)
-			{
-			case src_local:
-				if (func->function)
-					func->function(cmd);
-				else
-					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+			if(cmd->Handle(cmd, func, text, src))
 				goto done;
-			case src_client:
-				if (func->function)
-				{
-					if((func->flags & CF_CHEAT) && !sv_cheats.integer)
-						SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
-					else
-						func->function(cmd);
-					goto done;
-				}
-			}
-			break;
 		}
 	}
 
 	// if it's a client command and no command was found, say so.
-	if (cmd->source == src_client)
+	if(cmd->NotFound)
 	{
-		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
-		goto done;
+		if(cmd->NotFound(cmd, func, text, src))
+			goto done;
 	}
 
 // check alias
