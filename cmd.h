@@ -166,12 +166,9 @@ typedef struct cmd_input_s
 extern cmd_userdefined_t cmd_userdefined_all; // aliases and csqc functions
 extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
 
-// command interpreter for client commands injected by CSQC, MQC or client engine code
+// command interpreter for local commands injected by SVQC, CSQC, MQC, server or client engine code
 // uses cmddefs_all
-extern cmd_state_t *cmd_client;
-// command interpreter for server commands injected by MQC, SVQC, menu engine code or server engine code
-// uses cmddefs_all
-extern cmd_state_t *cmd_server;
+extern cmd_state_t *cmd_local;
 // command interpreter for server commands received over network from clients
 // uses cmddefs_null
 extern cmd_state_t *cmd_serverfromclient;
