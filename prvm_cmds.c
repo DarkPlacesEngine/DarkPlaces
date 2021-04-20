@@ -58,6 +58,34 @@ void VM_CheckEmptyString(prvm_prog_t *prog, const char *s)
 		prog->error_cmd("%s: Bad string", prog->name);
 }
 
+qbool PRVM_ConsoleCommand (prvm_prog_t *prog, const char *text, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message)
+{
+	int restorevm_tempstringsbuf_cursize;
+	int save_self;
+	qbool r = false;
+
+	if(!prog_loaded)
+		return false;
+
+	if(func)
+	{
+		if(preserve_self)
+			save_self = PRVM_gameglobaledict(self);
+		if(ptime)
+			PRVM_gameglobalfloat(time) = ptime;
+		PRVM_gameglobaledict(self) = curself;
+		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
+		prog->ExecuteProgram(prog, *func, error_message);
+		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+		if(preserve_self)
+			PRVM_gameglobaledict(self) = save_self;
+		r = (int) PRVM_G_FLOAT(OFS_RETURN) != 0;
+	}
+
+	return r;
+}
+
 void VM_GenerateFrameGroupBlend(prvm_prog_t *prog, framegroupblend_t *framegroupblend, const prvm_edict_t *ed)
 {
 	// self.frame is the interpolation target (new frame)
