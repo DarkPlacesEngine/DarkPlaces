@@ -1146,36 +1146,51 @@ void NetConn_Close(netconn_t *conn)
 static int clientport = -1;
 static int clientport2 = -1;
 static int hostport = -1;
+
+// Call on disconnect, during startup, or if cl_netport is changed
+void NetConn_UpdateSockets_Client(void)
+{
+	if (cls.state == ca_disconnected && clientport != clientport2)
+	{
+		clientport = clientport2;
+		NetConn_CloseClientPorts();
+	}
+	if (cl_numsockets == 0)
+		NetConn_OpenClientPorts();
+}
+
+// Call when cl_port is changed
+static void NetConn_cl_netport_Callback(cvar_t *var)
+{
+	if(cls.state != ca_dedicated)
+	{
+		if (clientport2 != var->integer)
+		{
+			clientport2 = var->integer;
+			if (cls.state == ca_connected)
+				Con_Print("Changing \"cl_port\" will not take effect until you reconnect.\n");
+		}
+		NetConn_UpdateSockets_Client();
+	}
+}
+
+// Call when port is changed
+static void NetConn_sv_netport_Callback(cvar_t *var)
+{
+	if (hostport != var->integer)
+	{
+		hostport = var->integer;
+		if (sv.active)
+			Con_Print("Changing \"port\" will not take effect until \"map\" command is executed.\n");
+	}
+}
+
 void NetConn_UpdateSockets(void)
 {
 	int i, j;
 
 	// TODO add logic to automatically close sockets if needed
 	LHNET_DefaultDSCP(net_tos_dscp.integer);
-
-	if (cls.state != ca_dedicated)
-	{
-		if (clientport2 != cl_netport.integer)
-		{
-			clientport2 = cl_netport.integer;
-			if (cls.state == ca_connected)
-				Con_Print("Changing \"cl_port\" will not take effect until you reconnect.\n");
-		}
-		if (cls.state == ca_disconnected && clientport != clientport2)
-		{
-			clientport = clientport2;
-			NetConn_CloseClientPorts();
-		}
-		if (cl_numsockets == 0)
-			NetConn_OpenClientPorts();
-	}
-
-	if (hostport != sv_netport.integer)
-	{
-		hostport = sv_netport.integer;
-		if (sv.active)
-			Con_Print("Changing \"port\" will not take effect until \"map\" command is executed.\n");
-	}
 
 	for (j = 0;j < MAX_RCONS;j++)
 	{
@@ -2923,7 +2938,7 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(cmd_server, s, src_local, true);
+				Cmd_ExecuteString(cmd_local, s, src_local, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
@@ -3885,8 +3900,9 @@ void NetConn_Init(void)
 	Cvar_RegisterCallback(&net_slist_favorites, NetConn_UpdateFavorites_c);
 #endif
 	Cvar_RegisterVariable(&net_slist_pause);
-	if(LHNET_DefaultDSCP(-1) >= 0) // register cvar only if supported
-		Cvar_RegisterVariable(&net_tos_dscp);
+#ifdef IP_TOS // register cvar only if supported
+	Cvar_RegisterVariable(&net_tos_dscp);
+#endif
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
@@ -3902,7 +3918,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
+	Cvar_RegisterCallback(&cl_netport, NetConn_cl_netport_Callback);
 	Cvar_RegisterVariable(&sv_netport);
+	Cvar_RegisterCallback(&sv_netport, NetConn_sv_netport_Callback);
 	Cvar_RegisterVariable(&net_address);
 	Cvar_RegisterVariable(&net_address_ipv6);
 	Cvar_RegisterVariable(&sv_public);

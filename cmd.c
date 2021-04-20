@@ -22,8 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "thread.h"
 
-cmd_state_t *cmd_client;
-cmd_state_t *cmd_server;
+cmd_state_t *cmd_local;
 cmd_state_t *cmd_serverfromclient;
 
 cmd_userdefined_t cmd_userdefined_all;
@@ -491,8 +490,29 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 	}
 }
 
+/*
+===================
+Cbuf_Frame_Input
+
+Add them exactly as if they had been typed at the console
+===================
+*/
+static void Cbuf_Frame_Input(void)
+{
+	char *line;
+
+	while ((line = Sys_ConsoleInput()))
+			Cbuf_AddText(cmd_local, line);
+}
+
 void Cbuf_Frame(cmd_buf_t *cbuf)
 {
+	// check for commands typed to the host
+	Cbuf_Frame_Input();
+
+//	R_TimeReport("preconsole");
+
+	// execute commands queued with the defer command
 	Cbuf_Execute_Deferred(cbuf);
 	if (cbuf->size)
 	{
@@ -500,6 +520,8 @@ void Cbuf_Frame(cmd_buf_t *cbuf)
 		Cbuf_Execute(cbuf);
 		SV_UnlockThreadMutex();
 	}
+
+//	R_TimeReport("console");
 }
 
 /*
@@ -1597,7 +1619,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
 }
 
-static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined, int autoflags, xcommand_t autofunction)
+static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined)
 {
 	cmd_state_t *cmd = (cmd_state_t *)Mem_Alloc(tempmempool, sizeof(cmd_state_t));
 	
@@ -1609,8 +1631,6 @@ static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int
 	cmd->cvars = cvars;
 	cmd->cvars_flagsmask = cvars_flagsmask;
 	cmd->cmd_flags = cmds_flagsmask;
-	cmd->auto_flags = autoflags;
-	cmd->auto_function = autofunction;
 	cmd->userdefined = userdefined;
 
 	return cmd;
@@ -1636,18 +1656,19 @@ void Cmd_Init(void)
 	cbuf->free.prev = cbuf->free.next = &(cbuf->free);
 
 	// FIXME: Get rid of cmd_iter_all eventually. This is just a hack to reduce the amount of work to make the interpreters dynamic.
-	cmd_iter_all = (cmd_iter_t *)Mem_Alloc(tempmempool, sizeof(cmd_iter_t) * 4);
+	cmd_iter_all = (cmd_iter_t *)Mem_Alloc(tempmempool, sizeof(cmd_iter_t) * 3);
 
-	// client console can see server cvars because the user may start a server
-	cmd_iter_all[0].cmd = cmd_client = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER, &cmd_userdefined_all, CF_SERVER_FROM_CLIENT, CL_ForwardToServer_f);
-
-	// dedicated server console can only see server cvars, there is no client
-	cmd_iter_all[1].cmd = cmd_server = Cmd_AddInterpreter(cbuf, &cvars_all, CF_SERVER, CF_SERVER, &cmd_userdefined_all, 0, NULL);
+	// local console
+	cmd_iter_all[0].cmd = cmd_local = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER | CF_SERVER_FROM_CLIENT, &cmd_userdefined_all);
+	cmd_local->Handle = Cmd_CL_Callback;
+	cmd_local->NotFound = NULL;
 
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
-	cmd_iter_all[2].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null, 0, NULL);
+	cmd_iter_all[1].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null);
+	cmd_serverfromclient->Handle = Cmd_SV_Callback;
+	cmd_serverfromclient->NotFound = Cmd_SV_NotFound;
 
-	cmd_iter_all[3].cmd = NULL;
+	cmd_iter_all[2].cmd = NULL;
 //
 // register our commands
 //
@@ -1816,22 +1837,13 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	cmd_function_t *func;
 	cmd_function_t *prev, *current;
 	cmd_state_t *cmd;
-	xcommand_t save = NULL;
-	qbool auto_add = false;
 	int i;
 
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 2; i++)
 	{
 		cmd = cmd_iter_all[i].cmd;
-		if ((flags & cmd->cmd_flags) || (flags & cmd->auto_flags))
+		if (flags & cmd->cmd_flags)
 		{
-			if((flags & cmd->auto_flags) && cmd->auto_function)
-			{
-				save = function;
-				function = cmd->auto_function;
-				auto_add = true;
-			}
-
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 			{
@@ -1846,10 +1858,8 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				{
 					if (!strcmp(cmd_name, func->name))
 					{
-						if(func->autofunc && !auto_add)
-							break;
 						Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
-						goto next;
+						continue;
 					}
 				}
 
@@ -1859,7 +1869,6 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->function = function;
 				func->description = description;
 				func->next = cmd->engine_functions;
-				func->autofunc = auto_add;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->engine_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1892,7 +1901,6 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->description = description;
 				func->qcfunc = true; //[515]: csqc
 				func->next = cmd->userdefined->qc_functions;
-				func->autofunc = false;
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->userdefined->qc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -1905,12 +1913,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				}
 				func->next = current;
 			}
-			if (save)
-				function = save;
 		}
-next:
-		auto_add = false;
-		continue;
 	}
 }
 
@@ -2154,6 +2157,76 @@ void Cmd_ClearCSQCCommands (cmd_state_t *cmd)
 extern cvar_t sv_cheats;
 
 /*
+ * Cloudwalk FIXME: This idea sounded great in my head but...
+ * How do we handle commands that can be received by the client,
+ * but which the server can also execute locally?
+ * 
+ * If we create a callback where the engine will forward to server
+ * but try to execute the command locally if it's dedicated,
+ * we're back to intermixing client and server code which I'm
+ * trying to avoid. There's no other way I can think of to
+ * implement that behavior that doesn't involve an #ifdef, or
+ * making a mess of hooks.
+ */
+qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if (func->function)
+		func->function(cmd);
+	else
+		Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+	return true;
+}
+
+qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	// TODO: Assign these functions to QC commands directly?
+	if(func->qcfunc)
+	{
+		if(((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text)) ||
+		   ((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text)))
+			return true;
+	}
+	if (func->flags & CF_SERVER_FROM_CLIENT)
+	{
+		if(host_isclient.integer)
+		{
+			CL_ForwardToServer_f(cmd);
+			return true;
+		}
+		else if(!(func->flags & CF_SERVER))
+		{
+			Con_Printf("Cannot execute client commands from a dedicated server console.\n");
+			return true;
+		}
+	}
+	return Cmd_Callback(cmd, func, text, src);
+}
+
+qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if(func->qcfunc && (func->flags & CF_SERVER))
+		return SV_VM_ConsoleCommand(text);
+	else if (src == src_client)
+	{
+		if((func->flags & CF_CHEAT) && !sv_cheats.integer)
+			SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
+		else
+			func->function(cmd);
+		return true;
+	}
+	return false;
+}
+
+qbool Cmd_SV_NotFound(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+{
+	if (cmd->source == src_client)
+	{
+		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
+		return true;
+	}
+	return false;
+}
+/*
 ============
 Cmd_ExecuteString
 
@@ -2182,13 +2255,8 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp(cmd->argv[0], func->name))
 		{
-			if(func->qcfunc)
-			{
-				if((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text))
-					goto done;
-				else if((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text))
-					goto done;
-			}
+			if(cmd->Handle(cmd, func, text, src))
+				goto done;
 		}
 	}
 
@@ -2196,33 +2264,16 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	{
 		if (!strcasecmp (cmd->argv[0], func->name))
 		{
-			switch (src)
-			{
-			case src_local:
-				if (func->function)
-					func->function(cmd);
-				else
-					Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+			if(cmd->Handle(cmd, func, text, src))
 				goto done;
-			case src_client:
-				if (func->function)
-				{
-					if((func->flags & CF_CHEAT) && !sv_cheats.integer)
-						SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
-					else
-						func->function(cmd);
-					goto done;
-				}
-			}
-			break;
 		}
 	}
 
 	// if it's a client command and no command was found, say so.
-	if (cmd->source == src_client)
+	if(cmd->NotFound)
 	{
-		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
-		goto done;
+		if(cmd->NotFound(cmd, func, text, src))
+			goto done;
 	}
 
 // check alias

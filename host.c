@@ -295,33 +295,13 @@ void Host_LoadConfig_f(cmd_state_t *cmd)
 	Cmd_RestoreInitState();
 #ifdef CONFIG_MENU
 	// prepend a menu restart command to execute after the config
-	Cbuf_InsertText(cmd_client, "\nmenu_restart\n");
+	Cbuf_InsertText(cmd_local, "\nmenu_restart\n");
 #endif
 	// reset cvars to their defaults, and then exec startup scripts again
-	Host_AddConfigText(cmd_client);
+	Host_AddConfigText(cmd_local);
 }
 
 //============================================================================
-
-/*
-===================
-Host_GetConsoleCommands
-
-Add them exactly as if they had been typed at the console
-===================
-*/
-static void Host_GetConsoleCommands (void)
-{
-	char *line;
-
-	while ((line = Sys_ConsoleInput()))
-	{
-		if (cls.state == ca_dedicated)
-			Cbuf_AddText(cmd_server, line);
-		else
-			Cbuf_AddText(cmd_client, line);
-	}
-}
 
 /*
 ==================
@@ -345,9 +325,7 @@ Runs all active servers
 static void Host_Init(void);
 double Host_Frame(double time)
 {
-	double cl_timer = 0;
-	double sv_timer = 0;
-	static double wait;
+	double cl_wait, sv_wait;
 
 	TaskQueue_Frame(false);
 
@@ -359,45 +337,36 @@ double Host_Frame(double time)
 
 	Log_DestBuffer_Flush();
 
-	Curl_Run();
-
-	// check for commands typed to the host
-	Host_GetConsoleCommands();
+	// Run any downloads
+	Curl_Frame();
 
 	// process console commands
-//		R_TimeReport("preconsole");
-
 	Cbuf_Frame(host.cbuf);
-
-//		R_TimeReport("console");
-
-	//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
 
 	R_TimeReport("---");
 
-	sv_timer = SV_Frame(time);
-	cl_timer = CL_Frame(time);
+	sv_wait = SV_Frame(time);
+	cl_wait = CL_Frame(time);
+
+//	Con_Printf("%6.0f %6.0f\n", cl_wait * 1000000.0, sv_wait * 1000000.0);
 
 	Mem_CheckSentinelsGlobal();
 
+	if(host.restless)
+		return 0;
+
 	// if the accumulators haven't become positive yet, wait a while
 	if (cls.state == ca_dedicated)
-		wait = sv_timer * -1000000.0; // dedicated
+		return sv_wait * -1000000.0; // dedicated
 	else if (!sv.active || svs.threaded)
-		wait = cl_timer * -1000000.0; // connected to server, main menu, or server is on different thread
+		return cl_wait * -1000000.0; // connected to server, main menu, or server is on different thread
 	else
-		wait = max(cl_timer, sv_timer) * -1000000.0; // listen server or singleplayer
-
-	if (!host.restless && wait >= 1)
-		return wait;
-	else
-		return 0;
+		return max(cl_wait, sv_wait) * -1000000.0; // listen server or singleplayer
 }
 
 static inline void Host_Sleep(double time)
 {
-	static double delta;
-	double time0;
+	double delta, time0;
 
 	if(host_maxwait.value <= 0)
 		time = min(time, 1000000.0);
@@ -469,7 +438,7 @@ void Host_Main(void)
 		sleeptime = Host_Frame(time);
 		oldtime = newtime;
 
-		if (sleeptime)
+		if (sleeptime >= 1)
 		{
 			Host_Sleep(sleeptime);
 			continue;
@@ -673,13 +642,13 @@ static void Host_Init (void)
 
 	// here comes the not so critical stuff
 
-	Host_AddConfigText(cmd_client);
+	Host_AddConfigText(cmd_local);
 
 	// if quake.rc is missing, use default
 	if (!FS_FileExists("quake.rc"))
 	{
-		Cbuf_AddText(cmd_client, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	host.state = host_active;
@@ -700,8 +669,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	// check for special demo mode
@@ -710,8 +679,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -720,24 +689,24 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
-		Cbuf_Execute((cmd_client)->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
+		Cbuf_Execute((cmd_local)->cbuf);
 	}
 #endif
 
 	if (cls.state == ca_dedicated || Sys_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, "startmap_dm\n");
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, "startmap_dm\n");
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
 #ifdef CONFIG_MENU
-		Cbuf_AddText(cmd_client, "togglemenu 1\n");
+		Cbuf_AddText(cmd_local, "togglemenu 1\n");
 #endif
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	Con_DPrint("========Initialized=========\n");

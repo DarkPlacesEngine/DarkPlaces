@@ -72,6 +72,8 @@ void MP_Draw (void);
 void MP_ToggleMenu (int mode);
 void MP_Shutdown (void);*/
 
+qbool MP_ConsoleCommand(const char *text);
+
 //
 // menu router
 //

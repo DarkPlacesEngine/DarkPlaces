@@ -76,7 +76,7 @@ cvar_t sv_checkforpacketsduringsleep = {CF_SERVER, "sv_checkforpacketsduringslee
 cvar_t sv_clmovement_enable = {CF_SERVER, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
 cvar_t sv_clmovement_minping = {CF_SERVER, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
 cvar_t sv_clmovement_minping_disabletime = {CF_SERVER, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
-cvar_t sv_clmovement_inputtimeout = {CF_SERVER, "sv_clmovement_inputtimeout", "0.2", "when a client does not send input for this many seconds, force them to move anyway (unlike QuakeWorld)"};
+cvar_t sv_clmovement_inputtimeout = {CF_SERVER, "sv_clmovement_inputtimeout", "0.1", "when a client does not send input for this many seconds (max 0.1), force them to move anyway (unlike QuakeWorld)"};
 cvar_t sv_cullentities_nevercullbmodels = {CF_SERVER, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
 cvar_t sv_cullentities_pvs = {CF_SERVER, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"};
 cvar_t sv_cullentities_stats = {CF_SERVER, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
@@ -711,6 +711,7 @@ void SV_Init (void)
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 
 	SV_ServerOptions();
+	Cvar_Callback(&sv_netport);
 }
 
 static void SV_SaveEntFile_f(cmd_state_t *cmd)
@@ -910,11 +911,6 @@ void SV_SendServerinfo (client_t *client)
 	client->movesequence = 0;
 	client->movement_highestsequence_seen = 0;
 	memset(&client->movement_count, 0, sizeof(client->movement_count));
-#ifdef NUM_PING_TIMES
-	for (i = 0;i < NUM_PING_TIMES;i++)
-		client->ping_times[i] = 0;
-	client->num_pings = 0;
-#endif
 	client->ping = 0;
 
 	// allow the client some time to send his keepalives, even if map loading took ages
@@ -1796,15 +1792,6 @@ void SV_SpawnServer (const char *map)
 
 	if(sv.active)
 	{
-		client_t *client;
-		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
-		{
-			if (client->netconnection)
-			{
-				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
-				MSG_WriteString(&client->netconnection->message, "reconnect\n");
-			}
-		}
 		World_End(&sv.world);
 		if(PRVM_serverfunction(SV_Shutdown))
 		{
@@ -1847,8 +1834,23 @@ void SV_SpawnServer (const char *map)
 //
 // tell all connected clients that we are going to a new level
 //
-	if (!sv.active)
+	if (sv.active)
+	{
+		client_t *client;
+		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+		{
+			if (client->netconnection)
+			{
+				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
+				MSG_WriteString(&client->netconnection->message, "reconnect\n");
+			}
+		}
+	}
+	else
+	{
+		// open server port
 		NetConn_OpenServerPorts(true);
+	}
 
 //
 // make cvars consistant
@@ -2268,7 +2270,7 @@ static qbool SVVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 static void SV_VM_Setup(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	PRVM_Prog_Init(prog, cmd_server);
+	PRVM_Prog_Init(prog, cmd_local);
 
 	// allocate the mempools
 	// TODO: move the magic numbers/constants into #defines [9/13/2006 Black]
@@ -2464,7 +2466,11 @@ static void SV_CheckTimeouts(void)
 	{
 		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout)
 		{
-			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+			if (host_client->begun)
+				SV_BroadcastPrintf("Client \"%s\" connection timed out\n", host_client->name);
+			else
+				Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+
 			SV_DropClient(false);
 		}
 	}

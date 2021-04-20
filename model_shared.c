@@ -2257,12 +2257,7 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, 
 	for (j = 0; j < Q3MAXTCMODS && layer->tcmods[j].tcmod != Q3TCMOD_NONE; j++)
 		shaderpass->tcmods[j] = layer->tcmods[j];
 	for (j = 0; j < layer->numframes; j++)
-	{
-		for (int i = 0; layer->texturename[j][i]; i++)
-			if(layer->texturename[j][i] == '\\')
-				layer->texturename[j][i] = '/';
 		shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false, true);
-	}
 	return shaderpass;
 }
 

@@ -512,23 +512,7 @@ qbool CL_VM_UpdateView (double frametime)
 qbool CL_VM_ConsoleCommand (const char *text)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	int restorevm_tempstringsbuf_cursize;
-	qbool r = false;
-	if(!cl.csqc_loaded)
-		return false;
-	CSQC_BEGIN
-	if (PRVM_clientfunction(CSQC_ConsoleCommand))
-	{
-		PRVM_clientglobalfloat(time) = cl.time;
-		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
-		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
-		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_ConsoleCommand), "QC function CSQC_ConsoleCommand is missing");
-		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-		r = CSQC_RETURNVAL != 0;
-	}
-	CSQC_END
-	return r;
+	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, cl.csqc_loaded, "QC function CSQC_ConsoleCommand is missing");
 }
 
 qbool CL_VM_Parse_TempEntity (void)
@@ -571,7 +555,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		int crcflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CF_READONLY;
 		csqc_progsize.flags &= ~CF_READONLY;
-		Cmd_ExecuteString(cmd_client, msg, src_local, true);
+		Cmd_ExecuteString(cmd_local, msg, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
@@ -603,7 +587,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 				l = sizeof(buf) - 1;
 			strlcpy(buf, p, l + 1); // strlcpy needs a + 1 as it includes the newline!
 
-			Cmd_ExecuteString(cmd_client, buf, src_local, true);
+			Cmd_ExecuteString(cmd_local, buf, src_local, true);
 
 			p += l;
 			if(*p == '\n')
@@ -611,13 +595,13 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 			else
 				break; // end of string or overflow
 		}
-		Cmd_ExecuteString(cmd_client, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
+		Cmd_ExecuteString(cmd_local, "curl --clear_autodownload", src_local, true); // don't inhibit CSQC loading
 		return;
 	}
 
 	if(!cl.csqc_loaded)
 	{
-		Cbuf_AddText(cmd_client, msg);
+		Cbuf_AddText(cmd_local, msg);
 		return;
 	}
 	CSQC_BEGIN
@@ -631,7 +615,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
 	else
-		Cbuf_AddText(cmd_client, msg);
+		Cbuf_AddText(cmd_local, msg);
 	CSQC_END
 }
 
@@ -1056,7 +1040,7 @@ void CL_VM_Init (void)
 		return;
 	}
 
-	PRVM_Prog_Init(prog, cmd_client);
+	PRVM_Prog_Init(prog, cmd_local);
 
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(csqc_progname.string, 0, NULL);
@@ -1156,7 +1140,7 @@ void CL_VM_Init (void)
 void CL_VM_ShutDown (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	Cmd_ClearCSQCCommands(cmd_client);
+	Cmd_ClearCSQCCommands(cmd_local);
 	//Cvar_SetValueQuick(&csqc_progcrc, -1);
 	//Cvar_SetValueQuick(&csqc_progsize, -1);
 	if(!cl.csqc_loaded)
