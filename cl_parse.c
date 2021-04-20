@@ -500,7 +500,7 @@ static void CL_SetupWorldModel(void)
 	World_Start(&cl.world);
 
 	// load or reload .loc file for team chat messages
-	CL_Locs_Reload_f(cmd_client);
+	CL_Locs_Reload_f(cmd_local);
 
 	// make sure we send enough keepalives
 	CL_KeepaliveMessage(false);
@@ -940,7 +940,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 		return;
 
 	// abort existing upload if in progress
-	QW_CL_StopUpload_f(cmd_client);
+	QW_CL_StopUpload_f(cmd_local);
 
 	Con_DPrintf("Starting upload of %d bytes...\n", size);
 
@@ -949,7 +949,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 	cls.qw_uploadsize = size;
 	cls.qw_uploadpos = 0;
 
-	QW_CL_NextUpload_f(cmd_client);
+	QW_CL_NextUpload_f(cmd_local);
 }
 
 #if 0
@@ -1619,7 +1619,7 @@ static void CL_SignonReply (void)
 			// execute cl_begindownloads next frame
 			// (after any commands added by svc_stufftext have been executed)
 			// when done with downloads the "prespawn" will be sent
-			Cbuf_AddText(cmd_client, "\ncl_begindownloads\n");
+			Cbuf_AddText(cmd_local, "\ncl_begindownloads\n");
 
 			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			//MSG_WriteString (&cls.netcon->message, "prespawn");
@@ -1920,7 +1920,7 @@ static void CL_ParseServerInfo (void)
 			if (cls.demorecording)
 			{
 				// finish the previous level's demo file
-				CL_Stop_f(cmd_client);
+				CL_Stop_f(cmd_local);
 			}
 
 			// start a new demo file
@@ -3695,7 +3695,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_sellscreen:
-				Cmd_ExecuteString(cmd_client, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", src_local, true);
 				break;
 
 			case qw_svc_smallkick:
@@ -4204,7 +4204,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sellscreen:
-				Cmd_ExecuteString(cmd_client, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", src_local, true);
 				break;
 			case svc_hidelmp:
 				if (gamemode == GAME_TENEBRAE)
@@ -4307,7 +4307,7 @@ void CL_Parse_DumpPacket(void)
 void CL_Parse_ErrorCleanUp(void)
 {
 	CL_StopDownload(0, 0);
-	QW_CL_StopUpload_f(cmd_client);
+	QW_CL_StopUpload_f(cmd_local);
 }
 
 void CL_Parse_Init(void)

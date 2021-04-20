@@ -1058,7 +1058,7 @@ void VM_cin_restart(prvm_prog_t *prog)
 static void VM_M_registercommand(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_M_registercommand);
-	if(!Cmd_Exists(cmd_client, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
@@ -1076,7 +1076,7 @@ VM_vlen,								//   #9
 VM_vectoyaw,						//  #10
 VM_vectoangles,					//  #11
 VM_random,							//  #12
-VM_localcmd_client,						//  #13
+VM_localcmd_local,						//  #13
 VM_cvar,								//  #14
 VM_cvar_set,						//  #15
 VM_dprint,							//  #16
