@@ -248,6 +248,7 @@
     <ClCompile Include="image.c" />
     <ClCompile Include="image_png.c" />
     <ClCompile Include="jpeg.c" />
+    <ClCompile Include="json.c" />
     <ClCompile Include="keys.c" />
     <ClCompile Include="lhnet.c" />
     <ClCompile Include="libcurl.c" />
@@ -382,6 +383,7 @@
     <ClInclude Include="mprogdefs.h" />
     <ClInclude Include="netconn.h" />
     <ClInclude Include="palette.h" />
+    <ClInclude Include="parser.h" />
     <ClInclude Include="pmove.h" />
     <ClInclude Include="polygon.h" />
     <ClInclude Include="portals.h" />

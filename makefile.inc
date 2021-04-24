@@ -139,6 +139,7 @@ OBJ_COMMON= \
 	model_sprite.o \
 	netconn.o \
 	palette.o \
+	parser.o \
 	polygon.o \
 	portals.o \
 	protocol.o \

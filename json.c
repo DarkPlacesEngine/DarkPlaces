@@ -18,8 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "quakedef.h"
-#include <setjmp.h>
+#include "darkplaces.h"
+#include "parser.h"
 
 // taken from json's wikipedia article
 const char json_test_string[] =
@@ -50,16 +50,6 @@ const char json_test_string[] =
 	"}\n\000"
 };
 
-static jmp_buf json_error;
-
-typedef enum qjson_err_e
-{
-	JSON_ERR_SUCCESS = 0,
-	JSON_ERR_INVAL = 1,
-	JSON_ERR_EOF = 2,
-	JSON_ERR_EMPTY = 3
-} qjson_err_t;
-
 typedef enum qjson_type_e
 {
 	JSON_TYPE_UNDEFINED = 0,
@@ -76,142 +66,74 @@ typedef struct qjson_token_s
 	char *string; // ASCII only for now
 } qjson_token_t;
 
-struct qjson_state_s
+typedef struct qjson_state_s
 {
 	qjson_token_t *head, *cur;
-	const char *buf;
-	const char *pos;
-	int line, col;
-};
+	qparser_state_t state;
+} qjson_state_t;
 
 static void Json_Parse_Object(struct qjson_state_s *state);
 static void Json_Parse_Array(struct qjson_state_s *state);
 
-// Tell the user that their json is broken, why it's broken, and where it's broken, so hopefully they fix it.
-static void Json_Parse_Error(struct qjson_state_s *state, qjson_err_t error)
-{
-	if(!error)
-		return;
-	else
-	{ 
-		switch (error)
-		{
-		case JSON_ERR_INVAL:
-			Con_Printf(CON_ERROR "Json Error: Unexpected token '%c', line %i, column %i\n", *state->pos, state->line, state->col);
-			break;
-		case JSON_ERR_EOF:
-			Con_Printf(CON_ERROR "Json Error: Unexpected end-of-file\n");
-			break;
-		default:
-			return;
-		}
-	}
-	longjmp(json_error, 1);
-}
-
-// Skips newlines, and handles different line endings.
-static qbool Json_Parse_Newline(struct qjson_state_s *state)
-{
-	if(*state->pos == '\n')
-		goto newline;
-	if(*state->pos == '\r')
-	{
-		if(*state->pos + 1 == '\n')
-			state->pos++;
-		goto newline;
-	}
-	return false;
-newline:
-	state->col = 1;
-	state->line++;
-	state->pos++;
-	return true;
-}
-
-// Skips the current line. Only useful for comments.
-static void Json_Parse_SkipLine(struct qjson_state_s *state)
-{
-	while(!Json_Parse_Newline(state))
-		state->pos++;
-}
-
 // Checks for C/C++-style comments and ignores them. This is not standard json.
-static qbool Json_Parse_Comment(struct qjson_state_s *state)
+static qbool Json_Parse_Comment_SingleLine(struct qparser_state_s *state)
 {
 	if(*state->pos == '/')
 	{
+		// FIXME: Let the parser interface increment this?
 		if(*state->pos++ == '/')
-			Json_Parse_SkipLine(state);
-		else if(*state->pos == '*')
-		{
-			while(*state->pos++ != '*' && *state->pos + 1 != '/')
-				continue;
-		}
+			return true;
 		else
-			Json_Parse_Error(state, JSON_ERR_INVAL);
-		return true;
+			Parse_Error(state, PARSE_ERR_INVAL);
 	}
 	return false;
 }
 
-// Advance forward in the stream as many times as 'count', cleanly.
-static void Json_Parse_Next(struct qjson_state_s *state, size_t count)
+static qbool Json_Parse_CheckComment_Multiline_Start(struct qparser_state_s *state)
 {
-	state->col = state->col + count;
-	state->pos = state->pos + count;
-
-	if(!*state->pos)
-		Json_Parse_Error(state, JSON_ERR_EOF);
+	if(*state->pos == '/')
+	{
+		// FIXME: Let the parser interface increment this?
+		if(*state->pos++ == '*')
+			return true;
+		else
+			Parse_Error(state, PARSE_ERR_INVAL);
+	}
+	return false;
 }
 
-// Skip all whitespace, as we normally know it.
-static void Json_Parse_Whitespace(struct qjson_state_s *state)
+static qbool Json_Parse_CheckComment_Multiline_End(struct qparser_state_s *state)
 {
-	while(*state->pos == ' ' || *state->pos == '\t')
-		Json_Parse_Next(state, 1);
+	if(*state->pos == '*')
+	{
+		// FIXME: Let the parser interface increment this?
+		if(*state->pos++ == '/')
+			return true;
+	}
+	return false;
 }
 
-// Skip all whitespace, as json defines it.
-static void Json_Parse_Skip(struct qjson_state_s *state)
-{
-	/*
-	 * Repeat this until we run out of whitespace, newlines, and comments.
-	 * state->pos should be left on non-whitespace when this returns.
-	 */
-	do {
-		Json_Parse_Whitespace(state);
-	} while (Json_Parse_Comment(state) || Json_Parse_Newline(state));
-}
-
-// Skip to the next token that isn't whitespace. Hopefully a valid one.
-static char Json_Parse_NextToken(struct qjson_state_s *state)
-{
-	/*
-	 * This assumes state->pos is already on whitespace. Most of the time this
-	 * doesn't happen automatically, but advancing the pointer here would break
-	 * comment and newline handling when it does happen automatically.
-	 */
-	Json_Parse_Skip(state);
-	return *state->pos;
-}
 
 // TODO: handle escape sequences
-static void Json_Parse_String(struct qjson_state_s *state)
+static void Json_Parse_String(struct qjson_state_s *json)
 {
 	do {
-		Json_Parse_Next(state, 1);
-		if(*state->pos == '\\')
-			Json_Parse_Next(state, 1);
-	} while(*state->pos != '"');
+		Parse_Next(&json->state, 1);
+		if(*json->state.pos == '\\')
+		{
+			Parse_Next(&json->state, 1);
+			continue;
+		}
+	} while(*json->state.pos != '"');
 
-	Json_Parse_Next(state, 1);
+	Parse_Next(&json->state, 1);
 }
 
 // Handles numbers. Json numbers can be either an integer or a double.
-static qbool Json_Parse_Number(struct qjson_state_s *state)
+static qbool Json_Parse_Number(struct qjson_state_s *json)
 {
 	int i, numsize;
-	const char *in = state->pos;
+	const char *in = json->state.pos;
 	//char out[128];
 	qbool is_float = false;
 	qbool is_exp = false;
@@ -223,7 +145,7 @@ static qbool Json_Parse_Number(struct qjson_state_s *state)
 		if(in[i] == '.')
 		{
 			if(is_float || is_exp)
-				Json_Parse_Error(state, JSON_ERR_INVAL);
+				Parse_Error(&json->state, PARSE_ERR_INVAL);
 			is_float = true;
 			i++;
 			continue;
@@ -232,7 +154,7 @@ static qbool Json_Parse_Number(struct qjson_state_s *state)
 		if(in[i] == 'e' || in[i] == 'E')
 		{
 			if(is_exp)
-				Json_Parse_Error(state, JSON_ERR_INVAL);
+				Parse_Error(&json->state, PARSE_ERR_INVAL);
 			if(in[i+1] == '+' || in[i+1] == '-')
 				i++;
 			is_exp = true;
@@ -241,109 +163,120 @@ static qbool Json_Parse_Number(struct qjson_state_s *state)
 		}
 	}
 	// TODO: use strtod()
-	Json_Parse_Next(state, i);
+	Parse_Next(&json->state, i);
 	return true;
 }
 
 // Parse a keyword.
-static qbool Json_Parse_Keyword(struct qjson_state_s *state, const char *keyword)
+static qbool Json_Parse_Keyword(struct qjson_state_s *json, const char *keyword)
 {
 	size_t keyword_size = strlen(keyword);
-	if(!strncmp(keyword, state->pos, keyword_size))
+	if(!strncmp(keyword, json->state.pos, keyword_size))
 	{
-		Json_Parse_Next(state, keyword_size);
+		Parse_Next(&json->state, keyword_size);
 		return true;
 	}
 	return false;
 }
 
 // Parse a value.
-static void Json_Parse_Value(struct qjson_state_s *state)
+static void Json_Parse_Value(struct qjson_state_s *json)
 {
-	Json_Parse_Next(state, 1);
+	Parse_Next(&json->state, 1);
 
-	switch(Json_Parse_NextToken(state))
+	switch(Parse_NextToken(&json->state))
 	{
 	case '"': // string
-		Json_Parse_String(state);
+		Json_Parse_String(json);
 		break;
 	case '{': // object
-		Json_Parse_Object(state);
+		Json_Parse_Object(json);
 		break;
 	case '[': // array
-		Json_Parse_Array(state);
+		Json_Parse_Array(json);
 		break;
 	case '-':
-		Json_Parse_Number(state);
+		Json_Parse_Number(json);
 		break;
 	default:
-		if(Json_Parse_Keyword(state, "true"))
+		if(Json_Parse_Keyword(json, "true"))
 			break;
-		if(Json_Parse_Keyword(state, "false"))
+		if(Json_Parse_Keyword(json, "false"))
 			break;
-		if(Json_Parse_Keyword(state, "null"))
+		if(Json_Parse_Keyword(json, "null"))
 			break;
-		if(isdigit(*state->pos))
-			Json_Parse_Number(state);
+		if(isdigit(*json->state.pos))
+			Json_Parse_Number(json);
 	}
 }
 
 // Parse an object.
-static void Json_Parse_Object(struct qjson_state_s *state)
+static void Json_Parse_Object(struct qjson_state_s *json)
 {
 	/*
 	 * Json objects are basically a data map; key-value pairs.
 	 * They end in a comma or a closing curly brace.
 	 */
 	do {
-		Json_Parse_Next(state, 1);
+		Parse_Next(&json->state, 1);
 
 		// Parse the key
-		if(Json_Parse_NextToken(state) == '"')
-			Json_Parse_String(state);
+		if(Parse_NextToken(&json->state) == '"')
+			Json_Parse_String(json);
 		else
 			goto fail;
 		
 		// And its value
-		if(Json_Parse_NextToken(state) == ':')
-			Json_Parse_Value(state);
+		if(Parse_NextToken(&json->state) == ':')
+			Json_Parse_Value(json);
 		else
 			goto fail;
-	} while (Json_Parse_NextToken(state) == ',');
+	} while (Parse_NextToken(&json->state) == ',');
 
-	if(Json_Parse_NextToken(state) == '}')
+	if(Parse_NextToken(&json->state) == '}')
 		return;
 fail:
-	Json_Parse_Error(state, JSON_ERR_INVAL);
+	Parse_Error(&json->state, PARSE_ERR_INVAL);
 }
 
 // Parse an array.
-static void Json_Parse_Array(struct qjson_state_s *state)
+static void Json_Parse_Array(struct qjson_state_s *json)
 {
 	/*
 	 * Json arrays are basically lists. They can contain
 	 * any value, comma-separated, and end with a closing square bracket.
 	 */
 	do {
-		Json_Parse_Value(state);
-	} while (Json_Parse_NextToken(state) == ',');
+		Json_Parse_Value(json);
+	} while (Parse_NextToken(&json->state) == ',');
 
-	if(Json_Parse_NextToken(state) == ']')
+	if(Parse_NextToken(&json->state) == ']')
 		return;
 	else
-		Json_Parse_Error(state, JSON_ERR_INVAL);
+		Parse_Error(&json->state, PARSE_ERR_INVAL);
 }
 
 // Main function for the parser.
 qjson_token_t *Json_Parse(const char *data)
 {
-	struct qjson_state_s state =
+	struct qjson_state_s json =
 	{
 		.head = NULL,
-		.buf = data,
-		.pos = &data[0],
-		.line = 1,
-		.col = 1
+		.cur = NULL,
+		.state =
+		{
+			.name = "json",
+			.buf = data,
+			.pos = &data[0],
+			.line = 1,
+			.col = 1,
+			.callback =
+			{
+				.CheckComment_SingleLine = Json_Parse_Comment_SingleLine,
+				.CheckComment_Multiline_Start = Json_Parse_CheckComment_Multiline_Start,
+				.CheckComment_Multiline_End = Json_Parse_CheckComment_Multiline_End
+			}
+		}
 	};
 
 	if(data == NULL)
@@ -352,14 +285,14 @@ qjson_token_t *Json_Parse(const char *data)
 		return NULL;
 	}
 
-	if(setjmp(json_error))
+	if(setjmp(parse_error))
 	{
 		// actually not sure about this
 		return NULL;
 	}
 
-	if(Json_Parse_NextToken(&state) == '{')
-		Json_Parse_Object(&state);
+	if(Parse_NextToken(&(json.state)) == '{')
+		Json_Parse_Object(&json);
 	else
 	{
 		Con_Printf(CON_ERROR "Json_Parse: Not a json file\n");
@@ -370,7 +303,7 @@ qjson_token_t *Json_Parse(const char *data)
 	// TODO: Actually parse.
 	Con_Printf("Hmm, yes. This json is made of json\n");
 
-	return state.head;
+	return NULL;
 }
 
 void Json_Test_f(cmd_state_t *cmd)
