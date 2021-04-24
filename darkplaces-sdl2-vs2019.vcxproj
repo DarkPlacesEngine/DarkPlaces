@@ -266,6 +266,7 @@
     <ClCompile Include="mvm_cmds.c" />
     <ClCompile Include="netconn.c" />
     <ClCompile Include="palette.c" />
+    <ClCompile Include="parser.c" />
     <ClCompile Include="polygon.c" />
     <ClCompile Include="portals.c" />
     <ClCompile Include="protocol.c" />
