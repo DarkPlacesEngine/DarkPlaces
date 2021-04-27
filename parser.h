@@ -21,20 +21,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qtypes.h"
 #include <setjmp.h>
 
+#define PARSER_MAX_DEPTH 256
+
 typedef enum qparser_err_e
 {
 	PARSE_ERR_SUCCESS = 0,
 	PARSE_ERR_INVAL = 1,
 	PARSE_ERR_EOF = 2,
-	PARSE_ERR_EMPTY = 3
+	PARSE_ERR_DEPTH = 3,
+	PARSE_ERR_EMPTY = 4
 } qparser_err_t;
 
 typedef struct qparser_state_s
 {
 	const char *name;
-	const char *buf;
-	const char *pos;
-	int line, col;
+	const unsigned char *buf;
+	const unsigned char *pos;
+	int line, col, depth;
 
 	struct
 	{
@@ -46,6 +49,21 @@ typedef struct qparser_state_s
 
 extern jmp_buf parse_error;
 
-void Parse_Error(struct qparser_state_s *state, qparser_err_t error);
+void Parse_Error(struct qparser_state_s *state, qparser_err_t error, const char *expected);
 void Parse_Next(struct qparser_state_s *state, size_t count);
 char Parse_NextToken(struct qparser_state_s *state);
+char Parse_CurrentToken(struct qparser_state_s *state);
+qparser_state_t *Parse_New(const unsigned char *in);
+qparser_state_t *Parse_LoadFile(const char *file);
+
+static inline void Parse_IncDepth(struct qparser_state_s *state)
+{
+	if(state->depth >= PARSER_MAX_DEPTH)
+		Parse_Error(state, PARSE_ERR_DEPTH, NULL);
+	state->depth++;
+}
+
+static inline void Parse_DecDepth(struct qparser_state_s *state)
+{
+	state->depth--;
+}

@@ -24,23 +24,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 jmp_buf parse_error;
 
 // Tell the user that their stuff is broken, why it's broken, and where it's broken, so hopefully they fix it.
-void Parse_Error(struct qparser_state_s *state, qparser_err_t error)
+DP_FUNC_NORETURN void Parse_Error(struct qparser_state_s *state, qparser_err_t error, const char *expected)
 {
-	if(!error)
-		return;
-	else
-	{ 
-		switch (error)
-		{
-		case PARSE_ERR_INVAL:
-			Con_Printf(CON_ERROR "Parse Error: %s: Unexpected token '%c', line %i, column %i\n", state->name, *state->pos, state->line, state->col);
-			break;
-		case PARSE_ERR_EOF:
-			Con_Printf(CON_ERROR "Parse Error: %s: Unexpected end-of-file\n", state->name);
-			break;
-		default:
-			return;
-		}
+	switch (error)
+	{
+	case PARSE_ERR_INVAL:
+		if(!expected)
+			Sys_Error("Parse_Error: Expected to expect something (expected == NULL)! Your parser is broken.");
+		Con_Printf(CON_ERROR "Parse Error: %s: Unexpected token '%c', expected %s. Line %i, column %i\n", state->name, *state->pos, expected, state->line, state->col);
+		break;
+	case PARSE_ERR_EOF:
+		if(expected)
+			Sys_Error("Parse_Error: expected != NULL when it should be NULL. Your parser is broken.");
+		Con_Printf(CON_ERROR "Parse Error: %s: Unexpected end-of-file\n", state->name);
+		break;
+	case PARSE_ERR_DEPTH:
+		Con_Printf(CON_ERROR "Parse Error: %s: This file is nested too deep. Max depth of %i reached.\n", state->name, PARSER_MAX_DEPTH);
+		break;
+	default:
+		Sys_Error("Parse_Error: Invalid error number %i. Your parser is broken.", error);
 	}
 
 	longjmp(parse_error, 1);
@@ -53,7 +55,7 @@ void Parse_Next(struct qparser_state_s *state, size_t count)
 	state->pos += count;
 
 	if(!*state->pos)
-		Parse_Error(state, PARSE_ERR_EOF);
+		Parse_Error(state, PARSE_ERR_EOF, NULL);
 }
 
 // Skips newlines, and handles different line endings.
@@ -76,15 +78,20 @@ newline:
 }
 
 // Skip all whitespace, as we normally know it.
-static inline void Parse_Whitespace(struct qparser_state_s *state)
+static inline qbool Parse_Skip_Whitespace(struct qparser_state_s *state)
 {
+	qbool ret = false;
 	// TODO: Some languages enforce indentation style. Add a callback to override this.
 	while(*state->pos == ' ' || *state->pos == '\t')
+	{
 		Parse_Next(state, 1);
+		ret = true;
+	}
+	return ret;
 }
 
 // Skips the current line. Only useful for comments.
-static inline void Parse_SkipLine(struct qparser_state_s *state)
+static inline void Parse_Skip_Line(struct qparser_state_s *state)
 {
 	while(!Parse_Newline(state))
 		Parse_Next(state, 1);
@@ -94,11 +101,11 @@ static inline qbool Parse_Skip_Comments(struct qparser_state_s *state)
 {
 	// Make sure these are both defined (or both not defined)
 	if((state->callback.CheckComment_Multiline_Start != NULL) ^ (state->callback.CheckComment_Multiline_End != NULL))
-		Sys_Error("Parse_Skip_Comments: CheckComment_Multiline_Start (or _End) == NULL");
+		Sys_Error("Parse_Skip_Comments: CheckComment_Multiline_Start (or _End) == NULL. Your parser is broken.");
 
 	// Assume language doesn't support the respective comment types if one of these are NULL.
 	if(state->callback.CheckComment_SingleLine && state->callback.CheckComment_SingleLine(state))
-		Parse_SkipLine(state);
+		Parse_Skip_Line(state);
 	else if(state->callback.CheckComment_Multiline_Start && state->callback.CheckComment_Multiline_Start(state))
 	{
 		do
@@ -114,25 +121,63 @@ static inline qbool Parse_Skip_Comments(struct qparser_state_s *state)
 }
 
 // Skip all whitespace.
-static inline void Parse_Skip(struct qparser_state_s *state)
+static inline qbool Parse_SkipToToken(struct qparser_state_s *state)
 {
+	qbool ret = false;
+
 	/*
 	 * Repeat this until we run out of whitespace, newlines, and comments.
 	 * state->pos should be left on non-whitespace when this returns.
 	 */
-	do {
-		Parse_Whitespace(state);
-	} while (Parse_Skip_Comments(state) || Parse_Newline(state));
+	while(Parse_Skip_Comments(state) || Parse_Skip_Whitespace(state) || Parse_Newline(state))
+		ret = true;
+
+	return ret;
 }
 
-// Skip to the next token that isn't whitespace. Hopefully a valid one.
+// Skip to the next token. Advance the pointer at least 1 if we're not sitting on whitespace.
 char Parse_NextToken(struct qparser_state_s *state)
 {
-	/*
-	 * This assumes state->pos is already on whitespace. Most of the time this
-	 * doesn't happen automatically, but advancing the pointer here would break
-	 * comment and newline handling when it does happen automatically.
-	 */
-	Parse_Skip(state);
+	// Check if we will skip first.
+	if(!Parse_SkipToToken(state))
+	{
+		// If not, advance the pointer.
+		Parse_Next(state, 1);
+		// Ensure we didn't land on whitespace and skip that too.
+		Parse_SkipToToken(state);
+	}
 	return *state->pos;
+}
+
+// Return the current token but skip comments.
+char Parse_CurrentToken(struct qparser_state_s *state)
+{
+	Parse_SkipToToken(state);
+	return *state->pos;
+}
+
+qparser_state_t *Parse_New(const unsigned char *in)
+{
+	qparser_state_t *out;
+
+	if(!in)
+	{
+		Con_Printf("Parse_New: FS_LoadFile() failed");
+		return NULL;
+	}
+
+	out = (qparser_state_t *)Z_Malloc(sizeof(qparser_state_t));
+
+	out->buf = in;
+	out->pos = in;
+	out->line = 1;
+	out->col = 1;
+	out->depth = 0;
+
+	return out;
+}
+
+qparser_state_t *Parse_LoadFile(const char *file)
+{
+	return Parse_New(FS_LoadFile(file, tempmempool, false, NULL));
 }
