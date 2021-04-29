@@ -243,8 +243,8 @@ LDFLAGS_UNIXSDL_PRELOAD=-lz -ljpeg -lpng -logg -ltheora -lvorbis -lvorbisenc -lv
 CFLAGS_UNIX_PRELOAD=-DPREFER_PRELOAD
 
 LDFLAGS_UNIXSDL=$(SDL_LIBS) #-lGLESv2
-EXE_UNIXSV=darkplaces-dedicated
-EXE_UNIXSDL=darkplaces-sdl
+EXE_UNIXSV=doombringer-lx-ded
+EXE_UNIXSDL=doombringer-lx
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
 EXE_UNIXSDLNEXUIZ=nexuiz-sdl
 
