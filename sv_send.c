@@ -394,6 +394,7 @@ static qbool SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, 
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
+	int csqcflags;
 	unsigned int sendflags;
 	unsigned int version;
 	unsigned int modelindex, effects, flags, glowsize, lightstyle, lightpflags, light[4], specialvisibilityradius;
@@ -518,8 +519,8 @@ static qbool SV_PrepareEntityForSending (prvm_edict_t *ent, entity_state_t *cs, 
 	cs->tagindex = (unsigned char)PRVM_serveredictfloat(ent, tag_index);
 	cs->glowsize = glowsize;
 	cs->traileffectnum = PRVM_serveredictfloat(ent, traileffectnum);
-	
-	int csqcflags = (int)(PRVM_serveredictfloat(ent, csqcflags));
+
+	csqcflags = (int)(PRVM_serveredictfloat(ent, csqcflags));
 	if (csqcflags & CSQCFLAG_SOLIDITY)
 	{
 		cs->solid = PRVM_serveredictfloat(ent, solid);
@@ -1215,7 +1216,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	{
 		statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR] = sv_airaccel_qw_stretchfactor.value;
 		statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY] = sv_aircontrol_penalty.value;
-		statsf[STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW] = sv_airspeedlimit_nonqw.value;		
+		statsf[STAT_MOVEVARS_AIRSPEEDLIMIT_NONQW] = sv_airspeedlimit_nonqw.value;
 		statsf[STAT_MOVEVARS_AIRSTRAFEACCEL_QW] = sv_airstrafeaccel_qw.value;
 		statsf[STAT_MOVEVARS_AIRCONTROL_POWER] = sv_aircontrol_power.value;
 		// movement settings for prediction
@@ -1236,7 +1237,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 		statsf[STAT_MOVEVARS_AIRCONTROL] = sv_aircontrol.value;
 		statsf[STAT_FRAGLIMIT] = fraglimit.value;
 		statsf[STAT_TIMELIMIT] = timelimit.value;
-		statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;	
+		statsf[STAT_MOVEVARS_FRICTION] = sv_friction.value;
 		statsf[STAT_MOVEVARS_WATERFRICTION] = sv_waterfriction.value >= 0 ? sv_waterfriction.value : sv_friction.value;
 		statsf[STAT_MOVEVARS_TICRATE] = sys_ticrate.value;
 		statsf[STAT_MOVEVARS_TIMESCALE] = host_timescale.value;

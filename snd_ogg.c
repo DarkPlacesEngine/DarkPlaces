@@ -555,7 +555,7 @@ static void OGG_DecodeTags(vorbis_comment *vc, unsigned int *start, unsigned int
 	thiscomment = qvorbis_comment_query(vc, "REPLAYGAIN_TRACK_GAIN", 0);
 	if(thiscomment)
 		*gaindb = atof(thiscomment);
-	
+
 	startcomment = qvorbis_comment_query(vc, "LOOP_START", 0); // DarkPlaces, and some Japanese app
 	if(startcomment)
 	{
@@ -598,6 +598,7 @@ Load an Ogg Vorbis file into memory
 qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
+	const char *nostream = NULL;
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
@@ -649,11 +650,11 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 	sfx->format.width = 2;  // We always work with 16 bits samples
 
 	sfx->total_length = qov_pcm_total(&vf, -1);
-	
+
 	vc = qov_comment(&vf, -1);
-	const char *nostream = NULL;
+
 	nostream = qvorbis_comment_query(vc, "NOSTREAM", 0);
-	
+
 	if (snd_streaming.integer && !atof(nostream) && (snd_streaming.integer >= 2 || sfx->total_length > max(sizeof(ogg_stream_perchannel_t), snd_streaming_length.value * sfx->format.speed)))
 	{
 		// large sounds use the OGG fetcher to decode the file on demand (but the entire file is held in memory)

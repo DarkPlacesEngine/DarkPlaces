@@ -223,6 +223,7 @@ void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 //[515]: set globals before calling R_UpdateView, WEIRD CRAP
 static void CSQC_SetGlobals (double frametime)
 {
+    char temp[128];
 	vec3_t pmove_org;
 	prvm_prog_t *prog = CLVM_prog;
 	CSQC_BEGIN
@@ -254,8 +255,7 @@ static void CSQC_SetGlobals (double frametime)
 		PRVM_clientglobalfloat(maxclients) = cl.maxclients;
 
 		PRVM_clientglobalfloat(player_localentnum) = cl.viewentity;
-		
-		char temp[128];
+
 		InfoString_GetValue(cls.userinfo, "*ip", temp, sizeof(temp));
 		PRVM_clientglobalstring(server_ip) = PRVM_SetEngineString(prog, temp);
 		//Con_Printf(PRVM_clientglobalstring(server_ip));
@@ -500,7 +500,7 @@ qbool CL_VM_UpdateView (double frametime)
 		/*
 		 * This should be fine for now but FTEQW uses flags for keydest
 		 * and checks that an array called "eyeoffset" is 0
-		 * 
+		 *
 		 * Just a note in case there's compatibility problems later
 		 */
 		PRVM_G_FLOAT(OFS_PARM2) = key_dest == key_game;
