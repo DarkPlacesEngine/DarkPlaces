@@ -2520,13 +2520,9 @@ with portable ones in-place, etc)
 */
 void FS_SanitizePath(char *path)
 {
-	int i, size;
-
-	for(i = 0, size = strlen(path); i < size; i++)
-	{
-		if(path[i] == '\\')
-			path[i] = '/';
-	}
+	for (; *path; path++)
+		if (*path == '\\')
+			*path = '/';
 }
 
 /*
