@@ -1329,6 +1329,10 @@ const char *FS_FileExtension (const char *in)
 {
 	const char *separator, *backslash, *colon, *dot;
 
+	dot = strrchr(in, '.');
+	if (dot == NULL)
+		return "";
+
 	separator = strrchr(in, '/');
 	backslash = strrchr(in, '\\');
 	if (!separator || separator < backslash)
@@ -1337,8 +1341,7 @@ const char *FS_FileExtension (const char *in)
 	if (!separator || separator < colon)
 		separator = colon;
 
-	dot = strrchr(in, '.');
-	if (dot == NULL || (separator && (dot < separator)))
+	if (separator && (dot < separator))
 		return "";
 
 	return dot + 1;
