@@ -1215,7 +1215,7 @@ void VM_drawline (prvm_prog_t *prog)
 	rgb		= PRVM_G_VECTOR(OFS_PARM3);
 	alpha	= PRVM_G_FLOAT(OFS_PARM4);
 	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
-	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags, false);
+	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
 }
 
 /*
