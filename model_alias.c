@@ -3073,6 +3073,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			biggestorigin = max(biggestorigin, fabs(k->origin[2]));
 		}
 		loadmodel->num_posescale = biggestorigin / 32767.0f;
+		if (loadmodel->num_posescale == 0) // don't divide by zero
+			loadmodel->num_posescale = 1.0;
 		loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 	
 		// load the poses from the animkeys
@@ -3112,6 +3114,8 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 			biggestorigin = max(biggestorigin, fabs(p->basepose.origin[2]));
 		}
 		loadmodel->num_posescale = biggestorigin / 32767.0f;
+		if (loadmodel->num_posescale == 0) // don't divide by zero
+			loadmodel->num_posescale = 1.0;
 		loadmodel->num_poseinvscale = 1.0f / loadmodel->num_posescale;
 	
 		// load the basepose as a frame
