@@ -3293,7 +3293,7 @@ static void CL_NetworkTimeReceived(double newtime)
 	}
 	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
-		double timehigh;
+		double timehigh = 0; // hush compiler warning
 		cl.mtime[1] = max(cl.mtime[1], cl.mtime[0] - 0.1);
 
 		if (developer_extra.integer && vid_activewindow)
