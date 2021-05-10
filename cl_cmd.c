@@ -28,11 +28,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_collision.h"
 
-cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "name", "player", "change your player name"};
-cvar_t cl_rate = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate", "20000", "change your connection speed"};
-cvar_t cl_rate_burstsize = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate_burstsize", "1024", "internal storage cvar for current rate control burst size (changed by rate_burstsize command)"};
-cvar_t cl_topcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "topcolor", "0", "change the color of your shirt"};
-cvar_t cl_bottomcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "bottomcolor", "0", "change the color of your pants"};
+cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "name", "player", "player name"};
+cvar_t cl_rate = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate", "20000", "connection speed"};
+cvar_t cl_rate_burstsize = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate_burstsize", "1024", "rate control burst size"};
+cvar_t cl_topcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "topcolor", "0", "color of your shirt"};
+cvar_t cl_bottomcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "bottomcolor", "0", "color of your pants"};
 cvar_t cl_team = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "team", "none", "QW team (4 character limit, example: blue)"};
 cvar_t cl_skin = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "skin", "", "QW player skin name (example: base)"};
 cvar_t cl_noaim = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "noaim", "1", "QW option to disable vertical autoaim"};
