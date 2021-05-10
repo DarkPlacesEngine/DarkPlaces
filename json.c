@@ -159,7 +159,7 @@ static inline qbool Json_Parse_Number(struct qjson_state_s *json)
 static inline qbool Json_Parse_Keyword(struct qjson_state_s *json, const char *keyword)
 {
 	size_t keyword_size = strlen(keyword);
-	if(!strncmp(keyword, json->state->pos, keyword_size))
+	if(!strncmp(keyword, (const char *)json->state->pos, keyword_size))
 	{
 		Parse_Next(json->state, keyword_size - 1);
 		return true;
@@ -207,7 +207,7 @@ static inline qbool Json_Parse_Pairs(struct qjson_state_s *json)
 		if(Parse_NextToken(json->state) == '"')
 		{
 			Json_Parse_String(json);
-			
+
 			// And its value
 			if(Parse_NextToken(json->state) == ':')
 			{
