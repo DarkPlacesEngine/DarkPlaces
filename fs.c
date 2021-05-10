@@ -1329,6 +1329,10 @@ const char *FS_FileExtension (const char *in)
 {
 	const char *separator, *backslash, *colon, *dot;
 
+	dot = strrchr(in, '.');
+	if (dot == NULL)
+		return "";
+
 	separator = strrchr(in, '/');
 	backslash = strrchr(in, '\\');
 	if (!separator || separator < backslash)
@@ -1337,8 +1341,7 @@ const char *FS_FileExtension (const char *in)
 	if (!separator || separator < colon)
 		separator = colon;
 
-	dot = strrchr(in, '.');
-	if (dot == NULL || (separator && (dot < separator)))
+	if (separator && (dot < separator))
 		return "";
 
 	return dot + 1;
@@ -2517,13 +2520,9 @@ with portable ones in-place, etc)
 */
 void FS_SanitizePath(char *path)
 {
-	int i, size;
-
-	for(i = 0, size = strlen(path); i < size; i++)
-	{
-		if(path[i] == '\\')
-			path[i] = '/';
-	}
+	for (; *path; path++)
+		if (*path == '\\')
+			*path = '/';
 }
 
 /*
