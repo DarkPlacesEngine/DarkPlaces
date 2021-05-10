@@ -84,6 +84,23 @@ static qbool Json_Parse_CheckComment_Multiline_End(struct qparser_state_s *state
 	return false;
 }
 
+static inline qbool Json_Handle_String_Escape(struct qjson_state_s *json)
+{
+	switch(*json->state->pos)
+	{
+	case '\\':
+	case '/':
+	case 'b':
+	case 'f':
+	case 'n':
+	case 'r':
+	case 't':
+	case 'u':
+		return true; // TODO
+	default:
+		return false;
+	}
+}
 
 // TODO: handle escape sequences
 static inline void Json_Parse_String(struct qjson_state_s *json)
@@ -93,7 +110,9 @@ static inline void Json_Parse_String(struct qjson_state_s *json)
 		if(*json->state->pos == '\\')
 		{
 			Parse_Next(json->state, 1);
-			continue;
+			if(Json_Handle_String_Escape(json))
+				continue;
+			Parse_Error(json->state, PARSE_ERR_INVAL, "a valid escape sequence");
 		}
 	} while(*json->state->pos != '"');
 }
