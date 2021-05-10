@@ -208,7 +208,7 @@ static inline qbool Json_Parse_Pairs(struct qjson_state_s *json)
 // Parse an object.
 static inline void Json_Parse_Object(struct qjson_state_s *json)
 {
-	Parse_IncDepth(json->state);
+	Parse_Indent(json->state);
 
 	/*
 	 * Json objects are basically a data map; key-value pairs.
@@ -219,13 +219,13 @@ static inline void Json_Parse_Object(struct qjson_state_s *json)
 	if(Parse_CurrentToken(json->state) != '}')
 		Parse_Error(json->state, PARSE_ERR_INVAL, ", or }");
 
-	Parse_DecDepth(json->state);
+	Parse_Dedent(json->state);
 }
 
 // Parse an array.
 static inline void Json_Parse_Array(struct qjson_state_s *json)
 {
-	Parse_IncDepth(json->state);
+	Parse_Indent(json->state);
 
 	/*
 	 * Json arrays are basically lists. They can contain
@@ -239,7 +239,7 @@ static inline void Json_Parse_Array(struct qjson_state_s *json)
 	if(Parse_CurrentToken(json->state) != ']')
 		Parse_Error(json->state, PARSE_ERR_INVAL, ", or ]");
 
-	Parse_DecDepth(json->state);
+	Parse_Dedent(json->state);
 }
 
 // Main function for the parser.

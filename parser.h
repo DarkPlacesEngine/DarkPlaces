@@ -56,14 +56,14 @@ char Parse_CurrentToken(struct qparser_state_s *state);
 qparser_state_t *Parse_New(const unsigned char *in);
 qparser_state_t *Parse_LoadFile(const char *file);
 
-static inline void Parse_IncDepth(struct qparser_state_s *state)
+static inline void Parse_Indent(struct qparser_state_s *state)
 {
 	if(state->depth >= PARSER_MAX_DEPTH)
 		Parse_Error(state, PARSE_ERR_DEPTH, NULL);
 	state->depth++;
 }
 
-static inline void Parse_DecDepth(struct qparser_state_s *state)
+static inline void Parse_Dedent(struct qparser_state_s *state)
 {
 	state->depth--;
 }
