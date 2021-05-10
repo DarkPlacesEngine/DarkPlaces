@@ -138,21 +138,13 @@ static inline qbool Parse_SkipToToken(struct qparser_state_s *state)
 // Skip to the next token. Advance the pointer at least 1 if we're not sitting on whitespace.
 char Parse_NextToken(struct qparser_state_s *state)
 {
-	// Check if we will skip first.
-	if(!Parse_SkipToToken(state))
-	{
-		// If not, advance the pointer.
+	if(!state->pos)
+		state->pos = state->buf;
+	else
 		Parse_Next(state, 1);
-		// Ensure we didn't land on whitespace and skip that too.
-		Parse_SkipToToken(state);
-	}
-	return *state->pos;
-}
 
-// Return the current token but skip comments.
-char Parse_CurrentToken(struct qparser_state_s *state)
-{
 	Parse_SkipToToken(state);
+
 	return *state->pos;
 }
 
@@ -169,7 +161,7 @@ qparser_state_t *Parse_New(const unsigned char *in)
 	out = (qparser_state_t *)Z_Malloc(sizeof(qparser_state_t));
 
 	out->buf = in;
-	out->pos = in;
+	out->pos = NULL;
 	out->line = 1;
 	out->col = 1;
 	out->depth = 0;

@@ -235,7 +235,7 @@ static inline void Json_Parse_Object(struct qjson_state_s *json)
 	 */
 	Json_Parse_Pairs(json);
 
-	if(Parse_CurrentToken(json->state) != '}')
+	if(*json->state->pos != '}')
 		Parse_Error(json->state, PARSE_ERR_INVAL, ", or }");
 
 	Parse_Dedent(json->state);
@@ -255,7 +255,7 @@ static inline void Json_Parse_Array(struct qjson_state_s *json)
 			break; 
 	} while (Parse_NextToken(json->state) == ',');
 
-	if(Parse_CurrentToken(json->state) != ']')
+	if(*json->state->pos != ']')
 		Parse_Error(json->state, PARSE_ERR_INVAL, ", or ]");
 
 	Parse_Dedent(json->state);
@@ -279,7 +279,7 @@ static qjson_token_t *Json_Parse_Main(qjson_state_t *json)
 		return NULL;
 	}
 
-	switch(Parse_CurrentToken(json->state))
+	switch(Parse_NextToken(json->state))
 	{
 	case '{':
 		Json_Parse_Object(json);

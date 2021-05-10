@@ -52,7 +52,6 @@ extern jmp_buf parse_error;
 void Parse_Error(struct qparser_state_s *state, qparser_err_t error, const char *expected);
 void Parse_Next(struct qparser_state_s *state, size_t count);
 char Parse_NextToken(struct qparser_state_s *state);
-char Parse_CurrentToken(struct qparser_state_s *state);
 qparser_state_t *Parse_New(const unsigned char *in);
 qparser_state_t *Parse_LoadFile(const char *file);
 
