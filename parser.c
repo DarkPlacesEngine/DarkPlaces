@@ -121,18 +121,13 @@ static inline qbool Parse_Skip_Comments(struct qparser_state_s *state)
 }
 
 // Skip all whitespace.
-static inline qbool Parse_SkipToToken(struct qparser_state_s *state)
+static inline void Parse_SkipToToken(struct qparser_state_s *state)
 {
-	qbool ret = false;
-
 	/*
 	 * Repeat this until we run out of whitespace, newlines, and comments.
 	 * state->pos should be left on non-whitespace when this returns.
 	 */
-	while(Parse_Skip_Comments(state) || Parse_Skip_Whitespace(state) || Parse_Newline(state))
-		ret = true;
-
-	return ret;
+	while(Parse_Skip_Comments(state) || Parse_Skip_Whitespace(state) || Parse_Newline(state));
 }
 
 // Skip to the next token. Advance the pointer at least 1 if we're not sitting on whitespace.
