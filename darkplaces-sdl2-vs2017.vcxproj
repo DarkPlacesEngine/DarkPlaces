@@ -306,6 +306,7 @@
     <ClCompile Include="sys_shared.c" />
     <ClCompile Include="taskqueue.c" />
     <ClCompile Include="thread_sdl.c" />
+    <ClCompile Include="token.c" />
     <ClCompile Include="utf8lib.c" />
     <ClCompile Include="vid_sdl.c" />
     <ClCompile Include="vid_shared.c" />
@@ -423,6 +424,7 @@
     <ClInclude Include="taskqueue.h" />
     <ClInclude Include="thread.h" />
     <ClInclude Include="timing.h" />
+    <ClInclude Include="token.h" />
     <ClInclude Include="utf8lib.h" />
     <ClInclude Include="vid.h" />
     <ClInclude Include="view.h" />

@@ -171,6 +171,7 @@ OBJ_COMMON= \
 	svvm_cmds.o \
 	sys_shared.o \
 	taskqueue.o \
+	token.o \
 	vid_shared.o \
 	view.o \
 	wad.o \

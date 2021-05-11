@@ -131,7 +131,7 @@ static inline void Json_Parse_String(struct qjson_state_s *json)
 static inline qbool Json_Parse_Number(struct qjson_state_s *json)
 {
 	int i, numsize;
-	const unsigned char *in = json->state->pos;
+	const char *in = json->state->pos;
 	//char out[128];
 	qbool is_float = false;
 	qbool is_exp = false;
@@ -182,7 +182,7 @@ static inline qbool Json_Parse_Keyword(struct qjson_state_s *json)
 	{
 		keyword_size = strlen(keyword_list[i]);
 
-		if(!strncmp(keyword_list[i], (const char *)json->state->pos, keyword_size))
+		if(!strncmp(keyword_list[i], json->state->pos, keyword_size))
 		{
 			// Don't advance the entire length of the keyword or we might run into a valid token that'd go missed.
 			Parse_Next(json->state, keyword_size - 1);

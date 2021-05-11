@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "darkplaces.h"
+#include "token.h"
 #include "parser.h"
 
 jmp_buf parse_error;
@@ -49,12 +50,16 @@ DP_FUNC_NORETURN void Parse_Error(struct qparser_state_s *state, qparser_err_t e
 }
 
 // Advance forward in the stream as many times as 'count', cleanly.
-void Parse_Next(struct qparser_state_s *state, size_t count)
+void Parse_Next(struct qparser_state_s *state, int count)
 {
-	state->col += count;
-	state->pos += count;
+	const char *next = Token_Next(state->pos, count);
 
-	if(!*state->pos)
+	if(next)
+	{
+		state->pos = next;
+		state->col += count;
+	}
+	else
 		Parse_Error(state, PARSE_ERR_EOF, NULL);
 }
 
@@ -155,7 +160,7 @@ qparser_state_t *Parse_New(const unsigned char *in)
 
 	out = (qparser_state_t *)Z_Malloc(sizeof(qparser_state_t));
 
-	out->buf = in;
+	out->buf = (const char *)in;
 	out->pos = NULL;
 	out->line = 1;
 	out->col = 1;
