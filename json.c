@@ -27,14 +27,24 @@ typedef enum qjson_type_e
 	JSON_TYPE_OBJECT = 1,
 	JSON_TYPE_ARRAY = 2,
 	JSON_TYPE_STRING = 3,
-	JSON_TYPE_PRIMITIVE = 4
+	JSON_TYPE_NUMBER = 4,
+	JSON_TYPE_BOOL = 5
 } qjson_type_t;
 
 typedef struct qjson_token_s
 {
 	qjson_type_t type;
-	struct qjson_token_s *next; // if an array, next will be a NULL terminated array
-	char *string; // ASCII only for now
+
+	struct qjson_token_s *prev, *next; // Linked list for arrays
+	struct qjson_token_s *parent, *child;
+	
+	char *key;
+	union
+	{
+		char *string;
+		double decimal;
+		int number;
+	} value;
 } qjson_token_t;
 
 typedef struct qjson_state_s
