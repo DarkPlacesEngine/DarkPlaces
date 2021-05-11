@@ -161,20 +161,44 @@ static inline qbool Json_Parse_Number(struct qjson_state_s *json)
 		}
 	}
 	// TODO: use strtod()
-	Parse_Next(json->state, i);
+	Parse_Next(json->state, i - 1);
 	return true;
 }
 
-// Parse a keyword.
-static inline qbool Json_Parse_Keyword(struct qjson_state_s *json, const char *keyword)
+static const char *keyword_list[] =
 {
-	size_t keyword_size = strlen(keyword);
-	if(!strncmp(keyword, (const char *)json->state->pos, keyword_size))
+	"true",
+	"false",
+	"null",
+	NULL
+};
+
+// Parse a keyword.
+static inline qbool Json_Parse_Keyword(struct qjson_state_s *json)
+{
+	size_t keyword_size;
+
+	for (int i = 0; keyword_list[i]; i++)
 	{
-		Parse_Next(json->state, keyword_size - 1);
-		return true;
+		keyword_size = strlen(keyword_list[i]);
+
+		if(!strncmp(keyword_list[i], (const char *)json->state->pos, keyword_size))
+		{
+			// Don't advance the entire length of the keyword or we might run into a valid token that'd go missed.
+			Parse_Next(json->state, keyword_size - 1);
+			return true;
+		}
 	}
 	return false;
+}
+
+static inline void Json_Parse_Key(struct qjson_state_s *json)
+{
+	do {
+		Parse_Next(json->state, 1);
+		if(ISWHITESPACE(*json->state->pos))
+			Parse_Error(json->state, PARSE_ERR_INVAL, "a key");
+	} while(*json->state->pos != '"');
 }
 
 // Parse a value.
@@ -194,15 +218,17 @@ static inline qbool Json_Parse_Value(struct qjson_state_s *json)
 	case '-':
 		Json_Parse_Number(json);
 		break;
+	case 't': // true
+	case 'f': // false
+	case 'n': // null
+		Json_Parse_Keyword(json);
+		break;
 	default:
 		if(isdigit(*json->state->pos))
+		{
 			Json_Parse_Number(json);
-		if(Json_Parse_Keyword(json, "true"))
 			break;
-		if(Json_Parse_Keyword(json, "false"))
-			break;
-		if(Json_Parse_Keyword(json, "null"))
-			break;
+		}
 		//Parse_Error(json->state, PARSE_ERR_INVAL, "a value");
 		return false;
 	}
@@ -213,10 +239,10 @@ static inline qbool Json_Parse_Pairs(struct qjson_state_s *json)
 {
 	do
 	{
-		// Parse the key
 		if(Parse_NextToken(json->state) == '"')
 		{
-			Json_Parse_String(json);
+			// Parse the key
+			Json_Parse_Key(json);
 
 			// And its value
 			if(Parse_NextToken(json->state) == ':')
@@ -262,7 +288,7 @@ static inline void Json_Parse_Array(struct qjson_state_s *json)
 	 */
 	do {
 		if(!Json_Parse_Value(json))
-			break; 
+			break;
 	} while (Parse_NextToken(json->state) == ',');
 
 	if(*json->state->pos != ']')
