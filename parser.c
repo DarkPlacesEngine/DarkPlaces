@@ -66,20 +66,13 @@ void Parse_Next(struct qparser_state_s *state, int count)
 // Skips newlines, and handles different line endings.
 static qbool Parse_Newline(struct qparser_state_s *state)
 {
-	if(*state->pos == '\n')
-		goto newline;
-	if(*state->pos == '\r')
+	if(Token_Newline(&state->pos))
 	{
-		if(*state->pos + 1 == '\n')
-			state->pos++;
-		goto newline;
+		state->col = 1;
+		state->line++;
+		return true;
 	}
 	return false;
-newline:
-	state->col = 1;
-	state->line++;
-	state->pos++;
-	return true;
 }
 
 // Skip all whitespace, as we normally know it.

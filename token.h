@@ -22,3 +22,4 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qdefs.h"
 
 const char *Token_Next(const char *data, int count);
+qbool Token_Newline(const char **data);

@@ -35,3 +35,20 @@ const char *Token_Next(const char *data, int count)
 
 	return out;
 }
+
+// Skips newlines, and handles different line endings.
+qbool Token_Newline(const char **data)
+{
+	if(**data == '\n')
+		goto newline;
+	if(**data == '\r')
+	{
+		if(**data + 1 == '\n')
+			(*data)++;
+		goto newline;
+	}
+	return false;
+newline:
+	(*data)++;
+	return true;
+}
