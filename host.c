@@ -127,9 +127,8 @@ void Host_Error (const char *error, ...)
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 
-	SV_LockThreadMutex();
-	SV_Shutdown ();
-	SV_UnlockThreadMutex();
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
@@ -374,7 +373,7 @@ static void Host_Init (void)
 	host.hook.Disconnect = NULL;
 	host.hook.ToggleMenu = NULL;
 	host.hook.CL_Intermission = NULL;
-	host.hook.SV_CanSave = NULL;
+	host.hook.SV_Shutdown = NULL;
 
 	host.state = host_init;
 
@@ -587,9 +586,8 @@ void Host_Shutdown(void)
 		SV_StopThread();
 
 	// shut down local server if active
-	SV_LockThreadMutex();
-	SV_Shutdown ();
-	SV_UnlockThreadMutex();
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet

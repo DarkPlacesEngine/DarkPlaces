@@ -686,6 +686,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_writepicture_quality);
 
 	SV_InitOperatorCommands();
+	host.hook.SV_Shutdown = SV_Shutdown;
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 
@@ -2058,10 +2059,12 @@ void SV_Shutdown(void)
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
 
-	Con_DPrintf("SV_Shutdown\n");
+	SV_LockThreadMutex();
 
 	if (!sv.active)
-		return;
+		goto end;
+
+	Con_DPrintf("SV_Shutdown\n");
 
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
@@ -2090,6 +2093,8 @@ void SV_Shutdown(void)
 //
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
+end:
+	SV_UnlockThreadMutex();
 }
 
 /////////////////////////////////////////////////////
