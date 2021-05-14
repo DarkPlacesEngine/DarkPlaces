@@ -432,6 +432,9 @@ void CL_Disconnect(void)
 
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
 	SCR_ClearLoadingScreen(false);
+
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 }
 
 /*
@@ -512,9 +515,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect ();
-	if (sv.active)
-		SV_Shutdown ();
+	CL_Disconnect();
 }
 
 

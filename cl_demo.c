@@ -422,10 +422,7 @@ void CL_PlayDemo(const char *demo)
 	cls.demostarting = true;
 
 	// disconnect from server
-	if(cls.state == ca_connected)
-		CL_Disconnect();
-	if(sv.active)
-		SV_Shutdown();
+	CL_Disconnect();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -683,8 +680,8 @@ static void CL_Demos_f(cmd_state_t *cmd)
 		return;
 	if (cls.demonum == -1)
 		cls.demonum = 1;
-	CL_Disconnect_f (cmd);
-	CL_NextDemo ();
+	CL_Disconnect();
+	CL_NextDemo();
 }
 
 /*
