@@ -205,6 +205,8 @@ cvar_t halflifebsp = {CF_SERVER, "halflifebsp", "0", "indicates the current map 
 cvar_t sv_mapformat_is_quake2 = {CF_SERVER, "sv_mapformat_is_quake2", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors, .frame on submodels and other things)"};
 cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors)"};
 
+cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
+
 server_t sv;
 server_static_t svs;
 
@@ -704,6 +706,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&halflifebsp);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
+
+	Cvar_RegisterVariable (&sv_writepicture_quality);
 
 	SV_InitOperatorCommands();
 	host.hook.SV_CanSave = SV_CanSave;
@@ -2476,6 +2480,18 @@ static void SV_CheckTimeouts(void)
 	}
 }
 
+/*
+==================
+SV_TimeReport
+
+Returns a time report string, for example for
+==================
+*/
+const char *SV_TimingReport(char *buf, size_t buflen)
+{
+	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
+}
+
 extern cvar_t host_maxwait;
 extern cvar_t host_framerate;
 extern cvar_t cl_maxphysicsframesperserverframe;
@@ -2509,7 +2525,7 @@ double SV_Frame(double time)
 			}
 
 			if(svs.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
-				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+				Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 		}
 
 		if(svs.perf_acc_realtime > 5 || sv.time < 10)
@@ -2705,7 +2721,7 @@ static int SV_ThreadFunc(void *voiddata)
 			}
 			if(svs.perf_lost > 0 && developer_extra.integer)
 				if(playing)
-					Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+					Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
 		}
 

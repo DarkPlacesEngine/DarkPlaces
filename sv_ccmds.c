@@ -740,7 +740,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
-	print ("timing:   %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+	print ("timing:   %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 
 	if (in == 1)

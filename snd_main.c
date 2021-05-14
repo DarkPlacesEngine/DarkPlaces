@@ -778,8 +778,8 @@ void S_Init(void)
 	if (Sys_CheckParm("-nosound"))
 	{
 		// dummy out Play and Play2 because mods stuffcmd that
-		Cmd_AddCommand(CF_CLIENT, "play", Host_NoOperation_f, "does nothing because -nosound was specified");
-		Cmd_AddCommand(CF_CLIENT, "play2", Host_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(CF_CLIENT, "play", Cmd_NoOperation_f, "does nothing because -nosound was specified");
+		Cmd_AddCommand(CF_CLIENT, "play2", Cmd_NoOperation_f, "does nothing because -nosound was specified");
 		return;
 	}
 

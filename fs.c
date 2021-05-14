@@ -1566,7 +1566,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 		}
 	}
 
-	Host_SaveConfig();
+	Host_SaveConfig(CONFIGFILENAME);
 
 	fs_numgamedirs = numgamedirs;
 	for (i = 0;i < fs_numgamedirs;i++)
