@@ -2090,8 +2090,6 @@ void SV_Shutdown(void)
 //
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
-
-	cl.islocalgame = false;
 }
 
 /////////////////////////////////////////////////////
