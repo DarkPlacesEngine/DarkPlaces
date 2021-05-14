@@ -3533,7 +3533,7 @@ void CL_ParseServerMessage(void)
 					Con_Printf("Server disconnected\n");
 					CL_Disconnect();
 				}
-				return;
+				break;
 
 			case qw_svc_print:
 				i = MSG_ReadByte(&cl_message);
