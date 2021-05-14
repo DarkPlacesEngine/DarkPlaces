@@ -36,6 +36,7 @@ typedef struct host_s
 		qbool (*CL_Intermission)(void); // Quake compatibility
 		void (*CL_SendCvar)(struct cmd_state_s *);
 		void (*SV_SendCvar)(struct cmd_state_s *);
+		void (*SV_Shutdown)(void);
 	} hook;
 } host_t;
 

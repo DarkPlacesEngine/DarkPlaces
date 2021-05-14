@@ -1527,13 +1527,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 #ifdef CONFIG_MENU
 	M_Update_Return_Reason("");
 #endif
-	// if we're connecting to a remote server, shut down any local server
-	if (LHNETADDRESS_GetAddressType(peeraddress) != LHNETADDRESSTYPE_LOOP && sv.active)
-	{
-		SV_LockThreadMutex();
-		SV_Shutdown ();
-		SV_UnlockThreadMutex();
-	}
+	// Disconnect from the current server or stop demo playback
 	if(cls.state == ca_connected || cls.demoplayback)
 		CL_Disconnect();
 	// allocate a net connection to keep track of things
@@ -2497,9 +2491,6 @@ void NetConn_ClientFrame(void)
 	{
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
-		SV_LockThreadMutex();
-		SV_Shutdown ();
-		SV_UnlockThreadMutex();
 	}
 }
 
