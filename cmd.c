@@ -2403,3 +2403,7 @@ void Cmd_RestoreInitState(void)
 	}
 	Cvar_RestoreInitState(&cvars_all);
 }
+
+void Cmd_NoOperation_f(cmd_state_t *cmd)
+{
+}

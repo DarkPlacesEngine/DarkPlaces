@@ -603,7 +603,7 @@ void SV_CheckVelocity (prvm_edict_t *ent);
 
 void SV_SetupVM(void);
 
-const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
+const char *SV_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
 void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix);

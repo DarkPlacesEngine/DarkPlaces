@@ -278,5 +278,7 @@ qbool Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quot
 
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd);
 
+void Cmd_NoOperation_f(cmd_state_t *cmd);
+
 #endif
 
