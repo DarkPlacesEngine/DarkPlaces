@@ -176,6 +176,30 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 	Con_Print("done.\n");
 }
 
+static qbool SV_CanSave(void)
+{
+	prvm_prog_t *prog = SVVM_prog;
+	if(SV_IsLocalServer() == 1)
+	{
+		// singleplayer checks
+		// FIXME: This only checks if the first player is dead?
+		if ((svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
+		{
+			Con_Print("Can't savegame with a dead player\n");
+			return false;
+		}
+
+		if(host.hook.CL_Intermission && host.hook.CL_Intermission())
+		{
+			Con_Print("Can't save in intermission.\n");
+			return false;
+		}
+	}
+	else
+		Con_Print(CON_WARN "Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
+	return true;
+}
+
 /*
 ===============
 SV_Savegame_f
@@ -192,11 +216,8 @@ void SV_Savegame_f(cmd_state_t *cmd)
 		return;
 	}
 
-	if(host.hook.SV_CanSave)
-	{
-		if(!host.hook.SV_CanSave())
-			return;
-	}
+	if(!SV_CanSave())
+		return;
 
 	if (Cmd_Argc(cmd) != 2)
 	{

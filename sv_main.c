@@ -434,30 +434,6 @@ static void SV_AreaStats_f(cmd_state_t *cmd)
 	World_PrintAreaStats(&sv.world, "server");
 }
 
-static qbool SV_CanSave(void)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	if(SV_IsLocalServer() == 1)
-	{
-		// singleplayer checks
-		if ((svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
-		{
-			Con_Print("Can't savegame with a dead player\n");
-			return false;
-		}
-
-		if(host.hook.CL_Intermission && host.hook.CL_Intermission())
-		{
-			Con_Print("Can't save in intermission.\n");
-			return false;
-		}
-	}
-	else
-		Con_Print(CON_WARN "Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
-	return true;
-	
-}
-
 static void SV_ServerOptions (void)
 {
 	int i;
@@ -710,7 +686,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_writepicture_quality);
 
 	SV_InitOperatorCommands();
-	host.hook.SV_CanSave = SV_CanSave;
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 
