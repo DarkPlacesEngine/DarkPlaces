@@ -401,29 +401,15 @@ void CL_Record_f(cmd_state_t *cmd)
 	cls.demo_lastcsprogscrc = -1;
 }
 
-
-/*
-====================
-CL_PlayDemo_f
-
-playdemo [demoname]
-====================
-*/
-void CL_PlayDemo_f(cmd_state_t *cmd)
+void CL_PlayDemo(const char *demo)
 {
-	char	name[MAX_QPATH];
+	char name[MAX_QPATH];
 	int c;
 	qbool neg = false;
 	qfile_t *f;
 
-	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Print("playdemo <demoname> : plays a demo\n");
-		return;
-	}
-
 	// open the demo file
-	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
+	strlcpy (name, demo, sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
@@ -464,6 +450,24 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 		cls.forcetrack = -cls.forcetrack;
 
 	cls.demostarting = false;
+}
+
+/*
+====================
+CL_PlayDemo_f
+
+playdemo [demoname]
+====================
+*/
+void CL_PlayDemo_f(cmd_state_t *cmd)
+{
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Print("playdemo <demoname> : plays a demo\n");
+		return;
+	}
+
+	CL_PlayDemo(Cmd_Argv(cmd, 1));
 }
 
 typedef struct
@@ -605,7 +609,7 @@ void CL_TimeDemo_f(cmd_state_t *cmd)
 
 	srand(0); // predictable random sequence for benchmarking
 
-	CL_PlayDemo_f (cmd);
+	CL_PlayDemo(Cmd_Argv(cmd, 1));
 
 // cls.td_starttime will be grabbed at the second frame of the demo, so
 // all the loading time doesn't get counted
