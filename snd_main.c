@@ -1395,12 +1395,28 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qbool isstatic, sfx_t *sfx)
 		// calculate stereo seperation and distance attenuation
 		VectorSubtract(listener_origin, ch->origin, source_vec);
 		dist = VectorLength(source_vec);
-		f = dist * ch->distfade;
+		
+		if (ch->flags & CHANNELFLAG_TRAPEZOID)
+		{
+			if (dist < ch->distfade * 0.4)
+			{
+				f = 1.0;
+			}
+			else
+			{
+				f = dist * (ch->distfade / 0.6);
+				f = 1.0 - f;
+			}
+		}
+		else
+		{
+			f = dist * ch->distfade;
 
-		f =
-			((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), (double)snd_attenuation_exponent.value))
-			*
-			((snd_attenuation_decibel.value == 0) ? 1.0 : pow(0.1, 0.1 * snd_attenuation_decibel.value * f));
+			f =
+				((snd_attenuation_exponent.value == 0) ? 1.0 : pow(1.0 - min(1.0, f), (double)snd_attenuation_exponent.value))
+				*
+				((snd_attenuation_decibel.value == 0) ? 1.0 : pow(0.1, 0.1 * snd_attenuation_decibel.value * f));
+		}
 
 		intensity = mastervol * f;
 		if (intensity > 0)
@@ -1706,6 +1722,7 @@ qbool S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qbool value)
 		flag != CHANNELFLAG_PAUSED &&
 		flag != CHANNELFLAG_FULLVOLUME &&
 		flag != CHANNELFLAG_BGMVOLUME &&
+		flag != CHANNELFLAG_TRAPEZOID &&
 		flag != CHANNELFLAG_LOCALSOUND)
 		return false;
 

@@ -38,9 +38,10 @@ struct cmd_state_s;
 #define CHANNELFLAG_RELIABLE	(1 << 0) // send as reliable message (only used on server)
 #define CHANNELFLAG_FORCELOOP	(1 << 1) // force looping even if the sound is not looped
 #define CHANNELFLAG_LOCALSOUND	(1 << 2) // INTERNAL USE. Not settable by S_SetChannelFlag
-#define CHANNELFLAG_PAUSED	(1 << 3) // pause status
+#define CHANNELFLAG_PAUSED		(1 << 3) // pause status
 #define CHANNELFLAG_FULLVOLUME	(1 << 4) // isn't affected by the general volume
 #define CHANNELFLAG_BGMVOLUME	(1 << 8) // uses bgmvolume instead of volume
+#define CHANNELFLAG_TRAPEZOID	(1 << 9) // uses trapezoidal falloff instead of linear
 
 // ====================================================================
 // Types and variables
