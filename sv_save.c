@@ -243,6 +243,14 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 		Con_Print("load <savename> : load a game\n");
 		return;
 	}
+	
+	if (PRVM_serverfunction(LoadTriggered))
+	{
+		Con_DPrint("Calling LoadTriggered\n");
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
+		prog->ExecuteProgram(prog, PRVM_serverfunction(LoadTriggered), "QC function LoadTriggered is missing");
+	}
 
 	strlcpy (filename, Cmd_Argv(cmd, 1), sizeof(filename));
 	FS_DefaultExtension (filename, ".sav", sizeof (filename));

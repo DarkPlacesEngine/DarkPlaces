@@ -1488,6 +1488,13 @@ void VID_Restart_f(cmd_state_t *cmd)
 			Sys_Error("Unable to restore to last working video mode");
 	}
 	VID_OpenSystems();
+	
+	prvm_prog_t *prog = CLVM_prog;
+	if (PRVM_clientfunction(CSQC_RendererRestarted))
+	{
+		Con_DPrint("Calling CSQC_RendererRestarted\n");
+		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_RendererRestarted), "QC function CSQC_RendererRestarted is missing");
+	}
 }
 
 const char *vidfallbacks[][2] =

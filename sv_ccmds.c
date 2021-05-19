@@ -140,6 +140,14 @@ static void SV_Restart_f(cmd_state_t *cmd)
 		Con_Print("Only the server may restart\n");
 		return;
 	}
+	
+	prvm_prog_t *prog = SVVM_prog;
+	if (PRVM_serverfunction(RestartTriggered))
+	{
+		Con_DPrint("Calling RestartTriggered\n");
+		PRVM_serverglobalfloat(time) = sv.time;
+		prog->ExecuteProgram(prog, PRVM_serverfunction(RestartTriggered), "QC function RestartTriggered is missing");
+	}
 
 	if(host.hook.ToggleMenu)
 		host.hook.ToggleMenu();
