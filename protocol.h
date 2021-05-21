@@ -744,6 +744,8 @@ void EntityFrame4_CL_ReadFrame(void);
 //CSQC Flags
 #define CSQCFLAG_SOLIDITY (1<<0)
 
+//Save Flags (these shouldn't be here but I don't know where to put them, sorry)
+#define SAVEFLAG_DONTSAVE (1<<0)
 
 // reset all entity fields (typically used if status changed)
 #define E5_FULLUPDATE (1<<0)

@@ -734,10 +734,12 @@ void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 	int		type;
 	char vabuf[1024];
 	char valuebuf[MAX_INPUTLINE];
+	
+	int saveflags = (int)(PRVM_serveredictfloat(ed, saveflags));
 
 	FS_Print(f, "{\n");
 
-	if (ed->priv.required->free)
+	if (ed->priv.required->free || saveflags & SAVEFLAG_DONTSAVE)
 	{
 		FS_Print(f, "}\n");
 		return;
