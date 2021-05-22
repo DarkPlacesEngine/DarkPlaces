@@ -1988,6 +1988,239 @@ void VM_fputs(prvm_prog_t *prog)
 		Con_DPrintf("fputs: %s: %s\n", prog->name, string);
 }
 
+// EXT_WRATH file stuff
+
+/*
+=========
+VM_fcopy
+float	fcopy(string fnfrom, string fnto)
+=========
+*/
+// float(string fnfrom, string fnto) fcopy = #650;
+// copies quake/gamedir/data/$fnfrom to quake/gamedir/data/$fnto
+// returns 0 on success, <0 on failure
+void VM_fcopy(prvm_prog_t *prog)
+{
+	char vabuf[1024];
+	char fbuf[VM_STRINGTEMP_LENGTH];
+	const char *fname1, *fname2;
+	qfile_t *f1, *f2;
+	fs_offset_t rx = 0, wx = 0;
+
+	VM_SAFEPARMCOUNT(2, VM_fcopy);
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+
+	fname1 = PRVM_G_STRING(OFS_PARM0);
+	fname2 = PRVM_G_STRING(OFS_PARM1);
+
+	f1 = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "data/%s", fname1), false);
+	if (f1 == NULL)
+		f1 = FS_OpenVirtualFile(va(vabuf, sizeof(vabuf), "%s", fname1), false);
+	if (f1 == NULL)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning(prog, "VM_fcopy: %s could not open file %s for reading\n", prog->name, fname1);
+		return;
+	}
+
+	f2 = FS_OpenRealFile(va(vabuf, sizeof(vabuf), "data/%s", fname2), "wb", false);
+	if (f2 == NULL)
+	{
+		FS_Close(f1);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_fcopy: %s could not open file %s for writing\n", prog->name, fname2);
+		return;
+	}
+
+	while ((rx = FS_Read(f1, fbuf, sizeof(fbuf)-1)) > 0) {
+		wx = FS_Write(f2, fbuf, rx);
+		if (wx != rx)
+		{
+			FS_Close(f1);
+			FS_Close(f2);
+			PRVM_G_FLOAT(OFS_RETURN) = -3;
+			VM_Warning(prog, "VM_fcopy: %s read %I64d from %s but wrote %I64d to %s\n", prog->name, rx, fname1, wx, fname2);
+			return;
+		}
+	}
+
+	if (wx == 0)
+		VM_Warning(prog, "VM_fcopy: %s wrote 0 bytes to %s\n", prog->name, fname2);
+	FS_Close(f1);
+	FS_Close(f2);
+}
+
+/*
+=========
+VM_frename
+float	frename(string fnold, string fnnew)
+=========
+*/
+// float(string fnold, string fnnew) frename = #651;
+// renames quake/gamedir/data/$fnold to quake/gamedir/data/$fnnew
+// returns 0 on success, <0 on failure
+void VM_frename(prvm_prog_t *prog)
+{
+	char vabuf1[1024], vabuf2[1024];
+	const char *fname1, *fname2;
+	int err = 0;
+
+	VM_SAFEPARMCOUNT(2, VM_frename);
+	fname1 = PRVM_G_STRING(OFS_PARM0);
+	fname2 = PRVM_G_STRING(OFS_PARM1);
+
+	if (FS_CheckNastyPath(fname1, true))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning(prog, "VM_frename: %s rejects nasty path %s\n", prog->name, vabuf1);
+		return;
+	}
+
+	if (FS_CheckNastyPath(fname2, true))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_frename: %s rejects nasty path %s\n", prog->name, vabuf2);
+		return;
+	}
+
+	dpsnprintf(vabuf1, sizeof(vabuf1), "%s/data/%s", fs_gamedir, fname1);
+	dpsnprintf(vabuf2, sizeof(vabuf2), "%s/data/%s", fs_gamedir, fname2);
+
+	if (!FS_SysFileExists(vabuf1))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning(prog, "VM_frename: %s can't find %s\n", prog->name, vabuf1);
+		return;
+	}
+
+	if (FS_SysFileExists(vabuf2))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning(prog, "VM_frename: %s file %s already exists\n", prog->name, vabuf2);
+		return;
+	}
+
+	if ((err = rename(vabuf1, vabuf2)) != 0)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -5;
+		VM_Warning(prog, "VM_frename: %s could not rename %s to %s\n", prog->name, vabuf1, vabuf2);
+		return;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+}
+
+/*
+=========
+VM_fremove
+float	fremove(string fname)
+=========
+*/
+// float(string fname) fremove = #652;
+// removes quake/gamedir/data/$fname
+// returns 0 on success, <0 on failure
+void VM_fremove(prvm_prog_t *prog)
+{
+	const char *fname;
+	char vabuf[1024] = { 0 };
+	int err = 0;
+
+	VM_SAFEPARMCOUNT(1, VM_fremove);
+	fname = PRVM_G_STRING(OFS_PARM0);
+
+	if (FS_CheckNastyPath(fname, true))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning(prog, "VM_fremove: %s rejects nasty path %s\n", prog->name, vabuf);
+		return;
+	}
+
+	if (dpsnprintf(vabuf, sizeof(vabuf), "%s/data/%s", fs_gamedir, fname) >= (int)sizeof(vabuf))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_fremove: %s rejects path %s as too long\n", prog->name, vabuf);
+		return;
+	}
+
+	if (!FS_SysFileExists(vabuf))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -3;
+		VM_Warning(prog, "VM_fremove: %s can't find %s\n", prog->name, vabuf);
+		return;
+	}
+
+	if ((err = remove(vabuf)) != 0)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		VM_Warning(prog, "VM_fremove: %s could not remove %s\n", prog->name, vabuf);
+		return;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+}
+
+/*
+=========
+VM_fexists
+float	fexists(string filename)
+=========
+*/
+// float(string filename) fexists = #653;
+// checks if quake/gamedir/$fname exists without opening it
+// returns not 0 if it exists, 0 if it does not
+void VM_fexists(prvm_prog_t *prog)
+{
+	const char *fname;
+	char vabuf[1024] = { 0 };
+
+	VM_SAFEPARMCOUNT(1, VM_fexists);
+	fname = PRVM_G_STRING(OFS_PARM0);
+
+	if (FS_CheckNastyPath(fname, true))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		VM_Warning(prog, "VM_fexists: %s rejects nasty path %s\n", prog->name, vabuf);
+		return;
+	}
+
+	dpsnprintf(vabuf, sizeof(vabuf), "%s/%s", fs_gamedir, fname);
+	PRVM_G_FLOAT(OFS_RETURN) = FS_SysFileExists(vabuf);
+}
+
+/*
+=========
+VM_rmtree
+float	rmtree(string path)
+=========
+*/
+// float(string path) rmtree = #654;
+// removes the directory "data/$path" and all of its contents
+// returns 0 on success, !=0 on failure
+void VM_rmtree(prvm_prog_t *prog)
+{
+	const char *fname;
+	char vabuf[1024] = { 0 };
+
+	VM_SAFEPARMCOUNT(1, VM_rmtree);
+	fname = PRVM_G_STRING(OFS_PARM0);
+
+	if (FS_CheckNastyPath(fname, true))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+		VM_Warning(prog, "VM_rmtree: %s rejects nasty path %s\n", prog->name, vabuf);
+		return;
+	}
+
+	if (dpsnprintf(vabuf, sizeof(vabuf), "%s/data/%s", fs_gamedir, fname) >= (int)sizeof(vabuf))
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		VM_Warning(prog, "VM_fremove: %s rejects path %s as too long\n", prog->name, vabuf);
+		return;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = FS_rmtree(vabuf);
+}
+
 /*
 =========
 VM_writetofile

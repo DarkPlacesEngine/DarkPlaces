@@ -229,6 +229,7 @@ const char *vm_sv_extensions[] = {
 "ZQ_PAUSE",
 "DP_RM_CLIPGROUP",
 "DP_QC_FS_SEARCH_PACKFILE",
+"EXT_WRATH",
 NULL
 //"EXT_CSQC" // not ready yet
 };
@@ -3864,6 +3865,38 @@ NULL,							// #640
 NULL,							// #641
 VM_coverage,						// #642
 NULL,							// #643
+NULL,							// #644
+NULL,							// #645
+NULL,							// #646
+NULL,							// #647
+NULL,							// #648
+NULL,							// #649
+// WRATH range (#650-#???)
+VM_fcopy,						// #650 float(string fnfrom, string fnto) fcopy (EXT_WRATH)
+VM_frename,						// #651 float (string fnold, string fnnew) frename (EXT_WRATH)
+VM_fremove,						// #652 float (string fname) fremove (EXT_WRATH)
+VM_fexists,						// #653 float (string fname) fexists (EXT_WRATH)
+VM_rmtree,						// #654 float (string path) rmtree (EXT_WRATH)
+NULL,							// #656
+NULL,							// #657
+NULL,							// #658
+NULL,							// #659
+NULL,							// #660
+NULL,							// #661
+NULL,							// #662
+NULL,							// #663
+NULL,							// #664
+NULL,							// #665
+NULL,							// #666
+NULL,							// #667
+NULL,							// #668
+NULL,							// #669
+NULL,							// #670
+NULL,							// #671
+NULL,							// #672
+NULL,							// #673
+NULL,							// #674
+NULL							// #675
 };
 
 const int vm_sv_numbuiltins = sizeof(vm_sv_builtins) / sizeof(prvm_builtin_t);

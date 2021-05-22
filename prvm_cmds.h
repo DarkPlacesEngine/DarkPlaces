@@ -486,4 +486,11 @@ void VM_physics_addtorque(prvm_prog_t *prog);
 
 void VM_coverage(prvm_prog_t *prog);
 
+// EXT_WRATH
+void VM_fcopy(prvm_prog_t *prog);
+void VM_frename(prvm_prog_t *prog);
+void VM_fremove(prvm_prog_t *prog);
+void VM_fexists(prvm_prog_t *prog);
+void VM_rmtree(prvm_prog_t *prog);
+
 #endif
