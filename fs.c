@@ -33,6 +33,8 @@
 # include <dirent.h>
 #endif
 
+#include <errno.h>
+
 #ifdef WIN32
 # include <direct.h>
 # include <io.h>
