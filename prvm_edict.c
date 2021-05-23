@@ -911,6 +911,10 @@ void PRVM_ED_WriteGlobals (prvm_prog_t *prog, qfile_t *f)
 			continue;
 
 		name = PRVM_GetString(prog, def->s_name);
+		
+		// terrible hack to make globals ending in _n not save
+		if(strlen(name) > 2 && name[0] == '_' && name[1] == 'n' && name[2] == '_')
+			continue;
 
 		if(developer_entityparsing.integer)
 			Con_Printf("PRVM_ED_WriteGlobals: at global %s\n", name);
