@@ -59,8 +59,6 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 	if (PRVM_serverfunction(SaveTriggered))
 	{
 		Con_DPrint("Calling SaveTriggered\n");
-		PRVM_serverglobalfloat(time) = sv.time;
-		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 		prog->ExecuteProgram(prog, PRVM_serverfunction(SaveTriggered), "QC function SaveTriggered is missing");
 	}
 
