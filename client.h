@@ -583,6 +583,7 @@ typedef struct client_static_s
 // demo recording info must be here, because record is started before
 // entering a map (and clearing client_state_t)
 	qbool demorecording;
+	qbool demorecording_isauto;
 	fs_offset_t demo_lastcsprogssize;
 	int demo_lastcsprogscrc;
 	qbool demoplayback;

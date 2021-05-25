@@ -1910,42 +1910,58 @@ static void CL_ParseServerInfo (void)
 
 		// check memory integrity
 		Mem_CheckSentinelsGlobal();
-
+	
+	// Reki 5-25-21: the comment below this is a lie in default DP
 	// if cl_autodemo is set, automatically start recording a demo if one isn't being recorded already
 		if (cl_autodemo.integer && cls.netcon && cls.protocol != PROTOCOL_QUAKEWORLD)
 		{
-			char demofile[MAX_OSPATH];
-
+			int record_autodemo = false;
+			
 			if (cls.demorecording)
 			{
-				// finish the previous level's demo file
-				CL_Stop_f(cmd_client);
-			}
-
-			// start a new demo file
-			dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), cl.worldbasename);
-
-			Con_Printf ("Auto-recording to %s.\n", demofile);
-
-			// Reset bit 0 for every new demo
-			Cvar_SetValueQuick(&cl_autodemo_delete,
-				(cl_autodemo_delete.integer & ~0x1)
-				|
-				((cl_autodemo_delete.integer & 0x2) ? 0x1 : 0)
-			);
-
-			cls.demofile = FS_OpenRealFile(demofile, "wb", false);
-			if (cls.demofile)
-			{
-				cls.forcetrack = -1;
-				FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
-				cls.demorecording = true;
-				strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
-				cls.demo_lastcsprogssize = -1;
-				cls.demo_lastcsprogscrc = -1;
+				if (cls.demorecording_isauto)
+				{
+					// Reki 5-25-21: we only do this if it's an autodemo
+					// finish the previous level's demo file
+					CL_Stop_f(cmd_client);
+					record_autodemo = true;
+				}
 			}
 			else
-				Con_Print(CON_ERROR "ERROR: couldn't open.\n");
+			{
+				record_autodemo = true;
+			}
+			
+			if (record_autodemo)
+			{
+				char demofile[MAX_OSPATH];
+
+				// start a new demo file
+				dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), cl.worldbasename);
+
+				Con_Printf ("Auto-recording to %s.\n", demofile);
+
+				// Reset bit 0 for every new demo
+				Cvar_SetValueQuick(&cl_autodemo_delete,
+					(cl_autodemo_delete.integer & ~0x1)
+					|
+					((cl_autodemo_delete.integer & 0x2) ? 0x1 : 0)
+				);
+
+				cls.demofile = FS_OpenRealFile(demofile, "wb", false);
+				if (cls.demofile)
+				{
+					cls.forcetrack = -1;
+					FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
+					cls.demorecording = true;
+					cls.demorecording_isauto = true;
+					strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
+					cls.demo_lastcsprogssize = -1;
+					cls.demo_lastcsprogscrc = -1;
+				}
+				else
+					Con_Print(CON_ERROR "ERROR: couldn't open.\n");
+			}
 		}
 	}
 	cl.islocalgame = NetConn_IsLocalGame();

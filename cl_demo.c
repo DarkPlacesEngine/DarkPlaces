@@ -395,7 +395,8 @@ void CL_Record_f(cmd_state_t *cmd)
 
 	cls.forcetrack = track;
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
-
+	
+	cls.demorecording_isauto = false;
 	cls.demorecording = true;
 	cls.demo_lastcsprogssize = -1;
 	cls.demo_lastcsprogscrc = -1;
