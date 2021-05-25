@@ -1594,12 +1594,12 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 			Cvar_PrintHelp(cvar, cvar->name, true);
 			count++;
 		}
-		for (int i = 0; i < cvar->aliasindex; i++)
+		for (char **cvar_alias = cvar->aliases; cvar_alias && *cvar_alias; cvar_alias++)
 		{
-			if (matchpattern_with_separator(cvar->aliases[i], partial, true, "", false))
+			if (matchpattern_with_separator(*cvar_alias, partial, true, "", false))
 			{
 				Con_Printf ("cvar ");
-				Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+				Cvar_PrintHelp(cvar, *cvar_alias, true);
 				count++;
 			}
 		}
