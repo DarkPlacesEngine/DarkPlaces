@@ -77,7 +77,6 @@ typedef struct cvar_s
 	const char *defstring;
 
 	void (*callback)(struct cvar_s *var);
-	qbool ignore_callback;
 
 	char **aliases;
 	int aliasindex;
