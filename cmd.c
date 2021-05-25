@@ -198,6 +198,11 @@ static cmd_input_t *Cmd_AllocInputNode(void)
 	return node;
 }
 
+
+// Cloudwalk FIXME: The entire design of this thing is overly complicated.
+// We could very much safely have one input node per line whether or not
+// the command was terminated. We don't need to split up input nodes per command
+// executed.
 static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 {
 	size_t pos, cmdsize = 0, start = 0;
@@ -284,6 +289,7 @@ static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 		if(!*output)
 			*output = Cmd_AllocInputNode();
 
+		// Append, since this input line hasn't closed yet.
 		if((*output)->pending)
 			offset = (*output)->length;
 
@@ -296,6 +302,11 @@ static size_t Cmd_ParseInput (cmd_input_t **output, char **input)
 		}
 
 		strlcpy(&(*output)->text[offset], &(*input)[start], cmdsize + 1);
+		
+		/*
+		 * If we were still looking ahead by the time we broke from the loop, the command input
+		 * hasn't terminated yet and we're still expecting more, so keep this node open for appending later.
+		 */
 		(*output)->pending = !lookahead;
 	}
 
@@ -316,12 +327,14 @@ static void Cbuf_LinkCreate(cmd_state_t *cmd, llist_t *head, cmd_input_t *existi
 	// Slide the pointer down until we reach the end
 	while(*in)
 	{
+		// Check if the current node is still accepting input (input line hasn't terminated)
 		current = Cbuf_LinkGet(cbuf, existing);
 		newsize = Cmd_ParseInput(&current, &in);
 
 		// Valid command
 		if(newsize)
 		{
+			// current will match existing if the input line hasn't terminated yet
 			if(current != existing)
 			{
 				current->source = cmd;
@@ -1581,12 +1594,12 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 			Cvar_PrintHelp(cvar, cvar->name, true);
 			count++;
 		}
-		for (int i = 0; i < cvar->aliasindex; i++)
+		for (char **cvar_alias = cvar->aliases; cvar_alias && *cvar_alias; cvar_alias++)
 		{
-			if (matchpattern_with_separator(cvar->aliases[i], partial, true, "", false))
+			if (matchpattern_with_separator(*cvar_alias, partial, true, "", false))
 			{
 				Con_Printf ("cvar ");
-				Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+				Cvar_PrintHelp(cvar, *cvar_alias, true);
 				count++;
 			}
 		}
@@ -2402,4 +2415,8 @@ void Cmd_RestoreInitState(void)
 		}
 	}
 	Cvar_RestoreInitState(&cvars_all);
+}
+
+void Cmd_NoOperation_f(cmd_state_t *cmd)
+{
 }

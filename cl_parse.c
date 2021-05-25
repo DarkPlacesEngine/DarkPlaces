@@ -3529,11 +3529,8 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-				{
-					Con_Printf("Server disconnected\n");
 					CL_Disconnect();
-				}
-				return;
+				break;
 
 			case qw_svc_print:
 				i = MSG_ReadByte(&cl_message);
@@ -3910,12 +3907,9 @@ void CL_ParseServerMessage(void)
 
 			case svc_disconnect:
 				if (cls.demonum != -1)
-					CL_NextDemo ();
+					CL_NextDemo();
 				else
-				{
-					Con_Printf ("Server disconnected\n");
-					CL_Disconnect ();
-				}
+					CL_Disconnect();
 				break;
 
 			case svc_print:

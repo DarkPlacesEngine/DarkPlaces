@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2021 David Knapp (Cloudwalk)
+Copyright (C) 2020-2021 David Knapp (Cloudwalk)
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -21,8 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef VPK_H
 #define VPK_H
 
-#include "qtypes.h"
-#include "qdefs.h"
+#include <stdint.h>
 
 /*
  * The VPK format is Valve's package format for Source engine games,

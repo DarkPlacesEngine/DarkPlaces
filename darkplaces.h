@@ -1,5 +1,4 @@
 /*
-Copyright (C) 1996-1997 Id Software, Inc.
 Copyright (C) 2020 Ashley Rose Hale (LadyHavoc)
 Copyright (C) 2020 David Knapp (Cloudwalk)
 

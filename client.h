@@ -577,7 +577,7 @@ typedef struct client_static_s
 	int demonum;
 	// list of demos in loop
 	char demos[MAX_DEMOS][MAX_DEMONAME];
-	// the actively playing demo (set by CL_PlayDemo_f)
+	// the actively playing demo (set by CL_PlayDemo)
 	char demoname[MAX_QPATH];
 
 // demo recording info must be here, because record is started before
@@ -1299,6 +1299,7 @@ void CL_WriteDemoMessage(sizebuf_t *mesage);
 void CL_CutDemo(unsigned char **buf, fs_offset_t *filesize);
 void CL_PasteDemo(unsigned char **buf, fs_offset_t *filesize);
 
+void CL_PlayDemo(const char *demo);
 void CL_NextDemo(void);
 void CL_Stop_f(cmd_state_t *cmd);
 void CL_Record_f(cmd_state_t *cmd);

@@ -1566,7 +1566,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 		}
 	}
 
-	Host_SaveConfig();
+	Host_SaveConfig(CONFIGFILENAME);
 
 	fs_numgamedirs = numgamedirs;
 	for (i = 0;i < fs_numgamedirs;i++)
@@ -1577,7 +1577,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 
 	if (cls.demoplayback)
 	{
-		CL_Disconnect_f(cmd_local);
+		CL_Disconnect();
 		cls.demonum = 0;
 	}
 

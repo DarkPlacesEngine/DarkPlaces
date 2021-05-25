@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2000-2021 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -43,8 +44,8 @@ cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags)
 		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
 			return hash->cvar;
 		else
-			for (int i = 0; i < hash->cvar->aliasindex; i++)
-				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
+			for (char **alias = hash->cvar->aliases; alias && *alias; alias++)
+				if (!strcmp (var_name, *alias) && (hash->cvar->flags & neededflags))
 					return hash->cvar;
 	return NULL;
 }
@@ -88,8 +89,8 @@ static cvar_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_
 		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
 			goto match;
 		else
-			for (int i = 0; i < hash->cvar->aliasindex; i++)
-				if (!strcmp (var_name, hash->cvar->aliases[i]) && (hash->cvar->flags & neededflags))
+			for (char **alias = hash->cvar->aliases; alias && *alias; alias++)
+				if (!strcmp (var_name, *alias) && (hash->cvar->flags & neededflags))
 					goto match;
 		if(parent) *parent = hash->cvar;
 	}
@@ -226,8 +227,8 @@ int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int nee
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			h++;
 		else
-			for(int i = 0; i < cvar->aliasindex; i++)
-				if (!strncasecmp(partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
+			for (char **alias = cvar->aliases; alias && *alias; alias++)
+				if (!strncasecmp(partial, *alias, len) && (cvar->flags & neededflags))
 					h++;
 		
 	return h;
@@ -257,9 +258,9 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			buf[bpos++] = cvar->name;
 		else
-			for(int i = 0; i < cvar->aliasindex; i++)
-				if (!strncasecmp(partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
-					buf[bpos++] = cvar->aliases[i];
+			for (char **alias = cvar->aliases; alias && *alias; alias++)
+				if (!strncasecmp(partial, *alias, len) && (cvar->flags & neededflags))
+					buf[bpos++] = *alias;
 		
 
 	buf[bpos] = NULL;
@@ -291,9 +292,9 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int needed
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			Cvar_PrintHelp(cvar, cvar->name, true);
 		else
-			for (int i = 0; i < cvar->aliasindex; i++)
-				if (!strncasecmp (partial, cvar->aliases[i], len) && (cvar->flags & neededflags))
-					Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+			for (char **alias = cvar->aliases; alias && *alias; alias++)
+				if (!strncasecmp (partial, *alias, len) && (cvar->flags & neededflags))
+					Cvar_PrintHelp(cvar, *alias, true);
 
 		
 }
@@ -497,11 +498,36 @@ void Cvar_RegisterAlias(cvar_t *variable, const char *alias )
 	cvar_hash_t *hash;
 	int hashindex;
 
-	variable->aliases = (char **)Mem_Realloc(zonemempool, variable->aliases, sizeof(char *) * (variable->aliasindex + 1));
+	if(!*alias)
+	{
+		Con_Printf("Cvar_RegisterAlias: invalid alias name\n");
+		return;
+	}
+
+	// check for overlap with a command
+	if (Cmd_Exists(cmd_local, alias))
+	{
+		Con_Printf("Cvar_RegisterAlias: %s is a command\n", alias);
+		return;
+	}
+
+	if(Cvar_FindVar(&cvars_all, alias, 0))
+	{
+		Con_Printf("Cvar_RegisterAlias: %s is a cvar\n", alias);
+		return;
+	}
+
+	if(!variable->aliases)
+		variable->aliases = (char **)Z_Malloc(sizeof(char *) * 2); // For NULL terminator
+	else
+		variable->aliases = (char **)Mem_Realloc(zonemempool, variable->aliases, sizeof(char *) * (variable->aliases_size + 1));
+	
+	variable->aliases[variable->aliases_size + 1] = NULL;
+	
 	// Add to it
-	variable->aliases[variable->aliasindex] = (char *)Z_Malloc(strlen(alias) + 1);
-	memcpy(variable->aliases[variable->aliasindex], alias, strlen(alias) + 1);
-	variable->aliasindex++;
+	variable->aliases[variable->aliases_size] = (char *)Z_Malloc(strlen(alias) + 1);
+	memcpy(variable->aliases[variable->aliases_size], alias, strlen(alias) + 1);
+	variable->aliases_size++;
 
 	// link to head of list in this hash table index
 	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
@@ -621,7 +647,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// check for overlap with a command
-	if (Cmd_Exists(cmd_local, variable->name) || Cmd_Exists(cmd_local, variable->name))
+	if (Cmd_Exists(cmd_local, variable->name))
 	{
 		Con_Printf("Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
@@ -633,7 +659,8 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->defstring = (char *)Mem_strdup(zonemempool, variable->string);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
-	variable->aliasindex = 0;
+	variable->aliases = NULL;
+	variable->aliases_size = 0;
 	variable->initstate = NULL;
 
 	// Mark it as not an autocvar.
@@ -685,7 +712,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	}
 
 	// check for overlap with a command
-	if (Cmd_Exists(cmd_local, name) || Cmd_Exists(cmd_local, name))
+	if (Cmd_Exists(cmd_local, name))
 	{
 		Con_Printf("Cvar_Get: %s is a command\n", name);
 		return NULL;
@@ -701,7 +728,8 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->defstring = (char *)Mem_strdup(zonemempool, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
-	cvar->aliases = (char **)Z_Malloc(sizeof(char **));
+	cvar->aliases = NULL;
+	cvar->aliases_size = 0;
 	cvar->initstate = NULL;
 	memset(cvar->aliases, 0, sizeof(char *));
 
@@ -983,11 +1011,11 @@ void Cvar_List_f(cmd_state_t *cmd)
 			Cvar_PrintHelp(cvar, cvar->name, true);
 			count++;
 		}
-		for (int i = 0; i < cvar->aliasindex; i++)
+		for (char **alias = cvar->aliases; alias && *alias; alias++)
 		{
-			if (matchpattern_with_separator(cvar->aliases[i], partial, false, "", false))
+			if (matchpattern_with_separator(*alias, partial, false, "", false))
 			{
-				Cvar_PrintHelp(cvar, cvar->aliases[i], true);
+				Cvar_PrintHelp(cvar, *alias, true);
 				count++;
 			}
 		}
