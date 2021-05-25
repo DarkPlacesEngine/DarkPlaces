@@ -43,6 +43,7 @@ Sorted by alphanumeric order by last name, and pseudonym if not available. Activ
 	* GreEn`mArine
 	* **Terence Hill (terencehill)**
 	* incognico
+	* Tomas Jakobsson (Tomaz)
 	* KillPixel
 	* KrimZon
 	* kristus
@@ -58,7 +59,6 @@ Sorted by alphanumeric order by last name, and pseudonym if not available. Activ
 	* Samual
 	* taniwha
 	* TimePath
-	* Tomaz
 	* tZork
 	* VorteX
 	* David Walton (Spoike)
