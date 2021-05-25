@@ -79,7 +79,7 @@ typedef struct cvar_s
 	void (*callback)(struct cvar_s *var);
 
 	char **aliases;
-	int aliasindex;
+	int aliases_size;
 
 	struct cvar_s *initstate; // snapshot of cvar during init
 
