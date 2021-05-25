@@ -1696,7 +1696,7 @@ void VM_registercvar(prvm_prog_t *prog)
 		return;
 
 // check for overlap with a command
-	if (Cmd_Exists(cmd_local, name) || Cmd_Exists(cmd_local, name))
+	if (Cmd_Exists(cmd_local, name))
 	{
 		VM_Warning(prog, "VM_registercvar: %s is a command\n", name);
 		return;
