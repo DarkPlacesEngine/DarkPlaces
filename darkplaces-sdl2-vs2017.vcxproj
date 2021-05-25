@@ -352,7 +352,6 @@
     <ClInclude Include="image.h" />
     <ClInclude Include="image_png.h" />
     <ClInclude Include="input.h" />
-    <ClInclude Include="intoverflow.h" />
     <ClInclude Include="jpeg.h" />
     <ClInclude Include="keys.h" />
     <ClInclude Include="lhfont.h" />
