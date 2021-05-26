@@ -220,7 +220,6 @@
 	<ClCompile Include="com_ents.c" />
 	<ClCompile Include="com_ents4.c" />
 	<ClCompile Include="com_game.c" />
-	<ClCompile Include="com_list.c" />
 	<ClCompile Include="com_msg.c" />
     <ClCompile Include="common.c" />
     <ClCompile Include="console.c" />
@@ -353,7 +352,6 @@
     <ClInclude Include="image.h" />
     <ClInclude Include="image_png.h" />
     <ClInclude Include="input.h" />
-    <ClInclude Include="intoverflow.h" />
     <ClInclude Include="jpeg.h" />
     <ClInclude Include="keys.h" />
     <ClInclude Include="lhfont.h" />
@@ -374,6 +372,7 @@
     <ClInclude Include="model_q1bsp.h" />
     <ClInclude Include="model_q2bsp.h" />
     <ClInclude Include="model_q3bsp.h" />
+    <ClInclude Include="model_vbsp.h" />
     <ClInclude Include="model_shared.h" />
     <ClInclude Include="model_sprite.h" />
     <ClInclude Include="model_zymotic.h" />

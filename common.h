@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2000-2020 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -298,6 +299,7 @@ typedef enum gamemode_e
 	GAME_MOONHELM,
 	GAME_VORETOURNAMENT,
 	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
+	GAME_BATTLEMETAL, // added by Cloudwalk for Subject9x
 	GAME_COUNT
 }
 gamemode_t;

@@ -847,9 +847,10 @@ enum
 	SHADERSTATICPARM_SHADOWSAMPLER = 10, ///< sampler
 	SHADERSTATICPARM_CELSHADING = 11, ///< celshading (alternative diffuse and specular math)
 	SHADERSTATICPARM_CELOUTLINES = 12, ///< celoutline (depth buffer analysis to produce outlines)
-	SHADERSTATICPARM_FXAA = 13 ///< fast approximate anti aliasing
+	SHADERSTATICPARM_FXAA = 13, ///< fast approximate anti aliasing
+	SHADERSTATICPARM_COLORFRINGE = 14 ///< colorfringe (chromatic aberration)
 };
-#define SHADERSTATICPARMS_COUNT 14
+#define SHADERSTATICPARMS_COUNT 15
 
 static const char *shaderstaticparmstrings_list[SHADERSTATICPARMS_COUNT];
 static int shaderstaticparms_count = 0;
@@ -898,6 +899,8 @@ qbool R_CompileShader_CheckStaticParms(void)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELSHADING);
 	if (r_celoutlines.integer)
 		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_CELOUTLINES);
+	if (r_colorfringe.value)
+		R_COMPILESHADER_STATICPARM_ENABLE(SHADERSTATICPARM_COLORFRINGE);
 
 	return memcmp(r_compileshader_staticparms, r_compileshader_staticparms_save, sizeof(r_compileshader_staticparms)) != 0;
 }
@@ -926,6 +929,7 @@ static void R_CompileShader_AddStaticParms(unsigned int mode, uint64_t permutati
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_CELSHADING, "USECELSHADING");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_CELOUTLINES, "USECELOUTLINES");
 	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_FXAA, "USEFXAA");
+	R_COMPILESHADER_STATICPARM_EMIT(SHADERSTATICPARM_COLORFRINGE, "USECOLORFRINGE");
 }
 
 /// information about each possible shader permutation
@@ -1557,7 +1561,7 @@ static int R_BlendFuncFlags(int src, int dst)
 	return r;
 }
 
-void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qbool notrippy)
+void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdiffuse[3], const float rtlightspecular[3], rsurfacepass_t rsurfacepass, int texturenumsurfaces, const msurface_t **texturesurfacelist, void *surfacewaterplane, qbool notrippy, qbool ui)
 {
 	// select a permutation of the lighting shader appropriate to this
 	// combination of texture, entity, light source, and fogging, only use the
@@ -1824,7 +1828,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 		// lightmapped wall
 		if ((t->glowtexture || t->backgroundglowtexture) && r_hdr_glowintensity.value > 0 && !gl_lightmaps.integer)
 			permutation |= SHADERPERMUTATION_GLOW;
-		if (r_refdef.fogenabled && !notrippy)
+		if (r_refdef.fogenabled && !ui)
 			permutation |= r_texture_fogheighttexture ? SHADERPERMUTATION_FOGHEIGHTTEXTURE : (r_refdef.fogplaneviewabove ? SHADERPERMUTATION_FOGOUTSIDE : SHADERPERMUTATION_FOGINSIDE);
 		if (t->colormapping)
 			permutation |= SHADERPERMUTATION_COLORMAPPING;
@@ -1896,7 +1900,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 	}
 	if(!(blendfuncflags & BLENDFUNC_ALLOWS_ANYFOG))
 		permutation &= ~(SHADERPERMUTATION_FOGHEIGHTTEXTURE | SHADERPERMUTATION_FOGOUTSIDE | SHADERPERMUTATION_FOGINSIDE);
-	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA && !notrippy)
+	if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACKALPHA && !ui)
 		permutation |= SHADERPERMUTATION_FOGALPHAHACK;
 	switch(vid.renderpath)
 	{
@@ -1958,7 +1962,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 				if (r_glsl_permutation->loc_DeferredMod_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_DeferredMod_Specular, t->render_rtlight_specular[0], t->render_rtlight_specular[1], t->render_rtlight_specular[2]);
 			}
 			// additive passes are only darkened by fog, not tinted
-			if (r_glsl_permutation->loc_FogColor >= 0 && !notrippy)
+			if (r_glsl_permutation->loc_FogColor >= 0 && !ui)
 			{
 				if(blendfuncflags & BLENDFUNC_ALLOWS_FOG_HACK0)
 					qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
@@ -3193,7 +3197,7 @@ static void gl_main_shutdown(void)
 	r_texture_numcubemaps = 0;
 	//r_texture_fogintensity = NULL;
 	memset(&r_fb, 0, sizeof(r_fb));
-	R_GLSL_Restart_f(&cmd_client);
+	R_GLSL_Restart_f(cmd_local);
 
 	r_glsl_permutation = NULL;
 	memset(r_glsl_permutationhash, 0, sizeof(r_glsl_permutationhash));
@@ -3445,102 +3449,42 @@ void Render_Init(void)
 	Mod_RenderInit();
 }
 
-int R_CullBox(const vec3_t mins, const vec3_t maxs)
+static void R_GetCornerOfBox(vec3_t out, const vec3_t mins, const vec3_t maxs, int signbits)
 {
-	int i;
-	mplane_t *p;
-	if (r_trippy.integer)
-		return false;
-	for (i = 0;i < r_refdef.view.numfrustumplanes;i++)
-	{
-		p = r_refdef.view.frustum + i;
-		switch(p->signbits)
-		{
-		default:
-		case 0:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 1:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 2:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 3:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 4:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 5:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 6:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 7:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		}
-	}
-	return false;
+	out[0] = ((signbits & 1) ? mins : maxs)[0];
+	out[1] = ((signbits & 2) ? mins : maxs)[1];
+	out[2] = ((signbits & 4) ? mins : maxs)[2];
 }
 
-int R_CullBoxCustomPlanes(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes)
+static qbool _R_CullBox(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes, int ignore)
 {
 	int i;
 	const mplane_t *p;
+	vec3_t corner;
 	if (r_trippy.integer)
 		return false;
 	for (i = 0;i < numplanes;i++)
 	{
+		if(i == ignore)
+			continue;
 		p = planes + i;
-		switch(p->signbits)
-		{
-		default:
-		case 0:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 1:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 2:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 3:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*maxs[2] < p->dist)
-				return true;
-			break;
-		case 4:
-			if (p->normal[0]*maxs[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 5:
-			if (p->normal[0]*mins[0] + p->normal[1]*maxs[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 6:
-			if (p->normal[0]*maxs[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		case 7:
-			if (p->normal[0]*mins[0] + p->normal[1]*mins[1] + p->normal[2]*mins[2] < p->dist)
-				return true;
-			break;
-		}
+		R_GetCornerOfBox(corner, mins, maxs, p->signbits);
+		if (DotProduct(p->normal, corner) < p->dist)
+			return true;
 	}
 	return false;
+}
+
+qbool R_CullFrustum(const vec3_t mins, const vec3_t maxs)
+{
+	// skip nearclip plane, it often culls portals when you are very close, and is almost never useful
+	return _R_CullBox(mins, maxs, r_refdef.view.numfrustumplanes, r_refdef.view.frustum, 4);
+}
+
+qbool R_CullBox(const vec3_t mins, const vec3_t maxs, int numplanes, const mplane_t *planes)
+{
+	// nothing to ignore
+	return _R_CullBox(mins, maxs, numplanes, planes, -1);
 }
 
 //==================================================================================
@@ -4084,7 +4028,7 @@ static void R_View_UpdateEntityVisible (void)
 				continue;
 			}
 			if (!(ent->flags & renderimask))
-			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+			if (!R_CullFrustum(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 			if ((ent->flags & (RENDER_NODEPTHTEST | RENDER_WORLDOBJECT | RENDER_VIEWMODEL)) || r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.scene.worldmodel, r_refdef.viewcache.world_leafvisible, ent->mins, ent->maxs))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
@@ -4096,7 +4040,7 @@ static void R_View_UpdateEntityVisible (void)
 		{
 			ent = r_refdef.scene.entities[i];
 			if (!(ent->flags & renderimask))
-			if (!R_CullBox(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
+			if (!R_CullFrustum(ent->mins, ent->maxs) || (ent->model && ent->model->type == mod_sprite && (ent->model->sprite.sprnum_type == SPR_LABEL || ent->model->sprite.sprnum_type == SPR_LABEL_SCALE)))
 				r_refdef.viewcache.entityvisible[i] = true;
 		}
 	}
@@ -4256,7 +4200,7 @@ static void R_View_SetFrustum(const int *scissor)
 	int i;
 	double fpx = +1, fnx = -1, fpy = +1, fny = -1;
 	vec3_t forward, left, up, origin, v;
-	if(r_lockvisibility.integer || r_lockpvs.integer)
+	if(r_lockvisibility.integer)
 		return;
 	if(scissor)
 	{
@@ -5688,7 +5632,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 
 	if(R_CompileShader_CheckStaticParms())
-		R_GLSL_Restart_f(&cmd_client);
+		R_GLSL_Restart_f(cmd_local);
 
 	if (!r_drawentities.integer)
 		r_refdef.scene.numentities = 0;
@@ -8741,7 +8685,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 	{
 		// render screenspace normalmap to texture
 		GL_DepthMask(true);
-		R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false);
+		R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_DEFERREDGEOMETRY, texturenumsurfaces, texturesurfacelist, NULL, false, false);
 		RSurf_DrawBatch();
 		return;
 	}
@@ -8769,18 +8713,18 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 			{
 				// render water or distortion background
 				GL_DepthMask(true);
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BACKGROUND, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false, false);
 				RSurf_DrawBatch();
 				// blend surface on top
 				GL_DepthMask(false);
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL, false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, NULL, false, false);
 				RSurf_DrawBatch();
 			}
 			else if ((rsurface.texture->currentmaterialflags & MATERIALFLAG_REFLECTION))
 			{
 				// render surface with reflection texture as input
 				GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false);
+				R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, end-start, texturesurfacelist + start, (void *)(r_fb.water.waterplanes + startplaneindex), false, false);
 				RSurf_DrawBatch();
 			}
 		}
@@ -8789,7 +8733,7 @@ static void R_DrawTextureSurfaceList_GL20(int texturenumsurfaces, const msurface
 
 	// render surface batch normally
 	GL_DepthMask(writedepth && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_BLENDED));
-	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0 || ui);
+	R_SetupShader_Surface(vec3_origin, vec3_origin, vec3_origin, RSURFPASS_BASE, texturenumsurfaces, texturesurfacelist, NULL, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SKY) != 0 || ui, ui);
 	RSurf_DrawBatch();
 }
 
@@ -9315,11 +9259,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	model_t *model;
 	const msurface_t *surface;
 	const msurface_t *surfaces;
-	const int *surfacelist;
 	const texture_t *texture;
 	int numtriangles;
-	int numsurfacelist;
-	int surfacelistindex;
 	int surfaceindex;
 	int triangleindex;
 	float localorigin[3];
@@ -9412,8 +9353,6 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 #endif
 
 	dynamic = model->surfmesh.isanimated;
-	numsurfacelist = model->nummodelsurfaces;
-	surfacelist = model->sortedmodelsurfaces;
 	surfaces = model->data_surfaces;
 
 	bih = NULL;
@@ -9449,9 +9388,8 @@ static void R_DecalSystem_SplatEntity(entity_render_t *ent, const vec3_t worldor
 	}
 	else
 	{
-		for (surfacelistindex = 0;surfacelistindex < numsurfacelist;surfacelistindex++)
+		for (surfaceindex = model->submodelsurfaces_start;surfaceindex < model->submodelsurfaces_end;surfaceindex++)
 		{
-			surfaceindex = surfacelist[surfacelistindex];
 			surface = surfaces + surfaceindex;
 			// check cull box first because it rejects more than any other check
 			if (!dynamic && !BoxesOverlap(surface->mins, surface->maxs, localmins, localmaxs))
@@ -9777,7 +9715,7 @@ static void R_DrawModelDecals(void)
 static void R_DrawDebugModel(void)
 {
 	entity_render_t *ent = rsurface.entity;
-	int i, j, flagsmask;
+	int j, flagsmask;
 	const msurface_t *surface;
 	model_t *model = ent->model;
 
@@ -9793,10 +9731,11 @@ static void R_DrawDebugModel(void)
 		GL_DepthMask(false);
 		GL_DepthRange(0, 1);
 		GL_BlendFunc(GL_ONE, GL_ONE);
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start;j < model->submodelsurfaces_end;j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -9836,7 +9775,7 @@ static void R_DrawDebugModel(void)
 		GL_PolygonOffset(r_refdef.polygonfactor + r_showcollisionbrushes_polygonfactor.value, r_refdef.polygonoffset + r_showcollisionbrushes_polygonoffset.value);
 		for (bihleafindex = 0, bihleaf = bih->leafs;bihleafindex < bih->numleafs;bihleafindex++, bihleaf++)
 		{
-			if (cullbox && R_CullBox(bihleaf->mins, bihleaf->maxs))
+			if (cullbox && R_CullFrustum(bihleaf->mins, bihleaf->maxs))
 				continue;
 			switch (bihleaf->type)
 			{
@@ -9887,10 +9826,11 @@ static void R_DrawDebugModel(void)
 			GL_DepthMask(true);
 		}
 		qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);CHECKGLERROR
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start; j < model->submodelsurfaces_end; j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -9925,10 +9865,11 @@ static void R_DrawDebugModel(void)
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthMask(true);
 		}
-		for (i = 0, j = model->firstmodelsurface, surface = model->data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		for (j = model->submodelsurfaces_start; j < model->submodelsurfaces_end; j++)
 		{
 			if (ent == r_refdef.scene.worldentity && !r_refdef.viewcache.world_surfacevisible[j])
 				continue;
+			surface = model->data_surfaces + j;
 			rsurface.texture = R_GetCurrentTexture(surface->texture);
 			if ((rsurface.texture->currentmaterialflags & flagsmask) && surface->num_triangles)
 			{
@@ -10034,7 +9975,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	}
 
 	// check if this is an empty model
-	if (model->nummodelsurfaces == 0)
+	if (model->submodelsurfaces_start >= model->submodelsurfaces_end)
 		return;
 
 	rsurface.lightmaptexture = NULL;
@@ -10048,9 +9989,9 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	if (ent == r_refdef.scene.worldentity)
 	{
 		// for the world entity, check surfacevisible
-		for (i = 0;i < model->nummodelsurfaces;i++)
+		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
 		{
-			j = model->sortedmodelsurfaces[i];
+			j = model->modelsurfaces_sorted[i];
 			if (r_refdef.viewcache.world_surfacevisible[j])
 				r_surfacelist[numsurfacelist++] = surfaces + j;
 		}
@@ -10064,15 +10005,15 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 	}
 	else if (ui)
 	{
-		// for ui we have to preserve the order of surfaces (not using sortedmodelsurfaces)
-		for (i = 0; i < model->nummodelsurfaces; i++)
-			r_surfacelist[numsurfacelist++] = surfaces + model->firstmodelsurface + i;
+		// for ui we have to preserve the order of surfaces (not using modelsurfaces_sorted)
+		for (i = model->submodelsurfaces_start; i < model->submodelsurfaces_end; i++)
+			r_surfacelist[numsurfacelist++] = surfaces + i;
 	}
 	else
 	{
 		// add all surfaces
-		for (i = 0; i < model->nummodelsurfaces; i++)
-			r_surfacelist[numsurfacelist++] = surfaces + model->sortedmodelsurfaces[i];
+		for (i = model->submodelsurfaces_start; i < model->submodelsurfaces_end; i++)
+			r_surfacelist[numsurfacelist++] = surfaces + model->modelsurfaces_sorted[i];
 	}
 
 	/*

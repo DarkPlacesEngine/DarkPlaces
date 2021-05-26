@@ -1,5 +1,4 @@
 /*
-Copyright (C) 1996-1997 Id Software, Inc.
 Copyright (C) 2020 Ashley Rose Hale (LadyHavoc)
 Copyright (C) 2020 David Knapp (Cloudwalk)
 
@@ -46,7 +45,6 @@ extern char engineversion[128];
 #include "qdefs.h"
 #include "zone.h"
 #include "thread.h"
-#include "com_list.h"
 #include "common.h"
 #include "fs.h"
 #include "host.h"

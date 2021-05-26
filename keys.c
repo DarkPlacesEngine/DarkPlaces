@@ -782,7 +782,8 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicod
 				}
 				else if (*p == '\n' || *p == '\r' || *p == '\b')
 					*p++ = ';';
-				p++;
+				else
+					p++;
 			}
 #else
 			strtok(cbd, "\n\r\b");
@@ -1831,7 +1832,7 @@ void Key_EventQueue_Unblock(void)
 void
 Key_Event (int key, int ascii, qbool down)
 {
-	cmd_state_t *cmd = &cmd_client;
+	cmd_state_t *cmd = cmd_local;
 	const char *bind;
 	qbool q;
 	keydest_t keydest = key_dest;
@@ -1909,7 +1910,7 @@ Key_Event (int key, int ascii, qbool down)
 		{
 			if(down)
 			{
-				Con_ToggleConsole_f(&cmd_client);
+				Con_ToggleConsole_f(cmd_local);
 				tbl_keydest[key] = key_void; // esc release should go nowhere (especially not to key_menu or key_game)
 			}
 			return;
@@ -1928,7 +1929,7 @@ Key_Event (int key, int ascii, qbool down)
 #endif
 					}
 					else
-						Con_ToggleConsole_f(&cmd_client);
+						Con_ToggleConsole_f(cmd_local);
 				}
 				break;
 
@@ -1992,7 +1993,7 @@ Key_Event (int key, int ascii, qbool down)
 		// (special exemption for german keyboard layouts)
 		if (con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && (key_consoleactive & KEY_CONSOLEACTIVE_USER) && (con_closeontoggleconsole.integer >= ((ascii != STRING_COLOR_TAG) ? 2 : 3) || key_linepos == 1))
 		{
-			Con_ToggleConsole_f(&cmd_client);
+			Con_ToggleConsole_f(cmd_local);
 			return;
 		}
 

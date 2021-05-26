@@ -40,7 +40,7 @@ m*_t structures are in-memory
 
 */
 
-typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_obj, mod_null} modtype_t;
+typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_brushhl2, mod_obj, mod_null} modtype_t;
 
 typedef struct animscene_s
 {
@@ -370,36 +370,40 @@ typedef struct msurface_lightmapinfo_s
 msurface_lightmapinfo_t;
 
 struct q3deffect_s;
+
+/// <summary>
+///  describes the textures to use on a range of triangles in the model, and mins/maxs (AABB) for culling.
+/// </summary>
 typedef struct msurface_s
 {
-	// bounding box for onscreen checks
+	/// range of triangles and vertices in model->surfmesh
+	int num_triangles; // triangles
+	int num_firsttriangle; // first element is this *3
+	int num_vertices; // length of the range referenced by elements
+	int num_firstvertex; // min vertex referenced by elements
+
+	/// the texture to use on the surface
+	texture_t *texture;
+	/// the lightmap texture fragment to use on the rendering mesh
+	struct rtexture_s *lightmaptexture;
+	/// the lighting direction texture fragment to use on the rendering mesh
+	struct rtexture_s *deluxemaptexture;
+
+	// the following fields are used situationally and are not part of rendering in typical usage
+
+	/// bounding box for onscreen checks
 	vec3_t mins;
 	vec3_t maxs;
-	// the texture to use on the surface
-	texture_t *texture;
-	// the lightmap texture fragment to use on the rendering mesh
-	struct rtexture_s *lightmaptexture;
-	// the lighting direction texture fragment to use on the rendering mesh
-	struct rtexture_s *deluxemaptexture;
-	// lightmaptexture rebuild information not used in q3bsp
-	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
-	// fog volume info in q3bsp
-	struct q3deffect_s *effect; // q3bsp
-	// mesh information for collisions (only used by q3bsp curves)
-	int num_firstcollisiontriangle;
 
-	// surfaces own ranges of vertices and triangles in the model->surfmesh
-	int num_triangles; // number of triangles
-	int num_firsttriangle; // first triangle
-	int num_vertices; // number of vertices
-	int num_firstvertex; // first vertex
+	/// lightmaptexture rebuild information not used in q3bsp
+	msurface_lightmapinfo_t* lightmapinfo; // q1bsp
+	/// fog volume info in q3bsp
+	struct q3deffect_s* effect; // q3bsp
 
-	// mesh information for collisions (only used by q3bsp curves)
-	int num_collisiontriangles; // q3bsp
-	int num_collisionvertices; // q3bsp
-
-	// used by Mod_Mesh_Finalize when building sortedmodelsurfaces
-	qbool included;
+	/// mesh information for collisions (only used by q3bsp curves)
+	int num_firstcollisiontriangle; // q3bsp only
+	int num_collisiontriangles; // number of triangles (if surface has collisions enabled)
+	int num_collisionvertices; // number of vertices referenced by collision triangles (if surface has collisions enabled)
 }
 msurface_t;
 
@@ -409,6 +413,7 @@ msurface_t;
 #include "model_q1bsp.h"
 #include "model_q2bsp.h"
 #include "model_q3bsp.h"
+#include "model_vbsp.h"
 #include "model_sprite.h"
 #include "model_alias.h"
 
@@ -455,10 +460,11 @@ typedef struct model_s
 	animscene_t		*skinscenes; // [numskins]
 	// skin animation info
 	animscene_t		*animscenes; // [numframes]
-	// range of surface numbers in this (sub)model
-	int				firstmodelsurface;
-	int				nummodelsurfaces;
-	int				*sortedmodelsurfaces;
+	// range of surface numbers in this model
+	int				submodelsurfaces_start;
+	int				submodelsurfaces_end;
+	/// surface indices of model in an optimal draw order (submodelindex -> texture -> lightmap -> index)
+	int				*modelsurfaces_sorted; // same size as num_surfaces
 	// range of collision brush numbers in this (sub)model
 	int				firstmodelbrush;
 	int				nummodelbrushes;
@@ -496,9 +502,9 @@ typedef struct model_s
 	const char		*modeldatatypestring;
 	// generates vertex data for a given frameblend
 	void(*AnimateVertices)(const struct model_s * RESTRICT model, const struct frameblend_s * RESTRICT frameblend, const struct skeleton_s *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f);
-	// draw the model's sky polygons (only used by brush models)
+	// draw the model's sky polygons
 	void(*DrawSky)(struct entity_render_s *ent);
-	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
+	// draw refraction/reflection textures for the model's water polygons
 	void(*DrawAddWaterPlanes)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
 	void(*Draw)(struct entity_render_s *ent);
@@ -601,6 +607,11 @@ void Mod_MakeSortedSurfaces(model_t *mod);
 // automatically called after model loader returns
 void Mod_BuildVBOs(void);
 
+/// Sets the mod->DrawSky and mod->DrawAddWaterPlanes pointers conditionally based on whether surfaces in this submodel use these features
+/// called specifically by brush model loaders when generating submodels
+/// automatically called after model loader returns
+void Mod_SetDrawSkyAndWater(model_t* mod);
+
 shadowmesh_t *Mod_ShadowMesh_Alloc(struct mempool_s *mempool, int maxverts, int maxtriangles);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, const float *vertex3f);
 void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtris, const int *element3i);
@@ -698,8 +709,6 @@ void Mod_Mesh_Destroy(model_t *mod);
 void Mod_Mesh_Reset(model_t *mod);
 texture_t *Mod_Mesh_GetTexture(model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
 msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithprevioussurface);
-void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf);
-int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(model_t *mod, msurface_t *surf, int e0, int e1, int e2);
 void Mod_Mesh_Validate(model_t *mod);
@@ -735,6 +744,7 @@ void Mod_BSP2_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_HLBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_VBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);

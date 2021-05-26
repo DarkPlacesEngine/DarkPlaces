@@ -371,12 +371,12 @@ qbool XMP_OpenLibrary (void)
 		return false;
 
 	// Load the DLL
-	if (Sys_LoadLibrary (dllnames_xmp, &xmp_dll, xmpfuncs))
+	if (Sys_LoadDependency (dllnames_xmp, &xmp_dll, xmpfuncs))
 	{
 		if (*qxmp_vercode < 0x040200)
 		{
 			Con_Printf("Found incompatible XMP library version %s, not loading. (4.2.0 or higher required)\n", *qxmp_version);
-			Sys_UnloadLibrary (&xmp_dll);
+			Sys_FreeLibrary (&xmp_dll);
 			return false;
 		}
 		if (developer_loading.integer >= 1)
@@ -397,7 +397,7 @@ Unload the libxmp DLL
 */
 void XMP_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&xmp_dll);
+	Sys_FreeLibrary (&xmp_dll);
 }
 
 #endif

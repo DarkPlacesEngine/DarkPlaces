@@ -53,6 +53,12 @@ const char *vm_m_extensions[] = {
 NULL
 };
 
+qbool MP_ConsoleCommand(const char *text)
+{
+	prvm_prog_t *prog = MVM_prog;
+	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.GameCommand, false, -1, 0, prog->loaded, "QC function GameCommand is missing");
+}
+
 /*
 =========
 VM_M_setmousetarget
@@ -1049,6 +1055,13 @@ void VM_cin_restart(prvm_prog_t *prog)
 		CL_RestartVideo( video );
 }
 
+static void VM_M_registercommand(prvm_prog_t *prog)
+{
+	VM_SAFEPARMCOUNT(1, VM_M_registercommand);
+	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
+		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 {NULL, 0, 0},									//   #0 NULL function (not callable)
 {VM_checkextension},				//   #1
@@ -1063,7 +1076,7 @@ prvm_builtin_t vm_m_builtins[] = {
 {VM_vectoyaw},						//  #10
 {VM_vectoangles},					//  #11
 {VM_random},							//  #12
-{VM_localcmd_client},						//  #13
+{VM_localcmd_local},						//  #13
 {VM_cvar},								//  #14
 {VM_cvar_set},						//  #15
 {VM_dprint},							//  #16

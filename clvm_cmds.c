@@ -1215,7 +1215,7 @@ void VM_drawline (prvm_prog_t *prog)
 	rgb		= PRVM_G_VECTOR(OFS_PARM3);
 	alpha	= PRVM_G_FLOAT(OFS_PARM4);
 	flags	= (int)PRVM_G_FLOAT(OFS_PARM5);
-	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags, false);
+	DrawQ_Line(width, c1[0], c1[1], c2[0], c2[1], rgb[0], rgb[1], rgb[2], alpha, flags);
 }
 
 /*
@@ -2402,7 +2402,7 @@ static void VM_CL_setlistener (prvm_prog_t *prog)
 static void VM_CL_registercmd (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
-	if(!Cmd_Exists(&cmd_client, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
@@ -4982,7 +4982,7 @@ prvm_builtin_t vm_cl_builtins[] = {
 {VM_fabs, 1, 1},						// #43 float(float f) fabs (QUAKE)
 {NULL, 0, 0},							// #44 vector(entity e, float speed) aim (QUAKE)
 {VM_cvar, 1, 8},						// #45 float(string s) cvar (QUAKE)
-{VM_localcmd_client, 1, 8},				// #46 void(string s) localcmd (QUAKE)
+{VM_localcmd_local, 1, 8},				// #46 void(string s) localcmd (QUAKE)
 {VM_nextent, 1, 1},						// #47 entity(entity e) nextent (QUAKE)
 {VM_CL_particle, 4, 4},					// #48 void(vector o, vector d, float color, float count) particle (QUAKE)
 {VM_changeyaw, 0, 0},					// #49 void() ChangeYaw (QUAKE)

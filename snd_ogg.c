@@ -306,7 +306,7 @@ qbool OGG_OpenLibrary (void)
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the vorbis DLL automatically when loading the VorbisFile DLL
-	return Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs) && Sys_LoadLibrary (dllnames_vf, &vf_dll, vorbisfilefuncs);
+	return Sys_LoadDependency (dllnames_vo, &vo_dll, vorbisfuncs) && Sys_LoadDependency (dllnames_vf, &vf_dll, vorbisfilefuncs);
 }
 
 
@@ -319,8 +319,8 @@ Unload the VorbisFile DLL
 */
 void OGG_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&vf_dll);
-	Sys_UnloadLibrary (&vo_dll);
+	Sys_FreeLibrary (&vf_dll);
+	Sys_FreeLibrary (&vo_dll);
 }
 
 #endif

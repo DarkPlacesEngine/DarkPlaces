@@ -289,12 +289,12 @@ qbool LibAV_LoadLibrary(void)
 		return false;
 
 	// Load the DLL
-	if (Sys_LoadLibrary (dllnames_libavcodec, &libavcodec_dll, libavcodecfuncs))
+	if (Sys_LoadDependency (dllnames_libavcodec, &libavcodec_dll, libavcodecfuncs))
 	{
-		if(Sys_LoadLibrary(dllnames_libavformat, &libavformat_dll, libavformatfuncs))
+		if(Sys_LoadDependency(dllnames_libavformat, &libavformat_dll, libavformatfuncs))
 			return true;
 		Con_Printf(CON_ERROR "Failed to load the libavformat library. Cannot use libavcodec without it\n");
-		Sys_UnloadLibrary(&libavcodec_dll);
+		Sys_FreeLibrary(&libavcodec_dll);
 	}
 
 	return false;

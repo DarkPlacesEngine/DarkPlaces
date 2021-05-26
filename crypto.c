@@ -1,3 +1,24 @@
+/*
+Copyright (C) 2010-2015 Rudolf Polzer (divVerent)
+Copyright (C) 2010-2020 Ashley Rose Hale (LadyHavoc)
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+
 #include "quakedef.h"
 #include "crypto.h"
 #include "common.h"
@@ -279,12 +300,12 @@ static qbool Crypto_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &d0_blind_id_dll, d0_blind_id_funcs);
+	return Sys_LoadDependency (dllnames, &d0_blind_id_dll, d0_blind_id_funcs);
 }
 
 static void Crypto_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&d0_blind_id_dll);
+	Sys_FreeLibrary (&d0_blind_id_dll);
 }
 
 #endif
@@ -348,12 +369,12 @@ static qbool Crypto_Rijndael_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &d0_rijndael_dll, d0_rijndael_funcs);
+	return Sys_LoadDependency (dllnames, &d0_rijndael_dll, d0_rijndael_funcs);
 }
 
 static void Crypto_Rijndael_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&d0_rijndael_dll);
+	Sys_FreeLibrary (&d0_rijndael_dll);
 }
 
 #endif

@@ -327,7 +327,7 @@ void Font_CloseLibrary (void)
 		font_ft2lib = NULL;
 	}
 #ifndef DP_FREETYPE_STATIC
-	Sys_UnloadLibrary (&ft2_dll);
+	Sys_FreeLibrary (&ft2_dll);
 #endif
 	pp.buf = NULL;
 }
@@ -367,7 +367,7 @@ qbool Font_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	if (!Sys_LoadLibrary (dllnames, &ft2_dll, ft2funcs))
+	if (!Sys_LoadDependency (dllnames, &ft2_dll, ft2funcs))
 		return false;
 #endif
 	return true;

@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2000-2020 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -1526,7 +1527,7 @@ Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 */
 static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 {
-	int y, i, col_out, linepos, text_start, prefix_start;
+	int y, i, col_out, linepos, text_start, prefix_start = 0;
 	char text[MAX_INPUTLINE + 5 + 9 + 1]; // space for ^xRGB, "say_team:" and \0
 	float xo;
 	size_t len_out;
@@ -2205,10 +2206,15 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 				lumplen = BuffLittleLong(buf + 4 + 8 * LUMP_ENTITIES + 4);
 				dpsnprintf(desc, sizeof(desc), "BSP2RMQe");
 			}
-			else
+			else if(!memcmp(buf, "VBSP", 4))
 			{
-				dpsnprintf(desc, sizeof(desc), "unknown%i", BuffLittleLong(buf));
+				hl2dheader_t *header = (hl2dheader_t *)buf;
+				lumpofs = LittleLong(header->lumps[HL2LUMP_ENTITIES].fileofs);
+				lumplen = LittleLong(header->lumps[HL2LUMP_ENTITIES].filelen);
+				dpsnprintf(desc, sizeof(desc), "VBSP%i", LittleLong(((int *)buf)[1]));
 			}
+			else
+				dpsnprintf(desc, sizeof(desc), "unknown%i", BuffLittleLong(buf));
 			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
 			memcpy(entfilename + strlen(entfilename) - 4, ".ent", 5);
 			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);

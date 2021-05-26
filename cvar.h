@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2006-2021 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -76,10 +77,9 @@ typedef struct cvar_s
 	const char *defstring;
 
 	void (*callback)(struct cvar_s *var);
-	qbool ignore_callback;
 
 	char **aliases;
-	int aliasindex;
+	int aliases_size;
 
 	struct cvar_s *initstate; // snapshot of cvar during init
 
@@ -114,6 +114,8 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
 void Cvar_RegisterVariable(cvar_t *variable);
 
 qbool Cvar_Readonly (cvar_t *var, const char *cmd_name);
+
+void Cvar_Callback(cvar_t *var);
 
 /// equivelant to "<name> <variable>" typed at the console
 void Cvar_Set (cvar_state_t *cvars, const char *var_name, const char *value);
