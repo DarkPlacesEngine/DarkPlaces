@@ -76,7 +76,7 @@ cvar_t sv_checkforpacketsduringsleep = {CF_SERVER, "sv_checkforpacketsduringslee
 cvar_t sv_clmovement_enable = {CF_SERVER, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
 cvar_t sv_clmovement_minping = {CF_SERVER, "sv_clmovement_minping", "0", "if client ping is below this time in milliseconds, then their ability to use cl_movement prediction is disabled for a while (as they don't need it)"};
 cvar_t sv_clmovement_minping_disabletime = {CF_SERVER, "sv_clmovement_minping_disabletime", "1000", "when client falls below minping, disable their prediction for this many milliseconds (should be at least 1000 or else their prediction may turn on/off frequently)"};
-cvar_t sv_clmovement_inputtimeout = {CF_SERVER, "sv_clmovement_inputtimeout", "0.2", "when a client does not send input for this many seconds, force them to move anyway (unlike QuakeWorld)"};
+cvar_t sv_clmovement_inputtimeout = {CF_SERVER, "sv_clmovement_inputtimeout", "0.1", "when a client does not send input for this many seconds (max 0.1), force them to move anyway (unlike QuakeWorld)"};
 cvar_t sv_cullentities_nevercullbmodels = {CF_SERVER, "sv_cullentities_nevercullbmodels", "0", "if enabled the clients are always notified of moving doors and lifts and other submodels of world (warning: eats a lot of network bandwidth on some levels!)"};
 cvar_t sv_cullentities_pvs = {CF_SERVER, "sv_cullentities_pvs", "1", "fast but loose culling of hidden entities"};
 cvar_t sv_cullentities_stats = {CF_SERVER, "sv_cullentities_stats", "0", "displays stats on network entities culled by various methods for each client"};
@@ -204,6 +204,8 @@ cvar_t sv_autodemo_perclient_discardable = {CF_SERVER | CF_ARCHIVE, "sv_autodemo
 cvar_t halflifebsp = {CF_SERVER, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 cvar_t sv_mapformat_is_quake2 = {CF_SERVER, "sv_mapformat_is_quake2", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors, .frame on submodels and other things)"};
 cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors)"};
+
+cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
 server_t sv;
 server_static_t svs;
@@ -430,30 +432,6 @@ static void Host_Timescale_c(cvar_t *var)
 static void SV_AreaStats_f(cmd_state_t *cmd)
 {
 	World_PrintAreaStats(&sv.world, "server");
-}
-
-static qbool SV_CanSave(void)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	if(SV_IsLocalServer() == 1)
-	{
-		// singleplayer checks
-		if ((svs.clients[0].active && PRVM_serveredictfloat(svs.clients[0].edict, deadflag)))
-		{
-			Con_Print("Can't savegame with a dead player\n");
-			return false;
-		}
-
-		if(host.hook.CL_Intermission && host.hook.CL_Intermission())
-		{
-			Con_Print("Can't save in intermission.\n");
-			return false;
-		}
-	}
-	else
-		Con_Print(CON_WARN "Warning: saving a multiplayer game may have strange results when restored (to properly resume, all players must join in the same player slots and then the game can be reloaded).\n");
-	return true;
-	
 }
 
 static void SV_ServerOptions (void)
@@ -705,12 +683,15 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake2);
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
+	Cvar_RegisterVariable (&sv_writepicture_quality);
+
 	SV_InitOperatorCommands();
-	host.hook.SV_CanSave = SV_CanSave;
+	host.hook.SV_Shutdown = SV_Shutdown;
 
 	sv_mempool = Mem_AllocPool("server", 0, NULL);
 
 	SV_ServerOptions();
+	Cvar_Callback(&sv_netport);
 }
 
 static void SV_SaveEntFile_f(cmd_state_t *cmd)
@@ -910,11 +891,6 @@ void SV_SendServerinfo (client_t *client)
 	client->movesequence = 0;
 	client->movement_highestsequence_seen = 0;
 	memset(&client->movement_count, 0, sizeof(client->movement_count));
-#ifdef NUM_PING_TIMES
-	for (i = 0;i < NUM_PING_TIMES;i++)
-		client->ping_times[i] = 0;
-	client->num_pings = 0;
-#endif
 	client->ping = 0;
 
 	// allow the client some time to send his keepalives, even if map loading took ages
@@ -1797,15 +1773,6 @@ void SV_SpawnServer (const char *map)
 
 	if(sv.active)
 	{
-		client_t *client;
-		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
-		{
-			if (client->netconnection)
-			{
-				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
-				MSG_WriteString(&client->netconnection->message, "reconnect\n");
-			}
-		}
 		World_End(&sv.world);
 		if(PRVM_serverfunction(SV_Shutdown))
 		{
@@ -1848,8 +1815,23 @@ void SV_SpawnServer (const char *map)
 //
 // tell all connected clients that we are going to a new level
 //
-	if (!sv.active)
+	if (sv.active)
+	{
+		client_t *client;
+		for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+		{
+			if (client->netconnection)
+			{
+				MSG_WriteByte(&client->netconnection->message, svc_stufftext);
+				MSG_WriteString(&client->netconnection->message, "reconnect\n");
+			}
+		}
+	}
+	else
+	{
+		// open server port
 		NetConn_OpenServerPorts(true);
+	}
 
 //
 // make cvars consistant
@@ -2078,10 +2060,12 @@ void SV_Shutdown(void)
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
 
-	Con_DPrintf("SV_Shutdown\n");
+	SV_LockThreadMutex();
 
 	if (!sv.active)
-		return;
+		goto end;
+
+	Con_DPrintf("SV_Shutdown\n");
 
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
@@ -2110,8 +2094,8 @@ void SV_Shutdown(void)
 //
 	memset(&sv, 0, sizeof(sv));
 	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
-
-	cl.islocalgame = false;
+end:
+	SV_UnlockThreadMutex();
 }
 
 /////////////////////////////////////////////////////
@@ -2269,7 +2253,7 @@ static qbool SVVM_load_edict(prvm_prog_t *prog, prvm_edict_t *ent)
 static void SV_VM_Setup(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	PRVM_Prog_Init(prog, &cmd_server);
+	PRVM_Prog_Init(prog, cmd_local);
 
 	// allocate the mempools
 	// TODO: move the magic numbers/constants into #defines [9/13/2006 Black]
@@ -2465,10 +2449,26 @@ static void SV_CheckTimeouts(void)
 	{
 		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout)
 		{
-			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+			if (host_client->begun)
+				SV_BroadcastPrintf("Client \"%s\" connection timed out\n", host_client->name);
+			else
+				Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
+
 			SV_DropClient(false);
 		}
 	}
+}
+
+/*
+==================
+SV_TimeReport
+
+Returns a time report string, for example for
+==================
+*/
+const char *SV_TimingReport(char *buf, size_t buflen)
+{
+	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
 }
 
 extern cvar_t host_maxwait;
@@ -2504,7 +2504,7 @@ double SV_Frame(double time)
 			}
 
 			if(svs.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
-				Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+				Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 		}
 
 		if(svs.perf_acc_realtime > 5 || sv.time < 10)
@@ -2700,7 +2700,7 @@ static int SV_ThreadFunc(void *voiddata)
 			}
 			if(svs.perf_lost > 0 && developer_extra.integer)
 				if(playing)
-					Con_DPrintf("Server can't keep up: %s\n", Host_TimingReport(vabuf, sizeof(vabuf)));
+					Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
 		}
 

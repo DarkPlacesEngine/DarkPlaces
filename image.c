@@ -1084,6 +1084,9 @@ unsigned char *loadimagepixelsbgra (const char *filename, qbool complain, qbool 
 	for (format = firstformat;format->formatstring;format++)
 	{
 		dpsnprintf (name, sizeof(name), format->formatstring, basename);
+
+		FS_SanitizePath(name);
+
 		if(FS_FileExists(name) && (f = FS_LoadFile(name, tempmempool, true, &filesize)) != NULL)
 		{
 			mymiplevel = miplevel ? *miplevel : 0;

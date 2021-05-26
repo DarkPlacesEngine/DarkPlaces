@@ -40,7 +40,7 @@ m*_t structures are in-memory
 
 */
 
-typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_obj, mod_null} modtype_t;
+typedef enum modtype_e {mod_invalid, mod_brushq1, mod_sprite, mod_alias, mod_brushq2, mod_brushq3, mod_brushhl2, mod_obj, mod_null} modtype_t;
 
 typedef struct animscene_s
 {
@@ -413,6 +413,7 @@ msurface_t;
 #include "model_q1bsp.h"
 #include "model_q2bsp.h"
 #include "model_q3bsp.h"
+#include "model_vbsp.h"
 #include "model_sprite.h"
 #include "model_alias.h"
 
@@ -501,9 +502,9 @@ typedef struct model_s
 	const char		*modeldatatypestring;
 	// generates vertex data for a given frameblend
 	void(*AnimateVertices)(const struct model_s * RESTRICT model, const struct frameblend_s * RESTRICT frameblend, const struct skeleton_s *skeleton, float * RESTRICT vertex3f, float * RESTRICT normal3f, float * RESTRICT svector3f, float * RESTRICT tvector3f);
-	// draw the model's sky polygons (only used by brush models)
+	// draw the model's sky polygons
 	void(*DrawSky)(struct entity_render_s *ent);
-	// draw refraction/reflection textures for the model's water polygons (only used by brush models)
+	// draw refraction/reflection textures for the model's water polygons
 	void(*DrawAddWaterPlanes)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
 	void(*Draw)(struct entity_render_s *ent);
@@ -606,6 +607,11 @@ void Mod_MakeSortedSurfaces(model_t *mod);
 // automatically called after model loader returns
 void Mod_BuildVBOs(void);
 
+/// Sets the mod->DrawSky and mod->DrawAddWaterPlanes pointers conditionally based on whether surfaces in this submodel use these features
+/// called specifically by brush model loaders when generating submodels
+/// automatically called after model loader returns
+void Mod_SetDrawSkyAndWater(model_t* mod);
+
 shadowmesh_t *Mod_ShadowMesh_Alloc(struct mempool_s *mempool, int maxverts, int maxtriangles);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, const float *vertex3f);
 void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtris, const int *element3i);
@@ -703,8 +709,6 @@ void Mod_Mesh_Destroy(model_t *mod);
 void Mod_Mesh_Reset(model_t *mod);
 texture_t *Mod_Mesh_GetTexture(model_t *mod, const char *name, int defaultdrawflags, int defaulttexflags, int defaultmaterialflags);
 msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithprevioussurface);
-void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf);
-int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a);
 void Mod_Mesh_AddTriangle(model_t *mod, msurface_t *surf, int e0, int e1, int e2);
 void Mod_Mesh_Validate(model_t *mod);
@@ -740,6 +744,7 @@ void Mod_BSP2_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_HLBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IBSP_Load(model_t *mod, void *buffer, void *bufferend);
+void Mod_VBSP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_MAP_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_OBJ_Load(model_t *mod, void *buffer, void *bufferend);
 void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend);

@@ -565,13 +565,13 @@ static qbool SCR_CaptureVideo_Ogg_OpenLibrary(void)
 	};
 
 	return
-		Sys_LoadLibrary (dllnames_og, &og_dll, oggfuncs)
+		Sys_LoadDependency (dllnames_og, &og_dll, oggfuncs)
 		&&
-		Sys_LoadLibrary (dllnames_th, &th_dll, theorafuncs)
+		Sys_LoadDependency (dllnames_th, &th_dll, theorafuncs)
 		&&
-		Sys_LoadLibrary (dllnames_vo, &vo_dll, vorbisfuncs)
+		Sys_LoadDependency (dllnames_vo, &vo_dll, vorbisfuncs)
 		&&
-		Sys_LoadLibrary (dllnames_ve, &ve_dll, vorbisencfuncs);
+		Sys_LoadDependency (dllnames_ve, &ve_dll, vorbisencfuncs);
 }
 
 void SCR_CaptureVideo_Ogg_Init(void)
@@ -596,10 +596,10 @@ qbool SCR_CaptureVideo_Ogg_Available(void)
 
 void SCR_CaptureVideo_Ogg_CloseDLL(void)
 {
-	Sys_UnloadLibrary (&ve_dll);
-	Sys_UnloadLibrary (&vo_dll);
-	Sys_UnloadLibrary (&th_dll);
-	Sys_UnloadLibrary (&og_dll);
+	Sys_FreeLibrary (&ve_dll);
+	Sys_FreeLibrary (&vo_dll);
+	Sys_FreeLibrary (&th_dll);
+	Sys_FreeLibrary (&og_dll);
 }
 
 // this struct should not be needed

@@ -577,7 +577,7 @@ typedef struct client_static_s
 	int demonum;
 	// list of demos in loop
 	char demos[MAX_DEMOS][MAX_DEMONAME];
-	// the actively playing demo (set by CL_PlayDemo_f)
+	// the actively playing demo (set by CL_PlayDemo)
 	char demoname[MAX_QPATH];
 
 // demo recording info must be here, because record is started before
@@ -871,7 +871,12 @@ typedef struct client_state_s
 	// how long it has been since the previous client frame in real time
 	// (not game time, for that use cl.time - cl.oldtime)
 	double realframetime;
-	
+
+	// used by cl_nettimesyncboundmode 7
+#define NUM_TS_ERRORS 32 // max 256
+	unsigned char ts_error_num;
+	float ts_error_stor[NUM_TS_ERRORS];
+
 	// fade var for fading while dead
 	float deathfade;
 
@@ -1042,8 +1047,8 @@ typedef struct client_state_s
 	// use cl.scores[cl.playerentity-1].qw_spectator instead
 	//qbool qw_spectator;
 
-	// last time an input packet was sent
-	double lastpackettime;
+	// time accumulated since an input packet was sent
+	float timesincepacket;
 
 	// movement parameters for client prediction
 	unsigned int moveflags;
@@ -1295,6 +1300,7 @@ void CL_WriteDemoMessage(sizebuf_t *mesage);
 void CL_CutDemo(unsigned char **buf, fs_offset_t *filesize);
 void CL_PasteDemo(unsigned char **buf, fs_offset_t *filesize);
 
+void CL_PlayDemo(const char *demo);
 void CL_NextDemo(void);
 void CL_Stop_f(cmd_state_t *cmd);
 void CL_Record_f(cmd_state_t *cmd);

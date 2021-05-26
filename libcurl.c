@@ -331,16 +331,16 @@ static void Curl_CheckCommandWhenDone(void)
 		if(numdownloads_fail == 0)
 		{
 			Con_DPrintf("cURL downloads occurred, executing %s\n", command_when_done);
-			Cbuf_AddText(&cmd_client, "\n");
-			Cbuf_AddText(&cmd_client, command_when_done);
-			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(cmd_local, "\n");
+			Cbuf_AddText(cmd_local, command_when_done);
+			Cbuf_AddText(cmd_local, "\n");
 		}
 		else
 		{
 			Con_DPrintf("cURL downloads FAILED, executing %s\n", command_when_error);
-			Cbuf_AddText(&cmd_client, "\n");
-			Cbuf_AddText(&cmd_client, command_when_error);
-			Cbuf_AddText(&cmd_client, "\n");
+			Cbuf_AddText(cmd_local, "\n");
+			Cbuf_AddText(cmd_local, command_when_error);
+			Cbuf_AddText(cmd_local, "\n");
 		}
 		Curl_Clear_forthismap();
 	}
@@ -377,7 +377,7 @@ static qbool CURL_OpenLibrary (void)
 		return true;
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &curl_dll, curlfuncs);
+	return Sys_LoadDependency (dllnames, &curl_dll, curlfuncs);
 }
 
 
@@ -390,7 +390,7 @@ Unload the cURL DLL
 */
 static void CURL_CloseLibrary (void)
 {
-	Sys_UnloadLibrary (&curl_dll);
+	Sys_FreeLibrary (&curl_dll);
 }
 
 
@@ -1119,13 +1119,13 @@ qbool Curl_Begin_ToMemory_POST(const char *URL, const char *extraheaders, double
 
 /*
 ====================
-Curl_Run
+Curl_Frame
 
 call this regularily as this will always download as much as possible without
 blocking.
 ====================
 */
-void Curl_Run(void)
+void Curl_Frame(void)
 {
 	double maxspeed;
 	downloadinfo *di;
@@ -1268,7 +1268,7 @@ void Curl_CancelAll(void)
 ====================
 Curl_Running
 
-returns true iff there is a download running.
+returns true if there is a download running.
 ====================
 */
 qbool Curl_Running(void)
@@ -1553,7 +1553,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
 	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
-	//Cmd_AddCommand(&cmd_client, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
+	//Cmd_AddCommand(cmd_local, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
 
 /*

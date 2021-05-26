@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "menu.h"
 #endif
 #include "cl_video.h"
+#include "float.h"
 
 const char *svc_strings[128] =
 {
@@ -185,9 +186,9 @@ cvar_t cl_sound_ric_gunshot = {CF_CLIENT, "cl_sound_ric_gunshot", "0", "specifie
 cvar_t cl_sound_r_exp3 = {CF_CLIENT, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
 cvar_t cl_serverextension_download = {CF_CLIENT, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {CF_CLIENT | CF_ARCHIVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
-cvar_t cl_nettimesyncfactor = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (bounding still applies)"};
-cvar_t cl_nettimesyncboundmode = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundmode", "6", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3, 5 = slighttly nicer version of Quake3 method, 6 = bounding + Quake3"};
-cvar_t cl_nettimesyncboundtolerance = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1)"};
+cvar_t cl_nettimesyncfactor = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (only applied in bound modes 0, 1, 2, 3)"};
+cvar_t cl_nettimesyncboundmode = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundmode", "6", "method of restricting client time to valid values, 0 = no correction, 1 = tight bounding (jerky with packet loss), 2 = loose bounding (corrects it if out of bounds), 3 = leniant bounding (ignores temporary errors due to varying framerate), 4 = slow adjustment method from Quake3, 5 = slightly nicer version of Quake3 method, 6 = tight bounding + mode 5, 7 = jitter compensated dynamic adjustment rate"};
+cvar_t cl_nettimesyncboundtolerance = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncboundtolerance", "0.25", "how much error is tolerated by bounding check, as a fraction of frametime, 0.25 = up to 25% margin of error tolerated, 1 = use only new time, 0 = use only old time (same effect as setting cl_nettimesyncfactor to 1) (only affects bound modes 2 and 3)"};
 cvar_t cl_iplog_name = {CF_CLIENT | CF_ARCHIVE, "cl_iplog_name", "darkplaces_iplog.txt", "name of iplog file containing player addresses for iplog_list command and automatic ip logging when parsing status command"};
 
 static qbool QW_CL_CheckOrDownloadFile(const char *filename);
@@ -500,7 +501,7 @@ static void CL_SetupWorldModel(void)
 	World_Start(&cl.world);
 
 	// load or reload .loc file for team chat messages
-	CL_Locs_Reload_f(&cmd_client);
+	CL_Locs_Reload_f(cmd_local);
 
 	// make sure we send enough keepalives
 	CL_KeepaliveMessage(false);
@@ -940,7 +941,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 		return;
 
 	// abort existing upload if in progress
-	QW_CL_StopUpload_f(&cmd_client);
+	QW_CL_StopUpload_f(cmd_local);
 
 	Con_DPrintf("Starting upload of %d bytes...\n", size);
 
@@ -949,7 +950,7 @@ void QW_CL_StartUpload(unsigned char *data, int size)
 	cls.qw_uploadsize = size;
 	cls.qw_uploadpos = 0;
 
-	QW_CL_NextUpload_f(&cmd_client);
+	QW_CL_NextUpload_f(cmd_local);
 }
 
 #if 0
@@ -1620,7 +1621,7 @@ static void CL_SignonReply (void)
 			// execute cl_begindownloads next frame
 			// (after any commands added by svc_stufftext have been executed)
 			// when done with downloads the "prespawn" will be sent
-			Cbuf_AddText(&cmd_client, "\ncl_begindownloads\n");
+			Cbuf_AddText(cmd_local, "\ncl_begindownloads\n");
 
 			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			//MSG_WriteString (&cls.netcon->message, "prespawn");
@@ -1933,7 +1934,7 @@ static void CL_ParseServerInfo (void)
 			if (cls.demorecording)
 			{
 				// finish the previous level's demo file
-				CL_Stop_f(&cmd_client);
+				CL_Stop_f(cmd_local);
 			}
 
 			// start a new demo file
@@ -3292,7 +3293,6 @@ extern cvar_t host_timescale;
 extern cvar_t cl_lerpexcess;
 static void CL_NetworkTimeReceived(double newtime)
 {
-	double timehigh;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
 	if (cl_nolerp.integer || cls.timedemo || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)
@@ -3307,7 +3307,9 @@ static void CL_NetworkTimeReceived(double newtime)
 	}
 	else if (cls.protocol != PROTOCOL_QUAKEWORLD)
 	{
+		double timehigh = 0; // hush compiler warning
 		cl.mtime[1] = max(cl.mtime[1], cl.mtime[0] - 0.1);
+
 		if (developer_extra.integer && vid_activewindow)
 		{
 			if (cl.time < cl.mtime[1] - (cl.mtime[0] - cl.mtime[1]))
@@ -3315,22 +3317,31 @@ static void CL_NetworkTimeReceived(double newtime)
 			else if (cl.time > cl.mtime[0] + (cl.mtime[0] - cl.mtime[1]))
 				Con_DPrintf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 		}
-		cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
-		timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
-		if (cl_nettimesyncboundmode.integer == 1)
-			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-		else if (cl_nettimesyncboundmode.integer == 2)
+
+		if (cl_nettimesyncboundmode.integer < 4)
 		{
+			// doesn't make sense for modes > 3
+			cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
+			timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
+		}
+
+		switch (cl_nettimesyncboundmode.integer)
+		{
+		case 1:
+			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
+			break;
+
+		case 2:
 			if (cl.time < cl.mtime[1] || cl.time > timehigh)
 				cl.time = cl.mtime[1];
-		}
-		else if (cl_nettimesyncboundmode.integer == 3)
-		{
+			break;
+
+		case 3:
 			if ((cl.time < cl.mtime[1] && cl.oldtime < cl.mtime[1]) || (cl.time > timehigh && cl.oldtime > timehigh))
 				cl.time = cl.mtime[1];
-		}
-		else if (cl_nettimesyncboundmode.integer == 4)
-		{
+			break;
+
+		case 4:
 			if (fabs(cl.time - cl.mtime[1]) > 0.5)
 				cl.time = cl.mtime[1]; // reset
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
@@ -3339,20 +3350,44 @@ static void CL_NetworkTimeReceived(double newtime)
 				cl.time -= 0.002 * cl.movevars_timescale; // fall into the past by 2ms
 			else
 				cl.time += 0.001 * cl.movevars_timescale; // creep forward 1ms
-		}
-		else if (cl_nettimesyncboundmode.integer == 5)
-		{
+			break;
+
+		case 5:
 			if (fabs(cl.time - cl.mtime[1]) > 0.5)
 				cl.time = cl.mtime[1]; // reset
 			else if (fabs(cl.time - cl.mtime[1]) > 0.1)
 				cl.time += 0.5 * (cl.mtime[1] - cl.time); // fast
 			else
 				cl.time = bound(cl.time - 0.002 * cl.movevars_timescale, cl.mtime[1], cl.time + 0.001 * cl.movevars_timescale);
-		}
-		else if (cl_nettimesyncboundmode.integer == 6)
-		{
+			break;
+
+		case 6:
 			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
 			cl.time = bound(cl.time - 0.002 * cl.movevars_timescale, cl.mtime[1], cl.time + 0.001 * cl.movevars_timescale);
+			break;
+
+		case 7:
+			/* bones_was_here: this aims to prevent disturbances in the force from affecting cl.time
+			 * the rolling harmonic mean gives large time error outliers low significance
+			 * correction rate is dynamic and gradual (max 10% of mean error per tic)
+			 * time is correct within a few server frames of connect/map start
+			 * can achieve microsecond accuracy when cl.realframetime is a multiple of sv.frametime
+			 * prevents 0ms move frame times with uncapped fps
+			 * smoothest mode esp. for vsynced clients on servers with aggressive inputtimeout
+			 */
+			{
+				unsigned char i;
+				float error;
+				// in event of packet loss, cl.mtime[1] could be very old, so avoid if possible
+				double target = cl.movevars_ticrate ? cl.mtime[0] - cl.movevars_ticrate : cl.mtime[1];
+				cl.ts_error_stor[cl.ts_error_num] = 1.0f / max(fabs(cl.time - target), FLT_MIN);
+				cl.ts_error_num = (cl.ts_error_num + 1) % NUM_TS_ERRORS;
+				for (i = 0, error = 0.0f; i < NUM_TS_ERRORS; i++)
+					error += cl.ts_error_stor[i];
+				error = 0.1f / (error / NUM_TS_ERRORS);
+				cl.time = bound(cl.time - error, target, cl.time + error);
+			}
+			break;
 		}
 	}
 	// this packet probably contains a player entity update, so we will need
@@ -3508,11 +3543,8 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-				{
-					Con_Printf("Server disconnected\n");
 					CL_Disconnect();
-				}
-				return;
+				break;
 
 			case qw_svc_print:
 				i = MSG_ReadByte(&cl_message);
@@ -3674,7 +3706,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_sellscreen:
-				Cmd_ExecuteString(&cmd_client, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", src_local, true);
 				break;
 
 			case qw_svc_smallkick:
@@ -3889,12 +3921,9 @@ void CL_ParseServerMessage(void)
 
 			case svc_disconnect:
 				if (cls.demonum != -1)
-					CL_NextDemo ();
+					CL_NextDemo();
 				else
-				{
-					Con_Printf ("Server disconnected\n");
-					CL_Disconnect ();
-				}
+					CL_Disconnect();
 				break;
 
 			case svc_print:
@@ -4183,7 +4212,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sellscreen:
-				Cmd_ExecuteString(&cmd_client, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", src_local, true);
 				break;
 			case svc_hidelmp:
 				if (gamemode == GAME_TENEBRAE)
@@ -4286,7 +4315,7 @@ void CL_Parse_DumpPacket(void)
 void CL_Parse_ErrorCleanUp(void)
 {
 	CL_StopDownload(0, 0);
-	QW_CL_StopUpload_f(&cmd_client);
+	QW_CL_StopUpload_f(cmd_local);
 }
 
 void CL_Parse_Init(void)

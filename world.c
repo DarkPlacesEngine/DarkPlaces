@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "clvm_cmds.h"
 #include "cl_collision.h"
+#include "com_list.h"
 
 /*
 
@@ -1522,7 +1523,7 @@ static void World_Physics_Init(void)
 
 #ifndef LINK_TO_LIBODE
 	// Load the DLL
-	if (Sys_LoadLibrary (dllnames, &ode_dll, odefuncs))
+	if (Sys_LoadDependency (dllnames, &ode_dll, odefuncs))
 #endif
 	{
 		dInitODE();
@@ -1539,7 +1540,7 @@ static void World_Physics_Init(void)
 # else
 			Con_Printf("ODE library not compiled for double precision - incompatible!  Not using ODE physics.\n");
 # endif
-			Sys_UnloadLibrary(&ode_dll);
+			Sys_FreeLibrary(&ode_dll);
 			ode_dll = NULL;
 		}
 		else
@@ -1565,7 +1566,7 @@ static void World_Physics_Shutdown(void)
 	{
 		dCloseODE();
 #ifndef LINK_TO_LIBODE
-		Sys_UnloadLibrary(&ode_dll);
+		Sys_FreeLibrary(&ode_dll);
 		ode_dll = NULL;
 #endif
 	}

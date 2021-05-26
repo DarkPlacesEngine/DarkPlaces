@@ -1,9 +1,28 @@
+/*
+Copyright (C) 2000-2020 DarkPlaces contributors
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+
 
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
 #include "image_png.h"
-#include "intoverflow.h"
 
 cvar_t gl_max_size = {CF_CLIENT | CF_ARCHIVE, "gl_max_size", "2048", "maximum allowed texture size, can be used to reduce video memory usage, limited by hardware capabilities (typically 2048, 4096, or 8192)"};
 cvar_t gl_max_lightmapsize = {CF_CLIENT | CF_ARCHIVE, "gl_max_lightmapsize", "512", "maximum allowed texture size for lightmap textures, use larger values to improve rendering speed, as long as there is enough video memory available (setting it too high for the hardware will cause very bad performance)"};

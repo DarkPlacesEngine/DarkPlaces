@@ -28,7 +28,7 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
+extern cvar_t sv_writepicture_quality;
 cvar_t r_texture_jpeg_fastpicmip = {CF_CLIENT | CF_ARCHIVE, "r_texture_jpeg_fastpicmip", "1", "perform gl_picmip during decompression for JPEG files (faster)"};
 
 // jboolean is unsigned char instead of int on Win32
@@ -169,9 +169,9 @@ typedef struct {
   /* The decompressor output side may not use these variables. */
   int dc_tbl_no;                /* DC entropy table selector (0..3) */
   int ac_tbl_no;                /* AC entropy table selector (0..3) */
-  
+
   /* Remaining fields should be treated as private by applications. */
-  
+
   /* These values are computed during compression or decompression startup: */
   /* Component's size in DCT blocks.
    * Any dummy blocks added to complete an MCU are not counted; therefore
@@ -523,7 +523,7 @@ qbool JPEG_OpenLibrary (void)
 #endif
 
 	// Load the DLL
-	return Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs);
+	return Sys_LoadDependency (dllnames, &jpeg_dll, jpegfuncs);
 #endif
 }
 
@@ -538,7 +538,7 @@ Unload the JPEG DLL
 void JPEG_CloseLibrary (void)
 {
 #ifndef LINK_TO_LIBJPEG
-	Sys_UnloadLibrary (&jpeg_dll);
+	Sys_FreeLibrary (&jpeg_dll);
 	jpeg_tried_loading = false; // allow retry
 #endif
 }
@@ -899,7 +899,7 @@ static size_t JPEG_try_SaveImage_to_Buffer (struct jpeg_compress_struct *cinfo, 
 	cinfo->in_color_space = JCS_RGB;
 	cinfo->input_components = 3;
 	qjpeg_set_defaults (cinfo);
-	qjpeg_set_quality (cinfo, quality, FALSE);
+	qjpeg_set_quality (cinfo, quality, false);
 
 	cinfo->comp_info[0].h_samp_factor = 2;
 	cinfo->comp_info[0].v_samp_factor = 2;
@@ -1017,7 +1017,7 @@ static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void
 
 	if(strlen(imagename) >= MAX_QPATH)
 		return; // can't add this
-	
+
 	i = (CompressedImageCacheItem*) Z_Malloc(sizeof(CompressedImageCacheItem));
 	strlcpy(i->imagename, imagename, sizeof(i->imagename));
 	i->maxsize = maxsize;

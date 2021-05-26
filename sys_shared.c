@@ -48,10 +48,8 @@ char *Sys_TimeString(const char *timeformat)
 void Sys_Quit (int returnvalue)
 {
 	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	if ((&cmd_client)->cbuf->lock)
-		Cbuf_Unlock((&cmd_client)->cbuf);
-	if ((&cmd_server)->cbuf->lock)
-		Cbuf_Unlock((&cmd_server)->cbuf);
+	if ((cmd_local)->cbuf->lock)
+		Cbuf_Unlock((cmd_local)->cbuf);
 	SV_UnlockThreadMutex();
 	TaskQueue_Frame(true);
 
@@ -91,7 +89,7 @@ DLL MANAGEMENT
 ===============================================================================
 */
 
-static qbool Sys_LoadLibraryFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qbool complain, qbool has_next)
+static qbool Sys_LoadDependencyFunctions(dllhandle_t dllhandle, const dllfunction_t *fcts, qbool complain, qbool has_next)
 {
 	const dllfunction_t *func;
 	if(dllhandle)
@@ -131,7 +129,7 @@ qbool Sys_LoadSelf(dllhandle_t *handle)
 	return true;
 }
 
-qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
+qbool Sys_LoadDependency (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
 #ifdef SUPPORTDLL
 	const dllfunction_t *func;
@@ -144,14 +142,14 @@ qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunc
 #ifndef WIN32
 #ifdef PREFER_PRELOAD
 	dllhandle = dlopen(NULL, RTLD_LAZY | RTLD_GLOBAL);
-	if(Sys_LoadLibraryFunctions(dllhandle, fcts, false, false))
+	if(Sys_LoadDependencyFunctions(dllhandle, fcts, false, false))
 	{
 		Con_DPrintf ("All of %s's functions were already linked in! Not loading dynamically...\n", dllnames[0]);
 		*handle = dllhandle;
 		return true;
 	}
 	else
-		Sys_UnloadLibrary(&dllhandle);
+		Sys_FreeLibrary(&dllhandle);
 notfound:
 #endif
 #endif
@@ -173,15 +171,14 @@ notfound:
 		SetDllDirectory("bin32");
 #  endif
 # endif
-		dllhandle = LoadLibrary (dllnames[i]);
-		// no need to unset this - we want ALL dlls to be loaded from there, anyway
-#else
-		dllhandle = dlopen (dllnames[i], RTLD_LAZY | RTLD_GLOBAL);
 #endif
-		if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
-			break;
-		else
-			Sys_UnloadLibrary (&dllhandle);
+		if(Sys_LoadLibrary(dllnames[i], &dllhandle))
+		{
+			if (Sys_LoadDependencyFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
+				break;
+			else
+				Sys_FreeLibrary (&dllhandle);
+		}
 	}
 
 	// see if the names can be loaded relative to the executable path
@@ -197,15 +194,14 @@ notfound:
 			strlcpy(temp, path, sizeof(temp));
 			strlcat(temp, dllnames[i], sizeof(temp));
 			Con_DPrintf (" \"%s\"", temp);
-#ifdef WIN32
-			dllhandle = LoadLibrary (temp);
-#else
-			dllhandle = dlopen (temp, RTLD_LAZY | RTLD_GLOBAL);
-#endif
-			if (Sys_LoadLibraryFunctions(dllhandle, fcts, true, dllnames[i+1] != NULL))
-				break;
-			else
-				Sys_UnloadLibrary (&dllhandle);
+
+			if(Sys_LoadLibrary(temp, &dllhandle))
+			{
+				if (Sys_LoadDependencyFunctions(dllhandle, fcts, true, (dllnames[i+1] != NULL) || (strrchr(sys.argv[0], '/'))))
+					break;
+				else
+					Sys_FreeLibrary (&dllhandle);
+			}
 		}
 	}
 
@@ -226,7 +222,28 @@ notfound:
 #endif
 }
 
-void Sys_UnloadLibrary (dllhandle_t* handle)
+qbool Sys_LoadLibrary(const char *name, dllhandle_t *handle)
+{
+	dllhandle_t dllhandle = 0;
+
+	if(handle == NULL)
+		return false;
+
+#ifdef SUPPORTDLL
+# ifdef WIN32
+	dllhandle = LoadLibrary (name);
+# else
+	dllhandle = dlopen (name, RTLD_LAZY | RTLD_GLOBAL);
+# endif
+#endif
+	if(!dllhandle)
+		return false;
+
+	*handle = dllhandle;
+	return true;
+}
+
+void Sys_FreeLibrary (dllhandle_t* handle)
 {
 #ifdef SUPPORTDLL
 	if (handle == NULL || *handle == NULL)
@@ -282,8 +299,9 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 # define HAVE_USLEEP 1
 #endif
 
-// this one is referenced elsewhere
+// these are referenced elsewhere
 cvar_t sys_usenoclockbutbenchmark = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
+cvar_t sys_libdir = {CF_READONLY | CF_CLIENT | CF_SERVER, "sys_libdir", "", "Default engine library directory"};
 
 // these are not
 static cvar_t sys_debugsleep = {CF_CLIENT | CF_SERVER, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
@@ -325,6 +343,7 @@ void Sys_Init_Commands (void)
 {
 	Cvar_RegisterVariable(&sys_debugsleep);
 	Cvar_RegisterVariable(&sys_usenoclockbutbenchmark);
+	Cvar_RegisterVariable(&sys_libdir);
 #if HAVE_TIMEGETTIME || HAVE_QUERYPERFORMANCECOUNTER || HAVE_CLOCKGETTIME || HAVE_GETTIMEOFDAY
 	if(sys_supportsdlgetticks)
 	{

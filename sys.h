@@ -173,13 +173,21 @@ dllfunction_t;
 
 qbool Sys_LoadSelf(dllhandle_t *handle);
 
-/*! Loads a library. 
+/*! Loads a dependency library. 
  * \param dllnames a NULL terminated array of possible names for the DLL you want to load.
  * \param handle
  * \param fcts
  */
-qbool Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts);
-void Sys_UnloadLibrary (dllhandle_t* handle);
+qbool Sys_LoadDependency (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts);
+
+/*! Loads a library.
+ * \param name a string of the library filename
+ * \param handle
+ * \return true if library was loaded successfully
+ */
+qbool Sys_LoadLibrary(const char *name, dllhandle_t *handle);
+
+void Sys_FreeLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
 int Sys_CheckParm (const char *parm);

@@ -394,7 +394,7 @@ void R_DrawPortals(void)
 			for (portal = model->brush.data_leafs[leafnum].portals;portal;portal = portal->next)
 			{
 				if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
-				if (!R_CullBox(portal->mins, portal->maxs))
+				if (!R_CullFrustum(portal->mins, portal->maxs))
 				{
 					VectorClear(center);
 					for (i = 0;i < portal->numpoints;i++)
@@ -426,7 +426,7 @@ static void R_View_WorldVisibility_CullSurfaces(void)
 	{
 		if (surfacevisible[surfaceindex])
 		{
-			if (R_CullBox(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)
+			if (R_CullFrustum(surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)
 			 || (r_vis_trace_surfaces.integer && !R_CanSeeBox(r_vis_trace_samples.integer, r_vis_trace_eyejitter.value, r_vis_trace_enlarge.value, r_vis_trace_expand.value, r_vis_trace_pad.value, r_refdef.view.origin, surfaces[surfaceindex].mins, surfaces[surfaceindex].maxs)))
 				surfacevisible[surfaceindex] = 0;
 		}
@@ -459,7 +459,7 @@ void R_View_WorldVisibility(qbool forcenovis)
 		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 		{
 			// if leaf is in current pvs and on the screen, mark its surfaces
-			if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+			if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullFrustum(leaf->mins, leaf->maxs))
 			{
 				r_refdef.stats[r_stat_world_leafs]++;
 				r_refdef.viewcache.world_leafvisible[j] = true;
@@ -490,7 +490,7 @@ void R_View_WorldVisibility(qbool forcenovis)
 				if (leaf->clusterindex < 0)
 					continue;
 				// if leaf is in current pvs and on the screen, mark its surfaces
-				if (!R_CullBox(leaf->mins, leaf->maxs))
+				if (!R_CullFrustum(leaf->mins, leaf->maxs))
 				{
 					r_refdef.stats[r_stat_world_leafs]++;
 					r_refdef.viewcache.world_leafvisible[j] = true;
@@ -513,7 +513,7 @@ void R_View_WorldVisibility(qbool forcenovis)
 				if (leaf->clusterindex < 0)
 					continue;
 				// if leaf is in current pvs and on the screen, mark its surfaces
-				if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+				if (CHECKPVSBIT(r_refdef.viewcache.world_pvsbits, leaf->clusterindex) && !R_CullFrustum(leaf->mins, leaf->maxs))
 				{
 					r_refdef.stats[r_stat_world_leafs]++;
 					r_refdef.viewcache.world_leafvisible[j] = true;
@@ -572,7 +572,7 @@ void R_View_WorldVisibility(qbool forcenovis)
 					cullmaxs[0] = p->maxs[0] + cullbias;
 					cullmaxs[1] = p->maxs[1] + cullbias;
 					cullmaxs[2] = p->maxs[2] + cullbias;
-					if (R_CullBox(cullmins, cullmaxs))
+					if (R_CullFrustum(cullmins, cullmaxs))
 						continue;
 					if (r_vis_trace.integer)
 					{
@@ -602,7 +602,7 @@ void R_Mod_DrawSky(entity_render_t *ent)
 
 void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 {
-	int i, j, n, flagsmask;
+	int i, n, flagsmask;
 	model_t *model = ent->model;
 	msurface_t *surfaces;
 	if (model == NULL)
@@ -617,12 +617,9 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 	if (ent == r_refdef.scene.worldentity)
 	{
 		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
-		{
-			j = model->modelsurfaces_sorted[i];
-			if (r_refdef.viewcache.world_surfacevisible[j])
-				if (surfaces[j].texture->basematerialflags & flagsmask)
-					R_Water_AddWaterPlane(surfaces + j, 0);
-		}
+			if (r_refdef.viewcache.world_surfacevisible[i])
+				if (surfaces[i].texture->basematerialflags & flagsmask)
+					R_Water_AddWaterPlane(surfaces + i, 0);
 	}
 	else
 	{
@@ -631,11 +628,8 @@ void R_Mod_DrawAddWaterPlanes(entity_render_t *ent)
 		else
 			n = 0;
 		for (i = model->submodelsurfaces_start;i < model->submodelsurfaces_end;i++)
-		{
-			j = model->modelsurfaces_sorted[i];
-			if (surfaces[j].texture->basematerialflags & flagsmask)
-				R_Water_AddWaterPlane(surfaces + j, n);
-		}
+			if (surfaces[i].texture->basematerialflags & flagsmask)
+				R_Water_AddWaterPlane(surfaces + i, n);
 	}
 	rsurface.entity = NULL; // used only by R_GetCurrentTexture and RSurf_ActiveModelEntity
 }
@@ -758,7 +752,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 				continue;
 #endif
 #if 0
-			if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
+			if (!r_shadow_compilingrtlight && R_CullBox(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
 				continue;
 #endif
 			// axial planes can be processed much more quickly
@@ -831,7 +825,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BSP(r_q1bsp_getlightinfo_t *info, qboo
 				continue;
 #endif
 #if 1
-			if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(leaf->mins, leaf->maxs, info->numfrustumplanes, info->frustumplanes))
+			if (!r_shadow_compilingrtlight && R_CullBox(leaf->mins, leaf->maxs, info->numfrustumplanes, info->frustumplanes))
 				continue;
 #endif
 
@@ -1015,7 +1009,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 					continue;
 #endif
 #if 1
-				if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(leaf->mins, leaf->maxs, info->numfrustumplanes, info->frustumplanes))
+				if (!r_shadow_compilingrtlight && R_CullBox(leaf->mins, leaf->maxs, info->numfrustumplanes, info->frustumplanes))
 					continue;
 #endif
 				surfaceindex = leaf->surfaceindex;
@@ -1082,7 +1076,7 @@ static void R_Q1BSP_RecursiveGetLightInfo_BIH(r_q1bsp_getlightinfo_t *info, cons
 				continue;
 #endif
 #if 0
-			if (!r_shadow_compilingrtlight && R_CullBoxCustomPlanes(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
+			if (!r_shadow_compilingrtlight && R_CullBox(node->mins, node->maxs, rtlight->cached_numfrustumplanes, rtlight->cached_frustumplanes))
 				continue;
 #endif
 			if (info->lightmins[axis] <= node->backmax)

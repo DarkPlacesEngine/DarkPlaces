@@ -1360,7 +1360,7 @@ void VID_Shared_Init(void)
 	//Cvar_RegisterVariable(&joy_x360_sensitivityroll);
 
 #ifdef WIN32
-	Sys_LoadLibrary(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
+	Sys_LoadDependency(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
 #endif
 
 	Cmd_AddCommand(CF_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");

@@ -55,6 +55,7 @@ static modloader_t loader[] =
 	{NULL, "BSP2", 4, Mod_BSP2_Load},
 	{NULL, "2PSB", 4, Mod_2PSB_Load},
 	{NULL, "IBSP", 4, Mod_IBSP_Load},
+	{NULL, "VBSP", 4, Mod_VBSP_Load},
 	{NULL, "ZYMOTICMODEL", 13, Mod_ZYMOTICMODEL_Load},
 	{NULL, "DARKPLACESMODEL", 16, Mod_DARKPLACESMODEL_Load},
 	{NULL, "PSKMODEL", 9, Mod_PSKMODEL_Load},
@@ -517,10 +518,10 @@ model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk)
 		// all models use memory, so allocate a memory pool
 		mod->mempool = Mem_AllocPool(mod->name, 0, NULL);
 
-		// call the apropriate loader
+		// We need to have a reference to the base model in case we're parsing submodels
 		loadmodel = mod;
 
-		// Try matching magic bytes.
+		// Call the appropriate loader. Try matching magic bytes.
 		for (i = 0; loader[i].Load; i++)
 		{
 			// Headerless formats can just load based on extension. Otherwise match the magic string.
@@ -540,6 +541,7 @@ model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk)
 					Mem_Free(buf);
 				}
 
+				Mod_SetDrawSkyAndWater(mod);
 				Mod_BuildVBOs();
 				break;
 			}
@@ -2255,12 +2257,7 @@ texture_shaderpass_t *Mod_CreateShaderPassFromQ3ShaderLayer(mempool_t *mempool, 
 	for (j = 0; j < Q3MAXTCMODS && layer->tcmods[j].tcmod != Q3TCMOD_NONE; j++)
 		shaderpass->tcmods[j] = layer->tcmods[j];
 	for (j = 0; j < layer->numframes; j++)
-	{
-		for (int i = 0; layer->texturename[j][i]; i++)
-			if(layer->texturename[j][i] == '\\')
-				layer->texturename[j][i] = '/';
 		shaderpass->skinframes[j] = R_SkinFrame_LoadExternal(layer->texturename[j], texflags, false, true);
-	}
 	return shaderpass;
 }
 
@@ -2881,9 +2878,25 @@ void Mod_VertexRangeFromElements(int numelements, const int *elements, int *firs
 		*lastvertexpointer = lastvertex;
 }
 
+void Mod_SetDrawSkyAndWater(model_t* mod)
+{
+	int j;
+	uint64_t basematerialflags = 0;
+	// by default assume there is no sky or water used in this model
+	mod->DrawSky = NULL;
+	mod->DrawAddWaterPlanes = NULL;
+	// combine all basematerialflags observed in the submodelsurfaces range, then check for special flags
+	for (j = mod->submodelsurfaces_start; j < mod->submodelsurfaces_end; j++)
+		if (mod->data_surfaces[j].texture)
+			basematerialflags |= mod->data_surfaces[j].texture->basematerialflags;
+	if (basematerialflags & MATERIALFLAG_SKY)
+		mod->DrawSky = R_Mod_DrawSky;
+	if (basematerialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION | MATERIALFLAG_CAMERA))
+		mod->DrawAddWaterPlanes = R_Mod_DrawAddWaterPlanes;
+}
+
 typedef struct Mod_MakeSortedSurfaces_qsortsurface_s
 {
-	int submodel;
 	int surfaceindex;
 	q3deffect_t* effect;
 	texture_t* texture;
@@ -2895,10 +2908,6 @@ static int Mod_MakeSortedSurfaces_qsortfunc(const void *a, const void *b)
 {
 	const Mod_MakeSortedSurfaces_qsortsurface_t* l = (Mod_MakeSortedSurfaces_qsortsurface_t*)a;
 	const Mod_MakeSortedSurfaces_qsortsurface_t* r = (Mod_MakeSortedSurfaces_qsortsurface_t*)b;
-	if (l->submodel < r->submodel)
-		return -1;
-	if (l->submodel > r->submodel)
-		return 1;
 	if (l->effect < r->effect)
 		return -1;
 	if (l->effect > r->effect)
@@ -2922,22 +2931,25 @@ void Mod_MakeSortedSurfaces(model_t *mod)
 {
 	// make an optimal set of texture-sorted batches to draw...
 	int j, k;
-	Mod_MakeSortedSurfaces_qsortsurface_t *info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
+	Mod_MakeSortedSurfaces_qsortsurface_t *info;
+
+	if(cls.state == ca_dedicated)
+		return;
+
+	info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
 	if (!mod->modelsurfaces_sorted)
 		mod->modelsurfaces_sorted = (int *) Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
 	// the goal is to sort by submodel (can't change which submodel a surface belongs to), and then by effects and textures
 	for (j = 0; j < mod->num_surfaces; j++)
 	{
-		info[j].submodel = 0;
 		info[j].surfaceindex = j;
 		info[j].effect = mod->data_surfaces[j].effect;
 		info[j].texture = mod->data_surfaces[j].texture;
 		info[j].lightmaptexture = mod->data_surfaces[j].lightmaptexture;
 	}
 	for (k = 0; k < mod->brush.numsubmodels; k++)
-		for (j = mod->brush.submodels[k]->submodelsurfaces_start; j < mod->brush.submodels[k]->submodelsurfaces_end; j++)
-			info[j].submodel = k;
-	qsort(info, mod->num_surfaces, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
+		if (mod->brush.submodels[k]->submodelsurfaces_end > mod->brush.submodels[k]->submodelsurfaces_start + 1)
+			qsort(info + mod->brush.submodels[k]->submodelsurfaces_start, (size_t)mod->brush.submodels[k]->submodelsurfaces_end - mod->brush.submodels[k]->submodelsurfaces_start, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
 	for (j = 0; j < mod->num_surfaces; j++)
 		mod->modelsurfaces_sorted[j] = info[j].surfaceindex;
 }
@@ -4531,30 +4543,9 @@ msurface_t *Mod_Mesh_AddSurface(model_t *mod, texture_t *tex, qbool batchwithpre
 	return surf;
 }
 
-static void Mod_Mesh_RebuildHashTable(model_t *mod, msurface_t *surf)
+int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
 {
 	int hashindex, h, vnum, mask;
-	surfmesh_t *mesh = &mod->surfmesh;
-
-	// rebuild the hash table
-	mesh->num_vertexhashsize = 4 * mesh->max_vertices;
-	mesh->num_vertexhashsize &= ~(mesh->num_vertexhashsize - 1); // round down to pow2
-	mesh->data_vertexhash = (int *)Mem_Realloc(mod->mempool, mesh->data_vertexhash, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
-	memset(mesh->data_vertexhash, -1, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
-	mask = mod->surfmesh.num_vertexhashsize - 1;
-	// no need to hash the vertices for the entire model, the latest surface will suffice.
-	for (vnum = surf ? surf->num_firstvertex : 0; vnum < mesh->num_vertices; vnum++)
-	{
-		// this uses prime numbers intentionally for computing the hash
-		hashindex = (unsigned int)(mesh->data_vertex3f[vnum * 3 + 0] * 2003 + mesh->data_vertex3f[vnum * 3 + 1] * 4001 + mesh->data_vertex3f[vnum * 3 + 2] * 7919 + mesh->data_normal3f[vnum * 3 + 0] * 4097 + mesh->data_normal3f[vnum * 3 + 1] * 257 + mesh->data_normal3f[vnum * 3 + 2] * 17) & mask;
-		for (h = hashindex; mesh->data_vertexhash[h] >= 0; h = (h + 1) & mask)
-			; // just iterate until we find the terminator
-		mesh->data_vertexhash[h] = vnum;
-	}
-}
-
-void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf)
-{
 	surfmesh_t *mesh = &mod->surfmesh;
 	if (mesh->max_vertices == mesh->num_vertices)
 	{
@@ -4566,15 +4557,36 @@ void Mod_Mesh_CheckResize_Vertex(model_t *mod, msurface_t *surf)
 		mesh->data_texcoordtexture2f = (float *)Mem_Realloc(mod->mempool, mesh->data_texcoordtexture2f, mesh->max_vertices * sizeof(float[2]));
 		mesh->data_texcoordlightmap2f = (float *)Mem_Realloc(mod->mempool, mesh->data_texcoordlightmap2f, mesh->max_vertices * sizeof(float[2]));
 		mesh->data_lightmapcolor4f = (float *)Mem_Realloc(mod->mempool, mesh->data_lightmapcolor4f, mesh->max_vertices * sizeof(float[4]));
-		Mod_Mesh_RebuildHashTable(mod, surf);
+		// rebuild the hash table
+		mesh->num_vertexhashsize = 4 * mesh->max_vertices;
+		mesh->num_vertexhashsize &= ~(mesh->num_vertexhashsize - 1); // round down to pow2
+		mesh->data_vertexhash = (int *)Mem_Realloc(mod->mempool, mesh->data_vertexhash, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
+		memset(mesh->data_vertexhash, -1, mesh->num_vertexhashsize * sizeof(*mesh->data_vertexhash));
+		mask = mod->surfmesh.num_vertexhashsize - 1;
+		// no need to hash the vertices for the entire model, the latest surface will suffice.
+		for (vnum = surf ? surf->num_firstvertex : 0; vnum < mesh->num_vertices; vnum++)
+		{
+			// this uses prime numbers intentionally for computing the hash
+			hashindex = (unsigned int)(mesh->data_vertex3f[vnum * 3 + 0] * 2003 + mesh->data_vertex3f[vnum * 3 + 1] * 4001 + mesh->data_vertex3f[vnum * 3 + 2] * 7919 + mesh->data_normal3f[vnum * 3 + 0] * 4097 + mesh->data_normal3f[vnum * 3 + 1] * 257 + mesh->data_normal3f[vnum * 3 + 2] * 17) & mask;
+			for (h = hashindex; mesh->data_vertexhash[h] >= 0; h = (h + 1) & mask)
+				; // just iterate until we find the terminator
+			mesh->data_vertexhash[h] = vnum;
+		}
 	}
-}
-
-int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
-{
-	int vnum;
-	surfmesh_t *mesh = &mod->surfmesh;
-
+	mask = mod->surfmesh.num_vertexhashsize - 1;
+	// this uses prime numbers intentionally for computing the hash
+	hashindex = (unsigned int)(x * 2003 + y * 4001 + z * 7919 + nx * 4097 + ny * 257 + nz * 17) & mask;
+	// when possible find an identical vertex within the same surface and return it
+	for(h = hashindex;(vnum = mesh->data_vertexhash[h]) >= 0;h = (h + 1) & mask)
+	{
+		if (vnum >= surf->num_firstvertex
+		 && mesh->data_vertex3f[vnum * 3 + 0] == x && mesh->data_vertex3f[vnum * 3 + 1] == y && mesh->data_vertex3f[vnum * 3 + 2] == z
+		 && mesh->data_normal3f[vnum * 3 + 0] == nx && mesh->data_normal3f[vnum * 3 + 1] == ny && mesh->data_normal3f[vnum * 3 + 2] == nz
+		 && mesh->data_texcoordtexture2f[vnum * 2 + 0] == s && mesh->data_texcoordtexture2f[vnum * 2 + 1] == t
+		 && mesh->data_texcoordlightmap2f[vnum * 2 + 0] == u && mesh->data_texcoordlightmap2f[vnum * 2 + 1] == v
+		 && mesh->data_lightmapcolor4f[vnum * 4 + 0] == r && mesh->data_lightmapcolor4f[vnum * 4 + 1] == g && mesh->data_lightmapcolor4f[vnum * 4 + 2] == b && mesh->data_lightmapcolor4f[vnum * 4 + 3] == a)
+			return vnum;
+	}
 	// add the new vertex
 	vnum = mesh->num_vertices++;
 	if (surf->num_vertices > 0)
@@ -4592,6 +4604,7 @@ int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z
 		VectorSet(surf->maxs, x, y, z);
 	}
 	surf->num_vertices = mesh->num_vertices - surf->num_firstvertex;
+	mesh->data_vertexhash[h] = vnum;
 	mesh->data_vertex3f[vnum * 3 + 0] = x;
 	mesh->data_vertex3f[vnum * 3 + 1] = y;
 	mesh->data_vertex3f[vnum * 3 + 2] = z;
@@ -4606,32 +4619,6 @@ int Mod_Mesh_AddVertex(model_t *mod, msurface_t *surf, float x, float y, float z
 	mesh->data_lightmapcolor4f[vnum * 4 + 1] = g;
 	mesh->data_lightmapcolor4f[vnum * 4 + 2] = b;
 	mesh->data_lightmapcolor4f[vnum * 4 + 3] = a;
-	return vnum;
-}
-
-int Mod_Mesh_IndexForVertex(model_t *mod, msurface_t *surf, float x, float y, float z, float nx, float ny, float nz, float s, float t, float u, float v, float r, float g, float b, float a)
-{
-	int hashindex, h, vnum, mask;
-	surfmesh_t *mesh = &mod->surfmesh;
-
-	Mod_Mesh_CheckResize_Vertex(mod, surf);
-
-	mask = mod->surfmesh.num_vertexhashsize - 1;
-	// this uses prime numbers intentionally for computing the hash
-	hashindex = (unsigned int)(x * 2003 + y * 4001 + z * 7919 + nx * 4097 + ny * 257 + nz * 17) & mask;
-	// when possible find an identical vertex within the same surface and return it
-	for(h = hashindex;(vnum = mesh->data_vertexhash[h]) >= 0;h = (h + 1) & mask)
-	{
-		if (vnum >= surf->num_firstvertex
-		 && mesh->data_vertex3f[vnum * 3 + 0] == x && mesh->data_vertex3f[vnum * 3 + 1] == y && mesh->data_vertex3f[vnum * 3 + 2] == z
-		 && mesh->data_normal3f[vnum * 3 + 0] == nx && mesh->data_normal3f[vnum * 3 + 1] == ny && mesh->data_normal3f[vnum * 3 + 2] == nz
-		 && mesh->data_texcoordtexture2f[vnum * 2 + 0] == s && mesh->data_texcoordtexture2f[vnum * 2 + 1] == t
-		 && mesh->data_texcoordlightmap2f[vnum * 2 + 0] == u && mesh->data_texcoordlightmap2f[vnum * 2 + 1] == v
-		 && mesh->data_lightmapcolor4f[vnum * 4 + 0] == r && mesh->data_lightmapcolor4f[vnum * 4 + 1] == g && mesh->data_lightmapcolor4f[vnum * 4 + 2] == b && mesh->data_lightmapcolor4f[vnum * 4 + 3] == a)
-			return vnum;
-	}
-	vnum = Mod_Mesh_AddVertex(mod, surf, x, y, z, nx, ny, nz, s, t, u, v, r, g, b, a);
-	mesh->data_vertexhash[h] = vnum;
 	return vnum;
 }
 
