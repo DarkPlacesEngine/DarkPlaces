@@ -652,7 +652,7 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 
 	sfx->total_length = qov_pcm_total(&vf, -1);
 	
-	shouldStream = FALSE;
+	shouldStream = false;
 	
 	//Con_Print("Sound effect (ogg) loaded\n");
 
@@ -667,7 +667,7 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 			(!nostream)
 			)
 		{
-		shouldStream = TRUE;
+		shouldStream = true;
 		}
 	}
 
