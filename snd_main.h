@@ -128,6 +128,7 @@ extern qbool snd_usethreadedmixing; // if true, the main thread does not mix sou
 extern struct cvar_s _snd_mixahead;
 extern struct cvar_s snd_swapstereo;
 extern struct cvar_s snd_streaming;
+extern struct cvar_s snd_streaming_ignoremusic;
 extern struct cvar_s snd_streaming_length;
 
 #define SND_CHANNELLAYOUT_AUTO		0

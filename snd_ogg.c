@@ -604,6 +604,7 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 	vorbis_info *vi;
 	vorbis_comment *vc;
 	double peak, gaindb;
+	int shouldStream;
 
 #ifndef LINK_TO_LIBVORBIS
 	if (!vf_dll)
@@ -649,8 +650,21 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 	sfx->format.width = 2;  // We always work with 16 bits samples
 
 	sfx->total_length = qov_pcm_total(&vf, -1);
+	
+	shouldStream = FALSE;
+	
+	//Con_Print("Sound effect (ogg) loaded\n");
 
 	if (snd_streaming.integer && (snd_streaming.integer >= 2 || sfx->total_length > max(sizeof(ogg_stream_perchannel_t), snd_streaming_length.value * sfx->format.speed)))
+	{
+		if (!(snd_streaming_ignoremusic.integer && (strncmp(filename, "sound/cdtracks/", 15) == 0 || strncmp(filename, "sound/music/", 12) == 0)))
+		{
+			shouldStream = TRUE;
+		}
+	}
+	
+
+	if (shouldStream)
 	{
 		// large sounds use the OGG fetcher to decode the file on demand (but the entire file is held in memory)
 		ogg_stream_persfx_t* per_sfx;
