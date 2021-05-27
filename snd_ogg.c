@@ -598,6 +598,7 @@ Load an Ogg Vorbis file into memory
 qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 {
 	unsigned char *data;
+	char *nostream;
 	fs_offset_t filesize;
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
@@ -655,14 +656,20 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 	
 	//Con_Print("Sound effect (ogg) loaded\n");
 
+	vc = qov_comment(&vf, -1);
+	OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, sfx->total_length, &peak, &gaindb);
+	nostream = qvorbis_comment_query(vc, "NOSTREAM", 0);
+
 	if (snd_streaming.integer && (snd_streaming.integer >= 2 || sfx->total_length > max(sizeof(ogg_stream_perchannel_t), snd_streaming_length.value * sfx->format.speed)))
 	{
-		if (!(snd_streaming_ignoremusic.integer && (strncmp(filename, "sound/cdtracks/", 15) == 0 || strncmp(filename, "sound/music/", 12) == 0)))
+		if	(
+			(!(snd_streaming_ignoremusic.integer && (strncmp(filename, "sound/cdtracks/", 15) == 0 || strncmp(filename, "sound/music/", 12) == 0))) &&
+			(!nostream)
+			)
 		{
-			shouldStream = TRUE;
+		shouldStream = TRUE;
 		}
 	}
-	
 
 	if (shouldStream)
 	{
@@ -678,8 +685,6 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 		sfx->fetcher_data = per_sfx;
 		sfx->fetcher = &ogg_fetcher;
 		sfx->flags |= SFXFLAG_STREAMED;
-		vc = qov_comment(&vf, -1);
-		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, sfx->total_length, &peak, &gaindb);
 		qov_clear(&vf);
 	}
 	else
@@ -702,8 +707,6 @@ qbool OGG_LoadVorbisFile(const char *filename, sfx_t *sfx)
 		bs = 0;
 		while ((ret = qov_read(&vf, &buff[done], (int)(len - done), mem_bigendian, 2, 1, &bs)) > 0)
 			done += ret;
-		vc = qov_comment(&vf, -1);
-		OGG_DecodeTags(vc, &sfx->loopstart, &sfx->total_length, sfx->total_length, &peak, &gaindb);
 		qov_clear(&vf);
 		Mem_Free(data);
 	}
