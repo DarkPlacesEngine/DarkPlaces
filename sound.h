@@ -101,6 +101,7 @@ sfx_t *S_FindName(const char *name);
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed);
 qbool S_LocalSound (const char *s);
+qbool S_LocalSound2 (const char *s, int chnl, float vlume);
 
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 void S_StopSound (int entnum, int entchannel);

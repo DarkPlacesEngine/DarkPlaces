@@ -2293,3 +2293,34 @@ qbool S_LocalSound (const char *sound)
 	channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 	return true;
 }
+
+qbool S_LocalSound2 (const char *sound, int chnl, float vlume)
+{
+	sfx_t	*sfx;
+	int		ch_ind;
+
+	if (!snd_initialized.integer || nosound.integer)
+		return true;
+
+	sfx = S_PrecacheSound (sound, true, false);
+	if (!sfx)
+	{
+		Con_Printf("S_LocalSound: can't precache %s\n", sound);
+		return false;
+	}
+
+	// menu sounds must not be freed on level change
+	sfx->flags |= SFXFLAG_MENUSOUND;
+
+	// Reki 5-28-2021
+	// A small hack to try to support lazy QC practices
+	if (vlume == 0)
+		vlume = 1;
+
+	ch_ind = S_StartSound (cl.viewentity, chnl, sfx, vec3_origin, vlume, 0);
+	if (ch_ind < 0)
+		return false;
+
+	channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
+	return true;
+}
