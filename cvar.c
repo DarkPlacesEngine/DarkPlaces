@@ -731,7 +731,6 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->aliases = NULL;
 	cvar->aliases_size = 0;
 	cvar->initstate = NULL;
-	memset(cvar->aliases, 0, sizeof(char *));
 
 	if(newdescription && *newdescription)
 		cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
