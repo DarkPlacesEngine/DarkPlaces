@@ -397,7 +397,7 @@ void CL_Disconnect(void)
 		sizebuf_t buf;
 		unsigned char bufdata[8];
 		if (cls.demorecording)
-			CL_Stop_f(cmd_client);
+			CL_Stop_f(cmd_local);
 
 		// send disconnect message 3 times to improve chances of server
 		// receiving it (but it still fails sometimes)
@@ -428,8 +428,13 @@ void CL_Disconnect(void)
 	cls.demoplayback = cls.timedemo = host.restless = false;
 	cls.signon = 0;
 
+	Cvar_Callback(&cl_netport);
+
 	// If we're dropped mid-connection attempt, it won't clear otherwise.
 	SCR_ClearLoadingScreen(false);
+
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 }
 
 /*
@@ -510,9 +515,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect ();
-	if (sv.active)
-		SV_Shutdown ();
+	CL_Disconnect();
 }
 
 
@@ -553,8 +556,8 @@ void CL_EstablishConnection(const char *address, int firstarg)
 		{
 			int i;
 			*cls.connect_userinfo = 0;
-			for(i = firstarg; i+2 <= Cmd_Argc(cmd_client); i += 2)
-				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(cmd_client, i), Cmd_Argv(cmd_client, i+1));
+			for(i = firstarg; i+2 <= Cmd_Argc(cmd_local); i += 2)
+				InfoString_SetValue(cls.connect_userinfo, sizeof(cls.connect_userinfo), Cmd_Argv(cmd_local, i), Cmd_Argv(cmd_local, i+1));
 		}
 		else if(firstarg < -1)
 		{
@@ -2751,7 +2754,6 @@ double CL_Frame (double time)
 	static double clframetime;
 	static double cl_timer = 0;
 	static double time1 = 0, time2 = 0, time3 = 0;
-	static double wait;
 	int pass1, pass2, pass3;
 
 	CL_VM_PreventInformationLeaks();
@@ -2794,9 +2796,8 @@ double CL_Frame (double time)
 		{
 			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxfps.value);
 			// when running slow, we need to sleep to keep input responsive
-			wait = bound(0, cl_maxfps_alwayssleep.value * 1000, 100000);
-			if (wait > 0)
-				Sys_Sleep((int)wait);
+			if (cl_maxfps_alwayssleep.value > 0)
+				Sys_Sleep((int)bound(0, cl_maxfps_alwayssleep.value * 1000, 100000));
 		}
 		else if (!vid_activewindow && cl_maxidlefps.value >= 1 && !cls.timedemo)
 			clframetime = cl.realframetime = max(cl_timer, 1.0 / cl_maxidlefps.value);
@@ -3083,6 +3084,8 @@ void CL_Init (void)
 		CL_MeshEntities_Init();
 
 		CL_Video_Init();
+
+		NetConn_UpdateSockets_Client();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
 		host.hook.Disconnect = CL_Disconnect;

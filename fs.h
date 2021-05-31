@@ -86,6 +86,7 @@ const char *FS_FileWithoutPath (const char *in);
 const char *FS_FileExtension (const char *in);
 int FS_CheckNastyPath (const char *path, qbool isgamedir);
 int FS_rmtree (const char *path);
+void FS_SanitizePath (char *path);
 
 extern const char *const fs_checkgamedir_missing; // "(missing)"
 const char *FS_CheckGameDir(const char *gamedir); // returns NULL if nasty, fs_checkgamedir_missing (exact pointer) if missing

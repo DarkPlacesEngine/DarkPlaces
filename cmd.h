@@ -142,17 +142,15 @@ typedef struct cmd_state_s
 
 	int cmd_flags; // cmd flags that identify this interpreter
 
-	/*
-	 * If a requested flag matches auto_flags, a command will be
-	 * added to a given interpreter with auto_function. For example,
-	 * a CF_SERVER_FROM_CLIENT command should be automatically added
-	 * to the client interpreter as CL_ForwardToServer_f. It can be
-	 * overridden at any time.
-	 */
-	int auto_flags;
-	xcommand_t auto_function;
+	qbool (*Handle)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
+	qbool (*NotFound)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
 }
 cmd_state_t;
+
+qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
+qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
+qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
+qbool Cmd_SV_NotFound(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
 
 typedef struct cmd_input_s
 {
@@ -168,12 +166,9 @@ typedef struct cmd_input_s
 extern cmd_userdefined_t cmd_userdefined_all; // aliases and csqc functions
 extern cmd_userdefined_t cmd_userdefined_null; // intentionally empty
 
-// command interpreter for client commands injected by CSQC, MQC or client engine code
+// command interpreter for local commands injected by SVQC, CSQC, MQC, server or client engine code
 // uses cmddefs_all
-extern cmd_state_t *cmd_client;
-// command interpreter for server commands injected by MQC, SVQC, menu engine code or server engine code
-// uses cmddefs_all
-extern cmd_state_t *cmd_server;
+extern cmd_state_t *cmd_local;
 // command interpreter for server commands received over network from clients
 // uses cmddefs_null
 extern cmd_state_t *cmd_serverfromclient;
@@ -282,6 +277,8 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 qbool Cmd_QuoteString(char *out, size_t outlen, const char *in, const char *quoteset, qbool putquotes);
 
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd);
+
+void Cmd_NoOperation_f(cmd_state_t *cmd);
 
 #endif
 

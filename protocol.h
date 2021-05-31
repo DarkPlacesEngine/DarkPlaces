@@ -388,10 +388,9 @@ typedef struct usercmd_s
 	vec_t	cursor_fraction;
 	int		cursor_entitynumber;
 
-	double time; // time the move is executed for (cl_movement: clienttime, non-cl_movement: receivetime)
-	double receivetime; // time the move was received at
-	double clienttime; // time to which server state the move corresponds to
-	int msec; // for predicted moves
+	double time; // time the move is executed for (non-cl_movement is executed at receivetime)
+	float receivetime; // time the move was received at (used for ping)
+	unsigned char msec; // for predicted moves
 	int buttons;
 	int impulse;
 	unsigned int sequence;

@@ -83,7 +83,7 @@ void Sys_Error (const char *error, ...)
 	if (!in_sys_error1)
 	{
 		in_sys_error1 = 1;
-		Host_Shutdown ();
+		//Host_Shutdown ();
 	}
 
 // shut down QHOST hooks if necessary

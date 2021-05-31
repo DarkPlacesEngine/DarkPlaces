@@ -179,9 +179,6 @@ typedef struct csqcentityframedb_s
 	int sendflags[NUM_CSQCENTITIES_PER_FRAME];
 } csqcentityframedb_t;
 
-// if defined this does ping smoothing, otherwise it does not
-//#define NUM_PING_TIMES 16
-
 #define NUM_SPAWN_PARMS 16
 
 typedef struct client_s
@@ -225,11 +222,6 @@ typedef struct client_s
 	/// PRVM_EDICT_NUM(clientnum+1)
 	prvm_edict_t *edict;
 
-#ifdef NUM_PING_TIMES
-	float ping_times[NUM_PING_TIMES];
-	/// ping_times[num_pings%NUM_PING_TIMES]
-	int num_pings;
-#endif
 	/// LadyHavoc: can be used for prediction or whatever...
 	float ping;
 
@@ -612,7 +604,7 @@ void SV_CheckVelocity (prvm_edict_t *ent);
 
 void SV_SetupVM(void);
 
-const char *Host_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
+const char *SV_TimingReport(char *buf, size_t buflen); ///< for output in SV_Status_f
 
 int SV_GetPitchSign(prvm_prog_t *prog, prvm_edict_t *ent);
 void SV_GetEntityMatrix(prvm_prog_t *prog, prvm_edict_t *ent, matrix4x4_t *out, qbool viewmatrix);

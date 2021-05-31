@@ -62,7 +62,7 @@ void Sys_Error (const char *error, ...)
 	if(!nocrashdialog)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", string, NULL);
 
-	Host_Shutdown ();
+	//Host_Shutdown ();
 	exit (1);
 }
 

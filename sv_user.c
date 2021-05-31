@@ -653,7 +653,7 @@ static void SV_ReadClientMove (void)
 	// read ping time
 	if (sv.protocol != PROTOCOL_QUAKE && sv.protocol != PROTOCOL_QUAKEDP && sv.protocol != PROTOCOL_NEHAHRAMOVIE && sv.protocol != PROTOCOL_NEHAHRABJP && sv.protocol != PROTOCOL_NEHAHRABJP2 && sv.protocol != PROTOCOL_NEHAHRABJP3 && sv.protocol != PROTOCOL_DARKPLACES1 && sv.protocol != PROTOCOL_DARKPLACES2 && sv.protocol != PROTOCOL_DARKPLACES3 && sv.protocol != PROTOCOL_DARKPLACES4 && sv.protocol != PROTOCOL_DARKPLACES5 && sv.protocol != PROTOCOL_DARKPLACES6)
 		move->sequence = MSG_ReadLong(&sv_message);
-	move->time = move->clienttime = MSG_ReadFloat(&sv_message);
+	move->time = MSG_ReadFloat(&sv_message);
 	if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	move->receivetime = (float)sv.time;
 
@@ -662,7 +662,7 @@ static void SV_ReadClientMove (void)
 #endif
 	// limit reported time to current time
 	// (incase the client is trying to cheat)
-	move->time = min(move->time, move->receivetime + sv.frametime);
+	move->time = min(move->time, sv.time + sv.frametime);
 
 	// read current angles
 	for (i = 0;i < 3;i++)
@@ -737,7 +737,8 @@ static void SV_ReadClientMove (void)
 		sv_readmoves[sv_numreadmoves++] = *move;
 
 	// movement packet loss tracking
-	if(move->sequence)
+	// bones_was_here: checking begun prevents heavy loss detection right after a map change
+	if(move->sequence && host_client->begun)
 	{
 		if(move->sequence > host_client->movement_highestsequence_seen)
 		{
@@ -774,12 +775,10 @@ static void SV_ExecuteClientMoves(void)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int moveindex;
-	float moveframetime;
+	double moveframetime;
 	double oldframetime;
 	double oldframetime2;
-#ifdef NUM_PING_TIMES
-	double total;
-#endif
+
 	if (sv_numreadmoves < 1)
 		return;
 	// only start accepting input once the player is spawned
@@ -810,7 +809,9 @@ static void SV_ExecuteClientMoves(void)
 				// this is a new move
 				move->time = bound(sv.time - 1, move->time, sv.time); // prevent slowhack/speedhack combos
 				move->time = max(move->time, host_client->cmd.time); // prevent backstepping of time
-				moveframetime = bound(0, move->time - host_client->cmd.time, min(0.1, sv_clmovement_inputtimeout.value));
+				// bones_was_here: limit moveframetime to a multiple of sv.frametime to match inputtimeout behaviour
+				moveframetime = min(move->time - host_client->cmd.time, min(0.1, sys_ticrate.value > 0.0 && sv.frametime > 0.0 ? sv.frametime * ceil(sv_clmovement_inputtimeout.value / sv.frametime) : sv_clmovement_inputtimeout.value));
+
 
 				// discard (treat like lost) moves with too low distance from
 				// the previous one to prevent hacks using float inaccuracy
@@ -839,8 +840,6 @@ static void SV_ExecuteClientMoves(void)
 				//  with this approach, and if they don't send input for a while they
 				//  start moving anyway, so the longest 'lagaport' possible is
 				//  determined by the sv_clmovement_inputtimeout cvar)
-				if (moveframetime <= 0)
-					continue;
 				oldframetime = PRVM_serverglobalfloat(frametime);
 				oldframetime2 = sv.frametime;
 				// update ping time for qc to see while executing this move
@@ -856,7 +855,7 @@ static void SV_ExecuteClientMoves(void)
 				SV_Physics_ClientMove();
 				sv.frametime = oldframetime2;
 				PRVM_serverglobalfloat(frametime) = oldframetime;
-				host_client->clmovement_inputtimeout = sv_clmovement_inputtimeout.value;
+				host_client->clmovement_inputtimeout = min(0.1, sv_clmovement_inputtimeout.value);
 			}
 		}
 	}
@@ -885,17 +884,9 @@ static void SV_ExecuteClientMoves(void)
 		host_client->movesequence = 0;
 		// make sure that normal physics takes over immediately
 		host_client->clmovement_inputtimeout = 0;
+		// update ping time
+		host_client->ping = host_client->cmd.receivetime - sv_readmoves[sv_numreadmoves-1].time;
 	}
-
-	// calculate average ping time
-	host_client->ping = host_client->cmd.receivetime - host_client->cmd.clienttime;
-#ifdef NUM_PING_TIMES
-	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = host_client->cmd.receivetime - host_client->cmd.clienttime;
-	host_client->num_pings++;
-	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
-		total += host_client->ping_times[i];
-	host_client->ping = total / NUM_PING_TIMES;
-#endif
 }
 
 void SV_ApplyClientMove (void)

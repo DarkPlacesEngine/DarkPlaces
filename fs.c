@@ -1392,6 +1392,10 @@ const char *FS_FileExtension (const char *in)
 {
 	const char *separator, *backslash, *colon, *dot;
 
+	dot = strrchr(in, '.');
+	if (dot == NULL)
+		return "";
+
 	separator = strrchr(in, '/');
 	backslash = strrchr(in, '\\');
 	if (!separator || separator < backslash)
@@ -1400,8 +1404,7 @@ const char *FS_FileExtension (const char *in)
 	if (!separator || separator < colon)
 		separator = colon;
 
-	dot = strrchr(in, '.');
-	if (dot == NULL || (separator && (dot < separator)))
+	if (separator && (dot < separator))
 		return "";
 
 	return dot + 1;
@@ -1626,7 +1629,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 		}
 	}
 
-	Host_SaveConfig();
+	Host_SaveConfig(CONFIGFILENAME);
 
 	fs_numgamedirs = numgamedirs;
 	for (i = 0;i < fs_numgamedirs;i++)
@@ -1637,15 +1640,15 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 
 	if (cls.demoplayback)
 	{
-		CL_Disconnect_f(cmd_client);
+		CL_Disconnect();
 		cls.demonum = 0;
 	}
 
 	// unload all sounds so they will be reloaded from the new files as needed
-	S_UnloadAllSounds_f(cmd_client);
+	S_UnloadAllSounds_f(cmd_local);
 
 	// restart the video subsystem after the config is executed
-	Cbuf_InsertText(cmd_client, "\nloadconfig\nvid_restart\n\n");
+	Cbuf_InsertText(cmd_local, "\nloadconfig\nvid_restart\n\n");
 
 	return true;
 }
@@ -2570,6 +2573,20 @@ int FS_CheckNastyPath (const char *path, qbool isgamedir)
 	return false;
 }
 
+/*
+====================
+FS_SanitizePath
+
+Sanitize path (replace non-portable characters 
+with portable ones in-place, etc)
+====================
+*/
+void FS_SanitizePath(char *path)
+{
+	for (; *path; path++)
+		if (*path == '\\')
+			*path = '/';
+}
 
 /*
 ====================

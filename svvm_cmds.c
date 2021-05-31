@@ -2854,33 +2854,14 @@ static void VM_SV_pointparticles(prvm_prog_t *prog)
 qbool SV_VM_ConsoleCommand (const char *text)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	int restorevm_tempstringsbuf_cursize;
-	int save_self;
-	qbool r = false;
-
-	if(!sv.active || !prog || !prog->loaded)
-		return false;
-
-	if (PRVM_serverfunction(ConsoleCmd))
-	{
-		save_self = PRVM_serverglobaledict(self);
-		PRVM_serverglobalfloat(time) = sv.time;
-		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(sv.world.prog->edicts);
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
-		prog->ExecuteProgram(prog, PRVM_serverfunction(ConsoleCmd), "QC function ConsoleCmd is missing");
-		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
-		PRVM_serverglobaledict(self) = save_self;
-		r = (int) PRVM_G_FLOAT(OFS_RETURN) != 0;
-	}
-	return r;
+	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.ConsoleCmd, true, PRVM_EDICT_TO_PROG(sv.world.prog->edicts), sv.time,  !(!sv.active || !prog || !prog->loaded), "QC function ConsoleCmd is missing"); 
 }
 
 // #352 void(string cmdname) registercommand (EXT_CSQC)
 static void VM_SV_registercommand (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_SV_registercmd);
-	if(!Cmd_Exists(cmd_server, PRVM_G_STRING(OFS_PARM0)))
+	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
 		Cmd_AddCommand(CF_SERVER, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 

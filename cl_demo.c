@@ -67,7 +67,7 @@ void CL_NextDemo (void)
 	}
 
 	dpsnprintf (str, sizeof(str), "playdemo %s\n", cls.demos[cls.demonum]);
-	Cbuf_InsertText(cmd_client, str);
+	Cbuf_InsertText(cmd_local, str);
 	cls.demonum++;
 }
 
@@ -274,7 +274,7 @@ void CL_ReadDemoMessage(void)
 			CL_ParseServerMessage();
 
 			if (cls.signon != SIGNONS)
-				Cbuf_Execute((cmd_client)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
+				Cbuf_Execute((cmd_local)->cbuf); // immediately execute svc_stufftext if in the demo before connect!
 
 			// In case the demo contains a "svc_disconnect" message
 			if (!cls.demoplayback)
@@ -402,29 +402,15 @@ void CL_Record_f(cmd_state_t *cmd)
 	cls.demo_lastcsprogscrc = -1;
 }
 
-
-/*
-====================
-CL_PlayDemo_f
-
-playdemo [demoname]
-====================
-*/
-void CL_PlayDemo_f(cmd_state_t *cmd)
+void CL_PlayDemo(const char *demo)
 {
-	char	name[MAX_QPATH];
+	char name[MAX_QPATH];
 	int c;
 	qbool neg = false;
 	qfile_t *f;
 
-	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Print("playdemo <demoname> : plays a demo\n");
-		return;
-	}
-
 	// open the demo file
-	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
+	strlcpy (name, demo, sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
@@ -437,10 +423,7 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 	cls.demostarting = true;
 
 	// disconnect from server
-	if(cls.state == ca_connected)
-		CL_Disconnect();
-	if(sv.active)
-		SV_Shutdown();
+	CL_Disconnect();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -465,6 +448,24 @@ void CL_PlayDemo_f(cmd_state_t *cmd)
 		cls.forcetrack = -cls.forcetrack;
 
 	cls.demostarting = false;
+}
+
+/*
+====================
+CL_PlayDemo_f
+
+playdemo [demoname]
+====================
+*/
+void CL_PlayDemo_f(cmd_state_t *cmd)
+{
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Print("playdemo <demoname> : plays a demo\n");
+		return;
+	}
+
+	CL_PlayDemo(Cmd_Argv(cmd, 1));
 }
 
 typedef struct
@@ -532,7 +533,7 @@ static void CL_FinishTimeDemo (void)
 			if(atoi(sys.argv[i + 1]) > benchmark_runs)
 			{
 				// restart the benchmark
-				Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
+				Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "timedemo %s\n", cls.demoname));
 				// cannot execute here
 			}
 			else
@@ -606,7 +607,7 @@ void CL_TimeDemo_f(cmd_state_t *cmd)
 
 	srand(0); // predictable random sequence for benchmarking
 
-	CL_PlayDemo_f (cmd);
+	CL_PlayDemo(Cmd_Argv(cmd, 1));
 
 // cls.td_starttime will be grabbed at the second frame of the demo, so
 // all the loading time doesn't get counted
@@ -680,8 +681,8 @@ static void CL_Demos_f(cmd_state_t *cmd)
 		return;
 	if (cls.demonum == -1)
 		cls.demonum = 1;
-	CL_Disconnect_f (cmd);
-	CL_NextDemo ();
+	CL_Disconnect();
+	CL_NextDemo();
 }
 
 /*

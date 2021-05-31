@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2000-2021 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -68,7 +69,6 @@ Host_AbortCurrentFrame
 aborts the current host frame and goes on with the next one
 ================
 */
-void Host_AbortCurrentFrame(void) DP_FUNC_NORETURN;
 void Host_AbortCurrentFrame(void)
 {
 	// in case we were previously nice, make us mean again
@@ -128,9 +128,8 @@ void Host_Error (const char *error, ...)
 	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 
-	SV_LockThreadMutex();
-	SV_Shutdown ();
-	SV_UnlockThreadMutex();
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
@@ -183,13 +182,86 @@ static void SendCvar_f(cmd_state_t *cmd)
 }
 
 /*
+===============
+Host_SaveConfig_f
+
+Writes key bindings and archived cvars to config.cfg
+===============
+*/
+void Host_SaveConfig(const char *file)
+{
+	qfile_t *f;
+
+// dedicated servers initialize the host but don't parse and set the
+// config.cfg cvars
+	// LadyHavoc: don't save a config if it crashed in startup
+	if (host.framecount >= 3 && cls.state != ca_dedicated && !Sys_CheckParm("-benchmark") && !Sys_CheckParm("-capturedemo"))
+	{
+		f = FS_OpenRealFile(file, "wb", false);
+		if (!f)
+		{
+			Con_Printf(CON_ERROR "Couldn't write %s.\n", file);
+			return;
+		}
+
+		Key_WriteBindings (f);
+		Cvar_WriteVariables (&cvars_all, f);
+
+		FS_Close (f);
+	}
+}
+
+static void Host_SaveConfig_f(cmd_state_t *cmd)
+{
+	const char *file = CONFIGFILENAME;
+
+	if(Cmd_Argc(cmd) >= 2) {
+		file = Cmd_Argv(cmd, 1);
+		Con_Printf("Saving to %s\n", file);
+	}
+
+	Host_SaveConfig(file);
+}
+
+static void Host_AddConfigText(cmd_state_t *cmd)
+{
+	// set up the default startmap_sp and startmap_dm aliases (mods can
+	// override these) and then execute the quake.rc startup script
+	if (gamemode == GAME_NEHAHRA)
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec " STARTCONFIGFILENAME "\n");
+	else if (gamemode == GAME_TRANSFUSION)
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec " STARTCONFIGFILENAME "\n");
+	else if (gamemode == GAME_TEU)
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
+	else
+		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
+	Cbuf_Execute(cmd->cbuf);
+}
+
+/*
+===============
+Host_LoadConfig_f
+
+Resets key bindings and cvars to defaults and then reloads scripts
+===============
+*/
+static void Host_LoadConfig_f(cmd_state_t *cmd)
+{
+	// reset all cvars, commands and aliases to init values
+	Cmd_RestoreInitState();
+#ifdef CONFIG_MENU
+	// prepend a menu restart command to execute after the config
+	Cbuf_InsertText(cmd_local, "\nmenu_restart\n");
+#endif
+	// reset cvars to their defaults, and then exec startup scripts again
+	Host_AddConfigText(cmd_local);
+}
+
+/*
 =======================
 Host_InitLocal
 ======================
 */
-void Host_SaveConfig_f(cmd_state_t *cmd);
-void Host_LoadConfig_f(cmd_state_t *cmd);
-extern cvar_t sv_writepicture_quality;
 extern cvar_t r_texture_jpeg_fastpicmip;
 static void Host_InitLocal (void)
 {
@@ -215,271 +287,8 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
 
-	Cvar_RegisterVariable (&sv_writepicture_quality);
 	Cvar_RegisterVariable (&r_texture_jpeg_fastpicmip);
 }
-
-
-/*
-===============
-Host_SaveConfig_f
-
-Writes key bindings and archived cvars to config.cfg
-===============
-*/
-static void Host_SaveConfig_to(const char *file)
-{
-	qfile_t *f;
-
-// dedicated servers initialize the host but don't parse and set the
-// config.cfg cvars
-	// LadyHavoc: don't save a config if it crashed in startup
-	if (host.framecount >= 3 && cls.state != ca_dedicated && !Sys_CheckParm("-benchmark") && !Sys_CheckParm("-capturedemo"))
-	{
-		f = FS_OpenRealFile(file, "wb", false);
-		if (!f)
-		{
-			Con_Printf(CON_ERROR "Couldn't write %s.\n", file);
-			return;
-		}
-
-		Key_WriteBindings (f);
-		Cvar_WriteVariables (&cvars_all, f);
-
-		FS_Close (f);
-	}
-}
-void Host_SaveConfig(void)
-{
-	Host_SaveConfig_to(CONFIGFILENAME);
-}
-void Host_SaveConfig_f(cmd_state_t *cmd)
-{
-	const char *file = CONFIGFILENAME;
-
-	if(Cmd_Argc(cmd) >= 2) {
-		file = Cmd_Argv(cmd, 1);
-		Con_Printf("Saving to %s\n", file);
-	}
-
-	Host_SaveConfig_to(file);
-}
-
-static void Host_AddConfigText(cmd_state_t *cmd)
-{
-	// set up the default startmap_sp and startmap_dm aliases (mods can
-	// override these) and then execute the quake.rc startup script
-	if (gamemode == GAME_NEHAHRA)
-		Cbuf_InsertText(cmd, "alias startmap_sp \"map nehstart\"\nalias startmap_dm \"map nehstart\"\nexec " STARTCONFIGFILENAME "\n");
-	else if (gamemode == GAME_TRANSFUSION)
-		Cbuf_InsertText(cmd, "alias startmap_sp \"map e1m1\"\n""alias startmap_dm \"map bb1\"\nexec " STARTCONFIGFILENAME "\n");
-	else if (gamemode == GAME_TEU)
-		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
-	else
-		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
-	Cbuf_Execute(cmd->cbuf);
-}
-
-/*
-===============
-Host_LoadConfig_f
-
-Resets key bindings and cvars to defaults and then reloads scripts
-===============
-*/
-void Host_LoadConfig_f(cmd_state_t *cmd)
-{
-	// reset all cvars, commands and aliases to init values
-	Cmd_RestoreInitState();
-#ifdef CONFIG_MENU
-	// prepend a menu restart command to execute after the config
-	Cbuf_InsertText(cmd_client, "\nmenu_restart\n");
-#endif
-	// reset cvars to their defaults, and then exec startup scripts again
-	Host_AddConfigText(cmd_client);
-}
-
-//============================================================================
-
-/*
-===================
-Host_GetConsoleCommands
-
-Add them exactly as if they had been typed at the console
-===================
-*/
-static void Host_GetConsoleCommands (void)
-{
-	char *line;
-
-	while ((line = Sys_ConsoleInput()))
-	{
-		if (cls.state == ca_dedicated)
-			Cbuf_AddText(cmd_server, line);
-		else
-			Cbuf_AddText(cmd_client, line);
-	}
-}
-
-/*
-==================
-Host_TimeReport
-
-Returns a time report string, for example for
-==================
-*/
-const char *Host_TimingReport(char *buf, size_t buflen)
-{
-	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
-}
-
-/*
-==================
-Host_Frame
-
-Runs all active servers
-==================
-*/
-static void Host_Init(void);
-double Host_Frame(double time)
-{
-	double cl_timer = 0;
-	double sv_timer = 0;
-	static double wait;
-
-	TaskQueue_Frame(false);
-
-	// keep the random time dependent, but not when playing demos/benchmarking
-	if(!*sv_random_seed.string && !host.restless)
-		rand();
-
-	NetConn_UpdateSockets();
-
-	Log_DestBuffer_Flush();
-
-	Curl_Run();
-
-	// check for commands typed to the host
-	Host_GetConsoleCommands();
-
-	// process console commands
-//		R_TimeReport("preconsole");
-
-	Cbuf_Frame(host.cbuf);
-
-//		R_TimeReport("console");
-
-	//Con_Printf("%6.0f %6.0f\n", cl_timer * 1000000.0, sv_timer * 1000000.0);
-
-	R_TimeReport("---");
-
-	sv_timer = SV_Frame(time);
-	cl_timer = CL_Frame(time);
-
-	Mem_CheckSentinelsGlobal();
-
-	// if the accumulators haven't become positive yet, wait a while
-	if (cls.state == ca_dedicated)
-		wait = sv_timer * -1000000.0; // dedicated
-	else if (!sv.active || svs.threaded)
-		wait = cl_timer * -1000000.0; // connected to server, main menu, or server is on different thread
-	else
-		wait = max(cl_timer, sv_timer) * -1000000.0; // listen server or singleplayer
-
-	if (!host.restless && wait >= 1)
-		return wait;
-	else
-		return 0;
-}
-
-static inline void Host_Sleep(double time)
-{
-	static double delta;
-	double time0;
-
-	if(host_maxwait.value <= 0)
-		time = min(time, 1000000.0);
-	else
-		time = min(time, host_maxwait.value * 1000.0);
-	if(time < 1)
-		time = 1; // because we cast to int
-
-	time0 = Sys_DirtyTime();
-	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
-		NetConn_SleepMicroseconds((int)time);
-		if (cls.state != ca_dedicated)
-			NetConn_ClientFrame(); // helps server browser get good ping values
-		// TODO can we do the same for ServerFrame? Probably not.
-	}
-	else
-		Sys_Sleep((int)time);
-	delta = Sys_DirtyTime() - time0;
-	if (delta < 0 || delta >= 1800) 
-		delta = 0;
-	host.sleeptime += delta;
-//			R_TimeReport("sleep");
-	return;
-}
-
-// Cloudwalk: Most overpowered function declaration...
-static inline double Host_UpdateTime (double newtime, double oldtime)
-{
-	double time = newtime - oldtime;
-
-	if (time < 0)
-	{
-		// warn if it's significant
-		if (time < -0.01)
-			Con_Printf(CON_WARN "Host_UpdateTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
-		time = 0;
-	}
-	else if (time >= 1800)
-	{
-		Con_Printf(CON_WARN "Host_UpdateTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
-		time = 0;
-	}
-
-	return time;
-}
-
-void Host_Main(void)
-{
-	double time, newtime, oldtime, sleeptime;
-
-	Host_Init(); // Start!
-
-	host.realtime = 0;
-	oldtime = Sys_DirtyTime();
-
-	// Main event loop
-	while(host.state != host_shutdown)
-	{
-		// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-			continue;
-		}
-
-		newtime = host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(newtime, oldtime);
-
-		sleeptime = Host_Frame(time);
-		oldtime = newtime;
-
-		if (sleeptime)
-		{
-			Host_Sleep(sleeptime);
-			continue;
-		}
-
-		host.framecount++;
-	}
-
-	return;
-}
-
-//============================================================================
 
 char engineversion[128];
 
@@ -507,6 +316,7 @@ static void Host_InitSession(void)
 		}
 	}
 }
+
 void Host_LockSession(void)
 {
 	if(locksession_run)
@@ -532,6 +342,7 @@ void Host_LockSession(void)
 		}
 	}
 }
+
 void Host_UnlockSession(void)
 {
 	if(!locksession_run)
@@ -563,7 +374,7 @@ static void Host_Init (void)
 	host.hook.Disconnect = NULL;
 	host.hook.ToggleMenu = NULL;
 	host.hook.CL_Intermission = NULL;
-	host.hook.SV_CanSave = NULL;
+	host.hook.SV_Shutdown = NULL;
 
 	host.state = host_init;
 
@@ -671,13 +482,13 @@ static void Host_Init (void)
 
 	// here comes the not so critical stuff
 
-	Host_AddConfigText(cmd_client);
+	Host_AddConfigText(cmd_local);
 
 	// if quake.rc is missing, use default
 	if (!FS_FileExists("quake.rc"))
 	{
-		Cbuf_AddText(cmd_client, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	host.state = host_active;
@@ -698,8 +509,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "timedemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	// check for special demo mode
@@ -708,8 +519,8 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\n", sys.argv[i + 1]));
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -718,24 +529,24 @@ static void Host_Init (void)
 	if (i && i + 1 < sys.argc)
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
-		Cbuf_Execute((cmd_client)->cbuf);
+		Cbuf_AddText(cmd_local, va(vabuf, sizeof(vabuf), "playdemo %s\ncl_capturevideo 1\n", sys.argv[i + 1]));
+		Cbuf_Execute((cmd_local)->cbuf);
 	}
 #endif
 
 	if (cls.state == ca_dedicated || Sys_CheckParm("-listen"))
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
-		Cbuf_AddText(cmd_client, "startmap_dm\n");
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_AddText(cmd_local, "startmap_dm\n");
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	if (!sv.active && !cls.demoplayback && !cls.connect_trying)
 	{
 #ifdef CONFIG_MENU
-		Cbuf_AddText(cmd_client, "togglemenu 1\n");
+		Cbuf_AddText(cmd_local, "togglemenu 1\n");
 #endif
-		Cbuf_Execute(cmd_client->cbuf);
+		Cbuf_Execute(cmd_local->cbuf);
 	}
 
 	Con_DPrint("========Initialized=========\n");
@@ -743,7 +554,6 @@ static void Host_Init (void)
 	if (cls.state != ca_dedicated)
 		SV_StartThread();
 }
-
 
 /*
 ===============
@@ -777,14 +587,13 @@ void Host_Shutdown(void)
 		SV_StopThread();
 
 	// shut down local server if active
-	SV_LockThreadMutex();
-	SV_Shutdown ();
-	SV_UnlockThreadMutex();
+	if(host.hook.SV_Shutdown)
+		host.hook.SV_Shutdown();
 
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
 
-	Host_SaveConfig();
+	Host_SaveConfig(CONFIGFILENAME);
 
 	Curl_Shutdown ();
 	NetConn_Shutdown ();
@@ -803,6 +612,138 @@ void Host_Shutdown(void)
 	Memory_Shutdown();
 }
 
-void Host_NoOperation_f(cmd_state_t *cmd)
+//============================================================================
+
+/*
+==================
+Host_Frame
+
+Runs all active servers
+==================
+*/
+static double Host_Frame(double time)
 {
+	double cl_wait, sv_wait;
+
+	TaskQueue_Frame(false);
+
+	// keep the random time dependent, but not when playing demos/benchmarking
+	if(!*sv_random_seed.string && !host.restless)
+		rand();
+
+	NetConn_UpdateSockets();
+
+	Log_DestBuffer_Flush();
+
+	// Run any downloads
+	Curl_Frame();
+
+	// process console commands
+	Cbuf_Frame(host.cbuf);
+
+	R_TimeReport("---");
+
+	sv_wait = SV_Frame(time);
+	cl_wait = CL_Frame(time);
+
+//	Con_Printf("%6.0f %6.0f\n", cl_wait * 1000000.0, sv_wait * 1000000.0);
+
+	Mem_CheckSentinelsGlobal();
+
+	if(host.restless)
+		return 0;
+
+	// if the accumulators haven't become positive yet, wait a while
+	if (cls.state == ca_dedicated)
+		return sv_wait * -1000000.0; // dedicated
+	else if (!sv.active || svs.threaded)
+		return cl_wait * -1000000.0; // connected to server, main menu, or server is on different thread
+	else
+		return max(cl_wait, sv_wait) * -1000000.0; // listen server or singleplayer
+}
+
+static inline void Host_Sleep(double time)
+{
+	double delta, time0;
+
+	if(host_maxwait.value <= 0)
+		time = min(time, 1000000.0);
+	else
+		time = min(time, host_maxwait.value * 1000.0);
+	if(time < 1)
+		time = 1; // because we cast to int
+
+	time0 = Sys_DirtyTime();
+	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
+		NetConn_SleepMicroseconds((int)time);
+		if (cls.state != ca_dedicated)
+			NetConn_ClientFrame(); // helps server browser get good ping values
+		// TODO can we do the same for ServerFrame? Probably not.
+	}
+	else
+		Sys_Sleep((int)time);
+	delta = Sys_DirtyTime() - time0;
+	if (delta < 0 || delta >= 1800) 
+		delta = 0;
+	host.sleeptime += delta;
+//			R_TimeReport("sleep");
+	return;
+}
+
+// Cloudwalk: Most overpowered function declaration...
+static inline double Host_UpdateTime (double newtime, double oldtime)
+{
+	double time = newtime - oldtime;
+
+	if (time < 0)
+	{
+		// warn if it's significant
+		if (time < -0.01)
+			Con_Printf(CON_WARN "Host_UpdateTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+		time = 0;
+	}
+	else if (time >= 1800)
+	{
+		Con_Printf(CON_WARN "Host_UpdateTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+		time = 0;
+	}
+
+	return time;
+}
+
+void Host_Main(void)
+{
+	double time, newtime, oldtime, sleeptime;
+
+	Host_Init(); // Start!
+
+	host.realtime = 0;
+	oldtime = Sys_DirtyTime();
+
+	// Main event loop
+	while(host.state != host_shutdown)
+	{
+		// Something bad happened, or the server disconnected
+		if (setjmp(host.abortframe))
+		{
+			host.state = host_active; // In case we were loading
+			continue;
+		}
+
+		newtime = host.dirtytime = Sys_DirtyTime();
+		host.realtime += time = Host_UpdateTime(newtime, oldtime);
+
+		sleeptime = Host_Frame(time);
+		oldtime = newtime;
+
+		if (sleeptime >= 1)
+		{
+			Host_Sleep(sleeptime);
+			continue;
+		}
+
+		host.framecount++;
+	}
+
+	return;
 }
