@@ -117,9 +117,9 @@ typedef struct llist_s
  * Iterate over a list of a given type
  */
 #define List_For_Each_Entry(pos, head, member) \
-	for (pos = List_Last_Entry(head, Q_typeof(*pos), member); \
+	for (pos = List_First_Entry(head, Q_typeof(*pos), member); \
 	     !List_Entry_Is_Head(pos, head, member); \
-	     pos = List_Prev_Entry(pos, member))
+	     pos = List_Next_Entry(pos, member))
 
 /*
  * Iterate over a list of a given type backwards
