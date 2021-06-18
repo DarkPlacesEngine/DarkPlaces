@@ -1448,7 +1448,7 @@ static void CL_StopDownload(int size, int crc)
 				Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
 				FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
 				extension = FS_FileExtension(cls.qw_downloadname);
-				if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+				if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3") || !strcasecmp(extension, "dpk"))
 					FS_Rescan();
 			}
 		}
