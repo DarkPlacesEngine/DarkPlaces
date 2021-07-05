@@ -526,8 +526,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&skill);
 	Cvar_RegisterVariable (&host_timescale);
 	Cvar_RegisterCallback (&host_timescale, Host_Timescale_c);
-	Cvar_RegisterAlias (&host_timescale, "slowmo");
-	Cvar_RegisterAlias (&host_timescale, "timescale");
+	Cvar_RegisterVirtual (&host_timescale, "slowmo");
+	Cvar_RegisterVirtual (&host_timescale, "timescale");
 	Cvar_RegisterVariable (&sv_accelerate);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_airaccel_qw);
@@ -618,7 +618,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_random_seed);
 	Cvar_RegisterVariable (&host_limitlocal);
-	Cvar_RegisterAlias(&host_limitlocal, "sv_ratelimitlocalplayer");
+	Cvar_RegisterVirtual(&host_limitlocal, "sv_ratelimitlocalplayer");
 	Cvar_RegisterVariable (&sv_sound_land);
 	Cvar_RegisterVariable (&sv_sound_watersplash);
 	Cvar_RegisterVariable (&sv_stepheight);

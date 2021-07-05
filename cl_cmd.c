@@ -716,13 +716,13 @@ void CL_InitCommands(void)
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
 
 	Cvar_RegisterVariable(&cl_name);
-	Cvar_RegisterAlias(&cl_name, "_cl_name");
+	Cvar_RegisterVirtual(&cl_name, "_cl_name");
 	Cvar_RegisterVariable(&cl_rate);
-	Cvar_RegisterAlias(&cl_rate, "_cl_rate");
+	Cvar_RegisterVirtual(&cl_rate, "_cl_rate");
 	Cvar_RegisterVariable(&cl_rate_burstsize);
-	Cvar_RegisterAlias(&cl_rate_burstsize, "_cl_rate_burstsize");
+	Cvar_RegisterVirtual(&cl_rate_burstsize, "_cl_rate_burstsize");
 	Cvar_RegisterVariable(&cl_pmodel);
-	Cvar_RegisterAlias(&cl_pmodel, "_cl_pmodel");
+	Cvar_RegisterVirtual(&cl_pmodel, "_cl_pmodel");
 	Cvar_RegisterVariable(&cl_color);
 	Cvar_RegisterCallback(&cl_color, CL_Color_c);
 	Cvar_RegisterVariable(&cl_topcolor);

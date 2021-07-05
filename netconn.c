@@ -3903,9 +3903,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_fakelag);
 	Cvar_RegisterVariable(&net_fakeloss_send);
 	Cvar_RegisterVariable(&net_fakeloss_receive);
-	Cvar_RegisterAlias(&net_fakelag, "cl_netlocalping");
-	Cvar_RegisterAlias(&net_fakeloss_send, "cl_netpacketloss_send");
-	Cvar_RegisterAlias(&net_fakeloss_receive, "cl_netpacketloss_receive");
+	Cvar_RegisterVirtual(&net_fakelag, "cl_netlocalping");
+	Cvar_RegisterVirtual(&net_fakeloss_send, "cl_netpacketloss_send");
+	Cvar_RegisterVirtual(&net_fakeloss_receive, "cl_netpacketloss_receive");
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
