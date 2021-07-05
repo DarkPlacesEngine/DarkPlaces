@@ -835,7 +835,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable(&scr_stipple);
 	Cvar_RegisterVariable(&scr_refresh);
 	Cvar_RegisterVariable(&net_graph);
-	Cvar_RegisterAlias(&net_graph, "shownetgraph");
+	Cvar_RegisterVirtual(&net_graph, "shownetgraph");
 	Cvar_RegisterVariable(&cl_demo_mousegrab);
 	Cvar_RegisterVariable(&timedemo_screenshotframelist);
 	Cvar_RegisterVariable(&vid_touchscreen_outlinealpha);

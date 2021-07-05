@@ -105,7 +105,7 @@ cvar_state_t;
 extern cvar_state_t cvars_all;
 extern cvar_state_t cvars_null; // used by cmd_serverfromclient which intentionally has no cvars available
 
-void Cvar_RegisterAlias(cvar_t *variable, const char *alias );
+void Cvar_RegisterVirtual(cvar_t *variable, const char *name );
 
 void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *));
 

@@ -492,28 +492,28 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 	variable->callback = callback;
 }
 
-void Cvar_RegisterAlias(cvar_t *variable, const char *alias )
+void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 {
 	cvar_state_t *cvars = &cvars_all;
 	cvar_hash_t *hash;
 	int hashindex;
 
-	if(!*alias)
+	if(!*name)
 	{
-		Con_Printf("Cvar_RegisterAlias: invalid alias name\n");
+		Con_Printf("Cvar_RegisterVirtual: invalid virtual cvar name\n");
 		return;
 	}
 
 	// check for overlap with a command
-	if (Cmd_Exists(cmd_local, alias))
+	if (Cmd_Exists(cmd_local, name))
 	{
-		Con_Printf("Cvar_RegisterAlias: %s is a command\n", alias);
+		Con_Printf("Cvar_RegisterVirtual: %s is a command\n", name);
 		return;
 	}
 
-	if(Cvar_FindVar(&cvars_all, alias, 0))
+	if(Cvar_FindVar(&cvars_all, name, 0))
 	{
-		Con_Printf("Cvar_RegisterAlias: %s is a cvar\n", alias);
+		Con_Printf("Cvar_RegisterVirtual: %s is a cvar\n", name);
 		return;
 	}
 
@@ -525,13 +525,13 @@ void Cvar_RegisterAlias(cvar_t *variable, const char *alias )
 	variable->aliases[variable->aliases_size + 1] = NULL;
 	
 	// Add to it
-	variable->aliases[variable->aliases_size] = (char *)Z_Malloc(strlen(alias) + 1);
-	memcpy(variable->aliases[variable->aliases_size], alias, strlen(alias) + 1);
+	variable->aliases[variable->aliases_size] = (char *)Z_Malloc(strlen(name) + 1);
+	memcpy(variable->aliases[variable->aliases_size], name, strlen(name) + 1);
 	variable->aliases_size++;
 
 	// link to head of list in this hash table index
 	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
-	hashindex = CRC_Block((const unsigned char *)alias, strlen(alias)) % CVAR_HASHSIZE;
+	hashindex = CRC_Block((const unsigned char *)name, strlen(name)) % CVAR_HASHSIZE;
 	hash->next = cvars->hashtable[hashindex];
 	cvars->hashtable[hashindex] = hash;
 	hash->cvar = variable;
