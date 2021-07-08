@@ -2,18 +2,18 @@
 
 set -e
 
-openssl aes-256-cbc -K $encrypted_29b4419ace44_key -iv $encrypted_29b4419ace44_iv -in id_xonotic.enc -out /tmp/id_xonotic -d
+openssl aes-256-cbc -K $encrypted_29b4419ace44_key -iv $encrypted_29b4419ace44_iv -in .travis-id_xonotic.enc -out /tmp/id_xonotic -d
 
 set -x
 
-chmod 0600 id-xonotic
-# ssh-keygen -y -f id-xonotic
+chmod 0600 id_xonotic
+# ssh-keygen -y -f id_xonotic
 
 export USRLOCAL="$PWD"/usrlocal
 
 rev=`git rev-parse HEAD`
 
-sftp -oStrictHostKeyChecking=no -i id-xonotic -P 2342 -b - autobuild-bin-uploader@srv04.xonotic.org <<EOF || true
+sftp -oStrictHostKeyChecking=no -i id_xonotic -P 2342 -b - autobuild-bin-uploader@srv04.xonotic.org <<EOF || true
 mkdir ${rev}
 EOF
 
@@ -121,7 +121,7 @@ for os in "$@"; do
     for o in $outputs; do
       src=${o%%:*}
       dst=${o#*:}
-      sftp -oStrictHostKeyChecking=no -i id-xonotic -P 2342 -b - autobuild-bin-uploader@srv04.xonotic.org <<EOF
+      sftp -oStrictHostKeyChecking=no -i id_xonotic -P 2342 -b - autobuild-bin-uploader@srv04.xonotic.org <<EOF
 put ${src} ${rev}/${dst}
 EOF
     done
