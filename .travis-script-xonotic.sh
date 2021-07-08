@@ -121,7 +121,10 @@ for os in "$@"; do
     for o in $outputs; do
       src=${o%%:*}
       dst=${o#*:}
-      sftp -oStrictHostKeyChecking=no -i id_rsa-xonotic -P 2222 -b - autobuild-bin-uploader@beta.xonotic.org <<EOF
+      sftp -oStrictHostKeyChecking=no -i id_rsa-xonotic -P 2222 -b - autobuild-bin-uploader@srv03.xonotic.org <<EOF
+put ${src} ${rev}/${dst}
+EOF
+      sftp -oStrictHostKeyChecking=no -i id_rsa-xonotic -P 2222 -b - autobuild-bin-uploader@srv04.xonotic.org <<EOF
 put ${src} ${rev}/${dst}
 EOF
     done
