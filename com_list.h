@@ -100,6 +100,7 @@ typedef struct llist_s
 #define List_For_Each_Safe(pos, n, head) \
 	for (pos = (head)->next, n = pos->next; pos != (head); \
 	     pos = n, n = pos->next)
+
 /*
  * Iterate over a list backwards, safe against removal of list entry
  */
@@ -107,6 +108,7 @@ typedef struct llist_s
 	for (pos = (head)->prev, n = pos->prev; \
 	     pos != (head); \
 	     pos = n, n = pos->prev)
+
 /*
  * Test if the entry points to the head of the list
  */
@@ -173,6 +175,7 @@ typedef struct llist_s
 	     n = List_Next_Entry(pos, member); \
 	     !List_Entry_Is_Head(pos, head, member); \
 	     pos = n, n = List_Next_Entry(n, member))
+
 /*
  * Continue iteration over a list of a given type, after the current position, safe against removal of list entry
  */
@@ -189,7 +192,6 @@ typedef struct llist_s
 	for (n = List_Next_Entry(pos, member); \
 	     !List_Entry_Is_Head(pos, head, member); \
 	     pos = n, n = List_Next_Entry(n, member))
-
 
 /*
  * Iterate over a list of a given type backwards, safe against removal of list entry
