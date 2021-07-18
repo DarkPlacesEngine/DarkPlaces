@@ -925,6 +925,7 @@ static void Cmd_Toggle_f(cmd_state_t *cmd)
 	{ // Correct Arguments Specified
 		// Acquire Potential CVar
 		cvar_t* cvCVar = Cvar_FindVar(cmd->cvars, Cmd_Argv(cmd, 1), cmd->cvars_flagsmask);
+		cvCVar = cvCVar->parent ? cvCVar->parent : cvCVar;
 
 		if(cvCVar != NULL)
 		{ // Valid CVar
@@ -1173,7 +1174,7 @@ static const char *Cmd_GetDirectCvarValue(cmd_state_t *cmd, const char *varname,
 	}
 
 	if((cvar = Cvar_FindVar(cmd->cvars, varname, cmd->cvars_flagsmask)) && !(cvar->flags & CF_PRIVATE))
-		return cvar->string;
+		return cvar->parent ? cvar->parent->string : cvar->string;
 
 	return NULL;
 }
@@ -1579,23 +1580,14 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	count = 0;
-	for (cvar = cmd->cvars->vars; cvar; cvar = cvar->next)
+	List_For_Each_Entry(cvar, &cmd->cvars->vars->list, list)
 	{
 		if (matchpattern_with_separator(cvar->name, partial, true, "", false) ||
 		    matchpattern_with_separator(cvar->description, partial, true, "", false))
 		{
 			Con_Printf ("cvar ");
-			Cvar_PrintHelp(cvar, cvar->name, true);
+			Cvar_PrintHelp(cvar->parent ? cvar->parent : cvar, cvar->name, true);
 			count++;
-		}
-		for (char **cvar_alias = cvar->aliases; cvar_alias && *cvar_alias; cvar_alias++)
-		{
-			if (matchpattern_with_separator(*cvar_alias, partial, true, "", false))
-			{
-				Con_Printf ("cvar ");
-				Cvar_PrintHelp(cvar, *cvar_alias, true);
-				count++;
-			}
 		}
 	}
 	for (func = cmd->userdefined->qc_functions; func; func = func->next)
@@ -1636,6 +1628,8 @@ static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int
 	cmd->null_string = "";
 
 	cmd->cvars = cvars;
+	cmd->cvars->vars = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+	cmd->cvars->vars->list.next = cmd->cvars->vars->list.prev = &cmd->cvars->vars->list;
 	cmd->cvars_flagsmask = cvars_flagsmask;
 	cmd->cmd_flags = cmds_flagsmask;
 	cmd->userdefined = userdefined;

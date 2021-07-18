@@ -59,6 +59,8 @@ interface from being ambiguous.
 
 #include "qtypes.h"
 #include "qdefs.h"
+#include "com_list.h"
+
 struct cmd_state_s;
 struct qfile_s;
 
@@ -78,27 +80,22 @@ typedef struct cvar_s
 
 	void (*callback)(struct cvar_s *var);
 
-	char **aliases;
-	int aliases_size;
-
-	struct cvar_s *initstate; // snapshot of cvar during init
-
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];
 
-	struct cvar_s *next;
-} cvar_t;
+	int hashindex; // Index in hash table, to avoid looking up a cvar twice when unlinking
 
-typedef struct cvar_hash_s
-{
-	cvar_t *cvar;
-	struct cvar_hash_s *next;
-} cvar_hash_t;
+	struct cvar_s *initstate; // snapshot of cvar during init
+
+	struct cvar_s *parent, *hnext;
+
+	llist_t list, vlist;
+} cvar_t;
 
 typedef struct cvar_state_s
 {
 	cvar_t *vars;
-	cvar_hash_t *hashtable[CVAR_HASHSIZE];
+	cvar_t *hashtable[CVAR_HASHSIZE];
 }
 cvar_state_t;
 
