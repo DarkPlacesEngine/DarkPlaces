@@ -27,6 +27,19 @@ typedef bool qbool;
 #define RESTRICT
 #endif
 
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef intptr_t iptr;
+typedef uintptr_t uptr;
+
 // LadyHavoc: upgrade the prvm to double precision for better time values
 // LadyHavoc: to be enabled when bugs are worked out...
 //#define PRVM_64
@@ -53,9 +66,4 @@ typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
 typedef vec_t vec4_t[4];
-typedef vec_t vec5_t[5];
-typedef vec_t vec6_t[6];
-typedef vec_t vec7_t[7];
-typedef vec_t vec8_t[8];
-
 #endif
