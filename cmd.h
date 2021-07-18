@@ -57,7 +57,7 @@ struct cmd_state_s;
 #define CF_USERINFO             (1<<9)  // command or cvar used to communicate userinfo to the server
 #define CF_PERSISTENT           (1<<10) // cvar must not be reset on gametype switch (such as scr_screenshot_name, which otherwise isn't set to the mod name properly)
 #define CF_PRIVATE              (1<<11) // cvar should not be $ expanded or sent to the server under any circumstances (rcon_password, etc)
-#define CF_MAXFLAGSVAL          4095    // used to determine if flags is valid
+#define CF_MAXFLAGSVAL          ((1<<12) - 1)    // used to determine if flags is valid
 // for internal use only!
 #define CF_DEFAULTSET (1<<30)
 #define CF_ALLOCATED (1<<31)
