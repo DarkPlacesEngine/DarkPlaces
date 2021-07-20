@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define COMMON_H
 
 #include <stdarg.h>
+#include <assert.h>
 #include "qtypes.h"
 #include "qdefs.h"
 
@@ -216,6 +217,12 @@ void COM_InitGameType (void);
 char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 // does a varargs printf into provided buffer, returns buffer (so it can be called in-line unlike dpsnprintf)
 
+// GCC with -Werror=c++-compat will error out if static_assert is used even though the macro is valid C11...
+#ifndef __cplusplus
+#define DP_STATIC_ASSERT(expr, str) _Static_assert(expr, str)
+#else
+#define DP_STATIC_ASSERT(expr, str) static_assert(expr, str)
+#endif
 
 // snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
 #ifdef snprintf
