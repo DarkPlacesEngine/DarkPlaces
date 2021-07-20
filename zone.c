@@ -146,6 +146,9 @@ static void mmap_free(void *mem)
 // (Windows growing its swapfile for example)
 static void *attempt_malloc(size_t size)
 {
+#ifndef WIN32
+	return malloc(size);
+#else
 	void *base;
 	// try for half a second or so
 	unsigned int attempts = 500;
@@ -157,6 +160,7 @@ static void *attempt_malloc(size_t size)
 		Sys_Sleep(1000);
 	}
 	return NULL;
+#endif
 }
 #endif
 
