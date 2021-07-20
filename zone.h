@@ -142,7 +142,9 @@ void Memory_Shutdown (void);
 void Memory_Init_Commands (void);
 
 extern mempool_t *zonemempool;
-#define Z_Malloc(size) Mem_Alloc(zonemempool,size)
+#define Z_Malloc(size) Mem_Alloc(zonemempool, size)
+#define Z_Realloc(data, size) Mem_Realloc(zonemempool, data, size)
+#define Z_strdup(s) Mem_strdup(zonemempool, s)
 #define Z_Free(data) Mem_Free(data)
 
 extern struct cvar_s developer_memory;
