@@ -32,29 +32,45 @@ line of sight checks trace->inopen and trace->inwater, but bullets don't
 
 */
 
+#ifdef USEODE
 static void World_Physics_Init(void);
+#endif
 void World_Init(void)
 {
 	Collision_Init();
+#ifdef USEODE
 	World_Physics_Init();
+#endif
 }
 
+#ifdef USEODE
 static void World_Physics_Shutdown(void);
+#endif
 void World_Shutdown(void)
 {
+#ifdef USEODE
 	World_Physics_Shutdown();
+#endif
 }
 
+#ifdef USEODE
 static void World_Physics_Start(world_t *world);
+#endif
 void World_Start(world_t *world)
 {
+#ifdef USEODE
 	World_Physics_Start(world);
+#endif
 }
 
+#ifdef USEODE
 static void World_Physics_End(world_t *world);
+#endif
 void World_End(world_t *world)
 {
+#ifdef USEODE
 	World_Physics_End(world);
+#endif
 }
 
 //============================================================================
@@ -1459,15 +1475,12 @@ static dllfunction_t odefuncs[] =
 //	{"dGeomTriMeshDataUpdate",                      (void **) &dGeomTriMeshDataUpdate},
 	{NULL, NULL}
 };
-
 // Handle for ODE DLL
 dllhandle_t ode_dll = NULL;
-#endif
 #endif
 
 static void World_Physics_Init(void)
 {
-#ifdef USEODE
 #ifndef LINK_TO_LIBODE
 	const char* dllnames [] =
 	{
@@ -1551,12 +1564,9 @@ static void World_Physics_Init(void)
 		}
 #endif
 	}
-#endif
 }
-
 static void World_Physics_Shutdown(void)
 {
-#ifdef USEODE
 #ifndef LINK_TO_LIBODE
 	if (ode_dll)
 #endif
@@ -1567,10 +1577,8 @@ static void World_Physics_Shutdown(void)
 		ode_dll = NULL;
 #endif
 	}
-#endif
 }
 
-#ifdef USEODE
 static void World_Physics_UpdateODE(world_t *world)
 {
 	dWorldID odeworld;
@@ -1627,20 +1635,16 @@ static void World_Physics_EnableODE(world_t *world)
 
 	World_Physics_UpdateODE(world);
 }
-#endif
 
 static void World_Physics_Start(world_t *world)
 {
-#ifdef USEODE
 	if (world->physics.ode)
 		return;
 	World_Physics_EnableODE(world);
-#endif
 }
 
 static void World_Physics_End(world_t *world)
 {
-#ifdef USEODE
 	if (world->physics.ode)
 	{
 		dWorldDestroy((dWorldID)world->physics.ode_world);
@@ -1648,17 +1652,14 @@ static void World_Physics_End(world_t *world)
 		dJointGroupDestroy((dJointGroupID)world->physics.ode_contactgroup);
 		world->physics.ode = false;
 	}
-#endif
 }
 
 void World_Physics_RemoveJointFromEntity(world_t *world, prvm_edict_t *ed)
 {
 	ed->priv.server->ode_joint_type = 0;
-#ifdef USEODE
 	if(ed->priv.server->ode_joint)
 		dJointDestroy((dJointID)ed->priv.server->ode_joint);
 	ed->priv.server->ode_joint = NULL;
-#endif
 }
 
 void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
@@ -1667,7 +1668,6 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 
 	// entity is not physics controlled, free any physics data
 	ed->priv.server->ode_physics = false;
-#ifdef USEODE
 	if (ed->priv.server->ode_geom)
 		dGeomDestroy((dGeomID)ed->priv.server->ode_geom);
 	ed->priv.server->ode_geom = NULL;
@@ -1697,7 +1697,6 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 		dBodyDestroy((dBodyID)ed->priv.server->ode_body);
 	}
 	ed->priv.server->ode_body = NULL;
-#endif
 	if (ed->priv.server->ode_vertex3f)
 		Mem_Free(ed->priv.server->ode_vertex3f);
 	ed->priv.server->ode_vertex3f = NULL;
@@ -1720,7 +1719,6 @@ void World_Physics_RemoveFromEntity(world_t *world, prvm_edict_t *ed)
 
 void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f)
 {
-#ifdef USEODE
 	dBodyID body = (dBodyID)ed->priv.server->ode_body;
 
 	switch(f->type)
@@ -1742,10 +1740,8 @@ void World_Physics_ApplyCmd(prvm_edict_t *ed, edict_odefunc_t *f)
 	default:
 		break;
 	}
-#endif
 }
 
-#ifdef USEODE
 static void World_Physics_Frame_BodyToEntity(world_t *world, prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = world->prog;
@@ -3006,11 +3002,9 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 		dJointAttach(c, b1, b2);
 	}
 }
-#endif
 
 void World_Physics_Frame(world_t *world, double frametime, double gravity)
 {
-#ifdef USEODE
 	prvm_prog_t *prog = world->prog;
 	double tdelta, tdelta2, tdelta3, simulationtime, collisiontime;
 
@@ -3117,5 +3111,5 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			}
 		}
 	}
-#endif
 }
+#endif

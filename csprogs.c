@@ -906,8 +906,10 @@ static void CLVM_free_edict(prvm_prog_t *prog, prvm_edict_t *ed)
 	World_UnlinkEdict(ed);
 	memset(ed->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 	VM_RemoveEdictSkeleton(prog, ed);
+#ifdef USEODE
 	World_Physics_RemoveFromEntity(&cl.world, ed);
 	World_Physics_RemoveJointFromEntity(&cl.world, ed);
+#endif
 }
 
 static void CLVM_count_edicts(prvm_prog_t *prog)

@@ -448,6 +448,22 @@ prepare :
 
 
 #this checks USEODE when compiling so it needs the ODE flags as well
+cl_parse.o: cl_parse.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_ODE)
+
+cs_progs.o: cs_progs.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_ODE)
+
+sv_main.o: sv_main.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_ODE)
+
+sv_phys.o: sv_phys.c
+	$(CHECKLEVEL2)
+	$(DO_CC) $(CFLAGS_ODE)
+
 prvm_cmds.o: prvm_cmds.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
