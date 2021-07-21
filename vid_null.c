@@ -29,6 +29,7 @@ void VID_Shutdown(void)
 {
 }
 
+#ifndef WIN32
 static void signal_handler(int sig)
 {
 	Con_Printf("Received signal %d, exiting...\n", sig);
@@ -37,7 +38,6 @@ static void signal_handler(int sig)
 
 static void InitSig(void)
 {
-#ifndef WIN32
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 	signal(SIGQUIT, signal_handler);
@@ -48,8 +48,8 @@ static void InitSig(void)
 	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
 	signal(SIGTERM, signal_handler);
-#endif
 }
+#endif
 
 void VID_SetMouse (qbool fullscreengrab, qbool relative, qbool hidecursor)
 {
@@ -61,7 +61,9 @@ void VID_Finish (void)
 
 void VID_Init(void)
 {
+#ifndef WIN32
 	InitSig(); // trap evil signals
+#endif
 }
 
 qbool VID_InitMode(viddef_mode_t *mode)
