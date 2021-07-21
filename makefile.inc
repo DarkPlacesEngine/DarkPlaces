@@ -472,10 +472,6 @@ world.o: world.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
 
-vid_glx.o: vid_glx.c
-	$(CHECKLEVEL2)
-	$(DO_CC) -I/usr/X11R6/include
-
 keysym2ucs.o: keysym2ucs.c
 	$(CHECKLEVEL2)
 	$(DO_CC) -I/usr/X11R6/include
