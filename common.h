@@ -228,11 +228,11 @@ char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 #ifdef snprintf
 # undef snprintf
 #endif
-#define snprintf DO_NOT_USE_SNPRINTF__USE_DPSNPRINTF
+#define snprintf DP_STATIC_ASSERT(0, "snprintf is forbidden for portability reasons. Use dpsnprintf instead.")
 #ifdef vsnprintf
 # undef vsnprintf
 #endif
-#define vsnprintf DO_NOT_USE_VSNPRINTF__USE_DPVSNPRINTF
+#define vsnprintf DP_STATIC_ASSERT(0, "vsnprintf is forbidden for portability reasons. Use dpvsnprintf instead.")
 
 // dpsnprintf and dpvsnprintf
 // return the number of printed characters, excluding the final '\0'
@@ -244,15 +244,15 @@ extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_
 // A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)
 // LadyHavoc: added #undef lines here to avoid warnings in Linux
 #undef strcat
-#define strcat DO_NOT_USE_STRCAT__USE_STRLCAT_OR_MEMCPY
+#define strcat DP_STATIC_ASSERT(0, "strcat is forbidden for security reasons. Use strlcat or memcpy instead.")
 #undef strncat
-#define strncat DO_NOT_USE_STRNCAT__USE_STRLCAT_OR_MEMCPY
+#define strncat DP_STATIC_ASSERT(0, "strncat is forbidden for security reasons. Use strlcat or memcpy instead.")
 #undef strcpy
-#define strcpy DO_NOT_USE_STRCPY__USE_STRLCPY_OR_MEMCPY
+#define strcpy DP_STATIC_ASSERT(0, "strcpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
 #undef strncpy
-#define strncpy DO_NOT_USE_STRNCPY__USE_STRLCPY_OR_MEMCPY
-//#undef sprintf
-//#define sprintf DO_NOT_USE_SPRINTF__USE_DPSNPRINTF
+#define strncpy DP_STATIC_ASSERT(0, "strncpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
+#undef sprintf
+#define sprintf DP_STATIC_ASSERT(0, "sprintf is forbidden for security reasons. Use dpsnprintf instead.")
 
 
 //============================================================================

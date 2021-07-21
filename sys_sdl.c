@@ -1,5 +1,5 @@
 #ifdef WIN32
-#include <io.h>
+#include <io.h> // Include this BEFORE darkplaces.h because it uses strncpy which trips DP_STATIC_ASSERT
 #include "conio.h"
 #else
 #include <unistd.h>
