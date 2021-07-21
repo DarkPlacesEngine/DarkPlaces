@@ -1556,7 +1556,7 @@ static void SV_Ent_Remove_f(cmd_state_t *cmd)
 				return;
 		}
 
-		if(!ed->priv.required->free)
+		if(!ed->free)
 		{
 			print("Removed a \"%s\"\n", PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)));
 			PRVM_ED_ClearEdict(prog, ed);
@@ -1580,7 +1580,7 @@ static void SV_Ent_Remove_All_f(cmd_state_t *cmd)
 
 	for (i = 0, rmcount = 0, ed = PRVM_EDICT_NUM(i); i < prog->num_edicts; i++, ed = PRVM_NEXT_EDICT(ed))
 	{
-		if(!ed->priv.required->free && !strcmp(PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)), Cmd_Argv(cmd, 1)))
+		if(!ed->free && !strcmp(PRVM_GetString(prog, PRVM_serveredictstring(ed, classname)), Cmd_Argv(cmd, 1)))
 		{
 			if(!i)
 			{

@@ -883,7 +883,7 @@ static void CLVM_end_increase_edicts(prvm_prog_t *prog)
 
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
-		if (!ent->priv.server->free && !VectorCompare(PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
+		if (!ent->free && !VectorCompare(PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
 			CL_LinkEdict(ent);
 }
 
@@ -919,7 +919,7 @@ static void CLVM_count_edicts(prvm_prog_t *prog)
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		ent = PRVM_EDICT_NUM(i);
-		if (ent->priv.server->free)
+		if (ent->free)
 			continue;
 		active++;
 		if (PRVM_clientedictfloat(ent, solid))
@@ -1191,7 +1191,7 @@ qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 
 	ed = PRVM_EDICT_NUM(entnum - MAX_EDICTS);
 
-	if(!ed->priv.required->free)
+	if(!ed->free)
 	{
 		mod = CL_GetModelFromEdict(ed);
 		VectorCopy(PRVM_clientedictvector(ed, origin), out);

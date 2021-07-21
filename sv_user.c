@@ -718,7 +718,7 @@ static void SV_ReadClientMove (void)
 		}
 		// as requested by FrikaC, cursor_trace_ent is reset to world if the
 		// entity is free at time of receipt
-		if (PRVM_EDICT_NUM(move->cursor_entitynumber)->priv.server->free)
+		if (PRVM_EDICT_NUM(move->cursor_entitynumber)->free)
 			move->cursor_entitynumber = 0;
 		if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
