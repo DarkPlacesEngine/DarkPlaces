@@ -67,15 +67,11 @@ typedef struct edict_odefunc_s
 
 typedef struct edict_engineprivate_s
 {
-	// true if this edict is unused
-	qbool free;
-	// sv.time when the object was freed (to prevent early reuse which could
-	// mess up client interpolation or obscure severe QuakeC bugs)
-	double freetime;
 	// mark for the leak detector
 	int mark;
 	// place in the code where it was allocated (for the leak detector)
 	const char *allocation_origin;
+
 	// initially false to prevent projectiles from moving on their first frame
 	// (even if they were spawned by an synchronous client think)
 	qbool move;

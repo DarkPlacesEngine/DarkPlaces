@@ -6123,7 +6123,7 @@ static void R_DrawEntityBBoxes(prvm_prog_t *prog)
 	for (i = 0; i < prog->num_edicts; i++)
 	{
 		edict = PRVM_EDICT_NUM(i);
-		if (edict->priv.server->free)
+		if (edict->free)
 			continue;
 		// exclude the following for now, as they don't live in world coordinate space and can't be solid:
 		if (PRVM_gameedictedict(edict, tag_entity) != 0)

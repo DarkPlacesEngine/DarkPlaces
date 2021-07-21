@@ -221,7 +221,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 			{
 				ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
-				if (!ent->priv.server->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
+				if (!ent->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
 				{
 					if (numlist < maxlist)
 						list[numlist] = ent;
@@ -245,7 +245,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
 					{
 						ent->priv.server->areagridmarknumber = world->areagrid_marknumber;
-						if (!ent->priv.server->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
+						if (!ent->free && BoxesOverlap(paddedmins, paddedmaxs, ent->priv.server->areamins, ent->priv.server->areamaxs))
 						{
 							if (numlist < maxlist)
 								list[numlist] = ent;
@@ -313,7 +313,7 @@ void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const
 		return;
 
 	// don't add free entities
-	if (ent->priv.server->free)
+	if (ent->free)
 		return;
 
 	VectorCopy(mins, ent->priv.server->areamins);
@@ -1862,7 +1862,7 @@ static void World_Physics_Frame_ForceFromEntity(world_t *world, prvm_edict_t *ed
 	if (!forcetype)
 		return;
 	enemy = PRVM_gameedictedict(ed, enemy);
-	if (enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].priv.required->free || prog->edicts[enemy].priv.server->ode_body == 0)
+	if (enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].free || prog->edicts[enemy].priv.server->ode_body == 0)
 		return;
 	VectorCopy(PRVM_gameedictvector(ed, movedir), movedir);
 	VectorCopy(PRVM_gameedictvector(ed, origin), origin);
@@ -1914,9 +1914,9 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 	VectorCopy(PRVM_gameedictvector(ed, movedir), movedir);
 	if(movetype == MOVETYPE_PHYSICS)
 		jointtype = JOINTTYPE_NONE; // can't have both
-	if(enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].priv.required->free || prog->edicts[enemy].priv.server->ode_body == 0)
+	if(enemy <= 0 || enemy >= prog->num_edicts || prog->edicts[enemy].free || prog->edicts[enemy].priv.server->ode_body == 0)
 		enemy = 0;
-	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].priv.required->free || prog->edicts[aiment].priv.server->ode_body == 0)
+	if(aiment <= 0 || aiment >= prog->num_edicts || prog->edicts[aiment].free || prog->edicts[aiment].priv.server->ode_body == 0)
 		aiment = 0;
 	// see http://www.ode.org/old_list_archives/2006-January/017614.html
 	// we want to set ERP? make it fps independent and work like a spring constant
@@ -2925,7 +2925,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 		return;
 
 	ed1 = (prvm_edict_t *) dGeomGetData(o1);
-	if(ed1 && ed1->priv.server->free)
+	if(ed1 && ed1->free)
 		ed1 = NULL;
 	if(ed1)
 	{
@@ -2936,7 +2936,7 @@ static void nearCallback (void *data, dGeomID o1, dGeomID o2)
 	}
 
 	ed2 = (prvm_edict_t *) dGeomGetData(o2);
-	if(ed2 && ed2->priv.server->free)
+	if(ed2 && ed2->free)
 		ed2 = NULL;
 	if(ed2)
 	{
@@ -3050,11 +3050,11 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 		if (prog)
 		{
 			for (i = 0, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
-				if (!prog->edicts[i].priv.required->free)
+				if (!prog->edicts[i].free)
 					World_Physics_Frame_BodyFromEntity(world, ed);
 			// oh, and it must be called after all bodies were created
 			for (i = 0, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
-				if (!prog->edicts[i].priv.required->free)
+				if (!prog->edicts[i].free)
 					World_Physics_Frame_JointFromEntity(world, ed);
 		}
 
@@ -3075,7 +3075,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 			{
 				int j;
 				for (j = 0, ed = prog->edicts + j;j < prog->num_edicts;j++, ed++)
-					if (!prog->edicts[j].priv.required->free)
+					if (!prog->edicts[j].free)
 						World_Physics_Frame_ForceFromEntity(world, ed);
 			}
 			// run physics (move objects, calculate new velocities)
@@ -3092,7 +3092,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 		if (prog)
 		{
 			for (i = 1, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
-				if (!prog->edicts[i].priv.required->free)
+				if (!prog->edicts[i].free)
 					World_Physics_Frame_BodyToEntity(world, ed);
 
 			// print stats
@@ -3104,7 +3104,7 @@ void World_Physics_Frame(world_t *world, double frametime, double gravity)
 				world->physics.ode_activeovjects = 0;
 				for (i = 1, ed = prog->edicts + i;i < prog->num_edicts;i++, ed++)
 				{
-					if (prog->edicts[i].priv.required->free)
+					if (prog->edicts[i].free)
 						continue;
 					body = (dBodyID)prog->edicts[i].priv.server->ode_body;
 					if (!body)

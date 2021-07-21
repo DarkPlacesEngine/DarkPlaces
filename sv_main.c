@@ -1556,7 +1556,7 @@ model_t *SV_GetModelFromEdict(prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int modelindex;
-	if (!ed || ed->priv.server->free)
+	if (!ed || ed->free)
 		return NULL;
 	modelindex = (int)PRVM_serveredictfloat(ed, modelindex);
 	return (modelindex > 0 && modelindex < MAX_MODELS) ? sv.models[modelindex] : NULL;
@@ -1583,7 +1583,7 @@ static void SV_CreateBaseline (void)
 		// LadyHavoc: always clear state values, whether the entity is in use or not
 		svent->priv.server->baseline = defaultstate;
 
-		if (svent->priv.server->free)
+		if (svent->free)
 			continue;
 		if (entnum > svs.maxclients && !PRVM_serveredictfloat(svent, modelindex))
 			continue;
@@ -1937,7 +1937,7 @@ void SV_SpawnServer (const char *map)
 	// AK possible hack since num_edicts is still 0
 	ent = PRVM_EDICT_NUM(0);
 	memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
-	ent->priv.server->free = false;
+	ent->free = false;
 	PRVM_serveredictstring(ent, model) = PRVM_SetEngineString(prog, sv.worldname);
 	PRVM_serveredictfloat(ent, modelindex) = 1;		// world model
 	PRVM_serveredictfloat(ent, solid) = SOLID_BSP;
@@ -2113,7 +2113,7 @@ static void SVVM_end_increase_edicts(prvm_prog_t *prog)
 
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
-		if (!ent->priv.server->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
+		if (!ent->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
 			SV_LinkEdict(ent);
 }
 
@@ -2209,7 +2209,7 @@ static void SVVM_count_edicts(prvm_prog_t *prog)
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		ent = PRVM_EDICT_NUM(i);
-		if (ent->priv.server->free)
+		if (ent->free)
 			continue;
 		active++;
 		if (PRVM_serveredictfloat(ent, solid))
