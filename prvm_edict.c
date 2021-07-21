@@ -204,8 +204,8 @@ freed and sets the allocation origin.
 void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e)
 {
 	memset(e->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
-	e->priv.required->free = false;
-	e->priv.required->freetime = host.realtime;
+	e->free = false;
+	e->freetime = host.realtime;
 	if(e->priv.required->allocation_origin)
 		Mem_Free((char *)e->priv.required->allocation_origin);
 	e->priv.required->allocation_origin = PRVM_AllocationOrigin(prog);
@@ -235,15 +235,15 @@ Returns if this particular edict could get allocated by PRVM_ED_Alloc
 */
 qbool PRVM_ED_CanAlloc(prvm_prog_t *prog, prvm_edict_t *e)
 {
-	if(!e->priv.required->free)
+	if(!e->free)
 		return false;
 	if(prvm_reuseedicts_always_allow == host.realtime)
 		return true;
-	if(host.realtime <= e->priv.required->freetime + 0.1 && prvm_reuseedicts_neverinsameframe.integer)
+	if(host.realtime <= e->freetime + 0.1 && prvm_reuseedicts_neverinsameframe.integer)
 		return false; // never allow reuse in same frame (causes networking trouble)
-	if(e->priv.required->freetime < prog->starttime + prvm_reuseedicts_startuptime.value)
+	if(e->freetime < prog->starttime + prvm_reuseedicts_startuptime.value)
 		return true;
-	if(host.realtime > e->priv.required->freetime + 1)
+	if(host.realtime > e->freetime + 1)
 		return true;
 	return false; // entity slot still blocked because the entity was freed less than one second ago
 }
@@ -308,8 +308,8 @@ void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed)
 
 	prog->free_edict(prog, ed);
 
-	ed->priv.required->free = true;
-	ed->priv.required->freetime = host.realtime;
+	ed->free = true;
+	ed->freetime = host.realtime;
 	if(ed->priv.required->allocation_origin)
 	{
 		Mem_Free((char *)ed->priv.required->allocation_origin);
@@ -654,7 +654,7 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 	char	tempstring[MAX_INPUTLINE], tempstring2[260]; // temporary string buffers
 	char	valuebuf[MAX_INPUTLINE];
 
-	if (ed->priv.required->free)
+	if (ed->free)
 	{
 		Con_Printf("%s: FREE\n",prog->name);
 		return;
@@ -737,7 +737,7 @@ void PRVM_ED_Write (prvm_prog_t *prog, qfile_t *f, prvm_edict_t *ed)
 
 	FS_Print(f, "{\n");
 
-	if (ed->priv.required->free)
+	if (ed->free)
 	{
 		FS_Print(f, "}\n");
 		return;
@@ -1351,8 +1351,8 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 	}
 
 	if (!init) {
-		ent->priv.required->free = true;
-		ent->priv.required->freetime = host.realtime;
+		ent->free = true;
+		ent->freetime = host.realtime;
 	}
 
 	return data;
@@ -1379,7 +1379,7 @@ qbool PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char
 //
 // immediately call spawn function, but only if there is a self global and a classname
 //
-	if (!ent->priv.required->free)
+	if (!ent->free)
 	{
 		if (!PRVM_alledictstring(ent, classname))
 		{
@@ -1455,7 +1455,7 @@ qbool PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char
 
 void PRVM_ED_CallPostspawnFunction (prvm_prog_t *prog, prvm_edict_t *ent)
 {
-	if(!ent->priv.required->free)
+	if(!ent->free)
 	if (PRVM_serverfunction(SV_OnEntityPostSpawnFunction))
 	{
 		// self = ent
@@ -1530,7 +1530,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 
 		PRVM_ED_CallPrespawnFunction(prog, ent);
 
-		if(ent->priv.required->free)
+		if(ent->free)
 		{
 			inhibited++;
 			continue;
@@ -1544,7 +1544,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 		PRVM_ED_CallPostspawnFunction(prog, ent);
 
 		spawned++;
-		if (ent->priv.required->free)
+		if (ent->free)
 			died++;
 	}
 
@@ -2746,7 +2746,7 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 	for (ednum = 0;ednum < prog->max_edicts;ednum++)
 	{
 		ed = PRVM_EDICT_NUM(ednum);
-		if (ed->priv.required->free)
+		if (ed->free)
 			continue;
 		for (i = 1;i < prog->numfielddefs;i++)
 		{
@@ -3446,7 +3446,7 @@ static qbool PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
-		if (ed->priv.required->free)
+		if (ed->free)
 			continue;
 		for (i=0; i<prog->numfielddefs; ++i)
 		{
@@ -3467,7 +3467,7 @@ static qbool PRVM_IsEdictRelevant(prvm_prog_t *prog, prvm_edict_t *edict)
 	char vabuf2[1024];
 	if(PRVM_NUM_FOR_EDICT(edict) <= prog->reserved_edicts)
 		return true; // world or clients
-	if (edict->priv.required->freetime <= prog->inittime)
+	if (edict->freetime <= prog->inittime)
 		return true; // created during startup
 	if (prog == SVVM_prog)
 	{
@@ -3564,7 +3564,7 @@ static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
-		if(ed->priv.required->free)
+		if(ed->free)
 			continue;
 		ed->priv.required->mark = PRVM_IsEdictRelevant(prog, ed) ? stage : 0;
 	}
@@ -3590,7 +3590,7 @@ static void PRVM_MarkReferencedEdicts(prvm_prog_t *prog)
 		for(j = 0; j < prog->num_edicts; ++j)
 		{
 			prvm_edict_t *ed = PRVM_EDICT_NUM(j);
-			if(ed->priv.required->free)
+			if(ed->free)
 				continue;
 			if(ed->priv.required->mark)
 				continue;
@@ -3632,7 +3632,7 @@ void PRVM_LeakTest(prvm_prog_t *prog)
 	for(j = 0; j < prog->num_edicts; ++j)
 	{
 		prvm_edict_t *ed = PRVM_EDICT_NUM(j);
-		if(ed->priv.required->free)
+		if(ed->free)
 			continue;
 		if(!ed->priv.required->mark)
 		if(ed->priv.required->allocation_origin)
