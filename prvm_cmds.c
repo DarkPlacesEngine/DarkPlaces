@@ -6408,6 +6408,7 @@ void VM_getsurfacetriangle(prvm_prog_t *prog)
 // physics builtins
 //
 
+#ifdef USEODE
 #define VM_physics_ApplyCmd(ed,f) if (!ed->priv.server->ode_body) VM_physics_newstackfunction(prog, ed, f); else World_Physics_ApplyCmd(ed, f)
 
 static edict_odefunc_t *VM_physics_newstackfunction(prvm_prog_t *prog, prvm_edict_t *ed, edict_odefunc_t *f)
@@ -6426,14 +6427,17 @@ static edict_odefunc_t *VM_physics_newstackfunction(prvm_prog_t *prog, prvm_edic
 	}
 	return newfunc;
 }
+#endif
 
 // void(entity e, float physics_enabled) physics_enable = #;
 void VM_physics_enable(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(2, VM_physics_enable);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6449,15 +6453,18 @@ void VM_physics_enable(prvm_prog_t *prog)
 	}
 	f.type = PRVM_G_FLOAT(OFS_PARM1) == 0 ? ODEFUNC_DISABLE : ODEFUNC_ENABLE;
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 // void(entity e, vector force, vector relative_ofs) physics_addforce = #;
 void VM_physics_addforce(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(3, VM_physics_addforce);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6475,15 +6482,18 @@ void VM_physics_addforce(prvm_prog_t *prog)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), f.v2);
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 // void(entity e, vector torque) physics_addtorque = #;
 void VM_physics_addtorque(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(2, VM_physics_addtorque);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6500,6 +6510,7 @@ void VM_physics_addtorque(prvm_prog_t *prog)
 	f.type = ODEFUNC_TORQUE;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 extern cvar_t prvm_coverage;

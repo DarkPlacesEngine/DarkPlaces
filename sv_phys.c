@@ -3176,8 +3176,10 @@ void SV_Physics (void)
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
 	prog->ExecuteProgram(prog, PRVM_serverfunction(StartFrame), "QC function StartFrame is missing");
 
+#ifdef USEODE
 	// run physics engine
 	World_Physics_Frame(&sv.world, sv.frametime, sv_gravity.value);
+#endif
 
 //
 // treat each object in turn
