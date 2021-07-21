@@ -2493,6 +2493,7 @@ static void CL_MeshEntities_Restart(void)
 	for (i = 0; i < NUM_MESHENTITIES; i++)
 	{
 		ent = cl_meshentities + i;
+		Mod_Mesh_Destroy(ent->render.model);
 		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
 	}
 }
