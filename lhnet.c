@@ -719,7 +719,7 @@ typedef struct lhnetpacket_s
 #ifndef STANDALONETEST
 	double sentdoubletime;
 #endif
-	struct lhnetpacket_s *next, *prev;
+	llist_t list;
 }
 lhnetpacket_t;
 
@@ -736,8 +736,8 @@ void LHNET_Init(void)
 {
 	if (lhnet_active)
 		return;
-	lhnet_socketlist.next = lhnet_socketlist.prev = &lhnet_socketlist;
-	lhnet_packetlist.next = lhnet_packetlist.prev = &lhnet_packetlist;
+	List_Create(&lhnet_socketlist.list);
+	List_Create(&lhnet_packetlist.list);
 	lhnet_active = 1;
 #ifdef WIN32
 	lhnet_didWSAStartup = !WSAStartup(MAKEWORD(1, 1), &lhnet_winsockdata);
@@ -760,16 +760,15 @@ int LHNET_DefaultDSCP(int dscp)
 
 void LHNET_Shutdown(void)
 {
-	lhnetpacket_t *p;
+	lhnetsocket_t *s, *snext;
+	lhnetpacket_t *p, *pnext;
 	if (!lhnet_active)
 		return;
-	while (lhnet_socketlist.next != &lhnet_socketlist)
-		LHNET_CloseSocket(lhnet_socketlist.next);
-	while (lhnet_packetlist.next != &lhnet_packetlist)
+	List_For_Each_Entry_Safe(s, snext, &lhnet_socketlist.list, list)
+		LHNET_CloseSocket(s);
+	List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, list)
 	{
-		p = lhnet_packetlist.next;
-		p->prev->next = p->next;
-		p->next->prev = p->prev;
+		List_Delete(&p->list);
 		Z_Free(p);
 	}
 #ifdef WIN32
@@ -849,7 +848,7 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 	lhnetsocket_t *s;
 	FD_ZERO(&fdreadset);
 	lastfd = 0;
-	for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
+	List_For_Each_Entry(s, &lhnet_socketlist.list, list)
 	{
 		if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
 		{
@@ -893,7 +892,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				lhnetsocket->address.port = 1024;
 				for (;;)
 				{
-					for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
+					List_For_Each_Entry(s, &lhnet_socketlist.list, list)
 						if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 							break;
 					if (s == &lhnet_socketlist)
@@ -902,15 +901,12 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				}
 			}
 			// check if the port is available
-			for (s = lhnet_socketlist.next;s != &lhnet_socketlist;s = s->next)
+			List_For_Each_Entry(s, &lhnet_socketlist.list, list)
 				if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 					break;
 			if (s == &lhnet_socketlist && lhnetsocket->address.port != 0)
 			{
-				lhnetsocket->next = &lhnet_socketlist;
-				lhnetsocket->prev = lhnetsocket->next->prev;
-				lhnetsocket->next->prev = lhnetsocket;
-				lhnetsocket->prev->next = lhnetsocket;
+				List_Add_Tail(&lhnetsocket->list, &lhnet_socketlist.list);
 				return lhnetsocket;
 			}
 			break;
@@ -1018,10 +1014,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 									}
 								}
 #endif
-								lhnetsocket->next = &lhnet_socketlist;
-								lhnetsocket->prev = lhnetsocket->next->prev;
-								lhnetsocket->next->prev = lhnetsocket;
-								lhnetsocket->prev->next = lhnetsocket;
+								List_Add_Tail(&lhnetsocket->list, &lhnet_socketlist.list);
 #ifdef WIN32
 								if (ioctlsocket(lhnetsocket->inetsocket, SIO_UDP_CONNRESET, &_false) == -1)
 									Con_DPrintf("LHNET_OpenSocket_Connectionless: ioctlsocket SIO_UDP_CONNRESET returned error: %s\n", LHNETPRIVATE_StrError());
@@ -1060,14 +1053,7 @@ void LHNET_CloseSocket(lhnetsocket_t *lhnetsocket)
 {
 	if (lhnetsocket)
 	{
-		// unlink from socket list
-		if (lhnetsocket->next == NULL)
-			return; // invalid!
-		lhnetsocket->next->prev = lhnetsocket->prev;
-		lhnetsocket->prev->next = lhnetsocket->next;
-		lhnetsocket->next = NULL;
-		lhnetsocket->prev = NULL;
-
+		List_Delete(&lhnetsocket->list);
 		// no special close code for loopback, just inet
 		if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET4 || lhnetsocket->address.addresstype == LHNETADDRESSTYPE_INET6)
 		{
@@ -1098,14 +1084,12 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		// scan for any old packets to timeout while searching for a packet
 		// that is waiting to be delivered to this socket
 		currenttime = time(NULL);
-		for (p = lhnet_packetlist.next;p != &lhnet_packetlist;p = pnext)
+		List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, list)
 		{
-			pnext = p->next;
 			if (p->timeout < currenttime)
 			{
 				// unlink and free
-				p->next->prev = p->prev;
-				p->prev->next = p->next;
+				List_Delete(&p->list);
 				Z_Free(p);
 				continue;
 			}
@@ -1126,8 +1110,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				else
 					value = -1;
 				// unlink and free
-				p->next->prev = p->prev;
-				p->prev->next = p->next;
+				List_Delete(&p->list);
 				Z_Free(p);
 			}
 		}
@@ -1207,10 +1190,8 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->sourceport = lhnetsocket->address.port;
 		p->destinationport = address->port;
 		p->timeout = time(NULL) + 10;
-		p->next = &lhnet_packetlist;
-		p->prev = p->next->prev;
-		p->next->prev = p;
-		p->prev->next = p;
+		List_Add_Tail(&p->list, &lhnet_packetlist.list);
+
 #ifndef STANDALONETEST
 		p->sentdoubletime = host.realtime;
 #endif
