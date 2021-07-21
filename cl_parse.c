@@ -3391,8 +3391,10 @@ static void CL_NetworkTimeReceived(double newtime)
 	// update the csqc's server timestamps, critical for proper sync
 	CSQC_UpdateNetworkTimes(cl.mtime[0], cl.mtime[1]);
 
+#ifdef USEODE
 	if (cl.mtime[0] > cl.mtime[1])
 		World_Physics_Frame(&cl.world, cl.mtime[0] - cl.mtime[1], cl.movevars_gravity);
+#endif
 
 	// only lerp entities that also get an update in this frame, when lerp excess is used
 	if(cl_lerpexcess.value > 0)

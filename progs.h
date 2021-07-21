@@ -57,6 +57,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ODEFUNC_FORCE       3
 #define ODEFUNC_TORQUE      4
 
+#ifdef USEODE
 typedef struct edict_odefunc_s
 {
 	int type;
@@ -64,6 +65,7 @@ typedef struct edict_odefunc_s
 	vec3_t v2;
 	struct edict_odefunc_s *next;
 }edict_odefunc_t;
+#endif
 
 typedef struct edict_engineprivate_s
 {
@@ -109,6 +111,7 @@ typedef struct edict_engineprivate_s
 	frameblend_t frameblend[MAX_FRAMEBLENDS];
 	skeleton_t skeleton;
 
+#ifdef USEODE
 	// physics parameters
 	qbool ode_physics;
 	void *ode_body;
@@ -141,6 +144,7 @@ typedef struct edict_engineprivate_s
 	vec3_t ode_joint_velocity; // second joint axis
 	vec3_t ode_joint_movedir; // parameters
 	void *ode_massbuf;
+#endif
 }
 edict_engineprivate_t;
 
