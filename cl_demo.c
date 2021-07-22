@@ -256,7 +256,7 @@ void CL_ReadDemoMessage(void)
 		}
 		if (cl_message.cursize > cl_message.maxsize)
 		{
-			CL_Disconnect(false, "Demo message (%i) > cl_message.maxsize (%i)", cl_message.cursize, cl_message.maxsize);
+			CL_DisconnectEx(false, "Demo message (%i) > cl_message.maxsize (%i)", cl_message.cursize, cl_message.maxsize);
 			cl_message.cursize = 0;
 			return;
 		}
@@ -284,7 +284,7 @@ void CL_ReadDemoMessage(void)
 		}
 		else
 		{
-			CL_Disconnect(false, NULL);
+			CL_Disconnect();
 			return;
 		}
 	}
@@ -363,7 +363,7 @@ void CL_Record_f(cmd_state_t *cmd)
 	}
 
 	if (cls.state == ca_connected)
-		CL_Disconnect(false, NULL);
+		CL_Disconnect();
 
 	// write the forced cd track number, or -1
 	if (c == 4)
@@ -421,7 +421,7 @@ void CL_PlayDemo(const char *demo)
 	cls.demostarting = true;
 
 	// disconnect from server
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 
 	// update networking ports (this is mainly just needed at startup)
 	NetConn_UpdateSockets();
@@ -679,7 +679,7 @@ static void CL_Demos_f(cmd_state_t *cmd)
 		return;
 	if (cls.demonum == -1)
 		cls.demonum = 1;
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 	CL_NextDemo();
 }
 
@@ -694,7 +694,7 @@ static void CL_Stopdemo_f(cmd_state_t *cmd)
 {
 	if (!cls.demoplayback)
 		return;
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 }
 
 // LadyHavoc: pausedemo command

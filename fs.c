@@ -1578,7 +1578,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 
 	if (cls.demoplayback)
 	{
-		CL_Disconnect(false, NULL);
+		CL_Disconnect();
 		cls.demonum = 0;
 	}
 
@@ -1629,7 +1629,7 @@ static void FS_GameDir_f(cmd_state_t *cmd)
 	}
 
 	// halt demo playback to close the file
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 
 	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
 }

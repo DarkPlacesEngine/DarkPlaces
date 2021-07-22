@@ -272,7 +272,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 
 	// stop playing demos
 	if (cls.demoplayback)
-		CL_Disconnect (false, NULL);
+		CL_Disconnect();
 
 #ifdef CONFIG_MENU
 	// remove menu

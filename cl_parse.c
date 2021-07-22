@@ -3531,7 +3531,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect(true, NULL);
+					CL_DisconnectEx(true, "Server disconnected");
 				break;
 
 			case qw_svc_print:
@@ -3911,7 +3911,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect(true, cls.protocol == PROTOCOL_DARKPLACES8 ? MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)) : NULL);
+					CL_DisconnectEx(true, cls.protocol == PROTOCOL_DARKPLACES8 ? MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)) : "Server disconnected");
 				break;
 
 			case svc_print:

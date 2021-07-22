@@ -1484,7 +1484,7 @@ static void Curl_Curl_f(cmd_state_t *cmd)
 						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
 						Curl_CommandWhenDone(donecommand);
 						noclear = true;
-						CL_Disconnect(false, NULL);
+						CL_Disconnect();
 						noclear = false;
 						Curl_CheckCommandWhenDone();
 					}

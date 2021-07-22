@@ -360,7 +360,8 @@ Sends a disconnect message to the server
 This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect(qbool kicked, const char *fmt, ... )
+
+void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 {
 	va_list argptr;
 	char reason[512];
@@ -460,6 +461,11 @@ void CL_Disconnect(qbool kicked, const char *fmt, ... )
 		host.hook.SV_Shutdown();
 }
 
+void CL_Disconnect(void)
+{
+	CL_DisconnectEx(false, NULL);
+}
+
 /*
 ==================
 CL_Reconnect_f
@@ -538,7 +544,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect(false, Cmd_Argc(cmd) > 1 ? Cmd_Argv(cmd, 1) : NULL);
+	Cmd_Argc(cmd) < 1 ? CL_Disconnect() : CL_DisconnectEx(false, Cmd_Argv(cmd, 1));
 }
 
 
@@ -2950,7 +2956,7 @@ void CL_Shutdown (void)
 	S_StopAllSounds();
 	
 	// disconnect client from server if active
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 	
 	CL_Video_Shutdown();
 
@@ -3130,7 +3136,7 @@ void CL_Init (void)
 		NetConn_UpdateSockets_Client();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
-		host.hook.Disconnect = CL_Disconnect;
+		host.hook.Disconnect = CL_DisconnectEx;
 		host.hook.CL_Intermission = CL_Intermission;
 		host.hook.ToggleMenu = CL_ToggleMenu_Hook;
 	}
