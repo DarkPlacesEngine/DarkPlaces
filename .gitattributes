@@ -61,6 +61,7 @@ DoxyConfig crlf=input
 doxyfile crlf=input
 Doxyfile crlf=input
 *.doxygen crlf=input
+*.dpk -diff -crlf
 *.dpm -diff -crlf
 *.dsp -crlf
 *.dsw -crlf
