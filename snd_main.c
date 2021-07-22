@@ -2240,7 +2240,7 @@ void S_ExtraUpdate (void)
 	S_PaintAndSubmit();
 }
 
-qbool S_LocalSound (const char *sound)
+qbool S_LocalSoundEx (const char *sound, int chan, float fvol)
 {
 	sfx_t	*sfx;
 	int		ch_ind;
@@ -2261,10 +2261,15 @@ qbool S_LocalSound (const char *sound)
 	// fun fact: in Quake 1, this used -1 "replace any entity channel",
 	// which we no longer support anyway
 	// changed by Black in r4297 "Changed S_LocalSound to play multiple sounds at a time."
-	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 0);
+	ch_ind = S_StartSound (cl.viewentity, chan, sfx, vec3_origin, fvol, 0);
 	if (ch_ind < 0)
 		return false;
 
 	channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 	return true;
+}
+
+qbool S_LocalSound (const char *sound)
+{
+	return S_LocalSoundEx(sound, 0, 1);
 }

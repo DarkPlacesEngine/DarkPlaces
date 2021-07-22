@@ -435,6 +435,7 @@ string(string s, float start, float length) substring = #116;
 vector(string) stov = #117;
 string(string s) strzone = #118;
 void(string s) strunzone = #119;
+void(string s, float chan, float vol) localsound = #177;
 
 // FTEQW range #200-#299
 

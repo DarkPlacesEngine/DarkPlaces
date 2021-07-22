@@ -586,18 +586,29 @@ void VM_random(prvm_prog_t *prog)
 =========
 VM_localsound
 
-localsound(string sample)
+localsound(string sample, float chan, float vol)
 =========
 */
 void VM_localsound(prvm_prog_t *prog)
 {
 	const char *s;
+	float chan, vol;
 
-	VM_SAFEPARMCOUNT(1,VM_localsound);
+	VM_SAFEPARMCOUNTRANGE(1, 3,VM_localsound);
 
 	s = PRVM_G_STRING(OFS_PARM0);
-
-	if(!S_LocalSound (s))
+	if(prog->argc == 3)
+	{
+		chan = PRVM_G_FLOAT(OFS_PARM1);
+		vol = PRVM_G_FLOAT(OFS_PARM2) == 0 ? 1 : PRVM_G_FLOAT(OFS_PARM2);
+		if(!S_LocalSoundEx(s, chan, vol))
+		{
+			PRVM_G_FLOAT(OFS_RETURN) = -4;
+			VM_Warning(prog, "VM_localsound: Failed to play %s for %s !\n", s, prog->name);
+			return;
+		}
+	}
+	else if(!S_LocalSound (s))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		VM_Warning(prog, "VM_localsound: Failed to play %s for %s !\n", s, prog->name);
