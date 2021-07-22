@@ -219,7 +219,7 @@ static inline qbool List_Is_Empty(const llist_t *list)
  */
 static inline void List_Create(llist_t *list)
 {
-	list->next = list->prev = NULL;
+	list->next = list->prev = list;
 }
 
 /*

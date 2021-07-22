@@ -146,6 +146,9 @@ static void mmap_free(void *mem)
 // (Windows growing its swapfile for example)
 static void *attempt_malloc(size_t size)
 {
+#ifndef WIN32
+	return malloc(size);
+#else
 	void *base;
 	// try for half a second or so
 	unsigned int attempts = 500;
@@ -157,6 +160,7 @@ static void *attempt_malloc(size_t size)
 		Sys_Sleep(1000);
 	}
 	return NULL;
+#endif
 }
 #endif
 
@@ -867,14 +871,14 @@ static void MemStats_f(cmd_state_t *cmd)
 }
 
 
-char* Mem_strdup (mempool_t *pool, const char* s)
+char* _Mem_strdup (mempool_t *pool, const char* s, const char *filename, int fileline)
 {
 	char* p;
 	size_t sz;
 	if (s == NULL)
 		return NULL;
 	sz = strlen (s) + 1;
-	p = (char*)Mem_Alloc (pool, sz);
+	p = (char*)_Mem_Alloc (pool, NULL, sz, 16, filename, fileline);
 	strlcpy (p, s, sz);
 	return p;
 }

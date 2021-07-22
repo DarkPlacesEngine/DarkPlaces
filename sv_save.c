@@ -272,7 +272,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 
 	// stop playing demos
 	if (cls.demoplayback)
-		CL_Disconnect ();
+		CL_Disconnect (false, NULL);
 
 #ifdef CONFIG_MENU
 	// remove menu
@@ -434,7 +434,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 				PRVM_MEM_IncreaseEdicts(prog);
 			ent = PRVM_EDICT_NUM(entnum);
 			memset(ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
-			ent->priv.server->free = false;
+			ent->free = false;
 
 			if(developer_entityparsing.integer)
 				Con_Printf("SV_Loadgame_f: loading edict %d\n", entnum);
@@ -442,7 +442,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 			PRVM_ED_ParseEdict (prog, start, ent);
 
 			// link it into the bsp tree
-			if (!ent->priv.server->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
+			if (!ent->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
 				SV_LinkEdict(ent);
 		}
 

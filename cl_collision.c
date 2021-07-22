@@ -104,7 +104,7 @@ model_t *CL_GetModelByIndex(int modelindex)
 model_t *CL_GetModelFromEdict(prvm_edict_t *ed)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if (!ed || ed->priv.server->free)
+	if (!ed || ed->free)
 		return NULL;
 	return CL_GetModelByIndex((int)PRVM_clientedictfloat(ed, modelindex));
 }
@@ -117,7 +117,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 	if (ent == prog->edicts)
 		return;		// don't add the world
 
-	if (ent->priv.server->free)
+	if (ent->free)
 		return;
 
 	// set the abs box

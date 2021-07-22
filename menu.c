@@ -5269,7 +5269,7 @@ static void MVM_count_edicts(prvm_prog_t *prog)
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		ent = PRVM_EDICT_NUM(i);
-		if (ent->priv.required->free)
+		if (ent->free)
 			continue;
 		active++;
 	}

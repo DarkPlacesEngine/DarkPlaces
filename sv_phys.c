@@ -689,7 +689,7 @@ int SV_EntitiesInBox(const vec3_t mins, const vec3_t maxs, int maxedicts, prvm_e
 		for (edictindex = 1;edictindex < prog->num_edicts;edictindex++)
 		{
 			ed = PRVM_EDICT_NUM(edictindex);
-			if (!ed->priv.required->free && BoxesOverlap(PRVM_serveredictvector(ed, absmin), PRVM_serveredictvector(ed, absmax), paddedmins, paddedmaxs))
+			if (!ed->free && BoxesOverlap(PRVM_serveredictvector(ed, absmin), PRVM_serveredictvector(ed, absmax), paddedmins, paddedmaxs))
 			{
 				resultedicts[numresultedicts++] = ed;
 				if (numresultedicts == maxedicts)
@@ -734,7 +734,7 @@ void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent)
 	if (ent == prog->edicts)
 		return;		// don't add the world
 
-	if (ent->priv.server->free)
+	if (ent->free)
 		return;
 
 	if (PRVM_serveredictfloat(ent, solid) == SOLID_NOT)
@@ -811,7 +811,7 @@ void SV_LinkEdict (prvm_edict_t *ent)
 	if (ent == prog->edicts)
 		return;		// don't add the world
 
-	if (ent->priv.server->free)
+	if (ent->free)
 		return;
 
 	modelindex = (int)PRVM_serveredictfloat(ent, modelindex);
@@ -1089,7 +1089,7 @@ static qbool SV_RunThink (prvm_edict_t *ent)
 	if (PRVM_serveredictfloat(ent, nextthink) <= 0 || PRVM_serveredictfloat(ent, nextthink) > sv.time + sv.frametime)
 		return true;
 
-	for (iterations = 0;iterations < 128  && !ent->priv.server->free;iterations++)
+	for (iterations = 0;iterations < 128  && !ent->free;iterations++)
 	{
 		PRVM_serverglobalfloat(time) = max(sv.time, PRVM_serveredictfloat(ent, nextthink));
 		PRVM_serveredictfloat(ent, nextthink) = 0;
@@ -1103,7 +1103,7 @@ static qbool SV_RunThink (prvm_edict_t *ent)
 		if (PRVM_serveredictfloat(ent, nextthink) <= PRVM_serverglobalfloat(time) || PRVM_serveredictfloat(ent, nextthink) > sv.time + sv.frametime || !sv_gameplayfix_multiplethinksperframe.integer)
 			break;
 	}
-	return !ent->priv.server->free;
+	return !ent->free;
 }
 
 /*
@@ -1126,7 +1126,7 @@ static void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 
 	VM_SetTraceGlobals(prog, trace);
 
-	if (!e1->priv.server->free && !e2->priv.server->free && PRVM_serveredictfunction(e1, touch) && PRVM_serveredictfloat(e1, solid) != SOLID_NOT)
+	if (!e1->free && !e2->free && PRVM_serveredictfunction(e1, touch) && PRVM_serveredictfloat(e1, solid) != SOLID_NOT)
 	{
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(e1);
@@ -1134,7 +1134,7 @@ static void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 		prog->ExecuteProgram(prog, PRVM_serveredictfunction(e1, touch), "QC function self.touch is missing");
 	}
 
-	if (!e1->priv.server->free && !e2->priv.server->free && PRVM_serveredictfunction(e2, touch) && PRVM_serveredictfloat(e2, solid) != SOLID_NOT)
+	if (!e1->free && !e2->free && PRVM_serveredictfunction(e2, touch) && PRVM_serveredictfloat(e2, solid) != SOLID_NOT)
 	{
 		PRVM_serverglobalfloat(time) = sv.time;
 		PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(e2);
@@ -2626,7 +2626,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			// we can trust FL_ONGROUND if groundentity is world because it never moves
 			return;
 		}
-		else if (ent->priv.server->suspendedinairflag && groundentity->priv.server->free)
+		else if (ent->priv.server->suspendedinairflag && groundentity->free)
 		{
 			// if ent was supported by a brush model on previous frame,
 			// and groundentity is now freed, set groundentity to 0 (world)
@@ -2659,7 +2659,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 		VectorScale(PRVM_serveredictvector(ent, velocity), movetime, move);
 		if(!SV_PushEntity(&trace, ent, move, true))
 			return; // teleported
-		if (ent->priv.server->free)
+		if (ent->free)
 			return;
 		if (trace.bmodelstartsolid && sv_gameplayfix_unstickentities.integer)
 		{
@@ -2667,7 +2667,7 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 			SV_UnstickEntity(ent);
 			if(!SV_PushEntity(&trace, ent, move, true))
 				return; // teleported
-			if (ent->priv.server->free)
+			if (ent->free)
 				return;
 		}
 		if (trace.fraction == 1)
@@ -3176,8 +3176,10 @@ void SV_Physics (void)
 	PRVM_serverglobalfloat(frametime) = sv.frametime;
 	prog->ExecuteProgram(prog, PRVM_serverfunction(StartFrame), "QC function StartFrame is missing");
 
+#ifdef USEODE
 	// run physics engine
 	World_Physics_Frame(&sv.world, sv.frametime, sv_gravity.value);
+#endif
 
 //
 // treat each object in turn
@@ -3186,22 +3188,22 @@ void SV_Physics (void)
 	// if force_retouch, relink all the entities
 	if (PRVM_serverglobalfloat(force_retouch) > 0)
 		for (i = 1, ent = PRVM_EDICT_NUM(i);i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-			if (!ent->priv.server->free)
+			if (!ent->free)
 				SV_LinkEdict_TouchAreaGrid(ent); // force retouch even for stationary
 
 	if (sv_gameplayfix_consistentplayerprethink.integer)
 	{
 		// run physics on the client entities in 3 stages
 		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
-			if (!ent->priv.server->free)
+			if (!ent->free)
 				SV_Physics_ClientEntity_PreThink(ent);
 
 		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
-			if (!ent->priv.server->free)
+			if (!ent->free)
 				SV_Physics_ClientEntity(ent);
 
 		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
-			if (!ent->priv.server->free)
+			if (!ent->free)
 				SV_Physics_ClientEntity_PostThink(ent);
 	}
 	else
@@ -3209,7 +3211,7 @@ void SV_Physics (void)
 		// run physics on the client entities
 		for (i = 1, ent = PRVM_EDICT_NUM(i), host_client = svs.clients;i <= svs.maxclients;i++, ent = PRVM_NEXT_EDICT(ent), host_client++)
 		{
-			if (!ent->priv.server->free)
+			if (!ent->free)
 			{
 				SV_Physics_ClientEntity_PreThink(ent);
 				SV_Physics_ClientEntity(ent);
@@ -3222,13 +3224,13 @@ void SV_Physics (void)
 	if (!sv_freezenonclients.integer)
 	{
 		for (;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-			if (!ent->priv.server->free)
+			if (!ent->free)
 				SV_Physics_Entity(ent);
 		// make a second pass to see if any ents spawned this frame and make
 		// sure they run their move/think
 		if (sv_gameplayfix_delayprojectiles.integer < 0)
 			for (i = svs.maxclients + 1, ent = PRVM_EDICT_NUM(i);i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
-				if (!ent->priv.server->move && !ent->priv.server->free)
+				if (!ent->priv.server->move && !ent->free)
 					SV_Physics_Entity(ent);
 	}
 

@@ -515,7 +515,7 @@ void SV_StartSound (prvm_edict_t *entity, int channel, const char *sample, int v
 void SV_StartPointSound (vec3_t origin, const char *sample, int volume, float attenuation, float speed);
 
 void SV_ConnectClient (int clientnum, netconn_t *netconnection);
-void SV_DropClient (qbool crash);
+void SV_DropClient (qbool leaving, const char *reason, ... );
 
 void SV_ClientCommands(const char *fmt, ...) DP_FUNC_PRINTF(1);
 

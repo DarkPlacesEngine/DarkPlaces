@@ -709,7 +709,7 @@ static void SV_PrepareEntitiesForSending(void)
 	memset(sv.sendentitiesindex, 0, prog->num_edicts * sizeof(*sv.sendentitiesindex));
 	for (e = 1, ent = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ent = PRVM_NEXT_EDICT(ent))
 	{
-		if (!ent->priv.server->free && SV_PrepareEntityForSending(ent, sv.sendentities + sv.numsendentities, e))
+		if (!ent->free && SV_PrepareEntityForSending(ent, sv.sendentities + sv.numsendentities, e))
 		{
 			sv.sendentitiesindex[e] = sv.sendentities + sv.numsendentities;
 			sv.numsendentities++;
@@ -1006,7 +1006,7 @@ void SV_AddCameraEyes(void)
 	// check line of sight to portal entities and add them to PVS
 	for (e = 1, ed = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ed = PRVM_NEXT_EDICT(ed))
 	{
-		if (!ed->priv.server->free)
+		if (!ed->free)
 		{
 			if(PRVM_serveredictfunction(ed, camera_transform))
 			{
@@ -1651,7 +1651,7 @@ static void SV_UpdateToReliableMessages (void)
 		if (clientcamera > 0)
 		{
 			int oldclientcamera = host_client->clientcamera;
-			if (clientcamera >= prog->max_edicts || PRVM_EDICT_NUM(clientcamera)->priv.required->free)
+			if (clientcamera >= prog->max_edicts || PRVM_EDICT_NUM(clientcamera)->free)
 				clientcamera = PRVM_NUM_FOR_EDICT(host_client->edict);
 			host_client->clientcamera = clientcamera;
 
@@ -1712,7 +1712,7 @@ void SV_SendClientMessages(void)
 
 		if (host_client->netconnection->message.overflowed)
 		{
-			SV_DropClient (true);	// if the message couldn't send, kick off
+			SV_DropClient (true, "Buffer overflow in net message");	// if the message couldn't send, kick off
 			continue;
 		}
 

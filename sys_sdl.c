@@ -1,7 +1,5 @@
-#include "darkplaces.h"
-
 #ifdef WIN32
-#include <io.h>
+#include <io.h> // Include this BEFORE darkplaces.h because it uses strncpy which trips DP_STATIC_ASSERT
 #include "conio.h"
 #else
 #include <unistd.h>
@@ -15,7 +13,13 @@
 
 #include <signal.h>
 
+/*
+ * Include this BEFORE darkplaces.h because it breaks wrapping
+ * _Static_assert. Cloudwalk has no idea how or why so don't ask.
+ */
 #include <SDL.h>
+
+#include "darkplaces.h"
 
 #ifdef WIN32
 #ifdef _MSC_VER

@@ -74,23 +74,27 @@ typedef struct prvm_required_field_s
 	const char *name;
 } prvm_required_field_t;
 
-
+#define PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN -1
+#define PRVM_EDICT_MARK_SETORIGIN_CAUGHT -2
 // AK: I dont call it engine private cause it doesnt really belongs to the engine
 //     it belongs to prvm.
 typedef struct prvm_edict_private_s
 {
-	qbool free;
-	double freetime; // realtime of last change to "free" (i.e. also set on allocation)
-	int mark; // used during leaktest (0 = unref, >0 = referenced); special values during server physics:
-#define PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN -1
-#define PRVM_EDICT_MARK_SETORIGIN_CAUGHT -2
+	// mark for the leak detector
+	int mark;
+	// place in the code where it was allocated (for the leak detector)
 	const char *allocation_origin;
 } prvm_edict_private_t;
 
 typedef struct prvm_edict_s
 {
+	// true if this edict is unused
+	qbool free;
+	// sv.time when the object was freed (to prevent early reuse which could
+	// mess up client interpolation or obscure severe QuakeC bugs)
+	double freetime;
+
 	// engine-private fields (stored in dynamically resized array)
-	//edict_engineprivate_t *e;
 	union
 	{
 		prvm_edict_private_t *required;
