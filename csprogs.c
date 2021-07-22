@@ -1043,8 +1043,7 @@ void CL_VM_Init (void)
 			else
 			{
 				Mem_Free(csprogsdata);
-				Con_Printf(CON_ERROR "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
-				CL_Disconnect();
+				CL_Disconnect(false, "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				return;
 			}
 		}
@@ -1052,13 +1051,7 @@ void CL_VM_Init (void)
 	else
 	{
 		if (requiredcrc >= 0)
-		{
-			if (cls.demoplayback)
-				Con_Printf(CON_ERROR "CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
-			else
-				Con_Printf(CON_ERROR "CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
-			CL_Disconnect();
-		}
+			CL_Disconnect(false, CON_ERROR "CL_VM_Init: %s requires CSQC, but \"%s\" wasn't found\n", cls.demoplayback ? "demo" : "server", csqc_progname.string);
 		return;
 	}
 
@@ -1094,11 +1087,8 @@ void CL_VM_Init (void)
 
 	if (!prog->loaded)
 	{
-		Host_Error("CSQC %s failed to load\n", csprogsfn);
-		if(!sv.active)
-			CL_Disconnect();
 		Mem_Free(csprogsdata);
-		return;
+		Host_Error("CSQC %s failed to load\n", csprogsfn);
 	}
 
 	if(cls.demorecording)

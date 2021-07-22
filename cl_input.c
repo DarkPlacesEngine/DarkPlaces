@@ -2167,10 +2167,7 @@ void CL_SendMove(void)
 	in_impulse = 0;
 
 	if (cls.netcon->message.overflowed)
-	{
-		Con_Print("CL_SendMove: lost server connection\n");
-		CL_Disconnect();
-	}
+		CL_Disconnect(true, "Lost connection to server");
 }
 
 /*
