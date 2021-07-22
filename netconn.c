@@ -1529,7 +1529,7 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 #endif
 	// Disconnect from the current server or stop demo playback
 	if(cls.state == ca_connected || cls.demoplayback)
-		CL_Disconnect(false, NULL);
+		CL_Disconnect();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	crypto = &cls.netcon->crypto;
@@ -2488,7 +2488,7 @@ void NetConn_ClientFrame(void)
 	NetConn_QueryQueueFrame();
 #endif
 	if (cls.netcon && host.realtime > cls.netcon->timeout && !sv.active)
-		CL_Disconnect(true, "Connection timed out");
+		CL_DisconnectEx(true, "Connection timed out");
 }
 
 static void NetConn_BuildChallengeString(char *buffer, int bufferlength)

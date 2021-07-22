@@ -1043,7 +1043,7 @@ void CL_VM_Init (void)
 			else
 			{
 				Mem_Free(csprogsdata);
-				CL_Disconnect(false, "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
+				CL_DisconnectEx(false, "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				return;
 			}
 		}
@@ -1051,7 +1051,7 @@ void CL_VM_Init (void)
 	else
 	{
 		if (requiredcrc >= 0)
-			CL_Disconnect(false, CON_ERROR "CL_VM_Init: %s requires CSQC, but \"%s\" wasn't found\n", cls.demoplayback ? "demo" : "server", csqc_progname.string);
+			CL_DisconnectEx(false, CON_ERROR "CL_VM_Init: %s requires CSQC, but \"%s\" wasn't found\n", cls.demoplayback ? "demo" : "server", csqc_progname.string);
 		return;
 	}
 
