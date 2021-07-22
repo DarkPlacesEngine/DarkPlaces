@@ -131,7 +131,7 @@ void StoreLittleShort (unsigned char *buffer, unsigned short i);
 typedef enum protocolversion_e
 {
 	PROTOCOL_UNKNOWN,
-	PROTOCOL_DARKPLACES8, ///< wip
+	PROTOCOL_DARKPLACES8, ///< added parting messages. WIP
 	PROTOCOL_DARKPLACES7, ///< added QuakeWorld-style movement protocol to allow more consistent prediction
 	PROTOCOL_DARKPLACES6, ///< various changes
 	PROTOCOL_DARKPLACES5, ///< uses EntityFrame5 entity snapshot encoder/decoder which is based on a Tribes networking article at http://www.garagegames.com/articles/networking1/

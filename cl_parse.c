@@ -35,7 +35,7 @@ const char *svc_strings[128] =
 {
 	"svc_bad",
 	"svc_nop",
-	"svc_disconnect",
+	"svc_disconnect",	// (DP8) [string] null terminated parting message
 	"svc_updatestat",
 	"svc_version",		// [int] server version
 	"svc_setview",		// [short] entity number
@@ -3531,7 +3531,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect();
+					CL_Disconnect(true, NULL);
 				break;
 
 			case qw_svc_print:
@@ -3911,7 +3911,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect();
+					CL_Disconnect(true, cls.protocol == PROTOCOL_DARKPLACES8 ? MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)) : NULL);
 				break;
 
 			case svc_print:

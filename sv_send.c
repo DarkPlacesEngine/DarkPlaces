@@ -1712,7 +1712,7 @@ void SV_SendClientMessages(void)
 
 		if (host_client->netconnection->message.overflowed)
 		{
-			SV_DropClient (true);	// if the message couldn't send, kick off
+			SV_DropClient (true, "Buffer overflow in net message");	// if the message couldn't send, kick off
 			continue;
 		}
 

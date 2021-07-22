@@ -360,10 +360,24 @@ Sends a disconnect message to the server
 This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect(void)
+void CL_Disconnect(qbool kicked, const char *fmt, ... )
 {
+	va_list argptr;
+	char reason[512];
+
 	if (cls.state == ca_dedicated)
 		return;
+
+	if(fmt)
+	{
+		va_start(argptr,fmt);
+		dpvsnprintf(reason,sizeof(reason),fmt,argptr);
+		va_end(argptr);
+	}
+	else
+	{
+		dpsnprintf(reason, sizeof(reason), "Disconnect by user");
+	}
 
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -395,32 +409,41 @@ void CL_Disconnect(void)
 	else if (cls.netcon)
 	{
 		sizebuf_t buf;
-		unsigned char bufdata[8];
+		unsigned char bufdata[520];
 		if (cls.demorecording)
 			CL_Stop_f(cmd_local);
 
-		// send disconnect message 3 times to improve chances of server
-		// receiving it (but it still fails sometimes)
-		memset(&buf, 0, sizeof(buf));
-		buf.data = bufdata;
-		buf.maxsize = sizeof(bufdata);
-		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		if(!kicked)
 		{
-			Con_DPrint("Sending drop command\n");
-			MSG_WriteByte(&buf, qw_clc_stringcmd);
-			MSG_WriteString(&buf, "drop");
+			// send disconnect message 3 times to improve chances of server
+			// receiving it (but it still fails sometimes)
+			memset(&buf, 0, sizeof(buf));
+			buf.data = bufdata;
+			buf.maxsize = sizeof(bufdata);
+			if (cls.protocol == PROTOCOL_QUAKEWORLD)
+			{
+				Con_DPrint("Sending drop command\n");
+				MSG_WriteByte(&buf, qw_clc_stringcmd);
+				MSG_WriteString(&buf, "drop");
+			}
+			else
+			{
+				Con_DPrint("Sending clc_disconnect\n");
+				MSG_WriteByte(&buf, clc_disconnect);
+				if(cls.protocol == PROTOCOL_DARKPLACES8)
+					MSG_WriteString(&buf, reason);
+			}
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
 		}
-		else
-		{
-			Con_DPrint("Sending clc_disconnect\n");
-			MSG_WriteByte(&buf, clc_disconnect);
-		}
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
-		Con_Printf("Disconnected\n");
+		if(fmt)
+			Con_Printf("Disconnect: %s\n", reason);
+		else
+			Con_Printf("Disconnected\n");
 	}
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
@@ -515,7 +538,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect();
+	CL_Disconnect(false, Cmd_Argc(cmd) > 1 ? Cmd_Argv(cmd, 1) : NULL);
 }
 
 
@@ -2909,7 +2932,7 @@ void CL_Shutdown (void)
 	S_StopAllSounds();
 	
 	// disconnect client from server if active
-	CL_Disconnect();
+	CL_Disconnect(false, NULL);
 	
 	CL_Video_Shutdown();
 

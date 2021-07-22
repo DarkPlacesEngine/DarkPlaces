@@ -2657,7 +2657,7 @@ static void VM_SV_dropclient(prvm_prog_t *prog)
 	}
 	oldhostclient = host_client;
 	host_client = svs.clients + clientnum;
-	SV_DropClient(false);
+	SV_DropClient(false, "Client dropped");
 	host_client = oldhostclient;
 }
 
