@@ -1628,7 +1628,8 @@ static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int
 	cmd->null_string = "";
 
 	cmd->cvars = cvars;
-	cmd->cvars->vars = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+	cmd->cvars->mempool = Mem_AllocPool("cvars", 0, NULL);
+	cmd->cvars->vars = (cvar_t *)Mem_Alloc(cmd->cvars->mempool, sizeof(cvar_t));
 	cmd->cvars->vars->list.next = cmd->cvars->vars->list.prev = &cmd->cvars->vars->list;
 	cmd->cvars_flagsmask = cvars_flagsmask;
 	cmd->cmd_flags = cmds_flagsmask;

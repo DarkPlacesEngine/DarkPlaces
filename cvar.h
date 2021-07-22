@@ -94,6 +94,7 @@ typedef struct cvar_s
 
 typedef struct cvar_state_s
 {
+	struct mempool_s *mempool;
 	cvar_t *vars;
 	cvar_t *hashtable[CVAR_HASHSIZE];
 }

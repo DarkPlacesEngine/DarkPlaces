@@ -337,6 +337,7 @@ Cvar_Set
 extern cvar_t sv_disablenotify;
 void Cvar_SetQuick (cvar_t *var, const char *value)
 {
+	cvar_state_t *cvars = &cvars_all;
 	size_t valuelen;
 
 	if (var == NULL)
@@ -353,9 +354,9 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 	valuelen = strlen(value);
 	if (!var->string || strlen(var->string) != valuelen)
 	{
-		Z_Free ((char *)var->string);	// free the old value string
+		Mem_Free((char *)var->string);	// free the old value string
 
-		var->string = (char *)Z_Malloc (valuelen + 1);
+		var->string = (char *)Mem_Alloc (cvars->mempool, valuelen + 1);
 	}
 	memcpy ((char *)var->string, value, valuelen + 1);
 	var->value = atof (var->string);
@@ -462,8 +463,8 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 static void Cvar_DeleteVirtual(cvar_t *vcvar)
 {
 	List_Delete(&vcvar->vlist);
-	Z_Free((char *)vcvar->name);
-	Z_Free(vcvar);
+	Mem_Free((char *)vcvar->name);
+	Mem_Free(vcvar);
 }
 
 static void Cvar_DeleteVirtual_All(cvar_t *var)
@@ -498,10 +499,10 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name)
 		return;
 	}
 
-	vcvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+	vcvar = (cvar_t *)Mem_Alloc(cvars->mempool, sizeof(cvar_t));
 	vcvar->parent = variable;
 	vcvar->flags = variable->flags;	
-	vcvar->name = (char *)Mem_strdup(zonemempool, name);
+	vcvar->name = (char *)Mem_strdup(cvars->mempool, name);
 	vcvar->description = variable->description;
 
 	// Add to it
@@ -583,9 +584,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// copy the value off, because future sets will Z_Free it
-	variable->name = (char *)Mem_strdup(zonemempool, variable->name);
-	variable->string = (char *)Mem_strdup(zonemempool, variable->string);
-	variable->defstring = (char *)Mem_strdup(zonemempool, variable->string);
+	variable->name = (char *)Mem_strdup(cvars->mempool, variable->name);
+	variable->string = (char *)Mem_strdup(cvars->mempool, variable->string);
+	variable->defstring = (char *)Mem_strdup(cvars->mempool, variable->string);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 	variable->initstate = NULL;
@@ -639,7 +640,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 				Z_Free((char *)cvar->description);
 
 			if(*newdescription)
-				cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
+				cvar->description = (char *)Mem_strdup(cvars->mempool, newdescription);
 			else
 				cvar->description = cvar_dummy_description;
 		}
@@ -656,11 +657,11 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	// allocate a new cvar, cvar name, and cvar string
 	// TODO: factorize the following code with the one at the end of Cvar_RegisterVariable()
 	// FIXME: these never get Z_Free'd
-	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+	cvar = (cvar_t *)Mem_Alloc(cvars->mempool, sizeof(cvar_t));
 	cvar->flags = flags | CF_ALLOCATED;
-	cvar->name = (char *)Mem_strdup(zonemempool, name);
-	cvar->string = (char *)Mem_strdup(zonemempool, value);
-	cvar->defstring = (char *)Mem_strdup(zonemempool, value);
+	cvar->name = (char *)Mem_strdup(cvars->mempool, name);
+	cvar->string = (char *)Mem_strdup(cvars->mempool, value);
+	cvar->defstring = (char *)Mem_strdup(cvars->mempool, value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 	cvar->initstate = NULL;
@@ -668,7 +669,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->vlist.next = cvar->vlist.prev = &cvar->vlist;
 
 	if(newdescription && *newdescription)
-		cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
+		cvar->description = (char *)Mem_strdup(cvars->mempool, newdescription);
 	else
 		cvar->description = cvar_dummy_description; // actually checked by VM_cvar_type
 
@@ -701,12 +702,12 @@ static void Cvar_Delete(cvar_t *cvar)
 	if(cvar->flags & CF_ALLOCATED)
 	{
 		if(cvar->description != cvar_dummy_description)
-			Z_Free((char *)cvar->description);
+			Mem_Free((char *)cvar->description);
 
-		Z_Free((char *)cvar->name);
-		Z_Free((char *)cvar->string);
-		Z_Free((char *)cvar->defstring);
-		Z_Free(cvar);
+		Mem_Free((char *)cvar->name);
+		Mem_Free((char *)cvar->string);
+		Mem_Free((char *)cvar->defstring);
+		Mem_Free(cvar);
 	}
 }
 
@@ -783,7 +784,7 @@ void Cvar_LockDefaults_f(cmd_state_t *cmd)
 			var->flags |= CF_DEFAULTSET;
 			Z_Free((char *)var->defstring);
 			alloclen = strlen(var->string) + 1;
-			var->defstring = (char *)Z_Malloc(alloclen);
+			var->defstring = (char *)Mem_Alloc(cvars->mempool, alloclen);
 			memcpy((char *)var->defstring, var->string, alloclen);
 		}
 	}
@@ -799,7 +800,7 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 		if(cvar->parent)
 			continue;
 
-		cvar->initstate = (cvar_t *)Z_Malloc(sizeof(cvar_t));
+		cvar->initstate = (cvar_t *)Mem_Alloc(cvars->mempool, sizeof(cvar_t));
 		memcpy(cvar->initstate, cvar, sizeof(cvar_t));
 
 		/*
@@ -838,10 +839,10 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 				Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", var->name);
 				if (var->defstring)
 					Z_Free((char *)var->defstring);
-				var->defstring = Mem_strdup(zonemempool, var->initstate->defstring);
+				var->defstring = Mem_strdup(cvars->mempool, var->initstate->defstring);
 				if (var->string)
 					Z_Free((char *)var->string);
-				var->string = Mem_strdup(zonemempool, var->initstate->string);
+				var->string = Mem_strdup(cvars->mempool, var->initstate->string);
 			}
 			var->flags = var->initstate->flags;
 			var->value = var->initstate->value;
