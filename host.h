@@ -31,7 +31,7 @@ typedef struct host_static_s
 	struct
 	{
 		void (*ConnectLocal)(void);
-		void (*Disconnect)(void);
+		void (*Disconnect)(qbool, const char *, ... );
 		void (*ToggleMenu)(void);
 		qbool (*CL_Intermission)(void); // Quake compatibility
 		void (*CL_SendCvar)(struct cmd_state_s *);

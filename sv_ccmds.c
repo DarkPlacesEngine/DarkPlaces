@@ -62,7 +62,7 @@ static void SV_Map_f(cmd_state_t *cmd)
 		Cvar_Set(&cvars_all, "warpmark", "");
 
 	if(host.hook.Disconnect)
-		host.hook.Disconnect();
+		host.hook.Disconnect(false, NULL);
 
 	SV_Shutdown();
 
@@ -1026,6 +1026,7 @@ static void SV_Kick_f(cmd_state_t *cmd)
 {
 	const char *who;
 	const char *message = NULL;
+	char reason[512];
 	client_t *save;
 	int i;
 	qbool byNumber = false;
@@ -1084,10 +1085,11 @@ static void SV_Kick_f(cmd_state_t *cmd)
 				message++;
 		}
 		if (message)
-			SV_ClientPrintf("Kicked by %s: %s\n", who, message);
+			SV_DropClient (false, va(reason, sizeof(reason), "Kicked by %s: %s", who, message)); // kicked
+			//SV_ClientPrintf("Kicked by %s: %s\n", who, message);
 		else
-			SV_ClientPrintf("Kicked by %s\n", who);
-		SV_DropClient (false); // kicked
+			//SV_ClientPrintf("Kicked by %s\n", who);
+			SV_DropClient (false, va(reason, sizeof(reason), "Kicked by %s", who)); // kicked
 	}
 
 	host_client = save;

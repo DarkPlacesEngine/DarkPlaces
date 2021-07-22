@@ -984,14 +984,31 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 SV_DropClient
 
 Called when the player is getting totally kicked off the host
-if (crash = true), don't bother sending signofs
+if (leaving = true), don't bother sending signofs
 =====================
 */
-void SV_DropClient(qbool crash)
+void SV_DropClient(qbool leaving, const char *fmt, ... )
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int i;
-	Con_Printf("Client \"%s\" dropped\n", host_client->name);
+
+	va_list argptr;
+	char reason[512] = "";
+
+	Con_Printf("Client \"%s\" dropped", host_client->name);
+
+	if(fmt)
+	{
+		va_start(argptr, fmt);
+		dpvsnprintf(reason, sizeof(reason), fmt, argptr);
+		va_end(argptr);
+
+		Con_Printf(" (%s)\n", reason);
+	}
+	else
+	{
+		Con_Printf(" \n");
+	}
 
 	SV_StopDemoRecording(host_client);
 
@@ -1001,15 +1018,22 @@ void SV_DropClient(qbool crash)
 	if (host_client->netconnection)
 	{
 		// tell the client to be gone
-		if (!crash)
+		if (!leaving)
 		{
 			// LadyHavoc: no opportunity for resending, so use unreliable 3 times
-			unsigned char bufdata[8];
+			unsigned char bufdata[520]; // Disconnect reason string can be 512 characters
 			sizebuf_t buf;
 			memset(&buf, 0, sizeof(buf));
 			buf.data = bufdata;
 			buf.maxsize = sizeof(bufdata);
 			MSG_WriteByte(&buf, svc_disconnect);
+			if(fmt)
+			{
+				if(sv.protocol == PROTOCOL_DARKPLACES8)
+					MSG_WriteString(&buf, reason);
+				else
+					SV_ClientPrintf("%s\n", reason);
+			}
 			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
 			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
 			NetConn_SendUnreliableMessage(host_client->netconnection, &buf, sv.protocol, 10000, 0, false);
@@ -1037,6 +1061,10 @@ void SV_DropClient(qbool crash)
 		NetConn_Close(host_client->netconnection);
 		host_client->netconnection = NULL;
 	}
+	if(fmt)
+		SV_BroadcastPrintf("\003^3%s left the game (%s)\n", host_client->name, reason);
+	else
+		SV_BroadcastPrintf("\003^3%s left the game\n", host_client->name);
 
 	// if a download is active, close it
 	if (host_client->download_file)
@@ -2083,7 +2111,7 @@ void SV_Shutdown(void)
 	}
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		if (host_client->active)
-			SV_DropClient(false); // server shutdown
+			SV_DropClient(false, "Server shutting down"); // server shutdown
 
 	NetConn_CloseServerPorts();
 
@@ -2446,17 +2474,8 @@ static void SV_CheckTimeouts(void)
 
 	// never timeout loopback connections
 	for (i = (host_isclient.integer ? 1 : 0), host_client = &svs.clients[i]; i < svs.maxclients; i++, host_client++)
-	{
 		if (host_client->netconnection && host.realtime > host_client->netconnection->timeout)
-		{
-			if (host_client->begun)
-				SV_BroadcastPrintf("Client \"%s\" connection timed out\n", host_client->name);
-			else
-				Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
-
-			SV_DropClient(false);
-		}
-	}
+			SV_DropClient(false, "Timed out");
 }
 
 /*
