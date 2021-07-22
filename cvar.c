@@ -463,6 +463,7 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 static void Cvar_DeleteVirtual(cvar_t *vcvar)
 {
 	List_Delete(&vcvar->vlist);
+	List_Delete(&vcvar->list);
 	Mem_Free((char *)vcvar->name);
 	Mem_Free(vcvar);
 }
@@ -584,14 +585,13 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// copy the value off, because future sets will Z_Free it
-	variable->name = (char *)Mem_strdup(cvars->mempool, variable->name);
 	variable->string = (char *)Mem_strdup(cvars->mempool, variable->string);
 	variable->defstring = (char *)Mem_strdup(cvars->mempool, variable->string);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 	variable->initstate = NULL;
 	variable->parent = NULL;
-	variable->vlist.next = variable->vlist.prev = &variable->vlist;
+	List_Create(&variable->vlist);
 
 	// Mark it as not an autocvar.
 	for (i = 0;i < PRVM_PROG_MAX;i++)
@@ -666,7 +666,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	cvar->integer = (int) cvar->value;
 	cvar->initstate = NULL;
 	cvar->parent = NULL;
-	cvar->vlist.next = cvar->vlist.prev = &cvar->vlist;
+	List_Create(&cvar->vlist);
 
 	if(newdescription && *newdescription)
 		cvar->description = (char *)Mem_strdup(cvars->mempool, newdescription);
@@ -803,6 +803,14 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 		cvar->initstate = (cvar_t *)Mem_Alloc(cvars->mempool, sizeof(cvar_t));
 		memcpy(cvar->initstate, cvar, sizeof(cvar_t));
 
+		if(cvar->description == cvar_dummy_description)
+			cvar->initstate->description = cvar_dummy_description;
+		else
+			cvar->initstate->description = (char *)Mem_strdup(cvars->mempool, cvar->description);
+
+		cvar->initstate->string = (char *)Mem_strdup(cvars->mempool, cvar->string);
+		cvar->initstate->defstring = (char *)Mem_strdup(cvars->mempool, cvar->defstring);
+
 		/*
 		 * Consider any virtual cvar created up to this point as
 		 * existing during init. Use the initstate of the parent cvar.
@@ -814,41 +822,42 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 
 void Cvar_RestoreInitState(cvar_state_t *cvars)
 {
-	cvar_t *var/*, *vcvar*/, *next/*, *vnext*/;
+	cvar_t *var, *next;
 
 	List_For_Each_Entry_Safe(var, next, &cvars->vars->list, list)
 	{
-		// Ignore virtual cvars
-		if(var->parent)
-			continue;
-
-		// Cloudwalk FIXME: This crashes for some reason, so it's disabled for now.
-		
 		// Destroy all virtual cvars that didn't exist at init
-		//List_For_Each_Entry_Safe(vcvar, vnext, &var->vlist, vlist)
-		//	if(!vcvar->initstate)
-		//		Cvar_DeleteVirtual(vcvar);
+		if(var->parent && !var->initstate)
+		{
+			Cvar_DeleteVirtual(var);
+			continue;
+		}
 
 		if (var->initstate)
 		{
 			// restore this cvar, it existed at init
-			if (((var->flags ^ var->initstate->flags) & CF_MAXFLAGSVAL)
-			 || strcmp(var->defstring ? var->defstring : "", var->initstate->defstring ? var->initstate->defstring : "")
-			 || strcmp(var->string ? var->string : "", var->initstate->string ? var->initstate->string : ""))
+			Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", var->name);
+			if(var->flags & CF_ALLOCATED)
 			{
-				Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", var->name);
-				if (var->defstring)
-					Z_Free((char *)var->defstring);
-				var->defstring = Mem_strdup(cvars->mempool, var->initstate->defstring);
-				if (var->string)
-					Z_Free((char *)var->string);
-				var->string = Mem_strdup(cvars->mempool, var->initstate->string);
+				if(var->flags & CF_ALLOCATED && var->description && var->description != cvar_dummy_description)
+					Z_Free((char *)var->description);
+				if(var->initstate->description == cvar_dummy_description)
+					var->description = cvar_dummy_description;
+				else
+					var->initstate->description = (char *)Mem_strdup(cvars->mempool, var->description);
 			}
+
+			if (var->defstring)
+				Z_Free((char *)var->defstring);
+			var->defstring = Mem_strdup(cvars->mempool, var->initstate->defstring);
+			if (var->string)
+				Z_Free((char *)var->string);
+			var->string = Mem_strdup(cvars->mempool, var->initstate->string);
+
 			var->flags = var->initstate->flags;
 			var->value = var->initstate->value;
 			var->integer = var->initstate->integer;
 			VectorCopy(var->initstate->vector, var->vector);
-
 		}
 		else
 		{
