@@ -5114,7 +5114,7 @@ NULL,							// #173
 NULL,							// #174
 NULL,							// #175
 NULL,							// #176
-NULL,							// #177
+VM_localsound,					// #177
 NULL,							// #178
 NULL,							// #179
 NULL,							// #180

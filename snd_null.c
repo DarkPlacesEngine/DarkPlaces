@@ -136,6 +136,11 @@ qbool S_LocalSound (const char *s)
 	return false;
 }
 
+qbool S_LocalSoundEx (const char *s, int chan, float fvol)
+{
+	return false;
+}
+
 void S_BlockSound (void)
 {
 }
