@@ -1302,7 +1302,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 
 	if (!sv_allowdownloads_archive.integer)
 	{
-		if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+		if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3") || !strcasecmp(extension, "dpk"))
 		{
 			SV_ClientPrintf("Download rejected: file \"%s\" is an archive\nYou must separately download or purchase the data archives for this game/mod to get this file\n", host_client->download_name);
 			SV_ClientCommands("\nstopdownload\n");

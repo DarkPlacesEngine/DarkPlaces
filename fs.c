@@ -1138,11 +1138,11 @@ static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbo
 	if(already_loaded)
 		*already_loaded = false;
 
-	if(!strcasecmp(ext, "pk3dir"))
+	if(!strcasecmp(ext, "pk3dir") || !strcasecmp(ext, "dpkdir"))
 		pak = FS_LoadPackVirtual (pakfile);
 	else if(!strcasecmp(ext, "pak"))
 		pak = FS_LoadPackPAK (pakfile);
-	else if(!strcasecmp(ext, "pk3"))
+	else if(!strcasecmp(ext, "pk3") || !strcasecmp(ext, "dpk"))
 		pak = FS_LoadPackPK3 (pakfile);
 	else if(!strcasecmp(ext, "obb")) // android apk expansion
 		pak = FS_LoadPackPK3 (pakfile);
@@ -1197,15 +1197,15 @@ static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbo
 		if(pak->vpack)
 		{
 			dpsnprintf(search->filename, sizeof(search->filename), "%s/", pakfile);
-			// if shortname ends with "pk3dir", strip that suffix to make it just "pk3"
+			// if shortname ends with "pk3dir" or "dpkdir", strip that suffix to make it just "pk3" or "dpk"
 			// same goes for the name inside the pack structure
 			l = strlen(pak->shortname);
 			if(l >= 7)
-				if(!strcasecmp(pak->shortname + l - 7, ".pk3dir"))
+				if(!strcasecmp(pak->shortname + l - 7, ".pk3dir") || !strcasecmp(pak->shortname + l - 7, ".dpkdir"))
 					pak->shortname[l - 3] = 0;
 			l = strlen(pak->filename);
 			if(l >= 7)
-				if(!strcasecmp(pak->filename + l - 7, ".pk3dir"))
+				if(!strcasecmp(pak->filename + l - 7, ".pk3dir") || !strcasecmp(pak->filename + l - 7, ".dpkdir"))
 					pak->filename[l - 3] = 0;
 		}
 		return true;
@@ -1287,7 +1287,8 @@ static void FS_AddGameDirectory (const char *dir)
 	// add any PK3 package in the directory
 	for (i = 0;i < list.numstrings;i++)
 	{
-		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "obb") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir"))
+		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "obb") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir")
+			|| !strcasecmp(FS_FileExtension(list.strings[i]), "dpk") || !strcasecmp(FS_FileExtension(list.strings[i]), "dpkdir"))
 		{
 			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
 		}
