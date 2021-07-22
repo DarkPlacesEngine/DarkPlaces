@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stddef.h>
 #include "qtypes.h"
 #include "qdefs.h"
+#include "com_list.h"
 
 extern qbool mem_bigendian;
 
@@ -39,8 +40,7 @@ typedef struct memheader_s
 	// address returned by Chunk_Alloc (may be significantly before this header to satisify alignment)
 	void *baseaddress;
 	// next and previous memheaders in chain belonging to pool
-	struct memheader_s *next;
-	struct memheader_s *prev;
+	struct llist_s list;
 	// pool this memheader belongs to
 	struct mempool_s *pool;
 	// size of the memory after the header (excluding header and sentinel2)
@@ -59,7 +59,7 @@ typedef struct mempool_s
 	// should always be MEMPOOL_SENTINEL
 	unsigned int sentinel1;
 	// chain of individual memory allocations
-	struct memheader_s *chain;
+	struct llist_s chain;
 	// POOLFLAG_*
 	int flags;
 	// total memory allocated in this pool (inside memheaders)

@@ -423,11 +423,7 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	memcpy((unsigned char *) mem + sizeof(memheader_t) + mem->size, &sentinel2, sizeof(sentinel2));
 
 	// append to head of list
-	mem->next = pool->chain;
-	mem->prev = NULL;
-	pool->chain = mem;
-	if (mem->next)
-		mem->next->prev = mem;
+	List_Add(&mem->list, &pool->chain);
 
 	if (mem_mutex)
 		Thread_UnlockMutex(mem_mutex);
@@ -468,16 +464,11 @@ static void _Mem_FreeBlock(memheader_t *mem, const char *filename, int fileline)
 	if (developer_memory.integer)
 		Con_DPrintf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, (int)(mem->size));
 	// unlink memheader from doubly linked list
-	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
+	if (mem->list.prev->next != &mem->list || mem->list.next->prev != &mem->list)
 		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);
 	if (mem_mutex)
 		Thread_LockMutex(mem_mutex);
-	if (mem->prev)
-		mem->prev->next = mem->next;
-	else
-		pool->chain = mem->next;
-	if (mem->next)
-		mem->next->prev = mem->prev;
+	List_Delete(&mem->list);
 	// memheader has been unlinked, do the actual free now
 	size = mem->size;
 	realsize = sizeof(memheader_t) + size + sizeof(sentinel2);
@@ -526,7 +517,7 @@ mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const 
 	pool->filename = filename;
 	pool->fileline = fileline;
 	pool->flags = flags;
-	pool->chain = NULL;
+	List_Create(&pool->chain);
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
 	strlcpy (pool->name, name, sizeof (pool->name));
@@ -556,8 +547,8 @@ void _Mem_FreePool(mempool_t **poolpointer, const char *filename, int fileline)
 		*chainaddress = pool->next;
 
 		// free memory owned by the pool
-		while (pool->chain)
-			_Mem_FreeBlock(pool->chain, filename, fileline);
+		while (!List_Is_Empty(&pool->chain))
+			_Mem_FreeBlock(List_First_Entry(&pool->chain, memheader_t, list), filename, fileline);
 
 		// free child pools, too
 		for(iter = poolchain; iter; iter = temp) {
@@ -595,8 +586,8 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 		Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
 
 	// free memory owned by the pool
-	while (pool->chain)
-		_Mem_FreeBlock(pool->chain, filename, fileline);
+	while (!List_Is_Empty(&pool->chain))
+		_Mem_FreeBlock(List_First_Entry(&pool->chain, memheader_t, list), filename, fileline);
 
 	// empty child pools, too
 	for(chainaddress = poolchain; chainaddress; chainaddress = chainaddress->next)
@@ -649,7 +640,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 2 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
 	}
 	for (pool = poolchain;pool;pool = pool->next)
-		for (mem = pool->chain;mem;mem = mem->next)
+		List_For_Each_Entry(mem, &pool->chain, list)
 			_Mem_CheckSentinels((void *)((unsigned char *) mem + sizeof(memheader_t)), filename, fileline);
 #if MEMCLUMPING
 	for (pool = poolchain;pool;pool = pool->next)
@@ -667,7 +658,7 @@ qbool Mem_IsAllocated(mempool_t *pool, void *data)
 	{
 		// search only one pool
 		target = (memheader_t *)((unsigned char *) data - sizeof(memheader_t));
-		for( header = pool->chain ; header ; header = header->next )
+		List_For_Each_Entry(header, &pool->chain, list)
 			if( header == target )
 				return true;
 	}
@@ -820,10 +811,10 @@ void Mem_PrintStats(void)
 	Con_Printf("total allocated size: %lu bytes (%.3fMB)\n", (unsigned long)realsize, realsize / 1048576.0);
 	for (pool = poolchain;pool;pool = pool->next)
 	{
-		if ((pool->flags & POOLFLAG_TEMP) && pool->chain)
+		if ((pool->flags & POOLFLAG_TEMP) && !List_Is_Empty(&pool->chain))
 		{
 			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", (void *)pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
-			for (mem = pool->chain;mem;mem = mem->next)
+			List_For_Each_Entry(mem, &pool->chain, list)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 		}
 	}
@@ -840,7 +831,7 @@ void Mem_PrintList(size_t minallocationsize)
 	{
 		Con_Printf("%10luk (%10luk actual) %s (%+li byte change) %s\n", (unsigned long) ((pool->totalsize + 1023) / 1024), (unsigned long)((pool->realsize + 1023) / 1024), pool->name, (long)(pool->totalsize - pool->lastchecksize), (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
 		pool->lastchecksize = pool->totalsize;
-		for (mem = pool->chain;mem;mem = mem->next)
+		List_For_Each_Entry(mem, &pool->chain, list)
 			if (mem->size >= minallocationsize)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 	}
