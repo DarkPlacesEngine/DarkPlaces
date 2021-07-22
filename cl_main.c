@@ -2521,6 +2521,28 @@ static void CL_MeshEntities_Restart(void)
 	}
 }
 
+static void CL_MeshEntities_Start(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
+	}
+}
+
+static void CL_MeshEntities_Shutdown(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Destroy(ent->render.model);
+	}
+}
+
 static void CL_MeshEntities_Init(void)
 {
 	int i;
@@ -2557,7 +2579,7 @@ static void CL_MeshEntities_Init(void)
 		CL_UpdateRenderEntity(&ent->render);
 	}
 	cl_meshentities[MESH_UI].render.flags = RENDER_NOSELFSHADOW;
-	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
+	R_RegisterModule("cl_meshentities", CL_MeshEntities_Start, CL_MeshEntities_Shutdown, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
 void CL_MeshEntities_Scene_Clear(void)
@@ -2577,10 +2599,6 @@ void CL_MeshEntities_Scene_FinalizeRenderEntity(void)
 	Mod_Mesh_Finalize(ent->render.model);
 	VectorCopy(ent->render.model->normalmins, ent->render.mins);
 	VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
-}
-
-static void CL_MeshEntities_Shutdown(void)
-{
 }
 
 extern cvar_t r_overheadsprites_pushback;
