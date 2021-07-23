@@ -360,10 +360,25 @@ Sends a disconnect message to the server
 This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect(void)
+
+void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 {
+	va_list argptr;
+	char reason[512];
+
 	if (cls.state == ca_dedicated)
 		return;
+
+	if(fmt)
+	{
+		va_start(argptr,fmt);
+		dpvsnprintf(reason,sizeof(reason),fmt,argptr);
+		va_end(argptr);
+	}
+	else
+	{
+		dpsnprintf(reason, sizeof(reason), "Disconnect by user");
+	}
 
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -395,32 +410,41 @@ void CL_Disconnect(void)
 	else if (cls.netcon)
 	{
 		sizebuf_t buf;
-		unsigned char bufdata[8];
+		unsigned char bufdata[520];
 		if (cls.demorecording)
 			CL_Stop_f(cmd_local);
 
-		// send disconnect message 3 times to improve chances of server
-		// receiving it (but it still fails sometimes)
-		memset(&buf, 0, sizeof(buf));
-		buf.data = bufdata;
-		buf.maxsize = sizeof(bufdata);
-		if (cls.protocol == PROTOCOL_QUAKEWORLD)
+		if(!kicked)
 		{
-			Con_DPrint("Sending drop command\n");
-			MSG_WriteByte(&buf, qw_clc_stringcmd);
-			MSG_WriteString(&buf, "drop");
+			// send disconnect message 3 times to improve chances of server
+			// receiving it (but it still fails sometimes)
+			memset(&buf, 0, sizeof(buf));
+			buf.data = bufdata;
+			buf.maxsize = sizeof(bufdata);
+			if (cls.protocol == PROTOCOL_QUAKEWORLD)
+			{
+				Con_DPrint("Sending drop command\n");
+				MSG_WriteByte(&buf, qw_clc_stringcmd);
+				MSG_WriteString(&buf, "drop");
+			}
+			else
+			{
+				Con_DPrint("Sending clc_disconnect\n");
+				MSG_WriteByte(&buf, clc_disconnect);
+				if(cls.protocol == PROTOCOL_DARKPLACES8)
+					MSG_WriteString(&buf, reason);
+			}
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
 		}
-		else
-		{
-			Con_DPrint("Sending clc_disconnect\n");
-			MSG_WriteByte(&buf, clc_disconnect);
-		}
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
-		NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
+
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
-		Con_Printf("Disconnected\n");
+		if(fmt)
+			Con_Printf("Disconnect: %s\n", reason);
+		else
+			Con_Printf("Disconnected\n");
 	}
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
@@ -435,6 +459,11 @@ void CL_Disconnect(void)
 
 	if(host.hook.SV_Shutdown)
 		host.hook.SV_Shutdown();
+}
+
+void CL_Disconnect(void)
+{
+	CL_DisconnectEx(false, NULL);
 }
 
 /*
@@ -515,7 +544,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect();
+	Cmd_Argc(cmd) < 1 ? CL_Disconnect() : CL_DisconnectEx(false, Cmd_Argv(cmd, 1));
 }
 
 
@@ -2493,7 +2522,30 @@ static void CL_MeshEntities_Restart(void)
 	for (i = 0; i < NUM_MESHENTITIES; i++)
 	{
 		ent = cl_meshentities + i;
+		Mod_Mesh_Destroy(ent->render.model);
 		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
+	}
+}
+
+static void CL_MeshEntities_Start(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
+	}
+}
+
+static void CL_MeshEntities_Shutdown(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Destroy(ent->render.model);
 	}
 }
 
@@ -2533,7 +2585,7 @@ static void CL_MeshEntities_Init(void)
 		CL_UpdateRenderEntity(&ent->render);
 	}
 	cl_meshentities[MESH_UI].render.flags = RENDER_NOSELFSHADOW;
-	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
+	R_RegisterModule("cl_meshentities", CL_MeshEntities_Start, CL_MeshEntities_Shutdown, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
 void CL_MeshEntities_Scene_Clear(void)
@@ -2553,10 +2605,6 @@ void CL_MeshEntities_Scene_FinalizeRenderEntity(void)
 	Mod_Mesh_Finalize(ent->render.model);
 	VectorCopy(ent->render.model->normalmins, ent->render.mins);
 	VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
-}
-
-static void CL_MeshEntities_Shutdown(void)
-{
 }
 
 extern cvar_t r_overheadsprites_pushback;
@@ -3088,7 +3136,7 @@ void CL_Init (void)
 		NetConn_UpdateSockets_Client();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
-		host.hook.Disconnect = CL_Disconnect;
+		host.hook.Disconnect = CL_DisconnectEx;
 		host.hook.CL_Intermission = CL_Intermission;
 		host.hook.ToggleMenu = CL_ToggleMenu_Hook;
 	}

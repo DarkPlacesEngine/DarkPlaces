@@ -254,7 +254,7 @@ static void VM_SV_setorigin(prvm_prog_t *prog)
 		VM_Warning(prog, "setorigin: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setorigin: can not modify free entity\n");
 		return;
@@ -305,7 +305,7 @@ static void VM_SV_setsize(prvm_prog_t *prog)
 		VM_Warning(prog, "setsize: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setsize: can not modify free entity\n");
 		return;
@@ -338,7 +338,7 @@ static void VM_SV_setmodel(prvm_prog_t *prog)
 		VM_Warning(prog, "setmodel: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setmodel: can not modify free entity\n");
 		return;
@@ -806,7 +806,7 @@ static int VM_SV_newcheckclient(prvm_prog_t *prog, int check)
 		// look up the client's edict
 		ent = PRVM_EDICT_NUM(i);
 		// check if it is to be ignored, but never ignore the one we started on (prevent infinite loop)
-		if (i != check && (ent->priv.server->free || PRVM_serveredictfloat(ent, health) <= 0 || ((int)PRVM_serveredictfloat(ent, flags) & FL_NOTARGET)))
+		if (i != check && (ent->free || PRVM_serveredictfloat(ent, health) <= 0 || ((int)PRVM_serveredictfloat(ent, flags) & FL_NOTARGET)))
 			continue;
 		// found a valid client (possibly the same one again)
 		break;
@@ -853,7 +853,7 @@ static void VM_SV_checkclient(prvm_prog_t *prog)
 
 	// return check if it might be visible
 	ent = PRVM_EDICT_NUM(sv.lastcheck);
-	if (ent->priv.server->free || PRVM_serveredictfloat(ent, health) <= 0)
+	if (ent->free || PRVM_serveredictfloat(ent, health) <= 0)
 	{
 		VM_RETURN_EDICT(prog->edicts);
 		return;
@@ -901,7 +901,7 @@ static void VM_SV_checkpvs(prvm_prog_t *prog)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
 	viewee = PRVM_G_EDICT(OFS_PARM1);
 
-	if(viewee->priv.server->free)
+	if(viewee->free)
 	{
 		VM_Warning(prog, "checkpvs: can not check free entity\n");
 		PRVM_G_FLOAT(OFS_RETURN) = 4;
@@ -1096,7 +1096,7 @@ static void VM_SV_walkmove(prvm_prog_t *prog)
 		VM_Warning(prog, "walkmove: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "walkmove: can not modify free entity\n");
 		return;
@@ -1151,7 +1151,7 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		VM_Warning(prog, "droptofloor: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "droptofloor: can not modify free entity\n");
 		return;
@@ -1307,7 +1307,7 @@ static void VM_SV_aim(prvm_prog_t *prog)
 		VM_Warning(prog, "aim: can not use world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "aim: can not use free entity\n");
 		return;
@@ -1535,7 +1535,7 @@ static void VM_SV_makestatic(prvm_prog_t *prog)
 		VM_Warning(prog, "makestatic: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "makestatic: can not modify free entity\n");
 		return;
@@ -1768,7 +1768,7 @@ static void VM_SV_copyentity(prvm_prog_t *prog)
 		VM_Warning(prog, "copyentity: can not read world entity\n");
 		return;
 	}
-	if (in->priv.server->free)
+	if (in->free)
 	{
 		VM_Warning(prog, "copyentity: can not read free entity\n");
 		return;
@@ -1779,7 +1779,7 @@ static void VM_SV_copyentity(prvm_prog_t *prog)
 		VM_Warning(prog, "copyentity: can not modify world entity\n");
 		return;
 	}
-	if (out->priv.server->free)
+	if (out->free)
 	{
 		VM_Warning(prog, "copyentity: can not modify free entity\n");
 		return;
@@ -2378,7 +2378,7 @@ static void VM_SV_setattachment(prvm_prog_t *prog)
 		VM_Warning(prog, "setattachment: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setattachment: can not modify free entity\n");
 		return;
@@ -2492,7 +2492,7 @@ static int SV_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *e
 
 	if (ent == prog->edicts)
 		return 1;
-	if (ent->priv.server->free)
+	if (ent->free)
 		return 2;
 
 	modelindex = (int)PRVM_serveredictfloat(ent, modelindex);
@@ -2561,7 +2561,7 @@ static void VM_SV_gettagindex(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_SV_gettagindex(entity #%i): can't affect world entity\n", PRVM_NUM_FOR_EDICT(ent));
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "VM_SV_gettagindex(entity #%i): can't affect free entity\n", PRVM_NUM_FOR_EDICT(ent));
 		return;
@@ -2657,7 +2657,7 @@ static void VM_SV_dropclient(prvm_prog_t *prog)
 	}
 	oldhostclient = host_client;
 	host_client = svs.clients + clientnum;
-	SV_DropClient(false);
+	SV_DropClient(false, "Client dropped");
 	host_client = oldhostclient;
 }
 
@@ -2730,7 +2730,7 @@ static void VM_SV_setmodelindex(prvm_prog_t *prog)
 		VM_Warning(prog, "setmodelindex: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setmodelindex: can not modify free entity\n");
 		return;

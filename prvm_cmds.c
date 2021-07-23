@@ -586,18 +586,29 @@ void VM_random(prvm_prog_t *prog)
 =========
 VM_localsound
 
-localsound(string sample)
+localsound(string sample, float chan, float vol)
 =========
 */
 void VM_localsound(prvm_prog_t *prog)
 {
 	const char *s;
+	float chan, vol;
 
-	VM_SAFEPARMCOUNT(1,VM_localsound);
+	VM_SAFEPARMCOUNTRANGE(1, 3,VM_localsound);
 
 	s = PRVM_G_STRING(OFS_PARM0);
-
-	if(!S_LocalSound (s))
+	if(prog->argc == 3)
+	{
+		chan = PRVM_G_FLOAT(OFS_PARM1);
+		vol = PRVM_G_FLOAT(OFS_PARM2) == 0 ? 1 : PRVM_G_FLOAT(OFS_PARM2);
+		if(!S_LocalSoundEx(s, chan, vol))
+		{
+			PRVM_G_FLOAT(OFS_RETURN) = -4;
+			VM_Warning(prog, "VM_localsound: Failed to play %s for %s !\n", s, prog->name);
+			return;
+		}
+	}
+	else if(!S_LocalSound (s))
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		VM_Warning(prog, "VM_localsound: Failed to play %s for %s !\n", s, prog->name);
@@ -930,7 +941,7 @@ void VM_ftoe(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1, VM_ftoe);
 
 	ent = (prvm_int_t)PRVM_G_FLOAT(OFS_PARM0);
-	if (ent < 0 || ent >= prog->max_edicts || PRVM_PROG_TO_EDICT(ent)->priv.required->free)
+	if (ent < 0 || ent >= prog->max_edicts || PRVM_PROG_TO_EDICT(ent)->free)
 		ent = 0; // return world instead of a free or invalid entity
 
 	PRVM_G_INT(OFS_RETURN) = ent;
@@ -1033,7 +1044,7 @@ void VM_remove(prvm_prog_t *prog)
 		if (developer.integer > 0)
 			VM_Warning(prog, "VM_remove: tried to remove the null entity or a reserved entity!\n" );
 	}
-	else if( ed->priv.required->free )
+	else if( ed->free )
 	{
 		if (developer.integer > 0)
 			VM_Warning(prog, "VM_remove: tried to remove an already freed entity!\n" );
@@ -1071,7 +1082,7 @@ void VM_find(prvm_prog_t *prog)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.required->free)
+		if (ed->free)
 			continue;
 		t = PRVM_E_STRING(ed,f);
 		if (!t)
@@ -1112,7 +1123,7 @@ void VM_findfloat(prvm_prog_t *prog)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.required->free)
+		if (ed->free)
 			continue;
 		if (PRVM_E_FLOAT(ed,f) == s)
 		{
@@ -1163,7 +1174,7 @@ void VM_findchain(prvm_prog_t *prog)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->priv.required->free)
+		if (ent->free)
 			continue;
 		t = PRVM_E_STRING(ent,f);
 		if (!t)
@@ -1214,7 +1225,7 @@ void VM_findchainfloat(prvm_prog_t *prog)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->priv.required->free)
+		if (ent->free)
 			continue;
 		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
@@ -1252,7 +1263,7 @@ void VM_findflags(prvm_prog_t *prog)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->priv.required->free)
+		if (ed->free)
 			continue;
 		if (!PRVM_E_FLOAT(ed,f))
 			continue;
@@ -1300,7 +1311,7 @@ void VM_findchainflags(prvm_prog_t *prog)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->priv.required->free)
+		if (ent->free)
 			continue;
 		if (!PRVM_E_FLOAT(ent,f))
 			continue;
@@ -1514,7 +1525,7 @@ void VM_nextent(prvm_prog_t *prog)
 			return;
 		}
 		ent = PRVM_EDICT_NUM(i);
-		if (!ent->priv.required->free)
+		if (!ent->free)
 		{
 			VM_RETURN_EDICT(ent);
 			return;
@@ -2037,7 +2048,7 @@ void VM_writetofile(prvm_prog_t *prog)
 	}
 
 	ent = PRVM_G_EDICT(OFS_PARM1);
-	if(ent->priv.required->free)
+	if(ent->free)
 	{
 		VM_Warning(prog, "VM_writetofile: %s: entity %i is free !\n", prog->name, PRVM_NUM_FOR_EDICT(ent));
 		return;
@@ -2138,7 +2149,7 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 	
 	// get the entity
 	ent = PRVM_G_EDICT(OFS_PARM1);
-	if(ent->priv.required->free)
+	if(ent->free)
 	{
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
 		VM_Warning(prog, "VM_entityfielddata: %s: entity %i is free !\n", prog->name, PRVM_NUM_FOR_EDICT(ent));
@@ -2185,7 +2196,7 @@ void VM_putentityfieldstring(prvm_prog_t *prog)
 
 	// get the entity
 	ent = PRVM_G_EDICT(OFS_PARM1);
-	if(ent->priv.required->free)
+	if(ent->free)
 	{
 		VM_Warning(prog, "VM_entityfielddata: %s: entity %i is free !\n", prog->name, PRVM_NUM_FOR_EDICT(ent));
 		PRVM_G_FLOAT(OFS_RETURN) = 0.0f;
@@ -2998,7 +3009,7 @@ void VM_parseentitydata(prvm_prog_t *prog)
 
 	// get edict and test it
 	ent = PRVM_G_EDICT(OFS_PARM0);
-	if (ent->priv.required->free)
+	if (ent->free)
 		prog->error_cmd("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!", prog->name, PRVM_NUM_FOR_EDICT(ent));
 
 	data = PRVM_G_STRING(OFS_PARM1);
@@ -4678,7 +4689,7 @@ void VM_changeyaw (prvm_prog_t *prog)
 		VM_Warning(prog, "changeyaw: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "changeyaw: can not modify free entity\n");
 		return;
@@ -4734,7 +4745,7 @@ void VM_changepitch (prvm_prog_t *prog)
 		VM_Warning(prog, "changepitch: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "changepitch: can not modify free entity\n");
 		return;
@@ -5136,7 +5147,7 @@ void VM_digest_hex(prvm_prog_t *prog)
 void VM_wasfreed (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_wasfreed);
-	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_EDICT(OFS_PARM0)->priv.required->free;
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_EDICT(OFS_PARM0)->free;
 }
 
 void VM_SetTraceGlobals(prvm_prog_t *prog, const trace_t *trace)
@@ -6315,7 +6326,7 @@ void VM_getsurfacenearpoint(prvm_prog_t *prog)
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), point);
 
-	if (!ed || ed->priv.server->free)
+	if (!ed || ed->free)
 		return;
 	model = getmodel(prog, ed);
 	if (!model || !model->num_surfaces)
@@ -6408,6 +6419,7 @@ void VM_getsurfacetriangle(prvm_prog_t *prog)
 // physics builtins
 //
 
+#ifdef USEODE
 #define VM_physics_ApplyCmd(ed,f) if (!ed->priv.server->ode_body) VM_physics_newstackfunction(prog, ed, f); else World_Physics_ApplyCmd(ed, f)
 
 static edict_odefunc_t *VM_physics_newstackfunction(prvm_prog_t *prog, prvm_edict_t *ed, edict_odefunc_t *f)
@@ -6426,14 +6438,17 @@ static edict_odefunc_t *VM_physics_newstackfunction(prvm_prog_t *prog, prvm_edic
 	}
 	return newfunc;
 }
+#endif
 
 // void(entity e, float physics_enabled) physics_enable = #;
 void VM_physics_enable(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(2, VM_physics_enable);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6449,15 +6464,18 @@ void VM_physics_enable(prvm_prog_t *prog)
 	}
 	f.type = PRVM_G_FLOAT(OFS_PARM1) == 0 ? ODEFUNC_DISABLE : ODEFUNC_ENABLE;
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 // void(entity e, vector force, vector relative_ofs) physics_addforce = #;
 void VM_physics_addforce(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(3, VM_physics_addforce);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6475,15 +6493,18 @@ void VM_physics_addforce(prvm_prog_t *prog)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM2), f.v2);
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 // void(entity e, vector torque) physics_addtorque = #;
 void VM_physics_addtorque(prvm_prog_t *prog)
 {
+#ifdef USEODE
 	prvm_edict_t *ed;
 	edict_odefunc_t f;
-	
+#endif
 	VM_SAFEPARMCOUNT(2, VM_physics_addtorque);
+#ifdef USEODE
 	ed = PRVM_G_EDICT(OFS_PARM0);
 	if (!ed)
 	{
@@ -6500,6 +6521,7 @@ void VM_physics_addtorque(prvm_prog_t *prog)
 	f.type = ODEFUNC_TORQUE;
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM1), f.v1);
 	VM_physics_ApplyCmd(ed, &f);
+#endif
 }
 
 extern cvar_t prvm_coverage;

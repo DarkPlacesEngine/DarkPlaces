@@ -2936,7 +2936,7 @@ void Mod_MakeSortedSurfaces(model_t *mod)
 	if(cls.state == ca_dedicated)
 		return;
 
-	info = (Mod_MakeSortedSurfaces_qsortsurface_t*)R_FrameData_Alloc(mod->num_surfaces * sizeof(*info));
+	info = (Mod_MakeSortedSurfaces_qsortsurface_t*)Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*info));
 	if (!mod->modelsurfaces_sorted)
 		mod->modelsurfaces_sorted = (int *) Mem_Alloc(loadmodel->mempool, mod->num_surfaces * sizeof(*mod->modelsurfaces_sorted));
 	// the goal is to sort by submodel (can't change which submodel a surface belongs to), and then by effects and textures
@@ -2952,6 +2952,7 @@ void Mod_MakeSortedSurfaces(model_t *mod)
 			qsort(info + mod->brush.submodels[k]->submodelsurfaces_start, (size_t)mod->brush.submodels[k]->submodelsurfaces_end - mod->brush.submodels[k]->submodelsurfaces_start, sizeof(*info), Mod_MakeSortedSurfaces_qsortfunc);
 	for (j = 0; j < mod->num_surfaces; j++)
 		mod->modelsurfaces_sorted[j] = info[j].surfaceindex;
+	Mem_Free(info);
 }
 
 void Mod_BuildVBOs(void)
@@ -4645,25 +4646,24 @@ static void Mod_Mesh_MakeSortedSurfaces(model_t *mod)
 {
 	int i, j;
 	texture_t *tex;
-	unsigned char* included = (unsigned char *)R_FrameData_Alloc(mod->num_surfaces * sizeof(unsigned char));
 
 	// build the sorted surfaces list properly to reduce material setup
 	// this is easy because we're just sorting on texture and don't care about the order of textures
 	mod->submodelsurfaces_start = 0;
 	mod->submodelsurfaces_end = 0;
 	for (i = 0; i < mod->num_surfaces; i++)
-		included[i] = 0;
+		mod->data_surfaces[i].included = false;
 	for (i = 0; i < mod->num_surfaces; i++)
 	{
-		if (included[i])
+		if (mod->data_surfaces[i].included)
 			continue;
 		tex = mod->data_surfaces[i].texture;
 		// j = i is intentional
 		for (j = i; j < mod->num_surfaces; j++)
 		{
-			if (!included[j] && mod->data_surfaces[j].texture == tex)
+			if (!mod->data_surfaces[j].included && mod->data_surfaces[j].texture == tex)
 			{
-				included[j] = 1;
+				mod->data_surfaces[j].included = 1;
 				mod->modelsurfaces_sorted[mod->submodelsurfaces_end++] = j;
 			}
 		}

@@ -25,7 +25,7 @@ TARGETS_NEXUIZ=sv-nexuiz sdl-nexuiz
 # Link options
 DP_LINK_ZLIB?=shared
 DP_LINK_JPEG?=shared
-DP_LINK_ODE?=dlopen
+DP_LINK_ODE?=
 DP_LINK_CRYPTO?=dlopen
 DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 DP_LINK_XMP?=dlopen

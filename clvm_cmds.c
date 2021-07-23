@@ -50,7 +50,7 @@ static void VM_CL_setorigin (prvm_prog_t *prog)
 		VM_Warning(prog, "setorigin: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.required->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setorigin: can not modify free entity\n");
 		return;
@@ -151,7 +151,7 @@ static void VM_CL_setsize (prvm_prog_t *prog)
 		VM_Warning(prog, "setsize: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setsize: can not modify free entity\n");
 		return;
@@ -537,7 +537,7 @@ static void VM_CL_droptofloor (prvm_prog_t *prog)
 		VM_Warning(prog, "droptofloor: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "droptofloor: can not modify free entity\n");
 		return;
@@ -761,14 +761,14 @@ static void VM_CL_R_AddEntities (prvm_prog_t *prog)
 		// so we can easily check if CSQC entity #edictnum is currently drawn
 		cl.csqcrenderentities[i].entitynumber = 0;
 		ed = &prog->edicts[i];
-		if(ed->priv.required->free)
+		if(ed->free)
 			continue;
 		CSQC_Think(ed);
-		if(ed->priv.required->free)
+		if(ed->free)
 			continue;
 		// note that for RF_USEAXIS entities, Predraw sets v_forward/v_right/v_up globals that are read by CSQC_AddRenderEdict
 		CSQC_Predraw(ed);
-		if(ed->priv.required->free)
+		if(ed->free)
 			continue;
 		if(!((int)PRVM_clientedictfloat(ed, drawmask) & drawmask))
 			continue;
@@ -2523,7 +2523,7 @@ static void VM_CL_makestatic (prvm_prog_t *prog)
 		VM_Warning(prog, "makestatic: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "makestatic: can not modify free entity\n");
 		return;
@@ -2619,7 +2619,7 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 		VM_Warning(prog, "copyentity: can not read world entity\n");
 		return;
 	}
-	if (in->priv.server->free)
+	if (in->free)
 	{
 		VM_Warning(prog, "copyentity: can not read free entity\n");
 		return;
@@ -2630,7 +2630,7 @@ static void VM_CL_copyentity (prvm_prog_t *prog)
 		VM_Warning(prog, "copyentity: can not modify world entity\n");
 		return;
 	}
-	if (out->priv.server->free)
+	if (out->free)
 	{
 		VM_Warning(prog, "copyentity: can not modify free entity\n");
 		return;
@@ -3089,7 +3089,7 @@ static void VM_CL_setattachment (prvm_prog_t *prog)
 		VM_Warning(prog, "setattachment: can not modify world entity\n");
 		return;
 	}
-	if (e->priv.server->free)
+	if (e->free)
 	{
 		VM_Warning(prog, "setattachment: can not modify free entity\n");
 		return;
@@ -3229,7 +3229,7 @@ int CL_GetTagMatrix (prvm_prog_t *prog, matrix4x4_t *out, prvm_edict_t *ent, int
 
 	if (ent == prog->edicts)
 		return 1;
-	if (ent->priv.server->free)
+	if (ent->free)
 		return 2;
 
 	model = CL_GetModelFromEdict(ent);
@@ -3321,7 +3321,7 @@ static void VM_CL_gettagindex (prvm_prog_t *prog)
 		VM_Warning(prog, "VM_CL_gettagindex(entity #%i): can't affect world entity\n", PRVM_NUM_FOR_EDICT(ent));
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "VM_CL_gettagindex(entity #%i): can't affect free entity\n", PRVM_NUM_FOR_EDICT(ent));
 		return;
@@ -4416,7 +4416,7 @@ static void VM_CL_walkmove (prvm_prog_t *prog)
 		VM_Warning(prog, "walkmove: can not modify world entity\n");
 		return;
 	}
-	if (ent->priv.server->free)
+	if (ent->free)
 	{
 		VM_Warning(prog, "walkmove: can not modify free entity\n");
 		return;
@@ -4487,7 +4487,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 	VectorCopy(PRVM_G_VECTOR(OFS_PARM0), viewpos);
 	viewee = PRVM_G_EDICT(OFS_PARM1);
 
-	if(viewee->priv.required->free)
+	if(viewee->free)
 	{
 		VM_Warning(prog, "checkpvs: can not check free entity\n");
 		PRVM_G_FLOAT(OFS_RETURN) = 4;
@@ -5114,7 +5114,7 @@ NULL,							// #173
 NULL,							// #174
 NULL,							// #175
 NULL,							// #176
-NULL,							// #177
+VM_localsound,					// #177
 NULL,							// #178
 NULL,							// #179
 NULL,							// #180

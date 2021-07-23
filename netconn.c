@@ -2488,10 +2488,7 @@ void NetConn_ClientFrame(void)
 	NetConn_QueryQueueFrame();
 #endif
 	if (cls.netcon && host.realtime > cls.netcon->timeout && !sv.active)
-	{
-		Con_Print("Connection timed out\n");
-		CL_Disconnect();
-	}
+		CL_DisconnectEx(true, "Connection timed out");
 }
 
 static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
@@ -3903,9 +3900,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_fakelag);
 	Cvar_RegisterVariable(&net_fakeloss_send);
 	Cvar_RegisterVariable(&net_fakeloss_receive);
-	Cvar_RegisterAlias(&net_fakelag, "cl_netlocalping");
-	Cvar_RegisterAlias(&net_fakeloss_send, "cl_netpacketloss_send");
-	Cvar_RegisterAlias(&net_fakeloss_receive, "cl_netpacketloss_receive");
+	Cvar_RegisterVirtual(&net_fakelag, "cl_netlocalping");
+	Cvar_RegisterVirtual(&net_fakeloss_send, "cl_netpacketloss_send");
+	Cvar_RegisterVirtual(&net_fakeloss_receive, "cl_netpacketloss_receive");
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);

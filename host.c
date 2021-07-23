@@ -38,7 +38,7 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 */
 
-host_t host;
+host_static_t host;
 
 // pretend frames take this amount of time (in seconds), 0 = realtime
 cvar_t host_framerate = {CF_CLIENT | CF_SERVER, "host_framerate","0", "locks frame timing to this value in seconds, 0.05 is 20fps for example, note that this can easily run too fast, use cl_maxfps if you want to limit your framerate instead, or sys_ticrate to limit server speed"};
@@ -134,7 +134,7 @@ void Host_Error (const char *error, ...)
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
 
-	CL_Disconnect ();
+	CL_Disconnect();
 	cls.demonum = -1;
 
 	hosterror = false;
@@ -685,7 +685,7 @@ static inline void Host_Sleep(double time)
 	else
 		Sys_Sleep((int)time);
 	delta = Sys_DirtyTime() - time0;
-	if (delta < 0 || delta >= 1800) 
+	if (delta < 0 || delta >= 1800)
 		delta = 0;
 	host.sleeptime += delta;
 //			R_TimeReport("sleep");

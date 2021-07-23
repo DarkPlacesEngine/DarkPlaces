@@ -903,9 +903,9 @@ void COM_Init_Commands (void)
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
 	Cvar_RegisterVariable(&cl_playermodel);
-	Cvar_RegisterAlias(&cl_playermodel, "_cl_playermodel");
+	Cvar_RegisterVirtual(&cl_playermodel, "_cl_playermodel");
 	Cvar_RegisterVariable(&cl_playerskin);
-	Cvar_RegisterAlias(&cl_playerskin, "_cl_playerskin");
+	Cvar_RegisterVirtual(&cl_playerskin, "_cl_playerskin");
 
 	// reconstitute the command line for the cmdline externally visible cvar
 	n = 0;

@@ -376,16 +376,16 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&cl_showdate_format);
 	Cvar_RegisterVariable(&cl_showtex);
 	
-	Cvar_RegisterAlias(&cl_showfps, "showfps");
-	Cvar_RegisterAlias(&cl_showsound, "showsound");
-	Cvar_RegisterAlias(&cl_showblur, "showblur");
-	Cvar_RegisterAlias(&cl_showspeed, "showspeed");
-	Cvar_RegisterAlias(&cl_showtopspeed, "showtopspeed");
-	Cvar_RegisterAlias(&cl_showtime, "showtime");
-	Cvar_RegisterAlias(&cl_showtime_format, "showtime_format");
-	Cvar_RegisterAlias(&cl_showdate, "showdate");
-	Cvar_RegisterAlias(&cl_showdate_format, "showdate_format");
-	Cvar_RegisterAlias(&cl_showtex, "showtex");
+	Cvar_RegisterVirtual(&cl_showfps, "showfps");
+	Cvar_RegisterVirtual(&cl_showsound, "showsound");
+	Cvar_RegisterVirtual(&cl_showblur, "showblur");
+	Cvar_RegisterVirtual(&cl_showspeed, "showspeed");
+	Cvar_RegisterVirtual(&cl_showtopspeed, "showtopspeed");
+	Cvar_RegisterVirtual(&cl_showtime, "showtime");
+	Cvar_RegisterVirtual(&cl_showtime_format, "showtime_format");
+	Cvar_RegisterVirtual(&cl_showdate, "showdate");
+	Cvar_RegisterVirtual(&cl_showdate_format, "showdate_format");
+	Cvar_RegisterVirtual(&cl_showtex, "showtex");
 	
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);

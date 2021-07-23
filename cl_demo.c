@@ -256,9 +256,8 @@ void CL_ReadDemoMessage(void)
 		}
 		if (cl_message.cursize > cl_message.maxsize)
 		{
-			Con_Printf("Demo message (%i) > cl_message.maxsize (%i)", cl_message.cursize, cl_message.maxsize);
+			CL_DisconnectEx(false, "Demo message (%i) > cl_message.maxsize (%i)", cl_message.cursize, cl_message.maxsize);
 			cl_message.cursize = 0;
-			CL_Disconnect();
 			return;
 		}
 		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);

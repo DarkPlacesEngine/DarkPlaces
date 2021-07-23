@@ -35,7 +35,7 @@ const char *svc_strings[128] =
 {
 	"svc_bad",
 	"svc_nop",
-	"svc_disconnect",
+	"svc_disconnect",	// (DP8) [string] null terminated parting message
 	"svc_updatestat",
 	"svc_version",		// [int] server version
 	"svc_setview",		// [short] entity number
@@ -1448,7 +1448,7 @@ static void CL_StopDownload(int size, int crc)
 				Con_Printf("Downloaded \"%s\" (%i bytes, %i CRC)\n", cls.qw_downloadname, size, crc);
 				FS_WriteFile(cls.qw_downloadname, cls.qw_downloadmemory, cls.qw_downloadmemorycursize);
 				extension = FS_FileExtension(cls.qw_downloadname);
-				if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3"))
+				if (!strcasecmp(extension, "pak") || !strcasecmp(extension, "pk3") || !strcasecmp(extension, "dpk"))
 					FS_Rescan();
 			}
 		}
@@ -3391,8 +3391,10 @@ static void CL_NetworkTimeReceived(double newtime)
 	// update the csqc's server timestamps, critical for proper sync
 	CSQC_UpdateNetworkTimes(cl.mtime[0], cl.mtime[1]);
 
+#ifdef USEODE
 	if (cl.mtime[0] > cl.mtime[1])
 		World_Physics_Frame(&cl.world, cl.mtime[0] - cl.mtime[1], cl.movevars_gravity);
+#endif
 
 	// only lerp entities that also get an update in this frame, when lerp excess is used
 	if(cl_lerpexcess.value > 0)
@@ -3529,7 +3531,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect();
+					CL_DisconnectEx(true, "Server disconnected");
 				break;
 
 			case qw_svc_print:
@@ -3909,7 +3911,7 @@ void CL_ParseServerMessage(void)
 				if (cls.demonum != -1)
 					CL_NextDemo();
 				else
-					CL_Disconnect();
+					CL_DisconnectEx(true, cls.protocol == PROTOCOL_DARKPLACES8 ? MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)) : "Server disconnected");
 				break;
 
 			case svc_print:

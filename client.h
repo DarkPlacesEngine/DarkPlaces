@@ -1223,7 +1223,8 @@ void CL_StartVideo(void);
 
 void CL_EstablishConnection(const char *host, int firstarg);
 
-void CL_Disconnect (void);
+void CL_Disconnect(void);
+void CL_DisconnectEx(qbool kicked, const char *reason, ... );
 void CL_Disconnect_f(cmd_state_t *cmd);
 
 void CL_UpdateRenderEntity(entity_render_t *ent);

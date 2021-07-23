@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define COMMON_H
 
 #include <stdarg.h>
+#include <assert.h>
 #include "qtypes.h"
 #include "qdefs.h"
 
@@ -42,7 +43,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //============================================================================
 
-#define ContainerOf(ptr, type, member) ((type *)((char *)&(ptr) - offsetof(type, member)))
+#define ContainerOf(ptr, type, member) ((type *)((char *)(ptr) - offsetof(type, member)))
 
 typedef struct sizebuf_s
 {
@@ -130,6 +131,7 @@ void StoreLittleShort (unsigned char *buffer, unsigned short i);
 typedef enum protocolversion_e
 {
 	PROTOCOL_UNKNOWN,
+	PROTOCOL_DARKPLACES8, ///< added parting messages. WIP
 	PROTOCOL_DARKPLACES7, ///< added QuakeWorld-style movement protocol to allow more consistent prediction
 	PROTOCOL_DARKPLACES6, ///< various changes
 	PROTOCOL_DARKPLACES5, ///< uses EntityFrame5 entity snapshot encoder/decoder which is based on a Tribes networking article at http://www.garagegames.com/articles/networking1/
@@ -216,16 +218,22 @@ void COM_InitGameType (void);
 char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 // does a varargs printf into provided buffer, returns buffer (so it can be called in-line unlike dpsnprintf)
 
+// GCC with -Werror=c++-compat will error out if static_assert is used even though the macro is valid C11...
+#ifndef __cplusplus
+#define DP_STATIC_ASSERT(expr, str) _Static_assert(expr, str)
+#else
+#define DP_STATIC_ASSERT(expr, str) static_assert(expr, str)
+#endif
 
 // snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
 #ifdef snprintf
 # undef snprintf
 #endif
-#define snprintf DO_NOT_USE_SNPRINTF__USE_DPSNPRINTF
+#define snprintf DP_STATIC_ASSERT(0, "snprintf is forbidden for portability reasons. Use dpsnprintf instead.")
 #ifdef vsnprintf
 # undef vsnprintf
 #endif
-#define vsnprintf DO_NOT_USE_VSNPRINTF__USE_DPVSNPRINTF
+#define vsnprintf DP_STATIC_ASSERT(0, "vsnprintf is forbidden for portability reasons. Use dpvsnprintf instead.")
 
 // dpsnprintf and dpvsnprintf
 // return the number of printed characters, excluding the final '\0'
@@ -237,15 +245,15 @@ extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_
 // A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)
 // LadyHavoc: added #undef lines here to avoid warnings in Linux
 #undef strcat
-#define strcat DO_NOT_USE_STRCAT__USE_STRLCAT_OR_MEMCPY
+#define strcat DP_STATIC_ASSERT(0, "strcat is forbidden for security reasons. Use strlcat or memcpy instead.")
 #undef strncat
-#define strncat DO_NOT_USE_STRNCAT__USE_STRLCAT_OR_MEMCPY
+#define strncat DP_STATIC_ASSERT(0, "strncat is forbidden for security reasons. Use strlcat or memcpy instead.")
 #undef strcpy
-#define strcpy DO_NOT_USE_STRCPY__USE_STRLCPY_OR_MEMCPY
+#define strcpy DP_STATIC_ASSERT(0, "strcpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
 #undef strncpy
-#define strncpy DO_NOT_USE_STRNCPY__USE_STRLCPY_OR_MEMCPY
-//#undef sprintf
-//#define sprintf DO_NOT_USE_SPRINTF__USE_DPSNPRINTF
+#define strncpy DP_STATIC_ASSERT(0, "strncpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
+#undef sprintf
+#define sprintf DP_STATIC_ASSERT(0, "sprintf is forbidden for security reasons. Use dpsnprintf instead.")
 
 
 //============================================================================

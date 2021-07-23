@@ -404,6 +404,9 @@ typedef struct msurface_s
 	int num_firstcollisiontriangle; // q3bsp only
 	int num_collisiontriangles; // number of triangles (if surface has collisions enabled)
 	int num_collisionvertices; // number of vertices referenced by collision triangles (if surface has collisions enabled)
+
+	// used by Mod_Mesh_Finalize when building sortedmodelsurfaces
+	qbool included;
 }
 msurface_t;
 

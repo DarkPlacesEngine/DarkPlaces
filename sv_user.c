@@ -718,7 +718,7 @@ static void SV_ReadClientMove (void)
 		}
 		// as requested by FrikaC, cursor_trace_ent is reset to world if the
 		// entity is free at time of receipt
-		if (PRVM_EDICT_NUM(move->cursor_entitynumber)->priv.server->free)
+		if (PRVM_EDICT_NUM(move->cursor_entitynumber)->free)
 			move->cursor_entitynumber = 0;
 		if (sv_message.badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
@@ -999,14 +999,14 @@ void SV_ReadClientMessage(void)
 		if (!host_client->active)
 		{
 			// a command caused an error
-			SV_DropClient (false);
+			SV_DropClient (false, "Connection closing");
 			return;
 		}
 
 		if (sv_message.badread)
 		{
 			Con_Print("SV_ReadClientMessage: badread\n");
-			SV_DropClient (false);
+			SV_DropClient (false, "An internal server error occurred");
 			return;
 		}
 
@@ -1025,7 +1025,7 @@ void SV_ReadClientMessage(void)
 			Con_Printf("SV_ReadClientMessage: unknown command char %i (at offset 0x%x)\n", netcmd, sv_message.readcount);
 			if (developer_networking.integer)
 				Com_HexDumpToConsole(sv_message.data, sv_message.cursize);
-			SV_DropClient (false);
+			SV_DropClient (false, "Unknown message sent to the server");
 			return;
 
 		case clc_nop:
@@ -1076,7 +1076,9 @@ clc_stringcmd_invalid:
 			break;
 
 		case clc_disconnect:
-			SV_DropClient (false); // client wants to disconnect
+			SV_DropClient (true, sv.protocol == PROTOCOL_DARKPLACES8
+			               ? MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring))
+			               : "Disconnect by user"); // client wants to disconnect
 			return;
 
 		case clc_move:

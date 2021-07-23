@@ -16,7 +16,7 @@ typedef enum host_state_e
 	host_active
 } host_state_t;
 
-typedef struct host_s
+typedef struct host_static_s
 {
 	jmp_buf abortframe;
 	int state;
@@ -31,16 +31,16 @@ typedef struct host_s
 	struct
 	{
 		void (*ConnectLocal)(void);
-		void (*Disconnect)(void);
+		void (*Disconnect)(qbool, const char *, ... );
 		void (*ToggleMenu)(void);
 		qbool (*CL_Intermission)(void); // Quake compatibility
 		void (*CL_SendCvar)(struct cmd_state_s *);
 		void (*SV_SendCvar)(struct cmd_state_s *);
 		void (*SV_Shutdown)(void);
 	} hook;
-} host_t;
+} host_static_t;
 
-extern host_t host;
+extern host_static_t host;
 
 void Host_Main(void);
 void Host_Shutdown(void);

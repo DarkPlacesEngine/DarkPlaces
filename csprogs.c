@@ -883,7 +883,7 @@ static void CLVM_end_increase_edicts(prvm_prog_t *prog)
 
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
-		if (!ent->priv.server->free && !VectorCompare(PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
+		if (!ent->free && !VectorCompare(PRVM_clientedictvector(ent, absmin), PRVM_clientedictvector(ent, absmax)))
 			CL_LinkEdict(ent);
 }
 
@@ -906,8 +906,10 @@ static void CLVM_free_edict(prvm_prog_t *prog, prvm_edict_t *ed)
 	World_UnlinkEdict(ed);
 	memset(ed->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 	VM_RemoveEdictSkeleton(prog, ed);
+#ifdef USEODE
 	World_Physics_RemoveFromEntity(&cl.world, ed);
 	World_Physics_RemoveJointFromEntity(&cl.world, ed);
+#endif
 }
 
 static void CLVM_count_edicts(prvm_prog_t *prog)
@@ -919,7 +921,7 @@ static void CLVM_count_edicts(prvm_prog_t *prog)
 	for (i=0 ; i<prog->num_edicts ; i++)
 	{
 		ent = PRVM_EDICT_NUM(i);
-		if (ent->priv.server->free)
+		if (ent->free)
 			continue;
 		active++;
 		if (PRVM_clientedictfloat(ent, solid))
@@ -1041,8 +1043,7 @@ void CL_VM_Init (void)
 			else
 			{
 				Mem_Free(csprogsdata);
-				Con_Printf(CON_ERROR "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
-				CL_Disconnect();
+				CL_DisconnectEx(false, "Your %s is not the same version as the server (CRC is %i/%i but should be %i/%i)\n", csqc_progname.string, csprogsdatacrc, (int)csprogsdatasize, requiredcrc, requiredsize);
 				return;
 			}
 		}
@@ -1050,13 +1051,7 @@ void CL_VM_Init (void)
 	else
 	{
 		if (requiredcrc >= 0)
-		{
-			if (cls.demoplayback)
-				Con_Printf(CON_ERROR "CL_VM_Init: demo requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
-			else
-				Con_Printf(CON_ERROR "CL_VM_Init: server requires CSQC, but \"%s\" wasn't found\n", csqc_progname.string);
-			CL_Disconnect();
-		}
+			CL_DisconnectEx(false, CON_ERROR "CL_VM_Init: %s requires CSQC, but \"%s\" wasn't found\n", cls.demoplayback ? "demo" : "server", csqc_progname.string);
 		return;
 	}
 
@@ -1092,11 +1087,8 @@ void CL_VM_Init (void)
 
 	if (!prog->loaded)
 	{
-		Host_Error("CSQC %s failed to load\n", csprogsfn);
-		if(!sv.active)
-			CL_Disconnect();
 		Mem_Free(csprogsdata);
-		return;
+		Host_Error("CSQC %s failed to load\n", csprogsfn);
 	}
 
 	if(cls.demorecording)
@@ -1191,7 +1183,7 @@ qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)
 
 	ed = PRVM_EDICT_NUM(entnum - MAX_EDICTS);
 
-	if(!ed->priv.required->free)
+	if(!ed->free)
 	{
 		mod = CL_GetModelFromEdict(ed);
 		VectorCopy(PRVM_clientedictvector(ed, origin), out);

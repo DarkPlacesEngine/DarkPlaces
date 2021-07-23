@@ -86,12 +86,8 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 			Con_Printf("No commands are pending.\n");
 		else
 		{
-			llist_t *pos;
-        	List_For_Each(pos, &cbuf->deferred)
-    		{
-				current = List_Entry(*pos, cmd_input_t, list);
+			List_For_Each_Entry(current, &cbuf->deferred, list)
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
-			}
 		}
 	}
 	else if(Cmd_Argc(cmd) == 2 && !strcasecmp("clear", Cmd_Argv(cmd, 1)))
@@ -183,7 +179,7 @@ static cmd_input_t *Cbuf_LinkGet(cmd_buf_t *cbuf, cmd_input_t *existing)
 		ret = existing;
 	else if(!List_Is_Empty(&cbuf->free))
 	{
-		ret = List_Entry(*cbuf->free.next, cmd_input_t, list);
+		ret = List_Entry(cbuf->free.next, cmd_input_t, list);
 		ret->length = 0;
 		ret->pending = false;
 	}
@@ -370,7 +366,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_AddText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(*cbuf->start.prev, cmd_input_t, list)), text);
+		Cbuf_LinkCreate(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.prev, cmd_input_t, list)), text);
 		if(!List_Is_Empty(&llist))
 			List_Splice_Tail(&llist, &cbuf->start);
 	}
@@ -398,7 +394,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, List_Entry(*cbuf->start.next, cmd_input_t, list), text);
+		Cbuf_LinkCreate(cmd, &llist, List_Entry(cbuf->start.next, cmd_input_t, list), text);
 		if(!List_Is_Empty(&llist))
 			List_Splice(&llist, &cbuf->start);
 	}
@@ -413,7 +409,6 @@ Cbuf_Execute_Deferred --blub
 */
 static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 {
-	llist_t *pos;
 	cmd_input_t *current;
 	double eat;
 
@@ -424,14 +419,13 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
-    List_For_Each(pos, &cbuf->deferred)
+	List_For_Each_Entry(current, &cbuf->deferred, list)
 	{
-		current = List_Entry(*pos, cmd_input_t, list);
 		current->delay -= eat;
 		if(current->delay <= 0)
 		{
 			cbuf->size += current->length;
-			List_Move(pos, &cbuf->start);
+			List_Move(&current->list, &cbuf->start);
 			// We must return and come back next frame or the engine will freeze. Fragile... like glass :3
 			return;
 		}
@@ -460,7 +454,7 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		 * commands down. This is necessary because commands (exec, alias)
 		 * can insert data at the beginning of the text buffer
 		 */
-		current = List_Entry(*cbuf->start.next, cmd_input_t, list);
+		current = List_Entry(cbuf->start.next, cmd_input_t, list);
 		
 		// Recycle memory so using WASD doesn't cause a malloc and free
 		List_Move_Tail(&current->list, &cbuf->free);
