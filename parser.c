@@ -129,12 +129,12 @@ static inline void Parse_SkipToToken(struct qparser_state_s *state)
 }
 
 // Skip to the next token. Advance the pointer at least 1 if we're not sitting on whitespace.
-char Parse_NextToken(struct qparser_state_s *state)
+char Parse_NextToken(struct qparser_state_s *state, int skip)
 {
 	if(!state->pos)
 		state->pos = state->buf;
 	else
-		Parse_Next(state, 1);
+		Parse_Next(state, 1 + skip);
 
 	Parse_SkipToToken(state);
 

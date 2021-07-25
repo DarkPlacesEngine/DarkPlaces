@@ -27,34 +27,34 @@ typedef enum qjson_type_e
 	JSON_TYPE_OBJECT = 1,
 	JSON_TYPE_ARRAY = 2,
 	JSON_TYPE_STRING = 3,
-	JSON_TYPE_NUMBER = 4,
-	JSON_TYPE_BOOL = 5
+	JSON_TYPE_USTRING = 4,
+	JSON_TYPE_NUMBER = 5,
+	JSON_TYPE_BOOL = 6,
+	JSON_TYPE_NULL = 7
 } qjson_type_t;
 
 typedef struct qjson_token_s
 {
 	qjson_type_t type;
 
-	struct qjson_token_s *prev, *next; // Linked list for arrays
-	struct qjson_token_s *parent, *child;
-	
+	struct qjson_token_s *parent;
+
+	llist_t list; // Array elements or key-value pairs
+	llist_t clist; // Head of list for children key-value pairs
+
 	char *key;
+	char *string;
+
 	union
 	{
-		char *string;
 		double decimal;
 		int number;
-	} value;
+	};
 } qjson_token_t;
 
-typedef struct qjson_state_s
-{
-	qjson_token_t *head, *cur;
-	qparser_state_t *state;
-} qjson_state_t;
-
-static inline void Json_Parse_Object(struct qjson_state_s *state);
-static inline void Json_Parse_Array(struct qjson_state_s *state);
+static inline qjson_token_t *Json_Parse_Object(struct qparser_state_s *state, qjson_token_t *, qjson_token_t *);
+static inline qjson_token_t *Json_Parse_Array(struct qparser_state_s *state, qjson_token_t *, qjson_token_t *);
+static inline qjson_token_t *Json_Parse_Terminator(struct qparser_state_s *state, qjson_token_t *, qjson_token_t *);
 
 // Checks for C/C++-style comments and ignores them. This is not standard json.
 static qbool Json_Parse_Comment_SingleLine(struct qparser_state_s *state)
@@ -94,87 +94,125 @@ static qbool Json_Parse_CheckComment_Multiline_End(struct qparser_state_s *state
 	return false;
 }
 
-static inline qbool Json_Handle_String_Escape(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_NewToken(qparser_state_t *json, qjson_token_t *parent)
 {
-	switch(*json->state->pos)
+	qjson_token_t *token;
+	token = (qjson_token_t *)Z_Malloc(sizeof(qjson_token_t));
+	if(parent)
+		List_Add_Tail(&token->list, &parent->clist);
+	token->parent = parent;
+	return token;
+}
+
+static inline char Json_Parse_String_Escape(qparser_state_t *json, char escape)
+{
+	switch(escape)
 	{
+	case '"':
 	case '\\':
 	case '/':
+		// These can be returned literally
+		return escape;
 	case 'b':
+		return '\b';
 	case 'f':
+		return '\f';
 	case 'n':
+		return '\n';
 	case 'r':
+		return '\r';
 	case 't':
-	case 'u':
-		return true; // TODO
+		return '\t';
 	default:
-		return false;
+		Parse_Error(json, PARSE_ERR_INVAL, "a valid escape sequence");
+		return 0;
 	}
 }
 
-// TODO: handle escape sequences
-static inline void Json_Parse_String(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_String(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	do {
-		Parse_Next(json->state, 1);
-		if(*json->state->pos == '\\')
+	int i;
+	const char *start, *end;
+	size_t subtract = 0;
+
+	Parse_Next(json, 1);
+
+	start = json->pos;
+
+	// Get the length
+	while(*json->pos != '"')
+	{
+		if(*json->pos == '\\')
 		{
-			Parse_Next(json->state, 1);
-			if(Json_Handle_String_Escape(json))
-				continue;
-			Parse_Error(json->state, PARSE_ERR_INVAL, "a valid escape sequence");
+			subtract++;
+			if(json->pos[1] == 'u')
+			{
+				Parse_Error(json, PARSE_ERR_INVAL, "Json Unicode escapes (\\u) are not supported");
+				return NULL;
+			}
+			Parse_Next(json, 1);
 		}
-	} while(*json->state->pos != '"');
+		Parse_Next(json, 1);
+	}
+
+	end = json->pos;
+
+	if(start != end)
+	{
+		token->string = (char *)Z_Malloc(((end - start) - subtract));
+
+		// Actually copy stuff over. 'i' should never exceed end - start.
+		for(i = 0; start != end; i++, start++)
+		{
+			if(*start == '\\')
+			{
+				start++;
+				token->string[i] = Json_Parse_String_Escape(json, *start);
+				continue;
+			}
+			token->string[i] = *start;
+		}
+	}
+
+	token->type = JSON_TYPE_STRING;
+
+	return Json_Parse_Terminator(json, parent, NULL);
 }
 
 // Handles numbers. Json numbers can be either an integer or a double.
-static inline qbool Json_Parse_Number(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Number(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	int i, numsize;
-	const char *in = json->state->pos;
-	//char out[128];
-	qbool is_float = false;
-	qbool is_exp = false;
+	const char *lookahead = json->pos;
 
-	for(i = 0, numsize = 0; isdigit(in[i]); i++, numsize++)
+	// First, figure out where the cursor should end up after atof.
+	// We don't care if the number is valid right now. atof takes care of that.
+	while(isdigit(*lookahead) || *lookahead == '-' || *lookahead == '+' || *lookahead == 'E' || *lookahead == 'e' || *lookahead == '.')
+		lookahead++;
+
+	token->type = JSON_TYPE_NUMBER;
+	token->decimal = atof(json->pos);
+
+	if(!token->decimal)
 	{
-		//out[numsize] = in[numsize];
-
-		if(in[i] == '.')
-		{
-			if(is_float || is_exp)
-				Parse_Error(json->state, PARSE_ERR_INVAL, "a number");
-			is_float = true;
-			i++;
-			continue;
-		}
-
-		if(in[i] == 'e' || in[i] == 'E')
-		{
-			if(is_exp)
-				Parse_Error(json->state, PARSE_ERR_INVAL, "a number");
-			if(in[i+1] == '+' || in[i+1] == '-')
-				i++;
-			is_exp = true;
-			i++;
-			continue;
-		}
+		Parse_Error(json, PARSE_ERR_INVAL, "a valid number");
+		return NULL;
 	}
-	// TODO: use strtod()
-	Parse_Next(json->state, i - 1);
-	return true;
+
+	Parse_Next(json, (lookahead - json->pos) - 1);
+
+	return Json_Parse_Terminator(json, parent, NULL);
 }
 
 static const char *keyword_list[] =
 {
-	"true",
 	"false",
+	"true",
 	"null",
 	NULL
 };
 
 // Parse a keyword.
-static inline qbool Json_Parse_Keyword(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Keyword(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
 {
 	size_t keyword_size;
 
@@ -182,184 +220,236 @@ static inline qbool Json_Parse_Keyword(struct qjson_state_s *json)
 	{
 		keyword_size = strlen(keyword_list[i]);
 
-		if(!strncmp(keyword_list[i], json->state->pos, keyword_size))
+		if(!strncmp(keyword_list[i], json->pos, keyword_size))
 		{
 			// Don't advance the entire length of the keyword or we might run into a valid token that'd go missed.
-			Parse_Next(json->state, keyword_size - 1);
-			return true;
+			Parse_Next(json, keyword_size - 1);
+			if(i == 2)
+				token->type = JSON_TYPE_NULL;
+			else
+			{
+				token->type = JSON_TYPE_BOOL;
+				token->number = i;
+			}
+
+			return Json_Parse_Terminator(json, parent, NULL);
 		}
 	}
-	return false;
+	Parse_Error(json, PARSE_ERR_INVAL, "true, false, or null");
+	return NULL;
 }
 
-static inline void Json_Parse_Key(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Value(qparser_state_t *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	do {
-		Parse_Next(json->state, 1);
-		if(ISWHITESPACE(*json->state->pos))
-			Parse_Error(json->state, PARSE_ERR_INVAL, "a key");
-	} while(*json->state->pos != '"');
-}
-
-// Parse a value.
-static inline qbool Json_Parse_Value(struct qjson_state_s *json)
-{
-	switch(Parse_NextToken(json->state))
+	switch(Parse_NextToken(json, 0))
 	{
 	case '"': // string
-		Json_Parse_String(json);
-		break;
+		return Json_Parse_String(json, parent, token);
 	case '{': // object
-		Json_Parse_Object(json);
-		break;
+		return Json_Parse_Object(json, parent, token);
 	case '[': // array
-		Json_Parse_Array(json);
-		break;
+		return Json_Parse_Array(json, parent, token);
 	case '-':
-		Json_Parse_Number(json);
-		break;
+		return Json_Parse_Number(json, parent, token);
 	case 't': // true
 	case 'f': // false
 	case 'n': // null
-		Json_Parse_Keyword(json);
-		break;
+		return Json_Parse_Keyword(json, parent, token);
 	default:
-		if(isdigit(*json->state->pos))
-		{
-			Json_Parse_Number(json);
-			break;
-		}
-		//Parse_Error(json->state, PARSE_ERR_INVAL, "a value");
-		return false;
+		if(isdigit(*json->pos))
+			return Json_Parse_Number(json, parent, token);
 	}
-	return true;
+	Parse_Error(json, PARSE_ERR_INVAL, "a value");
+	return NULL;
 }
 
-static inline qbool Json_Parse_Pairs(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Single(qparser_state_t *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	do
+	// TODO: Handle blank arrays
+
+	token = Json_Parse_NewToken(json, parent);
+	return Json_Parse_Value(json, parent, token);
+}
+
+static inline qjson_token_t *Json_Parse_Pair(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
+{
+	const char *start;
+	size_t length = 0;
+
+	Parse_NextToken(json, 0);
+
+	// TODO: Handle blank objects
+
+	start = &json->pos[1];
+
+	while(json->pos[1] != '"')
 	{
-		if(Parse_NextToken(json->state) == '"')
+		Parse_Next(json, 1);
+		if(ISWHITESPACE(*json->pos))
 		{
-			// Parse the key
-			Json_Parse_Key(json);
-
-			// And its value
-			if(Parse_NextToken(json->state) == ':')
-			{
-				if(!Json_Parse_Value(json))
-					Parse_Error(json->state, PARSE_ERR_INVAL, "a value");
-			}
-			else
-				Parse_Error(json->state, PARSE_ERR_INVAL, ":");
+			Parse_Error(json, PARSE_ERR_INVAL, "a key without whitespace");
+			return NULL;
 		}
-		else
-			return false;
-	} while (Parse_NextToken(json->state) == ',');
+		length++;
+	}
 
-	return true;
+	if(!length)
+	{
+		Parse_Error(json, PARSE_ERR_INVAL, "a key");
+		return NULL;
+	}
+
+	if(Parse_NextToken(json, 1) != ':')
+	{
+		Parse_Error(json, PARSE_ERR_INVAL, "':'");
+		return NULL;
+	}
+
+	token = Json_Parse_NewToken(json, parent);
+	token->key = (char *)Z_Malloc(length + 1);
+	memcpy(token->key, start, length);
+
+	return Json_Parse_Value(json, parent, token);
+}
+
+static inline qjson_token_t *Json_Parse_Terminator(qparser_state_t *json, qjson_token_t *parent, qjson_token_t *token)
+{
+	switch(Parse_NextToken(json, 0))
+	{
+	case ']':
+	case '}':
+		if(!parent->parent)
+			return parent;
+		return Json_Parse_Terminator(json, parent->parent, NULL);
+	case ',':
+		if(parent->type == JSON_TYPE_ARRAY)
+			return Json_Parse_Single(json, parent, NULL);
+		else
+			return Json_Parse_Pair(json, parent, NULL);
+	default:
+		Parse_Error(json, PARSE_ERR_INVAL, "']', '}', or ','");
+		return NULL;
+	}
 }
 
 // Parse an object.
-static inline void Json_Parse_Object(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Object(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	Parse_Indent(json->state);
+	//Parse_Indent(json);
 
 	/*
 	 * Json objects are basically a data map; key-value pairs.
 	 * They end in a comma or a closing curly brace.
 	 */
-	Json_Parse_Pairs(json);
+	token->type = JSON_TYPE_OBJECT;
+	List_Create(&token->clist);
 
-	if(*json->state->pos != '}')
-		Parse_Error(json->state, PARSE_ERR_INVAL, ", or }");
-
-	Parse_Dedent(json->state);
+	return Json_Parse_Pair(json, token, NULL);
 }
 
 // Parse an array.
-static inline void Json_Parse_Array(struct qjson_state_s *json)
+static inline qjson_token_t *Json_Parse_Array(struct qparser_state_s *json, qjson_token_t *parent, qjson_token_t *token)
 {
-	Parse_Indent(json->state);
+	//Parse_Indent(json);
 
 	/*
 	 * Json arrays are basically lists. They can contain
 	 * any value, comma-separated, and end with a closing square bracket.
 	 */
-	do {
-		if(!Json_Parse_Value(json))
-			break;
-	} while (Parse_NextToken(json->state) == ',');
+	token->type = JSON_TYPE_ARRAY;
+	List_Create(&token->clist);
 
-	if(*json->state->pos != ']')
-		Parse_Error(json->state, PARSE_ERR_INVAL, ", or ]");
+	return Json_Parse_Single(json, token, NULL);
+}
 
-	Parse_Dedent(json->state);
+static void Json_Parse_Cleanup(qparser_state_t *json, qjson_token_t *parent, qjson_token_t *token)
+{
+	qjson_token_t *cur, *next;
+
+	token->type = JSON_TYPE_UNDEFINED;
+
+	List_For_Each_Entry_Safe(cur, next, &token->clist, list)
+	{
+		if(cur->type == JSON_TYPE_ARRAY || cur->type == JSON_TYPE_BOOL)
+		{
+			Json_Parse_Cleanup(json, token, cur);
+			return;
+		}
+		List_Delete(&cur->list);
+		if(cur->key)
+			Z_Free(cur->key);
+		if(cur->string)
+			Z_Free(cur->string);
+	}
+
+	if(parent)
+		Json_Parse_Cleanup(json, parent->parent, parent);
+	else
+	{
+		if(token->key)
+			Z_Free(token->key);
+		Z_Free(token);
+	}
 }
 
 // Main function for the parser.
-static qjson_token_t *Json_Parse_Main(qjson_state_t *json)
+static qjson_token_t *Json_Parse_Start(qparser_state_t *json)
 {
-	json->state->callback.CheckComment_SingleLine = Json_Parse_Comment_SingleLine;
-	json->state->callback.CheckComment_Multiline_Start = Json_Parse_CheckComment_Multiline_Start;
-	json->state->callback.CheckComment_Multiline_End = Json_Parse_CheckComment_Multiline_End;
+	qjson_token_t *tree = NULL;
+	qjson_token_t *head = NULL;
 
-	if(setjmp(parse_error))
-	{
-		// actually not sure about this
-		return NULL;
-	}
-	if(json->state->buf == NULL)
+	json->callback.CheckComment_SingleLine = Json_Parse_Comment_SingleLine;
+	json->callback.CheckComment_Multiline_Start = Json_Parse_CheckComment_Multiline_Start;
+	json->callback.CheckComment_Multiline_End = Json_Parse_CheckComment_Multiline_End;
+
+	if(json->buf == NULL)
 	{
 		Con_Printf(CON_ERROR "Json_Parse: Empty json file\n");
 		return NULL;
 	}
 
-	switch(Parse_NextToken(json->state))
+	if(setjmp(parse_error))
 	{
-	case '{':
-		Json_Parse_Object(json);
-		break;
-	case '[':
-		Json_Parse_Array(json);
-		break;
-	default:
-		Con_Printf(CON_ERROR "Json_Parse: Not a json file\n");
+		// actually not sure about this
+		Json_Parse_Cleanup(json, NULL, head);
+		Z_Free(json);
 		return NULL;
 	}
 
-	// Success!
-	// TODO: Actually parse.
-	Con_Printf("Hmm, yes. This json is made of json\n");
+	head = Json_Parse_NewToken(json, NULL);
 
-	return NULL;
+	switch(Parse_NextToken(json, 0))
+	{
+	case '{':
+		tree = Json_Parse_Object(json, NULL, head);
+		break;
+	case '[':
+		tree = Json_Parse_Array(json, NULL, head);
+		break;
+	default:
+		Con_Printf(CON_ERROR "Json_Parse: Not a json file\n");
+		break;
+	}
+
+	Z_Free(json);
+	return tree;
 }
 
 qjson_token_t *Json_Parse_File(const char *file)
 {
-	struct qjson_state_s json =
-	{
-		.head = NULL,
-		.cur = NULL,
-		.state = Parse_LoadFile(file)
-	};
-
-	return Json_Parse_Main(&json);
+	return Json_Parse_Start(Parse_LoadFile(file));
 }
 
 qjson_token_t *Json_Parse(const unsigned char *data)
 {
-	struct qjson_state_s json =
-	{
-		.head = NULL,
-		.cur = NULL,
-		.state = Parse_New(data)
-	};
-
-	return Json_Parse_Main(&json);
+	return Json_Parse_Start(Parse_New(data));
 }
 
 void Json_Test_f(cmd_state_t *cmd)
 {
-	Json_Parse_File("test.json");
+	qjson_token_t *testing = Json_Parse_File("test.json");
+	if(testing)
+		Con_Printf("hmm yes this json here is made out of json\n");
+	else
+		Con_Printf("failure\n");
 }
