@@ -112,7 +112,7 @@ void Sys_Shutdown (void)
 #endif
 }
 
-void Sys_PrintToTerminal(const char *text)
+void Sys_Print(const char *text)
 {
 	DWORD dummy;
 	extern HANDLE houtput;
