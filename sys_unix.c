@@ -138,10 +138,6 @@ char *Sys_GetClipboardData (void)
 	return NULL;
 }
 
-void Sys_InitConsole (void)
-{
-}
-
 int main (int argc, char **argv)
 {
 	signal(SIGFPE, SIG_IGN);
