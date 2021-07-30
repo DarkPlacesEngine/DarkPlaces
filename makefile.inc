@@ -472,10 +472,6 @@ world.o: world.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
 
-keysym2ucs.o: keysym2ucs.c
-	$(CHECKLEVEL2)
-	$(DO_CC) -I/usr/X11R6/include
-
 crypto.o: crypto.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_CRYPTO) $(CFLAGS_CRYPTO_RIJNDAEL)
