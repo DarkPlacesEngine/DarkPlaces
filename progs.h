@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ENTITYGRIDAREAS 16
 #define MAX_ENTITYCLUSTERS 16
 
+#ifdef USEODE
 #define	GEOMTYPE_NONE      -1
 #define	GEOMTYPE_SOLID      0
 #define	GEOMTYPE_BOX		1
@@ -57,7 +58,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ODEFUNC_FORCE       3
 #define ODEFUNC_TORQUE      4
 
-#ifdef USEODE
 typedef struct edict_odefunc_s
 {
 	int type;
