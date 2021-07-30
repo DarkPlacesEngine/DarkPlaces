@@ -46,7 +46,7 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-void Sys_PrintToTerminal(const char *text)
+void Sys_Print(const char *text)
 {
 	if(sys.outfd < 0)
 		return;
@@ -136,10 +136,6 @@ char *Sys_ConsoleInput(void)
 char *Sys_GetClipboardData (void)
 {
 	return NULL;
-}
-
-void Sys_InitConsole (void)
-{
 }
 
 int main (int argc, char **argv)

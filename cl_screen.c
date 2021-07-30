@@ -1206,7 +1206,7 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
 			double fps  = (cls.capturevideo.frame                                ) / (t - cls.capturevideo.starttime   + 0.0000001);
 			dpsnprintf(buf, sizeof(buf), "capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
-			Sys_PrintToTerminal(buf);
+			Sys_Print(buf);
 			cls.capturevideo.lastfpstime = t;
 			cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
 		}

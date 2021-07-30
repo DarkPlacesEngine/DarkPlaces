@@ -270,16 +270,11 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 
 	Con_Printf("Loading game from %s...\n", filename);
 
-	// stop playing demos
-	if (cls.demoplayback)
-		CL_Disconnect (false, NULL);
+	if(host.hook.Disconnect)
+		host.hook.Disconnect(false, NULL);
 
-#ifdef CONFIG_MENU
-	// remove menu
-	if (key_dest == key_menu || key_dest == key_menu_grabbed)
-		MR_ToggleMenu(0);
-#endif
-	key_dest = key_game;
+	if(host.hook.ToggleMenu)
+		host.hook.ToggleMenu();
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 

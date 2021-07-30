@@ -404,13 +404,13 @@ int i;
 				OPC->_float = OPA->_float < OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_AND):
-				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) && FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add AND_I to be used by fteqcc for anything not a float
+				OPC->_float = PRVM_FLOAT_IS_TRUE_FOR_INT(OPA->_int) && PRVM_FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add AND_I to be used by fteqcc for anything not a float
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_OR):
-				OPC->_float = FLOAT_IS_TRUE_FOR_INT(OPA->_int) || FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add OR_I to be used by fteqcc for anything not a float
+				OPC->_float = PRVM_FLOAT_IS_TRUE_FOR_INT(OPA->_int) || PRVM_FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add OR_I to be used by fteqcc for anything not a float
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NOT_F):
-				OPC->_float = !FLOAT_IS_TRUE_FOR_INT(OPA->_int);
+				OPC->_float = !PRVM_FLOAT_IS_TRUE_FOR_INT(OPA->_int);
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NOT_V):
 				OPC->_float = !OPA->vector[0] && !OPA->vector[1] && !OPA->vector[2];

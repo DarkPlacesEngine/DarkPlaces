@@ -51,27 +51,6 @@ OBJ_SND_COMMON=snd_main.o snd_mem.o snd_mix.o snd_ogg.o snd_wav.o $(OBJ_SND_XMP)
 OBJ_SND_NULL=snd_null.o
 LIB_SND_NULL=
 
-# Open Sound System (Linux, FreeBSD and Solaris)
-OBJ_SND_OSS=$(OBJ_SND_COMMON) snd_oss.o
-LIB_SND_OSS=
-
-# Advanced Linux Sound Architecture (Linux)
-OBJ_SND_ALSA=$(OBJ_SND_COMMON) snd_alsa.o
-LIB_SND_ALSA=-lasound
-
-# Core Audio (Mac OS X)
-OBJ_SND_COREAUDIO=$(OBJ_SND_COMMON) snd_coreaudio.o
-LIB_SND_COREAUDIO=-framework CoreAudio
-
-# BSD / Sun audio API (NetBSD and OpenBSD)
-OBJ_SND_BSD=$(OBJ_SND_COMMON) snd_bsd.o
-LIB_SND_BSD=
-
-# DirectX and Win32 WAVE output (Win32)
-OBJ_SND_WIN=$(OBJ_SND_COMMON) snd_win.o
-LIB_SND_WIN=
-
-
 ###### Common objects and flags #####
 
 # Common objects
@@ -471,10 +450,6 @@ prvm_cmds.o: prvm_cmds.c
 world.o: world.c
 	$(CHECKLEVEL2)
 	$(DO_CC) $(CFLAGS_ODE)
-
-keysym2ucs.o: keysym2ucs.c
-	$(CHECKLEVEL2)
-	$(DO_CC) -I/usr/X11R6/include
 
 crypto.o: crypto.c
 	$(CHECKLEVEL2)

@@ -2,7 +2,7 @@
 #include "fs.h"
 #include "libcurl.h"
 #include "thread.h"
-
+#include "com_list.h"
 #include "image.h"
 #include "jpeg.h"
 #include "image_png.h"
@@ -209,7 +209,7 @@ typedef struct downloadinfo_s
 	size_t bytes_received; // for buffer
 	double bytes_received_curl; // for throttling
 	double bytes_sent_curl; // for throttling
-	struct downloadinfo_s *next, *prev;
+	llist_t list;
 	qbool forthismap;
 	double maxspeed;
 	curl_slist *slist; // http headers
@@ -225,7 +225,7 @@ typedef struct downloadinfo_s
 	const char *extraheaders;
 }
 downloadinfo;
-static downloadinfo *downloads = NULL;
+LIST_HEAD(downloads);
 static int numdownloads = 0;
 
 static qbool noclear = false;
@@ -284,7 +284,7 @@ void Curl_Clear_forthismap(void)
 	if(noclear)
 		return;
 	if (curl_mutex) Thread_LockMutex(curl_mutex);
-	for(di = downloads; di; di = di->next)
+	List_For_Each_Entry(di, &downloads, list)
 		di->forthismap = false;
 	Curl_CommandWhenError(NULL);
 	Curl_CommandWhenDone(NULL);
@@ -620,12 +620,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			CLEAR_AND_RETRY();
 	}
 
-	if(di->prev)
-		di->prev->next = di->next;
-	else
-		downloads = di->next;
-	if(di->next)
-		di->next->prev = di->prev;
+	List_Delete(&di->list);
 
 	--numdownloads;
 	if(di->forthismap)
@@ -687,7 +682,7 @@ static void CheckPendingDownloads(void)
 	if(numdownloads < cl_curl_maxdownloads.integer)
 	{
 		downloadinfo *di;
-		for(di = downloads; di; di = di->next)
+		List_For_Each_Entry(di, &downloads, list)
 		{
 			if(!di->started)
 			{
@@ -843,7 +838,7 @@ static downloadinfo *Curl_Find(const char *filename)
 	downloadinfo *di;
 	if(!curl_dll)
 		return NULL;
-	for(di = downloads; di; di = di->next)
+	List_For_Each_Entry(di, &downloads, list)
 		if(!strcasecmp(di->filename, filename))
 			return di;
 	return NULL;
@@ -851,19 +846,16 @@ static downloadinfo *Curl_Find(const char *filename)
 
 void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata)
 {
-	downloadinfo *di;
+	downloadinfo *di, *ndi;
 	if(!curl_dll)
 		return;
-	for(di = downloads; di; )
+	List_For_Each_Entry_Safe(di, ndi, &downloads, list)
 	{
 		if(di->callback == callback && di->callback_data == cbdata)
 		{
 			di->callback = curl_quiet_callback; // do NOT call the callback
 			Curl_EndDownload(di, CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
-			di = downloads;
 		}
-		else
-			di = di->next;
 	}
 }
 
@@ -1067,11 +1059,6 @@ static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspe
 		di->bytes_received_curl = 0;
 		di->bytes_sent_curl = 0;
 		di->extraheaders = extraheaders;
-		di->next = downloads;
-		di->prev = NULL;
-		if(di->next)
-			di->next->prev = di;
-
 		di->buffer = buf;
 		di->buffersize = bufsize;
 		if(callback == NULL)
@@ -1098,8 +1085,11 @@ static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspe
 			di->postbufsize = 0;
 		}
 
-		downloads = di;
-		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
+		List_Add(&di->list, &downloads);
+
+		if (curl_mutex)
+			Thread_UnlockMutex(curl_mutex);
+
 		return true;
 	}
 }
@@ -1142,7 +1132,7 @@ void Curl_Frame(void)
 
 	Curl_CheckCommandWhenDone();
 
-	if(!downloads)
+	if(List_Is_Empty(&downloads))
 	{
 		if (curl_mutex) Thread_UnlockMutex(curl_mutex);
 		return;
@@ -1164,7 +1154,7 @@ void Curl_Frame(void)
 		}
 		while(mc == CURLM_CALL_MULTI_PERFORM);
 
-		for(di = downloads; di; di = di->next)
+		List_For_Each_Entry(di, &downloads, list)
 		{
 			double b = 0;
 			if(di->curle)
@@ -1223,7 +1213,7 @@ void Curl_Frame(void)
 	// use the slowest allowing download to derive the maxspeed... this CAN
 	// be done better, but maybe later
 	maxspeed = cl_curl_maxspeed.value;
-	for(di = downloads; di; di = di->next)
+	List_For_Each_Entry(di, &downloads, list)
 		if(di->maxspeed > 0)
 			if(di->maxspeed < maxspeed || maxspeed <= 0)
 				maxspeed = di->maxspeed;
@@ -1255,9 +1245,9 @@ void Curl_CancelAll(void)
 
 	if (curl_mutex) Thread_LockMutex(curl_mutex);
 
-	while(downloads)
+	while(!List_Is_Empty(&downloads))
 	{
-		Curl_EndDownload(downloads, CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
+		Curl_EndDownload(List_First_Entry(&downloads, downloadinfo, list), CURL_DOWNLOAD_ABORTED, CURLE_OK, NULL);
 		// INVARIANT: downloads will point to the next download after that!
 	}
 
@@ -1276,7 +1266,7 @@ qbool Curl_Running(void)
 	if(!curl_dll)
 		return false;
 
-	return downloads != NULL;
+	return !List_Is_Empty(&downloads);
 }
 
 /*
@@ -1343,7 +1333,7 @@ static void Curl_Info_f(cmd_state_t *cmd)
 	{
 		if (curl_mutex) Thread_LockMutex(curl_mutex);
 		Con_Print("Currently running downloads:\n");
-		for(di = downloads; di; di = di->next)
+		List_For_Each_Entry(di, &downloads, list)
 		{
 			double speed, percent;
 			Con_Printf("  %s -> %s ",  CleanURL(di->url, urlbuf, sizeof(urlbuf)), di->filename);
@@ -1494,7 +1484,7 @@ static void Curl_Curl_f(cmd_state_t *cmd)
 						dpsnprintf(donecommand, sizeof(donecommand), "connect %s", cls.netcon->address);
 						Curl_CommandWhenDone(donecommand);
 						noclear = true;
-						CL_Disconnect(false, NULL);
+						CL_Disconnect();
 						noclear = false;
 						Curl_CheckCommandWhenDone();
 					}
@@ -1584,12 +1574,12 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 	if (curl_mutex) Thread_LockMutex(curl_mutex);
 
 	i = 0;
-	for(di = downloads; di; di = di->next)
+	List_For_Each_Entry(di, &downloads, list)
 		++i;
 
 	downinfo = (Curl_downloadinfo_t *) Z_Malloc(sizeof(*downinfo) * i);
 	i = 0;
-	for(di = downloads; di; di = di->next)
+	List_For_Each_Entry(di, &downloads, list)
 	{
 		// do not show infobars for background downloads
 		if(developer.integer <= 0)

@@ -931,9 +931,7 @@ void Con_Init (void)
 	Cmd_AddCommand(CF_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
 
 	con_initialized = true;
-	// initialize console window (only used by sys_win.c)
-	Sys_InitConsole();
-	
+
 	Con_Print("Console initialized.\n");
 }
 
@@ -1361,11 +1359,11 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 						*out++ = 'm';
 					}
 					*out++ = 0;
-					Sys_PrintToTerminal(printline);
+					Sys_Print(printline);
 				}
 				else if(sys_colortranslation.integer == 2) // Quake
 				{
-					Sys_PrintToTerminal(line);
+					Sys_Print(line);
 				}
 				else // strip
 				{
@@ -1416,7 +1414,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 						}
 					}
 					*out++ = 0;
-					Sys_PrintToTerminal(printline);
+					Sys_Print(printline);
 				}
 			}
 			// empty the line buffer
@@ -1667,7 +1665,7 @@ static float Con_WordWidthFunc(void *passthrough, const char *w, size_t *length,
 		return DrawQ_TextWidth(w, *length, ti->fontsize, ti->fontsize, false, ti->font);
 	else
 	{
-		Sys_PrintfToTerminal("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
+		Sys_Printf("Con_WordWidthFunc: can't get here (maxWidth should never be %f)\n", maxWidth);
 		// Note: this is NOT a Con_Printf, as it could print recursively
 		return 0;
 	}

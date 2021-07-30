@@ -360,7 +360,8 @@ Sends a disconnect message to the server
 This is also called on Host_Error, so it shouldn't cause any errors
 =====================
 */
-void CL_Disconnect(qbool kicked, const char *fmt, ... )
+
+void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 {
 	va_list argptr;
 	char reason[512];
@@ -460,6 +461,11 @@ void CL_Disconnect(qbool kicked, const char *fmt, ... )
 		host.hook.SV_Shutdown();
 }
 
+void CL_Disconnect(void)
+{
+	CL_DisconnectEx(false, NULL);
+}
+
 /*
 ==================
 CL_Reconnect_f
@@ -538,7 +544,7 @@ static void CL_Connect_f(cmd_state_t *cmd)
 
 void CL_Disconnect_f(cmd_state_t *cmd)
 {
-	CL_Disconnect(false, Cmd_Argc(cmd) > 1 ? Cmd_Argv(cmd, 1) : NULL);
+	Cmd_Argc(cmd) < 1 ? CL_Disconnect() : CL_DisconnectEx(false, Cmd_Argv(cmd, 1));
 }
 
 
@@ -2521,6 +2527,28 @@ static void CL_MeshEntities_Restart(void)
 	}
 }
 
+static void CL_MeshEntities_Start(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Create(ent->render.model, cl_meshentitynames[i]);
+	}
+}
+
+static void CL_MeshEntities_Shutdown(void)
+{
+	int i;
+	entity_t *ent;
+	for(i = 0; i < NUM_MESHENTITIES; i++)
+	{
+		ent = cl_meshentities + i;
+		Mod_Mesh_Destroy(ent->render.model);
+	}
+}
+
 static void CL_MeshEntities_Init(void)
 {
 	int i;
@@ -2557,7 +2585,7 @@ static void CL_MeshEntities_Init(void)
 		CL_UpdateRenderEntity(&ent->render);
 	}
 	cl_meshentities[MESH_UI].render.flags = RENDER_NOSELFSHADOW;
-	R_RegisterModule("cl_meshentities", CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
+	R_RegisterModule("cl_meshentities", CL_MeshEntities_Start, CL_MeshEntities_Shutdown, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
 void CL_MeshEntities_Scene_Clear(void)
@@ -2577,10 +2605,6 @@ void CL_MeshEntities_Scene_FinalizeRenderEntity(void)
 	Mod_Mesh_Finalize(ent->render.model);
 	VectorCopy(ent->render.model->normalmins, ent->render.mins);
 	VectorCopy(ent->render.model->normalmaxs, ent->render.maxs);
-}
-
-static void CL_MeshEntities_Shutdown(void)
-{
 }
 
 extern cvar_t r_overheadsprites_pushback;
@@ -2932,7 +2956,7 @@ void CL_Shutdown (void)
 	S_StopAllSounds();
 	
 	// disconnect client from server if active
-	CL_Disconnect(false, NULL);
+	CL_Disconnect();
 	
 	CL_Video_Shutdown();
 
@@ -3112,7 +3136,7 @@ void CL_Init (void)
 		NetConn_UpdateSockets_Client();
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
-		host.hook.Disconnect = CL_Disconnect;
+		host.hook.Disconnect = CL_DisconnectEx;
 		host.hook.CL_Intermission = CL_Intermission;
 		host.hook.ToggleMenu = CL_ToggleMenu_Hook;
 	}

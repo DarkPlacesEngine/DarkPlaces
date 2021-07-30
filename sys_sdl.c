@@ -70,7 +70,7 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-void Sys_PrintToTerminal(const char *text)
+void Sys_Print(const char *text)
 {
 #ifdef __ANDROID__
 	if (developer.integer > 0)
@@ -177,10 +177,6 @@ char *Sys_GetClipboardData (void)
 	}
 
 	return data;
-}
-
-void Sys_InitConsole (void)
-{
 }
 
 int main (int argc, char *argv[])

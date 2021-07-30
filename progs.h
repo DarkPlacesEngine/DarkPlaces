@@ -21,10 +21,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROGS_H
 #define PROGS_H
 #include "pr_comp.h"			// defs shared with qcc
+#include "qtypes.h"
+
 
 #define ENTITYGRIDAREAS 16
 #define MAX_ENTITYCLUSTERS 16
 
+#ifdef PRVM_64
+#define PRVM_FLOAT_IS_TRUE_FOR_INT(x) DOUBLE_IS_TRUE_FOR_INT(x)
+#define PRVM_FLOAT_LOSSLESS_FORMAT DOUBLE_LOSSLESS_FORMAT
+#define PRVM_VECTOR_LOSSLESS_FORMAT DOUBLE_VECTOR_LOSSLESS_FORMAT
+#else
+#define PRVM_FLOAT_IS_TRUE_FOR_INT(x) FLOAT_IS_TRUE_FOR_INT(x)
+#define PRVM_FLOAT_LOSSLESS_FORMAT FLOAT_LOSSLESS_FORMAT
+#define PRVM_VECTOR_LOSSLESS_FORMAT FLOAT_VECTOR_LOSSLESS_FORMAT
+#endif
+
+#ifdef USEODE
 #define	GEOMTYPE_NONE      -1
 #define	GEOMTYPE_SOLID      0
 #define	GEOMTYPE_BOX		1
@@ -57,7 +70,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ODEFUNC_FORCE       3
 #define ODEFUNC_TORQUE      4
 
-#ifdef USEODE
 typedef struct edict_odefunc_s
 {
 	int type;
