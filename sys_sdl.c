@@ -70,7 +70,7 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-void Sys_PrintToTerminal(const char *text)
+void Sys_Print(const char *text)
 {
 #ifdef __ANDROID__
 	if (developer.integer > 0)

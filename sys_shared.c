@@ -504,11 +504,11 @@ void Sys_Sleep(int microseconds)
 	if(sys_debugsleep.integer)
 	{
 		t = Sys_DirtyTime() - t;
-		Sys_PrintfToTerminal("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
+		Sys_Printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
 	}
 }
 
-void Sys_PrintfToTerminal(const char *fmt, ...)
+void Sys_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
@@ -517,7 +517,7 @@ void Sys_PrintfToTerminal(const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Sys_PrintToTerminal(msg);
+	Sys_Print(msg);
 }
 
 #ifndef WIN32
