@@ -474,11 +474,11 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 		break;
 	case ev_float:
 		// LadyHavoc: changed from %5.1f to %10.4f
-		dpsnprintf (line, linelength, FLOAT_LOSSLESS_FORMAT, val->_float);
+		dpsnprintf (line, linelength, PRVM_FLOAT_LOSSLESS_FORMAT, val->_float);
 		break;
 	case ev_vector:
 		// LadyHavoc: changed from %5.1f to %10.4f
-		dpsnprintf (line, linelength, "'" VECTOR_LOSSLESS_FORMAT "'", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, linelength, "'" PRVM_VECTOR_LOSSLESS_FORMAT "'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
 		dpsnprintf (line, linelength, "pointer");
@@ -567,10 +567,10 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		dpsnprintf (line, linelength, "void");
 		break;
 	case ev_float:
-		dpsnprintf (line, linelength, FLOAT_LOSSLESS_FORMAT, val->_float);
+		dpsnprintf (line, linelength, PRVM_FLOAT_LOSSLESS_FORMAT, val->_float);
 		break;
 	case ev_vector:
-		dpsnprintf (line, linelength, VECTOR_LOSSLESS_FORMAT, val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, linelength, PRVM_VECTOR_LOSSLESS_FORMAT, val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
 		dpsnprintf (line, linelength, "bad type %i", type);
