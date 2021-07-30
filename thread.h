@@ -3,7 +3,7 @@
 
 #include "qtypes.h"
 
-// enable Sys_PrintfToTerminal calls on nearly every threading call
+// enable Sys_Printf calls on nearly every threading call
 //#define THREADDEBUG
 //#define THREADDISABLE
 // use recursive mutex (non-posix) extensions in thread_pthread
