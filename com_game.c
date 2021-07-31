@@ -1,8 +1,5 @@
 /*
-Copyright (C) 1996-1997 Id Software, Inc.
-Copyright (C) 2000-2020 Ashley Rose "LadyHavoc" Hale
-Copyright (C) 2020 David "Cloudwalk" Knapp
-Copyright (C) 2020 Kristus <kristustf@gmail.com>
+Copyright (C) 2000-2021 DarkPlaces contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -21,7 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "quakedef.h"
+#include "darkplaces.h"
+#include "com_game.h"
 
 // Game mods
 

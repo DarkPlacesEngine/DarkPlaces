@@ -332,6 +332,7 @@
     <ClInclude Include="clvm_cmds.h" />
     <ClInclude Include="cmd.h" />
     <ClInclude Include="collision.h" />
+    <ClInclude Include="com_game.h" />
     <ClInclude Include="com_infostring.h" />
     <ClInclude Include="com_list.h" />
     <ClInclude Include="common.h" />
