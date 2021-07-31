@@ -355,10 +355,6 @@ void stringlistappend(stringlist_t *list, const char *text);
 void stringlistsort(stringlist_t *list, qbool uniq);
 void listdirectory(stringlist_t *list, const char *basepath, const char *path);
 
-char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
-void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value);
-void InfoString_Print(char *buffer);
-
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
 #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(MACOSX)
