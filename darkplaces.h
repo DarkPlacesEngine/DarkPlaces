@@ -47,6 +47,7 @@ extern char engineversion[128];
 #include "thread.h"
 #include "com_infostring.h"
 #include "common.h"
+#include "filematch.h"
 #include "fs.h"
 #include "host.h"
 #include "cvar.h"
