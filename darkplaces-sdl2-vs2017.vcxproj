@@ -343,6 +343,7 @@
     <ClInclude Include="darkplaces.h" />
     <ClInclude Include="dpvsimpledecode.h" />
     <ClInclude Include="draw.h" />
+    <ClInclude Include="filematch.h" />
     <ClInclude Include="fs.h" />
     <ClInclude Include="ft2.h" />
     <ClInclude Include="ft2_defs.h" />
