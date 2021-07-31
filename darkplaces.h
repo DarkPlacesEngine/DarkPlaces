@@ -45,6 +45,7 @@ extern char engineversion[128];
 #include "qdefs.h"
 #include "zone.h"
 #include "thread.h"
+#include "com_game.h"
 #include "com_infostring.h"
 #include "common.h"
 #include "filematch.h"
