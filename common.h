@@ -339,22 +339,6 @@ qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t siz
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
-typedef struct stringlist_s
-{
-	/// maxstrings changes as needed, causing reallocation of strings[] array
-	int maxstrings;
-	int numstrings;
-	char **strings;
-} stringlist_t;
-
-int matchpattern(const char *in, const char *pattern, int caseinsensitive);
-int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qbool wildcard_least_one);
-void stringlistinit(stringlist_t *list);
-void stringlistfreecontents(stringlist_t *list);
-void stringlistappend(stringlist_t *list, const char *text);
-void stringlistsort(stringlist_t *list, qbool uniq);
-void listdirectory(stringlist_t *list, const char *basepath, const char *path);
-
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
 #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(MACOSX)
