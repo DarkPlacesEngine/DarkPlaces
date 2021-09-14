@@ -12,7 +12,7 @@ execute_process(
 )
 
 execute_process(
-	COMMAND "git show -s --format=%ad --date='format-local:%a %b %d %Y %H:%I:%S UTC'"
+	COMMAND "git show -s --format=%ad --date='format-local:%a %b %d %Y %H:%M:%S UTC'"
 	OUTPUT_VARIABLE timestamp
 	OUTPUT_STRIP_TRAILING_WHITESPACE
 )
