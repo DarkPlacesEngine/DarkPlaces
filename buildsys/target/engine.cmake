@@ -1,5 +1,4 @@
 add_library(common INTERFACE)
-#target_sources(common INTERFACE ${OBJ_COMMON})
 target_compile_definitions(common INTERFACE -D_FILE_OFFSET_BITS=64 -D__KERNEL_STRICT_NAMES)
 
 set(ENV{TZ} "UTC")
