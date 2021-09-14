@@ -1,0 +1,28 @@
+{
+	"buildType": {
+		"default": "debug",
+		"description": "The build type.",
+		"choices": {
+			"debug": {
+				"short": "Debug",
+				"long": "Disable optimizations - include debug information.",
+				"buildType": "Debug"
+			},
+			"release": {
+				"short": "Release",
+				"long": "Optimize for speed - exclude debug information.",
+				"buildType": "Release"
+			},
+			"profile": {
+				"short": "Profile",
+				"long": "Disable optimizations - include profiling information.",
+				"buildType": "Profile"
+			},
+			"profrelease": {
+				"short": "ProfileRelease",
+				"long": "Optimize for speed - include profiling information.",
+				"buildType": "ProfileRelease"
+			}
+		}
+	}
+}

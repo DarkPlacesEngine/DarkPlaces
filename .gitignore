@@ -19,8 +19,10 @@ Makefile.win
 *.dll
 *.dylib
 *.dSYM
-.vscode
+/.vscode/*
+!/.vscode/cmake-variants.json
 *.code-workspace
 .ccls-cache
 *.gch
 /.vs
+/build
