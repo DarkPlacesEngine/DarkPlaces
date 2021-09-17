@@ -1,4 +1,4 @@
-add_executable(client ${OBJ_COMMON} ${OBJ_CL} ${OBJ_MENU} ${OBJ_SND_COMMON} ${OBJ_CD_COMMON} ${OBJ_VIDEO_CAPTURE})
+add_executable(client ${OBJ_CL} ${OBJ_MENU} ${OBJ_SND_COMMON} ${OBJ_CD_COMMON} ${OBJ_VIDEO_CAPTURE})
 target_link_libraries(client common)
 set_target_properties(client PROPERTIES OUTPUT_NAME "${ENGINE_BUILD_NAME}")
 

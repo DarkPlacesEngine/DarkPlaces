@@ -274,8 +274,8 @@ set(OBJ_HEADERS
 set(OBJ_SND_COMMON snd_main.c snd_mem.c snd_mix.c snd_ogg.c snd_wav.c)
 set(OBJ_VIDEO_CAPTURE cap_avi.c cap_ogg.c)
 set(OBJ_MENU menu.c mvm_cmds.c)
-set(OBJ_SV builddate.c sys_unix.c vid_null.c snd_null.c thread_null.c)
-set(OBJ_CL builddate.c snd_sdl.c sys_sdl.c vid_sdl.c thread_sdl.c)
+set(OBJ_SV ${OBJ_COMMON} builddate.c sys_unix.c vid_null.c snd_null.c thread_null.c)
+set(OBJ_CL ${OBJ_COMMON} builddate.c snd_sdl.c sys_sdl.c vid_sdl.c thread_sdl.c)
 set(OBJ_RC ${ENGINE_BUILD_WINRC})
 
 # Make the headers show up in IDEs

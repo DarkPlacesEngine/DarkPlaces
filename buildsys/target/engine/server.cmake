@@ -1,4 +1,4 @@
-add_executable(server ${OBJ_COMMON} ${OBJ_SV})
+add_executable(server ${OBJ_SV})
 target_link_libraries(server common)
 set_target_properties(server PROPERTIES OUTPUT_NAME ${ENGINE_BUILD_NAME}-dedicated)
 
