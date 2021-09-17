@@ -9,13 +9,13 @@
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
 #define DP_FUNC_NORETURN  __attribute__ ((noreturn))
-#define DP_FUNC_ALWAYSINLINE inline __attribute__((always_inline))
+#define DP_FUNC_ALWAYS_INLINE inline __attribute__((always_inline))
 #else
 #define DP_FUNC_PRINTF(n)
 #define DP_FUNC_PURE
 #define DP_FUNC_NORETURN
 # if defined (_MSC_VER)
-# define DP_FUNC_ALWAYSINLINE __forceinline
+# define DP_FUNC_ALWAYS_INLINE __forceinline
 # else
 # define DP_FUNC_ALWAYS_INLINE inline
 # endif
