@@ -1,4 +1,4 @@
-add_executable(client ${OBJ_CL} ${OBJ_MENU} ${OBJ_SND_COMMON} ${OBJ_CD_COMMON} ${OBJ_VIDEO_CAPTURE})
+add_executable(client ${OBJ_CL} ${OBJ_MENU} ${OBJ_SND_COMMON} ${OBJ_CD_COMMON})
 target_link_libraries(client common)
 set_target_properties(client PROPERTIES OUTPUT_NAME "${ENGINE_BUILD_NAME}")
 
@@ -61,4 +61,5 @@ endif()
 
 if(ENGINE_CONFIG_VIDEO_CAPTURE)
 	target_compile_definitions(client PRIVATE -DCONFIG_VIDEO_CAPTURE)
+	target_sources(client PRIVATE ${OBJ_VIDEO_CAPTURE})
 endif()
