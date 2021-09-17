@@ -3,20 +3,30 @@ target_compile_definitions(common INTERFACE -D_FILE_OFFSET_BITS=64 -D__KERNEL_ST
 
 set(ENV{TZ} "UTC")
 
-# Build a version string for the engine.
-execute_process(
-	COMMAND git rev-parse --short HEAD
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	OUTPUT_VARIABLE revision
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+find_package(Git)
 
-execute_process(
-	COMMAND "git show -s --format=%ad --date='format-local:%a %b %d %Y %H:%M:%S UTC'"
-	OUTPUT_VARIABLE timestamp
-	OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-set(DP_BUILD_REVISION "${timestamp} - ${revision}")
+if(NOT GIT_FOUND AND NOT EXISTS ${CMAKE_SOURCE_DIR}/.git)
+	message(WARNING "Both the .git directory and Git itself were not found. Commit-based version strings are unavailable. Consider installing git and downloading the repository using it")
+elseif(NOT GIT_FOUND)
+	message(WARNING "Git not found. Commit-based version strings are unavailable. Consider installing git.")
+elseif(NOT EXISTS ${CMAKE_SOURCE_DIR}/.git)
+	message(WARNING ".git directory not found. Commit-based version strings are unavailable. Consider downloading the repository using git")
+else()
+	# Build a version string for the engine
+	execute_process(
+		COMMAND git rev-parse --short HEAD
+		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+		OUTPUT_VARIABLE revision
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+
+	execute_process(
+		COMMAND "git show -s --format=%ad --date='format-local:%a %b %d %Y %H:%M:%S UTC'"
+		OUTPUT_VARIABLE timestamp
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	set(DP_BUILD_REVISION "${timestamp} - ${revision}")
+endif()
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x|i[36])86|AMD64")
 	option(ENGINE_CONFIG_SSE "Build with SSE support (x86 and x86_64 only)" ON)
