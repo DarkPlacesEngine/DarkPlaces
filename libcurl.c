@@ -284,7 +284,7 @@ void Curl_Clear_forthismap(void)
 	if(noclear)
 		return;
 	if (curl_mutex) Thread_LockMutex(curl_mutex);
-	List_For_Each_Entry(di, &downloads, list)
+	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		di->forthismap = false;
 	Curl_CommandWhenError(NULL);
 	Curl_CommandWhenDone(NULL);
@@ -682,7 +682,7 @@ static void CheckPendingDownloads(void)
 	if(numdownloads < cl_curl_maxdownloads.integer)
 	{
 		downloadinfo *di;
-		List_For_Each_Entry(di, &downloads, list)
+		List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		{
 			if(!di->started)
 			{
@@ -838,7 +838,7 @@ static downloadinfo *Curl_Find(const char *filename)
 	downloadinfo *di;
 	if(!curl_dll)
 		return NULL;
-	List_For_Each_Entry(di, &downloads, list)
+	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		if(!strcasecmp(di->filename, filename))
 			return di;
 	return NULL;
@@ -849,7 +849,7 @@ void Curl_Cancel_ToMemory(curl_callback_t callback, void *cbdata)
 	downloadinfo *di, *ndi;
 	if(!curl_dll)
 		return;
-	List_For_Each_Entry_Safe(di, ndi, &downloads, list)
+	List_For_Each_Entry_Safe(di, ndi, &downloads, downloadinfo, list)
 	{
 		if(di->callback == callback && di->callback_data == cbdata)
 		{
@@ -1154,7 +1154,7 @@ void Curl_Frame(void)
 		}
 		while(mc == CURLM_CALL_MULTI_PERFORM);
 
-		List_For_Each_Entry(di, &downloads, list)
+		List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		{
 			double b = 0;
 			if(di->curle)
@@ -1213,7 +1213,7 @@ void Curl_Frame(void)
 	// use the slowest allowing download to derive the maxspeed... this CAN
 	// be done better, but maybe later
 	maxspeed = cl_curl_maxspeed.value;
-	List_For_Each_Entry(di, &downloads, list)
+	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		if(di->maxspeed > 0)
 			if(di->maxspeed < maxspeed || maxspeed <= 0)
 				maxspeed = di->maxspeed;
@@ -1333,7 +1333,7 @@ static void Curl_Info_f(cmd_state_t *cmd)
 	{
 		if (curl_mutex) Thread_LockMutex(curl_mutex);
 		Con_Print("Currently running downloads:\n");
-		List_For_Each_Entry(di, &downloads, list)
+		List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		{
 			double speed, percent;
 			Con_Printf("  %s -> %s ",  CleanURL(di->url, urlbuf, sizeof(urlbuf)), di->filename);
@@ -1574,12 +1574,12 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 	if (curl_mutex) Thread_LockMutex(curl_mutex);
 
 	i = 0;
-	List_For_Each_Entry(di, &downloads, list)
+	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		++i;
 
 	downinfo = (Curl_downloadinfo_t *) Z_Malloc(sizeof(*downinfo) * i);
 	i = 0;
-	List_For_Each_Entry(di, &downloads, list)
+	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 	{
 		// do not show infobars for background downloads
 		if(developer.integer <= 0)

@@ -21,12 +21,6 @@
 # endif
 #endif
 
-#ifdef DP_GCC_COMPATIBLE
-#define Q_typeof(var) typeof(var)
-#elif defined (_MSC_VER)
-#define Q_typeof(var) decltype(var)
-#endif
-
 #define MAX_NUM_ARGVS	50
 
 #ifdef DP_SMALLMEMORY

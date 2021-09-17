@@ -640,7 +640,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 2 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
 	}
 	for (pool = poolchain;pool;pool = pool->next)
-		List_For_Each_Entry(mem, &pool->chain, list)
+		List_For_Each_Entry(mem, &pool->chain, memheader_t, list)
 			_Mem_CheckSentinels((void *)((unsigned char *) mem + sizeof(memheader_t)), filename, fileline);
 #if MEMCLUMPING
 	for (pool = poolchain;pool;pool = pool->next)
@@ -658,7 +658,7 @@ qbool Mem_IsAllocated(mempool_t *pool, void *data)
 	{
 		// search only one pool
 		target = (memheader_t *)((unsigned char *) data - sizeof(memheader_t));
-		List_For_Each_Entry(header, &pool->chain, list)
+		List_For_Each_Entry(header, &pool->chain, memheader_t, list)
 			if( header == target )
 				return true;
 	}
@@ -814,7 +814,7 @@ void Mem_PrintStats(void)
 		if ((pool->flags & POOLFLAG_TEMP) && !List_Is_Empty(&pool->chain))
 		{
 			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", (void *)pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
-			List_For_Each_Entry(mem, &pool->chain, list)
+			List_For_Each_Entry(mem, &pool->chain, memheader_t, list)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 		}
 	}
@@ -831,7 +831,7 @@ void Mem_PrintList(size_t minallocationsize)
 	{
 		Con_Printf("%10luk (%10luk actual) %s (%+li byte change) %s\n", (unsigned long) ((pool->totalsize + 1023) / 1024), (unsigned long)((pool->realsize + 1023) / 1024), pool->name, (long)(pool->totalsize - pool->lastchecksize), (pool->flags & POOLFLAG_TEMP) ? "TEMP" : "");
 		pool->lastchecksize = pool->totalsize;
-		List_For_Each_Entry(mem, &pool->chain, list)
+		List_For_Each_Entry(mem, &pool->chain, memheader_t, list)
 			if (mem->size >= minallocationsize)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 	}
