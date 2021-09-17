@@ -14,7 +14,7 @@
 #define DP_FUNC_PRINTF(n)
 #define DP_FUNC_PURE
 #define DP_FUNC_NORETURN
-# if defined (MSVC)
+# if defined (_MSC_VER)
 # define DP_FUNC_ALWAYSINLINE __forceinline
 # else
 # define DP_FUNC_ALWAYS_INLINE inline
@@ -23,7 +23,7 @@
 
 #ifdef DP_GCC_COMPATIBLE
 #define Q_typeof(var) typeof(var)
-#elif defined (MSVC)
+#elif defined (_MSC_VER)
 #define Q_typeof(var) decltype(var)
 #endif
 
