@@ -764,9 +764,9 @@ void LHNET_Shutdown(void)
 	lhnetpacket_t *p, *pnext;
 	if (!lhnet_active)
 		return;
-	List_For_Each_Entry_Safe(s, snext, &lhnet_socketlist.list, list)
+	List_For_Each_Entry_Safe(s, snext, &lhnet_socketlist.list, lhnetsocket_t, list)
 		LHNET_CloseSocket(s);
-	List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, list)
+	List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, lhnetpacket_t, list)
 	{
 		List_Delete(&p->list);
 		Z_Free(p);
@@ -848,7 +848,7 @@ void LHNET_SleepUntilPacket_Microseconds(int microseconds)
 	lhnetsocket_t *s;
 	FD_ZERO(&fdreadset);
 	lastfd = 0;
-	List_For_Each_Entry(s, &lhnet_socketlist.list, list)
+	List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
 	{
 		if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
 		{
@@ -892,7 +892,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				lhnetsocket->address.port = 1024;
 				for (;;)
 				{
-					List_For_Each_Entry(s, &lhnet_socketlist.list, list)
+					List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
 						if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 							break;
 					if (s == &lhnet_socketlist)
@@ -901,7 +901,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 				}
 			}
 			// check if the port is available
-			List_For_Each_Entry(s, &lhnet_socketlist.list, list)
+			List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
 				if (s->address.addresstype == lhnetsocket->address.addresstype && s->address.port == lhnetsocket->address.port)
 					break;
 			if (s == &lhnet_socketlist && lhnetsocket->address.port != 0)
@@ -1084,7 +1084,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 		// scan for any old packets to timeout while searching for a packet
 		// that is waiting to be delivered to this socket
 		currenttime = time(NULL);
-		List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, list)
+		List_For_Each_Entry_Safe(p, pnext, &lhnet_packetlist.list, lhnetpacket_t, list)
 		{
 			if (p->timeout < currenttime)
 			{

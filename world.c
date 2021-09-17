@@ -231,7 +231,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 	if (world->areagrid_outside.list.next)
 	{
 		grid = &world->areagrid_outside;
-		List_For_Each_Entry(l, &grid->list, list)
+		List_For_Each_Entry(l, &grid->list, link_t, list)
 		{
 			ent = PRVM_EDICT_NUM(l->entitynumber);
 			if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
@@ -255,7 +255,7 @@ int World_EntitiesInBox(world_t *world, const vec3_t requestmins, const vec3_t r
 		{
 			if (grid->list.next)
 			{
-				List_For_Each_Entry(l, &grid->list, list)
+				List_For_Each_Entry(l, &grid->list, link_t, list)
 				{
 					ent = PRVM_EDICT_NUM(l->entitynumber);
 					if (ent->priv.server->areagridmarknumber != world->areagrid_marknumber)
