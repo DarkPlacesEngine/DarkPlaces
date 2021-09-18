@@ -14,11 +14,11 @@ function(dp_build arg_project arg_path)
 	endif()
 
 	if(ENGINE_EXE_NAME STREQUAL "") # Cannot be empty
-        message(FATAL_ERROR "You must give the executable a name.")
-    endif()
+		message(FATAL_ERROR "You must give the executable a name.")
+	endif()
 
-    if(ENGINE_EXE_NAME MATCHES "[* *]") # Cannot contain spaces.
-        message(FATAL_ERROR "The executable name must not contain spaces.")
+	if(ENGINE_EXE_NAME MATCHES "[* *]") # Cannot contain spaces.
+		message(FATAL_ERROR "The executable name must not contain spaces.")
 	endif()
 
 	if(NOT ENGINE_BUILD_CLIENT AND NOT ENGINE_BUILD_SERVER)
