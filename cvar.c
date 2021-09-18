@@ -517,17 +517,12 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 		return;
 	}
 
-	if(!variable->aliases)
-		variable->aliases = (char **)Z_Malloc(sizeof(char *) * 2); // For NULL terminator
-	else
-		variable->aliases = (char **)Mem_Realloc(zonemempool, variable->aliases, sizeof(char *) * (variable->aliases_size + 1));
-	
-	variable->aliases[variable->aliases_size + 1] = NULL;
-	
-	// Add to it
-	variable->aliases[variable->aliases_size] = (char *)Z_Malloc(strlen(name) + 1);
-	memcpy(variable->aliases[variable->aliases_size], name, strlen(name) + 1);
-	variable->aliases_size++;
+	// Resize the variable->aliases list to have room for another entry and a null terminator.
+	// This zero-pads when resizing, so we don't need to write the NULL terminator manually here.
+	// Also if aliases is NULL this allocates fresh for the correct size, so it's fine to just do this.
+	variable->aliases = (char **)Z_Realloc(variable->aliases, sizeof(char *) * (variable->aliases_size + 2));
+	// Add the new alias, and increment the number of aliases in the list
+	variable->aliases[variable->aliases_size++] = (char *)Z_strdup(name);
 
 	// link to head of list in this hash table index
 	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
