@@ -524,14 +524,16 @@ Log_Close
 */
 void Log_Close (void)
 {
-	if (logfile == NULL)
+	qfile_t* l = logfile;
+
+	if (l == NULL)
 		return;
 
-	FS_Print (logfile, Log_Timestamp ("Log stopped"));
-	FS_Print (logfile, "\n");
-	FS_Close (logfile);
-
+	FS_Print (l, Log_Timestamp ("Log stopped"));
+	FS_Print (l, "\n");
 	logfile = NULL;
+	FS_Close (l);
+
 	crt_log_file[0] = '\0';
 }
 
