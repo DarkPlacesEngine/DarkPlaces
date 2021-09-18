@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.11 FATAL_ERROR)
 
 project(darkplaces C)
 
+cmake_policy(SET CMP0076 NEW)
+
 include(buildsys/build.cmake) # Utility and helper functions and macros
 include(buildsys/dependencies.cmake)
 include(game/default/dpconfig.cmake) # Initial build options
