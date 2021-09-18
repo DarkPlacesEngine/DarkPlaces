@@ -4630,7 +4630,7 @@ void VM_buf_cvarlist(prvm_prog_t *prog)
 	antiispattern = antipartial && (strchr(antipartial, '*') || strchr(antipartial, '?'));
 
 	n = 0;
-	List_For_Each_Entry(cvar, &prog->console_cmd->cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &prog->console_cmd->cvars->vars->list, cvar_t, list)
 	{
 		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;
@@ -4646,7 +4646,7 @@ void VM_buf_cvarlist(prvm_prog_t *prog)
 		stringbuffer->strings = (char **)Mem_Alloc(prog->progs_mempool, sizeof(stringbuffer->strings[0]) * stringbuffer->max_strings);
 	
 	n = 0;
-	List_For_Each_Entry(cvar, &prog->console_cmd->cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &prog->console_cmd->cvars->vars->list, cvar_t, list)
 	{
 		if(len && (ispattern ? !matchpattern_with_separator(cvar->name, partial, false, "", false) : strncmp(partial, cvar->name, len)))
 			continue;

@@ -9,22 +9,16 @@
 #define DP_FUNC_PRINTF(n) __attribute__ ((format (printf, n, n+1)))
 #define DP_FUNC_PURE      __attribute__ ((pure))
 #define DP_FUNC_NORETURN  __attribute__ ((noreturn))
-#define DP_FUNC_ALWAYSINLINE inline __attribute__((always_inline))
+#define DP_FUNC_ALWAYS_INLINE inline __attribute__((always_inline))
 #else
 #define DP_FUNC_PRINTF(n)
 #define DP_FUNC_PURE
 #define DP_FUNC_NORETURN
-# if defined (MSVC)
-# define DP_FUNC_ALWAYSINLINE __forceinline
+# if defined (_MSC_VER)
+# define DP_FUNC_ALWAYS_INLINE __forceinline
 # else
 # define DP_FUNC_ALWAYS_INLINE inline
 # endif
-#endif
-
-#ifdef DP_GCC_COMPATIBLE
-#define Q_typeof(var) typeof(var)
-#elif defined (MSVC)
-#define Q_typeof(var) decltype(var)
 #endif
 
 #define MAX_NUM_ARGVS	50

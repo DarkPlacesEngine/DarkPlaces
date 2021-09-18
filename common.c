@@ -1300,153 +1300,11 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 #undef APPEND
 }
 
-char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength)
-{
-	int pos = 0, j;
-	size_t keylength;
-	if (!key)
-		key = "";
-	keylength = strlen(key);
-	if (valuelength < 1 || !value)
-	{
-		Con_Printf("InfoString_GetValue: no room in value\n");
-		return NULL;
-	}
-	value[0] = 0;
-	if (strchr(key, '\\'))
-	{
-		Con_Printf("InfoString_GetValue: key name \"%s\" contains \\ which is not possible in an infostring\n", key);
-		return NULL;
-	}
-	if (strchr(key, '\"'))
-	{
-		Con_Printf("InfoString_SetValue: key name \"%s\" contains \" which is not allowed in an infostring\n", key);
-		return NULL;
-	}
-	if (!key[0])
-	{
-		Con_Printf("InfoString_GetValue: can not look up a key with no name\n");
-		return NULL;
-	}
-	while (buffer[pos] == '\\')
-	{
-		if (!memcmp(buffer + pos+1, key, keylength) &&
-				(buffer[pos+1 + keylength] == 0 ||
-				 buffer[pos+1 + keylength] == '\\'))
-		{
-			pos += 1 + (int)keylength;           // Skip \key
-			if (buffer[pos] == '\\') pos++; // Skip \ before value.
-			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < (int)valuelength - 1;j++)
-				value[j] = buffer[pos+j];
-			value[j] = 0;
-			return value;
-		}
-		if (buffer[pos] == '\\') pos++; // Skip \ before value.
-		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
-		if (buffer[pos] == '\\') pos++; // Skip \ before value.
-		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
-	}
-	// if we reach this point the key was not found
-	return NULL;
-}
-
-void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value)
-{
-	int pos = 0, pos2;
-	size_t keylength;
-	if (!key)
-		key = "";
-	if (!value)
-		value = "";
-	keylength = strlen(key);
-	if (strchr(key, '\\') || strchr(value, '\\'))
-	{
-		Con_Printf("InfoString_SetValue: \"%s\" \"%s\" contains \\ which is not possible to store in an infostring\n", key, value);
-		return;
-	}
-	if (strchr(key, '\"') || strchr(value, '\"'))
-	{
-		Con_Printf("InfoString_SetValue: \"%s\" \"%s\" contains \" which is not allowed in an infostring\n", key, value);
-		return;
-	}
-	if (!key[0])
-	{
-		Con_Printf("InfoString_SetValue: can not set a key with no name\n");
-		return;
-	}
-	while (buffer[pos] == '\\')
-	{
-		if (!memcmp(buffer + pos+1, key, keylength) &&
-				(buffer[pos+1 + keylength] == 0 ||
-				 buffer[pos+1 + keylength] == '\\'))
-			break;
-		if (buffer[pos] == '\\') pos++; // Skip \ before value.
-		for (;buffer[pos] && buffer[pos] != '\\';pos++);
-		if (buffer[pos] == '\\') pos++; // Skip \ before value.
-		for (;buffer[pos] && buffer[pos] != '\\';pos++);
-	}
-	// if we found the key, find the end of it because we will be replacing it
-	pos2 = pos;
-	if (buffer[pos] == '\\')
-	{
-		pos2 += 1 + (int)keylength;  // Skip \key
-		if (buffer[pos2] == '\\') pos2++; // Skip \ before value.
-		for (;buffer[pos2] && buffer[pos2] != '\\';pos2++);
-	}
-	if (bufferlength <= pos + 1 + strlen(key) + 1 + strlen(value) + strlen(buffer + pos2))
-	{
-		Con_Printf("InfoString_SetValue: no room for \"%s\" \"%s\" in infostring\n", key, value);
-		return;
-	}
-	if (value[0])
-	{
-		// set the key/value and append the remaining text
-		char tempbuffer[MAX_INPUTLINE];
-		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
-		dpsnprintf(buffer + pos, bufferlength - pos, "\\%s\\%s%s", key, value, tempbuffer);
-	}
-	else
-	{
-		// just remove the key from the text
-		strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
-	}
-}
-
-void InfoString_Print(char *buffer)
-{
-	int i;
-	char key[MAX_INPUTLINE];
-	char value[MAX_INPUTLINE];
-	while (*buffer)
-	{
-		if (*buffer != '\\')
-		{
-			Con_Printf("InfoString_Print: corrupt string\n");
-			return;
-		}
-		for (buffer++, i = 0;*buffer && *buffer != '\\';buffer++)
-			if (i < (int)sizeof(key)-1)
-				key[i++] = *buffer;
-		key[i] = 0;
-		if (*buffer != '\\')
-		{
-			Con_Printf("InfoString_Print: corrupt string\n");
-			return;
-		}
-		for (buffer++, i = 0;*buffer && *buffer != '\\';buffer++)
-			if (i < (int)sizeof(value)-1)
-				value[i++] = *buffer;
-		value[i] = 0;
-		// empty value is an error case
-		Con_Printf("%20s %s\n", key, value[0] ? value : "NO VALUE");
-	}
-}
-
 //========================================================
 // strlcat and strlcpy, from OpenBSD
 
 /*
- * Copyright (c) 1998 Todd C. Miller <Todd.Miller@courtesan.com>
+ * Copyright (c) 1998, 2015 Todd C. Miller <millert@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1461,66 +1319,65 @@ void InfoString_Print(char *buffer)
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-/*	$OpenBSD: strlcat.c,v 1.11 2003/06/17 21:56:24 millert Exp $	*/
-/*	$OpenBSD: strlcpy.c,v 1.8 2003/06/17 21:56:24 millert Exp $	*/
+/*	$OpenBSD: strlcat.c,v 1.19 2019/01/25 00:19:25 millert Exp $    */
+/*	$OpenBSD: strlcpy.c,v 1.16 2019/01/25 00:19:25 millert Exp $    */
 
 
 #ifndef HAVE_STRLCAT
 size_t
-strlcat(char *dst, const char *src, size_t siz)
+strlcat(char *dst, const char *src, size_t dsize)
 {
-	register char *d = dst;
-	register const char *s = src;
-	register size_t n = siz;
+	const char *odst = dst;
+	const char *osrc = src;
+	size_t n = dsize;
 	size_t dlen;
 
-	/* Find the end of dst and adjust bytes left but don't go past end */
-	while (n-- != 0 && *d != '\0')
-		d++;
-	dlen = d - dst;
-	n = siz - dlen;
+	/* Find the end of dst and adjust bytes left but don't go past end. */
+	while (n-- != 0 && *dst != '\0')
+		dst++;
+	dlen = dst - odst;
+	n = dsize - dlen;
 
-	if (n == 0)
-		return(dlen + strlen(s));
-	while (*s != '\0') {
-		if (n != 1) {
-			*d++ = *s;
+	if (n-- == 0)
+		return(dlen + strlen(src));
+	while (*src != '\0') {
+		if (n != 0) {
+			*dst++ = *src;
 			n--;
 		}
-		s++;
+		src++;
 	}
-	*d = '\0';
+	*dst = '\0';
 
-	return(dlen + (s - src));	/* count does not include NUL */
+	return(dlen + (src - osrc));	/* count does not include NUL */
 }
 #endif  // #ifndef HAVE_STRLCAT
 
 
 #ifndef HAVE_STRLCPY
 size_t
-strlcpy(char *dst, const char *src, size_t siz)
+strlcpy(char *dst, const char *src, size_t dsize)
 {
-	register char *d = dst;
-	register const char *s = src;
-	register size_t n = siz;
+	const char *osrc = src;
+	size_t nleft = dsize;
 
-	/* Copy as many bytes as will fit */
-	if (n != 0 && --n != 0) {
-		do {
-			if ((*d++ = *s++) == 0)
+	/* Copy as many bytes as will fit. */
+	if (nleft != 0) {
+		while (--nleft != 0) {
+			if ((*dst++ = *src++) == '\0')
 				break;
-		} while (--n != 0);
+		}
 	}
 
-	/* Not enough room in dst, add NUL and traverse rest of src */
-	if (n == 0) {
-		if (siz != 0)
-			*d = '\0';		/* NUL-terminate dst */
-		while (*s++)
+	/* Not enough room in dst, add NUL and traverse rest of src. */
+	if (nleft == 0) {
+		if (dsize != 0)
+			*dst = '\0';		/* NUL-terminate dst */
+		while (*src++)
 			;
 	}
 
-	return(s - src - 1);	/* count does not include NUL */
+	return(src - osrc - 1);	/* count does not include NUL */
 }
 
 #endif  // #ifndef HAVE_STRLCPY

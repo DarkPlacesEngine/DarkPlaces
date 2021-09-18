@@ -213,7 +213,6 @@ int COM_ParseToken_Console(const char **datapointer);
 
 void COM_Init (void);
 void COM_Shutdown (void);
-void COM_InitGameType (void);
 
 char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 // does a varargs printf into provided buffer, returns buffer (so it can be called in-line unlike dpsnprintf)
@@ -271,63 +270,6 @@ typedef enum userdirmode_e
 }
 userdirmode_t;
 
-typedef enum gamemode_e
-{
-	GAME_NORMAL,
-	GAME_HIPNOTIC,
-	GAME_ROGUE,
-	GAME_QUOTH,
-	GAME_NEHAHRA,
-	GAME_NEXUIZ,
-	GAME_XONOTIC,
-	GAME_TRANSFUSION,
-	GAME_GOODVSBAD2,
-	GAME_TEU,
-	GAME_BATTLEMECH,
-	GAME_ZYMOTIC,
-	GAME_SETHERAL,
-	GAME_TENEBRAE, // full of evil hackery
-	GAME_NEOTERIC,
-	GAME_OPENQUARTZ, //this game sucks
-	GAME_PRYDON,
-	GAME_DELUXEQUAKE,
-	GAME_THEHUNTED,
-	GAME_DEFEATINDETAIL2,
-	GAME_DARSANA,
-	GAME_CONTAGIONTHEORY,
-	GAME_EDU2P,
-	GAME_PROPHECY,
-	GAME_BLOODOMNICIDE,
-	GAME_STEELSTORM, // added by motorsep
-	GAME_STEELSTORM2, // added by motorsep
-	GAME_SSAMMO, // added by motorsep
-	GAME_STEELSTORMREVENANTS, // added by motorsep 07/19/2015
-	GAME_TOMESOFMEPHISTOPHELES, // added by motorsep
-	GAME_STRAPBOMB, // added by motorsep for Urre
-	GAME_MOONHELM,
-	GAME_VORETOURNAMENT,
-	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
-	GAME_BATTLEMETAL, // added by Cloudwalk for Subject9x
-	GAME_COUNT
-}
-gamemode_t;
-
-// Master switch for some hacks/changes that eventually should become cvars.
-#define IS_NEXUIZ_DERIVED(g) ((g) == GAME_NEXUIZ || (g) == GAME_XONOTIC || (g) == GAME_VORETOURNAMENT)
-// Pre-csqcmodels era.
-#define IS_OLDNEXUIZ_DERIVED(g) ((g) == GAME_NEXUIZ || (g) == GAME_VORETOURNAMENT)
-
-extern gamemode_t gamemode;
-extern const char *gamename;
-extern const char *gamenetworkfiltername;
-extern const char *gamedirname1;
-extern const char *gamedirname2;
-extern const char *gamescreenshotname;
-extern const char *gameuserdirname;
-extern char com_modname[MAX_OSPATH];
-
-void COM_ChangeGameTypeForGameDirs(void);
-
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 int COM_StringBeginsWith(const char *s, const char *match);
@@ -339,26 +281,6 @@ qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t siz
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
-typedef struct stringlist_s
-{
-	/// maxstrings changes as needed, causing reallocation of strings[] array
-	int maxstrings;
-	int numstrings;
-	char **strings;
-} stringlist_t;
-
-int matchpattern(const char *in, const char *pattern, int caseinsensitive);
-int matchpattern_with_separator(const char *in, const char *pattern, int caseinsensitive, const char *separators, qbool wildcard_least_one);
-void stringlistinit(stringlist_t *list);
-void stringlistfreecontents(stringlist_t *list);
-void stringlistappend(stringlist_t *list, const char *text);
-void stringlistsort(stringlist_t *list, qbool uniq);
-void listdirectory(stringlist_t *list, const char *basepath, const char *path);
-
-char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength);
-void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value);
-void InfoString_Print(char *buffer);
-
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
 #if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(MACOSX)
@@ -368,22 +290,22 @@ void InfoString_Print(char *buffer);
 
 #ifndef HAVE_STRLCAT
 /*!
- * Appends src to string dst of size siz (unlike strncat, siz is the
- * full size of dst, not space left).  At most siz-1 characters
- * will be copied.  Always NUL terminates (unless siz <= strlen(dst)).
- * Returns strlen(src) + MIN(siz, strlen(initial dst)).
- * If retval >= siz, truncation occurred.
+ * Appends src to string dst of size dsize (unlike strncat, dsize is the
+ * full size of dst, not space left).  At most dsize-1 characters
+ * will be copied.  Always NUL terminates (unless dsize <= strlen(dst)).
+ * Returns strlen(src) + MIN(dsize, strlen(initial dst)).
+ * If retval >= dsize, truncation occurred.
  */
-size_t strlcat(char *dst, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *src, size_t dsize);
 #endif  // #ifndef HAVE_STRLCAT
 
 #ifndef HAVE_STRLCPY
 /*!
- * Copy src to string dst of size siz.  At most siz-1 characters
- * will be copied.  Always NUL terminates (unless siz == 0).
- * Returns strlen(src); if retval >= siz, truncation occurred.
+ * Copy string src to buffer dst of size dsize.  At most dsize-1
+ * chars will be copied.  Always NUL terminates (unless dsize == 0).
+ * Returns strlen(src); if retval >= dsize, truncation occurred.
  */
-size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcpy(char *dst, const char *src, size_t dsize);
 
 #endif  // #ifndef HAVE_STRLCPY
 

@@ -86,7 +86,7 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 			Con_Printf("No commands are pending.\n");
 		else
 		{
-			List_For_Each_Entry(current, &cbuf->deferred, list)
+			List_For_Each_Entry(current, &cbuf->deferred, cmd_input_t, list)
 				Con_Printf("-> In %9.2f: %s\n", current->delay, current->text);
 		}
 	}
@@ -419,7 +419,7 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
-	List_For_Each_Entry(current, &cbuf->deferred, list)
+	List_For_Each_Entry(current, &cbuf->deferred, cmd_input_t, list)
 	{
 		current->delay -= eat;
 		if(current->delay <= 0)
@@ -1580,7 +1580,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 		partial = va(vabuf, sizeof(vabuf), "*%s*", partial);
 
 	count = 0;
-	List_For_Each_Entry(cvar, &cmd->cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cmd->cvars->vars->list, cvar_t, list)
 	{
 		if (matchpattern_with_separator(cvar->name, partial, true, "", false) ||
 		    matchpattern_with_separator(cvar->description, partial, true, "", false))

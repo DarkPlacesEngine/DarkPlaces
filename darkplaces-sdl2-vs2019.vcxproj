@@ -221,6 +221,7 @@
     <ClCompile Include="com_ents.c" />
     <ClCompile Include="com_ents4.c" />
     <ClCompile Include="com_game.c" />
+    <ClCompile Include="com_infostring.c" />
     <ClCompile Include="com_msg.c" />
     <ClCompile Include="common.c" />
     <ClCompile Include="console.c" />
@@ -332,6 +333,8 @@
     <ClInclude Include="clvm_cmds.h" />
     <ClInclude Include="cmd.h" />
     <ClInclude Include="collision.h" />
+    <ClInclude Include="com_game.h" />
+    <ClInclude Include="com_infostring.h" />
     <ClInclude Include="com_list.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="console.h" />
@@ -342,6 +345,7 @@
     <ClInclude Include="darkplaces.h" />
     <ClInclude Include="dpvsimpledecode.h" />
     <ClInclude Include="draw.h" />
+    <ClInclude Include="filematch.h" />
     <ClInclude Include="fs.h" />
     <ClInclude Include="ft2.h" />
     <ClInclude Include="ft2_defs.h" />

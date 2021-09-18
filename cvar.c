@@ -55,13 +55,13 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
 		var = Cvar_FindVar(cvars, prev_var_name, neededflags);
 		if (!var)
 			return NULL;
-		var = List_Next_Entry(var->parent ? var->parent : var, list);
+		var = List_Next_Entry(var->parent ? var->parent : var, cvar_t, list);
 	}
 	else
 		var = cvars->vars;
 
 	// search for the next cvar matching the needed flags
-	List_For_Each_Entry_From(var, &cvars->vars->list, list)
+	List_For_Each_Entry_From(var, &cvars->vars->list, cvar_t, list)
 	{
 		if (var->parent)
 			continue;
@@ -158,7 +158,7 @@ const char *Cvar_CompleteVariable(cvar_state_t *cvars, const char *partial, int 
 		return NULL;
 
 // check functions
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 		if (!strncasecmp (partial,cvar->name, len) && (cvar->flags & neededflags))
 			return cvar->name;
 
@@ -186,7 +186,7 @@ int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int nee
 		return	0;
 
 	// Loop through the cvars and count all possible matches
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			h++;
 	return h;
@@ -212,7 +212,7 @@ const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, in
 	len = strlen(partial);
 	buf = (const char **)Mem_Alloc(tempmempool, sizeofbuf + sizeof(const char *));
 	// Loop through the alias list and print all matches
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			buf[bpos++] = cvar->name;
 
@@ -241,7 +241,7 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int needed
 	cvar_t *cvar;
 	size_t len = strlen(partial);
 	// Loop through the command list and print all matches
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 		if (!strncasecmp(partial, cvar->name, len) && (cvar->flags & neededflags))
 			Cvar_PrintHelp(cvar->parent ? cvar->parent : cvar, cvar->name, true);
 }
@@ -309,7 +309,7 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 void Cvar_UpdateAllAutoCvars(cvar_state_t *cvars)
 {
 	cvar_t *var;
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if(var->parent)
 			continue;
@@ -437,7 +437,7 @@ static void Cvar_Link(cvar_t *variable, cvar_state_t *cvars)
 	int hashindex;
 
 	// Link the object in alphanumerical order
-	List_For_Each_Entry(current, &cvars->vars->list, list)
+	List_For_Each_Entry(current, &cvars->vars->list, cvar_t, list)
 		if(strcmp(current->name, variable->name) > 0)
 			break;
 
@@ -472,7 +472,7 @@ static void Cvar_DeleteVirtual_All(cvar_t *var)
 {
 	cvar_t *vcvar, *vcvar_next;
 
-	List_For_Each_Entry_Safe(vcvar, vcvar_next, &var->vlist, vlist)
+	List_For_Each_Entry_Safe(vcvar, vcvar_next, &var->vlist, cvar_t, vlist)
 		Cvar_DeleteVirtual(vcvar);
 }
 
@@ -765,7 +765,7 @@ void Cvar_UnlockDefaults(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	cvar_t *var;
 	// unlock the default values of all cvars
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 		var->flags &= ~CF_DEFAULTSET;
 }
 
@@ -774,7 +774,7 @@ void Cvar_LockDefaults_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	cvar_t *var;
 	// lock in the default values of all cvars
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if (!var->parent && !(var->flags & CF_DEFAULTSET))
 		{
@@ -794,7 +794,7 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 {
 	cvar_t *cvar, *vcvar;
 
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 	{
 		// Get the the virtual cvars separately
 		if(cvar->parent)
@@ -815,7 +815,7 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 		 * Consider any virtual cvar created up to this point as
 		 * existing during init. Use the initstate of the parent cvar.
 		 */
-		List_For_Each_Entry(vcvar, &cvar->vlist, list)
+		List_For_Each_Entry(vcvar, &cvar->vlist, cvar_t, list)
 			vcvar->initstate = cvar->initstate;
 	}
 }
@@ -824,7 +824,7 @@ void Cvar_RestoreInitState(cvar_state_t *cvars)
 {
 	cvar_t *var, *next;
 
-	List_For_Each_Entry_Safe(var, next, &cvars->vars->list, list)
+	List_For_Each_Entry_Safe(var, next, &cvars->vars->list, cvar_t, list)
 	{
 		// Destroy all virtual cvars that didn't exist at init
 		if(var->parent && !var->initstate)
@@ -885,7 +885,7 @@ void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	cvar_t *var;
 	// restore the default values of all cvars
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if(!var->parent && !(var->flags & CF_PERSISTENT))
 			Cvar_SetQuick(var, var->defstring);
@@ -897,7 +897,7 @@ void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	cvar_t *var;
 	// restore the default values of all cvars
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if (!var->parent && !(var->flags & (CF_PERSISTENT | CF_ARCHIVE)))
 			Cvar_SetQuick(var, var->defstring);
@@ -909,7 +909,7 @@ void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd)
 	cvar_state_t *cvars = cmd->cvars;
 	cvar_t *var;
 	// restore the default values of all cvars
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if (!var->parent && (var->flags & (CF_PERSISTENT | CF_ARCHIVE)) == CF_ARCHIVE)
 			Cvar_SetQuick(var, var->defstring);
@@ -930,7 +930,7 @@ void Cvar_WriteVariables (cvar_state_t *cvars, qfile_t *f)
 	char buf1[MAX_INPUTLINE], buf2[MAX_INPUTLINE];
 
 	// don't save cvars that match their default value
-	List_For_Each_Entry(var, &cvars->vars->list, list)
+	List_For_Each_Entry(var, &cvars->vars->list, cvar_t, list)
 	{
 		if(var->parent)
 			continue;
@@ -973,7 +973,7 @@ void Cvar_List_f(cmd_state_t *cmd)
 	}
 
 	count = 0;
-	List_For_Each_Entry(cvar, &cvars->vars->list, list)
+	List_For_Each_Entry(cvar, &cvars->vars->list, cvar_t, list)
 	{
 		if (matchpattern_with_separator(cvar->name, partial, false, "", false))
 		{
