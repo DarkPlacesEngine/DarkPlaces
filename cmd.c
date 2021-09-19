@@ -394,7 +394,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 		Con_Print("Cbuf_InsertText: overflow\n");
 	else
 	{
-		Cbuf_LinkCreate(cmd, &llist, List_Entry(cbuf->start.next, cmd_input_t, list), text);
+		Cbuf_LinkCreate(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.next, cmd_input_t, list)), text);
 		if(!List_Is_Empty(&llist))
 			List_Splice(&llist, &cbuf->start);
 	}
