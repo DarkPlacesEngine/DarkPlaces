@@ -1255,6 +1255,9 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 
 		if (trace.fraction == 1)
 			break;
+
+		time_left *= 1 - trace.fraction;
+
 		if (trace.plane.normal[2])
 		{
 			if (trace.plane.normal[2] > 0.7)
@@ -1282,6 +1285,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			trace_t steptrace3;
 			//Con_Printf("step %f %f %f : ", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
 			VectorSet(steppush, 0, 0, stepheight);
+			VectorScale(PRVM_serveredictvector(ent, velocity), time_left, push);
 			VectorCopy(PRVM_serveredictvector(ent, origin), org);
 			if(!SV_PushEntity(&steptrace, ent, steppush, false))
 			{
@@ -1332,8 +1336,6 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			VectorCopy(PRVM_serveredictvector(ent, velocity), original_velocity);
 			numplanes = 0;
 		}
-
-		time_left *= 1 - trace.fraction;
 
 		// clipped to another plane
 		if (numplanes >= MAX_CLIP_PLANES)
