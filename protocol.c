@@ -109,7 +109,7 @@ void Protocol_Names(char *buffer, size_t buffersize)
 	buffer[0] = 0;
 	for (i = 0;protocolversioninfo[i].name;i++)
 	{
-		if (i > 1)
+		if (i > 0)
 			strlcat(buffer, " ", buffersize);
 		strlcat(buffer, protocolversioninfo[i].name, buffersize);
 	}
