@@ -24,3 +24,5 @@ Makefile.win
 .ccls-cache
 *.gch
 /.vs
+/build
+/.cache
