@@ -42,3 +42,8 @@ In the engine's root directory, run `make`. See `make help` for options.
 ### Windows (Visual Studio)
 
 Instructions coming soon.
+
+## Documentation
+
+Doxygen: https://xonotic.org/doxygen/darkplaces
+
