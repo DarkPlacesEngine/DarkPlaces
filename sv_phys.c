@@ -2350,7 +2350,11 @@ static void SV_WalkMove (prvm_edict_t *ent)
 		VectorCopy(PRVM_serveredictvector(ent, maxs), entmaxs);
 		trace = SV_TraceBox(upmove, entmins, entmaxs, downmove, type, ent, SV_GenericHitSuperContentsMask(ent), skipsupercontentsmask, skipmaterialflagsmask, collision_extendmovelength.value);
 		if(trace.fraction < 1 && trace.plane.normal[2] > 0.7)
+		{
 			clip |= 1; // but we HAVE found a floor
+			// set groundentity so we get carried when walking onto a mover with sv_gameplayfix_nogravityonground
+			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
+		}
 	}
 
 	// if the move did not hit the ground at any point, we're not on ground
