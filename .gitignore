@@ -26,3 +26,4 @@ Makefile.win
 /.vs
 /build
 /.cache
+*.kdev4
