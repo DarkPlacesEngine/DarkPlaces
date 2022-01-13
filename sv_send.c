@@ -34,6 +34,7 @@ extern cvar_t sv_cullentities_trace_samples_players;
 extern cvar_t sv_cullentities_trace_eyejitter;
 extern cvar_t sv_cullentities_trace_expand;
 extern cvar_t sv_cullentities_trace_delay_players;
+extern cvar_t sv_cullentities_trace_spectators;
 
 /*
 =============================================================================
@@ -859,7 +860,7 @@ qbool SV_CanSeeBox(int numtraces, vec_t eyejitter, vec_t enlarge, vec_t entboxex
 	return false;
 }
 
-void SV_MarkWriteEntityStateToClient(entity_state_t *s)
+void SV_MarkWriteEntityStateToClient(entity_state_t *s, client_t *client)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int isbmodel;
@@ -906,7 +907,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			// tag attached entities simply check their parent
 			if (!sv.sendentitiesindex[s->tagentity])
 				return;
-			SV_MarkWriteEntityStateToClient(sv.sendentitiesindex[s->tagentity]);
+			SV_MarkWriteEntityStateToClient(sv.sendentitiesindex[s->tagentity], client);
 			if (sv.sententities[s->tagentity] != sv.sententitiesmark)
 				return;
 		}
@@ -946,7 +947,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			}
 
 			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel && sv.worldmodel->brush.TraceLineOfSight && !r_trippy.integer)
+			if (sv_cullentities_trace.integer && !isbmodel && sv.worldmodel && sv.worldmodel->brush.TraceLineOfSight && !r_trippy.integer && (client->frags != -666 || sv_cullentities_trace_spectators.integer))
 			{
 				int samples =
 					s->number <= svs.maxclients
