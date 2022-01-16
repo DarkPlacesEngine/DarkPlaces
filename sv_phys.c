@@ -1303,7 +1303,8 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			}
 			//Con_Printf("%f %f %f : ", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
 			// accept the new position if it made some progress...
-			if (fabs(PRVM_serveredictvector(ent, origin)[0] - org[0]) >= 0.03125 || fabs(PRVM_serveredictvector(ent, origin)[1] - org[1]) >= 0.03125)
+			// previously this checked if absolute distance >= 0.03125 which made stepping up unreliable
+			if (PRVM_serveredictvector(ent, origin)[0] - org[0] || PRVM_serveredictvector(ent, origin)[1] - org[1])
 			{
 				//Con_Printf("accepted (delta %f %f %f)\n", PRVM_serveredictvector(ent, origin)[0] - org[0], PRVM_serveredictvector(ent, origin)[1] - org[1], PRVM_serveredictvector(ent, origin)[2] - org[2]);
 				trace = steptrace2;
