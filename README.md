@@ -12,9 +12,6 @@ Developed by LadyHavoc. See CREDITS.md for a list of contributors.
 ### IRC:
 #darkplaces on irc.anynet.org
 
-### Discord:
-https://discord.gg/ZHT9QeW
-
 ## Build instructions (WIP)
 
 You will need the following packages regardless of platform:
