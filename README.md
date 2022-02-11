@@ -9,8 +9,11 @@ Developed by LadyHavoc. See CREDITS.md for a list of contributors.
 
 ## Help/support
 
-### IRC:
+### IRC
 #darkplaces on irc.anynet.org
+
+### [Matrix](https://matrix.org/docs/guides/introduction)
+Space: [#darkplaces:matrix.org](https://matrix.to/#/#darkplaces:matrix.org)
 
 ## Build instructions (WIP)
 
