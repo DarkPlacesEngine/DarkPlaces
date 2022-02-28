@@ -3447,6 +3447,7 @@ void Render_Init(void)
 	R_Particles_Init();
 	R_Explosion_Init();
 	R_LightningBeams_Init();
+	CL_MeshEntities_Init();
 	Mod_RenderInit();
 }
 
