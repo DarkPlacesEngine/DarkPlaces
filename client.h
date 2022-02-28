@@ -1364,6 +1364,7 @@ extern model_t cl_meshentitymodels[NUM_MESHENTITIES];
 extern const char *cl_meshentitynames[NUM_MESHENTITIES];
 #define CL_Mesh_Scene() (&cl_meshentitymodels[MESH_SCENE])
 #define CL_Mesh_UI() (&cl_meshentitymodels[MESH_UI])
+void CL_MeshEntities_Init(void);
 void CL_MeshEntities_Scene_Clear(void);
 void CL_MeshEntities_Scene_AddRenderEntity(void);
 void CL_MeshEntities_Scene_FinalizeRenderEntity(void);
