@@ -184,6 +184,8 @@ cvar_t cl_readpicture_force = {CF_CLIENT, "cl_readpicture_force", "0", "when ena
 #define RIC_GUNSHOTQUAD	2
 cvar_t cl_sound_ric_gunshot = {CF_CLIENT, "cl_sound_ric_gunshot", "0", "specifies if and when the related cl_sound_ric and cl_sound_tink sounds apply to TE_GUNSHOT/TE_GUNSHOTQUAD, 0 = no sound, 1 = TE_GUNSHOT, 2 = TE_GUNSHOTQUAD, 3 = TE_GUNSHOT and TE_GUNSHOTQUAD"};
 cvar_t cl_sound_r_exp3 = {CF_CLIENT, "cl_sound_r_exp3", "weapons/r_exp3.wav", "sound to play during TE_EXPLOSION and related effects (empty cvar disables sound)"};
+cvar_t snd_cdautopause = {CF_CLIENT | CF_ARCHIVE, "snd_cdautopause", "1", "pause the CD track while the game is paused"};
+
 cvar_t cl_serverextension_download = {CF_CLIENT, "cl_serverextension_download", "0", "indicates whether the server supports the download command"};
 cvar_t cl_joinbeforedownloadsfinish = {CF_CLIENT | CF_ARCHIVE, "cl_joinbeforedownloadsfinish", "1", "if non-zero the game will begin after the map is loaded before other downloads finish"};
 cvar_t cl_nettimesyncfactor = {CF_CLIENT | CF_ARCHIVE, "cl_nettimesyncfactor", "0", "rate at which client time adapts to match server time, 1 = instantly, 0.125 = slowly, 0 = not at all (only applied in bound modes 0, 1, 2, 3)"};
@@ -3793,9 +3795,9 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_setpause:
 				cl.paused = MSG_ReadByte(&cl_message) != 0;
-				if (cl.paused)
+				if (cl.paused && snd_cdautopause.integer)
 					CDAudio_Pause ();
-				else
+				else if (bgmvolume.value > 0.0f)
 					CDAudio_Resume ();
 				S_PauseGameSounds (cl.paused);
 				break;
@@ -4120,9 +4122,9 @@ void CL_ParseServerMessage(void)
 
 			case svc_setpause:
 				cl.paused = MSG_ReadByte(&cl_message) != 0;
-				if (cl.paused)
+				if (cl.paused && snd_cdautopause.integer)
 					CDAudio_Pause ();
-				else
+				else if (bgmvolume.value > 0.0f)
 					CDAudio_Resume ();
 				S_PauseGameSounds (cl.paused);
 				break;
@@ -4324,6 +4326,7 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable(&cl_sound_ric3);
 	Cvar_RegisterVariable(&cl_sound_ric_gunshot);
 	Cvar_RegisterVariable(&cl_sound_r_exp3);
+	Cvar_RegisterVariable(&snd_cdautopause);
 
 	Cvar_RegisterVariable(&cl_joinbeforedownloadsfinish);
 
