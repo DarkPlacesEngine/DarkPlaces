@@ -3360,8 +3360,8 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
 	if (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = prog->tempstringsbuf;
-		if (prog->tempstringsbuf.cursize + size >= 1<<28)
-			prog->error_cmd("PRVM_SetTempString: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", prog->tempstringsbuf.cursize, size);
+		if (prog->tempstringsbuf.cursize + size >= 1<<29)
+			prog->error_cmd("PRVM_SetTempString: ran out of tempstring memory!  (refusing to grow tempstring buffer over 512MB, cursize %i, size %i)\n", prog->tempstringsbuf.cursize, size);
 		prog->tempstringsbuf.maxsize = max(prog->tempstringsbuf.maxsize, 65536);
 		while (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 			prog->tempstringsbuf.maxsize *= 2;
