@@ -19,3 +19,11 @@ Makefile.win
 *.dll
 *.dylib
 *.dSYM
+.vscode
+*.code-workspace
+.ccls-cache
+*.gch
+/.vs
+/build
+/.cache
+*.kdev4
