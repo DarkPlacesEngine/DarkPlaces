@@ -808,7 +808,7 @@ void Curl_Init(void)
 	if(!curl_dll)
 		return;
 	if (Thread_HasThreads()) curl_mutex = Thread_CreateMutex();
-	qcurl_global_init(CURL_GLOBAL_NOTHING);
+	qcurl_global_init(CURL_GLOBAL_SSL);
 	curlm = qcurl_multi_init();
 }
 
