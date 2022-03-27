@@ -15,6 +15,7 @@ static cvar_t sv_curl_maxspeed = {CF_SERVER | CF_ARCHIVE, "sv_curl_maxspeed","0"
 static cvar_t cl_curl_enabled = {CF_CLIENT | CF_ARCHIVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
 static cvar_t cl_curl_useragent = {CF_CLIENT, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
 static cvar_t cl_curl_useragent_append = {CF_CLIENT, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
+static cvar_t developer_curl = {CF_CLIENT | CF_SERVER, "developer_curl","0", "whether verbose curl output should be printed to stderr"};
 
 /*
 =================================================================
@@ -62,6 +63,7 @@ typedef enum
 	CINIT(LOW_SPEED_TIME, LONG, 20),
 	CINIT(RESUME_FROM, LONG, 21),
 	CINIT(HTTPHEADER, OBJECTPOINT, 23),
+	CINIT(VERBOSE, LONG, 41),
 	CINIT(POST, LONG, 47),         /* HTTP POST method */
 	CINIT(FOLLOWLOCATION, LONG, 52),  /* use Location: Luke! */
 	CINIT(POSTFIELDSIZE, LONG, 60),
@@ -734,6 +736,8 @@ static void CheckPendingDownloads(void)
 				}
 				else
 					qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, "");
+				if(developer_curl.integer) 
+					qcurl_easy_setopt(di->curle, CURLOPT_VERBOSE, (long) 1);
 				qcurl_easy_setopt(di->curle, CURLOPT_REFERER, di->referer);
 				qcurl_easy_setopt(di->curle, CURLOPT_RESUME_FROM, (long) di->startpos);
 				qcurl_easy_setopt(di->curle, CURLOPT_FOLLOWLOCATION, 1);
@@ -803,7 +807,7 @@ void Curl_Init(void)
 	if(!curl_dll)
 		return;
 	if (Thread_HasThreads()) curl_mutex = Thread_CreateMutex();
-	qcurl_global_init(CURL_GLOBAL_NOTHING);
+	qcurl_global_init(CURL_GLOBAL_SSL);
 	curlm = qcurl_multi_init();
 }
 
@@ -1542,6 +1546,7 @@ void Curl_Init_Commands(void)
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
 	Cvar_RegisterVariable (&cl_curl_useragent);
 	Cvar_RegisterVariable (&cl_curl_useragent_append);
+	Cvar_RegisterVariable (&developer_curl);
 	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand(cmd_local, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
