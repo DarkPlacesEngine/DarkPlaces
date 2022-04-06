@@ -22,7 +22,10 @@ CC?=gcc
 # Experimental
 #CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fassociative-math -freciprocal-math -fno-signed-zeros -fno-trapping-math
 # Normal
-ifeq ($(CC), clang)
+ifneq ($(OS),Windows_NT)
+UNAME_S := $(shell uname -s)
+endif
+ifeq ($(UNAME_S),Darwin)
 	CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-trapping-math
 else
 	CPUOPTIMIZATIONS?=-fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
