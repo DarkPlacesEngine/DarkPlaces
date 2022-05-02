@@ -24,3 +24,7 @@ Makefile.win
 .ccls-cache
 *.gch
 /.vs
+*.vcxproj.user
+*.pdb
+*.lib
+*.exp
