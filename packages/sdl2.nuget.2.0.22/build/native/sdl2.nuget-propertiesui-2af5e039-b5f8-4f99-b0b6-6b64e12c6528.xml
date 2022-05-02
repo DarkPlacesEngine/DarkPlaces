@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ProjectSchemaDefinitions xmlns="clr-namespace:Microsoft.Build.Framework.XamlTypes;assembly=Microsoft.Build.Framework">
+  <Rule Name="ReferencedPackagescf877fbb-a85a-4aae-81b7-315b03a491b7" PageTemplate="tool" DisplayName="Referenced Packages" SwitchPrefix="/" Order="1">
+    <Rule.Categories>
+      <Category Name="sdl2.nuget" DisplayName="sdl2.nuget" />
+    </Rule.Categories>
+    <Rule.DataSource>
+      <DataSource Persistence="ProjectFile" ItemType="" />
+    </Rule.DataSource>
+    <EnumProperty Name="Linkage-sdl2.nuget" DisplayName="Linkage" Description="Which version of the .lib file to link to this library" Category="sdl2.nuget">
+      <EnumValue Name="" DisplayName="Dynamic Library (DLL)" />
+    </EnumProperty>
+  </Rule>
+</ProjectSchemaDefinitions>
