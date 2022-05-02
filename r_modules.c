@@ -55,9 +55,10 @@ void R_Modules_Start(void)
 			continue;
 		if (rendermodule[i].active)
 		{
-			Con_Printf ("R_StartModules: module \"%s\" already active\n", rendermodule[i].name);
+			Con_Printf ("R_Modules_Start: module \"%s\" already active\n", rendermodule[i].name);
 			continue;
 		}
+		Con_DPrintf("Starting render module \"%s\"\n", rendermodule[i].name);
 		rendermodule[i].active = 1;
 		rendermodule[i].start();
 	}
@@ -73,6 +74,7 @@ void R_Modules_Shutdown(void)
 			continue;
 		if (!rendermodule[i].active)
 			continue;
+		Con_DPrintf("Stopping render module \"%s\"\n", rendermodule[i].name);
 		rendermodule[i].active = 0;
 		rendermodule[i].shutdown();
 	}
@@ -81,7 +83,7 @@ void R_Modules_Shutdown(void)
 void R_Modules_Restart_f(cmd_state_t *cmd)
 {
 	CL_StartVideo();
-	Con_Print("restarting renderer\n");
+	Con_Print("Restarting renderer\n");
 	R_Modules_Shutdown();
 	R_Modules_Start();
 }
