@@ -417,12 +417,12 @@ static void CDAudio_SetVolume (float newvol)
 		return;
 
 	// If the CD has been muted
-	if (newvol == 0.0f)
+	if (newvol <= 0.0f)
 		CDAudio_Pause ();
 	else
 	{
 		// If the CD has been unmuted
-		if (cdvolume == 0.0f)
+		if (cdvolume <= 0.0f)
 			CDAudio_Resume ();
 
 		if (faketrack != -1)
