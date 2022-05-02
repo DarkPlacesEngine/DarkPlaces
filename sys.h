@@ -42,14 +42,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 # define DP_MOBILETOUCH	1
 # define DP_FREETYPE_STATIC 1
-#elif TARGET_OS_IPHONE /* must come first because it also defines MACOSX */
-# define DP_OS_NAME		"iPhoneOS"
-# define DP_OS_STR		"iphoneos"
-# define USE_GLES2		1
-# define LINK_TO_ZLIB	1
-# define LINK_TO_LIBVORBIS 1
-# define DP_MOBILETOUCH	1
-# define DP_FREETYPE_STATIC 1
 #elif defined(__linux__)
 # define DP_OS_NAME		"Linux"
 # define DP_OS_STR		"linux"
@@ -71,9 +63,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #elif defined(__DragonFly__)
 # define DP_OS_NAME		"DragonFlyBSD"
 # define DP_OS_STR		"dragonflybsd"
-#elif defined(MACOSX)
-# define DP_OS_NAME		"Mac OS X"
-# define DP_OS_STR		"osx"
+#elif defined(__APPLE__)
+# if TARGET_OS_IPHONE
+#  define DP_OS_NAME "iOS"
+#  define DP_OS_STR "ios"
+#  define USE_GLES2              1
+#  define LINK_TO_ZLIB   1
+#  define LINK_TO_LIBVORBIS 1
+#  define DP_MOBILETOUCH 1
+#  define DP_FREETYPE_STATIC 1
+# elif TARGET_OS_MAC
+#  define DP_OS_NAME "macOS"
+#  define DP_OS_STR "macos"
+# endif 
 #elif defined(__MORPHOS__)
 # define DP_OS_NAME		"MorphOS"
 # define DP_OS_STR		"morphos"

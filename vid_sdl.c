@@ -33,14 +33,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 static cvar_t apple_mouse_noaccel = {CF_CLIENT | CF_ARCHIVE, "apple_mouse_noaccel", "1", "disables mouse acceleration while DarkPlaces is active"};
 static qbool vid_usingnoaccel;
 static double originalMouseSpeed = -1.0;
-io_connect_t IN_GetIOHandle(void)
+static io_connect_t IN_GetIOHandle(void)
 {
 	io_connect_t iohandle = MACH_PORT_NULL;
 	kern_return_t status;
 	io_service_t iohidsystem = MACH_PORT_NULL;
 	mach_port_t masterport;
 
-	status = IOMasterPort(MACH_PORT_NULL, &masterport);
+	status = IOMainPort(MACH_PORT_NULL, &masterport);
 	if(status != KERN_SUCCESS)
 		return 0;
 

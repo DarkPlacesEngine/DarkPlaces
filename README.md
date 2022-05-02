@@ -9,11 +9,11 @@ Developed by LadyHavoc. See CREDITS.md for a list of contributors.
 
 ## Help/support
 
-### IRC:
+### IRC
 #darkplaces on irc.anynet.org
 
-### Discord:
-https://discord.gg/ZHT9QeW
+### [Matrix](https://matrix.org/docs/guides/introduction)
+Space: [#darkplaces:matrix.org](https://matrix.to/#/#darkplaces:matrix.org)
 
 ## Build instructions (WIP)
 
@@ -35,10 +35,27 @@ pacman -S --needed gcc make mingw-w64-x86_64-{toolchain,libjpeg-turbo,libpng,lib
 
 3. See [Unix instructions](#unix-(general)).
 
+### macOS
+1. Open a terminal and input `xcode-select --install`
+2. Install [Homebrew](https://brew.sh)
+3. In the same (or a different terminal), input the following command:
+
+```
+brew install sdl2 libjpeg-turbo libpng libvorbis curl
+```
+
+4. See [Unix instructions](#unix-(general)).
+
 ### Unix (General)
 
-In the engine's root directory, run `make`. See `make help` for options.
+From a terminal, in the engine's root directory, input `make`. On macOS, input `make` with a target such as `make sdl-release`.
+
+Input `make help` for options.
 
 ### Windows (Visual Studio)
 
 Instructions coming soon.
+
+## Documentation
+
+Doxygen: https://xonotic.org/doxygen/darkplaces

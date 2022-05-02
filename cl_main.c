@@ -2549,7 +2549,7 @@ static void CL_MeshEntities_Shutdown(void)
 	}
 }
 
-static void CL_MeshEntities_Init(void)
+void CL_MeshEntities_Init(void)
 {
 	int i;
 	entity_t *ent;
@@ -2585,7 +2585,7 @@ static void CL_MeshEntities_Init(void)
 		CL_UpdateRenderEntity(&ent->render);
 	}
 	cl_meshentities[MESH_UI].render.flags = RENDER_NOSELFSHADOW;
-	R_RegisterModule("cl_meshentities", CL_MeshEntities_Start, CL_MeshEntities_Shutdown, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
+	R_RegisterModule("CL_MeshEntities", CL_MeshEntities_Start, CL_MeshEntities_Shutdown, CL_MeshEntities_Restart, CL_MeshEntities_Restart, CL_MeshEntities_Restart);
 }
 
 void CL_MeshEntities_Scene_Clear(void)
@@ -3129,7 +3129,6 @@ void CL_Init (void)
 		CL_Parse_Init();
 		CL_Particles_Init();
 		CL_Screen_Init();
-		CL_MeshEntities_Init();
 
 		CL_Video_Init();
 

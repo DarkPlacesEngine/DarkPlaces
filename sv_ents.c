@@ -395,7 +395,7 @@ void SV_WriteEntitiesToClient(client_t *client, prvm_edict_t *clent, sizebuf_t *
 	sv.sententitiesmark++;
 
 	for (i = 0;i < sv.numsendentities;i++)
-		SV_MarkWriteEntityStateToClient(sv.sendentities + i);
+		SV_MarkWriteEntityStateToClient(sv.sendentities + i, client);
 
 	numsendstates = 0;
 	numcsqcsendstates = 0;

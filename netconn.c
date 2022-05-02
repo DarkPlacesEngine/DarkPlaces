@@ -44,8 +44,9 @@ static cvar_t sv_masters [] =
 	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master2", "", "user-chosen master server 2"},
 	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master3", "", "user-chosen master server 3"},
 	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_master4", "", "user-chosen master server 4"},
-	{CF_CLIENT | CF_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"}, // admin: Willis
-	{CF_CLIENT | CF_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"}, // admin: tChr
+	{CF_CLIENT | CF_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"},
+	{CF_CLIENT | CF_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"},
+	{CF_CLIENT | CF_SERVER, "sv_masterextra3", "dpm.dpmaster.org:27777", "dpm.dpmaster.org - default master server 3 (admin: gazby/soylent_cow)"},
 	{0, NULL, NULL, NULL}
 };
 

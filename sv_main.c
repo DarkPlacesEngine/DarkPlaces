@@ -93,6 +93,7 @@ cvar_t sv_cullentities_trace_entityocclusion = {CF_SERVER, "sv_cullentities_trac
 cvar_t sv_cullentities_trace_samples = {CF_SERVER, "sv_cullentities_trace_samples", "2", "number of samples to test for entity culling"};
 cvar_t sv_cullentities_trace_samples_extra = {CF_SERVER, "sv_cullentities_trace_samples_extra", "2", "number of samples to test for entity culling when the entity affects its surroundings by e.g. dlight"};
 cvar_t sv_cullentities_trace_samples_players = {CF_SERVER, "sv_cullentities_trace_samples_players", "8", "number of samples to test for entity culling when the entity is a player entity"};
+cvar_t sv_cullentities_trace_spectators = {CF_SERVER, "sv_cullentities_trace_spectators", "0", "enables trace entity culling for clients that are spectating"};
 cvar_t sv_debugmove = {CF_SERVER | CF_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
 cvar_t sv_echobprint = {CF_SERVER | CF_ARCHIVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
 cvar_t sv_edgefriction = {CF_SERVER, "edgefriction", "1", "how much you slow down when nearing a ledge you might fall off, multiplier of sv_friction (Quake used 2, QuakeWorld used 1 due to a bug in physics code)"};
@@ -122,7 +123,7 @@ cvar_t sv_gameplayfix_stepmultipletimes = {CF_SERVER, "sv_gameplayfix_stepmultip
 cvar_t sv_gameplayfix_nostepmoveonsteepslopes = {CF_SERVER, "sv_gameplayfix_nostepmoveonsteepslopes", "0", "crude fix which prevents MOVETYPE_STEP (not swimming or flying) to move on slopes whose angle is bigger than 45 degree"};
 cvar_t sv_gameplayfix_swiminbmodels = {CF_SERVER, "sv_gameplayfix_swiminbmodels", "1", "causes pointcontents (used to determine if you are in a liquid) to check bmodel entities as well as the world model, so you can swim around in (possibly moving) water bmodel entities"};
 cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag = {CF_SERVER, "sv_gameplayfix_upwardvelocityclearsongroundflag", "1", "prevents monsters, items, and most other objects from being stuck to the floor when pushed around by damage, and other situations in mods"};
-cvar_t sv_gameplayfix_downtracesupportsongroundflag = {CF_SERVER, "sv_gameplayfix_downtracesupportsongroundflag", "1", "prevents very short moves from clearing onground (which may make the player stick to the floor at high netfps)"};
+cvar_t sv_gameplayfix_downtracesupportsongroundflag = {CF_SERVER, "sv_gameplayfix_downtracesupportsongroundflag", "1", "prevents very short moves from clearing onground (which may make the player stick to the floor at high netfps), fixes groundentity not being set when walking onto a mover with sv_gameplayfix_nogravityonground"};
 cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {CF_SERVER, "sv_gameplayfix_q1bsptracelinereportstexture", "1", "enables mods to get accurate trace_texture results on q1bsp by using a surface-hitting traceline implementation rather than the standard solidbsp method, q3bsp always reports texture accurately"};
 cvar_t sv_gameplayfix_unstickplayers = {CF_SERVER, "sv_gameplayfix_unstickplayers", "1", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull."};
 cvar_t sv_gameplayfix_unstickentities = {CF_SERVER, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position"};
@@ -570,6 +571,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_extra);
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_players);
+	Cvar_RegisterVariable (&sv_cullentities_trace_spectators);
 	Cvar_RegisterVariable (&sv_debugmove);
 	Cvar_RegisterVariable (&sv_echobprint);
 	Cvar_RegisterVariable (&sv_edgefriction);
