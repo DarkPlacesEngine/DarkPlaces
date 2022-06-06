@@ -215,8 +215,8 @@ void R_UpdateVariables(void); // must call after setting up most of r_refdef, bu
 void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height); // must set r_refdef and call R_UpdateVariables and CL_UpdateEntityShading first
 void R_RenderView_UpdateViewVectors(void); // just updates r_refdef.view.{forward,left,up,origin,right,inverse_matrix}
 
-float RSurf_FogVertex(const vec3_t p);
-float RSurf_FogPoint(const vec3_t p);
+float RSurf_FogPoint(const float *v);
+float RSurf_FogVertex(const float *v);
 
 typedef enum r_refdef_scene_type_s {
 	RST_CLIENT,
@@ -593,7 +593,7 @@ void R_TimeReport(const char *name);
 void R_Stain(const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
 
 void R_CalcBeam_Vertex3f(float *vert, const float *org1, const float *org2, float width);
-void R_CalcSprite_Vertex3f(float *vertex3f, const float *origin, const float *left, const float *up, float scalex1, float scalex2, float scaley1, float scaley2);
+void R_CalcSprite_Vertex3f(float *vertex3f, const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2);
 
 extern mempool_t *r_main_mempool;
 
