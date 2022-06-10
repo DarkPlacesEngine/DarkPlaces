@@ -6563,7 +6563,7 @@ static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
 			lightgridmatrix[1][3] = -(loadmodel->brushq3.num_lightgrid_imins[1] - 0.5f) / texturesize[1];
 			lightgridmatrix[2][3] = -(loadmodel->brushq3.num_lightgrid_imins[2] - 1.5f) / texturesize[2];
 			lightgridmatrix[3][3] = 1;
-			Matrix4x4_FromArrayDoubleD3D(&loadmodel->brushq3.lightgridworldtotexturematrix, lightgridmatrix[0]);
+			Matrix4x4_FromArrayDoubleD3D(&loadmodel->brushq3.lightgridworldtotexturematrix, lightgridmatrix);
 			loadmodel->brushq3.lightgridtexture = R_LoadTexture3D(loadmodel->texturepool, "lightgrid", texturesize[0], texturesize[1], texturesize[2], texturergba, TEXTYPE_RGBA, TEXF_CLAMP, 0, NULL);
 			Mem_Free(texturergba);
 		}
