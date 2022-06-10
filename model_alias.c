@@ -3898,8 +3898,8 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		loadmodel->PointSuperContents = Mod_CollisionBIH_PointSuperContents_Mesh;
 	}
 
-	if (joint        ) Mem_Free(joint        );joint         = NULL;
-	if (joint1       ) Mem_Free(joint1       );joint1        = NULL;
-	if (pose         ) Mem_Free(pose         );pose          = NULL;
-	if (pose1        ) Mem_Free(pose1        );pose1         = NULL;
+	if (joint)  { Mem_Free(joint);  joint  = NULL; }
+	if (joint1) { Mem_Free(joint1); joint1 = NULL; }
+	if (pose)   { Mem_Free(pose);   pose   = NULL; }
+	if (pose1)  { Mem_Free(pose1);  pose1  = NULL; }
 }
