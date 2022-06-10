@@ -93,7 +93,7 @@ void Matrix4x4_FromArrayDoubleGL(matrix4x4_t *out, const double in[16]);
 // converts a matrix4x4 to a double[16] array in the Direct3D orientation
 void Matrix4x4_ToArrayDoubleD3D(const matrix4x4_t *in, double out[16]);
 // creates a matrix4x4 from a double[16] array in the Direct3D orientation
-void Matrix4x4_FromArrayDoubleD3D(matrix4x4_t *out, const double in[16]);
+void Matrix4x4_FromArrayDoubleD3D(matrix4x4_t *out, const double in[4][4]);
 
 // converts a matrix4x4 to a float[16] array in the OpenGL orientation
 void Matrix4x4_ToArrayFloatGL(const matrix4x4_t *in, float out[16]);
