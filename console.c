@@ -942,7 +942,8 @@ void Con_Shutdown (void)
 	if (con_mutex) Thread_LockMutex(con_mutex);
 	ConBuffer_Shutdown(&con);
 	if (con_mutex) Thread_UnlockMutex(con_mutex);
-	if (con_mutex) Thread_DestroyMutex(con_mutex);con_mutex = NULL;
+	if (con_mutex) Thread_DestroyMutex(con_mutex);
+	con_mutex = NULL;
 }
 
 /*
