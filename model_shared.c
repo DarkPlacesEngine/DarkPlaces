@@ -3203,7 +3203,7 @@ static void Mod_Decompile_SMD(model_t *model, const char *filename, int firstpos
 			// strangely the smd angles are for a transposed matrix, so we
 			// have to generate a transposed matrix, then convert that...
 			Matrix4x4_FromBonePose7s(&posematrix, model->num_posescale, model->data_poses7s + 7*(model->num_bones * poseindex + transformindex));
-			Matrix4x4_ToArray12FloatGL(&posematrix, mtest[0]);
+			Matrix4x4_ToArray12FloatGL(&posematrix, mtest);
 			AnglesFromVectors(angles, mtest[0], mtest[2], false);
 			if (angles[0] >= 180) angles[0] -= 360;
 			if (angles[1] >= 180) angles[1] -= 360;
