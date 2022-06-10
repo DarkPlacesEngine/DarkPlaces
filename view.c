@@ -972,7 +972,7 @@ void V_MakeViewIsometric(void)
 	matrix4x4_t modifiedview;
 	matrix4x4_t modify;
 	vec3_t forward, left, up, org;
-	float t[4][4];
+	float t[16];
 
 	r_refdef.view.useperspective = false;
 	r_refdef.view.usevieworiginculling = !r_trippy.value && v_isometric_usevieworiginculling.integer;
@@ -983,23 +983,23 @@ void V_MakeViewIsometric(void)
 	r_refdef.view.ortho_x = r_refdef.view.frustum_x; // used by VM_CL_R_SetView
 	r_refdef.view.ortho_y = r_refdef.view.frustum_y; // used by VM_CL_R_SetView
 
-	t[0][0] = v_isometric_xx.value;
-	t[0][1] = v_isometric_xy.value;
-	t[0][2] = v_isometric_xz.value;
-	t[0][3] = 0.0f;
-	t[1][0] = v_isometric_yx.value;
-	t[1][1] = v_isometric_yy.value;
-	t[1][2] = v_isometric_yz.value;
-	t[1][3] = 0.0f;
-	t[2][0] = v_isometric_zx.value;
-	t[2][1] = v_isometric_zy.value;
-	t[2][2] = v_isometric_zz.value;
-	t[2][3] = 0.0f;
-	t[3][0] = 0.0f;
-	t[3][1] = 0.0f;
-	t[3][2] = 0.0f;
-	t[3][3] = 1.0f;
-	Matrix4x4_FromArrayFloatGL(&modify, t[0]);
+	t[0]  = v_isometric_xx.value;
+	t[1]  = v_isometric_xy.value;
+	t[2]  = v_isometric_xz.value;
+	t[3]  = 0.0f;
+	t[4]  = v_isometric_yx.value;
+	t[5]  = v_isometric_yy.value;
+	t[6]  = v_isometric_yz.value;
+	t[7]  = 0.0f;
+	t[8]  = v_isometric_zx.value;
+	t[9]  = v_isometric_zy.value;
+	t[10] = v_isometric_zz.value;
+	t[11] = 0.0f;
+	t[12] = 0.0f;
+	t[13] = 0.0f;
+	t[14] = 0.0f;
+	t[15] = 1.0f;
+	Matrix4x4_FromArrayFloatGL(&modify, t);
 
 	// if the orientation is locked, extract the origin and create just a translate matrix to start with
 	if (v_isometric_locked_orientation.integer)
