@@ -3960,13 +3960,13 @@ qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t en
 	if (BoxesOverlap(boxmins, boxmaxs, eyemins, eyemaxs))
 		return true;
 
+	VectorCopy(eye, start);
 	// try specific positions in the box first - note that these can be cached
 	if (r_cullentities_trace_entityocclusion.integer)
 	{
 		for (i = 0; i < sizeof(positions) / sizeof(positions[0]); i++)
 		{
 			trace_t trace;
-			VectorCopy(eye, start);
 			end[0] = boxmins[0] + (boxmaxs[0] - boxmins[0]) * positions[i][0];
 			end[1] = boxmins[1] + (boxmaxs[1] - boxmins[1]) * positions[i][1];
 			end[2] = boxmins[2] + (boxmaxs[2] - boxmins[2]) * positions[i][2];
@@ -3977,8 +3977,13 @@ qbool R_CanSeeBox(int numsamples, vec_t eyejitter, vec_t entboxenlarge, vec_t en
 				return true;
 		}
 	}
-	else if (model->brush.TraceLineOfSight(model, start, end, padmins, padmaxs))
-		return true;
+	else
+	{
+		// try center
+		VectorMAM(0.5f, boxmins, 0.5f, boxmaxs, end);
+		if (model->brush.TraceLineOfSight(model, start, end, padmins, padmaxs))
+			return true;
+	}
 
 	// try various random positions
 	for (j = 0; j < numsamples; j++)
