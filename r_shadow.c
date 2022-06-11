@@ -487,6 +487,18 @@ static void r_shadow_start(void)
 	}
 }
 
+static void R_Shadow_BounceGrid_FreeHighPixels(void)
+{
+	r_shadow_bouncegrid_state.highpixels = NULL;
+	if (r_shadow_bouncegrid_state.blurpixels[0]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL; }
+	if (r_shadow_bouncegrid_state.blurpixels[1]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL; }
+	if (r_shadow_bouncegrid_state.u8pixels)      { Mem_Free(r_shadow_bouncegrid_state.u8pixels);      r_shadow_bouncegrid_state.u8pixels      = NULL; }
+	if (r_shadow_bouncegrid_state.fp16pixels)    { Mem_Free(r_shadow_bouncegrid_state.fp16pixels);    r_shadow_bouncegrid_state.fp16pixels    = NULL; }
+	if (r_shadow_bouncegrid_state.photons)       { Mem_Free(r_shadow_bouncegrid_state.photons);       r_shadow_bouncegrid_state.photons       = NULL; }
+	if (r_shadow_bouncegrid_state.photons_tasks) { Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL; }
+	if (r_shadow_bouncegrid_state.slices_tasks)  { Mem_Free(r_shadow_bouncegrid_state.slices_tasks);  r_shadow_bouncegrid_state.slices_tasks  = NULL; }
+}
+
 static void R_Shadow_FreeDeferred(void);
 static void r_shadow_shutdown(void)
 {
@@ -505,14 +517,7 @@ static void r_shadow_shutdown(void)
 	if (r_shadow_scenelightlist)
 		Mem_Free(r_shadow_scenelightlist);
 	r_shadow_scenelightlist = NULL;
-	r_shadow_bouncegrid_state.highpixels = NULL;
-	if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
-	if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
-	if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
-	if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
-	if (r_shadow_bouncegrid_state.photons) Mem_Free(r_shadow_bouncegrid_state.photons); r_shadow_bouncegrid_state.photons = NULL;
-	if (r_shadow_bouncegrid_state.photons_tasks) Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL;
-	if (r_shadow_bouncegrid_state.slices_tasks) Mem_Free(r_shadow_bouncegrid_state.slices_tasks); r_shadow_bouncegrid_state.slices_tasks = NULL;
+	R_Shadow_BounceGrid_FreeHighPixels();
 	memset(&r_shadow_bouncegrid_state, 0, sizeof(r_shadow_bouncegrid_state));
 	r_shadow_attenuationgradienttexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
@@ -579,14 +584,7 @@ static void r_shadow_shutdown(void)
 
 static void r_shadow_newmap(void)
 {
-	r_shadow_bouncegrid_state.highpixels = NULL;
-	if (r_shadow_bouncegrid_state.blurpixels[0]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL; }
-	if (r_shadow_bouncegrid_state.blurpixels[1]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL; }
-	if (r_shadow_bouncegrid_state.u8pixels) { Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL; }
-	if (r_shadow_bouncegrid_state.fp16pixels) { Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL; }
-	if (r_shadow_bouncegrid_state.photons) Mem_Free(r_shadow_bouncegrid_state.photons); r_shadow_bouncegrid_state.photons = NULL;
-	if (r_shadow_bouncegrid_state.photons_tasks) Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL;
-	if (r_shadow_bouncegrid_state.slices_tasks) Mem_Free(r_shadow_bouncegrid_state.slices_tasks); r_shadow_bouncegrid_state.slices_tasks = NULL;
+	R_Shadow_BounceGrid_FreeHighPixels();
 
 	if (r_shadow_bouncegrid_state.texture)    { R_FreeTexture(r_shadow_bouncegrid_state.texture);r_shadow_bouncegrid_state.texture = NULL; }
 	if (r_shadow_lightcorona)                 { R_SkinFrame_MarkUsed(r_shadow_lightcorona); }
@@ -1884,15 +1882,7 @@ static void R_Shadow_BounceGrid_UpdateSpacing(void)
 	{
 		if (r_shadow_bouncegrid_state.texture) { R_FreeTexture(r_shadow_bouncegrid_state.texture);r_shadow_bouncegrid_state.texture = NULL; }
 
-		r_shadow_bouncegrid_state.highpixels = NULL;
-
-		if (r_shadow_bouncegrid_state.blurpixels[0]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL; }
-		if (r_shadow_bouncegrid_state.blurpixels[1]) { Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL; }
-		if (r_shadow_bouncegrid_state.u8pixels) { Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL; }
-		if (r_shadow_bouncegrid_state.fp16pixels) { Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL; }
-		if (r_shadow_bouncegrid_state.photons) { Mem_Free(r_shadow_bouncegrid_state.photons); r_shadow_bouncegrid_state.photons = NULL; }
-		if (r_shadow_bouncegrid_state.photons_tasks) { Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL; }
-		if (r_shadow_bouncegrid_state.slices_tasks) Mem_Free(r_shadow_bouncegrid_state.slices_tasks); r_shadow_bouncegrid_state.slices_tasks = NULL;
+		R_Shadow_BounceGrid_FreeHighPixels();
 
 		r_shadow_bouncegrid_state.numpixels = numpixels;
 	}
@@ -2787,14 +2777,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 			R_FreeTexture(r_shadow_bouncegrid_state.texture);
 			r_shadow_bouncegrid_state.texture = NULL;
 		}
-		r_shadow_bouncegrid_state.highpixels = NULL;
-		if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
-		if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
-		if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
-		if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
-		if (r_shadow_bouncegrid_state.photons) Mem_Free(r_shadow_bouncegrid_state.photons); r_shadow_bouncegrid_state.photons = NULL;
-		if (r_shadow_bouncegrid_state.photons_tasks) Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL;
-		if (r_shadow_bouncegrid_state.slices_tasks) Mem_Free(r_shadow_bouncegrid_state.slices_tasks); r_shadow_bouncegrid_state.slices_tasks = NULL;
+		R_Shadow_BounceGrid_FreeHighPixels();
 		r_shadow_bouncegrid_state.numpixels = 0;
 		r_shadow_bouncegrid_state.numphotons = 0;
 		r_shadow_bouncegrid_state.directional = false;
@@ -2871,16 +2854,7 @@ void R_Shadow_UpdateBounceGridTexture(void)
 
 	// after we compute the static lighting we don't need to keep the highpixels array around
 	if (settings.staticmode)
-	{
-		r_shadow_bouncegrid_state.highpixels = NULL;
-		if (r_shadow_bouncegrid_state.blurpixels[0]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[0]); r_shadow_bouncegrid_state.blurpixels[0] = NULL;
-		if (r_shadow_bouncegrid_state.blurpixels[1]) Mem_Free(r_shadow_bouncegrid_state.blurpixels[1]); r_shadow_bouncegrid_state.blurpixels[1] = NULL;
-		if (r_shadow_bouncegrid_state.u8pixels) Mem_Free(r_shadow_bouncegrid_state.u8pixels); r_shadow_bouncegrid_state.u8pixels = NULL;
-		if (r_shadow_bouncegrid_state.fp16pixels) Mem_Free(r_shadow_bouncegrid_state.fp16pixels); r_shadow_bouncegrid_state.fp16pixels = NULL;
-		if (r_shadow_bouncegrid_state.photons) Mem_Free(r_shadow_bouncegrid_state.photons); r_shadow_bouncegrid_state.photons = NULL;
-		if (r_shadow_bouncegrid_state.photons_tasks) Mem_Free(r_shadow_bouncegrid_state.photons_tasks); r_shadow_bouncegrid_state.photons_tasks = NULL;
-		if (r_shadow_bouncegrid_state.slices_tasks) Mem_Free(r_shadow_bouncegrid_state.slices_tasks); r_shadow_bouncegrid_state.slices_tasks = NULL;
-	}
+		R_Shadow_BounceGrid_FreeHighPixels();
 }
 
 void R_Shadow_RenderMode_VisibleLighting(qbool transparent)
