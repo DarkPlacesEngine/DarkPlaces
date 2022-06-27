@@ -6154,10 +6154,7 @@ void R_Shadow_DrawCoronas(void)
 		rtlight = r_refdef.scene.lights[i];
 		if (rtlight->corona_visibility <= 0)
 			continue;
-		if (gl_flashblend.integer)
-			R_DrawCorona(rtlight, rtlight->corona, rtlight->radius * rtlight->coronasizescale * 2.0f);
-		else
-			R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
+		R_DrawCorona(rtlight, rtlight->corona * r_coronas.value * 0.25f, rtlight->radius * rtlight->coronasizescale);
 	}
 }
 
