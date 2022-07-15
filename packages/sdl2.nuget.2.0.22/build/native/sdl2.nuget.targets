@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" InitialTargets="sdl2_nuget_init">
+  <PropertyGroup Label="Default initializers for properties">
+    <Linkage-sdl2_nuget Condition="'$(Linkage-sdl2_nuget)' == ''">dynamic</Linkage-sdl2_nuget>
+    <CallingConvention-sdl2_nuget Condition="'$(CallingConvention-sdl2_nuget)' == ''">cdecl</CallingConvention-sdl2_nuget>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>HAS_SDL2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)../..//build/native/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)../..//build/native/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="Win32 and dynamic" Condition="'$(Platform.ToLower())' == 'win32' And '$(Linkage-sdl2_nuget.ToLower())' == 'dynamic'">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\dynamic\SDL2test.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\dynamic\SDL2main.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/Win32\dynamic\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Label="x64 and dynamic" Condition="'$(Platform.ToLower())' == 'x64' And '$(Linkage-sdl2_nuget.ToLower())' == 'dynamic'">
+    <Link>
+      <AdditionalDependencies>$(MSBuildThisFileDirectory)../..//build/native/lib/x64\dynamic\SDL2test.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\dynamic\SDL2main.lib;$(MSBuildThisFileDirectory)../..//build/native/lib/x64\dynamic\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)\default-propertiesui.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)\sdl2.nuget-propertiesui-2af5e039-b5f8-4f99-b0b6-6b64e12c6528.xml" />
+  </ItemGroup>
+  <UsingTask TaskName="sdl2_nuget_Contains" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll" TaskFactory="CodeTaskFactory">
+    <ParameterGroup>
+      <Text Output="false" ParameterType="System.String" />
+      <Library Output="false" Required="true" ParameterType="System.String" />
+      <Value Output="false" Required="true" ParameterType="System.String" />
+      <Result Output="true" ParameterType="System.String" />
+    </ParameterGroup>
+    <Task>
+      <Code>Result = ((Text ?? "").Split(';').Contains(Library) ) ? Value : String.Empty;</Code>
+    </Task>
+  </UsingTask>
+  <Target Name="sdl2_nuget_init">
+    <sdl2_nuget_Contains Text="Linkage-dynamic" Library="sdl2_nuget" Value="dynamic" Condition="'$(Linkage-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="Linkage-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+    <sdl2_nuget_Contains Text="CallingConvention-cdecl" Library="sdl2_nuget" Value="cdecl" Condition="'$(CallingConvention-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+    <sdl2_nuget_Contains Text="CallingConvention-stdcall" Library="sdl2_nuget" Value="stdcall" Condition="'$(CallingConvention-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+    <sdl2_nuget_Contains Text="CallingConvention-fastcall" Library="sdl2_nuget" Value="fastcall" Condition="'$(CallingConvention-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+    <sdl2_nuget_Contains Text="CallingConvention-thiscall" Library="sdl2_nuget" Value="thiscall" Condition="'$(CallingConvention-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+    <sdl2_nuget_Contains Text="CallingConvention-clrcall" Library="sdl2_nuget" Value="clrcall" Condition="'$(CallingConvention-sdl2_nuget)'==''">
+      <Output TaskParameter="Result" PropertyName="CallingConvention-sdl2_nuget" />
+    </sdl2_nuget_Contains>
+  </Target>
+</Project>

@@ -92,7 +92,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector2Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]))
 #define Vector2Set(a,b,c) ((a)[0]=(b),(a)[1]=(c))
 #define Vector2Scale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale))
-#define Vector2Normalize2(v,dest) {float ilength = (float) sqrt(DotProduct2((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;}
+#define Vector2Normalize2(v,dest) {float ilength = (float)DotProduct2((v),(v));if (ilength) ilength = 1.0f / sqrt(ilength);dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;}
 
 #define DotProduct4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
 #define Vector4Clear(a) ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)
@@ -100,7 +100,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector4Copy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2],(b)[3]=(a)[3])
 #define Vector4Negate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]),(b)[3]=-((a)[3]))
 #define Vector4Set(a,b,c,d,e) ((a)[0]=(b),(a)[1]=(c),(a)[2]=(d),(a)[3]=(e))
-#define Vector4Normalize2(v,dest) {float ilength = (float) sqrt(DotProduct4((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;dest[3] = (v)[3] * ilength;}
+#define Vector4Normalize2(v,dest) {float ilength = (float)DotProduct4((v),(v));if (ilength) ilength = 1.0f / sqrt(ilength);dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;dest[3] = (v)[3] * ilength;}
 #define Vector4Subtract(a,b,c) ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2],(c)[3]=(a)[3]-(b)[3])
 #define Vector4Add(a,b,c) ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2],(c)[3]=(a)[3]+(b)[3])
 #define Vector4Scale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale),(out)[3] = (in)[3] * (scale))
@@ -117,9 +117,9 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define VectorCopy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
 #define VectorMultiply(a,b,c) ((c)[0]=(a)[0]*(b)[0],(c)[1]=(a)[1]*(b)[1],(c)[2]=(a)[2]*(b)[2])
 #define CrossProduct(a,b,c) ((c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1],(c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2],(c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0])
-#define VectorNormalize(v) {float ilength = (float) sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0f / ilength;(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
-#define VectorNormalize2(v,dest) {float ilength = (float) sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0f / ilength;dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;}
-#define VectorNormalizeDouble(v) {double ilength = sqrt(DotProduct((v),(v)));if (ilength) ilength = 1.0 / ilength;(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
+#define VectorNormalize(v) {float ilength = (float)DotProduct((v),(v));if (ilength) ilength = 1.0f / sqrt(ilength);(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
+#define VectorNormalize2(v,dest) {float ilength = (float)DotProduct((v),(v));if (ilength) ilength = 1.0f / sqrt(ilength);dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;dest[2] = (v)[2] * ilength;}
+#define VectorNormalizeDouble(v) {double ilength = DotProduct((v),(v));if (ilength) ilength = 1.0 / sqrt(ilength);(v)[0] *= ilength;(v)[1] *= ilength;(v)[2] *= ilength;}
 #define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) (sqrt((double)DotProduct(a, a)))
@@ -235,13 +235,8 @@ float r2is = 1.0f / sin(r2);\
 
 #define VectorCopy4(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];(b)[3]=(a)[3];}
 
-vec_t Length (vec3_t v);
-
 /// returns vector length
 float VectorNormalizeLength (vec3_t v);
-
-/// returns vector length
-float VectorNormalizeLength2 (vec3_t v, vec3_t dest);
 
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];

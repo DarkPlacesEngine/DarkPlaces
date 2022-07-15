@@ -27,3 +27,7 @@ Makefile.win
 /build
 /.cache
 *.kdev4
+*.vcxproj.user
+*.pdb
+*.lib
+*.exp
