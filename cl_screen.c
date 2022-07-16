@@ -1773,10 +1773,11 @@ static void SCR_DrawScreen (void)
 	if(!scr_loading) {
 		SCR_DrawBrand();
 
-		SCR_DrawInfobar();
-
 		SCR_DrawTouchscreenOverlay();
 	}
+
+	SCR_DrawInfobar();
+
 	if (r_timereport_active)
 		R_TimeReport("2d");
 
