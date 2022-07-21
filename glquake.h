@@ -29,20 +29,6 @@
 
 //====================================================
 
-//#define DEBUGGL
-
-#ifdef DEBUGGL
-#ifdef USE_GLES2
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = glGetError();if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
-#else
-#define CHECKGLERROR {if (gl_paranoid.integer){if (gl_printcheckerror.integer) Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__);gl_errornumber = qglGetError ? qglGetError() : 0;if (gl_errornumber) GL_PrintError(gl_errornumber, __FILE__, __LINE__);}}
-#endif //USE_GLES2
-extern int gl_errornumber;
-void GL_PrintError(int errornumber, const char *filename, int linenumber);
-#else
-#define CHECKGLERROR
-#endif //DEBUGGL
-
 #ifndef USE_GLES2
 // this is defined if the SDL_opengl.h is included
 #ifndef GL_ZERO
@@ -1049,5 +1035,26 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 
 #define GL_HALF_FLOAT                                    0x140B
 #define GL_NUM_EXTENSIONS                 0x821D
+
+
+//====================================================
+
+//#define DEBUGGL
+
+#ifdef DEBUGGL
+void GL_PrintError(GLenum errornumber, const char *filename, unsigned int linenumber);
+#define CHECKGLERROR { \
+	if (gl_paranoid.integer) { \
+		GLenum gl_errornumber; \
+		if (gl_printcheckerror.integer) \
+			Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__); \
+		if (qglGetError) /* bones_was_here: is this pointer check still necessary? */ \
+			while ((gl_errornumber = qglGetError())) \
+				GL_PrintError(gl_errornumber, __FILE__, __LINE__); \
+	}}
+#else
+#define CHECKGLERROR
+#endif //DEBUGGL
+
 
 #endif //GLQUAKE_H
