@@ -1015,7 +1015,6 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 #define qglViewport glViewport
 #endif //USE_GLES2
 
-#endif //DEBUGGL
 #define GL_COLOR_ATTACHMENT0                0x8CE0
 #define GL_COLOR_ATTACHMENT1                0x8CE1
 #define GL_COLOR_ATTACHMENT2                0x8CE2
@@ -1050,3 +1049,5 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 
 #define GL_HALF_FLOAT                                    0x140B
 #define GL_NUM_EXTENSIONS                 0x821D
+
+#endif //GLQUAKE_H
