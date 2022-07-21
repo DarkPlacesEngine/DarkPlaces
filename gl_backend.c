@@ -27,9 +27,7 @@ float gl_modelviewprojection16f[16];
 qbool gl_modelmatrixchanged;
 
 #ifdef DEBUGGL
-int gl_errornumber = 0;
-
-void GL_PrintError(int errornumber, const char *filename, int linenumber)
+void GL_PrintError(GLenum errornumber, const char *filename, unsigned int linenumber)
 {
 	switch(errornumber)
 	{
