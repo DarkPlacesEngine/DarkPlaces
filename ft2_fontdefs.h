@@ -1,11 +1,21 @@
 #ifndef FT2_PRIVATE_H__
 #define FT2_PRIVATE_H__
 
+#include "draw.h"
+#include "fs.h"
+#include "ft2.h"
+#include "utf8lib.h"
+
 // anything should work, but I recommend multiples of 8
 // since the texture size should be a power of 2
 #define FONT_CHARS_PER_LINE 16
 #define FONT_CHAR_LINES 16
 #define FONT_CHARS_PER_MAP (FONT_CHARS_PER_LINE * FONT_CHAR_LINES)
+
+/* To support higher planes, modify to 0x110000, but that will take more memory
+ * Also see `unicode_bigblocks` in ft2.c
+ */
+#define UNICODE_SIZE 0x10000
 
 typedef struct glyph_slot_s
 {
@@ -35,7 +45,7 @@ struct ft2_font_map_s
 	int                    glyphSize;
 
 	cachepic_t            *pic;
-	qbool               static_tex;
+	qbool                  static_tex;
 	glyph_slot_t           glyphs[FONT_CHARS_PER_MAP];
 
 	// contains the kerning information for the first 256 characters

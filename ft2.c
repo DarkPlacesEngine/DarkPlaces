@@ -28,6 +28,20 @@ static int img_fontmap[256] = {
 };
 
 /*
+ * Some big blocks of Unicode characters, according to
+ *     http://www.unicode.org/Public/UNIDATA/Blocks.txt
+ *
+ * Will use incremental map for them, to avoid performance problem
+ */
+static Uchar unicode_bigblocks[] = { 
+	0x3400, 0x4DBF, 	//   6592  CJK Unified Ideographs Extension A
+	0x4E00, 0x9FFF, 	//  20992  CJK Unified Ideographs
+	0xAC00, 0xD7AF,		//  11184  Hangul Syllables
+	0xE000, 0xF8FF, 	//   6400  Private Use Area
+	//0x10000, 0x10FFFF //         Everything above
+};
+
+/*
 ================================================================================
 CVars introduced with the freetype extension
 ================================================================================
@@ -1200,23 +1214,54 @@ static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size)
 	}
 }
 
+/*
+ * Know if a Unicode character is in a Unicode "big block"
+ */
+qbool is_in_bigblock(Uchar ch)
+{
+	for(int i = 0; i < (int)(sizeof(unicode_bigblocks) / sizeof(Uchar)); i += 2)
+		if(unicode_bigblocks[i] <= ch && ch <= unicode_bigblocks[i + 1])
+			return true;
+	return false;
+}
+
+// FIXME should use per-font/size mapping, actually
+// FIXME not freed when Font_UnloadFont, will segfault after e.g. switching language
+static ft2_font_map_t *character_to_map_mapping[UNICODE_SIZE] = {0};
+static int character_to_map_index_mapping[UNICODE_SIZE] = {0};
+static ft2_font_map_t *current_map = NULL;
+static unsigned long current_map_index = 0;
+// TODO is this necessary?
+static void *current_map_access_mutex = NULL;
+
 static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
 {
 	char map_identifier[MAX_QPATH];
 	unsigned long mapidx = _ch / FONT_CHARS_PER_MAP;
 	unsigned char *data = NULL;
+	long data_size = 0;
 	FT_ULong ch, mapch;
 	int status;
 	int tp;
 	FT_Int32 load_flags;
 	int gpad_l, gpad_r, gpad_t, gpad_b;
+	int data_width, data_height;
 	char vabuf[1024];
 
 	int pitch;
-	int gR, gC; // glyph position: row and column
+	int glyph_row, glyph_column; // glyph position: row and column
 
 	ft2_font_map_t *map, *next;
 	ft2_font_t *usefont;
+
+	// Is the requested character in a "bigblock"
+	qbool in_bigblock = is_in_bigblock(_ch);
+	// Usual mapping procedure, or a new map is needed for bigblock char
+	qbool need_to_init_map = (
+		!in_bigblock ||
+		current_map == NULL ||
+		current_map_index == 0
+	);
 
 	FT_Face fontface;
 
@@ -1224,6 +1269,9 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 
 	if (outmap)
 		*outmap = NULL;
+
+	if(current_map_access_mutex == NULL)
+		current_map_access_mutex = Thread_CreateMutex();
 
 	if (r_font_use_alpha_textures.integer)
 		bytesPerPixel = 1;
@@ -1308,75 +1356,121 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		return false;
 	}
 
-	map = (ft2_font_map_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_map_t));
-	if (!map)
+	if (need_to_init_map)
 	{
-		Con_Printf(CON_ERROR "ERROR: Out of memory when loading fontmap for %s\n", font->name);
-		return false;
-	}
-
-	// create a totally unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
-	dpsnprintf(map_identifier, sizeof(map_identifier),
-		"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u",
-		font->name,
-		(double) mapstart->intSize,
-		(int) load_flags,
-		(double) font->settings->blur,
-		(double) font->settings->outline,
-		(double) font->settings->shadowx,
-		(double) font->settings->shadowy,
-		(double) font->settings->shadowz,
-		(unsigned) mapidx);
-
-	// create a cachepic_t from the data now, or reuse an existing one
-	if (developer_font.integer)
-		Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
-
-	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
-
-	// copy over the information
-	map->size = mapstart->size;
-	map->intSize = mapstart->intSize;
-	map->glyphSize = mapstart->glyphSize;
-	map->sfx = mapstart->sfx;
-	map->sfy = mapstart->sfy;
-
-	pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
-	data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
-	if (!data)
-	{
-		Con_Printf(CON_ERROR "ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
-		Mem_Free(map);
-		return false;
-	}
-	// initialize as white texture with zero alpha
-	tp = 0;
-	while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
-	{
-		if (bytesPerPixel == 4)
+		map = (ft2_font_map_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_map_t));
+		if (!map)
 		{
-			data[tp++] = 0xFF;
-			data[tp++] = 0xFF;
-			data[tp++] = 0xFF;
+			Con_Printf(CON_ERROR "ERROR: Out of memory when loading fontmap for %s\n", font->name);
+			return false;
 		}
-		data[tp++] = 0x00;
+
+		// create a totally unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
+		dpsnprintf(map_identifier, sizeof(map_identifier),
+			"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u",
+			font->name,
+			(double) mapstart->intSize,
+			(int) load_flags,
+			(double) font->settings->blur,
+			(double) font->settings->outline,
+			(double) font->settings->shadowx,
+			(double) font->settings->shadowy,
+			(double) font->settings->shadowz,
+			(unsigned) mapidx);
+
+		// create a cachepic_t from the data now, or reuse an existing one
+		if (developer_font.integer)
+			Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
+
+		Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+
+		// copy over the information
+		map->size = mapstart->size;
+		map->intSize = mapstart->intSize;
+		map->glyphSize = mapstart->glyphSize;
+		map->sfx = mapstart->sfx;
+		map->sfy = mapstart->sfy;
+
+		pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
+		data_size = (FONT_CHAR_LINES * map->glyphSize) * pitch;
+		data = (unsigned char *)Mem_Alloc(font_mempool, data_size);
+		if (!data)
+		{
+			Con_Printf(CON_ERROR "ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
+			Mem_Free(map);
+			return false;
+		}
+		// insert the map
+		map->start = mapidx * FONT_CHARS_PER_MAP;
+		next = mapstart;
+		while(next->next && next->next->start < map->start)
+			next = next->next;
+		map->next = next->next;
+		next->next = map;
+
+		if (in_bigblock)
+			current_map = map;
+	}
+	else
+	{
+		// Will only allocate a "piece" to contain a bigblock char, then put to existing map
+		map = current_map;
+		dpsnprintf(map_identifier, sizeof(map_identifier),
+			"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u_%i",
+			font->name,
+			(double) mapstart->intSize,
+			(int) load_flags,
+			(double) font->settings->blur,
+			(double) font->settings->outline,
+			(double) font->settings->shadowx,
+			(double) font->settings->shadowy,
+			(double) font->settings->shadowz,
+			(unsigned) mapidx,
+			_ch);
+		pitch = map->glyphSize * bytesPerPixel;
+		data_size = map->glyphSize * pitch;
+		data = (unsigned char *)Mem_Alloc(font_mempool, data_size);
+		if (!data)
+		{
+			Con_Printf(CON_ERROR "ERROR: Failed to allocate memory for font %s glyph piece %i at #%lu\n", font->name, _ch, current_map_index);
+			return false;
+		}
+		Font_Postprocess(font, NULL, 0, bytesPerPixel, map->size*2, map->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+
+	}
+
+	// initialize as white texture with zero alpha
+	for (long i = 0; i < data_size; i += 4)
+	{
+		data[i] = data[i + 1] = data[i + 2] = 0xff;
+		data[i + 3] = 0;
 	}
 
 	memset(map->width_of, 0, sizeof(map->width_of));
 
-	// insert the map
-	map->start = mapidx * FONT_CHARS_PER_MAP;
-	next = mapstart;
-	while(next->next && next->next->start < map->start)
-		next = next->next;
-	map->next = next->next;
-	next->next = map;
+	if (in_bigblock)
+	{
+		Thread_LockMutex(current_map_access_mutex);
+		ch = _ch;
+		// records
+		character_to_map_mapping[ch] = current_map;
+		character_to_map_index_mapping[ch] = current_map_index;
+		// used to calculate offset on the map
+		glyph_row = current_map_index % FONT_CHARS_PER_LINE;
+		glyph_column = current_map_index / FONT_CHARS_PER_LINE;
+	}
+	else
+	{
+		ch = map->start;
+		glyph_row = 0;
+		glyph_column = 0;
+	}
 
-	gR = 0;
-	gC = -1;
-	for (ch = map->start;
-	     ch < (FT_ULong)map->start + FONT_CHARS_PER_MAP;
-	     ++ch)
+	/*
+	 * If in_bigblock, only render one char; otherwise, render the entire map.
+	 * Termination condition is in the end.
+	 */
+	while (true)
 	{
 		FT_ULong glyphIndex;
 		int w, h, x, y;
@@ -1387,21 +1481,18 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		FT_Face face;
 		int pad_l, pad_r, pad_t, pad_b;
 
-		mapch = ch - map->start;
+		mapch = in_bigblock ? current_map_index : ch - map->start;
 
 		if (developer_font.integer)
 			Con_DPrint("glyphinfo: ------------- GLYPH INFO -----------------\n");
 
-		++gC;
-		if (gC >= FONT_CHARS_PER_LINE)
-		{
-			gC -= FONT_CHARS_PER_LINE;
-			++gR;
-		}
-
 		if (data)
 		{
-			imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
+			imagedata = data;
+			// offset of `data` is only needed in usual mapping
+			if (need_to_init_map)
+				imagedata += glyph_row    * map->glyphSize * pitch
+					   + glyph_column * map->glyphSize * bytesPerPixel;
 			imagedata += gpad_t * pitch + gpad_l * bytesPerPixel;
 		}
 		//status = qFT_Load_Char(face, ch, FT_LOAD_RENDER);
@@ -1579,9 +1670,9 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			//double mWidth = (glyph->metrics.width >> 6) / map->size;
 			//double mHeight = (glyph->metrics.height >> 6) / map->size;
 
-			mapglyph->txmin = ( (double)(gC * map->glyphSize) + (double)(gpad_l - pad_l) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
+			mapglyph->txmin = ( (double)(glyph_column * map->glyphSize) + (double)(gpad_l - pad_l) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
 			mapglyph->txmax = mapglyph->txmin + (double)(bmp->width + pad_l + pad_r) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
-			mapglyph->tymin = ( (double)(gR * map->glyphSize) + (double)(gpad_r - pad_r) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
+			mapglyph->tymin = ( (double)(glyph_row * map->glyphSize) + (double)(gpad_r - pad_r) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
 			//mapglyph->vxmin = bearingX;
 			//mapglyph->vxmax = bearingX + mWidth;
@@ -1599,7 +1690,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 
 			if (developer_font.integer)
 			{
-				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, gC, gR);
+				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, glyph_column, glyph_row);
 				Con_DPrintf("glyphinfo:   %f, %f, %lu\n", bearingX, map->sfx, (unsigned long)glyph->metrics.horiBearingX);
 				if (ch >= 32 && ch <= 128)
 					Con_DPrintf("glyphinfo:   Character: %c\n", (int)ch);
@@ -1613,36 +1704,63 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			}
 		}
 		map->glyphs[mapch].image = false;
+
+		if (in_bigblock)
+			break;
+		if (++ch >= (FT_ULong)map->start + FONT_CHARS_PER_MAP)
+			break;
+		if (++glyph_column >= FONT_CHARS_PER_LINE)
+		{
+			glyph_column = 0;
+			// ++glyph_row;
+			if (++glyph_row >= FONT_CHAR_LINES)
+				break;
+		}
 	}
 
+	if (need_to_init_map)
 	{
-		int w = map->glyphSize * FONT_CHARS_PER_LINE;
-		int h = map->glyphSize * FONT_CHAR_LINES;
+		data_width = map->glyphSize * FONT_CHARS_PER_LINE;
+		data_height = map->glyphSize * FONT_CHAR_LINES;
 		// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
-		map->pic = Draw_NewPic(map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | TEXF_CLAMP | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
+		map->pic = Draw_NewPic(map_identifier, data_width, data_height, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | TEXF_CLAMP | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
+	}
+	else
+	{
+		// Update the existing map texture, to contain the new bigblock character
+		rtexture_t *texture = Draw_GetPicTexture(map->pic);
+		// TODO I don't know which is corrent
+		data_width = map->glyphSize; //R_TextureWidth(texture) / FONT_CHARS_PER_LINE;
+		data_height = map->glyphSize; //R_TextureHeight(texture) / FONT_CHAR_LINES;
+		// TODO It trashes the map
+		//R_UpdateTexture(texture, data, glyph_column * data_width, glyph_row * data_height, 0, data_width, data_height, 1, 0);
+	}
 
-		if (r_font_diskcache.integer >= 1)
+	if (r_font_diskcache.integer >= 1)
+	{
+		// swap to BGRA for tga writing...
+		for (long i = 0; i < data_size; i += 4)
 		{
-			// swap to BGRA for tga writing...
-			int s = w * h;
-			int x;
-			int b;
-			for (x = 0;x < s;x++)
-			{
-				b = data[x*4+0];
-				data[x*4+0] = data[x*4+2];
-				data[x*4+2] = b;
-			}
-			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), w, h, data);
-#ifndef USE_GLES2
-			if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
-				R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
-#endif
+			char b = data[i];
+			data[i] = data[i + 2];
+			data[i + 2] = b;
 		}
+		Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), data_width, data_height, data);
+#ifndef USE_GLES2
+		if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
+			R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
+#endif
 	}
 
 	if(data)
 		Mem_Free(data);
+
+	if (in_bigblock)
+	{
+		if (++current_map_index >= FONT_CHARS_PER_MAP)
+			current_map_index = 0;
+		Thread_UnlockMutex(current_map_access_mutex);
+	}
 
 	if (!Draw_IsPicLoaded(map->pic))
 	{
@@ -1676,4 +1794,33 @@ ft2_font_map_t *FontMap_FindForChar(ft2_font_map_t *start, Uchar ch)
 	if (start && start->start > ch)
 		return NULL;
 	return start;
+}
+
+/*
+ * Get the map & char index of a character by assigning to given pointers.
+ * Will search through cached maps, or load one on demand if not present.
+ */
+void FontMap_GetForChar(ft2_font_t *font, int map_index, ft2_font_map_t *start,
+			Uchar ch, ft2_font_map_t **outmap, int *mapch)
+{
+	if(ch >= UNICODE_SIZE)
+	{
+		*outmap = NULL;
+		*mapch = 0;
+		return;
+	}
+	if(is_in_bigblock(ch))
+	{
+		*outmap = character_to_map_mapping[ch];
+		if(*outmap == NULL)
+			Font_LoadMap(font, start, ch, outmap);
+		*mapch = character_to_map_index_mapping[ch];
+	}
+	else
+	{
+		*outmap = FontMap_FindForChar(start, ch);
+		if (*outmap == NULL)
+			Font_LoadMapForIndex(font, map_index, ch, outmap);
+		*mapch = ch - (*outmap)->start;
+	}
 }

@@ -1046,18 +1046,9 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			}
 			x += width_of[ch] * dw;
 		} else {
-			if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
-			{
-				map = FontMap_FindForChar(fontmap, ch);
-				if (!map)
-				{
-					if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
-						break;
-					if (!map)
-						break;
-				}
-			}
-			mapch = ch - map->start;
+			FontMap_GetForChar(ft2, map_index, fontmap, ch, &map, &mapch);
+			if (!map)
+				break;
 			if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, NULL))
 				x += kx * dw;
 			x += map->glyphs[mapch].advance_x * dw;
@@ -1259,27 +1250,13 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
 				x += width_of[ch] * dw;
 			} else {
-				if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
+				FontMap_GetForChar(ft2, map_index, fontmap, ch, &map, &mapch);
+				if (!map)
 				{
-					// find the new map
-					map = FontMap_FindForChar(fontmap, ch);
-					if (!map)
-					{
-						if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
-						{
-							shadow = -1;
-							break;
-						}
-						if (!map)
-						{
-							// this shouldn't happen
-							shadow = -1;
-							break;
-						}
-					}
+					shadow = -1;
+					break;
 				}
 
-				mapch = ch - map->start;
 				thisw = map->glyphs[mapch].advance_x;
 
 				//x += ftbase_x;
