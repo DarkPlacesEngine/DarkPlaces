@@ -2151,14 +2151,8 @@ const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial)
 void Cmd_ClearCSQCCommands (cmd_state_t *cmd)
 {
 	cmd_function_t *func;
-	cmd_function_t **next = &cmd->userdefined->qc_functions;
-	
-	while(*next)
-	{
-		func = *next;
-		*next = func->next;
-		Z_Free(func);
-	}
+	for (func = cmd->userdefined->qc_functions; func; func = func->next)
+		func->qcfunc = false;
 }
 
 extern cvar_t sv_cheats;
@@ -2264,6 +2258,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		{
 			if(cmd->Handle(cmd, func, text, src))
 				goto done;
+			break;
 		}
 	}
 
@@ -2273,6 +2268,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 		{
 			if(cmd->Handle(cmd, func, text, src))
 				goto done;
+			break;
 		}
 	}
 

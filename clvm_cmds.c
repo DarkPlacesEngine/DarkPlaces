@@ -2401,8 +2401,18 @@ static void VM_CL_setlistener (prvm_prog_t *prog)
 //#352 void(string cmdname) registercommand (EXT_CSQC)
 static void VM_CL_registercmd (prvm_prog_t *prog)
 {
+	char *t;
 	VM_SAFEPARMCOUNT(1, VM_CL_registercmd);
 	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
+	{
+		size_t alloclen;
+
+		alloclen = strlen(PRVM_G_STRING(OFS_PARM0)) + 1;
+		t = (char *)Z_Malloc(alloclen);
+		memcpy(t, PRVM_G_STRING(OFS_PARM0), alloclen);
+		Cmd_AddCommand(CF_CLIENT, t, NULL, "console command created by QuakeC");
+	}
+	else
 		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 

@@ -359,11 +359,8 @@ static void sbar_newmap(void)
 
 void Sbar_Init (void)
 {
-	if(gamemode == GAME_NORMAL) // Workaround so Quake doesn't trample on Xonotic.
-	{
-		Cmd_AddCommand(CF_CLIENT, "+showscores", Sbar_ShowScores_f, "show scoreboard");
-		Cmd_AddCommand(CF_CLIENT, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
-	}
+	Cmd_AddCommand(CF_CLIENT, "+showscores", Sbar_ShowScores_f, "show scoreboard");
+	Cmd_AddCommand(CF_CLIENT, "-showscores", Sbar_DontShowScores_f, "hide scoreboard");
 	Cvar_RegisterVariable(&cl_showfps);
 	Cvar_RegisterVariable(&cl_showsound);
 	Cvar_RegisterVariable(&cl_showblur);
@@ -386,7 +383,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVirtual(&cl_showdate, "showdate");
 	Cvar_RegisterVirtual(&cl_showdate_format, "showdate_format");
 	Cvar_RegisterVirtual(&cl_showtex, "showtex");
-	
+
 	Cvar_RegisterVariable(&sbar_alpha_bg);
 	Cvar_RegisterVariable(&sbar_alpha_fg);
 	Cvar_RegisterVariable(&sbar_hudselector);
