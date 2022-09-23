@@ -5,7 +5,7 @@ improves and builds upon the original 1996 engine by adding modern rendering
 features, and expanding upon the engine's native game code language QuakeC, as
 well as supporting additional map and model formats.
 
-Developed by LadyHavoc. See CREDITS.md for a list of contributors.
+Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 
 ## Help/support
 
@@ -55,6 +55,10 @@ Input `make help` for options.
 ### Windows (Visual Studio)
 
 Instructions coming soon.
+
+## Contributing
+
+[DarkPlaces Contributing Guidelines](CONTRIBUTING.md)
 
 ## Documentation
 
