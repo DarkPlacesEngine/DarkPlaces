@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ENTMASK_ENGINE				1
 #define ENTMASK_ENGINEVIEWMODELS	2
 #define ENTMASK_NORMAL				4
+#define ENTMASK_SKIPRENDER			8 // DP_CSQC_ENTITYSKIPRENDER
 
 #define VF_MIN			1	//(vector)
 #define VF_MIN_X		2	//(float)

@@ -754,25 +754,27 @@ static void VM_CL_R_AddEntities (prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1, VM_CL_R_AddEntities);
 	drawmask = (int)PRVM_G_FLOAT(OFS_PARM0);
 	CSQC_RelinkAllEntities(drawmask);
-
-	PRVM_clientglobalfloat(time) = cl.time;
-	for(i=1;i<prog->num_edicts;i++)
+	if(!(drawmask & ENTMASK_SKIPRENDER))
 	{
-		// so we can easily check if CSQC entity #edictnum is currently drawn
-		cl.csqcrenderentities[i].entitynumber = 0;
-		ed = &prog->edicts[i];
-		if(ed->free)
-			continue;
-		CSQC_Think(ed);
-		if(ed->free)
-			continue;
-		// note that for RF_USEAXIS entities, Predraw sets v_forward/v_right/v_up globals that are read by CSQC_AddRenderEdict
-		CSQC_Predraw(ed);
-		if(ed->free)
-			continue;
-		if(!((int)PRVM_clientedictfloat(ed, drawmask) & drawmask))
-			continue;
-		CSQC_AddRenderEdict(ed, i);
+		PRVM_clientglobalfloat(time) = cl.time;
+		for(i=1;i<prog->num_edicts;i++)
+		{
+			// so we can easily check if CSQC entity #edictnum is currently drawn
+			cl.csqcrenderentities[i].entitynumber = 0;
+			ed = &prog->edicts[i];
+			if(ed->free)
+				continue;
+			CSQC_Think(ed);
+			if(ed->free)
+				continue;
+			// note that for RF_USEAXIS entities, Predraw sets v_forward/v_right/v_up globals that are read by CSQC_AddRenderEdict
+			CSQC_Predraw(ed);
+			if(ed->free)
+				continue;
+			if(!((int)PRVM_clientedictfloat(ed, drawmask) & drawmask))
+				continue;
+			CSQC_AddRenderEdict(ed, i);
+		}
 	}
 
 	// callprofile fixing hack: do not include this time in what is counted for CSQC_UpdateView

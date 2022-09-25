@@ -1476,3 +1476,10 @@ vector gettaginfo_right;
 vector gettaginfo_up;
 float checkpvs(vector viewpos, entity viewee) = #240;
 float mod(float dividend, float divisor) = #245;
+
+//DP_CSQC_ENTITYSKIPRENDER
+//idea: Mario
+//darkplaces implementation: Mario
+//Expansion to addentities which skips rendering entities, allowing it to function as a barebones means of rendering the world.
+//Useful for access to addentity which renders individual entities without the overhead of additional logic operations.
+float MASK_SKIPRENDER = 8;
