@@ -971,7 +971,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s, client_t *client)
 									? sv_cullentities_trace_delay_players.value
 									: sv_cullentities_trace_delay.value
 							);
-					else if (host.realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
+					else if ((float)host.realtime > svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number])
 					{
 						sv.writeentitiestoclient_stats_culled_trace++;
 						return;
@@ -1045,7 +1045,12 @@ void SV_AddCameraEyes(void)
 		for(k = 0; k < sv.writeentitiestoclient_numeyes; ++k)
 		if(eye_levels[k] <= MAX_EYE_RECURSION)
 		{
-			if(SV_CanSeeBox(sv_cullentities_trace_samples.integer, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[k], mi, ma))
+			if(SV_CanSeeBox(sv_cullentities_trace_samples_extra.integer, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[k], mi, ma))
+				svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[cameras[j]] = host.realtime + sv_cullentities_trace_delay.value;
+
+			// bones_was_here: this use of visibletime doesn't conflict because sv_cullentities_trace doesn't consider portal entities
+			// the explicit cast prevents float precision differences that cause the condition to fail
+			if ((float)host.realtime <= svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[cameras[j]])
 			{
 				eye_levels[sv.writeentitiestoclient_numeyes] = eye_levels[k] + 1;
 				VectorCopy(camera_origins[j], sv.writeentitiestoclient_eyes[sv.writeentitiestoclient_numeyes]);
