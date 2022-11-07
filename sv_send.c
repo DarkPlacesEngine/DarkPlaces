@@ -956,13 +956,12 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s, client_t *client)
 					s->specialvisibilityradius
 						? sv_cullentities_trace_samples_extra.integer
 						: sv_cullentities_trace_samples.integer;
-				float enlarge = sv_cullentities_trace_enlarge.value;
 
 				if(samples > 0)
 				{
 					int eyeindex;
 					for (eyeindex = 0;eyeindex < sv.writeentitiestoclient_numeyes;eyeindex++)
-						if(SV_CanSeeBox(samples, sv_cullentities_trace_eyejitter.value, enlarge, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
+						if(SV_CanSeeBox(samples, sv_cullentities_trace_eyejitter.value, sv_cullentities_trace_enlarge.value, sv_cullentities_trace_expand.value, sv.writeentitiestoclient_eyes[eyeindex], ed->priv.server->cullmins, ed->priv.server->cullmaxs))
 							break;
 					if(eyeindex < sv.writeentitiestoclient_numeyes)
 						svs.clients[sv.writeentitiestoclient_clientnumber].visibletime[s->number] =
@@ -995,14 +994,11 @@ void SV_AddCameraEyes(void)
 	prvm_prog_t *prog = SVVM_prog;
 	int e, i, j, k;
 	prvm_edict_t *ed;
-	static int cameras[MAX_LEVELNETWORKEYES];
-	static vec3_t camera_origins[MAX_LEVELNETWORKEYES];
-	static int eye_levels[MAX_CLIENTNETWORKEYES];
+	int cameras[MAX_LEVELNETWORKEYES];
+	vec3_t camera_origins[MAX_LEVELNETWORKEYES];
+	int eye_levels[MAX_CLIENTNETWORKEYES] = {0};
 	int n_cameras = 0;
 	vec3_t mi, ma;
-
-	for(i = 0; i < sv.writeentitiestoclient_numeyes; ++i)
-		eye_levels[i] = 0;
 
 	// check line of sight to portal entities and add them to PVS
 	for (e = 1, ed = PRVM_NEXT_EDICT(prog->edicts);e < prog->num_edicts;e++, ed = PRVM_NEXT_EDICT(ed))
