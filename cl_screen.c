@@ -695,15 +695,73 @@ SCR_DrawConsole
 void SCR_DrawConsole (void)
 {
 	scr_con_margin_bottom = SCR_InfobarHeight();
+	//Why do we need a fking console when we connect to server? Small info rect is enough. Nasty bc I dont want to mess with globals. //KleskBY
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
-		// full screen
-		Con_DrawConsole (vid_conheight.integer - scr_con_margin_bottom);
+		if ((cls.state == ca_connected || cls.connect_trying))
+		{
+			if (scr_con_current)
+			{
+				Con_DrawConsole(vid_conheight.integer - scr_con_margin_bottom);
+			}
+			else
+			{
+				Con_DrawNotify();
+				
+				int w, h, sw, sh, f, x, y;
+				cachepic_t* pic = Draw_CachePic_Flags(scr_loadingscreen_picture.string, CACHEPICFLAG_NOTPERSISTENT);
+				w = Draw_GetPicWidth(pic);
+				h = Draw_GetPicHeight(pic);
+
+				// apply scale
+				w *= scr_loadingscreen_scale.value;
+				h *= scr_loadingscreen_scale.value;
+
+				// apply scale base
+				if (scr_loadingscreen_scale_base.integer)
+				{
+					w *= vid_conwidth.integer / (float)vid.width;
+					h *= vid_conheight.integer / (float)vid.height;
+				}
+
+				// apply scale limit
+				sw = w / vid_conwidth.integer;
+				sh = h / vid_conheight.integer;
+				f = 1;
+				switch (scr_loadingscreen_scale_limit.integer)
+				{
+				case 1:
+					f = max(sw, sh);
+					break;
+				case 2:
+					f = min(sw, sh);
+					break;
+				case 3:
+					f = sw;
+					break;
+				case 4:
+					f = sh;
+					break;
+				}
+				if (f > 1)
+				{
+					w /= f;
+					h /= f;
+				}
+
+				x = (vid_conwidth.integer - w) / 2;
+				y = (vid_conheight.integer - h) / 2;
+
+				DrawQ_Pic(x, y, Draw_CachePic_Flags(scr_loadingscreen_picture.string, CACHEPICFLAG_NOTPERSISTENT), sw, sh, 1, 1, 1, 1, 0);
+			}
+		}
+		else Con_DrawConsole(vid_conheight.integer - scr_con_margin_bottom);
 	}
-	else if (scr_con_current)
-		Con_DrawConsole (min((int)scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
 	else
-		con_vislines = 0;
+	{
+		if (scr_con_current) Con_DrawConsole(min((int)scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
+		else con_vislines = 0;
+	}
 }
 
 qbool scr_loading = false;
@@ -2416,6 +2474,13 @@ void CL_UpdateScreen(void)
 		VID_SetMouse(vid.fullscreen, vid_mouse.integer && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0 && (!cls.demoplayback || cl_demo_mousegrab.integer) && !vid_touchscreen.integer, !vid_touchscreen.integer);
 
 	VID_Finish();
+	
+	#ifdef WIN32
+	if (vid_fullscreen.integer && GetAsyncKeyState(VK_MENU) && GetAsyncKeyState(VK_TAB))  //KleskBY Alt-Tab Fix //I know it is nasty as fk, it is a VERY serious bug. Fix it yourself then!
+	{
+		ShowWindow(FindWindowA("SDL_app", NULL), SW_MINIMIZE); 
+	}
+	#endif
 }
 
 void CL_Screen_NewMap(void)
