@@ -442,6 +442,26 @@ void VID_SetMouse(qbool fullscreengrab, qbool relative, qbool hidecursor)
 	{
 		vid_usinghidecursor = hidecursor;
 		SDL_ShowCursor( hidecursor ? SDL_DISABLE : SDL_ENABLE);
+		
+		//KleskBY //FIX: Sometimes cursor still visible in Windows and if you click game alt-tab. Is this code even safe?
+		Sleep(1);
+		int cursorState = SDL_ShowCursor(hidecursor ? SDL_DISABLE : SDL_ENABLE);
+		if (hidecursor)
+		{
+			while (cursorState != SDL_DISABLE)
+			{
+				cursorState = SDL_ShowCursor(SDL_DISABLE);
+				Sleep(1);
+			}
+		}
+		else
+		{
+			while (cursorState != SDL_ENABLE)
+			{
+				cursorState = SDL_ShowCursor(SDL_ENABLE);
+				Sleep(1);
+			}
+		}
 	}
 #endif
 }
