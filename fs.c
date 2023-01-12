@@ -321,6 +321,7 @@ typedef struct pack_s
 	int ignorecase;  ///< PK3 ignores case
 	int numfiles;
 	qbool vpack;
+	qbool dlcache;
 	packfile_t *files;
 } pack_t;
 //@}
@@ -1118,7 +1119,7 @@ FS_AddPack_Fullpath
  * plain directories.
  *
  */
-static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbool *already_loaded, qbool keep_plain_dirs)
+static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbool *already_loaded, qbool keep_plain_dirs, qbool dlcache)
 {
 	searchpath_t *search;
 	pack_t *pak = NULL;
@@ -1194,6 +1195,7 @@ static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbo
 			fs_searchpaths = search;
 		}
 		search->pack = pak;
+		search->pack->dlcache = dlcache;
 		if(pak->vpack)
 		{
 			dpsnprintf(search->filename, sizeof(search->filename), "%s/", pakfile);
@@ -1232,7 +1234,7 @@ FS_AddPack
  * If keep_plain_dirs is set, the pack will be added AFTER the first sequence of
  * plain directories.
  */
-qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_dirs)
+qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_dirs, qbool dlcache)
 {
 	char fullpath[MAX_OSPATH];
 	int index;
@@ -1251,7 +1253,7 @@ qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_di
 
 	dpsnprintf(fullpath, sizeof(fullpath), "%s%s", search->filename, pakfile);
 
-	return FS_AddPack_Fullpath(fullpath, pakfile, already_loaded, keep_plain_dirs);
+	return FS_AddPack_Fullpath(fullpath, pakfile, already_loaded, keep_plain_dirs, dlcache);
 }
 
 
@@ -1280,7 +1282,7 @@ static void FS_AddGameDirectory (const char *dir)
 	{
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pak"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false, false);
 		}
 	}
 
@@ -1290,7 +1292,7 @@ static void FS_AddGameDirectory (const char *dir)
 		if (!strcasecmp(FS_FileExtension(list.strings[i]), "pk3") || !strcasecmp(FS_FileExtension(list.strings[i]), "obb") || !strcasecmp(FS_FileExtension(list.strings[i]), "pk3dir")
 			|| !strcasecmp(FS_FileExtension(list.strings[i]), "dpk") || !strcasecmp(FS_FileExtension(list.strings[i]), "dpkdir"))
 		{
-			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false);
+			FS_AddPack_Fullpath(list.strings[i], list.strings[i] + strlen(dir), NULL, false, false);
 		}
 	}
 
@@ -1396,6 +1398,46 @@ static void FS_ClearSearchPath (void)
 			Mem_Free(search->pack);
 		}
 		Mem_Free(search);
+	}
+}
+
+/*
+================
+FS_UnloadPacks_dlcache
+
+Like FS_ClearSearchPath() but unloads only the packs loaded from dlcache
+so we don't need to use a full FS_Rescan() to prevent
+content from the previous server and/or map from interfering with the next
+================
+*/
+void FS_UnloadPacks_dlcache(void)
+{
+	searchpath_t *search = fs_searchpaths, *searchprev = fs_searchpaths, *searchnext;
+
+	while (search)
+	{
+		searchnext = search->next;
+		if (search->pack && search->pack->dlcache)
+		{
+			Con_DPrintf("Unloading pack: %s\n", search->pack->shortname);
+
+			// remove it from the search path list
+			if (search == fs_searchpaths)
+				fs_searchpaths = search->next;
+			else
+				searchprev->next = search->next;
+
+			// close the file
+			FILEDESC_CLOSE(search->pack->handle);
+			// free any memory associated with it
+			if (search->pack->files)
+				Mem_Free(search->pack->files);
+			Mem_Free(search->pack);
+			Mem_Free(search);
+		}
+		else
+			searchprev = search;
+		search = searchnext;
 	}
 }
 

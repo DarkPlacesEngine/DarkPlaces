@@ -583,7 +583,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 
 	if(ok && di->loadtype == LOADTYPE_PAK)
 	{
-		ok = FS_AddPack(di->filename, NULL, true);
+		ok = FS_AddPack(di->filename, NULL, true, true);
 		if(!ok)
 			CLEAR_AND_RETRY();
 	}
@@ -986,7 +986,7 @@ static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspe
 				if(loadtype == LOADTYPE_PAK)
 				{
 					qbool already_loaded;
-					if(FS_AddPack(fn, &already_loaded, true))
+					if(FS_AddPack(fn, &already_loaded, true, true))
 					{
 						Con_DPrintf("%s already exists, not downloading!\n", fn);
 						if(already_loaded)
