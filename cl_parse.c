@@ -1690,8 +1690,11 @@ static void CL_ParseServerInfo (void)
 	{
 		SCR_BeginLoadingPlaque(false);
 		S_StopAllSounds();
+		// prevent dlcache assets from the previous map from interfering with this one
+		FS_UnloadPacks_dlcache();
 		// free q3 shaders so that any newly downloaded shaders will be active
-		Mod_FreeQ3Shaders();
+		// bones_was_here: we free the q3 shaders later in CL_SignonReply
+		//Mod_FreeQ3Shaders();
 	}
 
 	// check memory integrity

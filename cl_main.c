@@ -387,11 +387,13 @@ void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 
 	Con_DPrintf("CL_Disconnect\n");
 
-    Cvar_SetValueQuick(&csqc_progcrc, -1);
+	Cvar_SetValueQuick(&csqc_progcrc, -1);
 	Cvar_SetValueQuick(&csqc_progsize, -1);
 	CL_VM_ShutDown();
-// stop sounds (especially looping!)
-	S_StopAllSounds ();
+	// stop sounds (especially looping!)
+	S_StopAllSounds();
+	// prevent dlcache assets from this server from interfering with the next one
+	FS_UnloadPacks_dlcache();
 
 	cl.parsingtextexpectingpingforscores = 0; // just in case no reply has come yet
 

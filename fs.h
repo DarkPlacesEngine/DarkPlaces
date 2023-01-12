@@ -61,7 +61,7 @@ typedef struct vfs_s
 // IMPORTANT: the file path is automatically prefixed by the current game directory for
 // each file created by FS_WriteFile, or opened in "write" or "append" mode by FS_OpenRealFile
 
-qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_dirs); // already_loaded may be NULL if caller does not care
+qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_dirs, qbool dlcache); // already_loaded may be NULL if caller does not care
 const char *FS_WhichPack(const char *filename);
 void FS_CreatePath (char *path);
 int FS_SysOpenFD(const char *filepath, const char *mode, qbool nonblocking); // uses absolute path
@@ -102,6 +102,7 @@ extern int fs_all_gamedirs_count;
 qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool complain, qbool failmissing);
 qbool FS_IsRegisteredQuakePack(const char *name);
 int FS_CRCFile(const char *filename, size_t *filesizepointer);
+void FS_UnloadPacks_dlcache(void);
 void FS_Rescan(void);
 
 typedef struct fssearch_s
