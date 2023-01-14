@@ -371,7 +371,7 @@ extern	keydest_t	key_dest;
 extern	int			key_consoleactive;
 extern	char		*keybindings[MAX_BINDMAPS][MAX_KEYS];
 
-extern int chat_mode; // 0 for say, 1 for say_team, -1 for command
+extern signed char chat_mode; // 0 for say, 1 for say_team, -1 for command
 extern char chat_buffer[MAX_INPUTLINE];
 extern int	chat_bufferpos;
 
