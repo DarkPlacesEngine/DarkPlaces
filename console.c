@@ -719,6 +719,8 @@ Con_MessageMode_f
 */
 static void Con_MessageMode_f(cmd_state_t *cmd)
 {
+	if (cls.demoplayback)
+		return;
 	key_dest = key_message;
 	chat_mode = 0; // "say"
 	if(Cmd_Argc(cmd) > 1)
@@ -736,6 +738,8 @@ Con_MessageMode2_f
 */
 static void Con_MessageMode2_f(cmd_state_t *cmd)
 {
+	if (cls.demoplayback)
+		return;
 	key_dest = key_message;
 	chat_mode = 1; // "say_team"
 	if(Cmd_Argc(cmd) > 1)
