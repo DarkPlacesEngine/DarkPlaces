@@ -711,18 +711,12 @@ void Con_ClearNotify (void)
 			CON_LINES(i).mask |= CON_MASK_HIDENOTIFY;
 }
 
-
-/*
-================
-Con_MessageMode_f
-================
-*/
-static void Con_MessageMode_f(cmd_state_t *cmd)
+static void Con_MsgCmdMode(cmd_state_t *cmd, signed char mode)
 {
-	if (cls.demoplayback)
+	if (cls.demoplayback && mode >= 0)
 		return;
 	key_dest = key_message;
-	chat_mode = 0; // "say"
+	chat_mode = mode;
 	if(Cmd_Argc(cmd) > 1)
 	{
 		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
@@ -730,23 +724,28 @@ static void Con_MessageMode_f(cmd_state_t *cmd)
 	}
 }
 
+/*
+================
+Con_MessageMode_f
+
+"say"
+================
+*/
+static void Con_MessageMode_f(cmd_state_t *cmd)
+{
+	Con_MsgCmdMode(cmd, 0);
+}
 
 /*
 ================
 Con_MessageMode2_f
+
+"say_team"
 ================
 */
 static void Con_MessageMode2_f(cmd_state_t *cmd)
 {
-	if (cls.demoplayback)
-		return;
-	key_dest = key_message;
-	chat_mode = 1; // "say_team"
-	if(Cmd_Argc(cmd) > 1)
-	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferpos = (unsigned int)strlen(chat_buffer);
-	}
+	Con_MsgCmdMode(cmd, 1);
 }
 
 /*
@@ -756,13 +755,7 @@ Con_CommandMode_f
 */
 static void Con_CommandMode_f(cmd_state_t *cmd)
 {
-	key_dest = key_message;
-	if(Cmd_Argc(cmd) > 1)
-	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferpos = (unsigned int)strlen(chat_buffer);
-	}
-	chat_mode = -1; // command
+	Con_MsgCmdMode(cmd, -1);
 }
 
 /*

@@ -694,7 +694,7 @@ Interactive line editing and console scrollback
 ====================
 */
 
-int chat_mode; // 0 for say, 1 for say_team, -1 for command
+signed char chat_mode; // 0 for say, 1 for say_team, -1 for command
 char chat_buffer[MAX_INPUTLINE];
 int chat_bufferpos = 0;
 
