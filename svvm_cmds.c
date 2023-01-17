@@ -1158,7 +1158,12 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 	}
 
 	VectorCopy (PRVM_serveredictvector(ent, origin), end);
-	end[2] -= 256;
+	if (sv.worldmodel->brush.isq3bsp)
+		end[2] -= 4096;
+	else if (sv.worldmodel->brush.isq2bsp)
+		end[2] -= 128;
+	else
+		end[2] -= 256; // Quake, QuakeWorld
 
 	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
 		SV_NudgeOutOfSolid(ent);

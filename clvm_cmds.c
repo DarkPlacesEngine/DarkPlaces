@@ -547,7 +547,12 @@ static void VM_CL_droptofloor (prvm_prog_t *prog)
 	VectorCopy(PRVM_clientedictvector(ent, mins), mins);
 	VectorCopy(PRVM_clientedictvector(ent, maxs), maxs);
 	VectorCopy(PRVM_clientedictvector(ent, origin), end);
-	end[2] -= 256;
+	if (cl.worldmodel->brush.isq3bsp)
+		end[2] -= 4096;
+	else if (cl.worldmodel->brush.isq2bsp)
+		end[2] -= 128;
+	else
+		end[2] -= 256; // Quake, QuakeWorld
 
 	trace = CL_TraceBox(start, mins, maxs, end, MOVE_NORMAL, ent, CL_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, true, true, NULL, true);
 

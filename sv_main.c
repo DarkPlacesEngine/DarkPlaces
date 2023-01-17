@@ -205,7 +205,7 @@ cvar_t sv_autodemo_perclient_discardable = {CF_SERVER | CF_ARCHIVE, "sv_autodemo
 
 cvar_t halflifebsp = {CF_SERVER, "halflifebsp", "0", "indicates the current map is hlbsp format (useful to know because of different bounding box sizes)"};
 cvar_t sv_mapformat_is_quake2 = {CF_SERVER, "sv_mapformat_is_quake2", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors, .frame on submodels and other things)"};
-cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indicates the current map is q2bsp format (useful to know because of different entity behaviors)"};
+cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indicates the current map is q3bsp format (useful to know because of different entity behaviors)"};
 
 cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
