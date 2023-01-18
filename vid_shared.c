@@ -1470,12 +1470,6 @@ void VID_Restart_f(cmd_state_t *cmd)
 	if (vid_commandlinecheck)
 		return;
 
-	if (!vid_opened)
-	{
-		SCR_BeginLoadingPlaque(false);
-		return;
-	}
-
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
 		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "",
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
@@ -1487,6 +1481,8 @@ void VID_Restart_f(cmd_state_t *cmd)
 		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
 			Sys_Error("Unable to restore to last working video mode");
 	}
+
+	SCR_DeferLoadingPlaque(false);
 	VID_OpenSystems();
 }
 

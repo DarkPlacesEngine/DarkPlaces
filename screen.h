@@ -31,11 +31,8 @@ void CL_UpdateScreen (void);
 void SCR_CenterPrint(const char *str);
 
 void SCR_BeginLoadingPlaque (qbool startup);
+void SCR_DeferLoadingPlaque (qbool startup);
 void SCR_EndLoadingPlaque (void);
-
-// invoke refresh of loading plaque (nothing else seen)
-void SCR_UpdateLoadingScreen(qbool clear, qbool startup);
-void SCR_UpdateLoadingScreenIfShown(void);
 
 // pushes an item on the loading screen
 void SCR_PushLoadingScreen (const char *msg, float len_in_parent);

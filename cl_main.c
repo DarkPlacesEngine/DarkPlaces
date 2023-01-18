@@ -600,6 +600,7 @@ void CL_EstablishConnection(const char *address, int firstarg)
 #ifdef CONFIG_MENU
 		M_Update_Return_Reason("Trying to connect...");
 #endif
+		SCR_BeginLoadingPlaque(false);
 	}
 	else
 	{
