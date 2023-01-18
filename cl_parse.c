@@ -333,10 +333,7 @@ void CL_KeepaliveMessage (qbool readmessages)
 		if(cls.state != ca_dedicated)
 		{
 			if(countdownupdate <= 0) // check if time stepped backwards
-			{
-				SCR_UpdateLoadingScreenIfShown();
 				countdownupdate = 2;
-			}
 		}
 	}
 
