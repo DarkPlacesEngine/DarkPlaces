@@ -23,7 +23,8 @@ cvar_t scr_conalphafactor = {CF_CLIENT | CF_ARCHIVE, "scr_conalphafactor", "1", 
 cvar_t scr_conalpha2factor = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha2factor", "0", "opacity of console background gfx/conback2 relative to scr_conalpha; when 0, gfx/conback2 is not drawn"};
 cvar_t scr_conalpha3factor = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha3factor", "0", "opacity of console background gfx/conback3 relative to scr_conalpha; when 0, gfx/conback3 is not drawn"};
 cvar_t scr_conbrightness = {CF_CLIENT | CF_ARCHIVE, "scr_conbrightness", "1", "brightness of console background (0 = black, 1 = image)"};
-cvar_t scr_conforcewhiledisconnected = {CF_CLIENT, "scr_conforcewhiledisconnected", "1", "forces fullscreen console while disconnected"};
+cvar_t scr_conforcewhiledisconnected = {CF_CLIENT, "scr_conforcewhiledisconnected", "1", "1 forces fullscreen console while disconnected, 2 also forces it when the listen server has started but the client is still loading"};
+cvar_t scr_conheight = {CF_CLIENT | CF_ARCHIVE, "scr_conheight", "0.5", "fraction of screen height occupied by console (reduced as necessary for visibility of loading progress and infobar)"};
 cvar_t scr_conscroll_x = {CF_CLIENT | CF_ARCHIVE, "scr_conscroll_x", "0", "scroll speed of gfx/conback in x direction"};
 cvar_t scr_conscroll_y = {CF_CLIENT | CF_ARCHIVE, "scr_conscroll_y", "0", "scroll speed of gfx/conback in y direction"};
 cvar_t scr_conscroll2_x = {CF_CLIENT | CF_ARCHIVE, "scr_conscroll2_x", "0", "scroll speed of gfx/conback2 in x direction"};
@@ -48,7 +49,7 @@ cvar_t scr_loadingscreen_count = {CF_CLIENT, "scr_loadingscreen_count","1", "num
 cvar_t scr_loadingscreen_firstforstartup = {CF_CLIENT, "scr_loadingscreen_firstforstartup","0", "remove loading.tga from random scr_loadingscreen_count selection and only display it on client startup, 0 = normal, 1 = firstforstartup"};
 cvar_t scr_loadingscreen_barcolor = {CF_CLIENT, "scr_loadingscreen_barcolor", "0 0 1", "rgb color of loadingscreen progress bar"};
 cvar_t scr_loadingscreen_barheight = {CF_CLIENT, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
-cvar_t scr_loadingscreen_maxfps = {CF_CLIENT, "scr_loadingscreen_maxfps", "10", "restrict maximal FPS for loading screen so it will not update very often (this will make lesser loading times on a maps loading large number of models)"};
+cvar_t scr_loadingscreen_maxfps = {CF_CLIENT, "scr_loadingscreen_maxfps", "20", "maximum FPS for loading screen so it will not update very often (this reduces loading time with lots of models)"};
 cvar_t scr_infobar_height = {CF_CLIENT, "scr_infobar_height", "8", "the height of the infobar items"};
 cvar_t vid_conwidthauto = {CF_CLIENT | CF_ARCHIVE, "vid_conwidthauto", "1", "automatically update vid_conwidth to match aspect ratio"};
 cvar_t vid_conwidth = {CF_CLIENT | CF_ARCHIVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
@@ -99,8 +100,10 @@ int jpeg_supported = false;
 
 qbool	scr_initialized;		// ready to draw
 
-float		scr_con_current;
-int			scr_con_margin_bottom;
+static qbool scr_loading = false;  // we are in a loading screen
+
+unsigned int        scr_con_current;
+static unsigned int scr_con_margin_bottom;
 
 extern int	con_vislines;
 
@@ -590,11 +593,13 @@ SCR_DrawInfobar
 */
 static void SCR_DrawInfobar(void)
 {
-	int offset = 0;
+	unsigned int offset = 0;
 	offset += SCR_DrawQWDownload(offset);
 	offset += SCR_DrawCurlDownload(offset);
 	if(scr_infobartime_off > 0)
 		offset += SCR_DrawInfobarString(offset);
+	if(!offset && scr_loading)
+		offset = scr_loadingscreen_barheight.integer;
 	if(offset != scr_con_margin_bottom)
 		Con_DPrintf("broken console margin calculation: %d != %d\n", offset, scr_con_margin_bottom);
 }
@@ -651,8 +656,6 @@ SCR_SetUpToDrawConsole
 */
 static void SCR_SetUpToDrawConsole (void)
 {
-	// lines of console to display
-	float conlines;
 #ifdef CONFIG_MENU
 	static int framecounter = 0;
 #endif
@@ -678,13 +681,11 @@ static void SCR_SetUpToDrawConsole (void)
 	else
 		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
 
-// decide on the height of the console
+	// decide on the height of the console
 	if (key_consoleactive & KEY_CONSOLEACTIVE_USER)
-		conlines = vid_conheight.integer/2;	// half screen
+		scr_con_current = vid_conheight.integer * scr_conheight.value;
 	else
-		conlines = 0;				// none visible
-
-	scr_con_current = conlines;
+		scr_con_current = 0; // none visible
 }
 
 /*
@@ -694,14 +695,15 @@ SCR_DrawConsole
 */
 void SCR_DrawConsole (void)
 {
-	scr_con_margin_bottom = SCR_InfobarHeight();
+	// infobar and loading progress are not drawn simultaneously
+	scr_con_margin_bottom = SCR_InfobarHeight() ?: scr_loading * scr_loadingscreen_barheight.integer;
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen
 		Con_DrawConsole (vid_conheight.integer - scr_con_margin_bottom);
 	}
 	else if (scr_con_current)
-		Con_DrawConsole (min((int)scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
+		Con_DrawConsole (min(scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
 	else
 		con_vislines = 0;
 }
@@ -760,6 +762,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_conscroll3_y);
 	Cvar_RegisterVariable (&scr_conbrightness);
 	Cvar_RegisterVariable (&scr_conforcewhiledisconnected);
+	Cvar_RegisterVariable (&scr_conheight);
 #ifdef CONFIG_MENU
 	Cvar_RegisterVariable (&scr_menuforcewhiledisconnected);
 #endif
@@ -1551,7 +1554,6 @@ typedef struct loadingscreenstack_s
 }
 loadingscreenstack_t;
 static loadingscreenstack_t *loadingscreenstack = NULL;
-static qbool scr_loading = false;  // we are in a loading screen
 rtexture_t *loadingscreentexture = NULL; // last framebuffer before loading screen, kept for the background
 static float loadingscreentexture_vertex3f[12];
 static float loadingscreentexture_texcoord2f[8];

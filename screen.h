@@ -41,7 +41,7 @@ void SCR_ClearLoadingScreen (qbool redraw);
 
 void SCR_CaptureVideo_SoundFrame(const struct portable_samplepair_s *paintbuffer, size_t length);
 
-extern float scr_con_current; // current height of displayed console
+extern unsigned int scr_con_current; // current height of displayed console
 
 extern int sb_lines;
 
