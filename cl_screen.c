@@ -706,25 +706,6 @@ void SCR_DrawConsole (void)
 		con_vislines = 0;
 }
 
-qbool scr_loading = false;
-
-/*
-===============
-SCR_BeginLoadingPlaque
-
-================
-*/
-void SCR_BeginLoadingPlaque (qbool startup)
-{
-	scr_loading = true;
-	SCR_UpdateLoadingScreen(false, startup);
-}
-
-void SCR_EndLoadingPlaque(void)
-{
-	scr_loading = false;
-}
-
 //=============================================================================
 
 /*
@@ -1570,10 +1551,8 @@ typedef struct loadingscreenstack_s
 }
 loadingscreenstack_t;
 static loadingscreenstack_t *loadingscreenstack = NULL;
-static qbool loadingscreendone = false;
-static qbool loadingscreencleared = false;
-static float loadingscreenheight = 0;
-rtexture_t *loadingscreentexture = NULL;
+static qbool scr_loading = false;  // we are in a loading screen
+rtexture_t *loadingscreentexture = NULL; // last framebuffer before loading screen, kept for the background
 static float loadingscreentexture_vertex3f[12];
 static float loadingscreentexture_texcoord2f[8];
 static int loadingscreenpic_number = 0;
@@ -1582,20 +1561,15 @@ static void SCR_DrawLoadingScreen(void);
 static void SCR_DrawScreen (void)
 {
 	Draw_Frame();
-
+	DrawQ_Start();
 	R_Mesh_Start();
-
 	R_UpdateVariables();
-
-	// this will be set back to 0 by R_RenderView during CL_VM_UpdateView
-	r_refdef.draw2dstage = 1;
-	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
 
 	// Quake uses clockwise winding, so these are swapped
 	r_refdef.view.cullface_front = GL_BACK;
 	r_refdef.view.cullface_back = GL_FRONT;
 
-	if (cls.signon == SIGNONS)
+	if (!scr_loading && cls.signon == SIGNONS)
 	{
 		float size;
 
@@ -1675,19 +1649,6 @@ static void SCR_DrawScreen (void)
 			R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		}
 	}
-	else if (key_dest == key_game && key_consoleactive == 0 && (cls.state == ca_connected || cls.connect_trying))
-	{
-		// draw the loading screen for a while if we're still connecting and not forcing the console or menu to show up
-		char temp[64];
-		if (cls.signon > 0)
-			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Signon stage %i of %i", cls.signon, SIGNONS), 1.0);
-		else if (cls.connect_remainingtries > 0)
-			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Trying...  %i", cls.connect_remainingtries), 1.0);
-		else
-			SCR_PushLoadingScreen(va(temp, sizeof(temp), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries), 1.0);
-		SCR_DrawLoadingScreen();
-		SCR_PopLoadingScreen(false);
-	}
 
 	// Don't apply debugging stuff like r_showsurfaces to the UI
 	r_refdef.view.showdebug = false;
@@ -1737,10 +1698,6 @@ static void SCR_DrawScreen (void)
 
 	// draw 2D stuff
 
-	// Don't flicker when starting a local server.
-	if(scr_loading && !loadingscreenstack && ((!cls.signon && !sv.active) || (cls.signon == SIGNONS)))
-		SCR_EndLoadingPlaque();
-
 	if(!scr_con_current && !(key_consoleactive & KEY_CONSOLEACTIVE_FORCED))
 		if ((key_dest == key_game || key_dest == key_message) && !r_letterbox.value && !scr_loading)
 			Con_DrawNotify ();	// only draw notify in game
@@ -1750,7 +1707,7 @@ static void SCR_DrawScreen (void)
 	else
 		host.paused = false;
 
-	if (cls.signon == SIGNONS)
+	if (!scr_loading && cls.signon == SIGNONS)
 	{
 		SCR_DrawNet ();
 		SCR_DrawTurtle ();
@@ -1768,13 +1725,34 @@ static void SCR_DrawScreen (void)
 	CL_DrawVideo();
 	R_Shadow_EditLights_DrawSelectedLightProperties();
 
+	if (scr_loading)
+	{
+		loadingscreenstack_t connect_status;
+		qbool show_connect_status = !loadingscreenstack && (cls.connect_trying || cls.state == ca_connected);
+		if (show_connect_status)
+		{
+			connect_status.absolute_loading_amount_min = 0;
+			if (cls.signon > 0)
+				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Signon stage %i of %i", cls.signon, SIGNONS);
+			else if (cls.connect_remainingtries > 0)
+				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Trying...  %i", cls.connect_remainingtries);
+			else
+				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries);
+			loadingscreenstack = &connect_status;
+		}
+
+		SCR_DrawLoadingScreen();
+
+		if (show_connect_status)
+			loadingscreenstack = NULL;
+	}
+
 	SCR_DrawConsole();
-	
-	if(!scr_loading) {
+	SCR_DrawInfobar();
+
+	if (!scr_loading)
+	{
 		SCR_DrawBrand();
-
-		SCR_DrawInfobar();
-
 		SCR_DrawTouchscreenOverlay();
 	}
 	if (r_timereport_active)
@@ -1786,9 +1764,8 @@ static void SCR_DrawScreen (void)
 	if(!scr_loading)
 		Sbar_ShowFPS();
 
-	DrawQ_Finish();
-
 	R_Mesh_Finish();
+	DrawQ_Finish();
 	R_RenderTarget_FreeUnused(false);
 }
 
@@ -1825,11 +1802,59 @@ static void SCR_SetLoadingScreenTexture(void)
 	loadingscreentexture_texcoord2f[6] = 0;loadingscreentexture_texcoord2f[7] = 0;
 }
 
-void SCR_UpdateLoadingScreenIfShown(void)
+static void SCR_ChooseLoadingPic(qbool startup)
 {
-	if(loadingscreendone)
-		SCR_UpdateLoadingScreen(loadingscreencleared, false);
+	if(startup && scr_loadingscreen_firstforstartup.integer)
+		loadingscreenpic_number = 0;
+	else if(scr_loadingscreen_firstforstartup.integer)
+		if(scr_loadingscreen_count.integer > 1)
+			loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer - 1) + 1;
+		else
+			loadingscreenpic_number = 0;
+	else
+		loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
 }
+
+/*
+===============
+SCR_BeginLoadingPlaque
+
+================
+*/
+void SCR_BeginLoadingPlaque(qbool startup)
+{
+	loadingscreenstack_t dummy_status;
+
+	// we need to push a dummy status so CL_UpdateScreen knows we have things to load...
+	if (!loadingscreenstack)
+	{
+		dummy_status.msg[0] = '\0';
+		dummy_status.absolute_loading_amount_min = 0;
+		loadingscreenstack = &dummy_status;
+	}
+
+	SCR_DeferLoadingPlaque(startup);
+	if (scr_loadingscreen_background.integer)
+		SCR_SetLoadingScreenTexture();
+	CL_UpdateScreen();
+
+	if (loadingscreenstack == &dummy_status)
+		loadingscreenstack = NULL;
+}
+
+void SCR_DeferLoadingPlaque(qbool startup)
+{
+	SCR_ChooseLoadingPic(startup);
+	scr_loading = true;
+}
+
+void SCR_EndLoadingPlaque(void)
+{
+	scr_loading = false;
+	SCR_ClearLoadingScreenTexture();
+}
+
+//=============================================================================
 
 void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 {
@@ -1853,7 +1878,8 @@ void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 		s->absolute_loading_amount_len = 1;
 	}
 
-		SCR_UpdateLoadingScreenIfShown();
+	if (scr_loading)
+		CL_UpdateScreen();
 }
 
 void SCR_PopLoadingScreen (qbool redraw)
@@ -1871,8 +1897,8 @@ void SCR_PopLoadingScreen (qbool redraw)
 		s->prev->relative_completion = (s->absolute_loading_amount_min + s->absolute_loading_amount_len - s->prev->absolute_loading_amount_min) / s->prev->absolute_loading_amount_len;
 	Z_Free(s);
 
-	if(redraw)
-		SCR_UpdateLoadingScreenIfShown();
+	if (scr_loading && redraw)
+		CL_UpdateScreen();
 }
 
 void SCR_ClearLoadingScreen (qbool redraw)
@@ -1898,7 +1924,6 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y, float size
 			len = strlen(s->msg);
 			x = (vid_conwidth.integer - DrawQ_TextWidth(s->msg, len, size, size, true, FONT_INFOBAR)) / 2;
 			y -= size;
-			DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 1, 0);
 			DrawQ_String(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 			total += size;
 		}
@@ -1909,7 +1934,6 @@ static float SCR_DrawLoadingStack_r(loadingscreenstack_t *s, float y, float size
 		len = strlen(s->msg);
 		x = (vid_conwidth.integer - DrawQ_TextWidth(s->msg, len, size, size, true, FONT_INFOBAR)) / 2;
 		y -= size;
-		DrawQ_Fill(0, y, vid_conwidth.integer, size, 0, 0, 0, 1, 0);
 		DrawQ_String(x, y, s->msg, len, size, size, 1, 1, 1, 1, 0, NULL, true, FONT_INFOBAR);
 		total += size;
 	}
@@ -1922,7 +1946,7 @@ static void SCR_DrawLoadingStack(void)
 	float verts[12];
 	float colors[16];
 
-	loadingscreenheight = SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer, scr_loadingscreen_barheight.value);
+	SCR_DrawLoadingStack_r(loadingscreenstack, vid_conheight.integer, scr_loadingscreen_barheight.value);
 	if(loadingscreenstack)
 	{
 		// height = 32; // sorry, using the actual one is ugly
@@ -1930,7 +1954,7 @@ static void SCR_DrawLoadingStack(void)
 		GL_DepthRange(0, 1);
 		GL_PolygonOffset(0, 0);
 		GL_DepthTest(false);
-//		R_Mesh_ResetTextureState();
+		//R_Mesh_ResetTextureState();
 		verts[2] = verts[5] = verts[8] = verts[11] = 0;
 		verts[0] = verts[9] = 0;
 		verts[1] = verts[4] = vid_conheight.integer - scr_loadingscreen_barheight.value;
@@ -1940,9 +1964,6 @@ static void SCR_DrawLoadingStack(void)
 #if _MSC_VER >= 1400
 #define sscanf sscanf_s
 #endif
-		//                                        ^^^^^^^^^^ blue component
-		//                              ^^^^^^ bottom row
-		//          ^^^^^^^^^^^^ alpha is always on
 		colors[0] = 0; colors[1] = 0; colors[2] = 0; colors[3] = 1;
 		colors[4] = 0; colors[5] = 0; colors[6] = 0; colors[7] = 1;
 		sscanf(scr_loadingscreen_barcolor.string, "%f %f %f", &colors[8], &colors[9], &colors[10]); colors[11] = 1;
@@ -1951,40 +1972,31 @@ static void SCR_DrawLoadingStack(void)
 		R_Mesh_PrepareVertices_Generic_Arrays(4, verts, colors, NULL);
 		R_SetupShader_Generic_NoTexture(true, true);
 		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-
-		// make sure everything is cleared, including the progress indicator
-		if(loadingscreenheight < 8)
-			loadingscreenheight = 8;
 	}
 }
 
-static cachepic_t *loadingscreenpic;
-static float loadingscreenpic_vertex3f[12];
-static float loadingscreenpic_texcoord2f[8];
-
-static void SCR_DrawLoadingScreen_SharedSetup (qbool clear)
+static void SCR_DrawLoadingScreen (void)
 {
-	r_viewport_t viewport;
+	cachepic_t *loadingscreenpic;
+	float loadingscreenpic_vertex3f[12];
+	float loadingscreenpic_texcoord2f[8];
 	float x, y, w, h, sw, sh, f;
 	char vabuf[1024];
-	// release mouse grab while loading
-	if (!vid.fullscreen)
-		VID_SetMouse(false, false, false);
-//	CHECKGLERROR
-	r_refdef.draw2dstage = true;
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, 0, 0, vid.width, vid.height, 0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100, NULL);
-	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
-	R_SetViewport(&viewport);
-	GL_ColorMask(1,1,1,1);
-	// when starting up a new video mode, make sure the screen is cleared to black
-	if (clear || loadingscreentexture)
-		GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
-	R_Textures_Frame();
-	R_Mesh_Start();
-	R_EntityMatrix(&identitymatrix);
-	// draw the loading plaque
-	loadingscreenpic = Draw_CachePic_Flags (loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthRange(0, 1);
+	GL_PolygonOffset(0, 0);
+	GL_DepthTest(false);
+	GL_Color(1,1,1,1);
+
+	if(loadingscreentexture)
+	{
+		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
+		R_SetupShader_Generic(loadingscreentexture, false, true, true);
+		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+	}
+
+	loadingscreenpic = Draw_CachePic_Flags(loadingscreenpic_number ? va(vabuf, sizeof(vabuf), "%s%d", scr_loadingscreen_picture.string, loadingscreenpic_number+1) : scr_loadingscreen_picture.string, loadingscreenpic_number ? CACHEPICFLAG_NOTPERSISTENT : 0);
 	w = Draw_GetPicWidth(loadingscreenpic);
 	h = Draw_GetPicHeight(loadingscreenpic);
 
@@ -2035,117 +2047,12 @@ static void SCR_DrawLoadingScreen_SharedSetup (qbool clear)
 	loadingscreenpic_texcoord2f[2] = 1;loadingscreenpic_texcoord2f[3] = 0;
 	loadingscreenpic_texcoord2f[4] = 1;loadingscreenpic_texcoord2f[5] = 1;
 	loadingscreenpic_texcoord2f[6] = 0;loadingscreenpic_texcoord2f[7] = 1;
-}
 
-static void SCR_DrawLoadingScreen (void)
-{
-	// we only need to draw the image if it isn't already there
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthRange(0, 1);
-	GL_PolygonOffset(0, 0);
-	GL_DepthTest(false);
-//	R_Mesh_ResetTextureState();
-	GL_Color(1,1,1,1);
-	if(loadingscreentexture)
-	{
-		R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreentexture_vertex3f, NULL, loadingscreentexture_texcoord2f);
-		R_SetupShader_Generic(loadingscreentexture, false, true, true);
-		R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
-	}
 	R_Mesh_PrepareVertices_Generic_Arrays(4, loadingscreenpic_vertex3f, NULL, loadingscreenpic_texcoord2f);
 	R_SetupShader_Generic(Draw_GetPicTexture(loadingscreenpic), true, true, false);
 	R_Mesh_Draw(0, 4, 0, 2, polygonelement3i, NULL, 0, polygonelement3s, NULL, 0);
+
 	SCR_DrawLoadingStack();
-}
-
-static double loadingscreen_lastupdate;
-
-static void SCR_UpdateVars(void);
-
-void SCR_UpdateLoadingScreen (qbool clear, qbool startup)
-{
-	keydest_t	old_key_dest;
-	int			old_key_consoleactive;
-
-	// don't do anything if not initialized yet
-	if (vid_hidden || cls.state == ca_dedicated)
-		return;
-
-	// limit update rate
-	if (scr_loadingscreen_maxfps.value)
-	{
-		double t = Sys_DirtyTime();
-		if ((t - loadingscreen_lastupdate) < 1.0f/scr_loadingscreen_maxfps.value)
-			return;
-		loadingscreen_lastupdate = t;
-	}
-
-	// set up the r_texture_gammaramps texture which we need for rendering the loadingscreenpic
-	R_UpdateVariables();
-
-	if(!scr_loadingscreen_background.integer)
-		clear = true;
-	
-	if(loadingscreendone)
-		clear |= loadingscreencleared;
-
-	if(!loadingscreendone)
-	{
-		if(startup && scr_loadingscreen_firstforstartup.integer)
-			loadingscreenpic_number = 0;
-		else if(scr_loadingscreen_firstforstartup.integer)
-			if(scr_loadingscreen_count.integer > 1)
-				loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer - 1) + 1;
-			else
-				loadingscreenpic_number = 0;
-		else
-			loadingscreenpic_number = rand() % (scr_loadingscreen_count.integer > 1 ? scr_loadingscreen_count.integer : 1);
-	}
-
-	if(clear)
-	        SCR_ClearLoadingScreenTexture();
-	else if(!loadingscreendone)
-	        SCR_SetLoadingScreenTexture();
-
-	if(!loadingscreendone)
-	{
-		loadingscreendone = true;
-		loadingscreenheight = 0;
-	}
-	loadingscreencleared = clear;
-
-#ifdef USE_GLES2
-	SCR_DrawLoadingScreen_SharedSetup(clear);
-	SCR_DrawLoadingScreen();
-#else
-	SCR_DrawLoadingScreen_SharedSetup(clear);
-	if (vid.stereobuffer)
-	{
-		qglDrawBuffer(GL_BACK_LEFT);
-		SCR_DrawLoadingScreen();
-		qglDrawBuffer(GL_BACK_RIGHT);
-		SCR_DrawLoadingScreen();
-	}
-	else
-	{
-		qglDrawBuffer(GL_BACK);
-		SCR_DrawLoadingScreen();
-	}
-#endif
-
-	DrawQ_Finish();
-	R_Mesh_Finish();
-	// refresh
-	VID_Finish();
-
-	// this goes into the event loop, and should prevent unresponsive cursor on vista
-	old_key_dest = key_dest;
-	old_key_consoleactive = key_consoleactive;
-	key_dest = key_void;
-	key_consoleactive = false;
-	Key_EventQueue_Block(); Sys_SendKeyEvents();
-	key_dest = old_key_dest;
-	key_consoleactive = old_key_consoleactive;
 }
 
 qbool R_Stereo_ColorMasking(void)
@@ -2158,7 +2065,7 @@ qbool R_Stereo_Active(void)
 	return (vid.stereobuffer || r_stereo_sidebyside.integer || r_stereo_horizontal.integer || r_stereo_vertical.integer || R_Stereo_ColorMasking());
 }
 
-void SCR_UpdateVars(void)
+static void SCR_UpdateVars(void)
 {
 	float conwidth = bound(160, vid_conwidth.value, 32768);
 	float conheight = bound(90, vid_conheight.value, 24576);
@@ -2203,9 +2110,10 @@ extern cvar_t cl_minfps_qualitymultiply;
 extern cvar_t cl_minfps_qualityhysteresis;
 extern cvar_t cl_minfps_qualitystepmax;
 extern cvar_t cl_minfps_force;
-static double cl_updatescreen_quality = 1;
 void CL_UpdateScreen(void)
 {
+	static double cl_updatescreen_quality = 1;
+
 	vec3_t vieworigin;
 	static double drawscreenstart = 0.0;
 	double drawscreendelta;
@@ -2294,8 +2202,6 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized || !scr_refresh.integer)
 		return;				// not initialized yet
 
-	loadingscreendone = false;
-
 	if(IS_NEXUIZ_DERIVED(gamemode))
 	{
 		// play a bit with the palette (experimental)
@@ -2317,6 +2223,20 @@ void CL_UpdateScreen(void)
 	{
 		VID_Finish();
 		return;
+	}
+
+	if (scr_loading)
+	{
+		if(!loadingscreenstack && !cls.connect_trying && (cls.state != ca_connected || cls.signon == SIGNONS))
+			SCR_EndLoadingPlaque();
+		else if (scr_loadingscreen_maxfps.value)
+		{
+			static float lastupdate;
+			float now = Sys_DirtyTime();
+			if (now - lastupdate < 1.0f / scr_loadingscreen_maxfps.value)
+				return;
+			lastupdate = now;
+		}
 	}
 
 	SCR_UpdateVars();

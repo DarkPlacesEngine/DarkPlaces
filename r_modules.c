@@ -84,6 +84,7 @@ void R_Modules_Restart_f(cmd_state_t *cmd)
 {
 	CL_StartVideo();
 	Con_Print("Restarting renderer\n");
+	SCR_BeginLoadingPlaque(false);
 	R_Modules_Shutdown();
 	R_Modules_Start();
 }
