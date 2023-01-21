@@ -2814,6 +2814,11 @@ double CL_Frame (double time)
 	SndSys_SendKeyEvents();
 	Sys_SendKeyEvents();
 
+	/*
+	 * If the accumulator hasn't become positive, don't
+	 * run the frame. Everything that happens before this
+	 * point will happen even if we're sleeping this frame.
+	 */
 	if((cl_timer += time) < 0)
 		return cl_timer;
 

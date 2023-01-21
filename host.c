@@ -681,7 +681,11 @@ static inline void Host_Sleep(double time)
 		// TODO can we do the same for ServerFrame? Probably not.
 	}
 	else
+	{
+		if (cls.state != ca_dedicated)
+			Curl_Select(&time);
 		Sys_Sleep((int)time);
+	}
 	delta = Sys_DirtyTime() - time0;
 	if (delta < 0 || delta >= 1800)
 		delta = 0;

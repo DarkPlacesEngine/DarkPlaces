@@ -158,6 +158,7 @@ static const char * (*qcurl_easy_strerror) (CURLcode);
 
 static CURLM * (*qcurl_multi_init) (void);
 static CURLMcode (*qcurl_multi_perform) (CURLM *multi_handle, int *running_handles);
+static CURLMcode (*qcurl_multi_poll) (CURLM *multi_handle, void*, unsigned int extra_nfds, int timeout_ms, int *ret);
 static CURLMcode (*qcurl_multi_add_handle) (CURLM *multi_handle, CURL *easy_handle);
 static CURLMcode (*qcurl_multi_remove_handle) (CURLM *multi_handle, CURL *easy_handle);
 static CURLMsg * (*qcurl_multi_info_read) (CURLM *multi_handle, int *msgs_in_queue);
@@ -177,6 +178,7 @@ static dllfunction_t curlfuncs[] =
 	{"curl_easy_getinfo",		(void **) &qcurl_easy_getinfo},
 	{"curl_multi_init",			(void **) &qcurl_multi_init},
 	{"curl_multi_perform",		(void **) &qcurl_multi_perform},
+	{"curl_multi_poll",		(void **) &qcurl_multi_poll},
 	{"curl_multi_add_handle",	(void **) &qcurl_multi_add_handle},
 	{"curl_multi_remove_handle",(void **) &qcurl_multi_remove_handle},
 	{"curl_multi_info_read",	(void **) &qcurl_multi_info_read},
@@ -431,6 +433,8 @@ static size_t CURL_fwrite(void *data, size_t size, size_t nmemb, void *vdi)
 	}
 
 	di->bytes_received += bytes;
+
+	//Con_Printf("CURL_fwrite callback timestamp: %f bytes: %ld\n", host.realtime, ret);
 
 	return ret;
 	// Why not ret / nmemb?
@@ -1233,6 +1237,25 @@ void Curl_Frame(void)
 		curltime = host.realtime;
 
 	if (curl_mutex) Thread_UnlockMutex(curl_mutex);
+}
+
+/*
+====================
+Curl_Select
+
+Sleeps until there's some transfer progress or a timeout is reached,
+unfortunately the timeout is only in milliseconds.
+This allows good throughput even at very low FPS.
+====================
+*/
+void Curl_Select(double *microseconds)
+{
+	if (List_Is_Empty(&downloads))
+		return;
+	if (qcurl_multi_poll(curlm, NULL, 0, *microseconds / 1000, NULL) == CURLM_OK)
+		*microseconds = 0; // either we finished waiting or a transfer progressed
+	else
+		Con_Print("There's an emergency going on!\nIt's still going on!\nMaybe you need to upgrade libcurl?\n");
 }
 
 /*
