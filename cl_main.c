@@ -3140,7 +3140,7 @@ void CL_Init (void)
 
 		CL_Video_Init();
 
-		NetConn_UpdateSockets_Client();
+		Cvar_Callback(&cl_netport);
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
 		host.hook.Disconnect = CL_DisconnectEx;
