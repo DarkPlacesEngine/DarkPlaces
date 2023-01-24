@@ -443,7 +443,6 @@ void NetConn_CloseClientPorts(void);
 void NetConn_OpenClientPorts(void);
 void NetConn_CloseServerPorts(void);
 void NetConn_OpenServerPorts(int opennetports);
-void NetConn_UpdateSockets_Client(void);
 void NetConn_UpdateSockets(void);
 lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address);
 lhnetsocket_t *NetConn_ChooseServerSocketForAddress(lhnetaddress_t *address);

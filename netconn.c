@@ -1146,22 +1146,9 @@ void NetConn_Close(netconn_t *conn)
 
 static int clientport = -1;
 static int clientport2 = -1;
-static int hostport = -1;
 
-// Call on disconnect, during startup, or if cl_netport is changed
-void NetConn_UpdateSockets_Client(void)
-{
-	if (cls.state == ca_disconnected && clientport != clientport2)
-	{
-		clientport = clientport2;
-		NetConn_CloseClientPorts();
-	}
-	if (cl_numsockets == 0)
-		NetConn_OpenClientPorts();
-}
-
-// Call when cl_port is changed
-static void NetConn_cl_netport_Callback(cvar_t *var)
+// Call on disconnect, during startup, or if cl_port/cl_netport is changed
+static void NetConn_CL_UpdateSockets_Callback(cvar_t *var)
 {
 	if(cls.state != ca_dedicated)
 	{
@@ -1171,11 +1158,20 @@ static void NetConn_cl_netport_Callback(cvar_t *var)
 			if (cls.state == ca_connected)
 				Con_Print("Changing \"cl_port\" will not take effect until you reconnect.\n");
 		}
-		NetConn_UpdateSockets_Client();
+
+		if (cls.state == ca_disconnected && clientport != clientport2)
+		{
+			clientport = clientport2;
+			NetConn_CloseClientPorts();
+		}
+		if (cl_numsockets == 0)
+			NetConn_OpenClientPorts();
 	}
 }
 
-// Call when port is changed
+static int hostport = -1;
+
+// Call when port/sv_netport is changed
 static void NetConn_sv_netport_Callback(cvar_t *var)
 {
 	if (hostport != var->integer)
@@ -3907,7 +3903,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
-	Cvar_RegisterCallback(&cl_netport, NetConn_cl_netport_Callback);
+	Cvar_RegisterCallback(&cl_netport, NetConn_CL_UpdateSockets_Callback);
 	Cvar_RegisterVariable(&sv_netport);
 	Cvar_RegisterCallback(&sv_netport, NetConn_sv_netport_Callback);
 	Cvar_RegisterVariable(&net_address);
