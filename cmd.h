@@ -90,6 +90,7 @@ typedef struct cmd_function_s
 	const char *description;
 	xcommand_t function;
 	qbool qcfunc;
+	struct cmd_function_s *overridden; // the engine cmd overriden by this QC cmd, if applicable
 	qbool autofunc;
 	qbool initstate; // indicates this command existed at init
 } cmd_function_t;
