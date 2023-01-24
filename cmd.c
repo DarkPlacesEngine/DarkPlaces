@@ -1900,7 +1900,6 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 					}
 				}
 
-
 				func = (cmd_function_t *)Mem_Alloc(cmd->mempool, sizeof(cmd_function_t));
 				func->flags = flags;
 				func->name = cmd_name;
@@ -1908,6 +1907,18 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				func->description = description;
 				func->qcfunc = true; //[515]: csqc
 				func->next = cmd->userdefined->qc_functions;
+
+				// bones_was_here: if this QC command overrides an engine command, store its pointer
+				// to avoid doing this search at invocation if QC declines to handle this command.
+				for (cmd_function_t *f = cmd->engine_functions; f; f = f->next)
+				{
+					if (!strcmp(cmd_name, f->name))
+					{
+						Con_DPrintf("Adding QC override of engine command %s\n", cmd_name);
+						func->overridden = f;
+						break;
+					}
+				}
 
 				// insert it at the right alphanumeric position
 				for (prev = NULL, current = cmd->userdefined->qc_functions; current && strcmp(current->name, func->name) < 0; prev = current, current = current->next)
@@ -2192,6 +2203,9 @@ qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, 
 		if(((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text)) ||
 		   ((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text)))
 			return true;
+
+		if (func->overridden) // If this QC command overrides an engine command,
+			func = func->overridden; // fall back to that command.
 	}
 	if (func->flags & CF_SERVER_FROM_CLIENT)
 	{
