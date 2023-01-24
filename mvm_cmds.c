@@ -1058,8 +1058,7 @@ void VM_cin_restart(prvm_prog_t *prog)
 static void VM_M_registercommand(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(1, VM_M_registercommand);
-	if(!Cmd_Exists(cmd_local, PRVM_G_STRING(OFS_PARM0)))
-		Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
+	Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
 prvm_builtin_t vm_m_builtins[] = {
