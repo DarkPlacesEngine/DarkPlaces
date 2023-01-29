@@ -97,6 +97,7 @@ typedef struct dp_font_s
 {
 	cachepic_t *pic;
 	float width_of[256]; // width_of[0] == max width of any char; 1.0f is base width (1/16 of texture width); therefore, all widths have to be <= 1 (does not include scale)
+	float width_of_ft2[MAX_FONT_SIZES][256];
 	float maxwidth; // precalculated max width of the font (includes scale)
 	char texpath[MAX_QPATH];
 	char title[MAX_QPATH];
