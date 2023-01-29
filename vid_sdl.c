@@ -100,7 +100,8 @@ static int MapKey( unsigned int sdlkey )
 {
 	switch(sdlkey)
 	{
-	default: return 0;
+	// sdlkey can be Unicode codepoint for non-ascii keys, which are valid
+	default:                      return sdlkey;
 //	case SDLK_UNKNOWN:            return K_UNKNOWN;
 	case SDLK_RETURN:             return K_ENTER;
 	case SDLK_ESCAPE:             return K_ESCAPE;
@@ -1066,6 +1067,7 @@ void Sys_SendKeyEvents( void )
 	static qbool sound_active = true;
 	int keycode;
 	int i;
+	const char *chp;
 	qbool isdown;
 	Uchar unicode;
 	SDL_Event event;
@@ -1222,9 +1224,14 @@ void Sys_SendKeyEvents( void )
 #endif
 				// convert utf8 string to char
 				// NOTE: this code is supposed to run even if utf8enable is 0
-				unicode = u8_getchar_utf8_enabled(event.text.text + (int)u8_bytelen(event.text.text, 0), NULL);
-				Key_Event(K_TEXT, unicode, true);
-				Key_Event(K_TEXT, unicode, false);
+				chp = event.text.text;
+				while (*chp != 0)
+				{
+					// input the chars one by one (there can be multiple chars when e.g. using an "input method")
+					unicode = u8_getchar_utf8_enabled(chp, &chp);
+					Key_Event(K_TEXT, unicode, true);
+					Key_Event(K_TEXT, unicode, false);
+				}
 				break;
 			case SDL_MOUSEMOTION:
 				break;

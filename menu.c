@@ -2643,7 +2643,7 @@ static void M_Keys_Draw (void)
 			strlcpy(keystring, "???", sizeof(keystring));
 		else
 		{
-			char tinystr[2];
+			char tinystr[TINYSTR_LEN];
 			keystring[0] = 0;
 			for (j = 0;j < NUMKEYS;j++)
 			{
@@ -2669,7 +2669,7 @@ static void M_Keys_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	char	line[80];
 	int		keys[NUMKEYS];
-	char	tinystr[2];
+	char	tinystr[TINYSTR_LEN];
 
 	if (bind_grab)
 	{	// defining a key
