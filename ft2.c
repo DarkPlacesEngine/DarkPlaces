@@ -28,6 +28,25 @@ static int img_fontmap[256] = {
 };
 
 /*
+ * Some big blocks of Unicode characters, according to
+ *     http://www.unicode.org/Public/UNIDATA/Blocks.txt
+ *
+ * Let's call these "bigblocks".
+ * These appears in a text in a "spreaded" way, ordinary maps will 
+ *     waste huge amount of resources rendering/caching unused glyphs.
+ *
+ * So, another matter is invented to counter this: incremental maps,
+ *     in which only used glyphs may present.
+ */
+static const Uchar unicode_bigblocks[] = {
+	0x3400, 0x4DBF, 	//   6592  CJK Unified Ideographs Extension A
+	0x4E00, 0x9FFF, 	//  20992  CJK Unified Ideographs
+	0xAC00, 0xD7AF,		//  11184  Hangul Syllables
+	0xE000, 0xF8FF, 	//   6400  Private Use Area
+	0x10000, 0x10FFFF   //         Everything above
+};
+
+/*
 ================================================================================
 CVars introduced with the freetype extension
 ================================================================================
@@ -37,10 +56,12 @@ cvar_t r_font_disable_freetype = {CF_CLIENT | CF_ARCHIVE, "r_font_disable_freety
 cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CF_CLIENT | CF_ARCHIVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_kerning = {CF_CLIENT | CF_ARCHIVE, "r_font_kerning", "1", "Use kerning if available"};
-cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "save font textures to disk for future loading rather than generating them every time"};
+cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "(deprecated and non-functional) save font textures to disk for future loading rather than generating them every time"};
 cvar_t r_font_compress = {CF_CLIENT | CF_ARCHIVE, "r_font_compress", "0", "use texture compression on font textures to save video memory"};
 cvar_t r_font_nonpoweroftwo = {CF_CLIENT | CF_ARCHIVE, "r_font_nonpoweroftwo", "1", "use nonpoweroftwo textures for font (saves memory, potentially slower)"};
 cvar_t developer_font = {CF_CLIENT | CF_ARCHIVE, "developer_font", "0", "prints debug messages about fonts"};
+
+cvar_t r_font_disable_incmaps = {CF_CLIENT | CF_ARCHIVE, "r_font_disable_incmaps", "0", "always to load a full glyph map for individual unmapped character, even when it will mean extreme resources waste"};
 
 #ifndef DP_FREETYPE_STATIC
 
@@ -430,6 +451,8 @@ void Font_Init(void)
 	Cvar_RegisterVariable(&r_font_diskcache);
 	Cvar_RegisterVariable(&r_font_compress);
 	Cvar_RegisterVariable(&developer_font);
+
+	Cvar_RegisterVariable(&r_font_disable_incmaps);
 
 	// let's open it at startup already
 	Font_OpenLibrary();
@@ -886,7 +909,7 @@ static void Font_Postprocess(ft2_font_t *fnt, unsigned char *imagedata, int pitc
 }
 
 static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size);
-static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap);
+static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap, int *outmapch, qbool incmap_ok);
 static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only)
 {
 	int map_index;
@@ -933,7 +956,7 @@ static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only)
 	temp.sfx = (1.0/64.0)/(double)size;
 	temp.sfy = (1.0/64.0)/(double)size;
 	temp.intSize = -1; // negative value: LoadMap must search now :)
-	if (!Font_LoadMap(font, &temp, 0, &fmap))
+	if (!Font_LoadMap(font, &temp, 0, &fmap, NULL, false))
 	{
 		Con_Printf(CON_ERROR "ERROR: can't load the first character map for %s\n"
 			   "This is fatal\n",
@@ -951,6 +974,7 @@ static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only)
 	{
 		Uchar l, r;
 		FT_Vector kernvec;
+		fmap->kerning = (ft2_kerning_t *)Mem_Alloc(font_mempool, sizeof(ft2_kerning_t));
 		for (l = 0; l < 256; ++l)
 		{
 			for (r = 0; r < 256; ++r)
@@ -960,13 +984,13 @@ static qbool Font_LoadSize(ft2_font_t *font, float size, qbool check_only)
 				ur = qFT_Get_Char_Index((FT_Face)font->face, r);
 				if (qFT_Get_Kerning((FT_Face)font->face, ul, ur, FT_KERNING_DEFAULT, &kernvec))
 				{
-					fmap->kerning.kerning[l][r][0] = 0;
-					fmap->kerning.kerning[l][r][1] = 0;
+					fmap->kerning->kerning[l][r][0] = 0;
+					fmap->kerning->kerning[l][r][1] = 0;
 				}
 				else
 				{
-					fmap->kerning.kerning[l][r][0] = Font_SnapTo((kernvec.x / 64.0) / fmap->size, 1 / fmap->size);
-					fmap->kerning.kerning[l][r][1] = Font_SnapTo((kernvec.y / 64.0) / fmap->size, 1 / fmap->size);
+					fmap->kerning->kerning[l][r][0] = Font_SnapTo((kernvec.x / 64.0) / fmap->size, 1 / fmap->size);
+					fmap->kerning->kerning[l][r][1] = Font_SnapTo((kernvec.y / 64.0) / fmap->size, 1 / fmap->size);
 				}
 			}
 		}
@@ -1074,8 +1098,8 @@ qbool Font_GetKerningForMap(ft2_font_t *font, int map_index, float w, float h, U
 	{
 		//Con_Printf("%g : %f, %f, %f :: %f\n", (w / (float)fmap->size), w, fmap->size, fmap->intSize, Font_VirtualToRealSize(w));
 		// quick-kerning, be aware of the size: scale it
-		if (outx) *outx = fmap->kerning.kerning[left][right][0];// * (w / (float)fmap->size);
-		if (outy) *outy = fmap->kerning.kerning[left][right][1];// * (h / (float)fmap->size);
+		if (outx) *outx = fmap->kerning->kerning[left][right][0];// * (w / (float)fmap->size);
+		if (outy) *outy = fmap->kerning->kerning[left][right][1];// * (h / (float)fmap->size);
 		return true;
 	}
 	else
@@ -1123,16 +1147,40 @@ qbool Font_GetKerningForSize(ft2_font_t *font, float w, float h, Uchar left, Uch
 	return Font_GetKerningForMap(font, Font_IndexForSize(font, h, NULL, NULL), w, h, left, right, outx, outy);
 }
 
-static void UnloadMapRec(ft2_font_map_t *map)
+// this is used to gracefully unload a map chain; the passed map
+// needs not necessarily be a startmap, so maps ahead of it can be kept
+static void UnloadMapChain(ft2_font_map_t *map)
 {
-	if (map->pic)
+	int i;
+	ft2_font_map_t *nextmap;
+	// these may only be in a startmap
+	if (map->kerning != NULL)
+		Mem_Free(map->kerning);
+	if (map->incmap != NULL)
 	{
-		//Draw_FreePic(map->pic); // FIXME: refcounting needed...
-		map->pic = NULL;
+		for (i = 0; i < FONT_CHARS_PER_LINE; ++i)
+			if (map->incmap->data_tier1[i] != NULL)
+				Mem_Free(map->incmap->data_tier1[i]);
+			else
+				break;
+		for (i = 0; i < FONT_CHAR_LINES; ++i)
+			if (map->incmap->data_tier2[i] != NULL)
+				Mem_Free(map->incmap->data_tier2[i]);
+			else
+				break;
+		Mem_Free(map->incmap);
 	}
-	if (map->next)
-		UnloadMapRec(map->next);
-	Mem_Free(map);
+	while (map != NULL)
+	{
+		if (map->pic)
+		{
+			//Draw_FreePic(map->pic); // FIXME: refcounting needed...
+			map->pic = NULL;
+		}
+		nextmap = map->next;
+		Mem_Free(map);
+		map = nextmap;
+	}
 }
 
 void Font_UnloadFont(ft2_font_t *font)
@@ -1157,7 +1205,7 @@ void Font_UnloadFont(ft2_font_t *font)
 	{
 		if (font->font_maps[i])
 		{
-			UnloadMapRec(font->font_maps[i]);
+			UnloadMapChain(font->font_maps[i]);
 			font->font_maps[i] = NULL;
 		}
 	}
@@ -1200,33 +1248,254 @@ static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size)
 	}
 }
 
-static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch, ft2_font_map_t **outmap)
+// some color transforming functions I made in attempt to fix font_diskcache
+// until the point I realize it's not worthwhile anymore
+
+static inline void rgba_to_bgra(unsigned char *source, unsigned char *target, int source_size)
+{
+	int x;
+	for (x = 0; x < source_size; x += 4)
+	{
+		target[0] = source[2];
+		target[1] = source[1];
+		target[2] = source[0];
+		target[3] = source[3];
+	}
+}
+static inline void rgba_to_alpha(unsigned char *source, unsigned char *target, int source_size)
+{
+	int x, i;
+	for (x = 0, i = 0; x < source_size; x += 4)
+	{
+		target[i++] = (
+			source[x+0] * 0.2125 +      // r
+			source[x+1] * 0.7154 +		// g
+			source[x+2] * 0.0721		// b
+		) / 3 * (source[x+3] / 256);	// a
+	}
+}
+static inline void alpha_to_rgba(unsigned char *source, unsigned char *target, int source_size)
+{
+	int x, i;
+	for (x = 0, i = 0; x < source_size; x += 4)
+	{
+		target[x+0] = target[x+1] = target[x+2] = 0xff - source[i];
+		target[x+3] = source[i++];
+	}
+}
+#define alpha_to_bgra alpha_to_rgba
+
+// helper inline functions for incmap_post_process
+
+static inline void update_pic_for_fontmap(ft2_font_map_t *fontmap, const char *identifier,
+		int width, int height, unsigned char *data)
+{
+	fontmap->pic = Draw_NewPic(identifier, width, height, data,
+		r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA,
+		TEXF_ALPHA | TEXF_CLAMP | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
+}
+
+// glyphs' texture coords needs to be fixed when merging to bigger texture
+static inline void transform_glyph_coords(glyph_slot_t *glyph, float shiftx, float shifty, float scalex, float scaley)
+{
+	glyph->txmin = glyph->txmin * scalex + shiftx;
+	glyph->txmax = glyph->txmax * scalex + shiftx;
+	glyph->tymin = glyph->tymin * scaley + shifty;
+	glyph->tymax = glyph->tymax * scaley + shifty;
+}
+#define fix_glyph_coords_tier1(glyph, order) transform_glyph_coords(glyph, order / (float)FONT_CHARS_PER_LINE, 0.0f, 1.0f / (float)FONT_CHARS_PER_LINE, 1.0f)
+#define fix_glyph_coords_tier2(glyph, order) transform_glyph_coords(glyph, 0.0f, order / (float)FONT_CHARS_PER_LINE, 1.0f, 1.0f / (float)FONT_CHARS_PER_LINE)
+
+// pull glyph things from sourcemap to targetmap
+static inline void merge_single_map(ft2_font_map_t *targetmap, int targetindex, ft2_font_map_t *sourcemap, int sourceindex)
+{
+	targetmap->glyphs[targetindex] = sourcemap->glyphs[sourceindex];
+	targetmap->glyphchars[targetindex] = sourcemap->glyphchars[sourceindex];
+}
+
+#define calc_data_arguments(w, h) 			\
+		width = startmap->glyphSize * w;	\
+		height = startmap->glyphSize * h;	\
+		pitch = width * bytes_per_pixel;	\
+		datasize = height * pitch;
+
+// do incremental map process
+static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
+		unsigned char *data, ft2_font_map_t **outmap, int *outmapch)
+{
+	int index, targetmap_at;
+	// where will the next `data` be placed
+	int tier1_data_index, tier2_data_index;
+	// metrics of data to manipulate
+	int width, height, bytes_per_pixel, pitch, datasize;
+	int i, j, x, y;
+	unsigned char *newdata, *chunk;
+	ft2_font_map_t *startmap, *targetmap, *currentmap;
+	#define M FONT_CHARS_PER_LINE
+	#define N FONT_CHAR_LINES
+
+	bytes_per_pixel = r_font_use_alpha_textures.integer ? 1 : 4;
+
+	startmap = incmap->fontmap;
+	index = incmap->charcount;
+	tier1_data_index = index % M;
+	tier2_data_index = incmap->tier1_merged;
+
+	if (bytes_per_pixel != incmap->bytes_per_pixel)
+	{
+		// should it really happen...
+		int olddata_size;
+		calc_data_arguments(1, 1);
+		olddata_size = datasize / bytes_per_pixel * incmap->bytes_per_pixel;
+		for (i = 0; i < M; ++i)
+		{
+			chunk = incmap->data_tier1[i];
+			if (chunk == NULL) break;
+			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize);
+			if (bytes_per_pixel == 1)
+				rgba_to_alpha(chunk, newdata, olddata_size);
+			else if (bytes_per_pixel == 4)
+				alpha_to_rgba(chunk, newdata, olddata_size);
+			Mem_Free(chunk);
+			incmap->data_tier1[i] = newdata;
+		}
+		chunk = NULL;
+		olddata_size *= M;
+		for (i = 0; i < N; ++i)
+		{
+			chunk = incmap->data_tier2[i];
+			if (chunk == NULL) break;
+			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize);
+			if (bytes_per_pixel == 1)
+				rgba_to_alpha(chunk, newdata, olddata_size);
+			else if (bytes_per_pixel == 4)
+				alpha_to_rgba(chunk, newdata, olddata_size);
+			Mem_Free(chunk);
+			incmap->data_tier2[i] = newdata;
+		}
+		chunk = NULL;
+		incmap->bytes_per_pixel = bytes_per_pixel;
+	}
+	
+	incmap->data_tier1[tier1_data_index] = data;
+
+	if (index % M == M - 1)
+	{
+		// tier 1 reduction, pieces to line
+		calc_data_arguments(1, 1);
+		targetmap_at = incmap->tier2_merged + incmap->tier1_merged;
+		targetmap = startmap;
+		for (i = 0; i < targetmap_at; ++i)
+			targetmap = targetmap->next;
+		currentmap = targetmap;
+		newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize * M);
+		for (i = 0; i < M; ++i)
+		{
+			chunk = incmap->data_tier1[i];
+			if (chunk == NULL)
+				continue;
+			for (y = 0; y < datasize; y += pitch)
+				for (x = 0; x < pitch; ++x)
+					newdata[y * M + i * pitch + x] = chunk[y + x];
+			Mem_Free(chunk);
+			incmap->data_tier1[i] = NULL;
+			merge_single_map(targetmap, i, currentmap, 0);
+			fix_glyph_coords_tier1(&targetmap->glyphs[i], (float)i);
+			currentmap = currentmap->next;
+		}
+		update_pic_for_fontmap(targetmap, Draw_GetPicName(targetmap->pic), width * M, height, newdata);
+		UnloadMapChain(targetmap->next);
+		targetmap->next = NULL;
+		incmap->data_tier2[tier2_data_index] = newdata;
+		++incmap->tier1_merged;
+		incmap->tier1_merged %= M;
+		incmap->newmap_start = INCMAP_START + targetmap_at + 1;
+		// then give this merged map
+		*outmap = targetmap;
+		*outmapch = i;
+	}
+	if (index % (M * N) == M * N - 1)
+	{
+		// tier 2 reduction, lines to full map
+		calc_data_arguments(M, 1);
+		targetmap_at = incmap->tier2_merged;
+		targetmap = startmap;
+		for (i = 0; i < targetmap_at; ++i)
+			targetmap = targetmap->next;
+		currentmap = targetmap;
+		newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize * N);
+		for (i = 0; i < N; ++i)
+		{
+			chunk = incmap->data_tier2[i];
+			if (chunk == NULL)
+				continue;
+			for (x = 0; x < datasize; ++x)
+				newdata[i * datasize + x] = chunk[x];
+			Mem_Free(chunk);
+			incmap->data_tier2[i] = NULL;
+			for (j = 0; j < M; ++j)
+			{
+				merge_single_map(targetmap, i * M + j, currentmap, j);
+				fix_glyph_coords_tier2(&targetmap->glyphs[i * M + j], (float)i);
+			}
+			currentmap = currentmap->next;
+		}
+		update_pic_for_fontmap(targetmap, Draw_GetPicName(targetmap->pic), width, height * N, newdata);
+		UnloadMapChain(targetmap->next);
+		targetmap->next = NULL;
+		Mem_Free(newdata);
+		++incmap->tier2_merged;
+		incmap->newmap_start = INCMAP_START + targetmap_at + 1;
+		// then give this merged map
+		*outmap = targetmap;
+		*outmapch = i * M + j;
+	}
+
+	++incmap->charcount;
+	++incmap->newmap_start;
+
+	#undef M
+	#undef N
+}
+
+static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
+		ft2_font_map_t **outmap, int *outmapch, qbool use_incmap)
 {
 	char map_identifier[MAX_QPATH];
-	unsigned long mapidx = _ch / FONT_CHARS_PER_MAP;
+	unsigned long map_startglyph = _ch / FONT_CHARS_PER_MAP * FONT_CHARS_PER_MAP;
 	unsigned char *data = NULL;
-	FT_ULong ch, mapch;
+	FT_ULong ch = 0, mapch = 0;
 	int status;
 	int tp;
 	FT_Int32 load_flags;
 	int gpad_l, gpad_r, gpad_t, gpad_b;
-	char vabuf[1024];
 
 	int pitch;
-	int gR, gC; // glyph position: row and column
+	int bytes_per_pixel;
+	int width, height, datasize;
+	int glyph_row, glyph_column;
 
-	ft2_font_map_t *map, *next;
+	int chars_per_line = FONT_CHARS_PER_LINE;
+	int char_lines = FONT_CHAR_LINES;
+	int chars_per_map = FONT_CHARS_PER_MAP;
+
 	ft2_font_t *usefont;
+	ft2_font_map_t *map, *next;
+	font_incmap_t *incmap;
 
 	FT_Face fontface;
 
-	int bytesPerPixel = 4; // change the conversion loop too if you change this!
+	bytes_per_pixel = r_font_use_alpha_textures.integer ? 1 : 4;
 
-	if (outmap)
-		*outmap = NULL;
-
-	if (r_font_use_alpha_textures.integer)
-		bytesPerPixel = 1;
+	incmap = mapstart->incmap;
+	if (use_incmap)
+	{
+		// only render one character in this map;
+		// such small maps will be merged together later in `incmap_post_process`
+		chars_per_line = char_lines = chars_per_map = 1;
+		// and the index is incremental
+		map_startglyph = incmap ? incmap->newmap_start : INCMAP_START;
+	}
 
 	if (font->image_font)
 		fontface = (FT_Face)font->next->face;
@@ -1311,13 +1580,16 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	map = (ft2_font_map_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_map_t));
 	if (!map)
 	{
-		Con_Printf(CON_ERROR "ERROR: Out of memory when loading fontmap for %s\n", font->name);
+		Con_Printf(CON_ERROR "ERROR: Out of memory when allowcating fontmap for %s\n", font->name);
 		return false;
 	}
 
-	// create a totally unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
+	map->start = map_startglyph;
+
+	// create a unique name for this map, then we will use it to make a unique cachepic_t to avoid redundant textures
+	/*
 	dpsnprintf(map_identifier, sizeof(map_identifier),
-		"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u",
+		"%s_cache_%g_%d_%g_%g_%g_%g_%g_%u_%lx",
 		font->name,
 		(double) mapstart->intSize,
 		(int) load_flags,
@@ -1326,13 +1598,18 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		(double) font->settings->shadowx,
 		(double) font->settings->shadowy,
 		(double) font->settings->shadowz,
-		(unsigned) mapidx);
+		(unsigned) map_startglyph,
+		// add pointer as a unique part to avoid earlier incmaps' state being trashed
+		use_incmap ? (unsigned long)mapstart : 0x0);
+	*/
+	dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%g_%lx_%u",
+			font->name, mapstart->intSize, (unsigned long) mapstart, (unsigned) map_startglyph);
 
 	// create a cachepic_t from the data now, or reuse an existing one
 	if (developer_font.integer)
 		Con_Printf("Generating font map %s (size: %.1f MB)\n", map_identifier, mapstart->glyphSize * (256 * 4 / 1048576.0) * mapstart->glyphSize);
 
-	Font_Postprocess(font, NULL, 0, bytesPerPixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
+	Font_Postprocess(font, NULL, 0, bytes_per_pixel, mapstart->size*2, mapstart->size*2, &gpad_l, &gpad_r, &gpad_t, &gpad_b);
 
 	// copy over the information
 	map->size = mapstart->size;
@@ -1341,19 +1618,58 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	map->sfx = mapstart->sfx;
 	map->sfy = mapstart->sfy;
 
-	pitch = map->glyphSize * FONT_CHARS_PER_LINE * bytesPerPixel;
-	data = (unsigned char *)Mem_Alloc(font_mempool, (FONT_CHAR_LINES * map->glyphSize) * pitch);
+	width = map->glyphSize * chars_per_line;
+	height = map->glyphSize * char_lines;
+	pitch = width * bytes_per_pixel;
+	datasize = height * pitch;
+	data = (unsigned char *)Mem_Alloc(font_mempool, datasize);
 	if (!data)
 	{
 		Con_Printf(CON_ERROR "ERROR: Failed to allocate memory for font %s size %g\n", font->name, map->size);
 		Mem_Free(map);
 		return false;
 	}
+
+	if (use_incmap)
+	{
+		if (mapstart->incmap == NULL)
+		{
+			// initial incmap
+			incmap = mapstart->incmap = (font_incmap_t *)Mem_Alloc(font_mempool, sizeof(font_incmap_t));
+			if (!incmap)
+			{
+				Con_Printf(CON_ERROR "ERROR: Out of memory when allowcating incremental fontmap for %s\n", font->name);
+				return false;
+			}
+			// this will be the startmap of incmap
+			incmap->fontmap = map;
+			incmap->newmap_start = INCMAP_START;
+			incmap->bytes_per_pixel = bytes_per_pixel;
+		}
+		else
+		{
+			// new maps for incmap shall always be the last one
+			next = incmap->fontmap;
+			while (next->next != NULL)
+				next = next->next;
+			next->next = map;
+		}
+	}
+	else
+	{
+		// insert this normal map
+		next = use_incmap ? incmap->fontmap : mapstart;
+		while(next->next && next->next->start < map->start)
+			next = next->next;
+		map->next = next->next;
+		next->next = map;
+	}
+
 	// initialize as white texture with zero alpha
 	tp = 0;
-	while (tp < (FONT_CHAR_LINES * map->glyphSize) * pitch)
+	while (tp < datasize)
 	{
-		if (bytesPerPixel == 4)
+		if (bytes_per_pixel == 4)
 		{
 			data[tp++] = 0xFF;
 			data[tp++] = 0xFF;
@@ -1362,21 +1678,11 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		data[tp++] = 0x00;
 	}
 
-	memset(map->width_of, 0, sizeof(map->width_of));
-
-	// insert the map
-	map->start = mapidx * FONT_CHARS_PER_MAP;
-	next = mapstart;
-	while(next->next && next->next->start < map->start)
-		next = next->next;
-	map->next = next->next;
-	next->next = map;
-
-	gR = 0;
-	gC = -1;
-	for (ch = map->start;
-	     ch < (FT_ULong)map->start + FONT_CHARS_PER_MAP;
-	     ++ch)
+	glyph_row = 0;
+	glyph_column = 0;
+	ch = (FT_ULong)(use_incmap ? _ch : map->start);
+	mapch = 0;
+	while (true)
 	{
 		FT_ULong glyphIndex;
 		int w, h, x, y;
@@ -1387,22 +1693,15 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		FT_Face face;
 		int pad_l, pad_r, pad_t, pad_b;
 
-		mapch = ch - map->start;
-
 		if (developer_font.integer)
 			Con_DPrint("glyphinfo: ------------- GLYPH INFO -----------------\n");
 
-		++gC;
-		if (gC >= FONT_CHARS_PER_LINE)
-		{
-			gC -= FONT_CHARS_PER_LINE;
-			++gR;
-		}
+		map->glyphchars[mapch] = (Uchar)ch;
 
 		if (data)
 		{
-			imagedata = data + gR * pitch * map->glyphSize + gC * map->glyphSize * bytesPerPixel;
-			imagedata += gpad_t * pitch + gpad_l * bytesPerPixel;
+			imagedata = data + glyph_row * pitch * map->glyphSize + glyph_column * map->glyphSize * bytes_per_pixel;
+			imagedata += gpad_t * pitch + gpad_l * bytes_per_pixel;
 		}
 		//status = qFT_Load_Char(face, ch, FT_LOAD_RENDER);
 		// we need the glyphIndex
@@ -1503,44 +1802,44 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 				switch (bmp->pixel_mode)
 				{
 				case FT_PIXEL_MODE_MONO:
-					dst += bytesPerPixel - 1; // shift to alpha byte
+					dst += bytes_per_pixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 8)
 					{
 						unsigned char c = *src++;
-						*dst = 255 * !!((c & 0x80) >> 7); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x40) >> 6); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x20) >> 5); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x10) >> 4); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x08) >> 3); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x04) >> 2); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x02) >> 1); dst += bytesPerPixel;
-						*dst = 255 * !!((c & 0x01) >> 0); dst += bytesPerPixel;
+						*dst = 255 * !!((c & 0x80) >> 7); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x40) >> 6); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x20) >> 5); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x10) >> 4); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x08) >> 3); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x04) >> 2); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x02) >> 1); dst += bytes_per_pixel;
+						*dst = 255 * !!((c & 0x01) >> 0); dst += bytes_per_pixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY2:
-					dst += bytesPerPixel - 1; // shift to alpha byte
+					dst += bytes_per_pixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 4)
 					{
 						unsigned char c = *src++;
-						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
-						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
-						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
-						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytesPerPixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytes_per_pixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytes_per_pixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytes_per_pixel;
+						*dst = ( ((c & 0xA0) >> 6) * 0x55 ); c <<= 2; dst += bytes_per_pixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY4:
-					dst += bytesPerPixel - 1; // shift to alpha byte
+					dst += bytes_per_pixel - 1; // shift to alpha byte
 					for (x = 0; x < bmp->width; x += 2)
 					{
 						unsigned char c = *src++;
-						*dst = ( ((c & 0xF0) >> 4) * 0x11); dst += bytesPerPixel;
-						*dst = ( ((c & 0x0F) ) * 0x11); dst += bytesPerPixel;
+						*dst = ( ((c & 0xF0) >> 4) * 0x11); dst += bytes_per_pixel;
+						*dst = ( ((c & 0x0F) ) * 0x11); dst += bytes_per_pixel;
 					}
 					break;
 				case FT_PIXEL_MODE_GRAY:
 					// in this case pitch should equal width
 					for (tp = 0; tp < bmp->pitch; ++tp)
-						dst[(bytesPerPixel - 1) + tp*bytesPerPixel] = src[tp]; // copy the grey value into the alpha bytes
+						dst[(bytes_per_pixel - 1) + tp*bytes_per_pixel] = src[tp]; // copy the grey value into the alpha bytes
 
 					//memcpy((void*)dst, (void*)src, bmp->pitch);
 					//dst += bmp->pitch;
@@ -1554,7 +1853,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			pad_r = gpad_r;
 			pad_t = gpad_t;
 			pad_b = gpad_b;
-			Font_Postprocess(font, imagedata, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+			Font_Postprocess(font, imagedata, pitch, bytes_per_pixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
 		}
 		else
 		{
@@ -1562,7 +1861,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			pad_r = gpad_r;
 			pad_t = gpad_t;
 			pad_b = gpad_b;
-			Font_Postprocess(font, NULL, pitch, bytesPerPixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
+			Font_Postprocess(font, NULL, pitch, bytes_per_pixel, w, h, &pad_l, &pad_r, &pad_t, &pad_b);
 		}
 
 
@@ -1579,10 +1878,10 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			//double mWidth = (glyph->metrics.width >> 6) / map->size;
 			//double mHeight = (glyph->metrics.height >> 6) / map->size;
 
-			mapglyph->txmin = ( (double)(gC * map->glyphSize) + (double)(gpad_l - pad_l) ) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
-			mapglyph->txmax = mapglyph->txmin + (double)(bmp->width + pad_l + pad_r) / ( (double)(map->glyphSize * FONT_CHARS_PER_LINE) );
-			mapglyph->tymin = ( (double)(gR * map->glyphSize) + (double)(gpad_r - pad_r) ) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
-			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * FONT_CHAR_LINES) );
+			mapglyph->txmin = ( (double)(glyph_column * map->glyphSize) + (double)(gpad_l - pad_l) ) / ( (double)(map->glyphSize * chars_per_line) );
+			mapglyph->txmax = mapglyph->txmin + (double)(bmp->width + pad_l + pad_r) / ( (double)(map->glyphSize * chars_per_line) );
+			mapglyph->tymin = ( (double)(glyph_row * map->glyphSize) + (double)(gpad_r - pad_r) ) / ( (double)(map->glyphSize * char_lines) );
+			mapglyph->tymax = mapglyph->tymin + (double)(bmp->rows + pad_t + pad_b) / ( (double)(map->glyphSize * char_lines) );
 			//mapglyph->vxmin = bearingX;
 			//mapglyph->vxmax = bearingX + mWidth;
 			mapglyph->vxmin = (glyph->bitmap_left - pad_l) / map->size;
@@ -1599,7 +1898,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 
 			if (developer_font.integer)
 			{
-				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, gC, gR);
+				Con_DPrintf("glyphinfo:   Glyph: %lu   at (%i, %i)\n", (unsigned long)ch, glyph_column, glyph_row);
 				Con_DPrintf("glyphinfo:   %f, %f, %lu\n", bearingX, map->sfx, (unsigned long)glyph->metrics.horiBearingX);
 				if (ch >= 32 && ch <= 128)
 					Con_DPrintf("glyphinfo:   Character: %c\n", (int)ch);
@@ -1613,36 +1912,40 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			}
 		}
 		map->glyphs[mapch].image = false;
+
+		++mapch; ++ch;
+		if ((int)mapch == chars_per_map)
+			break;
+		if (++glyph_column % chars_per_line == 0)
+		{
+			glyph_column = 0;
+			++glyph_row;
+		}
 	}
 
-	{
-		int w = map->glyphSize * FONT_CHARS_PER_LINE;
-		int h = map->glyphSize * FONT_CHAR_LINES;
-		// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
-		map->pic = Draw_NewPic(map_identifier, w, h, data, r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA, TEXF_ALPHA | TEXF_CLAMP | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
+	// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
+	update_pic_for_fontmap(map, map_identifier, width, height, data);
 
-		if (r_font_diskcache.integer >= 1)
-		{
+	// diskcache deprecated for being complicated to fix and not worthwhile anymore
+#if 0
+	if (r_font_diskcache.integer >= 1 && bytes_per_pixel == 4 && !use_incmap)
+	{
 			// swap to BGRA for tga writing...
-			int s = w * h;
 			int x;
 			int b;
-			for (x = 0;x < s;x++)
+			for (x = 0;x < datasize;x++)
 			{
 				b = data[x*4+0];
 				data[x*4+0] = data[x*4+2];
 				data[x*4+2] = b;
 			}
-			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), w, h, data);
+			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), width, height, data);
 #ifndef USE_GLES2
-			if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
-				R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
+		if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
+			R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
 #endif
-		}
 	}
-
-	if(data)
-		Mem_Free(data);
+#endif
 
 	if (!Draw_IsPicLoaded(map->pic))
 	{
@@ -1651,29 +1954,150 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		// this would be bad...
 		// only `data' must be freed
 		Con_Printf(CON_ERROR "ERROR: Failed to generate texture for font %s size %f map %lu\n",
-			   font->name, mapstart->size, mapidx);
+			   font->name, mapstart->size, map_startglyph);
 		return false;
 	}
-	if (outmap)
+
+	if (use_incmap)
+	{
 		*outmap = map;
+		*outmapch = 0;
+		// data will be kept in incmap for being merged later, freed afterward
+		incmap_post_process(incmap, _ch, data, outmap, outmapch);
+	}
+	else if (data)
+	{
+		Mem_Free(data);
+		*outmap = map;
+		if (outmapch != NULL)
+			*outmapch = _ch - map->start;
+	}
+
 	return true;
 }
 
-qbool Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar _ch, ft2_font_map_t **outmap)
+static qbool legacy_font_loading_api_alerted = false;
+static inline void alert_legacy_font_api(const char *name)
+{
+	if (!legacy_font_loading_api_alerted)
+	{
+		Con_DPrintf(CON_WARN "Warning: You are using an legacy API '%s', which have certain limitations; please use 'Font_GetMapForChar' instead\n", name);
+		legacy_font_loading_api_alerted = true;
+	}
+}
+
+// legacy font API, please use `Font_GetMapForChar` instead
+qbool Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar ch, ft2_font_map_t **outmap)
 {
 	if (map_index < 0 || map_index >= MAX_FONT_SIZES)
 		return false;
 	// the first map must have been loaded already
 	if (!font->font_maps[map_index])
 		return false;
-	return Font_LoadMap(font, font->font_maps[map_index], _ch, outmap);
+	alert_legacy_font_api("Font_LoadMapForIndex");
+	return Font_LoadMap(font, font->font_maps[map_index], ch, outmap, NULL, false);
 }
 
+// legacy font API, please use `Font_GetMapForChar` instead
 ft2_font_map_t *FontMap_FindForChar(ft2_font_map_t *start, Uchar ch)
 {
-	while (start && start->start + FONT_CHARS_PER_MAP <= ch)
-		start = start->next;
-	if (start && start->start > ch)
+	ft2_font_map_t *map = start;
+	while (map && map->start + FONT_CHARS_PER_MAP <= ch)
+		map = map->next;
+	if (map && map->start > ch)
 		return NULL;
-	return start;
+	alert_legacy_font_api("FontMap_FindForChar");
+	return map;
+}
+
+static inline qbool should_use_incmap(Uchar ch)
+{
+	int i;
+	// optimize: a simple check logic for usual conditions
+	if (ch < unicode_bigblocks[0])
+		return false;
+	if (r_font_disable_incmaps.integer == 1)
+		return false;
+	for (i = 0; i < (int)(sizeof(unicode_bigblocks) / sizeof(Uchar)); i += 2)
+		if (unicode_bigblocks[i] <= ch && ch <= unicode_bigblocks[i + 1])
+			return true;
+	return false;
+}
+
+static inline qbool get_char_from_incmap(ft2_font_map_t *map, Uchar ch, ft2_font_map_t **outmap, int *outmapch)
+{
+	int i;
+	font_incmap_t *incmap;
+
+	incmap = map->incmap;
+	*outmapch = 0;
+
+	if (incmap != NULL)
+	{
+		map = incmap->fontmap;
+		while (map != NULL)
+		{
+			for (i = 0; i < FONT_CHARS_PER_MAP; ++i)
+			{
+				if (map->glyphchars[i] == ch)
+				{
+					*outmap = map;
+					*outmapch = i;
+					return true;
+				}
+				else if (map->glyphchars[i] == 0)
+					// this tier0/tier1 map ends here
+					break;
+			}
+			map = map->next;
+		}
+	}
+	return false;
+}
+
+/**
+ * Query for or load a font map for a character, with the character's place on it.
+ * Supports the incremental map mechanism; returning if the operation is done successfully
+ */
+qbool Font_GetMapForChar(ft2_font_t *font, int map_index, Uchar ch, ft2_font_map_t **outmap, int *outmapch)
+{
+	qbool use_incmap;
+	ft2_font_map_t *map;
+
+	// startmap
+	map = Font_MapForIndex(font, map_index);
+
+	// optimize: the first map must have been loaded already
+	if (ch < FONT_CHARS_PER_MAP)
+	{
+		*outmapch = ch;
+		*outmap = map;
+		return true;
+	}
+
+	// search for the character
+
+	use_incmap = should_use_incmap(ch);
+
+	if (!use_incmap)
+	{
+		// normal way
+		*outmapch = ch % FONT_CHARS_PER_MAP;
+		while (map && map->start + FONT_CHARS_PER_MAP <= ch)
+			map = map->next;
+		if (map && map->start <= ch)
+		{
+			*outmap = map;
+			return true;
+		}
+	}
+	else if (get_char_from_incmap(map, ch, outmap, outmapch))
+		// got it
+		return true;
+
+	// so no appropriate map was found, load one
+
+	if (map_index < 0 || map_index >= MAX_FONT_SIZES)
+		return false;
+	return Font_LoadMap(font, font->font_maps[map_index], ch, outmap, outmapch, use_incmap);
 }

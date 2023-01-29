@@ -354,6 +354,9 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
 
+	/*
+	// this "reset" seems interrupts fontmap loading and wastes previous works
+	// no side-effects so far without this
 	if(fnt->ft2)
 	{
 		// clear freetype font
@@ -361,6 +364,7 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		Mem_Free(fnt->ft2);
 		fnt->ft2 = NULL;
 	}
+	*/
 
 	if(fnt->req_face != -1)
 	{
@@ -458,7 +462,7 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 			if (!map)
 				break;
 			for(ch = 0; ch < 256; ++ch)
-				map->width_of[ch] = Font_SnapTo(fnt->width_of[ch], 1/map->size);
+				fnt->width_of_ft2[i][ch] = Font_SnapTo(fnt->width_of[ch], 1/map->size);
 		}
 	}
 
@@ -975,7 +979,7 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	//	x = snap_to_pixel_x(x, 0.4); // haha, it's 0 anyway
 
 	if (fontmap)
-		width_of = fontmap->width_of;
+		width_of = fnt->width_of_ft2[map_index];
 	else
 		width_of = fnt->width_of;
 
@@ -1046,18 +1050,12 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			}
 			x += width_of[ch] * dw;
 		} else {
-			if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
+			if (!map || map == ft2_oldstyle_map || ch != prevch)
 			{
-				map = FontMap_FindForChar(fontmap, ch);
+				Font_GetMapForChar(ft2, map_index, ch, &map, &mapch);
 				if (!map)
-				{
-					if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
-						break;
-					if (!map)
-						break;
-				}
+					break;
 			}
-			mapch = ch - map->start;
 			if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, NULL))
 				x += kx * dw;
 			x += map->glyphs[mapch].advance_x * dw;
@@ -1146,7 +1144,7 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	pix_y = vid.height / vid_conheight.value;
 
 	if (fontmap)
-		width_of = fontmap->width_of;
+		width_of = fnt->width_of_ft2[map_index];
 	else
 		width_of = fnt->width_of;
 
@@ -1259,27 +1257,16 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 				Mod_Mesh_AddTriangle(mod, surf, e0, e2, e3);
 				x += width_of[ch] * dw;
 			} else {
-				if (!map || map == ft2_oldstyle_map || ch < map->start || ch >= map->start + FONT_CHARS_PER_MAP)
+				if (!map || map == ft2_oldstyle_map || ch != prevch)
 				{
-					// find the new map
-					map = FontMap_FindForChar(fontmap, ch);
+					Font_GetMapForChar(ft2, map_index, ch, &map, &mapch);
 					if (!map)
 					{
-						if (!Font_LoadMapForIndex(ft2, map_index, ch, &map))
-						{
-							shadow = -1;
-							break;
-						}
-						if (!map)
-						{
-							// this shouldn't happen
-							shadow = -1;
-							break;
-						}
+						shadow = -1;
+						break;
 					}
 				}
 
-				mapch = ch - map->start;
 				thisw = map->glyphs[mapch].advance_x;
 
 				//x += ftbase_x;
