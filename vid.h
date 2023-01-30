@@ -223,7 +223,7 @@ qbool VID_HasScreenKeyboardSupport(void);
 void VID_ShowKeyboard(qbool show);
 qbool VID_ShowingKeyboard(void);
 
-void VID_SetMouse (qbool fullscreengrab, qbool relative, qbool hidecursor);
+void VID_SetMouse(qbool relative, qbool hidecursor);
 void VID_Finish (void);
 
 void VID_Restart_f(struct cmd_state_s *cmd);
