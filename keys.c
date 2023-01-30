@@ -1364,9 +1364,10 @@ Key_StringToKeynum (const char *str)
 			return kn->keynum;
 	}
 
-	// non-ascii keys are Unicode codepoints, so give the character
+	// non-ascii keys are Unicode codepoints, so give the character if it's valid;
+	// error message have more than one character, don't allow it
 	ch = u8_getnchar(str, &str, 3);
-	return ch == 0 ? -1 : (int)ch;
+	return (ch == 0 || *str != 0) ? -1 : (int)ch;
 }
 
 /*
@@ -1597,9 +1598,9 @@ Key_PrintBindList(int j)
 		{
 			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false);
 			if (j == 0)
-				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 			else
-				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 		}
 	}
 }
@@ -1694,9 +1695,9 @@ Key_WriteBindings (qfile_t *f)
 			{
 				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false); // don't need to escape $ because cvars are not expanded inside bind
 				if (j == 0)
-					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 				else
-					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 			}
 		}
 	}
