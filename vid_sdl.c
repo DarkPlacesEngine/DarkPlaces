@@ -371,7 +371,7 @@ qbool VID_ShowingKeyboard(void)
 	return SDL_IsTextInputActive() != 0;
 }
 
-void VID_SetMouse(qbool fullscreengrab, qbool relative, qbool hidecursor)
+void VID_SetMouse(qbool relative, qbool hidecursor)
 {
 #ifndef DP_MOBILETOUCH
 #ifdef MACOSX
@@ -384,7 +384,7 @@ void VID_SetMouse(qbool fullscreengrab, qbool relative, qbool hidecursor)
 		vid_usingmouse = relative;
 		cl_ignoremousemoves = 2;
 		vid_usingmouse_relativeworks = SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE) == 0;
-//		Con_Printf("VID_SetMouse(%i, %i, %i) relativeworks = %i\n", (int)fullscreengrab, (int)relative, (int)hidecursor, (int)vid_usingmouse_relativeworks);
+//		Con_Printf("VID_SetMouse(%i, %i) relativeworks = %i\n", (int)relative, (int)hidecursor, (int)vid_usingmouse_relativeworks);
 #ifdef MACOSX
 		if(relative)
 		{
@@ -1655,7 +1655,7 @@ qbool VID_InitMode(viddef_mode_t *mode)
 void VID_Shutdown (void)
 {
 	VID_EnableJoystick(false);
-	VID_SetMouse(false, false, false);
+	VID_SetMouse(false, false);
 
 	SDL_DestroyWindow(window);
 	window = NULL;
