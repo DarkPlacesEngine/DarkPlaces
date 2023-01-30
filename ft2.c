@@ -1365,7 +1365,7 @@ static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
 		{
 			chunk = incmap->data_tier2[i];
 			if (chunk == NULL) break;
-			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize);
+			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize * M);
 			if (bytes_per_pixel == 1)
 				rgba_to_alpha(chunk, newdata, olddata_size);
 			else if (bytes_per_pixel == 4)
@@ -1602,8 +1602,16 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		// add pointer as a unique part to avoid earlier incmaps' state being trashed
 		use_incmap ? (unsigned long)mapstart : 0x0);
 	*/
-	dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%g_%lx_%u",
-			font->name, mapstart->intSize, (unsigned long) mapstart, (unsigned) map_startglyph);
+	/*
+	 * note 1: it appears that different font instances may have the same metrics, causing this pic being overwritten
+	 *         will use startmap's pointer as a unique part to avoid earlier incmaps' dynamic pics being trashed
+	 * note 2: if this identifier is made too long, significient performance drop will take place
+	 * note 3: blur/outline/shadow are per-font settings, so a pointer to startmap & map size
+	 *         already made these unique, hence they are omitted
+	 * note 4: font_diskcache is removed, this name can be less meaningful
+	 */
+	dpsnprintf(map_identifier, sizeof(map_identifier), "%s_%g_%p_%u",
+			font->name, mapstart->intSize, mapstart, (unsigned) map_startglyph);
 
 	// create a cachepic_t from the data now, or reuse an existing one
 	if (developer_font.integer)
