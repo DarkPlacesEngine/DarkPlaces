@@ -3271,7 +3271,7 @@ void VM_keynumtostring (prvm_prog_t *prog)
 	char tinystr[TINYSTR_LEN];
 	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Key_KeynumToString((int)PRVM_G_FLOAT(OFS_PARM0), tinystr, sizeof(tinystr)));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Key_KeynumToString((int)PRVM_G_FLOAT(OFS_PARM0), tinystr, TINYSTR_LEN));
 }
 
 /*

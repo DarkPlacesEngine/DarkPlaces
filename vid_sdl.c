@@ -101,7 +101,7 @@ static int MapKey( unsigned int sdlkey )
 	switch(sdlkey)
 	{
 	// sdlkey can be Unicode codepoint for non-ascii keys, which are valid
-	default:                      return sdlkey;
+	default:                      return sdlkey & SDLK_SCANCODE_MASK ? 0 : sdlkey;
 //	case SDLK_UNKNOWN:            return K_UNKNOWN;
 	case SDLK_RETURN:             return K_ENTER;
 	case SDLK_ESCAPE:             return K_ESCAPE;
