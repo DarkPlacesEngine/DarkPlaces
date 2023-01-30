@@ -978,7 +978,7 @@ trace_t CL_Cache_TraceLineSurfaces(const vec3_t start, const vec3_t end, int typ
 		if (!model)
 			continue;
 		// animated models are not suitable for caching
-		if ((&touch->priv.server->frameblend[0] && (touch->priv.server->frameblend[0].lerp != 1.0 || touch->priv.server->frameblend[0].subframe != 0)) || touch->priv.server->skeleton.relativetransforms)
+		if ((touch->priv.server->frameblend[0].lerp != 1.0 || touch->priv.server->frameblend[0].subframe != 0) || touch->priv.server->skeleton.relativetransforms)
 			continue;
 		if (type == MOVE_NOMONSTERS && PRVM_clientedictfloat(touch, solid) != SOLID_BSP)
 			continue;
