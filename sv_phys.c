@@ -875,29 +875,30 @@ void SV_LinkEdict (prvm_edict_t *ent)
 		VectorAdd(PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, maxs), maxs);
 	}
 
-//
-// to make items easier to pick up and allow them to be grabbed off
-// of shelves, the abs sizes are expanded
-//
-	if ((int)PRVM_serveredictfloat(ent, flags) & FL_ITEM)
+	if (sv_legacy_bbox_expand.integer)
 	{
-		mins[0] -= 15;
-		mins[1] -= 15;
-		mins[2] -= 1;
-		maxs[0] += 15;
-		maxs[1] += 15;
-		maxs[2] += 1;
-	}
-	else
-	{
-		// because movement is clipped an epsilon away from an actual edge,
-		// we must fully check even when bounding boxes don't quite touch
-		mins[0] -= 1;
-		mins[1] -= 1;
-		mins[2] -= 1;
-		maxs[0] += 1;
-		maxs[1] += 1;
-		maxs[2] += 1;
+		if ((int)PRVM_serveredictfloat(ent, flags) & FL_ITEM)
+		{
+			// to make items easier to pick up and allow them to be grabbed off
+			// of shelves, the abs sizes are expanded
+			mins[0] -= 15;
+			mins[1] -= 15;
+			mins[2] -= 1;
+			maxs[0] += 15;
+			maxs[1] += 15;
+			maxs[2] += 1;
+		}
+		else
+		{
+			// because movement is clipped an epsilon away from an actual edge,
+			// we must fully check even when bounding boxes don't quite touch
+			mins[0] -= 1;
+			mins[1] -= 1;
+			mins[2] -= 1;
+			maxs[0] += 1;
+			maxs[1] += 1;
+			maxs[2] += 1;
+		}
 	}
 
 	VectorCopy(mins, PRVM_serveredictvector(ent, absmin));
