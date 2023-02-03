@@ -134,6 +134,7 @@ cvar_t sv_init_frame_count = {CF_SERVER, "sv_init_frame_count", "2", "number of 
 cvar_t sv_idealpitchscale = {CF_SERVER, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
 cvar_t sv_jumpstep = {CF_SERVER | CF_NOTIFY, "sv_jumpstep", "0", "whether you can step up while jumping"};
 cvar_t sv_jumpvelocity = {CF_SERVER, "sv_jumpvelocity", "270", "cvar that can be used by QuakeC code for jump velocity"};
+cvar_t sv_legacy_bbox_expand = {CF_SERVER, "sv_legacy_bbox_expand", "1", "before linking an entity to the area grid, decrease its mins and increase its maxs by '1 1 1', or '15 15 1' if it has flag FL_ITEM (this is the Quake/QuakeWorld behaviour); disable to make SVQC bboxes consistent with CSQC which never does this expansion"};
 cvar_t sv_maxairspeed = {CF_SERVER, "sv_maxairspeed", "30", "maximum speed a player can accelerate to when airborn (note that it is possible to completely stop by moving the opposite direction)"};
 cvar_t sv_maxrate = {CF_SERVER | CF_ARCHIVE | CF_NOTIFY, "sv_maxrate", "1000000", "upper limit on client rate cvar, should reflect your network connection quality"};
 cvar_t sv_maxspeed = {CF_SERVER | CF_NOTIFY, "sv_maxspeed", "320", "maximum speed a player can accelerate to when on ground (can be exceeded by tricks)"};
@@ -612,6 +613,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_jumpstep);
 	Cvar_RegisterVariable (&sv_jumpvelocity);
+	Cvar_RegisterVariable (&sv_legacy_bbox_expand);
 	Cvar_RegisterVariable (&sv_maxairspeed);
 	Cvar_RegisterVariable (&sv_maxrate);
 	Cvar_RegisterVariable (&sv_maxspeed);

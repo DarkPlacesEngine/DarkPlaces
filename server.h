@@ -469,6 +469,7 @@ extern cvar_t sv_gravity;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_jumpstep;
 extern cvar_t sv_jumpvelocity;
+extern cvar_t sv_legacy_bbox_expand;
 extern cvar_t sv_maxairspeed;
 extern cvar_t sv_maxrate;
 extern cvar_t sv_maxspeed;
