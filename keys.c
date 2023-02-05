@@ -1351,6 +1351,7 @@ the K_* names are matched up.
 int
 Key_StringToKeynum (const char *str)
 {
+	Uchar ch;
 	const keyname_t  *kn;
 
 	if (!str || !str[0])
@@ -1362,7 +1363,11 @@ Key_StringToKeynum (const char *str)
 		if (!strcasecmp (str, kn->name))
 			return kn->keynum;
 	}
-	return -1;
+
+	// non-ascii keys are Unicode codepoints, so give the character if it's valid;
+	// error message have more than one character, don't allow it
+	ch = u8_getnchar(str, &str, 3);
+	return (ch == 0 || *str != 0) ? -1 : (int)ch;
 }
 
 /*
@@ -1387,13 +1392,9 @@ Key_KeynumToString (int keynum, char *tinystr, size_t tinystrlength)
 			return kn->name;
 
 	// if it is printable, output it as a single character
-	if (keynum > 32 && keynum < 256)
+	if (keynum > 32)
 	{
-		if (tinystrlength >= 2)
-		{
-			tinystr[0] = keynum;
-			tinystr[1] = 0;
-		}
+		u8_fromchar(keynum, tinystr, tinystrlength);
 		return tinystr;
 	}
 
@@ -1586,7 +1587,7 @@ static void
 Key_PrintBindList(int j)
 {
 	char bindbuf[MAX_INPUTLINE];
-	char tinystr[2];
+	char tinystr[TINYSTR_LEN];
 	const char *p;
 	int i;
 
@@ -1597,9 +1598,9 @@ Key_PrintBindList(int j)
 		{
 			Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false);
 			if (j == 0)
-				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+				Con_Printf("^2%s ^7= \"%s\"\n", Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 			else
-				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+				Con_Printf("^3bindmap %d: ^2%s ^7= \"%s\"\n", j, Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 		}
 	}
 }
@@ -1679,7 +1680,7 @@ Key_WriteBindings (qfile_t *f)
 {
 	int         i, j;
 	char bindbuf[MAX_INPUTLINE];
-	char tinystr[2];
+	char tinystr[TINYSTR_LEN];
 	const char *p;
 
 	// Override default binds
@@ -1694,9 +1695,9 @@ Key_WriteBindings (qfile_t *f)
 			{
 				Cmd_QuoteString(bindbuf, sizeof(bindbuf), p, "\"\\", false); // don't need to escape $ because cvars are not expanded inside bind
 				if (j == 0)
-					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+					FS_Printf(f, "bind %s \"%s\"\n", Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 				else
-					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i, tinystr, sizeof(tinystr)), bindbuf);
+					FS_Printf(f, "in_bind %d %s \"%s\"\n", j, Key_KeynumToString (i, tinystr, TINYSTR_LEN), bindbuf);
 			}
 		}
 	}

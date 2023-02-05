@@ -2643,7 +2643,7 @@ static void M_Keys_Draw (void)
 			strlcpy(keystring, "???", sizeof(keystring));
 		else
 		{
-			char tinystr[2];
+			char tinystr[TINYSTR_LEN];
 			keystring[0] = 0;
 			for (j = 0;j < NUMKEYS;j++)
 			{
@@ -2651,7 +2651,7 @@ static void M_Keys_Draw (void)
 				{
 					if (j > 0)
 						strlcat(keystring, " or ", sizeof(keystring));
-					strlcat(keystring, Key_KeynumToString (keys[j], tinystr, sizeof(tinystr)), sizeof(keystring));
+					strlcat(keystring, Key_KeynumToString (keys[j], tinystr, TINYSTR_LEN), sizeof(keystring));
 				}
 			}
 		}
@@ -2669,7 +2669,7 @@ static void M_Keys_Key(cmd_state_t *cmd, int k, int ascii)
 {
 	char	line[80];
 	int		keys[NUMKEYS];
-	char	tinystr[2];
+	char	tinystr[TINYSTR_LEN];
 
 	if (bind_grab)
 	{	// defining a key
@@ -2680,7 +2680,7 @@ static void M_Keys_Key(cmd_state_t *cmd, int k, int ascii)
 		}
 		else //if (k != '`')
 		{
-			dpsnprintf(line, sizeof(line), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k, tinystr, sizeof(tinystr)), bindnames[keys_cursor][0]);
+			dpsnprintf(line, sizeof(line), "bind \"%s\" \"%s\"\n", Key_KeynumToString(k, tinystr, TINYSTR_LEN), bindnames[keys_cursor][0]);
 			Cbuf_InsertText (cmd, line);
 		}
 
