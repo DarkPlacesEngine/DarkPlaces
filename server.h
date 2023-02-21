@@ -415,6 +415,7 @@ extern cvar_t sv_allowdownloads_archive;
 extern cvar_t sv_allowdownloads_config;
 extern cvar_t sv_allowdownloads_dlcache;
 extern cvar_t sv_allowdownloads_inarchive;
+extern cvar_t sv_areagrid_link_SOLID_NOT;
 extern cvar_t sv_areagrid_mingridsize;
 extern cvar_t sv_checkforpacketsduringsleep;
 extern cvar_t sv_clmovement_enable;

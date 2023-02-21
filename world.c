@@ -317,12 +317,16 @@ World_LinkEdict
 
 ===============
 */
-void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const vec3_t maxs)
+void World_LinkEdict(world_t *world, prvm_edict_t *ent, const vec3_t mins, const vec3_t maxs, qbool link_solid_not)
 {
 	prvm_prog_t *prog = world->prog;
 	// unlink from old position first
 	if (ent->priv.server->areagrid[0].list.prev)
 		World_UnlinkEdict(ent);
+
+	// some games don't want SOLID_NOT entities linked
+	if (!link_solid_not && PRVM_serveredictfloat(ent, solid) == SOLID_NOT)
+		return;
 
 	// don't add the world
 	if (ent == prog->edicts)

@@ -169,7 +169,7 @@ void CL_LinkEdict(prvm_edict_t *ent)
 	VectorCopy(mins, PRVM_clientedictvector(ent, absmin));
 	VectorCopy(maxs, PRVM_clientedictvector(ent, absmax));
 
-	World_LinkEdict(&cl.world, ent, mins, maxs);
+	World_LinkEdict(&cl.world, ent, mins, maxs, cl_areagrid_link_SOLID_NOT.integer);
 }
 
 int CL_GenericHitSuperContentsMask(const prvm_edict_t *passedict)

@@ -904,7 +904,7 @@ void SV_LinkEdict (prvm_edict_t *ent)
 	VectorCopy(mins, PRVM_serveredictvector(ent, absmin));
 	VectorCopy(maxs, PRVM_serveredictvector(ent, absmax));
 
-	World_LinkEdict(&sv.world, ent, mins, maxs);
+	World_LinkEdict(&sv.world, ent, mins, maxs, sv_areagrid_link_SOLID_NOT.integer);
 }
 
 /*

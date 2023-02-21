@@ -1790,8 +1790,7 @@ static void VM_SV_copyentity(prvm_prog_t *prog)
 		return;
 	}
 	memcpy(out->fields.fp, in->fields.fp, prog->entityfields * sizeof(prvm_vec_t));
-	if (VectorCompare(PRVM_serveredictvector(out, absmin), PRVM_serveredictvector(out, absmax)))
-		return;
+
 	SV_LinkEdict(out);
 }
 
