@@ -1201,6 +1201,8 @@ extern cvar_t cl_prydoncursor_notrace;
 
 extern cvar_t cl_locs_enable;
 
+extern cvar_t cl_areagrid_link_SOLID_NOT;
+
 extern client_state_t cl;
 
 extern void CL_AllocLightFlash (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, char *cubemapname, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags);

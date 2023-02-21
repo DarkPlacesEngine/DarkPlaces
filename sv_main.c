@@ -72,6 +72,7 @@ cvar_t sv_allowdownloads_archive = {CF_SERVER, "sv_allowdownloads_archive", "0",
 cvar_t sv_allowdownloads_config = {CF_SERVER, "sv_allowdownloads_config", "0", "whether to allow downloads of config files (cfg)"};
 cvar_t sv_allowdownloads_dlcache = {CF_SERVER, "sv_allowdownloads_dlcache", "0", "whether to allow downloads of dlcache files (dlcache/)"};
 cvar_t sv_allowdownloads_inarchive = {CF_SERVER, "sv_allowdownloads_inarchive", "0", "whether to allow downloads from archives (pak/pk3)"};
+cvar_t sv_areagrid_link_SOLID_NOT = {CF_SERVER | CF_NOTIFY, "sv_areagrid_link_SOLID_NOT", "1", "set to 0 to prevent SOLID_NOT entities from being linked to the area grid, and unlink any that are already linked (in the code paths that would otherwise link them), for better performance"};
 cvar_t sv_areagrid_mingridsize = {CF_SERVER | CF_NOTIFY, "sv_areagrid_mingridsize", "128", "minimum areagrid cell size, smaller values work better for lots of small objects, higher values for large objects"};
 cvar_t sv_checkforpacketsduringsleep = {CF_SERVER, "sv_checkforpacketsduringsleep", "0", "uses select() function to wait between frames which can be interrupted by packets being received, instead of Sleep()/usleep()/SDL_Sleep() functions which do not check for packets"};
 cvar_t sv_clmovement_enable = {CF_SERVER, "sv_clmovement_enable", "1", "whether to allow clients to use cl_movement prediction, which can cause choppy movement on the server which may annoy other players"};
@@ -551,6 +552,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_allowdownloads_config);
 	Cvar_RegisterVariable (&sv_allowdownloads_dlcache);
 	Cvar_RegisterVariable (&sv_allowdownloads_inarchive);
+	Cvar_RegisterVariable (&sv_areagrid_link_SOLID_NOT);
 	Cvar_RegisterVariable (&sv_areagrid_mingridsize);
 	Cvar_RegisterVariable (&sv_checkforpacketsduringsleep);
 	Cvar_RegisterVariable (&sv_clmovement_enable);
@@ -2155,7 +2157,7 @@ static void SVVM_end_increase_edicts(prvm_prog_t *prog)
 
 	// link every entity except world
 	for (i = 1, ent = prog->edicts;i < prog->num_edicts;i++, ent++)
-		if (!ent->free && !VectorCompare(PRVM_serveredictvector(ent, absmin), PRVM_serveredictvector(ent, absmax)))
+		if (!ent->free)
 			SV_LinkEdict(ent);
 }
 

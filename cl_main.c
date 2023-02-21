@@ -107,6 +107,8 @@ cvar_t cl_maxfps = {CF_CLIENT | CF_ARCHIVE, "cl_maxfps", "0", "maximum fps cap, 
 cvar_t cl_maxfps_alwayssleep = {CF_CLIENT | CF_ARCHIVE, "cl_maxfps_alwayssleep","1", "gives up some processing time to other applications each frame, value in milliseconds, disabled if cl_maxfps is 0"};
 cvar_t cl_maxidlefps = {CF_CLIENT | CF_ARCHIVE, "cl_maxidlefps", "20", "maximum fps cap when the game is not the active window (makes cpu time available to other programs"};
 
+cvar_t cl_areagrid_link_SOLID_NOT = {CF_CLIENT, "cl_areagrid_link_SOLID_NOT", "1", "set to 0 to prevent SOLID_NOT entities from being linked to the area grid, and unlink any that are already linked (in the code paths that would otherwise link them), for better performance"};
+
 client_static_t	cls;
 client_state_t	cl;
 
@@ -3133,6 +3135,8 @@ void CL_Init (void)
 		Cvar_RegisterVariable (&cl_maxfps);
 		Cvar_RegisterVariable (&cl_maxfps_alwayssleep);
 		Cvar_RegisterVariable (&cl_maxidlefps);
+
+		Cvar_RegisterVariable (&cl_areagrid_link_SOLID_NOT);
 
 		CL_Parse_Init();
 		CL_Particles_Init();

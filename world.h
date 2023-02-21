@@ -112,7 +112,7 @@ void World_PrintAreaStats(world_t *world, const char *worldname);
 void World_UnlinkEdict(struct prvm_edict_s *ent);
 
 /// Needs to be called any time an entity changes origin, mins, maxs
-void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins, const vec3_t maxs);
+void World_LinkEdict(world_t *world, struct prvm_edict_s *ent, const vec3_t mins, const vec3_t maxs, qbool link_solid_not);
 
 /// \returns list of entities touching a box
 int World_EntitiesInBox(world_t *world, const vec3_t mins, const vec3_t maxs, int maxlist, struct prvm_edict_s **list);
