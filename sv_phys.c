@@ -409,7 +409,7 @@ SV_Move
 ==================
 */
 #if COLLISIONPARANOID >= 1
-trace_t SV_TraceBox_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
+static trace_t SV_TraceBox_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 #else
 trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 #endif
@@ -588,17 +588,17 @@ finished:
 }
 
 #if COLLISIONPARANOID >= 1
-trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask)
+trace_t SV_TraceBox(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, prvm_edict_t *passedict, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float extend)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int endstuck;
 	trace_t trace;
 	vec3_t temp;
-	trace = SV_TraceBox_(start, mins, maxs, end, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask);
+	trace = SV_TraceBox_(start, mins, maxs, end, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend);
 	if (passedict)
 	{
 		VectorCopy(trace.endpos, temp);
-		endstuck = SV_TraceBox_(temp, mins, maxs, temp, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask).startsolid;
+		endstuck = SV_TraceBox_(temp, mins, maxs, temp, type, passedict, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, extend).startsolid;
 #if COLLISIONPARANOID < 3
 		if (trace.startsolid || endstuck)
 #endif
