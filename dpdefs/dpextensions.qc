@@ -763,10 +763,10 @@ entity(.string fld, string match) findchain = #402;
 //idea: divVerent
 //darkplaces implementation: divVerent
 //builtin definitions:
-entity(.string fld, float match, .entity tofield) findradius_tofield = #22;
+entity(vector org, float rad, .entity tofield) findradius_tofield = #22;
 entity(.string fld, string match, .entity tofield) findchain_tofield = #402;
-entity(.string fld, float match, .entity tofield) findchainflags_tofield = #450;
-entity(.string fld, float match, .entity tofield) findchainfloat_tofield = #403;
+entity(.float fld, float match, .entity tofield) findchainflags_tofield = #450;
+entity(.float fld, float match, .entity tofield) findchainfloat_tofield = #403;
 //description:
 //similar to findchain() etc, but stores the chain into .tofield instead of .chain
 //actually, the .entity tofield is an optional field of the the existing findchain* functions
