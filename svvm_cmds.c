@@ -229,6 +229,7 @@ const char *vm_sv_extensions[] = {
 "ZQ_PAUSE",
 "DP_RM_CLIPGROUP",
 "DP_QC_FS_SEARCH_PACKFILE",
+"DP_QC_FINDBOX",
 NULL
 //"EXT_CSQC" // not ready yet
 };
@@ -1051,6 +1052,50 @@ static void VM_SV_findradius(prvm_prog_t *prog)
 			PRVM_EDICTFIELDEDICT(ent,chainfield) = PRVM_EDICT_TO_PROG(chain);
 			chain = ent;
 		}
+	}
+
+	VM_RETURN_EDICT(chain);
+}
+
+/*
+=================
+VM_SV_findbox
+
+Returns a chain of entities that are touching a box (a simpler findradius); supports DP_QC_FINDCHAIN_TOFIELD
+
+findbox (mins, maxs)
+=================
+*/
+static void VM_SV_findbox(prvm_prog_t *prog)
+{
+	prvm_edict_t *chain;
+	int i, numtouchedicts;
+	static prvm_edict_t *touchedicts[MAX_EDICTS];
+	int chainfield;
+
+	VM_SAFEPARMCOUNTRANGE(2, 3, VM_SV_findbox);
+
+	if(prog->argc == 3)
+		chainfield = PRVM_G_INT(OFS_PARM2);
+	else
+		chainfield = prog->fieldoffsets.chain;
+	if (chainfield < 0)
+		prog->error_cmd("VM_SV_findbox: %s doesnt have the specified chain field !", prog->name);
+
+	chain = (prvm_edict_t *)prog->edicts;
+
+	numtouchedicts = SV_EntitiesInBox(PRVM_G_VECTOR(OFS_PARM0), PRVM_G_VECTOR(OFS_PARM1), MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
+	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
+	}
+	for (i = 0; i < numtouchedicts; ++i)
+	{
+		prog->xfunction->builtinsprofile++;
+		PRVM_EDICTFIELDEDICT(touchedicts[i], chainfield) = PRVM_EDICT_TO_PROG(chain);
+		chain = touchedicts[i];
 	}
 
 	VM_RETURN_EDICT(chain);
@@ -3763,7 +3808,7 @@ NULL,							// #562
 NULL,							// #563
 NULL,							// #564
 NULL,							// #565
-NULL,							// #566
+VM_SV_findbox,					// #566 entity(vector mins, vector maxs) findbox = #566; (DP_QC_FINDBOX)
 NULL,							// #567
 NULL,							// #568
 NULL,							// #569

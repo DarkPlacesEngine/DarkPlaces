@@ -2645,4 +2645,13 @@ void(string cmdname) registercommand = #352;
 //Adds a new console command which will take priority over a previous command of the same name (including engine commands) and in CSQC is removed when the VM shuts down. This will call CSQC_ConsoleCommand(string command) or ConsoleCmd(string command) in SVQC.  Return value should be true if QC handled the command, otherwise return false to have the engine handle it.
 
 
+//DP_QC_FINDBOX
+//idea: Mario
+//darkplaces implementation: bones_was_here
+//builtin definitions:
+entity(vector mins, vector maxs) findbox = #566;
+entity(vector mins, vector maxs, .entity tofield) findbox_tofield = #566;
+//description:
+//Returns a chain of entities that are touching a box (a simpler findradius); supports DP_QC_FINDCHAIN_TOFIELD
+
 float(float dividend, float divisor) mod = #245;
