@@ -743,7 +743,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		// Skip the name, additionnal field, and comment
 		// 1er uint16 : extra field length
 		// 2eme uint16 : file comment length
-		count = namesize + BuffLittleShort (&ptr[30]) + BuffLittleShort (&ptr[32]);
+		count = namesize + (unsigned short)BuffLittleShort (&ptr[30]) + (unsigned short)BuffLittleShort (&ptr[32]);
 		ptr += ZIP_CDIR_CHUNK_BASE_SIZE + count;
 		remaining -= count;
 	}
