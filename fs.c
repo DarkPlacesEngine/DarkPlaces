@@ -682,7 +682,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 			return -1;
 		}
 
-		namesize = BuffLittleShort (&ptr[28]);	// filename length
+		namesize = (unsigned short)BuffLittleShort (&ptr[28]);	// filename length
 
 		// Check encryption, compression, and attributes
 		// 1st uint8  : general purpose bit flag
@@ -699,7 +699,7 @@ static int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x21) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if (namesize < 0 || remaining < namesize || namesize >= (int)sizeof (*pack->files))
+			if (remaining < namesize || namesize >= (int)sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
