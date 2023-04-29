@@ -378,7 +378,7 @@ void VID_SetMouse(qbool relative, qbool hidecursor)
 #ifdef MACOSX
 	if(relative)
 		if(vid_usingmouse && (vid_usingnoaccel != !!apple_mouse_noaccel.integer))
-			VID_SetMouse(false, false, false); // ungrab first!
+			VID_SetMouse(false, false); // ungrab first!
 #endif
 	if (vid_usingmouse != relative)
 	{
