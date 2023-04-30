@@ -29,21 +29,27 @@ endif  # ifndef DP_MAKE_TARGET
 # If we're targeting an x86 CPU we want to enable DP_SSE (CFLAGS_SSE and SSE2)
 ifeq ($(DP_MAKE_TARGET), mingw)
 	DP_SSE:=1
+else ifeq ($(OS),Windows_NT)
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		DP_SSE:=1
+	else ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
+		DP_SSE:=1
+	else ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		DP_SSE:=1
+	else
+		DP_SSE:=0
+	endif
 else
 	DP_MACHINE:=$(shell uname -m)
 	ifeq ($(DP_MACHINE),x86_64)
 		DP_SSE:=1
-	else
-	ifeq ($(DP_MACHINE),i686)
+	else ifeq ($(DP_MACHINE),i686)
 		DP_SSE:=1
-	else
-	ifeq ($(DP_MACHINE),i386)
+	else ifeq ($(DP_MACHINE),i386)
 		DP_SSE:=1
 	else
 		DP_SSE:=0
-	endif # ifeq ($(DP_MACHINE),i386)
-	endif # ifeq ($(DP_MACHINE),i686)
-	endif # ifeq ($(DP_MACHINE),x86_64)
+	endif
 endif
 
 # Makefile name
