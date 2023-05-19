@@ -477,6 +477,16 @@ string(string digest, string data, ...) digest_hex = #639;
 //if the given digest is not supported, string_null is returned
 //the digest string is matched case sensitively, use "MD4", not "md4"!
 
+//DP_QC_WHICHPACK
+//idea: divVerent
+//darkplaces implementation: divVerent
+//builtin definitions:
+string(string filename) whichpack = #503;
+//description:
+//for files in a pak/pk3/whatever, returns the pack's file name in FRIK_FILE name space.
+//for physical files, returns "".
+//in case of error, returns string_null.
+
 //DP_QC_URI_ESCAPE
 //idea: div0
 //darkplaces implementation: div0
