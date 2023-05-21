@@ -336,7 +336,7 @@ void(entity e, string m) setmodel = #3;
 void(entity e, vector min, vector max) setsize = #4;
 
 void() break_to_debugger = #6;
-float() random = #7;
+float() random = #7; // Returns a random number > 0 and < 1
 void(entity e, float chan, string samp, float volume, float atten, ...) sound = #8;
 vector(vector v) normalize = #9;
 void(string e) error = #10;

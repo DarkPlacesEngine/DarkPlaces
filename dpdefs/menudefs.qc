@@ -179,7 +179,7 @@ float 	vlen(vector v)			= #9;
 float  	vectoyaw(vector v)		= #10;
 vector 	vectoangles(vector v)		= #11;
 
-float	random(void)  = #12;
+float	random(void)  = #12; // Returns a random number > 0 and < 1
 
 void	cmd(string command, ...) = #13;
 
