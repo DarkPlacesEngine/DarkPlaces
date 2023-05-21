@@ -403,7 +403,7 @@ void(entity e, string m) setmodel	= #3;		// set movetype and solid first
 void(entity e, vector min, vector max) setsize = #4;
 // #5 was removed
 void() break_to_debugger						= #6;
-float() random						= #7;		// returns 0 - 1
+float() random						= #7;	// Returns a random number > 0 and < 1
 void(entity e, float chan, string samp, float volume, ...) sound = #8;
 vector(vector v) normalize			= #9;
 void(string e, ...) error				= #10;

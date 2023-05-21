@@ -570,7 +570,7 @@ void VM_vectoangles(prvm_prog_t *prog)
 =================
 VM_random
 
-Returns a number from 0<= num < 1
+Returns a random number > 0 and < 1
 
 float random()
 =================
