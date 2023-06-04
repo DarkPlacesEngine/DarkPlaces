@@ -1454,9 +1454,19 @@ static sizebuf_t *WriteDest(prvm_prog_t *prog)
 	case MSG_ONE:
 		ent = PRVM_PROG_TO_EDICT(PRVM_serverglobaledict(msg_entity));
 		entnum = PRVM_NUM_FOR_EDICT(ent);
-		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active || !svs.clients[entnum-1].netconnection)
+		if (entnum < 1 || entnum > svs.maxclients)
 		{
 			VM_Warning(prog, "WriteDest: tried to write to non-client\n");
+			return &sv.reliable_datagram;
+		}
+		else if (!svs.clients[entnum-1].active)
+		{
+			VM_Warning(prog, "WriteDest: tried to write to a disconnected client\n");
+			return &sv.reliable_datagram;
+		}
+		else if (!svs.clients[entnum-1].netconnection)
+		{
+			VM_Warning(prog, "WriteDest: tried to write to a bot client\n");
 			return &sv.reliable_datagram;
 		}
 		else
@@ -2741,13 +2751,13 @@ static void VM_SV_clienttype(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1, VM_SV_clienttype);
 	clientnum = PRVM_G_EDICTNUM(OFS_PARM0) - 1;
 	if (clientnum < 0 || clientnum >= svs.maxclients)
-		PRVM_G_FLOAT(OFS_RETURN) = 3;
+		PRVM_G_FLOAT(OFS_RETURN) = 3; // CLIENTTYPE_NOTACLIENT
 	else if (!svs.clients[clientnum].active)
-		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		PRVM_G_FLOAT(OFS_RETURN) = 0; // CLIENTTYPE_DISCONNECTED
 	else if (svs.clients[clientnum].netconnection)
-		PRVM_G_FLOAT(OFS_RETURN) = 1;
+		PRVM_G_FLOAT(OFS_RETURN) = 1; // CLIENTTYPE_REAL
 	else
-		PRVM_G_FLOAT(OFS_RETURN) = 2;
+		PRVM_G_FLOAT(OFS_RETURN) = 2; // CLIENTTYPE_BOT
 }
 
 /*
