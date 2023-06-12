@@ -2573,7 +2573,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		}
 	}
 
-	for (cvar = prog->console_cmd->cvars->vars; cvar; cvar = cvar->next)
+	List_For_Each_Entry(cvar, &prog->console_cmd->cvars->vars->list, cvar_t, list)
 		cvar->globaldefindex[prog - prvm_prog_list] = -1;
 
 	for (i=0 ; i<prog->numglobaldefs ; i++)

@@ -211,7 +211,7 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 		if(!c || (c->flags & CF_PRIVATE))
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s", cvarname));
 		else
-			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
+			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->parent ? c->parent->string : c->string));
 		return;
 	}
 }
