@@ -927,7 +927,6 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 	size_t bytes_left;
 	ft2_font_map_t *fontmap = NULL;
 	ft2_font_map_t *map = NULL;
-	//ft2_font_map_t *prevmap = NULL;
 	ft2_font_t *ft2 = fnt->ft2;
 	// float ftbase_x;
 	qbool snap = true;
@@ -994,11 +993,11 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 		if (ch == ' ' && !fontmap)
 		{
 			if(!least_one || i0) // never skip the first character
-			if(x + width_of[(int) ' '] * dw > maxwidth)
-			{
-				i = i0;
-				break; // oops, can't draw this
-			}
+				if(x + width_of[(int) ' '] * dw > maxwidth)
+				{
+					i = i0;
+					break; // oops, can't draw this
+				}
 			x += width_of[(int) ' '] * dw;
 			continue;
 		}
@@ -1043,11 +1042,11 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 				map = ft2_oldstyle_map;
 			prevch = 0;
 			if(!least_one || i0) // never skip the first character
-			if(x + width_of[ch] * dw > maxwidth)
-			{
-				i = i0;
-				break; // oops, can't draw this
-			}
+				if(x + width_of[ch] * dw > maxwidth)
+				{
+					i = i0;
+					break; // oops, can't draw this
+				}
 			x += width_of[ch] * dw;
 		} else {
 			if (!map || map == ft2_oldstyle_map || ch != prevch)
@@ -1059,7 +1058,6 @@ float DrawQ_TextWidth_UntilWidth_TrackColors_Scale(const char *text, size_t *max
 			if (prevch && Font_GetKerningForMap(ft2, map_index, w, h, prevch, ch, &kx, NULL))
 				x += kx * dw;
 			x += map->glyphs[mapch].advance_x * dw;
-			//prevmap = map;
 			prevch = ch;
 		}
 	}
@@ -1081,7 +1079,6 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 	Uchar ch, mapch, nextch;
 	Uchar prevch = 0; // used for kerning
 	int map_index = 0;
-	//ft2_font_map_t *prevmap = NULL; // the previous map
 	ft2_font_map_t *map = NULL;     // the currently used map
 	ft2_font_map_t *fontmap = NULL; // the font map for the size
 	float ftbase_y;
