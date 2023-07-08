@@ -69,9 +69,6 @@ struct font_incmap_s
 
 	// count of merged maps
 	int tier1_merged, tier2_merged;
-
-	// in case it changed middleway, convert previous data
-	int bytes_per_pixel;
 };
 
 struct ft2_attachment_s

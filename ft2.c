@@ -53,10 +53,10 @@ CVars introduced with the freetype extension
 */
 
 cvar_t r_font_disable_freetype = {CF_CLIENT | CF_ARCHIVE, "r_font_disable_freetype", "0", "disable freetype support for fonts entirely"};
-cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "use alpha-textures for font rendering, this should safe memory"};
+cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "[deprecated, not effective] use alpha-textures for font rendering, this should safe memory"};
 cvar_t r_font_size_snapping = {CF_CLIENT | CF_ARCHIVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_kerning = {CF_CLIENT | CF_ARCHIVE, "r_font_kerning", "1", "Use kerning if available"};
-cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "(deprecated and non-functional) save font textures to disk for future loading rather than generating them every time"};
+cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "[deprecated, not effective] save font textures to disk for future loading rather than generating them every time"};
 cvar_t r_font_compress = {CF_CLIENT | CF_ARCHIVE, "r_font_compress", "0", "use texture compression on font textures to save video memory"};
 cvar_t r_font_nonpoweroftwo = {CF_CLIENT | CF_ARCHIVE, "r_font_nonpoweroftwo", "1", "use nonpoweroftwo textures for font (saves memory, potentially slower)"};
 cvar_t developer_font = {CF_CLIENT | CF_ARCHIVE, "developer_font", "0", "prints debug messages about fonts"};
@@ -1248,50 +1248,12 @@ static float Font_SearchSize(ft2_font_t *font, FT_Face fontface, float size)
 	}
 }
 
-// some color transforming functions I made in attempt to fix font_diskcache
-// until the point I realize it's not worthwhile anymore
-
-static inline void rgba_to_bgra(unsigned char *source, unsigned char *target, int source_size)
-{
-	int x;
-	for (x = 0; x < source_size; x += 4)
-	{
-		target[0] = source[2];
-		target[1] = source[1];
-		target[2] = source[0];
-		target[3] = source[3];
-	}
-}
-static inline void rgba_to_alpha(unsigned char *source, unsigned char *target, int source_size)
-{
-	int x, i;
-	for (x = 0, i = 0; x < source_size; x += 4)
-	{
-		target[i++] = (
-			source[x+0] * 0.2125 +      // r
-			source[x+1] * 0.7154 +		// g
-			source[x+2] * 0.0721		// b
-		) / 3 * (source[x+3] / 256);	// a
-	}
-}
-static inline void alpha_to_rgba(unsigned char *source, unsigned char *target, int source_size)
-{
-	int x, i;
-	for (x = 0, i = 0; x < source_size; x += 4)
-	{
-		target[x+0] = target[x+1] = target[x+2] = 0xff - source[i];
-		target[x+3] = source[i++];
-	}
-}
-#define alpha_to_bgra alpha_to_rgba
-
-// helper inline functions for incmap_post_process
+// helper inline functions for incmap_post_process:
 
 static inline void update_pic_for_fontmap(ft2_font_map_t *fontmap, const char *identifier,
 		int width, int height, unsigned char *data)
 {
-	fontmap->pic = Draw_NewPic(identifier, width, height, data,
-		r_font_use_alpha_textures.integer ? TEXTYPE_ALPHA : TEXTYPE_RGBA,
+	fontmap->pic = Draw_NewPic(identifier, width, height, data, TEXTYPE_RGBA,
 		TEXF_ALPHA | TEXF_CLAMP | (r_font_compress.integer > 0 ? TEXF_COMPRESS : 0));
 }
 
@@ -1323,60 +1285,24 @@ static inline void merge_single_map(ft2_font_map_t *targetmap, int targetindex, 
 static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
 		unsigned char *data, ft2_font_map_t **outmap, int *outmapch)
 {
+	#define bytes_per_pixel 4
+
 	int index, targetmap_at;
 	// where will the next `data` be placed
 	int tier1_data_index, tier2_data_index;
 	// metrics of data to manipulate
-	int width, height, bytes_per_pixel, pitch, datasize;
+	int width, height, pitch, datasize;
 	int i, j, x, y;
 	unsigned char *newdata, *chunk;
 	ft2_font_map_t *startmap, *targetmap, *currentmap;
 	#define M FONT_CHARS_PER_LINE
 	#define N FONT_CHAR_LINES
 
-	bytes_per_pixel = r_font_use_alpha_textures.integer ? 1 : 4;
-
 	startmap = incmap->fontmap;
 	index = incmap->charcount;
 	tier1_data_index = index % M;
 	tier2_data_index = incmap->tier1_merged;
 
-	if (bytes_per_pixel != incmap->bytes_per_pixel)
-	{
-		// should it really happen...
-		int olddata_size;
-		calc_data_arguments(1, 1);
-		olddata_size = datasize / bytes_per_pixel * incmap->bytes_per_pixel;
-		for (i = 0; i < M; ++i)
-		{
-			chunk = incmap->data_tier1[i];
-			if (chunk == NULL) break;
-			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize);
-			if (bytes_per_pixel == 1)
-				rgba_to_alpha(chunk, newdata, olddata_size);
-			else if (bytes_per_pixel == 4)
-				alpha_to_rgba(chunk, newdata, olddata_size);
-			Mem_Free(chunk);
-			incmap->data_tier1[i] = newdata;
-		}
-		chunk = NULL;
-		olddata_size *= M;
-		for (i = 0; i < N; ++i)
-		{
-			chunk = incmap->data_tier2[i];
-			if (chunk == NULL) break;
-			newdata = (unsigned char *)Mem_Alloc(font_mempool, datasize * M);
-			if (bytes_per_pixel == 1)
-				rgba_to_alpha(chunk, newdata, olddata_size);
-			else if (bytes_per_pixel == 4)
-				alpha_to_rgba(chunk, newdata, olddata_size);
-			Mem_Free(chunk);
-			incmap->data_tier2[i] = newdata;
-		}
-		chunk = NULL;
-		incmap->bytes_per_pixel = bytes_per_pixel;
-	}
-	
 	incmap->data_tier1[tier1_data_index] = data;
 
 	if (index % M == M - 1)
@@ -1412,7 +1338,7 @@ static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
 		incmap->newmap_start = INCMAP_START + targetmap_at + 1;
 		// then give this merged map
 		*outmap = targetmap;
-		*outmapch = i;
+		*outmapch = FONT_CHARS_PER_LINE - 1;
 	}
 	if (index % (M * N) == M * N - 1)
 	{
@@ -1448,7 +1374,7 @@ static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
 		incmap->newmap_start = INCMAP_START + targetmap_at + 1;
 		// then give this merged map
 		*outmap = targetmap;
-		*outmapch = i * M + j;
+		*outmapch = FONT_CHARS_PER_MAP - 1;
 	}
 
 	++incmap->charcount;
@@ -1461,6 +1387,8 @@ static inline void incmap_post_process(font_incmap_t *incmap, Uchar ch,
 static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 		ft2_font_map_t **outmap, int *outmapch, qbool use_incmap)
 {
+	#define bytes_per_pixel 4
+
 	char map_identifier[MAX_QPATH];
 	unsigned long map_startglyph = _ch / FONT_CHARS_PER_MAP * FONT_CHARS_PER_MAP;
 	unsigned char *data = NULL;
@@ -1471,7 +1399,6 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	int gpad_l, gpad_r, gpad_t, gpad_b;
 
 	int pitch;
-	int bytes_per_pixel;
 	int width, height, datasize;
 	int glyph_row, glyph_column;
 
@@ -1484,8 +1411,6 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	font_incmap_t *incmap;
 
 	FT_Face fontface;
-
-	bytes_per_pixel = r_font_use_alpha_textures.integer ? 1 : 4;
 
 	incmap = mapstart->incmap;
 	if (use_incmap)
@@ -1652,7 +1577,6 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			// this will be the startmap of incmap
 			incmap->fontmap = map;
 			incmap->newmap_start = INCMAP_START;
-			incmap->bytes_per_pixel = bytes_per_pixel;
 		}
 		else
 		{
@@ -1934,27 +1858,6 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	// update the pic returned by Draw_CachePic_Flags earlier to contain our texture
 	update_pic_for_fontmap(map, map_identifier, width, height, data);
 
-	// diskcache deprecated for being complicated to fix and not worthwhile anymore
-#if 0
-	if (r_font_diskcache.integer >= 1 && bytes_per_pixel == 4 && !use_incmap)
-	{
-			// swap to BGRA for tga writing...
-			int x;
-			int b;
-			for (x = 0;x < datasize;x++)
-			{
-				b = data[x*4+0];
-				data[x*4+0] = data[x*4+2];
-				data[x*4+2] = b;
-			}
-			Image_WriteTGABGRA(va(vabuf, sizeof(vabuf), "%s.tga", map_identifier), width, height, data);
-#ifndef USE_GLES2
-		if (r_font_compress.integer && Draw_IsPicLoaded(map->pic))
-			R_SaveTextureDDSFile(Draw_GetPicTexture(map->pic), va(vabuf, sizeof(vabuf), "dds/%s.dds", map_identifier), r_texture_dds_save.integer < 2, true);
-#endif
-	}
-#endif
-
 	if (!Draw_IsPicLoaded(map->pic))
 	{
 		// if the first try isn't successful, keep it with a broken texture
@@ -2006,7 +1909,7 @@ qbool Font_LoadMapForIndex(ft2_font_t *font, int map_index, Uchar ch, ft2_font_m
 	return Font_LoadMap(font, font->font_maps[map_index], ch, outmap, NULL, false);
 }
 
-// legacy font API, please use `Font_GetMapForChar` instead
+// legacy font API. please use `Font_GetMapForChar` instead
 ft2_font_map_t *FontMap_FindForChar(ft2_font_map_t *start, Uchar ch)
 {
 	ft2_font_map_t *map = start;
