@@ -167,9 +167,9 @@ findchar:
 
 	// Now check the decoded byte for an overlong encoding
 	if ( (bits >= 2 && ch < 0x80) ||
-	     (bits >= 3 && ch < 0x800) ||
-	     (bits >= 4 && ch < 0x10000) ||
-	     ch >= 0x10FFFF // RFC 3629
+		 (bits >= 3 && ch < 0x800) ||
+		 (bits >= 4 && ch < 0x10000) ||
+		 ch >= 0x10FFFF // RFC 3629
 		)
 	{
 		i += bits;
@@ -914,48 +914,48 @@ size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qbool lef
  */
 int towtf8(const wchar *wstr, int wlen, char *cstr, int maxclen)
 {
-    int p = 0;
+	int p = 0;
 	int i;
-    for (i = 0; i < wlen; ++i)
+	for (i = 0; i < wlen; ++i)
 	{
-        wchar point = wstr[i];
-        if (point < 0x80)
+		wchar point = wstr[i];
+		if (point < 0x80)
 		{
-            if (p + 1 >= maxclen) break;
-            cstr[p++] = point;
-        }
+			if (p + 1 >= maxclen) break;
+			cstr[p++] = point;
+		}
 		else if (point < 0x800)
 		{
-            if (p + 2 >= maxclen) break;
-            cstr[p++] = (0xc0 | ((point >>  6) & 0x1f));
-            cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
-        }
+			if (p + 2 >= maxclen) break;
+			cstr[p++] = (0xc0 | ((point >>  6) & 0x1f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
 		else
 		#if U32
 		if (point < 0x10000)
 		#endif
-        {
-            if (p + 3 >= maxclen) break;
-            cstr[p++] = (0xe0 | ((point >> 12) & 0x0f));
-            cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
-            cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
-        }
-        #if U32
-        else
-        #if CHECKS
-        if (point < 0x110000)
-        #endif
-        {
-            if (p + 4 >= maxclen) break;
-            cstr[p++] = (0xf0 | ((point >> 18) & 0x07));
-            cstr[p++] = (0x80 | ((point >> 12) & 0x3f));
-            cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
-            cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
-        }
-        #endif
-    }
-    cstr[p] = 0x00;
-    return p;
+		{
+			if (p + 3 >= maxclen) break;
+			cstr[p++] = (0xe0 | ((point >> 12) & 0x0f));
+			cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
+		#if U32
+		else
+		#if CHECKS
+		if (point < 0x110000)
+		#endif
+		{
+			if (p + 4 >= maxclen) break;
+			cstr[p++] = (0xf0 | ((point >> 18) & 0x07));
+			cstr[p++] = (0x80 | ((point >> 12) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
+		#endif
+	}
+	cstr[p] = 0x00;
+	return p;
 }
 
 /**
@@ -963,52 +963,52 @@ int towtf8(const wchar *wstr, int wlen, char *cstr, int maxclen)
  */
 int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
 {
-    int p = 0;
+	int p = 0;
 	int i;
-    for (i = 0; i < clen;)
+	for (i = 0; i < clen;)
 	{
-        char byte = cstr[i++];
-        wchar point = byte;
-        int length = 1;
-        if (p + 1 >= maxwlen) break;
-        #if CHECKS
-        if ((byte & 0xf8) == 0xf8)
-            return -1;
-        #endif
-        if ((byte & 0xf8) == 0xf0)
+		char byte = cstr[i++];
+		wchar point = byte;
+		int length = 1;
+		if (p + 1 >= maxwlen) break;
+		#if CHECKS
+		if ((byte & 0xf8) == 0xf8)
+			return -1;
+		#endif
+		if ((byte & 0xf8) == 0xf0)
 		{
-            length = 4;
-            point = byte & 0x07;
-        }
+			length = 4;
+			point = byte & 0x07;
+		}
 		else if ((byte & 0xf0) == 0xe0)
 		{
-            length = 3;
-            point = byte & 0x0f;
-        }
+			length = 3;
+			point = byte & 0x0f;
+		}
 		else if ((byte & 0xe0) == 0xc0)
 		{
-            length = 2;
-            point = byte & 0x1f;
-        }
-        #if CHECKS
-        else if ((byte & 0xc0) == 0x80)
+			length = 2;
+			point = byte & 0x1f;
+		}
+		#if CHECKS
+		else if ((byte & 0xc0) == 0x80)
 		{
-            return -1;
-        }
-        #endif
-        while (--length)
+			return -1;
+		}
+		#endif
+		while (--length)
 		{
-            byte = cstr[i++];
-            #if CHECKS
-            if (byte == -1) return -1;
-            else if ((byte & 0xc0) != 0x80) return -1;
-            #endif
-            point = (point << 6) | (byte & 0x3f);
-        }
-        wstr[p++] = point;
-    }
-    wstr[p] = 0x00;
-    return p;
+			byte = cstr[i++];
+			#if CHECKS
+			if (byte == -1) return -1;
+			else if ((byte & 0xc0) != 0x80) return -1;
+			#endif
+			point = (point << 6) | (byte & 0x3f);
+		}
+		wstr[p++] = point;
+	}
+	wstr[p] = 0x00;
+	return p;
 }
 
 #endif // WIN32
