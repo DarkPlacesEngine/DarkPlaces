@@ -975,12 +975,15 @@ int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
 		if ((byte & 0xf8) == 0xf8)
 			return -1;
 		#endif
+		#if WTF8U32
 		if ((byte & 0xf8) == 0xf0)
 		{
 			length = 4;
 			point = byte & 0x07;
 		}
-		else if ((byte & 0xf0) == 0xe0)
+		else
+		#endif
+		if ((byte & 0xf0) == 0xe0)
 		{
 			length = 3;
 			point = byte & 0x0f;
