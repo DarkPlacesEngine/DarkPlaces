@@ -167,10 +167,10 @@ findchar:
 
 	// Now check the decoded byte for an overlong encoding
 	if ( (bits >= 2 && ch < 0x80) ||
-		 (bits >= 3 && ch < 0x800) ||
-		 (bits >= 4 && ch < 0x10000) ||
-		 ch >= 0x10FFFF // RFC 3629
-		)
+	     (bits >= 3 && ch < 0x800) ||
+	     (bits >= 4 && ch < 0x10000) ||
+	     ch >= 0x10FFFF // RFC 3629
+	)
 	{
 		i += bits;
 		//fprintf(stderr, "overlong: %i bytes for %x\n", bits, ch);
@@ -931,7 +931,7 @@ int towtf8(const wchar *wstr, int wlen, char *cstr, int maxclen)
 			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
 		}
 		else
-		#if U32
+		#if WTF8U32
 		if (point < 0x10000)
 		#endif
 		{
@@ -940,9 +940,9 @@ int towtf8(const wchar *wstr, int wlen, char *cstr, int maxclen)
 			cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
 			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
 		}
-		#if U32
+		#if WTF8U32
 		else
-		#if CHECKS
+		#if WTF8CHECKS
 		if (point < 0x110000)
 		#endif
 		{
@@ -971,7 +971,7 @@ int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
 		wchar point = byte;
 		int length = 1;
 		if (p + 1 >= maxwlen) break;
-		#if CHECKS
+		#if WTF8CHECKS
 		if ((byte & 0xf8) == 0xf8)
 			return -1;
 		#endif
@@ -990,7 +990,7 @@ int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
 			length = 2;
 			point = byte & 0x1f;
 		}
-		#if CHECKS
+		#if WTF8CHECKS
 		else if ((byte & 0xc0) == 0x80)
 		{
 			return -1;
@@ -999,7 +999,7 @@ int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
 		while (--length)
 		{
 			byte = cstr[i++];
-			#if CHECKS
+			#if WTF8CHECKS
 			if (byte == -1) return -1;
 			else if ((byte & 0xc0) != 0x80) return -1;
 			#endif
