@@ -82,8 +82,8 @@ Uchar u8_tolower(Uchar ch);
 
 // WTF-8 encoding to circumvent Windows encodings, be it UTF-16 or random codepages
 // https://simonsapin.github.io/wtf-8/
-#define U32 0
-#define CHECKS 1
+#define WTF8U32 0     // whether to regard wchar as utf-32
+#define WTF8CHECKS 1  // check for extra sanity in conversion steps
 typedef wchar_t wchar;
 
 int towtf8(const wchar* wstr, int wlen, char* cstr, int maxclen);
