@@ -442,7 +442,7 @@ static dllhandle_t zlib_dll = NULL;
 #endif
 
 #ifdef WIN32
-static HRESULT (WINAPI *qSHGetFolderPath) (HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwFlags, LPTSTR pszPath);
+static HRESULT (WINAPI *qSHGetFolderPath) (HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwFlags, LPWSTR pszPath);
 static dllfunction_t shfolderfuncs[] =
 {
 	{"SHGetFolderPathW", (void **) &qSHGetFolderPath},
@@ -1873,7 +1873,8 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 #if _MSC_VER >= 1400
 	size_t homedirwlen;
 #endif
-	TCHAR mydocsdir[MAX_PATH + 1];
+	wchar_t mydocsdirw[WSTRBUF];
+	char mydocsdir[WSTRBUF];
 	wchar_t *savedgamesdirw;
 	char savedgamesdir[WSTRBUF] = {0};
 	int fd;
@@ -1891,8 +1892,9 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		if (!shfolder_dll)
 			Sys_LoadDependency(shfolderdllnames, &shfolder_dll, shfolderfuncs);
 		mydocsdir[0] = 0;
-		if (qSHGetFolderPath && qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdir) == S_OK)
+		if (qSHGetFolderPath && qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdirw) == S_OK)
 		{
+			narrow(mydocsdirw, mydocsdir);
 			dpsnprintf(userdir, userdirsize, "%s/My Games/%s/", mydocsdir, gameuserdirname);
 			break;
 		}
