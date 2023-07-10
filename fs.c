@@ -49,6 +49,10 @@
 #include "fs.h"
 #include "wad.h"
 
+#ifdef WIN32
+#include "utf8lib.h"
+#endif
+
 // Win32 requires us to add O_BINARY, but the other OSes don't have it
 #ifndef O_BINARY
 # define O_BINARY 0
@@ -441,7 +445,7 @@ static dllhandle_t zlib_dll = NULL;
 static HRESULT (WINAPI *qSHGetFolderPath) (HWND hwndOwner, int nFolder, HANDLE hToken, DWORD dwFlags, LPTSTR pszPath);
 static dllfunction_t shfolderfuncs[] =
 {
-	{"SHGetFolderPathA", (void **) &qSHGetFolderPath},
+	{"SHGetFolderPathW", (void **) &qSHGetFolderPath},
 	{NULL, NULL}
 };
 static const char* shfolderdllnames [] =
@@ -926,14 +930,30 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 	return pfile;
 }
 
+#if WIN32
+#define WSTRBUF 4096
+static inline int wstrlen(wchar *wstr)
+{
+	int len = 0;
+	while (wstr[len] != 0 && len < WSTRBUF)
+		++len;
+	return len;
+}
+#define widen(str, wstr) fromwtf8(str, strlen(str), wstr, WSTRBUF)
+#define narrow(wstr, str) towtf8(wstr, wstrlen(wstr), str, WSTRBUF)
+#endif
 
 static void FS_mkdir (const char *path)
 {
+#if WIN32
+	wchar pathw[WSTRBUF] = {0};
+#endif
 	if(Sys_CheckParm("-readonly"))
 		return;
 
 #if WIN32
-	if (_mkdir (path) == -1)
+	widen(path, pathw);
+	if (_wmkdir (pathw) == -1)
 #else
 	if (mkdir (path, 0777) == -1)
 #endif
@@ -944,7 +964,6 @@ static void FS_mkdir (const char *path)
 		// thus will detect failure that way.
 	}
 }
-
 
 /*
 ============
@@ -1849,13 +1868,14 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	return -1;
 
 #elif defined(WIN32)
-	char *homedir;
+	char homedir[WSTRBUF];
+	wchar *homedirw;
 #if _MSC_VER >= 1400
-	size_t homedirlen;
+	size_t homedirwlen;
 #endif
 	TCHAR mydocsdir[MAX_PATH + 1];
 	wchar_t *savedgamesdirw;
-	char savedgamesdir[MAX_OSPATH];
+	char savedgamesdir[WSTRBUF] = {0};
 	int fd;
 	char vabuf[1024];
 
@@ -1877,16 +1897,18 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 			break;
 		}
 #if _MSC_VER >= 1400
-		_dupenv_s(&homedir, &homedirlen, "USERPROFILE");
-		if(homedir)
+		_wdupenv_s(&homedirw, &homedirwlen, L"USERPROFILE");
+		narrow(homedirw, homedir);
+		if(homedir[0])
 		{
 			dpsnprintf(userdir, userdirsize, "%s/.%s/", homedir, gameuserdirname);
-			free(homedir);
+			free(homedirw);
 			break;
 		}
 #else
-		homedir = getenv("USERPROFILE");
-		if(homedir)
+		homedirw = _wgetenv(L"USERPROFILE");
+		narrow(homedirw, homedir);
+		if(homedir[0])
 		{
 			dpsnprintf(userdir, userdirsize, "%s/.%s/", homedir, gameuserdirname);
 			break;
@@ -1911,12 +1933,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 */
 			if (qSHGetKnownFolderPath(&qFOLDERID_SavedGames, qKF_FLAG_CREATE | qKF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
 			{
-				memset(savedgamesdir, 0, sizeof(savedgamesdir));
-#if _MSC_VER >= 1400
-				wcstombs_s(NULL, savedgamesdir, sizeof(savedgamesdir), savedgamesdirw, sizeof(savedgamesdir)-1);
-#else
-				wcstombs(savedgamesdir, savedgamesdirw, sizeof(savedgamesdir)-1);
-#endif
+				narrow(savedgamesdirw, savedgamesdir);
 				qCoTaskMemFree(savedgamesdirw);
 			}
 			qCoUninitialize();
@@ -2279,6 +2296,9 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	int mod, opt;
 	unsigned int ind;
 	qbool dolock = false;
+	#ifdef WIN32
+	wchar filepathw[WSTRBUF] = {0};
+	#endif
 
 	// Parse the mode string
 	switch (mode[0])
@@ -2330,10 +2350,11 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	handle = SDL_RWFromFile(filepath, mode);
 #else
 # ifdef WIN32
+	widen(filepath, filepathw);
 #  if _MSC_VER >= 1400
-	_sopen_s(&handle, filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+	_wsopen_s(&handle, filepathw, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
 #  else
-	handle = _sopen (filepath, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+	handle = _wsopen (filepathw, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
 #  endif
 # else
 	handle = open (filepath, mod | opt, 0666);
@@ -3592,8 +3613,10 @@ int FS_SysFileType (const char *path)
 # ifndef INVALID_FILE_ATTRIBUTES
 #  define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 # endif
-
-	DWORD result = GetFileAttributes(path);
+	wchar pathw[WSTRBUF] = {0};
+	DWORD result;
+	widen(path, pathw);
+	result = GetFileAttributesW(pathw);
 
 	if(result == INVALID_FILE_ATTRIBUTES)
 		return FS_FILETYPE_NONE;
