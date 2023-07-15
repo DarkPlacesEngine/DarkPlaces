@@ -55,7 +55,10 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 			else
 				stucktrace = CL_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, pass ? false : true, false, NULL, false);
 
-			if (!stucktrace.bmodelstartsolid || stucktrace.startdepth >= 0)
+			// Separation compared here to ensure a good location will be recognised reliably.
+			if (-stucktrace.startdepth <= separation
+			|| (!stucktrace.bmodelstartsolid && !stucktrace.worldstartsolid)
+			|| (pass && !stucktrace.worldstartsolid))
 			{
 				// found a good location, use it
 				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
