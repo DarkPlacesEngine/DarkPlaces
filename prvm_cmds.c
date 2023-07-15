@@ -32,7 +32,7 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
-	Con_Printf(CON_WARN "%s", msg);
+	Con_Printf(CON_WARN "%s VM warning: %s", prog->name, msg);
 
 	// TODO: either add a cvar/cmd to control the state dumping or replace some of the calls with Con_Printf [9/13/2006 Black]
 	if(prvm_backtraceforwarnings.integer && recursive != host.realtime) // NOTE: this compares to the time, just in case if PRVM_PrintState causes a Host_Error and keeps recursive set
@@ -5560,6 +5560,41 @@ void VM_SV_getextresponse (prvm_prog_t *prog)
 		--sv_net_extresponse_count;
 		first = (sv_net_extresponse_last + NET_EXTRESPONSE_MAX - sv_net_extresponse_count) % NET_EXTRESPONSE_MAX;
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, sv_net_extresponse[first]);
+	}
+}
+
+// DP_QC_NUDGEOUTOFSOLID
+// float(entity ent) nudgeoutofsolid = #567;
+void VM_nudgeoutofsolid(prvm_prog_t *prog)
+{
+	prvm_edict_t *ent;
+
+	VM_SAFEPARMCOUNTRANGE(1, 1, VM_nudgeoutofsolid);
+
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	if (ent == prog->edicts)
+	{
+		VM_Warning(prog, "nudgeoutofsolid: can not modify world entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+	if (ent->free)
+	{
+		VM_Warning(prog, "nudgeoutofsolid: can not modify free entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = PHYS_NudgeOutOfSolid(prog, ent);
+
+	if (PRVM_G_FLOAT(OFS_RETURN) > 0)
+	{
+		if (prog == SVVM_prog)
+			SV_LinkEdict(ent);
+		else if (prog == CLVM_prog)
+			CL_LinkEdict(ent);
+		else
+			Sys_Error("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
 	}
 }
 

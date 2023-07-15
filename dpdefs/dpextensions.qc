@@ -2644,7 +2644,6 @@ void(string cmdname) registercommand = #352;
 //description:
 //Adds a new console command which will take priority over a previous command of the same name (including engine commands) and in CSQC is removed when the VM shuts down. This will call CSQC_ConsoleCommand(string command) or ConsoleCmd(string command) in SVQC.  Return value should be true if QC handled the command, otherwise return false to have the engine handle it.
 
-
 //DP_QC_FINDBOX
 //idea: Mario
 //darkplaces implementation: bones_was_here
@@ -2653,5 +2652,17 @@ entity(vector mins, vector maxs) findbox = #566;
 entity(vector mins, vector maxs, .entity tofield) findbox_tofield = #566;
 //description:
 //Returns a chain of entities that are touching a box (a simpler findradius); supports DP_QC_FINDCHAIN_TOFIELD
+
+//DP_QC_NUDGEOUTOFSOLID
+//idea: LadyHavoc, bones_was_here
+//darkplaces implementation: LadyHavoc, bones_was_here
+//builtin definitions:
+float(entity ent) nudgeoutofsolid = #567;
+//cvar definitions:
+//sv_gameplayfix_nudgeoutofsolid_separation
+//description:
+//Attempts to move a stuck entity out of solid brushes, returning 1 if successful, 0 if it remains stuck, -1 if it wasn't stuck.
+//Note: makes only one tracebox call if the entity isn't stuck, so don't call tracebox just to see if you should call nudgeoutofsolid.
+
 
 float(float dividend, float divisor) mod = #245;
