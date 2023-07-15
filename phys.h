@@ -5,9 +5,9 @@
 
 
 /*! move an entity that is stuck out of the surface it is stuck in (can move large amounts)
- * returns true if it found a better place
+ * returns 1 if it found a better place, 0 if it remains stuck, -1 if it wasn't stuck.
  */
-qbool PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent);
+int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent);
 extern cvar_t cl_gameplayfix_nudgeoutofsolid_separation;
 
 

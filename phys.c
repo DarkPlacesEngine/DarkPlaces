@@ -6,7 +6,7 @@
 #include "cl_collision.h"
 
 
-qbool PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
+int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	int bump, pass;
 	trace_t stucktrace;
@@ -59,11 +59,11 @@ qbool PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 			{
 				// found a good location, use it
 				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
-				return true;
+				return bump || pass ? 1 : -1; // -1 means it wasn't stuck
 			}
 			nudge = -stucktrace.startdepth;
 			VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
 		}
 	}
-	return false;
+	return 0;
 }
