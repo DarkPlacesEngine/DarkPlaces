@@ -1211,7 +1211,13 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		end[2] -= 256; // Quake, QuakeWorld
 
 	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
-		PHYS_NudgeOutOfSolid(prog, ent);
+	{
+		int n = PHYS_NudgeOutOfSolid(prog, ent);
+		if (!n)
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid_nudgetocorrect COULD NOT FIX badly placed entity \"%s\" before drop\n", PRVM_gameedictvector(ent, origin)[0], PRVM_gameedictvector(ent, origin)[1], PRVM_gameedictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
+		else if (n > 0)
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid_nudgetocorrect FIXED badly placed entity \"%s\" before drop\n", PRVM_gameedictvector(ent, origin)[0], PRVM_gameedictvector(ent, origin)[1], PRVM_gameedictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
+	}
 
 	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
 	VectorCopy(PRVM_serveredictvector(ent, mins), entmins);
@@ -1226,7 +1232,7 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		VectorSubtract(trace.endpos, offset, trace.endpos);
 		if (trace.startsolid)
 		{
-			Con_DPrintf("droptofloor at %f %f %f - COULD NOT FIX BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid COULD NOT FIX badly placed entity \"%s\"\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
 			SV_LinkEdict(ent);
 			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
 			PRVM_serveredictedict(ent, groundentity) = 0;
@@ -1234,7 +1240,7 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		}
 		else if (trace.fraction < 1)
 		{
-			Con_DPrintf("droptofloor at %f %f %f - FIXED BADLY PLACED ENTITY\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid FIXED badly placed entity \"%s\"\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
 			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
 			if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
 				PHYS_NudgeOutOfSolid(prog, ent);
@@ -1248,6 +1254,9 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 	}
 	else
 	{
+		if (trace.startsolid)
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": badly placed entity \"%s\", startsolid: %d allsolid: %d\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)), trace.startsolid, trace.allsolid);
+
 		if (!trace.allsolid && trace.fraction < 1)
 		{
 			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
