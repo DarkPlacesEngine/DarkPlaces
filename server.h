@@ -568,10 +568,6 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); //
  * returns true if it found a better place
  */
 qbool SV_UnstickEntity (prvm_edict_t *ent);
-/*! move an entity that is stuck out of the surface it is stuck in (can move large amounts)
- * returns true if it found a better place
- */
-qbool SV_NudgeOutOfSolid(prvm_edict_t *ent);
 
 /// calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);

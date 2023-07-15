@@ -1543,46 +1543,6 @@ static qbool SV_NudgeOutOfSolid_PivotIsKnownGood(prvm_edict_t *ent, vec3_t pivot
 	return true;
 }
 
-qbool SV_NudgeOutOfSolid(prvm_edict_t *ent)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	int bump, pass;
-	trace_t stucktrace;
-	vec3_t stuckorigin;
-	vec3_t stuckmins, stuckmaxs;
-	vec_t nudge;
-	vec_t separation = sv_gameplayfix_nudgeoutofsolid_separation.value;
-	if (sv.worldmodel && sv.worldmodel->brushq1.numclipnodes)
-		separation = 0.0f; // when using hulls, it can not be enlarged
-	VectorCopy(PRVM_serveredictvector(ent, mins), stuckmins);
-	VectorCopy(PRVM_serveredictvector(ent, maxs), stuckmaxs);
-	stuckmins[0] -= separation;
-	stuckmins[1] -= separation;
-	stuckmins[2] -= separation;
-	stuckmaxs[0] += separation;
-	stuckmaxs[1] += separation;
-	stuckmaxs[2] += separation;
-	// first pass we try to get it out of brush entities
-	// second pass we try to get it out of world only (can't win them all)
-	for (pass = 0;pass < 2;pass++)
-	{
-		VectorCopy(PRVM_serveredictvector(ent, origin), stuckorigin);
-		for (bump = 0;bump < 10;bump++)
-		{
-			stucktrace = SV_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
-			if (!stucktrace.bmodelstartsolid || stucktrace.startdepth >= 0)
-			{
-				// found a good location, use it
-				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
-				return true;
-			}
-			nudge = -stucktrace.startdepth;
-			VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
-		}
-	}
-	return false;
-}
-
 /*
 ============
 SV_PushEntity
@@ -1610,7 +1570,7 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 	// move start position out of solids
 	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
 	{
-		SV_NudgeOutOfSolid(ent);
+		PHYS_NudgeOutOfSolid(prog, ent);
 	}
 
 	VectorCopy(PRVM_serveredictvector(ent, origin), start);
