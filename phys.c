@@ -12,7 +12,6 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 	trace_t stucktrace;
 	vec3_t stuckorigin;
 	vec3_t stuckmins, stuckmaxs;
-	vec_t nudge;
 	vec_t separation;
 	model_t *worldmodel;
 
@@ -64,8 +63,8 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
 				return bump || pass ? 1 : -1; // -1 means it wasn't stuck
 			}
-			nudge = -stucktrace.startdepth;
-			VectorMA(stuckorigin, nudge, stucktrace.startdepthnormal, stuckorigin);
+
+			VectorMA(stuckorigin, -stucktrace.startdepth, stucktrace.startdepthnormal, stuckorigin);
 		}
 	}
 	return 0;

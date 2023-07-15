@@ -21,19 +21,19 @@ struct texture_s;
 typedef struct trace_s
 {
 	// if true, the entire trace was in solid (see hitsupercontentsmask)
-	int allsolid;
+	qbool allsolid;
 	// if true, the initial point was in solid (see hitsupercontentsmask)
-	int startsolid;
+	qbool startsolid;
 	// this is set to true in world.c if startsolid was set in a trace against world
-	int worldstartsolid;
+	qbool worldstartsolid;
 	// this is set to true in world.c if startsolid was set in a trace against a SOLID_BSP entity, in other words this is true if the entity is stuck in a door or wall, but not if stuck in another normal entity
-	int bmodelstartsolid;
+	qbool bmodelstartsolid;
 	// if true, the trace passed through empty somewhere
 	// (set only by Q1BSP tracing)
-	int inopen;
+	qbool inopen;
 	// if true, the trace passed through water/slime/lava somewhere
 	// (set only by Q1BSP tracing)
-	int inwater;
+	qbool inwater;
 	// fraction of the total distance that was traveled before impact
 	// in case of impact this is actually nudged a bit off the surface
 	// (1.0 = did not hit anything)
@@ -62,7 +62,7 @@ typedef struct trace_s
 	const struct texture_s *hittexture;
 	// initially false, set when the start leaf is found
 	// (set only by Q1BSP tracing and entity box tracing)
-	int startfound;
+	qbool startfound;
 	// if startsolid, contains the minimum penetration depth found in the
 	// trace, and the normal needed to push it out of that solid
 	double startdepth;

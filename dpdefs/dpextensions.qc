@@ -2644,7 +2644,6 @@ void(string cmdname) registercommand = #352;
 //description:
 //Adds a new console command which will take priority over a previous command of the same name (including engine commands) and in CSQC is removed when the VM shuts down. This will call CSQC_ConsoleCommand(string command) or ConsoleCmd(string command) in SVQC.  Return value should be true if QC handled the command, otherwise return false to have the engine handle it.
 
-
 //DP_QC_FINDBOX
 //idea: Mario
 //darkplaces implementation: bones_was_here
