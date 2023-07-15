@@ -119,6 +119,7 @@ const char *vm_sv_extensions[] = {
 "DP_QC_LOG",
 "DP_QC_MINMAXBOUND",
 "DP_QC_MULTIPLETEMPSTRINGS",
+"DP_QC_NUDGEOUTOFSOLID",
 "DP_QC_NUM_FOR_EDICT",
 "DP_QC_RANDOMVEC",
 "DP_QC_SINCOSSQRTPOW",
@@ -3833,7 +3834,7 @@ NULL,							// #563
 NULL,							// #564
 NULL,							// #565
 VM_SV_findbox,					// #566 entity(vector mins, vector maxs) findbox = #566; (DP_QC_FINDBOX)
-NULL,							// #567
+VM_nudgeoutofsolid,				// #567 float(entity ent) nudgeoutofsolid = #567; (DP_QC_NUDGEOUTOFSOLID)
 NULL,							// #568
 NULL,							// #569
 NULL,							// #570

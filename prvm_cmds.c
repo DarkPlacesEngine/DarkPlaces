@@ -5563,6 +5563,41 @@ void VM_SV_getextresponse (prvm_prog_t *prog)
 	}
 }
 
+// DP_QC_NUDGEOUTOFSOLID
+// float(entity ent) nudgeoutofsolid = #567;
+void VM_nudgeoutofsolid(prvm_prog_t *prog)
+{
+	prvm_edict_t *ent;
+
+	VM_SAFEPARMCOUNTRANGE(1, 1, VM_nudgeoutofsolid);
+
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	if (ent == prog->edicts)
+	{
+		VM_Warning(prog, "nudgeoutofsolid: can not modify world entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+	if (ent->free)
+	{
+		VM_Warning(prog, "nudgeoutofsolid: can not modify free entity\n");
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		return;
+	}
+
+	PRVM_G_FLOAT(OFS_RETURN) = PHYS_NudgeOutOfSolid(prog, ent);
+
+	if (PRVM_G_FLOAT(OFS_RETURN) > 0)
+	{
+		if (prog == SVVM_prog)
+			SV_LinkEdict(ent);
+		else if (prog == CLVM_prog)
+			CL_LinkEdict(ent);
+		else
+			Sys_Error("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
+	}
+}
+
 /*
 =========
 Common functions between menu.dat and clsprogs
