@@ -1178,12 +1178,18 @@ VM_SV_droptofloor
 void() droptofloor
 ===============
 */
-
+inline static qbool droptofloor_bsp_failcond(trace_t *trace)
+{
+	if (sv.worldmodel->brush.isq3bsp || sv.worldmodel->brush.isq2bsp)
+		return trace->startsolid;
+	else
+		return trace->allsolid || trace->fraction == 1;
+}
 static void VM_SV_droptofloor(prvm_prog_t *prog)
 {
-	prvm_edict_t		*ent;
-	vec3_t		end, entorigin, entmins, entmaxs;
-	trace_t		trace;
+	prvm_edict_t *ent;
+	vec3_t        end;
+	trace_t       trace;
 
 	VM_SAFEPARMCOUNTRANGE(0, 2, VM_SV_droptofloor); // allow 2 parameters because the id1 defs.qc had an incorrect prototype
 
@@ -1202,14 +1208,6 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 		return;
 	}
 
-	VectorCopy (PRVM_serveredictvector(ent, origin), end);
-	if (sv.worldmodel->brush.isq3bsp)
-		end[2] -= 4096;
-	else if (sv.worldmodel->brush.isq2bsp)
-		end[2] -= 128;
-	else
-		end[2] -= 256; // Quake, QuakeWorld
-
 	if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
 	{
 		int n = PHYS_NudgeOutOfSolid(prog, ent);
@@ -1219,6 +1217,14 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid_nudgetocorrect FIXED badly placed entity \"%s\" before drop\n", PRVM_gameedictvector(ent, origin)[0], PRVM_gameedictvector(ent, origin)[1], PRVM_gameedictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
 	}
 
+	VectorCopy (PRVM_serveredictvector(ent, origin), end);
+	if (sv.worldmodel->brush.isq3bsp)
+		end[2] -= 4096;
+	else if (sv.worldmodel->brush.isq2bsp)
+		end[2] -= 128;
+	else
+		end[2] -= 256; // Quake, QuakeWorld
+
 	/* bones_was_here: not using SV_GenericHitSuperContentsMask(ent) anymore because it was setting:
 	 * items:    SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY
 	 * monsters: SUPERCONTENTS_SOLID | SUPERCONTENTS_BODY | SUPERCONTENTS_PLAYERCLIP
@@ -1226,55 +1232,47 @@ static void VM_SV_droptofloor(prvm_prog_t *prog)
 	 * which caused (startsolid == true) when, for example, a health was touching a monster.
 	 * Changing MOVE_NORMAL also fixes that, but other engines are using MOVE_NORMAL here.
 	 */
-	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
-	VectorCopy(PRVM_serveredictvector(ent, mins), entmins);
-	VectorCopy(PRVM_serveredictvector(ent, maxs), entmaxs);
-	trace = SV_TraceBox(entorigin, entmins, entmaxs, end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
-	if (trace.startsolid && sv_gameplayfix_droptofloorstartsolid.integer)
+	trace = SV_TraceBox(PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs), end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
+	if (droptofloor_bsp_failcond(&trace))
 	{
-		vec3_t offset, org;
-		VectorSet(offset, 0.5f * (PRVM_serveredictvector(ent, mins)[0] + PRVM_serveredictvector(ent, maxs)[0]), 0.5f * (PRVM_serveredictvector(ent, mins)[1] + PRVM_serveredictvector(ent, maxs)[1]), PRVM_serveredictvector(ent, mins)[2]);
-		VectorAdd(PRVM_serveredictvector(ent, origin), offset, org);
-		trace = SV_TraceLine(org, end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
-		VectorSubtract(trace.endpos, offset, trace.endpos);
-		if (trace.startsolid)
+		if (sv_gameplayfix_droptofloorstartsolid.integer)
 		{
-			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid COULD NOT FIX badly placed entity \"%s\"\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
-			SV_LinkEdict(ent);
-			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
-			PRVM_serveredictedict(ent, groundentity) = 0;
-			PRVM_G_FLOAT(OFS_RETURN) = 1;
-		}
-		else if (trace.fraction < 1)
-		{
+			vec3_t offset, org;
+
+			offset[0] = 0.5f * (PRVM_serveredictvector(ent, mins)[0] + PRVM_serveredictvector(ent, maxs)[0]);
+			offset[1] = 0.5f * (PRVM_serveredictvector(ent, mins)[1] + PRVM_serveredictvector(ent, maxs)[1]);
+			offset[2] = PRVM_serveredictvector(ent, mins)[2];
+			VectorAdd(PRVM_serveredictvector(ent, origin), offset, org);
+			VectorAdd(end, offset, end);
+
+			trace = SV_TraceLine(org, end, MOVE_NORMAL, ent, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
+			if (droptofloor_bsp_failcond(&trace))
+			{
+				VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid COULD NOT FIX badly placed entity \"%s\"\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
+				return;
+			}
 			VM_Warning(prog, "droptofloor at \"%f %f %f\": sv_gameplayfix_droptofloorstartsolid FIXED badly placed entity \"%s\"\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)));
-			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
+			VectorSubtract(trace.endpos, offset, PRVM_serveredictvector(ent, origin));
+
+			// only because we dropped it without considering its bbox
 			if (sv_gameplayfix_droptofloorstartsolid_nudgetocorrect.integer)
 				PHYS_NudgeOutOfSolid(prog, ent);
-			SV_LinkEdict(ent);
-			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
-			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
-			PRVM_G_FLOAT(OFS_RETURN) = 1;
-			// if support is destroyed, keep suspended (gross hack for floating items in various maps)
-			ent->priv.server->suspendedinairflag = true;
+		}
+		else
+		{
+			VM_Warning(prog, "droptofloor at \"%f %f %f\": badly placed entity \"%s\", startsolid: %d allsolid: %d\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)), trace.startsolid, trace.allsolid);
+			return;
 		}
 	}
 	else
-	{
-		if (trace.startsolid)
-			VM_Warning(prog, "droptofloor at \"%f %f %f\": badly placed entity \"%s\", startsolid: %d allsolid: %d\n", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2], PRVM_GetString(prog, PRVM_gameedictstring(ent, classname)), trace.startsolid, trace.allsolid);
+		VectorCopy(trace.endpos, PRVM_serveredictvector(ent, origin));
 
-		if (!trace.allsolid && trace.fraction < 1)
-		{
-			VectorCopy (trace.endpos, PRVM_serveredictvector(ent, origin));
-			SV_LinkEdict(ent);
-			PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
-			PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
-			PRVM_G_FLOAT(OFS_RETURN) = 1;
-			// if support is destroyed, keep suspended (gross hack for floating items in various maps)
-			ent->priv.server->suspendedinairflag = true;
-		}
-	}
+	SV_LinkEdict(ent);
+	PRVM_serveredictfloat(ent, flags) = (int)PRVM_serveredictfloat(ent, flags) | FL_ONGROUND;
+	PRVM_serveredictedict(ent, groundentity) = PRVM_EDICT_TO_PROG(trace.ent);
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+	// if support is destroyed, keep suspended (gross hack for floating items in various maps)
+	ent->priv.server->suspendedinairflag = true;
 }
 
 /*
