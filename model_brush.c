@@ -762,7 +762,7 @@ static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int nu
 			// recurse both sides, front side first
 			ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[p1side], p1f, midf, p1, mid);
 			// if this side is not empty, return what it is (solid or done)
-			if (ret != HULLCHECKSTATE_EMPTY)
+			if (ret != HULLCHECKSTATE_EMPTY && !t->trace->allsolid)
 				return ret;
 
 			ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[p2side], midf, p2f, mid, p2);
