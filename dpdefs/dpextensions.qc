@@ -2654,4 +2654,16 @@ entity(vector mins, vector maxs, .entity tofield) findbox_tofield = #566;
 //description:
 //Returns a chain of entities that are touching a box (a simpler findradius); supports DP_QC_FINDCHAIN_TOFIELD
 
+//DP_QC_NUDGEOUTOFSOLID
+//idea: LadyHavoc, bones_was_here
+//darkplaces implementation: LadyHavoc, bones_was_here
+//builtin definitions:
+float(entity ent) nudgeoutofsolid = #567;
+//cvar definitions:
+//sv_gameplayfix_nudgeoutofsolid_separation
+//description:
+//Attempts to move a stuck entity out of solid brushes, returning 1 if successful, 0 if it remains stuck, -1 if it wasn't stuck.
+//Note: makes only one tracebox call if the entity isn't stuck, so don't call tracebox just to see if you should call nudgeoutofsolid.
+
+
 float(float dividend, float divisor) mod = #245;
