@@ -1513,13 +1513,16 @@ void FS_Rescan (void)
 	// add back the selfpack as new first item
 	FS_AddSelfPack();
 
-	// set the default screenshot name to either the mod name or the
-	// gamemode screenshot name
-	if (strcmp(com_modname, gamedirname1))
-		Cvar_SetQuick (&scr_screenshot_name, com_modname);
-	else
-		Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
-	
+	if (cls.state != ca_dedicated)
+	{
+		// set the default screenshot name to either the mod name or the
+		// gamemode screenshot name
+		if (strcmp(com_modname, gamedirname1))
+			Cvar_SetQuick (&scr_screenshot_name, com_modname);
+		else
+			Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
+	}
+
 	if((i = Sys_CheckParm("-modname")) && i < sys.argc - 1)
 		strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
 

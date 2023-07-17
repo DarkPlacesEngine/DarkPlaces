@@ -59,8 +59,9 @@ struct cmd_state_s;
 #define CF_PRIVATE              (1<<11) // cvar should not be $ expanded or sent to the server under any circumstances (rcon_password, etc)
 #define CF_MAXFLAGSVAL          ((1<<12) - 1)    // used to determine if flags is valid
 // for internal use only!
+#define CF_REGISTERED (1<<29)  // created by Cvar_RegisterVariable()
 #define CF_DEFAULTSET (1<<30)
-#define CF_ALLOCATED (1<<31)
+#define CF_ALLOCATED (1<<31)   // created by Cvar_Get() (console or QC)
 
 #define CF_SHARED 3
 
