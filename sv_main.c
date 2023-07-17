@@ -452,7 +452,6 @@ static void SV_ServerOptions (void)
 	i = Sys_CheckParm ("-dedicated");
 	if (i || !cl_available)
 	{
-		cls.state = ca_dedicated;
 		// check for -dedicated specifying how many players
 		if (i && i + 1 < sys.argc && atoi (sys.argv[i+1]) >= 1)
 			svs.maxclients = atoi (sys.argv[i+1]);
@@ -2604,7 +2603,8 @@ double SV_Frame(double time)
 		{
 			advancetime = sys_ticrate.value;
 			// listen servers can run multiple server frames per client frame
-			framelimit = cl_maxphysicsframesperserverframe.integer;
+			if (cl_maxphysicsframesperserverframe.integer > 0)
+				framelimit = cl_maxphysicsframesperserverframe.integer;
 			aborttime = Sys_DirtyTime() + 0.1;
 		}
 

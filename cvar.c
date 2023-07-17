@@ -437,6 +437,12 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 		return;
 	}
 
+	if (!(var->flags & CF_REGISTERED) && !(var->flags & CF_ALLOCATED))
+	{
+		Con_Printf(CON_WARN "Warning: Cvar_SetQuick() cannot set unregistered cvar \"%s\"\n", var->name);
+		return; // setting an unregistered engine cvar crashes
+	}
+
 	if (developer_extra.integer)
 		Con_DPrintf("Cvar_SetQuick({\"%s\", \"%s\", %i, \"%s\"}, \"%s\");\n", var->name, var->string, var->flags, var->defstring, value);
 
@@ -498,22 +504,25 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 	cvar_hash_t *hash;
 	int hashindex;
 
+	if (cls.state == ca_dedicated && !(variable->flags & CF_SERVER))
+		return;
+
 	if(!*name)
 	{
-		Con_Printf("Cvar_RegisterVirtual: invalid virtual cvar name\n");
+		Con_Printf(CON_WARN "Cvar_RegisterVirtual: invalid virtual cvar name\n");
 		return;
 	}
 
 	// check for overlap with a command
 	if (Cmd_Exists(cmd_local, name))
 	{
-		Con_Printf("Cvar_RegisterVirtual: %s is a command\n", name);
+		Con_Printf(CON_WARN "Cvar_RegisterVirtual: %s is a command\n", name);
 		return;
 	}
 
 	if(Cvar_FindVar(&cvars_all, name, 0))
 	{
-		Con_Printf("Cvar_RegisterVirtual: %s is a cvar\n", name);
+		Con_Printf(CON_WARN "Cvar_RegisterVirtual: %s is a cvar\n", name);
 		return;
 	}
 
@@ -579,7 +588,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 
 	switch (variable->flags & (CF_CLIENT | CF_SERVER))
 	{
-	case CF_CLIENT:
+	case CF_CLIENT: // client-only cvar
+		if (cls.state == ca_dedicated)
+			return;
 	case CF_SERVER:
 	case CF_CLIENT | CF_SERVER:
 		cvars = &cvars_all;
@@ -607,7 +618,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 			// (because the engine directly accesses fixed variables)
 			// NOTE: this isn't actually used currently
 			// (all cvars are registered before config parsing)
-			variable->flags |= (cvar->flags & ~CF_ALLOCATED);
+			variable->flags &= ~CF_ALLOCATED;
 			// cvar->string is now owned by variable instead
 			variable->string = cvar->string;
 			variable->defstring = cvar->defstring;
@@ -661,6 +672,9 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	// Mark it as not an autocvar.
 	for (i = 0;i < PRVM_PROG_MAX;i++)
 		variable->globaldefindex[i] = -1;
+
+	// Safe for Cvar_SetQuick()
+	variable->flags |= CF_REGISTERED;
 
 	Cvar_Link(variable, cvars);
 }

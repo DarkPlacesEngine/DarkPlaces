@@ -424,6 +424,10 @@ static void Host_Init (void)
 	if (Sys_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 
+	// -dedicated is checked in SV_ServerOptions() but that's too late for Cvar_RegisterVariable() to skip all the client-only cvars
+	if (Sys_CheckParm ("-dedicated") || !cl_available)
+		cls.state = ca_dedicated;
+
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
 
