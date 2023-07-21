@@ -804,6 +804,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "csqc_polygons_defaultmaterial_nocullface 1\n"
 "con_chatsound_team_mask 13\n"
 "sv_gameplayfix_customstats 1\n"
+"mod_q1bsp_zero_hullsize_cutoff 8.03125\n"
 				);
 			break;
 		// Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
