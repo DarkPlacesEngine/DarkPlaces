@@ -78,4 +78,17 @@ extern Uchar u8_quake2utf8map[256];
 Uchar u8_toupper(Uchar ch);
 Uchar u8_tolower(Uchar ch);
 
+#ifdef WIN32
+
+// WTF-8 encoding to circumvent Windows encodings, be it UTF-16 or random codepages
+// https://simonsapin.github.io/wtf-8/
+#define WTF8U32 0     // whether to regard wchar as utf-32
+#define WTF8CHECKS 1  // check for extra sanity in conversion steps
+typedef wchar_t wchar;
+
+int towtf8(const wchar* wstr, int wlen, char* cstr, int maxclen);
+int fromwtf8(const char* cstr, int clen, wchar* wstr, int maxwlen);
+
+#endif // WIN32
+
 #endif // UTF8LIB_H__
