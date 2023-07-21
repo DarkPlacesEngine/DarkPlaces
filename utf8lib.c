@@ -170,7 +170,7 @@ findchar:
 	     (bits >= 3 && ch < 0x800) ||
 	     (bits >= 4 && ch < 0x10000) ||
 	     ch >= 0x10FFFF // RFC 3629
-		)
+	)
 	{
 		i += bits;
 		//fprintf(stderr, "overlong: %i bytes for %x\n", bits, ch);
@@ -906,6 +906,115 @@ size_t u8_strpad_colorcodes(char *out, size_t outsize, const char *in, qbool lef
 	int rpad = leftalign ? pad : 0;
 	return dpsnprintf(out, outsize, "%*s%.*s%*s", lpad, "", prec, in, rpad, "");
 }
+
+#ifdef WIN32
+
+/**
+ * Convert Windows "wide" characters to WTF-8 for internal manipulation
+ */
+int towtf8(const wchar *wstr, int wlen, char *cstr, int maxclen)
+{
+	int p = 0;
+	int i;
+	for (i = 0; i < wlen; ++i)
+	{
+		wchar point = wstr[i];
+		if (point < 0x80)
+		{
+			if (p + 1 >= maxclen) break;
+			cstr[p++] = point;
+		}
+		else if (point < 0x800)
+		{
+			if (p + 2 >= maxclen) break;
+			cstr[p++] = (0xc0 | ((point >>  6) & 0x1f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
+		else
+		#if WTF8U32
+		if (point < 0x10000)
+		#endif
+		{
+			if (p + 3 >= maxclen) break;
+			cstr[p++] = (0xe0 | ((point >> 12) & 0x0f));
+			cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
+		#if WTF8U32
+		else
+		#if WTF8CHECKS
+		if (point < 0x110000)
+		#endif
+		{
+			if (p + 4 >= maxclen) break;
+			cstr[p++] = (0xf0 | ((point >> 18) & 0x07));
+			cstr[p++] = (0x80 | ((point >> 12) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  6) & 0x3f));
+			cstr[p++] = (0x80 | ((point >>  0) & 0x3f));
+		}
+		#endif
+	}
+	cstr[p] = 0x00;
+	return p;
+}
+
+/**
+ * Convert WTF-8 string to "wide" characters used by Windows
+ */
+int fromwtf8(const char *cstr, int clen, wchar *wstr, int maxwlen)
+{
+	int p = 0;
+	int i;
+	for (i = 0; i < clen;)
+	{
+		char byte = cstr[i++];
+		wchar point = byte;
+		int length = 1;
+		if (p + 1 >= maxwlen) break;
+		#if WTF8CHECKS
+		if ((byte & 0xf8) == 0xf8)
+			return -1;
+		#endif
+		#if WTF8U32
+		if ((byte & 0xf8) == 0xf0)
+		{
+			length = 4;
+			point = byte & 0x07;
+		}
+		else
+		#endif
+		if ((byte & 0xf0) == 0xe0)
+		{
+			length = 3;
+			point = byte & 0x0f;
+		}
+		else if ((byte & 0xe0) == 0xc0)
+		{
+			length = 2;
+			point = byte & 0x1f;
+		}
+		#if WTF8CHECKS
+		else if ((byte & 0xc0) == 0x80)
+		{
+			return -1;
+		}
+		#endif
+		while (--length)
+		{
+			byte = cstr[i++];
+			#if WTF8CHECKS
+			if (byte == -1) return -1;
+			else if ((byte & 0xc0) != 0x80) return -1;
+			#endif
+			point = (point << 6) | (byte & 0x3f);
+		}
+		wstr[p++] = point;
+	}
+	wstr[p] = 0x00;
+	return p;
+}
+
+#endif // WIN32
 
 
 /*
