@@ -3064,13 +3064,21 @@ float	mod(float val, float m)
 */
 void VM_modulo(prvm_prog_t *prog)
 {
-	prvm_int_t val, m;
+	vec_t val, m;
+
 	VM_SAFEPARMCOUNT(2, VM_modulo);
 
-	val = (prvm_int_t) PRVM_G_FLOAT(OFS_PARM0);
-	m	= (prvm_int_t) PRVM_G_FLOAT(OFS_PARM1);
+	val = PRVM_G_FLOAT(OFS_PARM0);
+	m   = PRVM_G_FLOAT(OFS_PARM1);
 
-	PRVM_G_FLOAT(OFS_RETURN) = (prvm_vec_t) (val % m);
+	// matches how gmqcc implements % when mod() builtin isn't defined, and FTEQW mod()
+	if (m)
+		PRVM_G_FLOAT(OFS_RETURN) = val - m * (prvm_int_t)(val / m);
+	else
+	{
+		VM_Warning(prog, "Attempted modulo of %f by zero\n", val);
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+	}
 }
 
 static void VM_Search_Init(prvm_prog_t *prog)
