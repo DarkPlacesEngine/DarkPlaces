@@ -65,6 +65,7 @@ cvar_t mod_q3shader_force_addalpha = {CF_CLIENT, "mod_q3shader_force_addalpha", 
 cvar_t mod_q3shader_force_terrain_alphaflag = {CF_CLIENT, "mod_q3shader_force_terrain_alphaflag", "0", "for multilayered terrain shaders force TEXF_ALPHA flag on both layers"};
 
 cvar_t mod_q1bsp_polygoncollisions = {CF_CLIENT | CF_SERVER, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
+cvar_t mod_q1bsp_zero_hullsize_cutoff = {CF_CLIENT | CF_SERVER, "mod_q1bsp_zero_hullsize_cutoff", "3", "bboxes with an X dimension smaller than this will use the smallest cliphull (0x0x0) instead of being rounded up to the player's cliphull (32x32x56)"};
 cvar_t mod_recalculatenodeboxes = {CF_CLIENT | CF_SERVER, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
 
 static texture_t mod_q1bsp_texture_solid;
@@ -115,6 +116,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3shader_force_addalpha);
 	Cvar_RegisterVariable(&mod_q3shader_force_terrain_alphaflag);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
+	Cvar_RegisterVariable(&mod_q1bsp_zero_hullsize_cutoff);
 	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
 
 	// these games were made for older DP engines and are no longer
@@ -976,7 +978,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, const frameblend_t *frameb
 	rhc.trace->fraction = 1;
 	rhc.trace->allsolid = true;
 	VectorSubtract(boxmaxs, boxmins, boxsize);
-	if (boxsize[0] < 3)
+	if (boxsize[0] < mod_q1bsp_zero_hullsize_cutoff.value)
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	else if (model->brush.ishlbsp)
 	{
@@ -3828,7 +3830,7 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	VectorSubtract(inmaxs, inmins, size);
 	if (cmodel->brush.ishlbsp)
 	{
-		if (size[0] < 3)
+		if (size[0] < mod_q1bsp_zero_hullsize_cutoff.value)
 			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
 		else if (size[0] <= 32)
 		{
