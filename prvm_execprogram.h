@@ -377,11 +377,8 @@ int i;
 				}
 				else
 				{
-					if (developer.integer)
-					{
-						PRE_ERROR();
-						VM_Warning(prog, "Attempted division by zero in %s\n", prog->name );
-					}
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of %f by zero\n", OPA->_float);
 					OPC->_float = 0.0f;
 				}
 				DISPATCH_OPCODE();
