@@ -246,7 +246,7 @@ string	fgets(float fhandle)  = #50;
 void	fputs(float fhandle, string s)  = #51;
 
 float	strlen(string s)  = #52;
-string	strcat(string s1,string s2,...)  = #53;
+string	strcat(string s, string...)  = #53;
 string	substring(string s, float start, float length)  = #54;
 
 vector	stov(string s)  = #55;
