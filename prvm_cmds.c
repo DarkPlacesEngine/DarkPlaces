@@ -2322,11 +2322,11 @@ void VM_strtoupper(prvm_prog_t *prog)
 =========
 VM_strcat
 
-string strcat(string,string,...[string])
+string strcat(string s, string...)
 =========
 */
-//string(string s1, string s2) strcat = #115;
-// concatenates two strings (for example "abc", "def" would return "abcdef")
+//string(string s, string...) strcat = #115;
+// concatenates strings (for example "abc", "def" would return "abcdef")
 // and returns as a tempstring
 void VM_strcat(prvm_prog_t *prog)
 {
