@@ -25,6 +25,7 @@ void Curl_Cancel_ToMemory(curl_callback_t callback, void* cbdata);
 void Curl_Init(void);
 void Curl_Init_Commands(void);
 void Curl_Shutdown(void);
+qbool Curl_Available(void);
 void Curl_CancelAll(void);
 void Curl_Clear_forthismap(void);
 qbool Curl_Have_forthismap(void);

@@ -834,6 +834,12 @@ void Curl_Shutdown(void)
 	curl_dll = NULL;
 }
 
+// for VM_checkextension()
+qbool Curl_Available(void)
+{
+	return curl_dll ? true : false;
+}
+
 /*
 ====================
 Curl_Find

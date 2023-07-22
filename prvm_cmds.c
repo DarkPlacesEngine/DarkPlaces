@@ -321,6 +321,10 @@ static qbool checkextension(prvm_prog_t *prog, const char *name)
 			if (!strcasecmp("DP_QC_DIGEST_SHA256", name))
 				return Crypto_Available();
 
+			// special shreck for libcurl
+			if (!strcasecmp("DP_QC_URI_GET", name) || !strcasecmp("DP_QC_URI_POST", name))
+				return Curl_Available();
+
 			return true;
 		}
 	}
