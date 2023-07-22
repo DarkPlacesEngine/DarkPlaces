@@ -191,6 +191,7 @@ cvar_t r_glsl_postprocess_uservec2_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_pos
 cvar_t r_glsl_postprocess_uservec3_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec3_enable", "1", "enables postprocessing uservec3 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
 cvar_t r_glsl_postprocess_uservec4_enable = {CF_CLIENT | CF_ARCHIVE, "r_glsl_postprocess_uservec4_enable", "1", "enables postprocessing uservec4 usage, creates USERVEC1 define (only useful if default.glsl has been customized)"};
 cvar_t r_colorfringe = {CF_CLIENT | CF_ARCHIVE, "r_colorfringe", "0", "Chromatic aberration. Values higher than 0.025 will noticeably distort the image"};
+cvar_t r_fxaa = {CF_CLIENT | CF_ARCHIVE, "r_fxaa", "0", "fast approximate anti aliasing"};
 
 cvar_t r_water = {CF_CLIENT | CF_ARCHIVE, "r_water", "0", "whether to use reflections and refraction on water surfaces (note: r_wateralpha must be set below 1)"};
 cvar_t r_water_cameraentitiesonly = {CF_CLIENT | CF_ARCHIVE, "r_water_cameraentitiesonly", "0", "whether to only show QC-defined reflections/refractions (typically used for camera- or portal-like effects)"};
@@ -3368,6 +3369,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_glsl_postprocess_uservec4_enable);
 	Cvar_RegisterVariable(&r_celshading);
 	Cvar_RegisterVariable(&r_celoutlines);
+	Cvar_RegisterVariable(&r_fxaa);
 
 	Cvar_RegisterVariable(&r_water);
 	Cvar_RegisterVariable(&r_water_cameraentitiesonly);
