@@ -8,8 +8,8 @@
 #include "image_png.h"
 
 static cvar_t curl_enabled = {CF_SHARED | CF_ARCHIVE, "curl_enabled","1", "whether libcurl may be used to GET files or POST data"};
-static cvar_t curl_maxdownloads = {CF_SHARED | CF_ARCHIVE, "curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t curl_maxspeed = {CF_SHARED | CF_ARCHIVE, "curl_maxspeed","300", "maximum download speed (KiB/s)"};
+static cvar_t curl_maxdownloads = {CF_SHARED | CF_ARCHIVE, "curl_maxdownloads","3", "maximum number of concurrent HTTP/FTP downloads"};
+static cvar_t curl_maxspeed = {CF_SHARED | CF_ARCHIVE, "curl_maxspeed","0", "maximum download speed (KiB/s)"};
 static cvar_t curl_useragent = {CF_SHARED, "curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
 static cvar_t curl_useragent_append = {CF_SHARED, "curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
 
