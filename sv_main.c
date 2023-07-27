@@ -161,6 +161,7 @@ cvar_t sv_warsowbunny_backtosideratio = {CF_SERVER, "sv_warsowbunny_backtosidera
 cvar_t sv_onlycsqcnetworking = {CF_SERVER, "sv_onlycsqcnetworking", "0", "disables legacy entity networking code for higher performance (except on clients, which can still be legacy)"};
 cvar_t sv_areadebug = {CF_SERVER, "sv_areadebug", "0", "disables physics culling for debugging purposes (only for development)"};
 cvar_t sys_ticrate = {CF_SERVER | CF_ARCHIVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
+cvar_t sv_maxphysicsframesperserverframe = {CF_SERVER, "sv_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
 cvar_t teamplay = {CF_SERVER | CF_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 cvar_t timelimit = {CF_SERVER | CF_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
 cvar_t sv_threaded = {CF_SERVER, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
@@ -641,6 +642,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_onlycsqcnetworking);
 	Cvar_RegisterVariable (&sv_areadebug);
 	Cvar_RegisterVariable (&sys_ticrate);
+	Cvar_RegisterVariable (&sv_maxphysicsframesperserverframe);
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&timelimit);
 	Cvar_RegisterVariable (&sv_threaded);
@@ -2507,7 +2509,6 @@ const char *SV_TimingReport(char *buf, size_t buflen)
 
 extern cvar_t host_maxwait;
 extern cvar_t host_framerate;
-extern cvar_t cl_maxphysicsframesperserverframe;
 double SV_Frame(double time)
 {
 	static double sv_timer;
@@ -2603,8 +2604,8 @@ double SV_Frame(double time)
 		{
 			advancetime = sys_ticrate.value;
 			// listen servers can run multiple server frames per client frame
-			if (cl_maxphysicsframesperserverframe.integer > 0)
-				framelimit = cl_maxphysicsframesperserverframe.integer;
+			if (sv_maxphysicsframesperserverframe.integer > 0)
+				framelimit = sv_maxphysicsframesperserverframe.integer;
 			aborttime = Sys_DirtyTime() + 0.1;
 		}
 

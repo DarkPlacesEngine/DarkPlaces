@@ -7,15 +7,17 @@
 #include "jpeg.h"
 #include "image_png.h"
 
-static cvar_t cl_curl_maxdownloads = {CF_CLIENT | CF_ARCHIVE, "cl_curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
-static cvar_t cl_curl_maxspeed = {CF_CLIENT | CF_ARCHIVE, "cl_curl_maxspeed","300", "maximum download speed (KiB/s)"};
-static cvar_t sv_curl_defaulturl = {CF_SERVER | CF_ARCHIVE, "sv_curl_defaulturl","", "default autodownload source URL"};
-static cvar_t sv_curl_serverpackages = {CF_SERVER | CF_ARCHIVE, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
-static cvar_t sv_curl_maxspeed = {CF_SERVER | CF_ARCHIVE, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
-static cvar_t cl_curl_enabled = {CF_CLIENT | CF_ARCHIVE, "cl_curl_enabled","1", "whether client's download support is enabled"};
-static cvar_t cl_curl_useragent = {CF_CLIENT, "cl_curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
-static cvar_t cl_curl_useragent_append = {CF_CLIENT, "cl_curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
-static cvar_t developer_curl = {CF_CLIENT | CF_SERVER, "developer_curl","0", "whether verbose curl output should be printed to stderr"};
+static cvar_t curl_enabled = {CF_SHARED | CF_ARCHIVE, "curl_enabled","1", "whether libcurl may be used to GET files or POST data"};
+static cvar_t curl_maxdownloads = {CF_SHARED | CF_ARCHIVE, "curl_maxdownloads","1", "maximum number of concurrent HTTP/FTP downloads"};
+static cvar_t curl_maxspeed = {CF_SHARED | CF_ARCHIVE, "curl_maxspeed","300", "maximum download speed (KiB/s)"};
+static cvar_t curl_useragent = {CF_SHARED, "curl_useragent","1", "send the User-Agent string (note: turning this off may break stuff)"};
+static cvar_t curl_useragent_append = {CF_SHARED, "curl_useragent_append","", "a string to append to the User-Agent string (useful for name and version number of your mod)"};
+
+static cvar_t sv_curl_defaulturl = {CF_SERVER, "sv_curl_defaulturl","", "default autodownload source URL"};
+static cvar_t sv_curl_serverpackages = {CF_SERVER, "sv_curl_serverpackages","", "list of required files for the clients, separated by spaces"};
+static cvar_t sv_curl_maxspeed = {CF_SERVER, "sv_curl_maxspeed","0", "maximum download speed for clients downloading from sv_curl_defaulturl (KiB/s)"};
+
+static cvar_t developer_curl = {CF_SHARED, "developer_curl","0", "whether verbose libcurl output should be printed to stderr"};
 
 /*
 =================================================================
@@ -685,7 +687,7 @@ static void CheckPendingDownloads(void)
 	char vabuf[1024];
 	if(!curl_dll)
 		return;
-	if(numdownloads < cl_curl_maxdownloads.integer)
+	if(numdownloads < curl_maxdownloads.integer)
 	{
 		downloadinfo *di;
 		List_For_Each_Entry(di, &downloads, downloadinfo, list)
@@ -719,7 +721,7 @@ static void CheckPendingDownloads(void)
 				di->curle = qcurl_easy_init();
 				di->slist = NULL;
 				qcurl_easy_setopt(di->curle, CURLOPT_URL, di->url);
-				if(cl_curl_useragent.integer)
+				if(curl_useragent.integer)
 				{
 					const char *ua
 #ifdef HTTP_USER_AGENT
@@ -729,13 +731,13 @@ static void CheckPendingDownloads(void)
 #endif
 					if(!ua)
 						ua = "";
-					if(*cl_curl_useragent_append.string)
+					if(*curl_useragent_append.string)
 						ua = va(vabuf, sizeof(vabuf), "%s%s%s",
 							ua,
 							(ua[0] && ua[strlen(ua)-1] != ' ')
 								? " "
 								: "",
-							cl_curl_useragent_append.string);
+							curl_useragent_append.string);
 					qcurl_easy_setopt(di->curle, CURLOPT_USERAGENT, ua);
 				}
 				else
@@ -790,7 +792,7 @@ static void CheckPendingDownloads(void)
 				qcurl_multi_add_handle(curlm, di->curle);
 				di->started = true;
 				++numdownloads;
-				if(numdownloads >= cl_curl_maxdownloads.integer)
+				if(numdownloads >= curl_maxdownloads.integer)
 					break;
 			}
 		}
@@ -887,7 +889,7 @@ static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspe
 		if(loadtype != LOADTYPE_NONE)
 			Host_Error("Curl_Begin: loadtype and buffer are both set");
 
-	if(!curl_dll || !cl_curl_enabled.integer)
+	if(!curl_dll || !curl_enabled.integer)
 	{
 		return false;
 	}
@@ -1136,7 +1138,7 @@ void Curl_Frame(void)
 
 	noclear = false;
 
-	if(!cl_curl_enabled.integer)
+	if(!curl_enabled.integer && cls.state != ca_dedicated)
 		return;
 
 	if(!curl_dll)
@@ -1226,7 +1228,7 @@ void Curl_Frame(void)
 
 	// use the slowest allowing download to derive the maxspeed... this CAN
 	// be done better, but maybe later
-	maxspeed = cl_curl_maxspeed.value;
+	maxspeed = curl_maxspeed.value;
 	List_For_Each_Entry(di, &downloads, downloadinfo, list)
 		if(di->maxspeed > 0)
 			if(di->maxspeed < maxspeed || maxspeed <= 0)
@@ -1427,7 +1429,7 @@ static void Curl_Curl_f(cmd_state_t *cmd)
 		return;
 	}
 
-	if(!cl_curl_enabled.integer)
+	if(!curl_enabled.integer)
 	{
 		Con_Print("curl support not enabled. Set cl_curl_enabled to 1 to enable.\n");
 		return;
@@ -1567,15 +1569,23 @@ loads the commands and cvars this library uses
 */
 void Curl_Init_Commands(void)
 {
-	Cvar_RegisterVariable (&cl_curl_enabled);
-	Cvar_RegisterVariable (&cl_curl_maxdownloads);
-	Cvar_RegisterVariable (&cl_curl_maxspeed);
+	Cvar_RegisterVariable (&curl_enabled);
+	Cvar_RegisterVariable (&curl_maxdownloads);
+	Cvar_RegisterVariable (&curl_maxspeed);
+	Cvar_RegisterVariable (&curl_useragent);
+	Cvar_RegisterVariable (&curl_useragent_append);
+	Cvar_RegisterVirtual  (&curl_enabled,          "cl_curl_enabled");
+	Cvar_RegisterVirtual  (&curl_maxdownloads,     "cl_curl_maxdownloads");
+	Cvar_RegisterVirtual  (&curl_maxspeed,         "cl_curl_maxspeed");
+	Cvar_RegisterVirtual  (&curl_useragent,        "cl_curl_useragent");
+	Cvar_RegisterVirtual  (&curl_useragent_append, "cl_curl_useragent_append");
+
 	Cvar_RegisterVariable (&sv_curl_defaulturl);
 	Cvar_RegisterVariable (&sv_curl_serverpackages);
 	Cvar_RegisterVariable (&sv_curl_maxspeed);
-	Cvar_RegisterVariable (&cl_curl_useragent);
-	Cvar_RegisterVariable (&cl_curl_useragent_append);
+
 	Cvar_RegisterVariable (&developer_curl);
+
 	Cmd_AddCommand(CF_CLIENT | CF_CLIENT_FROM_SERVER, "curl", Curl_Curl_f, "download data from an URL and add to search path");
 	//Cmd_AddCommand(cmd_local, "curlcat", Curl_CurlCat_f, "display data from an URL (debugging command)");
 }
