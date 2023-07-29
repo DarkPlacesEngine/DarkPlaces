@@ -744,14 +744,10 @@ void Host_Main(void)
 
 		sleeptime = Host_Frame(time);
 		oldtime = newtime;
+		++host.framecount;
 
 		if (sleeptime >= 1)
-		{
 			Host_Sleep(sleeptime);
-			continue;
-		}
-
-		host.framecount++;
 	}
 
 	return;
