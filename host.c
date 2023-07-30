@@ -648,35 +648,34 @@ static double Host_Frame(double time)
 
 	R_TimeReport("---");
 
-	sv_wait = SV_Frame(time);
-	cl_wait = CL_Frame(time);
-
-//	Con_Printf("%6.0f %6.0f\n", cl_wait * 1000000.0, sv_wait * 1000000.0);
+	// if the accumulators haven't become positive yet, wait a while
+	sv_wait = - SV_Frame(time);
+	cl_wait = - CL_Frame(time);
 
 	Mem_CheckSentinelsGlobal();
 
-	if(host.restless)
-		return 0;
-
-	// if the accumulators haven't become positive yet, wait a while
 	if (cls.state == ca_dedicated)
-		return sv_wait * -1000000.0; // dedicated
+		return sv_wait; // dedicated
 	else if (!sv.active || svs.threaded)
-		return cl_wait * -1000000.0; // connected to server, main menu, or server is on different thread
+		return cl_wait; // connected to server, main menu, or server is on different thread
 	else
-		return max(cl_wait, sv_wait) * -1000000.0; // listen server or singleplayer
+		return min(cl_wait, sv_wait); // listen server or singleplayer
 }
 
-static inline void Host_Sleep(double time)
+static inline double Host_Sleep(double time)
 {
 	double delta, time0;
+
+	// convert to microseconds
+	time *= 1000000.0;
+
+	if (time < 1 || host.restless)
+		return 0; // not sleeping this frame
 
 	if(host_maxwait.value <= 0)
 		time = min(time, 1000000.0);
 	else
 		time = min(time, host_maxwait.value * 1000.0);
-	if(time < 1)
-		time = 1; // because we cast to int
 
 	time0 = Sys_DirtyTime();
 	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
@@ -691,12 +690,13 @@ static inline void Host_Sleep(double time)
 			Curl_Select(&time);
 		Sys_Sleep((int)time);
 	}
+
 	delta = Sys_DirtyTime() - time0;
 	if (delta < 0 || delta >= 1800)
 		delta = 0;
-	host.sleeptime = delta;
-//			R_TimeReport("sleep");
-	return;
+
+//	R_TimeReport("sleep");
+	return delta;
 }
 
 // Cloudwalk: Most overpowered function declaration...
@@ -722,7 +722,7 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 
 void Host_Main(void)
 {
-	double time, newtime, oldtime, sleeptime;
+	double time, oldtime, sleeptime;
 
 	Host_Init(); // Start!
 
@@ -739,17 +739,15 @@ void Host_Main(void)
 			continue;
 		}
 
-		newtime = host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(newtime, oldtime);
+		host.dirtytime = Sys_DirtyTime();
+		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
 
 		sleeptime = Host_Frame(time);
-		oldtime = newtime;
+		oldtime = host.dirtytime;
 		++host.framecount;
 
-		if (sleeptime >= 1)
-			Host_Sleep(sleeptime);
-		else
-			host.sleeptime = 0;
+		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+		host.sleeptime = Host_Sleep(sleeptime);
 	}
 
 	return;
