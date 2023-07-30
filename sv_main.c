@@ -160,11 +160,15 @@ cvar_t sv_warsowbunny_turnaccel = {CF_SERVER, "sv_warsowbunny_turnaccel", "0", "
 cvar_t sv_warsowbunny_backtosideratio = {CF_SERVER, "sv_warsowbunny_backtosideratio", "0.8", "lower values make it easier to change direction without losing speed; the drawback is \"understeering\" in sharp turns"};
 cvar_t sv_onlycsqcnetworking = {CF_SERVER, "sv_onlycsqcnetworking", "0", "disables legacy entity networking code for higher performance (except on clients, which can still be legacy)"};
 cvar_t sv_areadebug = {CF_SERVER, "sv_areadebug", "0", "disables physics culling for debugging purposes (only for development)"};
+
 cvar_t sys_ticrate = {CF_SERVER | CF_ARCHIVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t sv_maxphysicsframesperserverframe = {CF_SERVER, "sv_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
+cvar_t sv_lagreporting_always = {CF_SERVER, "sv_lagreporting_always", "0", "report lag even in singleplayer, listen, or an empty dedicated server"};
+cvar_t sv_lagreporting_strict = {CF_SERVER, "sv_lagreporting_strict", "0", "log any extra frames run to catch up after a holdup (only applies when sv_maxphysicsframesperserverframe > 1)"};
+cvar_t sv_threaded = {CF_SERVER, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
+
 cvar_t teamplay = {CF_SERVER | CF_NOTIFY, "teamplay","0", "teamplay mode, values depend on mod but typically 0 = no teams, 1 = no team damage no self damage, 2 = team damage and self damage, some mods support 3 = no team damage but can damage self"};
 cvar_t timelimit = {CF_SERVER | CF_NOTIFY, "timelimit","0", "ends level at this time (in minutes)"};
-cvar_t sv_threaded = {CF_SERVER, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
 
 cvar_t sv_rollspeed = {CF_CLIENT, "sv_rollspeed", "200", "how much strafing is necessary to tilt the view"};
 cvar_t sv_rollangle = {CF_CLIENT, "sv_rollangle", "2.0", "how much to tilt the view when strafing"};
@@ -641,11 +645,15 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_warsowbunny_backtosideratio);
 	Cvar_RegisterVariable (&sv_onlycsqcnetworking);
 	Cvar_RegisterVariable (&sv_areadebug);
+
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&sv_maxphysicsframesperserverframe);
+	Cvar_RegisterVariable (&sv_lagreporting_always);
+	Cvar_RegisterVariable (&sv_lagreporting_strict);
+	Cvar_RegisterVariable (&sv_threaded);
+
 	Cvar_RegisterVariable (&teamplay);
 	Cvar_RegisterVariable (&timelimit);
-	Cvar_RegisterVariable (&sv_threaded);
 
 	Cvar_RegisterVariable (&sv_rollangle);
 	Cvar_RegisterVariable (&sv_rollspeed);
@@ -2518,7 +2526,7 @@ double SV_Frame(double time)
 	static double sv_timer;
 	int i;
 	char vabuf[1024];
-	qbool playing = false;
+	qbool reporting = false;
 
 	// reset timer after level change
 	if (host.framecount == sv.spawnframe || host.framecount == sv.spawnframe + 1)
@@ -2529,10 +2537,20 @@ double SV_Frame(double time)
 		sv.perf_acc_sleeptime += host.sleeptime;
 		sv.perf_acc_realtime += time;
 
-		// Look for clients who have spawned
-		for (i = 0, host_client = svs.clients; i < svs.maxclients; i++, host_client++)
-			if(host_client->begun && host_client->netconnection)
-				playing = true;
+		if (sv_lagreporting_always.integer)
+			reporting = true;
+		else if (cls.state == ca_dedicated)
+		{
+			// Report lag if there's players, so they know it wasn't the network or their machine
+			for (i = 0; i < svs.maxclients; ++i)
+			{
+				if (svs.clients[i].begun && svs.clients[i].netconnection)
+				{
+					reporting = true;
+					break;
+				}
+			}
+		}
 
 		if(sv.perf_acc_realtime > 5)
 		{
@@ -2546,8 +2564,8 @@ double SV_Frame(double time)
 				sv.perf_offset_sdev = sqrt(sv.perf_acc_offset_squared / sv.perf_acc_offset_samples - sv.perf_offset_avg * sv.perf_offset_avg);
 			}
 
-			if(sv.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
-				Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
+			if (sv.perf_lost > 0 && reporting)
+				SV_BroadcastPrintf("\003" CON_WARN "Server lag report: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 
 			sv.perf_acc_realtime = sv.perf_acc_sleeptime =
 			sv.perf_acc_lost = sv.perf_acc_offset =
@@ -2650,6 +2668,9 @@ double SV_Frame(double time)
 			if (framelimit > 1 && Sys_DirtyTime() >= aborttime)
 				break;
 		}
+
+		if (framecount > 1 && sv_lagreporting_strict.integer && reporting)
+			SV_BroadcastPrintf(CON_WARN "Server lag report: caught up %.1fms by running %d extra frames\n", advancetime * (framecount - 1) * 1000, framecount - 1);
 
 		R_TimeReport("serverphysics");
 
