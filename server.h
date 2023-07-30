@@ -34,20 +34,6 @@ typedef struct server_static_s
 	qbool changelevel_issued;
 	/// server infostring
 	char serverinfo[MAX_SERVERINFO_STRING];
-	// performance data
-	float perf_cpuload;
-	float perf_lost;
-	float perf_offset_avg;
-	float perf_offset_max;
-	float perf_offset_sdev;
-	// temporary performance data accumulators
-	float perf_acc_realtime;
-	float perf_acc_sleeptime;
-	float perf_acc_lost;
-	float perf_acc_offset;
-	float perf_acc_offset_squared;
-	float perf_acc_offset_max;
-	int perf_acc_offset_samples;
 
 	// csqc stuff
 	unsigned char *csqc_progdata;
@@ -88,8 +74,24 @@ typedef struct server_s
 	protocolversion_t protocol;
 
 	double time;
-
 	double frametime;
+
+	unsigned int spawnframe; // signals SV_Frame() to reset its timers
+
+	// performance data
+	float perf_cpuload;
+	float perf_lost;
+	float perf_offset_avg;
+	float perf_offset_max;
+	float perf_offset_sdev;
+	// temporary performance data accumulators
+	float perf_acc_realtime;
+	float perf_acc_sleeptime;
+	float perf_acc_lost;
+	float perf_acc_offset;
+	float perf_acc_offset_squared;
+	float perf_acc_offset_max;
+	int perf_acc_offset_samples;
 
 	// used by PF_checkclient
 	int lastcheck;

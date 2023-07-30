@@ -1891,6 +1891,10 @@ void SV_SpawnServer (const char *map)
 // set up the new server
 //
 	memset (&sv, 0, sizeof(sv));
+
+	// tell SV_Frame() to reset its timers
+	sv.spawnframe = host.framecount;
+
 	// if running a local client, make sure it doesn't try to access the last
 	// level's data which is no longer valiud
 	cls.signon = 0;
@@ -2504,7 +2508,7 @@ Returns a time report string, for example for
 */
 const char *SV_TimingReport(char *buf, size_t buflen)
 {
-	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", svs.perf_cpuload * 100, svs.perf_lost * 100, svs.perf_offset_avg * 1000, svs.perf_offset_max * 1000, svs.perf_offset_sdev * 1000);
+	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", sv.perf_cpuload * 100, sv.perf_lost * 100, sv.perf_offset_avg * 1000, sv.perf_offset_max * 1000, sv.perf_offset_sdev * 1000);
 }
 
 extern cvar_t host_maxwait;
@@ -2516,42 +2520,39 @@ double SV_Frame(double time)
 	char vabuf[1024];
 	qbool playing = false;
 
+	// reset timer after level change
+	if (host.framecount == sv.spawnframe || host.framecount == sv.spawnframe + 1)
+		sv_timer = time = host.sleeptime = 0;
+
 	if (!svs.threaded)
 	{
-		svs.perf_acc_sleeptime = host.sleeptime;
-		svs.perf_acc_realtime += time;
+		sv.perf_acc_sleeptime += host.sleeptime;
+		sv.perf_acc_realtime += time;
 
 		// Look for clients who have spawned
 		for (i = 0, host_client = svs.clients; i < svs.maxclients; i++, host_client++)
 			if(host_client->begun && host_client->netconnection)
 				playing = true;
 
-		if(svs.perf_acc_realtime > 5)
+		if(sv.perf_acc_realtime > 5)
 		{
-			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
-			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
+			sv.perf_cpuload = 1 - sv.perf_acc_sleeptime / sv.perf_acc_realtime;
+			sv.perf_lost = sv.perf_acc_lost / sv.perf_acc_realtime;
 
-			if(svs.perf_acc_offset_samples > 0)
+			if(sv.perf_acc_offset_samples > 0)
 			{
-				svs.perf_offset_max = svs.perf_acc_offset_max;
-				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
-				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+				sv.perf_offset_max = sv.perf_acc_offset_max;
+				sv.perf_offset_avg = sv.perf_acc_offset / sv.perf_acc_offset_samples;
+				sv.perf_offset_sdev = sqrt(sv.perf_acc_offset_squared / sv.perf_acc_offset_samples - sv.perf_offset_avg * sv.perf_offset_avg);
 			}
 
-			if(svs.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
+			if(sv.perf_lost > 0 && developer_extra.integer && playing) // only complain if anyone is looking
 				Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
-		}
 
-		if(svs.perf_acc_realtime > 5 || sv.time < 10)
-		{
-			/*
-			 * Don't accumulate time for the first 10 seconds of a match
-			 * so things can settle
-			 */
-			svs.perf_acc_realtime = svs.perf_acc_sleeptime =
-			svs.perf_acc_lost = svs.perf_acc_offset =
-			svs.perf_acc_offset_squared = svs.perf_acc_offset_max =
-			svs.perf_acc_offset_samples = host.sleeptime = 0;
+			sv.perf_acc_realtime = sv.perf_acc_sleeptime =
+			sv.perf_acc_lost = sv.perf_acc_offset =
+			sv.perf_acc_offset_squared = sv.perf_acc_offset_max =
+			sv.perf_acc_offset_samples = 0;
 		}
 
 		/*
@@ -2577,7 +2578,7 @@ double SV_Frame(double time)
 	if (sv_timer > 0.1)
 	{
 		if (!svs.threaded)
-			svs.perf_acc_lost += (sv_timer - 0.1);
+			sv.perf_acc_lost += (sv_timer - 0.1);
 		sv_timer = 0.1;
 	}
 
@@ -2621,12 +2622,12 @@ double SV_Frame(double time)
 				offset = 0;
 
 			offset += sv_timer;
-			++svs.perf_acc_offset_samples;
-			svs.perf_acc_offset += offset;
-			svs.perf_acc_offset_squared += offset * offset;
+			++sv.perf_acc_offset_samples;
+			sv.perf_acc_offset += offset;
+			sv.perf_acc_offset_squared += offset * offset;
 			
-			if(svs.perf_acc_offset_max < offset)
-				svs.perf_acc_offset_max = offset;
+			if(sv.perf_acc_offset_max < offset)
+				sv.perf_acc_offset_max = offset;
 		}
 
 		// only advance time if not paused
@@ -2676,7 +2677,7 @@ double SV_Frame(double time)
 	if (sv_timer >= 0)
 	{
 		if (!svs.threaded)
-			svs.perf_acc_lost += sv_timer;
+			sv.perf_acc_lost += sv_timer;
 		sv_timer = 0;
 	}
 
@@ -2706,7 +2707,7 @@ static int SV_ThreadFunc(void *voiddata)
 
 		sv_timer += sv_deltarealtime;
 
-		svs.perf_acc_realtime += sv_deltarealtime;
+		sv.perf_acc_realtime += sv_deltarealtime;
 
 		// at this point we start doing real server work, and must block on any client activity pertaining to the server (such as executing SV_SpawnServer)
 		SV_LockThreadMutex();
@@ -2722,22 +2723,22 @@ static int SV_ThreadFunc(void *voiddata)
 		{
 			// don't accumulate time for the first 10 seconds of a match
 			// so things can settle
-			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+			sv.perf_acc_realtime = sv.perf_acc_sleeptime = sv.perf_acc_lost = sv.perf_acc_offset = sv.perf_acc_offset_squared = sv.perf_acc_offset_max = sv.perf_acc_offset_samples = 0;
 		}
-		else if(svs.perf_acc_realtime > 5)
+		else if(sv.perf_acc_realtime > 5)
 		{
-			svs.perf_cpuload = 1 - svs.perf_acc_sleeptime / svs.perf_acc_realtime;
-			svs.perf_lost = svs.perf_acc_lost / svs.perf_acc_realtime;
-			if(svs.perf_acc_offset_samples > 0)
+			sv.perf_cpuload = 1 - sv.perf_acc_sleeptime / sv.perf_acc_realtime;
+			sv.perf_lost = sv.perf_acc_lost / sv.perf_acc_realtime;
+			if(sv.perf_acc_offset_samples > 0)
 			{
-				svs.perf_offset_max = svs.perf_acc_offset_max;
-				svs.perf_offset_avg = svs.perf_acc_offset / svs.perf_acc_offset_samples;
-				svs.perf_offset_sdev = sqrt(svs.perf_acc_offset_squared / svs.perf_acc_offset_samples - svs.perf_offset_avg * svs.perf_offset_avg);
+				sv.perf_offset_max = sv.perf_acc_offset_max;
+				sv.perf_offset_avg = sv.perf_acc_offset / sv.perf_acc_offset_samples;
+				sv.perf_offset_sdev = sqrt(sv.perf_acc_offset_squared / sv.perf_acc_offset_samples - sv.perf_offset_avg * sv.perf_offset_avg);
 			}
-			if(svs.perf_lost > 0 && developer_extra.integer)
+			if(sv.perf_lost > 0 && developer_extra.integer)
 				if(playing)
 					Con_DPrintf("Server can't keep up: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
-			svs.perf_acc_realtime = svs.perf_acc_sleeptime = svs.perf_acc_lost = svs.perf_acc_offset = svs.perf_acc_offset_squared = svs.perf_acc_offset_max = svs.perf_acc_offset_samples = 0;
+			sv.perf_acc_realtime = sv.perf_acc_sleeptime = sv.perf_acc_lost = sv.perf_acc_offset = sv.perf_acc_offset_squared = sv.perf_acc_offset_max = sv.perf_acc_offset_samples = 0;
 		}
 
 		// get new packets
@@ -2762,7 +2763,7 @@ static int SV_ThreadFunc(void *voiddata)
 			time0 = Sys_DirtyTime();
 			Sys_Sleep((int)wait);
 			delta = Sys_DirtyTime() - time0;if (delta < 0 || delta >= 1800) delta = 0;
-			svs.perf_acc_sleeptime += delta;
+			sv.perf_acc_sleeptime += delta;
 			continue;
 		}
 
@@ -2780,11 +2781,11 @@ static int SV_ThreadFunc(void *voiddata)
 			if(advancetime > 0)
 			{
 				offset = sv_timer + (Sys_DirtyTime() - sv_realtime); // LadyHavoc: FIXME: I don't understand this line
-				++svs.perf_acc_offset_samples;
-				svs.perf_acc_offset += offset;
-				svs.perf_acc_offset_squared += offset * offset;
-				if(svs.perf_acc_offset_max < offset)
-					svs.perf_acc_offset_max = offset;
+				++sv.perf_acc_offset_samples;
+				sv.perf_acc_offset += offset;
+				sv.perf_acc_offset_squared += offset * offset;
+				if(sv.perf_acc_offset_max < offset)
+					sv.perf_acc_offset_max = offset;
 			}
 
 			// only advance time if not paused
@@ -2822,7 +2823,7 @@ static int SV_ThreadFunc(void *voiddata)
 		// if there is some time remaining from this frame, reset the timers
 		if (sv_timer >= 0)
 		{
-			svs.perf_acc_lost += sv_timer;
+			sv.perf_acc_lost += sv_timer;
 			sv_timer = 0;
 		}
 	}
