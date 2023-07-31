@@ -1226,7 +1226,7 @@ static unsigned int R_Shadow_MakeTextures_SamplePoint(float x, float y, float z)
 	float dist = sqrt(x*x+y*y+z*z);
 	float intensity = dist < 1 ? ((1.0f - dist) * r_shadow_lightattenuationlinearscale.value / (r_shadow_lightattenuationdividebias.value + dist*dist)) : 0;
 	// note this code could suffer byte order issues except that it is multiplying by an integer that reads the same both ways
-	return ((unsigned int)bound(0, intensity * 256.0f, 255)) * 0x01010101U;
+	return bound(0, (unsigned int)(intensity * 256.0f), 255) * 0x01010101U;
 }
 
 static void R_Shadow_MakeTextures(void)
