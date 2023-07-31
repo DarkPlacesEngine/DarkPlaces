@@ -39,13 +39,13 @@ float BuffBigFloat (const unsigned char *buffer)
 		unsigned int i;
 	}
 	u;
-	u.i = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	u.i = ((unsigned)buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 	return u.f;
 }
 
 int BuffBigLong (const unsigned char *buffer)
 {
-	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	return ((unsigned)buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 }
 
 short BuffBigShort (const unsigned char *buffer)
@@ -61,13 +61,13 @@ float BuffLittleFloat (const unsigned char *buffer)
 		unsigned int i;
 	}
 	u;
-	u.i = (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+	u.i = ((unsigned)buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
 	return u.f;
 }
 
 int BuffLittleLong (const unsigned char *buffer)
 {
-	return (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+	return ((unsigned)buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
 }
 
 short BuffLittleShort (const unsigned char *buffer)
