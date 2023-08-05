@@ -61,7 +61,7 @@ cvar_t mod_q3shader_force_terrain_alphaflag = {CF_CLIENT, "mod_q3shader_force_te
 cvar_t mod_q2bsp_littransparentsurfaces = {CF_CLIENT, "mod_q2bsp_littransparentsurfaces", "0", "allows lighting on rain in 3v3gloom3 and other cases of transparent surfaces that have lightmaps that were ignored by quake2"};
 
 cvar_t mod_q1bsp_polygoncollisions = {CF_CLIENT | CF_SERVER, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
-cvar_t mod_q1bsp_zero_hullsize_cutoff = {CF_CLIENT | CF_SERVER, "mod_q1bsp_zero_hullsize_cutoff", "3", "bboxes with an X dimension smaller than this will use the smallest cliphull (0x0x0) instead of being rounded up to the player's cliphull (32x32x56)"};
+cvar_t mod_q1bsp_zero_hullsize_cutoff = {CF_CLIENT | CF_SERVER, "mod_q1bsp_zero_hullsize_cutoff", "3", "bboxes with an X dimension smaller than this will use the smallest cliphull (0x0x0) instead of being rounded up to the player cliphull (32x32x56) in Q1BSP, or crouching player (32x32x36) in HLBSP"};
 
 cvar_t mod_bsp_portalize = {CF_CLIENT, "mod_bsp_portalize", "1", "enables portal generation from BSP tree (may take several seconds per map), used by r_drawportals, r_useportalculling, r_shadow_realtime_dlight_portalculling, r_shadow_realtime_world_compileportalculling"};
 cvar_t mod_recalculatenodeboxes = {CF_CLIENT | CF_SERVER, "mod_recalculatenodeboxes", "1", "enables use of generated node bounding boxes based on BSP tree portal reconstruction, rather than the node boxes supplied by the map compiler"};
@@ -3824,11 +3824,11 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	const hull_t *hull;
 
 	VectorSubtract(inmaxs, inmins, size);
-	if (cmodel->brush.ishlbsp)
+	if (size[0] < mod_q1bsp_zero_hullsize_cutoff.value)
+		hull = &cmodel->brushq1.hulls[0]; // 0x0x0
+	else if (cmodel->brush.ishlbsp)
 	{
-		if (size[0] < mod_q1bsp_zero_hullsize_cutoff.value)
-			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
+		if (size[0] <= 32)
 		{
 			if (size[2] < 54) // pick the nearest of 36 or 72
 				hull = &cmodel->brushq1.hulls[3]; // 32x32x36
@@ -3840,9 +3840,7 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	}
 	else
 	{
-		if (size[0] < 3)
-			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
+		if (size[0] <= 32)
 			hull = &cmodel->brushq1.hulls[1]; // 32x32x56
 		else
 			hull = &cmodel->brushq1.hulls[2]; // 64x64x88
