@@ -592,7 +592,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 		c = cm;
 	}
 
-	if(!c || (c - filelist) > MAX_QPATH)
+	if(!c || (c - filelist) >= MAX_QPATH)
 		strlcpy(mainfont, filelist, sizeof(mainfont));
 	else
 	{
@@ -617,7 +617,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 			f->fallback_faces[i] = 0; // f->req_face; could make it stick to the default-font's face index
 			c = cm;
 		}
-		if(!c || (c-filelist) > MAX_QPATH)
+		if(!c || (c-filelist) >= MAX_QPATH)
 		{
 			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
 		}
