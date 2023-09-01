@@ -297,7 +297,11 @@ prvm_edict_t *PRVM_ED_Alloc(prvm_prog_t *prog)
 PRVM_ED_Free
 
 Marks the edict as free
+
 FIXME: walk all entities and NULL out references to this entity
+bones_was_here: do not want, that would break chains immediately!
+Currently chains aren't broken by removing an entity, at least with prvm_reuseedicts_neverinsameframe 1
+which is very handy and some QC code will depend on it.
 =================
 */
 void PRVM_ED_Free(prvm_prog_t *prog, prvm_edict_t *ed)
