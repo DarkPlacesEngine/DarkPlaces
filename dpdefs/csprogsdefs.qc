@@ -1443,6 +1443,13 @@ void(float fh, entity e) writetofile = #606;
 float(string s) isfunction = #607;
 void(entity e, string s) parseentitydata = #608;
 
+//DP_QC_FINDCHAIN_TOFIELD
+//see: dpextensions.qc
+entity(vector org, float rad, .entity tofield) findradius_tofield = #22;
+entity(.string fld, string match, .entity tofield) findchain_tofield = #402;
+entity(.float fld, float match, .entity tofield) findchainflags_tofield = #450;
+entity(.float fld, float match, .entity tofield) findchainfloat_tofield = #403;
+
 //DP_COVERAGE
 //idea: divVerent
 //darkplaces implementation: divVerent
