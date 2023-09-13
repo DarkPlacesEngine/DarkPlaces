@@ -1332,6 +1332,14 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			if (stepnormal)
 				VectorCopy(trace.plane.normal, stepnormal);
 		}
+
+		// Unlike some other movetypes Quake's SV_FlyMove calls SV_Impact only after setting ONGROUND which id1 fiends rely on.
+		// If we stepped up (sv_gameplayfix_stepmultipletimes) this will impact the steptrace2 plane instead of the original.
+		if (PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace.ent)
+			SV_Impact(ent, &trace);
+		if (ent->free)
+			return blocked; // removed by the impact function
+
 		if (trace.fraction >= 0.001)
 		{
 			// actually covered some distance
@@ -1627,10 +1635,12 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 #endif
 
 	if (dolink)
+	{
 		SV_LinkEdict_TouchAreaGrid(ent);
 
-	if((PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace->ent && (!((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || PRVM_serveredictedict(ent, groundentity) != PRVM_EDICT_TO_PROG(trace->ent))))
-		SV_Impact (ent, trace);
+		if((PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace->ent && (!((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || PRVM_serveredictedict(ent, groundentity) != PRVM_EDICT_TO_PROG(trace->ent))))
+			SV_Impact (ent, trace);
+	}
 
 	if(ent->priv.required->mark == PRVM_EDICT_MARK_SETORIGIN_CAUGHT)
 	{
