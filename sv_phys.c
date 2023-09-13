@@ -1194,7 +1194,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 ============
 */
 static float SV_Gravity (prvm_edict_t *ent);
-static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink);
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink, qbool checkstuck);
 #define MAX_CLIP_PLANES 5
 static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
 {
@@ -1238,7 +1238,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			break;
 
 		VectorScale(PRVM_serveredictvector(ent, velocity), time_left, push);
-		if(!SV_PushEntity(&trace, ent, push, false))
+		if(!SV_PushEntity(&trace, ent, push, false, true))
 		{
 			// we got teleported by a touch function
 			// let's abort the move
@@ -1248,7 +1248,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 
 		// this code is used by MOVETYPE_WALK and MOVETYPE_STEP and SV_UnstickEntity
 		// abort move if we're stuck in the world (and didn't make it out)
-		if (trace.worldstartsolid && trace.allsolid)
+		if (trace.worldstartsolid && trace.allsolid && trace.startdepth < 0)
 		{
 			VectorCopy(restore_velocity, PRVM_serveredictvector(ent, velocity));
 			return 3;
@@ -1288,20 +1288,20 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			VectorSet(steppush, 0, 0, stepheight);
 			VectorScale(PRVM_serveredictvector(ent, velocity), time_left, push);
 			VectorCopy(PRVM_serveredictvector(ent, origin), org);
-			if(!SV_PushEntity(&steptrace, ent, steppush, false))
+			if(!SV_PushEntity(&steptrace, ent, steppush, false, true))
 			{
 				blocked |= 8;
 				break;
 			}
 			//Con_Printf("%f %f %f : ", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
-			if(!SV_PushEntity(&steptrace2, ent, push, false))
+			if(!SV_PushEntity(&steptrace2, ent, push, false, true))
 			{
 				blocked |= 8;
 				break;
 			}
 			//Con_Printf("%f %f %f : ", PRVM_serveredictvector(ent, origin)[0], PRVM_serveredictvector(ent, origin)[1], PRVM_serveredictvector(ent, origin)[2]);
 			VectorSet(steppush, 0, 0, org[2] - PRVM_serveredictvector(ent, origin)[2]);
-			if(!SV_PushEntity(&steptrace3, ent, steppush, false))
+			if(!SV_PushEntity(&steptrace3, ent, steppush, false, true))
 			{
 				blocked |= 8;
 				break;
@@ -1552,7 +1552,7 @@ The trace struct is filled with the trace that has been done.
 Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
-static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink)
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink, qbool checkstuck)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int solid;
@@ -1567,12 +1567,6 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 	VectorCopy(PRVM_serveredictvector(ent, mins), mins);
 	VectorCopy(PRVM_serveredictvector(ent, maxs), maxs);
 
-	// move start position out of solids
-	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
-	{
-		PHYS_NudgeOutOfSolid(prog, ent);
-	}
-
 	VectorCopy(PRVM_serveredictvector(ent, origin), start);
 	VectorAdd(start, push, end);
 
@@ -1586,9 +1580,37 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 		type = MOVE_NORMAL;
 
 	*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
-	// fail the move if stuck in world
-	if (trace->worldstartsolid)
-		return true;
+	// abort move if we're stuck in the world (and didn't make it out)
+	if (trace->worldstartsolid && trace->allsolid && trace->startdepth < 0 && checkstuck)
+	{
+		// checking startdepth eliminates many false positives on Q1BSP with mod_q1bsp_polygoncollisions 0
+		// but it's still not guaranteed that we're stuck in a bmodel at this point
+		if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
+		{
+			switch (PHYS_NudgeOutOfSolid(prog, ent))
+			{
+				case 0:
+					Con_Printf(CON_WARN "NudgeOutOfSolid couldn't fix stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
+					return true; // definitely stuck in a bmodel
+				case 1:
+					Con_DPrintf("NudgeOutOfSolid fixed stuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), PRVM_serveredictvector(ent, origin)[0] - start[0], PRVM_serveredictvector(ent, origin)[1] - start[1], PRVM_serveredictvector(ent, origin)[2] - start[2]);
+					VectorCopy(PRVM_serveredictvector(ent, origin), start);
+					VectorAdd(start, push, end);
+					*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
+
+				// definitely not stuck in a bmodel, move may proceed
+			}
+		}
+		else if (sv_gameplayfix_unstickentities.integer && SV_UnstickEntity(ent))
+		{
+			// bones_was_here: pretty sure we can deprecate sv_gameplayfix_unstickentities, sv_gameplayfix_nudgeoutofsolid is much nicer
+			VectorCopy(PRVM_serveredictvector(ent, origin), start);
+			VectorAdd(start, push, end);
+			*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
+		}
+		else
+			return true; // assuming stuck, bones_was_here TODO: always use PHYS_NudgeOutOfSolid (remove sv_gameplayfix_nudgeoutofsolid)?
+	}
 
 	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, origin));
 
@@ -1854,7 +1876,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 		// try moving the contacted entity
 		PRVM_serveredictfloat(pusher, solid) = SOLID_NOT;
-		if(!SV_PushEntity (&trace, check, move, true))
+		if(!SV_PushEntity(&trace, check, move, true, true))
 		{
 			// entity "check" got teleported
 			PRVM_serveredictvector(check, angles)[1] += trace.fraction * moveangle[1];
@@ -1886,7 +1908,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			{
 				// hack to invoke all necessary movement triggers
 				VectorClear(move2);
-				if(!SV_PushEntity(&trace2, check, move2, true))
+				if(!SV_PushEntity(&trace2, check, move2, true, true))
 				{
 					// entity "check" got teleported
 					continue;
@@ -2371,7 +2393,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 		// move up
 		VectorClear (upmove);
 		upmove[2] = sv_stepheight.value;
-		if(!SV_PushEntity(&trace, ent, upmove, true))
+		if(!SV_PushEntity(&trace, ent, upmove, true, true))
 		{
 			// we got teleported when upstepping... must abort the move
 			return;
@@ -2423,7 +2445,7 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	// move down
 	VectorClear (downmove);
 	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
-	if(!SV_PushEntity (&downtrace, ent, downmove, true))
+	if(!SV_PushEntity(&downtrace, ent, downmove, true, true))
 	{
 		// we got teleported when downstepping... must abort the move
 		return;
@@ -2625,19 +2647,12 @@ void SV_Physics_Toss (prvm_edict_t *ent)
 	{
 	// move origin
 		VectorScale(PRVM_serveredictvector(ent, velocity), movetime, move);
-		if(!SV_PushEntity(&trace, ent, move, true))
+		// The buzzsaw traps in r2m6 and r2m7 use MOVETYPE_FLY and rely on moving while stuck in the world.
+		// Quake movetypes checked allsolid only in SV_FlyMove().
+		if(!SV_PushEntity(&trace, ent, move, true, PRVM_serveredictfloat(ent, movetype) != MOVETYPE_FLY))
 			return; // teleported
 		if (ent->free)
 			return;
-		if (trace.bmodelstartsolid && sv_gameplayfix_unstickentities.integer)
-		{
-			// try to unstick the entity
-			SV_UnstickEntity(ent);
-			if(!SV_PushEntity(&trace, ent, move, true))
-				return; // teleported
-			if (ent->free)
-				return;
-		}
 		if (trace.fraction == 1)
 			break;
 		movetime *= 1 - min(1, trace.fraction);
