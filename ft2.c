@@ -32,11 +32,11 @@ static int img_fontmap[256] = {
  *     http://www.unicode.org/Public/UNIDATA/Blocks.txt
  *
  * Let's call these "bigblocks".
- * These appears in a text in a "spreaded" way, ordinary maps will 
+ * These characters are "spreaded", and ordinary maps will 
  *     waste huge amount of resources rendering/caching unused glyphs.
  *
- * So, another matter is invented to counter this: incremental maps,
- *     in which only used glyphs may present.
+ * So, a new design is introduced to solve the problem:
+ *     incremental maps, in which only used glyphs are stored.
  */
 static const Uchar unicode_bigblocks[] = {
 	0x3400, 0x4DBF, 	//   6592  CJK Unified Ideographs Extension A
@@ -53,7 +53,7 @@ CVars introduced with the freetype extension
 */
 
 cvar_t r_font_disable_freetype = {CF_CLIENT | CF_ARCHIVE, "r_font_disable_freetype", "0", "disable freetype support for fonts entirely"};
-cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "[deprecated, not effective] use alpha-textures for font rendering, this should safe memory"};
+cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "[deprecated, not effective] use alpha-textures for font rendering, this should save memory"};
 cvar_t r_font_size_snapping = {CF_CLIENT | CF_ARCHIVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_kerning = {CF_CLIENT | CF_ARCHIVE, "r_font_kerning", "1", "Use kerning if available"};
 cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "[deprecated, not effective] save font textures to disk for future loading rather than generating them every time"};
@@ -1505,7 +1505,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 	map = (ft2_font_map_t *)Mem_Alloc(font_mempool, sizeof(ft2_font_map_t));
 	if (!map)
 	{
-		Con_Printf(CON_ERROR "ERROR: Out of memory when allowcating fontmap for %s\n", font->name);
+		Con_Printf(CON_ERROR "ERROR: Out of memory when allocating fontmap for %s\n", font->name);
 		return false;
 	}
 
@@ -1571,7 +1571,7 @@ static qbool Font_LoadMap(ft2_font_t *font, ft2_font_map_t *mapstart, Uchar _ch,
 			incmap = mapstart->incmap = (font_incmap_t *)Mem_Alloc(font_mempool, sizeof(font_incmap_t));
 			if (!incmap)
 			{
-				Con_Printf(CON_ERROR "ERROR: Out of memory when allowcating incremental fontmap for %s\n", font->name);
+				Con_Printf(CON_ERROR "ERROR: Out of memory when allocating incremental fontmap for %s\n", font->name);
 				return false;
 			}
 			// this will be the startmap of incmap
