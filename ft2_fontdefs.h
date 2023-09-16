@@ -43,7 +43,7 @@ struct ft2_font_map_s
 	glyph_slot_t    glyphs[FONT_CHARS_PER_MAP];
 	Uchar           glyphchars[FONT_CHARS_PER_MAP];
 
-	// safes us the trouble of calculating these over and over again
+	// saves us the trouble of calculating these over and over again
 	double          sfx, sfy;
 
 	// note: float width_of[256] was moved to `struct dp_font_s` as width_of_ft2

@@ -354,17 +354,13 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
 
-	/*
-	// this "reset" seems interrupts fontmap loading and wastes previous works
-	// no side-effects so far without this
 	if(fnt->ft2)
 	{
-		// clear freetype font
+		// clear previous freetype font to prevent leaking memory
 		Font_UnloadFont(fnt->ft2);
 		Mem_Free(fnt->ft2);
 		fnt->ft2 = NULL;
 	}
-	*/
 
 	if(fnt->req_face != -1)
 	{
