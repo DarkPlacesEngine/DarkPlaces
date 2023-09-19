@@ -2561,7 +2561,8 @@ double SV_Frame(double time)
 			{
 				sv.perf_offset_max = sv.perf_acc_offset_max;
 				sv.perf_offset_avg = sv.perf_acc_offset / sv.perf_acc_offset_samples;
-				sv.perf_offset_sdev = sqrt(sv.perf_acc_offset_squared / sv.perf_acc_offset_samples - sv.perf_offset_avg * sv.perf_offset_avg);
+				sv.perf_offset_sdev = sv.perf_acc_offset_squared / sv.perf_acc_offset_samples - sv.perf_offset_avg * sv.perf_offset_avg;
+				sv.perf_offset_sdev = sv.perf_offset_sdev > 0 ? sqrt(sv.perf_offset_sdev) : 0;
 			}
 
 			if (sv.perf_lost > 0 && reporting)
