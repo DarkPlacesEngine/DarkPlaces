@@ -74,11 +74,13 @@ Cmd_Defer_f
 Cause a command to be executed after a delay.
 ============
 */
-static cmd_input_t *Cbuf_NodeGet(cmd_buf_t *cbuf, cmd_input_t *existing);
+static void Cbuf_ParseText(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text, qbool allowpending);
+static void Cbuf_LinkString(cmd_state_t *cmd, llist_t *head, cmd_input_t *existing, const char *text, qbool leavepending, unsigned int cmdsize);
 static void Cmd_Defer_f (cmd_state_t *cmd)
 {
 	cmd_input_t *current;
 	cmd_buf_t *cbuf = cmd->cbuf;
+	unsigned int cmdsize;
 
 	if(Cmd_Argc(cmd) == 1)
 	{
@@ -93,25 +95,19 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 	else if(Cmd_Argc(cmd) == 2 && !strcasecmp("clear", Cmd_Argv(cmd, 1)))
 	{
 		while(!List_Is_Empty(&cbuf->deferred))
-			List_Move_Tail(cbuf->deferred.next, &cbuf->free);
-	}
-	else if(Cmd_Argc(cmd) == 3)
-	{
-		const char *text = Cmd_Argv(cmd, 2);
-		current = Cbuf_NodeGet(cbuf, NULL);
-		current->length = strlen(text);
-		current->source = cmd;
-		current->delay = atof(Cmd_Argv(cmd, 1));
-
-		if(current->size < current->length)
 		{
-			current->text = (char *)Mem_Realloc(cbuf_mempool, current->text, current->length + 1);
-			current->size = current->length;
+			cbuf->size -= List_Entry(cbuf->deferred.next, cmd_input_t, list)->length;
+			List_Move_Tail(cbuf->deferred.next, &cbuf->free);
 		}
+	}
+	else if(Cmd_Argc(cmd) == 3 && (cmdsize = strlen(Cmd_Argv(cmd, 2))) )
+	{
+		Cbuf_Lock(cbuf);
 
-		strlcpy(current->text, text, current->length + 1);
+		Cbuf_LinkString(cmd, &cbuf->deferred, NULL, Cmd_Argv(cmd, 2), false, cmdsize);
+		List_Entry(cbuf->deferred.prev, cmd_input_t, list)->delay = atof(Cmd_Argv(cmd, 1));
 
-		List_Move_Tail(&current->list, &cbuf->deferred);
+		Cbuf_Unlock(cbuf);
 	}
 	else
 	{
@@ -362,25 +358,25 @@ Cbuf_Execute_Deferred --blub
 */
 static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 {
-	cmd_input_t *current;
-	double eat;
+	cmd_input_t *current, *n;
+	vec_t eat;
 
 	if (host.realtime - cbuf->deferred_oldtime < 0 || host.realtime - cbuf->deferred_oldtime > 1800)
 		cbuf->deferred_oldtime = host.realtime;
 	eat = host.realtime - cbuf->deferred_oldtime;
-	if (eat < (1.0 / 120.0))
+	if (eat < 1/128)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
-	List_For_Each_Entry(current, &cbuf->deferred, cmd_input_t, list)
+	List_For_Each_Entry_Safe(current, n, &cbuf->deferred, cmd_input_t, list)
 	{
 		current->delay -= eat;
 		if(current->delay <= 0)
 		{
-			cbuf->size += current->length;
-			List_Move(&current->list, &cbuf->start);
-			// We must return and come back next frame or the engine will freeze. Fragile... like glass :3
-			return;
+			Cbuf_AddText(current->source, current->text); // parse deferred string and append its cmdstring(s)
+			List_Entry(cbuf->start.prev, cmd_input_t, list)->pending = false; // faster than div0-stable's Cbuf_AddText(";\n");
+			List_Move_Tail(&current->list, &cbuf->free); // make deferred string memory available for reuse
+			cbuf->size -= current->length;
 		}
 	}
 }
