@@ -1706,7 +1706,7 @@ void Cmd_Shutdown(void)
 Cmd_Argc
 ============
 */
-int		Cmd_Argc (cmd_state_t *cmd)
+inline int Cmd_Argc (cmd_state_t *cmd)
 {
 	return cmd->argc;
 }
@@ -1716,7 +1716,7 @@ int		Cmd_Argc (cmd_state_t *cmd)
 Cmd_Argv
 ============
 */
-const char *Cmd_Argv(cmd_state_t *cmd, int arg)
+inline const char *Cmd_Argv(cmd_state_t *cmd, int arg)
 {
 	if (arg >= cmd->argc )
 		return cmd->null_string;
@@ -1728,7 +1728,7 @@ const char *Cmd_Argv(cmd_state_t *cmd, int arg)
 Cmd_Args
 ============
 */
-const char *Cmd_Args (cmd_state_t *cmd)
+inline const char *Cmd_Args (cmd_state_t *cmd)
 {
 	return cmd->args;
 }
