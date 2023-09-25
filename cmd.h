@@ -158,7 +158,7 @@ typedef struct cmd_input_s
 {
 	llist_t list;
 	cmd_state_t *source;
-	double delay;
+	vec_t delay;
 	size_t size;
 	size_t length;
 	char *text;
