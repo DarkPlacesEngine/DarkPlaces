@@ -386,12 +386,14 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 Cbuf_Execute
 ============
 */
+extern qbool prvm_runawaycheck;
 static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
 void Cbuf_Execute (cmd_buf_t *cbuf)
 {
 	cmd_input_t *current;
 	char preprocessed[MAX_INPUTLINE];
 	char *firstchar;
+	unsigned int i = 0;
 
 	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
 	cbuf->tokenizebufferpos = 0;
@@ -442,6 +444,16 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 			 */
 			cbuf->wait = false;
 			break;
+		}
+
+		if (++i == 1000000 && prvm_runawaycheck)
+		{
+			Con_Printf(CON_WARN "Cbuf_Execute: runaway loop counter hit limit of %d commands, clearing command buffers!\n", i);
+			while (!List_Is_Empty(&cbuf->start))
+				List_Move_Tail(cbuf->start.next, &cbuf->free);
+			while (!List_Is_Empty(&cbuf->deferred))
+				List_Move_Tail(cbuf->deferred.next, &cbuf->free);
+			cbuf->size = 0;
 		}
 	}
 }
