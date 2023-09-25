@@ -2813,11 +2813,6 @@ double CL_Frame (double time)
 
 	CL_VM_PreventInformationLeaks();
 
-	// get new key events
-	Key_EventQueue_Unblock();
-	SndSys_SendKeyEvents();
-	Sys_SendKeyEvents();
-
 	/*
 	 * If the accumulator hasn't become positive, don't
 	 * run the frame. Everything that happens before this
