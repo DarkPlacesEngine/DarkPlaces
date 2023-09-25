@@ -1972,14 +1972,12 @@ Key_Event (int key, int ascii, qbool down)
 			{
 				// button commands add keynum as a parm
 				if (bind[0] == '+')
-					Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
+					Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 				else
-				{
-					Cbuf_AddText (cmd, bind);
-					Cbuf_AddText (cmd, "\n");
-				}
-			} else if(bind[0] == '+' && !down && keydown[key] == 0)
-				Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+					Cbuf_InsertText(cmd, bind);
+			}
+			else if(bind[0] == '+' && !down && keydown[key] == 0)
+				Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 		}
 		return;
 	}
@@ -2010,7 +2008,7 @@ Key_Event (int key, int ascii, qbool down)
 	{
 		if (down && con_closeontoggleconsole.integer && bind && !strncmp(bind, "toggleconsole", strlen("toggleconsole")) && ascii != STRING_COLOR_TAG)
 		{
-			Cbuf_AddText(cmd, "toggleconsole\n");  // Deferred to next frame so we're not sending the text event to the console.
+			Cbuf_InsertText(cmd, "toggleconsole\n");  // Deferred to next frame so we're not sending the text event to the console.
 			tbl_keydest[key] = key_void; // key release should go nowhere (especially not to key_menu or key_game)
 			return;
 		}
@@ -2053,14 +2051,12 @@ Key_Event (int key, int ascii, qbool down)
 				{
 					// button commands add keynum as a parm
 					if (bind[0] == '+')
-						Cbuf_AddText (cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
+						Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 					else
-					{
-						Cbuf_AddText (cmd, bind);
-						Cbuf_AddText (cmd, "\n");
-					}
-				} else if(bind[0] == '+' && !down && keydown[key] == 0)
-					Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+						Cbuf_InsertText(cmd, bind);
+				}
+				else if(bind[0] == '+' && !down && keydown[key] == 0)
+					Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 			}
 			break;
 		default:
