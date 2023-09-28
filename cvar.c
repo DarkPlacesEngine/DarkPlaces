@@ -271,15 +271,13 @@ void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full)
 {
 	// Aliases are purple, cvars are yellow
 	if (strcmp(cvar->name, name))
-		Con_Printf("^6");
+		Con_Printf("^6%s^7 (alias of ^3%s^7)", name, cvar->name);
 	else
-		Con_Printf("^3");
-	Con_Printf("%s^7 is \"%s\" [\"%s\"]", name, ((cvar->flags & CF_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
-	if (strcmp(cvar->name, name))
-		Con_Printf(" (also ^3%s^7)", cvar->name);
+		Con_Printf("^3%s^7", name);
+	Con_Printf(" is \"%s^7\" [\"%s^7\"]", ((cvar->flags & CF_PRIVATE) ? "********"/*hunter2*/ : cvar->string), cvar->defstring);
 	if (full)
 		Con_Printf(" %s", cvar->description);
-	Con_Printf("\n");
+	Con_Print("\n");
 }
 
 // written by LadyHavoc
