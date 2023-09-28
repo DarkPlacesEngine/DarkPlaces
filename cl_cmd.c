@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_collision.h"
 
-cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "name", "player", "player name"};
+cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "_cl_name", "player", "player name"};
 cvar_t cl_rate = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate", "20000", "connection speed"};
 cvar_t cl_rate_burstsize = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate_burstsize", "1024", "rate control burst size"};
 cvar_t cl_topcolor = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "topcolor", "0", "color of your shirt"};
@@ -214,6 +214,32 @@ static void CL_SendCvar_f(cmd_state_t *cmd)
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "sentcvar %s \"%s\"", c->name, c->string));
 		return;
 	}
+}
+
+/*
+==================
+CL_Name_f
+
+The logic from div0-stable's Host_Name_f() is now in SV_Name_f().
+==================
+*/
+static void CL_Name_f(cmd_state_t *cmd)
+{
+	char *newNameSource;
+
+	if (Cmd_Argc(cmd) == 1)
+	{
+		Con_Printf("name: \"%s^7\"\n", cl_name.string);
+		return;
+	}
+
+	// in the single-arg case any enclosing quotes shall be stripped
+	newNameSource = (char *)(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : Cmd_Args(cmd));
+
+	if (strlen(newNameSource) >= MAX_SCOREBOARDNAME) // may as well truncate before networking
+		newNameSource[MAX_SCOREBOARDNAME - 1] = '\0'; // this is fine (cbuf stores length)
+
+	Cvar_SetQuick(&cl_name, newNameSource);
 }
 
 /*
@@ -715,8 +741,16 @@ void CL_InitCommands(void)
 {
 	dpsnprintf(cls.userinfo, sizeof(cls.userinfo), "\\name\\player\\team\\none\\topcolor\\0\\bottomcolor\\0\\rate\\10000\\msg\\1\\noaim\\1\\*ver\\dp");
 
+	/* In Quake `name` is a command that concatenates its arguments (quotes unnecessary)
+	 * which is expected in most DP-based games.
+	 * In QuakeWorld it's a cvar which requires quotes if spaces are used.
+	 */
 	Cvar_RegisterVariable(&cl_name);
-	Cvar_RegisterVirtual(&cl_name, "_cl_name");
+	if ((0)) // TODO: if (gamemode == GAME_QUAKEWORLD)
+		Cvar_RegisterVirtual(&cl_name, "name");
+	else
+		Cmd_AddCommand(CF_CLIENT, "name", CL_Name_f, "change your player name");
+
 	Cvar_RegisterVariable(&cl_rate);
 	Cvar_RegisterVirtual(&cl_rate, "_cl_rate");
 	Cvar_RegisterVariable(&cl_rate_burstsize);
