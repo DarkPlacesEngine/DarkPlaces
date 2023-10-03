@@ -3144,6 +3144,8 @@ PRVM_Init
 */
 void PRVM_Init (void)
 {
+	unsigned int i;
+
 	Cmd_AddCommand(CF_SHARED, "prvm_edict", PRVM_ED_PrintEdict_f, "print all data about an entity number in the selected VM (server, client, menu)");
 	Cmd_AddCommand(CF_SHARED, "prvm_edicts", PRVM_ED_PrintEdicts_f, "prints all data about all entities in the selected VM (server, client, menu)");
 	Cmd_AddCommand(CF_SHARED, "prvm_edictcount", PRVM_ED_Count_f, "prints number of active entities in the selected VM (server, client, menu)");
@@ -3188,6 +3190,18 @@ void PRVM_Init (void)
 	prvm_runawaycheck = !Sys_CheckParm("-norunaway");
 
 	//VM_Cmd_Init();
+
+	// LadyHavoc: report supported extensions
+	Con_DPrintf("\nQuakeC extensions for server and client:");
+	for (i = 0; vm_sv_extensions[i]; i++)
+		Con_DPrintf(" %s", vm_sv_extensions[i]);
+	Con_DPrintf("\n");
+#ifdef CONFIG_MENU
+	Con_DPrintf("\nQuakeC extensions for menu:");
+	for (i = 0; vm_m_extensions[i]; i++)
+		Con_DPrintf(" %s", vm_m_extensions[i]);
+	Con_DPrintf("\n");
+#endif
 }
 
 /*
