@@ -63,10 +63,12 @@ void Sys_Error (const char *error, ...)
 
 	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
 	
+	// don't want a dead window left blocking the OS UI or the crash dialog
+	Host_Shutdown();
+
 	if(!nocrashdialog)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", string, NULL);
 
-	//Host_Shutdown ();
 	exit (1);
 }
 
