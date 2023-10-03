@@ -1619,6 +1619,16 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	SDL_GL_SetSwapInterval(bound(-1, vid_vsync.integer, 1));
 	vid_usingvsync = (vid_vsync.integer != 0);
 
+	vid_hidden = false;
+	vid_activewindow = true;
+	vid_hasfocus = true;
+	vid_usingmouse = false;
+	vid_usinghidecursor = false;
+
+	// clear to black (loading plaque will be seen over this)
+	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
+	VID_Finish(); // checks vid_hidden
+
 	GL_Setup();
 
 	// VorteX: set other info
@@ -1628,15 +1638,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	Cvar_SetQuick(&gl_info_platform, "SDL");
 	Cvar_SetQuick(&gl_info_driver, drivername ? drivername : "");
 
-	// clear to black (loading plaque will be seen over this)
-	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
-
-	vid_hidden = false;
-	vid_activewindow = false;
-	vid_hasfocus = true;
-	vid_usingmouse = false;
-	vid_usinghidecursor = false;
-		
 	return true;
 }
 
