@@ -1659,6 +1659,8 @@ void VID_Shutdown (void)
 	VID_EnableJoystick(false);
 	VID_SetMouse(false, false);
 
+	SDL_GL_DeleteContext(context);
+	context = NULL;
 	SDL_DestroyWindow(window);
 	window = NULL;
 
