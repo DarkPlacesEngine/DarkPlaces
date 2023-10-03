@@ -41,6 +41,7 @@ renderpath_t;
 
 typedef struct viddef_support_s
 {
+	int glversion; // this is at least 32
 	int glshaderversion; // this is at least 150 (GL 3.2)
 	qbool amd_texture_texture4;
 	qbool arb_texture_gather;
@@ -199,6 +200,7 @@ qbool GL_ExtensionSupported(const char *name);
 
 void VID_Shared_Init(void);
 
+void GL_InitFunctions(void);
 void GL_Setup(void);
 
 void VID_ClearExtensions(void);

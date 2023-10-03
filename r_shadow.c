@@ -232,7 +232,7 @@ cvar_t r_shadow_bouncegrid_subsamples = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bounc
 cvar_t r_shadow_bouncegrid_threaded = {CF_CLIENT | CF_ARCHIVE, "r_shadow_bouncegrid_threaded", "1", "enables use of taskqueue_maxthreads to perform the traces and slice rendering of bouncegrid"};
 cvar_t r_coronas = {CF_CLIENT | CF_ARCHIVE, "r_coronas", "0", "brightness of corona flare effects around certain lights, 0 disables corona effects"};
 cvar_t r_coronas_occlusionsizescale = {CF_CLIENT | CF_ARCHIVE, "r_coronas_occlusionsizescale", "0.1", "size of light source for corona occlusion checksum the proportion of hidden pixels controls corona intensity"};
-cvar_t r_coronas_occlusionquery = {CF_CLIENT | CF_ARCHIVE, "r_coronas_occlusionquery", "0", "fades coronas according to visibility"};
+cvar_t r_coronas_occlusionquery = {CF_CLIENT | CF_ARCHIVE, "r_coronas_occlusionquery", "0", "fades coronas according to visibility, requires OpenGL 4.4"};
 cvar_t gl_flashblend = {CF_CLIENT | CF_ARCHIVE, "gl_flashblend", "0", "render bright coronas for dynamic lights instead of actual lighting, fast but ugly"};
 cvar_t r_editlights = {CF_CLIENT, "r_editlights", "0", "enables .rtlights file editing mode"};
 cvar_t r_editlights_cursordistance = {CF_CLIENT, "r_editlights_cursordistance", "1024", "maximum distance of cursor from eye"};
@@ -4561,7 +4561,8 @@ void R_Shadow_DrawCoronas(void)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		usequery = r_coronas_occlusionquery.integer;
+		// buffer binding target GL_QUERY_BUFFER: Core since version 4.4
+		usequery = r_coronas_occlusionquery.integer && vid.support.glversion >= 44;
 #ifndef USE_GLES2
 		if (usequery)
 		{

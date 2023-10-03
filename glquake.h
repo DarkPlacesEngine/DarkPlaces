@@ -1034,6 +1034,8 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 #define GL_TEXTURE_3D				0x806F
 
 #define GL_HALF_FLOAT                                    0x140B
+#define GL_MAJOR_VERSION                  0x821B
+#define GL_MINOR_VERSION                  0x821C
 #define GL_NUM_EXTENSIONS                 0x821D
 
 

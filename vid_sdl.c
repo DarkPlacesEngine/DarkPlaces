@@ -1570,6 +1570,9 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	SDL_GL_SetAttribute (SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	/* Requesting a Core profile and 3.2 minimum is mandatory on macOS and older Mesa drivers.
+	 * It works fine on other drivers too except NVIDIA, see HACK below.
+	 */
 #endif
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, (gl_debug.integer > 0 ? SDL_GL_CONTEXT_DEBUG_FLAG : 0));
@@ -1591,6 +1594,27 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		VID_Shutdown();
 		return false;
 	}
+
+	GL_InitFunctions();
+
+#if !defined(USE_GLES2) && !defined(MACOSX)
+	// NVIDIA hates the Core profile and limits the version to the minimum we specified.
+	// HACK: to detect NVIDIA we first need a context, fortunately replacing it takes a few milliseconds
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	if (strncmp(gl_vendor, "NVIDIA", 6) == 0)
+	{
+		Con_DPrint("The Way It's Meant To Be Played: replacing OpenGL Core profile with Compatibility profile...\n");
+		SDL_GL_DeleteContext(context);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+		context = SDL_GL_CreateContext(window);
+		if (context == NULL)
+		{
+			Con_Printf(CON_ERROR "Failed to initialize OpenGL context: %s\n", SDL_GetError());
+			VID_Shutdown();
+			return false;
+		}
+	}
+#endif
 
 	SDL_GL_SetSwapInterval(bound(-1, vid_vsync.integer, 1));
 	vid_usingvsync = (vid_vsync.integer != 0);
