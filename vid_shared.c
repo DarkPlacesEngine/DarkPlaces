@@ -680,43 +680,17 @@ void VID_ClearExtensions(void)
 	memset(&vid.support, 0, sizeof(vid.support));
 }
 
-void GL_Setup(void)
+void GL_InitFunctions(void)
 {
-	char *s;
-	int j;
-	GLint numextensions = 0;
+#ifndef USE_GLES2
 	const glfunction_t *func;
 	qbool missingrequiredfuncs = false;
 	static char missingfuncs[16384];
 
-#ifndef USE_GLES2
 	// first fetch the function pointers for everything - after this we can begin making GL calls.
 	for (func = openglfuncs; func->name != NULL; func++)
 		*func->funcvariable = (void *)GL_GetProcAddress(func->name);
-#endif
 
-	gl_renderer = (const char *)qglGetString(GL_RENDERER);
-	gl_vendor = (const char *)qglGetString(GL_VENDOR);
-	gl_version = (const char *)qglGetString(GL_VERSION);
-
-	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
-	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
-	Con_Printf("GL_VERSION: %s\n", gl_version);
-
-#ifndef USE_GLES2
-	qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
-	Con_DPrint("GL_EXTENSIONS:\n");
-	for (j = 0; j < numextensions; j++)
-	{
-		const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
-		Con_DPrintf(" %s", ext);
-		if(j && !(j % 3))
-			Con_DPrintf("\n");
-	}
-	Con_DPrint("\n");
-#endif //USE_GLES2
-
-#ifndef USE_GLES2
 	missingfuncs[0] = 0;
 	for (func = openglfuncs; func && func->name != NULL; func++)
 	{
@@ -732,6 +706,42 @@ void GL_Setup(void)
 	if (missingrequiredfuncs)
 		Sys_Error("OpenGL driver/hardware lacks required features:\n%s", missingfuncs);
 #endif
+}
+
+void GL_Setup(void)
+{
+	char *s;
+	int j;
+	GLint numextensions = 0;
+	int majorv, minorv;
+
+	gl_renderer = (const char *)qglGetString(GL_RENDERER);
+	gl_vendor = (const char *)qglGetString(GL_VENDOR);
+	gl_version = (const char *)qglGetString(GL_VERSION);
+
+	Con_Printf("GL_VENDOR: %s\n", gl_vendor);
+	Con_Printf("GL_RENDERER: %s\n", gl_renderer);
+	Con_Printf("GL_VERSION: %s\n", gl_version);
+
+#ifndef USE_GLES2
+	qglGetIntegerv(GL_MAJOR_VERSION, &majorv);
+	qglGetIntegerv(GL_MINOR_VERSION, &minorv);
+	vid.support.glversion = 10 * majorv + minorv;
+	if (vid.support.glversion < 32)
+		// fallback, should never get here: GL context creation should have failed
+		Sys_Error("OpenGL driver/hardware supports version %i.%i but 3.2 is the minimum\n", majorv, minorv);
+
+	qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
+	Con_DPrint("GL_EXTENSIONS:\n");
+	for (j = 0; j < numextensions; j++)
+	{
+		const char *ext = (const char *)qglGetStringi(GL_EXTENSIONS, j);
+		Con_DPrintf(" %s", ext);
+		if(j && !(j % 3))
+			Con_DPrintf("\n");
+	}
+	Con_DPrint("\n");
+#endif //USE_GLES2
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
