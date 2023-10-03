@@ -72,7 +72,6 @@ static qbool vid_usingmouse = false;
 static qbool vid_usingmouse_relativeworks = false; // SDL2 workaround for unimplemented RelativeMouse mode
 static qbool vid_usinghidecursor = false;
 static qbool vid_hasfocus = false;
-static qbool vid_usingvsync = false;
 static SDL_Joystick *vid_sdljoystick = NULL;
 static SDL_GameController *vid_sdlgamecontroller = NULL;
 static cvar_t joy_sdl2_trigger_deadzone = {CF_ARCHIVE | CF_CLIENT, "joy_sdl2_trigger_deadzone", "0.5", "deadzone for triggers to be registered as key presses"};
@@ -1320,6 +1319,21 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
+static void VID_SetVsync_c(cvar_t *var)
+{
+	signed char vsyncwanted = cls.timedemo ? 0 : bound(-1, vid_vsync.integer, 1);
+
+	if (!context)
+		return;
+	if (SDL_GL_GetSwapInterval() == vsyncwanted)
+		return;
+
+	if (SDL_GL_SetSwapInterval(vsyncwanted) >= 0)
+		Con_DPrintf("Vsync %s\n", vsyncwanted ? "activated" : "deactivated");
+	else
+		Con_Printf(CON_ERROR "ERROR: can't %s vsync because %s\n", vsyncwanted ? "activate" : "deactivate", SDL_GetError());
+}
+
 void VID_Init (void)
 {
 #ifndef __IPHONEOS__
@@ -1335,6 +1349,8 @@ void VID_Init (void)
 #ifdef SDL_R_RESTART
 	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
 #endif
+
+	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
@@ -1606,8 +1622,8 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	}
 #endif
 
-	SDL_GL_SetSwapInterval(bound(-1, vid_vsync.integer, 1));
-	vid_usingvsync = (vid_vsync.integer != 0);
+	// apply vid_vsync
+	Cvar_Callback(&vid_vsync);
 
 	vid_hidden = false;
 	vid_activewindow = true;
@@ -1658,7 +1674,6 @@ void VID_Shutdown (void)
 
 void VID_Finish (void)
 {
-	qbool vid_usevsync;
 	vid_activewindow = !vid_hidden && vid_hasfocus;
 
 	VID_UpdateGamma();
@@ -1672,16 +1687,6 @@ void VID_Finish (void)
 			CHECKGLERROR
 			if (r_speeds.integer == 2 || gl_finish.integer)
 				GL_Finish();
-
-			vid_usevsync = (vid_vsync.integer && !cls.timedemo);
-			if (vid_usingvsync != vid_usevsync)
-			{
-				vid_usingvsync = vid_usevsync;
-				if (SDL_GL_SetSwapInterval(vid_usevsync != 0) >= 0)
-					Con_DPrintf("Vsync %s\n", vid_usevsync ? "activated" : "deactivated");
-				else
-					Con_DPrintf("ERROR: can't %s vsync\n", vid_usevsync ? "activate" : "deactivate");
-			}
 			SDL_GL_SwapWindow(window);
 			break;
 		}
