@@ -1615,18 +1615,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	Cvar_SetQuick(&gl_info_platform, gl_platform ? gl_platform : "");
 	Cvar_SetQuick(&gl_info_driver, gl_driver);
 
-	// LadyHavoc: report supported extensions
-	Con_DPrintf("\nQuakeC extensions for server and client:");
-	for (i = 0; vm_sv_extensions[i]; i++)
-		Con_DPrintf(" %s", vm_sv_extensions[i]);
-	Con_DPrintf("\n");
-#ifdef CONFIG_MENU
-	Con_DPrintf("\nQuakeC extensions for menu:");
-	for (i = 0; vm_m_extensions[i]; i++)
-		Con_DPrintf(" %s", vm_m_extensions[i]);
-	Con_DPrintf("\n");
-#endif
-
 	// clear to black (loading plaque will be seen over this)
 	GL_Clear(GL_COLOR_BUFFER_BIT, NULL, 1.0f, 0);
 
