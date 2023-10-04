@@ -390,7 +390,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 	changed = strcmp(var->string, value) != 0;
 	// LadyHavoc: don't reallocate when there is no change
 	if (!changed)
-		return;
+		goto cvar_callback;
 
 	// LadyHavoc: don't reallocate when the buffer is the same size
 	valuelen = strlen(value);
@@ -423,6 +423,7 @@ static void Cvar_SetQuick_Internal (cvar_t *var, const char *value)
 
 	Cvar_UpdateAutoCvar(var);
 
+cvar_callback:
 	// Call the function stored in the cvar for bounds checking, cleanup, etc
 	Cvar_Callback(var);
 }

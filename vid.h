@@ -96,6 +96,9 @@ typedef struct viddef_s
 	viddef_support_t support;
 
 	int forcetextype; // always use GL_BGRA for D3D, always use GL_RGBA for GLES, etc
+
+	int xPos, yPos; // current virtual position of the top left corner of the SDL window
+	unsigned char displayindex; // the monitor it's on currently
 } viddef_t;
 
 // global video state
@@ -155,6 +158,8 @@ extern cvar_t vid_touchscreen_supportshowkeyboard;
 extern cvar_t vid_stick_mouse;
 extern cvar_t vid_resizable;
 extern cvar_t vid_desktopfullscreen;
+extern cvar_t vid_display;
+extern cvar_t vid_info_displaycount;
 #ifdef WIN32
 extern cvar_t vid_ignore_taskbar;
 #endif
