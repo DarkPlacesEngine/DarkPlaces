@@ -163,6 +163,8 @@ cvar_t vid_touchscreen_supportshowkeyboard = {CF_CLIENT | CF_READONLY, "vid_touc
 cvar_t vid_stick_mouse = {CF_CLIENT | CF_ARCHIVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CF_CLIENT | CF_ARCHIVE, "vid_resizable", "0", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
 cvar_t vid_desktopfullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
+cvar_t vid_display = {CF_CLIENT | CF_ARCHIVE, "vid_display", "0", "which monitor to render on, numbered from 0 (system default)" };
+cvar_t vid_info_displaycount = {CF_CLIENT | CF_READONLY, "vid_info_displaycount", "1", "how many monitors are currently available, updated by hotplug events" };
 #ifdef WIN32
 cvar_t vid_ignore_taskbar = {CF_CLIENT | CF_ARCHIVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
 #endif
@@ -1317,6 +1319,8 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_stick_mouse);
 	Cvar_RegisterVariable(&vid_resizable);
 	Cvar_RegisterVariable(&vid_desktopfullscreen);
+	Cvar_RegisterVariable(&vid_display);
+	Cvar_RegisterVariable(&vid_info_displaycount);
 #ifdef WIN32
 	Cvar_RegisterVariable(&vid_ignore_taskbar);
 #endif
@@ -1435,7 +1439,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "");
+		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s on display %i\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", vid.displayindex);
 
 		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 		Cvar_SetValueQuick(&vid_width, vid.mode.width);

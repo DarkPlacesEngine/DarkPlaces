@@ -72,6 +72,7 @@ static qbool vid_usingmouse = false;
 static qbool vid_usingmouse_relativeworks = false; // SDL2 workaround for unimplemented RelativeMouse mode
 static qbool vid_usinghidecursor = false;
 static qbool vid_hasfocus = false;
+static qbool vid_wmborder_waiting, vid_wmborderless;
 static SDL_Joystick *vid_sdljoystick = NULL;
 static SDL_GameController *vid_sdlgamecontroller = NULL;
 static cvar_t joy_sdl2_trigger_deadzone = {CF_ARCHIVE | CF_CLIENT, "joy_sdl2_trigger_deadzone", "0.5", "deadzone for triggers to be registered as key presses"};
@@ -1055,6 +1056,7 @@ static keynum_t buttonremap[] =
 };
 
 //#define DEBUGSDLEVENTS
+static void VID_ChangeDisplay_c(cvar_t *var);
 void Sys_SDL_HandleEvents(void)
 {
 	static qbool sound_active = true;
@@ -1166,12 +1168,45 @@ void Sys_SDL_HandleEvents(void)
 #endif
 						break;
 					case SDL_WINDOWEVENT_MOVED:
+						vid.xPos = event.window.data1;
+						vid.yPos = event.window.data2;
+						// Update vid.displayindex (current monitor) as it may have changed
+						// SDL_GetWindowDisplayIndex() doesn't work if the window manager moves the fullscreen window, but this works:
+						for (i = 0; i < vid_info_displaycount.integer; ++i)
+						{
+							SDL_Rect displaybounds;
+							if (SDL_GetDisplayBounds(i, &displaybounds) < 0)
+							{
+								Con_Printf(CON_ERROR "Error getting bounds of display %i: \"%s\"\n", i, SDL_GetError());
+								return;
+							}
+							if (vid.xPos >= displaybounds.x && vid.xPos < displaybounds.x + displaybounds.w)
+							if (vid.yPos >= displaybounds.y && vid.yPos < displaybounds.y + displaybounds.h)
+							{
+								vid.displayindex = i;
+								break;
+							}
+						}
+						// when the window manager adds/removes the border it's likely to move the SDL window
+						// we'll need to correct that to (re)align the xhair with the monitor
+						if (vid_wmborder_waiting)
+						{
+							SDL_GetWindowBordersSize(window, &i, NULL, NULL, NULL);
+							if (!i != vid_wmborderless) // border state changed
+							{
+								SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex), SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex));
+								SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
+								vid_wmborder_waiting = false;
+							}
+						}
 						break;
-					case SDL_WINDOWEVENT_RESIZED:
+					case SDL_WINDOWEVENT_RESIZED: // external events only
 						if(vid_resizable.integer < 2)
 						{
-							vid.width = event.window.data1;
-							vid.height = event.window.data2;
+							//vid.width = event.window.data1;
+							//vid.height = event.window.data2;
+							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
+							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
 #ifdef SDL_R_RESTART
 							// better not call R_Modules_Restart_f from here directly, as this may wreak havoc...
 							// so, let's better queue it for next frame
@@ -1182,6 +1217,8 @@ void Sys_SDL_HandleEvents(void)
 							}
 #endif
 						}
+						break;
+					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
 						break;
 					case SDL_WINDOWEVENT_MINIMIZED:
 						break;
@@ -1202,7 +1239,34 @@ void Sys_SDL_HandleEvents(void)
 					case SDL_WINDOWEVENT_CLOSE:
 						host.state = host_shutdown;
 						break;
+					case SDL_WINDOWEVENT_TAKE_FOCUS:
+						break;
+					case SDL_WINDOWEVENT_HIT_TEST:
+						break;
+					case SDL_WINDOWEVENT_ICCPROF_CHANGED:
+						break;
+					case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+						// this event can't be relied on in fullscreen, see SDL_WINDOWEVENT_MOVED above
+						vid.displayindex = event.window.data1;
+						break;
 					}
+				}
+				break;
+			case SDL_DISPLAYEVENT: // Display hotplugging
+				switch (event.display.event)
+				{
+					case SDL_DISPLAYEVENT_CONNECTED:
+						Con_Printf("Display %i connected: %s\nA vid_restart may be necessary!\n", event.display.display, SDL_GetDisplayName(event.display.display));
+						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
+						// Ideally we'd call VID_ChangeDisplay_c() to try to switch to the preferred display here,
+						// but we may need a vid_restart first, see comments in VID_ChangeDisplay_c().
+						break;
+					case SDL_DISPLAYEVENT_DISCONNECTED:
+						Con_Printf("Display %i disconnected.\nA vid_restart may be necessary!\n", event.display.display);
+						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
+						break;
+					case SDL_DISPLAYEVENT_ORIENTATION:
+						break;
 				}
 				break;
 			case SDL_TEXTEDITING:
@@ -1319,6 +1383,86 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
+static void VID_ChangeDisplay_c(cvar_t *var)
+{
+	unsigned int fullscreenwanted, fullscreencurrent;
+	unsigned int displaywanted = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
+
+	if (!window)
+		return;
+
+	fullscreencurrent = SDL_GetWindowFlags(window) & (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_FULLSCREEN);
+	if (vid_fullscreen.integer)
+		fullscreenwanted = vid_desktopfullscreen.integer ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
+	else
+		fullscreenwanted = 0;
+
+	// moving to another display, changing the fullscreen mode or switching to windowed
+	if (vid.displayindex != displaywanted // SDL seems unable to move any fullscreen window to another display
+	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: switching to windowed first feels safer
+	{
+		if (SDL_SetWindowFullscreen(window, 0) < 0)
+		{
+			Con_Printf(CON_ERROR "ERROR: can't deactivate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
+			return;
+		}
+		vid.fullscreen = false;
+		Con_DPrintf("Fullscreen deactivated on display %i\n", vid.displayindex);
+	}
+
+	// switching to windowed
+	if (!fullscreenwanted)
+	{
+		int toppx;
+		SDL_SetWindowSize(window, vid.width = vid_width.integer, vid.height = vid_height.integer);
+		SDL_SetWindowResizable(window, vid_resizable.integer ? SDL_TRUE : SDL_FALSE);
+		SDL_SetWindowBordered(window, (SDL_bool)!vid_borderless.integer);
+		SDL_GetWindowBordersSize(window, &toppx, NULL, NULL, NULL);
+		vid_wmborderless = !toppx;
+		if (vid_borderless.integer != vid_wmborderless) // this is not the state we're looking for
+			vid_wmborder_waiting = true;
+	}
+
+	// moving to another display or switching to windowed
+	if (vid.displayindex != displaywanted || !fullscreenwanted)
+	{
+//		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted), SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted));
+//		SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
+
+		/* bones_was_here BUG: after SDL_DISPLAYEVENT hotplug events,
+		 * SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted) may place the window somewhere completely invisible.
+		 * WORKAROUND: manual positioning seems safer: although SDL_GetDisplayBounds() may return outdated values,
+		 * SDL_SetWindowPosition() always placed the window somewhere fully visible, even if it wasn't correct,
+		 * when tested with SDL 2.26.5.
+		 */
+		SDL_Rect displaybounds;
+		if (SDL_GetDisplayBounds(displaywanted, &displaybounds) < 0)
+		{
+			Con_Printf(CON_ERROR "Error getting bounds of display %i: \"%s\"\n", displaywanted, SDL_GetError());
+			return;
+		}
+		vid.xPos = displaybounds.x + 0.5 * (displaybounds.w - vid.width);
+		vid.yPos = displaybounds.y + 0.5 * (displaybounds.h - vid.height);
+		SDL_SetWindowPosition(window, vid.xPos, vid.yPos);
+
+		vid.displayindex = displaywanted;
+	}
+
+	// switching to a fullscreen mode
+	if (fullscreenwanted)
+	{
+		if (SDL_SetWindowFullscreen(window, fullscreenwanted) < 0)
+		{
+			Con_Printf(CON_ERROR "ERROR: can't activate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
+			return;
+		}
+		// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
+		SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
+		vid.fullscreen = true;
+		Con_DPrintf("Fullscreen activated on display %i\n", vid.displayindex);
+	}
+}
+
 static void VID_SetVsync_c(cvar_t *var)
 {
 	signed char vsyncwanted = cls.timedemo ? 0 : bound(-1, vid_vsync.integer, 1);
@@ -1350,6 +1494,17 @@ void VID_Init (void)
 	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
 #endif
 
+#if defined(__linux__)
+	// exclusive fullscreen is no longer functional (and when it worked was obnoxious and not faster)
+	Cvar_SetValueQuick(&vid_desktopfullscreen, 1);
+	vid_desktopfullscreen.flags |= CF_READONLY;
+#endif
+
+	Cvar_RegisterCallback(&vid_fullscreen,             VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_display,                VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_resizable,              VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_borderless,             VID_ChangeDisplay_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -1481,15 +1636,18 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 static qbool VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
-	// currently SDL_WINDOWPOS_UNDEFINED behaves exactly like SDL_WINDOWPOS_CENTERED, this might change some day
-	// https://trello.com/c/j56vUcwZ/81-centered-vs-undefined-window-position
-	int xPos = SDL_WINDOWPOS_UNDEFINED;
-	int yPos = SDL_WINDOWPOS_UNDEFINED;
 	int i;
 #ifndef USE_GLES2
 	// SDL usually knows best
 	const char *drivername = NULL;
 #endif
+
+	// video display selection (multi-monitor)
+	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
+	vid.displayindex = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
+	vid.xPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
+	vid.yPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
+	vid_wmborder_waiting = vid_wmborderless = false;
 
 	win_half_width = mode->width>>1;
 	win_half_height = mode->height>>1;
@@ -1535,18 +1693,16 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	{
 		if (vid_borderless.integer)
 			windowflags |= SDL_WINDOW_BORDERLESS;
-#ifdef WIN32
-		if (vid_ignore_taskbar.integer)
-		{
-			xPos = SDL_WINDOWPOS_CENTERED;
-			yPos = SDL_WINDOWPOS_CENTERED;
-		}
 		else
+			vid_wmborder_waiting = true; // waiting for border to be added
+#ifdef WIN32
+		if (!vid_ignore_taskbar.integer)
 		{
 			RECT rect;
 			AdjustWindowBounds(mode, &rect);
-			xPos = rect.left;
-			yPos = rect.top;
+			vid.xPos = rect.left;
+			vid.xPos = rect.top;
+			vid_wmborder_waiting = false;
 		}
 #endif
 	}
@@ -1585,14 +1741,18 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, (gl_debug.integer > 0 ? SDL_GL_CONTEXT_DEBUG_FLAG : 0));
 
-	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
+	window = SDL_CreateWindow(gamename, vid.xPos, vid.yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
 	{
 		Con_Printf(CON_ERROR "Failed to set video mode to %ix%i: %s\n", mode->width, mode->height, SDL_GetError());
 		VID_Shutdown();
 		return false;
 	}
-	SDL_GetWindowSize(window, &mode->width, &mode->height);
+	// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
+	SDL_GL_GetDrawableSize(window, &mode->width, &mode->height);
+	// After using SDL_WINDOWPOS_CENTERED_DISPLAY we don't know the real position
+	SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
+
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
 	{
@@ -1642,6 +1802,9 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	Cvar_SetQuick(&gl_info_renderer, gl_renderer);
 	Cvar_SetQuick(&gl_info_version, gl_version);
 	Cvar_SetQuick(&gl_info_driver, drivername ? drivername : "");
+
+	for (i = 0; i < vid_info_displaycount.integer; ++i)
+		Con_Printf("Display %i: %s\n", i, SDL_GetDisplayName(i));
 
 	return true;
 }
@@ -1700,7 +1863,7 @@ vid_mode_t VID_GetDesktopMode(void)
 	Uint32 rmask, gmask, bmask, amask;
 	vid_mode_t desktop_mode;
 
-	SDL_GetDesktopDisplayMode(0, &mode);
+	SDL_GetDesktopDisplayMode(vid.displayindex, &mode);
 	SDL_PixelFormatEnumToMasks(mode.format, &bpp, &rmask, &gmask, &bmask, &amask);
 	desktop_mode.width = mode.w;
 	desktop_mode.height = mode.h;
@@ -1708,9 +1871,6 @@ vid_mode_t VID_GetDesktopMode(void)
 	desktop_mode.refreshrate = mode.refresh_rate;
 	desktop_mode.pixelheight_num = 1;
 	desktop_mode.pixelheight_denom = 1; // SDL does not provide this
-	// TODO check whether this actually works, or whether we do still need
-	// a read-window-size-after-entering-desktop-fullscreen hack for
-	// multiscreen setups.
 	return desktop_mode;
 }
 
@@ -1718,13 +1878,13 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	size_t k = 0;
 	int modenum;
-	int nummodes = SDL_GetNumDisplayModes(0);
+	int nummodes = SDL_GetNumDisplayModes(vid.displayindex);
 	SDL_DisplayMode mode;
 	for (modenum = 0;modenum < nummodes;modenum++)
 	{
 		if (k >= maxcount)
 			break;
-		if (SDL_GetDisplayMode(0, modenum, &mode))
+		if (SDL_GetDisplayMode(vid.displayindex, modenum, &mode))
 			continue;
 		modes[k].width = mode.w;
 		modes[k].height = mode.h;
