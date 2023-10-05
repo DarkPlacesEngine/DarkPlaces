@@ -368,7 +368,7 @@ qbool VID_ShowingKeyboard(void)
 	return SDL_IsTextInputActive() != 0;
 }
 
-void VID_SetMouse(qbool relative, qbool hidecursor)
+static void VID_SetMouse(qbool relative, qbool hidecursor)
 {
 #ifndef DP_MOBILETOUCH
 #ifdef MACOSX
@@ -1013,6 +1013,8 @@ void IN_Move( void )
 		in_windowmouse_y = y;
 	}
 
+	//Con_Printf("Mouse position: in_mouse %f %f in_windowmouse %f %f\n", in_mouse_x, in_mouse_y, in_windowmouse_x, in_windowmouse_y);
+
 	VID_BuildJoyState(&joystate);
 	VID_ApplyJoyState(&joystate);
 }
@@ -1348,8 +1350,10 @@ void Sys_SDL_HandleEvents(void)
 				break;
 		}
 
+	vid_activewindow = !vid_hidden && vid_hasfocus;
+
 	// enable/disable sound on focus gain/loss
-	if ((!vid_hidden && vid_activewindow) || !snd_mutewhenidle.integer)
+	if (vid_activewindow || !snd_mutewhenidle.integer)
 	{
 		if (!sound_active)
 		{
@@ -1365,6 +1369,13 @@ void Sys_SDL_HandleEvents(void)
 			sound_active = false;
 		}
 	}
+
+	if (!vid_activewindow || key_consoleactive || scr_loading)
+		VID_SetMouse(false, false);
+	else if (key_dest == key_menu || key_dest == key_menu_grabbed)
+		VID_SetMouse(vid_mouse.integer && !in_client_mouse && !vid_touchscreen.integer, !vid_touchscreen.integer);
+	else
+		VID_SetMouse(vid_mouse.integer && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0 && (!cls.demoplayback || cl_demo_mousegrab.integer) && !vid_touchscreen.integer, !vid_touchscreen.integer);
 }
 
 /////////////////
@@ -1825,8 +1836,6 @@ void VID_Shutdown (void)
 
 void VID_Finish (void)
 {
-	vid_activewindow = !vid_hidden && vid_hasfocus;
-
 	VID_UpdateGamma();
 
 	if (!vid_hidden)
