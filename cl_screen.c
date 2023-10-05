@@ -100,7 +100,7 @@ int jpeg_supported = false;
 
 qbool	scr_initialized;		// ready to draw
 
-static qbool scr_loading = false;  // we are in a loading screen
+qbool scr_loading = false;  // we are in a loading screen
 
 unsigned int        scr_con_current;
 static unsigned int scr_con_margin_bottom;
@@ -2325,14 +2325,6 @@ void CL_UpdateScreen(void)
 #endif
 
 	qglFlush(); // ensure that the commands are submitted to the GPU before we do other things
-
-	if (!vid_activewindow || key_consoleactive)
-		VID_SetMouse(false, false);
-	else if (key_dest == key_menu || key_dest == key_menu_grabbed || scr_loading)
-		VID_SetMouse(vid_mouse.integer && !in_client_mouse && !vid_touchscreen.integer, !vid_touchscreen.integer);
-	else
-		VID_SetMouse(vid_mouse.integer && !cl.csqc_wantsmousemove && cl_prydoncursor.integer <= 0 && (!cls.demoplayback || cl_demo_mousegrab.integer) && !vid_touchscreen.integer, !vid_touchscreen.integer);
-
 	VID_Finish();
 }
 

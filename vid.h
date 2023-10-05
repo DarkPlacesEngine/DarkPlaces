@@ -133,6 +133,9 @@ int VID_Shared_SetJoystick(int index);
 qbool VID_JoyBlockEmulatedKeys(int keycode);
 void VID_EnableJoystick(qbool enable);
 
+extern cvar_t cl_demo_mousegrab;
+extern qbool scr_loading;
+
 extern qbool vid_hidden;
 extern qbool vid_activewindow;
 extern qbool vid_supportrefreshrate;
@@ -231,7 +234,6 @@ qbool VID_HasScreenKeyboardSupport(void);
 void VID_ShowKeyboard(qbool show);
 qbool VID_ShowingKeyboard(void);
 
-void VID_SetMouse(qbool relative, qbool hidecursor);
 void VID_Finish (void);
 
 void VID_Restart_f(struct cmd_state_s *cmd);
