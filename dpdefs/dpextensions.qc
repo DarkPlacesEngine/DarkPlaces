@@ -35,7 +35,7 @@ float(string s) checkextension = #99;
 //field definitions:
 .float buttonchat;
 //description:
-//true if the player is currently chatting (in messagemode, menus or console)
+//true if the player is currently chatting (in messagemode, menus or console) or if their game window is not active.
 
 //DP_BUTTONUSE
 //idea: id Software
