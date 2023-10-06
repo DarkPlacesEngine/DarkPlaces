@@ -1806,7 +1806,7 @@ void CL_SendMove(void)
 	if (in_button7.state  & 3) bits |=  64;
 	if (in_button8.state  & 3) bits |= 128;
 	if (in_use.state      & 3) bits |= 256;
-	if (key_dest != key_game || key_consoleactive) bits |= 512;
+	if (key_dest != key_game || key_consoleactive || !vid_activewindow) bits |= 512;
 	if (cl_prydoncursor.integer > 0) bits |= 1024;
 	if (in_button9.state  & 3)  bits |=   2048;
 	if (in_button10.state  & 3) bits |=   4096;
