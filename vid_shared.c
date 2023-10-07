@@ -1464,20 +1464,6 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 		return false;
 }
 
-static void VID_OpenSystems(void)
-{
-	Key_ReleaseAll();
-	R_Modules_Start();
-	S_Startup();
-}
-
-static void VID_CloseSystems(void)
-{
-	S_Shutdown();
-	R_Modules_Shutdown();
-	Key_ReleaseAll();
-}
-
 qbool vid_commandlinecheck = true;
 extern qbool vid_opened;
 
@@ -1492,7 +1478,8 @@ void VID_Restart_f(cmd_state_t *cmd)
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
 		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "",
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
-	VID_CloseSystems();
+	SCR_DeferLoadingPlaque(false);
+	R_Modules_Shutdown();
 	VID_Shutdown();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer))
 	{
@@ -1500,9 +1487,8 @@ void VID_Restart_f(cmd_state_t *cmd)
 		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
 			Sys_Error("Unable to restore to last working video mode");
 	}
-
-	SCR_DeferLoadingPlaque(false);
-	VID_OpenSystems();
+	R_Modules_Start();
+	Key_ReleaseAll();
 }
 
 const char *vidfallbacks[][2] =
@@ -1576,13 +1562,9 @@ void VID_Start(void)
 		if (!success)
 			Sys_Error("Video modes failed");
 	}
-	VID_OpenSystems();
-}
 
-void VID_Stop(void)
-{
-	VID_CloseSystems();
-	VID_Shutdown();
+	R_Modules_Start();
+	Key_ReleaseAll();
 }
 
 static int VID_SortModes_Compare(const void *a_, const void *b_)
