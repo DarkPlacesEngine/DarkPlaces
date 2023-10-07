@@ -178,18 +178,20 @@ extern struct cvar_s v_color_white_r;
 extern struct cvar_s v_color_white_g;
 extern struct cvar_s v_color_white_b;
 
+extern cvar_t gl_info_vendor;
+extern cvar_t gl_info_renderer;
+extern cvar_t gl_info_version;
+extern cvar_t gl_info_extensions;
+extern cvar_t gl_info_platform;
+extern cvar_t gl_info_driver;
+
 // brand of graphics chip
 extern const char *gl_vendor;
 // graphics chip model and other information
 extern const char *gl_renderer;
 // begins with 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0, 1.3.1, or 1.4.0
 extern const char *gl_version;
-// extensions list, space separated
-extern const char *gl_extensions;
-// WGL, GLX, or AGL
-extern const char *gl_platform;
-// name of driver library (opengl32.dll, libGL.so.1, or whatever)
-extern char gl_driver[256];
+
 
 void *GL_GetProcAddress(const char *name);
 qbool GL_CheckExtension(const char *name, const char *disableparm, int silent);
