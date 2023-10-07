@@ -661,12 +661,16 @@ void S_Startup (void)
 #ifdef CONFIG_VIDEO_CAPTURE
 	recording_sound = false;
 #endif
+
+	CDAudio_Startup();
 }
 
 void S_Shutdown(void)
 {
 	if (snd_renderbuffer == NULL)
 		return;
+
+	CDAudio_Shutdown();
 
 	oldpaintedtime = snd_renderbuffer->endframe;
 
@@ -824,6 +828,8 @@ void S_Init(void)
 #ifdef USEXMP
 	XMP_OpenLibrary ();
 #endif
+
+	CDAudio_Init();
 }
 
 

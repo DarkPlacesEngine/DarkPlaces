@@ -2797,7 +2797,6 @@ void CL_StartVideo(void)
 		NetConn_UpdateSockets();
 #endif
 		VID_Start();
-		CDAudio_Startup();
 	}
 }
 
@@ -2973,7 +2972,6 @@ void CL_Shutdown (void)
 		MR_Shutdown();
 #endif
 
-	CDAudio_Shutdown ();
 	S_Terminate ();
 	
 	R_Modules_Shutdown();
@@ -2985,7 +2983,6 @@ void CL_Shutdown (void)
 	CL_MeshEntities_Shutdown();
 
 	Key_Shutdown();
-	S_Shutdown();
 
 	Mem_FreePool (&cls.permanentmempool);
 	Mem_FreePool (&cls.levelmempool);
@@ -3017,7 +3014,6 @@ void CL_Init (void)
 		VID_Init();
 		Render_Init();
 		S_Init();
-		CDAudio_Init();
 		Key_Init();
 		V_Init();
 

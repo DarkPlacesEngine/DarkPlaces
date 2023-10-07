@@ -503,6 +503,7 @@ static void Host_Init (void)
 	{
 		// put up the loading image so the user doesn't stare at a black screen...
 		SCR_BeginLoadingPlaque(true);
+		S_Startup();
 #ifdef CONFIG_MENU
 		MR_Init();
 #endif
