@@ -129,7 +129,7 @@ cvar_t gl_info_vendor = {CF_CLIENT | CF_READONLY, "gl_info_vendor", "", "indicat
 cvar_t gl_info_renderer = {CF_CLIENT | CF_READONLY, "gl_info_renderer", "", "indicates graphics chip model and other information"};
 cvar_t gl_info_version = {CF_CLIENT | CF_READONLY, "gl_info_version", "", "indicates version of current renderer. begins with 1.0.0, 1.1.0, 1.2.0, 1.3.1 etc."};
 cvar_t gl_info_extensions = {CF_CLIENT | CF_READONLY, "gl_info_extensions", "", "indicates extension list found by engine, space separated."};
-cvar_t gl_info_platform = {CF_CLIENT | CF_READONLY, "gl_info_platform", "", "indicates GL platform: WGL, GLX, or AGL."};
+cvar_t gl_info_platform = {CF_CLIENT | CF_READONLY, "gl_info_platform", "", "indicates GL platform: SDL, SDL, or SDL."};
 cvar_t gl_info_driver = {CF_CLIENT | CF_READONLY, "gl_info_driver", "", "name of driver library (opengl32.dll, libGL.so.1, or whatever)."};
 
 cvar_t vid_fullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_fullscreen", "1", "use fullscreen (1) or windowed (0)"};
@@ -191,12 +191,6 @@ const char *gl_vendor;
 const char *gl_renderer;
 // begins with 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0, 1.3.1, or 1.4.0
 const char *gl_version;
-// extensions list, space separated
-const char *gl_extensions;
-// WGL, GLX, or AGL
-const char *gl_platform;
-// name of driver library (opengl32.dll, libGL.so.1, or whatever)
-char gl_driver[256];
 
 #ifndef USE_GLES2
 GLboolean (GLAPIENTRY *qglIsBuffer) (GLuint buffer);
