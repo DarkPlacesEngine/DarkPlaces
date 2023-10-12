@@ -3,6 +3,8 @@ obj/
 *.o
 *.i
 *.s
+*.obj
+*.tlog
 ChangeLog
 darkplaces-agl
 darkplaces-glx
