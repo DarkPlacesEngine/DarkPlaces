@@ -58,13 +58,4 @@ extern char engineversion[128];
 #include "mathlib.h"
 #include "matrixlib.h"
 
-extern cvar_t developer;
-extern cvar_t developer_entityparsing;
-extern cvar_t developer_extra;
-extern cvar_t developer_insane;
-extern cvar_t developer_loadfile;
-extern cvar_t developer_loading;
-extern cvar_t host_isclient;
-extern cvar_t sessionid;
-
 #endif
