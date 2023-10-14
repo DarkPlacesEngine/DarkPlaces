@@ -76,7 +76,7 @@ void *GL_GetProcAddress(const char *name)
 	return NULL;
 }
 
-void Sys_SendKeyEvents(void)
+void Sys_SDL_HandleEvents(void)
 {
 }
 
@@ -86,11 +86,6 @@ void VID_BuildJoyState(vid_joystate_t *joystate)
 
 void IN_Move(void)
 {
-}
-
-vid_mode_t *VID_GetDesktopMode(void)
-{
-	return NULL;
 }
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)

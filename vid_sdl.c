@@ -82,12 +82,9 @@ static cvar_t *steelstorm_showing_mousecursor = NULL; // detect but do not creat
 
 static int win_half_width = 50;
 static int win_half_height = 50;
-static int video_bpp;
 
 static SDL_GLContext context;
 static SDL_Window *window;
-static int window_flags;
-static vid_mode_t desktop_mode;
 
 // Input handling
 
@@ -1059,9 +1056,7 @@ static keynum_t buttonremap[] =
 };
 
 //#define DEBUGSDLEVENTS
-
-// SDL2
-void Sys_SendKeyEvents( void )
+void Sys_SDL_HandleEvents(void)
 {
 	static qbool sound_active = true;
 	int keycode;
@@ -1325,8 +1320,6 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
-static qbool vid_sdl_initjoysticksystem = false;
-
 void VID_Init (void)
 {
 #ifndef __IPHONEOS__
@@ -1345,8 +1338,7 @@ void VID_Init (void)
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
-	vid_sdl_initjoysticksystem = SDL_InitSubSystem(SDL_INIT_JOYSTICK) >= 0;
-	if (!vid_sdl_initjoysticksystem)
+	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
 		Con_Printf(CON_ERROR "Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 }
 
@@ -1515,9 +1507,9 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	{
 		if (vid_desktopfullscreen.integer)
 		{
-			vid_mode_t *m = VID_GetDesktopMode();
-			mode->width = m->width;
-			mode->height = m->height;
+			vid_mode_t m = VID_GetDesktopMode();
+			mode->width = m.width;
+			mode->height = m.height;
 			windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 		}
 		else
@@ -1577,8 +1569,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, (gl_debug.integer > 0 ? SDL_GL_CONTEXT_DEBUG_FLAG : 0));
 
-	video_bpp = mode->bitsperpixel;
-	window_flags = windowflags;
 	window = SDL_CreateWindow(gamename, xPos, yPos, mode->width, mode->height, windowflags);
 	if (window == NULL)
 	{
@@ -1699,11 +1689,13 @@ void VID_Finish (void)
 	}
 }
 
-vid_mode_t *VID_GetDesktopMode(void)
+vid_mode_t VID_GetDesktopMode(void)
 {
 	SDL_DisplayMode mode;
 	int bpp;
 	Uint32 rmask, gmask, bmask, amask;
+	vid_mode_t desktop_mode;
+
 	SDL_GetDesktopDisplayMode(0, &mode);
 	SDL_PixelFormatEnumToMasks(mode.format, &bpp, &rmask, &gmask, &bmask, &amask);
 	desktop_mode.width = mode.w;
@@ -1715,7 +1707,7 @@ vid_mode_t *VID_GetDesktopMode(void)
 	// TODO check whether this actually works, or whether we do still need
 	// a read-window-size-after-entering-desktop-fullscreen hack for
 	// multiscreen setups.
-	return &desktop_mode;
+	return desktop_mode;
 }
 
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
