@@ -116,10 +116,10 @@ vid_joystate_t;
 
 extern vid_joystate_t vid_joystate;
 
-extern struct cvar_s joy_index;
-extern struct cvar_s joy_enable;
-extern struct cvar_s joy_detected;
-extern struct cvar_s joy_active;
+extern cvar_t joy_index;
+extern cvar_t joy_enable;
+extern cvar_t joy_detected;
+extern cvar_t joy_active;
 
 float VID_JoyState_GetAxis(const vid_joystate_t *joystate, int axis, float sensitivity, float deadzone);
 void VID_ApplyJoyState(vid_joystate_t *joystate);
@@ -134,50 +134,50 @@ extern qbool vid_hidden;
 extern qbool vid_activewindow;
 extern qbool vid_supportrefreshrate;
 
-extern struct cvar_s vid_fullscreen;
-extern struct cvar_s vid_borderless;
-extern struct cvar_s vid_width;
-extern struct cvar_s vid_height;
-extern struct cvar_s vid_bitsperpixel;
-extern struct cvar_s vid_samples;
-extern struct cvar_s vid_refreshrate;
-extern struct cvar_s vid_userefreshrate;
-extern struct cvar_s vid_touchscreen_density;
-extern struct cvar_s vid_touchscreen_xdpi;
-extern struct cvar_s vid_touchscreen_ydpi;
-extern struct cvar_s vid_vsync;
-extern struct cvar_s vid_mouse;
-extern struct cvar_s vid_mouse_clickthrough;
-extern struct cvar_s vid_grabkeyboard;
-extern struct cvar_s vid_touchscreen;
-extern struct cvar_s vid_touchscreen_showkeyboard;
-extern struct cvar_s vid_touchscreen_supportshowkeyboard;
-extern struct cvar_s vid_stick_mouse;
-extern struct cvar_s vid_resizable;
-extern struct cvar_s vid_desktopfullscreen;
+extern cvar_t vid_fullscreen;
+extern cvar_t vid_borderless;
+extern cvar_t vid_width;
+extern cvar_t vid_height;
+extern cvar_t vid_bitsperpixel;
+extern cvar_t vid_samples;
+extern cvar_t vid_refreshrate;
+extern cvar_t vid_userefreshrate;
+extern cvar_t vid_touchscreen_density;
+extern cvar_t vid_touchscreen_xdpi;
+extern cvar_t vid_touchscreen_ydpi;
+extern cvar_t vid_vsync;
+extern cvar_t vid_mouse;
+extern cvar_t vid_mouse_clickthrough;
+extern cvar_t vid_grabkeyboard;
+extern cvar_t vid_touchscreen;
+extern cvar_t vid_touchscreen_showkeyboard;
+extern cvar_t vid_touchscreen_supportshowkeyboard;
+extern cvar_t vid_stick_mouse;
+extern cvar_t vid_resizable;
+extern cvar_t vid_desktopfullscreen;
 #ifdef WIN32
-extern struct cvar_s vid_ignore_taskbar;
+extern cvar_t vid_ignore_taskbar;
 #endif
-extern struct cvar_s vid_minwidth;
-extern struct cvar_s vid_minheight;
-extern struct cvar_s vid_sRGB;
-extern struct cvar_s vid_sRGB_fallback;
+extern cvar_t vid_minwidth;
+extern cvar_t vid_minheight;
+extern cvar_t vid_sRGB;
+extern cvar_t vid_sRGB_fallback;
 
-extern struct cvar_s gl_finish;
+extern cvar_t gl_finish;
 
-extern struct cvar_s v_gamma;
-extern struct cvar_s v_contrast;
-extern struct cvar_s v_brightness;
-extern struct cvar_s v_color_enable;
-extern struct cvar_s v_color_black_r;
-extern struct cvar_s v_color_black_g;
-extern struct cvar_s v_color_black_b;
-extern struct cvar_s v_color_grey_r;
-extern struct cvar_s v_color_grey_g;
-extern struct cvar_s v_color_grey_b;
-extern struct cvar_s v_color_white_r;
-extern struct cvar_s v_color_white_g;
-extern struct cvar_s v_color_white_b;
+extern cvar_t v_gamma;
+extern cvar_t v_contrast;
+extern cvar_t v_brightness;
+extern cvar_t v_color_enable;
+extern cvar_t v_color_black_r;
+extern cvar_t v_color_black_g;
+extern cvar_t v_color_black_b;
+extern cvar_t v_color_grey_r;
+extern cvar_t v_color_grey_g;
+extern cvar_t v_color_grey_b;
+extern cvar_t v_color_white_r;
+extern cvar_t v_color_white_g;
+extern cvar_t v_color_white_b;
 
 extern cvar_t gl_info_vendor;
 extern cvar_t gl_info_renderer;
@@ -246,7 +246,7 @@ typedef struct
 	int pixelheight_num, pixelheight_denom;
 }
 vid_mode_t;
-vid_mode_t *VID_GetDesktopMode(void);
+vid_mode_t VID_GetDesktopMode(void);
 size_t VID_ListModes(vid_mode_t *modes, size_t maxcount);
 size_t VID_SortModes(vid_mode_t *modes, size_t count, qbool usebpp, qbool userefreshrate, qbool useaspect);
 void VID_Soft_SharedSetup(void);

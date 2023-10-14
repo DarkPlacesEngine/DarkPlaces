@@ -24,7 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern cvar_t cl_capturevideo;
 extern cvar_t cl_capturevideo_demo_stop;
 #endif
-int old_vsync = 0;
 
 static void CL_FinishTimeDemo (void);
 

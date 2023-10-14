@@ -193,19 +193,10 @@ static void VM_M_getresolution(prvm_prog_t *prog)
 	}
 	else if(nr == -1)
 	{
-		vid_mode_t *m = VID_GetDesktopMode();
-		if (m)
-		{
-			PRVM_G_VECTOR(OFS_RETURN)[0] = m->width;
-			PRVM_G_VECTOR(OFS_RETURN)[1] = m->height;
-			PRVM_G_VECTOR(OFS_RETURN)[2] = m->pixelheight_num / (prvm_vec_t) m->pixelheight_denom;
-		}
-		else
-		{
-			PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
-			PRVM_G_VECTOR(OFS_RETURN)[1] = 0;
-			PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
-		}
+		vid_mode_t m = VID_GetDesktopMode();
+		PRVM_G_VECTOR(OFS_RETURN)[0] = m.width;
+		PRVM_G_VECTOR(OFS_RETURN)[1] = m.height;
+		PRVM_G_VECTOR(OFS_RETURN)[2] = m.pixelheight_num / (prvm_vec_t) m.pixelheight_denom;
 	}
 	else
 	{

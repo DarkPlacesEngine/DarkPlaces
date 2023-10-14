@@ -644,7 +644,7 @@ static double Host_Frame(double time)
 	Curl_Frame();
 
 	// get new SDL events and add commands from keybindings to the cbuf
-	Sys_SendKeyEvents();
+	Sys_SDL_HandleEvents();
 
 	// process console commands
 	Cbuf_Frame(host.cbuf);

@@ -243,7 +243,7 @@ char *Sys_ConsoleInput (void);
 void Sys_Sleep(int microseconds);
 
 /// Perform Key_Event () callbacks until the input que is empty
-void Sys_SendKeyEvents (void);
+void Sys_SDL_HandleEvents(void);
 
 char *Sys_GetClipboardData (void);
 
