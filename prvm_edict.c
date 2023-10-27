@@ -3374,18 +3374,18 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
 		return 0;
 	size = (int)strlen(s) + 1;
 	if (developer_insane.integer)
-		Con_DPrintf("PRVM_SetTempString: cursize %i, size %i\n", prog->tempstringsbuf.cursize, size);
+		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %i\n", prog->name, prog->tempstringsbuf.cursize, size);
 	if (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = prog->tempstringsbuf;
 		if (prog->tempstringsbuf.cursize + size >= 1<<28)
-			prog->error_cmd("PRVM_SetTempString: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", prog->tempstringsbuf.cursize, size);
+			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", prog->name, prog->tempstringsbuf.cursize, size);
 		prog->tempstringsbuf.maxsize = max(prog->tempstringsbuf.maxsize, 65536);
 		while (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 			prog->tempstringsbuf.maxsize *= 2;
 		if (prog->tempstringsbuf.maxsize != old.maxsize || prog->tempstringsbuf.data == NULL)
 		{
-			Con_DPrintf("PRVM_SetTempString: enlarging tempstrings buffer (%iKB -> %iKB)\n", old.maxsize/1024, prog->tempstringsbuf.maxsize/1024);
+			Con_DPrintf("PRVM_SetTempString %s: enlarging tempstrings buffer (%iKB -> %iKB)\n", prog->name, old.maxsize/1024, prog->tempstringsbuf.maxsize/1024);
 			prog->tempstringsbuf.data = (unsigned char *) Mem_Alloc(prog->progs_mempool, prog->tempstringsbuf.maxsize);
 			if (old.data)
 			{
@@ -3426,16 +3426,16 @@ int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer)
 void PRVM_FreeString(prvm_prog_t *prog, int num)
 {
 	if (num == 0)
-		prog->error_cmd("PRVM_FreeString: attempt to free a NULL string");
+		prog->error_cmd("PRVM_FreeString %s: attempt to free a NULL string", prog->name);
 	else if (num >= 0 && num < prog->stringssize)
-		prog->error_cmd("PRVM_FreeString: attempt to free a constant string");
+		prog->error_cmd("PRVM_FreeString %s: attempt to free a constant string", prog->name);
 	else if (num >= PRVM_KNOWNSTRINGBASE && num < PRVM_KNOWNSTRINGBASE + prog->numknownstrings)
 	{
 		num = num - PRVM_KNOWNSTRINGBASE;
 		if (!prog->knownstrings[num])
-			prog->error_cmd("PRVM_FreeString: attempt to free a non-existent or already freed string");
+			prog->error_cmd("PRVM_FreeString %s: attempt to free a non-existent or already freed string", prog->name);
 		if (!prog->knownstrings_flags[num])
-			prog->error_cmd("PRVM_FreeString: attempt to free a string owned by the engine");
+			prog->error_cmd("PRVM_FreeString %s: attempt to free a string owned by the engine", prog->name);
 		PRVM_Free((char *)prog->knownstrings[num]);
 		if(prog->leaktest_active)
 			if(prog->knownstrings_origin[num])
@@ -3445,7 +3445,7 @@ void PRVM_FreeString(prvm_prog_t *prog, int num)
 		prog->firstfreeknownstring = min(prog->firstfreeknownstring, num);
 	}
 	else
-		prog->error_cmd("PRVM_FreeString: invalid string offset %i", num);
+		prog->error_cmd("PRVM_FreeString %s: invalid string offset %i", prog->name, num);
 }
 
 static qbool PRVM_IsStringReferenced(prvm_prog_t *prog, string_t string)
