@@ -1199,8 +1199,7 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	int blocked, bumpcount;
-	int i, j, numplanes;
+	unsigned int i, j, numplanes, blocked, bumpcount;
 	float d, time_left, gravity;
 	vec3_t dir, push, planes[MAX_CLIP_PLANES];
 	prvm_vec3_t primal_velocity, original_velocity, new_velocity, restore_velocity;
