@@ -30,6 +30,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ============================================================================
 */
 
+/* Casting to unsigned when shifting by 24 bits here is necessary to prevent UB
+ * caused by shifting outside the range of int on platforms where int is 32 bits.
+ */
 
 float BuffBigFloat (const unsigned char *buffer)
 {
@@ -39,13 +42,13 @@ float BuffBigFloat (const unsigned char *buffer)
 		unsigned int i;
 	}
 	u;
-	u.i = (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	u.i = ((unsigned)buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 	return u.f;
 }
 
 int BuffBigLong (const unsigned char *buffer)
 {
-	return (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
+	return ((unsigned)buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3];
 }
 
 short BuffBigShort (const unsigned char *buffer)
@@ -61,13 +64,13 @@ float BuffLittleFloat (const unsigned char *buffer)
 		unsigned int i;
 	}
 	u;
-	u.i = (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+	u.i = ((unsigned)buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
 	return u.f;
 }
 
 int BuffLittleLong (const unsigned char *buffer)
 {
-	return (buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
+	return ((unsigned)buffer[3] << 24) | (buffer[2] << 16) | (buffer[1] << 8) | buffer[0];
 }
 
 short BuffLittleShort (const unsigned char *buffer)
@@ -287,7 +290,7 @@ int MSG_ReadLittleLong (sizebuf_t *sb)
 		return -1;
 	}
 	sb->readcount += 4;
-	return sb->data[sb->readcount-4] | (sb->data[sb->readcount-3]<<8) | (sb->data[sb->readcount-2]<<16) | (sb->data[sb->readcount-1]<<24);
+	return sb->data[sb->readcount-4] | (sb->data[sb->readcount-3]<<8) | (sb->data[sb->readcount-2]<<16) | ((unsigned)sb->data[sb->readcount-1]<<24);
 }
 
 int MSG_ReadBigLong (sizebuf_t *sb)
@@ -298,7 +301,7 @@ int MSG_ReadBigLong (sizebuf_t *sb)
 		return -1;
 	}
 	sb->readcount += 4;
-	return (sb->data[sb->readcount-4]<<24) + (sb->data[sb->readcount-3]<<16) + (sb->data[sb->readcount-2]<<8) + sb->data[sb->readcount-1];
+	return ((unsigned)sb->data[sb->readcount-4]<<24) + (sb->data[sb->readcount-3]<<16) + (sb->data[sb->readcount-2]<<8) + sb->data[sb->readcount-1];
 }
 
 float MSG_ReadLittleFloat (sizebuf_t *sb)
@@ -314,7 +317,7 @@ float MSG_ReadLittleFloat (sizebuf_t *sb)
 		return -1;
 	}
 	sb->readcount += 4;
-	dat.l = sb->data[sb->readcount-4] | (sb->data[sb->readcount-3]<<8) | (sb->data[sb->readcount-2]<<16) | (sb->data[sb->readcount-1]<<24);
+	dat.l = sb->data[sb->readcount-4] | (sb->data[sb->readcount-3]<<8) | (sb->data[sb->readcount-2]<<16) | ((unsigned)sb->data[sb->readcount-1]<<24);
 	return dat.f;
 }
 
@@ -331,7 +334,7 @@ float MSG_ReadBigFloat (sizebuf_t *sb)
 		return -1;
 	}
 	sb->readcount += 4;
-	dat.l = (sb->data[sb->readcount-4]<<24) | (sb->data[sb->readcount-3]<<16) | (sb->data[sb->readcount-2]<<8) | sb->data[sb->readcount-1];
+	dat.l = ((unsigned)sb->data[sb->readcount-4]<<24) | (sb->data[sb->readcount-3]<<16) | (sb->data[sb->readcount-2]<<8) | sb->data[sb->readcount-1];
 	return dat.f;
 }
 
