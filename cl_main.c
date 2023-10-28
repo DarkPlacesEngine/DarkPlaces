@@ -3107,7 +3107,8 @@ void CL_Init (void)
 
 		// for QW connections
 		Cvar_RegisterVariable(&qport);
-		Cvar_SetValueQuick(&qport, (rand() * RAND_MAX + rand()) & 0xffff);
+		// multiplying by RAND_MAX necessary for Windows, for which RAND_MAX is only 32767.
+		Cvar_SetValueQuick(&qport, ((unsigned int)rand() * RAND_MAX + (unsigned int)rand()) & 0xffff);
 
 		Cmd_AddCommand(CF_CLIENT, "timerefresh", CL_TimeRefresh_f, "turn quickly and print rendering statistcs");
 
