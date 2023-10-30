@@ -1489,6 +1489,12 @@ static void VID_SetVsync_c(cvar_t *var)
 		Con_Printf(CON_ERROR "ERROR: can't %s vsync because %s\n", vsyncwanted ? "activate" : "deactivate", SDL_GetError());
 }
 
+static void VID_SetHints_c(cvar_t *var)
+{
+	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH,     vid_mouse_clickthrough.integer     ? "1" : "0");
+	SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, vid_minimize_on_focus_loss.integer ? "1" : "0");
+}
+
 void VID_Init (void)
 {
 	SDL_version version;
@@ -1519,6 +1525,8 @@ void VID_Init (void)
 	Cvar_RegisterCallback(&vid_resizable,              VID_ChangeDisplay_c);
 	Cvar_RegisterCallback(&vid_borderless,             VID_ChangeDisplay_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
+	Cvar_RegisterCallback(&vid_mouse_clickthrough,     VID_SetHints_c);
+	Cvar_RegisterCallback(&vid_minimize_on_focus_loss, VID_SetHints_c);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
@@ -1720,8 +1728,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "1");
 #endif
 
-	if (vid_mouse_clickthrough.integer)
-		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+	VID_SetHints_c(NULL);
 
 	SDL_GL_SetAttribute (SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute (SDL_GL_RED_SIZE, 8);
