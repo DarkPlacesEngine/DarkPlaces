@@ -154,6 +154,7 @@ extern cvar_t vid_touchscreen_ydpi;
 extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
 extern cvar_t vid_mouse_clickthrough;
+extern cvar_t vid_minimize_on_focus_loss;
 extern cvar_t vid_grabkeyboard;
 extern cvar_t vid_touchscreen;
 extern cvar_t vid_touchscreen_showkeyboard;
