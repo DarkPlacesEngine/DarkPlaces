@@ -1751,11 +1751,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
-	{
-		Con_Printf(CON_ERROR "Failed to initialize OpenGL context: %s\n", SDL_GetError());
-		VID_Shutdown();
-		return false;
-	}
+		Sys_Error("Failed to initialize OpenGL context: %s\n", SDL_GetError());
 
 	GL_InitFunctions();
 
@@ -1770,11 +1766,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 		context = SDL_GL_CreateContext(window);
 		if (context == NULL)
-		{
-			Con_Printf(CON_ERROR "Failed to initialize OpenGL context: %s\n", SDL_GetError());
-			VID_Shutdown();
-			return false;
-		}
+			Sys_Error("Failed to initialize OpenGL context: %s\n", SDL_GetError());
 	}
 #endif
 
