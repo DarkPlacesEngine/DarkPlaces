@@ -1480,6 +1480,8 @@ static void VID_SetVsync_c(cvar_t *var)
 
 void VID_Init (void)
 {
+	SDL_version version;
+
 #ifndef __IPHONEOS__
 #ifdef MACOSX
 	Cvar_RegisterVariable(&apple_mouse_noaccel);
@@ -1511,6 +1513,12 @@ void VID_Init (void)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
 		Con_Printf(CON_ERROR "Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
+
+	SDL_GetVersion(&version);
+	Con_Printf("Linked against SDL version %d.%d.%d\n"
+	           "Using SDL library version %d.%d.%d\n",
+	           SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
+	           version.major, version.minor, version.patch);
 }
 
 static int vid_sdljoystickindex = -1;
@@ -1574,16 +1582,6 @@ void VID_EnableJoystick(qbool enable)
 
 	if (joy_active.integer != (success ? 1 : 0))
 		Cvar_SetValueQuick(&joy_active, success ? 1 : 0);
-}
-
-static void VID_OutputVersion(void)
-{
-	SDL_version version;
-	SDL_GetVersion(&version);
-	Con_Printf(	"Linked against SDL version %d.%d.%d\n"
-					"Using SDL library version %d.%d.%d\n",
-					SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_PATCHLEVEL,
-					version.major, version.minor, version.patch );
 }
 
 #ifdef WIN32
@@ -1654,8 +1652,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	if(vid_resizable.integer)
 		windowflags |= SDL_WINDOW_RESIZABLE;
-
-	VID_OutputVersion();
 
 #ifndef USE_GLES2
 // COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is whatever SDL recommends, useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
