@@ -47,7 +47,6 @@ static cvar_t sv_masters [] =
 	{CF_CLIENT | CF_SERVER, "sv_masterextra1", "dpmaster.deathmask.net", "dpmaster.deathmask.net - default master server 1 (admin: Willis)"},
 	{CF_CLIENT | CF_SERVER, "sv_masterextra2", "dpmaster.tchr.no", "dpmaster.tchr.no - default master server 2 (admin: tChr)"},
 	{CF_CLIENT | CF_SERVER, "sv_masterextra3", "dpm.dpmaster.org:27777", "dpm.dpmaster.org - default master server 3 (admin: gazby/soylent_cow)"},
-	{0, NULL, NULL, NULL}
 };
 
 #ifdef CONFIG_MENU
@@ -61,7 +60,6 @@ static cvar_t sv_qwmasters [] =
 	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
 	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
 	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
-	{0, NULL, NULL, NULL}
 };
 #endif
 
@@ -81,7 +79,7 @@ cvar_t net_messagetimeout = {CF_CLIENT | CF_SERVER, "net_messagetimeout","300", 
 cvar_t net_connecttimeout = {CF_CLIENT | CF_SERVER, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
 cvar_t net_connectfloodblockingtimeout = {CF_SERVER, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
 cvar_t net_challengefloodblockingtimeout = {CF_SERVER, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
-cvar_t net_getstatusfloodblockingtimeout = {CF_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every 4 seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
+cvar_t net_getstatusfloodblockingtimeout = {CF_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every net_slist_timeout seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
 cvar_t net_sourceaddresscheck = {CF_CLIENT, "net_sourceaddresscheck", "1", "compare the source IP address for replies (more secure, may break some bad multihoming setups"};
 cvar_t hostname = {CF_SERVER | CF_ARCHIVE, "hostname", "UNNAMED", "server message to show in server browser"};
 cvar_t developer_networking = {CF_CLIENT | CF_SERVER, "developer_networking", "0", "prints all received and sent packets (recommended only for debugging)"};
@@ -89,12 +87,19 @@ cvar_t developer_networking = {CF_CLIENT | CF_SERVER, "developer_networking", "0
 cvar_t net_fakelag = {CF_CLIENT, "net_fakelag","0", "lags local loopback connection by this much ping time (useful to play more fairly on your own server with people with higher pings)"};
 static cvar_t net_fakeloss_send = {CF_CLIENT, "net_fakeloss_send","0", "drops this percentage of outgoing packets, useful for testing network protocol robustness (jerky movement, prediction errors, etc)"};
 static cvar_t net_fakeloss_receive = {CF_CLIENT, "net_fakeloss_receive","0", "drops this percentage of incoming packets, useful for testing network protocol robustness (jerky movement, effects failing to start, sounds failing to play, etc)"};
-static cvar_t net_slist_queriespersecond = {CF_CLIENT, "net_slist_queriespersecond", "20", "how many server information requests to send per second"};
-static cvar_t net_slist_queriesperframe = {CF_CLIENT, "net_slist_queriesperframe", "4", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
-static cvar_t net_slist_timeout = {CF_CLIENT, "net_slist_timeout", "4", "how long to listen for a server information response before giving up"};
-static cvar_t net_slist_pause = {CF_CLIENT, "net_slist_pause", "0", "when set to 1, the server list won't update until it is set back to 0"};
-static cvar_t net_slist_maxtries = {CF_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
+
+#ifdef CONFIG_MENU
+static cvar_t net_slist_debug = {CF_CLIENT, "net_slist_debug", "0", "enables verbose messages for master server queries"};
 static cvar_t net_slist_favorites = {CF_CLIENT | CF_ARCHIVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
+static cvar_t net_slist_interval = {CF_CLIENT, "net_slist_interval", "1.125", "minimum number of seconds to wait between getstatus queries to the same DP server, must be >= server's net_getstatusfloodblockingtimeout"};
+static cvar_t net_slist_maxping = {CF_CLIENT | CF_ARCHIVE, "net_slist_maxping", "420", "server query responses are ignored if their ping in milliseconds is higher than this"};
+static cvar_t net_slist_maxtries = {CF_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
+static cvar_t net_slist_pause = {CF_CLIENT, "net_slist_pause", "0", "when set to 1, the server list sorting in the menu won't update until it is set back to 0"};
+static cvar_t net_slist_queriespersecond = {CF_CLIENT, "net_slist_queriespersecond", "128", "how many server information requests to send per second"};
+static cvar_t net_slist_queriesperframe = {CF_CLIENT, "net_slist_queriesperframe", "2", "maximum number of server information requests to send each rendered frame (guards against low framerates causing problems)"};
+static cvar_t net_slist_timeout = {CF_CLIENT, "net_slist_timeout", "4", "minimum number of seconds to wait between status queries to the same QW server, determines which response belongs to which query so low values will cause impossible pings; also a warning is printed if a dpmaster query fails to complete within this time"};
+#endif
+
 static cvar_t net_tos_dscp = {CF_CLIENT | CF_ARCHIVE, "net_tos_dscp", "32", "DiffServ Codepoint for network sockets (may need game restart to apply)"};
 static cvar_t gameversion = {CF_SERVER, "gameversion", "0", "version of game data (mod-specific) to be sent to querying clients"};
 static cvar_t gameversion_min = {CF_CLIENT | CF_SERVER, "gameversion_min", "-1", "minimum version of game data (mod-specific), when client and server gameversion mismatch in the server browser the server is shown as incompatible; if -1, gameversion is used alone"};
@@ -113,14 +118,25 @@ unsigned serverreplycount = 0;
 
 challenge_t challenges[MAX_CHALLENGES];
 
+#define DPMASTER_COUNT sizeof(sv_masters) / sizeof(cvar_t)
+#define QWMASTER_COUNT sizeof(sv_qwmasters) / sizeof(cvar_t)
+
+/// bitfield because in theory we could be doing QW & DP simultaneously
+uint8_t serverlist_querystage = 0;
+
 #ifdef CONFIG_MENU
-/// this is only false if there are still servers left to query
-static qbool serverlist_querysleep = true;
-static qbool serverlist_paused = false;
-/// this is pushed a second or two ahead of realtime whenever a master server
-/// reply is received, to avoid issuing queries while master replies are still
-/// flooding in (which would make a mess of the ping times)
-static double serverlist_querywaittime = 0;
+#define SLIST_QUERYSTAGE_DPMASTERS 1
+#define SLIST_QUERYSTAGE_QWMASTERS 2
+#define SLIST_QUERYSTAGE_SERVERS 4
+
+static uint8_t dpmasterstatus[DPMASTER_COUNT] = {0};
+static uint8_t qwmasterstatus[QWMASTER_COUNT] = {0};
+#define MASTER_TX_QUERY 1    // we sent the query
+#define MASTER_RX_RESPONSE 2 // we got at least 1 packet of the response
+#define MASTER_RX_COMPLETE 3 // we saw the EOT marker (assumes dpmaster >= 2.0, see dpmaster/doc/techinfo.txt)
+
+/// the hash password for timestamp verification
+char serverlist_dpserverquerykey[12]; // challenge_t uses [12]
 #endif
 
 static unsigned cl_numsockets;
@@ -160,7 +176,7 @@ unsigned serverlist_maxcachecount = 0;
 unsigned serverlist_cachecount = 0;
 serverlist_entry_t *serverlist_cache = NULL;
 
-qbool serverlist_consoleoutput;
+static qbool serverlist_consoleoutput;
 
 static unsigned nFavorites = 0;
 static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
@@ -429,6 +445,11 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 	)
 		return;
 
+	// also display entries that are currently being refreshed [11/8/2007 Black]
+	// bones_was_here: if their previous ping was acceptable (unset if timeout occurs)
+	if (!entry->info.ping)
+		return;
+
 	// refresh the "favorite" status
 	entry->info.isfavorite = false;
 	if(LHNETADDRESS_FromString(&addr, entry->info.cname, 26000))
@@ -516,17 +537,16 @@ static void ServerList_ViewList_Remove( serverlist_entry_t *entry )
 	}
 }
 
-void ServerList_RebuildViewList(void)
+void ServerList_RebuildViewList(cvar_t *var)
 {
 	unsigned i;
 
+	if (net_slist_pause.integer)
+		return;
+
 	serverlist_viewcount = 0;
-	for( i = 0 ; i < serverlist_cachecount ; i++ ) {
-		serverlist_entry_t *entry = &serverlist_cache[i];
-		// also display entries that are currently being refreshed [11/8/2007 Black]
-		if( entry->query == SQS_QUERIED || entry->query == SQS_REFRESHING )
-			ServerList_ViewList_Insert( entry );
-	}
+	for (i = 0; i < serverlist_cachecount; ++i)
+		ServerList_ViewList_Insert(&serverlist_cache[i]);
 }
 
 void ServerList_ResetMasks(void)
@@ -549,7 +569,7 @@ void ServerList_GetPlayerStatistics(unsigned *numplayerspointer, unsigned *maxpl
 
 	for (i = 0;i < serverlist_cachecount;i++)
 	{
-		if (serverlist_cache[i].query == SQS_QUERIED)
+		if (serverlist_cache[i].info.ping)
 		{
 			numplayers += serverlist_cache[i].info.numhumans;
 			maxplayers += serverlist_cache[i].info.maxplayers;
@@ -580,11 +600,44 @@ static void _ServerList_Test(void)
 }
 #endif
 
+/*
+====================
+ServerList_BuildDPServerQuery
+
+Generates the string for pinging DP servers with a hash-verified timestamp
+to provide reliable pings while preventing ping cheating,
+and discard spurious getstatus/getinfo packets.
+
+14 bytes of header including the mandatory space,
+22 bytes of base64-encoded hash,
+up to 16 bytes of unsigned hexadecimal milliseconds (typically 4-5 bytes sent),
+null terminator.
+
+The maximum challenge length (after the space) for existing DP7 servers is 49.
+====================
+*/
+static inline void ServerList_BuildDPServerQuery(char *buffer, size_t buffersize, double querytime)
+{
+	unsigned char hash[24]; // 4*(16/3) rounded up to 4 byte multiple
+	uint64_t timestamp = querytime * 1000.0; // no rounding up as that could make small pings go <= 0
+
+	HMAC_MDFOUR_16BYTES(hash,
+		(unsigned char *)&timestamp, sizeof(timestamp),
+		(unsigned char *)serverlist_dpserverquerykey, sizeof(serverlist_dpserverquerykey));
+	base64_encode(hash, 16, sizeof(hash));
+	dpsnprintf(buffer, buffersize, "\377\377\377\377getstatus %.22s%" PRIx64, hash, timestamp);
+}
+
+static void NetConn_BuildChallengeString(char *buffer, int bufferlength);
 void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput)
 {
 	unsigned i;
+	lhnetaddress_t broadcastaddress;
+	char dpquery[53]; // theoretical max: 14+22+16+1
 
-	masterquerytime = host.realtime;
+	if (net_slist_debug.integer)
+		Con_Printf("^2Querying master, favourite and LAN servers, reset=%u\n", resetcache);
+	serverlist_querystage = (querydp ? SLIST_QUERYSTAGE_DPMASTERS : 0) | (queryqw ? SLIST_QUERYSTAGE_QWMASTERS : 0);
 	masterquerycount = 0;
 	masterreplycount = 0;
 	if (resetcache)
@@ -602,7 +655,7 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 		for (i = 0; i < serverlist_cachecount; ++i)
 		{
 			serverlist_entry_t *entry = &serverlist_cache[i];
-			entry->query = SQS_REFRESHING;
+			entry->responded = false;
 			entry->querycounter = 0;
 		}
 	}
@@ -611,6 +664,51 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	//_ServerList_Test();
 
 	NetConn_QueryMasters(querydp, queryqw);
+
+	// Generate new DP server query key string
+	// Used to prevent ping cheating and discard spurious getstatus/getinfo packets
+	if (!serverlist_querystage) // don't change key while updating
+		NetConn_BuildChallengeString(serverlist_dpserverquerykey, sizeof(serverlist_dpserverquerykey));
+
+	// LAN search
+
+	// Master and and/or favourite queries were likely delayed by DNS lag,
+	// for correct pings we need to know what host.realtime would be if it were updated now.
+	masterquerytime = host.realtime + (Sys_DirtyTime() - host.dirtytime);
+	ServerList_BuildDPServerQuery(dpquery, sizeof(dpquery), masterquerytime);
+
+	// 26000 is the default quake server port, servers on other ports will not be found
+	// note this is IPv4-only, I doubt there are IPv6-only LANs out there
+	LHNETADDRESS_FromString(&broadcastaddress, "255.255.255.255", 26000);
+
+	for (i = 0; i < cl_numsockets; ++i)
+	{
+		if (!cl_sockets[i])
+			continue;
+		if (LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) != LHNETADDRESS_GetAddressType(&broadcastaddress))
+			continue;
+
+		if (querydp)
+		{
+			// search LAN for Quake servers
+			SZ_Clear(&cl_message);
+			// save space for the header, filled in later
+			MSG_WriteLong(&cl_message, 0);
+			MSG_WriteByte(&cl_message, CCREQ_SERVER_INFO);
+			MSG_WriteString(&cl_message, "QUAKE");
+			MSG_WriteByte(&cl_message, NET_PROTOCOL_VERSION);
+			StoreBigLong(cl_message.data, NETFLAG_CTL | (cl_message.cursize & NETFLAG_LENGTH_MASK));
+			NetConn_Write(cl_sockets[i], cl_message.data, cl_message.cursize, &broadcastaddress);
+			SZ_Clear(&cl_message);
+
+			// search LAN for DarkPlaces servers
+			NetConn_WriteString(cl_sockets[i], dpquery, &broadcastaddress);
+		}
+
+		if (queryqw)
+			// search LAN for QuakeWorld servers
+			NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &broadcastaddress);
+	}
 }
 #endif
 
@@ -1593,11 +1691,13 @@ int NetConn_IsLocalGame(void)
 }
 
 #ifdef CONFIG_MENU
-static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *addressstring)
+static qbool hmac_mdfour_time_matching(lhnetaddress_t *peeraddress, const char *password, const char *hash, const char *s, int slen);
+static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *addressstring, const char *challenge)
 {
 	unsigned n;
-	int pingtime;
-	serverlist_entry_t *entry = NULL;
+	float ping;
+	double currentrealtime;
+	serverlist_entry_t *entry;
 
 	// search the cache for this server and update it
 	for (n = 0; n < serverlist_cachecount; ++n)
@@ -1609,8 +1709,8 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 
 	if (n == serverlist_cachecount)
 	{
-		// LAN search doesnt require an answer from the master server so we wont
-		// know the ping nor will it be initialized already...
+		if (net_slist_debug.integer)
+			Con_Printf("^6Received LAN broadcast response from %s\n", addressstring);
 
 		// find a slot
 		if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
@@ -1621,31 +1721,62 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 			serverlist_maxcachecount += 64;
 			serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
 		}
+		++serverlist_cachecount;
 		entry = &serverlist_cache[n];
 
 		memset(entry, 0, sizeof(*entry));
-		// store the data the engine cares about (address and ping)
 		strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
-		entry->info.ping = 100000;
-		entry->querytime = host.realtime;
-		// if not in the slist menu we should print the server to console
+
+		// consider the broadcast to be the first query
+		// NetConn_QueryQueueFrame() will perform more until net_slist_maxtries is reached
+		entry->querycounter = 1;
+		entry->querytime = masterquerytime;
+		// protocol is one of these at all
+		// NetConn_ClientParsePacket_ServerList_PrepareQuery() callsites
+		entry->protocol = challenge ? PROTOCOL_DARKPLACES7 : PROTOCOL_QUAKEWORLD;
+
 		if (serverlist_consoleoutput)
 			Con_Printf("querying %s\n", addressstring);
-		++serverlist_cachecount;
 	}
-	// if this is the first reply from this server, count it as having replied
-	pingtime = (int)((host.realtime - entry->querytime) * 1000.0 + 0.5);
-	pingtime = bound(0, pingtime, 9999);
-	if (entry->query == SQS_REFRESHING) {
-		entry->info.ping = pingtime;
-		entry->query = SQS_QUERIED;
-	} else {
-		// convert to unsigned to catch the -1
-		// I still dont like this but its better than the old 10000 magic ping number - as in easier to type and read :( [11/8/2007 Black]
-		entry->info.ping = min((unsigned) entry->info.ping, (unsigned) pingtime);
+
+	// If the client stalls partway through a frame (test command: `alias a a;a`)
+	// for correct pings we need to know what host.realtime would be if it were updated now.
+	currentrealtime = host.realtime + (Sys_DirtyTime() - host.dirtytime);
+
+	if (challenge)
+	{
+		unsigned char hash[24]; // 4*(16/3) rounded up to 4 byte multiple
+		uint64_t timestamp = strtoull(&challenge[22], NULL, 16);
+
+		HMAC_MDFOUR_16BYTES(hash,
+			(unsigned char *)&timestamp, sizeof(timestamp),
+			(unsigned char *)serverlist_dpserverquerykey, sizeof(serverlist_dpserverquerykey));
+		base64_encode(hash, 16, sizeof(hash));
+		if (memcmp(hash, challenge, 22) != 0)
+			return -1;
+
+		ping = currentrealtime * 1000.0 - timestamp;
+	}
+	else
+		ping = 1000 * (currentrealtime - entry->querytime);
+
+	if (ping <= 0 || ping > net_slist_maxping.value
+	|| (entry->info.ping && ping > entry->info.ping + 100)) // server loading map, client stall, etc
+		return -1;
+
+	// never round down to 0, 0 latency is impossible, 0 means no data available
+	if (ping < 1)
+		ping = 1;
+
+	if (entry->info.ping)
+		entry->info.ping = (entry->info.ping + ping) * 0.5 + 0.5; // "average" biased toward most recent results
+	else
+	{
+		entry->info.ping = ping + 0.5;
 		serverreplycount++;
 	}
-	
+	entry->responded = true;
+
 	// other server info is updated by the caller
 	return n;
 }
@@ -1654,8 +1785,15 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 {
 	serverlist_entry_t *entry = &serverlist_cache[n];
 	serverlist_info_t *info = &entry->info;
+
 	// update description strings for engine menu and console output
-	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5d^7 ^%c%3u^7/%3u %-65.65s", info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'), (int)info->ping, ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'), info->numplayers, info->maxplayers, info->name);
+	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5.0f^7 ^%c%3u^7/%3u %-65.65s",
+	           info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'),
+	           info->ping ?: INFINITY, // display inf when a listed server times out and net_slist_pause blocks its removal
+	           ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'),
+	           info->numplayers,
+	           info->maxplayers,
+	           info->name);
 	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game,
 			(
 			 info->gameversion != gameversion.integer
@@ -1668,19 +1806,15 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 			  )
 			) ? '1' : '4',
 			info->mod, info->map);
-	if (entry->query == SQS_QUERIED)
+
+	if(!net_slist_pause.integer)
 	{
-		if(!serverlist_paused)
-			ServerList_ViewList_Remove(entry);
+		ServerList_ViewList_Remove(entry);
+		ServerList_ViewList_Insert(entry);
 	}
-	// if not in the slist menu we should print the server to console (if wanted)
-	else if( serverlist_consoleoutput )
-		Con_Printf("%s\n%s\n", serverlist_cache[n].line1, serverlist_cache[n].line2);
-	// and finally, update the view set
-	if(!serverlist_paused)
-		ServerList_ViewList_Insert( entry );
-	//	update the entry's state
-	serverlist_cache[n].query = SQS_QUERIED;
+
+	if (serverlist_consoleoutput)
+		Con_Printf("%s\n%s\n", entry->line1, entry->line2);
 }
 
 // returns true, if it's sensible to continue the processing
@@ -1692,16 +1826,14 @@ static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, con
 	// ignore the rest of the message if the serverlist is full
 	if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
 		return false;
-	// also ignore it if we have already queried it (other master server response)
+
 	for (n = 0; n < serverlist_cachecount; ++n)
 		if (!strcmp(ipstring, serverlist_cache[n].info.cname))
 			break;
 
+	// also ignore it if we have already queried it (other master server response)
 	if (n < serverlist_cachecount)
-	{
-		// the entry has already been queried once
 		return true;
-	}
 
 	if (serverlist_maxcachecount <= n)
 	{
@@ -1710,30 +1842,38 @@ static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, con
 	}
 
 	entry = &serverlist_cache[n];
-
 	memset(entry, 0, sizeof(*entry));
 	entry->protocol = protocol;
-	// store the data the engine cares about (address and ping)
 	strlcpy(entry->info.cname, ipstring, sizeof(entry->info.cname));
-
 	entry->info.isfavorite = isfavorite;
 
-	// no, then reset the ping right away
-	entry->info.ping = -1;
-	// we also want to increase the serverlist_cachecount then
 	serverlist_cachecount++;
 	serverquerycount++;
-
-	entry->query = SQS_QUERYING;
 
 	return true;
 }
 
-static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *senderaddress, const unsigned char *data, int length, qbool isextended)
+static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *masteraddress, const char *masteraddressstring, const unsigned char *data, int length, qbool isextended)
 {
+	unsigned masternum;
+	lhnetaddress_t testaddress;
+
+	for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
+		if (sv_masters[masternum].string[0]
+		&& LHNETADDRESS_FromString(&testaddress, sv_masters[masternum].string, DPMASTER_PORT)
+		&& LHNETADDRESS_Compare(&testaddress, masteraddress) == 0)
+			break;
+	if (net_sourceaddresscheck.integer && masternum >= DPMASTER_COUNT)
+	{
+		Con_Printf(CON_WARN "ignoring DarkPlaces %sserver list from unrecognised master %s\n", isextended ? "extended " : "", masteraddressstring);
+		return;
+	}
+
 	masterreplycount++;
-	if (serverlist_consoleoutput)
-		Con_Printf("received DarkPlaces %sserver list...\n", isextended ? "extended " : "");
+	dpmasterstatus[masternum] = MASTER_RX_RESPONSE;
+	if (serverlist_consoleoutput || net_slist_debug.integer)
+		Con_Printf("^5Received DarkPlaces server list %sfrom %s\n", isextended ? "(extended) " : "", sv_masters[masternum].string);
+
 	while (length >= 7)
 	{
 		char ipstring [128];
@@ -1745,6 +1885,13 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 			if (port != 0 && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF))
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%hu", data[1], data[2], data[3], data[4], port);
+			else if (port == 0 && data[1] == 'E' && data[2] == 'O' && data[3] == 'T' && data[4] == '\0')
+			{
+				dpmasterstatus[masternum] = MASTER_RX_COMPLETE;
+				if (net_slist_debug.integer)
+					Con_Printf("^4End Of Transmission %sfrom %s\n", isextended ? "(extended) " : "", sv_masters[masternum].string);
+				break;
+			}
 
 			// move on to next address in packet
 			data += 7;
@@ -1787,7 +1934,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 		}
 		else
 		{
-			Con_Print("Error while parsing the server list\n");
+			Con_Print(CON_WARN "Error while parsing the server list\n");
 			break;
 		}
 
@@ -1798,9 +1945,59 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 			break;
 	}
 
+	if (serverlist_querystage & SLIST_QUERYSTAGE_QWMASTERS)
+		return; // we must wait if we're also querying QW as it has no EOT marker
 	// begin or resume serverlist queries
-	serverlist_querysleep = false;
-	serverlist_querywaittime = host.realtime + 3;
+	for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
+		if (dpmasterstatus[masternum] && dpmasterstatus[masternum] < MASTER_RX_COMPLETE)
+			break; // was queried but no EOT marker received yet
+	if (masternum >= DPMASTER_COUNT)
+	{
+		serverlist_querystage = SLIST_QUERYSTAGE_SERVERS;
+		if (net_slist_debug.integer)
+			Con_Print("^2Starting to query servers early (got EOT from all masters)\n");
+	}
+}
+
+static void NetConn_ClientParsePacket_ServerList_ParseQWList(lhnetaddress_t *masteraddress, const char *masteraddressstring, const unsigned char *data, int length)
+{
+	uint8_t masternum;
+	lhnetaddress_t testaddress;
+
+	for (masternum = 0; masternum < QWMASTER_COUNT; ++masternum)
+		if (sv_qwmasters[masternum].string[0]
+		&& LHNETADDRESS_FromString(&testaddress, sv_qwmasters[masternum].string, QWMASTER_PORT)
+		&& LHNETADDRESS_Compare(&testaddress, masteraddress) == 0)
+			break;
+	if (net_sourceaddresscheck.integer && masternum >= QWMASTER_COUNT)
+	{
+		Con_Printf(CON_WARN "ignoring QuakeWorld server list from unrecognised master %s\n", masteraddressstring);
+		return;
+	}
+
+	masterreplycount++;
+	qwmasterstatus[masternum] = MASTER_RX_RESPONSE;
+	if (serverlist_consoleoutput || net_slist_debug.integer)
+		Con_Printf("^5Received QuakeWorld server list from %s\n", sv_qwmasters[masternum].string);
+
+	while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
+	{
+		char ipstring[32];
+
+		dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
+		if (serverlist_consoleoutput && developer_networking.integer)
+			Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
+
+		if (!NetConn_ClientParsePacket_ServerList_PrepareQuery(PROTOCOL_QUAKEWORLD, ipstring, false))
+			break;
+
+		// move on to next address in packet
+		data += 6;
+		length -= 6;
+	}
+
+	// Unlike in NetConn_ClientParsePacket_ServerList_ParseDPList()
+	// we can't start to query servers early here because QW has no EOT marker.
 }
 #endif
 
@@ -1814,7 +2011,6 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	size_t sendlength;
 #ifdef CONFIG_MENU
 	char infostringvalue[MAX_INPUTLINE];
-	char ipstring[32];
 	const char *s;
 #endif
 
@@ -1981,7 +2177,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 				string += 15;
 				// search the cache for this server and update it
-				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+				// the challenge is (ab)used to return the query time
+				s = InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, s);
 				if (n < 0)
 					return true;
 
@@ -2032,7 +2230,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 				string += 13;
 				// search the cache for this server and update it
-				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+				// the challenge is (ab)used to return the query time
+				s = InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, s);
 				if (n < 0)
 					return true;
 
@@ -2071,7 +2271,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// Extract the IP addresses
 				data += 18;
 				length -= 18;
-				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, false);
+				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, addressstring2, data, length, false);
 				return true;
 			}
 			if (!strncmp(string, "getserversExtResponse", 21) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
@@ -2079,7 +2279,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// Extract the IP addresses
 				data += 21;
 				length -= 21;
-				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, data, length, true);
+				NetConn_ClientParsePacket_ServerList_ParseDPList(peeraddress, addressstring2, data, length, true);
 				return true;
 			}
 			if (!memcmp(string, "d\n", 2) && serverlist_cachecount < SERVERLIST_TOTALSIZE)
@@ -2087,26 +2287,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				// Extract the IP addresses
 				data += 2;
 				length -= 2;
-				masterreplycount++;
-				if (serverlist_consoleoutput)
-					Con_Printf("received QuakeWorld server list from %s...\n", addressstring2);
-				while (length >= 6 && (data[0] != 0xFF || data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF) && data[4] * 256 + data[5] != 0)
-				{
-					dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[0], data[1], data[2], data[3], data[4] * 256 + data[5]);
-					if (serverlist_consoleoutput && developer_networking.integer)
-						Con_Printf("Requesting info from QuakeWorld server %s\n", ipstring);
-					
-					if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, ipstring, false ) ) {
-						break;
-					}
-
-					// move on to next address in packet
-					data += 6;
-					length -= 6;
-				}
-				// begin or resume serverlist queries
-				serverlist_querysleep = false;
-				serverlist_querywaittime = host.realtime + 3;
+				NetConn_ClientParsePacket_ServerList_ParseQWList(peeraddress, addressstring2, data, length);
 				return true;
 			}
 		}
@@ -2174,7 +2355,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			string += 1;
 			// search the cache for this server and update it
-			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, NULL);
 			if (n < 0)
 				return true;
 
@@ -2302,7 +2483,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			// we just ignore it and keep the real address
 			MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 			// search the cache for this server and update it
-			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2);
+			n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, NULL);
 			if (n < 0)
 				break;
 
@@ -2357,82 +2538,109 @@ void NetConn_QueryQueueFrame(void)
 {
 	unsigned index;
 	unsigned queries, maxqueries;
-	double timeouttime;
+	char dpquery[53]; // theoretical max: 14+22+16+1
+	double currentrealtime;
 	static double querycounter = 0;
+	qbool pending = false;
 
-	if (!net_slist_pause.integer && serverlist_paused)
-		ServerList_RebuildViewList();
-	serverlist_paused = net_slist_pause.integer != 0;
-
-	if (serverlist_querysleep)
+	if (!serverlist_querystage)
 		return;
+
+	// If the client stalls partway through a frame (test command: `alias a a;a`)
+	// for correct pings we need to know what host.realtime would be if it were updated now.
+	currentrealtime = host.realtime + (Sys_DirtyTime() - host.dirtytime);
 
 	// apply a cool down time after master server replies,
 	// to avoid messing up the ping times on the servers
-	if (serverlist_querywaittime > host.realtime)
-		return;
+	if (serverlist_querystage < SLIST_QUERYSTAGE_SERVERS)
+	{
+		if (currentrealtime < masterquerytime + net_slist_timeout.value)
+			return;
+
+		// Report the masters that timed out or whose response was incomplete.
+		for (index = 0; index < DPMASTER_COUNT; ++index)
+			if (dpmasterstatus[index] && dpmasterstatus[index] < MASTER_RX_COMPLETE)
+				Con_Printf(CON_WARN "WARNING: dpmaster %s %s\n", sv_masters[index].string, dpmasterstatus[index] == MASTER_TX_QUERY ? "timed out" : "response incomplete");
+		for (index = 0; index < QWMASTER_COUNT; ++index)
+			if (qwmasterstatus[index] && qwmasterstatus[index] < MASTER_RX_RESPONSE) // no EOT marker in QW lists
+				Con_Printf(CON_WARN "WARNING: qwmaster %s timed out\n", sv_qwmasters[index].string);
+
+		serverlist_querystage = SLIST_QUERYSTAGE_SERVERS;
+	}
 
 	// each time querycounter reaches 1.0 issue a query
 	querycounter += cl.realframetime * net_slist_queriespersecond.value;
 	maxqueries = bound(0, (int)querycounter, net_slist_queriesperframe.integer);
 	querycounter -= maxqueries;
-
 	if (maxqueries == 0)
 		return;
 
-	// scan serverlist and issue queries as needed
-	serverlist_querysleep = true;
+	// QW depends on waiting "long enough" between queries that responses "definitely" refer to the most recent querytime
+	// DP servers can echo back a timestamp for reliable (and more frequent, see net_slist_interval) pings
+	ServerList_BuildDPServerQuery(dpquery, sizeof(dpquery), currentrealtime);
 
-	timeouttime = host.realtime - net_slist_timeout.value;
 	for (index = 0, queries = 0; index < serverlist_cachecount && queries < maxqueries; ++index)
 	{
 		serverlist_entry_t *entry = &serverlist_cache[index];
-		if (entry->query != SQS_QUERYING && entry->query != SQS_REFRESHING)
-			continue;
 
-		serverlist_querysleep = false;
-		if (entry->querycounter != 0 && entry->querytime > timeouttime)
-			continue;
-
-		if (entry->querycounter != (unsigned)net_slist_maxtries.integer)
+		if (entry->querycounter < min(8, (unsigned)net_slist_maxtries.integer))
 		{
 			lhnetaddress_t address;
 			unsigned socket;
+
+			// only check this when there are tries remaining so we finish querying sooner
+			if (currentrealtime < entry->querytime + (entry->protocol == PROTOCOL_QUAKEWORLD ? net_slist_timeout : net_slist_interval).value)
+			{
+				pending = true;
+				continue;
+			}
 
 			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
 			if (entry->protocol == PROTOCOL_QUAKEWORLD)
 			{
 				for (socket = 0; socket < cl_numsockets; ++socket)
-					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377status\n", &address);
+					if (cl_sockets[socket])
+						NetConn_WriteString(cl_sockets[socket], "\377\377\377\377status\n", &address);
 			}
 			else
 			{
 				for (socket = 0; socket < cl_numsockets; ++socket)
-					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getstatus", &address);
+					if (cl_sockets[socket])
+						NetConn_WriteString(cl_sockets[socket], dpquery, &address);
 			}
 
-			// update the entry fields
-			entry->querytime = host.realtime;
+			entry->querytime = currentrealtime;
 			entry->querycounter++;
+			queries++;
 
-			// if not in the slist menu we should print the server to console
 			if (serverlist_consoleoutput)
 				Con_Printf("querying %25s (%i. try)\n", entry->info.cname, entry->querycounter);
-
-			queries++;
 		}
-		else
+		else // reached net_slist_maxtries
+		if (!entry->responded // no acceptable response during this refresh cycle
+		&& (entry->info.ping)) // visible in the list (has old ping from previous refresh cycle)
 		{
-			// have we tried to refresh this server?
-			if (entry->query == SQS_REFRESHING)
+			if (currentrealtime >= entry->querytime + net_slist_maxping.integer/1000)
 			{
-				// yes, so update the reply count (since its not responding anymore)
+				// you have no chance to survive make your timeout
 				serverreplycount--;
-				if (!serverlist_paused)
+				if(!net_slist_pause.integer)
 					ServerList_ViewList_Remove(entry);
+				entry->info.ping = 0; // removed later if net_slist_pause
 			}
-			entry->query = SQS_TIMEDOUT;
+			else // still has time
+				pending = true;
 		}
+	}
+
+	// If we got to the end of the list (didn't hit maxqueries)
+	// and no servers remain to be queried or checked for timeout,
+	// there's nothing else to do here until the next refresh cycle.
+	if (index >= serverlist_cachecount && !pending)
+	{
+		if (net_slist_debug.integer)
+			Con_Printf("^2Finished querying masters and servers in %f\n", currentrealtime - masterquerytime);
+		serverlist_querystage = 0;
 	}
 }
 #endif
@@ -3636,16 +3844,14 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 	unsigned i, j;
 	unsigned masternum;
 	lhnetaddress_t masteraddress;
-	lhnetaddress_t broadcastaddress;
 	char request[256];
+	char lookupstring[128];
 
 	if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
 		return;
 
-	// 26000 is the default quake server port, servers on other ports will not
-	// be found
-	// note this is IPv4-only, I doubt there are IPv6-only LANs out there
-	LHNETADDRESS_FromString(&broadcastaddress, "255.255.255.255", 26000);
+	memset(dpmasterstatus, 0, sizeof(*dpmasterstatus));
+	memset(qwmasterstatus, 0, sizeof(*qwmasterstatus));
 
 	if (querydp)
 	{
@@ -3655,23 +3861,6 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 			{
 				const char *cmdname, *extraoptions;
 				lhnetaddresstype_t af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
-
-				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
-				{
-					// search LAN for Quake servers
-					SZ_Clear(&cl_message);
-					// save space for the header, filled in later
-					MSG_WriteLong(&cl_message, 0);
-					MSG_WriteByte(&cl_message, CCREQ_SERVER_INFO);
-					MSG_WriteString(&cl_message, "QUAKE");
-					MSG_WriteByte(&cl_message, NET_PROTOCOL_VERSION);
-					StoreBigLong(cl_message.data, NETFLAG_CTL | (cl_message.cursize & NETFLAG_LENGTH_MASK));
-					NetConn_Write(cl_sockets[i], cl_message.data, cl_message.cursize, &broadcastaddress);
-					SZ_Clear(&cl_message);
-
-					// search LAN for DarkPlaces servers
-					NetConn_WriteString(cl_sockets[i], "\377\377\377\377getstatus", &broadcastaddress);
-				}
 
 				// build the getservers message to send to the dpmaster master servers
 				if (LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) == LHNETADDRESSTYPE_INET6)
@@ -3688,24 +3877,28 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 				dpsnprintf(request+4, sizeof(request)-4, "%s %s %u empty full%s", cmdname, gamenetworkfiltername, NET_PROTOCOL_VERSION, extraoptions);
 
 				// search internet
-				for (masternum = 0;sv_masters[masternum].name;masternum++)
+				for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
 				{
-					if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == af)
+					if(sv_masters[masternum].string[0]
+					&& LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT)
+					&& LHNETADDRESS_GetAddressType(&masteraddress) == af)
 					{
+						if (serverlist_consoleoutput || net_slist_debug.integer)
+						{
+							LHNETADDRESS_ToString(&masteraddress, lookupstring, sizeof(lookupstring), true);
+							Con_Printf("Querying DP master %s (resolved from %s)\n", lookupstring, sv_masters[masternum].string);
+						}
 						masterquerycount++;
 						NetConn_WriteString(cl_sockets[i], request, &masteraddress);
+						dpmasterstatus[masternum] = MASTER_TX_QUERY;
 					}
 				}
 
 				// search favorite servers
 				for(j = 0; j < nFavorites; ++j)
-				{
-					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af)
-					{
-						if(LHNETADDRESS_ToString(&favorites[j], request, sizeof(request), true))
-							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, request, true );
-					}
-				}
+					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af
+					&& LHNETADDRESS_ToString(&favorites[j], lookupstring, sizeof(lookupstring), true))
+						NetConn_ClientParsePacket_ServerList_PrepareQuery(PROTOCOL_DARKPLACES7, lookupstring, true);
 			}
 		}
 	}
@@ -3713,53 +3906,41 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 	// only query QuakeWorld servers when the user wants to
 	if (queryqw)
 	{
+		dpsnprintf(request, sizeof(request), "c\n");
+
 		for (i = 0;i < cl_numsockets;i++)
 		{
 			if (cl_sockets[i])
 			{
 				lhnetaddresstype_t af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
-				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
-				{
-					// search LAN for QuakeWorld servers
-					NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &broadcastaddress);
-
-					// build the getservers message to send to the qwmaster master servers
-					// note this has no -1 prefix, and the trailing nul byte is sent
-					dpsnprintf(request, sizeof(request), "c\n");
-				}
-
 				// search internet
-				for (masternum = 0;sv_qwmasters[masternum].name;masternum++)
+				for (masternum = 0; masternum < QWMASTER_COUNT; ++masternum)
 				{
-					if (sv_qwmasters[masternum].string && LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT) && LHNETADDRESS_GetAddressType(&masteraddress) == LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])))
+					if(sv_qwmasters[masternum].string[0]
+					&& LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[masternum].string, QWMASTER_PORT)
+					&& LHNETADDRESS_GetAddressType(&masteraddress) == af)
 					{
-						if (m_state != m_slist)
+						if (serverlist_consoleoutput || net_slist_debug.integer)
 						{
-							char lookupstring[128];
 							LHNETADDRESS_ToString(&masteraddress, lookupstring, sizeof(lookupstring), true);
-							Con_Printf("Querying master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
+							Con_Printf("Querying QW master %s (resolved from %s)\n", lookupstring, sv_qwmasters[masternum].string);
 						}
 						masterquerycount++;
 						NetConn_Write(cl_sockets[i], request, (int)strlen(request) + 1, &masteraddress);
+						qwmasterstatus[masternum] = MASTER_TX_QUERY;
 					}
 				}
 
 				// search favorite servers
 				for(j = 0; j < nFavorites; ++j)
-				{
-					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af)
-					{
-						if(LHNETADDRESS_ToString(&favorites[j], request, sizeof(request), true))
-						{
-							NetConn_WriteString(cl_sockets[i], "\377\377\377\377status\n", &favorites[j]);
-							NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_QUAKEWORLD, request, true );
-						}
-					}
-				}
+					if(LHNETADDRESS_GetAddressType(&favorites[j]) == af
+					&& LHNETADDRESS_ToString(&favorites[j], lookupstring, sizeof(lookupstring), true))
+						NetConn_ClientParsePacket_ServerList_PrepareQuery(PROTOCOL_QUAKEWORLD, lookupstring, true);
 			}
 		}
 	}
+
 	if (!masterquerycount)
 	{
 		Con_Print(CON_ERROR "Unable to query master servers, no suitable network sockets active.\n");
@@ -3771,7 +3952,7 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 void NetConn_Heartbeat(int priority)
 {
 	lhnetaddress_t masteraddress;
-	int masternum;
+	uint8_t masternum;
 	lhnetsocket_t *mysocket;
 
 	// if it's a state change (client connected), limit next heartbeat to no
@@ -3793,8 +3974,10 @@ void NetConn_Heartbeat(int priority)
 	if (sv.active && sv_public.integer > 0 && svs.maxclients >= 2 && (priority > 1 || host.realtime > nextheartbeattime))
 	{
 		nextheartbeattime = host.realtime + sv_heartbeatperiod.value;
-		for (masternum = 0;sv_masters[masternum].name;masternum++)
-			if (sv_masters[masternum].string && sv_masters[masternum].string[0] && LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT) && (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
+		for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
+			if (sv_masters[masternum].string[0]
+			&& LHNETADDRESS_FromString(&masteraddress, sv_masters[masternum].string, DPMASTER_PORT)
+			&& (mysocket = NetConn_ChooseServerSocketForAddress(&masteraddress)))
 				NetConn_WriteString(mysocket, "\377\377\377\377heartbeat DarkPlaces\x0A", &masteraddress);
 	}
 }
@@ -3837,7 +4020,7 @@ void Net_Refresh_f(cmd_state_t *cmd)
 {
 	if (m_state != m_slist)
 	{
-		Con_Print("Sending new requests to master servers\n");
+		Con_Print("Sending new requests to DP master servers\n");
 		ServerList_QueryList(false, true, false, true);
 		Con_Print("Listening for replies...\n");
 	}
@@ -3852,7 +4035,7 @@ void Net_Slist_f(cmd_state_t *cmd)
 	serverlist_sortflags = 0;
 	if (m_state != m_slist)
 	{
-		Con_Print("Sending requests to master servers\n");
+		Con_Print("Sending requests to DP master servers\n");
 		ServerList_QueryList(true, true, false, true);
 		Con_Print("Listening for replies...\n");
 	}
@@ -3867,9 +4050,8 @@ void Net_SlistQW_f(cmd_state_t *cmd)
 	serverlist_sortflags = 0;
 	if (m_state != m_slist)
 	{
-		Con_Print("Sending requests to master servers\n");
+		Con_Print("Sending requests to QW master servers\n");
 		ServerList_QueryList(true, false, true, true);
-		serverlist_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
 	}
 	else
@@ -3895,15 +4077,21 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&rcon_restricted_password);
 	Cvar_RegisterVariable(&rcon_restricted_commands);
 	Cvar_RegisterVariable(&rcon_secure_maxdiff);
+
+#ifdef CONFIG_MENU
+	Cvar_RegisterVariable(&net_slist_debug);
+	Cvar_RegisterVariable(&net_slist_favorites);
+	Cvar_RegisterCallback(&net_slist_favorites, NetConn_UpdateFavorites_c);
+	Cvar_RegisterVariable(&net_slist_interval);
+	Cvar_RegisterVariable(&net_slist_maxping);
+	Cvar_RegisterVariable(&net_slist_maxtries);
+	Cvar_RegisterVariable(&net_slist_pause);
+	Cvar_RegisterCallback(&net_slist_pause, ServerList_RebuildViewList);
 	Cvar_RegisterVariable(&net_slist_queriespersecond);
 	Cvar_RegisterVariable(&net_slist_queriesperframe);
 	Cvar_RegisterVariable(&net_slist_timeout);
-	Cvar_RegisterVariable(&net_slist_maxtries);
-	Cvar_RegisterVariable(&net_slist_favorites);
-#ifdef CONFIG_MENU
-	Cvar_RegisterCallback(&net_slist_favorites, NetConn_UpdateFavorites_c);
 #endif
-	Cvar_RegisterVariable(&net_slist_pause);
+
 #ifdef IP_TOS // register cvar only if supported
 	Cvar_RegisterVariable(&net_tos_dscp);
 #endif
@@ -3930,8 +4118,8 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_public_rejectreason);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
-	for (i = 0;sv_masters[i].name;i++)
-		Cvar_RegisterVariable(&sv_masters[i]);
+	for (uint8_t masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
+		Cvar_RegisterVariable(&sv_masters[masternum]);
 	Cvar_RegisterVariable(&gameversion);
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);

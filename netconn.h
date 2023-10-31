@@ -274,8 +274,8 @@ typedef struct serverlist_info_s
 {
 	/// address for connecting
 	char cname[128];
-	/// ping time for sorting servers
-	int ping;
+	/// ping time for sorting servers, in milliseconds, 0 means no data
+	unsigned ping;
 	/// name of the game
 	char game[32];
 	/// name of the mod
@@ -305,7 +305,7 @@ typedef struct serverlist_info_s
 	///  not filterable by QC)
 	int gameversion;
 
-	// categorized sorting
+	/// categorized sorting
 	int category;
 	/// favorite server flag
 	qbool isfavorite;
@@ -339,22 +339,13 @@ typedef enum
 	SLSF_CATEGORIES = 4
 } serverlist_sortflags_t;
 
-typedef enum
-{
-	SQS_NONE = 0,
-	SQS_QUERYING,
-	SQS_QUERIED,
-	SQS_TIMEDOUT,
-	SQS_REFRESHING
-} serverlist_query_state;
-
 typedef struct serverlist_entry_s
 {
-	/// used to determine whether this entry should be included into the final view
-	serverlist_query_state query;
+	/// used to track when a server should be considered timed out and removed from the final view
+	qbool responded;
 	/// used to count the number of times the host has tried to query this server already
 	unsigned querycounter;
-	/// used to calculate ping when update comes in
+	/// used to calculate ping in PROTOCOL_QUAKEWORLD, and for net_slist_maxtries interval, and for timeouts
 	double querytime;
 	/// query protocol to use on this server, may be PROTOCOL_QUAKEWORLD or PROTOCOL_DARKPLACES7
 	int protocol;
@@ -468,7 +459,7 @@ void Net_Refresh_f(struct cmd_state_s *cmd);
 
 /// ServerList interface (public)
 /// manually refresh the view set, do this after having changed the mask or any other flag
-void ServerList_RebuildViewList(void);
+void ServerList_RebuildViewList(cvar_t* var);
 void ServerList_ResetMasks(void);
 void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput);
 

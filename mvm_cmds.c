@@ -440,7 +440,7 @@ resortserverlist
 static void VM_M_resortserverlist(prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_M_resortserverlist);
-	ServerList_RebuildViewList();
+	ServerList_RebuildViewList(NULL);
 }
 
 /*
@@ -556,7 +556,8 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.freeslots;
 			break;
 		case SLIF_PING:
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
+			// display inf when a listed server times out and net_slist_pause blocks its removal
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping ?: INFINITY;
 			break;
 		case SLIF_PROTOCOL:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
