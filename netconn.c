@@ -582,18 +582,22 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	masterquerytime = host.realtime;
 	masterquerycount = 0;
 	masterreplycount = 0;
-	if( resetcache ) {
+	if (resetcache)
+	{
 		serverquerycount = 0;
 		serverreplycount = 0;
 		serverlist_cachecount = 0;
 		serverlist_viewcount = 0;
 		serverlist_maxcachecount = 0;
 		serverlist_cache = (serverlist_entry_t *)Mem_Realloc(netconn_mempool, (void *)serverlist_cache, sizeof(serverlist_entry_t) * serverlist_maxcachecount);
-	} else {
+	}
+	else
+	{
 		// refresh all entries
 		int n;
-		for( n = 0 ; n < serverlist_cachecount ; n++ ) {
-			serverlist_entry_t *entry = &serverlist_cache[ n ];
+		for (n = 0; n < serverlist_cachecount; ++n)
+		{
+			serverlist_entry_t *entry = &serverlist_cache[n];
 			entry->query = SQS_REFRESHING;
 			entry->querycounter = 0;
 		}
@@ -1586,8 +1590,9 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 	serverlist_entry_t *entry = NULL;
 
 	// search the cache for this server and update it
-	for (n = 0;n < serverlist_cachecount;n++) {
-		entry = &serverlist_cache[ n ];
+	for (n = 0; n < serverlist_cachecount; ++n)
+	{
+		entry = &serverlist_cache[n];
 		if (!strcmp(addressstring, entry->info.cname))
 			break;
 	}
@@ -1669,20 +1674,22 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 }
 
 // returns true, if it's sensible to continue the processing
-static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, const char *ipstring, qbool isfavorite ) {
+static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, const char *ipstring, qbool isfavorite)
+{
 	int n;
 	serverlist_entry_t *entry;
 
-	//	ignore the rest of the message if the serverlist is full
-	if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
+	// ignore the rest of the message if the serverlist is full
+	if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
 		return false;
-	//	also ignore	it	if	we	have already queried	it	(other master server	response)
-	for( n =	0 ; n	< serverlist_cachecount	; n++	)
-		if( !strcmp( ipstring, serverlist_cache[ n ].info.cname ) )
+	// also ignore it if we have already queried it (other master server response)
+	for (n = 0; n < serverlist_cachecount; ++n)
+		if (!strcmp(ipstring, serverlist_cache[n].info.cname))
 			break;
 
-	if( n < serverlist_cachecount ) {
-		// the entry has already been queried once or 
+	if (n < serverlist_cachecount)
+	{
+		// the entry has already been queried once
 		return true;
 	}
 
@@ -1695,19 +1702,19 @@ static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery( int protocol, co
 	entry = &serverlist_cache[n];
 
 	memset(entry, 0, sizeof(*entry));
-	entry->protocol =	protocol;
-	//	store	the data	the engine cares about (address and	ping)
-	strlcpy (entry->info.cname, ipstring, sizeof(entry->info.cname));
+	entry->protocol = protocol;
+	// store the data the engine cares about (address and ping)
+	strlcpy(entry->info.cname, ipstring, sizeof(entry->info.cname));
 
 	entry->info.isfavorite = isfavorite;
-	
+
 	// no, then reset the ping right away
 	entry->info.ping = -1;
 	// we also want to increase the serverlist_cachecount then
 	serverlist_cachecount++;
 	serverquerycount++;
 
-	entry->query =	SQS_QUERYING;
+	entry->query = SQS_QUERYING;
 
 	return true;
 }
@@ -1776,11 +1783,9 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *sen
 
 		if (serverlist_consoleoutput && developer_networking.integer)
 			Con_Printf("Requesting info from DarkPlaces server %s\n", ipstring);
-		
-		if( !NetConn_ClientParsePacket_ServerList_PrepareQuery( PROTOCOL_DARKPLACES7, ipstring, false ) ) {
-			break;
-		}
 
+		if (!NetConn_ClientParsePacket_ServerList_PrepareQuery(PROTOCOL_DARKPLACES7, ipstring, false))
+			break;
 	}
 
 	// begin or resume serverlist queries
@@ -2346,7 +2351,7 @@ void NetConn_QueryQueueFrame(void)
 	double timeouttime;
 	static double querycounter = 0;
 
-	if(!net_slist_pause.integer && serverlist_paused)
+	if (!net_slist_pause.integer && serverlist_paused)
 		ServerList_RebuildViewList();
 	serverlist_paused = net_slist_pause.integer != 0;
 
@@ -2364,46 +2369,41 @@ void NetConn_QueryQueueFrame(void)
 	maxqueries = bound(0, maxqueries, net_slist_queriesperframe.integer);
 	querycounter -= maxqueries;
 
-	if( maxqueries == 0 ) {
+	if (maxqueries == 0)
 		return;
-	}
 
-	//	scan serverlist and issue queries as needed
+	// scan serverlist and issue queries as needed
 	serverlist_querysleep = true;
 
-	timeouttime	= host.realtime - net_slist_timeout.value;
-	for( index = 0, queries	= 0 ;	index	< serverlist_cachecount	&&	queries < maxqueries	; index++ )
+	timeouttime = host.realtime - net_slist_timeout.value;
+	for (index = 0, queries = 0; index < serverlist_cachecount && queries < maxqueries; ++index)
 	{
-		serverlist_entry_t *entry = &serverlist_cache[ index ];
-		if( entry->query != SQS_QUERYING && entry->query != SQS_REFRESHING )
-		{
+		serverlist_entry_t *entry = &serverlist_cache[index];
+		if (entry->query != SQS_QUERYING && entry->query != SQS_REFRESHING)
 			continue;
-		}
 
-		serverlist_querysleep	= false;
-		if( entry->querycounter	!=	0 && entry->querytime >	timeouttime	)
-		{
+		serverlist_querysleep = false;
+		if (entry->querycounter != 0 && entry->querytime > timeouttime)
 			continue;
-		}
 
-		if( entry->querycounter	!=	(unsigned) net_slist_maxtries.integer )
+		if (entry->querycounter != (unsigned)net_slist_maxtries.integer)
 		{
-			lhnetaddress_t	address;
+			lhnetaddress_t address;
 			int socket;
 
 			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
-			if	(entry->protocol == PROTOCOL_QUAKEWORLD)
+			if (entry->protocol == PROTOCOL_QUAKEWORLD)
 			{
-				for (socket	= 0; socket	< cl_numsockets ;	socket++)
+				for (socket = 0; socket < cl_numsockets; ++socket)
 					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377status\n", &address);
 			}
 			else
 			{
-				for (socket	= 0; socket	< cl_numsockets ;	socket++)
+				for (socket = 0; socket < cl_numsockets; ++socket)
 					NetConn_WriteString(cl_sockets[socket], "\377\377\377\377getstatus", &address);
 			}
 
-			//	update the entry fields
+			// update the entry fields
 			entry->querytime = host.realtime;
 			entry->querycounter++;
 
@@ -2416,10 +2416,11 @@ void NetConn_QueryQueueFrame(void)
 		else
 		{
 			// have we tried to refresh this server?
-			if( entry->query == SQS_REFRESHING ) {
+			if (entry->query == SQS_REFRESHING)
+			{
 				// yes, so update the reply count (since its not responding anymore)
 				serverreplycount--;
-				if(!serverlist_paused)
+				if (!serverlist_paused)
 					ServerList_ViewList_Remove(entry);
 			}
 			entry->query = SQS_TIMEDOUT;
@@ -3822,11 +3823,13 @@ void Net_Stats_f(cmd_state_t *cmd)
 #ifdef CONFIG_MENU
 void Net_Refresh_f(cmd_state_t *cmd)
 {
-	if (m_state != m_slist) {
+	if (m_state != m_slist)
+	{
 		Con_Print("Sending new requests to master servers\n");
 		ServerList_QueryList(false, true, false, true);
 		Con_Print("Listening for replies...\n");
-	} else
+	}
+	else
 		ServerList_QueryList(false, true, false, false);
 }
 
@@ -3835,11 +3838,13 @@ void Net_Slist_f(cmd_state_t *cmd)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
-    if (m_state != m_slist) {
+	if (m_state != m_slist)
+	{
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, true, false, true);
 		Con_Print("Listening for replies...\n");
-	} else
+	}
+	else
 		ServerList_QueryList(true, true, false, false);
 }
 
@@ -3848,12 +3853,14 @@ void Net_SlistQW_f(cmd_state_t *cmd)
 	ServerList_ResetMasks();
 	serverlist_sortbyfield = SLIF_PING;
 	serverlist_sortflags = 0;
-    if (m_state != m_slist) {
+	if (m_state != m_slist)
+	{
 		Con_Print("Sending requests to master servers\n");
 		ServerList_QueryList(true, false, true, true);
 		serverlist_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
-	} else
+	}
+	else
 		ServerList_QueryList(true, false, true, false);
 }
 #endif
