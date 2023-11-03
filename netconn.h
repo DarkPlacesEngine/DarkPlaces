@@ -380,21 +380,19 @@ extern serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 extern serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
 extern serverlist_infofield_t serverlist_sortbyfield;
-extern int serverlist_sortflags; // not using the enum, as it is a bitmask
+extern unsigned serverlist_sortflags; // not using the enum, as it is a bitmask
 
 #if SERVERLIST_TOTALSIZE > 65536
 #error too many servers, change type of index array
 #endif
-extern int serverlist_viewcount;
-extern unsigned short serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
+extern unsigned serverlist_viewcount;
+extern uint16_t serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
-extern int serverlist_cachecount;
+extern unsigned serverlist_cachecount;
 extern serverlist_entry_t *serverlist_cache;
 extern const serverlist_entry_t *serverlist_callbackentry;
 
-extern qbool serverlist_consoleoutput;
-
-void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer);
+void ServerList_GetPlayerStatistics(unsigned *numplayerspointer, unsigned *maxplayerspointer);
 #endif
 
 //============================================================================
@@ -404,19 +402,19 @@ void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspoint
 //============================================================================
 
 extern char cl_net_extresponse[NET_EXTRESPONSE_MAX][1400];
-extern int cl_net_extresponse_count;
-extern int cl_net_extresponse_last;
+extern unsigned cl_net_extresponse_count;
+extern unsigned cl_net_extresponse_last;
 
 extern char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
-extern int sv_net_extresponse_count;
-extern int sv_net_extresponse_last;
+extern unsigned sv_net_extresponse_count;
+extern unsigned sv_net_extresponse_last;
 
 #ifdef CONFIG_MENU
 extern double masterquerytime;
-extern int masterquerycount;
-extern int masterreplycount;
-extern int serverquerycount;
-extern int serverreplycount;
+extern unsigned masterquerycount;
+extern unsigned masterreplycount;
+extern unsigned serverquerycount;
+extern unsigned serverreplycount;
 #endif
 
 extern sizebuf_t cl_message;

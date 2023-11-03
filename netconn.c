@@ -106,10 +106,10 @@ extern cvar_t rcon_secure;
 extern cvar_t rcon_secure_challengetimeout;
 
 double masterquerytime = -1000;
-int masterquerycount = 0;
-int masterreplycount = 0;
-int serverquerycount = 0;
-int serverreplycount = 0;
+unsigned masterquerycount = 0;
+unsigned masterreplycount = 0;
+unsigned serverquerycount = 0;
+unsigned serverreplycount = 0;
 
 challenge_t challenges[MAX_CHALLENGES];
 
@@ -123,9 +123,9 @@ static qbool serverlist_paused = false;
 static double serverlist_querywaittime = 0;
 #endif
 
-static int cl_numsockets;
+static unsigned cl_numsockets;
 static lhnetsocket_t *cl_sockets[16];
-static int sv_numsockets;
+static unsigned sv_numsockets;
 static lhnetsocket_t *sv_sockets[16];
 
 netconn_t *netconn_list = NULL;
@@ -138,12 +138,12 @@ cvar_t net_address = {CF_CLIENT | CF_SERVER, "net_address", "", "network address
 cvar_t net_address_ipv6 = {CF_CLIENT | CF_SERVER, "net_address_ipv6", "", "network address to open ipv6 ports on (if empty, use default interfaces)"};
 
 char cl_net_extresponse[NET_EXTRESPONSE_MAX][1400];
-int cl_net_extresponse_count = 0;
-int cl_net_extresponse_last = 0;
+unsigned cl_net_extresponse_count = 0;
+unsigned cl_net_extresponse_last = 0;
 
 char sv_net_extresponse[NET_EXTRESPONSE_MAX][1400];
-int sv_net_extresponse_count = 0;
-int sv_net_extresponse_last = 0;
+unsigned sv_net_extresponse_count = 0;
+unsigned sv_net_extresponse_last = 0;
 
 #ifdef CONFIG_MENU
 // ServerList interface
@@ -151,20 +151,20 @@ serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
 serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
 serverlist_infofield_t serverlist_sortbyfield;
-int serverlist_sortflags;
+unsigned serverlist_sortflags;
 
-int serverlist_viewcount = 0;
-unsigned short serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
+unsigned serverlist_viewcount = 0;
+uint16_t serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
-int serverlist_maxcachecount = 0;
-int serverlist_cachecount = 0;
+unsigned serverlist_maxcachecount = 0;
+unsigned serverlist_cachecount = 0;
 serverlist_entry_t *serverlist_cache = NULL;
 
 qbool serverlist_consoleoutput;
 
-static int nFavorites = 0;
+static unsigned nFavorites = 0;
 static lhnetaddress_t favorites[MAX_FAVORITESERVERS];
-static int nFavorites_idfp = 0;
+static unsigned nFavorites_idfp = 0;
 static char favorites_idfp[MAX_FAVORITESERVERS][FP64_SIZE+1];
 
 void NetConn_UpdateFavorites_c(cvar_t *var)
@@ -192,9 +192,10 @@ void NetConn_UpdateFavorites_c(cvar_t *var)
 
 /// helper function to insert a value into the viewset
 /// spare entries will be removed
-static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entry_t *entry )
+static void _ServerList_ViewList_Helper_InsertBefore(unsigned index, serverlist_entry_t *entry)
 {
-    int i;
+	unsigned i;
+
 	if( serverlist_viewcount < SERVERLIST_VIEWLISTSIZE ) {
 		i = serverlist_viewcount++;
 	} else {
@@ -208,7 +209,7 @@ static void _ServerList_ViewList_Helper_InsertBefore( int index, serverlist_entr
 }
 
 /// we suppose serverlist_viewcount to be valid, ie > 0
-static void _ServerList_ViewList_Helper_Remove( int index )
+static inline void _ServerList_ViewList_Helper_Remove(unsigned index)
 {
 	serverlist_viewcount--;
 	for( ; index < serverlist_viewcount ; index++ )
@@ -412,7 +413,7 @@ static qbool _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info_t 
 
 static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 {
-	int start, end, mid, i;
+	unsigned start, end, mid, i;
 	lhnetaddress_t addr;
 
 	// reject incompatible servers
@@ -503,7 +504,8 @@ static void ServerList_ViewList_Insert( serverlist_entry_t *entry )
 
 static void ServerList_ViewList_Remove( serverlist_entry_t *entry )
 {
-	int i;
+	unsigned i;
+
 	for( i = 0; i < serverlist_viewcount; i++ )
 	{
 		if (ServerList_GetViewEntry(i) == entry)
@@ -516,7 +518,7 @@ static void ServerList_ViewList_Remove( serverlist_entry_t *entry )
 
 void ServerList_RebuildViewList(void)
 {
-	int i;
+	unsigned i;
 
 	serverlist_viewcount = 0;
 	for( i = 0 ; i < serverlist_cachecount ; i++ ) {
@@ -540,10 +542,11 @@ void ServerList_ResetMasks(void)
 		serverlist_ormasks[i].info.numbots = -1;
 }
 
-void ServerList_GetPlayerStatistics(int *numplayerspointer, int *maxplayerspointer)
+void ServerList_GetPlayerStatistics(unsigned *numplayerspointer, unsigned *maxplayerspointer)
 {
-	int i;
-	int numplayers = 0, maxplayers = 0;
+	unsigned i;
+	unsigned numplayers = 0, maxplayers = 0;
+
 	for (i = 0;i < serverlist_cachecount;i++)
 	{
 		if (serverlist_cache[i].query == SQS_QUERIED)
@@ -579,6 +582,8 @@ static void _ServerList_Test(void)
 
 void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool consoleoutput)
 {
+	unsigned i;
+
 	masterquerytime = host.realtime;
 	masterquerycount = 0;
 	masterreplycount = 0;
@@ -594,10 +599,9 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	else
 	{
 		// refresh all entries
-		int n;
-		for (n = 0; n < serverlist_cachecount; ++n)
+		for (i = 0; i < serverlist_cachecount; ++i)
 		{
-			serverlist_entry_t *entry = &serverlist_cache[n];
+			serverlist_entry_t *entry = &serverlist_cache[i];
 			entry->query = SQS_REFRESHING;
 			entry->querycounter = 0;
 		}
@@ -615,7 +619,8 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
 	int length;
-	int i;
+	unsigned i;
+
 	if (mysocket->address.addresstype == LHNETADDRESSTYPE_LOOP && netconn_mutex)
 		Thread_LockMutex(netconn_mutex);
 	length = LHNET_Read(mysocket, data, maxlength, peeraddress);
@@ -646,7 +651,8 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const lhnetaddress_t *peeraddress)
 {
 	int ret;
-	int i;
+	unsigned i;
+
 	if (net_fakeloss_send.integer)
 		for (i = 0;i < cl_numsockets;i++)
 			if (cl_sockets[i] == mysocket && (rand() % 100) < net_fakeloss_send.integer)
@@ -1084,7 +1090,9 @@ void NetConn_OpenServerPorts(int opennetports)
 
 lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address)
 {
-	int i, a = LHNETADDRESS_GetAddressType(address);
+	unsigned i;
+	lhnetaddresstype_t a = LHNETADDRESS_GetAddressType(address);
+
 	for (i = 0;i < cl_numsockets;i++)
 		if (cl_sockets[i] && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) == a)
 			return cl_sockets[i];
@@ -1093,7 +1101,9 @@ lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address)
 
 lhnetsocket_t *NetConn_ChooseServerSocketForAddress(lhnetaddress_t *address)
 {
-	int i, a = LHNETADDRESS_GetAddressType(address);
+	unsigned i;
+	lhnetaddresstype_t a = LHNETADDRESS_GetAddressType(address);
+
 	for (i = 0;i < sv_numsockets;i++)
 		if (sv_sockets[i] && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(sv_sockets[i])) == a)
 			return sv_sockets[i];
@@ -1585,7 +1595,7 @@ int NetConn_IsLocalGame(void)
 #ifdef CONFIG_MENU
 static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *addressstring)
 {
-	int n;
+	unsigned n;
 	int pingtime;
 	serverlist_entry_t *entry = NULL;
 
@@ -1676,7 +1686,7 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 // returns true, if it's sensible to continue the processing
 static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, const char *ipstring, qbool isfavorite)
 {
-	int n;
+	unsigned n;
 	serverlist_entry_t *entry;
 
 	// ignore the rest of the message if the serverlist is full
@@ -2345,9 +2355,8 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 #ifdef CONFIG_MENU
 void NetConn_QueryQueueFrame(void)
 {
-	int index;
-	int queries;
-	int maxqueries;
+	unsigned index;
+	unsigned queries, maxqueries;
 	double timeouttime;
 	static double querycounter = 0;
 
@@ -2365,8 +2374,7 @@ void NetConn_QueryQueueFrame(void)
 
 	// each time querycounter reaches 1.0 issue a query
 	querycounter += cl.realframetime * net_slist_queriespersecond.value;
-	maxqueries = (int)querycounter;
-	maxqueries = bound(0, maxqueries, net_slist_queriesperframe.integer);
+	maxqueries = bound(0, (int)querycounter, net_slist_queriesperframe.integer);
 	querycounter -= maxqueries;
 
 	if (maxqueries == 0)
@@ -2389,7 +2397,7 @@ void NetConn_QueryQueueFrame(void)
 		if (entry->querycounter != (unsigned)net_slist_maxtries.integer)
 		{
 			lhnetaddress_t address;
-			int socket;
+			unsigned socket;
 
 			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
 			if (entry->protocol == PROTOCOL_QUAKEWORLD)
@@ -2431,9 +2439,11 @@ void NetConn_QueryQueueFrame(void)
 
 void NetConn_ClientFrame(void)
 {
-	int i, length;
+	unsigned i;
+	int length;
 	lhnetaddress_t peeraddress;
 	unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+
 	NetConn_UpdateSockets();
 	if (cls.connect_trying && cls.connect_nextsendtime < host.realtime)
 	{
@@ -3605,9 +3615,11 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 void NetConn_ServerFrame(void)
 {
-	int i, length;
+	unsigned i;
+	int length;
 	lhnetaddress_t peeraddress;
 	unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
@@ -3621,8 +3633,8 @@ void NetConn_SleepMicroseconds(int microseconds)
 #ifdef CONFIG_MENU
 void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 {
-	int i, j;
-	int masternum;
+	unsigned i, j;
+	unsigned masternum;
 	lhnetaddress_t masteraddress;
 	lhnetaddress_t broadcastaddress;
 	char request[256];
@@ -3642,7 +3654,7 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 			if (cl_sockets[i])
 			{
 				const char *cmdname, *extraoptions;
-				int af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
+				lhnetaddresstype_t af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
 				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
 				{
@@ -3705,7 +3717,7 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 		{
 			if (cl_sockets[i])
 			{
-				int af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
+				lhnetaddresstype_t af = LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i]));
 
 				if(LHNETADDRESS_GetAddressType(&broadcastaddress) == af)
 				{

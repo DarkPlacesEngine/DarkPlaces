@@ -4385,7 +4385,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 //=============================================================================
 /* SLIST MENU */
 
-static int slist_cursor;
+static unsigned slist_cursor;
 
 void M_Menu_ServerList_f(cmd_state_t *cmd)
 {
@@ -4403,7 +4403,7 @@ void M_Menu_ServerList_f(cmd_state_t *cmd)
 
 static void M_ServerList_Draw (void)
 {
-	int n, y, visible, start, end, statnumplayers, statmaxplayers;
+	unsigned n, y, visible, start, end, statnumplayers, statmaxplayers;
 	cachepic_t *p;
 	const char *s;
 	char vabuf[1024];
@@ -4415,13 +4415,13 @@ static void M_ServerList_Draw (void)
 		M_Background(640, vid_conheight.integer);
 	// scroll the list as the cursor moves
 	ServerList_GetPlayerStatistics(&statnumplayers, &statmaxplayers);
-	s = va(vabuf, sizeof(vabuf), "%i/%i masters %i/%i servers %i/%i players", masterreplycount, masterquerycount, serverreplycount, serverquerycount, statnumplayers, statmaxplayers);
+	s = va(vabuf, sizeof(vabuf), "%u/%u masters %u/%u servers %u/%u players", masterreplycount, masterquerycount, serverreplycount, serverquerycount, statnumplayers, statmaxplayers);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
 	if (*m_return_reason)
 		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
-	visible = (int)((menu_height - 16 - y) / 8 / 2);
-	start = bound(0, slist_cursor - (visible >> 1), serverlist_viewcount - visible);
+	visible = (menu_height - 16 - y) / 8 / 2;
+	start = min(slist_cursor - min(slist_cursor, visible >> 1), serverlist_viewcount - min(serverlist_viewcount, visible));
 	end = min(start + visible, serverlist_viewcount);
 
 	p = Draw_CachePic ("gfx/p_multi");
@@ -4473,7 +4473,7 @@ static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 	case K_LEFTARROW:
 		S_LocalSound ("sound/misc/menu1.wav");
 		slist_cursor--;
-		if (slist_cursor < 0)
+		if (slist_cursor >= serverlist_viewcount)
 			slist_cursor = serverlist_viewcount - 1;
 		break;
 
