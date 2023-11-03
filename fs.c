@@ -449,6 +449,7 @@ int fs_all_gamedirs_count = 0;
 
 cvar_t scr_screenshot_name = {CF_CLIENT | CF_PERSISTENT, "scr_screenshot_name","dp", "prefix name for saved screenshots (changes based on -game commandline, as well as which game mode is running; the date is encoded using strftime escapes)"};
 cvar_t fs_empty_files_in_pack_mark_deletions = {CF_CLIENT | CF_SERVER, "fs_empty_files_in_pack_mark_deletions", "0", "if enabled, empty files in a pak/pk3 count as not existing but cancel the search in further packs, effectively allowing patch pak/pk3 files to 'delete' files"};
+cvar_t fs_unload_dlcache = {CF_CLIENT, "fs_unload_dlcache", "1", "if enabled, unload dlcache's loaded pak/pk3 files when changing server and/or map WARNING: disabling unloading can cause servers to override assets of other servers, \"memory leaking\" by dlcache assets never unloading and many more issues"};
 cvar_t cvar_fs_gamedir = {CF_CLIENT | CF_SERVER | CF_READONLY | CF_PERSISTENT, "fs_gamedir", "", "the list of currently selected gamedirs (use the 'gamedir' command to change this)"};
 
 
@@ -1493,6 +1494,9 @@ void FS_UnloadPacks_dlcache(void)
 {
 	searchpath_t *search = fs_searchpaths, *searchprev = fs_searchpaths, *searchnext;
 
+	if (!fs_unload_dlcache.integer)
+		return;
+
 	while (search)
 	{
 		searchnext = search->next;
@@ -2093,6 +2097,7 @@ void FS_Init_Commands(void)
 {
 	Cvar_RegisterVariable (&scr_screenshot_name);
 	Cvar_RegisterVariable (&fs_empty_files_in_pack_mark_deletions);
+	Cvar_RegisterVariable (&fs_unload_dlcache);
 	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
 	Cmd_AddCommand(CF_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
