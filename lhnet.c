@@ -607,14 +607,6 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 	return 0;
 }
 
-int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
-{
-	if (address)
-		return address->addresstype;
-	else
-		return LHNETADDRESSTYPE_NONE;
-}
-
 const char *LHNETADDRESS_GetInterfaceName(const lhnetaddress_t *vaddress, char *ifname, size_t ifnamelength)
 {
 #ifndef NOSUPPORTIPV6

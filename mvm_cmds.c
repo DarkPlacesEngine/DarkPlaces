@@ -467,7 +467,7 @@ static void VM_M_getserverliststring(prvm_prog_t *prog)
 	}
 	else
 	{
-		if(hostnr < 0 || hostnr >= serverlist_viewcount)
+		if(hostnr < 0 || (unsigned)hostnr >= serverlist_viewcount)
 		{
 			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 			return;
@@ -532,7 +532,7 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 	}
 	else
 	{
-		if(hostnr < 0 || hostnr >= serverlist_viewcount)
+		if(hostnr < 0 || (unsigned)hostnr >= serverlist_viewcount)
 		{
 			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
 			return;
