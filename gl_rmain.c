@@ -156,10 +156,6 @@ cvar_t gl_skyclip = {CF_CLIENT, "gl_skyclip", "4608", "nehahra farclip distance 
 cvar_t r_texture_dds_load = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_load", "0", "load compressed dds/filename.dds texture instead of filename.tga, if the file exists (requires driver support)"};
 cvar_t r_texture_dds_save = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
 
-cvar_t r_textureunits = {CF_CLIENT, "r_textureunits", "32", "number of texture units to use in GL 1.1 and GL 1.3 rendering paths"};
-static cvar_t gl_combine = {CF_CLIENT | CF_READONLY, "gl_combine", "1", "indicates whether the OpenGL 1.3 rendering path is active"};
-static cvar_t r_glsl = {CF_CLIENT | CF_READONLY, "r_glsl", "1", "indicates whether the OpenGL 2.0 rendering path is active"};
-
 cvar_t r_usedepthtextures = {CF_CLIENT | CF_ARCHIVE, "r_usedepthtextures", "1", "use depth texture instead of depth renderbuffer where possible, uses less video memory but may render slower (or faster) depending on hardware"};
 cvar_t r_viewfbo = {CF_CLIENT | CF_ARCHIVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
 cvar_t r_rendertarget_debug = {CF_CLIENT, "r_rendertarget_debug", "-1", "replaces the view with the contents of the specified render target (by number - note that these can fluctuate depending on scene)"};
@@ -3072,9 +3068,6 @@ static void gl_main_start(void)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		Cvar_SetValueQuick(&r_textureunits, MAX_TEXTUREUNITS);
-		Cvar_SetValueQuick(&gl_combine, 1);
-		Cvar_SetValueQuick(&r_glsl, 1);
 		r_loadnormalmap = true;
 		r_loadgloss = true;
 		r_loadfog = false;
@@ -3336,8 +3329,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_transparent_sortarraysize);
 	Cvar_RegisterVariable(&r_texture_dds_load);
 	Cvar_RegisterVariable(&r_texture_dds_save);
-	Cvar_RegisterVariable(&r_textureunits);
-	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&r_usedepthtextures);
 	Cvar_RegisterVariable(&r_viewfbo);
 	Cvar_RegisterVariable(&r_rendertarget_debug);
@@ -3348,7 +3339,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_viewscale_fpsscaling_stepsize);
 	Cvar_RegisterVariable(&r_viewscale_fpsscaling_stepmax);
 	Cvar_RegisterVariable(&r_viewscale_fpsscaling_target);
-	Cvar_RegisterVariable(&r_glsl);
 	Cvar_RegisterVariable(&r_glsl_deluxemapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping);
 	Cvar_RegisterVariable(&r_glsl_offsetmapping_steps);

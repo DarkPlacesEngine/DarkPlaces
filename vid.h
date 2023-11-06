@@ -183,7 +183,6 @@ extern cvar_t gl_info_vendor;
 extern cvar_t gl_info_renderer;
 extern cvar_t gl_info_version;
 extern cvar_t gl_info_extensions;
-extern cvar_t gl_info_platform;
 extern cvar_t gl_info_driver;
 
 // brand of graphics chip
