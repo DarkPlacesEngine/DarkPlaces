@@ -736,8 +736,9 @@ static void SV_Status_f(cmd_state_t *cmd)
 	for (players = 0, i = 0;i < svs.maxclients;i++)
 		if (svs.clients[i].active)
 			players++;
+
 	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CF_SERVER));
-	print ("version:  %s build %s (gamename %s)\n", gamename, buildstring, gamenetworkfiltername);
+	print ("version:  %s\n", engineversion);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
 	print ("map:      %s\n", sv.name);
 	print ("timing:   %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
