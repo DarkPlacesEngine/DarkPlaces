@@ -156,7 +156,7 @@ static void Host_Quit_f(cmd_state_t *cmd)
 
 static void Host_Version_f(cmd_state_t *cmd)
 {
-	Con_Printf("Version: %s build %s\n", gamename, buildstring);
+	Con_Printf("Version: %s\n", engineversion);
 }
 
 static void Host_Framerate_c(cvar_t *var)
@@ -365,7 +365,6 @@ Host_Init
 static void Host_Init (void)
 {
 	int i;
-	const char* os;
 	char vabuf[1024];
 
 	host.hook.ConnectLocal = NULL;
@@ -445,8 +444,7 @@ static void Host_Init (void)
 	FS_Init();
 
 	// construct a version string for the corner of the console
-	os = DP_OS_NAME;
-	dpsnprintf (engineversion, sizeof (engineversion), "%s %s %s", gamename, os, buildstring);
+	dpsnprintf (engineversion, sizeof (engineversion), "%s %s%s, buildstring: %s", gamename, DP_OS_NAME, cls.state == ca_dedicated ? " dedicated" : "", buildstring);
 	Con_Printf("%s\n", engineversion);
 
 	// initialize process nice level
