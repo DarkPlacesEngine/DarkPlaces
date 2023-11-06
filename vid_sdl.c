@@ -1714,6 +1714,11 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 #endif
 	}
 
+	// DPI scaling prevents use of the native resolution, causing blurry rendering
+	// and/or mouse cursor problems, so we need to opt-out.
+#ifdef WIN32
+	SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "1");
+#endif
 
 	if (vid_mouse_clickthrough.integer)
 		SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
