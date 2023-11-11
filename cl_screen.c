@@ -2231,11 +2231,11 @@ void CL_UpdateScreen(void)
 	{
 		if(!loadingscreenstack && !cls.connect_trying && (cls.state != ca_connected || cls.signon == SIGNONS))
 			SCR_EndLoadingPlaque();
-		else if (scr_loadingscreen_maxfps.value)
+		else if (scr_loadingscreen_maxfps.value > 0)
 		{
 			static float lastupdate;
 			float now = Sys_DirtyTime();
-			if (now - lastupdate < 1.0f / scr_loadingscreen_maxfps.value)
+			if (now - lastupdate < min(1.0f / scr_loadingscreen_maxfps.value, 0.1))
 				return;
 			lastupdate = now;
 		}
