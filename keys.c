@@ -1971,13 +1971,15 @@ Key_Event (int key, int ascii, qbool down)
 			if(keydown[key] == 1 && down)
 			{
 				// button commands add keynum as a parm
+				// prepend to avoid delays from `wait` commands added by other sources
 				if (bind[0] == '+')
 					Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 				else
 					Cbuf_InsertText(cmd, bind);
 			}
 			else if(bind[0] == '+' && !down && keydown[key] == 0)
-				Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+				// append -bind to ensure it's after the +bind in case they arrive in the same frame
+				Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 		}
 		return;
 	}
@@ -2050,13 +2052,15 @@ Key_Event (int key, int ascii, qbool down)
 				if(keydown[key] == 1 && down)
 				{
 					// button commands add keynum as a parm
+					// prepend to avoid delays from `wait` commands added by other sources
 					if (bind[0] == '+')
 						Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "%s %i\n", bind, key));
 					else
 						Cbuf_InsertText(cmd, bind);
 				}
 				else if(bind[0] == '+' && !down && keydown[key] == 0)
-					Cbuf_InsertText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
+					// append -bind to ensure it's after the +bind in case they arrive in the same frame
+					Cbuf_AddText(cmd, va(vabuf, sizeof(vabuf), "-%s %i\n", bind + 1, key));
 			}
 			break;
 		default:
