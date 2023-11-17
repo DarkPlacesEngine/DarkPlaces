@@ -3281,6 +3281,7 @@ extern cvar_t host_timescale;
 extern cvar_t cl_lerpexcess;
 static void CL_NetworkTimeReceived(double newtime)
 {
+	cl.opt_inputs_since_update = 0;
 	cl.mtime[1] = cl.mtime[0];
 	cl.mtime[0] = newtime;
 	if (cl_nolerp.integer || cls.timedemo || cl.mtime[1] == cl.mtime[0] || cls.signon < SIGNONS)

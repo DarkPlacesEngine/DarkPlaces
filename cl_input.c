@@ -1538,8 +1538,8 @@ void CL_UpdateMoveVars(void)
 	else
 	{
 		cl.moveflags = 0;
-		cl.movevars_ticrate = (cls.demoplayback ? 1.0f : host_timescale.value) / bound(10.0f, cl_netfps.value, 1000.0f);
-		cl.movevars_timescale = (cls.demoplayback ? 1.0f : host_timescale.value);
+		cl.movevars_ticrate = 0; // bones_was_here: no guessing, unavailable ticrate triggers better fallbacks
+		cl.movevars_timescale = (cls.demoplayback || host_timescale.value <= 0) ? 1.0f : host_timescale.value;
 		cl.movevars_gravity = sv_gravity.value;
 		cl.movevars_stopspeed = cl_movement_stopspeed.value;
 		cl.movevars_maxspeed = cl_movement_maxspeed.value;
@@ -1777,7 +1777,8 @@ void CL_SendMove(void)
 	usercmd_t *cmd;
 	sizebuf_t buf;
 	unsigned char data[1024];
-	float packettime;
+	float packettime, sv_frametime, lag, frames_per_tic;
+	qbool opportune_moment;
 	qbool quemove;
 	qbool important;
 
@@ -1893,8 +1894,14 @@ void CL_SendMove(void)
 	if (quemove)
 		cl.movecmd[0] = cl.cmd;
 
-	// don't predict more than 200fps
-	if (cl.timesincepacket >= 0.005)
+	/* Accumulating cl.realframetime to prevent low packet rates,
+	 * previously with cl_maxfps == cl_netfps it did not send every frame because
+	 * host.realtime - cl.lastpackettime was often well below (or above) cl_packetinterval.
+	 */
+	cl.timesincepacket += cl.realframetime;
+
+	// don't predict more than 256fps
+	if (cl.timesincepacket >= 1/256)
 		cl.movement_replay = true; // redo the prediction
 
 	// now decide whether to actually send this move
@@ -1907,32 +1914,46 @@ void CL_SendMove(void)
 	// don't send too often or else network connections can get clogged by a
 	// high renderer framerate
 	packettime = 1.0f / bound(10.0f, cl_netfps.value, 1000.0f);
-	if (cl.movevars_timescale && cl.movevars_ticrate)
+	if (cl.movevars_ticrate)
 	{
-		// try to ensure at least 1 packet per server frame
-		// and apply soft limit of 2, hard limit < 4 (packettime reduced further below)
-		float maxtic = cl.movevars_ticrate / cl.movevars_timescale;
-		packettime = bound(maxtic * 0.5f, packettime, maxtic);
+		packettime = bound(cl.movevars_ticrate * 0.5f, packettime, cl.movevars_ticrate);
+		sv_frametime = cl.movevars_ticrate;
 	}
-	// bones_was_here: reduce packettime to (largest multiple of realframetime) <= packettime
-	// prevents packet rates lower than cl_netfps or server frame rate
-	// eg: cl_netfps 60 and cl_maxfps 250 would otherwise send only 50 netfps
-	// with this line that config sends 62.5 netfps
-	// (this causes it to emit packets at a steady beat)
-	packettime = floor(packettime / (float)cl.realframetime) * (float)cl.realframetime;
+	else // fallback, may be affected by server->client network problems
+		sv_frametime = (cl.mtime[0] - cl.mtime[1]) / cl.movevars_timescale;
 
 	// always send if buttons changed or an impulse is pending
 	// even if it violates the rate limit!
 	important = (cl.cmd.impulse || (cl_netimmediatebuttons.integer && cl.cmd.buttons != cl.movecmd[1].buttons));
 
-	// don't send too often (cl_netfps), allowing a small margin for float error
-	// bones_was_here: accumulate realframetime to prevent low packet rates
-	// previously with cl_maxfps == cl_netfps it did not send every frame as
-	// host.realtime - cl.lastpackettime was often well below (or above) packettime
-	if (!important && cl.timesincepacket < packettime * 0.99999f)
+	lag = cl.mtime[0] - cl.cmd.time;
+	frames_per_tic = sv_frametime / cl.realframetime;
+//	opportune_moment = lag <= cl.realframetime * 2; // FAIL: can miss the moment with uncapped fps
+//	opportune_moment = lag <= cl.realframetime * frames_per_tic * 0.5; // FAIL: too early at high fps, reducing multi causes misses at moderate fps
+	opportune_moment = lag <= cl.realframetime * (frames_per_tic <= 1 ? 1 : sqrt(frames_per_tic)); // perfect
+
+	// Two methods for deciding when to send
+	if (!important)
 	{
-		cl.timesincepacket += cl.realframetime;
-		return;
+		// Traditional time interval, now used as fallback
+		if (sv_frametime <= 0 || lag > sv_frametime || lag < 0) // unknown ticrate || lag/PL || still connecting
+		{
+			if (cl.timesincepacket < packettime * 0.99999f)
+			{
+//				Con_Printf("^6moveft %f realft %f lag %f tic %f inputsince %d\n", cl.cmd.frametime, cl.realframetime, lag, sv_frametime, cl.opt_inputs_since_update);
+				return;
+			}
+		}
+		// Server-synchronised, for better pings
+		// Sends at least once per server frame
+		else // cl.opt_inputs_since_update is usable
+		{
+			if (!opportune_moment || cl.opt_inputs_since_update >= sv_frametime / packettime)
+			{
+//				Con_Printf("^1moveft %f realft %f lag %f tic %f inputsince %d\n", cl.cmd.frametime, cl.realframetime, lag, sv_frametime, cl.opt_inputs_since_update);
+				return;
+			}
+		}
 	}
 
 	// don't choke the connection with packets (obey rate limit)
@@ -1943,8 +1964,13 @@ void CL_SendMove(void)
 	if (!NetConn_CanSend(cls.netcon) && !important)
 		return;
 
+//	Con_Printf("%smoveft %f realft %f lag %f tic %f inputsince %d important %d\n", (lag < 0.0005 || !opportune_moment) ? "^3" : "^2", cl.cmd.frametime, cl.realframetime, lag, sv_frametime, cl.opt_inputs_since_update, important);
+
+	if (opportune_moment) // this check is needed for optimal timing especially with cl_netimmediatebuttons
+		++cl.opt_inputs_since_update;
+
 	// reset the packet timing accumulator
-	cl.timesincepacket = cl.realframetime;
+	cl.timesincepacket = 0;
 
 	buf.maxsize = sizeof(data);
 	buf.cursize = 0;
