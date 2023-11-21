@@ -1175,6 +1175,7 @@ static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qbool interp
 	// someone or watching a cutscene of some sort
 	if (cl_nolerp.integer || cls.timedemo)
 		interpolate = false;
+
 	if (e == cl.entities + cl.playerentity && cl.movement_predicted && (!cl.fixangle[1] || !cl.fixangle[0]))
 	{
 		VectorCopy(cl.movement_origin, origin);
