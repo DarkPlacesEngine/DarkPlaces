@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "sv_demo.h"
 
 extern cvar_t sv_airaccel_qw_stretchfactor;
-extern cvar_t sv_gameplayfix_customstats;
+extern cvar_t sv_qcstats;
 extern cvar_t sv_warsowbunny_airforwardaccel;
 extern cvar_t sv_warsowbunny_accel;
 extern cvar_t sv_warsowbunny_topspeed;
@@ -1205,7 +1205,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	//stats[STAT_SECRETS] = PRVM_serverglobalfloat(found_secrets);
 	//stats[STAT_MONSTERS] = PRVM_serverglobalfloat(killed_monsters);
 
-	if(!sv_gameplayfix_customstats.integer)
+	if(!sv_qcstats.integer)
 	{
 		statsf[STAT_MOVEVARS_AIRACCEL_QW_STRETCHFACTOR] = sv_airaccel_qw_stretchfactor.value;
 		statsf[STAT_MOVEVARS_AIRCONTROL_PENALTY] = sv_aircontrol_penalty.value;
