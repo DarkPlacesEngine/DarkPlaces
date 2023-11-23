@@ -764,7 +764,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 			Cbuf_InsertText(cmd, "\n"
 "csqc_polygons_defaultmaterial_nocullface 1\n"
 "con_chatsound_team_mask 13\n"
-"sv_gameplayfix_customstats 1\n"
+"sv_qcstats 1\n"
 "mod_q1bsp_zero_hullsize_cutoff 8.03125\n"
 				);
 			break;
