@@ -3307,27 +3307,32 @@ static void CL_NetworkTimeReceived(double newtime)
 				Con_DPrintf("--- cl.time > cl.mtime[0] (%f > %f ... %f)\n", cl.time, cl.mtime[1], cl.mtime[0]);
 		}
 
-		if (cl_nettimesyncboundmode.integer < 4)
+selectmode:
+		switch (cl_nettimesyncboundmode.integer)
 		{
+		default:
+			Cvar_SetQuick(&cl_nettimesyncboundmode, cl_nettimesyncboundmode.defstring);
+			goto selectmode;
+		case 1:
+		case 2:
+		case 3:
 			// doesn't make sense for modes > 3
 			cl.time += (cl.mtime[1] - cl.time) * bound(0, cl_nettimesyncfactor.value, 1);
 			timehigh = cl.mtime[1] + (cl.mtime[0] - cl.mtime[1]) * cl_nettimesyncboundtolerance.value;
-		}
-
-		switch (cl_nettimesyncboundmode.integer)
-		{
-		case 1:
-			cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
-			break;
-
-		case 2:
-			if (cl.time < cl.mtime[1] || cl.time > timehigh)
-				cl.time = cl.mtime[1];
-			break;
-
-		case 3:
-			if ((cl.time < cl.mtime[1] && cl.oldtime < cl.mtime[1]) || (cl.time > timehigh && cl.oldtime > timehigh))
-				cl.time = cl.mtime[1];
+			switch (cl_nettimesyncboundmode.integer)
+			{
+			case 1:
+				cl.time = bound(cl.mtime[1], cl.time, cl.mtime[0]);
+				break;
+			case 2:
+				if (cl.time < cl.mtime[1] || cl.time > timehigh)
+					cl.time = cl.mtime[1];
+				break;
+			case 3:
+				if ((cl.time < cl.mtime[1] && cl.oldtime < cl.mtime[1]) || (cl.time > timehigh && cl.oldtime > timehigh))
+					cl.time = cl.mtime[1];
+				break;
+			}
 			break;
 
 		case 4:
