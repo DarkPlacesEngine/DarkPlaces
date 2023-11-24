@@ -17,12 +17,17 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 
 ## Build instructions (WIP)
 
-You will need the following packages regardless of platform:
-* SDL2
-* libjpeg
-* libpng
-* libvorbis
-* libogg
+### Required packages
+
+These names are for Debian, you may need to find equivalents for your platform.
+
+##### Client
+Build (mandatory): `build-essential` `libjpeg-dev` `libsdl2-dev`  
+Runtime (optional): `libcurl` `libpng` `libfreetype6` `libvorbisfile`  
+
+##### Dedicated Server
+Build (mandatory): `build-essential` `libjpeg-dev` `zlib1g-dev`  
+Runtime (optional): `libcurl` `libpng`  
 
 ### Windows (MSYS2):
 
@@ -51,6 +56,9 @@ brew install sdl2 libjpeg-turbo libpng libvorbis curl
 From a terminal, in the engine's root directory, input `make`. On macOS, input `make` with a target such as `make sdl-release`.
 
 Input `make help` for options.
+
+If you get errors (that don't seem to be about missing dependencies) try `make clean` before compiling, especially if you updated your system since the last time you compiled.
+
 
 ### Windows (Visual Studio)
 
