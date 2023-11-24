@@ -2550,14 +2550,6 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	// hide the menu with SDL_WINDOW_BORDERLESS
 	windowflags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
 #endif
-#ifndef USE_GLES2
-	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
-	{
-		VID_Shutdown();
-		Con_Print("Required OpenGL function glGetString not found\n");
-		return false;
-	}
-#endif
 
 	// Knghtbrd: should do platform-specific extension string function here
 
@@ -2672,6 +2664,15 @@ static qboolean VID_InitModeGL(viddef_mode_t *mode)
 	{
 		Con_Printf("Failed to initialize OpenGL context: %s\n", SDL_GetError());
 		VID_Shutdown();
+		return false;
+	}
+#endif
+
+#ifndef USE_GLES2
+	if ((qglGetString = (const GLubyte* (GLAPIENTRY *)(GLenum name))GL_GetProcAddress("glGetString")) == NULL)
+	{
+		VID_Shutdown();
+		Con_Print("Required OpenGL function glGetString not found\n");
 		return false;
 	}
 #endif
