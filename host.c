@@ -664,43 +664,6 @@ static double Host_Frame(double time)
 		return min(cl_wait, sv_wait); // listen server or singleplayer
 }
 
-static inline double Host_Sleep(double time)
-{
-	double delta, time0;
-
-	// convert to microseconds
-	time *= 1000000.0;
-
-	if (time < 1 || host.restless)
-		return 0; // not sleeping this frame
-
-	if(host_maxwait.value <= 0)
-		time = min(time, 1000000.0);
-	else
-		time = min(time, host_maxwait.value * 1000.0);
-
-	time0 = Sys_DirtyTime();
-	if (sv_checkforpacketsduringsleep.integer && !sys_usenoclockbutbenchmark.integer && !svs.threaded) {
-		NetConn_SleepMicroseconds((int)time);
-		if (cls.state != ca_dedicated)
-			NetConn_ClientFrame(); // helps server browser get good ping values
-		// TODO can we do the same for ServerFrame? Probably not.
-	}
-	else
-	{
-		if (cls.state != ca_dedicated)
-			Curl_Select(&time);
-		Sys_Sleep((int)time);
-	}
-
-	delta = Sys_DirtyTime() - time0;
-	if (delta < 0 || delta >= 1800)
-		delta = 0;
-
-//	R_TimeReport("sleep");
-	return delta;
-}
-
 // Cloudwalk: Most overpowered function declaration...
 static inline double Host_UpdateTime (double newtime, double oldtime)
 {
@@ -743,13 +706,12 @@ void Host_Main(void)
 
 		host.dirtytime = Sys_DirtyTime();
 		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
+		oldtime = host.dirtytime;
 
 		sleeptime = Host_Frame(time);
-		oldtime = host.dirtytime;
 		++host.framecount;
-
 		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Host_Sleep(sleeptime);
+		host.sleeptime = Sys_Sleep(sleeptime);
 	}
 
 	return;

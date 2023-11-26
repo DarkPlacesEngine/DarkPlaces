@@ -150,7 +150,6 @@ typedef struct sys_s
 
 extern sys_t sys;
 
-extern struct cvar_s sys_usenoclockbutbenchmark;
 
 //
 // DLL management
@@ -240,7 +239,7 @@ void Sys_ProvideSelfFD (void);
 char *Sys_ConsoleInput (void);
 
 /// called to yield for a little bit so as not to hog cpu when paused or debugging
-void Sys_Sleep(int microseconds);
+double Sys_Sleep(double time);
 
 /// Perform Key_Event () callbacks until the input que is empty
 void Sys_SDL_HandleEvents(void);

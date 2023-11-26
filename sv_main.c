@@ -2519,7 +2519,6 @@ const char *SV_TimingReport(char *buf, size_t buflen)
 	return va(buf, buflen, "%.1f%% CPU, %.2f%% lost, offset avg %.1fms, max %.1fms, sdev %.1fms", sv.perf_cpuload * 100, sv.perf_lost * 100, sv.perf_offset_avg * 1000, sv.perf_offset_max * 1000, sv.perf_offset_sdev * 1000);
 }
 
-extern cvar_t host_maxwait;
 extern cvar_t host_framerate;
 double SV_Frame(double time)
 {
@@ -2712,7 +2711,6 @@ static int SV_ThreadFunc(void *voiddata)
 	qbool playing = false;
 	double sv_timer = 0;
 	double sv_deltarealtime, sv_oldrealtime, sv_realtime;
-	double wait;
 	int i;
 	char vabuf[1024];
 	sv_realtime = Sys_DirtyTime();
@@ -2771,21 +2769,10 @@ static int SV_ThreadFunc(void *voiddata)
 		}
 
 		// if the accumulators haven't become positive yet, wait a while
-		wait = sv_timer * -1000000.0;
-		if (wait >= 1)
+		if (sv_timer < 0)
 		{
-			double time0, delta;
 			SV_UnlockThreadMutex(); // don't keep mutex locked while sleeping
-			if (host_maxwait.value <= 0)
-				wait = min(wait, 1000000.0);
-			else
-				wait = min(wait, host_maxwait.value * 1000.0);
-			if(wait < 1)
-				wait = 1; // because we cast to int
-			time0 = Sys_DirtyTime();
-			Sys_Sleep((int)wait);
-			delta = Sys_DirtyTime() - time0;if (delta < 0 || delta >= 1800) delta = 0;
-			sv.perf_acc_sleeptime += delta;
+			sv.perf_acc_sleeptime += Sys_Sleep(-sv_timer);
 			continue;
 		}
 

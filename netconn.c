@@ -3833,11 +3833,6 @@ void NetConn_ServerFrame(void)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
 }
 
-void NetConn_SleepMicroseconds(int microseconds)
-{
-	LHNET_SleepUntilPacket_Microseconds(microseconds);
-}
-
 #ifdef CONFIG_MENU
 void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 {

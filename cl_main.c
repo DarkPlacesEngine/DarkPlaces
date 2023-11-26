@@ -2858,7 +2858,7 @@ double CL_Frame (double time)
 
 			// on some legacy systems, we need to sleep to keep input responsive
 			if (cl_maxfps_alwayssleep.value > 0 && !cls.timedemo)
-				Sys_Sleep((int)bound(1, cl_maxfps_alwayssleep.value * 1000, 50000));
+				Sys_Sleep(min(cl_maxfps_alwayssleep.value / 1000, 0.05));
 		}
 
 		// apply slowmo scaling
