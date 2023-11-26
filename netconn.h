@@ -446,7 +446,6 @@ int NetConn_WriteString(lhnetsocket_t *mysocket, const char *string, const lhnet
 int NetConn_IsLocalGame(void);
 void NetConn_ClientFrame(void);
 void NetConn_ServerFrame(void);
-void NetConn_SleepMicroseconds(int microseconds);
 void NetConn_Heartbeat(int priority);
 void Net_Stats_f(struct cmd_state_s *cmd);
 

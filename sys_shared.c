@@ -7,6 +7,7 @@
 #include "quakedef.h"
 #include "taskqueue.h"
 #include "thread.h"
+#include "libcurl.h"
 
 #define SUPPORTDLL
 
@@ -286,12 +287,8 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 # define HAVE_GETTIMEOFDAY 1
 #endif
 
-#ifndef WIN32
-// on Win32, select() cannot be used with all three FD list args being NULL according to MSDN
-// (so much for POSIX...)
-# ifdef FD_SET
-#  define HAVE_SELECT 1
-# endif
+#ifdef FD_SET
+# define HAVE_SELECT 1
 #endif
 
 #ifndef WIN32
@@ -300,18 +297,18 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 #endif
 
 // these are referenced elsewhere
-cvar_t sys_usenoclockbutbenchmark = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
-cvar_t sys_libdir = {CF_READONLY | CF_CLIENT | CF_SERVER, "sys_libdir", "", "Default engine library directory"};
+cvar_t sys_usenoclockbutbenchmark = {CF_SHARED, "sys_usenoclockbutbenchmark", "0", "don't use ANY real timing, and simulate a clock (for benchmarking); the game then runs as fast as possible. Run a QC mod with bots that does some stuff, then does a quit at the end, to benchmark a server. NEVER do this on a public server."};
+cvar_t sys_libdir = {CF_READONLY | CF_SHARED, "sys_libdir", "", "Default engine library directory"};
 
 // these are not
-static cvar_t sys_debugsleep = {CF_CLIENT | CF_SERVER, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
-static cvar_t sys_usesdlgetticks = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
-static cvar_t sys_usesdldelay = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
+static cvar_t sys_debugsleep = {CF_SHARED, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
+static cvar_t sys_usesdlgetticks = {CF_SHARED, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
+static cvar_t sys_usesdldelay = {CF_SHARED, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
 #if HAVE_QUERYPERFORMANCECOUNTER
-static cvar_t sys_usequeryperformancecounter = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
+static cvar_t sys_usequeryperformancecounter = {CF_SHARED | CF_ARCHIVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
 #endif
 #if HAVE_CLOCKGETTIME
-static cvar_t sys_useclockgettime = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
+static cvar_t sys_useclockgettime = {CF_SHARED | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
 #endif
 
 static double benchmark_time; // actually always contains an integer amount of milliseconds, will eventually "overflow"
@@ -455,57 +452,92 @@ double Sys_DirtyTime(void)
 #endif
 }
 
-void Sys_Sleep(int microseconds)
+extern cvar_t host_maxwait;
+double Sys_Sleep(double time)
 {
-	double t = 0;
+	double dt;
+	uint32_t microseconds;
+
+	// convert to microseconds
+	time *= 1000000.0;
+
+	if(host_maxwait.value <= 0)
+		time = min(time, 1000000.0);
+	else
+		time = min(time, host_maxwait.value * 1000.0);
+
+	if (time < 1 || host.restless)
+		return 0; // not sleeping this frame
+
+	microseconds = time; // post-validation to prevent overflow
+
 	if(sys_usenoclockbutbenchmark.integer)
 	{
-		if(microseconds)
-		{
-			double old_benchmark_time = benchmark_time;
-			benchmark_time += microseconds;
-			if(benchmark_time == old_benchmark_time)
-				Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
-		}
-		return;
+		double old_benchmark_time = benchmark_time;
+		benchmark_time += microseconds;
+		if(benchmark_time == old_benchmark_time)
+			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
+		return 0;
 	}
+
 	if(sys_debugsleep.integer)
+		Sys_Printf("sys_debugsleep: requesting %u ", microseconds);
+	dt = Sys_DirtyTime();
+
+	// less important on newer libcurl so no need to disturb dedicated servers
+	if (cls.state != ca_dedicated && Curl_Select(microseconds))
 	{
-		t = Sys_DirtyTime();
+		// a transfer is ready or we finished sleeping
 	}
-	if(sys_supportsdlgetticks && sys_usesdldelay.integer)
-	{
+	else if(sys_supportsdlgetticks && sys_usesdldelay.integer)
 		Sys_SDL_Delay(microseconds / 1000);
-	}
 #if HAVE_SELECT
 	else
 	{
 		struct timeval tv;
+		lhnetsocket_t *s;
+		fd_set fdreadset;
+		int lastfd = -1;
+
+		FD_ZERO(&fdreadset);
+		if (cls.state == ca_dedicated && sv_checkforpacketsduringsleep.integer)
+		{
+			List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
+			{
+				if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
+				{
+					if (lastfd < s->inetsocket)
+						lastfd = s->inetsocket;
+	#if defined(WIN32) && !defined(_MSC_VER)
+					FD_SET((int)s->inetsocket, &fdreadset);
+	#else
+					FD_SET((unsigned int)s->inetsocket, &fdreadset);
+	#endif
+				}
+			}
+		}
 		tv.tv_sec = microseconds / 1000000;
 		tv.tv_usec = microseconds % 1000000;
-		select(0, NULL, NULL, NULL, &tv);
+		// on Win32, select() cannot be used with all three FD list args being NULL according to MSDN
+		// (so much for POSIX...)
+		// bones_was_here: but a zeroed fd_set seems to be tolerated (tested on Win 7)
+		select(lastfd + 1, &fdreadset, NULL, NULL, &tv);
 	}
 #elif HAVE_USLEEP
 	else
-	{
 		usleep(microseconds);
-	}
 #elif HAVE_Sleep
 	else
-	{
 		Sleep(microseconds / 1000);
-	}
 #else
 	else
-	{
 		Sys_SDL_Delay(microseconds / 1000);
-	}
 #endif
+
+	dt = Sys_DirtyTime() - dt;
 	if(sys_debugsleep.integer)
-	{
-		t = Sys_DirtyTime() - t;
-		Sys_Printf("%d %d # debugsleep\n", microseconds, (unsigned int)(t * 1000000));
-	}
+		Sys_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - microseconds);
+	return (dt < 0 || dt >= 1800) ? 0 : dt;
 }
 
 void Sys_Printf(const char *fmt, ...)

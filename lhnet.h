@@ -46,6 +46,7 @@ typedef struct lhnetsocket_s
 	llist_t list;
 }
 lhnetsocket_t;
+extern lhnetsocket_t lhnet_socketlist;
 
 void LHNET_Init(void);
 void LHNET_Shutdown(void);

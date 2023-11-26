@@ -160,7 +160,7 @@ static const char * (*qcurl_easy_strerror) (CURLcode);
 
 static CURLM * (*qcurl_multi_init) (void);
 static CURLMcode (*qcurl_multi_perform) (CURLM *multi_handle, int *running_handles);
-static CURLMcode (*qcurl_multi_poll) (CURLM *multi_handle, void*, unsigned int extra_nfds, int timeout_ms, int *ret);
+static CURLMcode (*qcurl_multi_wait) (CURLM *multi_handle, void*, unsigned int extra_nfds, int timeout_ms, int *ret);
 static CURLMcode (*qcurl_multi_add_handle) (CURLM *multi_handle, CURL *easy_handle);
 static CURLMcode (*qcurl_multi_remove_handle) (CURLM *multi_handle, CURL *easy_handle);
 static CURLMsg * (*qcurl_multi_info_read) (CURLM *multi_handle, int *msgs_in_queue);
@@ -180,7 +180,7 @@ static dllfunction_t curlfuncs[] =
 	{"curl_easy_getinfo",		(void **) &qcurl_easy_getinfo},
 	{"curl_multi_init",			(void **) &qcurl_multi_init},
 	{"curl_multi_perform",		(void **) &qcurl_multi_perform},
-	{"curl_multi_poll",		(void **) &qcurl_multi_poll},
+	{"curl_multi_wait",		(void **) &qcurl_multi_wait},
 	{"curl_multi_add_handle",	(void **) &qcurl_multi_add_handle},
 	{"curl_multi_remove_handle",(void **) &qcurl_multi_remove_handle},
 	{"curl_multi_info_read",	(void **) &qcurl_multi_info_read},
@@ -1254,16 +1254,25 @@ Curl_Select
 Sleeps until there's some transfer progress or a timeout is reached,
 unfortunately the timeout is only in milliseconds.
 This allows good throughput even at very low FPS.
+Less important on newer libcurl versions but still helps.
+
+Returns 0 immediately if there's no transfers to wait for,
+or > 0 if a transfer is ready or the timeout was reached.
 ====================
 */
-void Curl_Select(double *microseconds)
+int Curl_Select(uint32_t microseconds)
 {
+	CURLMcode err;
+	int numfds;
+
 	if (List_Is_Empty(&downloads))
-		return;
-	if (qcurl_multi_poll(curlm, NULL, 0, *microseconds / 1000, NULL) == CURLM_OK)
-		*microseconds = 0; // either we finished waiting or a transfer progressed
-	else
-		Con_Print("There's an emergency going on!\nIt's still going on!\nMaybe you need to upgrade libcurl?\n");
+		return 0;
+
+	err = qcurl_multi_wait(curlm, NULL, 0, microseconds / 1000, &numfds);
+	if (err == CURLM_OK)
+		return numfds;
+	Con_Printf("curl_multi_wait() failed, code %d\n", err);
+	return 0;
 }
 
 /*
