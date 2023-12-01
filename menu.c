@@ -4386,6 +4386,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 /* SLIST MENU */
 
 static unsigned slist_cursor;
+static unsigned slist_visible;
 
 void M_Menu_ServerList_f(cmd_state_t *cmd)
 {
@@ -4403,7 +4404,7 @@ void M_Menu_ServerList_f(cmd_state_t *cmd)
 
 static void M_ServerList_Draw (void)
 {
-	unsigned n, y, visible, start, end, statnumplayers, statmaxplayers;
+	unsigned n, y, start, end, statnumplayers, statmaxplayers;
 	cachepic_t *p;
 	const char *s;
 	char vabuf[1024];
@@ -4420,9 +4421,9 @@ static void M_ServerList_Draw (void)
 	if (*m_return_reason)
 		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
-	visible = (menu_height - 16 - y) / 8 / 2;
-	start = min(slist_cursor - min(slist_cursor, visible >> 1), serverlist_viewcount - min(serverlist_viewcount, visible));
-	end = min(start + visible, serverlist_viewcount);
+	slist_visible = (menu_height - 16 - y) / 8 / 2;
+	start = min(slist_cursor - min(slist_cursor, slist_visible >> 1), serverlist_viewcount - min(serverlist_viewcount, slist_visible));
+	end = min(start + slist_visible, serverlist_viewcount);
 
 	p = Draw_CachePic ("gfx/p_multi");
 	M_DrawPic((640 - Draw_GetPicWidth(p)) / 2, 4, "gfx/p_multi");
@@ -4469,6 +4470,8 @@ static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 			Net_Slist_f(cmd);
 		break;
 
+	case K_PGUP:
+		slist_cursor -= slist_visible - 2;
 	case K_UPARROW:
 	case K_LEFTARROW:
 		S_LocalSound ("sound/misc/menu1.wav");
@@ -4477,12 +4480,24 @@ static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 			slist_cursor = serverlist_viewcount - 1;
 		break;
 
+	case K_PGDN:
+		slist_cursor += slist_visible - 2;
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("sound/misc/menu1.wav");
 		slist_cursor++;
 		if (slist_cursor >= serverlist_viewcount)
 			slist_cursor = 0;
+		break;
+
+	case K_HOME:
+		S_LocalSound ("sound/misc/menu1.wav");
+		slist_cursor = 0;
+		break;
+
+	case K_END:
+		S_LocalSound ("sound/misc/menu1.wav");
+		slist_cursor = serverlist_viewcount - 1;
 		break;
 
 	case K_ENTER:
