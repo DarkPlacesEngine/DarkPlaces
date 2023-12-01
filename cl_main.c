@@ -447,10 +447,14 @@ void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
-		if(fmt)
-			Con_Printf("Disconnect: %s\n", reason);
+
+		// It's possible for a server to disconnect a player with an empty reason
+		// which is checked here rather than above so we don't print "Disconnect by user".
+		if(fmt && reason[0] != '\0')
+			dpsnprintf(cl_connect_status, sizeof(cl_connect_status), "Disconnect: %s", reason);
 		else
-			Con_Printf("Disconnected\n");
+			strlcpy(cl_connect_status, "Disconnected", sizeof(cl_connect_status));
+		Con_Printf("%s\n", cl_connect_status);
 	}
 	cls.state = ca_disconnected;
 	cl.islocalgame = false;
@@ -492,7 +496,7 @@ static void CL_Reconnect_f(cmd_state_t *cmd)
 		if (temp[0])
 			CL_EstablishConnection(temp, -1);
 		else
-			Con_Printf("Reconnect to what server?  (you have not connected to a server yet)\n");
+			Con_Printf(CON_WARN "Reconnect to what server?  (you have not connected to a server yet)\n");
 		return;
 	}
 	// if connected, do something based on protocol
@@ -572,18 +576,13 @@ void CL_EstablishConnection(const char *address, int firstarg)
 	if (Sys_CheckParm("-benchmark"))
 		return;
 
-	// clear menu's connect error message
-#ifdef CONFIG_MENU
-	M_Update_Return_Reason("");
-#endif
-
 	// make sure the client ports are open before attempting to connect
 	NetConn_UpdateSockets();
 
 	if (LHNETADDRESS_FromString(&cls.connect_address, address, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
 		cls.connect_trying = true;
-		cls.connect_remainingtries = 3;
+		cls.connect_remainingtries = 10;
 		cls.connect_nextsendtime = 0;
 
 		// only NOW, set connect_userinfo
@@ -601,17 +600,13 @@ void CL_EstablishConnection(const char *address, int firstarg)
 			*cls.connect_userinfo = 0;
 		}
 
-#ifdef CONFIG_MENU
-		M_Update_Return_Reason("Trying to connect...");
-#endif
+		strlcpy(cl_connect_status, "Connect: pending...", sizeof(cl_connect_status));
 		SCR_BeginLoadingPlaque(false);
 	}
 	else
 	{
-		Con_Print("Unable to find a suitable network socket to connect to server.\n");
-#ifdef CONFIG_MENU
-		M_Update_Return_Reason("No network");
-#endif
+		Con_Printf(CON_ERROR "Connect: failed, unable to find a network socket suitable to reach %s\n", address);
+		strlcpy(cl_connect_status, "Connect: failed, no network", sizeof(cl_connect_status));
 	}
 }
 

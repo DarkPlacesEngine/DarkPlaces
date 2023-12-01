@@ -1632,15 +1632,14 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, protocolversion_t initialprotocol)
 {
 	crypto_t *crypto;
+
 	cls.connect_trying = false;
-#ifdef CONFIG_MENU
-	M_Update_Return_Reason("");
-#endif
 	// Disconnect from the current server or stop demo playback
 	if(cls.state == ca_connected || cls.demoplayback)
 		CL_Disconnect();
 	// allocate a net connection to keep track of things
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
+	strlcpy(cl_connect_status, "Connection established", sizeof(cl_connect_status));
 	crypto = &cls.netcon->crypto;
 	if(cls.crypto.authenticated)
 	{
@@ -1656,7 +1655,9 @@ static void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_
 				crypto_keyfp_recommended_length, crypto->client_keyfp[0] ? crypto->client_keyfp : "-"
 				);
 	}
-	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
+	else
+		Con_Printf("%s to %s\n", cl_connect_status, cls.netcon->address);
+
 	key_dest = key_game;
 #ifdef CONFIG_MENU
 	m_state = m_none;
@@ -2038,7 +2039,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 
 		sendlength = sizeof(senddata) - 4;
-		switch(Crypto_ClientParsePacket(string, length, senddata+4, &sendlength, peeraddress))
+		switch(Crypto_ClientParsePacket(string, length, senddata+4, &sendlength, peeraddress, addressstring2))
 		{
 			case CRYPTO_NOMATCH:
 				// nothing to do
@@ -2119,15 +2120,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// darkplaces or quake3
 			char protocolnames[1400];
-			Con_DPrintf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-				Con_DPrintf("challenge message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring challenge message from wrong server %s\n", addressstring2);
 				return true;
 			}
+			Con_DPrintf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+			strlcpy(cl_connect_status, "Connect: replying to challenge...", sizeof(cl_connect_status));
+
 			Protocol_Names(protocolnames, sizeof(protocolnames));
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason("Got challenge response");
-#endif
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
 			// TODO: add userinfo stuff here instead of using NQ commands?
@@ -2140,30 +2141,23 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// darkplaces or quake3
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-				Con_DPrintf("accept message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring accept message from wrong server %s\n", addressstring2);
 				return true;
 			}
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason("Accepted");
-#endif
 			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_DARKPLACES3);
 			return true;
 		}
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
 		{
-			char rejectreason[128];
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-				Con_DPrintf("reject message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring reject message from wrong server %s\n", addressstring2);
 				return true;
 			}
 			cls.connect_trying = false;
 			string += 7;
-			length = min(length - 7, (int)sizeof(rejectreason) - 1);
-			memcpy(rejectreason, string, length);
-			rejectreason[length] = 0;
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason(rejectreason);
-#endif
+			length = min(length - 7, (int)sizeof(cl_connect_status) - 1);
+			dpsnprintf(cl_connect_status, sizeof(cl_connect_status), "Connect: rejected, %.*s", length, string);
+			Con_Printf(CON_ERROR "Connect: rejected by %s\n" CON_ERROR "%.*s\n", addressstring2, length, string);
 			return true;
 		}
 #ifdef CONFIG_MENU
@@ -2315,13 +2309,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// challenge message
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-				Con_DPrintf("c message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring c message from wrong server %s\n", addressstring2);
 				return true;
 			}
-			Con_Printf("challenge %s received, sending QuakeWorld connect request back to %s\n", string + 1, addressstring2);
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason("Got QuakeWorld challenge response");
-#endif
+			Con_DPrintf("challenge %s received, sending QuakeWorld connect request back to %s\n", string + 1, addressstring2);
+			strlcpy(cl_connect_status, "Connect: replying to challenge...", sizeof(cl_connect_status));
+
 			cls.qw_qport = qport.integer;
 			// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 			InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
@@ -2334,12 +2327,9 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// accept message
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-				Con_DPrintf("j message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring j message from wrong server %s\n", addressstring2);
 				return true;
 			}
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason("QuakeWorld Accepted");
-#endif
 			NetConn_ConnectionEstablished(mysocket, peeraddress, PROTOCOL_QUAKEWORLD);
 			return true;
 		}
@@ -2396,7 +2386,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		{
 			// qw print command, used by rcon replies too
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address) && LHNETADDRESS_Compare(peeraddress, &cls.rcon_address)) {
-				Con_DPrintf("n message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring n message from wrong server %s\n", addressstring2);
 				return true;
 			}
 			Con_Printf("QW print command from server at %s:\n%s\n", addressstring2, string + 1);
@@ -2435,7 +2425,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			{
 				lhnetaddress_t clientportaddress;
 				if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address)) {
-					Con_DPrintf("CCREP_ACCEPT message from wrong server %s\n", addressstring2);
+					Con_Printf(CON_WARN "ignoring CCREP_ACCEPT message from wrong server %s\n", addressstring2);
 					break;
 				}
 				clientportaddress = *peeraddress;
@@ -2457,23 +2447,18 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					Con_Printf("Connected to ProQuake %.1f server, enabling precise aim\n", cls.proquake_serverversion / 10.0f);
 				// update the server IP in the userinfo (QW servers expect this, and it is used by the reconnect command)
 				InfoString_SetValue(cls.userinfo, sizeof(cls.userinfo), "*ip", addressstring2);
-#ifdef CONFIG_MENU
-				M_Update_Return_Reason("Accepted");
-#endif
 				NetConn_ConnectionEstablished(mysocket, &clientportaddress, PROTOCOL_QUAKE);
 			}
 			break;
 		case CCREP_REJECT:
-			if (developer_extra.integer) {
-				Con_DPrintf("CCREP_REJECT message from wrong server %s\n", addressstring2);
+			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
+			{
+				Con_Printf(CON_WARN "ignoring CCREP_REJECT message from wrong server %s\n", addressstring2);
 				break;
 			}
-			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
-				break;
 			cls.connect_trying = false;
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason((char *)MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
-#endif
+			dpsnprintf(cl_connect_status, sizeof(cl_connect_status), "Connect: rejected, %s", MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
+			Con_Printf(CON_ERROR "Connect: rejected by %s\n%s\n", addressstring2, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
 			break;
 		case CCREP_SERVER_INFO:
 			if (developer_extra.integer)
@@ -2501,7 +2486,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			break;
 		case CCREP_RCON: // RocketGuy: ProQuake rcon support
 			if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.rcon_address)) {
-				Con_DPrintf("CCREP_RCON message from wrong server %s\n", addressstring2);
+				Con_Printf(CON_WARN "ignoring CCREP_RCON message from wrong server %s\n", addressstring2);
 				break;
 			}
 			if (developer_extra.integer)
@@ -2653,22 +2638,26 @@ void NetConn_ClientFrame(void)
 	unsigned char readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 
 	NetConn_UpdateSockets();
+
 	if (cls.connect_trying && cls.connect_nextsendtime < host.realtime)
 	{
-#ifdef CONFIG_MENU
-		if (cls.connect_remainingtries == 0)
-			M_Update_Return_Reason("Connect: Waiting 10 seconds for reply");
-#endif
-		cls.connect_nextsendtime = host.realtime + 1;
-		cls.connect_remainingtries--;
-		if (cls.connect_remainingtries <= -10)
+		if (cls.connect_remainingtries > 0)
 		{
+			cls.connect_remainingtries--;
+			dpsnprintf(cl_connect_status, sizeof(cl_connect_status), "Connect: sending initial request, %i %s left...", cls.connect_remainingtries, cls.connect_remainingtries == 1 ? "retry" : "retries");
+		}
+		else
+		{
+			char address[128];
+
 			cls.connect_trying = false;
-#ifdef CONFIG_MENU
-			M_Update_Return_Reason("Connect: Failed");
-#endif
+			LHNETADDRESS_ToString(&cls.connect_address, address, sizeof(address), true);
+			strlcpy(cl_connect_status, "Connect: failed, no reply", sizeof(cl_connect_status));
+			Con_Printf(CON_ERROR "%s from %s\n", cl_connect_status, address);
 			return;
 		}
+		cls.connect_nextsendtime = host.realtime + 1;
+
 		// try challenge first (newer DP server or QW)
 		NetConn_WriteString(cls.connect_mysocket, "\377\377\377\377getchallenge", &cls.connect_address);
 		// then try netquake as a fallback (old server, or netquake)
@@ -2691,6 +2680,7 @@ void NetConn_ClientFrame(void)
 		NetConn_Write(cls.connect_mysocket, cl_message.data, cl_message.cursize, &cls.connect_address);
 		SZ_Clear(&cl_message);
 	}
+
 	for (i = 0;i < cl_numsockets;i++)
 	{
 		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
@@ -3939,7 +3929,7 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 	if (!masterquerycount)
 	{
 		Con_Print(CON_ERROR "Unable to query master servers, no suitable network sockets active.\n");
-		M_Update_Return_Reason("No network");
+		strlcpy(cl_connect_status, "No network", sizeof(cl_connect_status));
 	}
 }
 #endif

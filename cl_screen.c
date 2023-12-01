@@ -1558,6 +1558,9 @@ rtexture_t *loadingscreentexture = NULL; // last framebuffer before loading scre
 static float loadingscreentexture_vertex3f[12];
 static float loadingscreentexture_texcoord2f[8];
 static int loadingscreenpic_number = 0;
+/// User-friendly connection status for the menu and/or loading screen,
+/// colours and \n not supported.
+char cl_connect_status[MAX_QPATH]; // should match size of loadingscreenstack_t msg[]
 
 static void SCR_DrawLoadingScreen(void);
 static void SCR_DrawScreen (void)
@@ -1729,24 +1732,19 @@ static void SCR_DrawScreen (void)
 
 	if (scr_loading)
 	{
-		loadingscreenstack_t connect_status;
-		qbool show_connect_status = !loadingscreenstack && (cls.connect_trying || cls.state == ca_connected);
-		if (show_connect_status)
+		// connect_status replaces any dummy_status
+		if ((!loadingscreenstack || loadingscreenstack->msg[0] == '\0') && cl_connect_status[0] != '\0')
 		{
+			loadingscreenstack_t connect_status, *og_ptr = loadingscreenstack;
+
 			connect_status.absolute_loading_amount_min = 0;
-			if (cls.signon > 0)
-				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Signon stage %i of %i", cls.signon, SIGNONS);
-			else if (cls.connect_remainingtries > 0)
-				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Trying...  %i", cls.connect_remainingtries);
-			else
-				dpsnprintf(connect_status.msg, sizeof(connect_status.msg), "Connect: Waiting %i seconds for reply", 10 + cls.connect_remainingtries);
+			strlcpy(connect_status.msg, cl_connect_status, sizeof(cl_connect_status));
 			loadingscreenstack = &connect_status;
+			SCR_DrawLoadingScreen();
+			loadingscreenstack = og_ptr;
 		}
-
-		SCR_DrawLoadingScreen();
-
-		if (show_connect_status)
-			loadingscreenstack = NULL;
+		else
+			SCR_DrawLoadingScreen();
 	}
 
 	SCR_DrawConsole();

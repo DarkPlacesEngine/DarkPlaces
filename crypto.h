@@ -65,8 +65,8 @@ const void *Crypto_DecryptPacket(crypto_t *crypto, const void *data_src, size_t 
 #define CRYPTO_MATCH 1          // process as usual (packet was used)
 #define CRYPTO_DISCARD 2        // discard this packet
 #define CRYPTO_REPLACE 3        // make the buffer the current packet
-int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, struct lhnetaddress_s *peeraddress);
-int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, struct lhnetaddress_s *peeraddress);
+int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress, const char *peeraddressstring);
+int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress);
 
 // if len_out is nonzero, the packet is to be sent to the client
 

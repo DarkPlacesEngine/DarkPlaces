@@ -17,6 +17,8 @@ extern struct cvar_s scr_screenshot_png;
 extern struct cvar_s scr_screenshot_gammaboost;
 extern struct cvar_s scr_screenshot_name;
 
+extern char cl_connect_status[MAX_QPATH];
+
 void CL_Screen_NewMap(void);
 void CL_Screen_Init(void);
 void CL_Screen_Shutdown(void);
