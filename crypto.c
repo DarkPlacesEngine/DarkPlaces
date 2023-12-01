@@ -1141,11 +1141,11 @@ static void Crypto_KeyGen_Finished(int code, size_t length_received, unsigned ch
 	{
 		if(length_received >= 5 && Crypto_LittleLong((const char *) buffer) == FOURCC_D0ER)
 		{
-			Con_Printf("Error response from keygen server: %.*s\n", (int)(length_received - 5), buffer + 5);
+			Con_Printf(CON_ERROR "Error response from keygen server: %.*s\n", (int)(length_received - 5), buffer + 5);
 		}
 		else
 		{
-			Con_Printf("Invalid response from keygen server:\n");
+			Con_Printf(CON_ERROR "Invalid response from keygen server:\n");
 			Com_HexDumpToConsole(buffer, (int)length_received);
 		}
 		keygen_i = -1;
@@ -2106,7 +2106,7 @@ static int Crypto_SoftClientError(char *data_out, size_t *len_out, const char *m
 	return CRYPTO_DISCARD;
 }
 
-int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress)
+int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out, size_t *len_out, lhnetaddress_t *peeraddress, const char *peeraddressstring)
 {
 	crypto_t *crypto = &cls.crypto;
 	const char *string = data_in;
@@ -2214,7 +2214,12 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 		// Must check the source IP here, if we want to prevent other servers' replies from falsely advancing the crypto state, preventing successful connect to the real server.
 		if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
-			return Crypto_SoftClientError(data_out, len_out, "challenge message from wrong server");
+		{
+			char warn_msg[128];
+
+			dpsnprintf(warn_msg, sizeof(warn_msg), "ignoring challenge message from wrong server %s", peeraddressstring);
+			return Crypto_SoftClientError(data_out, len_out, warn_msg);
+		}
 
 		// if we have a stored host key for the server, assume serverid to already be selected!
 		// (the loop will refuse to overwrite this one then)
@@ -2422,7 +2427,12 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 		// Must check the source IP here, if we want to prevent other servers' replies from falsely advancing the crypto state, preventing successful connect to the real server.
 		if (net_sourceaddresscheck.integer && LHNETADDRESS_Compare(peeraddress, &cls.connect_address))
-			return Crypto_SoftClientError(data_out, len_out, "d0pk\\ message from wrong server");
+		{
+			char warn_msg[128];
+
+			dpsnprintf(warn_msg, sizeof(warn_msg), "ignoring d0pk\\ message from wrong server %s", peeraddressstring);
+			return Crypto_SoftClientError(data_out, len_out, warn_msg);
+		}
 
 		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
 		id = (cnt ? atoi(cnt) : -1);

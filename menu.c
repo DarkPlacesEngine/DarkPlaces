@@ -34,7 +34,6 @@ static cvar_t menu_progs = {CF_CLIENT, "menu_progs", "menu.dat", "name of quakec
 static int NehGameType;
 
 enum m_state_e m_state;
-char m_return_reason[128];
 
 void M_Menu_Main_f(cmd_state_t *cmd);
 	void M_Menu_SinglePlayer_f(cmd_state_t *cmd);
@@ -107,13 +106,6 @@ static void M_ServerList_Key(cmd_state_t *cmd, int key, int ascii);
 static void M_ModList_Key(cmd_state_t *cmd, int key, int ascii);
 
 static qbool	m_entersound;		///< play after drawing a frame, so caching won't disrupt the sound
-
-void M_Update_Return_Reason(const char *s)
-{
-	strlcpy(m_return_reason, s, sizeof(m_return_reason));
-	if (s)
-		Con_DPrintf("%s\n", s);
-}
 
 #define StartingGame	(m_multiplayer_cursor == 1)
 #define JoiningGame		(m_multiplayer_cursor == 0)
@@ -3344,7 +3336,7 @@ void M_Menu_LanConfig_f(cmd_state_t *cmd)
 	lanConfig_port = 26000;
 	dpsnprintf(lanConfig_portname, sizeof(lanConfig_portname), "%u", (unsigned int) lanConfig_port);
 
-	M_Update_Return_Reason("");
+	cl_connect_status[0] = '\0';
 }
 
 
@@ -3397,8 +3389,8 @@ static void M_LanConfig_Draw (void)
 	if (lanConfig_cursor == 3)
 		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [lanConfig_cursor], 10+((int)(host.realtime*4)&1));
 
-	if (*m_return_reason)
-		M_Print(basex, 168, m_return_reason);
+	if (*cl_connect_status)
+		M_Print(basex, 168, cl_connect_status);
 }
 
 
@@ -4394,7 +4386,7 @@ void M_Menu_ServerList_f(cmd_state_t *cmd)
 	m_state = m_slist;
 	m_entersound = true;
 	slist_cursor = 0;
-	M_Update_Return_Reason("");
+	cl_connect_status[0] = '\0';
 	if (lanConfig_cursor == 2)
 		Net_SlistQW_f(cmd);
 	else
@@ -4418,8 +4410,8 @@ static void M_ServerList_Draw (void)
 	ServerList_GetPlayerStatistics(&statnumplayers, &statmaxplayers);
 	s = va(vabuf, sizeof(vabuf), "%u/%u masters %u/%u servers %u/%u players", masterreplycount, masterquerycount, serverreplycount, serverquerycount, statnumplayers, statmaxplayers);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
-	if (*m_return_reason)
-		M_Print(16, menu_height - 8, m_return_reason);
+	if (*cl_connect_status)
+		M_Print(16, menu_height - 8, cl_connect_status);
 	y = 48;
 	slist_visible = (menu_height - 16 - y) / 8 / 2;
 	start = min(slist_cursor - min(slist_cursor, slist_visible >> 1), serverlist_viewcount - min(serverlist_viewcount, slist_visible));
@@ -4617,7 +4609,7 @@ void M_Menu_ModList_f(cmd_state_t *cmd)
 	m_state = m_modlist;
 	m_entersound = true;
 	modlist_cursor = 0;
-	M_Update_Return_Reason("");
+	cl_connect_status[0] = '\0';
 	ModList_RebuildList();
 }
 
@@ -4667,8 +4659,8 @@ static void M_ModList_Draw (void)
 	for (y = 0; y < modlist_numenabled; y++)
 		M_PrintRed(432, 48 + y * 8, modlist[modlist_enabled[y]].dir);
 
-	if (*m_return_reason)
-		M_Print(16, menu_height - 8, m_return_reason);
+	if (*cl_connect_status)
+		M_Print(16, menu_height - 8, cl_connect_status);
 	// scroll the list as the cursor moves
 	y = 48;
 	visible = (int)((menu_height - 16 - y) / 8 / 2);
