@@ -31,23 +31,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 struct mplane_s;
 extern vec3_t vec3_origin;
 
-#define float_nanmask (0x7F800000)
-#define double_nanmask (0x7FF8000000000000)
-#define FLOAT_IS_NAN(x) (((*(int *)&x)&float_nanmask)==float_nanmask)
-#define DOUBLE_IS_NAN(x) (((*(long long *)&x)&double_nanmask)==double_nanmask)
-
-#ifdef VEC_64
-#define VEC_IS_NAN(x) DOUBLE_IS_NAN(x)
-#else
-#define VEC_IS_NAN(x) FLOAT_IS_NAN(x)
-#endif
-
-#ifdef PRVM_64
-#define PRVM_IS_NAN(x) DOUBLE_IS_NAN(x)
-#else
-#define PRVM_IS_NAN(x) FLOAT_IS_NAN(x)
-#endif
-
 #define bound(min,num,max) ((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
 #ifndef min
