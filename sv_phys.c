@@ -1041,12 +1041,12 @@ void SV_CheckVelocity (prvm_edict_t *ent)
 //
 	for (i=0 ; i<3 ; i++)
 	{
-		if (PRVM_IS_NAN(PRVM_serveredictvector(ent, velocity)[i]))
+		if (isnan(PRVM_serveredictvector(ent, velocity)[i]))
 		{
 			Con_Printf("Got a NaN velocity on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			PRVM_serveredictvector(ent, velocity)[i] = 0;
 		}
-		if (PRVM_IS_NAN(PRVM_serveredictvector(ent, origin)[i]))
+		if (isnan(PRVM_serveredictvector(ent, origin)[i]))
 		{
 			Con_Printf("Got a NaN origin on entity #%i (%s)\n", PRVM_NUM_FOR_EDICT(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			PRVM_serveredictvector(ent, origin)[i] = 0;
