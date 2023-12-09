@@ -133,6 +133,9 @@ void Host_Error (const char *error, ...)
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
 
+	// prevent an endless loop if the error was triggered by a command
+	Cbuf_Clear(cmd_local->cbuf);
+
 	CL_Disconnect();
 	cls.demonum = -1;
 

@@ -406,10 +406,7 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		 * can insert data at the beginning of the text buffer
 		 */
 		current = List_Entry(cbuf->start.next, cmd_input_t, list);
-		
-		// Recycle memory so using WASD doesn't cause a malloc and free
-		List_Move_Tail(&current->list, &cbuf->free);
-		
+
 		/*
 		 * Assume we're rolling with the current command-line and
 		 * always set this false because alias expansion or cbuf insertion
@@ -434,6 +431,9 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 			Cmd_ExecuteString (current->source, current->text, src_local, false);
 		}
 
+		// Recycle memory so using WASD doesn't cause a malloc and free
+		List_Move_Tail(&current->list, &cbuf->free);
+
 		current = NULL;
 
 		if (cbuf->wait)
@@ -449,11 +449,7 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		if (++i == 1000000 && prvm_runawaycheck)
 		{
 			Con_Printf(CON_WARN "Cbuf_Execute: runaway loop counter hit limit of %d commands, clearing command buffers!\n", i);
-			while (!List_Is_Empty(&cbuf->start))
-				List_Move_Tail(cbuf->start.next, &cbuf->free);
-			while (!List_Is_Empty(&cbuf->deferred))
-				List_Move_Tail(cbuf->deferred.next, &cbuf->free);
-			cbuf->size = 0;
+			Cbuf_Clear(cbuf);
 		}
 	}
 }
@@ -490,6 +486,15 @@ void Cbuf_Frame(cmd_buf_t *cbuf)
 	}
 
 //	R_TimeReport("console");
+}
+
+void Cbuf_Clear(cmd_buf_t *cbuf)
+{
+	while (!List_Is_Empty(&cbuf->start))
+		List_Move_Tail(cbuf->start.next, &cbuf->free);
+	while (!List_Is_Empty(&cbuf->deferred))
+		List_Move_Tail(cbuf->deferred.next, &cbuf->free);
+	cbuf->size = 0;
 }
 
 /*
