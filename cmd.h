@@ -199,6 +199,8 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text);
 void Cbuf_Execute (cmd_buf_t *cbuf);
 /*! Performs deferred commands and runs Cbuf_Execute, called by Host_Frame */
 void Cbuf_Frame (cmd_buf_t *cbuf);
+/// Clears all command buffers
+void Cbuf_Clear(cmd_buf_t *cbuf);
 
 //===========================================================================
 
