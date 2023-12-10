@@ -368,7 +368,7 @@ void Cvar_Callback(cvar_t *var)
 {
 	if (var == NULL)
 	{
-		Con_Print("Cvar_Callback: var == NULL\n");
+		Con_Print(CON_WARN "Cvar_Callback: var == NULL\n");
 		return;
 	}
 
@@ -432,7 +432,7 @@ void Cvar_SetQuick (cvar_t *var, const char *value)
 {
 	if (var == NULL)
 	{
-		Con_Print("Cvar_SetQuick: var == NULL\n");
+		Con_Print(CON_WARN "Cvar_SetQuick: var == NULL\n");
 		return;
 	}
 
@@ -454,7 +454,7 @@ void Cvar_Set(cvar_state_t *cvars, const char *var_name, const char *value)
 	var = Cvar_FindVar(cvars, var_name, ~0);
 	if (var == NULL)
 	{
-		Con_Printf("Cvar_Set: variable %s not found\n", var_name);
+		Con_Printf(CON_WARN "Cvar_Set: variable %s not found\n", var_name);
 		return;
 	}
 	Cvar_SetQuick(var, value);
@@ -491,7 +491,7 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 {
 	if (variable == NULL)
 	{
-		Con_Print("Cvar_RegisterCallback: var == NULL\n");
+		Con_Print(CON_WARN "Cvar_RegisterCallback: var == NULL\n");
 		return;
 	}
 	variable->callback = callback;
@@ -654,7 +654,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	// check for overlap with a command
 	if (Cmd_Exists(cmd_local, variable->name))
 	{
-		Con_Printf("Cvar_RegisterVariable: %s is a command\n", variable->name);
+		Con_Printf(CON_WARN "Cvar_RegisterVariable: %s is a command\n", variable->name);
 		return;
 	}
 
@@ -715,14 +715,14 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int f
 	// check for pure evil
 	if (!*name)
 	{
-		Con_Printf("Cvar_Get: invalid variable name\n");
+		Con_Printf(CON_WARN "Cvar_Get: invalid variable name\n");
 		return NULL;
 	}
 
 	// check for overlap with a command
 	if (Cmd_Exists(cmd_local, name))
 	{
-		Con_Printf("Cvar_Get: %s is a command\n", name);
+		Con_Printf(CON_WARN "Cvar_Get: %s is a command\n", name);
 		return NULL;
 	}
 
@@ -758,10 +758,10 @@ qbool Cvar_Readonly (cvar_t *var, const char *cmd_name)
 {
 	if (var->flags & CF_READONLY)
 	{
+		Con_Print(CON_WARN);
 		if(cmd_name)
 			Con_Printf("%s: ",cmd_name);
-		Con_Printf("%s", var->name);
-		Con_Printf(" is read-only\n");
+		Con_Printf("%s is read-only\n", var->name);
 		return true;
 	}
 	return false;
