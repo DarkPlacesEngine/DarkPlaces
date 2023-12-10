@@ -312,7 +312,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 	Cbuf_Lock(cbuf);
 
 	if (cbuf->maxsize - cbuf->size <= l)
-		Con_Print("Cbuf_AddText: overflow\n");
+		Con_Print(CON_WARN "Cbuf_AddText: overflow\n");
 	else
 	{
 		// If the string terminates but the (last) line doesn't, the node will be left in the pending state (to be continued).
@@ -338,7 +338,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 	Cbuf_Lock(cbuf);
 
 	if (cbuf->size + l >= cbuf->maxsize)
-		Con_Print("Cbuf_InsertText: overflow\n");
+		Con_Print(CON_WARN "Cbuf_InsertText: overflow\n");
 	else
 	{
 		// bones_was_here assertion: when prepending to the buffer it never makes sense to leave node(s) in the `pending` state,
@@ -586,7 +586,7 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 	f = (char *)FS_LoadFile (filename, tempmempool, false, NULL);
 	if (!f)
 	{
-		Con_Printf("couldn't exec %s\n",filename);
+		Con_Printf(CON_WARN "couldn't exec %s\n",filename);
 		return;
 	}
 	Con_Printf("execing %s\n",filename);
@@ -844,7 +844,7 @@ static void Cmd_Exec_f (cmd_state_t *cmd)
 	s = FS_Search(Cmd_Argv(cmd, 1), true, true, NULL);
 	if(!s || !s->numfilenames)
 	{
-		Con_Printf("couldn't exec %s\n",Cmd_Argv(cmd, 1));
+		Con_Printf(CON_WARN "couldn't exec %s\n",Cmd_Argv(cmd, 1));
 		return;
 	}
 
@@ -946,7 +946,7 @@ static void Cmd_Toggle_f(cmd_state_t *cmd)
 		}
 		else
 		{ // Invalid CVar
-			Con_Printf("ERROR : CVar '%s' not found\n", Cmd_Argv(cmd, 1) );
+			Con_Printf(CON_WARN "ERROR : CVar '%s' not found\n", Cmd_Argv(cmd, 1) );
 		}
 	}
 }
@@ -977,7 +977,7 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 	s = Cmd_Argv(cmd, 1);
 	if (strlen(s) >= MAX_ALIAS_NAME)
 	{
-		Con_Print("Alias name is too long\n");
+		Con_Print(CON_WARN "Alias name is too long\n");
 		return;
 	}
 
@@ -1789,7 +1789,7 @@ static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 			l = (int)strlen(com_token) + 1;
 			if (cmd->cbuf->tokenizebufferpos + l > CMD_TOKENIZELENGTH)
 			{
-				Con_Printf("Cmd_TokenizeString: ran out of %i character buffer space for command arguments\n", CMD_TOKENIZELENGTH);
+				Con_Printf(CON_WARN "Cmd_TokenizeString: ran out of %i character buffer space for command arguments\n", CMD_TOKENIZELENGTH);
 				break;
 			}
 			memcpy (cmd->cbuf->tokenizebuffer + cmd->cbuf->tokenizebufferpos, com_token, l);
@@ -1821,7 +1821,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
 			{
-				Con_Printf("Cmd_AddCommand: %s already defined as a var\n", cmd_name);
+				Con_Printf(CON_WARN "Cmd_AddCommand: %s already defined as a var\n", cmd_name);
 				return;
 			}
 
@@ -1832,7 +1832,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 				{
 					if (!strcmp(cmd_name, func->name))
 					{
-						Con_Printf("Cmd_AddCommand: %s already defined\n", cmd_name);
+						Con_Printf(CON_WARN "Cmd_AddCommand: %s already defined\n", cmd_name);
 						continue;
 					}
 				}
@@ -2158,7 +2158,7 @@ qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd
 	if (func->function)
 		func->function(cmd);
 	else
-		Con_Printf("Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
+		Con_Printf(CON_WARN "Command \"%s\" can not be executed\n", Cmd_Argv(cmd, 0));
 	return true;
 }
 
@@ -2183,7 +2183,7 @@ qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, 
 		}
 		else if(!(func->flags & CF_SERVER))
 		{
-			Con_Printf("Cannot execute client commands from a dedicated server console.\n");
+			Con_Printf(CON_WARN "Cannot execute client commands from a dedicated server console.\n");
 			return true;
 		}
 	}
@@ -2197,7 +2197,7 @@ qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, 
 	else if (src == src_client)
 	{
 		if((func->flags & CF_CHEAT) && !sv_cheats.integer)
-			SV_ClientPrintf("No cheats allowed. The server must have sv_cheats set to 1\n");
+			SV_ClientPrintf(CON_WARN "No cheats allowed. The server must have sv_cheats set to 1\n");
 		else
 			func->function(cmd);
 		return true;
@@ -2276,7 +2276,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 
 // check cvars
 	if (!Cvar_Command(cmd) && host.framecount > 0)
-		Con_Printf("Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
+		Con_Printf(CON_WARN "Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 done:
 	cmd->cbuf->tokenizebufferpos = oldpos;
 	if (lockmutex)
@@ -2298,7 +2298,7 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm)
 
 	if (!parm)
 	{
-		Con_Printf ("Cmd_CheckParm: NULL");
+		Con_Printf(CON_WARN "Cmd_CheckParm: NULL");
 		return 0;
 	}
 
