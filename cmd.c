@@ -1708,38 +1708,6 @@ void Cmd_Shutdown(void)
 
 /*
 ============
-Cmd_Argc
-============
-*/
-inline int Cmd_Argc (cmd_state_t *cmd)
-{
-	return cmd->argc;
-}
-
-/*
-============
-Cmd_Argv
-============
-*/
-inline const char *Cmd_Argv(cmd_state_t *cmd, int arg)
-{
-	if (arg >= cmd->argc )
-		return cmd->null_string;
-	return cmd->argv[arg];
-}
-
-/*
-============
-Cmd_Args
-============
-*/
-inline const char *Cmd_Args (cmd_state_t *cmd)
-{
-	return cmd->args;
-}
-
-/*
-============
 Cmd_TokenizeString
 
 Parses the given string into command line tokens.
