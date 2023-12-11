@@ -250,15 +250,25 @@ const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial);
 void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial);
 
 // Enhanced console completion by Fett erich@heintz.com
-
 // Added by EvilTypeGuy eviltypeguy@qeradiant.com
 
-int Cmd_Argc (cmd_state_t *cmd);
-const char *Cmd_Argv (cmd_state_t *cmd, int arg);
-const char *Cmd_Args (cmd_state_t *cmd);
 // The functions that execute commands get their parameters with these
 // functions. Cmd_Argv(cmd, ) will return an empty string, not a NULL
 // if arg > argc, so string operations are always safe.
+static inline int Cmd_Argc (cmd_state_t *cmd)
+{
+	return cmd->argc;
+}
+static inline const char *Cmd_Argv(cmd_state_t *cmd, int arg)
+{
+	if (arg >= cmd->argc )
+		return cmd->null_string;
+	return cmd->argv[arg];
+}
+static inline const char *Cmd_Args (cmd_state_t *cmd)
+{
+	return cmd->args;
+}
 
 /// Returns the position (1 to argc-1) in the command's argument list
 /// where the given parameter apears, or 0 if not present
