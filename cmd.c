@@ -2201,21 +2201,25 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strcasecmp(cmd->argv[0], func->name))
 			if(cmd->Handle(cmd, func, text, src))
-				goto done;
+				goto functions_done;
 
 	for (func = cmd->engine_functions; func; func=func->next)
 		if (!strcasecmp (cmd->argv[0], func->name))
 			if(cmd->Handle(cmd, func, text, src))
-				goto done;
+				goto functions_done;
 
-	// if it's a client command and no command was found, say so.
+functions_done:
+	// If it's a client command and wasn't found and handled, say so.
+	// Also don't let clients call server aliases.
 	if (cmd->source == src_client)
 	{
-		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
+		if (!func)
+			Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
 		goto done;
 	}
 
 // check alias
+	// Execute any alias with the same name as a command after the command.
 	for (a=cmd->userdefined->alias ; a ; a=a->next)
 	{
 		if (!strcasecmp (cmd->argv[0], a->name))
@@ -2224,6 +2228,10 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 			goto done;
 		}
 	}
+
+	// If the command was found and handled don't try to handle it as a cvar.
+	if (func)
+		goto done;
 
 // check cvars
 	if (!Cvar_Command(cmd) && host.framecount > 0)
