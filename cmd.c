@@ -1635,12 +1635,10 @@ void Cmd_Init(void)
 	// local console
 	cmd_iter_all[0].cmd = cmd_local = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER | CF_SERVER_FROM_CLIENT, &cmd_userdefined_all);
 	cmd_local->Handle = Cmd_CL_Callback;
-	cmd_local->NotFound = NULL;
 
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
 	cmd_iter_all[1].cmd = cmd_serverfromclient = Cmd_AddInterpreter(cbuf, &cvars_null, 0, CF_SERVER_FROM_CLIENT | CF_USERINFO, &cmd_userdefined_null);
 	cmd_serverfromclient->Handle = Cmd_SV_Callback;
-	cmd_serverfromclient->NotFound = Cmd_SV_NotFound;
 
 	cmd_iter_all[2].cmd = NULL;
 //
@@ -1711,9 +1709,10 @@ void Cmd_Shutdown(void)
 Cmd_TokenizeString
 
 Parses the given string into command line tokens.
+Takes a null terminated string.  Does not need to be /n terminated.
 ============
 */
-// AK: This function should only be called from ExcuteString because the current design is a bit of an hack
+// AK: This function should only be called from ExecuteString because the current design is a bit of an hack
 static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 {
 	int l;
@@ -2173,15 +2172,6 @@ qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, 
 	return false;
 }
 
-qbool Cmd_SV_NotFound(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
-{
-	if (cmd->source == src_client)
-	{
-		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
-		return true;
-	}
-	return false;
-}
 /*
 ============
 Cmd_ExecuteString
@@ -2195,6 +2185,7 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 	int oldpos;
 	cmd_function_t *func;
 	cmd_alias_t *a;
+
 	if (lockmutex)
 		Cbuf_Lock(cmd->cbuf);
 	oldpos = cmd->cbuf->tokenizebufferpos;
@@ -2208,28 +2199,20 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 
 // check functions
 	for (func = cmd->userdefined->qc_functions; func; func = func->next)
-	{
 		if (!strcasecmp(cmd->argv[0], func->name))
-		{
 			if(cmd->Handle(cmd, func, text, src))
 				goto done;
-		}
-	}
 
 	for (func = cmd->engine_functions; func; func=func->next)
-	{
 		if (!strcasecmp (cmd->argv[0], func->name))
-		{
 			if(cmd->Handle(cmd, func, text, src))
 				goto done;
-		}
-	}
 
 	// if it's a client command and no command was found, say so.
-	if(cmd->NotFound)
+	if (cmd->source == src_client)
 	{
-		if(cmd->NotFound(cmd, func, text, src))
-			goto done;
+		Con_Printf("Client \"%s\" tried to execute \"%s\"\n", host_client->name, text);
+		goto done;
 	}
 
 // check alias

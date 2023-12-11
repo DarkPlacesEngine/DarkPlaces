@@ -145,14 +145,12 @@ typedef struct cmd_state_s
 	int cmd_flags; // cmd flags that identify this interpreter
 
 	qbool (*Handle)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
-	qbool (*NotFound)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
 }
 cmd_state_t;
 
 qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
 qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
 qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
-qbool Cmd_SV_NotFound(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
 
 typedef struct cmd_input_s
 {
@@ -236,17 +234,11 @@ qbool Cmd_Exists (cmd_state_t *cmd, const char *cmd_name);
 const char *Cmd_CompleteCommand (cmd_state_t *cmd, const char *partial);
 
 int Cmd_CompleteAliasCountPossible (cmd_state_t *cmd, const char *partial);
-
 const char **Cmd_CompleteAliasBuildList (cmd_state_t *cmd, const char *partial);
-
 int Cmd_CompleteCountPossible (cmd_state_t *cmd, const char *partial);
-
 const char **Cmd_CompleteBuildList (cmd_state_t *cmd, const char *partial);
-
 void Cmd_CompleteCommandPrint (cmd_state_t *cmd, const char *partial);
-
 const char *Cmd_CompleteAlias (cmd_state_t *cmd, const char *partial);
-
 void Cmd_CompleteAliasPrint (cmd_state_t *cmd, const char *partial);
 
 // Enhanced console completion by Fett erich@heintz.com
@@ -273,10 +265,6 @@ static inline const char *Cmd_Args (cmd_state_t *cmd)
 /// Returns the position (1 to argc-1) in the command's argument list
 /// where the given parameter apears, or 0 if not present
 int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
-
-//void Cmd_TokenizeString (char *text);
-// Takes a null terminated string.  Does not need to be /n terminated.
-// breaks the string up into arg tokens.
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
