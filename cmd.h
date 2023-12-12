@@ -85,7 +85,7 @@ typedef struct cmd_alias_s
 
 typedef struct cmd_function_s
 {
-	int flags;
+	unsigned flags;
 	struct cmd_function_s *next;
 	const char *name;
 	const char *description;
@@ -140,9 +140,8 @@ typedef struct cmd_state_s
 	cmd_function_t *engine_functions;
 
 	struct cvar_state_s *cvars; // which cvar system is this cmd state able to access? (&cvars_all or &cvars_null)
-	int cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
-
-	int cmd_flags; // cmd flags that identify this interpreter
+	unsigned cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
+	unsigned cmd_flagsmask; // cmd flags that identify this interpreter
 
 	qbool (*Handle)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
 }
@@ -221,7 +220,7 @@ void Cmd_SaveInitState(void);
 // called by FS_GameDir_f, this restores cvars, commands and aliases to init values
 void Cmd_RestoreInitState(void);
 
-void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const char *description);
+void Cmd_AddCommand(unsigned flags, const char *cmd_name, xcommand_t function, const char *description);
 // called by the init functions of other parts of the program to
 // register commands and functions to call for them.
 // The cmd_name is referenced later, so it should not be in temp memory
