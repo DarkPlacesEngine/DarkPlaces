@@ -343,8 +343,6 @@ typedef struct serverlist_entry_s
 {
 	/// used to track when a server should be considered timed out and removed from the final view
 	qbool responded;
-	/// used to count the number of times the host has tried to query this server already
-	unsigned querycounter;
 	/// used to calculate ping in PROTOCOL_QUAKEWORLD, and for net_slist_maxtries interval, and for timeouts
 	double querytime;
 	/// query protocol to use on this server, may be PROTOCOL_QUAKEWORLD or PROTOCOL_DARKPLACES7

@@ -91,7 +91,7 @@ static cvar_t net_fakeloss_receive = {CF_CLIENT, "net_fakeloss_receive","0", "dr
 #ifdef CONFIG_MENU
 static cvar_t net_slist_debug = {CF_CLIENT, "net_slist_debug", "0", "enables verbose messages for master server queries"};
 static cvar_t net_slist_favorites = {CF_CLIENT | CF_ARCHIVE, "net_slist_favorites", "", "contains a list of IP addresses and ports to always query explicitly"};
-static cvar_t net_slist_interval = {CF_CLIENT, "net_slist_interval", "1.125", "minimum number of seconds to wait between getstatus queries to the same DP server, must be >= server's net_getstatusfloodblockingtimeout"};
+static cvar_t net_slist_interval = {CF_CLIENT, "net_slist_interval", "1", "minimum number of seconds to wait between getstatus queries to the same DP server, must be >= server's net_getstatusfloodblockingtimeout"};
 static cvar_t net_slist_maxping = {CF_CLIENT | CF_ARCHIVE, "net_slist_maxping", "420", "server query responses are ignored if their ping in milliseconds is higher than this"};
 static cvar_t net_slist_maxtries = {CF_CLIENT, "net_slist_maxtries", "3", "how many times to ask the same server for information (more times gives better ping reports but takes longer)"};
 static cvar_t net_slist_pause = {CF_CLIENT, "net_slist_pause", "0", "when set to 1, the server list sorting in the menu won't update until it is set back to 0"};
@@ -656,7 +656,6 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 		{
 			serverlist_entry_t *entry = &serverlist_cache[i];
 			entry->responded = false;
-			entry->querycounter = 0;
 		}
 	}
 	serverlist_consoleoutput = consoleoutput;
@@ -1728,9 +1727,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		memset(entry, 0, sizeof(*entry));
 		strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
 
-		// consider the broadcast to be the first query
-		// NetConn_QueryQueueFrame() will perform more until net_slist_maxtries is reached
-		entry->querycounter = 1;
+		// use the broadcast as the first query, NetConn_QueryQueueFrame() will send more
 		entry->querytime = masterquerytime;
 		// protocol is one of these at all
 		// NetConn_ClientParsePacket_ServerList_PrepareQuery() callsites
@@ -2522,11 +2519,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 void NetConn_QueryQueueFrame(void)
 {
 	unsigned index;
-	unsigned queries, maxqueries;
+	unsigned maxqueries;
 	char dpquery[53]; // theoretical max: 14+22+16+1
 	double currentrealtime;
 	static double querycounter = 0;
-	qbool pending = false;
+	static unsigned pass = 0, server = 0;
+	unsigned queriesperserver = bound(1, net_slist_maxtries.integer, 8);
 
 	if (!serverlist_querystage)
 		return;
@@ -2560,25 +2558,21 @@ void NetConn_QueryQueueFrame(void)
 	if (maxqueries == 0)
 		return;
 
-	// QW depends on waiting "long enough" between queries that responses "definitely" refer to the most recent querytime
-	// DP servers can echo back a timestamp for reliable (and more frequent, see net_slist_interval) pings
-	ServerList_BuildDPServerQuery(dpquery, sizeof(dpquery), currentrealtime);
-
-	for (index = 0, queries = 0; index < serverlist_cachecount && queries < maxqueries; ++index)
+	if (pass < queriesperserver)
 	{
-		serverlist_entry_t *entry = &serverlist_cache[index];
+		// QW depends on waiting "long enough" between queries that responses "definitely" refer to the most recent querytime
+		// DP servers can echo back a timestamp for reliable (and more frequent, see net_slist_interval) pings
+		ServerList_BuildDPServerQuery(dpquery, sizeof(dpquery), currentrealtime);
 
-		if (entry->querycounter < min(8, (unsigned)net_slist_maxtries.integer))
+		for (unsigned queries = 0; server < serverlist_cachecount; ++server)
 		{
 			lhnetaddress_t address;
 			unsigned socket;
+			serverlist_entry_t *entry = &serverlist_cache[server];
 
-			// only check this when there are tries remaining so we finish querying sooner
-			if (currentrealtime < entry->querytime + (entry->protocol == PROTOCOL_QUAKEWORLD ? net_slist_timeout : net_slist_interval).value)
-			{
-				pending = true;
-				continue;
-			}
+			if (queries >= maxqueries
+			|| currentrealtime <= entry->querytime + (entry->protocol == PROTOCOL_QUAKEWORLD ? net_slist_timeout : net_slist_interval).value)
+				return; // continue this pass at the current server on a later frame
 
 			LHNETADDRESS_FromString(&address, entry->info.cname, 0);
 			if (entry->protocol == PROTOCOL_QUAKEWORLD)
@@ -2595,37 +2589,54 @@ void NetConn_QueryQueueFrame(void)
 			}
 
 			entry->querytime = currentrealtime;
-			entry->querycounter++;
 			queries++;
 
 			if (serverlist_consoleoutput)
-				Con_Printf("querying %25s (%i. try)\n", entry->info.cname, entry->querycounter);
+				Con_Printf("querying %25s (%i. try)\n", entry->info.cname, pass + 1);
 		}
-		else // reached net_slist_maxtries
-		if (!entry->responded // no acceptable response during this refresh cycle
-		&& (entry->info.ping)) // visible in the list (has old ping from previous refresh cycle)
+	}
+	else
+	{
+		// check timeouts
+		for (; server < serverlist_cachecount; ++server)
 		{
-			if (currentrealtime >= entry->querytime + net_slist_maxping.integer/1000)
+			serverlist_entry_t *entry = &serverlist_cache[server];
+
+			if (!entry->responded // no acceptable response during this refresh cycle
+			&& entry->info.ping) // visible in the list (has old ping from previous refresh cycle)
 			{
-				// you have no chance to survive make your timeout
-				serverreplycount--;
-				if(!net_slist_pause.integer)
-					ServerList_ViewList_Remove(entry);
-				entry->info.ping = 0; // removed later if net_slist_pause
+				if (currentrealtime > entry->querytime + net_slist_maxping.integer/1000)
+				{
+					// you have no chance to survive make your timeout
+					serverreplycount--;
+					if(!net_slist_pause.integer)
+						ServerList_ViewList_Remove(entry);
+					entry->info.ping = 0; // removed later if net_slist_pause
+				}
+				else // still has time
+					return; // continue this pass at the current server on a later frame
 			}
-			else // still has time
-				pending = true;
 		}
 	}
 
-	// If we got to the end of the list (didn't hit maxqueries)
-	// and no servers remain to be queried or checked for timeout,
-	// there's nothing else to do here until the next refresh cycle.
-	if (index >= serverlist_cachecount && !pending)
+	// We finished the pass, ie didn't stop at maxqueries
+	// or a server that can't be (re)queried or timed out yet.
+	++pass;
+	server = 0;
+
+	if (pass == queriesperserver)
 	{
+		// timeout pass begins next frame
 		if (net_slist_debug.integer)
 			Con_Printf("^2Finished querying masters and servers in %f\n", currentrealtime - masterquerytime);
+	}
+	else if (pass > queriesperserver)
+	{
+		// Nothing else to do until the next refresh cycle.
+		if (net_slist_debug.integer)
+			Con_Printf("^4Finished checking server timeouts in %f\n", currentrealtime - serverlist_cache[serverlist_cachecount - 1].querytime);
 		serverlist_querystage = 0;
+		pass = 0;
 	}
 }
 #endif
