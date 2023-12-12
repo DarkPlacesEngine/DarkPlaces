@@ -1593,7 +1593,7 @@ static void Cmd_Apropos_f(cmd_state_t *cmd)
 	Con_Printf("%i result%s\n\n", count, (count > 1) ? "s" : "");
 }
 
-static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int cvars_flagsmask, int cmds_flagsmask, cmd_userdefined_t *userdefined)
+static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, unsigned cvars_flagsmask, unsigned cmds_flagsmask, cmd_userdefined_t *userdefined)
 {
 	cmd_state_t *cmd = (cmd_state_t *)Mem_Alloc(tempmempool, sizeof(cmd_state_t));
 	
@@ -1604,7 +1604,7 @@ static cmd_state_t *Cmd_AddInterpreter(cmd_buf_t *cbuf, cvar_state_t *cvars, int
 
 	cmd->cvars = cvars;
 	cmd->cvars_flagsmask = cvars_flagsmask;
-	cmd->cmd_flags = cmds_flagsmask;
+	cmd->cmd_flagsmask = cmds_flagsmask;
 	cmd->userdefined = userdefined;
 
 	return cmd;
@@ -1618,6 +1618,8 @@ Cmd_Init
 void Cmd_Init(void)
 {
 	cmd_buf_t *cbuf;
+	unsigned cvars_flagsmask, cmds_flagsmask;
+
 	cbuf_mempool = Mem_AllocPool("Command buffer", 0, NULL);
 	cbuf = (cmd_buf_t *)Mem_Alloc(cbuf_mempool, sizeof(cmd_buf_t));
 	cbuf->maxsize = CMDBUFSIZE;
@@ -1633,7 +1635,17 @@ void Cmd_Init(void)
 	cmd_iter_all = (cmd_iter_t *)Mem_Alloc(tempmempool, sizeof(cmd_iter_t) * 3);
 
 	// local console
-	cmd_iter_all[0].cmd = cmd_local = Cmd_AddInterpreter(cbuf, &cvars_all, CF_CLIENT | CF_SERVER, CF_CLIENT | CF_CLIENT_FROM_SERVER | CF_SERVER_FROM_CLIENT, &cmd_userdefined_all);
+	if (cls.state == ca_dedicated)
+	{
+		cvars_flagsmask = CF_SERVER;
+		cmds_flagsmask = CF_SERVER | CF_SERVER_FROM_CLIENT;
+	}
+	else
+	{
+		cvars_flagsmask = CF_CLIENT | CF_SERVER;
+		cmds_flagsmask = CF_CLIENT | CF_SERVER | CF_CLIENT_FROM_SERVER | CF_SERVER_FROM_CLIENT;
+	}
+	cmd_iter_all[0].cmd = cmd_local = Cmd_AddInterpreter(cbuf, &cvars_all, cvars_flagsmask, cmds_flagsmask, &cmd_userdefined_all);
 	cmd_local->Handle = Cmd_CL_Callback;
 
 	// server commands received from clients have no reason to access cvars, cvar expansion seems perilous.
@@ -1773,7 +1785,7 @@ static void Cmd_TokenizeString (cmd_state_t *cmd, const char *text)
 Cmd_AddCommand
 ============
 */
-void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const char *description)
+void Cmd_AddCommand(unsigned flags, const char *cmd_name, xcommand_t function, const char *description)
 {
 	cmd_function_t *func;
 	cmd_function_t *prev, *current;
@@ -1783,7 +1795,7 @@ void Cmd_AddCommand(int flags, const char *cmd_name, xcommand_t function, const 
 	for (i = 0; i < 2; i++)
 	{
 		cmd = cmd_iter_all[i].cmd;
-		if (flags & cmd->cmd_flags)
+		if (flags & cmd->cmd_flagsmask)
 		{
 			// fail if the command is a variable name
 			if (Cvar_FindVar(cmd->cvars, cmd_name, ~0))
