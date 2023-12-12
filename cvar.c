@@ -494,6 +494,14 @@ void Cvar_RegisterCallback(cvar_t *variable, void (*callback)(cvar_t *))
 		Con_Print(CON_WARN "Cvar_RegisterCallback: var == NULL\n");
 		return;
 	}
+
+	if (!(variable->flags & cmd_local->cvars_flagsmask))
+	{
+		if (developer_extra.integer)
+			Con_DPrintf("^6Cvar_RegisterCallback: rejecting cvar \"%s\"\n", variable->name);
+		return;
+	}
+
 	variable->callback = callback;
 }
 
@@ -503,8 +511,12 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 	cvar_hash_t *hash;
 	int hashindex;
 
-	if (cls.state == ca_dedicated && !(variable->flags & CF_SERVER))
+	if (!(variable->flags & cmd_local->cvars_flagsmask))
+	{
+		if (developer_extra.integer)
+			Con_DPrintf("^6Cvar_RegisterVirtual: rejecting cvar \"%s\" alias \"%s\"\n", variable->name, name);
 		return;
+	}
 
 	if(!*name)
 	{
@@ -581,25 +593,15 @@ Adds a freestanding variable to the variable list.
 */
 void Cvar_RegisterVariable (cvar_t *variable)
 {
-	cvar_state_t *cvars = NULL;
+	cvar_state_t *cvars = &cvars_all;
 	cvar_t *current, *cvar;
 	int i;
 
-	switch (variable->flags & (CF_CLIENT | CF_SERVER))
+	if (!(variable->flags & cmd_local->cvars_flagsmask))
 	{
-	case CF_CLIENT: // client-only cvar
-		if (cls.state == ca_dedicated)
-			return;
-	case CF_SERVER:
-	case CF_CLIENT | CF_SERVER:
-		cvars = &cvars_all;
-		break;
-	case 0:
-		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with no CF_CLIENT | CF_SERVER flags\n", variable->name, variable->string, variable->flags);
-		break;
-	default:
-		Sys_Error("Cvar_RegisterVariable({\"%s\", \"%s\", %i}) with weird CF_CLIENT | CF_SERVER flags\n", variable->name, variable->string, variable->flags);
-		break;
+		if (developer_extra.integer)
+			Con_DPrintf("^2Cvar_RegisterVariable: rejecting cvar \"%s\"\n", variable->name);
+		return;
 	}
 
 	if (developer_extra.integer)
