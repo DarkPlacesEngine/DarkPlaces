@@ -1305,78 +1305,85 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 #undef APPEND
 }
 
-//========================================================
-// strlcat and strlcpy, from OpenBSD
 
 /*
- * Copyright (c) 1998, 2015 Todd C. Miller <millert@openbsd.org>
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+============
+String Copying
+
+The glibc implementation of memccpy is several times faster than old functions that
+copy one byte at a time (even at -O3) and its advantage increases with string length.
+============
+*/
+#ifdef WIN32
+	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
+	// Microsoft supports it, but apparently complains if we use it.
+	#pragma warning(disable : 4996)
+#endif
+
+/** Chain-copies a string with truncation and efficiency (compared to strlcat()).
+ * The destination ends at an absolute pointer instead of a relative offset
+ * and a pointer to the \0 terminator is returned on success.
+ * Truncates, warns, and returns the end pointer on overflow or unterminated source.
+ * Guarantees \0 termination.    end = dst + sizeof(src[])
  */
-
-/*	$OpenBSD: strlcat.c,v 1.19 2019/01/25 00:19:25 millert Exp $    */
-/*	$OpenBSD: strlcpy.c,v 1.16 2019/01/25 00:19:25 millert Exp $    */
-
-size_t dp_strlcat(char *dst, const char *src, size_t dsize)
+char *dp_stpecpy(char *dst, char *end, const char *src)
 {
-	const char *odst = dst;
-	const char *osrc = src;
-	size_t n = dsize;
-	size_t dlen;
+	char *p = (char *)memccpy(dst, src, '\0', end - dst);
 
-	/* Find the end of dst and adjust bytes left but don't go past end. */
-	while (n-- != 0 && *dst != '\0')
-		dst++;
-	dlen = dst - odst;
-	n = dsize - dlen;
-
-	if (n-- == 0)
-		return(dlen + strlen(src));
-	while (*src != '\0') {
-		if (n != 0) {
-			*dst++ = *src;
-			n--;
-		}
-		src++;
-	}
-	*dst = '\0';
-
-	return(dlen + (src - osrc));	/* count does not include NUL */
+	if (p)
+		return p - 1;
+	end[-1] = '\0';
+	Con_Printf(CON_WARN "%s: src string unterminated or truncated to %zu bytes: \"%s\"\n", __func__, dst == end ? 0 : (end - dst) - 1, dst);
+	return end;
 }
 
-size_t dp_strlcpy(char *dst, const char *src, size_t dsize)
+/** Copies a measured byte sequence (unterminated string) to a null-terminated string.
+ * Returns a pointer to the \0 terminator. Guarantees \0 termination.
+ * Compared to ustr2stp(): truncates and warns on overflow.
+ */
+char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t ssize)
 {
-	const char *osrc = src;
-	size_t nleft = dsize;
-
-	/* Copy as many bytes as will fit. */
-	if (nleft != 0) {
-		while (--nleft != 0) {
-			if ((*dst++ = *src++) == '\0')
-				break;
-		}
+	if (ssize >= dsize)
+	{
+		ssize = dsize - 1;
+		Con_Printf(CON_WARN "%s: src string truncated to %zu bytes: \"%.*s\"\n", __func__, ssize, (int)ssize, src);
 	}
-
-	/* Not enough room in dst, add NUL and traverse rest of src. */
-	if (nleft == 0) {
-		if (dsize != 0)
-			*dst = '\0';		/* NUL-terminate dst */
-		while (*src++)
-			;
-	}
-
-	return(src - osrc - 1);	/* count does not include NUL */
+	memcpy(dst, src, ssize);
+	dst[ssize] = '\0';
+	return &dst[ssize];
 }
+
+/** Copies a string, like strlcpy() but with a better return: the number of bytes copied
+ * excluding the \0 terminator. Truncates and warns on overflow or unterminated source,
+ * whereas strlcpy() truncates silently and overreads (possibly segfaulting).
+ * Guarantees \0 termination.
+ * See also: dp_stpecpy() and dp_ustr2stp().
+ */
+size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, unsigned line)
+{
+	char *p = (char *)memccpy(dst, src, '\0', dsize);
+
+	if (p)
+		return (p - 1) - dst;
+	dst[dsize - 1] = '\0';
+	Con_Printf(CON_WARN "%s:%u: src string unterminated or truncated to %zu bytes: \"%s\"\n", func, line, dsize - 1, dst);
+	return dsize - 1;
+}
+
+/** Catenates a string, like strlcat() but with a better return: the number of bytes copied
+ * excluding the \0 terminator. Truncates and warns on overflow or unterminated source,
+ * whereas strlcat() truncates silently and overreads (possibly segfaulting).
+ * Guarantees \0 termination.
+ * Inefficient like any strcat(), please use memcpy(), dp_stpecpy() or dp_strlcpy() instead.
+ */
+size_t dp__strlcat(char *dst, const char *src, size_t dsize, const char *func, unsigned line)
+{
+	char *p = (char *)memchr(dst, '\0', dsize) ?: dst;
+	size_t offset = p - dst;
+
+	return dp__strlcpy(p, src, dsize - offset, func, line) + offset;
+}
+
 
 
 void FindFraction(double val, int *num, int *denom, int denomMax)

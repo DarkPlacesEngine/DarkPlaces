@@ -225,13 +225,9 @@ char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 #endif
 
 // snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
-#ifdef snprintf
-# undef snprintf
-#endif
+#undef snprintf
 #define snprintf DP_STATIC_ASSERT(0, "snprintf is forbidden for portability reasons. Use dpsnprintf instead.")
-#ifdef vsnprintf
-# undef vsnprintf
-#endif
+#undef vsnprintf
 #define vsnprintf DP_STATIC_ASSERT(0, "vsnprintf is forbidden for portability reasons. Use dpvsnprintf instead.")
 
 // dpsnprintf and dpvsnprintf
@@ -244,15 +240,26 @@ extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_
 // A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)
 // LadyHavoc: added #undef lines here to avoid warnings in Linux
 #undef strcat
-#define strcat DP_STATIC_ASSERT(0, "strcat is forbidden for security reasons. Use strlcat or memcpy instead.")
+#define strcat DP_STATIC_ASSERT(0, "strcat is forbidden for security reasons. Use dp_strlcat or memcpy instead.")
 #undef strncat
-#define strncat DP_STATIC_ASSERT(0, "strncat is forbidden for security reasons. Use strlcat or memcpy instead.")
+#define strncat DP_STATIC_ASSERT(0, "strncat is forbidden for security reasons. Use dp_strlcat or memcpy instead.")
 #undef strcpy
-#define strcpy DP_STATIC_ASSERT(0, "strcpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
+#define strcpy DP_STATIC_ASSERT(0, "strcpy is forbidden for security reasons. Use dp_strlcpy or memcpy instead.")
 #undef strncpy
-#define strncpy DP_STATIC_ASSERT(0, "strncpy is forbidden for security reasons. Use strlcpy or memcpy instead.")
+#define strncpy DP_STATIC_ASSERT(0, "strncpy is forbidden for security reasons. Use dp_strlcpy or memcpy instead.")
+#undef stpcpy
+#define stpcpy DP_STATIC_ASSERT(0, "stpcpy is forbidden for security reasons. Use dp_stpecpy or memcpy instead.")
+#undef ustpcpy
+#define ustpcpy DP_STATIC_ASSERT(0, "ustpcpy is forbidden for security reasons. Use dp_ustr2stp or memcpy instead.")
+#undef ustr2stp
+#define ustr2stp DP_STATIC_ASSERT(0, "ustr2stp is forbidden for security reasons. Use dp_ustr2stp or memcpy instead.")
 #undef sprintf
 #define sprintf DP_STATIC_ASSERT(0, "sprintf is forbidden for security reasons. Use dpsnprintf instead.")
+
+#undef strlcpy
+#define strlcpy DP_STATIC_ASSERT(0, "strlcpy is forbidden for stability and correctness. See common.h and common.c comments.")
+#undef strlcat
+#define strlcat DP_STATIC_ASSERT(0, "strlcat is forbidden for stability and correctness. See common.h and common.c comments.")
 
 
 //============================================================================
@@ -281,21 +288,14 @@ qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t siz
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
-/*!
- * Appends src to string dst of size dsize (unlike strncat, dsize is the
- * full size of dst, not space left).  At most dsize-1 characters
- * will be copied.  Always NUL terminates (unless dsize <= strlen(dst)).
- * Returns strlen(src) + MIN(dsize, strlen(initial dst)).
- * If retval >= dsize, truncation occurred.
- */
-size_t dp_strlcat(char *dst, const char *src, size_t dsize);
 
-/*!
- * Copy string src to buffer dst of size dsize.  At most dsize-1
- * chars will be copied.  Always NUL terminates (unless dsize == 0).
- * Returns strlen(src); if retval >= dsize, truncation occurred.
- */
-size_t dp_strlcpy(char *dst, const char *src, size_t dsize);
+#define dp_strlcpy(dst, src, dsize) dp__strlcpy(dst, src, dsize, __func__, __LINE__)
+#define dp_strlcat(dst, src, dsize) dp__strlcat(dst, src, dsize, __func__, __LINE__)
+size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, unsigned line);
+size_t dp__strlcat(char *dst, const char *src, size_t dsize, const char *func, unsigned line);
+char *dp_stpecpy(char *dst, char *end, const char *src);
+char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t ssize);
+
 
 void FindFraction(double val, int *num, int *denom, int denomMax);
 
