@@ -118,49 +118,6 @@ static void Cmd_Defer_f (cmd_state_t *cmd)
 }
 
 /*
-============
-Cmd_Centerprint_f
-
-Print something to the center of the screen using SCR_Centerprint
-============
-*/
-static void Cmd_Centerprint_f (cmd_state_t *cmd)
-{
-	char msg[MAX_INPUTLINE];
-	unsigned int i, c, p;
-	c = Cmd_Argc(cmd);
-	if(c >= 2)
-	{
-		strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
-		for(i = 2; i < c; ++i)
-		{
-			strlcat(msg, " ", sizeof(msg));
-			strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
-		}
-		c = (unsigned int)strlen(msg);
-		for(p = 0, i = 0; i < c; ++i)
-		{
-			if(msg[i] == '\\')
-			{
-				if(msg[i+1] == 'n')
-					msg[p++] = '\n';
-				else if(msg[i+1] == '\\')
-					msg[p++] = '\\';
-				else {
-					msg[p++] = '\\';
-					msg[p++] = msg[i+1];
-				}
-				++i;
-			} else {
-				msg[p++] = msg[i];
-			}
-		}
-		msg[p] = '\0';
-		SCR_CenterPrint(msg);
-	}
-}
-
-/*
 =============================================================================
 
 						COMMAND BUFFER
@@ -1658,7 +1615,6 @@ void Cmd_Init(void)
 //
 	// client-only commands
 	Cmd_AddCommand(CF_SHARED, "wait", Cmd_Wait_f, "make script execution wait for next rendered frame");
-	Cmd_AddCommand(CF_CLIENT, "cprint", Cmd_Centerprint_f, "print something at the screen center");
 
 	// maintenance commands used for upkeep of cvars and saved configs
 	Cmd_AddCommand(CF_SHARED, "stuffcmds", Cmd_StuffCmds_f, "execute commandline parameters (must be present in quake.rc script)");

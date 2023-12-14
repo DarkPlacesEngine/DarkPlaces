@@ -156,6 +156,48 @@ void SCR_CenterPrint(const char *str)
 	}
 }
 
+/*
+============
+SCR_Centerprint_f
+
+Print something to the center of the screen using SCR_Centerprint
+============
+*/
+static void SCR_Centerprint_f (cmd_state_t *cmd)
+{
+	char msg[MAX_INPUTLINE];
+	unsigned int i, c, p;
+	c = Cmd_Argc(cmd);
+	if(c >= 2)
+	{
+		strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
+		for(i = 2; i < c; ++i)
+		{
+			strlcat(msg, " ", sizeof(msg));
+			strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
+		}
+		c = (unsigned int)strlen(msg);
+		for(p = 0, i = 0; i < c; ++i)
+		{
+			if(msg[i] == '\\')
+			{
+				if(msg[i+1] == 'n')
+					msg[p++] = '\n';
+				else if(msg[i+1] == '\\')
+					msg[p++] = '\\';
+				else {
+					msg[p++] = '\\';
+					msg[p++] = msg[i+1];
+				}
+				++i;
+			} else {
+				msg[p++] = msg[i];
+			}
+		}
+		msg[p] = '\0';
+		SCR_CenterPrint(msg);
+	}
+}
 
 static void SCR_DrawCenterString (void)
 {
@@ -840,6 +882,7 @@ void CL_Screen_Init(void)
 	if (Sys_CheckParm ("-noconsole"))
 		Cvar_SetQuick(&scr_conforcewhiledisconnected, "0");
 
+	Cmd_AddCommand(CF_CLIENT, "cprint", SCR_Centerprint_f, "print something at the screen center");
 	Cmd_AddCommand(CF_CLIENT, "sizeup",SCR_SizeUp_f, "increase view size (increases viewsize cvar)");
 	Cmd_AddCommand(CF_CLIENT, "sizedown",SCR_SizeDown_f, "decrease view size (decreases viewsize cvar)");
 	Cmd_AddCommand(CF_CLIENT, "screenshot",SCR_ScreenShot_f, "takes a screenshot of the next rendered frame");
