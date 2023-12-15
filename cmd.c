@@ -266,16 +266,18 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 	cmd_buf_t *cbuf = cmd->cbuf;
 	llist_t llist = {&llist, &llist};
 
+	if (cbuf->size + l > cbuf->maxsize)
+	{
+		Con_Printf(CON_WARN "Cbuf_AddText: input too large, %zuKB ought to be enough for anybody.\n", cbuf->maxsize / 1024);
+		return;
+	}
+
 	Cbuf_Lock(cbuf);
 
-	if (cbuf->maxsize - cbuf->size <= l)
-		Con_Print(CON_WARN "Cbuf_AddText: overflow\n");
-	else
-	{
-		// If the string terminates but the (last) line doesn't, the node will be left in the pending state (to be continued).
-		Cbuf_ParseText(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.prev, cmd_input_t, list)), text, true);
-		List_Splice_Tail(&llist, &cbuf->start);
-	}
+	// If the string terminates but the (last) line doesn't, the node will be left in the pending state (to be continued).
+	Cbuf_ParseText(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.prev, cmd_input_t, list)), text, true);
+	List_Splice_Tail(&llist, &cbuf->start);
+
 	Cbuf_Unlock(cbuf);
 }
 
@@ -292,18 +294,19 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 	llist_t llist = {&llist, &llist};
 	size_t l = strlen(text);
 
+	if (cbuf->size + l > cbuf->maxsize)
+	{
+		Con_Printf(CON_WARN "Cbuf_InsertText: input too large, %zuKB ought to be enough for anybody.\n", cbuf->maxsize / 1024);
+		return;
+	}
+
 	Cbuf_Lock(cbuf);
 
-	if (cbuf->size + l >= cbuf->maxsize)
-		Con_Print(CON_WARN "Cbuf_InsertText: overflow\n");
-	else
-	{
-		// bones_was_here assertion: when prepending to the buffer it never makes sense to leave node(s) in the `pending` state,
-		// it would have been impossible to append to such text later in the old raw text buffer,
-		// and allowing it causes bugs when .cfg files lack \n at EOF (see: https://gitlab.com/xonotic/darkplaces/-/issues/378).
-		Cbuf_ParseText(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.next, cmd_input_t, list)), text, false);
-		List_Splice(&llist, &cbuf->start);
-	}
+	// bones_was_here assertion: when prepending to the buffer it never makes sense to leave node(s) in the `pending` state,
+	// it would have been impossible to append to such text later in the old raw text buffer,
+	// and allowing it causes bugs when .cfg files lack \n at EOF (see: https://gitlab.com/xonotic/darkplaces/-/issues/378).
+	Cbuf_ParseText(cmd, &llist, (List_Is_Empty(&cbuf->start) ? NULL : List_Entry(cbuf->start.next, cmd_input_t, list)), text, false);
+	List_Splice(&llist, &cbuf->start);
 
 	Cbuf_Unlock(cbuf);
 }
@@ -321,7 +324,7 @@ static void Cbuf_Execute_Deferred (cmd_buf_t *cbuf)
 	if (host.realtime - cbuf->deferred_oldtime < 0 || host.realtime - cbuf->deferred_oldtime > 1800)
 		cbuf->deferred_oldtime = host.realtime;
 	eat = host.realtime - cbuf->deferred_oldtime;
-	if (eat < 1/128)
+	if (eat < 1.0/128.0)
 		return;
 	cbuf->deferred_oldtime = host.realtime;
 
