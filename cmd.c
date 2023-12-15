@@ -193,7 +193,7 @@ static void Cbuf_LinkString(cmd_state_t *cmd, llist_t *head, cmd_input_t *existi
 	}
 	cbuf->size += cmdsize;
 
-	strlcpy(&node->text[offset], text, cmdsize + 1); // always sets the last char to \0
+	dp_strlcpy(&node->text[offset], text, cmdsize + 1); // always sets the last char to \0
 	//Con_Printf("^5Cbuf_LinkString(): %s `^7%s^5`\n", node->pending ? "append" : "new", &node->text[offset]);
 	node->pending = leavepending;
 }
@@ -960,7 +960,7 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 		cmd_alias_t *prev, *current;
 
 		a = (cmd_alias_t *)Z_Malloc (sizeof(cmd_alias_t));
-		strlcpy (a->name, s, sizeof (a->name));
+		dp_strlcpy (a->name, s, sizeof (a->name));
 		// insert it at the right alphanumeric position
 		for( prev = NULL, current = cmd->userdefined->alias ; current && strcmp( current->name, a->name ) < 0 ; prev = current, current = current->next )
 			;
@@ -979,10 +979,10 @@ static void Cmd_Alias_f (cmd_state_t *cmd)
 	for (i=2 ; i < c ; i++)
 	{
 		if (i != 2)
-			strlcat (line, " ", sizeof (line));
-		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
+			dp_strlcat (line, " ", sizeof (line));
+		dp_strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 	}
-	strlcat (line, "\n", sizeof (line));
+	dp_strlcat (line, "\n", sizeof (line));
 
 	alloclen = strlen (line) + 1;
 	if(alloclen >= 2)

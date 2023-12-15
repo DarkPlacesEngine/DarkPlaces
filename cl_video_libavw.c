@@ -335,7 +335,7 @@ void *LibAvW_OpenVideo(clvideo_t *video, char *filename, const char **errorstrin
 	if (wavename)
 	{
 		FS_StripExtension(filename, wavename, len-1);
-		strlcat(wavename, ".wav", len);
+		dp_strlcat(wavename, ".wav", len);
 		s->sfx = S_PrecacheSound(wavename, false, false);
 		s->sndchan = -1;
 		Z_Free(wavename);

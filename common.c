@@ -1327,10 +1327,7 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 /*	$OpenBSD: strlcat.c,v 1.19 2019/01/25 00:19:25 millert Exp $    */
 /*	$OpenBSD: strlcpy.c,v 1.16 2019/01/25 00:19:25 millert Exp $    */
 
-
-#ifndef HAVE_STRLCAT
-size_t
-strlcat(char *dst, const char *src, size_t dsize)
+size_t dp_strlcat(char *dst, const char *src, size_t dsize)
 {
 	const char *odst = dst;
 	const char *osrc = src;
@@ -1356,12 +1353,8 @@ strlcat(char *dst, const char *src, size_t dsize)
 
 	return(dlen + (src - osrc));	/* count does not include NUL */
 }
-#endif  // #ifndef HAVE_STRLCAT
 
-
-#ifndef HAVE_STRLCPY
-size_t
-strlcpy(char *dst, const char *src, size_t dsize)
+size_t dp_strlcpy(char *dst, const char *src, size_t dsize)
 {
 	const char *osrc = src;
 	size_t nleft = dsize;
@@ -1385,7 +1378,6 @@ strlcpy(char *dst, const char *src, size_t dsize)
 	return(src - osrc - 1);	/* count does not include NUL */
 }
 
-#endif  // #ifndef HAVE_STRLCPY
 
 void FindFraction(double val, int *num, int *denom, int denomMax)
 {
@@ -1423,7 +1415,7 @@ char **XPM_DecodeString(const char *in)
 	while(COM_ParseToken_QuakeC(&in, false))
 	{
 		tokens[line] = lines[line];
-		strlcpy(lines[line++], com_token, sizeof(lines[0]));
+		dp_strlcpy(lines[line++], com_token, sizeof(lines[0]));
 		if(!COM_ParseToken_QuakeC(&in, false))
 			return NULL;
 		if(!strcmp(com_token, "}"))

@@ -122,13 +122,13 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	{
 		// set the key/value and append the remaining text
 		char tempbuffer[MAX_INPUTLINE];
-		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
+		dp_strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
 		dpsnprintf(buffer + pos, bufferlength - pos, "\\%s\\%s%s", key, value, tempbuffer);
 	}
 	else
 	{
 		// just remove the key from the text
-		strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
+		dp_strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
 	}
 }
 

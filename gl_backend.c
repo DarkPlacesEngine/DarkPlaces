@@ -1773,7 +1773,7 @@ r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const cha
 	buffer->isuniformbuffer = isuniformbuffer;
 	buffer->isdynamic = isdynamic;
 	buffer->isindex16 = isindex16;
-	strlcpy(buffer->name, name, sizeof(buffer->name));
+	dp_strlcpy(buffer->name, name, sizeof(buffer->name));
 	R_Mesh_UpdateMeshBuffer(buffer, data, size, false, 0);
 	return buffer;
 }

@@ -921,7 +921,7 @@ void Image_StripImageExtension (const char *in, char *out, size_t size_out)
 	if (ext && (!strcmp(ext, "tga") || !strcmp(ext, "pcx") || !strcmp(ext, "lmp") || !strcmp(ext, "png") || !strcmp(ext, "jpg") || !strcmp(ext, "wal")))
 		FS_StripExtension(in, out, size_out);
 	else
-		strlcpy(out, in, size_out);
+		dp_strlcpy(out, in, size_out);
 }
 
 static unsigned char image_linearfromsrgb[256];
@@ -1059,14 +1059,14 @@ unsigned char *loadimagepixelsbgra (const char *filename, qbool complain, qbool 
 			*c = '#';
 	path[0] = 0;
 	name[0] = 0;
-	strlcpy(afterpath, basename, sizeof(afterpath));
+	dp_strlcpy(afterpath, basename, sizeof(afterpath));
 	if (strchr(basename, '/'))
 	{
 		int i;
 		for (i = 0;i < (int)sizeof(path)-1 && basename[i] != '/' && basename[i];i++)
 			path[i] = basename[i];
 		path[i] = 0;
-		strlcpy(afterpath, basename + i + 1, sizeof(afterpath));
+		dp_strlcpy(afterpath, basename + i + 1, sizeof(afterpath));
 	}
 	if (gamemode == GAME_TENEBRAE)
 		firstformat = imageformats_tenebrae;

@@ -218,10 +218,10 @@ void R_TimeReport(const char *desc)
 
 	if (speedstringcount + length > (vid_conwidth.integer / 8))
 	{
-		strlcat(r_speeds_timestring, "\n", sizeof(r_speeds_timestring));
+		dp_strlcat(r_speeds_timestring, "\n", sizeof(r_speeds_timestring));
 		speedstringcount = 0;
 	}
-	strlcat(r_speeds_timestring, tempbuf, sizeof(r_speeds_timestring));
+	dp_strlcat(r_speeds_timestring, tempbuf, sizeof(r_speeds_timestring));
 	speedstringcount += length;
 }
 

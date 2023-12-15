@@ -441,7 +441,7 @@ void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 	}
 	else
 	{
-		strlcpy(buf, "<NO PROG>", bufsize);
+		dp_strlcpy(buf, "<NO PROG>", bufsize);
 		return;
 	}
 
@@ -451,7 +451,7 @@ void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 	{
 		f = prog->stack[i].f;
 
-		if(strlcat(buf,
+		if(dp_strlcat(buf,
 			f
 				? va(vabuf, sizeof(vabuf), "%s:%s(%i) ", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement)
 				: "<NULL> ",

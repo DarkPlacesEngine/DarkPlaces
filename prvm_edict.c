@@ -448,7 +448,7 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 	switch (type)
 	{
 	case ev_string:
-		strlcpy (line, PRVM_GetString (prog, val->string), linelength);
+		dp_strlcpy (line, PRVM_GetString (prog, val->string), linelength);
 		break;
 	case ev_entity:
 		n = val->edict;
@@ -555,7 +555,7 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		if ((unsigned int)val->function < (unsigned int)prog->progs_numfunctions)
 		{
 			f = prog->functions + val->function;
-			strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
+			dp_strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
 		}
 		else
 			dpsnprintf (line, linelength, "bad function %" PRVM_PRIi " (invalid!)", val->function);
@@ -697,10 +697,10 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
 		for (l = strlen(name);l < 14;l++)
-			strlcat(tempstring, " ", sizeof(tempstring));
-		strlcat(tempstring, " ", sizeof(tempstring));
+			dp_strlcat(tempstring, " ", sizeof(tempstring));
+		dp_strlcat(tempstring, " ", sizeof(tempstring));
 
 		name = PRVM_ValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf));
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -710,8 +710,8 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
-		strlcat(tempstring, "\n", sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
@@ -946,7 +946,7 @@ void PRVM_ED_ParseGlobals (prvm_prog_t *prog, const char *data)
 		if (developer_entityparsing.integer)
 			Con_Printf("Key: \"%s\"", com_token);
 
-		strlcpy (keyname, com_token, sizeof(keyname));
+		dp_strlcpy (keyname, com_token, sizeof(keyname));
 
 		// parse value
 		if (!COM_ParseToken_Simple(&data, false, true, true))
@@ -1296,7 +1296,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		// and allow them to be turned into vectors. (FIXME...)
 		if (!strcmp(com_token, "angle"))
 		{
-			strlcpy (com_token, "angles", sizeof(com_token));
+			dp_strlcpy (com_token, "angles", sizeof(com_token));
 			anglehack = true;
 		}
 		else
@@ -1304,9 +1304,9 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 
 		// FIXME: change light to _light to get rid of this hack
 		if (!strcmp(com_token, "light"))
-			strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
+			dp_strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
 
-		strlcpy (keyname, com_token, sizeof(keyname));
+		dp_strlcpy (keyname, com_token, sizeof(keyname));
 
 		// another hack to fix keynames with trailing spaces
 		n = strlen(keyname);
@@ -1346,7 +1346,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		if (anglehack)
 		{
 			char	temp[32];
-			strlcpy (temp, com_token, sizeof(temp));
+			dp_strlcpy (temp, com_token, sizeof(temp));
 			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
@@ -1852,7 +1852,7 @@ static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t
 					break;
 				if((size_t)(q - p) >= (size_t) sizeof(inbuf))
 					break;
-				strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
+				dp_strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
 				PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
 				decodedpos += strlen(decodedbuf + decodedpos);
 				if(*q == '\r')
@@ -1947,7 +1947,7 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 	char filename[512];
 
 	FS_StripExtension( progname, filename, sizeof( filename ) );
-	strlcat( filename, ".lno", sizeof( filename ) );
+	dp_strlcat( filename, ".lno", sizeof( filename ) );
 
 	lno = FS_LoadFile( filename, tempmempool, false, &filesize );
 	if( !lno ) {
@@ -2782,32 +2782,32 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 		switch(d->type & ~DEF_SAVEGLOBAL)
 		{
 		case ev_string:
-			strlcat(tempstring, "string   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "string   ", sizeof(tempstring));
 			break;
 		case ev_entity:
-			strlcat(tempstring, "entity   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "entity   ", sizeof(tempstring));
 			break;
 		case ev_function:
-			strlcat(tempstring, "function ", sizeof(tempstring));
+			dp_strlcat(tempstring, "function ", sizeof(tempstring));
 			break;
 		case ev_field:
-			strlcat(tempstring, "field    ", sizeof(tempstring));
+			dp_strlcat(tempstring, "field    ", sizeof(tempstring));
 			break;
 		case ev_void:
-			strlcat(tempstring, "void     ", sizeof(tempstring));
+			dp_strlcat(tempstring, "void     ", sizeof(tempstring));
 			break;
 		case ev_float:
-			strlcat(tempstring, "float    ", sizeof(tempstring));
+			dp_strlcat(tempstring, "float    ", sizeof(tempstring));
 			break;
 		case ev_vector:
-			strlcat(tempstring, "vector   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "vector   ", sizeof(tempstring));
 			break;
 		case ev_pointer:
-			strlcat(tempstring, "pointer  ", sizeof(tempstring));
+			dp_strlcat(tempstring, "pointer  ", sizeof(tempstring));
 			break;
 		default:
 			dpsnprintf (tempstring2, sizeof(tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
-			strlcat(tempstring, tempstring2, sizeof(tempstring));
+			dp_strlcat(tempstring, tempstring2, sizeof(tempstring));
 			break;
 		}
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -2817,12 +2817,12 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
 		for (j = (int)strlen(name);j < 25;j++)
-			strlcat(tempstring, " ", sizeof(tempstring));
+			dp_strlcat(tempstring, " ", sizeof(tempstring));
 		dpsnprintf(tempstring2, sizeof(tempstring2), "%5d", counts[i]);
-		strlcat(tempstring, tempstring2, sizeof(tempstring));
-		strlcat(tempstring, "\n", sizeof(tempstring));
+		dp_strlcat(tempstring, tempstring2, sizeof(tempstring));
+		dp_strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
@@ -3073,7 +3073,7 @@ static void PRVM_Breakpoint_f(cmd_state_t *cmd)
 
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
-		strlcpy(debug->break_statement, Cmd_Argv(cmd, 2), sizeof(debug->break_statement));
+		dp_strlcpy(debug->break_statement, Cmd_Argv(cmd, 2), sizeof(debug->break_statement));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }
@@ -3102,7 +3102,7 @@ static void PRVM_GlobalWatchpoint_f(cmd_state_t *cmd)
 
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
-		strlcpy(debug->watch_global, Cmd_Argv(cmd, 2), sizeof(debug->watch_global));
+		dp_strlcpy(debug->watch_global, Cmd_Argv(cmd, 2), sizeof(debug->watch_global));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }
@@ -3132,7 +3132,7 @@ static void PRVM_EdictWatchpoint_f(cmd_state_t *cmd)
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
 		debug->watch_edict = atoi(Cmd_Argv(cmd, 2));
-		strlcpy(debug->watch_field, Cmd_Argv(cmd, 3), sizeof(debug->watch_field));
+		dp_strlcpy(debug->watch_field, Cmd_Argv(cmd, 3), sizeof(debug->watch_field));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }

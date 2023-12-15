@@ -195,7 +195,7 @@ static void COM_SetGameType(int index)
 		// if there are spaces in the game's network filter name it would
 		// cause parse errors in getservers in dpmaster, so we need to replace
 		// them with _ characters
-		strlcpy(gamenetworkfilternamebuffer, gamenetworkfiltername, sizeof(gamenetworkfilternamebuffer));
+		dp_strlcpy(gamenetworkfilternamebuffer, gamenetworkfiltername, sizeof(gamenetworkfilternamebuffer));
 		while ((s = strchr(gamenetworkfilternamebuffer, ' ')) != NULL)
 			*s = '_';
 		gamenetworkfiltername = gamenetworkfilternamebuffer;

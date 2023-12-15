@@ -214,7 +214,7 @@ static void LoadSubtitles( clvideo_t *video, const char *subtitlesfile )
 
 static clvideo_t* OpenVideo( clvideo_t *video, const char *filename, const char *name, int owner, const char *subtitlesfile )
 {
-	strlcpy(video->filename, filename, sizeof(video->filename));
+	dp_strlcpy(video->filename, filename, sizeof(video->filename));
 	dpsnprintf(video->name, sizeof(video->name), CLVIDEOPREFIX "%s", name);
 	video->ownertag = owner;
 	if( strncmp( name, CLVIDEOPREFIX, sizeof( CLVIDEOPREFIX ) - 1 ) )

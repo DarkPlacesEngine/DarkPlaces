@@ -231,7 +231,7 @@ void SV_Savegame_f(cmd_state_t *cmd)
 		return;
 	}
 
-	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
+	dp_strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
 	SV_Savegame_to(prog, name);
@@ -265,7 +265,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 		return;
 	}
 
-	strlcpy (filename, Cmd_Argv(cmd, 1), sizeof(filename));
+	dp_strlcpy (filename, Cmd_Argv(cmd, 1), sizeof(filename));
 	FS_DefaultExtension (filename, ".sav", sizeof (filename));
 
 	Con_Printf("Loading game from %s...\n", filename);
@@ -320,7 +320,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 
 	// mapname
 	COM_ParseToken_Simple(&t, false, false, true);
-	strlcpy (mapname, com_token, sizeof(mapname));
+	dp_strlcpy (mapname, com_token, sizeof(mapname));
 
 	if(developer_entityparsing.integer)
 		Con_Printf("SV_Loadgame_f: loading time\n");
@@ -362,7 +362,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 			t = start;
 			break;
 		}
-		strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
+		dp_strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
 	}
 
 	if(developer_entityparsing.integer)
@@ -481,7 +481,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 					i = atoi(com_token);
 					COM_ParseToken_Simple(&t, false, false, true);
 					if (i >= 0 && i < MAX_LIGHTSTYLES)
-						strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
+						dp_strlcpy(sv.lightstyles[i], com_token, sizeof(sv.lightstyles[i]));
 					else
 						Con_Printf("unsupported lightstyle %i \"%s\"\n", i, com_token);
 				}
@@ -492,7 +492,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 					COM_ParseToken_Simple(&t, false, false, true);
 					if (i >= 0 && i < MAX_MODELS)
 					{
-						strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
+						dp_strlcpy(sv.model_precache[i], com_token, sizeof(sv.model_precache[i]));
 						sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, sv.model_precache[i][0] == '*' ? sv.worldname : NULL);
 					}
 					else
@@ -504,7 +504,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 					i = atoi(com_token);
 					COM_ParseToken_Simple(&t, false, false, true);
 					if (i >= 0 && i < MAX_SOUNDS)
-						strlcpy(sv.sound_precache[i], com_token, sizeof(sv.sound_precache[i]));
+						dp_strlcpy(sv.sound_precache[i], com_token, sizeof(sv.sound_precache[i]));
 					else
 						Con_Printf("unsupported sound %i \"%s\"\n", i, com_token);
 				}

@@ -700,8 +700,8 @@ void GL_InitFunctions(void)
 		{
 			Con_DPrintf("GL context is missing required function \"%s\"!\n", func->name);
 			missingrequiredfuncs = true;
-			strlcat(missingfuncs, " ", sizeof(missingfuncs));
-			strlcat(missingfuncs, func->name, sizeof(missingfuncs));
+			dp_strlcat(missingfuncs, " ", sizeof(missingfuncs));
+			dp_strlcat(missingfuncs, func->name, sizeof(missingfuncs));
 		}
 	}
 

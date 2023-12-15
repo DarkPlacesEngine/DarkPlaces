@@ -1300,7 +1300,7 @@ static void VM_SV_lightstyle(prvm_prog_t *prog)
 	}
 
 // change the string in sv
-	strlcpy(sv.lightstyles[style], val, sizeof(sv.lightstyles[style]));
+	dp_strlcpy(sv.lightstyles[style], val, sizeof(sv.lightstyles[style]));
 
 // send message to all clients on this server
 	if (sv.state != ss_active)
@@ -1740,7 +1740,7 @@ void VM_SV_UpdateCustomStats (client_t *client, prvm_edict_t *ent, sizebuf_t *ms
 		//string as 16 bytes
 		case 1:
 			memset(s, 0, 17);
-			strlcpy(s, PRVM_E_STRING(ent, vm_customstats[i].fieldoffset), 16);
+			dp_strlcpy(s, PRVM_E_STRING(ent, vm_customstats[i].fieldoffset), 16);
 			stats[i] = s[ 0] + s[ 1] * 256 + s[ 2] * 65536 + s[ 3] * 16777216;
 			stats[i+1] = s[ 4] + s[ 5] * 256 + s[ 6] * 65536 + s[ 7] * 16777216;
 			stats[i+2] = s[ 8] + s[ 9] * 256 + s[10] * 65536 + s[11] * 16777216;

@@ -403,14 +403,14 @@ void CL_ParseEntityLump(char *entdata)
 		if (com_token[0] == '}')
 			break; // end of worldspawn
 		if (com_token[0] == '_')
-			strlcpy (key, com_token + 1, sizeof (key));
+			dp_strlcpy (key, com_token + 1, sizeof (key));
 		else
-			strlcpy (key, com_token, sizeof (key));
+			dp_strlcpy (key, com_token, sizeof (key));
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
 		if (!COM_ParseToken_Simple(&data, false, false, true))
 			return; // error
-		strlcpy (value, com_token, sizeof (value));
+		dp_strlcpy (value, com_token, sizeof (value));
 		if (!strcmp("sky", key))
 		{
 			loadedsky = true;
@@ -487,9 +487,9 @@ static void CL_SetupWorldModel(void)
 	// set up csqc world for collision culling
 	if (cl.worldmodel)
 	{
-		strlcpy(cl.worldname, cl.worldmodel->name, sizeof(cl.worldname));
+		dp_strlcpy(cl.worldname, cl.worldmodel->name, sizeof(cl.worldname));
 		FS_StripExtension(cl.worldname, cl.worldnamenoextension, sizeof(cl.worldnamenoextension));
-		strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/", 5) ? cl.worldnamenoextension + 5 : cl.worldnamenoextension, sizeof(cl.worldbasename));
+		dp_strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/", 5) ? cl.worldnamenoextension + 5 : cl.worldnamenoextension, sizeof(cl.worldbasename));
 		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
 		Cvar_SetQuick(&cl_worldname, cl.worldname);
 		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
@@ -561,7 +561,7 @@ static qbool QW_CL_CheckOrDownloadFile(const char *filename)
 	if (!cls.netcon)
 		return true;
 
-	strlcpy(cls.qw_downloadname, filename, sizeof(cls.qw_downloadname));
+	dp_strlcpy(cls.qw_downloadname, filename, sizeof(cls.qw_downloadname));
 	Con_Printf("Downloading %s\n", filename);
 
 	if (!cls.qw_downloadmemory)
@@ -838,7 +838,7 @@ static void QW_CL_ParseModelList(void)
 			Host_Error("Server sent too many model precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
-		strlcpy(cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
+		dp_strlcpy(cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 	}
 
 	n = MSG_ReadByte(&cl_message);
@@ -873,7 +873,7 @@ static void QW_CL_ParseSoundList(void)
 			Host_Error("Server sent too many sound precaches");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
-		strlcpy(cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
+		dp_strlcpy(cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 	}
 
 	n = MSG_ReadByte(&cl_message);
@@ -987,7 +987,7 @@ static void QW_CL_ProcessUserInfo(int slot)
 	InfoString_GetValue(cl.scores[slot].qw_userinfo, "team", cl.scores[slot].qw_team, sizeof(cl.scores[slot].qw_team));
 	InfoString_GetValue(cl.scores[slot].qw_userinfo, "skin", cl.scores[slot].qw_skin, sizeof(cl.scores[slot].qw_skin));
 	if (!cl.scores[slot].qw_skin[0])
-		strlcpy(cl.scores[slot].qw_skin, "base", sizeof(cl.scores[slot].qw_skin));
+		dp_strlcpy(cl.scores[slot].qw_skin, "base", sizeof(cl.scores[slot].qw_skin));
 	// TODO: skin cache
 }
 
@@ -1003,7 +1003,7 @@ static void QW_CL_UpdateUserInfo(void)
 		return;
 	}
 	cl.scores[slot].qw_userid = MSG_ReadLong(&cl_message);
-	strlcpy(cl.scores[slot].qw_userinfo, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(cl.scores[slot].qw_userinfo));
+	dp_strlcpy(cl.scores[slot].qw_userinfo, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(cl.scores[slot].qw_userinfo));
 
 	QW_CL_ProcessUserInfo(slot);
 }
@@ -1014,8 +1014,8 @@ static void QW_CL_SetInfo(void)
 	char key[2048];
 	char value[2048];
 	slot = MSG_ReadByte(&cl_message);
-	strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
-	strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
+	dp_strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
+	dp_strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
 	if (slot >= cl.maxclients)
 	{
 		Con_Printf("svc_setinfo >= cl.maxclients\n");
@@ -1031,8 +1031,8 @@ static void QW_CL_ServerInfo(void)
 	char key[2048];
 	char value[2048];
 	char temp[32];
-	strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
-	strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
+	dp_strlcpy(key, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(key));
+	dp_strlcpy(value, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(value));
 	Con_DPrintf("SERVERINFO: %s=%s\n", key, value);
 	InfoString_SetValue(cl.qw_serverinfo, sizeof(cl.qw_serverinfo), key, value);
 	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
@@ -1530,7 +1530,7 @@ static void CL_DownloadBegin_f(cmd_state_t *cmd)
 	CL_StopDownload(0, 0);
 
 	// we're really beginning a download now, so initialize stuff
-	strlcpy(cls.qw_downloadname, Cmd_Argv(cmd, 2), sizeof(cls.qw_downloadname));
+	dp_strlcpy(cls.qw_downloadname, Cmd_Argv(cmd, 2), sizeof(cls.qw_downloadname));
 	cls.qw_downloadmemorymaxsize = size;
 	cls.qw_downloadmemory = (unsigned char *) Mem_Alloc(cls.permanentmempool, cls.qw_downloadmemorymaxsize);
 	cls.qw_downloadnumber++;
@@ -1735,7 +1735,7 @@ static void CL_ParseServerInfo (void)
 
 		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
 		Con_Printf("server gamedir is %s\n", str);
-		strlcpy(gamedir[0], str, sizeof(gamedir[0]));
+		dp_strlcpy(gamedir[0], str, sizeof(gamedir[0]));
 
 		// change gamedir if needed
 		if (!FS_ChangeGameDirs(1, gamedir, true, false))
@@ -1753,7 +1753,7 @@ static void CL_ParseServerInfo (void)
 
 		// get the full level name
 		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
-		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
+		dp_strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 		// get the movevars that are defined in the qw protocol
 		cl.movevars_gravity            = MSG_ReadFloat(&cl_message);
@@ -1800,9 +1800,9 @@ static void CL_ParseServerInfo (void)
 		// (we don't even know the name of the map yet)
 		// this also means cl_autodemo does not work on QW protocol...
 
-		strlcpy(cl.worldname, "", sizeof(cl.worldname));
-		strlcpy(cl.worldnamenoextension, "", sizeof(cl.worldnamenoextension));
-		strlcpy(cl.worldbasename, "qw", sizeof(cl.worldbasename));
+		dp_strlcpy(cl.worldname, "", sizeof(cl.worldname));
+		dp_strlcpy(cl.worldnamenoextension, "", sizeof(cl.worldnamenoextension));
+		dp_strlcpy(cl.worldbasename, "qw", sizeof(cl.worldbasename));
 		Cvar_SetQuick(&cl_worldname, cl.worldname);
 		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
 		Cvar_SetQuick(&cl_worldbasename, cl.worldbasename);
@@ -1830,7 +1830,7 @@ static void CL_ParseServerInfo (void)
 
 	// parse signon message
 		str = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
-		strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
+		dp_strlcpy (cl.worldmessage, str, sizeof(cl.worldmessage));
 
 	// seperate the printfs so the server message can have a color
 		if (cls.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
@@ -1849,7 +1849,7 @@ static void CL_ParseServerInfo (void)
 				Host_Error ("Server sent too many model precaches");
 			if (strlen(str) >= MAX_QPATH)
 				Host_Error ("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
-			strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
+			dp_strlcpy (cl.model_name[nummodels], str, sizeof (cl.model_name[nummodels]));
 		}
 		// parse sound precache list
 		for (numsounds=1 ; ; numsounds++)
@@ -1861,13 +1861,13 @@ static void CL_ParseServerInfo (void)
 				Host_Error("Server sent too many sound precaches");
 			if (strlen(str) >= MAX_QPATH)
 				Host_Error("Server sent a precache name of %i characters (max %i)", (int)strlen(str), MAX_QPATH - 1);
-			strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
+			dp_strlcpy (cl.sound_name[numsounds], str, sizeof (cl.sound_name[numsounds]));
 		}
 
 		// set the base name for level-specific things...  this gets updated again by CL_SetupWorldModel later
-		strlcpy(cl.worldname, cl.model_name[1], sizeof(cl.worldname));
+		dp_strlcpy(cl.worldname, cl.model_name[1], sizeof(cl.worldname));
 		FS_StripExtension(cl.worldname, cl.worldnamenoextension, sizeof(cl.worldnamenoextension));
-		strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/", 5) ? cl.worldnamenoextension + 5 : cl.worldnamenoextension, sizeof(cl.worldbasename));
+		dp_strlcpy(cl.worldbasename, !strncmp(cl.worldnamenoextension, "maps/", 5) ? cl.worldnamenoextension + 5 : cl.worldnamenoextension, sizeof(cl.worldbasename));
 		Cvar_SetQuick(&cl_worldmessage, cl.worldmessage);
 		Cvar_SetQuick(&cl_worldname, cl.worldname);
 		Cvar_SetQuick(&cl_worldnamenoextension, cl.worldnamenoextension);
@@ -1949,7 +1949,7 @@ static void CL_ParseServerInfo (void)
 				cls.forcetrack = -1;
 				FS_Printf (cls.demofile, "%i\n", cls.forcetrack);
 				cls.demorecording = true;
-				strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
+				dp_strlcpy(cls.demoname, demofile, sizeof(cls.demoname));
 				cls.demo_lastcsprogssize = -1;
 				cls.demo_lastcsprogscrc = -1;
 			}
@@ -3032,10 +3032,10 @@ static void CL_IPLog_Add(const char *address, const char *name, qbool checkexist
 	sz_name = strlen(name) + 1;
 	cl_iplog_items[cl_iplog_numitems].address = (char *) Mem_Alloc(cls.permanentmempool, sz_address);
 	cl_iplog_items[cl_iplog_numitems].name = (char *) Mem_Alloc(cls.permanentmempool, sz_name);
-	strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, sz_address);
+	dp_strlcpy(cl_iplog_items[cl_iplog_numitems].address, address, sz_address);
 	// TODO: maybe it would be better to strip weird characters from name when
 	// copying it here rather than using a straight strcpy?
-	strlcpy(cl_iplog_items[cl_iplog_numitems].name, name, sz_name);
+	dp_strlcpy(cl_iplog_items[cl_iplog_numitems].name, name, sz_name);
 	cl_iplog_numitems++;
 	if (addtofile)
 	{
@@ -3517,7 +3517,7 @@ void CL_ParseServerMessage(void)
 				{
 					char description[32*64], logtemp[64];
 					int count;
-					strlcpy(description, "packet dump: ", sizeof(description));
+					dp_strlcpy(description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
 					if (i < 0)
 						i = 0;
@@ -3526,7 +3526,7 @@ void CL_ParseServerMessage(void)
 					while(count > 0)
 					{
 						dpsnprintf(logtemp, sizeof(logtemp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
-						strlcat(description, logtemp, sizeof(description));
+						dp_strlcat(description, logtemp, sizeof(description));
 						count--;
 						i++;
 						i &= 31;
@@ -3598,7 +3598,7 @@ void CL_ParseServerMessage(void)
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
+				dp_strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
 				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
@@ -3868,7 +3868,7 @@ void CL_ParseServerMessage(void)
 				{
 					char description[32*64], tempdesc[64];
 					int count;
-					strlcpy (description, "packet dump: ", sizeof(description));
+					dp_strlcpy (description, "packet dump: ", sizeof(description));
 					i = cmdcount - 32;
 					if (i < 0)
 						i = 0;
@@ -3877,7 +3877,7 @@ void CL_ParseServerMessage(void)
 					while(count > 0)
 					{
 						dpsnprintf (tempdesc, sizeof (tempdesc), "%3i:%s ", cmdlog[i], cmdlogname[i]);
-						strlcat (description, tempdesc, sizeof (description));
+						dp_strlcat (description, tempdesc, sizeof (description));
 						count--;
 						i++;
 						i &= 31;
@@ -4010,7 +4010,7 @@ void CL_ParseServerMessage(void)
 					Con_Printf ("svc_lightstyle >= MAX_LIGHTSTYLES");
 					break;
 				}
-				strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
+				dp_strlcpy (cl.lightstyle[i].map,  MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.lightstyle[i].map));
 				cl.lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 				cl.lightstyle[i].length = (int)strlen(cl.lightstyle[i].map);
 				break;
@@ -4067,7 +4067,7 @@ void CL_ParseServerMessage(void)
 				i = MSG_ReadByte(&cl_message);
 				if (i >= cl.maxclients)
 					Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
-				strlcpy (cl.scores[i].name, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.scores[i].name));
+				dp_strlcpy (cl.scores[i].name, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (cl.scores[i].name));
 				break;
 
 			case svc_updatefrags:

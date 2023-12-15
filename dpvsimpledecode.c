@@ -397,7 +397,7 @@ void *dpvsimpledecode_open(clvideo_t *video, char *filename, const char **errors
 									sfx_t* sfx;
 
 									FS_StripExtension(filename, wavename, namelen);
-									strlcat(wavename, ".wav", namelen);
+									dp_strlcat(wavename, ".wav", namelen);
 									sfx = S_PrecacheSound (wavename, false, false);
 									if (sfx != NULL)
 										s->sndchan = S_StartSound (-1, 0, sfx, vec3_origin, 1.0f, 0);
