@@ -1154,7 +1154,7 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	s = PRVM_GetString(prog, PRVM_serveredictstring(ent, weaponmodel));
 	if (strcmp(s, client->weaponmodel))
 	{
-		strlcpy(client->weaponmodel, s, sizeof(client->weaponmodel));
+		dp_strlcpy(client->weaponmodel, s, sizeof(client->weaponmodel));
 		client->weaponmodelindex = SV_ModelIndex(s, 1);
 	}
 
@@ -1614,7 +1614,7 @@ static void SV_UpdateToReliableMessages (void)
 		// always point the string back at host_client->name to keep it safe
 		//strlcpy (host_client->name, name, sizeof (host_client->name));
 		if (name != host_client->name) // prevent buffer overlap SIGABRT on Mac OSX
-			strlcpy (host_client->name, name, sizeof (host_client->name));
+			dp_strlcpy (host_client->name, name, sizeof (host_client->name));
 		SV_Name(i);
 
 		// DP_SV_CLIENTCOLORS
@@ -1635,7 +1635,7 @@ static void SV_UpdateToReliableMessages (void)
 		// always point the string back at host_client->name to keep it safe
 		//strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
 		if (model != host_client->playermodel) // prevent buffer overlap SIGABRT on Mac OSX
-			strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+			dp_strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
 		PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
 
 		// NEXUIZ_PLAYERSKIN
@@ -1645,7 +1645,7 @@ static void SV_UpdateToReliableMessages (void)
 		// always point the string back at host_client->name to keep it safe
 		//strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
 		if (skin != host_client->playerskin) // prevent buffer overlap SIGABRT on Mac OSX
-			strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+			dp_strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
 		PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 
 		// TODO: add an extension name for this [1/17/2008 Black]

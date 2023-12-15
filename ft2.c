@@ -288,7 +288,7 @@ static const unsigned char *fontfilecache_LoadFile(const char *path, qbool quiet
 		for(i = 0; i < MAX_FONTFILES; ++i)
 			if(fontfiles[i].refcount <= 0)
 			{
-				strlcpy(fontfiles[i].path, path, sizeof(fontfiles[i].path));
+				dp_strlcpy(fontfiles[i].path, path, sizeof(fontfiles[i].path));
 				fontfiles[i].len = *filesizepointer;
 				fontfiles[i].buf = buf;
 				fontfiles[i].refcount = 1;
@@ -547,7 +547,7 @@ qbool Font_LoadFont(const char *name, dp_font_t *dpfnt)
 			Mem_Free(ft2);
 			return false;
 		}
-		strlcpy(ft2->name, name, sizeof(ft2->name));
+		dp_strlcpy(ft2->name, name, sizeof(ft2->name));
 		ft2->image_font = true;
 		ft2->has_kerning = false;
 	}
@@ -724,7 +724,7 @@ static qbool Font_LoadFile(const char *name, int _face, ft2_settings_t *settings
 			Con_Printf(CON_ERROR "Failed to add attachment %u to %s\n", (unsigned)i, font->name);
 	}
 
-	strlcpy(font->name, name, sizeof(font->name));
+	dp_strlcpy(font->name, name, sizeof(font->name));
 	font->image_font = false;
 	font->has_kerning = !!(((FT_Face)(font->face))->face_flags & FT_FACE_FLAG_KERNING);
 	return true;

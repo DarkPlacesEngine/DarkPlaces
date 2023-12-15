@@ -143,7 +143,7 @@ cachepic_t *Draw_CachePic_Flags(const char *path, unsigned int cachepicflags)
 	Con_DPrintf("Draw_CachePic(\"%s\"): frame %i: loading pic%s\n", path, draw_frame, (cachepicflags & CACHEPICFLAG_NOTPERSISTENT) ? " notpersist" : "");
 	pic = cachepics + (numcachepics++);
 	memset(pic, 0, sizeof(*pic));
-	strlcpy (pic->name, path, sizeof(pic->name));
+	dp_strlcpy (pic->name, path, sizeof(pic->name));
 	// link into list
 	pic->chain = cachepichash[hashkey];
 	cachepichash[hashkey] = pic;
@@ -286,7 +286,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 		Con_DPrintf("Draw_NewPic(\"%s\"): frame %i: creating new cachepic\n", picname, draw_frame);
 		pic = cachepics + (numcachepics++);
 		memset(pic, 0, sizeof(*pic));
-		strlcpy (pic->name, picname, sizeof(pic->name));
+		dp_strlcpy (pic->name, picname, sizeof(pic->name));
 		// link into list
 		pic->chain = cachepichash[hashkey];
 		cachepichash[hashkey] = pic;
@@ -336,7 +336,7 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 
 	if(override || !fnt->texpath[0])
 	{
-		strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
+		dp_strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
 		// load the cvars when the font is FIRST loader
 		fnt->settings.scale = scale;
 		fnt->settings.voffset = voffset;
@@ -384,7 +384,7 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		if(!Draw_IsPicLoaded(fnt->pic))
 		{
 			fnt->pic = Draw_CachePic_Flags("gfx/conchars", CACHEPICFLAG_NOCOMPRESSION | (r_nearest_conchars.integer ? CACHEPICFLAG_NEAREST : 0));
-			strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
+			dp_strlcpy(widthfile, "gfx/conchars.width", sizeof(widthfile));
 		}
 		else
 			dpsnprintf(widthfile, sizeof(widthfile), "%s.width", fnt->fallbacks[i]);
@@ -493,7 +493,7 @@ dp_font_t *FindFont(const char *title, qbool allocate_new)
 		{
 			if(!strcmp(dp_fonts.f[i].title, ""))
 			{
-				strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
+				dp_strlcpy(dp_fonts.f[i].title, title, sizeof(dp_fonts.f[i].title));
 				return &dp_fonts.f[i];
 			}
 		}
@@ -508,7 +508,7 @@ dp_font_t *FindFont(const char *title, qbool allocate_new)
 			if (dp_fonts.f[i].ft2)
 				dp_fonts.f[i].ft2->settings = &dp_fonts.f[i].settings;
 		// register a font in first expanded slot
-		strlcpy(dp_fonts.f[oldsize].title, title, sizeof(dp_fonts.f[oldsize].title));
+		dp_strlcpy(dp_fonts.f[oldsize].title, title, sizeof(dp_fonts.f[oldsize].title));
 		return &dp_fonts.f[oldsize];
 	}
 	return NULL;
@@ -577,7 +577,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 	else
 	{
 		if (strcmp(cmd->cmdline, f->cmdline) != 0 || r_font_always_reload.integer)
-		 	strlcpy(f->cmdline, cmd->cmdline, MAX_FONT_CMDLINE);
+			dp_strlcpy(f->cmdline, cmd->cmdline, MAX_FONT_CMDLINE);
 		else
 		{
 			Con_DPrintf("LoadFont: font %s is unchanged\n", Cmd_Argv(cmd, 1));
@@ -605,7 +605,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 	}
 
 	if(!c || (c - filelist) >= MAX_QPATH)
-		strlcpy(mainfont, filelist, sizeof(mainfont));
+		dp_strlcpy(mainfont, filelist, sizeof(mainfont));
 	else
 	{
 		memcpy(mainfont, filelist, c - filelist);
@@ -631,7 +631,7 @@ static void LoadFont_f(cmd_state_t *cmd)
 		}
 		if(!c || (c-filelist) >= MAX_QPATH)
 		{
-			strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
+			dp_strlcpy(f->fallbacks[i], filelist, sizeof(mainfont));
 		}
 		else
 		{
@@ -768,15 +768,15 @@ void GL_Draw_Init (void)
 	memset(dp_fonts.f, 0, sizeof(dp_font_t) * dp_fonts.maxsize);
 
 	// assign starting font names
-	strlcpy(FONT_DEFAULT->title, "default", sizeof(FONT_DEFAULT->title));
-	strlcpy(FONT_DEFAULT->texpath, "gfx/conchars", sizeof(FONT_DEFAULT->texpath));
-	strlcpy(FONT_CONSOLE->title, "console", sizeof(FONT_CONSOLE->title));
-	strlcpy(FONT_SBAR->title, "sbar", sizeof(FONT_SBAR->title));
-	strlcpy(FONT_NOTIFY->title, "notify", sizeof(FONT_NOTIFY->title));
-	strlcpy(FONT_CHAT->title, "chat", sizeof(FONT_CHAT->title));
-	strlcpy(FONT_CENTERPRINT->title, "centerprint", sizeof(FONT_CENTERPRINT->title));
-	strlcpy(FONT_INFOBAR->title, "infobar", sizeof(FONT_INFOBAR->title));
-	strlcpy(FONT_MENU->title, "menu", sizeof(FONT_MENU->title));
+	dp_strlcpy(FONT_DEFAULT->title, "default", sizeof(FONT_DEFAULT->title));
+	dp_strlcpy(FONT_DEFAULT->texpath, "gfx/conchars", sizeof(FONT_DEFAULT->texpath));
+	dp_strlcpy(FONT_CONSOLE->title, "console", sizeof(FONT_CONSOLE->title));
+	dp_strlcpy(FONT_SBAR->title, "sbar", sizeof(FONT_SBAR->title));
+	dp_strlcpy(FONT_NOTIFY->title, "notify", sizeof(FONT_NOTIFY->title));
+	dp_strlcpy(FONT_CHAT->title, "chat", sizeof(FONT_CHAT->title));
+	dp_strlcpy(FONT_CENTERPRINT->title, "centerprint", sizeof(FONT_CENTERPRINT->title));
+	dp_strlcpy(FONT_INFOBAR->title, "infobar", sizeof(FONT_INFOBAR->title));
+	dp_strlcpy(FONT_MENU->title, "menu", sizeof(FONT_MENU->title));
 	for(i = 0, j = 0; i < MAX_USERFONTS; ++i)
 		if(!FONT_USER(i)->title[0])
 			dpsnprintf(FONT_USER(i)->title, sizeof(FONT_USER(i)->title), "user%d", j++);

@@ -276,9 +276,9 @@ static void S_Play_Common (cmd_state_t *cmd, float fvol, float attenuation)
 	while (i < Cmd_Argc (cmd))
 	{
 		// Get the name, and appends ".wav" as an extension if there's none
-		strlcpy (name, Cmd_Argv(cmd, i), sizeof (name));
+		dp_strlcpy (name, Cmd_Argv(cmd, i), sizeof (name));
 		if (!strrchr (name, '.'))
-			strlcat (name, ".wav", sizeof (name));
+			dp_strlcat (name, ".wav", sizeof (name));
 		i++;
 
 		// If we need to get the volume from the command line
@@ -927,7 +927,7 @@ sfx_t *S_FindName (const char *name)
 	// Add a sfx_t struct for this sound
 	sfx = (sfx_t *)Mem_Alloc (snd_mempool, sizeof (*sfx));
 	memset (sfx, 0, sizeof(*sfx));
-	strlcpy (sfx->name, name, sizeof (sfx->name));
+	dp_strlcpy (sfx->name, name, sizeof (sfx->name));
 	sfx->memsize = sizeof(*sfx);
 	sfx->next = known_sfx;
 	known_sfx = sfx;

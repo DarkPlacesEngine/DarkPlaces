@@ -113,40 +113,40 @@ void CL_ForwardToServer (const char *s)
 					if (cl.stats[STAT_ITEMS] & IT_QUAD)
 					{
 						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "quad", sizeof(temp));
+							dp_strlcat(temp, " ", sizeof(temp));
+						dp_strlcat(temp, "quad", sizeof(temp));
 					}
 					if (cl.stats[STAT_ITEMS] & IT_INVULNERABILITY)
 					{
 						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "pent", sizeof(temp));
+							dp_strlcat(temp, " ", sizeof(temp));
+						dp_strlcat(temp, "pent", sizeof(temp));
 					}
 					if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
 					{
 						if (temp[0])
-							strlcat(temp, " ", sizeof(temp));
-						strlcat(temp, "eyes", sizeof(temp));
+							dp_strlcat(temp, " ", sizeof(temp));
+						dp_strlcat(temp, "eyes", sizeof(temp));
 					}
 					break;
 				case 'w': // weapon status (outputs "SSG:NG:SNG:GL:RL:LG" with the text between : characters omitted if you lack the weapon)
 					if (cl.stats[STAT_ITEMS] & IT_SUPER_SHOTGUN)
-						strlcat(temp, "SSG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
+						dp_strlcat(temp, "SSG", sizeof(temp));
+					dp_strlcat(temp, ":", sizeof(temp));
 					if (cl.stats[STAT_ITEMS] & IT_NAILGUN)
-						strlcat(temp, "NG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
+						dp_strlcat(temp, "NG", sizeof(temp));
+					dp_strlcat(temp, ":", sizeof(temp));
 					if (cl.stats[STAT_ITEMS] & IT_SUPER_NAILGUN)
-						strlcat(temp, "SNG", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
+						dp_strlcat(temp, "SNG", sizeof(temp));
+					dp_strlcat(temp, ":", sizeof(temp));
 					if (cl.stats[STAT_ITEMS] & IT_GRENADE_LAUNCHER)
-						strlcat(temp, "GL", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
+						dp_strlcat(temp, "GL", sizeof(temp));
+					dp_strlcat(temp, ":", sizeof(temp));
 					if (cl.stats[STAT_ITEMS] & IT_ROCKET_LAUNCHER)
-						strlcat(temp, "RL", sizeof(temp));
-					strlcat(temp, ":", sizeof(temp));
+						dp_strlcat(temp, "RL", sizeof(temp));
+					dp_strlcat(temp, ":", sizeof(temp));
 					if (cl.stats[STAT_ITEMS] & IT_LIGHTNING)
-						strlcat(temp, "LG", sizeof(temp));
+						dp_strlcat(temp, "LG", sizeof(temp));
 					break;
 				default:
 					// not a recognized macro, print it as-is...
@@ -592,7 +592,7 @@ static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 			++cls.rcon_trying;
 			if(i >= MAX_RCONS)
 				NetConn_WriteString(mysocket, "\377\377\377\377getchallenge", &cls.rcon_address); // otherwise we'll request the challenge later
-			strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(cmd), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
+			dp_strlcpy(cls.rcon_commands[cls.rcon_ringpos], Cmd_Args(cmd), sizeof(cls.rcon_commands[cls.rcon_ringpos]));
 			cls.rcon_addresses[cls.rcon_ringpos] = cls.rcon_address;
 			cls.rcon_timeout[cls.rcon_ringpos] = host.realtime + rcon_secure_challengetimeout.value;
 			cls.rcon_ringpos = (cls.rcon_ringpos + 1) % MAX_RCONS;
@@ -606,7 +606,7 @@ static void CL_Rcon_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 			if(HMAC_MDFOUR_16BYTES((unsigned char *) (buf + 24), (unsigned char *) argbuf, (int)strlen(argbuf), (unsigned char *) rcon_password.string, n))
 			{
 				buf[40] = ' ';
-				strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
+				dp_strlcpy(buf + 41, argbuf, sizeof(buf) - 41);
 				NetConn_Write(mysocket, buf, 41 + (int)strlen(buf + 41), &cls.rcon_address);
 			}
 		}
@@ -637,7 +637,7 @@ static void CL_FullServerinfo_f(cmd_state_t *cmd) // credit: taken from QuakeWor
 		return;
 	}
 
-	strlcpy (cl.qw_serverinfo, Cmd_Argv(cmd, 1), sizeof(cl.qw_serverinfo));
+	dp_strlcpy (cl.qw_serverinfo, Cmd_Argv(cmd, 1), sizeof(cl.qw_serverinfo));
 	InfoString_GetValue(cl.qw_serverinfo, "teamplay", temp, sizeof(temp));
 	cl.qw_teamplay = atoi(temp);
 }
@@ -671,7 +671,7 @@ static void CL_FullInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 		if (len >= sizeof(key)) {
 			len = sizeof(key) - 1;
 		}
-		strlcpy(key, s, len + 1);
+		dp_strlcpy(key, s, len + 1);
 		s += len;
 		if (!*s)
 		{
@@ -684,7 +684,7 @@ static void CL_FullInfo_f(cmd_state_t *cmd) // credit: taken from QuakeWorld
 		if (len >= sizeof(value)) {
 			len = sizeof(value) - 1;
 		}
-		strlcpy(value, s, len + 1);
+		dp_strlcpy(value, s, len + 1);
 
 		CL_SetInfo(key, value, false, false, false, false);
 

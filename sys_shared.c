@@ -213,13 +213,13 @@ notfound:
 	if (!dllhandle && strrchr(sys.argv[0], '/'))
 	{
 		char path[MAX_OSPATH];
-		strlcpy(path, sys.argv[0], sizeof(path));
+		dp_strlcpy(path, sys.argv[0], sizeof(path));
 		strrchr(path, '/')[1] = 0;
 		for (i = 0; dllnames[i] != NULL; i++)
 		{
 			char temp[MAX_OSPATH];
-			strlcpy(temp, path, sizeof(temp));
-			strlcat(temp, dllnames[i], sizeof(temp));
+			dp_strlcpy(temp, path, sizeof(temp));
+			dp_strlcat(temp, dllnames[i], sizeof(temp));
 			Con_DPrintf (" \"%s\"", temp);
 
 			if(Sys_LoadLibrary(temp, &dllhandle))

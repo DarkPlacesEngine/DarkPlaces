@@ -1019,7 +1019,7 @@ static void CompressedImageCache_Add(const char *imagename, size_t maxsize, void
 		return; // can't add this
 
 	i = (CompressedImageCacheItem*) Z_Malloc(sizeof(CompressedImageCacheItem));
-	strlcpy(i->imagename, imagename, sizeof(i->imagename));
+	dp_strlcpy(i->imagename, imagename, sizeof(i->imagename));
 	i->maxsize = maxsize;
 	i->compressed = compressed;
 	i->compressed_size = compressed_size;

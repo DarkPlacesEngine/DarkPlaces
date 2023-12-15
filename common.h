@@ -281,14 +281,6 @@ qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t siz
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 
-// strlcat and strlcpy, from OpenBSD
-// Most (all?) BSDs already have them
-#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(MACOSX)
-# define HAVE_STRLCAT 1
-# define HAVE_STRLCPY 1
-#endif
-
-#ifndef HAVE_STRLCAT
 /*!
  * Appends src to string dst of size dsize (unlike strncat, dsize is the
  * full size of dst, not space left).  At most dsize-1 characters
@@ -296,18 +288,14 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out);
  * Returns strlen(src) + MIN(dsize, strlen(initial dst)).
  * If retval >= dsize, truncation occurred.
  */
-size_t strlcat(char *dst, const char *src, size_t dsize);
-#endif  // #ifndef HAVE_STRLCAT
+size_t dp_strlcat(char *dst, const char *src, size_t dsize);
 
-#ifndef HAVE_STRLCPY
 /*!
  * Copy string src to buffer dst of size dsize.  At most dsize-1
  * chars will be copied.  Always NUL terminates (unless dsize == 0).
  * Returns strlen(src); if retval >= dsize, truncation occurred.
  */
-size_t strlcpy(char *dst, const char *src, size_t dsize);
-
-#endif  // #ifndef HAVE_STRLCPY
+size_t dp_strlcpy(char *dst, const char *src, size_t dsize);
 
 void FindFraction(double val, int *num, int *denom, int denomMax);
 

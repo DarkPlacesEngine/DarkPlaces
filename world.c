@@ -119,7 +119,7 @@ void World_SetSize(world_t *world, const char *filename, const vec3_t mins, cons
 {
 	int i;
 
-	strlcpy(world->filename, filename, sizeof(world->filename));
+	dp_strlcpy(world->filename, filename, sizeof(world->filename));
 	VectorCopy(mins, world->mins);
 	VectorCopy(maxs, world->maxs);
 	world->prog = prog;

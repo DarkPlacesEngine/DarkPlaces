@@ -750,9 +750,9 @@ qbool Crypto_RetrieveHostKey(lhnetaddress_t *peeraddress, int *keyid, char *keyf
 	if(keyid)
 		*keyid = hk->keyid;
 	if(keyfp)
-		strlcpy(keyfp, pubkeys_fp64[hk->keyid], keyfplen);
+		dp_strlcpy(keyfp, pubkeys_fp64[hk->keyid], keyfplen);
 	if(idfp)
-		strlcpy(idfp, hk->idfp, idfplen);
+		dp_strlcpy(idfp, hk->idfp, idfplen);
 	if(aeslevel)
 		*aeslevel = hk->aeslevel;
 	if(issigned)
@@ -771,10 +771,10 @@ int Crypto_RetrieveLocalKey(int keyid, char *keyfp, size_t keyfplen, char *idfp,
 	if(!pubkeys[keyid])
 		return -1;
 	if(keyfp)
-		strlcpy(keyfp, pubkeys_fp64[keyid], keyfplen);
+		dp_strlcpy(keyfp, pubkeys_fp64[keyid], keyfplen);
 	if(idfp)
 		if(pubkeys_havepriv[keyid])
-			strlcpy(idfp, pubkeys_priv_fp64[keyid], idfplen);
+			dp_strlcpy(idfp, pubkeys_priv_fp64[keyid], idfplen);
 	if(issigned)
 		*issigned = pubkeys_havesig[keyid];
 	return 1;
@@ -848,7 +848,7 @@ static void Crypto_BuildIdString(void)
 	dpsnprintf(crypto_idstring_buf, sizeof(crypto_idstring_buf), "%d", d0_rijndael_dll ? crypto_aeslevel.integer : 0);
 	for (i = 0; i < MAX_PUBKEYS; ++i)
 		if (pubkeys[i])
-			strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s%s", pubkeys_priv_fp64[i], pubkeys_havesig[i] ? "" : "~", pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
+			dp_strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s%s", pubkeys_priv_fp64[i], pubkeys_havesig[i] ? "" : "~", pubkeys_fp64[i]), sizeof(crypto_idstring_buf));
 	crypto_idstring = crypto_idstring_buf;
 }
 
@@ -1292,7 +1292,7 @@ static void Crypto_KeyGen_f(cmd_state_t *cmd)
 		{
 			Con_Printf("Generated private ID key_%d.d0pk (public key fingerprint: %s)\n", keygen_i, pubkeys_priv_fp64[keygen_i]);
 			pubkeys_havepriv[keygen_i] = true;
-			strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
+			dp_strlcat(crypto_idstring_buf, va(vabuf, sizeof(vabuf), " %s@%s", pubkeys_priv_fp64[keygen_i], pubkeys_fp64[keygen_i]), sizeof(crypto_idstring_buf));
 			crypto_idstring = crypto_idstring_buf;
 			Crypto_BuildChallengeAppend();
 		}
@@ -1858,8 +1858,8 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 			if(CDATA->s >= 0)
 			{
 				// I am the server, and my key is ok... so let's set server_keyfp and server_idfp
-				strlcpy(crypto->server_keyfp, pubkeys_fp64[CDATA->s], sizeof(crypto->server_keyfp));
-				strlcpy(crypto->server_idfp, pubkeys_priv_fp64[CDATA->s], sizeof(crypto->server_idfp));
+				dp_strlcpy(crypto->server_keyfp, pubkeys_fp64[CDATA->s], sizeof(crypto->server_keyfp));
+				dp_strlcpy(crypto->server_idfp, pubkeys_priv_fp64[CDATA->s], sizeof(crypto->server_idfp));
 				crypto->server_issigned = pubkeys_havesig[CDATA->s];
 
 				if(!CDATA->id)
@@ -2001,7 +2001,7 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 				CLEAR_CDATA;
 				return Crypto_ServerError(data_out, len_out, "d0_blind_id_authenticate_with_private_id_verify failed (authentication error)", "Authentication error");
 			}
-			strlcpy(crypto->client_keyfp, pubkeys_fp64[CDATA->c], sizeof(crypto->client_keyfp));
+			dp_strlcpy(crypto->client_keyfp, pubkeys_fp64[CDATA->c], sizeof(crypto->client_keyfp));
 			crypto->client_issigned = status;
 
 			memset(crypto->client_idfp, 0, sizeof(crypto->client_idfp));
@@ -2324,7 +2324,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			CDATA->s = serverid;
 			CDATA->c = clientid;
 			memset(crypto->dhkey, 0, sizeof(crypto->dhkey));
-			strlcpy(CDATA->challenge, challenge, sizeof(CDATA->challenge));
+			dp_strlcpy(CDATA->challenge, challenge, sizeof(CDATA->challenge));
 			crypto->client_keyfp[0] = 0;
 			crypto->client_idfp[0] = 0;
 			crypto->server_keyfp[0] = 0;
@@ -2363,8 +2363,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			if(clientid >= 0)
 			{
 				// I am the client, and my key is ok... so let's set client_keyfp and client_idfp
-				strlcpy(crypto->client_keyfp, pubkeys_fp64[CDATA->c], sizeof(crypto->client_keyfp));
-				strlcpy(crypto->client_idfp, pubkeys_priv_fp64[CDATA->c], sizeof(crypto->client_idfp));
+				dp_strlcpy(crypto->client_keyfp, pubkeys_fp64[CDATA->c], sizeof(crypto->client_keyfp));
+				dp_strlcpy(crypto->client_idfp, pubkeys_priv_fp64[CDATA->c], sizeof(crypto->client_idfp));
 				crypto->client_issigned = pubkeys_havesig[CDATA->c];
 			}
 
@@ -2508,7 +2508,7 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 				return Crypto_ClientError(data_out, len_out, "d0_blind_id_authenticate_with_private_id_verify failed (server authentication error)");
 			}
 
-			strlcpy(crypto->server_keyfp, pubkeys_fp64[CDATA->s], sizeof(crypto->server_keyfp));
+			dp_strlcpy(crypto->server_keyfp, pubkeys_fp64[CDATA->s], sizeof(crypto->server_keyfp));
 			if (!status && CDATA->wantserver_issigned)
 			{
 				CLEAR_CDATA;

@@ -904,7 +904,7 @@ static void Mod_MDL_LoadFrames (unsigned char* datapointer, int inverts, int *ve
 		// get scene name from first frame
 		pinframe = (daliasframe_t *)datapointer;
 
-		strlcpy(scene->name, pinframe->name, sizeof(scene->name));
+		dp_strlcpy(scene->name, pinframe->name, sizeof(scene->name));
 		scene->firstframe = pose;
 		scene->framecount = groupframes;
 		scene->framerate = 1.0f / interval;
@@ -1281,7 +1281,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 
 			// store the info about the new skin
 			Mod_LoadCustomMaterial(loadmodel->mempool, loadmodel->data_textures + totalskins * loadmodel->num_surfaces, name, SUPERCONTENTS_SOLID, MATERIALFLAG_WALL, tempskinframe);
-			strlcpy(loadmodel->skinscenes[loadmodel->numskins].name, name, sizeof(loadmodel->skinscenes[loadmodel->numskins].name));
+			dp_strlcpy(loadmodel->skinscenes[loadmodel->numskins].name, name, sizeof(loadmodel->skinscenes[loadmodel->numskins].name));
 			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
 			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
 			loadmodel->skinscenes[loadmodel->numskins].framerate = 10.0f;
@@ -1542,7 +1542,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer, void *bufferend)
 			out[k] = v[vertremap[k]];
 		datapointer += numxyz * sizeof(trivertx_t);
 
-		strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
+		dp_strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].framerate = 10;
@@ -1636,7 +1636,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->animscenes = (animscene_t *)Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
 	for (i = 0, pinframe = (md3frameinfo_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_frameinfo));i < loadmodel->numframes;i++, pinframe++)
 	{
-		strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
+		dp_strlcpy(loadmodel->animscenes[i].name, pinframe->name, sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = i;
 		loadmodel->animscenes[i].framecount = 1;
 		loadmodel->animscenes[i].framerate = 10;
@@ -1649,7 +1649,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->data_tags = (aliastag_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_tagframes * loadmodel->num_tags * sizeof(aliastag_t));
 	for (i = 0, pintag = (md3tag_t *)((unsigned char *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->num_tagframes * loadmodel->num_tags;i++, pintag++)
 	{
-		strlcpy(loadmodel->data_tags[i].name, pintag->name, sizeof(loadmodel->data_tags[i].name));
+		dp_strlcpy(loadmodel->data_tags[i].name, pintag->name, sizeof(loadmodel->data_tags[i].name));
 		for (j = 0;j < 9;j++)
 			loadmodel->data_tags[i].matrixgl[j] = LittleFloat(pintag->rotationmatrix[j]);
 		for (j = 0;j < 3;j++)
@@ -2547,7 +2547,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->synctype = ST_RAND;
 
 	FS_StripExtension(loadmodel->name, animname, sizeof(animname));
-	strlcat(animname, ".psa", sizeof(animname));
+	dp_strlcat(animname, ".psa", sizeof(animname));
 	animbuffer = animfilebuffer = FS_LoadFile(animname, loadmodel->mempool, false, &filesize);
 	animbufferend = (void *)((unsigned char*)animbuffer + (int)filesize);
 	if (!animbuffer)
@@ -2974,7 +2974,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// copy over the bones
 	for (index = 0;index < numbones;index++)
 	{
-		strlcpy(loadmodel->data_bones[index].name, bones[index].name, sizeof(loadmodel->data_bones[index].name));
+		dp_strlcpy(loadmodel->data_bones[index].name, bones[index].name, sizeof(loadmodel->data_bones[index].name));
 		loadmodel->data_bones[index].parent = (index || bones[index].parent > 0) ? bones[index].parent : -1;
 		if (loadmodel->data_bones[index].parent >= index)
 			Host_Error("%s bone[%i].parent >= %i", loadmodel->name, index, index);
@@ -3098,7 +3098,7 @@ void Mod_PSKMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
-		strlcpy(loadmodel->animscenes[0].name, "base", sizeof(loadmodel->animscenes[0].name));
+		dp_strlcpy(loadmodel->animscenes[0].name, "base", sizeof(loadmodel->animscenes[0].name));
 		loadmodel->animscenes[0].firstframe = 0;
 		loadmodel->animscenes[0].framecount = 1;
 		loadmodel->animscenes[0].loop = true;
@@ -3443,7 +3443,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				joint1[i].rotation[j] = LittleFloat(injoint1[i].rotation[j]);
 				joint1[i].scale[j] = LittleFloat(injoint1[i].scale[j]);
 			}
-			strlcpy(loadmodel->data_bones[i].name, &text[joint1[i].name], sizeof(loadmodel->data_bones[i].name));
+			dp_strlcpy(loadmodel->data_bones[i].name, &text[joint1[i].name], sizeof(loadmodel->data_bones[i].name));
 			loadmodel->data_bones[i].parent = joint1[i].parent;
 			if (loadmodel->data_bones[i].parent >= i)
 				Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
@@ -3475,7 +3475,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 				joint[i].scale[j] = LittleFloat(injoint[i].scale[j]);
 			}
 			joint[i].rotation[3] = LittleFloat(injoint[i].rotation[3]);
-			strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
+			dp_strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
 			loadmodel->data_bones[i].parent = joint[i].parent;
 			if (loadmodel->data_bones[i].parent >= i)
 				Host_Error("%s bone[%i].parent >= %i", loadmodel->name, i, i);
@@ -3503,7 +3503,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		anim.num_frames = LittleLong(anims[i].num_frames);
 		anim.framerate = LittleFloat(anims[i].framerate);
 		anim.flags = LittleLong(anims[i].flags);
-		strlcpy(loadmodel->animscenes[i].name, &text[anim.name], sizeof(loadmodel->animscenes[i].name));
+		dp_strlcpy(loadmodel->animscenes[i].name, &text[anim.name], sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = anim.first_frame;
 		loadmodel->animscenes[i].framecount = anim.num_frames;
 		loadmodel->animscenes[i].loop = ((anim.flags & IQM_LOOP) != 0);
@@ -3511,7 +3511,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	if (header.num_anims <= 0)
 	{
-		strlcpy(loadmodel->animscenes[0].name, "static", sizeof(loadmodel->animscenes[0].name));
+		dp_strlcpy(loadmodel->animscenes[0].name, "static", sizeof(loadmodel->animscenes[0].name));
 		loadmodel->animscenes[0].firstframe = 0;
 		loadmodel->animscenes[0].framecount = 1;
 		loadmodel->animscenes[0].loop = true;

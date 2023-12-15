@@ -629,10 +629,10 @@ void CSQC_AddPrintText (const char *msg)
 				cl.csqc_printtextbuf[0] = 0;
 			}
 			else
-				strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
+				dp_strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
 			return;
 		}
-		strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
+		dp_strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
 		CL_VM_Parse_Print(cl.csqc_printtextbuf);
 		cl.csqc_printtextbuf[0] = 0;
 	}
