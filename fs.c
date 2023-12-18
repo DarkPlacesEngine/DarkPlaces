@@ -3846,7 +3846,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 
 				// prevseparator points past the '/' right before the wildcard and nextseparator at the one following it (or at the end of the string)
 				// copy everything up except nextseperator
-				dp_strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
+				dp_ustr2stp(subpattern, sizeof(subpattern), pattern, nextseparator - pattern);
 				// find the last '/' before the wildcard
 				prevseparator = strrchr( subpattern, '/' );
 				if (!prevseparator)
@@ -3855,7 +3855,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 					prevseparator++;
 				// copy everything from start to the previous including the '/' (before the wildcard)
 				// everything up to start is already included in the path of matchedSet's entries
-				dp_strlcpy(subpath, start, min(sizeof(subpath), (size_t) ((prevseparator - subpattern) - (start - pattern) + 1)));
+				dp_ustr2stp(subpath, sizeof(subpath), start, (prevseparator - subpattern) - (start - pattern));
 
 				// for each entry in matchedSet try to open the subdirectories specified in subpath
 				for( dirlistindex = 0 ; dirlistindex < matchedSet.numstrings ; dirlistindex++ ) {
