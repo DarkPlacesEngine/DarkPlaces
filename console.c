@@ -391,8 +391,8 @@ const char *ConBuffer_GetLine(conbuffer_t *buf, int i)
 {
 	static char copybuf[MAX_INPUTLINE]; // client only
 	con_lineinfo_t *l = &CONBUFFER_LINES(buf, i);
-	size_t sz = l->len+1 > sizeof(copybuf) ? sizeof(copybuf) : l->len+1;
-	dp_strlcpy(copybuf, l->start, sz);
+
+	dp_ustr2stp(copybuf, sizeof(copybuf), l->start, l->len);
 	return copybuf;
 }
 
@@ -2785,7 +2785,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 	space = strchr(line + 1, ' ');
 	if(space && pos == (space - line) + 1)
 	{
-		dp_strlcpy(command, line + 1, min(sizeof(command), (unsigned int)(space - line)));
+		// adding 1 to line drops the leading ]
+		dp_ustr2stp(command, sizeof(command), line + 1, space - (line + 1));
 
 		patterns = Cvar_VariableString(cmd->cvars, va(vabuf, sizeof(vabuf), "con_completion_%s", command), CF_CLIENT | CF_SERVER); // TODO maybe use a better place for this?
 		if(patterns && !*patterns)

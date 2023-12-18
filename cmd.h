@@ -156,8 +156,8 @@ typedef struct cmd_input_s
 	llist_t list;
 	cmd_state_t *source;
 	vec_t delay;
-	size_t size;
-	size_t length;
+	size_t size;   ///< excludes \0 terminator
+	size_t length; ///< excludes \0 terminator
 	char *text;
 	qbool pending;
 } cmd_input_t;
