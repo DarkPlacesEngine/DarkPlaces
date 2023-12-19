@@ -348,6 +348,7 @@ void CL_Record_f(cmd_state_t *cmd)
 	int c, track;
 	char name[MAX_OSPATH];
 	char vabuf[1024];
+	int vabuf_len;
 
 	c = Cmd_Argc(cmd);
 	if (c != 2 && c != 3 && c != 4)
@@ -386,7 +387,10 @@ void CL_Record_f(cmd_state_t *cmd)
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_local, false);
+	{
+		vabuf_len = dpsnprintf(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2));
+		Cmd_ExecuteString(cmd, vabuf, vabuf_len, src_local, false);
+	}
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);

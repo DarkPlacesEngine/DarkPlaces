@@ -2433,7 +2433,7 @@ static void VM_SV_clientcommand(prvm_prog_t *prog)
 
 	temp_client = host_client;
 	host_client = svs.clients + i;
-	Cmd_ExecuteString(cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), src_client, true);
+	Cmd_ExecuteString(cmd_serverfromclient, PRVM_G_STRING(OFS_PARM1), strlen(PRVM_G_STRING(OFS_PARM1)), src_client, true);
 	host_client = temp_client;
 }
 
@@ -2686,7 +2686,7 @@ static void VM_SV_gettaginfo(prvm_prog_t *prog)
 	Matrix4x4_ToVectors(&tag_localmatrix, forward, left, up, origin);
 
 	PRVM_serverglobalfloat(gettaginfo_parent) = parentindex;
-	PRVM_serverglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(prog, tagname) : 0;
+	PRVM_serverglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(prog, tagname, strlen(tagname)) : 0;
 	VectorCopy(forward, PRVM_serverglobalvector(gettaginfo_forward));
 	VectorNegate(left, PRVM_serverglobalvector(gettaginfo_right));
 	VectorCopy(up, PRVM_serverglobalvector(gettaginfo_up));
@@ -2785,9 +2785,10 @@ string(string key) serverkey
 static void VM_SV_serverkey(prvm_prog_t *prog)
 {
 	char string[VM_TEMPSTRING_MAXSIZE];
+
 	VM_SAFEPARMCOUNT(1, VM_SV_serverkey);
 	InfoString_GetValue(svs.serverinfo, PRVM_G_STRING(OFS_PARM0), string, sizeof(string));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, strlen(string));
 }
 
 //#333 void(entity e, float mdlindex) setmodelindex (EXT_CSQC)
@@ -2924,10 +2925,10 @@ static void VM_SV_pointparticles(prvm_prog_t *prog)
 	SV_FlushBroadcastMessages();
 }
 
-qbool SV_VM_ConsoleCommand (const char *text)
+qbool SV_VM_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.ConsoleCmd, true, PRVM_EDICT_TO_PROG(sv.world.prog->edicts), sv.time,  !(!sv.active || !prog || !prog->loaded), "QC function ConsoleCmd is missing"); 
+	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.ConsoleCmd, true, PRVM_EDICT_TO_PROG(sv.world.prog->edicts), sv.time,  !(!sv.active || !prog || !prog->loaded), "QC function ConsoleCmd is missing");
 }
 
 // #352 void(string cmdname) registercommand (EXT_CSQC)
@@ -3043,7 +3044,7 @@ static void VM_SV_skel_get_bonename(prvm_prog_t *prog)
 		return;
 	if (bonenum < 0 || bonenum >= skeleton->model->num_bones)
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, skeleton->model->data_bones[bonenum].name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, skeleton->model->data_bones[bonenum].name, strlen(skeleton->model->data_bones[bonenum].name));
 }
 
 // #267 float(float skel, float bonenum) skel_get_boneparent = #267; // (FTE_CSQC_SKELETONOBJECTS) returns parent num for supplied bonenum, 0 if bonenum has no parent or bone does not exist (returned value is always less than bonenum, you can loop on this)

@@ -1118,6 +1118,7 @@ typedef struct client_state_s
 	qbool csqc_usecsqclistener;
 	matrix4x4_t csqc_listenermatrix;
 	char csqc_printtextbuf[MAX_INPUTLINE];
+	size_t csqc_printtextbuf_len; ///< strlen
 
 	// collision culling data
 	world_t world;

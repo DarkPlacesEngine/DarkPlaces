@@ -143,13 +143,13 @@ typedef struct cmd_state_s
 	unsigned cvars_flagsmask; // which CVAR_* flags should be visible to this interpreter? (CF_CLIENT | CF_SERVER, or just CF_SERVER)
 	unsigned cmd_flagsmask; // cmd flags that identify this interpreter
 
-	qbool (*Handle)(struct cmd_state_s *, struct cmd_function_s *, const char *, enum cmd_source_s);
+	qbool (*Handle)(struct cmd_state_s *, struct cmd_function_s *, const char *, size_t, enum cmd_source_s);
 }
 cmd_state_t;
 
-qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
-qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
-qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src);
+qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func);
+qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, size_t textlen, cmd_source_t src);
+qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, size_t textlen, cmd_source_t src);
 
 typedef struct cmd_input_s
 {
@@ -267,7 +267,7 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
-void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qbool lockmutex);
+void Cmd_ExecuteString(cmd_state_t *cmd, const char *text, size_t textlen, cmd_source_t src, qbool lockmutex);
 
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies

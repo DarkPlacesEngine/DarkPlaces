@@ -26,6 +26,7 @@ lhnetaddress_t;
 
 int LHNETADDRESS_FromPort(lhnetaddress_t *address, lhnetaddresstype_t addresstype, int port);
 int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int defaultport);
+/// Returns the number of bytes written to *string excluding the \0 terminator.
 int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int stringbuffersize, int includeport);
 static inline lhnetaddresstype_t LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
 {

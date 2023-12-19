@@ -987,6 +987,7 @@ void SV_ReadClientMessage(void)
 	prvm_prog_t *prog = SVVM_prog;
 	int netcmd, num, start;
 	char *s, *p, *q;
+	size_t slen;
 
 	if(sv_autodemo_perclient.integer >= 2)
 		SV_WriteDemoMessage(host_client, &(host_client->netconnection->message), true);
@@ -1035,7 +1036,8 @@ void SV_ReadClientMessage(void)
 			// allow reliable messages now as the client is done with initial loading
 			if (host_client->sendsignon == 2)
 				host_client->sendsignon = 0;
-			s = MSG_ReadString(&sv_message, sv_readstring, sizeof(sv_readstring));
+			slen = MSG_ReadString_len(&sv_message, sv_readstring, sizeof(sv_readstring));
+			s = sv_readstring;
 			q = NULL;
 			for(p = s; *p; ++p) switch(*p)
 			{
@@ -1054,19 +1056,19 @@ void SV_ReadClientMessage(void)
 			if (strncasecmp(s, "spawn", 5) == 0
 			 || strncasecmp(s, "begin", 5) == 0
 			 || strncasecmp(s, "prespawn", 8) == 0)
-				Cmd_ExecuteString (cmd_serverfromclient, s, src_client, true);
+				Cmd_ExecuteString(cmd_serverfromclient, s, slen, src_client, true);
 			else if (PRVM_serverfunction(SV_ParseClientCommand))
 			{
 				int restorevm_tempstringsbuf_cursize;
 				restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s);
+				PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s, slen);
 				PRVM_serverglobalfloat(time) = sv.time;
 				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(host_client->edict);
 				prog->ExecuteProgram(prog, PRVM_serverfunction(SV_ParseClientCommand), "QC function SV_ParseClientCommand is missing");
 				prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 			}
 			else
-				Cmd_ExecuteString (cmd_serverfromclient, s, src_client, true);
+				Cmd_ExecuteString(cmd_serverfromclient, s, slen, src_client, true);
 			break;
 
 clc_stringcmd_invalid:

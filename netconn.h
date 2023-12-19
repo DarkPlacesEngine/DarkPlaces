@@ -274,20 +274,27 @@ typedef struct serverlist_info_s
 {
 	/// address for connecting
 	char cname[128];
+	unsigned cname_len;
 	/// ping time for sorting servers, in milliseconds, 0 means no data
 	unsigned ping;
 	/// name of the game
 	char game[32];
+	unsigned game_len;
 	/// name of the mod
 	char mod[32];
+	unsigned mod_len;
 	/// name of the map
 	char map[32];
+	unsigned map_len;
 	/// name of the session
 	char name[128];
+	unsigned name_len;
 	/// qc-defined short status string
 	char qcstatus[128];
+	unsigned qcstatus_len;
 	/// frags/ping/name list (if they fit in the packet)
 	char players[2800];
+	unsigned players_len;
 	/// max client number
 	int maxplayers;
 	/// number of currently connected players (including bots)
@@ -352,7 +359,9 @@ typedef struct serverlist_entry_s
 
 	// legacy stuff
 	char line1[128];
+	unsigned line1_len;
 	char line2[128];
+	unsigned line2_len;
 } serverlist_entry_t;
 
 typedef struct serverlist_mask_s

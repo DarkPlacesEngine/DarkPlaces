@@ -348,11 +348,12 @@ Cbuf_Execute
 ============
 */
 extern qbool prvm_runawaycheck;
-static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias );
+static size_t Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias);
 void Cbuf_Execute (cmd_buf_t *cbuf)
 {
 	cmd_input_t *current;
 	char preprocessed[MAX_INPUTLINE];
+	size_t preprocessed_len;
 	char *firstchar;
 	unsigned int i = 0;
 
@@ -380,16 +381,16 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		firstchar = current->text;
 		while(*firstchar && ISWHITESPACE(*firstchar))
 			++firstchar;
-		if((strncmp(firstchar, "alias", 5)   || !ISWHITESPACE(firstchar[5])) &&
-		   (strncmp(firstchar, "bind", 4)    || !ISWHITESPACE(firstchar[4])) &&
-		   (strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7])))
+		if((strncmp(firstchar, "alias", 5)   || !ISWHITESPACE(firstchar[5]))
+		&& (strncmp(firstchar, "bind", 4)    || !ISWHITESPACE(firstchar[4]))
+		&& (strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7])))
 		{
-			if(Cmd_PreprocessString(current->source, current->text, preprocessed, sizeof(preprocessed), NULL ))
-				Cmd_ExecuteString(current->source, preprocessed, src_local, false);
+			if((preprocessed_len = Cmd_PreprocessString(current->source, current->text, preprocessed, sizeof(preprocessed), NULL)))
+				Cmd_ExecuteString(current->source, preprocessed, preprocessed_len, src_local, false);
 		}
 		else
 		{
-			Cmd_ExecuteString (current->source, current->text, src_local, false);
+			Cmd_ExecuteString(current->source, current->text, current->length, src_local, false);
 		}
 
 		// Recycle memory so using WASD doesn't cause a malloc and free
@@ -1280,12 +1281,14 @@ static const char *Cmd_GetCvarValue(cmd_state_t *cmd, const char *var, size_t va
 	return varstr;
 }
 
-/*
+/**
 Cmd_PreprocessString
 
 Preprocesses strings and replaces $*, $param#, $cvar accordingly. Also strips comments.
+Returns the number of bytes written to *outtext excluding the \0 terminator.
 */
-static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias ) {
+static size_t Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias)
+{
 	const char *in;
 	size_t eat, varlen;
 	unsigned outlen;
@@ -1293,7 +1296,7 @@ static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *ou
 
 	// don't crash if there's no room in the outtext buffer
 	if( maxoutlen == 0 ) {
-		return false;
+		return 0;
 	}
 	maxoutlen--; // because of \0
 
@@ -1366,7 +1369,7 @@ static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *ou
 				{
 					val = Cmd_GetCvarValue(cmd, in + 1, varlen, alias);
 					if(!val)
-						return false;
+						return 0;
 					eat = varlen + 2;
 				}
 				else
@@ -1379,7 +1382,7 @@ static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *ou
 				varlen = strspn(in, "#*0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-");
 				val = Cmd_GetCvarValue(cmd, in, varlen, alias);
 				if(!val)
-					return false;
+					return 0;
 				eat = varlen;
 			}
 			if(val)
@@ -1403,8 +1406,8 @@ static qbool Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *ou
 		else 
 			outtext[outlen++] = *in++;
 	}
-	outtext[outlen] = 0;
-	return true;
+	outtext[outlen] = '\0';
+	return outlen;
 }
 
 /*
@@ -2096,7 +2099,7 @@ extern cvar_t sv_cheats;
  * implement that behavior that doesn't involve an #ifdef, or
  * making a mess of hooks.
  */
-qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func)
 {
 	if (func->function)
 		func->function(cmd);
@@ -2105,13 +2108,13 @@ qbool Cmd_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd
 	return true;
 }
 
-qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, size_t textlen, cmd_source_t src)
 {
 	// TODO: Assign these functions to QC commands directly?
 	if(func->qcfunc)
 	{
-		if(((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text)) ||
-		   ((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text)))
+		if(((func->flags & CF_CLIENT) && CL_VM_ConsoleCommand(text, textlen)) ||
+		   ((func->flags & CF_SERVER) && SV_VM_ConsoleCommand(text, textlen)))
 			return true;
 
 		if (func->overridden) // If this QC command overrides an engine command,
@@ -2130,13 +2133,13 @@ qbool Cmd_CL_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, 
 			return true;
 		}
 	}
-	return Cmd_Callback(cmd, func, text, src);
+	return Cmd_Callback(cmd, func);
 }
 
-qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, cmd_source_t src)
+qbool Cmd_SV_Callback(cmd_state_t *cmd, cmd_function_t *func, const char *text, size_t textlen, cmd_source_t src)
 {
 	if(func->qcfunc && (func->flags & CF_SERVER))
-		return SV_VM_ConsoleCommand(text);
+		return SV_VM_ConsoleCommand(text, textlen);
 	else if (src == src_client)
 	{
 		if((func->flags & CF_CHEAT) && !sv_cheats.integer)
@@ -2156,7 +2159,7 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qbool lockmutex)
+void Cmd_ExecuteString(cmd_state_t *cmd, const char *text, size_t textlen, cmd_source_t src, qbool lockmutex)
 {
 	int oldpos;
 	cmd_function_t *func;
@@ -2176,12 +2179,12 @@ void Cmd_ExecuteString (cmd_state_t *cmd, const char *text, cmd_source_t src, qb
 // check functions
 	for (func = cmd->userdefined->qc_functions; func; func = func->next)
 		if (!strcasecmp(cmd->argv[0], func->name))
-			if(cmd->Handle(cmd, func, text, src))
+			if(cmd->Handle(cmd, func, text, textlen, src))
 				goto functions_done;
 
 	for (func = cmd->engine_functions; func; func=func->next)
 		if (!strcasecmp (cmd->argv[0], func->name))
-			if(cmd->Handle(cmd, func, text, src))
+			if(cmd->Handle(cmd, func, text, textlen, src))
 				goto functions_done;
 
 functions_done:
