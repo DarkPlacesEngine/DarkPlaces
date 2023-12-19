@@ -346,8 +346,19 @@ char *MSG_ReadString (sizebuf_t *sb, char *string, size_t maxstring)
 	while ((c = MSG_ReadByte(sb)) > 0)
 		if (l < maxstring - 1)
 			string[l++] = c;
-	string[l] = 0;
+	string[l] = '\0';
 	return string;
+}
+size_t MSG_ReadString_len (sizebuf_t *sb, char *string, size_t maxstring)
+{
+	int c;
+	size_t l = 0;
+	// read string into sbfer, but only store as many characters as will fit
+	while ((c = MSG_ReadByte(sb)) > 0)
+		if (l < maxstring - 1)
+			string[l++] = c;
+	string[l] = '\0';
+	return l;
 }
 
 int MSG_ReadBytes (sizebuf_t *sb, int numbytes, unsigned char *out)

@@ -719,8 +719,9 @@ static void Con_MsgCmdMode(cmd_state_t *cmd, signed char mode)
 	chat_mode = mode;
 	if(Cmd_Argc(cmd) > 1)
 	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferpos = (unsigned int)strlen(chat_buffer);
+		chat_bufferpos = dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
+		if (chat_bufferpos < 0)
+			chat_bufferpos = 0;
 	}
 }
 

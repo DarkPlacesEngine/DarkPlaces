@@ -180,6 +180,8 @@ int MSG_ReadBigLong (sizebuf_t *sb);
 float MSG_ReadLittleFloat (sizebuf_t *sb);
 float MSG_ReadBigFloat (sizebuf_t *sb);
 char *MSG_ReadString (sizebuf_t *sb, char *string, size_t maxstring);
+/// Same as MSG_ReadString except it returns the number of bytes written to *string excluding the \0 terminator.
+size_t MSG_ReadString_len (sizebuf_t *sb, char *string, size_t maxstring);
 int MSG_ReadBytes (sizebuf_t *sb, int numbytes, unsigned char *out);
 
 #define MSG_ReadChar(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, -1) : (signed char)(sb)->data[(sb)->readcount++])
@@ -205,7 +207,7 @@ typedef int (*COM_LineProcessorFunc) (void *passthrough, const char *line, size_
 int COM_Wordwrap(const char *string, size_t length, float continuationSize, float maxWidth, COM_WordWidthFunc_t wordWidth, void *passthroughCW, COM_LineProcessorFunc processLine, void *passthroughPL);
 
 extern char com_token[MAX_INPUTLINE];
-
+extern unsigned com_token_len;
 int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments);
 int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline);
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline);
@@ -277,16 +279,15 @@ typedef enum userdirmode_e
 }
 userdirmode_t;
 
-void COM_ToLowerString (const char *in, char *out, size_t size_out);
-void COM_ToUpperString (const char *in, char *out, size_t size_out);
+/// Returns the number of bytes written to *out excluding the \0 terminator.
+size_t COM_ToLowerString(const char *in, char *out, size_t size_out);
+/// Returns the number of bytes written to *out excluding the \0 terminator.
+size_t COM_ToUpperString(const char *in, char *out, size_t size_out);
 int COM_StringBeginsWith(const char *s, const char *match);
-
 int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize, const char *commentprefix);
-
 size_t COM_StringLengthNoColors(const char *s, size_t size_s, qbool *valid);
-qbool COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets);
-void COM_ToLowerString (const char *in, char *out, size_t size_out);
-void COM_ToUpperString (const char *in, char *out, size_t size_out);
+size_t COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets);
+
 
 
 #define dp_strlcpy(dst, src, dsize) dp__strlcpy(dst, src, dsize, __func__, __LINE__)

@@ -3444,6 +3444,7 @@ void CL_ParseServerMessage(void)
 	qbool	qwplayerupdatereceived;
 	qbool	strip_pqc;
 	char vabuf[1024];
+	size_t cl_readstring_len;
 
 	// LadyHavoc: moved demo message writing from before the packet parse to
 	// after the packet parse so that CL_Stop_f can be called by cl_autodemo
@@ -3550,22 +3551,28 @@ void CL_ParseServerMessage(void)
 
 			case qw_svc_print:
 				i = MSG_ReadByte(&cl_message);
-				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				temp = cl_readstring;
 				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
 				{
 					if (i == 3) // chat
-						CSQC_AddPrintText(va(vabuf, sizeof(vabuf), "\1%s", temp));	//[515]: csqc
+					{
+						cl_readstring_len = dpsnprintf(vabuf, sizeof(vabuf), "\1%s", temp);
+						CSQC_AddPrintText(vabuf, cl_readstring_len);	//[515]: csqc
+					}
 					else
-						CSQC_AddPrintText(temp);
+						CSQC_AddPrintText(temp, cl_readstring_len);
 				}
 				break;
 
 			case qw_svc_centerprint:
-				CL_VM_Parse_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				CL_VM_Parse_CenterPrint(cl_readstring, cl_readstring_len);	//[515]: csqc
 				break;
 
 			case qw_svc_stufftext:
-				CL_VM_Parse_StuffCmd(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				CL_VM_Parse_StuffCmd(cl_readstring, cl_readstring_len);	//[515]: csqc
 				break;
 
 			case qw_svc_damage:
@@ -3708,7 +3715,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case qw_svc_sellscreen:
-				Cmd_ExecuteString(cmd_local, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", 4, src_local, true);
 				break;
 
 			case qw_svc_smallkick:
@@ -3920,17 +3927,20 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_print:
-				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				temp = cl_readstring;
 				if (CL_ExaminePrintString(temp)) // look for anything interesting like player IP addresses or ping reports
-					CSQC_AddPrintText(temp);	//[515]: csqc
+					CSQC_AddPrintText(temp, cl_readstring_len);	//[515]: csqc
 				break;
 
 			case svc_centerprint:
-				CL_VM_Parse_CenterPrint(MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));	//[515]: csqc
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				CL_VM_Parse_CenterPrint(cl_readstring, cl_readstring_len);	//[515]: csqc
 				break;
 
 			case svc_stufftext:
-				temp = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
+				cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+				temp = cl_readstring;
 				/* if(utf8_enable.integer)
 				{
 					strip_pqc = true;
@@ -3961,11 +3971,15 @@ void CL_ParseServerMessage(void)
 					if(*temp == 0x01)
 					{
 						++temp;
+						--cl_readstring_len;
 						while(*temp >= 0x01 && *temp <= 0x1F)
+						{
 							++temp;
+							--cl_readstring_len;
+						}
 					}
 				}
-				CL_VM_Parse_StuffCmd(temp);	//[515]: csqc
+				CL_VM_Parse_StuffCmd(temp, cl_readstring_len);	//[515]: csqc
 				break;
 
 			case svc_damage:
@@ -4204,7 +4218,7 @@ void CL_ParseServerMessage(void)
 				break;
 
 			case svc_sellscreen:
-				Cmd_ExecuteString(cmd_local, "help", src_local, true);
+				Cmd_ExecuteString(cmd_local, "help", 4, src_local, true);
 				break;
 			case svc_hidelmp:
 				if (gamemode == GAME_TENEBRAE)

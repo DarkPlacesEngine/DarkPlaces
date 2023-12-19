@@ -553,8 +553,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 		{
 			if (stringbuffersize >= 12)
 			{
-				dpsnprintf(string, stringbuffersize, "local:%d", address->port);
-				return 1;
+				return dpsnprintf(string, stringbuffersize, "local:%d", address->port);
 			}
 		}
 		else
@@ -562,7 +561,7 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 			if (stringbuffersize >= 6)
 			{
 				memcpy(string, "local", 6);
-				return 1;
+				return 5;
 			}
 		}
 		break;
@@ -572,16 +571,14 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 		{
 			if (stringbuffersize >= 22)
 			{
-				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d:%d", a[0], a[1], a[2], a[3], address->port);
-				return 1;
+				return dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d:%d", a[0], a[1], a[2], a[3], address->port);
 			}
 		}
 		else
 		{
 			if (stringbuffersize >= 16)
 			{
-				dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]);
-				return 1;
+				return dpsnprintf(string, stringbuffersize, "%d.%d.%d.%d", a[0], a[1], a[2], a[3]);
 			}
 		}
 		break;
@@ -592,16 +589,14 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *vaddress, char *string, int stri
 		{
 			if (stringbuffersize >= 88)
 			{
-				dpsnprintf(string, stringbuffersize, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15], address->port);
-				return 1;
+				return dpsnprintf(string, stringbuffersize, "[%x:%x:%x:%x:%x:%x:%x:%x]:%d", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15], address->port);
 			}
 		}
 		else
 		{
 			if (stringbuffersize >= 80)
 			{
-				dpsnprintf(string, stringbuffersize, "%x:%x:%x:%x:%x:%x:%x:%x", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15]);
-				return 1;
+				return dpsnprintf(string, stringbuffersize, "%x:%x:%x:%x:%x:%x:%x:%x", a[0] * 256 + a[1], a[2] * 256 + a[3], a[4] * 256 + a[5], a[6] * 256 + a[7], a[8] * 256 + a[9], a[10] * 256 + a[11], a[12] * 256 + a[13], a[14] * 256 + a[15]);
 			}
 		}
 		break;

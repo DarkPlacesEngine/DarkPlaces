@@ -1725,7 +1725,7 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 		entry = &serverlist_cache[n];
 
 		memset(entry, 0, sizeof(*entry));
-		dp_strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
+		entry->info.cname_len = dp_strlcpy(entry->info.cname, addressstring, sizeof(entry->info.cname));
 
 		// use the broadcast as the first query, NetConn_QueryQueueFrame() will send more
 		entry->querytime = masterquerytime;
@@ -1785,14 +1785,14 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 	serverlist_info_t *info = &entry->info;
 
 	// update description strings for engine menu and console output
-	dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5.0f^7 ^%c%3u^7/%3u %-65.65s",
+	entry->line1_len = dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5.0f^7 ^%c%3u^7/%3u %-65.65s",
 	           info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'),
 	           info->ping ?: INFINITY, // display inf when a listed server times out and net_slist_pause blocks its removal
 	           ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'),
 	           info->numplayers,
 	           info->maxplayers,
 	           info->name);
-	dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game,
+	entry->line2_len = dpsnprintf(entry->line2, sizeof(serverlist_cache[n].line2), "^4%-21.21s %-19.19s ^%c%-17.17s^4 %-20.20s", info->cname, info->game,
 			(
 			 info->gameversion != gameversion.integer
 			 &&
@@ -1842,7 +1842,7 @@ static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, con
 	entry = &serverlist_cache[n];
 	memset(entry, 0, sizeof(*entry));
 	entry->protocol = protocol;
-	dp_strlcpy(entry->info.cname, ipstring, sizeof(entry->info.cname));
+	entry->info.cname_len = dp_strlcpy(entry->info.cname, ipstring, sizeof(entry->info.cname));
 	entry->info.isfavorite = isfavorite;
 
 	serverlist_cachecount++;
@@ -2175,15 +2175,15 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					return true;
 
 				info = &serverlist_cache[n].info;
-				info->game[0] = 0;
-				info->mod[0]  = 0;
-				info->map[0]  = 0;
-				info->name[0] = 0;
-				info->qcstatus[0] = 0;
-				info->players[0] = 0;
-				info->protocol = -1;
-				info->numplayers = 0;
-				info->numbots = -1;
+				info->game[0]     = '\0'; info->game_len = 0;
+				info->mod[0]      = '\0'; info->mod_len = 0;
+				info->map[0]      = '\0'; info->map_len = 0;
+				info->name[0]     = '\0'; info->name_len = 0;
+				info->qcstatus[0] = '\0'; info->qcstatus_len = 0;
+				info->players[0]  = '\0'; info->players_len = 0;
+				info->protocol    = -1;
+				info->numplayers  = 0;
+				info->numbots     = -1;
 				info->maxplayers  = 0;
 				info->gameversion = 0;
 
@@ -2196,17 +2196,17 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				else
 					Con_Printf("statusResponse without players block?\n");
 
-				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->game, s, sizeof (info->game));
-				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->mod , s, sizeof (info->mod ));
-				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->map , s, sizeof (info->map ));
-				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->name, s, sizeof (info->name));
+				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->game_len = dp_strlcpy(info->game, s, sizeof(info->game));
+				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
+				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
+				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
 				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
 				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
 				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
 				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
 				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
-				if (p                                                                                         != NULL) dp_strlcpy(info->players, p, sizeof(info->players));
+				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->qcstatus_len = dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+				if (p                                                                                            != NULL) info->players_len = dp_strlcpy(info->players, p, sizeof(info->players));
 				info->numhumans = info->numplayers - max(0, info->numbots);
 				info->freeslots = info->maxplayers - info->numplayers;
 
@@ -2228,28 +2228,28 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					return true;
 
 				info = &serverlist_cache[n].info;
-				info->game[0] = 0;
-				info->mod[0]  = 0;
-				info->map[0]  = 0;
-				info->name[0] = 0;
-				info->qcstatus[0] = 0;
-				info->players[0] = 0;
-				info->protocol = -1;
-				info->numplayers = 0;
-				info->numbots = -1;
+				info->game[0]     = '\0'; info->game_len = 0;
+				info->mod[0]      = '\0'; info->mod_len = 0;
+				info->map[0]      = '\0'; info->map_len = 0;
+				info->name[0]     = '\0'; info->name_len = 0;
+				info->qcstatus[0] = '\0'; info->qcstatus_len = 0;
+				info->players[0]  = '\0'; info->players_len = 0;
+				info->protocol    = -1;
+				info->numplayers  = 0;
+				info->numbots     = -1;
 				info->maxplayers  = 0;
 				info->gameversion = 0;
 
-				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->game, s, sizeof (info->game));
-				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->mod , s, sizeof (info->mod ));
-				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->map , s, sizeof (info->map ));
-				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->name, s, sizeof (info->name));
+				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->game_len = dp_strlcpy(info->game, s, sizeof(info->game));
+				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
+				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
+				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
 				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
 				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
 				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
 				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
 				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->qcstatus_len = dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
 				info->numhumans = info->numplayers - max(0, info->numbots);
 				info->freeslots = info->maxplayers - info->numplayers;
 
@@ -2348,9 +2348,12 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			info = &serverlist_cache[n].info;
 			dp_strlcpy(info->game, "QuakeWorld", sizeof(info->game));
-			if ((s = InfoString_GetValue(string, "*gamedir"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
-			if ((s = InfoString_GetValue(string, "map"          , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
-			if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) dp_strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
+			if ((s = InfoString_GetValue(string, "*gamedir"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
+			else { info->mod[0] = '\0'; info->mod_len = 0; }
+			if ((s = InfoString_GetValue(string, "map"          , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
+			else { info->map[0] = '\0'; info->map_len = 0; }
+			if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
+			else { info->name[0] = '\0'; info->name_len = 0; }
 			info->protocol = 0;
 			info->numplayers = 0; // updated below
 			info->numhumans = 0; // updated below
@@ -2470,10 +2473,10 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				break;
 
 			info = &serverlist_cache[n].info;
-			dp_strlcpy(info->game, "Quake", sizeof(info->game));
-			dp_strlcpy(info->mod , "", sizeof(info->mod)); // mod name is not specified
-			dp_strlcpy(info->name, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(info->name));
-			dp_strlcpy(info->map , MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(info->map));
+			info->game_len = dp_strlcpy(info->game, "Quake", sizeof(info->game));
+			info->mod_len  = dp_strlcpy(info->mod, "", sizeof(info->mod)); // mod name is not specified
+			info->name_len = dp_strlcpy(info->name, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(info->name));
+			info->map_len  = dp_strlcpy(info->map, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof(info->map));
 			info->numplayers = MSG_ReadByte(&cl_message);
 			info->maxplayers = MSG_ReadByte(&cl_message);
 			info->protocol = MSG_ReadByte(&cl_message);

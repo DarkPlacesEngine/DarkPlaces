@@ -2063,6 +2063,7 @@ static void VM_CL_getstats (prvm_prog_t *prog)
 {
 	int i;
 	char t[17];
+	size_t t_len;
 	VM_SAFEPARMCOUNT(1, VM_CL_getstats);
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i > MAX_CL_STATS-4)
@@ -2071,8 +2072,8 @@ static void VM_CL_getstats (prvm_prog_t *prog)
 		VM_Warning(prog, "VM_CL_getstats: index>MAX_CL_STATS-4 or index<0\n");
 		return;
 	}
-	dp_strlcpy(t, (char*)&cl.stats[i], sizeof(t));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t);
+	t_len = dp_strlcpy(t, (char*)&cl.stats[i], sizeof(t));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t, t_len);
 }
 
 //#333 void(entity e, float mdlindex) setmodelindex (EXT_CSQC)
@@ -2374,9 +2375,10 @@ static void VM_CL_runplayerphysics (prvm_prog_t *prog)
 //#348 string(float playernum, string keyname) getplayerkeyvalue (EXT_CSQC)
 static void VM_CL_getplayerkey (prvm_prog_t *prog)
 {
-	int			i;
-	char		t[128];
-	const char	*c;
+	int i;
+	char t[128];
+	size_t t_len;
+	const char *c;
 
 	VM_SAFEPARMCOUNT(2, VM_CL_getplayerkey);
 
@@ -2393,37 +2395,37 @@ static void VM_CL_getplayerkey (prvm_prog_t *prog)
 	t[0] = 0;
 
 	if(!strcasecmp(c, "name"))
-		dp_strlcpy(t, cl.scores[i].name, sizeof(t));
+		t_len = dp_strlcpy(t, cl.scores[i].name, sizeof(t));
 	else
 		if(!strcasecmp(c, "frags"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].frags);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].frags);
 	else
 		if(!strcasecmp(c, "ping"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_ping);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_ping);
 	else
 		if(!strcasecmp(c, "pl"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_packetloss);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_packetloss);
 	else
 		if(!strcasecmp(c, "movementloss"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_movementloss);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].qw_movementloss);
 	else
 		if(!strcasecmp(c, "entertime"))
-			dpsnprintf(t, sizeof(t), "%f", cl.scores[i].qw_entertime);
+			t_len = dpsnprintf(t, sizeof(t), "%f", cl.scores[i].qw_entertime);
 	else
 		if(!strcasecmp(c, "colors"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors);
 	else
 		if(!strcasecmp(c, "topcolor"))
-			dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors & 0xf0);
+			t_len = dpsnprintf(t, sizeof(t), "%i", cl.scores[i].colors & 0xf0);
 	else
 		if(!strcasecmp(c, "bottomcolor"))
-			dpsnprintf(t, sizeof(t), "%i", (cl.scores[i].colors &15)<<4);
+			t_len = dpsnprintf(t, sizeof(t), "%i", (cl.scores[i].colors &15)<<4);
 	else
 		if(!strcasecmp(c, "viewentity"))
-			dpsnprintf(t, sizeof(t), "%i", i+1);
+			t_len = dpsnprintf(t, sizeof(t), "%i", i+1);
 	if(!t[0])
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t, t_len);
 }
 
 //#351 void(vector origin, vector forward, vector right, vector up) SetListener (EXT_CSQC)
@@ -2491,8 +2493,11 @@ static void VM_CL_ReadAngle (prvm_prog_t *prog)
 //#366 string() readstring (EXT_CSQC)
 static void VM_CL_ReadString (prvm_prog_t *prog)
 {
+	size_t cl_readstring_len;
+
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadString);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)));
+	cl_readstring_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cl_readstring, cl_readstring_len);
 }
 
 //#367 float() readfloat (EXT_CSQC)
@@ -2507,6 +2512,7 @@ extern cvar_t cl_readpicture_force;
 static void VM_CL_ReadPicture (prvm_prog_t *prog)
 {
 	const char *name;
+	size_t name_len;
 	unsigned char *data;
 	unsigned char *buf;
 	unsigned short size;
@@ -2515,7 +2521,8 @@ static void VM_CL_ReadPicture (prvm_prog_t *prog)
 
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadPicture);
 
-	name = MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring));
+	name_len = MSG_ReadString_len(&cl_message, cl_readstring, sizeof(cl_readstring));
+	name = cl_readstring;
 	size = (unsigned short) MSG_ReadShort(&cl_message);
 
 	// check if a texture of that name exists
@@ -2546,7 +2553,7 @@ static void VM_CL_ReadPicture (prvm_prog_t *prog)
 		}
 	}
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, name, name_len);
 }
 
 //////////////////////////////////////////////////////////
@@ -3409,7 +3416,7 @@ static void VM_CL_gettaginfo (prvm_prog_t *prog)
 	Matrix4x4_ToVectors(&tag_localmatrix, forward, left, up, origin);
 
 	PRVM_clientglobalfloat(gettaginfo_parent) = parentindex;
-	PRVM_clientglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(prog, tagname) : 0;
+	PRVM_clientglobalstring(gettaginfo_name) = tagname ? PRVM_SetTempString(prog, tagname, strlen(tagname)) : 0;
 	VectorCopy(forward, PRVM_clientglobalvector(gettaginfo_forward));
 	VectorScale(left, -1, PRVM_clientglobalvector(gettaginfo_right));
 	VectorCopy(up, PRVM_clientglobalvector(gettaginfo_up));
@@ -4496,7 +4503,7 @@ static void VM_CL_serverkey(prvm_prog_t *prog)
 	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNT(1, VM_CL_serverkey);
 	InfoString_GetValue(cl.qw_serverinfo, PRVM_G_STRING(OFS_PARM0), string, sizeof(string));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, strlen(string));
 }
 
 /*
@@ -4657,7 +4664,7 @@ static void VM_CL_skel_get_bonename(prvm_prog_t *prog)
 		return;
 	if (bonenum < 0 || bonenum >= skeleton->model->num_bones)
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, skeleton->model->data_bones[bonenum].name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, skeleton->model->data_bones[bonenum].name, strlen(skeleton->model->data_bones[bonenum].name));
 }
 
 // #267 float(float skel, float bonenum) skel_get_boneparent = #267; // (FTE_CSQC_SKELETONOBJECTS) returns parent num for supplied bonenum, 0 if bonenum has no parent or bone does not exist (returned value is always less than bonenum, you can loop on this)

@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "progsvm.h"
 #include "csprogs.h"
+#include "prvm_cmds.h"
 
 prvm_prog_t prvm_prog_list[PRVM_PROG_MAX];
 
@@ -1123,7 +1124,7 @@ static void PRVM_GameCommand(cmd_state_t *cmd, const char *whichprogs, const cha
 		s = Cmd_Args(cmd);
 
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s ? s : "");
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s ? s : "", s ? strlen(s) : 0);
 		prog->ExecuteProgram(prog, PRVM_allfunction(GameCommand), "QC function GameCommand is missing");
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
@@ -3366,23 +3367,23 @@ int PRVM_SetEngineString(prvm_prog_t *prog, const char *s)
 //  restores it on return, so multiple recursive calls can share the same
 //  buffer)
 // the buffer size is automatically grown as needed
-
-int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
+int PRVM_SetTempString(prvm_prog_t *prog, const char *s, size_t slen)
 {
-	int size;
+	size_t size;
 	char *t;
-	if (!s)
+
+	if (!s || slen >= VM_TEMPSTRING_MAXSIZE)
 		return 0;
-	size = (int)strlen(s) + 1;
+	size = slen + 1;
 	if (developer_insane.integer)
-		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %i\n", prog->name, prog->tempstringsbuf.cursize, size);
-	if (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
+		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %zu\n", prog->name, prog->tempstringsbuf.cursize, size);
+	if ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = prog->tempstringsbuf;
 		if (prog->tempstringsbuf.cursize + size >= 1<<28)
-			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", prog->name, prog->tempstringsbuf.cursize, size);
+			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %zu)\n", prog->name, prog->tempstringsbuf.cursize, size);
 		prog->tempstringsbuf.maxsize = max(prog->tempstringsbuf.maxsize, 65536);
-		while (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
+		while ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 			prog->tempstringsbuf.maxsize *= 2;
 		if (prog->tempstringsbuf.maxsize != old.maxsize || prog->tempstringsbuf.data == NULL)
 		{

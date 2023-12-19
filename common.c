@@ -37,6 +37,7 @@ cvar_t cl_playermodel = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "play
 cvar_t cl_playerskin = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
 
 char com_token[MAX_INPUTLINE];
+unsigned com_token_len;
 
 //===========================================================================
 
@@ -456,6 +457,7 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 COM_ParseToken_Simple
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
 int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
@@ -464,8 +466,8 @@ int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool p
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -530,7 +532,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == '\"')
 			data++;
 		*datapointer = data;
@@ -540,7 +543,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -548,7 +552,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -558,7 +563,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -569,6 +575,7 @@ skipwhite:
 COM_ParseToken_QuakeC
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
 int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
@@ -577,8 +584,8 @@ int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -644,7 +651,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == quote)
 			data++;
 		*datapointer = data;
@@ -654,7 +662,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -662,7 +671,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -672,7 +682,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -683,6 +694,7 @@ skipwhite:
 COM_ParseToken_VM_Tokenize
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
 int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
@@ -691,8 +703,8 @@ int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -758,7 +770,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == quote)
 			data++;
 		*datapointer = data;
@@ -768,7 +781,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -776,7 +790,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -786,7 +801,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -797,6 +813,7 @@ skipwhite:
 COM_ParseToken_Console
 
 Parse a token out of a string, behaving like the qwcl console
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
 int COM_ParseToken_Console(const char **datapointer)
@@ -804,8 +821,8 @@ int COM_ParseToken_Console(const char **datapointer)
 	int len;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -843,7 +860,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == '\"')
 			data++;
 		*datapointer = data;
@@ -854,7 +872,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 	}
 
@@ -1014,10 +1033,12 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 
 //======================================
 
-void COM_ToLowerString (const char *in, char *out, size_t size_out)
+size_t COM_ToLowerString(const char *in, char *out, size_t size_out)
 {
+	const char *out_start = out;
+
 	if (size_out == 0)
-		return;
+		return 0;
 
 	if(utf8_enable.integer)
 	{
@@ -1028,12 +1049,12 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 			Uchar ch = u8_getchar_utf8_enabled(in, &in);
 			ch = u8_tolower(ch);
 			n = u8_fromchar(ch, out, size_out);
+			out += n; // before the break so the return is correct
 			if(n <= 0)
 				break;
-			out += n;
 			size_out -= n;
 		}
-		return;
+		return out - out_start;
 	}
 
 	while (*in && size_out > 1)
@@ -1045,12 +1066,15 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 		size_out--;
 	}
 	*out = '\0';
+	return out - out_start;
 }
 
-void COM_ToUpperString (const char *in, char *out, size_t size_out)
+size_t COM_ToUpperString(const char *in, char *out, size_t size_out)
 {
+	const char *out_start = out;
+
 	if (size_out == 0)
-		return;
+		return 0;
 
 	if(utf8_enable.integer)
 	{
@@ -1061,12 +1085,12 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 			Uchar ch = u8_getchar_utf8_enabled(in, &in);
 			ch = u8_toupper(ch);
 			n = u8_fromchar(ch, out, size_out);
+			out += n; // before the break so the return is correct
 			if(n <= 0)
 				break;
-			out += n;
 			size_out -= n;
 		}
-		return;
+		return out - out_start;
 	}
 
 	while (*in && size_out > 1)
@@ -1078,6 +1102,7 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 		size_out--;
 	}
 	*out = '\0';
+	return out - out_start;
 }
 
 int COM_StringBeginsWith(const char *s, const char *match)
@@ -1231,9 +1256,10 @@ removes color codes from a string.
 If escape_carets is true, the resulting string will be safe for printing. If
 escape_carets is false, the function will just strip color codes (for logging
 for example).
+Returns the number of bytes written to the *out buffer excluding the \0 terminator.
 
-If the output buffer size did not suffice for converting, the function returns
-FALSE. Generally, if escape_carets is false, the output buffer needs
+If the output buffer size did not suffice for converting, the function returns 0.
+Generally, if escape_carets is false, the output buffer needs
 strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)*1.5+2
 bytes. In any case, the function makes sure that the resulting string is
 zero terminated.
@@ -1242,20 +1268,22 @@ For size_in, specify the maximum number of characters from in to use, or 0 to us
 all characters until the zero terminator.
 ============
 */
-qbool
-COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
+size_t COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
 {
-#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return false; } } while(0)
+#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return 0; } } while(0)
+
+	const char *out_start = out;
 	const char *end = size_in ? (in + size_in) : NULL;
+
 	if(size_out < 1)
-		return false;
+		return 0;
 	for(;;)
 	{
 		switch((in == end) ? 0 : *in)
 		{
 			case 0:
-				*out++ = 0;
-				return true;
+				*out = '\0';
+				return out - out_start;
 			case STRING_COLOR_TAG:
 				++in;
 				switch((in == end) ? 0 : *in)
@@ -1278,8 +1306,8 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 						// finish the code by appending another caret when escaping
 						if(escape_carets)
 							APPEND(STRING_COLOR_TAG);
-						*out++ = 0;
-						return true;
+						*out = '\0';
+						return out - out_start;
 					case STRING_COLOR_TAG: // escaped ^
 						APPEND(STRING_COLOR_TAG);
 						// append a ^ twice when escaping
