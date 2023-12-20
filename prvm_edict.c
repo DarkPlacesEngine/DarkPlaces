@@ -220,8 +220,9 @@ const char *PRVM_AllocationOrigin(prvm_prog_t *prog)
 	if(prog->leaktest_active)
 	if(prog->depth > 0) // actually in QC code and not just parsing the entities block of a map/savegame
 	{
-		buf = (char *)PRVM_Alloc(256);
-		PRVM_ShortStackTrace(prog, buf, 256);
+		// bones_was_here: this is the smallest 64 multiple that avoids truncation in Xonotic (was 256)
+		buf = (char *)PRVM_Alloc(448);
+		PRVM_ShortStackTrace(prog, buf, 448);
 	}
 	return buf;
 }
