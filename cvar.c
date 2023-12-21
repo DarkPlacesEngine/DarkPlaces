@@ -74,37 +74,44 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
 	return var;
 }
 
-static cvar_t *Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
+/**
+ * Returns a pointer to the pointer stored in hashtable[] (or the one it links to)
+ * because we'll need to update that when deleting a cvar as other cvar(s) may share its hashindex.
+ */
+static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
 {
 	int hashindex;
-	cvar_hash_t *hash;
+	cvar_t *cvar;
+	cvar_hash_t **hashlinkptr;
 
 	// use hash lookup to minimize search time
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
 	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
 	if(link) *link = &cvars->hashtable[hashindex]->cvar;
-	for (hash = cvars->hashtable[hashindex];hash;hash = hash->next)
+	hashlinkptr = &cvars->hashtable[hashindex];
+	for (hashlinkptr = &cvars->hashtable[hashindex]; *hashlinkptr; hashlinkptr = &(*hashlinkptr)->next)
 	{
-		if (!strcmp (var_name, hash->cvar->name) && (hash->cvar->flags & neededflags))
+		cvar = (*hashlinkptr)->cvar;
+		if (!strcmp (var_name, cvar->name) && (cvar->flags & neededflags))
 			goto match;
 		else
-			for (char **alias = hash->cvar->aliases; alias && *alias; alias++)
-				if (!strcmp (var_name, *alias) && (hash->cvar->flags & neededflags))
+			for (char **alias = cvar->aliases; alias && *alias; alias++)
+				if (!strcmp (var_name, *alias) && (cvar->flags & neededflags))
 					goto match;
-		if(parent) *parent = hash->cvar;
+		if(parent) *parent = cvar;
 	}
 	return NULL;
 match:
-	if(!prev_alpha || hash->cvar == cvars->vars)
-		return hash->cvar;
+	if(!prev_alpha || cvar == cvars->vars)
+		return hashlinkptr;
 
 	*prev_alpha = cvars->vars;
 	// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
 	// already - should I still insert '*prev_alpha &&' in the loop?
-	while((*prev_alpha)->next != hash->cvar)
+	while((*prev_alpha)->next != cvar)
 		*prev_alpha = (*prev_alpha)->next;
-	return hash->cvar;
+	return hashlinkptr;
 }
 
 /*
@@ -1095,10 +1102,10 @@ void Cvar_SetA_f(cmd_state_t *cmd)
 void Cvar_Del_f(cmd_state_t *cmd)
 {
 	cvar_state_t *cvars = cmd->cvars;
-	int neededflags = ~0;
 	int i;
 	cvar_t *parent, **link;
 	cvar_t *cvar, *prev;
+	cvar_hash_t **hashlinkptr, *oldhashlink;
 
 	if(Cmd_Argc(cmd) < 2)
 	{
@@ -1107,20 +1114,23 @@ void Cvar_Del_f(cmd_state_t *cmd)
 	}
 	for(i = 1; i < Cmd_Argc(cmd); ++i)
 	{
-		cvar = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, neededflags);
+		hashlinkptr = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, ~0);
 
-		if(!cvar)
+		if(!hashlinkptr)
 		{
 			Con_Printf("%s: %s is not defined\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, i));
 			continue;
 		}
+		cvar = (*hashlinkptr)->cvar;
+
 		if(Cvar_Readonly(cvar, Cmd_Argv(cmd, 0)))
 			continue;
 		if(!(cvar->flags & CF_ALLOCATED))
 		{
-			Con_Printf("%s: %s is static and cannot be deleted\n", Cmd_Argv(cmd, 0), cvar->name);
+			Con_Printf(CON_WARN "%s: %s is static and cannot be deleted\n", Cmd_Argv(cmd, 0), cvar->name);
 			continue;
 		}
+
 		if(cvar == cvars->vars)
 		{
 			cvars->vars = cvar->next;
@@ -1143,6 +1153,10 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		Z_Free((char *)cvar->string);
 		Z_Free((char *)cvar->defstring);
 		Z_Free(cvar);
+
+		oldhashlink = *hashlinkptr;
+		*hashlinkptr = (*hashlinkptr)->next;
+		Z_Free(oldhashlink);
 	}
 }
 
