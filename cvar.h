@@ -64,7 +64,7 @@ struct qfile_s;
 
 typedef struct cvar_s
 {
-	int flags;
+	unsigned flags;
 
 	const char *name;
 
@@ -126,31 +126,31 @@ void Cvar_SetValue (cvar_state_t *cvars, const char *var_name, float value);
 void Cvar_SetQuick (cvar_t *var, const char *value);
 void Cvar_SetValueQuick (cvar_t *var, float value);
 
-float Cvar_VariableValueOr (cvar_state_t *cvars, const char *var_name, float def, int neededflags);
+float Cvar_VariableValueOr (cvar_state_t *cvars, const char *var_name, float def, unsigned neededflags);
 // returns def if not defined
 
-float Cvar_VariableValue (cvar_state_t *cvars, const char *var_name, int neededflags);
+float Cvar_VariableValue (cvar_state_t *cvars, const char *var_name, unsigned neededflags);
 // returns 0 if not defined or non numeric
 
-const char *Cvar_VariableStringOr (cvar_state_t *cvars, const char *var_name, const char *def, int neededflags);
+const char *Cvar_VariableStringOr (cvar_state_t *cvars, const char *var_name, const char *def, unsigned neededflags);
 // returns def if not defined
 
-const char *Cvar_VariableString (cvar_state_t *cvars, const char *var_name, int neededflags);
+const char *Cvar_VariableString (cvar_state_t *cvars, const char *var_name, unsigned neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_VariableDefString (cvar_state_t *cvars, const char *var_name, int neededflags);
+const char *Cvar_VariableDefString (cvar_state_t *cvars, const char *var_name, unsigned neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_VariableDescription (cvar_state_t *cvars, const char *var_name, int neededflags);
+const char *Cvar_VariableDescription (cvar_state_t *cvars, const char *var_name, unsigned neededflags);
 // returns an empty string if not defined
 
-const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, int neededflags);
+const char *Cvar_CompleteVariable (cvar_state_t *cvars, const char *partial, unsigned neededflags);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
 void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full);
 
-void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, int neededflags);
+void Cvar_CompleteCvarPrint (cvar_state_t *cvars, const char *partial, unsigned neededflags);
 
 qbool Cvar_Command (struct cmd_state_s *cmd);
 // called by Cmd_ExecuteString when Cmd_Argv(cmd, 0) doesn't match a known
@@ -170,11 +170,11 @@ void Cvar_WriteVariables (cvar_state_t *cvars, struct qfile_s *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
-cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags);
-cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int neededflags);
+cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, unsigned neededflags);
+cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, unsigned neededflags);
 
-int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int neededflags);
-const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, int neededflags);
+int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, unsigned neededflags);
+const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, unsigned neededflags);
 // Added by EvilTypeGuy - functions for tab completion system
 // Thanks to Fett erich@heintz.com
 // Thanks to taniwha
