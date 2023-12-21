@@ -33,9 +33,9 @@ cvar_state_t cvars_null;
 Cvar_FindVar
 ============
 */
-cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags)
+cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, unsigned neededflags)
 {
-	int hashindex;
+	unsigned hashindex;
 	cvar_hash_t *hash;
 
 	// use hash lookup to minimize search time
@@ -50,7 +50,7 @@ cvar_t *Cvar_FindVar(cvar_state_t *cvars, const char *var_name, int neededflags)
 	return NULL;
 }
 
-cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int neededflags)
+cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, unsigned neededflags)
 {
 	cvar_t *var;
 
@@ -78,9 +78,9 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, int ne
  * Returns a pointer to the pointer stored in hashtable[] (or the one it links to)
  * because we'll need to update that when deleting a cvar as other cvar(s) may share its hashindex.
  */
-static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, int neededflags)
+static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, unsigned neededflags)
 {
-	int hashindex;
+	unsigned hashindex;
 	cvar_t *cvar;
 	cvar_hash_t **hashlinkptr;
 
@@ -119,7 +119,7 @@ match:
 Cvar_VariableValue
 ============
 */
-float Cvar_VariableValueOr(cvar_state_t *cvars, const char *var_name, float def, int neededflags)
+float Cvar_VariableValueOr(cvar_state_t *cvars, const char *var_name, float def, unsigned neededflags)
 {
 	cvar_t *var;
 
@@ -129,7 +129,7 @@ float Cvar_VariableValueOr(cvar_state_t *cvars, const char *var_name, float def,
 	return atof (var->string);
 }
 
-float Cvar_VariableValue(cvar_state_t *cvars, const char *var_name, int neededflags)
+float Cvar_VariableValue(cvar_state_t *cvars, const char *var_name, unsigned neededflags)
 {
 	return Cvar_VariableValueOr(cvars, var_name, 0, neededflags);
 }
@@ -139,7 +139,7 @@ float Cvar_VariableValue(cvar_state_t *cvars, const char *var_name, int neededfl
 Cvar_VariableString
 ============
 */
-const char *Cvar_VariableStringOr(cvar_state_t *cvars, const char *var_name, const char *def, int neededflags)
+const char *Cvar_VariableStringOr(cvar_state_t *cvars, const char *var_name, const char *def, unsigned neededflags)
 {
 	cvar_t *var;
 
@@ -149,7 +149,7 @@ const char *Cvar_VariableStringOr(cvar_state_t *cvars, const char *var_name, con
 	return var->string;
 }
 
-const char *Cvar_VariableString(cvar_state_t *cvars, const char *var_name, int neededflags)
+const char *Cvar_VariableString(cvar_state_t *cvars, const char *var_name, unsigned neededflags)
 {
 	return Cvar_VariableStringOr(cvars, var_name, cvar_null_string, neededflags);
 }
@@ -159,7 +159,7 @@ const char *Cvar_VariableString(cvar_state_t *cvars, const char *var_name, int n
 Cvar_VariableDefString
 ============
 */
-const char *Cvar_VariableDefString(cvar_state_t *cvars, const char *var_name, int neededflags)
+const char *Cvar_VariableDefString(cvar_state_t *cvars, const char *var_name, unsigned neededflags)
 {
 	cvar_t *var;
 
@@ -174,7 +174,7 @@ const char *Cvar_VariableDefString(cvar_state_t *cvars, const char *var_name, in
 Cvar_VariableDescription
 ============
 */
-const char *Cvar_VariableDescription(cvar_state_t *cvars, const char *var_name, int neededflags)
+const char *Cvar_VariableDescription(cvar_state_t *cvars, const char *var_name, unsigned neededflags)
 {
 	cvar_t *var;
 
@@ -190,7 +190,7 @@ const char *Cvar_VariableDescription(cvar_state_t *cvars, const char *var_name, 
 Cvar_CompleteVariable
 ============
 */
-const char *Cvar_CompleteVariable(cvar_state_t *cvars, const char *partial, int neededflags)
+const char *Cvar_CompleteVariable(cvar_state_t *cvars, const char *partial, unsigned neededflags)
 {
 	cvar_t		*cvar;
 	size_t		len;
@@ -217,7 +217,7 @@ const char *Cvar_CompleteVariable(cvar_state_t *cvars, const char *partial, int 
 	Thanks to Fett erich@heintz.com
 
 */
-int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int neededflags)
+int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, unsigned neededflags)
 {
 	cvar_t	*cvar;
 	size_t	len;
@@ -250,7 +250,7 @@ int Cvar_CompleteCountPossible(cvar_state_t *cvars, const char *partial, int nee
 	Thanks to taniwha
 
 */
-const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, int neededflags)
+const char **Cvar_CompleteBuildList(cvar_state_t *cvars, const char *partial, unsigned neededflags)
 {
 	const cvar_t *cvar;
 	size_t len = 0;
@@ -288,7 +288,7 @@ void Cvar_PrintHelp(cvar_t *cvar, const char *name, qbool full)
 }
 
 // written by LadyHavoc
-void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, int neededflags)
+void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, unsigned neededflags)
 {
 	cvar_t *cvar;
 	size_t len = strlen(partial);
@@ -516,7 +516,7 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 {
 	cvar_state_t *cvars = &cvars_all;
 	cvar_hash_t *hash;
-	int hashindex;
+	unsigned hashindex;
 
 	if (!(variable->flags & cmd_local->cvars_flagsmask))
 	{
@@ -570,7 +570,7 @@ static void Cvar_Link(cvar_t *variable, cvar_state_t *cvars)
 {
 	cvar_t *current, *next;
 	cvar_hash_t *hash;
-	int hashindex;
+	unsigned hashindex;
 	/*
 	 * Link the variable in
 	 * alphanumerical order
@@ -854,7 +854,7 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 
 void Cvar_RestoreInitState(cvar_state_t *cvars)
 {
-	int hashindex;
+	unsigned hashindex;
 	cvar_t *c, **cp;
 	cvar_t *c2, **cp2;
 	for (cp = &cvars->vars;(c = *cp);)
