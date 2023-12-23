@@ -490,6 +490,7 @@ nexuiz.o: %.o : %.rc
 .c.o:
 	$(CHECKLEVEL2)
 	$(DO_CC)
+.c.o: .EXTRA_PREREQS =  # According to POSIX, a suffix rule cannot contain prerequisites.
 
 $(EXE_SV): $(OBJ_SV) $(OBJ_ICON)
 	$(CHECKLEVEL2)
@@ -507,6 +508,10 @@ $(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
 	$(CHECKLEVEL2)
 	$(DO_LD)
 
+# If requested, these targets must always run first:
+.EXTRA_PREREQS := $(filter clean clean-profile, $(MAKECMDGOALS))
+.NOTPARALLEL: $(.EXTRA_PREREQS)
+
 clean:
 	-$(CMD_RM) $(EXE_SV)
 	-$(CMD_RM) $(EXE_SDL)
@@ -516,6 +521,7 @@ clean:
 	-$(CMD_RM) *.d
 	-$(CMD_RM) *.gch
 	-$(CMD_RM) build-obj/
+clean: .EXTRA_PREREQS =  # prevents circular dependency with clean-profile
 
 clean-profile: clean
 	-$(CMD_RM) *.gcda
