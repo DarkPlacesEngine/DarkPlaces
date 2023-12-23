@@ -19,7 +19,8 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 
 ### Required packages
 
-These names are for Debian, you may need to find equivalents for your platform.
+The minimum SDL version is 2.0.18 for Linux and 2.24.0 for Windows.  
+The following package names are for Debian, see below for Windows and Mac.
 
 ##### Client
 Build (mandatory): `build-essential` `libjpeg-dev` `libsdl2-dev`  
@@ -62,7 +63,7 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 
 ### Windows (Visual Studio)
 
-Instructions coming soon.
+Instructions TODO.
 
 ## Contributing
 
