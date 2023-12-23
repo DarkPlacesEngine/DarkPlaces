@@ -5489,6 +5489,11 @@ void R_UpdateVariables(void)
 	if (r_refdef.scene.worldmodel)
 	{
 		r_refdef.scene.lightmapintensity *= r_refdef.scene.worldmodel->lightmapscale;
+
+		// Apply the default lightstyle to the lightmap even on q3bsp
+		if (cl.worldmodel && cl.worldmodel->type == mod_brushq3) {
+			r_refdef.scene.lightmapintensity *= r_refdef.scene.rtlightstylevalue[0];
+		}
 	}
 	if (r_showsurfaces.integer)
 	{
