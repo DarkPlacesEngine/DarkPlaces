@@ -295,19 +295,23 @@ ifeq ($(DP_LINK_ODE), dlopen)
 endif
 
 # d0_blind_id
-ifeq ($(DP_LINK_CRYPTO), shared)
+ifeq ($(DP_LINK_CRYPTO), static)
+	LIB_CRYPTO=-ld0_blind_id -lgmp
+	CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
+else ifeq ($(DP_LINK_CRYPTO), shared)
 	LIB_CRYPTO=-ld0_blind_id
 	CFLAGS_CRYPTO=-DLINK_TO_CRYPTO
-endif
-ifeq ($(DP_LINK_CRYPTO), dlopen)
+else ifeq ($(DP_LINK_CRYPTO), dlopen)
 	LIB_CRYPTO=
 	CFLAGS_CRYPTO=
+endif
+ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), static)
+	DP_LINK_CRYPTO_RIJNDAEL=shared
 endif
 ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), shared)
 	LIB_CRYPTO_RIJNDAEL=-ld0_rijndael
 	CFLAGS_CRYPTO_RIJNDAEL=-DLINK_TO_CRYPTO_RIJNDAEL
-endif
-ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), dlopen)
+else ifeq ($(DP_LINK_CRYPTO_RIJNDAEL), dlopen)
 	LIB_CRYPTO_RIJNDAEL=
 	CFLAGS_CRYPTO_RIJNDAEL=
 endif
