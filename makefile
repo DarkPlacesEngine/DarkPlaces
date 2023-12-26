@@ -66,19 +66,13 @@ else
 	CMD_MKDIR=$(CMD_UNIXMKDIR)
 endif
 
-# 64bits AMD CPUs use another lib directory
-ifeq ($(DP_MACHINE),x86_64)
-	UNIX_X11LIBPATH:=/usr/X11R6/lib64
-else
-	UNIX_X11LIBPATH:=/usr/X11R6/lib
-endif
-
 # default targets
 TARGETS_DEBUG=sv-debug sdl-debug
 TARGETS_PROFILE=sv-profile sdl-profile
 TARGETS_RELEASE=sv-release sdl-release
 TARGETS_RELEASE_PROFILE=sv-release-profile sdl-release-profile
 TARGETS_NEXUIZ=sv-nexuiz sdl-nexuiz
+
 
 ###### Optional features #####
 DP_VIDEO_CAPTURE?=enabled
@@ -210,26 +204,6 @@ ifeq ($(DP_MAKE_TARGET), bsd)
 endif
 
 # Win32 configuration
-ifeq ($(WIN32RELEASE), 1)
-#	TARGET=i686-pc-mingw32
-#	CC=$(TARGET)-g++
-#	WINDRES=$(TARGET)-windres
-	CPUOPTIMIZATIONS=-march=pentium3 -mfpmath=sse -fno-math-errno -fno-rounding-math -fno-signaling-nans -fno-trapping-math
-#       CPUOPTIMIZATIONS+=-DUSE_WSPIAPI_H -DSUPPORTIPV6
-	LDFLAGS_WINCOMMON=-Wl,--large-address-aware
-else
-	LDFLAGS_WINCOMMON=
-endif
-
-ifeq ($(WIN64RELEASE), 1)
-#	TARGET=x86_64-pc-mingw32
-#	CC=$(TARGET)-g++
-#	WINDRES=$(TARGET)-windres
-endif
-
-CFLAGS_WARNINGS=-Wall -Winline -Werror=vla -Werror=c++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
-
-
 ifeq ($(DP_MAKE_TARGET), mingw)
 	OBJ_ICON=darkplaces.o
 	OBJ_ICON_NEXUIZ=nexuiz.o
@@ -258,6 +232,16 @@ endif
 
 ##### Library linking #####
 # SDL2
+SDL_CONFIG?=sdl2-config
+SDLCONFIG_UNIXCFLAGS?=`$(SDL_CONFIG) --cflags`
+SDLCONFIG_UNIXCFLAGS_X11?=
+SDLCONFIG_UNIXLIBS?=`$(SDL_CONFIG) --libs`
+SDLCONFIG_UNIXLIBS_X11?=-lX11
+SDLCONFIG_UNIXSTATICLIBS?=`$(SDL_CONFIG) --static-libs`
+SDLCONFIG_UNIXSTATICLIBS_X11?=-lX11
+SDLCONFIG_MACOSXCFLAGS=$(SDLCONFIG_UNIXCFLAGS)
+SDLCONFIG_MACOSXLIBS=$(SDLCONFIG_UNIXLIBS)
+SDLCONFIG_MACOSXSTATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS)
 ifeq ($(DP_LINK_SDL), shared)
 	SDL_LIBS=$(SDLCONFIG_LIBS)
 else ifeq ($(DP_LINK_SDL), static)
@@ -349,10 +333,6 @@ endif
 
 
 ##### Extra CFLAGS #####
-ifneq ($(CC), tcc)
-	CFLAGS_MAKEDEP?=-MMD
-endif
-
 ifdef DP_FS_BASEDIR
 	CFLAGS_FS=-DDP_FS_BASEDIR=\"$(DP_FS_BASEDIR)\"
 else
@@ -374,6 +354,7 @@ endif
 CFLAGS_NET=
 # Systems without IPv6 support should uncomment this:
 #CFLAGS_NET+=-DNOSUPPORTIPV6
+
 
 ##### GNU Make specific definitions #####
 
