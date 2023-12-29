@@ -2091,9 +2091,8 @@ void SV_SpawnServer (const char *map)
 		}
 	}
 
-	// update the map title cvar
-	dp_strlcpy(sv.worldmessage, PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)), sizeof(sv.worldmessage)); // map title (not related to filename)
-	Cvar_SetQuick(&sv_worldmessage, sv.worldmessage);
+	// update the map title cvar (not related to filename)
+	Cvar_SetQuick(&sv_worldmessage, PRVM_GetString(prog, PRVM_serveredictstring(prog->edicts, message)));
 
 	Con_Printf("Server spawned.\n");
 	NetConn_Heartbeat (2);
