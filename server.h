@@ -108,7 +108,6 @@ typedef struct server_s
 	/// map name
 	char name[64]; // %s followed by entrance name
 	// variants of map name
-	char worldmessage[40]; // map title (not related to filename)
 	char worldbasename[MAX_QPATH]; // %s
 	char worldname[MAX_QPATH]; // maps/%s.bsp
 	char worldnamenoextension[MAX_QPATH]; // maps/%s

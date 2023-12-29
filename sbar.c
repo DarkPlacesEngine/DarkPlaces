@@ -682,7 +682,7 @@ static void Sbar_SoloScoreboard (void)
 		Sbar_DrawString(8+22*8, 4, va(vabuf, sizeof(vabuf), "Secrets:%3i", cl.stats[STAT_SECRETS]));
 
 	// format is like this: e1m1:The Sligpate Complex
-	dpsnprintf(str, sizeof(str), "%s:%s", cl.worldbasename, cl.worldmessage);
+	dpsnprintf(str, sizeof(str), "%s:%.39s", cl.worldbasename, cl.worldmessage);
 
 	// if there's a newline character, terminate the string there
 	if (strchr(str, '\n'))
