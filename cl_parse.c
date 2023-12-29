@@ -1624,16 +1624,13 @@ static void CL_SignonReply(int signon_stage)
 			// (so that the server can see the player name while downloading)
 			CL_SendPlayerInfo();
 
-			// execute cl_begindownloads next frame
-			// (after any commands added by svc_stufftext have been executed)
-			// when done with downloads the "prespawn" will be sent
-			Cbuf_AddText(cmd_local, "\ncl_begindownloads\n");
-
 			//MSG_WriteByte (&cls.netcon->message, clc_stringcmd);
 			//MSG_WriteString (&cls.netcon->message, "prespawn");
 		}
-		else // playing a demo...  make sure loading occurs as soon as possible
-			CL_BeginDownloads(false);
+		// execute cl_begindownloads next frame
+		// (after any commands added by svc_stufftext have been executed)
+		// when done with downloads the "prespawn" will be sent
+		Cbuf_AddText(cmd_local, "\ncl_begindownloads\n");
 		break;
 
 	case 2:
