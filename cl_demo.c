@@ -244,6 +244,13 @@ void CL_ReadDemoMessage(void)
 			}
 		}
 
+		/* At signon 1 the cl_begindownloads command starts the world and, if applicable,
+		 * boots up CSQC which may be required to parse the next message.
+		 * That will be delayed if curl must first (down)load the map.
+		 */
+		if (cls.signon == 1 && cl.loadcsqc) // waiting for CL_VM_Init() to be called
+			return;
+
 		// get the next message
 		FS_Read(cls.demofile, &cl_message.cursize, 4);
 		cl_message.cursize = LittleLong(cl_message.cursize);
