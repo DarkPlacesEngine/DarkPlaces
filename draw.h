@@ -93,6 +93,7 @@ typedef struct ft2_settings_s
 
 #define MAX_FONT_SIZES 16
 #define MAX_FONT_FALLBACKS 3
+#define MAX_FONT_CMDLINE MAX_QPATH * (MAX_FONT_FALLBACKS + 1)
 typedef struct dp_font_s
 {
 	cachepic_t *pic;
@@ -109,6 +110,8 @@ typedef struct dp_font_s
 	struct ft2_font_s *ft2;
 
 	ft2_settings_t settings;
+
+	char cmdline[MAX_FONT_CMDLINE];
 }
 dp_font_t;
 
