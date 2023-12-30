@@ -61,6 +61,7 @@ cvar_t r_font_postprocess_shadow_y = {CF_CLIENT | CF_ARCHIVE, "r_font_postproces
 cvar_t r_font_postprocess_shadow_z = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_shadow_z", "0", "font shadow Z shift amount, applied during blurring"};
 cvar_t r_font_hinting = {CF_CLIENT | CF_ARCHIVE, "r_font_hinting", "3", "0 = no hinting, 1 = light autohinting, 2 = full autohinting, 3 = full hinting"};
 cvar_t r_font_antialias = {CF_CLIENT | CF_ARCHIVE, "r_font_antialias", "1", "0 = monochrome, 1 = grey" /* , 2 = rgb, 3 = bgr" */};
+cvar_t r_font_always_reload = {CF_CLIENT | CF_ARCHIVE, "r_font_always_reload", "0", "reload a font even given the same loadfont command. useful for trying out different versions of the same font file"};
 cvar_t r_nearest_2d = {CF_CLIENT | CF_ARCHIVE, "r_nearest_2d", "0", "use nearest filtering on all 2d textures (including conchars)"};
 cvar_t r_nearest_conchars = {CF_CLIENT | CF_ARCHIVE, "r_nearest_conchars", "0", "use nearest filtering on conchars texture"};
 
@@ -338,6 +339,9 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
 		// load the cvars when the font is FIRST loader
 		fnt->settings.scale = scale;
+		// fix bad scale
+		if (fnt->settings.scale <= 0)
+			fnt->settings.scale = 1;
 		fnt->settings.voffset = voffset;
 		fnt->settings.antialias = r_font_antialias.integer;
 		fnt->settings.hinting = r_font_hinting.integer;
@@ -347,16 +351,13 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		fnt->settings.shadowy = r_font_postprocess_shadow_y.value;
 		fnt->settings.shadowz = r_font_postprocess_shadow_z.value;
 	}
-	// fix bad scale
-	if (fnt->settings.scale <= 0)
-		fnt->settings.scale = 1;
 
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
 
 	if(fnt->ft2)
 	{
-		// clear previous freetype font to prevent leaking memory
+		// we are going to reload. clear old ft2 data
 		Font_UnloadFont(fnt->ft2);
 		Mem_Free(fnt->ft2);
 		fnt->ft2 = NULL;
@@ -572,6 +573,16 @@ static void LoadFont_f(cmd_state_t *cmd)
 		Con_Printf("font function not found\n");
 		return;
 	}
+	else
+	{
+		if (strcmp(cmd->cmdline, f->cmdline) != 0 || r_font_always_reload.integer)
+		 	strlcpy(f->cmdline, cmd->cmdline, MAX_FONT_CMDLINE);
+		else
+		{
+			Con_DPrintf("LoadFont: font %s is unchanged\n", Cmd_Argv(cmd, 1));
+			return;
+		}
+	}
 
 	if(Cmd_Argc(cmd) < 3)
 		filelist = "gfx/conchars";
@@ -742,6 +753,7 @@ void GL_Draw_Init (void)
 	Cvar_RegisterVariable(&r_font_postprocess_shadow_z);
 	Cvar_RegisterVariable(&r_font_hinting);
 	Cvar_RegisterVariable(&r_font_antialias);
+	Cvar_RegisterVariable(&r_font_always_reload);
 	Cvar_RegisterVariable(&r_textshadow);
 	Cvar_RegisterVariable(&r_textbrightness);
 	Cvar_RegisterVariable(&r_textcontrast);
