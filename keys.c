@@ -1098,8 +1098,7 @@ static int Key_Convert_NumPadKey(int key)
 	return key;
 }
 
-static void
-Key_Console(cmd_state_t *cmd, int key, int unicode)
+static void Key_Console(cmd_state_t *cmd, int key, int unicode)
 {
 	int linepos;
 
@@ -1121,8 +1120,9 @@ Key_Console(cmd_state_t *cmd, int key, int unicode)
 
 	if ((key == K_ENTER || key == K_KP_ENTER) && KM_NONE)
 	{
-		Cbuf_AddText (cmd, key_line+1);	// skip the ]
-		Cbuf_AddText (cmd, "\n");
+		// bones_was_here: prepending allows a loop such as `alias foo "bar; wait; foo"; foo`
+		// to be broken with an alias or unalias command
+		Cbuf_InsertText(cmd, key_line+1); // skip the ]
 		Key_History_Push();
 		key_linepos = Key_ClearEditLine(true);
 		// force an update, because the command may take some time
