@@ -618,8 +618,8 @@ void Sys_Printf(const char *fmt, ...)
 char *Sys_ConsoleInput(void)
 {
 	static char text[MAX_INPUTLINE];
-	static unsigned int len = 0;
 #ifdef WIN32
+	static unsigned int len = 0;
 	int c;
 
 	// read a line out
@@ -653,24 +653,12 @@ char *Sys_ConsoleInput(void)
 	}
 #else
 	fd_set fdset;
-	struct timeval timeout;
+	struct timeval timeout = { .tv_sec = 0, .tv_usec = 0 };
+
 	FD_ZERO(&fdset);
-	FD_SET(0, &fdset); // stdin
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 0;
-	if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
-	{
-		len = read (0, text, sizeof(text) - 1);
-		if (len >= 1)
-		{
-			// rip off the \n and terminate
-			// div0: WHY? console code can deal with \n just fine
-			// this caused problems with pasting stuff into a terminal window
-			// so, not ripping off the \n, but STILL keeping a NUL terminator
-			text[len] = 0;
-			return text;
-		}
-	}
+	FD_SET(fileno(stdin), &fdset);
+	if (select(1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(fileno(stdin), &fdset))
+		return fgets(text, sizeof(text), stdin);
 #endif
 	return NULL;
 }
@@ -922,7 +910,7 @@ int main (int argc, char **argv)
 	Sys_ProvideSelfFD(); // may call Con_Printf() so must be after sys.outfd is set
 
 #ifndef WIN32
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
+	fcntl(fileno(stdin), F_SETFL, fcntl (fileno(stdin), F_GETFL, 0) | O_NONBLOCK);
 #endif
 
 #ifdef __ANDROID__
