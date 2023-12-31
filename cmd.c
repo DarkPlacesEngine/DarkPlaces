@@ -425,10 +425,20 @@ static void Cbuf_Frame_Input(void)
 {
 	char *line;
 
-	// bones_was_here: prepending allows a loop such as `alias foo "bar; wait; foo"; foo`
-	// to be broken with an alias or unalias command
-	while ((line = Sys_ConsoleInput()))
+	if ((line = Sys_ConsoleInput()))
+	{
+		// bones_was_here: prepending allows a loop such as `alias foo "bar; wait; foo"; foo`
+		// to be broken with an alias or unalias command
 		Cbuf_InsertText(cmd_local, line);
+		/* appending subsequent lines allows this test to pass (if pasted with proper \n):
+		 * wait; echo a
+		 * wait
+		 * echo b
+		 * echo c
+		 */
+		while ((line = Sys_ConsoleInput()))
+			Cbuf_AddText(cmd_local, line);
+	}
 }
 
 void Cbuf_Frame(cmd_buf_t *cbuf)
