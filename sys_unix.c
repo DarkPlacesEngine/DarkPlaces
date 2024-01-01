@@ -10,8 +10,6 @@
 #include <fcntl.h>
 #endif
 
-#include <signal.h>
-
 #include "darkplaces.h"
 
 sys_t sys;
@@ -138,34 +136,8 @@ char *Sys_GetClipboardData (void)
 	return NULL;
 }
 
-int main (int argc, char **argv)
+void Sys_SDL_Init(void)
 {
-	signal(SIGFPE, SIG_IGN);
-	sys.selffd = -1;
-	sys.argc = argc;
-	sys.argv = (const char **)argv;
-	Sys_ProvideSelfFD();
-
-	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
-	if(Sys_CheckParm("-noterminal"))
-		sys.outfd = -1;
-	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
-	else if(Sys_CheckParm("-stderr"))
-		sys.outfd = 2;
-	else
-		sys.outfd = 1;
-#ifndef WIN32
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
-#endif
-
-	// used by everything
-	Memory_Init();
-
-	Host_Main();
-
-	Sys_Quit(0);
-
-	return 0;
 }
 
 qbool sys_supportsdlgetticks = false;

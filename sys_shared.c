@@ -31,6 +31,8 @@
 # endif
 #endif
 
+#include <signal.h>
+
 static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
 {
@@ -745,3 +747,37 @@ void Sys_MakeProcessMean (void)
 {
 }
 #endif
+
+int main (int argc, char **argv)
+{
+	signal(SIGFPE, SIG_IGN);
+
+	sys.argc = argc;
+	sys.argv = (const char **)argv;
+
+	// COMMANDLINEOPTION: -noterminal disables console output on stdout
+	if(Sys_CheckParm("-noterminal"))
+		sys.outfd = -1;
+	// COMMANDLINEOPTION: -stderr moves console output to stderr
+	else if(Sys_CheckParm("-stderr"))
+		sys.outfd = 2;
+	else
+		sys.outfd = 1;
+
+	sys.selffd = -1;
+	Sys_ProvideSelfFD(); // may call Con_Printf() so must be after sys.outfd is set
+
+#ifndef WIN32
+	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
+#endif
+
+#ifdef __ANDROID__
+	Sys_AllowProfiling(true);
+#endif
+
+	Host_Main();
+
+	Sys_Quit(0);
+
+	return 0;
+}

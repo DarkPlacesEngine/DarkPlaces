@@ -11,8 +11,6 @@
 #include <android/log.h>
 #endif
 
-#include <signal.h>
-
 /*
  * Include this BEFORE darkplaces.h because it breaks wrapping
  * _Static_assert. Cloudwalk has no idea how or why so don't ask.
@@ -46,7 +44,9 @@ void Sys_Shutdown (void)
 	SDL_Quit();
 }
 
-static qbool nocrashdialog;
+// Sys_Error early in startup might screw with automated
+// workflows or something if we show the dialog by default.
+static qbool nocrashdialog = true;
 void Sys_Error (const char *error, ...)
 {
 	va_list argptr;
@@ -181,51 +181,15 @@ char *Sys_GetClipboardData (void)
 	return data;
 }
 
-int main (int argc, char *argv[])
+void Sys_SDL_Init(void)
 {
-	signal(SIGFPE, SIG_IGN);
+	// we don't know which systems we'll want to init, yet...
+	if (SDL_Init(0) < 0)
+		Sys_Error("SDL_Init failed: %s\n", SDL_GetError());
 
-#ifdef __ANDROID__
-	Sys_AllowProfiling(true);
-#endif
-
-	sys.selffd = -1;
-	sys.argc = argc;
-	sys.argv = (const char **)argv;
-
-	// Sys_Error this early in startup might screw with automated
-	// workflows or something if we show the dialog by default.
-	nocrashdialog = true;
-
-	Sys_ProvideSelfFD();
-
-	// COMMANDLINEOPTION: -nocrashdialog disables "Engine Error" crash dialog boxes
+	// COMMANDLINEOPTION: sdl: -nocrashdialog disables "Engine Error" crash dialog boxes
 	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
-	// COMMANDLINEOPTION: sdl: -noterminal disables console output on stdout
-	if(Sys_CheckParm("-noterminal"))
-		sys.outfd = -1;
-	// COMMANDLINEOPTION: sdl: -stderr moves console output to stderr
-	else if(Sys_CheckParm("-stderr"))
-		sys.outfd = 2;
-	else
-		sys.outfd = 1;
-
-#ifndef WIN32
-	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | O_NONBLOCK);
-#endif
-
-	// we don't know which systems we'll want to init, yet...
-	SDL_Init(0);
-
-	// used by everything
-	Memory_Init();
-
-	Host_Main();
-
-	Sys_Quit(0);
-	
-	return 0;
 }
 
 qbool sys_supportsdlgetticks = true;

@@ -370,6 +370,10 @@ static void Host_Init (void)
 	int i;
 	char vabuf[1024];
 
+	Sys_SDL_Init();
+
+	Memory_Init();
+
 	host.hook.ConnectLocal = NULL;
 	host.hook.Disconnect = NULL;
 	host.hook.ToggleMenu = NULL;
