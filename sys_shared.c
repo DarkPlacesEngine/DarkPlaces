@@ -890,10 +890,83 @@ void Sys_MakeProcessMean (void)
 }
 #endif
 
+/** Halt and try not to catch fire.
+ * Writing to any file could corrupt it,
+ * any uneccessary code could crash while we crash.
+ * No malloc() (libgcc should be loaded already) or Con_Printf() allowed here.
+ */
+static void Sys_HandleCrash(int sig)
+{
+#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
+	// Before doing anything else grab the stack frame addresses
+	#include <execinfo.h>
+	void *stackframes[32];
+	int framecount = backtrace(stackframes, 32);
+#endif
+
+	// Windows doesn't have strsignal()
+	const char *sigdesc;
+	switch (sig)
+	{
+#ifndef WIN32 // or SIGBUS
+		case SIGBUS:  sigdesc = "Bus error"; break;
+#endif
+		case SIGILL:  sigdesc = "Illegal instruction"; break;
+		case SIGABRT: sigdesc = "Aborted"; break;
+		case SIGFPE:  sigdesc = "Floating point exception"; break;
+		case SIGSEGV: sigdesc = "Segmentation fault"; break;
+		default:      sigdesc = "Yo dawg, we hit a bug while hitting a bug";
+	}
+
+	fprintf(stderr, "\n\n\e[1;37;41m    Engine Crash: %s (%d)    \e[m\n", sigdesc, sig);
+#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
+	// the first two addresses will be in this function and in signal() in libc
+	backtrace_symbols_fd(stackframes + 2, framecount - 2, fileno(stderr));
+#endif
+	fprintf(stderr, "\e[1m%s\e[m\n", engineversion);
+
+	// DP8 TODO: send a disconnect message indicating we crashed, see CL_DisconnectEx()
+
+	// don't want a dead window left blocking the OS UI or the crash dialog
+	VID_Shutdown();
+	S_StopAllSounds();
+
+	Sys_SDL_Dialog("Engine Crash", sigdesc);
+
+	exit (sig);
+}
+
+static void Sys_HandleSignal(int sig)
+{
+#ifdef WIN32
+	// Windows users will likely never see this so no point replicating strsignal()
+	Con_Printf("\nReceived signal %d, exiting...\n", sig);
+#else
+	Con_Printf("\nReceived %s signal (%d), exiting...\n", strsignal(sig), sig);
+#endif
+	host.state = host_shutdown;
+}
+
+/// SDL2 only handles SIGINT and SIGTERM by default and doesn't log anything
+static void Sys_InitSignals(void)
+{
+// Windows docs say its signal() only accepts these ones
+	signal(SIGABRT, Sys_HandleCrash);
+	signal(SIGFPE,  Sys_HandleCrash);
+	signal(SIGILL,  Sys_HandleCrash);
+	signal(SIGINT,  Sys_HandleSignal);
+	signal(SIGSEGV, Sys_HandleCrash);
+	signal(SIGTERM, Sys_HandleSignal);
+#ifndef WIN32
+	signal(SIGHUP,  Sys_HandleSignal);
+	signal(SIGQUIT, Sys_HandleSignal);
+	signal(SIGBUS,  Sys_HandleCrash);
+	signal(SIGPIPE, Sys_HandleSignal);
+#endif
+}
+
 int main (int argc, char **argv)
 {
-	signal(SIGFPE, SIG_IGN);
-
 	sys.argc = argc;
 	sys.argv = (const char **)argv;
 
@@ -916,6 +989,8 @@ int main (int argc, char **argv)
 #ifdef __ANDROID__
 	Sys_AllowProfiling(true);
 #endif
+
+	Sys_InitSignals();
 
 	Host_Main();
 

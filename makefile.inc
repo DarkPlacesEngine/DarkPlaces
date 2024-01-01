@@ -216,8 +216,10 @@ CMD_UNIXMKDIR=mkdir -p
 ##### Linux specific variables #####
 
 # Link
-LDFLAGS_LINUXSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl
-LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl $(LDFLAGS_UNIXSDL)
+# -rdynamic allows glibc backtrace_symbols_fd() to convert addresses to function names
+# with a much smaller binary than with full debug symbols
+LDFLAGS_LINUXSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic
+LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 
 ##### Mac OS X specific variables #####

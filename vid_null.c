@@ -29,37 +29,12 @@ void VID_Shutdown(void)
 {
 }
 
-#ifndef WIN32
-static void signal_handler(int sig)
-{
-	Con_Printf("Received signal %d, exiting...\n", sig);
-	Sys_Quit(1);
-}
-
-static void InitSig(void)
-{
-	signal(SIGHUP, signal_handler);
-	signal(SIGINT, signal_handler);
-	signal(SIGQUIT, signal_handler);
-	signal(SIGILL, signal_handler);
-	signal(SIGTRAP, signal_handler);
-	signal(SIGIOT, signal_handler);
-	signal(SIGBUS, signal_handler);
-	signal(SIGFPE, signal_handler);
-	signal(SIGSEGV, signal_handler);
-	signal(SIGTERM, signal_handler);
-}
-#endif
-
 void VID_Finish (void)
 {
 }
 
 void VID_Init(void)
 {
-#ifndef WIN32
-	InitSig(); // trap evil signals
-#endif
 }
 
 qbool VID_InitMode(viddef_mode_t *mode)

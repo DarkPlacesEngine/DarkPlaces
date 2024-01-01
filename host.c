@@ -448,10 +448,10 @@ static void Host_Init (void)
 	Sys_Init_Commands();
 	COM_Init_Commands();
 
-	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name)
+	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name, gamename)
 	FS_Init();
 
-	// construct a version string for the corner of the console
+	// ASAP! construct a version string for the corner of the console and for crash messages
 	dpsnprintf (engineversion, sizeof (engineversion), "%s %s%s, buildstring: %s", gamename, DP_OS_NAME, cls.state == ca_dedicated ? " dedicated" : "", buildstring);
 	Con_Printf("%s\n", engineversion);
 
