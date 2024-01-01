@@ -439,6 +439,8 @@ void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 				MSG_WriteByte(&buf, clc_disconnect);
 				if(cls.protocol == PROTOCOL_DARKPLACES8)
 					MSG_WriteString(&buf, reason);
+				// DP8 TODO: write a simpler func that Sys_HandleCrash() calls
+				// to send a disconnect message indicating we crashed
 			}
 			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
 			NetConn_SendUnreliableMessage(cls.netcon, &buf, cls.protocol, 10000, 0, false);
