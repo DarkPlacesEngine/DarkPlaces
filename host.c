@@ -613,7 +613,7 @@ void Host_Shutdown(void)
 	TaskQueue_Shutdown();
 	Thread_Shutdown();
 	Cmd_Shutdown();
-	Sys_Shutdown();
+	Sys_SDL_Shutdown();
 	Log_Close();
 	Crypto_Shutdown();
 

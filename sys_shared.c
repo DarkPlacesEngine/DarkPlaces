@@ -65,6 +65,15 @@ void Sys_Quit (int returnvalue)
 		Sys_AllowProfiling(false);
 	host.state = host_shutdown;
 	Host_Shutdown();
+
+#ifdef __ANDROID__
+	Sys_AllowProfiling(false);
+#endif
+#ifndef WIN32
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
+#endif
+	fflush(stdout);
+
 	exit(returnvalue);
 }
 
