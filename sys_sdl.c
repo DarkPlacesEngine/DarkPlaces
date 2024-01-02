@@ -46,29 +46,10 @@ void Sys_Shutdown (void)
 // Sys_Error early in startup might screw with automated
 // workflows or something if we show the dialog by default.
 static qbool nocrashdialog = true;
-void Sys_Error (const char *error, ...)
+void Sys_SDL_Dialog(const char *title, const char *string)
 {
-	va_list argptr;
-	char string[MAX_INPUTLINE];
-
-// change stdin to non blocking
-#ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-
-	va_start (argptr,error);
-	dpvsnprintf (string, sizeof (string), error, argptr);
-	va_end (argptr);
-
-	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
-	
-	// don't want a dead window left blocking the OS UI or the crash dialog
-	Host_Shutdown();
-
 	if(!nocrashdialog)
-		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Engine Error", string, NULL);
-
-	exit (1);
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, string, NULL);
 }
 
 void Sys_Print(const char *text)

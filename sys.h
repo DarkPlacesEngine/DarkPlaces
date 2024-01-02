@@ -241,6 +241,7 @@ char *Sys_ConsoleInput (void);
 /// called to yield for a little bit so as not to hog cpu when paused or debugging
 double Sys_Sleep(double time);
 
+void Sys_SDL_Dialog(const char *title, const char *string);
 void Sys_SDL_Init(void);
 /// Perform Key_Event () callbacks until the input que is empty
 void Sys_SDL_HandleEvents(void);
