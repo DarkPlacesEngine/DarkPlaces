@@ -1,6 +1,5 @@
 #ifdef WIN32
 #include <io.h> // Include this BEFORE darkplaces.h because it uses strncpy which trips DP_STATIC_ASSERT
-#include "conio.h"
 #else
 #include <unistd.h>
 #include <fcntl.h>
@@ -105,63 +104,6 @@ void Sys_Print(const char *text)
 #endif
 	//fprintf(stdout, "%s", text);
 #endif
-}
-
-char *Sys_ConsoleInput(void)
-{
-	static char text[MAX_INPUTLINE];
-	int len = 0;
-#ifdef WIN32
-	int c;
-
-	// read a line out
-	while (_kbhit ())
-	{
-		c = _getch ();
-		_putch (c);
-		if (c == '\r')
-		{
-			text[len] = 0;
-			_putch ('\n');
-			len = 0;
-			return text;
-		}
-		if (c == 8)
-		{
-			if (len)
-			{
-				_putch (' ');
-				_putch (c);
-				len--;
-				text[len] = 0;
-			}
-			continue;
-		}
-		text[len] = c;
-		len++;
-		text[len] = 0;
-		if (len == sizeof (text))
-			len = 0;
-	}
-#else
-	fd_set fdset;
-	struct timeval timeout;
-	FD_ZERO(&fdset);
-	FD_SET(0, &fdset); // stdin
-	timeout.tv_sec = 0;
-	timeout.tv_usec = 0;
-	if (select (1, &fdset, NULL, NULL, &timeout) != -1 && FD_ISSET(0, &fdset))
-	{
-		len = read (0, text, sizeof(text));
-		if (len >= 1)
-		{
-			// rip off the \n and terminate
-			text[len-1] = 0;
-			return text;
-		}
-	}
-#endif
-	return NULL;
 }
 
 char *Sys_GetClipboardData (void)
