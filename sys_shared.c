@@ -4,11 +4,6 @@
 # endif
 #endif
 
-#include "quakedef.h"
-#include "taskqueue.h"
-#include "thread.h"
-#include "libcurl.h"
-
 #define SUPPORTDLL
 
 #ifdef WIN32
@@ -16,12 +11,16 @@
 # include <mmsystem.h> // timeGetTime
 # include <time.h> // localtime
 # include <conio.h> // _kbhit, _getch, _putch
+# include <io.h> // write; Include this BEFORE darkplaces.h because it uses strncpy which trips DP_STATIC_ASSERT
 #ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
 #endif
 #else
 # ifdef __FreeBSD__
 #  include <sys/sysctl.h>
+# endif
+# ifdef __ANDROID__
+#  include <android/log.h>
 # endif
 # include <unistd.h>
 # include <fcntl.h>
@@ -33,6 +32,11 @@
 #endif
 
 #include <signal.h>
+
+#include "quakedef.h"
+#include "taskqueue.h"
+#include "thread.h"
+#include "libcurl.h"
 
 static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
@@ -541,6 +545,40 @@ double Sys_Sleep(double time)
 	if(sys_debugsleep.integer)
 		Sys_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - microseconds);
 	return (dt < 0 || dt >= 1800) ? 0 : dt;
+}
+
+void Sys_Print(const char *text)
+{
+#ifdef __ANDROID__
+	if (developer.integer > 0)
+	{
+		__android_log_write(ANDROID_LOG_DEBUG, sys.argv[0], text);
+	}
+#else
+	if(sys.outfd < 0)
+		return;
+  #ifndef WIN32
+	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
+	// this is because both go to /dev/tty by default!
+	{
+		int origflags = fcntl (sys.outfd, F_GETFL, 0);
+		fcntl (sys.outfd, F_SETFL, origflags & ~O_NONBLOCK);
+  #else
+    #define write _write
+  #endif
+		while(*text)
+		{
+			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, (int)strlen(text));
+			if(written <= 0)
+				break; // sorry, I cannot do anything about this error - without an output
+			text += written;
+		}
+  #ifndef WIN32
+		fcntl (sys.outfd, F_SETFL, origflags);
+	}
+  #endif
+	//fprintf(stdout, "%s", text);
+#endif
 }
 
 void Sys_Printf(const char *fmt, ...)
