@@ -4,7 +4,6 @@
 #include <mmsystem.h>
 #else
 #include <sys/time.h>
-#include <fcntl.h>
 #endif
 
 #include "darkplaces.h"
@@ -14,12 +13,8 @@ sys_t sys;
 // =======================================================================
 // General routines
 // =======================================================================
-void Sys_Shutdown (void)
+void Sys_SDL_Shutdown(void)
 {
-#ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-	fflush(stdout);
 }
 
 void Sys_SDL_Dialog(const char *title, const char *string)

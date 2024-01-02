@@ -1,6 +1,5 @@
 #ifdef WIN32
 #else
-#include <fcntl.h>
 #include <sys/time.h>
 #endif
 
@@ -25,15 +24,8 @@ sys_t sys;
 // General routines
 // =======================================================================
 
-void Sys_Shutdown (void)
+void Sys_SDL_Shutdown(void)
 {
-#ifdef __ANDROID__
-	Sys_AllowProfiling(false);
-#endif
-#ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-	fflush(stdout);
 	SDL_Quit();
 }
 
