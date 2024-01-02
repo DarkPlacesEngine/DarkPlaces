@@ -3143,7 +3143,10 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				Cmd_ExecuteString(cmd_local, s, src_local, true);
+				//Cmd_ExecuteString(cmd_local, s, src_local, true); // no variable expansion
+				// bones_was_here: prepending allows a loop such as `alias foo "bar; wait; foo"; foo`
+				// to be broken with an alias or unalias command
+				Cbuf_InsertText(cmd_local, s);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
