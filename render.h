@@ -778,7 +778,7 @@ void R_HDR_UpdateIrisAdaptation(const vec3_t point);
 
 void RSurf_ActiveModelEntity(const entity_render_t *ent, qbool wantnormals, qbool wanttangents, qbool prepass);
 void RSurf_ActiveCustomEntity(const matrix4x4_t *matrix, const matrix4x4_t *inversematrix, int entflags, double shadertime, float r, float g, float b, float a, int numvertices, const float *vertex3f, const float *texcoord2f, const float *normal3f, const float *svector3f, const float *tvector3f, const float *color4f, int numtriangles, const int *element3i, const unsigned short *element3s, qbool wantnormals, qbool wanttangents);
-void RSurf_SetupDepthAndCulling(void);
+void RSurf_SetupDepthAndCulling(bool ui);
 
 extern int r_textureframe; ///< used only by R_GetCurrentTexture, incremented per view and per UI render
 texture_t *R_GetCurrentTexture(texture_t *t);

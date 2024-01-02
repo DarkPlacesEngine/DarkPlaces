@@ -157,7 +157,7 @@ cvar_t r_texture_dds_load = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_load", "0", 
 cvar_t r_texture_dds_save = {CF_CLIENT | CF_ARCHIVE, "r_texture_dds_save", "0", "save compressed dds/filename.dds texture when filename.tga is loaded, so that it can be loaded instead next time"};
 
 cvar_t r_usedepthtextures = {CF_CLIENT | CF_ARCHIVE, "r_usedepthtextures", "1", "use depth texture instead of depth renderbuffer where possible, uses less video memory but may render slower (or faster) depending on hardware"};
-cvar_t r_viewfbo = {CF_CLIENT | CF_ARCHIVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode"};
+cvar_t r_viewfbo = {CF_CLIENT | CF_ARCHIVE, "r_viewfbo", "0", "enables use of an 8bit (1) or 16bit (2) or 32bit (3) per component float framebuffer render, which may be at a different resolution than the video mode; the default setting of 0 uses a framebuffer render when required, and renders directly to the screen otherwise"};
 cvar_t r_rendertarget_debug = {CF_CLIENT, "r_rendertarget_debug", "-1", "replaces the view with the contents of the specified render target (by number - note that these can fluctuate depending on scene)"};
 cvar_t r_viewscale = {CF_CLIENT | CF_ARCHIVE, "r_viewscale", "1", "scaling factor for resolution of the fbo rendering method, must be > 0, can be above 1 for a costly antialiasing behavior, typical values are 0.5 for 1/4th as many pixels rendered, or 1 for normal rendering"};
 cvar_t r_viewscale_fpsscaling = {CF_CLIENT | CF_ARCHIVE, "r_viewscale_fpsscaling", "0", "change resolution based on framerate"};
@@ -5243,6 +5243,40 @@ static void R_Bloom_MakeTexture(void)
 	r_fb.rt_bloom = cur;
 }
 
+static qbool R_BlendView_IsTrivial(int viewx, int viewy, int viewwidth, int viewheight, int x, int y, int width, int height)
+{
+	// Shifting requested?
+	// (It should be possible to work around this otherwise)
+	if (viewx != x || viewy != y)
+		return false;
+	// Scaling requested?
+	if (viewwidth != width || viewheight != height)
+		return false;
+	// Higher bit depth or explicit FBO requested?
+	if (r_viewfbo.integer)
+		return false;
+	// Motion blur?
+	if(r_refdef.view.ismain && !R_Stereo_Active() && (r_motionblur.value > 0 || (r_damageblur.value > 0 && cl.cshifts[CSHIFT_DAMAGE].percent != 0)) && r_fb.ghosttexture)
+		return false;
+	// Non-trivial postprocessing shader permutation?
+	if (r_fb.bloomwidth
+	|| r_refdef.viewblend[3] > 0
+	|| !vid_gammatables_trivial
+	|| r_glsl_postprocess.integer
+	|| ((!R_Stereo_ColorMasking() && r_glsl_saturation.value != 1)))
+		return false;
+	// Other reasons for a non-trivial default postprocessing shader?
+	// (See R_CompileShader_CheckStaticParms but only those relevant for MODE_POSTPROCESS in shader_glsl.h)
+	// Skip: if (r_glsl_saturation_redcompensate.integer) (already covered by saturation above).
+	// Skip: if (r_glsl_postprocess.integer) (already covered by r_glsl_postprocess above).
+	// Skip: if (r_glsl_postprocess_uservec1_enable.integer) (already covered by r_glsl_postprocessing above).
+	if (r_fxaa.integer)
+		return false;
+	if (r_colorfringe.value)
+		return false;
+	return true;
+}
+
 static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height)
 {
 	uint64_t permutation;
@@ -5252,7 +5286,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 
 	R_EntityMatrix(&identitymatrix);
 
-	if(r_refdef.view.ismain && !R_Stereo_Active() && (r_motionblur.value > 0 || r_damageblur.value > 0) && r_fb.ghosttexture)
+	if(r_refdef.view.ismain && !R_Stereo_Active() && (r_motionblur.value > 0 || (r_damageblur.value > 0 && cl.cshifts[CSHIFT_DAMAGE].percent != 0)) && r_fb.ghosttexture)
 	{
 		// declare variables
 		float blur_factor, blur_mouseaccel, blur_velocity;
@@ -5631,6 +5665,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	rtexture_t *viewdepthtexture = NULL;
 	rtexture_t *viewcolortexture = NULL;
 	int viewx = r_refdef.view.x, viewy = r_refdef.view.y, viewwidth = r_refdef.view.width, viewheight = r_refdef.view.height;
+	qbool skipblend;
 
 	// finish any 2D rendering that was queued
 	DrawQ_Finish();
@@ -5705,9 +5740,21 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	if(r_fb.rt_bloom)
 		r_refdef.view.colorscale *= r_bloom_scenebrightness.value;
 
-	// R_Bloom_StartFrame probably set up an fbo for us to render into, it will be rendered to the window later in R_BlendView
-	if (r_fb.rt_screen)
+	skipblend = R_BlendView_IsTrivial(0, 0, r_fb.rt_screen->texturewidth, r_fb.rt_screen->textureheight, x, y, width, height);
+	if (skipblend)
 	{
+		// Render to the screen right away.
+		viewfbo = fbo;
+		viewdepthtexture = depthtexture;
+		viewcolortexture = colortexture;
+		viewx = x;
+		viewy = y;
+		viewwidth = width;
+		viewheight = height;
+	}
+	else if (r_fb.rt_screen)
+	{
+		// R_Bloom_StartFrame probably set up an fbo for us to render into, it will be rendered to the window later in R_BlendView
 		viewfbo = r_fb.rt_screen->fbo;
 		viewdepthtexture = r_fb.rt_screen->depthtexture;
 		viewcolortexture = r_fb.rt_screen->colortexture[0];
@@ -5763,7 +5810,8 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	// postprocess uses textures that are not aligned with the viewport we're rendering, so no scissoring
 	GL_ScissorTest(false);
 
-	R_BlendView(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight, fbo, depthtexture, colortexture, x, y, width, height);
+	if (!skipblend)
+		R_BlendView(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight, fbo, depthtexture, colortexture, x, y, width, height);
 	if (r_timereport_active)
 		R_TimeReport("blendview");
 
@@ -8576,14 +8624,14 @@ static int RSurf_FindWaterPlaneForSurface(const msurface_t *surface)
 	// render multiple smaller batches
 }
 
-void RSurf_SetupDepthAndCulling(void)
+void RSurf_SetupDepthAndCulling(bool ui)
 {
 	// submodels are biased to avoid z-fighting with world surfaces that they
 	// may be exactly overlapping (avoids z-fighting artifacts on certain
 	// doors and things in Quake maps)
 	GL_DepthRange(0, (rsurface.texture->currentmaterialflags & MATERIALFLAG_SHORTDEPTHRANGE) ? 0.0625 : 1);
 	GL_PolygonOffset(rsurface.basepolygonfactor + rsurface.texture->biaspolygonfactor, rsurface.basepolygonoffset + rsurface.texture->biaspolygonoffset);
-	GL_DepthTest(!(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	GL_DepthTest(!ui && !(rsurface.texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_CullFace((rsurface.texture->currentmaterialflags & MATERIALFLAG_NOCULLFACE) ? GL_NONE : r_refdef.view.cullface_back);
 }
 
@@ -8598,7 +8646,7 @@ static void R_DrawTextureSurfaceList_Sky(int texturenumsurfaces, const msurface_
 		return;
 	R_SetupShader_Generic_NoTexture(false, false);
 	skyrenderlater = true;
-	RSurf_SetupDepthAndCulling();
+	RSurf_SetupDepthAndCulling(false);
 	GL_DepthMask(true);
 
 	// add the vertices of the surfaces to a world bounding box so we can scissor the sky render later
@@ -8781,7 +8829,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 static void R_DrawModelTextureSurfaceList(int texturenumsurfaces, const msurface_t **texturesurfacelist, qbool writedepth, qbool prepass, qbool ui)
 {
 	CHECKGLERROR
-	RSurf_SetupDepthAndCulling();
+	RSurf_SetupDepthAndCulling(ui);
 	if (r_showsurfaces.integer && r_refdef.view.showdebug)
 	{
 		R_DrawTextureSurfaceList_ShowSurfaces(texturenumsurfaces, texturesurfacelist, writedepth);
@@ -8843,7 +8891,7 @@ static void R_DrawSurface_TransparentCallback(const entity_render_t *ent, const 
 				GL_DepthMask(true);
 //				R_Mesh_ResetTextureState();
 			}
-			RSurf_SetupDepthAndCulling();
+			RSurf_SetupDepthAndCulling(false);
 			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 			R_SetupShader_DepthOrShadow(false, false, !!rsurface.batchskeletaltransform3x4);
 			R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
@@ -8917,7 +8965,7 @@ static void R_DrawTextureSurfaceList_DepthOnly(int texturenumsurfaces, const msu
 		return;
 	if (r_fb.water.renderingscene && (rsurface.texture->currentmaterialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFLECTION)))
 		return;
-	RSurf_SetupDepthAndCulling();
+	RSurf_SetupDepthAndCulling(false);
 	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ALLOWMULTIDRAW, texturenumsurfaces, texturesurfacelist);
 	R_Mesh_PrepareVertices_Vertex3f(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchvertex3f_vertexbuffer, rsurface.batchvertex3f_bufferoffset);
 	R_SetupShader_DepthOrShadow(false, false, !!rsurface.batchskeletaltransform3x4);
