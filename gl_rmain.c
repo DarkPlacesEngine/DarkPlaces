@@ -5238,7 +5238,7 @@ static void R_Bloom_MakeTexture(void)
 	r_fb.rt_bloom = cur;
 }
 
-static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
+static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height)
 {
 	uint64_t permutation;
 	float uservecs[4][4];
@@ -5286,7 +5286,7 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		cl.motionbluralpha *= lhrandom(1 - r_motionblur_randomize.value, 1 + r_motionblur_randomize.value);
 		cl.motionbluralpha = bound(0, cl.motionbluralpha, r_motionblur_maxblur.value);
 
-		// apply the blur
+		// apply the blur on top of the current view
 		R_ResetViewRendering2D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
 		if (cl.motionbluralpha > 0 && !r_refdef.envmap && r_fb.ghosttexture_valid)
 		{
@@ -5328,11 +5328,11 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		sscanf(r_glsl_postprocess_uservec4.string, "%f %f %f %f", &uservecs[3][0], &uservecs[3][1], &uservecs[3][2], &uservecs[3][3]);
 
 	// render to the screen fbo
-	R_ResetViewRendering2D(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
+	R_ResetViewRendering2D(fbo, depthtexture, colortexture, x, y, width, height);
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 
-	viewtexture = r_fb.rt_screen->colortexture[0];
+	viewtexture = viewcolortexture;
 	bloomtexture = r_fb.rt_bloom ? r_fb.rt_bloom->colortexture[0] : NULL;
 
 	if (r_rendertarget_debug.integer >= 0)
@@ -5758,7 +5758,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	// postprocess uses textures that are not aligned with the viewport we're rendering, so no scissoring
 	GL_ScissorTest(false);
 
-	R_BlendView(fbo, depthtexture, colortexture, x, y, width, height);
+	R_BlendView(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight, fbo, depthtexture, colortexture, x, y, width, height);
 	if (r_timereport_active)
 		R_TimeReport("blendview");
 
