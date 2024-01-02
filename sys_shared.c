@@ -38,6 +38,8 @@
 #include "thread.h"
 #include "libcurl.h"
 
+sys_t sys;
+
 static char sys_timestring[128];
 char *Sys_TimeString(const char *timeformat)
 {
@@ -497,7 +499,7 @@ double Sys_Sleep(double time)
 	}
 
 	if(sys_debugsleep.integer)
-		Sys_Printf("sys_debugsleep: requesting %u ", microseconds);
+		Con_Printf("sys_debugsleep: requesting %u ", microseconds);
 	dt = Sys_DirtyTime();
 
 	// less important on newer libcurl so no need to disturb dedicated servers
@@ -552,9 +554,18 @@ double Sys_Sleep(double time)
 
 	dt = Sys_DirtyTime() - dt;
 	if(sys_debugsleep.integer)
-		Sys_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - microseconds);
+		Con_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - microseconds);
 	return (dt < 0 || dt >= 1800) ? 0 : dt;
 }
+
+
+/*
+===============================================================================
+
+STDIO
+
+===============================================================================
+*/
 
 void Sys_Print(const char *text)
 {
@@ -590,6 +601,7 @@ void Sys_Print(const char *text)
 #endif
 }
 
+/// for the console to report failures inside Con_Printf()
 void Sys_Printf(const char *fmt, ...)
 {
 	va_list argptr;
@@ -602,6 +614,7 @@ void Sys_Printf(const char *fmt, ...)
 	Sys_Print(msg);
 }
 
+/// Reads a line from POSIX stdin or the Windows console
 char *Sys_ConsoleInput(void)
 {
 	static char text[MAX_INPUTLINE];
@@ -662,6 +675,14 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
+
+/*
+===============================================================================
+
+Startup and Shutdown
+
+===============================================================================
+*/
 
 void Sys_Error (const char *error, ...)
 {

@@ -768,7 +768,7 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicod
 	if ((key == 'v' && KM_CTRL) || ((key == K_INS || key == K_KP_INS) && KM_SHIFT))
 	{
 		char *cbd, *p;
-		if ((cbd = Sys_GetClipboardData()) != 0)
+		if ((cbd = Sys_SDL_GetClipboardData()) != 0)
 		{
 			int i;
 #if 1
