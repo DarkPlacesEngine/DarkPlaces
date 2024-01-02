@@ -2959,7 +2959,7 @@ void R_Shadow_RenderLighting(int texturenumsurfaces, const msurface_t **textures
 		VectorNegate(specularcolor, specularcolor);
 		GL_BlendEquationSubtract(true);
 	}
-	RSurf_SetupDepthAndCulling();
+	RSurf_SetupDepthAndCulling(false);
 	switch (r_shadow_rendermode)
 	{
 	case R_SHADOW_RENDERMODE_VISIBLELIGHTING:
