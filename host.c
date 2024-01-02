@@ -202,9 +202,11 @@ void Host_SaveConfig(const char *file)
 		f = FS_OpenRealFile(file, "wb", false);
 		if (!f)
 		{
-			Con_Printf(CON_ERROR "Couldn't write %s.\n", file);
+			Con_Printf(CON_ERROR "Couldn't write %s\n", file);
 			return;
 		}
+		else
+			Con_Printf("Saving config to %s ...\n", file);
 
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (&cvars_all, f);
@@ -217,10 +219,8 @@ static void Host_SaveConfig_f(cmd_state_t *cmd)
 {
 	const char *file = CONFIGFILENAME;
 
-	if(Cmd_Argc(cmd) >= 2) {
+	if(Cmd_Argc(cmd) >= 2)
 		file = Cmd_Argv(cmd, 1);
-		Con_Printf("Saving to %s\n", file);
-	}
 
 	Host_SaveConfig(file);
 }
@@ -581,12 +581,12 @@ void Host_Shutdown(void)
 
 	if (isdown)
 	{
-		Con_Print("recursive shutdown\n");
+		Con_Print(CON_WARN "recursive shutdown\n");
 		return;
 	}
 	if (setjmp(host.abortframe))
 	{
-		Con_Print("aborted the quitting frame?!?\n");
+		Con_Print(CON_WARN "aborted the quitting frame?!?\n");
 		return;
 	}
 	isdown = true;

@@ -92,18 +92,20 @@ static void Key_History_Init(void)
 
 static void Key_History_Shutdown(void)
 {
-	// TODO write history to a file
-
 // not necessary for mobile
 #ifndef DP_MOBILETOUCH
 	qfile_t *historyfile = FS_OpenRealFile("darkplaces_history.txt", "w", false);
 	if(historyfile)
 	{
 		int i;
+
+		Con_Print("Saving command history to darkplaces_history.txt ...\n");
 		for(i = 0; i < CONBUFFER_LINES_COUNT(&history); ++i)
 			FS_Printf(historyfile, "%s\n", ConBuffer_GetLine(&history, i));
 		FS_Close(historyfile);
 	}
+	else
+		Con_Print(CON_ERROR "Couldn't write darkplaces_history.txt\n");
 #endif
 
 	ConBuffer_Shutdown(&history);
