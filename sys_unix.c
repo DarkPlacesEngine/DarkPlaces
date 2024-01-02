@@ -24,23 +24,8 @@ void Sys_Shutdown (void)
 	fflush(stdout);
 }
 
-void Sys_Error (const char *error, ...)
+void Sys_SDL_Dialog(const char *title, const char *string)
 {
-	va_list argptr;
-	char string[MAX_INPUTLINE];
-
-// change stdin to non blocking
-#ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-	va_start (argptr,error);
-	dpvsnprintf (string, sizeof (string), error, argptr);
-	va_end (argptr);
-
-	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
-
-	//Host_Shutdown ();
-	exit (1);
 }
 
 void Sys_Print(const char *text)

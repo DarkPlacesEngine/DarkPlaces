@@ -615,6 +615,31 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
+
+void Sys_Error (const char *error, ...)
+{
+	va_list argptr;
+	char string[MAX_INPUTLINE];
+
+// change stdin to non blocking
+#ifndef WIN32
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
+#endif
+
+	va_start (argptr,error);
+	dpvsnprintf (string, sizeof (string), error, argptr);
+	va_end (argptr);
+
+	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
+
+	// don't want a dead window left blocking the OS UI or the crash dialog
+	Host_Shutdown();
+
+	Sys_SDL_Dialog("Engine Error", string);
+
+	exit (1);
+}
+
 #ifndef WIN32
 static const char *Sys_FindInPATH(const char *name, char namesep, const char *PATH, char pathsep, char *buf, size_t bufsize)
 {
