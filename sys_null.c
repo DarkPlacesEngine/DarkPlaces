@@ -1,18 +1,11 @@
 
-#ifdef WIN32
-#include <windows.h>
-#include <mmsystem.h>
-#else
-#include <sys/time.h>
-#endif
-
 #include "darkplaces.h"
 
-sys_t sys;
 
 // =======================================================================
 // General routines
 // =======================================================================
+
 void Sys_SDL_Shutdown(void)
 {
 }
@@ -21,7 +14,7 @@ void Sys_SDL_Dialog(const char *title, const char *string)
 {
 }
 
-char *Sys_GetClipboardData (void)
+char *Sys_SDL_GetClipboardData (void)
 {
 	return NULL;
 }

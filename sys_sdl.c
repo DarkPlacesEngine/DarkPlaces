@@ -1,8 +1,3 @@
-#ifdef WIN32
-#else
-#include <sys/time.h>
-#endif
-
 /*
  * Include this BEFORE darkplaces.h because it breaks wrapping
  * _Static_assert. Cloudwalk has no idea how or why so don't ask.
@@ -18,7 +13,6 @@
 #endif
 #endif
 
-sys_t sys;
 
 // =======================================================================
 // General routines
@@ -38,7 +32,7 @@ void Sys_SDL_Dialog(const char *title, const char *string)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, string, NULL);
 }
 
-char *Sys_GetClipboardData (void)
+char *Sys_SDL_GetClipboardData (void)
 {
 	char *data = NULL;
 	char *cliptext;

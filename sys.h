@@ -209,6 +209,7 @@ void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 
 /// (may) output text to terminal which launched program
 void Sys_Print(const char *text);
+/// for the console to report failures inside Con_Printf()
 void Sys_Printf(const char *fmt, ...);
 
 /// INFO: This is only called by Host_Shutdown so we dont need testing for recursion
@@ -236,6 +237,7 @@ double Sys_DirtyTime(void);
 
 void Sys_ProvideSelfFD (void);
 
+/// Reads a line from POSIX stdin or the Windows console
 char *Sys_ConsoleInput (void);
 
 /// called to yield for a little bit so as not to hog cpu when paused or debugging
@@ -246,7 +248,7 @@ void Sys_SDL_Init(void);
 /// Perform Key_Event () callbacks until the input que is empty
 void Sys_SDL_HandleEvents(void);
 
-char *Sys_GetClipboardData (void);
+char *Sys_SDL_GetClipboardData (void);
 
 extern qbool sys_supportsdlgetticks;
 unsigned int Sys_SDL_GetTicks (void); // wrapper to call SDL_GetTicks

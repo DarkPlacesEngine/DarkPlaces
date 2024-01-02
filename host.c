@@ -439,6 +439,7 @@ static void Host_Init (void)
 	Memory_Init_Commands();
 
 	// initialize console and logging and its cvars/commands
+	// this enables Con_Printf() messages to be coloured
 	Con_Init();
 
 	// initialize various cvars that could not be initialized earlier
