@@ -5243,12 +5243,8 @@ static void R_Bloom_MakeTexture(void)
 	r_fb.rt_bloom = cur;
 }
 
-static qbool R_BlendView_IsTrivial(int viewx, int viewy, int viewwidth, int viewheight, int x, int y, int width, int height)
+static qbool R_BlendView_IsTrivial(int viewwidth, int viewheight, int width, int height)
 {
-	// Shifting requested?
-	// (It should be possible to work around this otherwise)
-	if (viewx != x || viewy != y)
-		return false;
 	// Scaling requested?
 	if (viewwidth != width || viewheight != height)
 		return false;
@@ -5742,7 +5738,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	if(r_fb.rt_bloom)
 		r_refdef.view.colorscale *= r_bloom_scenebrightness.value;
 
-	skipblend = R_BlendView_IsTrivial(0, 0, r_fb.rt_screen->texturewidth, r_fb.rt_screen->textureheight, x, y, width, height);
+	skipblend = R_BlendView_IsTrivial(r_fb.rt_screen->texturewidth, r_fb.rt_screen->textureheight, width, height);
 	if (skipblend)
 	{
 		// Render to the screen right away.
@@ -5805,7 +5801,7 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	// test needs to be on
 	if (r_fb.rt_screen)
 		GL_ScissorTest(true);
-	GL_Scissor(viewx, viewy, viewwidth, viewheight);
+	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 	R_RenderScene(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
 	r_fb.water.numwaterplanes = 0;
 
