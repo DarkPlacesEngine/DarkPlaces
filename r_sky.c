@@ -432,7 +432,7 @@ void R_Sky(void)
 		//GL_Clear(GL_DEPTH_BUFFER_BIT);
 	}
 	*/
-	GL_Scissor(0, 0, r_fb.screentexturewidth, r_fb.screentextureheight);
+	GL_Scissor(r_refdef.view.viewport.x, r_refdef.view.viewport.y, r_refdef.view.viewport.width, r_refdef.view.viewport.height);
 }
 
 //===============================================================
