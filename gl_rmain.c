@@ -4401,7 +4401,7 @@ void R_SetupView(qbool allowwaterclippingplane, int viewfbo, rtexture_t *viewdep
 {
 	const float *customclipplane = NULL;
 	float plane[4];
-	int /*rtwidth,*/ rtheight;
+	int viewy_adjusted;
 	if (r_refdef.view.useclipplane && allowwaterclippingplane)
 	{
 		// LadyHavoc: couldn't figure out how to make this approach work the same in DPSOFTRAST
@@ -4416,15 +4416,16 @@ void R_SetupView(qbool allowwaterclippingplane, int viewfbo, rtexture_t *viewdep
 		customclipplane = plane;
 	}
 
-	//rtwidth = viewfbo ? R_TextureWidth(viewdepthtexture ? viewdepthtexture : viewcolortexture) : vid.width;
-	rtheight = viewfbo ? R_TextureHeight(viewdepthtexture ? viewdepthtexture : viewcolortexture) : vid.height;
+	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom.
+	// Unless the render target is a FBO...
+	viewy_adjusted = viewfbo ? viewy : vid.height - viewheight - viewy;
 
 	if (!r_refdef.view.useperspective)
-		R_Viewport_InitOrtho3D(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitOrtho3D(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, viewy_adjusted, viewwidth, viewheight, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
 	else if (vid.stencil && r_useinfinitefarclip.integer)
-		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
+		R_Viewport_InitPerspectiveInfinite(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, viewy_adjusted, viewwidth, viewheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, customclipplane);
 	else
-		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, rtheight - viewheight - viewy, viewwidth, viewheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
+		R_Viewport_InitPerspective(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, viewy_adjusted, viewwidth, viewheight, r_refdef.view.frustum_x, r_refdef.view.frustum_y, r_refdef.nearclip, r_refdef.farclip, customclipplane);
 	R_Mesh_SetRenderTargets(viewfbo, viewdepthtexture, viewcolortexture, NULL, NULL, NULL);
 	R_SetViewport(&r_refdef.view.viewport);
 }
@@ -4454,11 +4455,15 @@ void R_EntityMatrix(const matrix4x4_t *matrix)
 void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight, float x2, float y2)
 {
 	r_viewport_t viewport;
+	int viewy_adjusted;
 
 	CHECKGLERROR
 
-	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom
-	R_Viewport_InitOrtho(&viewport, &identitymatrix, viewx, vid.height - viewheight - viewy, viewwidth, viewheight, 0, 0, x2, y2, -10, 100, NULL);
+	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom.
+	// Unless the render target is a FBO...
+	viewy_adjusted = viewfbo ? viewy : vid.height - viewheight - viewy;
+
+	R_Viewport_InitOrtho(&viewport, &identitymatrix, viewx, viewy_adjusted, viewwidth, viewheight, 0, 0, x2, y2, -10, 100, NULL);
 	R_Mesh_SetRenderTargets(viewfbo, viewdepthtexture, viewcolortexture, NULL, NULL, NULL);
 	R_SetViewport(&viewport);
 	GL_Scissor(viewport.x, viewport.y, viewport.width, viewport.height);
