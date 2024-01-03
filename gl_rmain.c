@@ -82,7 +82,7 @@ cvar_t r_transparent_useplanardistance = {CF_CLIENT, "r_transparent_useplanardis
 cvar_t r_showoverdraw = {CF_CLIENT, "r_showoverdraw", "0", "shows overlapping geometry"};
 cvar_t r_showbboxes = {CF_CLIENT, "r_showbboxes", "0", "shows bounding boxes of server entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
 cvar_t r_showbboxes_client = {CF_CLIENT, "r_showbboxes_client", "0", "shows bounding boxes of clientside qc entities, value controls opacity scaling (1 = 10%,  10 = 100%)"};
-cvar_t r_showsurfaces = {CF_CLIENT, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 2 shows triangle draw order (for analyzing whether meshes are optimized for vertex cache)"};
+cvar_t r_showsurfaces = {CF_CLIENT, "r_showsurfaces", "0", "1 shows surfaces as different colors, or a value of 3 shows an approximation to vertex or object color (for a very approximate view of the game)"};
 cvar_t r_showtris = {CF_CLIENT, "r_showtris", "0", "shows triangle outlines, value controls brightness (can be above 1)"};
 cvar_t r_shownormals = {CF_CLIENT, "r_shownormals", "0", "shows per-vertex surface normals and tangent vectors for bumpmapped lighting"};
 cvar_t r_showlighting = {CF_CLIENT, "r_showlighting", "0", "shows areas lit by lights, useful for finding out why some areas of a map render slowly (bright orange = lots of passes = slow), a value of 2 disables depth testing which can be interesting but not very useful"};
@@ -1922,7 +1922,7 @@ void R_SetupShader_Surface(const float rtlightambient[3], const float rtlightdif
 			if (r_glsl_permutation->loc_Color_Ambient >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Ambient, rtlightambient[0], rtlightambient[1], rtlightambient[2]);
 			if (r_glsl_permutation->loc_Color_Diffuse >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Diffuse, rtlightdiffuse[0], rtlightdiffuse[1], rtlightdiffuse[2]);
 			if (r_glsl_permutation->loc_Color_Specular >= 0) qglUniform3f(r_glsl_permutation->loc_Color_Specular, rtlightspecular[0], rtlightspecular[1], rtlightspecular[2]);
-	
+
 			// additive passes are only darkened by fog, not tinted
 			if (r_glsl_permutation->loc_FogColor >= 0)
 				qglUniform3f(r_glsl_permutation->loc_FogColor, 0, 0, 0);
@@ -3828,7 +3828,7 @@ qbool R_AnimCache_GetEntity(entity_render_t *ent, qbool wantnormals, qbool wantt
 		r_refdef.stats[r_stat_animcache_skeletal_bones] += model->num_bones;
 		r_refdef.stats[r_stat_animcache_skeletal_maxbones] = max(r_refdef.stats[r_stat_animcache_skeletal_maxbones], model->num_bones);
 		ent->animcache_skeletaltransform3x4 = (float *)R_FrameData_Alloc(sizeof(float[3][4]) * model->num_bones);
-		Mod_Skeletal_BuildTransforms(model, ent->frameblend, ent->skeleton, NULL, ent->animcache_skeletaltransform3x4); 
+		Mod_Skeletal_BuildTransforms(model, ent->frameblend, ent->skeleton, NULL, ent->animcache_skeletaltransform3x4);
 		// note: this can fail if the buffer is at the grow limit
 		ent->animcache_skeletaltransform3x4size = sizeof(float[3][4]) * model->num_bones;
 		ent->animcache_skeletaltransform3x4buffer = R_BufferData_Store(ent->animcache_skeletaltransform3x4size, ent->animcache_skeletaltransform3x4, R_BUFFERDATA_UNIFORM, &ent->animcache_skeletaltransform3x4offset);
@@ -4985,7 +4985,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				r_refdef.view.usecustompvs = true;
 				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
 			}
-			
+
 			// camera needs no clipplane
 			r_refdef.view.useclipplane = false;
 			// TODO: is the camera origin always valid?  if so we don't need to clear this
@@ -5278,22 +5278,22 @@ static void R_MotionBlurView(int viewfbo, rtexture_t *viewdepthtexture, rtexture
 	{
 		// declare variables
 		float blur_factor, blur_mouseaccel, blur_velocity;
-		static float blur_average; 
+		static float blur_average;
 		static vec3_t blur_oldangles; // used to see how quickly the mouse is moving
 
 		// set a goal for the factoring
-		blur_velocity = bound(0, (VectorLength(cl.movement_velocity) - r_motionblur_velocityfactor_minspeed.value) 
+		blur_velocity = bound(0, (VectorLength(cl.movement_velocity) - r_motionblur_velocityfactor_minspeed.value)
 			/ max(1, r_motionblur_velocityfactor_maxspeed.value - r_motionblur_velocityfactor_minspeed.value), 1);
-		blur_mouseaccel = bound(0, ((fabs(VectorLength(cl.viewangles) - VectorLength(blur_oldangles)) * 10) - r_motionblur_mousefactor_minspeed.value) 
+		blur_mouseaccel = bound(0, ((fabs(VectorLength(cl.viewangles) - VectorLength(blur_oldangles)) * 10) - r_motionblur_mousefactor_minspeed.value)
 			/ max(1, r_motionblur_mousefactor_maxspeed.value - r_motionblur_mousefactor_minspeed.value), 1);
-		blur_factor = ((blur_velocity * r_motionblur_velocityfactor.value) 
+		blur_factor = ((blur_velocity * r_motionblur_velocityfactor.value)
 			+ (blur_mouseaccel * r_motionblur_mousefactor.value));
 
 		// from the goal, pick an averaged value between goal and last value
 		cl.motionbluralpha = bound(0, (cl.time - cl.oldtime) / max(0.001, r_motionblur_averaging.value), 1);
 		blur_average = blur_average * (1 - cl.motionbluralpha) + blur_factor * cl.motionbluralpha;
 
-		// enforce minimum amount of blur 
+		// enforce minimum amount of blur
 		blur_factor = blur_average * (1 - r_motionblur_minblur.value) + r_motionblur_minblur.value;
 
 		//Con_Printf("motionblur: direct factor: %f, averaged factor: %f, velocity: %f, mouse accel: %f \n", blur_factor, blur_average, blur_velocity, blur_mouseaccel);
@@ -6060,7 +6060,7 @@ static const unsigned short bboxelements[36] =
 };
 
 #define BBOXEDGES 13
-static const float bboxedges[BBOXEDGES][6] = 
+static const float bboxedges[BBOXEDGES][6] =
 {
 	// whole box
 	{ 0, 0, 0, 1, 1, 1 },
@@ -8801,6 +8801,8 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	int k;
 	const msurface_t *surface;
 	float surfacecolor4f[4];
+	float c[4];
+	texture_t *t = rsurface.texture;
 
 //	R_Mesh_ResetTextureState();
 	R_SetupShader_Generic_NoTexture(false, false);
@@ -8808,18 +8810,70 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(writedepth);
 
-	RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_VERTEXCOLOR | BATCHNEED_ARRAY_TEXCOORD | BATCHNEED_ALWAYSCOPY, texturenumsurfaces, texturesurfacelist);
-	vi = 0;
-	for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+	switch (r_showsurfaces.integer)
 	{
-		surface = texturesurfacelist[texturesurfaceindex];
-		k = (int)(((size_t)surface) / sizeof(msurface_t));
-		Vector4Set(surfacecolor4f, (k & 0xF) * (1.0f / 16.0f), (k & 0xF0) * (1.0f / 256.0f), (k & 0xF00) * (1.0f / 4096.0f), 1);
-		for (j = 0;j < surface->num_vertices;j++)
-		{
-			Vector4Copy(surfacecolor4f, rsurface.batchlightmapcolor4f + 4 * vi);
-			vi++;
-		}
+		case 1:
+		default:
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_VERTEXCOLOR | BATCHNEED_ALWAYSCOPY, texturenumsurfaces, texturesurfacelist);
+			vi = 0;
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				k = (int)(((size_t)surface) / sizeof(msurface_t));
+				Vector4Set(surfacecolor4f, (k & 0xF) * (1.0f / 16.0f), (k & 0xF0) * (1.0f / 256.0f), (k & 0xF00) * (1.0f / 4096.0f), 1);
+				for (j = 0;j < surface->num_vertices;j++)
+				{
+					Vector4Copy(surfacecolor4f, rsurface.batchlightmapcolor4f + 4 * vi);
+					vi++;
+				}
+			}
+			break;
+		case 3:
+			if(t && t->currentskinframe)
+			{
+				Vector4Copy(t->currentskinframe->avgcolor, c);
+				c[3] *= t->currentalpha;
+			}
+			else
+			{
+				Vector4Set(c, 1, 0, 1, 1);
+			}
+			if (t->pantstexture || t->shirttexture)
+			{
+				VectorMAM(0.7, t->render_colormap_pants, 0.3, t->render_colormap_shirt, c);
+			}
+			VectorScale(c, 2 * r_refdef.view.colorscale, c);
+			if(t->currentmaterialflags & MATERIALFLAG_WATERALPHA)
+				c[3] *= r_wateralpha.value;
+			RSurf_PrepareVerticesForBatch(BATCHNEED_ARRAY_VERTEX | BATCHNEED_ARRAY_VERTEXCOLOR | BATCHNEED_ALWAYSCOPY, texturenumsurfaces, texturesurfacelist);
+			vi = 0;
+			if (rsurface.modellightmapcolor4f)
+			{
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					for (j = 0;j < surface->num_vertices;j++)
+					{
+						float *ptr = rsurface.batchlightmapcolor4f + 4 * vi;
+						Vector4Multiply(ptr, c, ptr);
+						vi++;
+					}
+				}
+			}
+			else
+			{
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					for (j = 0;j < surface->num_vertices;j++)
+					{
+						float *ptr = rsurface.batchlightmapcolor4f + 4 * vi;
+						Vector4Copy(c, ptr);
+						vi++;
+					}
+				}
+			}
+			break;
 	}
 	R_Mesh_PrepareVertices_Generic_Arrays(rsurface.batchnumvertices, rsurface.batchvertex3f, rsurface.batchlightmapcolor4f, rsurface.batchtexcoordtexture2f);
 	RSurf_DrawBatch();
@@ -10097,7 +10151,7 @@ void R_DrawModelSurfaces(entity_render_t *ent, qbool skysurfaces, qbool writedep
 		// Now check if update flags are set on any surfaces that are visible
 		if (r_q1bsp_lightmap_updates_hidden_surfaces.integer)
 		{
-			/* 
+			/*
 			 * We can do less frequent texture uploads (approximately 10hz for animated
 			 * lightstyles) by rebuilding lightmaps on surfaces that are not currently visible.
 			 * For optimal efficiency, this includes the submodels of the worldmodel, so we
