@@ -5255,9 +5255,6 @@ static qbool R_BlendView_IsTrivial(int viewx, int viewy, int viewwidth, int view
 	// Higher bit depth or explicit FBO requested?
 	if (r_viewfbo.integer)
 		return false;
-	// Motion blur?
-	if(r_refdef.view.ismain && !R_Stereo_Active() && (r_motionblur.value > 0 || (r_damageblur.value > 0 && cl.cshifts[CSHIFT_DAMAGE].percent != 0)) && r_fb.ghosttexture)
-		return false;
 	// Non-trivial postprocessing shader permutation?
 	if (r_fb.bloomwidth
 	|| r_refdef.viewblend[3] > 0
@@ -5277,13 +5274,8 @@ static qbool R_BlendView_IsTrivial(int viewx, int viewy, int viewwidth, int view
 	return true;
 }
 
-static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height)
+static void R_MotionBlurView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewcolortexture, int viewx, int viewy, int viewwidth, int viewheight)
 {
-	uint64_t permutation;
-	float uservecs[4][4];
-	rtexture_t *viewtexture;
-	rtexture_t *bloomtexture;
-
 	R_EntityMatrix(&identitymatrix);
 
 	if(r_refdef.view.ismain && !R_Stereo_Active() && (r_motionblur.value > 0 || (r_damageblur.value > 0 && cl.cshifts[CSHIFT_DAMAGE].percent != 0)) && r_fb.ghosttexture)
@@ -5346,6 +5338,16 @@ static void R_BlendView(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *v
 		r_refdef.stats[r_stat_bloom_copypixels] += viewwidth * viewheight;
 		r_fb.ghosttexture_valid = true;
 	}
+}
+
+static void R_BlendView(rtexture_t *viewcolortexture, int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, int x, int y, int width, int height)
+{
+	uint64_t permutation;
+	float uservecs[4][4];
+	rtexture_t *viewtexture;
+	rtexture_t *bloomtexture;
+
+	R_EntityMatrix(&identitymatrix);
 
 	if (r_fb.bloomwidth)
 	{
@@ -5810,8 +5812,9 @@ void R_RenderView(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, i
 	// postprocess uses textures that are not aligned with the viewport we're rendering, so no scissoring
 	GL_ScissorTest(false);
 
+	R_MotionBlurView(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight);
 	if (!skipblend)
-		R_BlendView(viewfbo, viewdepthtexture, viewcolortexture, viewx, viewy, viewwidth, viewheight, fbo, depthtexture, colortexture, x, y, width, height);
+		R_BlendView(viewcolortexture, fbo, depthtexture, colortexture, x, y, width, height);
 	if (r_timereport_active)
 		R_TimeReport("blendview");
 
