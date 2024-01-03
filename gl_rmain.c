@@ -8838,7 +8838,7 @@ static void R_DrawTextureSurfaceList_ShowSurfaces(int texturenumsurfaces, const 
 			{
 				Vector4Set(c, 1, 0, 1, 1);
 			}
-			if (t->pantstexture || t->shirttexture)
+			if (t && (t->pantstexture || t->shirttexture))
 			{
 				VectorMAM(0.7, t->render_colormap_pants, 0.3, t->render_colormap_shirt, c);
 			}
