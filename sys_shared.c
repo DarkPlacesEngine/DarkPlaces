@@ -329,6 +329,11 @@ static cvar_t sys_usequeryperformancecounter = {CF_SHARED | CF_ARCHIVE, "sys_use
 static cvar_t sys_useclockgettime = {CF_SHARED | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
 #endif
 
+static cvar_t sys_stdout = {CF_SHARED, "sys_stdout", "1", "0: nothing is written to stdout (-nostdout cmdline option sets this), 1: normal messages are written to stdout, 2: normal messages are written to stderr (-stderr cmdline option sets this)"};
+#ifndef WIN32
+static cvar_t sys_stdout_blocks = {CF_SHARED, "sys_stdout_blocks", "0", "1: writes to stdout and stderr streams will block (causing a stutter or complete halt) if the buffer is full, ensuring no messages are lost at a price"};
+#endif
+
 static double benchmark_time; // actually always contains an integer amount of milliseconds, will eventually "overflow"
 
 /*
@@ -354,6 +359,17 @@ int Sys_CheckParm (const char *parm)
 	return 0;
 }
 
+static void Sys_UpdateOutFD_c(cvar_t *var)
+{
+	switch (sys_stdout.integer)
+	{
+		case 0: sys.outfd = -1; break;
+		default:
+		case 1: sys.outfd = fileno(stdout); break;
+		case 2: sys.outfd = fileno(stderr); break;
+	}
+}
+
 void Sys_Init_Commands (void)
 {
 	Cvar_RegisterVariable(&sys_debugsleep);
@@ -371,6 +387,11 @@ void Sys_Init_Commands (void)
 #endif
 #if HAVE_CLOCKGETTIME
 	Cvar_RegisterVariable(&sys_useclockgettime);
+#endif
+	Cvar_RegisterVariable(&sys_stdout);
+	Cvar_RegisterCallback(&sys_stdout, Sys_UpdateOutFD_c);
+#ifndef WIN32
+	Cvar_RegisterVariable(&sys_stdout_blocks);
 #endif
 }
 
@@ -581,8 +602,9 @@ void Sys_Print(const char *text)
 	// BUG: for some reason, NDELAY also affects stdout (1) when used on stdin (0).
 	// this is because both go to /dev/tty by default!
 	{
-		int origflags = fcntl (sys.outfd, F_GETFL, 0);
-		fcntl (sys.outfd, F_SETFL, origflags & ~O_NONBLOCK);
+		int origflags = fcntl(sys.outfd, F_GETFL, 0);
+		if (sys_stdout_blocks.integer)
+			fcntl(sys.outfd, F_SETFL, origflags & ~O_NONBLOCK);
   #else
     #define write _write
   #endif
@@ -594,7 +616,8 @@ void Sys_Print(const char *text)
 			text += written;
 		}
   #ifndef WIN32
-		fcntl (sys.outfd, F_SETFL, origflags);
+		if (sys_stdout_blocks.integer)
+			fcntl(sys.outfd, F_SETFL, origflags);
 	}
   #endif
 	//fprintf(stdout, "%s", text);
@@ -970,21 +993,25 @@ int main (int argc, char **argv)
 	sys.argc = argc;
 	sys.argv = (const char **)argv;
 
+	// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
 	// COMMANDLINEOPTION: -noterminal disables console output on stdout
-	if(Sys_CheckParm("-noterminal"))
-		sys.outfd = -1;
+	if(Sys_CheckParm("-noterminal") || Sys_CheckParm("-nostdout"))
+		sys_stdout.string = "0";
 	// COMMANDLINEOPTION: -stderr moves console output to stderr
 	else if(Sys_CheckParm("-stderr"))
-		sys.outfd = 2;
-	else
-		sys.outfd = 1;
+		sys_stdout.string = "2";
+	// too early for Cvar_SetQuick
+	sys_stdout.value = sys_stdout.integer = atoi(sys_stdout.string);
+	Sys_UpdateOutFD_c(&sys_stdout);
+#ifndef WIN32
+	fcntl(fileno(stdin), F_SETFL, fcntl(fileno(stdin), F_GETFL, 0) | O_NONBLOCK);
+	// stdout/stderr will be set to blocking in Sys_Print() if so configured, or during a fatal error.
+	fcntl(fileno(stdout), F_SETFL, fcntl(fileno(stdout), F_GETFL, 0) | O_NONBLOCK);
+	fcntl(fileno(stderr), F_SETFL, fcntl(fileno(stderr), F_GETFL, 0) | O_NONBLOCK);
+#endif
 
 	sys.selffd = -1;
 	Sys_ProvideSelfFD(); // may call Con_Printf() so must be after sys.outfd is set
-
-#ifndef WIN32
-	fcntl(fileno(stdin), F_SETFL, fcntl (fileno(stdin), F_GETFL, 0) | O_NONBLOCK);
-#endif
 
 #ifdef __ANDROID__
 	Sys_AllowProfiling(true);

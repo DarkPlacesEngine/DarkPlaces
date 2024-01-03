@@ -293,7 +293,6 @@ static void Host_InitLocal (void)
 
 char engineversion[128];
 
-qbool sys_nostdout = false;
 
 static qfile_t *locksession_fh = NULL;
 static qbool locksession_run = false;
@@ -423,10 +422,6 @@ static void Host_Init (void)
 		gl_paranoid.integer = 1;gl_paranoid.string = "1";
 		gl_printcheckerror.integer = 1;gl_printcheckerror.string = "1";
 	}
-
-// COMMANDLINEOPTION: Console: -nostdout disables text output to the terminal the game was launched from
-	if (Sys_CheckParm("-nostdout"))
-		sys_nostdout = 1;
 
 	// -dedicated is checked in SV_ServerOptions() but that's too late for Cvar_RegisterVariable() to skip all the client-only cvars
 	if (Sys_CheckParm ("-dedicated") || !cl_available)

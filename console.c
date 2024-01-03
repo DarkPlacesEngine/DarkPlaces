@@ -1150,7 +1150,6 @@ Con_MaskPrint
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
-extern qbool sys_nostdout;
 void Con_MaskPrint(int additionalmask, const char *msg)
 {
 	static int mask = 0;
@@ -1219,7 +1218,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 				Con_PrintToHistory(line, mask);
 			}
 			// send to terminal or dedicated server window
-			if (!sys_nostdout)
+			if (sys.outfd >= 0)
 			if (developer.integer || !(mask & CON_MASK_DEVELOPER))
 			{
 				if(sys_specialcharactertranslation.integer)
