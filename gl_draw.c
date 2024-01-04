@@ -339,9 +339,6 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		strlcpy(fnt->texpath, name, sizeof(fnt->texpath));
 		// load the cvars when the font is FIRST loader
 		fnt->settings.scale = scale;
-		// fix bad scale
-		if (fnt->settings.scale <= 0)
-			fnt->settings.scale = 1;
 		fnt->settings.voffset = voffset;
 		fnt->settings.antialias = r_font_antialias.integer;
 		fnt->settings.hinting = r_font_hinting.integer;
@@ -351,6 +348,10 @@ void LoadFont(qbool override, const char *name, dp_font_t *fnt, float scale, flo
 		fnt->settings.shadowy = r_font_postprocess_shadow_y.value;
 		fnt->settings.shadowz = r_font_postprocess_shadow_z.value;
 	}
+
+	// fix bad scale
+	if (fnt->settings.scale <= 0)
+		fnt->settings.scale = 1;
 
 	if(drawtexturepool == NULL)
 		return; // before gl_draw_start, so will be loaded later
