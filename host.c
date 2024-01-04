@@ -89,6 +89,10 @@ void Host_Error (const char *error, ...)
 	static char hosterrorstring2[MAX_INPUTLINE]; // THREAD UNSAFE
 	static qbool hosterror = false;
 	va_list argptr;
+	int outfd = sys.outfd;
+
+	// set output to stderr
+	sys.outfd = fileno(stderr);
 
 	// turn off rcon redirect if it was active when the crash occurred
 	// to prevent loops when it is a networking problem
@@ -140,6 +144,9 @@ void Host_Error (const char *error, ...)
 	cls.demonum = -1;
 
 	hosterror = false;
+
+	// restore configured outfd
+	sys.outfd = outfd;
 
 	Host_AbortCurrentFrame();
 }
