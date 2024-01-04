@@ -53,7 +53,6 @@ CVars introduced with the freetype extension
 */
 
 cvar_t r_font_disable_freetype = {CF_CLIENT | CF_ARCHIVE, "r_font_disable_freetype", "0", "disable freetype support for fonts entirely"};
-cvar_t r_font_use_alpha_textures = {CF_CLIENT | CF_ARCHIVE, "r_font_use_alpha_textures", "0", "[deprecated, not effective] use alpha-textures for font rendering, this should save memory"};
 cvar_t r_font_size_snapping = {CF_CLIENT | CF_ARCHIVE, "r_font_size_snapping", "1", "stick to good looking font sizes whenever possible - bad when the mod doesn't support it!"};
 cvar_t r_font_kerning = {CF_CLIENT | CF_ARCHIVE, "r_font_kerning", "1", "Use kerning if available"};
 cvar_t r_font_diskcache = {CF_CLIENT | CF_ARCHIVE, "r_font_diskcache", "0", "[deprecated, not effective] save font textures to disk for future loading rather than generating them every time"};
@@ -445,7 +444,6 @@ void Font_Init(void)
 {
 	Cvar_RegisterVariable(&r_font_nonpoweroftwo);
 	Cvar_RegisterVariable(&r_font_disable_freetype);
-	Cvar_RegisterVariable(&r_font_use_alpha_textures);
 	Cvar_RegisterVariable(&r_font_size_snapping);
 	Cvar_RegisterVariable(&r_font_kerning);
 	Cvar_RegisterVariable(&r_font_diskcache);
