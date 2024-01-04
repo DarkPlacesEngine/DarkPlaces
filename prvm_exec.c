@@ -715,6 +715,7 @@ extern cvar_t prvm_errordump;
 void PRVM_Crash(prvm_prog_t *prog)
 {
 	char vabuf[1024];
+	int outfd = sys.outfd;
 
 	cl.csqc_loaded = false;
 
@@ -722,6 +723,9 @@ void PRVM_Crash(prvm_prog_t *prog)
 		return;
 	if (!prog->loaded)
 		return;
+
+	// set output to stderr
+	sys.outfd = fileno(stderr);
 
 	PRVM_serverfunction(SV_Shutdown) = 0; // don't call SV_Shutdown on crash
 
@@ -746,6 +750,9 @@ void PRVM_Crash(prvm_prog_t *prog)
 
 	// reset the prog pointer
 	prog = NULL;
+
+	// restore configured outfd
+	sys.outfd = outfd;
 }
 
 /*

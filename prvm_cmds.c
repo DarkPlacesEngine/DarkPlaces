@@ -27,6 +27,10 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
 	static double recursive = -1;
+	int outfd = sys.outfd;
+
+	// set output to stderr
+	sys.outfd = fileno(stderr);
 
 	va_start(argptr,fmt);
 	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
@@ -41,6 +45,9 @@ void VM_Warning(prvm_prog_t *prog, const char *fmt, ...)
 		PRVM_PrintState(prog, 0);
 		recursive = -1;
 	}
+
+	// restore configured outfd
+	sys.outfd = outfd;
 }
 
 

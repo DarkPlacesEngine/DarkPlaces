@@ -71,10 +71,13 @@ void Sys_Quit (int returnvalue)
 #ifdef __ANDROID__
 	Sys_AllowProfiling(false);
 #endif
+
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
+	fcntl(fileno(stdout), F_SETFL, fcntl(fileno(stdout), F_GETFL, 0) & ~O_NONBLOCK);
+	fcntl(fileno(stderr), F_SETFL, fcntl(fileno(stderr), F_GETFL, 0) & ~O_NONBLOCK);
 #endif
 	fflush(stdout);
+	fflush(stderr);
 
 	exit(returnvalue);
 }
@@ -700,9 +703,10 @@ void Sys_Error (const char *error, ...)
 	va_list argptr;
 	char string[MAX_INPUTLINE];
 
-// change stdin to non blocking
+	// set output to blocking stderr
+	sys.outfd = fileno(stderr);
 #ifndef WIN32
-	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~O_NONBLOCK);
+	fcntl(sys.outfd, F_SETFL, fcntl(sys.outfd, F_GETFL, 0) & ~O_NONBLOCK);
 #endif
 
 	va_start (argptr,error);
@@ -715,6 +719,8 @@ void Sys_Error (const char *error, ...)
 	Host_Shutdown();
 
 	Sys_SDL_Dialog("Engine Error", string);
+
+	fflush(stderr);
 
 	exit (1);
 }
@@ -941,10 +947,16 @@ static void Sys_HandleCrash(int sig)
 		default:      sigdesc = "Yo dawg, we hit a bug while hitting a bug";
 	}
 
+	// set output to blocking stderr
+	sys.outfd = fileno(stderr);
+#ifndef WIN32
+	fcntl(sys.outfd, F_SETFL, fcntl(sys.outfd, F_GETFL, 0) & ~O_NONBLOCK);
+#endif
+
 	fprintf(stderr, "\n\n\e[1;37;41m    Engine Crash: %s (%d)    \e[m\n", sigdesc, sig);
 #if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
 	// the first two addresses will be in this function and in signal() in libc
-	backtrace_symbols_fd(stackframes + 2, framecount - 2, fileno(stderr));
+	backtrace_symbols_fd(stackframes + 2, framecount - 2, sys.outfd);
 #endif
 	fprintf(stderr, "\e[1m%s\e[m\n", engineversion);
 
@@ -955,6 +967,8 @@ static void Sys_HandleCrash(int sig)
 	S_StopAllSounds();
 
 	Sys_SDL_Dialog("Engine Crash", sigdesc);
+
+	fflush(stderr);
 
 	exit (sig);
 }
