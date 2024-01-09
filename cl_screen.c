@@ -1224,19 +1224,13 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	cls.capturevideo.videoframes(newframestepframenum - cls.capturevideo.framestepframe);
 	cls.capturevideo.framestepframe = newframestepframenum;
 
-	if(cl_capturevideo_printfps.integer)
+	if(cl_capturevideo_printfps.integer && host.realtime > cls.capturevideo.lastfpstime + 1)
 	{
-		char buf[80];
-		double t = host.realtime;
-		if(t > cls.capturevideo.lastfpstime + 1)
-		{
-			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
-			double fps  = (cls.capturevideo.frame                                ) / (t - cls.capturevideo.starttime   + 0.0000001);
-			dpsnprintf(buf, sizeof(buf), "capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
-			Sys_Print(buf);
-			cls.capturevideo.lastfpstime = t;
-			cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
-		}
+		double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (host.realtime - cls.capturevideo.lastfpstime + 0.0000001);
+		double fps  = (cls.capturevideo.frame                                ) / (host.realtime - cls.capturevideo.starttime   + 0.0000001);
+		Sys_Printf("capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
+		cls.capturevideo.lastfpstime = host.realtime;
+		cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
 	}
 }
 

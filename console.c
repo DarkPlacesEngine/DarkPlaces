@@ -1356,12 +1356,12 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 						*out++ = '[';
 						*out++ = 'm';
 					}
-					*out++ = 0;
-					Sys_Print(printline);
+					*out = '\0';
+					Sys_Print(printline, out - printline);
 				}
 				else if(sys_colortranslation.integer == 2) // Quake
 				{
-					Sys_Print(line);
+					Sys_Print(line, index);
 				}
 				else // strip
 				{
@@ -1411,8 +1411,8 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 								break;
 						}
 					}
-					*out++ = 0;
-					Sys_Print(printline);
+					*out = '\0';
+					Sys_Print(printline, out - printline);
 				}
 			}
 			// empty the line buffer
