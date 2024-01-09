@@ -333,7 +333,7 @@ ConBuffer_AddLine
 Appends a given string as a new line to the console.
 ================
 */
-void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
+void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, unsigned mask)
 {
 	char *putpos;
 	con_lineinfo_t *p;
@@ -367,7 +367,7 @@ void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
 	p->height = -1; // calculate when needed
 }
 
-int ConBuffer_FindPrevLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start)
+int ConBuffer_FindPrevLine(conbuffer_t *buf, unsigned mask_must, unsigned mask_mustnot, int start)
 {
 	int i;
 	if(start == -1)
@@ -1151,10 +1151,10 @@ Con_MaskPrint
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
-void Con_MaskPrint(int additionalmask, const char *msg)
+void Con_MaskPrint(unsigned additionalmask, const char *msg)
 {
-	static int mask = 0;
-	static int index = 0;
+	static unsigned mask = 0;
+	static unsigned index = 0;
 	static char line[MAX_INPUTLINE];
 
 	if (con_mutex)
@@ -1430,7 +1430,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 Con_MaskPrintf
 ================
 */
-void Con_MaskPrintf(int mask, const char *fmt, ...)
+void Con_MaskPrintf(unsigned mask, const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
@@ -1700,7 +1700,7 @@ static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t lengt
 	return 1;
 }
 
-static int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
+static int Con_DrawNotifyRect(unsigned mask_must, unsigned mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
 {
 	int i;
 	int lines = 0;
@@ -1901,7 +1901,7 @@ If alpha is 0, the line is not drawn, but still wrapped and its height
 returned.
 ================
 */
-static int Con_DrawConsoleLine(int mask_must, int mask_mustnot, float y, int lineno, float ymin, float ymax)
+static int Con_DrawConsoleLine(unsigned mask_must, unsigned mask_mustnot, float y, int lineno, float ymin, float ymax)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
@@ -1933,7 +1933,7 @@ Calculates the last visible line index and how much to show of it based on
 con_backscroll.
 ================
 */
-static void Con_LastVisibleLine(int mask_must, int mask_mustnot, int *last, int *limitlast)
+static void Con_LastVisibleLine(unsigned mask_must, unsigned mask_mustnot, int *last, int *limitlast)
 {
 	int lines_seen = 0;
 	int i;

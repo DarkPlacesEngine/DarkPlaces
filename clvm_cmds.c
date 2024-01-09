@@ -2448,49 +2448,49 @@ static void VM_CL_registercmd (prvm_prog_t *prog)
 	Cmd_AddCommand(CF_CLIENT, PRVM_G_STRING(OFS_PARM0), NULL, "console command created by QuakeC");
 }
 
-//#360 float() readbyte (EXT_CSQC)
+//#360 float() ReadByte (EXT_CSQC)
 static void VM_CL_ReadByte (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadByte);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadByte(&cl_message);
 }
 
-//#361 float() readchar (EXT_CSQC)
+//#361 float() ReadChar (EXT_CSQC)
 static void VM_CL_ReadChar (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadChar);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadChar(&cl_message);
 }
 
-//#362 float() readshort (EXT_CSQC)
+//#362 float() ReadShort (EXT_CSQC)
 static void VM_CL_ReadShort (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadShort);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadShort(&cl_message);
 }
 
-//#363 float() readlong (EXT_CSQC)
+//#363 float() ReadLong (EXT_CSQC)
 static void VM_CL_ReadLong (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadLong);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadLong(&cl_message);
 }
 
-//#364 float() readcoord (EXT_CSQC)
+//#364 float() ReadCoord (EXT_CSQC)
 static void VM_CL_ReadCoord (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadCoord);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadCoord(&cl_message, cls.protocol);
 }
 
-//#365 float() readangle (EXT_CSQC)
+//#365 float() ReadAngle (EXT_CSQC)
 static void VM_CL_ReadAngle (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadAngle);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadAngle(&cl_message, cls.protocol);
 }
 
-//#366 string() readstring (EXT_CSQC)
+//#366 string() ReadString (EXT_CSQC)
 static void VM_CL_ReadString (prvm_prog_t *prog)
 {
 	size_t cl_readstring_len;
@@ -2500,14 +2500,14 @@ static void VM_CL_ReadString (prvm_prog_t *prog)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cl_readstring, cl_readstring_len);
 }
 
-//#367 float() readfloat (EXT_CSQC)
+//#367 float() ReadFloat (EXT_CSQC)
 static void VM_CL_ReadFloat (prvm_prog_t *prog)
 {
 	VM_SAFEPARMCOUNT(0, VM_CL_ReadFloat);
 	PRVM_G_FLOAT(OFS_RETURN) = MSG_ReadFloat(&cl_message);
 }
 
-//#501 string() readpicture (DP_CSQC_READWRITEPICTURE)
+//#501 string() ReadPicture (DP_CSQC_READWRITEPICTURE)
 extern cvar_t cl_readpicture_force;
 static void VM_CL_ReadPicture (prvm_prog_t *prog)
 {
@@ -5344,14 +5344,14 @@ VM_findfont,					// #356 float(string fontname) loadfont (DP_GFX_FONTS)
 VM_loadfont,					// #357 float(string fontname, string fontmaps, string sizes, float slot) loadfont (DP_GFX_FONTS)
 VM_CL_loadcubemap,				// #358 void(string cubemapname) loadcubemap (DP_GFX_)
 NULL,							// #359
-VM_CL_ReadByte,					// #360 float() readbyte (EXT_CSQC)
-VM_CL_ReadChar,					// #361 float() readchar (EXT_CSQC)
-VM_CL_ReadShort,				// #362 float() readshort (EXT_CSQC)
-VM_CL_ReadLong,					// #363 float() readlong (EXT_CSQC)
-VM_CL_ReadCoord,				// #364 float() readcoord (EXT_CSQC)
-VM_CL_ReadAngle,				// #365 float() readangle (EXT_CSQC)
-VM_CL_ReadString,				// #366 string() readstring (EXT_CSQC)
-VM_CL_ReadFloat,				// #367 float() readfloat (EXT_CSQC)
+VM_CL_ReadByte,					// #360 float() ReadByte (EXT_CSQC)
+VM_CL_ReadChar,					// #361 float() ReadChar (EXT_CSQC)
+VM_CL_ReadShort,				// #362 float() ReadShort (EXT_CSQC)
+VM_CL_ReadLong,					// #363 float() ReadLong (EXT_CSQC)
+VM_CL_ReadCoord,				// #364 float() ReadCoord (EXT_CSQC)
+VM_CL_ReadAngle,				// #365 float() ReadAngle (EXT_CSQC)
+VM_CL_ReadString,				// #366 string() ReadString (EXT_CSQC)
+VM_CL_ReadFloat,				// #367 float() ReadFloat (EXT_CSQC)
 NULL,						// #368
 NULL,							// #369
 NULL,							// #370
