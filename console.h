@@ -46,7 +46,7 @@ void Con_Shutdown (void);
 void Con_DrawConsole (int lines);
 
 /// Prints to a chosen console target
-void Con_MaskPrint(int mask, const char *msg);
+void Con_MaskPrint(int additionalmask, const char *msg);
 
 // Prints to a chosen console target
 void Con_MaskPrintf(int mask, const char *fmt, ...) DP_FUNC_PRINTF(2);

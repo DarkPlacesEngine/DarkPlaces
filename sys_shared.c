@@ -596,7 +596,7 @@ STDIO
 ===============================================================================
 */
 
-void Sys_Print(const char *text)
+void Sys_Print(const char *text, size_t textlen)
 {
 #ifdef __ANDROID__
 	if (developer.integer > 0)
@@ -618,7 +618,7 @@ void Sys_Print(const char *text)
   #endif
 		while(*text)
 		{
-			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, (int)strlen(text));
+			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, textlen);
 			if(written <= 0)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
@@ -632,17 +632,18 @@ void Sys_Print(const char *text)
 #endif
 }
 
-/// for the console to report failures inside Con_Printf()
 void Sys_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
+	int msglen;
 
 	va_start(argptr,fmt);
-	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
+	msglen = dpvsnprintf(msg, sizeof(msg), fmt, argptr);
 	va_end(argptr);
 
-	Sys_Print(msg);
+	if (msglen >= 0)
+		Sys_Print(msg, msglen);
 }
 
 /// Reads a line from POSIX stdin or the Windows console
