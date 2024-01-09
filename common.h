@@ -210,10 +210,10 @@ int COM_Wordwrap(const char *string, size_t length, float continuationSize, floa
 
 extern char com_token[MAX_INPUTLINE];
 extern unsigned com_token_len;
-int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments);
-int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline);
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline);
-int COM_ParseToken_Console(const char **datapointer);
+qbool COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments);
+qbool COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline);
+qbool COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline);
+qbool COM_ParseToken_Console(const char **datapointer);
 
 void COM_Init (void);
 void COM_Shutdown (void);

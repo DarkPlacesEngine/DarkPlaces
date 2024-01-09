@@ -460,7 +460,7 @@ Parse a token out of a string
 Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
+qbool COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
 {
 	int len;
 	int c;
@@ -578,7 +578,7 @@ Parse a token out of a string
 Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
+qbool COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -697,7 +697,7 @@ Parse a token out of a string
 Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
+qbool COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
@@ -816,7 +816,7 @@ Parse a token out of a string, behaving like the qwcl console
 Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_Console(const char **datapointer)
+qbool COM_ParseToken_Console(const char **datapointer)
 {
 	int len;
 	const char *data = *datapointer;
