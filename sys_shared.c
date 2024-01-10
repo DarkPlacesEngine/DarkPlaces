@@ -38,6 +38,11 @@
 #include "thread.h"
 #include "libcurl.h"
 
+#ifdef WIN32
+	// Microsoft's compiler complains about portable code
+	#pragma warning(disable : 4996)
+#endif
+
 sys_t sys;
 
 static char sys_timestring[128];
