@@ -489,7 +489,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
@@ -507,7 +507,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				// refresh the garbage collection on the string - this guards
@@ -531,7 +531,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to NULL entity field .%s (%i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
@@ -557,7 +557,7 @@ int i;
 				if (OPA->edict == 0 && !cached_allowworldwrites)
 				{
 					PRE_ERROR();
-					prog->error_cmd("Forbidden assignment to NULL entity in %s", prog->name);
+					prog->error_cmd("Forbidden assignment to world (edictnum 0) in %s", prog->name);
 					goto cleanup;
 				}
 #endif
