@@ -21,12 +21,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // host.c -- coordinates spawning and killing of local servers
 
 #include "quakedef.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <emscripten/html5.h>
+#endif
 
 #include <time.h>
 #include "libcurl.h"
 #include "taskqueue.h"
 #include "utf8lib.h"
-
+double timee, oldtime, sleeptime;
 /*
 
 A server can always be started, even if the system started out as a client
@@ -61,6 +65,133 @@ cvar_t locksession = {CF_CLIENT | CF_SERVER, "locksession", "0", "Lock the sessi
 
 cvar_t host_isclient = {CF_SHARED | CF_READONLY, "_host_isclient", "0", "If 1, clientside is active."};
 
+#ifdef __EMSCRIPTEN__
+
+EM_JS(bool,syncFS,(bool x),{
+	FS.syncfs(x,function(e){
+		if(e){
+			alert("FileSystem Save Error: "+e);
+			return false;
+		} else{
+			console.log("Filesystem Saved!");
+			return true;
+		}
+	})});
+
+EM_JS(void,emshutdown,(),{
+	FS.syncfs(false,function(e){
+		if(e){
+			alert("FileSystem Save Error: "+e+" while shutting down.");
+			return false;
+		} else{
+			console.log("Filesystem Saved!");
+			return true;
+		}
+	});
+	window.close();
+})
+
+EM_JS(char*,rm,(char* x),{
+	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
+	if(FS.isFile(mode)){
+		FS.unlink(UTF8ToString(x));
+		return stringToNewUTF8("File removed"); 
+	}
+	else {
+		return stringToNewUTF8(x+" is not a File.");
+	}
+	});
+
+EM_JS(char*,rmdir,(char* x),{
+	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
+	if(FS.isDir(mode)){
+		try{FS.rmdir(UTF8ToString(x));} catch (error) {return stringToNewUTF8("Unable to remove directory. Is it not empty?");}
+		 
+		return stringToNewUTF8("Directory removed"); 
+	}
+	else {
+		return stringToNewUTF8(x+" is not a directory.");
+	}
+	});
+
+EM_JS(char*,upload,(char* todirectory),{
+	if(UTF8ToString(todirectory).slice(-1) != "/"){
+		currentname = UTF8ToString(todirectory) + "/";
+	}
+	else{
+		currentname = UTF8ToString(todirectory);
+	}
+	
+	file_selector.click();
+	return stringToNewUTF8("Upload started");
+
+});
+
+EM_JS(char*, listfiles,(char* directory),{ if(UTF8ToString(directory) == ""){
+	console.log("listing cwd"); 
+	return stringToNewUTF8(FS.readdir(FS.cwd()).toString())
+}  
+try{
+return  stringToNewUTF8(FS.readdir(UTF8ToString(directory)).toString()); 
+} catch(error){
+	return stringToNewUTF8("directory not found");
+}
+});
+
+void listfiles_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 2){
+		
+		Con_Printf(listfiles(""));
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(listfiles(Cmd_Argv(cmd,1)) );
+		Con_Printf("\n");
+	}
+}
+void savefs_f(cmd_state_t *cmd){
+	Con_Printf("Saving Files\n");
+	if(syncFS(false)){
+		Con_Printf("Files Saved to Browser Storage\n");
+	} else{
+		Con_Printf("File Save failed.\n");
+	}
+}
+
+void upload_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 2){
+		Con_Printf(upload("/save/data"));
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(upload(Cmd_Argv(cmd,1)));
+		Con_Printf("\n");
+	}
+}
+
+void rm_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 2){
+		Con_Printf("No file to remove");
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(rm(Cmd_Argv(cmd,1)));
+		Con_Printf("\n");
+	}
+}
+
+void rmdir_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 2){
+		Con_Printf("No directory to remove");
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(rmdir(Cmd_Argv(cmd,1)));
+		Con_Printf("\n");
+	}
+}
+bool engineup = false;
+#endif
 /*
 ================
 Host_AbortCurrentFrame
@@ -567,6 +698,10 @@ static void Host_Init (void)
 
 	if (cls.state != ca_dedicated)
 		SV_StartThread();
+	
+#ifdef __EMSCRIPTEN__
+engineup = true;
+#endif
 }
 
 /*
@@ -695,34 +830,51 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 	return time;
 }
 
+void Host_Loop(void){
+	// Something bad happened, or the server disconnected
+	#ifdef __EMSCRIPTEN__
+		if(engineup == false){
+			return;
+		}
+	#endif
+
+	if (setjmp(host.abortframe))
+	{
+		host.state = host_active; // In case we were loading
+	}
+
+	host.dirtytime = Sys_DirtyTime();
+	host.realtime += timee = Host_UpdateTime(host.dirtytime, oldtime);
+
+	sleeptime = Host_Frame(timee);
+	oldtime = host.dirtytime;
+	++host.framecount;
+
+	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+	host.sleeptime = Sys_Sleep(sleeptime);
+
+	#ifdef __EMSCRIPTEN__
+	if(host.state == host_shutdown){emshutdown(); engineup = false;}
+	#endif
+	
+}
+
 void Host_Main(void)
 {
-	double time, oldtime, sleeptime;
-
+	
 	Host_Init(); // Start!
-
 	host.realtime = 0;
 	oldtime = Sys_DirtyTime();
 
 	// Main event loop
+	#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(Host_Loop,60,true);
+	#else
 	while(host.state != host_shutdown)
 	{
-		// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-			continue;
-		}
-
-		host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
-		oldtime = host.dirtytime;
-
-		sleeptime = Host_Frame(time);
-		++host.framecount;
-		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Sys_Sleep(sleeptime);
+		Host_Loop();
 	}
-
+	#endif
 	return;
 }
+

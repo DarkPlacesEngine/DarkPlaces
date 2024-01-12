@@ -1658,6 +1658,9 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	// SDL usually knows best
 	const char *drivername = NULL;
 #endif
+#ifdef __EMSCRIPTEN__
+	const char *drivername = NULL;
+#endif
 
 	// video display selection (multi-monitor)
 	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());

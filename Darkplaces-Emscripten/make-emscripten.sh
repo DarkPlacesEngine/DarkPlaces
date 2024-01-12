@@ -1,0 +1,7 @@
+if ! type "emcc" > /dev/null; then
+    printf "\nEmscripten Not installed. Please install Emscripten at https://emscripten.org/docs/getting_started/downloads.html \n"
+    exit 1
+fi
+echo "hi"
+cd ..
+emmake make sdl-debug DP_SSE=0 DP_LINK_CRYPTO=shared DP_LINK_CRYPTO_RIJNDAEL=shared LIB_CRYPTO_RIJNDAEL=../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_rijndael.a EXE_SDL=darkplaces-emscripten.html LIB_CRYPTO=../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_blind_id.a LIB_CRYPTO+=" ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a" LIBM="" LIBZ="" LIB_JPEG=../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a CFLAGS_EXTRA="-DUSE_GLES2 -I../../../Darkplaces-Emscripten/builddeps/d0_blind_id/include/ -I../../../Darkplaces-Emscripten/builddeps/gmp/include -I../../../Darkplaces-Emscripten/builddeps/jpeg/include/" LDFLAGS_EXTRA="-LDarkplaces-Emscripten/builddeps/d0_blind_id/lib/ -Wl,-rpath,Darkplaces-Emscripten/builddeps/d0_blind_id/lib/ -LDarkplaces-Emscripten/builddeps/gmp/lib -Wl,-rpath,Darkplaces-Emscripten/builddeps/gmp/lib -LDarkplaces-Emscripten/builddeps/jpeg/lib/ -Wl,-rpath,Darkplaces-Emscripten/builddeps/jpeg/lib/ -sUSE_SDL=2 -sUSE_ZLIB=1 -DUSE_GLES2 -sINITIAL_MEMORY=1500MB -sSINGLE_FILE -sFULL_ES2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -s ASSERTIONS=1 -s SAFE_HEAP=1 -sMALLOC=emmalloc" 
