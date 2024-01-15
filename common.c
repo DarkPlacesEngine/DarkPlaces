@@ -1000,6 +1000,11 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 	if (result < 0 || (size_t)result >= buffersize)
 	{
 		buffer[buffersize - 1] = '\0';
+		// we could be inside Con_Printf
+		if (result < 0)
+			Sys_Printf("dpvsnprintf: output error, buffer size %zu\n", buffersize);
+		else
+			Sys_Printf("dpvsnprintf: truncated to %zu bytes: \"%s\"\n", buffersize - 1, buffer);
 		return -1;
 	}
 
