@@ -120,7 +120,11 @@ static int MapKey( unsigned int sdlkey )
 	default:                      return sdlkey & SDLK_SCANCODE_MASK ? 0 : sdlkey;
 //	case SDLK_UNKNOWN:            return K_UNKNOWN;
 	case SDLK_RETURN:             return K_ENTER;
+	#ifdef __EMSCRIPTEN__
+	case SDLK_BACKQUOTE:          return K_ESCAPE;
+	#else
 	case SDLK_ESCAPE:             return K_ESCAPE;
+	#endif
 	case SDLK_BACKSPACE:          return K_BACKSPACE;
 	case SDLK_TAB:                return K_TAB;
 	case SDLK_SPACE:              return K_SPACE;
@@ -161,7 +165,9 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_RIGHTBRACKET:       return ']';
 	case SDLK_CARET:              return '^';
 	case SDLK_UNDERSCORE:         return '_';
+	#ifndef __EMSCRIPTEN__
 	case SDLK_BACKQUOTE:          return '`';
+	#endif
 	case SDLK_a:                  return 'a';
 	case SDLK_b:                  return 'b';
 	case SDLK_c:                  return 'c';
