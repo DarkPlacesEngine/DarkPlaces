@@ -3,10 +3,6 @@ let currentcmd = [0,0,0]
 let currentfile = "";
 const sleep = ms => new Promise(r => setTimeout(r,ms));
 
-let isready = function(){
-    if(FS.analyzePath("/save/data",false).exists == true){return 1}
-    return 0
-}
 let cmditerate = 0
 Module['arguments'] = ["-basedir /save/data"]
 Module['print'] = function(text){console.log(text);}
@@ -20,14 +16,10 @@ Module['preRun'] = function(){
     FS.mount(IDBFS,{},"/save");
     
 }
-/*element.addEventListener('click', (ev) => {
+Module['noInitialRun'] = true
+document.addEventListener('click', (ev) => {
     console.log("event is captured only once.");
-    function stdin(){return 10};
-    var stdout = null;
-    var stderr = null; 
-    FS.init(stdin,stdout,stderr);
-    FS.mkdir('/save')
-    FS.mount(IDBFS,{},"/save");
-    FS.syncFS(true);
-  }, { once: true });*/
+    FS.syncfs(true);
+    Module.callMain(["-basedir /save"]);
+  }, { once: true });
   

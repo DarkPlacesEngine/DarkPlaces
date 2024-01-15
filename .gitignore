@@ -33,3 +33,4 @@ Makefile.win
 *.pdb
 *.lib
 *.exp
+*.html
