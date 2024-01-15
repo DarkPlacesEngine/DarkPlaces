@@ -23,6 +23,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "utf8lib.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(bool,setsizes,(),{
+	if(canvas.width != document.body.clientWidth && canvas.height != document.body.clientHeight && document.fullscreen == false){
+	canvas.width = document.body.clientWidth;
+	canvas.height = window.innerHeight;
+	return true
+	}
+	return false
+});
+
+EM_JS(int,getcanvassize,(int x),{
+	if(x == 1){
+		return canvas.width
+	} else{
+		return canvas.height
+	}
+});
+#endif
 
 #ifndef __IPHONEOS__
 #ifdef MACOSX
@@ -1070,7 +1090,12 @@ void Sys_SDL_HandleEvents(void)
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
-
+	if(setsizes()){
+		vid.width = getcanvassize(1);
+		vid.height = getcanvassize(2);
+		vid.fullscreen = false;
+		vid_fullscreen.integer = 0;
+	}
 	while( SDL_PollEvent( &event ) )
 		loop_start:
 		switch( event.type ) {

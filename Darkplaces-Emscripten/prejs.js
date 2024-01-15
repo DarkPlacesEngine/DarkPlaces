@@ -19,7 +19,8 @@ Module['preRun'] = function(){
 Module['noInitialRun'] = true
 document.addEventListener('click', (ev) => {
     console.log("event is captured only once.");
-    FS.syncfs(true);
-    Module.callMain(["-basedir /save"]);
+    FS.syncfs(true,function(){Module.callMain(["-basedir","/save"]);});
+    
   }, { once: true });
+
   

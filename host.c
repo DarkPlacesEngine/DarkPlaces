@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 #include <time.h>
@@ -77,6 +78,7 @@ EM_JS(bool,syncFS,(bool x),{
 		}
 	})});
 
+
 EM_JS(void,emshutdown,(),{
 	FS.syncfs(false,function(e){
 		if(e){
@@ -97,7 +99,7 @@ EM_JS(char*,rm,(char* x),{
 		return stringToNewUTF8("File removed"); 
 	}
 	else {
-		return stringToNewUTF8(x+" is not a File.");
+		return stringToNewUTF8(UTF8ToString(x)+" is not a File.");
 	}
 	});
 
@@ -109,9 +111,20 @@ EM_JS(char*,rmdir,(char* x),{
 		return stringToNewUTF8("Directory removed"); 
 	}
 	else {
-		return stringToNewUTF8(x+" is not a directory.");
+		return stringToNewUTF8(UTF8ToString(x)+" is not a directory.");
 	}
 	});
+
+EM_JS(char*,mkd,(char* x),{
+
+	try{FS.mkdir(UTF8ToString(x));} catch (error) {return stringToNewUTF8("Unable to create directory. Does it already exist?");}
+	return stringToNewUTF8(UTF8ToString(x)+" directory was created.");
+});
+
+EM_JS(char*,move,(char* x,char* y),{
+	try{FS.rename(UTF8ToString(x),UTF8ToString(y))}catch(error){return stringToNewUTF8("unable to move.")}
+	return stringToNewUTF8("File Moved")
+});
 
 EM_JS(char*,upload,(char* todirectory),{
 	if(UTF8ToString(todirectory).slice(-1) != "/"){
@@ -159,7 +172,7 @@ void savefs_f(cmd_state_t *cmd){
 
 void upload_f(cmd_state_t *cmd){
 	if(Cmd_Argc(cmd) != 2){
-		Con_Printf(upload("/save/data"));
+		Con_Printf(upload("/save"));
 		Con_Printf("\n");
 	}
 	else{
@@ -189,6 +202,29 @@ void rmdir_f(cmd_state_t *cmd){
 		Con_Printf("\n");
 	}
 }
+
+void mkdir_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 2){
+		Con_Printf("No directory to create");
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(mkd(Cmd_Argv(cmd,1)));
+		Con_Printf("\n");
+	}
+}
+
+void mv_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 3){
+		Con_Printf("Nothing to move");
+		Con_Printf("\n");
+	}
+	else{
+		Con_Printf(move(Cmd_Argv(cmd,1),Cmd_Argv(cmd,2)));
+		Con_Printf("\n");
+	}
+}
+
 bool engineup = false;
 #endif
 /*
@@ -409,6 +445,16 @@ static void Host_InitLocal (void)
 	Cmd_AddCommand(CF_SHARED, "saveconfig", Host_SaveConfig_f, "save settings to config.cfg (or a specified filename) immediately (also automatic when quitting)");
 	Cmd_AddCommand(CF_SHARED, "loadconfig", Host_LoadConfig_f, "reset everything and reload configs");
 	Cmd_AddCommand(CF_SHARED, "sendcvar", SendCvar_f, "sends the value of a cvar to the server as a sentcvar command, for use by QuakeC");
+	#ifdef __EMSCRIPTEN__
+		Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to /save (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_rm", rm_f, "Remove a file from game Filesystem (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
+		Cmd_AddCommand(CF_SHARED, "em_move", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
+	#endif
+
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterCallback (&host_framerate, Host_Framerate_c);
 	Cvar_RegisterVariable (&host_speeds);
@@ -772,7 +818,6 @@ Runs all active servers
 static double Host_Frame(double time)
 {
 	double cl_wait, sv_wait;
-
 	TaskQueue_Frame(false);
 
 	// keep the random time dependent, but not when playing demos/benchmarking
