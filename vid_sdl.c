@@ -1688,8 +1688,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 #ifndef USE_GLES2
 	// SDL usually knows best
 	const char *drivername = NULL;
-#endif
-#ifdef __EMSCRIPTEN__
+#elif defined(__EMSCRIPTEN__)
 	const char *drivername = NULL;
 #endif
 

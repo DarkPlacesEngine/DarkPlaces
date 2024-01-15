@@ -200,6 +200,9 @@
 "#ifdef FRAGMENT_SHADER\n",
 "void main(void)\n",
 "{\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "#ifdef USEDEPTHRGB\n",
 "	dp_FragColor = encodedepthmacro(Depth);\n",
 "#else\n",
@@ -228,6 +231,9 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "uniform sampler2D Texture_First;\n",
 "#ifdef USEBLOOM\n",
 "uniform sampler2D Texture_Second;\n",
@@ -300,6 +306,9 @@
 "\n",
 "void main(void)\n",
 "{\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "#ifdef USECOLORFRINGE\n",
 "	float fringe = ColorFringe;//.0033f;\n",
 "	float amount = distance(TexCoord1, vec2(.5f,.5f));\n",
@@ -430,6 +439,9 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "#ifdef USEDIFFUSE\n",
 "uniform sampler2D Texture_First;\n",
 "#endif\n",
@@ -495,6 +507,9 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "uniform sampler2D Texture_First;\n",
 "uniform mediump vec4 BloomBlur_Parameters;\n",
 "\n",
@@ -546,6 +561,9 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "uniform sampler2D Texture_Normal;\n",
 "uniform sampler2D Texture_Refraction;\n",
 "\n",
@@ -642,6 +660,9 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "uniform sampler2D Texture_Normal;\n",
 "uniform sampler2D Texture_Refraction;\n",
 "uniform sampler2D Texture_Reflection;\n",
@@ -777,6 +798,9 @@
 "\n",
 "// fragment shader specific:\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "\n",
 "uniform sampler2D Texture_Normal;\n",
 "uniform sampler2D Texture_Color;\n",
@@ -1155,6 +1179,9 @@
 "#ifdef FRAGMENT_SHADER\n",
 "void main(void)\n",
 "{\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "#ifdef USEOFFSETMAPPING\n",
 "	// apply offsetmapping\n",
 "	vec2 dPdx = dp_offsetmapping_dFdx(TexCoordSurfaceLightmap.xy);\n",
@@ -1205,6 +1232,9 @@
 "#endif // VERTEX_SHADER\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "uniform highp mat4 ViewToLight;\n",
 "// ScreenToDepth = vec2(Far / (Far - Near), Far * Near / (Near - Far));\n",
 "uniform highp vec2 ScreenToDepth;\n",
@@ -1416,6 +1446,9 @@
 "\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
+#ifdef __EMSCRIPTEN__
+"precision highp float;\n",
+#endif
 "#ifdef USEDEFERREDLIGHTMAP\n",
 "uniform myhalf2 PixelToScreenTexCoord;\n",
 "uniform myhalf3 DeferredMod_Diffuse;\n",
