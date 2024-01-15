@@ -87,6 +87,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #  define DP_OS_NAME	"SunOS"
 #  define DP_OS_STR		"sunos"
 # endif
+#elif defined(__EMSCRIPTEN__)
+#define DP_OS_NAME		"Browser"
+#define DP_OS_STR		"browser"
+#endif
 #else
 # define DP_OS_NAME		"Unknown"
 # define DP_OS_STR		"unknown"

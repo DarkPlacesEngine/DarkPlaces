@@ -20,10 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <SDL.h>
 #include <stdio.h>
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten/html5.h>
-#endif
-
 #include "quakedef.h"
 #include "image.h"
 #include "utf8lib.h"
@@ -95,33 +91,6 @@ static SDL_Window *window;
 #ifndef SDLK_PERCENT
 #define SDLK_PERCENT '%'
 #endif
-
-#ifdef __EMSCRIPTEN__
-static EM_BOOL resized(int eventType, const EmscriptenUiEvent *uiEvent, void *userData){
-#else
-static void resized(void){
-#endif
-	if(vid_resizable.integer < 2)
-		{
-			//vid.width = event.window.data1;
-			//vid.height = event.window.data2;
-			// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-			SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
-#ifdef SDL_R_RESTART
-			// better not call R_Modules_Restart_f from here directly, as this may wreak havoc...
-			// so, let's better queue it for next frame
-			if(!sdl_needs_restart)
-			{
-				Cbuf_AddText(cmd_local, "\nr_restart\n");
-				sdl_needs_restart = true;
-			}
-#endif
-		}
-	#ifdef __EMSCRIPTEN__
-		return EM_TRUE;
-	#endif
-
-}
 
 static int MapKey( unsigned int sdlkey )
 {
@@ -1234,9 +1203,22 @@ void Sys_SDL_HandleEvents(void)
 						}
 						break;
 					case SDL_WINDOWEVENT_RESIZED: // external events only
-						#ifndef __EMSCRIPTEN__
-							resized();
-						#endif
+						if(vid_resizable.integer < 2)
+						{
+							//vid.width = event.window.data1;
+							//vid.height = event.window.data2;
+							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
+							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
+#ifdef SDL_R_RESTART
+							// better not call R_Modules_Restart_f from here directly, as this may wreak havoc...
+							// so, let's better queue it for next frame
+							if(!sdl_needs_restart)
+							{
+								Cbuf_AddText(cmd_local, "\nr_restart\n");
+								sdl_needs_restart = true;
+							}
+#endif
+						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
 						break;
@@ -1518,9 +1500,6 @@ void VID_Init (void)
 	SDL_version version;
 
 #ifndef __IPHONEOS__
-#ifdef __EMSCRIPTEN__
-	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT,NULL,EM_FALSE,resized);
-#endif
 #ifdef MACOSX
 	Cvar_RegisterVariable(&apple_mouse_noaccel);
 #endif
