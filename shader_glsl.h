@@ -200,7 +200,7 @@
 "#ifdef FRAGMENT_SHADER\n",
 "void main(void)\n",
 "{\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "#ifdef USEDEPTHRGB\n",
@@ -231,7 +231,7 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "uniform sampler2D Texture_First;\n",
@@ -306,7 +306,7 @@
 "\n",
 "void main(void)\n",
 "{\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "#ifdef USECOLORFRINGE\n",
@@ -439,7 +439,7 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "#ifdef USEDIFFUSE\n",
@@ -507,7 +507,7 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "uniform sampler2D Texture_First;\n",
@@ -561,7 +561,7 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "uniform sampler2D Texture_Normal;\n",
@@ -660,7 +660,7 @@
 "#endif\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "uniform sampler2D Texture_Normal;\n",
@@ -798,7 +798,7 @@
 "\n",
 "// fragment shader specific:\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "\n",
@@ -1179,7 +1179,7 @@
 "#ifdef FRAGMENT_SHADER\n",
 "void main(void)\n",
 "{\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "#ifdef USEOFFSETMAPPING\n",
@@ -1232,7 +1232,7 @@
 "#endif // VERTEX_SHADER\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "uniform highp mat4 ViewToLight;\n",
@@ -1446,7 +1446,7 @@
 "\n",
 "\n",
 "#ifdef FRAGMENT_SHADER\n",
-#ifdef __EMSCRIPTEN__
+#ifdef USE_GLES2
 "precision highp float;\n",
 #endif
 "#ifdef USEDEFERREDLIGHTMAP\n",
