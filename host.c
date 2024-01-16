@@ -385,6 +385,7 @@ void Host_SaveConfig(const char *file)
 		Cvar_WriteVariables (&cvars_all, f);
 
 		FS_Close (f);
+		syncFS(false);
 	}
 }
 
@@ -844,7 +845,7 @@ static double Host_Frame(double time)
 	cl_wait = - CL_Frame(time);
 
 	Mem_CheckSentinelsGlobal();
-
+	
 	if (cls.state == ca_dedicated)
 		return sv_wait; // dedicated
 	else if (!sv.active || svs.threaded)
