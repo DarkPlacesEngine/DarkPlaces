@@ -1096,12 +1096,14 @@ void Sys_SDL_HandleEvents(void)
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
-	if(setsizes()){
-		vid.width = getcanvassize(1);
-		vid.height = getcanvassize(2);
-		vid.fullscreen = false;
-		vid_fullscreen.integer = 0;
-	}
+	#ifdef __EMSCRIPTEN__
+		if(setsizes()){
+			vid.width = getcanvassize(1);
+			vid.height = getcanvassize(2);
+			vid.fullscreen = false;
+			vid_fullscreen.integer = 0;
+		}
+	#endif
 	while( SDL_PollEvent( &event ) )
 		loop_start:
 		switch( event.type ) {
