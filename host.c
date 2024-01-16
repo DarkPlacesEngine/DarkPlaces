@@ -385,7 +385,9 @@ void Host_SaveConfig(const char *file)
 		Cvar_WriteVariables (&cvars_all, f);
 
 		FS_Close (f);
-		syncFS(false);
+		#ifdef __EMSCRIPTEN__
+			syncFS(false);
+		#endif
 	}
 }
 
