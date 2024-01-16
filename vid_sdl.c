@@ -1687,13 +1687,8 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	int i;
-#ifndef USE_GLES2
 	// SDL usually knows best
 	const char *drivername = NULL;
-#elif defined(__EMSCRIPTEN__)
-	const char *drivername = NULL;
-#endif
-
 	// video display selection (multi-monitor)
 	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
 	vid.displayindex = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
