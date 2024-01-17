@@ -182,10 +182,12 @@ float MSG_ReadBigFloat (sizebuf_t *sb);
 char *MSG_ReadString (sizebuf_t *sb, char *string, size_t maxstring);
 /// Same as MSG_ReadString except it returns the number of bytes written to *string excluding the \0 terminator.
 size_t MSG_ReadString_len (sizebuf_t *sb, char *string, size_t maxstring);
-int MSG_ReadBytes (sizebuf_t *sb, int numbytes, unsigned char *out);
+size_t MSG_ReadBytes (sizebuf_t *sb, size_t numbytes, unsigned char *out);
 
 #define MSG_ReadChar(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, -1) : (signed char)(sb)->data[(sb)->readcount++])
 #define MSG_ReadByte(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, -1) : (unsigned char)(sb)->data[(sb)->readcount++])
+/// Same as MSG_ReadByte but with no need to copy twice (first to `int` to check for -1) so each byte can be copied directly to a string[]
+#define MSG_ReadByte_opt(sb) ((sb)->readcount >= (sb)->cursize ? ((sb)->badread = true, '\0') : (unsigned char)(sb)->data[(sb)->readcount++])
 #define MSG_ReadShort MSG_ReadLittleShort
 #define MSG_ReadLong MSG_ReadLittleLong
 #define MSG_ReadFloat MSG_ReadLittleFloat
