@@ -24,6 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <string.h>
 #endif
 
 #include <time.h>
@@ -150,6 +151,11 @@ return  stringToNewUTF8(FS.readdir(UTF8ToString(directory)).toString());
 }
 });
 
+EM_JS(void,wss,(char* url, char* subprotocol),{
+	Module['websocket']['url'] = UTF8ToString(url);
+	Module['websocket']['subprotocol'] = UTF8ToString(subprotocol);
+});
+
 void listfiles_f(cmd_state_t *cmd){
 	if(Cmd_Argc(cmd) != 2){
 		
@@ -163,11 +169,7 @@ void listfiles_f(cmd_state_t *cmd){
 }
 void savefs_f(cmd_state_t *cmd){
 	Con_Printf("Saving Files\n");
-	if(syncFS(false)){
-		Con_Printf("Files Saved to Browser Storage\n");
-	} else{
-		Con_Printf("File Save failed.\n");
-	}
+	syncFS(false);
 }
 
 void upload_f(cmd_state_t *cmd){
@@ -225,6 +227,22 @@ void mv_f(cmd_state_t *cmd){
 	}
 }
 
+void wss_f(cmd_state_t *cmd){
+	if(Cmd_Argc(cmd) != 3){
+		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)");
+		Con_Printf("\n");
+	}
+	else{
+		
+		if(strcmp(Cmd_Argv(cmd,2),"binary") == 0 || strcmp(Cmd_Argv(cmd,2),"text") == 0){
+
+			Con_Printf("Set Websocket URL to %s and subprotocol to %s.", Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
+		} else{
+			Con_Printf("subprotocol must be either binary or text");
+		}
+		Con_Printf("\n");
+	}
+}
 bool engineup = false;
 #endif
 /*
@@ -456,6 +474,7 @@ static void Host_InitLocal (void)
 		Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
 		Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
 		Cmd_AddCommand(CF_SHARED, "em_move", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
+		Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol");
 	#endif
 
 	Cvar_RegisterVariable (&host_framerate);
