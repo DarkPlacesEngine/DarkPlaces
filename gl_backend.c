@@ -966,7 +966,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
-		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+		// R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
 #ifdef USE_GLES2
 		// FIXME: separate stencil attachment on GLES
