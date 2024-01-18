@@ -212,7 +212,7 @@ float	getserverlistindexforkey(string key)
 
 #define	VM_RETURN_EDICT(e)		(prog->globals.ip[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
 
-#define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
+#define VM_TEMPSTRING_MAXSIZE MAX_INPUTLINE
 
 // general functions
 void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);

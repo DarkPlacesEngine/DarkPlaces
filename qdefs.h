@@ -91,7 +91,7 @@
 #define SERVERLIST_ANDMASKCOUNT		5
 #define SERVERLIST_ORMASKCOUNT		5
 #else
-#define	MAX_INPUTLINE			16384 ///< maximum length of console commandline, QuakeC strings, and many other text processing buffers
+#define	MAX_INPUTLINE			16384 ///< maximum size of console commandline, QuakeC strings, and many other text processing buffers
 #define	CON_TEXTSIZE			1048576 ///< max scrollback buffer characters in console
 #define	CON_MAXLINES			16384 ///< max scrollback buffer lines in console
 #define	HIST_TEXTSIZE			262144 ///< max command history buffer characters in console

@@ -375,7 +375,7 @@ static void VM_SV_sprint(prvm_prog_t *prog)
 {
 	client_t	*client;
 	int			entnum;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_sprint);
 
@@ -417,7 +417,7 @@ static void VM_SV_centerprint(prvm_prog_t *prog)
 {
 	client_t	*client;
 	int			entnum;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_centerprint);
 
@@ -962,7 +962,7 @@ static void VM_SV_stuffcmd(prvm_prog_t *prog)
 {
 	int		entnum;
 	client_t	*old;
-	char	string[VM_STRINGTEMP_LENGTH];
+	char	string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_SV_stuffcmd);
 
@@ -2784,7 +2784,7 @@ string(string key) serverkey
 */
 static void VM_SV_serverkey(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNT(1, VM_SV_serverkey);
 	InfoString_GetValue(svs.serverinfo, PRVM_G_STRING(OFS_PARM0), string, sizeof(string));
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);

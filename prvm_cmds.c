@@ -358,7 +358,7 @@ error(value)
 void VM_error(prvm_prog_t *prog)
 {
 	prvm_edict_t	*ed;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Printf(CON_ERROR "======%s ERROR in %s:\n%s\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
@@ -381,7 +381,7 @@ objerror(value)
 void VM_objerror(prvm_prog_t *prog)
 {
 	prvm_edict_t	*ed;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Printf(CON_ERROR "======OBJECT ERROR======\n"); // , prog->name, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
@@ -402,7 +402,7 @@ print(...[string])
 */
 void VM_print(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Print(string);
@@ -419,7 +419,7 @@ bprint(...[string])
 */
 void VM_bprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	if(!sv.active)
 	{
@@ -444,7 +444,7 @@ void VM_sprint(prvm_prog_t *prog)
 {
 	client_t	*client;
 	int			clientnum;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_sprint);
 
@@ -476,7 +476,7 @@ centerprint(value)
 */
 void VM_centerprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_centerprint);
 	VM_VarString(prog, 0, string, sizeof(string));
@@ -655,7 +655,7 @@ cmd (string, ...)
 */
 void VM_localcmd_local(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_local);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(cmd_local, string);
@@ -673,7 +673,7 @@ cmd (string, ...)
 */
 void VM_localcmd_server(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_server);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(cmd_local, string);
@@ -695,7 +695,7 @@ float cvar (string)
 */
 void VM_cvar(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
@@ -717,7 +717,7 @@ float CVAR_TYPEFLAG_READONLY = 32;
 */
 void VM_cvar_type(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	cvar_t *cvar;
 	int ret;
 
@@ -757,7 +757,7 @@ const string	VM_cvar_string (string, ...)
 */
 void VM_cvar_string(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_string);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
@@ -774,7 +774,7 @@ const string	VM_cvar_defstring (string, ...)
 */
 void VM_cvar_defstring(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_defstring);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
@@ -790,7 +790,7 @@ const string	VM_cvar_description (string, ...)
 */
 void VM_cvar_description(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_description);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
@@ -806,7 +806,7 @@ void cvar_set (string,string, ...)
 void VM_cvar_set(prvm_prog_t *prog)
 {
 	const char *name;
-	char value[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
 	cvar_t *cvar;
 
 	VM_SAFEPARMCOUNTRANGE(2,8,VM_cvar_set);
@@ -836,7 +836,7 @@ dprint(...[string])
 */
 void VM_dprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_dprint);
 	VM_VarString(prog, 0, string, sizeof(string));
 #if 1
@@ -933,7 +933,7 @@ float stof(...[string])
 */
 void VM_stof(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_stof);
 	VM_VarString(prog, 0, string, sizeof(string));
 	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
@@ -1000,8 +1000,8 @@ void VM_strftime(prvm_prog_t *prog)
 #else
 	struct tm *tm;
 #endif
-	char fmt[VM_STRINGTEMP_LENGTH];
-	char result[VM_STRINGTEMP_LENGTH];
+	char fmt[VM_TEMPSTRING_MAXSIZE];
+	char result[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_strftime);
 	VM_VarString(prog, 1, fmt, sizeof(fmt));
 	t = time(NULL);
@@ -1974,7 +1974,7 @@ string	fgets(float fhandle)
 void VM_fgets(prvm_prog_t *prog)
 {
 	int c, end;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
@@ -1999,7 +1999,7 @@ void VM_fgets(prvm_prog_t *prog)
 		c = FS_Getc(prog->openfiles[filenum]);
 		if (c == '\r' || c == '\n' || c < 0)
 			break;
-		if (end < VM_STRINGTEMP_LENGTH - 1)
+		if (end < VM_TEMPSTRING_MAXSIZE - 1)
 			string[end++] = c;
 	}
 	string[end] = 0;
@@ -2027,7 +2027,7 @@ fputs(float fhandle, string s)
 void VM_fputs(prvm_prog_t *prog)
 {
 	int stringlength;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(2,VM_fputs);
@@ -2258,7 +2258,7 @@ string	strdecolorize(string s)
 // string (string s) strdecolorize = #472; // returns the passed in string with color codes stripped
 void VM_strdecolorize(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
 	const char *szString;
 
 	// Prepare Strings
@@ -2304,7 +2304,7 @@ string	strtolower(string s)
 // string (string s) strtolower = #480; // returns passed in string in lowercase form
 void VM_strtolower(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
 	const char *szString;
 
 	// Prepare Strings
@@ -2326,7 +2326,7 @@ string	strtoupper(string s)
 // string (string s) strtoupper = #481; // returns passed in string in uppercase form
 void VM_strtoupper(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
 	const char *szString;
 
 	// Prepare Strings
@@ -2350,7 +2350,7 @@ string strcat(string s, string...)
 // and returns as a tempstring
 void VM_strcat(prvm_prog_t *prog)
 {
-	char s[VM_STRINGTEMP_LENGTH];
+	char s[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strcat);
 
 	VM_VarString(prog, 0, s, sizeof(s));
@@ -2372,7 +2372,7 @@ void VM_substring(prvm_prog_t *prog)
 	int u_slength = 0, u_start;
 	size_t u_length;
 	const char *s;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(3,VM_substring);
 
@@ -2442,7 +2442,7 @@ void VM_strreplace(prvm_prog_t *prog)
 {
 	int i, j, si;
 	const char *search, *replace, *subject;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int search_len, replace_len, subject_len;
 
 	VM_SAFEPARMCOUNT(3,VM_strreplace);
@@ -2509,7 +2509,7 @@ void VM_strireplace(prvm_prog_t *prog)
 {
 	int i, j, si;
 	const char *search, *replace, *subject;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int search_len, replace_len, subject_len;
 
 	VM_SAFEPARMCOUNT(3, VM_strireplace);
@@ -2574,7 +2574,7 @@ vector	stov(string s)
 //vector(string s) stov = #117; // returns vector value from a string
 void VM_stov(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(1,VM_stov);
 
@@ -2593,7 +2593,7 @@ string	strzone(string s)
 void VM_strzone(prvm_prog_t *prog)
 {
 	char *out;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	size_t alloclen;
 
 	VM_SAFEPARMCOUNT(1,VM_strzone);
@@ -2629,10 +2629,10 @@ float tokenize(string s)
 //this function originally written by KrimZon, made shorter by LadyHavoc
 //20040203: rewritten by LadyHavoc (no longer uses allocations)
 static int num_tokens = 0;
-static int tokens[VM_STRINGTEMP_LENGTH / 2];
-static int tokens_startpos[VM_STRINGTEMP_LENGTH / 2];
-static int tokens_endpos[VM_STRINGTEMP_LENGTH / 2];
-static char tokenize_string[VM_STRINGTEMP_LENGTH];
+static int tokens[VM_TEMPSTRING_MAXSIZE / 2];
+static int tokens_startpos[VM_TEMPSTRING_MAXSIZE / 2];
+static int tokens_endpos[VM_TEMPSTRING_MAXSIZE / 2];
+static char tokenize_string[VM_TEMPSTRING_MAXSIZE];
 void VM_tokenize (prvm_prog_t *prog)
 {
 	const char *p;
@@ -3320,7 +3320,7 @@ void M_FindKeysForCommand(const char *command, int *keys);
 void VM_findkeysforcommand(prvm_prog_t *prog)
 {
 	const char *cmd;
-	char ret[VM_STRINGTEMP_LENGTH];
+	char ret[VM_TEMPSTRING_MAXSIZE];
 	int keys[FKFC_NUMKEYS];
 	int i;
 	int bindmap;
@@ -3616,7 +3616,7 @@ string altstr_prepare(string)
 void VM_altstr_prepare(prvm_prog_t *prog)
 {
 	const char *instr, *in;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 	size_t outpos;
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
@@ -3650,7 +3650,7 @@ void VM_altstr_get(prvm_prog_t *prog)
 	const char *altstr, *pos;
 	char *out;
 	int count, size;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT( 2, VM_altstr_get );
 
@@ -3699,7 +3699,7 @@ void VM_altstr_set(prvm_prog_t *prog)
 	const char *altstr, *str;
 	const char *in;
 	char *out;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT( 3, VM_altstr_set );
 
@@ -3743,7 +3743,7 @@ void VM_altstr_ins(prvm_prog_t *prog)
 	const char *set;
 	const char *in;
 	char *out;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(3, VM_altstr_ins);
 
@@ -4093,7 +4093,7 @@ string buf_implode(float bufhandle, string glue) = #465;
 void VM_buf_implode (prvm_prog_t *prog)
 {
 	prvm_stringbuffer_t *stringbuffer;
-	char			k[VM_STRINGTEMP_LENGTH];
+	char			k[VM_TEMPSTRING_MAXSIZE];
 	const char		*sep;
 	int				i;
 	size_t			l;
@@ -4281,7 +4281,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 {
 	size_t alloclen;
 	prvm_stringbuffer_t *stringbuffer;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int strindex, c, end;
 	const char *filename;
 	char vabuf[1024];
@@ -4322,7 +4322,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 			c = FS_Getc(file);
 			if (c == '\r' || c == '\n' || c < 0)
 				break;
-			if (end < VM_STRINGTEMP_LENGTH - 1)
+			if (end < VM_TEMPSTRING_MAXSIZE - 1)
 				string[end++] = c;
 		}
 		string[end] = 0;
@@ -4526,7 +4526,7 @@ float bufstr_find(float bufhandle, string match, float matchrule, float startpos
 void VM_bufstr_find(prvm_prog_t *prog)
 {
 	prvm_stringbuffer_t *stringbuffer;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int matchrule, matchlen, i, step;
 	const char *match;
 
@@ -4563,7 +4563,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 	step = (prog->argc > 4) ? (int)PRVM_G_FLOAT(OFS_PARM4) : 1;
 	while(i < stringbuffer->num_strings)
 	{
-		if (stringbuffer->strings[i] && match_rule(stringbuffer->strings[i], VM_STRINGTEMP_LENGTH, match, matchlen, matchrule))
+		if (stringbuffer->strings[i] && match_rule(stringbuffer->strings[i], VM_TEMPSTRING_MAXSIZE, match, matchlen, matchrule))
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = i;
 			break;
@@ -4581,7 +4581,7 @@ float matchpattern(string s, string pattern, float matchrule, float startpos) = 
 void VM_matchpattern(prvm_prog_t *prog)
 {
 	const char *s, *match;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int matchrule, l;
 
 	VM_SAFEPARMCOUNTRANGE(2, 4, VM_matchpattern);
@@ -4609,7 +4609,7 @@ void VM_matchpattern(prvm_prog_t *prog)
 		s += max(0, min((unsigned int)PRVM_G_FLOAT(OFS_PARM3), strlen(s)-1));
 
 	// match
-	PRVM_G_FLOAT(OFS_RETURN) = match_rule(s, VM_STRINGTEMP_LENGTH, match, l, matchrule);
+	PRVM_G_FLOAT(OFS_RETURN) = match_rule(s, VM_TEMPSTRING_MAXSIZE, match, l, matchrule);
 }
 
 /*
@@ -4818,7 +4818,7 @@ void VM_changepitch (prvm_prog_t *prog)
 
 void VM_uncolorstring (prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
 	const char *szString;
 
 	// Prepare Strings
@@ -4983,7 +4983,7 @@ static int chrchar_alpha(int i, int basec, int baset, int convc, int convt, int 
 void VM_strconv (prvm_prog_t *prog)
 {
 	int ccase, redalpha, rednum, len, i;
-	unsigned char resbuf[VM_STRINGTEMP_LENGTH];
+	unsigned char resbuf[VM_TEMPSTRING_MAXSIZE];
 	unsigned char *result = resbuf;
 
 	VM_SAFEPARMCOUNTRANGE(3, 8, VM_strconv);
@@ -5029,8 +5029,8 @@ void VM_strconv (prvm_prog_t *prog)
 // #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
 void VM_strpad (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char destbuf[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char destbuf[VM_TEMPSTRING_MAXSIZE];
 	int pad;
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strpad);
 	pad = (int) PRVM_G_FLOAT(OFS_PARM0);
@@ -5048,17 +5048,17 @@ void VM_strpad (prvm_prog_t *prog)
 void VM_infoadd (prvm_prog_t *prog)
 {
 	const char *info, *key;
-	char value[VM_STRINGTEMP_LENGTH];
-	char temp[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
+	char temp[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_infoadd);
 	info = PRVM_G_STRING(OFS_PARM0);
 	key = PRVM_G_STRING(OFS_PARM1);
 	VM_VarString(prog, 2, value, sizeof(value));
 
-	dp_strlcpy(temp, info, VM_STRINGTEMP_LENGTH);
+	dp_strlcpy(temp, info, VM_TEMPSTRING_MAXSIZE);
 
-	InfoString_SetValue(temp, VM_STRINGTEMP_LENGTH, key, value);
+	InfoString_SetValue(temp, VM_TEMPSTRING_MAXSIZE, key, value);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, temp);
 }
@@ -5069,13 +5069,13 @@ void VM_infoget (prvm_prog_t *prog)
 {
 	const char *info;
 	const char *key;
-	char value[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(2, VM_infoget);
 	info = PRVM_G_STRING(OFS_PARM0);
 	key = PRVM_G_STRING(OFS_PARM1);
 
-	InfoString_GetValue(info, key, value, VM_STRINGTEMP_LENGTH);
+	InfoString_GetValue(info, key, value, VM_TEMPSTRING_MAXSIZE);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, value);
 }
@@ -5120,7 +5120,7 @@ void VM_strncasecmp (prvm_prog_t *prog)
 void VM_crc16(prvm_prog_t *prog)
 {
 	float insensitive;
-	char s[VM_STRINGTEMP_LENGTH];
+	char s[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_crc16);
 	insensitive = PRVM_G_FLOAT(OFS_PARM0);
 	VM_VarString(prog, 1, s, sizeof(s));
@@ -5136,7 +5136,7 @@ void VM_digest_hex(prvm_prog_t *prog)
 	char outhex[65];
 	int outlen;
 
-	char s[VM_STRINGTEMP_LENGTH];
+	char s[VM_TEMPSTRING_MAXSIZE];
 	int len;
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_digest_hex);
@@ -5240,8 +5240,8 @@ void VM_Cmd_Reset(prvm_prog_t *prog)
 // does URI escaping on a string (replace evil stuff by %AB escapes)
 void VM_uri_escape (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char dest[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char dest[VM_TEMPSTRING_MAXSIZE];
 	char *p, *q;
 	static const char *hex = "0123456789ABCDEF";
 
@@ -5273,8 +5273,8 @@ void VM_uri_escape (prvm_prog_t *prog)
 // does URI unescaping on a string (get back the evil stuff)
 void VM_uri_unescape (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char dest[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char dest[VM_TEMPSTRING_MAXSIZE];
 	char *p, *q;
 	int hi, lo;
 
