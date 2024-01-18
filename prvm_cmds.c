@@ -806,12 +806,25 @@ void cvar_set (string,string, ...)
 void VM_cvar_set(prvm_prog_t *prog)
 {
 	const char *name;
-	char string[VM_STRINGTEMP_LENGTH];
+	char value[VM_STRINGTEMP_LENGTH];
+	cvar_t *cvar;
+
 	VM_SAFEPARMCOUNTRANGE(2,8,VM_cvar_set);
-	VM_VarString(prog, 1, string, sizeof(string));
 	name = PRVM_G_STRING(OFS_PARM0);
 	VM_CheckEmptyString(prog, name);
-	Cvar_Set(prog->console_cmd->cvars, name, string);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, name, prog->console_cmd->cvars_flagsmask);
+	if (!cvar)
+	{
+		VM_Warning(prog, "VM_cvar_set: variable %s not found\n", name);
+		return;
+	}
+	if (cvar->flags & CF_READONLY)
+	{
+		VM_Warning(prog, "VM_cvar_set: variable %s is read-only\n", cvar->name);
+		return;
+	}
+	VM_VarString(prog, 1, value, sizeof(value));
+	Cvar_SetQuick(cvar, value);
 }
 
 /*
