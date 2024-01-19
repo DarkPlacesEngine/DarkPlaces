@@ -13,3 +13,4 @@ cp .libs/libgmp.a ../gmp/lib
 cp gmp.h ../gmp/include
 cd ..
 rm -rf gmp-6.3.0
+rm gmp-6.3.0.tar.xz
