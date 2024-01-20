@@ -586,6 +586,7 @@ void SCR_CaptureVideo_Ogg_Init(void)
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_mininterval);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_keyframe_auto_threshold);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_noise_sensitivity);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_sharpness);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
 }
 

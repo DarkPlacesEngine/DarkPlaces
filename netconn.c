@@ -52,14 +52,14 @@ static cvar_t sv_masters [] =
 #ifdef CONFIG_MENU
 static cvar_t sv_qwmasters [] =
 {
-	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
-	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
-	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
-	{CF_CLIENT | CF_SERVER | CF_ARCHIVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
-	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
-	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
-	{CF_CLIENT | CF_SERVER, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster1", "", "user-chosen qwmaster server 1"},
+	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
+	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
+	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
+	{CF_CLIENT, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
+	{CF_CLIENT, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
 };
 #endif
 
@@ -4064,7 +4064,9 @@ void Net_SlistQW_f(cmd_state_t *cmd)
 void NetConn_Init(void)
 {
 	int i;
+	unsigned j;
 	lhnetaddress_t tempaddress;
+
 	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
 	Cmd_AddCommand(CF_SHARED, "net_stats", Net_Stats_f, "print network statistics");
 #ifdef CONFIG_MENU
@@ -4120,8 +4122,12 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_public_rejectreason);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
-	for (uint8_t masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
-		Cvar_RegisterVariable(&sv_masters[masternum]);
+	for (j = 0; j < DPMASTER_COUNT; ++j)
+		Cvar_RegisterVariable(&sv_masters[j]);
+#ifdef CONFIG_MENU
+	for (j = 0; j < QWMASTER_COUNT; ++j)
+		Cvar_RegisterVariable(&sv_qwmasters[j]);
+#endif
 	Cvar_RegisterVariable(&gameversion);
 	Cvar_RegisterVariable(&gameversion_min);
 	Cvar_RegisterVariable(&gameversion_max);
