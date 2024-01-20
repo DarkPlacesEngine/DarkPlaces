@@ -4004,7 +4004,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brushq1.num_compressedpvs = 0;
 
 	Mod_Q1BSP_MakeHull0();
-	if (mod_bsp_portalize.integer)
+	if (mod_bsp_portalize.integer && cls.state != ca_dedicated)
 		Mod_BSP_MakePortals();
 
 	mod->numframes = 2;		// regular and alternate animation
@@ -4935,7 +4935,7 @@ static void Mod_Q2BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	mod->brushq1.num_compressedpvs = 0;
 
 	// the MakePortals code works fine on the q2bsp data as well
-	if (mod_bsp_portalize.integer)
+	if (mod_bsp_portalize.integer && cls.state != ca_dedicated)
 		Mod_BSP_MakePortals();
 
 	mod->numframes = 0;		// q2bsp animations are kind of special, frame is unbounded...
@@ -7516,7 +7516,7 @@ static void Mod_Q3BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->brush.numsubmodels = loadmodel->brushq3.num_models;
 
 	// the MakePortals code works fine on the q3bsp data as well
-	if (mod_bsp_portalize.integer)
+	if (mod_bsp_portalize.integer && cls.state != ca_dedicated)
 		Mod_BSP_MakePortals();
 
 	// FIXME: shader alpha should replace r_wateralpha support in q3bsp
