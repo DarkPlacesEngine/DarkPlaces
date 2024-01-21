@@ -26,10 +26,10 @@ void Sys_SDL_Init(void)
 qbool sys_supportsdlgetticks = false;
 unsigned int Sys_SDL_GetTicks (void)
 {
-	Sys_Error("Called Sys_SDL_GetTicks on non-SDL target");
+	Sys_Abort("Called Sys_SDL_GetTicks on non-SDL target");
 	return 0;
 }
 void Sys_SDL_Delay (unsigned int milliseconds)
 {
-	Sys_Error("Called Sys_SDL_Delay on non-SDL target");
+	Sys_Abort("Called Sys_SDL_Delay on non-SDL target");
 }

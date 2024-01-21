@@ -204,10 +204,12 @@ char *Sys_TimeString(const char *timeformat);
 // system IO interface (these are the sys functions that need to be implemented in a new driver atm)
 //
 
-/// an error will cause the entire program to exit
-void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
+/// Causes the entire program to exit ASAP.
+/// Trailing \n should be omitted.
+void Sys_Abort (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 
 /// (may) output text to terminal which launched program
+/// is POSIX async-signal-safe
 /// textlen excludes any (optional) \0 terminator
 void Sys_Print(const char *text, size_t textlen);
 /// used to report failures inside Con_Printf()

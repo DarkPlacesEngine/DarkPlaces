@@ -105,12 +105,12 @@ void Host_Error (const char *error, ...)
 	Con_Printf(CON_ERROR "Host_Error: %s\n", hosterrorstring1);
 
 	// LadyHavoc: if crashing very early, or currently shutting down, do
-	// Sys_Error instead
+	// Sys_Abort instead
 	if (host.framecount < 3 || host.state == host_shutdown)
-		Sys_Error ("Host_Error: %s", hosterrorstring1);
+		Sys_Abort ("Host_Error during %s: %s", host.framecount < 3 ? "startup" : "shutdown", hosterrorstring1);
 
 	if (hosterror)
-		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
+		Sys_Abort ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
 	hosterror = true;
 
 	dp_strlcpy(hosterrorstring2, hosterrorstring1, sizeof(hosterrorstring2));
@@ -135,11 +135,12 @@ void Host_Error (const char *error, ...)
 		host.hook.SV_Shutdown();
 
 	if (cls.state == ca_dedicated)
-		Sys_Error ("Host_Error: %s",hosterrorstring2);	// dedicated servers exit
+		Sys_Abort ("Host_Error: %s",hosterrorstring2);        // dedicated servers exit
 
 	// prevent an endless loop if the error was triggered by a command
 	Cbuf_Clear(cmd_local->cbuf);
 
+	// DP8 TODO: send a disconnect message indicating we errored out, see Sys_Abort() and Sys_HandleCrash()
 	CL_Disconnect();
 	cls.demonum = -1;
 
@@ -344,7 +345,7 @@ void Host_LockSession(void)
 			}
 			else
 			{
-				Sys_Error("session lock %s could not be acquired. Please run with -sessionid and an unique session name.\n", p);
+				Sys_Abort("session lock %s could not be acquired. Please run with -sessionid and an unique session name.\n", p);
 			}
 		}
 	}
@@ -389,7 +390,7 @@ static void Host_Init (void)
 	host.state = host_init;
 
 	if (setjmp(host.abortframe)) // Huh?!
-		Sys_Error("Engine initialization failed. Check the console (if available) for additional information.\n");
+		Sys_Abort("Engine initialization failed. Check the console (if available) for additional information.\n");
 
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -573,7 +574,7 @@ static void Host_Init (void)
 ===============
 Host_Shutdown
 
-FIXME: this is a callback from Sys_Quit and Sys_Error.  It would be better
+FIXME: this is a callback from Sys_Quit().  It would be better
 to run quit through here before the final handoff to the sys code.
 ===============
 */

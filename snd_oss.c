@@ -222,7 +222,7 @@ static int SndSys_Write (const unsigned char* buffer, unsigned int nb_bytes)
 
 	factor = snd_renderbuffer->format.width * snd_renderbuffer->format.channels;
 	if (written % factor != 0)
-		Sys_Error ("SndSys_Write: nb of bytes written (%d) isn't aligned to a frame sample!\n",
+		Sys_Abort ("SndSys_Write: nb of bytes written (%d) isn't aligned to a frame sample!\n",
 				   written);
 
 	snd_renderbuffer->startframe += written / factor;

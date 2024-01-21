@@ -1529,7 +1529,7 @@ void VID_Init (void)
 	Cvar_RegisterCallback(&vid_minimize_on_focus_loss, VID_SetHints_c);
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
+		Sys_Abort ("Failed to init SDL video subsystem: %s", SDL_GetError());
 	if (SDL_InitSubSystem(SDL_INIT_JOYSTICK) < 0)
 		Con_Printf(CON_ERROR "Failed to init SDL joystick subsystem: %s\n", SDL_GetError());
 
@@ -1774,7 +1774,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
-		Sys_Error("Failed to initialize OpenGL context: %s\n", SDL_GetError());
+		Sys_Abort("Failed to initialize OpenGL context: %s\n", SDL_GetError());
 
 	GL_InitFunctions();
 
@@ -1789,7 +1789,7 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 		context = SDL_GL_CreateContext(window);
 		if (context == NULL)
-			Sys_Error("Failed to initialize OpenGL context: %s\n", SDL_GetError());
+			Sys_Abort("Failed to initialize OpenGL context: %s\n", SDL_GetError());
 	}
 #endif
 
@@ -1827,7 +1827,7 @@ qbool VID_InitMode(viddef_mode_t *mode)
 	steelstorm_showing_mousecursor = Cvar_FindVar(&cvars_all, "steelstorm_showing_mousecursor", ~0);
 
 	if (!SDL_WasInit(SDL_INIT_VIDEO) && SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
+		Sys_Abort ("Failed to init SDL video subsystem: %s", SDL_GetError());
 
 	Cvar_SetValueQuick(&vid_touchscreen_supportshowkeyboard, SDL_HasScreenKeyboardSupport() ? 1 : 0);
 	return VID_InitModeGL(mode);

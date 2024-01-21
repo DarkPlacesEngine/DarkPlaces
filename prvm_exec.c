@@ -431,14 +431,15 @@ void PRVM_StackTrace (prvm_prog_t *prog)
 
 void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 {
-	mfunction_t	*f;
-	int			i;
+	mfunction_t *f;
+	int i;
 	char vabuf[1024];
 	char *p;
 
 	if(prog)
 	{
-		p = buf + max(0, dpsnprintf(buf, bufsize, "(%s) ", prog->name));
+		i = dpsnprintf(buf, bufsize, "(%s) ", prog->name);
+		p = buf + max(0, i);
 	}
 	else
 	{

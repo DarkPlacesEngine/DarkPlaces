@@ -2573,7 +2573,7 @@ void M_Menu_Keys_f(cmd_state_t *cmd)
 
 		// Only sections? There may be a problem somewhere...
 		if (keys_cursor >= numcommands)
-			Sys_Error ("M_Init: The key binding list only contains sections");
+			Sys_Abort ("M_Init: The key binding list only contains sections");
 	}
 }
 
@@ -5221,7 +5221,7 @@ void MVM_error_cmd(const char *format, ...)
 	va_end (argptr);
 
 	if (host.framecount < 3)
-		Sys_Error("Menu_Error: %s\n", errorstring);
+		Sys_Abort("Menu_Error: %s\n", errorstring);
 
 	Con_Printf( "Menu_Error: %s\n", errorstring );
 

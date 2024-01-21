@@ -37,7 +37,7 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 
 	factor = snd_renderbuffer->format.channels * snd_renderbuffer->format.width;
 	if ((unsigned int)len % factor != 0)
-		Sys_Error("SDL sound: invalid buffer length passed to Buffer_Callback (%d bytes)\n", len);
+		Sys_Abort("SDL sound: invalid buffer length passed to Buffer_Callback (%d bytes)\n", len);
 
 	RequestedFrames = (unsigned int)len / factor;
 

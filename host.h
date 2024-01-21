@@ -23,7 +23,8 @@ typedef enum host_state_e
 	host_shutdown,
 	host_init,
 	host_loading,
-	host_active
+	host_active,
+	host_failed ///< crashed or aborted, SDL dialog open
 } host_state_t;
 
 typedef struct host_static_s

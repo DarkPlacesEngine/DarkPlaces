@@ -413,7 +413,7 @@ double Sys_DirtyTime(void)
 		double old_benchmark_time = benchmark_time;
 		benchmark_time += 1;
 		if(benchmark_time == old_benchmark_time)
-			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
+			Sys_Abort("sys_usenoclockbutbenchmark cannot run any longer, sorry");
 		return benchmark_time * 0.000001;
 	}
 #if HAVE_QUERYPERFORMANCECOUNTER
@@ -494,7 +494,7 @@ double Sys_DirtyTime(void)
 	}
 #else
 	// fallback for using the SDL timer if no other timer is available
-	// this calls Sys_Error() if not linking against SDL
+	// this calls Sys_Abort() if not linking against SDL
 	return (double) Sys_SDL_GetTicks() / 1000.0;
 #endif
 }
@@ -523,7 +523,7 @@ double Sys_Sleep(double time)
 		double old_benchmark_time = benchmark_time;
 		benchmark_time += microseconds;
 		if(benchmark_time == old_benchmark_time)
-			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
+			Sys_Abort("sys_usenoclockbutbenchmark cannot run any longer, sorry");
 		return 0;
 	}
 
@@ -596,6 +596,7 @@ STDIO
 ===============================================================================
 */
 
+// NOTE: use only POSIX async-signal-safe library functions here (see: man signal-safety)
 void Sys_Print(const char *text, size_t textlen)
 {
 #ifdef __ANDROID__
@@ -704,10 +705,11 @@ Startup and Shutdown
 ===============================================================================
 */
 
-void Sys_Error (const char *error, ...)
+void Sys_Abort (const char *error, ...)
 {
 	va_list argptr;
 	char string[MAX_INPUTLINE];
+	int i;
 
 	// set output to blocking stderr
 	sys.outfd = fileno(stderr);
@@ -719,12 +721,30 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf(CON_ERROR "Engine Error: %s\n", string);
+	Con_Printf(CON_ERROR "Engine Abort: %s\n^9%s\n", string, engineversion);
 
-	// don't want a dead window left blocking the OS UI or the crash dialog
-	Host_Shutdown();
+	dp_strlcat(string, "\n\n", sizeof(string));
+	dp_strlcat(string, engineversion, sizeof(string));
 
-	Sys_SDL_Dialog("Engine Error", string);
+	// Most shutdown funcs can't be called here as they could error while we error.
+
+	// DP8 TODO: send a disconnect message indicating we aborted, see Host_Error() and Sys_HandleCrash()
+
+	if (cls.demorecording)
+		CL_Stop_f(cmd_local);
+	if (sv.active)
+	{
+		sv.active = false; // make SV_DropClient() skip the QC stuff to avoid recursive errors
+		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+			if (host_client->active)
+				SV_DropClient(false, "Server abort!"); // closes demo file
+	}
+	// don't want a dead window left blocking the OS UI or the abort dialog
+	VID_Shutdown();
+	S_StopAllSounds();
+
+	host.state = host_failed; // make Sys_HandleSignal() call exit()
+	Sys_SDL_Dialog("Engine Abort", string);
 
 	fflush(stderr);
 
@@ -925,10 +945,33 @@ void Sys_MakeProcessMean (void)
 }
 #endif
 
+
+static const char *Sys_SigDesc(int sig)
+{
+	switch (sig)
+	{
+		// Windows only supports the C99 signals
+		case SIGINT:  return "Interrupt";
+		case SIGILL:  return "Illegal instruction";
+		case SIGABRT: return "Aborted";
+		case SIGFPE:  return "Floating point exception";
+		case SIGSEGV: return "Segmentation fault";
+		case SIGTERM: return "Termination";
+#ifndef WIN32
+		// POSIX has several others worth catching
+		case SIGHUP:  return "Hangup";
+		case SIGQUIT: return "Quit";
+		case SIGBUS:  return "Bus error (bad memory access)";
+		case SIGPIPE: return "Broken pipe";
+#endif
+		default:      return "Yo dawg, we bugged out while bugging out";
+	}
+}
+
 /** Halt and try not to catch fire.
  * Writing to any file could corrupt it,
  * any uneccessary code could crash while we crash.
- * No malloc() (libgcc should be loaded already) or Con_Printf() allowed here.
+ * Try to use only POSIX async-signal-safe library functions here (see: man signal-safety).
  */
 static void Sys_HandleCrash(int sig)
 {
@@ -937,70 +980,89 @@ static void Sys_HandleCrash(int sig)
 	#include <execinfo.h>
 	void *stackframes[32];
 	int framecount = backtrace(stackframes, 32);
+	char **btstrings;
 #endif
+	char dialogtext[3072];
+	const char *sigdesc = Sys_SigDesc(sig);
 
-	// Windows doesn't have strsignal()
-	const char *sigdesc;
-	switch (sig)
-	{
-#ifndef WIN32 // or SIGBUS
-		case SIGBUS:  sigdesc = "Bus error"; break;
-#endif
-		case SIGILL:  sigdesc = "Illegal instruction"; break;
-		case SIGABRT: sigdesc = "Aborted"; break;
-		case SIGFPE:  sigdesc = "Floating point exception"; break;
-		case SIGSEGV: sigdesc = "Segmentation fault"; break;
-		default:      sigdesc = "Yo dawg, we hit a bug while hitting a bug";
-	}
-
-	// set output to blocking stderr
-	sys.outfd = fileno(stderr);
+	// set output to blocking stderr and print header, backtrace, version
+	sys.outfd = fileno(stderr); // not async-signal-safe :(
 #ifndef WIN32
 	fcntl(sys.outfd, F_SETFL, fcntl(sys.outfd, F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-
-	fprintf(stderr, "\n\n\e[1;37;41m    Engine Crash: %s (%d)    \e[m\n", sigdesc, sig);
-#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
+	Sys_Print("\n\n\e[1;37;41m    Engine Crash: ", 30);
+	Sys_Print(sigdesc, strlen(sigdesc));
+	Sys_Print("    \e[m\n", 8);
+  #if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
 	// the first two addresses will be in this function and in signal() in libc
 	backtrace_symbols_fd(stackframes + 2, framecount - 2, sys.outfd);
+  #endif
+	Sys_Print("\e[1m", 4);
+	Sys_Print(engineversion, strlen(engineversion));
+	Sys_Print("\e[m\n", 4);
+#else // Windows console doesn't support colours
+	Sys_Print("\n\nEngine Crash: ", 16);
+	Sys_Print(sigdesc, strlen(sigdesc));
+	Sys_Print("\n", 1);
+	Sys_Print(engineversion, strlen(engineversion));
+	Sys_Print("\n", 1);
 #endif
-	fprintf(stderr, "\e[1m%s\e[m\n", engineversion);
 
-	// DP8 TODO: send a disconnect message indicating we crashed, see CL_DisconnectEx()
+	// DP8 TODO: send a disconnect message indicating we crashed, see Sys_Abort() and Host_Error()
 
 	// don't want a dead window left blocking the OS UI or the crash dialog
 	VID_Shutdown();
 	S_StopAllSounds();
 
-	Sys_SDL_Dialog("Engine Crash", sigdesc);
+	// prepare the dialogtext: signal, backtrace, version
+	// the dp_st* funcs are POSIX async-signal-safe IF we don't trigger their warnings
+	dp_strlcpy(dialogtext, sigdesc, sizeof(dialogtext));
+	dp_strlcat(dialogtext, "\n\n", sizeof(dialogtext));
+#if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
+	btstrings = backtrace_symbols(stackframes + 2, framecount - 2); // calls malloc :(
+	if (btstrings)
+		for (int i = 0; i < framecount - 2; ++i)
+		{
+			dp_strlcat(dialogtext, btstrings[i], sizeof(dialogtext));
+			dp_strlcat(dialogtext, "\n", sizeof(dialogtext));
+		}
+#endif
+	dp_strlcat(dialogtext, "\n", sizeof(dialogtext));
+	dp_strlcat(dialogtext, engineversion, sizeof(dialogtext));
 
-	fflush(stderr);
+	host.state = host_failed; // make Sys_HandleSignal() call _Exit()
+	Sys_SDL_Dialog("Engine Crash", dialogtext);
 
-	exit (sig);
+	fflush(stderr); // not async-signal-safe :(
+	_Exit(sig);
 }
 
 static void Sys_HandleSignal(int sig)
 {
-#ifdef WIN32
-	// Windows users will likely never see this so no point replicating strsignal()
-	Con_Printf("\nReceived signal %d, exiting...\n", sig);
-#else
-	Con_Printf("\nReceived %s signal (%d), exiting...\n", strsignal(sig), sig);
-#endif
+	const char *sigdesc = Sys_SigDesc(sig);
+	Sys_Print("\nReceived ", 10);
+	Sys_Print(sigdesc, strlen(sigdesc));
+	Sys_Print(" signal, exiting...\n", 20);
+	if (host.state == host_failed)
+	{
+		// user is trying to kill the process while the dialog is open
+		fflush(stderr); // not async-signal-safe :(
+		_Exit(sig);
+	}
 	host.state = host_shutdown;
 }
 
 /// SDL2 only handles SIGINT and SIGTERM by default and doesn't log anything
 static void Sys_InitSignals(void)
 {
-// Windows docs say its signal() only accepts these ones
+	// Windows only supports the C99 signals
+	signal(SIGINT,  Sys_HandleSignal);
+	signal(SIGILL,  Sys_HandleCrash);
 	signal(SIGABRT, Sys_HandleCrash);
 	signal(SIGFPE,  Sys_HandleCrash);
-	signal(SIGILL,  Sys_HandleCrash);
-	signal(SIGINT,  Sys_HandleSignal);
 	signal(SIGSEGV, Sys_HandleCrash);
 	signal(SIGTERM, Sys_HandleSignal);
 #ifndef WIN32
+	// POSIX has several others worth catching
 	signal(SIGHUP,  Sys_HandleSignal);
 	signal(SIGQUIT, Sys_HandleSignal);
 	signal(SIGBUS,  Sys_HandleCrash);

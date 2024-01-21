@@ -188,10 +188,10 @@ static void SCR_CaptureVideo_RIFF_IndexEntry(const char *chunkfourcc, int chunks
 {
 	LOAD_FORMATSPECIFIC_AVI();
 	if(!format->canseek)
-		Sys_Error("SCR_CaptureVideo_RIFF_IndexEntry called on non-seekable AVI");
+		Sys_Abort("SCR_CaptureVideo_RIFF_IndexEntry called on non-seekable AVI");
 
 	if (format->riffstacklevel != 2)
-		Sys_Error("SCR_Capturevideo_RIFF_IndexEntry: RIFF stack level is %i (should be 2)\n", format->riffstacklevel);
+		Sys_Abort("SCR_Capturevideo_RIFF_IndexEntry: RIFF stack level is %i (should be 2)\n", format->riffstacklevel);
 	GrowBuf(&format->riffindexbuffer, 16);
 	SCR_CaptureVideo_RIFF_Flush();
 	MSG_WriteUnterminatedString(&format->riffindexbuffer, chunkfourcc);
@@ -209,7 +209,7 @@ static void SCR_CaptureVideo_RIFF_MakeIxChunk(const char *fcc, const char *dwChu
 	fs_offset_t pos, sz;
 	
 	if(!format->canseek)
-		Sys_Error("SCR_CaptureVideo_RIFF_MakeIxChunk called on non-seekable AVI");
+		Sys_Abort("SCR_CaptureVideo_RIFF_MakeIxChunk called on non-seekable AVI");
 
 	if(*masteridx_count >= AVI_MASTER_INDEX_SIZE)
 		return;
@@ -312,7 +312,7 @@ static void SCR_CaptureVideo_RIFF_OverflowCheck(int framesize)
 	fs_offset_t cursize;
 	//fs_offset_t curfilesize;
 	if (format->riffstacklevel != 2)
-		Sys_Error("SCR_CaptureVideo_RIFF_OverflowCheck: chunk stack leakage!\n");
+		Sys_Abort("SCR_CaptureVideo_RIFF_OverflowCheck: chunk stack leakage!\n");
 	
 	if(!format->canseek)
 		return;
@@ -707,7 +707,7 @@ void SCR_CaptureVideo_Avi_BeginVideo(void)
 		// we're done with the headers now...
 		SCR_CaptureVideo_RIFF_Flush();
 		if (format->riffstacklevel != 2)
-			Sys_Error("SCR_CaptureVideo_BeginVideo: broken AVI writing code (stack level is %i (should be 2) at end of headers)\n", format->riffstacklevel);
+			Sys_Abort("SCR_CaptureVideo_BeginVideo: broken AVI writing code (stack level is %i (should be 2) at end of headers)\n", format->riffstacklevel);
 
 		if(!format->canseek)
 		{
