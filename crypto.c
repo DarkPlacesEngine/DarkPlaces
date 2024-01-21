@@ -1741,16 +1741,15 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 
 	if (len_in > 8 && !memcmp(string, "connect\\", 8) && d0_rijndael_dll && crypto_aeslevel.integer >= 3)
 	{
-		const char *s;
 		int i;
 		// sorry, we have to verify the challenge here to not reflect network spam
 
-		if (!(s = InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue))))
+		if (!InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue)))
 			return CRYPTO_NOMATCH; // will be later accepted if encryption was set up
 		// validate the challenge
 		for (i = 0;i < MAX_CHALLENGES;i++)
 			if(challenges[i].time > 0)
-				if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
+				if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, infostringvalue))
 					break;
 		// if the challenge is not recognized, drop the packet
 		if (i == MAX_CHALLENGES) // challenge mismatch is silent
@@ -1762,12 +1761,11 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 	}
 	else if(len_in > 5 && !memcmp(string, "d0pk\\", 5) && ((LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP) || sv_public.integer > -3))
 	{
-		const char *cnt, *s, *p;
+		const char *cnt, *p;
 		int id;
 		int clientid = -1, serverid = -1;
-		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
-		id = (cnt ? atoi(cnt) : -1);
-		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
+		id = (InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1);
+		cnt = (InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue)) ? infostringvalue : NULL);
 		if(!cnt)
 			return Crypto_SoftServerError(data_out, len_out, "missing cnt in d0pk");
 		GetUntilNul(&data_in, &len_in);
@@ -1776,21 +1774,21 @@ static int Crypto_ServerParsePacket_Internal(const char *data_in, size_t len_in,
 		if(!strcmp(cnt, "0"))
 		{
 			int i;
-			if (!(s = InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue))))
+			if (!InfoString_GetValue(string + 4, "challenge", infostringvalue, sizeof(infostringvalue)))
 				return Crypto_SoftServerError(data_out, len_out, "missing challenge in d0pk\\0");
 			// validate the challenge
 			for (i = 0;i < MAX_CHALLENGES;i++)
 				if(challenges[i].time > 0)
-					if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
+					if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, infostringvalue))
 						break;
 			// if the challenge is not recognized, drop the packet
 			if (i == MAX_CHALLENGES)
 				return Crypto_SoftServerError(data_out, len_out, "invalid challenge in d0pk\\0");
 
-			if (!(s = InfoString_GetValue(string + 4, "aeslevel", infostringvalue, sizeof(infostringvalue))))
+			if (!InfoString_GetValue(string + 4, "aeslevel", infostringvalue, sizeof(infostringvalue)))
 				aeslevel = 0; // not supported
 			else
-				aeslevel = bound(0, atoi(s), 3);
+				aeslevel = bound(0, atoi(infostringvalue), 3);
 			switch(bound(0, d0_rijndael_dll ? crypto_aeslevel.integer : 0, 3))
 			{
 				default: // dummy, never happens, but to make gcc happy...
@@ -2048,7 +2046,7 @@ int Crypto_ServerParsePacket(const char *data_in, size_t len_in, char *data_out,
 		if(len_in > 5 && !memcmp(data_in, "d0pk\\", 5))
 		{
 			do_time = true;
-			cnt = InfoString_GetValue(data_in + 4, "cnt", infostringvalue, sizeof(infostringvalue));
+			cnt = (InfoString_GetValue(data_in + 4, "cnt", infostringvalue, sizeof(infostringvalue)) ? infostringvalue : NULL);
 			if(cnt)
 				if(!strcmp(cnt, "0"))
 					do_reject = true;
@@ -2110,7 +2108,6 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 {
 	crypto_t *crypto = &cls.crypto;
 	const char *string = data_in;
-	const char *s;
 	D0_BOOL aes;
 	char *data_out_p = data_out;
 	D0_BOOL status;
@@ -2173,9 +2170,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 	}
 	else if (len_in >= 13 && !memcmp(string, "infoResponse\x0A", 13))
 	{
-		s = InfoString_GetValue(string + 13, "d0_blind_id", infostringvalue, sizeof(infostringvalue));
-		if(s)
-			Crypto_StoreHostKey(peeraddress, s, true);
+		if(InfoString_GetValue(string + 13, "d0_blind_id", infostringvalue, sizeof(infostringvalue)))
+			Crypto_StoreHostKey(peeraddress, infostringvalue, true);
 		return CRYPTO_NOMATCH;
 	}
 	else if (len_in >= 15 && !memcmp(string, "statusResponse\x0A", 15))
@@ -2188,9 +2184,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			save = *p;
 			* (char *) p = 0; // cut off the string there
 		}
-		s = InfoString_GetValue(string + 15, "d0_blind_id", infostringvalue, sizeof(infostringvalue));
-		if(s)
-			Crypto_StoreHostKey(peeraddress, s, true);
+		if(InfoString_GetValue(string + 15, "d0_blind_id", infostringvalue, sizeof(infostringvalue)))
+			Crypto_StoreHostKey(peeraddress, infostringvalue, true);
 		if(p)
 		{
 			* (char *) p = save;
@@ -2434,9 +2429,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 			return Crypto_SoftClientError(data_out, len_out, warn_msg);
 		}
 
-		cnt = InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue));
-		id = (cnt ? atoi(cnt) : -1);
-		cnt = InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue));
+		id = (InfoString_GetValue(string + 4, "id", infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1);
+		cnt = (InfoString_GetValue(string + 4, "cnt", infostringvalue, sizeof(infostringvalue)) ? infostringvalue : NULL);
 		if(!cnt)
 			return Crypto_ClientError(data_out, len_out, "d0pk\\ message without cnt");
 		GetUntilNul(&data_in, &len_in);
@@ -2453,8 +2447,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			cls.connect_nextsendtime = max(cls.connect_nextsendtime, host.realtime + 1); // prevent "hammering"
 
-			if((s = InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue))))
-				aes = atoi(s);
+			if(InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue)))
+				aes = atoi(infostringvalue);
 			else
 				aes = false;
 			// we CANNOT toggle the AES status any more!
@@ -2586,8 +2580,8 @@ int Crypto_ClientParsePacket(const char *data_in, size_t len_in, char *data_out,
 
 			if(CDATA->s < 0) // only if server didn't auth
 			{
-				if((s = InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue))))
-					aes = atoi(s);
+				if(InfoString_GetValue(string + 4, "aes", infostringvalue, sizeof(infostringvalue)))
+					aes = atoi(infostringvalue);
 				else
 					aes = false;
 				if(CDATA->wantserver_idfp[0]) // if we know a host key, honor its encryption setting
