@@ -271,20 +271,41 @@ void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed)
 //============================================================================
 //BUILT-IN FUNCTIONS
 
-void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength)
+#ifdef WIN32
+	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
+	// Microsoft supports it, but apparently complains if we use it.
+	#pragma warning(disable : 4996)
+#endif
+size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 {
 	int i;
 	const char *s;
-	char *outend;
+	char *p;
+	char *outend = out + outsize - 1;
 
-	outend = out + outlength - 1;
+	// bones_was_here: && out < outend improves perf significantly in some tests that don't trigger the warning,
+	// which seems odd, surely it would only help when the warning is printed?
 	for (i = first;i < prog->argc && out < outend;i++)
 	{
 		s = PRVM_G_STRING((OFS_PARM0+i*3));
-		while (out < outend && *s)
-			*out++ = *s++;
+		if (*s)
+		{
+			// like dp_stpecpy but with a VM_Warning for use with `prvm_backtraceforwarnings 1`
+			p = (char *)memccpy(out, s, '\0', (outend + 1) - out);
+			if (p)
+				out = p - 1;
+			else
+			{
+				VM_Warning(prog, "%zu of %zu bytes available, will truncate %zu byte string \"%s\"\n", outend - out, outsize - 1, strlen(s), s);
+				out = outend;
+				*out = '\0';
+			}
+		}
+		else
+			*out = '\0';
 	}
-	*out++ = 0;
+
+	return outsize - ((outend + 1) - out);
 }
 
 /*
@@ -2026,7 +2047,7 @@ fputs(float fhandle, string s)
 //void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
 void VM_fputs(prvm_prog_t *prog)
 {
-	int stringlength;
+	size_t stringlength;
 	char string[VM_TEMPSTRING_MAXSIZE];
 	int filenum;
 
@@ -2043,8 +2064,8 @@ void VM_fputs(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, prog->name);
 		return;
 	}
-	VM_VarString(prog, 1, string, sizeof(string));
-	if ((stringlength = (int)strlen(string)))
+	stringlength = VM_VarString(prog, 1, string, sizeof(string));
+	if (stringlength)
 		FS_Write(prog->openfiles[filenum], string, stringlength);
 	if (developer_extra.integer)
 		Con_DPrintf("fputs: %s: %s\n", prog->name, string);
@@ -2598,8 +2619,7 @@ void VM_strzone(prvm_prog_t *prog)
 
 	VM_SAFEPARMCOUNT(1,VM_strzone);
 
-	VM_VarString(prog, 0, string, sizeof(string));
-	alloclen = strlen(string) + 1;
+	alloclen = VM_VarString(prog, 0, string, sizeof(string)) + 1;
 	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(prog, alloclen, &out);
 	memcpy(out, string, alloclen);
 }
@@ -4982,7 +5002,9 @@ static int chrchar_alpha(int i, int basec, int baset, int convc, int convt, int 
 //bulk convert a string. change case or colouring.
 void VM_strconv (prvm_prog_t *prog)
 {
-	int ccase, redalpha, rednum, len, i;
+	int ccase, redalpha, rednum;
+	unsigned i;
+	size_t resbuf_len;
 	unsigned char resbuf[VM_TEMPSTRING_MAXSIZE];
 	unsigned char *result = resbuf;
 
@@ -4991,10 +5013,9 @@ void VM_strconv (prvm_prog_t *prog)
 	ccase = (int) PRVM_G_FLOAT(OFS_PARM0);	//0 same, 1 lower, 2 upper
 	redalpha = (int) PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
 	rednum = (int) PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
-	VM_VarString(prog, 3, (char *) resbuf, sizeof(resbuf));
-	len = (int)strlen((char *) resbuf);
+	resbuf_len = VM_VarString(prog, 3, (char *) resbuf, sizeof(resbuf));
 
-	for (i = 0; i < len; i++, result++)	//should this be done backwards?
+	for (i = 0; i < resbuf_len; i++, result++)	//should this be done backwards?
 	{
 		if (*result >= '0' && *result <= '9')	//normal numbers...
 			*result = chrconv_number(*result, '0', rednum);
@@ -5121,10 +5142,12 @@ void VM_crc16(prvm_prog_t *prog)
 {
 	float insensitive;
 	char s[VM_TEMPSTRING_MAXSIZE];
+	size_t slen;
+
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_crc16);
 	insensitive = PRVM_G_FLOAT(OFS_PARM0);
-	VM_VarString(prog, 1, s, sizeof(s));
-	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, strlen(s)));
+	slen = VM_VarString(prog, 1, s, sizeof(s));
+	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, slen));
 }
 
 // #639 float(string digest, string data, ...) digest_hex
@@ -5137,14 +5160,13 @@ void VM_digest_hex(prvm_prog_t *prog)
 	int outlen;
 
 	char s[VM_TEMPSTRING_MAXSIZE];
-	int len;
+	size_t len;
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_digest_hex);
 	digest = PRVM_G_STRING(OFS_PARM0);
 	if(!digest)
 		digest = "";
-	VM_VarString(prog, 1, s, sizeof(s));
-	len = (int)strlen(s);
+	len = VM_VarString(prog, 1, s, sizeof(s));
 
 	outlen = 0;
 
