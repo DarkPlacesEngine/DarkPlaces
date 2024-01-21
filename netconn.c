@@ -2009,7 +2009,6 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 	size_t sendlength;
 #ifdef CONFIG_MENU
 	char infostringvalue[MAX_INPUTLINE];
-	const char *s;
 #endif
 
 	// quakeworld ingame packet
@@ -2169,44 +2168,34 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				string += 15;
 				// search the cache for this server and update it
 				// the challenge is (ab)used to return the query time
-				s = InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
-				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, s);
+				InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, infostringvalue);
 				if (n < 0)
 					return true;
 
 				info = &serverlist_cache[n].info;
-				info->game[0]     = '\0'; info->game_len = 0;
-				info->mod[0]      = '\0'; info->mod_len = 0;
-				info->map[0]      = '\0'; info->map_len = 0;
-				info->name[0]     = '\0'; info->name_len = 0;
-				info->qcstatus[0] = '\0'; info->qcstatus_len = 0;
-				info->players[0]  = '\0'; info->players_len = 0;
-				info->protocol    = -1;
-				info->numplayers  = 0;
-				info->numbots     = -1;
-				info->maxplayers  = 0;
-				info->gameversion = 0;
-
 				p = strchr(string, '\n');
 				if(p)
 				{
 					*p = 0; // cut off the string there
 					++p;
+					info->players_len = dp_strlcpy(info->players, p, sizeof(info->players));
 				}
 				else
+				{
 					Con_Printf("statusResponse without players block?\n");
-
-				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->game_len = dp_strlcpy(info->game, s, sizeof(info->game));
-				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
-				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
-				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
-				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
-				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
-				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
-				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
-				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->qcstatus_len = dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
-				if (p                                                                                            != NULL) info->players_len = dp_strlcpy(info->players, p, sizeof(info->players));
+					info->players_len = info->players[0] = 0;
+				}
+				info->game_len     = InfoString_GetValue(string, "gamename", info->game,     sizeof(info->game));
+				info->mod_len      = InfoString_GetValue(string, "modname",  info->mod,      sizeof(info->mod));
+				info->map_len      = InfoString_GetValue(string, "mapname",  info->map,      sizeof(info->map));
+				info->name_len     = InfoString_GetValue(string, "hostname", info->name,     sizeof(info->name));
+				info->qcstatus_len = InfoString_GetValue(string, "qcstatus", info->qcstatus, sizeof(info->qcstatus));
+				info->protocol    = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1;
+				info->numplayers  = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
+				info->numbots     = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1;
+				info->maxplayers  = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
+				info->gameversion = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
 				info->numhumans = info->numplayers - max(0, info->numbots);
 				info->freeslots = info->maxplayers - info->numplayers;
 
@@ -2222,34 +2211,23 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				string += 13;
 				// search the cache for this server and update it
 				// the challenge is (ab)used to return the query time
-				s = InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
-				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, s);
+				InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue));
+				n = NetConn_ClientParsePacket_ServerList_ProcessReply(addressstring2, infostringvalue);
 				if (n < 0)
 					return true;
 
 				info = &serverlist_cache[n].info;
-				info->game[0]     = '\0'; info->game_len = 0;
-				info->mod[0]      = '\0'; info->mod_len = 0;
-				info->map[0]      = '\0'; info->map_len = 0;
-				info->name[0]     = '\0'; info->name_len = 0;
-				info->qcstatus[0] = '\0'; info->qcstatus_len = 0;
-				info->players[0]  = '\0'; info->players_len = 0;
-				info->protocol    = -1;
-				info->numplayers  = 0;
-				info->numbots     = -1;
-				info->maxplayers  = 0;
-				info->gameversion = 0;
-
-				if ((s = InfoString_GetValue(string, "gamename"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->game_len = dp_strlcpy(info->game, s, sizeof(info->game));
-				if ((s = InfoString_GetValue(string, "modname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
-				if ((s = InfoString_GetValue(string, "mapname"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
-				if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
-				if ((s = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->protocol = atoi(s);
-				if ((s = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue))) != NULL) info->numplayers = atoi(s);
-				if ((s = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue))) != NULL) info->numbots = atoi(s);
-				if ((s = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);
-				if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);
-				if ((s = InfoString_GetValue(string, "qcstatus"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->qcstatus_len = dp_strlcpy(info->qcstatus, s, sizeof(info->qcstatus));
+				info->players_len = info->players[0] = 0;
+				info->game_len     = InfoString_GetValue(string, "gamename", info->game,     sizeof(info->game));
+				info->mod_len      = InfoString_GetValue(string, "modname",  info->mod,      sizeof(info->mod));
+				info->map_len      = InfoString_GetValue(string, "mapname",  info->map,      sizeof(info->map));
+				info->name_len     = InfoString_GetValue(string, "hostname", info->name,     sizeof(info->name));
+				info->qcstatus_len = InfoString_GetValue(string, "qcstatus", info->qcstatus, sizeof(info->qcstatus));
+				info->protocol    = InfoString_GetValue(string, "protocol"     , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1;
+				info->numplayers  = InfoString_GetValue(string, "clients"      , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
+				info->numbots     = InfoString_GetValue(string, "bots"         , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : -1;
+				info->maxplayers  = InfoString_GetValue(string, "sv_maxclients", infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
+				info->gameversion = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
 				info->numhumans = info->numplayers - max(0, info->numbots);
 				info->freeslots = info->maxplayers - info->numplayers;
 
@@ -2335,6 +2313,7 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 #ifdef CONFIG_MENU
 			serverlist_info_t *info;
 			int n;
+			const char *s;
 
 			// qw server status
 			if (serverlist_consoleoutput && developer_networking.integer >= 2)
@@ -2348,17 +2327,14 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 
 			info = &serverlist_cache[n].info;
 			dp_strlcpy(info->game, "QuakeWorld", sizeof(info->game));
-			if ((s = InfoString_GetValue(string, "*gamedir"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->mod_len = dp_strlcpy(info->mod, s, sizeof(info->mod));
-			else { info->mod[0] = '\0'; info->mod_len = 0; }
-			if ((s = InfoString_GetValue(string, "map"          , infostringvalue, sizeof(infostringvalue))) != NULL) info->map_len = dp_strlcpy(info->map, s, sizeof(info->map));
-			else { info->map[0] = '\0'; info->map_len = 0; }
-			if ((s = InfoString_GetValue(string, "hostname"     , infostringvalue, sizeof(infostringvalue))) != NULL) info->name_len = dp_strlcpy(info->name, s, sizeof(info->name));
-			else { info->name[0] = '\0'; info->name_len = 0; }
+			info->mod_len  = InfoString_GetValue(string, "*gamedir", info->mod, sizeof(info->mod));
+			info->map_len  = InfoString_GetValue(string, "map"     , info->map, sizeof(info->map));
+			info->name_len = InfoString_GetValue(string, "hostname", info->name, sizeof(info->name));
 			info->protocol = 0;
 			info->numplayers = 0; // updated below
 			info->numhumans = 0; // updated below
-			if ((s = InfoString_GetValue(string, "maxclients"   , infostringvalue, sizeof(infostringvalue))) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
-			if ((s = InfoString_GetValue(string, "gameversion"  , infostringvalue, sizeof(infostringvalue))) != NULL) info->gameversion = atoi(s);else info->gameversion = 0;
+			info->maxplayers  = InfoString_GetValue(string, "maxclients" , infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
+			info->gameversion = InfoString_GetValue(string, "gameversion", infostringvalue, sizeof(infostringvalue)) ? atoi(infostringvalue) : 0;
 
 			// count active players on server
 			// (we could gather more info, but we're just after the number)
@@ -3268,7 +3244,6 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		}
 		if (length > 8 && !memcmp(string, "connect\\", 8))
 		{
-			char *s;
 			client_t *client;
 			crypto_t *crypto = Crypto_ServerGetInstance(peeraddress);
 			string += 7;
@@ -3293,12 +3268,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 			else
 			{
-				if ((s = InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue))))
+				if (InfoString_GetValue(string, "challenge", infostringvalue, sizeof(infostringvalue)))
 				{
 					// validate the challenge
 					for (i = 0;i < MAX_CHALLENGES;i++)
 						if(challenges[i].time > 0)
-							if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, s))
+							if (!LHNETADDRESS_Compare(peeraddress, &challenges[i].address) && !strcmp(challenges[i].string, infostringvalue))
 								break;
 					// if the challenge is not recognized, drop the packet
 					if (i == MAX_CHALLENGES)
@@ -3306,8 +3281,8 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				}
 			}
 
-			if((s = InfoString_GetValue(string, "message", infostringvalue, sizeof(infostringvalue))))
-				Con_DPrintf("Connecting client %s sent us the message: %s\n", addressstring2, s);
+			if(InfoString_GetValue(string, "message", infostringvalue, sizeof(infostringvalue)))
+				Con_DPrintf("Connecting client %s sent us the message: %s\n", addressstring2, infostringvalue);
 
 			if(!(islocal || sv_public.integer > -2))
 			{
@@ -3320,7 +3295,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 			}
 
 			// check engine protocol
-			if(!(s = InfoString_GetValue(string, "protocol", infostringvalue, sizeof(infostringvalue))) || strcmp(s, "darkplaces 3"))
+			if(!InfoString_GetValue(string, "protocol", infostringvalue, sizeof(infostringvalue)) || strcmp(infostringvalue, "darkplaces 3"))
 			{
 				if (developer_extra.integer)
 					Con_Printf("Datagram_ParseConnectionless: sending \"reject Wrong game protocol.\" to %s.\n", addressstring2);
