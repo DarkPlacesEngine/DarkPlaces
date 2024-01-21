@@ -1369,16 +1369,16 @@ char *dp_stpecpy(char *dst, char *end, const char *src)
  * Returns a pointer to the \0 terminator. Guarantees \0 termination.
  * Compared to ustr2stp(): truncates and warns on overflow.
  */
-char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t ssize)
+char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t slen)
 {
-	if (ssize >= dsize)
+	if (slen >= dsize)
 	{
-		ssize = dsize - 1;
-		Con_Printf(CON_WARN "%s: src string truncated to %zu bytes: \"%.*s\"\n", __func__, ssize, (int)ssize, src);
+		slen = dsize - 1;
+		Con_Printf(CON_WARN "%s: src string truncated to %zu bytes: \"%.*s\"\n", __func__, slen, (int)slen, src);
 	}
-	memcpy(dst, src, ssize);
-	dst[ssize] = '\0';
-	return &dst[ssize];
+	memcpy(dst, src, slen);
+	dst[slen] = '\0';
+	return &dst[slen];
 }
 
 /** Copies a string, like strlcpy() but with a better return: the number of bytes copied

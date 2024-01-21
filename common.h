@@ -297,7 +297,7 @@ size_t COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t si
 size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, unsigned line);
 size_t dp__strlcat(char *dst, const char *src, size_t dsize, const char *func, unsigned line);
 char *dp_stpecpy(char *dst, char *end, const char *src);
-char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t ssize);
+char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t slen);
 
 
 void FindFraction(double val, int *num, int *denom, int denomMax);
