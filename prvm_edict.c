@@ -1854,7 +1854,8 @@ static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t
 					break;
 				if((size_t)(q - p) >= (size_t) sizeof(inbuf))
 					break;
-				dp_strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
+				memcpy(inbuf, p, q - p - 1);
+				inbuf[q - p - 1] = '\0';
 				PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
 				decodedpos += strlen(decodedbuf + decodedpos);
 				if(*q == '\r')
