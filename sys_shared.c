@@ -60,33 +60,6 @@ char *Sys_TimeString(const char *timeformat)
 }
 
 
-void Sys_Quit (int returnvalue)
-{
-	// Unlock mutexes because the quit command may jump directly here, causing a deadlock
-	if ((cmd_local)->cbuf->lock)
-		Cbuf_Unlock((cmd_local)->cbuf);
-	SV_UnlockThreadMutex();
-	TaskQueue_Frame(true);
-
-	if (Sys_CheckParm("-profilegameonly"))
-		Sys_AllowProfiling(false);
-	host.state = host_shutdown;
-	Host_Shutdown();
-
-#ifdef __ANDROID__
-	Sys_AllowProfiling(false);
-#endif
-
-#ifndef WIN32
-	fcntl(fileno(stdout), F_SETFL, fcntl(fileno(stdout), F_GETFL, 0) & ~O_NONBLOCK);
-	fcntl(fileno(stderr), F_SETFL, fcntl(fileno(stderr), F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-	fflush(stdout);
-	fflush(stderr);
-
-	exit(returnvalue);
-}
-
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -1103,7 +1076,16 @@ int main (int argc, char **argv)
 
 	Host_Main();
 
-	Sys_Quit(0);
+#ifdef __ANDROID__
+	Sys_AllowProfiling(false);
+#endif
+
+#ifndef WIN32
+	fcntl(fileno(stdout), F_SETFL, fcntl(fileno(stdout), F_GETFL, 0) & ~O_NONBLOCK);
+	fcntl(fileno(stderr), F_SETFL, fcntl(fileno(stderr), F_GETFL, 0) & ~O_NONBLOCK);
+#endif
+	fflush(stdout);
+	fflush(stderr);
 
 	return 0;
 }

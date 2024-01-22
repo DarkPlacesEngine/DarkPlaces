@@ -574,25 +574,13 @@ static void Host_Init (void)
 ===============
 Host_Shutdown
 
-FIXME: this is a callback from Sys_Quit().  It would be better
-to run quit through here before the final handoff to the sys code.
+Cleanly shuts down after the main loop exits.
 ===============
 */
-void Host_Shutdown(void)
+static void Host_Shutdown(void)
 {
-	static qbool isdown = false;
-
-	if (isdown)
-	{
-		Con_Print(CON_WARN "recursive shutdown\n");
-		return;
-	}
-	if (setjmp(host.abortframe))
-	{
-		Con_Print(CON_WARN "aborted the quitting frame?!?\n");
-		return;
-	}
-	isdown = true;
+	if (Sys_CheckParm("-profilegameonly"))
+		Sys_AllowProfiling(false);
 
 	if(cls.state != ca_dedicated)
 		CL_Shutdown();
@@ -725,5 +713,5 @@ void Host_Main(void)
 		host.sleeptime = Sys_Sleep(sleeptime);
 	}
 
-	return;
+	Host_Shutdown();
 }
