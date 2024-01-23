@@ -109,80 +109,82 @@ void Protocol_Names(char *buffer, size_t buffersize);
 #define PFLAGS_FULLDYNAMIC		128 // must be set or the light fields are ignored
 
 // if the high bit of the servercmd is set, the low bits are fast update flags:
-#define U_MOREBITS		(1<<0)
-#define U_ORIGIN1		(1<<1)
-#define U_ORIGIN2		(1<<2)
-#define U_ORIGIN3		(1<<3)
-#define U_ANGLE2		(1<<4)
-// LadyHavoc: U_NOLERP was only ever used for monsters, so I renamed it U_STEP
-#define U_STEP			(1<<5)
-#define U_FRAME			(1<<6)
-// just differentiates from other updates
-#define U_SIGNAL		(1<<7)
+#define U_MOREBITS       (1u<<0)
+#define U_ORIGIN1        (1u<<1)
+#define U_ORIGIN2        (1u<<2)
+#define U_ORIGIN3        (1u<<3)
+#define U_ANGLE2         (1u<<4)
+// LadyHavoc: U_NOLERP was uonly ever used for monsters, so I renamed it U_STEP
+#define U_STEP           (1u<<5)
+#define U_FRAME          (1u<<6)
+// just differentiates fromu other updates
+#define U_SIGNAL         (1u<<7)
 
-#define U_ANGLE1		(1<<8)
-#define U_ANGLE3		(1<<9)
-#define U_MODEL			(1<<10)
-#define U_COLORMAP		(1<<11)
-#define U_SKIN			(1<<12)
-#define U_EFFECTS		(1<<13)
-#define U_LONGENTITY	(1<<14)
+#define U_ANGLE1         (1u<<8)
+#define U_ANGLE3         (1u<<9)
+#define U_MODEL          (1u<<10)
+#define U_COLORMAP       (1u<<11)
+#define U_SKIN           (1u<<12)
+#define U_EFFECTS        (1u<<13)
+#define U_LONGENTITY     (1u<<14)
 
 // LadyHavoc: protocol extension
-#define U_EXTEND1		(1<<15)
+#define U_EXTEND1        (1u<<15)
 // LadyHavoc: first extend byte
-#define U_DELTA			(1<<16) // no data, while this is set the entity is delta compressed (uses previous frame as a baseline, meaning only things that have changed from the previous frame are sent, except for the forced full update every half second)
-#define U_ALPHA			(1<<17) // 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
-#define U_SCALE			(1<<18) // 1 byte, scale / 16 positive, not sent if 1.0
-#define U_EFFECTS2		(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
-#define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/4.0, unsigned, not sent if 0
-#define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
-#define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
-#define U_EXTEND2		(1<<23) // another byte to follow
+#define U_DELTA          (1u<<16) ///< no data, while this is set the entity is delta compressed (uses previous frame as a baseline, meaning only things that have changed from the previous frame are sent, except for the forced full update every half second)
+#define U_ALPHA          (1u<<17) ///< 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
+#define U_SCALE          (1u<<18) ///< 1 byte, scale / 16 positive, not sent if 1.0
+#define U_EFFECTS2       (1u<<19) ///< 1 byte, this is .effects & 0xFF00 (second byte)
+#define U_GLOWSIZE       (1u<<20) ///< 1 byte, encoding is float/4.0, unsigned, not sent if 0
+#define U_GLOWCOLOR      (1u<<21) ///< 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
+#define U_COLORMOD       (1u<<22) ///< 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
+#define U_EXTEND2        (1u<<23) ///< another byte to follow
 // LadyHavoc: second extend byte
-#define U_GLOWTRAIL		(1<<24) // leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
-#define U_VIEWMODEL		(1<<25) // attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
-#define U_FRAME2		(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
-#define U_MODEL2		(1<<27) // 1 byte, this is .modelindex & 0xFF00 (second byte)
-#define U_EXTERIORMODEL	(1<<28) // causes this model to not be drawn when using a first person view (third person will draw it, first person will not)
-#define U_UNUSED29		(1<<29) // future expansion
-#define U_UNUSED30		(1<<30) // future expansion
-#define U_EXTEND3		(1<<31) // another byte to follow, future expansion
+#define U_GLOWTRAIL      (1u<<24) ///< leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
+#define U_VIEWMODEL      (1u<<25) ///< attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
+#define U_FRAME2         (1u<<26) ///< 1 byte, this is .frame & 0xFF00 (second byte)
+#define U_MODEL2         (1u<<27) ///< 1 byte, this is .modelindex & 0xFF00 (second byte)
+#define U_EXTERIORMODEL  (1u<<28) ///< causes this model to not be drawn when using a first person view (third person will draw it, first person will not)
+#define U_UNUSED29       (1u<<29) ///< future expansion
+#define U_UNUSED30       (1u<<30) ///< future expansion
+#define U_EXTEND3        (1u<<31) ///< another byte to follow, future expansion
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
-#define	SU_VIEWHEIGHT	(1<<0)
-#define	SU_IDEALPITCH	(1<<1)
-#define	SU_PUNCH1		(1<<2)
-#define	SU_PUNCH2		(1<<3)
-#define	SU_PUNCH3		(1<<4)
-#define	SU_VELOCITY1	(1<<5)
-#define	SU_VELOCITY2	(1<<6)
-#define	SU_VELOCITY3	(1<<7)
-//define	SU_AIMENT		(1<<8)  AVAILABLE BIT
-#define	SU_ITEMS		(1<<9)
-#define	SU_ONGROUND		(1<<10)		// no data follows, the bit is it
-#define	SU_INWATER		(1<<11)		// no data follows, the bit is it
-#define	SU_WEAPONFRAME	(1<<12)
-#define	SU_ARMOR		(1<<13)
-#define	SU_WEAPON		(1<<14)
-#define SU_EXTEND1		(1<<15)
+#define SU_VIEWHEIGHT    (1u<<0)
+#define SU_IDEALPITCH    (1u<<1)
+#define SU_PUNCH1        (1u<<2)
+#define SU_PUNCH2        (1u<<3)
+#define SU_PUNCH3        (1u<<4)
+#define SU_VELOCITY1     (1u<<5)
+#define SU_VELOCITY2     (1u<<6)
+#define SU_VELOCITY3     (1u<<7)
+//#define SU_AIMENT        (1u<<8)  AVAILABLE BIT
+#define SU_ITEMS         (1u<<9)
+#define SU_ONGROUND      (1u<<10) ///< no data follows, the bit is it
+#define SU_INWATER       (1u<<11) ///< no data follows, the bit is it
+#define SU_WEAPONFRAME   (1u<<12)
+#define SU_ARMOR         (1u<<13)
+#define SU_WEAPON        (1u<<14)
+#define SU_EXTEND1       (1u<<15)
 // first extend byte
-#define SU_PUNCHVEC1	(1<<16)
-#define SU_PUNCHVEC2	(1<<17)
-#define SU_PUNCHVEC3	(1<<18)
-#define SU_VIEWZOOM		(1<<19) // byte factor (0 = 0.0 (not valid), 255 = 1.0)
-#define SU_UNUSED20		(1<<20)
-#define SU_UNUSED21		(1<<21)
-#define SU_UNUSED22		(1<<22)
-#define SU_EXTEND2		(1<<23) // another byte to follow, future expansion
+#define SU_PUNCHVEC1     (1u<<16)
+#define SU_PUNCHVEC2     (1u<<17)
+#define SU_PUNCHVEC3     (1u<<18)
+#define SU_VIEWZOOM      (1u<<19) ///< byte factor (0 = 0.0 (not valid), 255 = 1.0)
+#define SU_UNUSED20      (1u<<20)
+#define SU_UNUSED21      (1u<<21)
+#define SU_UNUSED22      (1u<<22)
+#define SU_EXTEND2       (1u<<23) ///< another byte to follow, future expansion
 // second extend byte
-#define SU_UNUSED24		(1<<24)
-#define SU_UNUSED25		(1<<25)
-#define SU_UNUSED26		(1<<26)
-#define SU_UNUSED27		(1<<27)
-#define SU_UNUSED28		(1<<28)
-#define SU_UNUSED29		(1<<29)
-#define SU_UNUSED30		(1<<30)
-#define SU_EXTEND3		(1<<31) // another byte to follow, future expansion
+#define SU_UNUSED24      (1u<<24)
+#define SU_UNUSED25      (1u<<25)
+#define SU_UNUSED26      (1u<<26)
+#define SU_UNUSED27      (1u<<27)
+#define SU_UNUSED28      (1u<<28)
+#define SU_UNUSED29      (1u<<29)
+#define SU_UNUSED30      (1u<<30)
+#define SU_EXTEND3       (1u<<31) ///< another byte to follow, future expansion
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
 // a sound with no channel is a local only sound
 #define	SND_VOLUME		(1<<0)		// a byte
@@ -609,43 +611,44 @@ entityframe_database_t;
 // order of the bits to minimize overhead from extend bytes
 
 // enough to describe a nail, gib, shell casing, bullet hole, or rocket
-#define E_ORIGIN1		(1<<0)
-#define E_ORIGIN2		(1<<1)
-#define E_ORIGIN3		(1<<2)
-#define E_ANGLE1		(1<<3)
-#define E_ANGLE2		(1<<4)
-#define E_ANGLE3		(1<<5)
-#define E_MODEL1		(1<<6)
-#define E_EXTEND1		(1<<7)
+#define E_ORIGIN1        (1u<<0)
+#define E_ORIGIN2        (1u<<1)
+#define E_ORIGIN3        (1u<<2)
+#define E_ANGLE1         (1u<<3)
+#define E_ANGLE2         (1u<<4)
+#define E_ANGLE3         (1u<<5)
+#define E_MODEL1         (1u<<6)
+#define E_EXTEND1        (1u<<7)
 
 // enough to describe almost anything
-#define E_FRAME1		(1<<8)
-#define E_EFFECTS1		(1<<9)
-#define E_ALPHA			(1<<10)
-#define E_SCALE			(1<<11)
-#define E_COLORMAP		(1<<12)
-#define E_SKIN			(1<<13)
-#define E_FLAGS			(1<<14)
-#define E_EXTEND2		(1<<15)
+#define E_FRAME1         (1u<<8)
+#define E_EFFECTS1       (1u<<9)
+#define E_ALPHA          (1u<<10)
+#define E_SCALE          (1u<<11)
+#define E_COLORMAP       (1u<<12)
+#define E_SKIN           (1u<<13)
+#define E_FLAGS          (1u<<14)
+#define E_EXTEND2        (1u<<15)
 
 // players, custom color glows, high model numbers
-#define E_FRAME2		(1<<16)
-#define E_MODEL2		(1<<17)
-#define E_EFFECTS2		(1<<18)
-#define E_GLOWSIZE		(1<<19)
-#define E_GLOWCOLOR		(1<<20)
-#define E_LIGHT			(1<<21)
-#define E_LIGHTPFLAGS	(1<<22)
-#define E_EXTEND3		(1<<23)
+#define E_FRAME2         (1u<<16)
+#define E_MODEL2         (1u<<17)
+#define E_EFFECTS2       (1u<<18)
+#define E_GLOWSIZE       (1u<<19)
+#define E_GLOWCOLOR      (1u<<20)
+#define E_LIGHT          (1u<<21)
+#define E_LIGHTPFLAGS    (1u<<22)
+#define E_EXTEND3        (1u<<23)
 
-#define E_SOUND1		(1<<24)
-#define E_SOUNDVOL		(1<<25)
-#define E_SOUNDATTEN	(1<<26)
-#define E_TAGATTACHMENT	(1<<27)
-#define E_LIGHTSTYLE	(1<<28)
-#define E_UNUSED6		(1<<29)
-#define E_UNUSED7		(1<<30)
-#define E_EXTEND4		(1<<31)
+#define E_SOUND1         (1u<<24)
+#define E_SOUNDVOL       (1u<<25)
+#define E_SOUNDATTEN     (1u<<26)
+#define E_TAGATTACHMENT  (1u<<27)
+#define E_LIGHTSTYLE     (1u<<28)
+#define E_UNUSED6        (1u<<29)
+#define E_UNUSED7        (1u<<30)
+#define E_EXTEND4        (1u<<31)
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
 // returns difference between two states as E_ flags
 int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n);
@@ -736,89 +739,90 @@ qbool EntityFrame4_WriteFrame(struct sizebuf_s *msg, int maxsize, entityframe4_d
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(void);
 
-// reset all entity fields (typically used if status changed)
-#define E5_FULLUPDATE (1<<0)
-// E5_ORIGIN32=0: short[3] = s->origin[0] * 8, s->origin[1] * 8, s->origin[2] * 8
-// E5_ORIGIN32=1: float[3] = s->origin[0], s->origin[1], s->origin[2]
-#define E5_ORIGIN (1<<1)
-// E5_ANGLES16=0: byte[3] = s->angle[0] * 256 / 360, s->angle[1] * 256 / 360, s->angle[2] * 256 / 360
-// E5_ANGLES16=1: short[3] = s->angle[0] * 65536 / 360, s->angle[1] * 65536 / 360, s->angle[2] * 65536 / 360
-#define E5_ANGLES (1<<2)
-// E5_MODEL16=0: byte = s->modelindex
-// E5_MODEL16=1: short = s->modelindex
-#define E5_MODEL (1<<3)
-// E5_FRAME16=0: byte = s->frame
-// E5_FRAME16=1: short = s->frame
-#define E5_FRAME (1<<4)
-// byte = s->skin
-#define E5_SKIN (1<<5)
-// E5_EFFECTS16=0 && E5_EFFECTS32=0: byte = s->effects
-// E5_EFFECTS16=1 && E5_EFFECTS32=0: short = s->effects
-// E5_EFFECTS16=0 && E5_EFFECTS32=1: int = s->effects
-// E5_EFFECTS16=1 && E5_EFFECTS32=1: int = s->effects
-#define E5_EFFECTS (1<<6)
-// bits >= (1<<8)
-#define E5_EXTEND1 (1<<7)
+/// reset all entity fields (typically used if status changed)
+#define E5_FULLUPDATE        (1u<<0)
+/// E5_ORIGIN32=0: short[3] = s->origin[0] * 8, s->origin[1] * 8, s->origin[2] * 8
+/// E5_ORIGIN32=1: float[3] = s->origin[0], s->origin[1], s->origin[2]
+#define E5_ORIGIN            (1u<<1)
+/// E5_ANGLES16=0: byte[3] = s->angle[0] * 256 / 360, s->angle[1] * 256 / 360, s->angle[2] * 256 / 360
+/// E5_ANGLES16=1: short[3] = s->angle[0] * 65536 / 360, s->angle[1] * 65536 / 360, s->angle[2] * 65536 / 360
+#define E5_ANGLES            (1u<<2)
+/// E5_MODEL16=0: byte = s->modelindex
+/// E5_MODEL16=1: short = s->modelindex
+#define E5_MODEL             (1u<<3)
+/// E5_FRAME16=0: byte = s->frame
+/// E5_FRAME16=1: short = s->frame
+#define E5_FRAME             (1u<<4)
+/// byte = s->skin
+#define E5_SKIN              (1u<<5)
+/// E5_EFFECTS16=0 && E5_EFFECTS32=0: byte = s->effects
+/// E5_EFFECTS16=1 && E5_EFFECTS32=0: short = s->effects
+/// E5_EFFECTS16=0 && E5_EFFECTS32=1: int = s->effects
+/// E5_EFFECTS16=1 && E5_EFFECTS32=1: int = s->effects
+#define E5_EFFECTS           (1u<<6)
+/// bits >= (1<<8)
+#define E5_EXTEND1           (1u<<7)
 
-// byte = s->renderflags
-#define E5_FLAGS (1<<8)
-// byte = bound(0, s->alpha * 255, 255)
-#define E5_ALPHA (1<<9)
-// byte = bound(0, s->scale * 16, 255)
-#define E5_SCALE (1<<10)
-// flag
-#define E5_ORIGIN32 (1<<11)
-// flag
-#define E5_ANGLES16 (1<<12)
-// flag
-#define E5_MODEL16 (1<<13)
-// byte = s->colormap
-#define E5_COLORMAP (1<<14)
-// bits >= (1<<16)
-#define E5_EXTEND2 (1<<15)
+/// byte = s->renderflags
+#define E5_FLAGS             (1u<<8)
+/// byte = bound(0, s->alpha * 255, 255)
+#define E5_ALPHA             (1u<<9)
+/// byte = bound(0, s->scale * 16, 255)
+#define E5_SCALE             (1u<<10)
+/// flag
+#define E5_ORIGIN32          (1u<<11)
+/// flag
+#define E5_ANGLES16          (1u<<12)
+/// flag
+#define E5_MODEL16           (1u<<13)
+/// byte = s->colormap
+#define E5_COLORMAP          (1u<<14)
+/// bits >= (1<<16)
+#define E5_EXTEND2           (1u<<15)
 
-// short = s->tagentity
-// byte = s->tagindex
-#define E5_ATTACHMENT (1<<16)
-// short[4] = s->light[0], s->light[1], s->light[2], s->light[3]
-// byte = s->lightstyle
-// byte = s->lightpflags
-#define E5_LIGHT (1<<17)
-// byte = s->glowsize
-// byte = s->glowcolor
-#define E5_GLOW (1<<18)
-// short = s->effects
-#define E5_EFFECTS16 (1<<19)
-// int = s->effects
-#define E5_EFFECTS32 (1<<20)
-// flag
-#define E5_FRAME16 (1<<21)
-// byte[3] = s->colormod[0], s->colormod[1], s->colormod[2]
-#define E5_COLORMOD (1<<22)
-// bits >= (1<<24)
-#define E5_EXTEND3 (1<<23)
+/// short = s->tagentity
+/// byte = s->tagindex
+#define E5_ATTACHMENT        (1u<<16)
+/// short[4] = s->light[0], s->light[1], s->light[2], s->light[3]
+/// byte = s->lightstyle
+/// byte = s->lightpflags
+#define E5_LIGHT             (1u<<17)
+/// byte = s->glowsize
+/// byte = s->glowcolor
+#define E5_GLOW              (1u<<18)
+/// short = s->effects
+#define E5_EFFECTS16         (1u<<19)
+/// int = s->effects
+#define E5_EFFECTS32         (1u<<20)
+/// flag
+#define E5_FRAME16           (1u<<21)
+/// byte[3] = s->colormod[0], s->colormod[1], s->colormod[2]
+#define E5_COLORMOD          (1u<<22)
+/// bits >= (1<<24)
+#define E5_EXTEND3           (1u<<23)
 
-// byte[3] = s->glowmod[0], s->glowmod[1], s->glowmod[2]
-#define E5_GLOWMOD (1<<24)
-// byte type=0 short frames[1] short times[1]
-// byte type=1 short frames[2] short times[2] byte lerps[2]
-// byte type=2 short frames[3] short times[3] byte lerps[3]
-// byte type=3 short frames[4] short times[4] byte lerps[4]
-// byte type=4 short modelindex byte numbones {short pose7s[7]}
-// see also RENDER_COMPLEXANIMATION
-#define E5_COMPLEXANIMATION (1<<25)
-// ushort traileffectnum
-#define E5_TRAILEFFECTNUM (1<<26)
-// unused
-#define E5_UNUSED27 (1<<27)
-// unused
-#define E5_UNUSED28 (1<<28)
-// unused
-#define E5_UNUSED29 (1<<29)
-// unused
-#define E5_UNUSED30 (1<<30)
-// bits2 > 0
-#define E5_EXTEND4 (1<<31)
+/// byte[3] = s->glowmod[0], s->glowmod[1], s->glowmod[2]
+#define E5_GLOWMOD           (1u<<24)
+/// byte type=0 short frames[1] short times[1]
+/// byte type=1 short frames[2] short times[2] byte lerps[2]
+/// byte type=2 short frames[3] short times[3] byte lerps[3]
+/// byte type=3 short frames[4] short times[4] byte lerps[4]
+/// byte type=4 short modelindex byte numbones {short pose7s[7]}
+/// see also RENDER_COMPLEXANIMATION
+#define E5_COMPLEXANIMATION  (1u<<25)
+/// ushort traileffectnum
+#define E5_TRAILEFFECTNUM    (1u<<26)
+/// unused
+#define E5_UNUSED27          (1u<<27)
+/// unused
+#define E5_UNUSED28          (1u<<28)
+/// unused
+#define E5_UNUSED29          (1u<<29)
+/// unused
+#define E5_UNUSED30          (1u<<30)
+/// bits2 > 0
+#define E5_EXTEND4           (1u<<31)
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
 #define ENTITYFRAME5_MAXPACKETLOGS 64
 #define ENTITYFRAME5_MAXSTATES 1024

@@ -98,8 +98,9 @@ static void copy64(uint32_t *M, const unsigned char *in)
 {
 	int i;
 
+	// UBSan: (unsigned) is because promotion to int causes signed overflow when in[] >= 128
 	for (i=0;i<16;i++)
-		M[i] = (in[i*4+3]<<24) | (in[i*4+2]<<16) |
+		M[i] = ((unsigned)in[i*4+3]<<24) | (in[i*4+2]<<16) |
 			(in[i*4+1]<<8) | (in[i*4+0]<<0);
 }
 

@@ -46,7 +46,7 @@ typedef enum shaderlanguage_e
 }
 shaderlanguage_t;
 
-// this enum selects which of the glslshadermodeinfo entries should be used
+/// this enum selects which of the glslshadermodeinfo entries should be used
 typedef enum shadermode_e
 {
 	SHADERMODE_GENERIC, ///< (particles/HUD/etc) vertex color, optionally multiplied by one texture
@@ -70,39 +70,40 @@ typedef enum shadermode_e
 }
 shadermode_t;
 
-#define SHADERPERMUTATION_DIFFUSE (1<<0) ///< (lightsource) whether to use directional shading
-#define SHADERPERMUTATION_VERTEXTEXTUREBLEND (1<<1) ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
-#define	SHADERPERMUTATION_VIEWTINT (1<<2) ///< view tint (postprocessing only), use vertex colors (generic only)
-#define	SHADERPERMUTATION_COLORMAPPING (1<<3) ///< indicates this is a colormapped skin
-#define	SHADERPERMUTATION_SATURATION (1<<4) ///< saturation (postprocessing only)
-#define	SHADERPERMUTATION_FOGINSIDE (1<<5) ///< tint the color by fog color or black if using additive blend mode
-#define	SHADERPERMUTATION_FOGOUTSIDE (1<<6) ///< tint the color by fog color or black if using additive blend mode
-#define	SHADERPERMUTATION_FOGHEIGHTTEXTURE (1<<7) ///< fog color and density determined by texture mapped on vertical axis
-#define	SHADERPERMUTATION_FOGALPHAHACK (1<<8) ///< fog color and density determined by texture mapped on vertical axis
-#define	SHADERPERMUTATION_GAMMARAMPS (1<<9) ///< gamma (postprocessing only)
-#define	SHADERPERMUTATION_CUBEFILTER (1<<10) ///< (lightsource) use cubemap light filter
-#define	SHADERPERMUTATION_GLOW (1<<11) ///< (lightmap) blend in an additive glow texture
-#define	SHADERPERMUTATION_BLOOM (1<<12) ///< bloom (postprocessing only)
-#define	SHADERPERMUTATION_SPECULAR (1<<13) ///< (lightsource or deluxemapping) render specular effects
-#define	SHADERPERMUTATION_POSTPROCESSING (1<<14) ///< user defined postprocessing (postprocessing only)
-#define	SHADERPERMUTATION_REFLECTION (1<<15) ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
-#define	SHADERPERMUTATION_OFFSETMAPPING (1<<16) ///< adjust texcoords to roughly simulate a displacement mapped surface
-#define	SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1<<17) ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
-#define	SHADERPERMUTATION_SHADOWMAP2D (1<<18) ///< (lightsource) use shadowmap texture as light filter
-#define	SHADERPERMUTATION_SHADOWMAPVSDCT (1<<19) ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
-#define	SHADERPERMUTATION_SHADOWMAPORTHO (1<<20) ///< (lightsource) use orthographic shadowmap projection
-#define	SHADERPERMUTATION_DEFERREDLIGHTMAP (1<<21) ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
-#define	SHADERPERMUTATION_ALPHAKILL (1<<22) ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5, (generic) apply global alpha
-#define	SHADERPERMUTATION_REFLECTCUBE (1<<23) ///< fake reflections using global cubemap (not HDRI light probe)
-#define	SHADERPERMUTATION_NORMALMAPSCROLLBLEND (1<<24) ///< (water) counter-direction normalmaps scrolling
-#define	SHADERPERMUTATION_BOUNCEGRID (1<<25) ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
-#define	SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL (1<<26) ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
-#define SHADERPERMUTATION_TRIPPY (1<<27) ///< use trippy vertex shader effect
-#define	SHADERPERMUTATION_DEPTHRGB (1<<28) ///< read/write depth values in RGB color coded format for older hardware without depth samplers
-#define	SHADERPERMUTATION_ALPHAGEN_VERTEX (1<<29) ///< alphaGen vertex
-#define	SHADERPERMUTATION_SKELETAL (1<<30) ///< (skeletal models) use skeletal matrices to deform vertices (gpu-skinning)
-#define	SHADERPERMUTATION_OCCLUDE (1<<31) ///< use occlusion buffer for corona
-#define	SHADERPERMUTATION_COUNT 32 ///< size of shaderpermutationinfo array
+#define SHADERPERMUTATION_DIFFUSE (1u<<0) ///< (lightsource) whether to use directional shading
+#define SHADERPERMUTATION_VERTEXTEXTUREBLEND (1u<<1) ///< indicates this is a two-layer material blend based on vertex alpha (q3bsp)
+#define SHADERPERMUTATION_VIEWTINT (1u<<2) ///< view tint (postprocessing only), use vertex colors (generic only)
+#define SHADERPERMUTATION_COLORMAPPING (1u<<3) ///< indicates this is a colormapped skin
+#define SHADERPERMUTATION_SATURATION (1u<<4) ///< saturation (postprocessing only)
+#define SHADERPERMUTATION_FOGINSIDE (1u<<5) ///< tint the color by fog color or black if using additive blend mode
+#define SHADERPERMUTATION_FOGOUTSIDE (1u<<6) ///< tint the color by fog color or black if using additive blend mode
+#define SHADERPERMUTATION_FOGHEIGHTTEXTURE (1u<<7) ///< fog color and density determined by texture mapped on vertical axis
+#define SHADERPERMUTATION_FOGALPHAHACK (1u<<8) ///< fog color and density determined by texture mapped on vertical axis
+#define SHADERPERMUTATION_GAMMARAMPS (1u<<9) ///< gamma (postprocessing only)
+#define SHADERPERMUTATION_CUBEFILTER (1u<<10) ///< (lightsource) use cubemap light filter
+#define SHADERPERMUTATION_GLOW (1u<<11) ///< (lightmap) blend in an additive glow texture
+#define SHADERPERMUTATION_BLOOM (1u<<12) ///< bloom (postprocessing only)
+#define SHADERPERMUTATION_SPECULAR (1u<<13) ///< (lightsource or deluxemapping) render specular effects
+#define SHADERPERMUTATION_POSTPROCESSING (1u<<14) ///< user defined postprocessing (postprocessing only)
+#define SHADERPERMUTATION_REFLECTION (1u<<15) ///< normalmap-perturbed reflection of the scene infront of the surface, preformed as an overlay on the surface
+#define SHADERPERMUTATION_OFFSETMAPPING (1u<<16) ///< adjust texcoords to roughly simulate a displacement mapped surface
+#define SHADERPERMUTATION_OFFSETMAPPING_RELIEFMAPPING (1u<<17) ///< adjust texcoords to accurately simulate a displacement mapped surface (requires OFFSETMAPPING to also be set!)
+#define SHADERPERMUTATION_SHADOWMAP2D (1u<<18) ///< (lightsource) use shadowmap texture as light filter
+#define SHADERPERMUTATION_SHADOWMAPVSDCT (1u<<19) ///< (lightsource) use virtual shadow depth cube texture for shadowmap indexing
+#define SHADERPERMUTATION_SHADOWMAPORTHO (1u<<20) ///< (lightsource) use orthographic shadowmap projection
+#define SHADERPERMUTATION_DEFERREDLIGHTMAP (1u<<21) ///< (lightmap) read Texture_ScreenDiffuse/Specular textures and add them on top of lightmapping
+#define SHADERPERMUTATION_ALPHAKILL (1u<<22) ///< (deferredgeometry) discard pixel if diffuse texture alpha below 0.5, (generic) apply global alpha
+#define SHADERPERMUTATION_REFLECTCUBE (1u<<23) ///< fake reflections using global cubemap (not HDRI light probe)
+#define SHADERPERMUTATION_NORMALMAPSCROLLBLEND (1u<<24) ///< (water) counter-direction normalmaps scrolling
+#define SHADERPERMUTATION_BOUNCEGRID (1u<<25) ///< (lightmap) use Texture_BounceGrid as an additional source of ambient light
+#define SHADERPERMUTATION_BOUNCEGRIDDIRECTIONAL (1u<<26) ///< (lightmap) use 16-component pixels in bouncegrid texture for directional lighting rather than standard 4-component
+#define SHADERPERMUTATION_TRIPPY (1u<<27) ///< use trippy vertex shader effect
+#define SHADERPERMUTATION_DEPTHRGB (1u<<28) ///< read/write depth values in RGB color coded format for older hardware without depth samplers
+#define SHADERPERMUTATION_ALPHAGEN_VERTEX (1u<<29) ///< alphaGen vertex
+#define SHADERPERMUTATION_SKELETAL (1u<<30) ///< (skeletal models) use skeletal matrices to deform vertices (gpu-skinning)
+#define SHADERPERMUTATION_OCCLUDE (1u<<31) ///< use occlusion buffer for corona
+#define SHADERPERMUTATION_COUNT 32u ///< size of shaderpermutationinfo array
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
 // 1.0f / N table
 extern float ixtable[4096];
@@ -236,9 +237,9 @@ r_viewport_type_t;
 
 typedef struct r_viewport_s
 {
-	matrix4x4_t cameramatrix; // from entity (transforms from camera entity to world)
-	matrix4x4_t viewmatrix; // actual matrix for rendering (transforms to viewspace)
-	matrix4x4_t projectmatrix; // actual projection matrix (transforms from viewspace to screen)
+	matrix4x4_t cameramatrix;  ///< from entity (transforms from camera entity to world)
+	matrix4x4_t viewmatrix;    ///< actual matrix for rendering (transforms to viewspace)
+	matrix4x4_t projectmatrix; ///< actual projection matrix (transforms from viewspace to screen)
 	int x;
 	int y;
 	int z;
@@ -246,7 +247,7 @@ typedef struct r_viewport_s
 	int height;
 	int depth;
 	r_viewport_type_t type;
-	float screentodepth[2]; // used by deferred renderer to calculate linear depth from device depth coordinates
+	float screentodepth[2];    ///< used by deferred renderer to calculate linear depth from device depth coordinates
 }
 r_viewport_t;
 
@@ -271,17 +272,17 @@ typedef struct r_refdef_view_s
 	int numfrustumplanes;
 	mplane_t frustum[6];
 	qbool useclipplane;
-	qbool usecustompvs; // uses r_refdef.viewcache.pvsbits as-is rather than computing it
+	qbool usecustompvs; ///< uses r_refdef.viewcache.pvsbits as-is rather than computing it
 	mplane_t clipplane;
 	float frustum_x, frustum_y;
 	vec3_t frustumcorner[4];
-	// if turned off it renders an ortho view
+	/// if turned off it renders an ortho view
 	int useperspective;
-	// allows visibility culling based on the view origin (e.g. pvs and R_CanSeeBox)
-	// this is turned off by:
-	// r_trippy
-	// !r_refdef.view.useperspective
-	// (sometimes) r_refdef.view.useclipplane
+	/// allows visibility culling based on the view origin (e.g. pvs and R_CanSeeBox)
+	/// this is turned off by:
+	/// r_trippy
+	/// !r_refdef.view.useperspective
+	/// (sometimes) r_refdef.view.useclipplane
 	int usevieworiginculling;
 	float ortho_x, ortho_y;
 
@@ -292,19 +293,19 @@ typedef struct r_refdef_view_s
 	int width;
 	int height;
 	int depth;
-	r_viewport_t viewport; // note: if r_viewscale is used, the viewport.width and viewport.height may be less than width and height
+	r_viewport_t viewport; ///< note: if r_viewscale is used, the viewport.width and viewport.height may be less than width and height
 
-	// which color components to allow (for anaglyph glasses)
+	/// which color components to allow (for anaglyph glasses)
 	int colormask[4];
 
-	// global RGB color multiplier for rendering
+	/// global RGB color multiplier for rendering
 	float colorscale;
 
-	// whether to call R_ClearScreen before rendering stuff
+	/// whether to call R_ClearScreen before rendering stuff
 	qbool clear;
-	// if true, don't clear or do any post process effects (bloom, etc)
+	/// if true, don't clear or do any post process effects (bloom, etc)
 	qbool isoverlay;
-	// if true, this is the MAIN view (which is, after CSQC, copied into the scene for use e.g. by r_speeds 1, showtex, prydon cursor)
+	/// if true, this is the MAIN view (which is, after CSQC, copied into the scene for use e.g. by r_speeds 1, showtex, prydon cursor)
 	qbool ismain;
 
 	// whether to draw r_showtris and such, this is only true for the main
@@ -316,7 +317,7 @@ typedef struct r_refdef_view_s
 	int cullface_front;
 	int cullface_back;
 
-	// render quality (0 to 1) - affects r_drawparticles_drawdistance and others
+	/// render quality (0 to 1) - affects r_drawparticles_drawdistance and others
 	float quality;
 }
 r_refdef_view_t;
@@ -332,8 +333,8 @@ typedef struct r_refdef_viewcache_s
 
 	// these properties are generated by R_View_Update()
 
-	// which entities are currently visible for this viewpoint
-	// (the used range is 0...r_refdef.scene.numentities)
+	/// which entities are currently visible for this viewpoint
+	/// (the used range is 0...r_refdef.scene.numentities)
 	unsigned char *entityvisible;
 
 	// flag arrays used for visibility checking on world model
@@ -341,7 +342,7 @@ typedef struct r_refdef_viewcache_s
 	unsigned char *world_pvsbits;
 	unsigned char *world_leafvisible;
 	unsigned char *world_surfacevisible;
-	// if true, the view is currently in a leaf without pvs data
+	/// if true, the view is currently in a leaf without pvs data
 	qbool world_novis;
 }
 r_refdef_viewcache_t;
@@ -349,24 +350,24 @@ r_refdef_viewcache_t;
 // TODO: really think about which fields should go into scene and which one should stay in refdef [1/7/2008 Black]
 // maybe also refactor some of the functions to support different setting sources (ie. fogenabled, etc.) for different scenes
 typedef struct r_refdef_scene_s {
-	// whether to call S_ExtraUpdate during render to reduce sound chop
+	/// whether to call S_ExtraUpdate during render to reduce sound chop
 	qbool extraupdate;
 
-	// (client gameworld) time for rendering time based effects
+	/// (client gameworld) time for rendering time based effects
 	double time;
 
-	// the world
+	/// the world
 	entity_render_t *worldentity;
 
-	// same as worldentity->model
+	/// same as worldentity->model
 	model_t *worldmodel;
 
-	// renderable entities (excluding world)
+	/// renderable entities (excluding world)
 	entity_render_t **entities;
 	int numentities;
 	int maxentities;
 
-	// field of temporary entities that is reset each (client) frame
+	/// field of temporary entities that is reset each (client) frame
 	entity_render_t *tempentities;
 	int numtempentities;
 	int maxtempentities;
@@ -378,10 +379,10 @@ typedef struct r_refdef_scene_s {
 	int numlights;
 
 	// intensities for light styles right now, controls rtlights
-	float rtlightstylevalue[MAX_LIGHTSTYLES];	// float fraction of base light value
+	float rtlightstylevalue[MAX_LIGHTSTYLES]; ///< float fraction of base light value
 	// 8.8bit fixed point intensities for light styles
 	// controls intensity lightmap layers
-	unsigned short lightstylevalue[MAX_LIGHTSTYLES];	// 8.8 fraction of base light value
+	unsigned short lightstylevalue[MAX_LIGHTSTYLES]; ///< 8.8 fraction of base light value
 
 	// adds brightness to the whole scene, separate from lightmapintensity
 	// see CL_UpdateEntityShading

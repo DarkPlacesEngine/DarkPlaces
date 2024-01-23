@@ -1353,8 +1353,8 @@ static int NetConn_ReceivedMessage(netconn_t *conn, const unsigned char *data, s
 		conn->packetsReceived++;
 		reliable_message = (sequence >> 31) != 0;
 		reliable_ack = (sequence_ack >> 31) != 0;
-		sequence &= ~(1<<31);
-		sequence_ack &= ~(1<<31);
+		sequence &= ~(1u<<31);
+		sequence_ack &= ~(1u<<31);
 		if (sequence <= conn->qw.incoming_sequence)
 		{
 			//Con_DPrint("Got a stale datagram\n");

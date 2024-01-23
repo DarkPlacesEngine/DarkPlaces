@@ -1041,7 +1041,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer, void *bufferend)
 	BOUNDI((int)loadmodel->synctype,0,2);
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
-	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
+	loadmodel->effects = (((unsigned)i & 255) << 24) | (i & 0x00FFFF00);
 
 	if (strstr(r_nolerp_list.string, loadmodel->name))
 		loadmodel->nolerp = true;
@@ -1616,7 +1616,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->synctype = ST_RAND;
 	// convert model flags to EF flags (MF_ROCKET becomes EF_ROCKET, etc)
 	i = LittleLong (pinmodel->flags);
-	loadmodel->effects = ((i & 255) << 24) | (i & 0x00FFFF00);
+	loadmodel->effects = (((unsigned)i & 255) << 24) | (i & 0x00FFFF00);
 
 	// set up some global info about the model
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
