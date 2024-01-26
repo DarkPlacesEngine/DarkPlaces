@@ -3280,7 +3280,8 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		return;
 	}
 
-	// copy structs to make them aligned in memory (otherwise we crash on Sparc and PowerPC and others)
+	// Structs will be copied for alignment in memory, otherwise we crash on Sparc, PowerPC and others
+	// and get big spam from UBSan, because these offsets may not be aligned.
 	if (header.num_vertexarrays)
 		vas = (iqmvertexarray_t *)(pbase + header.ofs_vertexarrays);
 	if (header.num_anims)
@@ -3294,11 +3295,13 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	{
 		iqmvertexarray_t va;
 		size_t vsize;
-		va.type = LittleLong(vas[i].type);
-		va.flags = LittleLong(vas[i].flags);
-		va.format = LittleLong(vas[i].format);
-		va.size = LittleLong(vas[i].size);
-		va.offset = LittleLong(vas[i].offset);
+
+		memcpy(&va, &vas[i], sizeof(iqmvertexarray_t));
+		va.type = LittleLong(va.type);
+		va.flags = LittleLong(va.flags);
+		va.format = LittleLong(va.format);
+		va.size = LittleLong(va.size);
+		va.offset = LittleLong(va.offset);
 		vsize = header.num_vertexes*va.size;
 		switch (va.format)
 		{ 
@@ -3434,19 +3437,23 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	// load the bone info
 	if (header.version == 1)
 	{
-		iqmjoint1_t *injoint1 = (iqmjoint1_t *)(pbase + header.ofs_joints);
+		iqmjoint1_t *injoints1 = (iqmjoint1_t *)(pbase + header.ofs_joints);
+
 		if (loadmodel->num_bones)
 			joint1 = (iqmjoint1_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(iqmjoint1_t));
 		for (i = 0;i < loadmodel->num_bones;i++)
 		{
 			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
-			joint1[i].name = LittleLong(injoint1[i].name);
-			joint1[i].parent = LittleLong(injoint1[i].parent);
+			iqmjoint1_t injoint1;
+
+			memcpy(&injoint1, &injoints1[i], sizeof(iqmjoint1_t));
+			joint1[i].name = LittleLong(injoint1.name);
+			joint1[i].parent = LittleLong(injoint1.parent);
 			for (j = 0;j < 3;j++)
 			{
-				joint1[i].origin[j] = LittleFloat(injoint1[i].origin[j]);
-				joint1[i].rotation[j] = LittleFloat(injoint1[i].rotation[j]);
-				joint1[i].scale[j] = LittleFloat(injoint1[i].scale[j]);
+				joint1[i].origin[j] = LittleFloat(injoint1.origin[j]);
+				joint1[i].rotation[j] = LittleFloat(injoint1.rotation[j]);
+				joint1[i].scale[j] = LittleFloat(injoint1.scale[j]);
 			}
 			dp_strlcpy(loadmodel->data_bones[i].name, &text[joint1[i].name], sizeof(loadmodel->data_bones[i].name));
 			loadmodel->data_bones[i].parent = joint1[i].parent;
@@ -3465,21 +3472,25 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
-		iqmjoint_t *injoint = (iqmjoint_t *)(pbase + header.ofs_joints);
+		iqmjoint_t *injoints = (iqmjoint_t *)(pbase + header.ofs_joints);
+
 		if (header.num_joints)
 			joint = (iqmjoint_t *)Mem_Alloc(loadmodel->mempool, loadmodel->num_bones * sizeof(iqmjoint_t));
 		for (i = 0;i < loadmodel->num_bones;i++)
 		{
 			matrix4x4_t relbase, relinvbase, pinvbase, invbase;
-			joint[i].name = LittleLong(injoint[i].name);
-			joint[i].parent = LittleLong(injoint[i].parent);
+			iqmjoint_t injoint;
+
+			memcpy(&injoint, &injoints[i], sizeof(iqmjoint_t));
+			joint[i].name = LittleLong(injoint.name);
+			joint[i].parent = LittleLong(injoint.parent);
 			for (j = 0;j < 3;j++)
 			{
-				joint[i].origin[j] = LittleFloat(injoint[i].origin[j]);
-				joint[i].rotation[j] = LittleFloat(injoint[i].rotation[j]);
-				joint[i].scale[j] = LittleFloat(injoint[i].scale[j]);
+				joint[i].origin[j] = LittleFloat(injoint.origin[j]);
+				joint[i].rotation[j] = LittleFloat(injoint.rotation[j]);
+				joint[i].scale[j] = LittleFloat(injoint.scale[j]);
 			}
-			joint[i].rotation[3] = LittleFloat(injoint[i].rotation[3]);
+			joint[i].rotation[3] = LittleFloat(injoint.rotation[3]);
 			dp_strlcpy(loadmodel->data_bones[i].name, &text[joint[i].name], sizeof(loadmodel->data_bones[i].name));
 			loadmodel->data_bones[i].parent = joint[i].parent;
 			if (loadmodel->data_bones[i].parent >= i)
@@ -3503,11 +3514,13 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	for (i = 0;i < (int)header.num_anims;i++)
 	{
 		iqmanim_t anim;
-		anim.name = LittleLong(anims[i].name);
-		anim.first_frame = LittleLong(anims[i].first_frame);
-		anim.num_frames = LittleLong(anims[i].num_frames);
-		anim.framerate = LittleFloat(anims[i].framerate);
-		anim.flags = LittleLong(anims[i].flags);
+
+		memcpy(&anim, &anims[i], sizeof(iqmanim_t));
+		anim.name = LittleLong(anim.name);
+		anim.first_frame = LittleLong(anim.first_frame);
+		anim.num_frames = LittleLong(anim.num_frames);
+		anim.framerate = LittleFloat(anim.framerate);
+		anim.flags = LittleLong(anim.flags);
 		dp_strlcpy(loadmodel->animscenes[i].name, &text[anim.name], sizeof(loadmodel->animscenes[i].name));
 		loadmodel->animscenes[i].firstframe = anim.first_frame;
 		loadmodel->animscenes[i].framecount = anim.num_frames;
@@ -3530,18 +3543,22 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	biggestorigin = 0;
 	if (header.version == 1)
 	{
-		iqmpose1_t *inpose1 = (iqmpose1_t *)(pbase + header.ofs_poses);
+		iqmpose1_t *inposes1 = (iqmpose1_t *)(pbase + header.ofs_poses);
+
 		if (header.num_poses)
 			pose1 = (iqmpose1_t *)Mem_Alloc(loadmodel->mempool, header.num_poses * sizeof(iqmpose1_t));
 		for (i = 0;i < (int)header.num_poses;i++)
 		{
 			float f;
-			pose1[i].parent = LittleLong(inpose1[i].parent);
-			pose1[i].channelmask = LittleLong(inpose1[i].channelmask);
+			iqmpose1_t inpose;
+
+			memcpy(&inpose, &inposes1[i], sizeof(iqmpose1_t));
+			pose1[i].parent = LittleLong(inpose.parent);
+			pose1[i].channelmask = LittleLong(inpose.channelmask);
 			for (j = 0;j < 9;j++)
 			{
-				pose1[i].channeloffset[j] = LittleFloat(inpose1[i].channeloffset[j]);
-				pose1[i].channelscale[j] = LittleFloat(inpose1[i].channelscale[j]);
+				pose1[i].channeloffset[j] = LittleFloat(inpose.channeloffset[j]);
+				pose1[i].channelscale[j] = LittleFloat(inpose.channelscale[j]);
 			}
 			f = fabs(pose1[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose1[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
@@ -3563,18 +3580,22 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	}
 	else
 	{
-		iqmpose_t *inpose = (iqmpose_t *)(pbase + header.ofs_poses);
+		iqmpose_t *inposes = (iqmpose_t *)(pbase + header.ofs_poses);
+
 		if (header.num_poses)
 			pose = (iqmpose_t *)Mem_Alloc(loadmodel->mempool, header.num_poses * sizeof(iqmpose_t));
 		for (i = 0;i < (int)header.num_poses;i++)
 		{
 			float f;
-			pose[i].parent = LittleLong(inpose[i].parent);
-			pose[i].channelmask = LittleLong(inpose[i].channelmask);
+			iqmpose_t inpose;
+
+			memcpy(&inpose, &inposes[i], sizeof(iqmpose_t));
+			pose[i].parent = LittleLong(inpose.parent);
+			pose[i].channelmask = LittleLong(inpose.channelmask);
 			for (j = 0;j < 10;j++)
 			{
-				pose[i].channeloffset[j] = LittleFloat(inpose[i].channeloffset[j]);
-				pose[i].channelscale[j] = LittleFloat(inpose[i].channelscale[j]);
+				pose[i].channeloffset[j] = LittleFloat(inpose.channeloffset[j]);
+				pose[i].channelscale[j] = LittleFloat(inpose.channelscale[j]);
 			}
 			f = fabs(pose[i].channeloffset[0]); biggestorigin = max(biggestorigin, f);
 			f = fabs(pose[i].channeloffset[1]); biggestorigin = max(biggestorigin, f);
@@ -3863,12 +3884,13 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 		iqmmesh_t mesh;
 		msurface_t *surface;
 
-		mesh.name = LittleLong(meshes[i].name);
-		mesh.material = LittleLong(meshes[i].material);
-		mesh.first_vertex = LittleLong(meshes[i].first_vertex);
-		mesh.num_vertexes = LittleLong(meshes[i].num_vertexes);
-		mesh.first_triangle = LittleLong(meshes[i].first_triangle);
-		mesh.num_triangles = LittleLong(meshes[i].num_triangles);
+		memcpy(&mesh, &meshes[i], sizeof(iqmmesh_t));
+		mesh.name = LittleLong(mesh.name);
+		mesh.material = LittleLong(mesh.material);
+		mesh.first_vertex = LittleLong(mesh.first_vertex);
+		mesh.num_vertexes = LittleLong(mesh.num_vertexes);
+		mesh.first_triangle = LittleLong(mesh.first_triangle);
+		mesh.num_triangles = LittleLong(mesh.num_triangles);
 
 		loadmodel->modelsurfaces_sorted[i] = i;
 		surface = loadmodel->data_surfaces + i;
