@@ -3883,7 +3883,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 	hullinfo_t hullinfo;
 	int totalstylesurfaces, totalstyles, stylecounts[256], remapstyles[256];
 	model_brush_lightstyleinfo_t styleinfo[256];
-	unsigned char *datapointer;
+	int *datapointer;
+	model_brush_lightstyleinfo_t *lsidatapointer;
 	sizebuf_t sb;
 
 	MSG_InitReadBuffer(&sb, (unsigned char *)buffer, (unsigned char *)bufferend - (unsigned char *)buffer);
@@ -4045,8 +4046,11 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 				totalstylesurfaces += stylecounts[k];
 		}
 	}
-	datapointer = (unsigned char *)Mem_Alloc(mod->mempool, mod->num_surfaces * sizeof(int) + totalstyles * sizeof(model_brush_lightstyleinfo_t) + totalstylesurfaces * sizeof(int *));
-	mod->modelsurfaces_sorted = (int*)datapointer;datapointer += mod->num_surfaces * sizeof(int);
+	// bones_was_here: using a separate allocation for model_brush_lightstyleinfo_t
+	// because on a 64-bit machine it no longer has the same alignment requirement as int.
+	lsidatapointer = Mem_AllocType(mod->mempool, model_brush_lightstyleinfo_t, totalstyles * sizeof(model_brush_lightstyleinfo_t));
+	datapointer = Mem_AllocType(mod->mempool, int, mod->num_surfaces * sizeof(int) + totalstylesurfaces * sizeof(int));
+	mod->modelsurfaces_sorted = datapointer;datapointer += mod->num_surfaces;
 	for (i = 0;i < mod->brush.numsubmodels;i++)
 	{
 		// LadyHavoc: this code was originally at the end of this loop, but
@@ -4138,7 +4142,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 					styleinfo[mod->brushq1.num_lightstyles].style = k;
 					styleinfo[mod->brushq1.num_lightstyles].value = 0;
 					styleinfo[mod->brushq1.num_lightstyles].numsurfaces = 0;
-					styleinfo[mod->brushq1.num_lightstyles].surfacelist = (int *)datapointer;datapointer += stylecounts[k] * sizeof(int);
+					styleinfo[mod->brushq1.num_lightstyles].surfacelist = datapointer;datapointer += stylecounts[k];
 					remapstyles[k] = mod->brushq1.num_lightstyles;
 					mod->brushq1.num_lightstyles++;
 				}
@@ -4155,7 +4159,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer, void *bufferend)
 					}
 				}
 			}
-			mod->brushq1.data_lightstyleinfo = (model_brush_lightstyleinfo_t *)datapointer;datapointer += mod->brushq1.num_lightstyles * sizeof(model_brush_lightstyleinfo_t);
+			mod->brushq1.data_lightstyleinfo = lsidatapointer;lsidatapointer += mod->brushq1.num_lightstyles;
 			memcpy(mod->brushq1.data_lightstyleinfo, styleinfo, mod->brushq1.num_lightstyles * sizeof(model_brush_lightstyleinfo_t));
 		}
 		else
