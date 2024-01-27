@@ -864,7 +864,7 @@ static pack_t *FS_LoadPackPK3FromFD (const char *packfile, filedesc_t packhandle
 	// Create a package structure in memory
 	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = true; // PK3 ignores case
-	strlcpy (pack->filename, packfile, sizeof (pack->filename));
+	dp_strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
 	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, eocd.nbentries * sizeof(packfile_t));
@@ -982,7 +982,7 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 	memmove (pfile + 1, pfile, (pack->numfiles - left) * sizeof (*pfile));
 	pack->numfiles++;
 
-	strlcpy (pfile->name, name, sizeof (pfile->name));
+	dp_strlcpy (pfile->name, name, sizeof (pfile->name));
 	pfile->offset = offset;
 	pfile->packsize = packsize;
 	pfile->realsize = realsize;
@@ -1140,7 +1140,7 @@ static pack_t *FS_LoadPackPAK (const char *packfile)
 
 	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = true; // PAK is sensitive in Quake1 but insensitive in Quake2
-	strlcpy (pack->filename, packfile, sizeof (pack->filename));
+	dp_strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = 0;
 	pack->files = (packfile_t *)Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
@@ -1176,7 +1176,7 @@ static pack_t *FS_LoadPackVirtual (const char *dirname)
 	pack = (pack_t *)Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->vpack = true;
 	pack->ignorecase = false;
-	strlcpy (pack->filename, dirname, sizeof(pack->filename));
+	dp_strlcpy (pack->filename, dirname, sizeof(pack->filename));
 	pack->handle = FILEDESC_INVALID;
 	pack->numfiles = -1;
 	pack->files = NULL;
@@ -1232,7 +1232,7 @@ static qbool FS_AddPack_Fullpath(const char *pakfile, const char *shortname, qbo
 
 	if(pak)
 	{
-		strlcpy(pak->shortname, shortname, sizeof(pak->shortname));
+		dp_strlcpy(pak->shortname, shortname, sizeof(pak->shortname));
 
 		//Con_DPrintf("  Registered pack with short name %s\n", shortname);
 		if(keep_plain_dirs)
@@ -1351,7 +1351,7 @@ static void FS_AddGameDirectory (const char *dir)
 	stringlist_t list;
 	searchpath_t *search;
 
-	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
+	dp_strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
 	stringlistinit(&list);
 	listdirectory(&list, "", dir);
@@ -1381,7 +1381,7 @@ static void FS_AddGameDirectory (const char *dir)
 	// Add the directory to the search path
 	// (unpacked files have the priority over packed files)
 	search = (searchpath_t *)Mem_Alloc(fs_mempool, sizeof(searchpath_t));
-	strlcpy (search->filename, dir, sizeof (search->filename));
+	dp_strlcpy (search->filename, dir, sizeof (search->filename));
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
 }
@@ -1563,9 +1563,9 @@ void FS_Rescan (void)
 	FS_AddGameHierarchy (gamedirname1);
 	// update the com_modname (used for server info)
 	if (gamedirname2 && gamedirname2[0])
-		strlcpy(com_modname, gamedirname2, sizeof(com_modname));
+		dp_strlcpy(com_modname, gamedirname2, sizeof(com_modname));
 	else
-		strlcpy(com_modname, gamedirname1, sizeof(com_modname));
+		dp_strlcpy(com_modname, gamedirname1, sizeof(com_modname));
 
 	// add the game-specific path, if any
 	// (only used for mission packs and the like, which should set fs_modified)
@@ -1585,11 +1585,11 @@ void FS_Rescan (void)
 		fs_modified = true;
 		FS_AddGameHierarchy (fs_gamedirs[i]);
 		// update the com_modname (used server info)
-		strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
+		dp_strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
 		if(i)
-			strlcat(gamedirbuf, va(vabuf, sizeof(vabuf), " %s", fs_gamedirs[i]), sizeof(gamedirbuf));
+			dp_strlcat(gamedirbuf, va(vabuf, sizeof(vabuf), " %s", fs_gamedirs[i]), sizeof(gamedirbuf));
 		else
-			strlcpy(gamedirbuf, fs_gamedirs[i], sizeof(gamedirbuf));
+			dp_strlcpy(gamedirbuf, fs_gamedirs[i], sizeof(gamedirbuf));
 	}
 	Cvar_SetQuick(&cvar_fs_gamedir, gamedirbuf); // so QC or console code can query it
 
@@ -1607,7 +1607,7 @@ void FS_Rescan (void)
 	}
 
 	if((i = Sys_CheckParm("-modname")) && i < sys.argc - 1)
-		strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
+		dp_strlcpy(com_modname, sys.argv[i+1], sizeof(com_modname));
 
 	// If "-condebug" is in the command line, remove the previous log file
 	if (Sys_CheckParm ("-condebug") != 0)
@@ -1699,7 +1699,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 
 	fs_numgamedirs = numgamedirs;
 	for (i = 0;i < fs_numgamedirs;i++)
-		strlcpy(fs_gamedirs[i], gamedirs[i], sizeof(fs_gamedirs[i]));
+		dp_strlcpy(fs_gamedirs[i], gamedirs[i], sizeof(fs_gamedirs[i]));
 
 	// reinitialize filesystem to detect the new paks
 	FS_Rescan();
@@ -1747,7 +1747,7 @@ static void FS_GameDir_f(cmd_state_t *cmd)
 	}
 
 	for (i = 0;i < numgamedirs;i++)
-		strlcpy(gamedirs[i], Cmd_Argv(cmd, i+1), sizeof(gamedirs[i]));
+		dp_strlcpy(gamedirs[i], Cmd_Argv(cmd, i+1), sizeof(gamedirs[i]));
 
 	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
 	{
@@ -1874,8 +1874,8 @@ static void FS_ListGameDirs(void)
 			continue;
 		if(!*info)
 			continue;
-		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].name, list2.strings[i], sizeof(fs_all_gamedirs[fs_all_gamedirs_count].name));
-		strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].description, info, sizeof(fs_all_gamedirs[fs_all_gamedirs_count].description));
+		dp_strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].name, list2.strings[i], sizeof(fs_all_gamedirs[fs_all_gamedirs_count].name));
+		dp_strlcpy(fs_all_gamedirs[fs_all_gamedirs_count].description, info, sizeof(fs_all_gamedirs[fs_all_gamedirs_count].description));
 		++fs_all_gamedirs_count;
 	}
 }
@@ -1906,7 +1906,7 @@ static void COM_InsertFlags(const char *buf) {
 		if(i > args_left)
 			break;
 		q = (char *)Mem_Alloc(fs_mempool, sz);
-		strlcpy(q, com_token, sz);
+		dp_strlcpy(q, com_token, sz);
 		new_argv[i] = q;
 		++i;
 	}
@@ -1929,7 +1929,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	{
 		// fs_basedir is "" by default, to utilize this you can simply add your gamedir to the Resources in xcode
 		// fs_userdir stores configurations to the Documents folder of the app
-		strlcpy(userdir, "../Documents/", MAX_OSPATH);
+		dp_strlcpy(userdir, "../Documents/", MAX_OSPATH);
 		return 1;
 	}
 	return -1;
@@ -1953,7 +1953,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	default:
 		return -1;
 	case USERDIRMODE_NOHOME:
-		strlcpy(userdir, fs_basedir, userdirsize);
+		dp_strlcpy(userdir, fs_basedir, userdirsize);
 		break;
 	case USERDIRMODE_MYGAMES:
 		if (!shfolder_dll)
@@ -2024,7 +2024,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	default:
 		return -1;
 	case USERDIRMODE_NOHOME:
-		strlcpy(userdir, fs_basedir, userdirsize);
+		dp_strlcpy(userdir, fs_basedir, userdirsize);
 		break;
 	case USERDIRMODE_HOME:
 		homedir = getenv("HOME");
@@ -2123,7 +2123,7 @@ static void FS_Init_Dir (void)
 	i = Sys_CheckParm ("-basedir");
 	if (i && i < sys.argc-1)
 	{
-		strlcpy (fs_basedir, sys.argv[i+1], sizeof (fs_basedir));
+		dp_strlcpy (fs_basedir, sys.argv[i+1], sizeof (fs_basedir));
 		i = (int)strlen (fs_basedir);
 		if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
 			fs_basedir[i-1] = 0;
@@ -2132,7 +2132,7 @@ static void FS_Init_Dir (void)
 	{
 // If the base directory is explicitly defined by the compilation process
 #ifdef DP_FS_BASEDIR
-		strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
+		dp_strlcpy(fs_basedir, DP_FS_BASEDIR, sizeof(fs_basedir));
 #elif defined(__ANDROID__)
 		dpsnprintf(fs_basedir, sizeof(fs_basedir), "/sdcard/%s/", gameuserdirname);
 #elif defined(MACOSX)
@@ -2140,7 +2140,7 @@ static void FS_Init_Dir (void)
 		if (strstr(sys.argv[0], ".app/"))
 		{
 			char *split;
-			strlcpy(fs_basedir, sys.argv[0], sizeof(fs_basedir));
+			dp_strlcpy(fs_basedir, sys.argv[0], sizeof(fs_basedir));
 			split = strstr(fs_basedir, ".app/");
 			if (split)
 			{
@@ -2152,7 +2152,7 @@ static void FS_Init_Dir (void)
 				if (stat(va(vabuf, sizeof(vabuf), "%s/Contents/Resources/%s", fs_basedir, gamedirname1), &statresult) == 0)
 				{
 					// found gamedir inside Resources, use it
-					strlcat(fs_basedir, "Contents/Resources/", sizeof(fs_basedir));
+					dp_strlcat(fs_basedir, "Contents/Resources/", sizeof(fs_basedir));
 				}
 				else
 				{
@@ -2171,7 +2171,7 @@ static void FS_Init_Dir (void)
 	memset(fs_basedir + sizeof(fs_basedir) - 2, 0, 2);
 	// add a path separator to the end of the basedir if it lacks one
 	if (fs_basedir[0] && fs_basedir[strlen(fs_basedir) - 1] != '/' && fs_basedir[strlen(fs_basedir) - 1] != '\\')
-		strlcat(fs_basedir, "/", sizeof(fs_basedir));
+		dp_strlcat(fs_basedir, "/", sizeof(fs_basedir));
 
 	// Add the personal game directory
 	if((i = Sys_CheckParm("-userdir")) && i < sys.argc - 1)
@@ -2181,7 +2181,7 @@ static void FS_Init_Dir (void)
 	else
 	{
 #ifdef DP_FS_USERDIR
-		strlcpy(fs_userdir, DP_FS_USERDIR, sizeof(fs_userdir));
+		dp_strlcpy(fs_userdir, DP_FS_USERDIR, sizeof(fs_userdir));
 #else
 		int dirmode;
 		int highestuserdirmode = USERDIRMODE_COUNT - 1;
@@ -2259,7 +2259,7 @@ static void FS_Init_Dir (void)
 			if(p == fs_checkgamedir_missing)
 				Con_Printf(CON_WARN "WARNING: -game %s%s/ not found!\n", fs_basedir, sys.argv[i]);
 			// add the gamedir to the list of active gamedirs
-			strlcpy (fs_gamedirs[fs_numgamedirs], sys.argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
+			dp_strlcpy (fs_gamedirs[fs_numgamedirs], sys.argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
 			fs_numgamedirs++;
 		}
 	}
@@ -3628,7 +3628,7 @@ void FS_DefaultExtension (char *path, const char *extension, size_t size_path)
 		src--;
 	}
 
-	strlcat (path, extension, size_path);
+	dp_strlcat (path, extension, size_path);
 }
 
 
@@ -3774,7 +3774,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 			for (i = 0;i < pak->numfiles;i++)
 			{
 				char temp[MAX_OSPATH];
-				strlcpy(temp, pak->files[i].name, sizeof(temp));
+				dp_strlcpy(temp, pak->files[i].name, sizeof(temp));
 				while (temp[0])
 				{
 					if (matchpattern(temp, (char *)pattern, true))
@@ -3846,7 +3846,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 
 				// prevseparator points past the '/' right before the wildcard and nextseparator at the one following it (or at the end of the string)
 				// copy everything up except nextseperator
-				strlcpy(subpattern, pattern, min(sizeof(subpattern), (size_t) (nextseparator - pattern + 1)));
+				dp_ustr2stp(subpattern, sizeof(subpattern), pattern, nextseparator - pattern);
 				// find the last '/' before the wildcard
 				prevseparator = strrchr( subpattern, '/' );
 				if (!prevseparator)
@@ -3855,13 +3855,13 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet, const
 					prevseparator++;
 				// copy everything from start to the previous including the '/' (before the wildcard)
 				// everything up to start is already included in the path of matchedSet's entries
-				strlcpy(subpath, start, min(sizeof(subpath), (size_t) ((prevseparator - subpattern) - (start - pattern) + 1)));
+				dp_ustr2stp(subpath, sizeof(subpath), start, (prevseparator - subpattern) - (start - pattern));
 
 				// for each entry in matchedSet try to open the subdirectories specified in subpath
 				for( dirlistindex = 0 ; dirlistindex < matchedSet.numstrings ; dirlistindex++ ) {
 					char temp[MAX_OSPATH];
-					strlcpy( temp, matchedSet.strings[ dirlistindex ], sizeof(temp) );
-					strlcat( temp, subpath, sizeof(temp) );
+					dp_strlcpy( temp, matchedSet.strings[ dirlistindex ], sizeof(temp) );
+					dp_strlcat( temp, subpath, sizeof(temp) );
 					listdirectory( &foundSet, searchpath->filename, temp );
 				}
 				if( dirlistindex == 0 ) {

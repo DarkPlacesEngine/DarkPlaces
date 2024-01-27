@@ -333,7 +333,7 @@ ConBuffer_AddLine
 Appends a given string as a new line to the console.
 ================
 */
-void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
+void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, unsigned mask)
 {
 	char *putpos;
 	con_lineinfo_t *p;
@@ -367,7 +367,7 @@ void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask)
 	p->height = -1; // calculate when needed
 }
 
-int ConBuffer_FindPrevLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start)
+int ConBuffer_FindPrevLine(conbuffer_t *buf, unsigned mask_must, unsigned mask_mustnot, int start)
 {
 	int i;
 	if(start == -1)
@@ -391,8 +391,8 @@ const char *ConBuffer_GetLine(conbuffer_t *buf, int i)
 {
 	static char copybuf[MAX_INPUTLINE]; // client only
 	con_lineinfo_t *l = &CONBUFFER_LINES(buf, i);
-	size_t sz = l->len+1 > sizeof(copybuf) ? sizeof(copybuf) : l->len+1;
-	strlcpy(copybuf, l->start, sz);
+
+	dp_ustr2stp(copybuf, sizeof(copybuf), l->start, l->len);
 	return copybuf;
 }
 
@@ -512,7 +512,7 @@ static void Log_Open (void)
 	logfile = FS_OpenRealFile(log_file.string, "a", false);
 	if (logfile != NULL)
 	{
-		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
+		dp_strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
 		FS_Print (logfile, Log_Timestamp ("Log started"));
 	}
 }
@@ -719,8 +719,9 @@ static void Con_MsgCmdMode(cmd_state_t *cmd, signed char mode)
 	chat_mode = mode;
 	if(Cmd_Argc(cmd) > 1)
 	{
-		dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
-		chat_bufferpos = (unsigned int)strlen(chat_buffer);
+		chat_bufferpos = dpsnprintf(chat_buffer, sizeof(chat_buffer), "%s ", Cmd_Args(cmd));
+		if (chat_bufferpos < 0)
+			chat_bufferpos = 0;
 	}
 }
 
@@ -1150,10 +1151,10 @@ Con_MaskPrint
 */
 extern cvar_t timestamps;
 extern cvar_t timeformat;
-void Con_MaskPrint(int additionalmask, const char *msg)
+void Con_MaskPrint(unsigned additionalmask, const char *msg)
 {
-	static int mask = 0;
-	static int index = 0;
+	static unsigned mask = 0;
+	static unsigned index = 0;
 	static char line[MAX_INPUTLINE];
 
 	if (con_mutex)
@@ -1355,12 +1356,12 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 						*out++ = '[';
 						*out++ = 'm';
 					}
-					*out++ = 0;
-					Sys_Print(printline);
+					*out = '\0';
+					Sys_Print(printline, out - printline);
 				}
 				else if(sys_colortranslation.integer == 2) // Quake
 				{
-					Sys_Print(line);
+					Sys_Print(line, index);
 				}
 				else // strip
 				{
@@ -1410,8 +1411,8 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 								break;
 						}
 					}
-					*out++ = 0;
-					Sys_Print(printline);
+					*out = '\0';
+					Sys_Print(printline, out - printline);
 				}
 			}
 			// empty the line buffer
@@ -1429,7 +1430,7 @@ void Con_MaskPrint(int additionalmask, const char *msg)
 Con_MaskPrintf
 ================
 */
-void Con_MaskPrintf(int mask, const char *fmt, ...)
+void Con_MaskPrintf(unsigned mask, const char *fmt, ...)
 {
 	va_list argptr;
 	char msg[MAX_INPUTLINE];
@@ -1536,7 +1537,7 @@ static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 	{
 		// empty prefix because ] is part of the console edit line
 		prefix = "";
-		strlcpy(text, key_line, sizeof(text));
+		dp_strlcpy(text, key_line, sizeof(text));
 		linepos = key_linepos;
 		fnt = FONT_CONSOLE;
 	}
@@ -1548,7 +1549,7 @@ static void Con_DrawInput(qbool is_console, float x, float v, float inputsize)
 			prefix = "say_team:";
 		else
 			prefix = "say:";
-		strlcpy(text, chat_buffer, sizeof(text));
+		dp_strlcpy(text, chat_buffer, sizeof(text));
 		linepos = chat_bufferpos;
 		fnt = FONT_CHAT;
 	}
@@ -1699,7 +1700,7 @@ static int Con_DisplayLineFunc(void *passthrough, const char *line, size_t lengt
 	return 1;
 }
 
-static int Con_DrawNotifyRect(int mask_must, int mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
+static int Con_DrawNotifyRect(unsigned mask_must, unsigned mask_mustnot, float maxage, float x, float y, float width, float height, float fontsize, float alignment_x, float alignment_y, const char *continuationString)
 {
 	int i;
 	int lines = 0;
@@ -1900,7 +1901,7 @@ If alpha is 0, the line is not drawn, but still wrapped and its height
 returned.
 ================
 */
-static int Con_DrawConsoleLine(int mask_must, int mask_mustnot, float y, int lineno, float ymin, float ymax)
+static int Con_DrawConsoleLine(unsigned mask_must, unsigned mask_mustnot, float y, int lineno, float ymin, float ymax)
 {
 	float width = vid_conwidth.value;
 	con_text_info_t ti;
@@ -1932,7 +1933,7 @@ Calculates the last visible line index and how much to show of it based on
 con_backscroll.
 ================
 */
-static void Con_LastVisibleLine(int mask_must, int mask_mustnot, int *last, int *limitlast)
+static void Con_LastVisibleLine(unsigned mask_must, unsigned mask_mustnot, int *last, int *limitlast)
 {
 	int lines_seen = 0;
 	int i;
@@ -2149,12 +2150,12 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 		char entfilename[MAX_QPATH];
 		char desc[64];
 		desc[0] = 0;
-		strlcpy(message, "^1ERROR: open failed^7", sizeof(message));
+		dp_strlcpy(message, "^1ERROR: open failed^7", sizeof(message));
 		p = 0;
 		f = FS_OpenVirtualFile(t->filenames[i], true);
 		if(f)
 		{
-			strlcpy(message, "^1ERROR: not a known map format^7", sizeof(message));
+			dp_strlcpy(message, "^1ERROR: not a known map format^7", sizeof(message));
 			memset(buf, 0, 1024);
 			FS_Read(f, buf, 1024);
 			if (!memcmp(buf, "IBSP", 4))
@@ -2210,7 +2211,7 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 			}
 			else
 				dpsnprintf(desc, sizeof(desc), "unknown%i", BuffLittleLong(buf));
-			strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
+			dp_strlcpy(entfilename, t->filenames[i], sizeof(entfilename));
 			memcpy(entfilename + strlen(entfilename) - 4, ".ent", 5);
 			entities = (char *)FS_LoadFile(entfilename, tempmempool, true, NULL);
 			if (!entities && lumplen >= 10)
@@ -2246,7 +2247,7 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 					if (!strcmp(keyname, "message"))
 					{
 						// get the message contents
-						strlcpy(message, com_token, sizeof(message));
+						dp_strlcpy(message, com_token, sizeof(message));
 						break;
 					}
 				}
@@ -2455,10 +2456,10 @@ static int Nicks_CompleteCountPossible(char *line, int pos, char *s, qbool isCon
 		if(match < 0)
 			continue;
 		//Con_Printf("Possible match: %s|%s\n", cl.scores[p].name, name);
-		strlcpy(Nicks_list[count], cl.scores[p].name, sizeof(Nicks_list[count]));
+		dp_strlcpy(Nicks_list[count], cl.scores[p].name, sizeof(Nicks_list[count]));
 
 		// the sanitized list
-		strlcpy(Nicks_sanlist[count], name, sizeof(Nicks_sanlist[count]));
+		dp_strlcpy(Nicks_sanlist[count], name, sizeof(Nicks_sanlist[count]));
 		if(!count)
 		{
 			Nicks_matchpos = match;
@@ -2572,7 +2573,7 @@ static void Nicks_CutMatchesAlphaNumeric(int count)
 	if(Nicks_strcleanlen(Nicks_sanlist[0]) < strlen(tempstr))
 	{
 		// if the clean sanitized one is longer than the current one, use it, it has crap chars which definitely are in there
-		strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
+		dp_strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
 	}
 }
 
@@ -2628,7 +2629,7 @@ static void Nicks_CutMatchesNoSpaces(int count)
 	if(Nicks_strcleanlen(Nicks_sanlist[0]) < strlen(tempstr))
 	{
 		// if the clean sanitized one is longer than the current one, use it, it has crap chars which definitely are in there
-		strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
+		dp_strlcpy(Nicks_sanlist[0], tempstr, sizeof(Nicks_sanlist[0]));
 	}
 }
 
@@ -2775,7 +2776,7 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 	pos++;
 
 	s = line + pos;
-	strlcpy(s2, line + linepos, sizeof(s2)); //save chars after cursor
+	dp_strlcpy(s2, line + linepos, sizeof(s2)); //save chars after cursor
 	line[linepos] = 0; //hide them
 
 	c = v = a = n = cmd_len = 0;
@@ -2785,7 +2786,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 	space = strchr(line + 1, ' ');
 	if(space && pos == (space - line) + 1)
 	{
-		strlcpy(command, line + 1, min(sizeof(command), (unsigned int)(space - line)));
+		// adding 1 to line drops the leading ]
+		dp_ustr2stp(command, sizeof(command), line + 1, space - (line + 1));
 
 		patterns = Cvar_VariableString(cmd->cvars, va(vabuf, sizeof(vabuf), "con_completion_%s", command), CF_CLIENT | CF_SERVER); // TODO maybe use a better place for this?
 		if(patterns && !*patterns)
@@ -2802,8 +2804,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 
 				// and now do the actual work
 				*s = 0;
-				strlcat(line, t, MAX_INPUTLINE);
-				strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
+				dp_strlcat(line, t, MAX_INPUTLINE);
+				dp_strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 				// and fix the cursor
 				if(linepos > (int) strlen(line))
@@ -2851,8 +2853,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 						const char *slash = strrchr(s, '/');
 						if(slash)
 						{
-							strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
-							strlcat(t, com_token, sizeof(t));
+							dp_strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
+							dp_strlcat(t, com_token, sizeof(t));
 							search = FS_Search(t, true, true, NULL);
 						}
 						else
@@ -2874,8 +2876,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 					const char *slash = strrchr(s, '/');
 					if(slash)
 					{
-						strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
-						strlcat(t, "*", sizeof(t));
+						dp_strlcpy(t, s, min(sizeof(t), (unsigned int)(slash - s + 2))); // + 2, because I want to include the slash
+						dp_strlcat(t, "*", sizeof(t));
 						search = FS_Search(t, true, true, NULL);
 					}
 					else
@@ -2934,7 +2936,7 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 						// of resultbuf.strings[0]. We want to append the characters
 						// from resultbuf.strings[0] to (not including) p as these are
 						// the unique prefix
-						strlcpy(t, (resultbuf.numstrings > 0 ? resultbuf : dirbuf).strings[0], min(matchchars + 1, sizeof(t)));
+						dp_strlcpy(t, (resultbuf.numstrings > 0 ? resultbuf : dirbuf).strings[0], min(matchchars + 1, sizeof(t)));
 					}
 
 					// first move the cursor
@@ -2942,8 +2944,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 
 					// and now do the actual work
 					*s = 0;
-					strlcat(line, t, MAX_INPUTLINE);
-					strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
+					dp_strlcat(line, t, MAX_INPUTLINE);
+					dp_strlcat(line, s2, MAX_INPUTLINE); //add back chars after cursor
 
 					// and fix the cursor
 					if(linepos > (int) strlen(line))
@@ -2988,7 +2990,7 @@ nicks:
 	if (!(c + v + a + n))	// No possible matches
 	{
 		if(s2[0])
-			strlcpy(&line[linepos], s2, linesize - linepos);
+			dp_strlcpy(&line[linepos], s2, linesize - linepos);
 		return linepos;
 	}
 
@@ -3051,7 +3053,7 @@ done:
 
 	// use strlcat to avoid a buffer overrun
 	line[linepos] = 0;
-	strlcat(line, s2, linesize);
+	dp_strlcat(line, s2, linesize);
 
 	if (!is_console)
 		return linepos;

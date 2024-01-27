@@ -1291,7 +1291,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	glt = (gltexture_t *)Mem_ExpandableArray_AllocRecord(&texturearray);
 	if (identifier)
-		strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
+		dp_strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;
@@ -1382,7 +1382,7 @@ rtexture_t *R_LoadTextureRenderBuffer(rtexturepool_t *rtexturepool, const char *
 
 	glt = (gltexture_t *)Mem_ExpandableArray_AllocRecord(&texturearray);
 	if (identifier)
-		strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
+		dp_strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;
@@ -1686,7 +1686,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 
 			texinfo = R_GetTexTypeInfo(textype, flags);
 
-			strlcpy (glt->identifier, vabuf, sizeof(glt->identifier));
+			dp_strlcpy(glt->identifier, vabuf, sizeof(glt->identifier));
 			glt->pool = pool;
 			glt->chain = pool->gltchain;
 			pool->gltchain = glt;
@@ -2164,7 +2164,7 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 	texinfo = R_GetTexTypeInfo(textype, flags);
 
 	glt = (gltexture_t *)Mem_ExpandableArray_AllocRecord(&texturearray);
-	strlcpy (glt->identifier, filename, sizeof(glt->identifier));
+	dp_strlcpy (glt->identifier, filename, sizeof(glt->identifier));
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;

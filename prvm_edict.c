@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "progsvm.h"
 #include "csprogs.h"
+#include "prvm_cmds.h"
 
 prvm_prog_t prvm_prog_list[PRVM_PROG_MAX];
 
@@ -220,8 +221,9 @@ const char *PRVM_AllocationOrigin(prvm_prog_t *prog)
 	if(prog->leaktest_active)
 	if(prog->depth > 0) // actually in QC code and not just parsing the entities block of a map/savegame
 	{
-		buf = (char *)PRVM_Alloc(256);
-		PRVM_ShortStackTrace(prog, buf, 256);
+		// bones_was_here: this is the smallest 64 multiple that avoids truncation in Xonotic (was 256)
+		buf = (char *)PRVM_Alloc(448);
+		PRVM_ShortStackTrace(prog, buf, 448);
 	}
 	return buf;
 }
@@ -448,7 +450,7 @@ static char *PRVM_ValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val
 	switch (type)
 	{
 	case ev_string:
-		strlcpy (line, PRVM_GetString (prog, val->string), linelength);
+		dp_strlcpy (line, PRVM_GetString (prog, val->string), linelength);
 		break;
 	case ev_entity:
 		n = val->edict;
@@ -555,7 +557,7 @@ char *PRVM_UglyValueString (prvm_prog_t *prog, etype_t type, prvm_eval_t *val, c
 		if ((unsigned int)val->function < (unsigned int)prog->progs_numfunctions)
 		{
 			f = prog->functions + val->function;
-			strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
+			dp_strlcpy (line, PRVM_GetString (prog, f->s_name), linelength);
 		}
 		else
 			dpsnprintf (line, linelength, "bad function %" PRVM_PRIi " (invalid!)", val->function);
@@ -697,10 +699,10 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
 		for (l = strlen(name);l < 14;l++)
-			strlcat(tempstring, " ", sizeof(tempstring));
-		strlcat(tempstring, " ", sizeof(tempstring));
+			dp_strlcat(tempstring, " ", sizeof(tempstring));
+		dp_strlcat(tempstring, " ", sizeof(tempstring));
 
 		name = PRVM_ValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf));
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -710,8 +712,8 @@ void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fie
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
-		strlcat(tempstring, "\n", sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
@@ -946,7 +948,7 @@ void PRVM_ED_ParseGlobals (prvm_prog_t *prog, const char *data)
 		if (developer_entityparsing.integer)
 			Con_Printf("Key: \"%s\"", com_token);
 
-		strlcpy (keyname, com_token, sizeof(keyname));
+		dp_strlcpy (keyname, com_token, sizeof(keyname));
 
 		// parse value
 		if (!COM_ParseToken_Simple(&data, false, true, true))
@@ -1122,7 +1124,7 @@ static void PRVM_GameCommand(cmd_state_t *cmd, const char *whichprogs, const cha
 		s = Cmd_Args(cmd);
 
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s ? s : "");
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, s ? s : "", s ? strlen(s) : 0);
 		prog->ExecuteProgram(prog, PRVM_allfunction(GameCommand), "QC function GameCommand is missing");
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
@@ -1296,7 +1298,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		// and allow them to be turned into vectors. (FIXME...)
 		if (!strcmp(com_token, "angle"))
 		{
-			strlcpy (com_token, "angles", sizeof(com_token));
+			dp_strlcpy (com_token, "angles", sizeof(com_token));
 			anglehack = true;
 		}
 		else
@@ -1304,9 +1306,9 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 
 		// FIXME: change light to _light to get rid of this hack
 		if (!strcmp(com_token, "light"))
-			strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
+			dp_strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
 
-		strlcpy (keyname, com_token, sizeof(keyname));
+		dp_strlcpy (keyname, com_token, sizeof(keyname));
 
 		// another hack to fix keynames with trailing spaces
 		n = strlen(keyname);
@@ -1346,7 +1348,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		if (anglehack)
 		{
 			char	temp[32];
-			strlcpy (temp, com_token, sizeof(temp));
+			dp_strlcpy (temp, com_token, sizeof(temp));
 			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
@@ -1852,7 +1854,8 @@ static po_t *PRVM_PO_Load(const char *filename, const char *filename2, mempool_t
 					break;
 				if((size_t)(q - p) >= (size_t) sizeof(inbuf))
 					break;
-				strlcpy(inbuf, p, q - p); // not - 1, because this adds a NUL
+				memcpy(inbuf, p, q - p - 1);
+				inbuf[q - p - 1] = '\0';
 				PRVM_PO_ParseString(decodedbuf + decodedpos, inbuf, sizeof(decodedbuf) - decodedpos);
 				decodedpos += strlen(decodedbuf + decodedpos);
 				if(*q == '\r')
@@ -1947,7 +1950,7 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 	char filename[512];
 
 	FS_StripExtension( progname, filename, sizeof( filename ) );
-	strlcat( filename, ".lno", sizeof( filename ) );
+	dp_strlcat( filename, ".lno", sizeof( filename ) );
 
 	lno = FS_LoadFile( filename, tempmempool, false, &filesize );
 	if( !lno ) {
@@ -2782,32 +2785,32 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 		switch(d->type & ~DEF_SAVEGLOBAL)
 		{
 		case ev_string:
-			strlcat(tempstring, "string   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "string   ", sizeof(tempstring));
 			break;
 		case ev_entity:
-			strlcat(tempstring, "entity   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "entity   ", sizeof(tempstring));
 			break;
 		case ev_function:
-			strlcat(tempstring, "function ", sizeof(tempstring));
+			dp_strlcat(tempstring, "function ", sizeof(tempstring));
 			break;
 		case ev_field:
-			strlcat(tempstring, "field    ", sizeof(tempstring));
+			dp_strlcat(tempstring, "field    ", sizeof(tempstring));
 			break;
 		case ev_void:
-			strlcat(tempstring, "void     ", sizeof(tempstring));
+			dp_strlcat(tempstring, "void     ", sizeof(tempstring));
 			break;
 		case ev_float:
-			strlcat(tempstring, "float    ", sizeof(tempstring));
+			dp_strlcat(tempstring, "float    ", sizeof(tempstring));
 			break;
 		case ev_vector:
-			strlcat(tempstring, "vector   ", sizeof(tempstring));
+			dp_strlcat(tempstring, "vector   ", sizeof(tempstring));
 			break;
 		case ev_pointer:
-			strlcat(tempstring, "pointer  ", sizeof(tempstring));
+			dp_strlcat(tempstring, "pointer  ", sizeof(tempstring));
 			break;
 		default:
 			dpsnprintf (tempstring2, sizeof(tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
-			strlcat(tempstring, tempstring2, sizeof(tempstring));
+			dp_strlcat(tempstring, tempstring2, sizeof(tempstring));
 			break;
 		}
 		if (strlen(name) > sizeof(tempstring2)-4)
@@ -2817,12 +2820,12 @@ static void PRVM_Fields_f(cmd_state_t *cmd)
 			tempstring2[sizeof(tempstring2)-1] = 0;
 			name = tempstring2;
 		}
-		strlcat(tempstring, name, sizeof(tempstring));
+		dp_strlcat(tempstring, name, sizeof(tempstring));
 		for (j = (int)strlen(name);j < 25;j++)
-			strlcat(tempstring, " ", sizeof(tempstring));
+			dp_strlcat(tempstring, " ", sizeof(tempstring));
 		dpsnprintf(tempstring2, sizeof(tempstring2), "%5d", counts[i]);
-		strlcat(tempstring, tempstring2, sizeof(tempstring));
-		strlcat(tempstring, "\n", sizeof(tempstring));
+		dp_strlcat(tempstring, tempstring2, sizeof(tempstring));
+		dp_strlcat(tempstring, "\n", sizeof(tempstring));
 		if (strlen(tempstring) >= sizeof(tempstring)/2)
 		{
 			Con_Print(tempstring);
@@ -3073,7 +3076,7 @@ static void PRVM_Breakpoint_f(cmd_state_t *cmd)
 
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
-		strlcpy(debug->break_statement, Cmd_Argv(cmd, 2), sizeof(debug->break_statement));
+		dp_strlcpy(debug->break_statement, Cmd_Argv(cmd, 2), sizeof(debug->break_statement));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }
@@ -3102,7 +3105,7 @@ static void PRVM_GlobalWatchpoint_f(cmd_state_t *cmd)
 
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
-		strlcpy(debug->watch_global, Cmd_Argv(cmd, 2), sizeof(debug->watch_global));
+		dp_strlcpy(debug->watch_global, Cmd_Argv(cmd, 2), sizeof(debug->watch_global));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }
@@ -3132,7 +3135,7 @@ static void PRVM_EdictWatchpoint_f(cmd_state_t *cmd)
 	{
 		debug_data_t *debug = &debug_data[prog - prvm_prog_list];
 		debug->watch_edict = atoi(Cmd_Argv(cmd, 2));
-		strlcpy(debug->watch_field, Cmd_Argv(cmd, 3), sizeof(debug->watch_field));
+		dp_strlcpy(debug->watch_field, Cmd_Argv(cmd, 3), sizeof(debug->watch_field));
 	}
 	PRVM_UpdateBreakpoints(prog);
 }
@@ -3365,23 +3368,23 @@ int PRVM_SetEngineString(prvm_prog_t *prog, const char *s)
 //  restores it on return, so multiple recursive calls can share the same
 //  buffer)
 // the buffer size is automatically grown as needed
-
-int PRVM_SetTempString(prvm_prog_t *prog, const char *s)
+int PRVM_SetTempString(prvm_prog_t *prog, const char *s, size_t slen)
 {
-	int size;
+	size_t size;
 	char *t;
-	if (!s)
+
+	if (!s || slen >= VM_TEMPSTRING_MAXSIZE)
 		return 0;
-	size = (int)strlen(s) + 1;
+	size = slen + 1;
 	if (developer_insane.integer)
-		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %i\n", prog->name, prog->tempstringsbuf.cursize, size);
-	if (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
+		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %zu\n", prog->name, prog->tempstringsbuf.cursize, size);
+	if ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = prog->tempstringsbuf;
 		if (prog->tempstringsbuf.cursize + size >= 1<<28)
-			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %i)\n", prog->name, prog->tempstringsbuf.cursize, size);
+			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %zu)\n", prog->name, prog->tempstringsbuf.cursize, size);
 		prog->tempstringsbuf.maxsize = max(prog->tempstringsbuf.maxsize, 65536);
-		while (prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
+		while ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 			prog->tempstringsbuf.maxsize *= 2;
 		if (prog->tempstringsbuf.maxsize != old.maxsize || prog->tempstringsbuf.data == NULL)
 		{

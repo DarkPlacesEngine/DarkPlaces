@@ -20,33 +20,34 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "darkplaces.h"
 
-char *InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuelength)
+size_t InfoString_GetValue(const char *buffer, const char *key, char *value, size_t valuesize)
 {
-	int pos = 0, j;
+	unsigned pos = 0, j;
 	size_t keylength;
+
 	if (!key)
 		key = "";
 	keylength = strlen(key);
-	if (valuelength < 1 || !value)
+	if (valuesize < 1 || !value)
 	{
 		Con_Printf("InfoString_GetValue: no room in value\n");
-		return NULL;
+		return 0;
 	}
-	value[0] = 0;
+	value[0] = '\0';
 	if (strchr(key, '\\'))
 	{
 		Con_Printf("InfoString_GetValue: key name \"%s\" contains \\ which is not possible in an infostring\n", key);
-		return NULL;
+		return 0;
 	}
 	if (strchr(key, '\"'))
 	{
 		Con_Printf("InfoString_SetValue: key name \"%s\" contains \" which is not allowed in an infostring\n", key);
-		return NULL;
+		return 0;
 	}
 	if (!key[0])
 	{
 		Con_Printf("InfoString_GetValue: can not look up a key with no name\n");
-		return NULL;
+		return 0;
 	}
 	while (buffer[pos] == '\\')
 	{
@@ -54,12 +55,12 @@ char *InfoString_GetValue(const char *buffer, const char *key, char *value, size
 				(buffer[pos+1 + keylength] == 0 ||
 				 buffer[pos+1 + keylength] == '\\'))
 		{
-			pos += 1 + (int)keylength;           // Skip \key
+			pos += 1 + keylength;           // Skip \key
 			if (buffer[pos] == '\\') pos++; // Skip \ before value.
-			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < (int)valuelength - 1;j++)
+			for (j = 0;buffer[pos+j] && buffer[pos+j] != '\\' && j < valuesize - 1;j++)
 				value[j] = buffer[pos+j];
-			value[j] = 0;
-			return value;
+			value[j] = '\0';
+			return j;
 		}
 		if (buffer[pos] == '\\') pos++; // Skip \ before value.
 		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
@@ -67,7 +68,7 @@ char *InfoString_GetValue(const char *buffer, const char *key, char *value, size
 		for (pos++;buffer[pos] && buffer[pos] != '\\';pos++);
 	}
 	// if we reach this point the key was not found
-	return NULL;
+	return 0;
 }
 
 void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, const char *value)
@@ -122,13 +123,13 @@ void InfoString_SetValue(char *buffer, size_t bufferlength, const char *key, con
 	{
 		// set the key/value and append the remaining text
 		char tempbuffer[MAX_INPUTLINE];
-		strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
+		dp_strlcpy(tempbuffer, buffer + pos2, sizeof(tempbuffer));
 		dpsnprintf(buffer + pos, bufferlength - pos, "\\%s\\%s%s", key, value, tempbuffer);
 	}
 	else
 	{
 		// just remove the key from the text
-		strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
+		dp_strlcpy(buffer + pos, buffer + pos2, bufferlength - pos);
 	}
 }
 

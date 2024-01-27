@@ -348,6 +348,7 @@ void CL_Record_f(cmd_state_t *cmd)
 	int c, track;
 	char name[MAX_OSPATH];
 	char vabuf[1024];
+	int vabuf_len;
 
 	c = Cmd_Argc(cmd);
 	if (c != 2 && c != 3 && c != 4)
@@ -381,12 +382,15 @@ void CL_Record_f(cmd_state_t *cmd)
 		track = -1;
 
 	// get the demo name
-	strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
+	dp_strlcpy (name, Cmd_Argv(cmd, 1), sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 
 	// start the map up
 	if (c > 2)
-		Cmd_ExecuteString ( cmd, va(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2)), src_local, false);
+	{
+		vabuf_len = dpsnprintf(vabuf, sizeof(vabuf), "map %s", Cmd_Argv(cmd, 2));
+		Cmd_ExecuteString(cmd, vabuf, vabuf_len, src_local, false);
+	}
 
 	// open the demo file
 	Con_Printf("recording to %s.\n", name);
@@ -396,7 +400,7 @@ void CL_Record_f(cmd_state_t *cmd)
 		Con_Print(CON_ERROR "ERROR: couldn't open.\n");
 		return;
 	}
-	strlcpy(cls.demoname, name, sizeof(cls.demoname));
+	dp_strlcpy(cls.demoname, name, sizeof(cls.demoname));
 
 	cls.forcetrack = track;
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
@@ -414,7 +418,7 @@ void CL_PlayDemo(const char *demo)
 	qfile_t *f;
 
 	// open the demo file
-	strlcpy (name, demo, sizeof (name));
+	dp_strlcpy (name, demo, sizeof (name));
 	FS_DefaultExtension (name, ".dem", sizeof (name));
 	f = FS_OpenVirtualFile(name, false);
 	if (!f)
@@ -436,7 +440,7 @@ void CL_PlayDemo(const char *demo)
 
 	Con_Printf("Playing demo %s.\n", name);
 	cls.demofile = f;
-	strlcpy(cls.demoname, name, sizeof(cls.demoname));
+	dp_strlcpy(cls.demoname, name, sizeof(cls.demoname));
 
 	cls.demoplayback = true;
 	cls.state = ca_connected;
@@ -662,7 +666,7 @@ static void CL_Startdemos_f(cmd_state_t *cmd)
 	Con_DPrintf("%i demo(s) in loop\n", c);
 
 	for (i=1 ; i<c+1 ; i++)
-		strlcpy (cls.demos[i-1], Cmd_Argv(cmd, i), sizeof (cls.demos[i-1]));
+		dp_strlcpy (cls.demos[i-1], Cmd_Argv(cmd, i), sizeof (cls.demos[i-1]));
 
 	// LadyHavoc: clear the remaining slots
 	for (;i <= MAX_DEMOS;i++)

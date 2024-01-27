@@ -434,14 +434,15 @@ void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 	mfunction_t	*f;
 	int			i;
 	char vabuf[1024];
+	char *p;
 
 	if(prog)
 	{
-		dpsnprintf(buf, bufsize, "(%s) ", prog->name);
+		p = buf + max(0, dpsnprintf(buf, bufsize, "(%s) ", prog->name));
 	}
 	else
 	{
-		strlcpy(buf, "<NO PROG>", bufsize);
+		dp_strlcpy(buf, "<NO PROG>", bufsize);
 		return;
 	}
 
@@ -450,13 +451,14 @@ void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize)
 	for (i = prog->depth;i > 0;i--)
 	{
 		f = prog->stack[i].f;
-
-		if(strlcat(buf,
+		p = dp_stpecpy(
+			p,
+			buf + bufsize,
 			f
 				? va(vabuf, sizeof(vabuf), "%s:%s(%i) ", PRVM_GetString(prog, f->s_file), PRVM_GetString(prog, f->s_name), prog->stack[i].s - f->first_statement)
-				: "<NULL> ",
-			bufsize
-		) >= bufsize)
+				: "<NULL> "
+			);
+		if (p == buf + bufsize)
 			break;
 	}
 }

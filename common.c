@@ -37,6 +37,7 @@ cvar_t cl_playermodel = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "play
 cvar_t cl_playerskin = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "playerskin", "", "current player skin in Nexuiz/Xonotic"};
 
 char com_token[MAX_INPUTLINE];
+unsigned com_token_len;
 
 //===========================================================================
 
@@ -456,16 +457,17 @@ int COM_Wordwrap(const char *string, size_t length, float continuationWidth, flo
 COM_ParseToken_Simple
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
+qbool COM_ParseToken_Simple(const char **datapointer, qbool returnnewline, qbool parsebackslash, qbool parsecomments)
 {
 	int len;
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -530,7 +532,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == '\"')
 			data++;
 		*datapointer = data;
@@ -540,7 +543,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -548,7 +552,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -558,7 +563,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -569,16 +575,17 @@ skipwhite:
 COM_ParseToken_QuakeC
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
+qbool COM_ParseToken_QuakeC(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -644,7 +651,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == quote)
 			data++;
 		*datapointer = data;
@@ -654,7 +662,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -662,7 +671,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -672,7 +682,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -683,16 +694,17 @@ skipwhite:
 COM_ParseToken_VM_Tokenize
 
 Parse a token out of a string
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
+qbool COM_ParseToken_VM_Tokenize(const char **datapointer, qbool returnnewline)
 {
 	int len;
 	int c;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -758,7 +770,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = c;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == quote)
 			data++;
 		*datapointer = data;
@@ -768,7 +781,8 @@ skipwhite:
 	{
 		// translate Mac line ending to UNIX
 		com_token[len++] = '\n';data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -776,7 +790,8 @@ skipwhite:
 	{
 		// single character
 		com_token[len++] = *data++;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -786,7 +801,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data) && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != ':' && *data != ',' && *data != ';';data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 		return true;
 	}
@@ -797,15 +813,16 @@ skipwhite:
 COM_ParseToken_Console
 
 Parse a token out of a string, behaving like the qwcl console
+Writes the token and its strlen to the com_token and com_token_len globals.
 ==============
 */
-int COM_ParseToken_Console(const char **datapointer)
+qbool COM_ParseToken_Console(const char **datapointer)
 {
 	int len;
 	const char *data = *datapointer;
 
-	len = 0;
-	com_token[0] = 0;
+	com_token_len = len = 0;
+	com_token[0] = '\0';
 
 	if (!data)
 	{
@@ -843,7 +860,8 @@ skipwhite:
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
 		}
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		if (*data == '\"')
 			data++;
 		*datapointer = data;
@@ -854,7 +872,8 @@ skipwhite:
 		for (;!ISWHITESPACE(*data);data++)
 			if (len < (int)sizeof(com_token) - 1)
 				com_token[len++] = *data;
-		com_token[len] = 0;
+		com_token[len] = '\0';
+		com_token_len = len;
 		*datapointer = data;
 	}
 
@@ -1000,6 +1019,11 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 	if (result < 0 || (size_t)result >= buffersize)
 	{
 		buffer[buffersize - 1] = '\0';
+		// we could be inside Con_Printf
+		if (result < 0)
+			Sys_Printf("dpvsnprintf: output error, buffer size %zu\n", buffersize);
+		else
+			Sys_Printf("dpvsnprintf: truncated to %zu bytes: \"%s\"\n", buffersize - 1, buffer);
 		return -1;
 	}
 
@@ -1009,10 +1033,12 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 
 //======================================
 
-void COM_ToLowerString (const char *in, char *out, size_t size_out)
+size_t COM_ToLowerString(const char *in, char *out, size_t size_out)
 {
+	const char *out_start = out;
+
 	if (size_out == 0)
-		return;
+		return 0;
 
 	if(utf8_enable.integer)
 	{
@@ -1023,12 +1049,12 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 			Uchar ch = u8_getchar_utf8_enabled(in, &in);
 			ch = u8_tolower(ch);
 			n = u8_fromchar(ch, out, size_out);
+			out += n; // before the break so the return is correct
 			if(n <= 0)
 				break;
-			out += n;
 			size_out -= n;
 		}
-		return;
+		return out - out_start;
 	}
 
 	while (*in && size_out > 1)
@@ -1040,12 +1066,15 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out)
 		size_out--;
 	}
 	*out = '\0';
+	return out - out_start;
 }
 
-void COM_ToUpperString (const char *in, char *out, size_t size_out)
+size_t COM_ToUpperString(const char *in, char *out, size_t size_out)
 {
+	const char *out_start = out;
+
 	if (size_out == 0)
-		return;
+		return 0;
 
 	if(utf8_enable.integer)
 	{
@@ -1056,12 +1085,12 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 			Uchar ch = u8_getchar_utf8_enabled(in, &in);
 			ch = u8_toupper(ch);
 			n = u8_fromchar(ch, out, size_out);
+			out += n; // before the break so the return is correct
 			if(n <= 0)
 				break;
-			out += n;
 			size_out -= n;
 		}
-		return;
+		return out - out_start;
 	}
 
 	while (*in && size_out > 1)
@@ -1073,6 +1102,7 @@ void COM_ToUpperString (const char *in, char *out, size_t size_out)
 		size_out--;
 	}
 	*out = '\0';
+	return out - out_start;
 }
 
 int COM_StringBeginsWith(const char *s, const char *match)
@@ -1226,9 +1256,10 @@ removes color codes from a string.
 If escape_carets is true, the resulting string will be safe for printing. If
 escape_carets is false, the function will just strip color codes (for logging
 for example).
+Returns the number of bytes written to the *out buffer excluding the \0 terminator.
 
-If the output buffer size did not suffice for converting, the function returns
-FALSE. Generally, if escape_carets is false, the output buffer needs
+If the output buffer size did not suffice for converting, the function returns 0.
+Generally, if escape_carets is false, the output buffer needs
 strlen(str)+1 bytes, and if escape_carets is true, it can need strlen(str)*1.5+2
 bytes. In any case, the function makes sure that the resulting string is
 zero terminated.
@@ -1237,20 +1268,22 @@ For size_in, specify the maximum number of characters from in to use, or 0 to us
 all characters until the zero terminator.
 ============
 */
-qbool
-COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
+size_t COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out, qbool escape_carets)
 {
-#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return false; } } while(0)
+#define APPEND(ch) do { if(--size_out) { *out++ = (ch); } else { *out++ = 0; return 0; } } while(0)
+
+	const char *out_start = out;
 	const char *end = size_in ? (in + size_in) : NULL;
+
 	if(size_out < 1)
-		return false;
+		return 0;
 	for(;;)
 	{
 		switch((in == end) ? 0 : *in)
 		{
 			case 0:
-				*out++ = 0;
-				return true;
+				*out = '\0';
+				return out - out_start;
 			case STRING_COLOR_TAG:
 				++in;
 				switch((in == end) ? 0 : *in)
@@ -1273,8 +1306,8 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 						// finish the code by appending another caret when escaping
 						if(escape_carets)
 							APPEND(STRING_COLOR_TAG);
-						*out++ = 0;
-						return true;
+						*out = '\0';
+						return out - out_start;
 					case STRING_COLOR_TAG: // escaped ^
 						APPEND(STRING_COLOR_TAG);
 						// append a ^ twice when escaping
@@ -1300,87 +1333,86 @@ COM_StringDecolorize(const char *in, size_t size_in, char *out, size_t size_out,
 #undef APPEND
 }
 
-//========================================================
-// strlcat and strlcpy, from OpenBSD
 
 /*
- * Copyright (c) 1998, 2015 Todd C. Miller <millert@openbsd.org>
- *
- * Permission to use, copy, modify, and distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+============
+String Copying
+
+The glibc implementation of memccpy is several times faster than old functions that
+copy one byte at a time (even at -O3) and its advantage increases with string length.
+============
+*/
+#ifdef WIN32
+	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
+	// Microsoft supports it, but apparently complains if we use it.
+	#pragma warning(disable : 4996)
+#endif
+
+/** Chain-copies a string with truncation and efficiency (compared to strlcat()).
+ * The destination ends at an absolute pointer instead of a relative offset
+ * and a pointer to the \0 terminator is returned on success.
+ * Truncates, warns, and returns the end pointer on overflow or unterminated source.
+ * Guarantees \0 termination.    end = dst + sizeof(src[])
  */
-
-/*	$OpenBSD: strlcat.c,v 1.19 2019/01/25 00:19:25 millert Exp $    */
-/*	$OpenBSD: strlcpy.c,v 1.16 2019/01/25 00:19:25 millert Exp $    */
-
-
-#ifndef HAVE_STRLCAT
-size_t
-strlcat(char *dst, const char *src, size_t dsize)
+char *dp_stpecpy(char *dst, char *end, const char *src)
 {
-	const char *odst = dst;
-	const char *osrc = src;
-	size_t n = dsize;
-	size_t dlen;
+	char *p = (char *)memccpy(dst, src, '\0', end - dst);
 
-	/* Find the end of dst and adjust bytes left but don't go past end. */
-	while (n-- != 0 && *dst != '\0')
-		dst++;
-	dlen = dst - odst;
-	n = dsize - dlen;
-
-	if (n-- == 0)
-		return(dlen + strlen(src));
-	while (*src != '\0') {
-		if (n != 0) {
-			*dst++ = *src;
-			n--;
-		}
-		src++;
-	}
-	*dst = '\0';
-
-	return(dlen + (src - osrc));	/* count does not include NUL */
-}
-#endif  // #ifndef HAVE_STRLCAT
-
-
-#ifndef HAVE_STRLCPY
-size_t
-strlcpy(char *dst, const char *src, size_t dsize)
-{
-	const char *osrc = src;
-	size_t nleft = dsize;
-
-	/* Copy as many bytes as will fit. */
-	if (nleft != 0) {
-		while (--nleft != 0) {
-			if ((*dst++ = *src++) == '\0')
-				break;
-		}
-	}
-
-	/* Not enough room in dst, add NUL and traverse rest of src. */
-	if (nleft == 0) {
-		if (dsize != 0)
-			*dst = '\0';		/* NUL-terminate dst */
-		while (*src++)
-			;
-	}
-
-	return(src - osrc - 1);	/* count does not include NUL */
+	if (p)
+		return p - 1;
+	end[-1] = '\0';
+	Con_Printf(CON_WARN "%s: src string unterminated or truncated to %zu bytes: \"%s\"\n", __func__, dst == end ? 0 : (end - dst) - 1, dst);
+	return end;
 }
 
-#endif  // #ifndef HAVE_STRLCPY
+/** Copies a measured byte sequence (unterminated string) to a null-terminated string.
+ * Returns a pointer to the \0 terminator. Guarantees \0 termination.
+ * Compared to ustr2stp(): truncates and warns on overflow.
+ */
+char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t slen)
+{
+	if (slen >= dsize)
+	{
+		slen = dsize - 1;
+		Con_Printf(CON_WARN "%s: src string truncated to %zu bytes: \"%.*s\"\n", __func__, slen, (int)slen, src);
+	}
+	memcpy(dst, src, slen);
+	dst[slen] = '\0';
+	return &dst[slen];
+}
+
+/** Copies a string, like strlcpy() but with a better return: the number of bytes copied
+ * excluding the \0 terminator. Truncates and warns on overflow or unterminated source,
+ * whereas strlcpy() truncates silently and overreads (possibly segfaulting).
+ * Guarantees \0 termination.
+ * See also: dp_stpecpy() and dp_ustr2stp().
+ */
+size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, unsigned line)
+{
+	char *p = (char *)memccpy(dst, src, '\0', dsize);
+
+	if (p)
+		return (p - 1) - dst;
+	dst[dsize - 1] = '\0';
+	Con_Printf(CON_WARN "%s:%u: src string unterminated or truncated to %zu bytes: \"%s\"\n", func, line, dsize - 1, dst);
+	return dsize - 1;
+}
+
+/** Catenates a string, like strlcat() but with a better return: the number of bytes copied
+ * excluding the \0 terminator. Truncates and warns on overflow or unterminated source,
+ * whereas strlcat() truncates silently and overreads (possibly segfaulting).
+ * Guarantees \0 termination.
+ * Inefficient like any strcat(), please use memcpy(), dp_stpecpy() or dp_strlcpy() instead.
+ */
+size_t dp__strlcat(char *dst, const char *src, size_t dsize, const char *func, unsigned line)
+{
+	char *p = (char *)memchr(dst, '\0', dsize) ?: dst;
+	size_t offset = p - dst;
+
+	return dp__strlcpy(p, src, dsize - offset, func, line) + offset;
+}
+
+
 
 void FindFraction(double val, int *num, int *denom, int denomMax)
 {
@@ -1418,7 +1450,7 @@ char **XPM_DecodeString(const char *in)
 	while(COM_ParseToken_QuakeC(&in, false))
 	{
 		tokens[line] = lines[line];
-		strlcpy(lines[line++], com_token, sizeof(lines[0]));
+		dp_strlcpy(lines[line++], com_token, sizeof(lines[0]));
 		if(!COM_ParseToken_QuakeC(&in, false))
 			return NULL;
 		if(!strcmp(com_token, "}"))

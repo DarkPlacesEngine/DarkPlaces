@@ -901,7 +901,8 @@ void PRVM_ED_PrintNum (prvm_prog_t *prog, int ent, const char *wildcard_fieldnam
 const char *PRVM_GetString(prvm_prog_t *prog, int num);
 int PRVM_SetEngineString(prvm_prog_t *prog, const char *s);
 const char *PRVM_ChangeEngineString(prvm_prog_t *prog, int i, const char *s);
-int PRVM_SetTempString(prvm_prog_t *prog, const char *s);
+/// Takes an strlen (not a buffer size).
+int PRVM_SetTempString(prvm_prog_t *prog, const char *s, size_t slen);
 int PRVM_AllocString(prvm_prog_t *prog, size_t bufferlength, char **pointer);
 void PRVM_FreeString(prvm_prog_t *prog, int num);
 

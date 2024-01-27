@@ -78,7 +78,7 @@ static void SV_Map_f(cmd_state_t *cmd)
 		host.hook.ToggleMenu();
 
 	svs.serverflags = 0;			// haven't completed an episode yet
-	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
+	dp_strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
 
 	if(sv.active && host.hook.ConnectLocal != NULL)
@@ -112,7 +112,7 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 		host.hook.ToggleMenu();
 
 	SV_SaveSpawnparms ();
-	strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
+	dp_strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
 	SV_SpawnServer(level);
 	
 	if(sv.active && host.hook.ConnectLocal != NULL)
@@ -144,7 +144,7 @@ static void SV_Restart_f(cmd_state_t *cmd)
 	if(host.hook.ToggleMenu)
 		host.hook.ToggleMenu();
 
-	strlcpy(mapname, sv.name, sizeof(mapname));
+	dp_strlcpy(mapname, sv.name, sizeof(mapname));
 	SV_SpawnServer(mapname);
 	
 	if(sv.active && host.hook.ConnectLocal != NULL)
@@ -469,7 +469,7 @@ static void SV_Say(cmd_state_t *cmd, qbool teamonly)
 		p2[-1] = 0;
 		p2--;
 	}
-	strlcat(text, "\n", sizeof(text));
+	dp_strlcat(text, "\n", sizeof(text));
 
 	// note: save is not a valid edict if fromServer is true
 	save = host_client;
@@ -780,9 +780,9 @@ static void SV_Status_f(cmd_state_t *cmd)
 		}
 
 		if(sv_status_privacy.integer && cmd->source != src_local && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-			strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
+			dp_strlcpy(ip, client->netconnection ? "hidden" : "botclient", 48);
 		else
-			strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
+			dp_strlcpy(ip, (client->netconnection && *client->netconnection->address) ? client->netconnection->address : "botclient", 48);
 
 		frags = client->frags;
 
@@ -838,7 +838,7 @@ void SV_Name(int clientnum)
 	{
 		if (host_client->begun)
 			SV_BroadcastPrintf("\003%s ^7changed name to ^3%s\n", host_client->old_name, host_client->name);
-		strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
+		dp_strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 		MSG_WriteByte (&sv.reliable_datagram, clientnum);
@@ -867,7 +867,7 @@ static void SV_Name_f(cmd_state_t *cmd)
 	else
 		newNameSource = Cmd_Args(cmd);
 
-	strlcpy(newName, newNameSource, sizeof(newName));
+	dp_strlcpy(newName, newNameSource, sizeof(newName));
 
 	if (cmd->source == src_local)
 		return;
@@ -881,7 +881,7 @@ static void SV_Name_f(cmd_state_t *cmd)
 	host_client->nametime = host.realtime + max(0.0f, sv_namechangetimer.value);
 
 	// point the string back at updateclient->name to keep it safe
-	strlcpy (host_client->name, newName, sizeof (host_client->name));
+	dp_strlcpy (host_client->name, newName, sizeof (host_client->name));
 
 	for (i = 0, j = 0;host_client->name[i];i++)
 		if (host_client->name[i] != '\r' && host_client->name[i] != '\n')
@@ -1139,9 +1139,9 @@ static void SV_Playermodel_f(cmd_state_t *cmd)
 		return;
 
 	if (Cmd_Argc (cmd) == 2)
-		strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
+		dp_strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
 	else
-		strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
+		dp_strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
 
 	for (i = 0, j = 0;newPath[i];i++)
 		if (newPath[i] != '\r' && newPath[i] != '\n')
@@ -1159,11 +1159,11 @@ static void SV_Playermodel_f(cmd_state_t *cmd)
 	*/
 
 	// point the string back at updateclient->name to keep it safe
-	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
+	dp_strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
 	PRVM_serveredictstring(host_client->edict, playermodel) = PRVM_SetEngineString(prog, host_client->playermodel);
 	if (strcmp(host_client->old_model, host_client->playermodel))
 	{
-		strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
+		dp_strlcpy(host_client->old_model, host_client->playermodel, sizeof(host_client->old_model));
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
@@ -1186,9 +1186,9 @@ static void SV_Playerskin_f(cmd_state_t *cmd)
 		return;
 
 	if (Cmd_Argc (cmd) == 2)
-		strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
+		dp_strlcpy (newPath, Cmd_Argv(cmd, 1), sizeof (newPath));
 	else
-		strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
+		dp_strlcpy (newPath, Cmd_Args(cmd), sizeof (newPath));
 
 	for (i = 0, j = 0;newPath[i];i++)
 		if (newPath[i] != '\r' && newPath[i] != '\n')
@@ -1206,13 +1206,13 @@ static void SV_Playerskin_f(cmd_state_t *cmd)
 	*/
 
 	// point the string back at updateclient->name to keep it safe
-	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
+	dp_strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
 	PRVM_serveredictstring(host_client->edict, playerskin) = PRVM_SetEngineString(prog, host_client->playerskin);
 	if (strcmp(host_client->old_skin, host_client->playerskin))
 	{
 		//if (host_client->begun)
 		//	SV_BroadcastPrintf("%s changed skin to %s\n", host_client->name, host_client->playerskin);
-		strlcpy(host_client->old_skin, host_client->playerskin, sizeof(host_client->old_skin));
+		dp_strlcpy(host_client->old_skin, host_client->playerskin, sizeof(host_client->old_skin));
 		/*// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);
 		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);

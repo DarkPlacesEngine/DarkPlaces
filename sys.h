@@ -211,8 +211,9 @@ char *Sys_TimeString(const char *timeformat);
 void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 
 /// (may) output text to terminal which launched program
-void Sys_Print(const char *text);
-/// for the console to report failures inside Con_Printf()
+/// textlen excludes any (optional) \0 terminator
+void Sys_Print(const char *text, size_t textlen);
+/// used to report failures inside Con_Printf()
 void Sys_Printf(const char *fmt, ...);
 
 /// INFO: This is only called by Host_Shutdown so we dont need testing for recursion

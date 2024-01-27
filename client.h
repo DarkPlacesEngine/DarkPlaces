@@ -894,7 +894,7 @@ typedef struct client_state_s
 	char sound_name[MAX_SOUNDS][MAX_QPATH];
 
 	// for display on solo scoreboard
-	char worldmessage[40]; // map title (not related to filename)
+	char worldmessage[MAX_QPATH]; // map title (not related to filename)
 	// variants of map name
 	char worldbasename[MAX_QPATH]; // %s
 	char worldname[MAX_QPATH]; // maps/%s.bsp
@@ -1118,6 +1118,7 @@ typedef struct client_state_s
 	qbool csqc_usecsqclistener;
 	matrix4x4_t csqc_listenermatrix;
 	char csqc_printtextbuf[MAX_INPUTLINE];
+	size_t csqc_printtextbuf_len; ///< strlen
 
 	// collision culling data
 	world_t world;

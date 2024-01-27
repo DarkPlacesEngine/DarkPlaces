@@ -129,7 +129,7 @@ static qbool Key_History_Get_foundCommand(void)
 {
 	if (!history_matchfound)
 		return false;
-	strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+	dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 	key_linepos = (int)strlen(key_line);
 	history_matchfound = false;
 	return true;
@@ -138,7 +138,7 @@ static qbool Key_History_Get_foundCommand(void)
 static void Key_History_Up(void)
 {
 	if(history_line == -1) // editing the "new" line
-		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+		dp_strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
 
 	if (Key_History_Get_foundCommand())
 		return;
@@ -148,14 +148,14 @@ static void Key_History_Up(void)
 		history_line = CONBUFFER_LINES_COUNT(&history) - 1;
 		if(history_line != -1)
 		{
-			strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+			dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 			key_linepos = (int)strlen(key_line);
 		}
 	}
 	else if(history_line > 0)
 	{
 		--history_line; // this also does -1 -> 0, so it is good
-		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 		key_linepos = (int)strlen(key_line);
 	}
 }
@@ -171,12 +171,12 @@ static void Key_History_Down(void)
 	if(history_line < CONBUFFER_LINES_COUNT(&history) - 1)
 	{
 		++history_line;
-		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 	}
 	else
 	{
 		history_line = -1;
-		strlcpy(key_line + 1, history_savedline, sizeof(key_line) - 1);
+		dp_strlcpy(key_line + 1, history_savedline, sizeof(key_line) - 1);
 	}
 
 	key_linepos = (int)strlen(key_line);
@@ -185,12 +185,12 @@ static void Key_History_Down(void)
 static void Key_History_First(void)
 {
 	if(history_line == -1) // editing the "new" line
-		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+		dp_strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
 
 	if (CONBUFFER_LINES_COUNT(&history) > 0)
 	{
 		history_line = 0;
-		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 		key_linepos = (int)strlen(key_line);
 	}
 }
@@ -198,12 +198,12 @@ static void Key_History_First(void)
 static void Key_History_Last(void)
 {
 	if(history_line == -1) // editing the "new" line
-		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+		dp_strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
 
 	if (CONBUFFER_LINES_COUNT(&history) > 0)
 	{
 		history_line = CONBUFFER_LINES_COUNT(&history) - 1;
-		strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
+		dp_strlcpy(key_line + 1, ConBuffer_GetLine(&history, history_line), sizeof(key_line) - 1);
 		key_linepos = (int)strlen(key_line);
 	}
 }
@@ -216,11 +216,11 @@ static void Key_History_Find_Backwards(void)
 	size_t digits = strlen(va(vabuf, sizeof(vabuf), "%i", HIST_MAXLINES));
 
 	if (history_line == -1) // editing the "new" line
-		strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
+		dp_strlcpy(history_savedline, key_line + 1, sizeof(history_savedline));
 
 	if (strcmp(key_line + 1, history_searchstring)) // different string? Start a new search
 	{
-		strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
+		dp_strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
 		i = CONBUFFER_LINES_COUNT(&history) - 1;
 	}
 	else if (history_line == -1)
@@ -255,7 +255,7 @@ static void Key_History_Find_Forwards(void)
 
 	if (strcmp(key_line + 1, history_searchstring)) // different string? Start a new search
 	{
-		strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
+		dp_strlcpy(history_searchstring, key_line + 1, sizeof(history_searchstring));
 		i = 0;
 	}
 	else i = history_line + 1;
@@ -951,7 +951,7 @@ int Key_Parse_CommonKeys(cmd_state_t *cmd, qbool is_console, int key, int unicod
 		{
 			// hide ']' from u8_prevbyte otherwise it could go out of bounds
 			int newpos = (int)u8_prevbyte(line + linestart, linepos - linestart) + linestart;
-			strlcpy(line + newpos, line + linepos, linesize + 1 - linepos);
+			dp_strlcpy(line + newpos, line + linepos, linesize + 1 - linepos);
 			linepos = newpos;
 		}
 		return linepos;
@@ -1308,7 +1308,7 @@ Key_Message (cmd_state_t *cmd, int key, int ascii)
 	if (key == K_ENTER || key == K_KP_ENTER || ascii == 10 || ascii == 13)
 	{
 		if(chat_mode < 0)
-			Cmd_ExecuteString(cmd, chat_buffer, src_local, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
+			Cmd_ExecuteString(cmd, chat_buffer, strlen(chat_buffer), src_local, true); // not Cbuf_AddText to allow semiclons in args; however, this allows no variables then. Use aliases!
 		else
 			CL_ForwardToServer(va(vabuf, sizeof(vabuf), "%s %s", chat_mode ? "say_team" : "say ", chat_buffer));
 
@@ -1516,9 +1516,9 @@ Key_In_Bind_f(cmd_state_t *cmd)
 // copy the rest of the command line
 	line[0] = 0;							// start out with a null string
 	for (i = 3; i < c; i++) {
-		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
+		dp_strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 		if (i != (c - 1))
-			strlcat (line, " ", sizeof (line));
+			dp_strlcat (line, " ", sizeof (line));
 	}
 
 	if(!Key_SetBinding (b, m, line))
@@ -1663,9 +1663,9 @@ Key_Bind_f(cmd_state_t *cmd)
 // copy the rest of the command line
 	line[0] = 0;							// start out with a null string
 	for (i = 2; i < c; i++) {
-		strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
+		dp_strlcat (line, Cmd_Argv(cmd, i), sizeof (line));
 		if (i != (c - 1))
-			strlcat (line, " ", sizeof (line));
+			dp_strlcat (line, " ", sizeof (line));
 	}
 
 	if(!Key_SetBinding (b, 0, line))

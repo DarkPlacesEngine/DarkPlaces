@@ -46,10 +46,10 @@ void Con_Shutdown (void);
 void Con_DrawConsole (int lines);
 
 /// Prints to a chosen console target
-void Con_MaskPrint(int mask, const char *msg);
+void Con_MaskPrint(unsigned additionalmask, const char *msg);
 
 // Prints to a chosen console target
-void Con_MaskPrintf(int mask, const char *fmt, ...) DP_FUNC_PRINTF(2);
+void Con_MaskPrintf(unsigned mask, const char *fmt, ...) DP_FUNC_PRINTF(2);
 
 /// Prints to all appropriate console targets, and adds timestamps
 void Con_Print(const char *txt);
@@ -108,7 +108,7 @@ typedef struct con_lineinfo_s
 {
 	char *start;
 	size_t len;
-	int mask;
+	unsigned mask;
 
 	/// used only by console.c
 	double addtime;
@@ -149,9 +149,9 @@ void ConBuffer_DeleteLine(conbuffer_t *buf);
 void ConBuffer_DeleteLastLine(conbuffer_t *buf);
 
 /// Appends a given string as a new line to the console.
-void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, int mask);
-int ConBuffer_FindPrevLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start);
-int ConBuffer_FindNextLine(conbuffer_t *buf, int mask_must, int mask_mustnot, int start);
+void ConBuffer_AddLine(conbuffer_t *buf, const char *line, int len, unsigned mask);
+int ConBuffer_FindPrevLine(conbuffer_t *buf, unsigned mask_must, unsigned mask_mustnot, int start);
+int ConBuffer_FindNextLine(conbuffer_t *buf, unsigned mask_must, unsigned mask_mustnot, int start);
 const char *ConBuffer_GetLine(conbuffer_t *buf, int i);
 
 #endif

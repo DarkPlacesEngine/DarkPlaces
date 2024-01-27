@@ -65,7 +65,7 @@ void VM_CheckEmptyString(prvm_prog_t *prog, const char *s)
 		prog->error_cmd("%s: Bad string", prog->name);
 }
 
-qbool PRVM_ConsoleCommand (prvm_prog_t *prog, const char *text, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message)
+qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message)
 {
 	int restorevm_tempstringsbuf_cursize;
 	int save_self = 0; // hush compiler warning
@@ -82,7 +82,7 @@ qbool PRVM_ConsoleCommand (prvm_prog_t *prog, const char *text, int *func, qbool
 			PRVM_gameglobalfloat(time) = ptime;
 		PRVM_gameglobaledict(self) = curself;
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, text, textlen);
 		prog->ExecuteProgram(prog, *func, error_message);
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 		if(preserve_self)
@@ -271,20 +271,41 @@ void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed)
 //============================================================================
 //BUILT-IN FUNCTIONS
 
-void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength)
+#ifdef WIN32
+	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
+	// Microsoft supports it, but apparently complains if we use it.
+	#pragma warning(disable : 4996)
+#endif
+size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 {
 	int i;
 	const char *s;
-	char *outend;
+	char *p;
+	char *outend = out + outsize - 1;
 
-	outend = out + outlength - 1;
+	// bones_was_here: && out < outend improves perf significantly in some tests that don't trigger the warning,
+	// which seems odd, surely it would only help when the warning is printed?
 	for (i = first;i < prog->argc && out < outend;i++)
 	{
 		s = PRVM_G_STRING((OFS_PARM0+i*3));
-		while (out < outend && *s)
-			*out++ = *s++;
+		if (*s)
+		{
+			// like dp_stpecpy but with a VM_Warning for use with `prvm_backtraceforwarnings 1`
+			p = (char *)memccpy(out, s, '\0', (outend + 1) - out);
+			if (p)
+				out = p - 1;
+			else
+			{
+				VM_Warning(prog, "%zu of %zu bytes available, will truncate %zu byte string \"%s\"\n", outend - out, outsize - 1, strlen(s), s);
+				out = outend;
+				*out = '\0';
+			}
+		}
+		else
+			*out = '\0';
 	}
-	*out++ = 0;
+
+	return outsize - ((outend + 1) - out);
 }
 
 /*
@@ -358,7 +379,7 @@ error(value)
 void VM_error(prvm_prog_t *prog)
 {
 	prvm_edict_t	*ed;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Printf(CON_ERROR "======%s ERROR in %s:\n%s\n", prog->name, PRVM_GetString(prog, prog->xfunction->s_name), string);
@@ -381,7 +402,7 @@ objerror(value)
 void VM_objerror(prvm_prog_t *prog)
 {
 	prvm_edict_t	*ed;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Printf(CON_ERROR "======OBJECT ERROR======\n"); // , prog->name, PRVM_GetString(prog->xfunction->s_name), string); // or include them? FIXME
@@ -402,7 +423,7 @@ print(...[string])
 */
 void VM_print(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_VarString(prog, 0, string, sizeof(string));
 	Con_Print(string);
@@ -419,7 +440,7 @@ bprint(...[string])
 */
 void VM_bprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	if(!sv.active)
 	{
@@ -444,7 +465,7 @@ void VM_sprint(prvm_prog_t *prog)
 {
 	client_t	*client;
 	int			clientnum;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_sprint);
 
@@ -476,7 +497,7 @@ centerprint(value)
 */
 void VM_centerprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_centerprint);
 	VM_VarString(prog, 0, string, sizeof(string));
@@ -655,7 +676,7 @@ cmd (string, ...)
 */
 void VM_localcmd_local(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_local);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(cmd_local, string);
@@ -673,7 +694,7 @@ cmd (string, ...)
 */
 void VM_localcmd_server(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_server);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(cmd_local, string);
@@ -695,7 +716,7 @@ float cvar (string)
 */
 void VM_cvar(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar);
 	VM_VarString(prog, 0, string, sizeof(string));
 	VM_CheckEmptyString(prog, string);
@@ -717,7 +738,7 @@ float CVAR_TYPEFLAG_READONLY = 32;
 */
 void VM_cvar_type(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	cvar_t *cvar;
 	int ret;
 
@@ -757,11 +778,18 @@ const string	VM_cvar_string (string, ...)
 */
 void VM_cvar_string(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char cvar_name[VM_TEMPSTRING_MAXSIZE];
+
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_string);
-	VM_VarString(prog, 0, string, sizeof(string));
-	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_Cvar_ReadOk(prog, string) ? Cvar_VariableString(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask) : "");
+	VM_VarString(prog, 0, cvar_name, sizeof(cvar_name));
+	VM_CheckEmptyString(prog, cvar_name);
+	if (PRVM_Cvar_ReadOk(prog, cvar_name))
+	{
+		const char *cvar_string = Cvar_VariableString(prog->console_cmd->cvars, cvar_name, prog->console_cmd->cvars_flagsmask);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cvar_string, strlen(cvar_string));
+	}
+	else
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 }
 
 
@@ -774,11 +802,14 @@ const string	VM_cvar_defstring (string, ...)
 */
 void VM_cvar_defstring(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char cvar_name[VM_TEMPSTRING_MAXSIZE];
+	const char *cvar_defstring;
+
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_defstring);
-	VM_VarString(prog, 0, string, sizeof(string));
-	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDefString(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask));
+	VM_VarString(prog, 0, cvar_name, sizeof(cvar_name));
+	VM_CheckEmptyString(prog, cvar_name);
+	cvar_defstring = Cvar_VariableDefString(prog->console_cmd->cvars, cvar_name, prog->console_cmd->cvars_flagsmask);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cvar_defstring, strlen(cvar_defstring));
 }
 
 /*
@@ -790,11 +821,14 @@ const string	VM_cvar_description (string, ...)
 */
 void VM_cvar_description(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char cvar_name[VM_TEMPSTRING_MAXSIZE];
+	const char *cvar_desc;
+
 	VM_SAFEPARMCOUNTRANGE(1,8,VM_cvar_description);
-	VM_VarString(prog, 0, string, sizeof(string));
-	VM_CheckEmptyString(prog, string);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Cvar_VariableDescription(prog->console_cmd->cvars, string, prog->console_cmd->cvars_flagsmask));
+	VM_VarString(prog, 0, cvar_name, sizeof(cvar_name));
+	VM_CheckEmptyString(prog, cvar_name);
+	cvar_desc = Cvar_VariableDescription(prog->console_cmd->cvars, cvar_name, prog->console_cmd->cvars_flagsmask);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cvar_desc, strlen(cvar_desc));
 }
 /*
 =================
@@ -806,12 +840,25 @@ void cvar_set (string,string, ...)
 void VM_cvar_set(prvm_prog_t *prog)
 {
 	const char *name;
-	char string[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
+	cvar_t *cvar;
+
 	VM_SAFEPARMCOUNTRANGE(2,8,VM_cvar_set);
-	VM_VarString(prog, 1, string, sizeof(string));
 	name = PRVM_G_STRING(OFS_PARM0);
 	VM_CheckEmptyString(prog, name);
-	Cvar_Set(prog->console_cmd->cvars, name, string);
+	cvar = Cvar_FindVar(prog->console_cmd->cvars, name, prog->console_cmd->cvars_flagsmask);
+	if (!cvar)
+	{
+		VM_Warning(prog, "VM_cvar_set: variable %s not found\n", name);
+		return;
+	}
+	if (cvar->flags & CF_READONLY)
+	{
+		VM_Warning(prog, "VM_cvar_set: variable %s is read-only\n", cvar->name);
+		return;
+	}
+	VM_VarString(prog, 1, value, sizeof(value));
+	Cvar_SetQuick(cvar, value);
 }
 
 /*
@@ -823,7 +870,7 @@ dprint(...[string])
 */
 void VM_dprint(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_dprint);
 	VM_VarString(prog, 0, string, sizeof(string));
 #if 1
@@ -845,16 +892,17 @@ void VM_ftos(prvm_prog_t *prog)
 {
 	prvm_vec_t v;
 	char s[128];
+	size_t slen;
 
 	VM_SAFEPARMCOUNT(1, VM_ftos);
 
 	v = PRVM_G_FLOAT(OFS_PARM0);
 
 	if ((prvm_vec_t)((prvm_int_t)v) == v)
-		dpsnprintf(s, sizeof(s), "%.0f", v);
+		slen = dpsnprintf(s, sizeof(s), "%.0f", v);
 	else
-		dpsnprintf(s, sizeof(s), "%f", v);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s);
+		slen = dpsnprintf(s, sizeof(s), "%f", v);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s, slen);
 }
 
 /*
@@ -886,11 +934,12 @@ string	vtos(vector)
 void VM_vtos(prvm_prog_t *prog)
 {
 	char s[512];
+	size_t slen;
 
 	VM_SAFEPARMCOUNT(1,VM_vtos);
 
-	dpsnprintf (s, sizeof(s), "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s);
+	slen = dpsnprintf(s, sizeof(s), "'%5.1f %5.1f %5.1f'", PRVM_G_VECTOR(OFS_PARM0)[0], PRVM_G_VECTOR(OFS_PARM0)[1], PRVM_G_VECTOR(OFS_PARM0)[2]);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s, slen);
 }
 
 /*
@@ -904,11 +953,12 @@ string	etos(entity)
 void VM_etos(prvm_prog_t *prog)
 {
 	char s[128];
+	size_t slen;
 
 	VM_SAFEPARMCOUNT(1, VM_etos);
 
-	dpsnprintf (s, sizeof(s), "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s);
+	slen = dpsnprintf(s, sizeof(s), "entity %i", PRVM_G_EDICTNUM(OFS_PARM0));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s, slen);
 }
 
 /*
@@ -920,7 +970,7 @@ float stof(...[string])
 */
 void VM_stof(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_stof);
 	VM_VarString(prog, 0, string, sizeof(string));
 	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
@@ -987,8 +1037,10 @@ void VM_strftime(prvm_prog_t *prog)
 #else
 	struct tm *tm;
 #endif
-	char fmt[VM_STRINGTEMP_LENGTH];
-	char result[VM_STRINGTEMP_LENGTH];
+	char fmt[VM_TEMPSTRING_MAXSIZE];
+	char result[VM_TEMPSTRING_MAXSIZE];
+	size_t result_len;
+
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_strftime);
 	VM_VarString(prog, 1, fmt, sizeof(fmt));
 	t = time(NULL);
@@ -1010,11 +1062,11 @@ void VM_strftime(prvm_prog_t *prog)
 		return;
 	}
 #if _MSC_VER >= 1400
-	strftime(result, sizeof(result), fmt, &tm);
+	result_len = strftime(result, sizeof(result), fmt, &tm);
 #else
-	strftime(result, sizeof(result), fmt, tm);
+	result_len = strftime(result, sizeof(result), fmt, tm);
 #endif
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, result);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, result, result_len);
 }
 
 /*
@@ -1961,7 +2013,7 @@ string	fgets(float fhandle)
 void VM_fgets(prvm_prog_t *prog)
 {
 	int c, end;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
@@ -1986,10 +2038,10 @@ void VM_fgets(prvm_prog_t *prog)
 		c = FS_Getc(prog->openfiles[filenum]);
 		if (c == '\r' || c == '\n' || c < 0)
 			break;
-		if (end < VM_STRINGTEMP_LENGTH - 1)
+		if (end < VM_TEMPSTRING_MAXSIZE - 1)
 			string[end++] = c;
 	}
-	string[end] = 0;
+	string[end] = '\0';
 	// remove \n following \r
 	if (c == '\r')
 	{
@@ -2000,7 +2052,7 @@ void VM_fgets(prvm_prog_t *prog)
 	if (developer_extra.integer)
 		Con_DPrintf("fgets: %s: %s\n", prog->name, string);
 	if (c >= 0 || end)
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, end);
 }
 
 /*
@@ -2013,8 +2065,8 @@ fputs(float fhandle, string s)
 //void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
 void VM_fputs(prvm_prog_t *prog)
 {
-	int stringlength;
-	char string[VM_STRINGTEMP_LENGTH];
+	size_t stringlength;
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(2,VM_fputs);
@@ -2030,8 +2082,8 @@ void VM_fputs(prvm_prog_t *prog)
 		VM_Warning(prog, "VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, prog->name);
 		return;
 	}
-	VM_VarString(prog, 1, string, sizeof(string));
-	if ((stringlength = (int)strlen(string)))
+	stringlength = VM_VarString(prog, 1, string, sizeof(string));
+	if (stringlength)
 		FS_Write(prog->openfiles[filenum], string, stringlength);
 	if (developer_extra.integer)
 		Con_DPrintf("fputs: %s: %s\n", prog->name, string);
@@ -2099,7 +2151,7 @@ void VM_entityfieldname(prvm_prog_t *prog)
 	if (i < 0 || i >= prog->numfielddefs)
 	{
 		VM_Warning(prog, "VM_entityfieldname: %s: field index out of bounds\n", prog->name);
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 		return;
 	}
 
@@ -2151,8 +2203,8 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 	
 	if (i < 0 || i >= prog->numfielddefs)
 	{
-        VM_Warning(prog, "VM_entityfielddata: %s: field index out of bounds\n", prog->name);
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		VM_Warning(prog, "VM_entityfielddata: %s: field index out of bounds\n", prog->name);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 		return;
 	}
 	
@@ -2162,7 +2214,7 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 	ent = PRVM_G_EDICT(OFS_PARM1);
 	if(ent->free)
 	{
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 		VM_Warning(prog, "VM_entityfielddata: %s: entity %i is free !\n", prog->name, PRVM_NUM_FOR_EDICT(ent));
 		return;
 	}
@@ -2175,11 +2227,12 @@ void VM_getentityfieldstring(prvm_prog_t *prog)
 			break;
 	if (j == prvm_type_size[type])
 	{
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 		return;
 	}
-		
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, PRVM_UglyValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf)));
+
+	PRVM_UglyValueString(prog, (etype_t)d->type, val, valuebuf, sizeof(valuebuf));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, valuebuf, strlen(valuebuf));
 }
 
 // KrimZon - DP_QC_ENTITYDATA
@@ -2245,14 +2298,15 @@ string	strdecolorize(string s)
 // string (string s) strdecolorize = #472; // returns the passed in string with color codes stripped
 void VM_strdecolorize(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
+	size_t szNewString_len;
 	const char *szString;
 
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strdecolorize);
 	szString = PRVM_G_STRING(OFS_PARM0);
-	COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), true);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString);
+	szNewString_len = COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), true);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString, szNewString_len);
 }
 
 // DRESK - String Length (not counting color codes)
@@ -2291,16 +2345,17 @@ string	strtolower(string s)
 // string (string s) strtolower = #480; // returns passed in string in lowercase form
 void VM_strtolower(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
+	size_t szNewString_len;
 	const char *szString;
 
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strtolower);
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	COM_ToLowerString(szString, szNewString, sizeof(szNewString) );
+	szNewString_len = COM_ToLowerString(szString, szNewString, sizeof(szNewString) );
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString, szNewString_len);
 }
 
 /*
@@ -2313,16 +2368,17 @@ string	strtoupper(string s)
 // string (string s) strtoupper = #481; // returns passed in string in uppercase form
 void VM_strtoupper(prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
+	size_t szNewString_len;
 	const char *szString;
 
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1,VM_strtoupper);
 	szString = PRVM_G_STRING(OFS_PARM0);
 
-	COM_ToUpperString(szString, szNewString, sizeof(szNewString) );
+	szNewString_len = COM_ToUpperString(szString, szNewString, sizeof(szNewString) );
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString, szNewString_len);
 }
 
 /*
@@ -2337,11 +2393,13 @@ string strcat(string s, string...)
 // and returns as a tempstring
 void VM_strcat(prvm_prog_t *prog)
 {
-	char s[VM_STRINGTEMP_LENGTH];
+	char s[VM_TEMPSTRING_MAXSIZE];
+	size_t slen;
+
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strcat);
 
-	VM_VarString(prog, 0, s, sizeof(s));
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s);
+	slen = VM_VarString(prog, 0, s, sizeof(s));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, s, slen);
 }
 
 /*
@@ -2359,7 +2417,7 @@ void VM_substring(prvm_prog_t *prog)
 	int u_slength = 0, u_start;
 	size_t u_length;
 	const char *s;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(3,VM_substring);
 
@@ -2405,7 +2463,7 @@ void VM_substring(prvm_prog_t *prog)
 	u_start = u8_byteofs(s, start, NULL);
 	if (u_start < 0)
 	{
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 		return;
 	}
 	u_length = u8_bytelen(s + u_start, length);
@@ -2413,8 +2471,8 @@ void VM_substring(prvm_prog_t *prog)
 		u_length = sizeof(string)-1;
 	
 	memcpy(string, s + u_start, u_length);
-	string[u_length] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+	string[u_length] = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, u_length);
 }
 
 /*
@@ -2429,7 +2487,7 @@ void VM_strreplace(prvm_prog_t *prog)
 {
 	int i, j, si;
 	const char *search, *replace, *subject;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int search_len, replace_len, subject_len;
 
 	VM_SAFEPARMCOUNT(3,VM_strreplace);
@@ -2481,7 +2539,7 @@ void VM_strreplace(prvm_prog_t *prog)
 			string[si++] = subject[i];
 	string[si] = '\0';
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, si);
 }
 
 /*
@@ -2496,7 +2554,7 @@ void VM_strireplace(prvm_prog_t *prog)
 {
 	int i, j, si;
 	const char *search, *replace, *subject;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int search_len, replace_len, subject_len;
 
 	VM_SAFEPARMCOUNT(3, VM_strireplace);
@@ -2548,7 +2606,7 @@ void VM_strireplace(prvm_prog_t *prog)
 			string[si++] = subject[i];
 	string[si] = '\0';
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, string, si);
 }
 
 /*
@@ -2561,7 +2619,7 @@ vector	stov(string s)
 //vector(string s) stov = #117; // returns vector value from a string
 void VM_stov(prvm_prog_t *prog)
 {
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(1,VM_stov);
 
@@ -2580,13 +2638,12 @@ string	strzone(string s)
 void VM_strzone(prvm_prog_t *prog)
 {
 	char *out;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	size_t alloclen;
 
 	VM_SAFEPARMCOUNT(1,VM_strzone);
 
-	VM_VarString(prog, 0, string, sizeof(string));
-	alloclen = strlen(string) + 1;
+	alloclen = VM_VarString(prog, 0, string, sizeof(string)) + 1;
 	PRVM_G_INT(OFS_RETURN) = PRVM_AllocString(prog, alloclen, &out);
 	memcpy(out, string, alloclen);
 }
@@ -2616,17 +2673,17 @@ float tokenize(string s)
 //this function originally written by KrimZon, made shorter by LadyHavoc
 //20040203: rewritten by LadyHavoc (no longer uses allocations)
 static int num_tokens = 0;
-static int tokens[VM_STRINGTEMP_LENGTH / 2];
-static int tokens_startpos[VM_STRINGTEMP_LENGTH / 2];
-static int tokens_endpos[VM_STRINGTEMP_LENGTH / 2];
-static char tokenize_string[VM_STRINGTEMP_LENGTH];
+static int tokens[VM_TEMPSTRING_MAXSIZE / 2];
+static int tokens_startpos[VM_TEMPSTRING_MAXSIZE / 2];
+static int tokens_endpos[VM_TEMPSTRING_MAXSIZE / 2];
+static char tokenize_string[VM_TEMPSTRING_MAXSIZE];
 void VM_tokenize (prvm_prog_t *prog)
 {
 	const char *p;
 
 	VM_SAFEPARMCOUNT(1,VM_tokenize);
 
-	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	dp_strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
 	p = tokenize_string;
 
 	num_tokens = 0;
@@ -2643,7 +2700,7 @@ void VM_tokenize (prvm_prog_t *prog)
 		if(!COM_ParseToken_VM_Tokenize(&p, false))
 			break;
 		tokens_endpos[num_tokens] = p - tokenize_string;
-		tokens[num_tokens] = PRVM_SetTempString(prog, com_token);
+		tokens[num_tokens] = PRVM_SetTempString(prog, com_token, com_token_len);
 		++num_tokens;
 	}
 
@@ -2657,7 +2714,7 @@ void VM_tokenize_console (prvm_prog_t *prog)
 
 	VM_SAFEPARMCOUNT(1, VM_tokenize_console);
 
-	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	dp_strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
 	p = tokenize_string;
 
 	num_tokens = 0;
@@ -2674,7 +2731,7 @@ void VM_tokenize_console (prvm_prog_t *prog)
 		if(!COM_ParseToken_Console(&p))
 			break;
 		tokens_endpos[num_tokens] = p - tokenize_string;
-		tokens[num_tokens] = PRVM_SetTempString(prog, com_token);
+		tokens[num_tokens] = PRVM_SetTempString(prog, com_token, com_token_len);
 		++num_tokens;
 	}
 
@@ -2707,7 +2764,7 @@ void VM_tokenizebyseparator (prvm_prog_t *prog)
 
 	VM_SAFEPARMCOUNTRANGE(2, 8,VM_tokenizebyseparator);
 
-	strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
+	dp_strlcpy(tokenize_string, PRVM_G_STRING(OFS_PARM0), sizeof(tokenize_string));
 	p = tokenize_string;
 
 	numseparators = 0;
@@ -2750,8 +2807,8 @@ void VM_tokenizebyseparator (prvm_prog_t *prog)
 		tokens_endpos[num_tokens] = p0 - tokenize_string;
 		if (j >= (int)sizeof(tokentext))
 			break;
-		tokentext[j++] = 0;
-		tokens[num_tokens++] = PRVM_SetTempString(prog, token);
+		tokentext[j++] = '\0';
+		tokens[num_tokens++] = PRVM_SetTempString(prog, token, j - 1);
 		if (!*p)
 			break;
 	}
@@ -3226,6 +3283,7 @@ string	search_getfilename(float handle, float num)
 void VM_search_getfilename(prvm_prog_t *prog)
 {
 	int handle, filenum;
+
 	VM_SAFEPARMCOUNT(2, VM_search_getfilename);
 
 	handle = (int)PRVM_G_FLOAT(OFS_PARM0);
@@ -3247,7 +3305,9 @@ void VM_search_getfilename(prvm_prog_t *prog)
 		return;
 	}
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, prog->opensearches[handle]->filenames[filenum]);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog,
+	                                            prog->opensearches[handle]->filenames[filenum],
+	                                            strlen(prog->opensearches[handle]->filenames[filenum]));
 }
 
 /*
@@ -3271,11 +3331,11 @@ void VM_chr(prvm_prog_t *prog)
 	
 	char tmp[8];
 	int len;
-	VM_SAFEPARMCOUNT(1, VM_chr);
 
+	VM_SAFEPARMCOUNT(1, VM_chr);
 	len = u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0), tmp, sizeof(tmp));
-	tmp[len] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, tmp);
+	tmp[len] = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, tmp, len);
 }
 
 /*
@@ -3288,9 +3348,11 @@ string keynumtostring(float keynum)
 void VM_keynumtostring (prvm_prog_t *prog)
 {
 	char tinystr[TINYSTR_LEN];
-	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
+	const char *str; // Key_KeynumToString doesn't always return tinystr
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Key_KeynumToString((int)PRVM_G_FLOAT(OFS_PARM0), tinystr, TINYSTR_LEN));
+	VM_SAFEPARMCOUNT(1, VM_keynumtostring);
+	str = Key_KeynumToString((int)PRVM_G_FLOAT(OFS_PARM0), tinystr, sizeof(tinystr));
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, str, strlen(str));
 }
 
 /*
@@ -3307,7 +3369,8 @@ void M_FindKeysForCommand(const char *command, int *keys);
 void VM_findkeysforcommand(prvm_prog_t *prog)
 {
 	const char *cmd;
-	char ret[VM_STRINGTEMP_LENGTH];
+	char ret[VM_TEMPSTRING_MAXSIZE];
+	size_t ret_len;
 	int keys[FKFC_NUMKEYS];
 	int i;
 	int bindmap;
@@ -3327,9 +3390,9 @@ void VM_findkeysforcommand(prvm_prog_t *prog)
 
 	ret[0] = 0;
 	for(i = 0; i < FKFC_NUMKEYS; i++)
-		strlcat(ret, va(vabuf, sizeof(vabuf), " \'%i\'", keys[i]), sizeof(ret));
+		ret_len = dp_strlcat(ret, va(vabuf, sizeof(vabuf), " \'%i\'", keys[i]), sizeof(ret));
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, ret);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, ret, ret_len);
 }
 
 /*
@@ -3356,13 +3419,15 @@ string getkeybind(float key, float bindmap)
 void VM_getkeybind (prvm_prog_t *prog)
 {
 	int bindmap;
+	const char *bind;
+
 	VM_SAFEPARMCOUNTRANGE(1, 2, VM_getkeybind);
 	if(prog->argc == 2)
 		bindmap = bound(-1, PRVM_G_FLOAT(OFS_PARM1), MAX_BINDMAPS-1);
 	else
 		bindmap = 0; // consistent to "bind"
-
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap));
+	bind = Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, bind, strlen(bind));
 }
 
 /*
@@ -3603,7 +3668,7 @@ string altstr_prepare(string)
 void VM_altstr_prepare(prvm_prog_t *prog)
 {
 	const char *instr, *in;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 	size_t outpos;
 
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
@@ -3620,9 +3685,9 @@ void VM_altstr_prepare(prvm_prog_t *prog)
 		else
 			outstr[outpos++] = *in;
 	}
-	outstr[outpos] = 0;
 
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
+	outstr[outpos] = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outstr, outpos);
 }
 
 /*
@@ -3637,7 +3702,7 @@ void VM_altstr_get(prvm_prog_t *prog)
 	const char *altstr, *pos;
 	char *out;
 	int count, size;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT( 2, VM_altstr_get );
 
@@ -3669,8 +3734,8 @@ void VM_altstr_get(prvm_prog_t *prog)
 		else
 			*out = *pos;
 
-	*out = 0;
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
+	*out = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outstr, out - outstr);
 }
 
 /*
@@ -3686,7 +3751,7 @@ void VM_altstr_set(prvm_prog_t *prog)
 	const char *altstr, *str;
 	const char *in;
 	char *out;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT( 3, VM_altstr_set );
 
@@ -3713,8 +3778,8 @@ void VM_altstr_set(prvm_prog_t *prog)
 		if( *in == '\'' || (*in == '\\' && !*++in) )
 			break;
 
-	strlcpy(out, in, outstr + sizeof(outstr) - out);
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
+	out += dp_strlcpy(out, in, outstr + sizeof(outstr) - out);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outstr, out - outstr);
 }
 
 /*
@@ -3730,7 +3795,7 @@ void VM_altstr_ins(prvm_prog_t *prog)
 	const char *set;
 	const char *in;
 	char *out;
-	char outstr[VM_STRINGTEMP_LENGTH];
+	char outstr[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(3, VM_altstr_ins);
 
@@ -3752,8 +3817,8 @@ void VM_altstr_ins(prvm_prog_t *prog)
 	for( ; *set ; *out++ = *set++ );
 	*out++ = '\'';
 
-	strlcpy(out, in, outstr + sizeof(outstr) - out);
-	PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog,  outstr );
+	out += dp_strlcpy(out, in, outstr + sizeof(outstr) - out);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outstr, out - outstr);
 }
 
 
@@ -4080,10 +4145,12 @@ string buf_implode(float bufhandle, string glue) = #465;
 void VM_buf_implode (prvm_prog_t *prog)
 {
 	prvm_stringbuffer_t *stringbuffer;
-	char			k[VM_STRINGTEMP_LENGTH];
-	const char		*sep;
-	int				i;
-	size_t			l;
+	char k[VM_TEMPSTRING_MAXSIZE];
+	size_t k_len;
+	const char *sep;
+	int i;
+	size_t l;
+
 	VM_SAFEPARMCOUNT(2, VM_buf_implode);
 
 	stringbuffer = (prvm_stringbuffer_t *)Mem_ExpandableArray_RecordAtIndex(&prog->stringbuffersarray, (int)PRVM_G_FLOAT(OFS_PARM0));
@@ -4096,7 +4163,8 @@ void VM_buf_implode (prvm_prog_t *prog)
 	if(!stringbuffer->num_strings)
 		return;
 	sep = PRVM_G_STRING(OFS_PARM1);
-	k[0] = 0;
+	k[0] = '\0';
+	k_len = 0;
 	for(l = i = 0;i < stringbuffer->num_strings;i++)
 	{
 		if(stringbuffer->strings[i])
@@ -4104,11 +4172,11 @@ void VM_buf_implode (prvm_prog_t *prog)
 			l += (i > 0 ? strlen(sep) : 0) + strlen(stringbuffer->strings[i]);
 			if (l >= sizeof(k) - 1)
 				break;
-			strlcat(k, sep, sizeof(k));
-			strlcat(k, stringbuffer->strings[i], sizeof(k));
+			dp_strlcat(k, sep, sizeof(k));
+			k_len = dp_strlcat(k, stringbuffer->strings[i], sizeof(k));
 		}
 	}
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, k);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, k, k_len);
 }
 
 /*
@@ -4138,7 +4206,7 @@ void VM_bufstr_get (prvm_prog_t *prog)
 		return;
 	}
 	if (strindex < stringbuffer->num_strings && stringbuffer->strings[strindex])
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, stringbuffer->strings[strindex]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, stringbuffer->strings[strindex], strlen(stringbuffer->strings[strindex]));
 }
 
 /*
@@ -4268,7 +4336,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 {
 	size_t alloclen;
 	prvm_stringbuffer_t *stringbuffer;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int strindex, c, end;
 	const char *filename;
 	char vabuf[1024];
@@ -4309,7 +4377,7 @@ void VM_buf_loadfile(prvm_prog_t *prog)
 			c = FS_Getc(file);
 			if (c == '\r' || c == '\n' || c < 0)
 				break;
-			if (end < VM_STRINGTEMP_LENGTH - 1)
+			if (end < VM_TEMPSTRING_MAXSIZE - 1)
 				string[end++] = c;
 		}
 		string[end] = 0;
@@ -4513,7 +4581,7 @@ float bufstr_find(float bufhandle, string match, float matchrule, float startpos
 void VM_bufstr_find(prvm_prog_t *prog)
 {
 	prvm_stringbuffer_t *stringbuffer;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int matchrule, matchlen, i, step;
 	const char *match;
 
@@ -4540,7 +4608,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 		match = PRVM_G_STRING(OFS_PARM1);
 	else
 	{
-		strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
+		dp_strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
 		match = detect_match_rule(string, &matchrule);
 	}
 	matchlen = (int)strlen(match);
@@ -4550,7 +4618,7 @@ void VM_bufstr_find(prvm_prog_t *prog)
 	step = (prog->argc > 4) ? (int)PRVM_G_FLOAT(OFS_PARM4) : 1;
 	while(i < stringbuffer->num_strings)
 	{
-		if (stringbuffer->strings[i] && match_rule(stringbuffer->strings[i], VM_STRINGTEMP_LENGTH, match, matchlen, matchrule))
+		if (stringbuffer->strings[i] && match_rule(stringbuffer->strings[i], VM_TEMPSTRING_MAXSIZE, match, matchlen, matchrule))
 		{
 			PRVM_G_FLOAT(OFS_RETURN) = i;
 			break;
@@ -4568,7 +4636,7 @@ float matchpattern(string s, string pattern, float matchrule, float startpos) = 
 void VM_matchpattern(prvm_prog_t *prog)
 {
 	const char *s, *match;
-	char string[VM_STRINGTEMP_LENGTH];
+	char string[VM_TEMPSTRING_MAXSIZE];
 	int matchrule, l;
 
 	VM_SAFEPARMCOUNTRANGE(2, 4, VM_matchpattern);
@@ -4586,7 +4654,7 @@ void VM_matchpattern(prvm_prog_t *prog)
 		match = PRVM_G_STRING(OFS_PARM1);
 	else
 	{
-		strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
+		dp_strlcpy(string, PRVM_G_STRING(OFS_PARM1), sizeof(string));
 		match = detect_match_rule(string, &matchrule);
 	}
 
@@ -4596,7 +4664,7 @@ void VM_matchpattern(prvm_prog_t *prog)
 		s += max(0, min((unsigned int)PRVM_G_FLOAT(OFS_PARM3), strlen(s)-1));
 
 	// match
-	PRVM_G_FLOAT(OFS_RETURN) = match_rule(s, VM_STRINGTEMP_LENGTH, match, l, matchrule);
+	PRVM_G_FLOAT(OFS_RETURN) = match_rule(s, VM_TEMPSTRING_MAXSIZE, match, l, matchrule);
 }
 
 /*
@@ -4805,15 +4873,15 @@ void VM_changepitch (prvm_prog_t *prog)
 
 void VM_uncolorstring (prvm_prog_t *prog)
 {
-	char szNewString[VM_STRINGTEMP_LENGTH];
+	char szNewString[VM_TEMPSTRING_MAXSIZE];
+	size_t szNewString_len;
 	const char *szString;
 
 	// Prepare Strings
 	VM_SAFEPARMCOUNT(1, VM_uncolorstring);
 	szString = PRVM_G_STRING(OFS_PARM0);
-	COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), true);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString);
-	
+	szNewString_len = COM_StringDecolorize(szString, 0, szNewString, sizeof(szNewString), true);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, szNewString, szNewString_len);
 }
 
 // #221 float(string str, string sub[, float startpos]) strstrofs (FTE_STRINGS)
@@ -4878,11 +4946,12 @@ void VM_chr2str (prvm_prog_t *prog)
 	char t[9 * 4 + 1];
 	int i;
 	size_t len = 0;
+
 	VM_SAFEPARMCOUNTRANGE(0, 8, VM_chr2str);
 	for(i = 0; i < prog->argc && len < sizeof(t)-1; ++i)
 		len += u8_fromchar((Uchar)PRVM_G_FLOAT(OFS_PARM0+i*3), t + len, sizeof(t)-1);
-	t[len] = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t);
+	t[len] = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, t, len);
 }
 
 static int chrconv_number(int i, int base, int conv)
@@ -4969,8 +5038,10 @@ static int chrchar_alpha(int i, int basec, int baset, int convc, int convt, int 
 //bulk convert a string. change case or colouring.
 void VM_strconv (prvm_prog_t *prog)
 {
-	int ccase, redalpha, rednum, len, i;
-	unsigned char resbuf[VM_STRINGTEMP_LENGTH];
+	int ccase, redalpha, rednum;
+	unsigned i;
+	size_t resbuf_len;
+	unsigned char resbuf[VM_TEMPSTRING_MAXSIZE];
 	unsigned char *result = resbuf;
 
 	VM_SAFEPARMCOUNTRANGE(3, 8, VM_strconv);
@@ -4978,10 +5049,9 @@ void VM_strconv (prvm_prog_t *prog)
 	ccase = (int) PRVM_G_FLOAT(OFS_PARM0);	//0 same, 1 lower, 2 upper
 	redalpha = (int) PRVM_G_FLOAT(OFS_PARM1);	//0 same, 1 white, 2 red,  5 alternate, 6 alternate-alternate
 	rednum = (int) PRVM_G_FLOAT(OFS_PARM2);	//0 same, 1 white, 2 red, 3 redspecial, 4 whitespecial, 5 alternate, 6 alternate-alternate
-	VM_VarString(prog, 3, (char *) resbuf, sizeof(resbuf));
-	len = (int)strlen((char *) resbuf);
+	resbuf_len = VM_VarString(prog, 3, (char *) resbuf, sizeof(resbuf));
 
-	for (i = 0; i < len; i++, result++)	//should this be done backwards?
+	for (i = 0; i < resbuf_len; i++, result++)	//should this be done backwards?
 	{
 		if (*result >= '0' && *result <= '9')	//normal numbers...
 			*result = chrconv_number(*result, '0', rednum);
@@ -5010,24 +5080,26 @@ void VM_strconv (prvm_prog_t *prog)
 	}
 	*result = '\0';
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, (char *) resbuf);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, (char *)resbuf, result - resbuf);
 }
 
 // #225 string(float chars, string s, ...) strpad (FTE_STRINGS)
 void VM_strpad (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char destbuf[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char destbuf[VM_TEMPSTRING_MAXSIZE];
+	size_t destbuf_len;
 	int pad;
+
 	VM_SAFEPARMCOUNTRANGE(1, 8, VM_strpad);
 	pad = (int) PRVM_G_FLOAT(OFS_PARM0);
 	VM_VarString(prog, 1, src, sizeof(src));
 
 	// note: < 0 = left padding, > 0 = right padding,
 	// this is reverse logic of printf!
-	dpsnprintf(destbuf, sizeof(destbuf), "%*s", -pad, src);
+	destbuf_len = dpsnprintf(destbuf, sizeof(destbuf), "%*s", -pad, src);
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, destbuf);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, destbuf, destbuf_len);
 }
 
 // #226 string(string info, string key, string value, ...) infoadd (FTE_STRINGS)
@@ -5035,19 +5107,19 @@ void VM_strpad (prvm_prog_t *prog)
 void VM_infoadd (prvm_prog_t *prog)
 {
 	const char *info, *key;
-	char value[VM_STRINGTEMP_LENGTH];
-	char temp[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
+	char temp[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_infoadd);
 	info = PRVM_G_STRING(OFS_PARM0);
 	key = PRVM_G_STRING(OFS_PARM1);
 	VM_VarString(prog, 2, value, sizeof(value));
 
-	strlcpy(temp, info, VM_STRINGTEMP_LENGTH);
+	dp_strlcpy(temp, info, VM_TEMPSTRING_MAXSIZE);
 
-	InfoString_SetValue(temp, VM_STRINGTEMP_LENGTH, key, value);
+	InfoString_SetValue(temp, VM_TEMPSTRING_MAXSIZE, key, value);
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, temp);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, temp, strlen(temp));
 }
 
 // #227 string(string info, string key) infoget (FTE_STRINGS)
@@ -5056,15 +5128,15 @@ void VM_infoget (prvm_prog_t *prog)
 {
 	const char *info;
 	const char *key;
-	char value[VM_STRINGTEMP_LENGTH];
+	char value[VM_TEMPSTRING_MAXSIZE];
 
 	VM_SAFEPARMCOUNT(2, VM_infoget);
 	info = PRVM_G_STRING(OFS_PARM0);
 	key = PRVM_G_STRING(OFS_PARM1);
 
-	InfoString_GetValue(info, key, value, VM_STRINGTEMP_LENGTH);
+	InfoString_GetValue(info, key, value, VM_TEMPSTRING_MAXSIZE);
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, value);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, value, strlen(value));
 }
 
 //#228 float(string s1, string s2, float len) strncmp (FTE_STRINGS)
@@ -5107,11 +5179,13 @@ void VM_strncasecmp (prvm_prog_t *prog)
 void VM_crc16(prvm_prog_t *prog)
 {
 	float insensitive;
-	char s[VM_STRINGTEMP_LENGTH];
+	char s[VM_TEMPSTRING_MAXSIZE];
+	size_t slen;
+
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_crc16);
 	insensitive = PRVM_G_FLOAT(OFS_PARM0);
-	VM_VarString(prog, 1, s, sizeof(s));
-	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, strlen(s)));
+	slen = VM_VarString(prog, 1, s, sizeof(s));
+	PRVM_G_FLOAT(OFS_RETURN) = (unsigned short) ((insensitive ? CRC_Block_CaseInsensitive : CRC_Block) ((unsigned char *) s, slen));
 }
 
 // #639 float(string digest, string data, ...) digest_hex
@@ -5123,15 +5197,14 @@ void VM_digest_hex(prvm_prog_t *prog)
 	char outhex[65];
 	int outlen;
 
-	char s[VM_STRINGTEMP_LENGTH];
-	int len;
+	char s[VM_TEMPSTRING_MAXSIZE];
+	size_t len;
 
 	VM_SAFEPARMCOUNTRANGE(2, 8, VM_digest_hex);
 	digest = PRVM_G_STRING(OFS_PARM0);
 	if(!digest)
 		digest = "";
-	VM_VarString(prog, 1, s, sizeof(s));
-	len = (int)strlen(s);
+	len = VM_VarString(prog, 1, s, sizeof(s));
 
 	outlen = 0;
 
@@ -5156,8 +5229,8 @@ void VM_digest_hex(prvm_prog_t *prog)
 			outhex[2*i]   = hexmap[(out[i] >> 4) & 15];
 			outhex[2*i+1] = hexmap[(out[i] >> 0) & 15];
 		}
-		outhex[2*i] = 0;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outhex);
+		outhex[2*i] = '\0';
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outhex, 2*i);
 	}
 	else
 		PRVM_G_INT(OFS_RETURN) = 0;
@@ -5183,7 +5256,7 @@ void VM_SetTraceGlobals(prvm_prog_t *prog, const trace_t *trace)
 	PRVM_gameglobalfloat(trace_dpstartcontents) = trace->startsupercontents;
 	PRVM_gameglobalfloat(trace_dphitcontents) = trace->hitsupercontents;
 	PRVM_gameglobalfloat(trace_dphitq3surfaceflags) = trace->hitq3surfaceflags;
-	PRVM_gameglobalstring(trace_dphittexturename) = trace->hittexture ? PRVM_SetTempString(prog, trace->hittexture->name) : 0;
+	PRVM_gameglobalstring(trace_dphittexturename) = trace->hittexture ? PRVM_SetTempString(prog, trace->hittexture->name, strlen(trace->hittexture->name)) : 0;
 }
 
 void VM_ClearTraceGlobals(prvm_prog_t *prog)
@@ -5227,8 +5300,8 @@ void VM_Cmd_Reset(prvm_prog_t *prog)
 // does URI escaping on a string (replace evil stuff by %AB escapes)
 void VM_uri_escape (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char dest[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char dest[VM_TEMPSTRING_MAXSIZE];
 	char *p, *q;
 	static const char *hex = "0123456789ABCDEF";
 
@@ -5251,17 +5324,17 @@ void VM_uri_escape (prvm_prog_t *prog)
 			*q++ = hex[ *(unsigned char *)p       & 0xF];
 		}
 	}
-	*q++ = 0;
+	*q = '\0';
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, dest);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, dest, q - dest);
 }
 
 // #510 string(string input, ...) uri_unescape (DP_QC_URI_ESCAPE)
 // does URI unescaping on a string (get back the evil stuff)
 void VM_uri_unescape (prvm_prog_t *prog)
 {
-	char src[VM_STRINGTEMP_LENGTH];
-	char dest[VM_STRINGTEMP_LENGTH];
+	char src[VM_TEMPSTRING_MAXSIZE];
+	char dest[VM_TEMPSTRING_MAXSIZE];
 	char *p, *q;
 	int hi, lo;
 
@@ -5298,9 +5371,9 @@ nohex:
 		// otherwise:
 		*q++ = *p++;
 	}
-	*q++ = 0;
+	*q = '\0';
 
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, dest);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, dest, q - dest);
 }
 
 // #502 string(string filename) whichpack (DP_QC_WHICHPACK)
@@ -5313,7 +5386,7 @@ void VM_whichpack (prvm_prog_t *prog)
 	fn = PRVM_G_STRING(OFS_PARM0);
 	pack = FS_WhichPack(fn);
 
-	PRVM_G_INT(OFS_RETURN) = pack ? PRVM_SetTempString(prog, pack) : 0;
+	PRVM_G_INT(OFS_RETURN) = pack ? PRVM_SetTempString(prog, pack, strlen(pack)) : 0;
 }
 
 typedef struct
@@ -5351,11 +5424,11 @@ static void uri_to_string_callback(int status, size_t length_received, unsigned 
 	{
 		if(length_received >= sizeof(handle->buffer))
 			length_received = sizeof(handle->buffer) - 1;
-		handle->buffer[length_received] = 0;
+		handle->buffer[length_received] = '\0';
 
 		PRVM_G_FLOAT(OFS_PARM0) = handle->id;
 		PRVM_G_FLOAT(OFS_PARM1) = status;
-		PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(prog, handle->buffer);
+		PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(prog, handle->buffer, length_received);
 		prog->ExecuteProgram(prog, PRVM_allfunction(URI_Get_Callback), "QC function URI_Get_Callback is missing");
 	}
 
@@ -5462,7 +5535,7 @@ void VM_uri_get (prvm_prog_t *prog)
 			// POST: we sign postdata \0 query string
 			size_t ll;
 			handle->sigdata = (char *)Z_Malloc(8192);
-			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
+			dp_strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
 			l = strlen(handle->sigdata);
 			handle->siglen = Crypto_SignDataDetached(handle->postdata, handle->postlen + 1 + lq, postkeyid, handle->sigdata + l, 8192 - l);
 			if(!handle->siglen)
@@ -5482,7 +5555,7 @@ void VM_uri_get (prvm_prog_t *prog)
 			handle->sigdata[handle->siglen] = 0;
 		}
 out1:
-		strlcpy(handle->posttype, posttype, sizeof(handle->posttype));
+		dp_strlcpy(handle->posttype, posttype, sizeof(handle->posttype));
 		ret = Curl_Begin_ToMemory_POST(url, handle->sigdata, 0, handle->posttype, handle->postdata, handle->postlen, (unsigned char *) handle->buffer, sizeof(handle->buffer), uri_to_string_callback, handle);
 	}
 	else
@@ -5492,7 +5565,7 @@ out1:
 			// GET: we sign JUST the query string
 			size_t l, ll;
 			handle->sigdata = (char *)Z_Malloc(8192);
-			strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
+			dp_strlcpy(handle->sigdata, "X-D0-Blind-ID-Detached-Signature: ", 8192);
 			l = strlen(handle->sigdata);
 			handle->siglen = Crypto_SignDataDetached(query_string, lq, postkeyid, handle->sigdata + l, 8192 - l);
 			if(!handle->siglen)
@@ -5535,6 +5608,7 @@ void VM_netaddress_resolve (prvm_prog_t *prog)
 {
 	const char *ip;
 	char normalized[128];
+	size_t normalized_len;
 	int port;
 	lhnetaddress_t addr;
 
@@ -5545,10 +5619,10 @@ void VM_netaddress_resolve (prvm_prog_t *prog)
 	if(prog->argc > 1)
 		port = (int) PRVM_G_FLOAT(OFS_PARM1);
 
-	if(LHNETADDRESS_FromString(&addr, ip, port) && LHNETADDRESS_ToString(&addr, normalized, sizeof(normalized), prog->argc > 1))
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, normalized);
+	if(LHNETADDRESS_FromString(&addr, ip, port) && (normalized_len = LHNETADDRESS_ToString(&addr, normalized, sizeof(normalized), prog->argc > 1)))
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, normalized, normalized_len);
 	else
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "");
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "", 0);
 }
 
 //string(prvm_prog_t *prog) getextresponse = #624; // returns the next extResponse packet that was sent to this client
@@ -5563,7 +5637,7 @@ void VM_CL_getextresponse (prvm_prog_t *prog)
 		int first;
 		--cl_net_extresponse_count;
 		first = (cl_net_extresponse_last + NET_EXTRESPONSE_MAX - cl_net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cl_net_extresponse[first]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cl_net_extresponse[first], strlen(cl_net_extresponse[first]));
 	}
 }
 
@@ -5578,7 +5652,7 @@ void VM_SV_getextresponse (prvm_prog_t *prog)
 		int first;
 		--sv_net_extresponse_count;
 		first = (sv_net_extresponse_last + NET_EXTRESPONSE_MAX - sv_net_extresponse_count) % NET_EXTRESPONSE_MAX;
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, sv_net_extresponse[first]);
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, sv_net_extresponse[first], strlen(sv_net_extresponse[first]));
 	}
 }
 
@@ -6031,9 +6105,10 @@ verbatim:
 				break;
 		}
 	}
+
 finished:
-	*o = 0;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outbuf);
+	*o = '\0';
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, outbuf, o - outbuf);
 }
 
 
@@ -6359,11 +6434,12 @@ void VM_getsurfacetexture(prvm_prog_t *prog)
 {
 	model_t *model;
 	msurface_t *surface;
+
 	VM_SAFEPARMCOUNT(2, VM_getsurfacetexture);
 	PRVM_G_INT(OFS_RETURN) = OFS_NULL;
 	if (!(model = getmodel(prog, PRVM_G_EDICT(OFS_PARM0))) || !(surface = getsurface(model, (int)PRVM_G_FLOAT(OFS_PARM1))))
 		return;
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, surface->texture->name);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, surface->texture->name, strlen(surface->texture->name));
 }
 //PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 void VM_getsurfacenearpoint(prvm_prog_t *prog)

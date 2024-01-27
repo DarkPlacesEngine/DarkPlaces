@@ -455,7 +455,7 @@ void CL_DisconnectEx(qbool kicked, const char *fmt, ... )
 		if(fmt && reason[0] != '\0')
 			dpsnprintf(cl_connect_status, sizeof(cl_connect_status), "Disconnect: %s", reason);
 		else
-			strlcpy(cl_connect_status, "Disconnected", sizeof(cl_connect_status));
+			dp_strlcpy(cl_connect_status, "Disconnected", sizeof(cl_connect_status));
 		Con_Printf("%s\n", cl_connect_status);
 	}
 	cls.state = ca_disconnected;
@@ -602,13 +602,13 @@ void CL_EstablishConnection(const char *address, int firstarg)
 			*cls.connect_userinfo = 0;
 		}
 
-		strlcpy(cl_connect_status, "Connect: pending...", sizeof(cl_connect_status));
+		dp_strlcpy(cl_connect_status, "Connect: pending...", sizeof(cl_connect_status));
 		SCR_BeginLoadingPlaque(false);
 	}
 	else
 	{
 		Con_Printf(CON_ERROR "Connect: failed, unable to find a network socket suitable to reach %s\n", address);
-		strlcpy(cl_connect_status, "Connect: failed, no network", sizeof(cl_connect_status));
+		dp_strlcpy(cl_connect_status, "Connect: failed, no network", sizeof(cl_connect_status));
 	}
 }
 
@@ -890,7 +890,7 @@ void CL_AllocLightFlash(entity_render_t *ent, matrix4x4_t *matrix, float radius,
 		dl->die = 0;
 	dl->cubemapname[0] = 0;
 	if (cubemapname && cubemapname[0])
-		strlcpy(dl->cubemapname, cubemapname, sizeof(dl->cubemapname));
+		dp_strlcpy(dl->cubemapname, cubemapname, sizeof(dl->cubemapname));
 	dl->style = style;
 	dl->shadow = shadowenable;
 	dl->corona = corona;
@@ -2160,7 +2160,7 @@ static void CL_Fog_HeightTexture_f(cmd_state_t *cmd)
 	r_refdef.fog_end = atof(Cmd_Argv(cmd, 7));
 	r_refdef.fog_height = atof(Cmd_Argv(cmd, 8));
 	r_refdef.fog_fadedepth = atof(Cmd_Argv(cmd, 9));
-	strlcpy(r_refdef.fog_height_texturename, Cmd_Argv(cmd, 10), sizeof(r_refdef.fog_height_texturename));
+	dp_strlcpy(r_refdef.fog_height_texturename, Cmd_Argv(cmd, 10), sizeof(r_refdef.fog_height_texturename));
 }
 
 
@@ -2225,7 +2225,7 @@ void CL_Locs_FindLocationName(char *buffer, size_t buffersize, vec3_t point)
 	cl_locnode_t *loc;
 	loc = CL_Locs_FindNearest(point);
 	if (loc)
-		strlcpy(buffer, loc->name, buffersize);
+		dp_strlcpy(buffer, loc->name, buffersize);
 	else
 		dpsnprintf(buffer, buffersize, "LOC=%.0f:%.0f:%.0f", point[0], point[1], point[2]);
 }

@@ -53,10 +53,10 @@ const char *vm_m_extensions[] = {
 NULL
 };
 
-qbool MP_ConsoleCommand(const char *text)
+qbool MP_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = MVM_prog;
-	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.GameCommand, false, -1, 0, prog->loaded, "QC function GameCommand is missing");
+	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.GameCommand, false, -1, 0, prog->loaded, "QC function GameCommand is missing");
 }
 
 /*
@@ -220,9 +220,9 @@ static void VM_M_getgamedirinfo(prvm_prog_t *prog)
 	if(nr >= 0 && nr < fs_all_gamedirs_count)
 	{
 		if(item == 0)
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, fs_all_gamedirs[nr].name );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, fs_all_gamedirs[nr].name, strlen(fs_all_gamedirs[nr].name));
 		else if(item == 1)
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, fs_all_gamedirs[nr].description );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, fs_all_gamedirs[nr].description, strlen(fs_all_gamedirs[nr].description));
 	}
 }
 
@@ -331,25 +331,25 @@ static void VM_M_setserverlistmaskstring(prvm_prog_t *prog)
 
 	switch( field ) {
 		case SLIF_CNAME:
-			strlcpy( mask->info.cname, str, sizeof(mask->info.cname) );
+			mask->info.cname_len = dp_strlcpy(mask->info.cname, str, sizeof(mask->info.cname));
 			break;
 		case SLIF_NAME:
-			strlcpy( mask->info.name, str, sizeof(mask->info.name)  );
+			mask->info.name_len = dp_strlcpy(mask->info.name, str, sizeof(mask->info.name));
 			break;
 		case SLIF_QCSTATUS:
-			strlcpy( mask->info.qcstatus, str, sizeof(mask->info.qcstatus)  );
+			mask->info.qcstatus_len = dp_strlcpy(mask->info.qcstatus, str, sizeof(mask->info.qcstatus));
 			break;
 		case SLIF_PLAYERS:
-			strlcpy( mask->info.players, str, sizeof(mask->info.players)  );
+			mask->info.players_len = dp_strlcpy(mask->info.players, str, sizeof(mask->info.players));
 			break;
 		case SLIF_MAP:
-			strlcpy( mask->info.map, str, sizeof(mask->info.map)  );
+			mask->info.map_len = dp_strlcpy(mask->info.map, str, sizeof(mask->info.map));
 			break;
 		case SLIF_MOD:
-			strlcpy( mask->info.mod, str, sizeof(mask->info.mod)  );
+			mask->info.mod_len = dp_strlcpy(mask->info.mod, str, sizeof(mask->info.mod));
 			break;
 		case SLIF_GAME:
-			strlcpy( mask->info.game, str, sizeof(mask->info.game)  );
+			mask->info.game_len = dp_strlcpy(mask->info.game, str, sizeof(mask->info.game));
 			break;
 		default:
 			VM_Warning(prog, "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
@@ -476,32 +476,32 @@ static void VM_M_getserverliststring(prvm_prog_t *prog)
 	}
 	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
 		case SLIF_CNAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.cname );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.cname, cache->info.cname_len);
 			break;
 		case SLIF_NAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.name );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.name, cache->info.name_len);
 			break;
 		case SLIF_QCSTATUS:
-			PRVM_G_INT (OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.qcstatus );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.qcstatus, cache->info.qcstatus_len);
 			break;
 		case SLIF_PLAYERS:
-			PRVM_G_INT (OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.players );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.players, cache->info.players_len);
 			break;
 		case SLIF_GAME:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.game );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.game, cache->info.game_len);
 			break;
 		case SLIF_MOD:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.mod );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.mod, cache->info.mod_len);
 			break;
 		case SLIF_MAP:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->info.map );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.map, cache->info.map_len);
 			break;
 		// TODO remove this again
 		case 1024:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->line1 );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->line1, cache->line1_len);
 			break;
 		case 1025:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, cache->line2 );
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->line2, cache->line2_len);
 			break;
 		default:
 			Con_Print("VM_M_getserverliststring: bad field number passed!\n");
@@ -810,7 +810,7 @@ static void VM_M_crypto_getkeyfp(prvm_prog_t *prog)
 	VM_CheckEmptyString( prog, s );
 
 	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, keyfp, sizeof(keyfp), NULL, 0, NULL, NULL))
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, keyfp );
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, keyfp, strlen(keyfp));
 	else
 		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
 }
@@ -826,7 +826,7 @@ static void VM_M_crypto_getidfp(prvm_prog_t *prog)
 	VM_CheckEmptyString( prog, s );
 
 	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, NULL, 0, idfp, sizeof(idfp), NULL, NULL))
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, idfp );
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString( prog, idfp, strlen(idfp));
 	else
 		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
 }
@@ -859,7 +859,15 @@ static void VM_M_crypto_getencryptlevel(prvm_prog_t *prog)
 	VM_CheckEmptyString( prog, s );
 
 	if(LHNETADDRESS_FromString(&addr, s, 26000) && Crypto_RetrieveHostKey(&addr, NULL, NULL, 0, NULL, 0, &aeslevel, NULL))
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, aeslevel ? va(vabuf, sizeof(vabuf), "%d AES128", aeslevel) : "0");
+	{
+		if (aeslevel)
+		{
+			size_t vabuf_len = dpsnprintf(vabuf, sizeof(vabuf), "%d AES128", aeslevel);
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, vabuf, vabuf_len);
+		}
+		else
+			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, "0", 1);
+	}
 	else
 		PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
 }
@@ -874,14 +882,14 @@ static void VM_M_crypto_getmykeyfp(prvm_prog_t *prog)
 	switch(Crypto_RetrieveLocalKey(i, keyfp, sizeof(keyfp), NULL, 0, NULL))
 	{
 		case -1:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "");
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "", 0);
 			break;
 		case 0:
 			PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
 			break;
 		default:
 		case 1:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, keyfp);
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, keyfp, strlen(keyfp));
 			break;
 	}
 }
@@ -896,14 +904,14 @@ static void VM_M_crypto_getmyidfp(prvm_prog_t *prog)
 	switch(Crypto_RetrieveLocalKey(i, NULL, 0, idfp, sizeof(idfp), NULL))
 	{
 		case -1:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "");
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, "", 0);
 			break;
 		case 0:
 			PRVM_G_INT( OFS_RETURN ) = OFS_NULL;
 			break;
 		default:
 		case 1:
-			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, idfp);
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetTempString(prog, idfp, strlen(idfp));
 			break;
 	}
 }

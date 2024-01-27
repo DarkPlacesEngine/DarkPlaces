@@ -176,9 +176,9 @@ void listdirectory(stringlist_t *list, const char *basepath, const char *path)
 	int lenw = 0;
 	WIN32_FIND_DATAW n_file;
 	HANDLE hFile;
-	strlcpy (pattern, basepath, sizeof(pattern));
-	strlcat (pattern, path, sizeof (pattern));
-	strlcat (pattern, "*", sizeof (pattern));
+	dp_strlcpy(pattern, basepath, sizeof(pattern));
+	dp_strlcat(pattern, path, sizeof (pattern));
+	dp_strlcat(pattern, "*", sizeof (pattern));
 	fromwtf8(pattern, strlen(pattern), patternw, BUFSIZE);
 	// ask for the directory listing handle
 	hFile = FindFirstFileW(patternw, &n_file);

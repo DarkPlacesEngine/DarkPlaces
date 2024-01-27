@@ -850,7 +850,7 @@ static void M_ScanSaves (void)
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 	{
-		strlcpy (m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
+		dp_strlcpy (m_filenames[i], "--- UNUSED SLOT ---", sizeof(m_filenames[i]));
 		loadable[i] = false;
 		dpsnprintf (name, sizeof(name), "s%i.sav", (int)i);
 		f = FS_OpenRealFile (name, "rb", false);
@@ -866,7 +866,7 @@ static void M_ScanSaves (void)
 		//version = atoi(com_token);
 		// description
 		COM_ParseToken_Simple(&t, false, false, true);
-		strlcpy (m_filenames[i], com_token, sizeof (m_filenames[i]));
+		dp_strlcpy (m_filenames[i], com_token, sizeof (m_filenames[i]));
 
 	// change _ back to space
 		for (j=0 ; j<SAVEGAME_COMMENT_LENGTH ; j++)
@@ -1284,7 +1284,7 @@ void M_Menu_Setup_f(cmd_state_t *cmd)
 	key_dest = key_menu;
 	m_state = m_setup;
 	m_entersound = true;
-	strlcpy(setup_myname, cl_name.string, sizeof(setup_myname));
+	dp_strlcpy(setup_myname, cl_name.string, sizeof(setup_myname));
 	setup_top = setup_oldtop = cl_topcolor.integer;
 	setup_bottom = setup_oldbottom = cl_bottomcolor.integer;
 	setup_rate = cl_rate.integer;
@@ -2632,7 +2632,7 @@ static void M_Keys_Draw (void)
 
 		// LadyHavoc: redesigned to print more than 2 keys, inspired by Tomaz's MiniRacer
 		if (keys[0] == -1)
-			strlcpy(keystring, "???", sizeof(keystring));
+			dp_strlcpy(keystring, "???", sizeof(keystring));
 		else
 		{
 			char tinystr[TINYSTR_LEN];
@@ -2642,8 +2642,8 @@ static void M_Keys_Draw (void)
 				if (keys[j] != -1)
 				{
 					if (j > 0)
-						strlcat(keystring, " or ", sizeof(keystring));
-					strlcat(keystring, Key_KeynumToString (keys[j], tinystr, TINYSTR_LEN), sizeof(keystring));
+						dp_strlcat(keystring, " or ", sizeof(keystring));
+					dp_strlcat(keystring, Key_KeynumToString (keys[j], tinystr, TINYSTR_LEN), sizeof(keystring));
 				}
 			}
 		}
@@ -4554,7 +4554,7 @@ static void ModList_RebuildList(void)
 		description = FS_CheckGameDir(list.strings[i]);
 		if (description == NULL || description == fs_checkgamedir_missing) continue;
 
-		strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
+		dp_strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
 		//check currently loaded mods
 		modlist[modlist_count].loaded = false;
 		if (fs_numgamedirs)
@@ -4580,7 +4580,7 @@ static void ModList_Enable (void)
 	// copy our mod list into an array for FS_ChangeGameDirs
 	numgamedirs = modlist_numenabled;
 	for (i = 0; i < modlist_numenabled; i++)
-		strlcpy (gamedirs[i], modlist[modlist_enabled[i]].dir,sizeof (gamedirs[i]));
+		dp_strlcpy (gamedirs[i], modlist[modlist_enabled[i]].dir,sizeof (gamedirs[i]));
 
 	// this code snippet is from FS_ChangeGameDirs
 	if (fs_numgamedirs == numgamedirs)

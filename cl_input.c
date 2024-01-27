@@ -211,7 +211,7 @@ static void IN_BestWeapon_Register(const char *name, int impulse, int weaponbit,
 		Con_Printf("no slot left for weapon definition; increase IN_BESTWEAPON_MAX\n");
 		return; // sorry
 	}
-	strlcpy(in_bestweapon_info[i].name, name, sizeof(in_bestweapon_info[i].name));
+	dp_strlcpy(in_bestweapon_info[i].name, name, sizeof(in_bestweapon_info[i].name));
 	in_bestweapon_info[i].impulse = impulse;
 	if(weaponbit != -1)
 		in_bestweapon_info[i].weaponbit = weaponbit;

@@ -256,7 +256,7 @@ static void Curl_CommandWhenDone(const char *cmd)
 	if(!curl_dll)
 		return;
 	if(cmd)
-		strlcpy(command_when_done, cmd, sizeof(command_when_done));
+		dp_strlcpy(command_when_done, cmd, sizeof(command_when_done));
 	else
 		*command_when_done = 0;
 }
@@ -272,7 +272,7 @@ static void Curl_CommandWhenError(const char *cmd)
 	if(!curl_dll)
 		return;
 	if(cmd)
-		strlcpy(command_when_error, cmd, sizeof(command_when_error));
+		dp_strlcpy(command_when_error, cmd, sizeof(command_when_error));
 	else
 		*command_when_error = 0;
 }
@@ -553,7 +553,7 @@ static void Curl_EndDownload(downloadinfo *di, CurlStatus status, CURLcode error
 			break;
 	}
 	if(content_type_)
-		strlcpy(content_type, content_type_, sizeof(content_type));
+		dp_strlcpy(content_type, content_type_, sizeof(content_type));
 	else
 		*content_type = 0;
 
@@ -1061,8 +1061,8 @@ static qbool Curl_Begin(const char *URL, const char *extraheaders, double maxspe
 		if(forthismap)
 			++numdownloads_added;
 		di = (downloadinfo *) Z_Malloc(sizeof(*di));
-		strlcpy(di->filename, name, sizeof(di->filename));
-		strlcpy(di->url, URL, sizeof(di->url));
+		dp_strlcpy(di->filename, name, sizeof(di->filename));
+		dp_strlcpy(di->url, URL, sizeof(di->url));
 		dpsnprintf(di->referer, sizeof(di->referer), "dp://%s/", cls.netcon ? cls.netcon->address : "notconnected.invalid");
 		di->forthismap = forthismap;
 		di->stream = NULL;
@@ -1638,7 +1638,7 @@ Curl_downloadinfo_t *Curl_GetDownloadInfo(int *nDownloads, const char **addition
 		if(developer.integer <= 0)
 			if(di->buffer)
 				continue;
-		strlcpy(downinfo[i].filename, di->filename, sizeof(downinfo[i].filename));
+		dp_strlcpy(downinfo[i].filename, di->filename, sizeof(downinfo[i].filename));
 		if(di->curle)
 		{
 			downinfo[i].progress = Curl_GetDownloadAmount(di);
@@ -1729,7 +1729,7 @@ static const char *Curl_FindPackURL(const char *filename)
 						*urlend = 0;
 						if(matchpattern(filename, pattern, true))
 						{
-							strlcpy(foundurl, url, sizeof(foundurl));
+							dp_strlcpy(foundurl, url, sizeof(foundurl));
 							Z_Free(buf);
 							return foundurl;
 						}
@@ -1781,7 +1781,7 @@ void Curl_RequireFile(const char *filename)
 {
 	requirement *req = (requirement *) Z_Malloc(sizeof(*requirements));
 	req->next = requirements;
-	strlcpy(req->filename, filename, sizeof(req->filename));
+	dp_strlcpy(req->filename, filename, sizeof(req->filename));
 	requirements = req;
 }
 
@@ -1833,18 +1833,18 @@ static qbool Curl_SendRequirement(const char *filename, qbool foundone, char *se
 	if(packurl && *packurl && strcmp(packurl, "-"))
 	{
 		if(!foundone)
-			strlcat(sendbuffer, "curl --clear_autodownload\n", sendbuffer_len);
+			dp_strlcat(sendbuffer, "curl --clear_autodownload\n", sendbuffer_len);
 
-		strlcat(sendbuffer, "curl --pak --forthismap --as ", sendbuffer_len);
-		strlcat(sendbuffer, thispack, sendbuffer_len);
+		dp_strlcat(sendbuffer, "curl --pak --forthismap --as ", sendbuffer_len);
+		dp_strlcat(sendbuffer, thispack, sendbuffer_len);
 		if(sv_curl_maxspeed.value > 0)
 			dpsnprintf(sendbuffer + strlen(sendbuffer), sendbuffer_len - strlen(sendbuffer), " --maxspeed=%.1f", sv_curl_maxspeed.value);
-		strlcat(sendbuffer, " --for ", sendbuffer_len);
-		strlcat(sendbuffer, filename, sendbuffer_len);
-		strlcat(sendbuffer, " ", sendbuffer_len);
-		strlcat(sendbuffer, packurl, sendbuffer_len);
-		strlcat(sendbuffer, thispack, sendbuffer_len);
-		strlcat(sendbuffer, "\n", sendbuffer_len);
+		dp_strlcat(sendbuffer, " --for ", sendbuffer_len);
+		dp_strlcat(sendbuffer, filename, sendbuffer_len);
+		dp_strlcat(sendbuffer, " ", sendbuffer_len);
+		dp_strlcat(sendbuffer, packurl, sendbuffer_len);
+		dp_strlcat(sendbuffer, thispack, sendbuffer_len);
+		dp_strlcat(sendbuffer, "\n", sendbuffer_len);
 
 		return true;
 	}
@@ -1867,7 +1867,7 @@ void Curl_SendRequirements(void)
 		foundone = Curl_SendRequirement(com_token, foundone, sendbuffer, sizeof(sendbuffer)) || foundone;
 
 	if(foundone)
-		strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
+		dp_strlcat(sendbuffer, "curl --finish_autodownload\n", sizeof(sendbuffer));
 
 	if(strlen(sendbuffer) + 1 < sizeof(sendbuffer))
 		SV_ClientCommands("%s", sendbuffer);

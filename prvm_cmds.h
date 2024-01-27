@@ -212,12 +212,13 @@ float	getserverlistindexforkey(string key)
 
 #define	VM_RETURN_EDICT(e)		(prog->globals.ip[OFS_RETURN] = PRVM_EDICT_TO_PROG(e))
 
-#define VM_STRINGTEMP_LENGTH MAX_INPUTLINE
+#define VM_TEMPSTRING_MAXSIZE MAX_INPUTLINE
 
 // general functions
 void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);
-void VM_VarString(prvm_prog_t *prog, int first, char *out, int outlength);
-qbool PRVM_ConsoleCommand (prvm_prog_t *prog, const char *text, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message);
+/// Returns the length of the *out string excluding the \0 terminator.
+size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize);
+qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message);
 prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, const char *format);
 void BufStr_Set(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer, int strindex, const char *str);
 void BufStr_Del(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer);

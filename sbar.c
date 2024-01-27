@@ -620,7 +620,7 @@ void Sbar_SortFrags (void)
 						teamname = "Total Team Score";
 						break;
 				}
-				strlcpy(teams[teamlines-1].name, teamname, sizeof(teams[teamlines-1].name));
+				dp_strlcpy(teams[teamlines-1].name, teamname, sizeof(teams[teamlines-1].name));
 
 				teams[teamlines-1].frags = 0;
 				teams[teamlines-1].colors = color + 16 * color;
@@ -682,7 +682,7 @@ static void Sbar_SoloScoreboard (void)
 		Sbar_DrawString(8+22*8, 4, va(vabuf, sizeof(vabuf), "Secrets:%3i", cl.stats[STAT_SECRETS]));
 
 	// format is like this: e1m1:The Sligpate Complex
-	dpsnprintf(str, sizeof(str), "%s:%s", cl.worldbasename, cl.worldmessage);
+	dpsnprintf(str, sizeof(str), "%s:%.39s", cl.worldbasename, cl.worldmessage);
 
 	// if there's a newline character, terminate the string there
 	if (strchr(str, '\n'))
@@ -1141,12 +1141,12 @@ void Sbar_ShowFPS(void)
 	}
 	if (cl_showtime.integer)
 	{
-		strlcpy(timestring, Sys_TimeString(cl_showtime_format.string), sizeof(timestring));
+		dp_strlcpy(timestring, Sys_TimeString(cl_showtime_format.string), sizeof(timestring));
 		fps_strings++;
 	}
 	if (cl_showdate.integer)
 	{
-		strlcpy(datestring, Sys_TimeString(cl_showdate_format.string), sizeof(datestring));
+		dp_strlcpy(datestring, Sys_TimeString(cl_showdate_format.string), sizeof(datestring));
 		fps_strings++;
 	}
 	if (cl_showblur.integer)
@@ -1218,9 +1218,9 @@ void Sbar_ShowFPS(void)
 			svtrace = SV_TraceLine(org, dest, MOVE_HITMODEL, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value);
 		cltrace = CL_TraceLine(org, dest, MOVE_HITMODEL, NULL, SUPERCONTENTS_SOLID, 0, MATERIALFLAGMASK_TRANSLUCENT, collision_extendmovelength.value, true, false, &hitnetentity, true, true);
 		if (cltrace.hittexture)
-			strlcpy(texstring, cltrace.hittexture->name, sizeof(texstring));
+			dp_strlcpy(texstring, cltrace.hittexture->name, sizeof(texstring));
 		else
-			strlcpy(texstring, "(no texture hit)", sizeof(texstring));
+			dp_strlcpy(texstring, "(no texture hit)", sizeof(texstring));
 		fps_strings++;
 		if (svtrace.fraction < cltrace.fraction)
 		{
@@ -1230,7 +1230,7 @@ void Sbar_ShowFPS(void)
 				dpsnprintf(entstring, sizeof(entstring), "server entity %i", (int)PRVM_EDICT_TO_PROG(svtrace.ent));
 			}
 			else
-				strlcpy(entstring, "(no entity hit)", sizeof(entstring));
+				dp_strlcpy(entstring, "(no entity hit)", sizeof(entstring));
 		}
 		else
 		{
@@ -1242,9 +1242,9 @@ void Sbar_ShowFPS(void)
 			else if (hitnetentity > 0)
 				dpsnprintf(entstring, sizeof(entstring), "network entity %i", hitnetentity);
 			else if (hitnetentity == 0)
-				strlcpy(entstring, "world entity", sizeof(entstring));
+				dp_strlcpy(entstring, "world entity", sizeof(entstring));
 			else
-				strlcpy(entstring, "(no entity hit)", sizeof(entstring));
+				dp_strlcpy(entstring, "(no entity hit)", sizeof(entstring));
 		}
 		fps_strings++;
 	}

@@ -529,10 +529,10 @@ qbool CL_VM_UpdateView (double frametime)
 	return true;
 }
 
-qbool CL_VM_ConsoleCommand (const char *text)
+qbool CL_VM_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	return PRVM_ConsoleCommand(prog, text, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, cl.csqc_loaded, "QC function CSQC_ConsoleCommand is missing");
+	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, cl.csqc_loaded, "QC function CSQC_ConsoleCommand is missing");
 }
 
 qbool CL_VM_Parse_TempEntity (void)
@@ -560,7 +560,7 @@ qbool CL_VM_Parse_TempEntity (void)
 	return r;
 }
 
-void CL_VM_Parse_StuffCmd (const char *msg)
+void CL_VM_Parse_StuffCmd(const char *msg, size_t msg_len)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
@@ -575,7 +575,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		int crcflags = csqc_progcrc.flags;
 		csqc_progcrc.flags &= ~CF_READONLY;
 		csqc_progsize.flags &= ~CF_READONLY;
-		Cmd_ExecuteString(cmd_local, msg, src_local, true);
+		Cmd_ExecuteString(cmd_local, msg, msg_len, src_local, true);
 		csqc_progcrc.flags = csqc_progsize.flags = crcflags;
 		return;
 	}
@@ -591,7 +591,7 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg, msg_len);
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Parse_StuffCmd), "QC function CSQC_Parse_StuffCmd is missing");
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
@@ -600,48 +600,54 @@ void CL_VM_Parse_StuffCmd (const char *msg)
 	CSQC_END
 }
 
-static void CL_VM_Parse_Print (const char *msg)
+static void CL_VM_Parse_Print(const char *msg, size_t msg_len)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
 	PRVM_clientglobalfloat(time) = cl.time;
 	PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 	restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg);
+	PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg, msg_len);
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Parse_Print), "QC function CSQC_Parse_Print is missing");
 	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 }
 
-void CSQC_AddPrintText (const char *msg)
+void CSQC_AddPrintText(const char *msg, size_t msg_len)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	size_t i;
+	char *start = cl.csqc_printtextbuf + cl.csqc_printtextbuf_len;
+	size_t writebytes = min(msg_len + 1, MAX_INPUTLINE - cl.csqc_printtextbuf_len);
+
 	CSQC_BEGIN
 	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_Print))
 	{
-		// FIXME: is this bugged?
-		i = strlen(msg)-1;
-		if(msg[i] != '\n' && msg[i] != '\r')
+		if(msg[msg_len - 1] != '\n' && msg[msg_len - 1] != '\r')
 		{
-			if(strlen(cl.csqc_printtextbuf)+i >= MAX_INPUTLINE)
+			if(cl.csqc_printtextbuf_len + msg_len + 1 >= MAX_INPUTLINE)
 			{
-				CL_VM_Parse_Print(cl.csqc_printtextbuf);
-				cl.csqc_printtextbuf[0] = 0;
+				CL_VM_Parse_Print(cl.csqc_printtextbuf, cl.csqc_printtextbuf_len);
+				cl.csqc_printtextbuf[0] = '\0';
+				cl.csqc_printtextbuf_len = 0;
 			}
 			else
-				strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
+			{
+				memcpy(start, msg, writebytes);
+				cl.csqc_printtextbuf_len += msg_len;
+			}
 			return;
 		}
-		strlcat(cl.csqc_printtextbuf, msg, MAX_INPUTLINE);
-		CL_VM_Parse_Print(cl.csqc_printtextbuf);
-		cl.csqc_printtextbuf[0] = 0;
+		memcpy(start, msg, writebytes);
+		cl.csqc_printtextbuf_len += msg_len;
+		CL_VM_Parse_Print(cl.csqc_printtextbuf, cl.csqc_printtextbuf_len);
+		cl.csqc_printtextbuf[0] = '\0';
+		cl.csqc_printtextbuf_len = 0;
 	}
 	else
 		Con_Print(msg);
 	CSQC_END
 }
 
-void CL_VM_Parse_CenterPrint (const char *msg)
+void CL_VM_Parse_CenterPrint(const char *msg, size_t msg_len)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
@@ -651,7 +657,7 @@ void CL_VM_Parse_CenterPrint (const char *msg)
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 		restorevm_tempstringsbuf_cursize = prog->tempstringsbuf.cursize;
-		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg);
+		PRVM_G_INT(OFS_PARM0) = PRVM_SetTempString(prog, msg, msg_len);
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Parse_CenterPrint), "QC function CSQC_Parse_CenterPrint is missing");
 		prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
 	}
@@ -693,7 +699,7 @@ qbool CL_VM_Event_Sound(int sound_num, float fvolume, int channel, float attenua
 			PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 			PRVM_G_FLOAT(OFS_PARM0) = ent;
 			PRVM_G_FLOAT(OFS_PARM1) = CHAN_ENGINE2USER(channel);
-			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(prog, cl.sound_name[sound_num] );
+			PRVM_G_INT(OFS_PARM2) = PRVM_SetTempString(prog, cl.sound_name[sound_num], strlen(cl.sound_name[sound_num]));
 			PRVM_G_FLOAT(OFS_PARM3) = fvolume;
 			PRVM_G_FLOAT(OFS_PARM4) = attenuation;
 			VectorCopy(pos, PRVM_G_VECTOR(OFS_PARM5) );

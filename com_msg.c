@@ -340,21 +340,34 @@ float MSG_ReadBigFloat (sizebuf_t *sb)
 
 char *MSG_ReadString (sizebuf_t *sb, char *string, size_t maxstring)
 {
-	int c;
 	size_t l = 0;
+
 	// read string into sbfer, but only store as many characters as will fit
-	while ((c = MSG_ReadByte(sb)) > 0)
-		if (l < maxstring - 1)
-			string[l++] = c;
-	string[l] = 0;
+	// if dest buffer is full sb->readcount will still be advanced to end of message string
+	while ((string[l] = MSG_ReadByte_opt(sb)) != '\0')
+		if (l < maxstring)
+			++l;
 	return string;
 }
-
-int MSG_ReadBytes (sizebuf_t *sb, int numbytes, unsigned char *out)
+size_t MSG_ReadString_len (sizebuf_t *sb, char *string, size_t maxstring)
 {
-	int l, c;
-	for (l = 0;l < numbytes && (c = MSG_ReadByte(sb)) != -1;l++)
-		out[l] = c;
+	size_t l = 0;
+
+	// read string into sbfer, but only store as many characters as will fit
+	// if dest buffer is full sb->readcount will still be advanced to end of message string
+	while ((string[l] = MSG_ReadByte_opt(sb)) != '\0')
+		if (l < maxstring)
+			++l;
+	return l;
+}
+
+size_t MSG_ReadBytes (sizebuf_t *sb, size_t numbytes, unsigned char *out)
+{
+	size_t l = 0;
+
+	// when numbytes have been read sb->readcount won't be advanced any further
+	while (l < numbytes && !sb->badread)
+		out[l++] = MSG_ReadByte_opt(sb);
 	return l;
 }
 

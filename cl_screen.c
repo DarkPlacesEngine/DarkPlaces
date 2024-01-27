@@ -142,7 +142,7 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
-	strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
+	dp_strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 
@@ -170,11 +170,11 @@ static void SCR_Centerprint_f (cmd_state_t *cmd)
 	c = Cmd_Argc(cmd);
 	if(c >= 2)
 	{
-		strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
+		dp_strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
 		for(i = 2; i < c; ++i)
 		{
-			strlcat(msg, " ", sizeof(msg));
-			strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
+			dp_strlcat(msg, " ", sizeof(msg));
+			dp_strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
 		}
 		c = (unsigned int)strlen(msg);
 		for(p = 0, i = 0; i < c; ++i)
@@ -682,7 +682,7 @@ static void SCR_InfoBar_f(cmd_state_t *cmd)
 	if(Cmd_Argc(cmd) == 3)
 	{
 		scr_infobartime_off = atof(Cmd_Argv(cmd, 1));
-		strlcpy(scr_infobarstring, Cmd_Argv(cmd, 2), sizeof(scr_infobarstring));
+		dp_strlcpy(scr_infobarstring, Cmd_Argv(cmd, 2), sizeof(scr_infobarstring));
 	}
 	else
 	{
@@ -916,7 +916,7 @@ void SCR_ScreenShot_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) == 2)
 	{
 		const char *ext;
-		strlcpy(filename, Cmd_Argv(cmd, 1), sizeof(filename));
+		dp_strlcpy(filename, Cmd_Argv(cmd, 1), sizeof(filename));
 		ext = FS_FileExtension(filename);
 		if (!strcasecmp(ext, "jpg"))
 		{
@@ -1009,7 +1009,7 @@ void SCR_ScreenShot_f(cmd_state_t *cmd)
 		{
 			if(SCR_ScreenShot (filename, buffer1, buffer2, 0, 0, vid.width, vid.height, false, false, false, false, false, true, scr_screenshot_alpha.integer != 0))
 			{
-				strlcpy(filename + strlen(filename) - 3, "tga", 4);
+				dp_strlcpy(filename + strlen(filename) - 3, "tga", 4);
 				Con_Printf("Wrote %s\n", filename);
 			}
 		}
@@ -1224,19 +1224,13 @@ static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
 	cls.capturevideo.videoframes(newframestepframenum - cls.capturevideo.framestepframe);
 	cls.capturevideo.framestepframe = newframestepframenum;
 
-	if(cl_capturevideo_printfps.integer)
+	if(cl_capturevideo_printfps.integer && host.realtime > cls.capturevideo.lastfpstime + 1)
 	{
-		char buf[80];
-		double t = host.realtime;
-		if(t > cls.capturevideo.lastfpstime + 1)
-		{
-			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (t - cls.capturevideo.lastfpstime + 0.0000001);
-			double fps  = (cls.capturevideo.frame                                ) / (t - cls.capturevideo.starttime   + 0.0000001);
-			dpsnprintf(buf, sizeof(buf), "capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
-			Sys_Print(buf);
-			cls.capturevideo.lastfpstime = t;
-			cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
-		}
+		double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (host.realtime - cls.capturevideo.lastfpstime + 0.0000001);
+		double fps  = (cls.capturevideo.frame                                ) / (host.realtime - cls.capturevideo.starttime   + 0.0000001);
+		Sys_Printf("capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
+		cls.capturevideo.lastfpstime = host.realtime;
+		cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
 	}
 }
 
@@ -1340,7 +1334,7 @@ static void R_Envmap_f(cmd_state_t *cmd)
 		return;
 	}
 
-	strlcpy (basename, Cmd_Argv(cmd, 1), sizeof (basename));
+	dp_strlcpy (basename, Cmd_Argv(cmd, 1), sizeof (basename));
 	size = atoi(Cmd_Argv(cmd, 2));
 	if (size != 128 && size != 256 && size != 512 && size != 1024)
 	{
@@ -1416,8 +1410,8 @@ void SHOWLMP_decodeshow(void)
 	int k;
 	char lmplabel[256], picname[256];
 	float x, y;
-	strlcpy (lmplabel,MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (lmplabel));
-	strlcpy (picname, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (picname));
+	dp_strlcpy (lmplabel,MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (lmplabel));
+	dp_strlcpy (picname, MSG_ReadString(&cl_message, cl_readstring, sizeof(cl_readstring)), sizeof (picname));
 	if (gamemode == GAME_NEHAHRA) // LadyHavoc: nasty old legacy junk
 	{
 		x = MSG_ReadByte(&cl_message);
@@ -1448,8 +1442,8 @@ void SHOWLMP_decodeshow(void)
 			if (!cl.showlmps[k].isactive)
 				break;
 	cl.showlmps[k].isactive = true;
-	strlcpy (cl.showlmps[k].label, lmplabel, sizeof (cl.showlmps[k].label));
-	strlcpy (cl.showlmps[k].pic, picname, sizeof (cl.showlmps[k].pic));
+	dp_strlcpy (cl.showlmps[k].label, lmplabel, sizeof (cl.showlmps[k].label));
+	dp_strlcpy (cl.showlmps[k].pic, picname, sizeof (cl.showlmps[k].pic));
 	cl.showlmps[k].x = x;
 	cl.showlmps[k].y = y;
 	cl.num_showlmps = max(cl.num_showlmps, k + 1);
@@ -1781,7 +1775,7 @@ static void SCR_DrawScreen (void)
 			loadingscreenstack_t connect_status, *og_ptr = loadingscreenstack;
 
 			connect_status.absolute_loading_amount_min = 0;
-			strlcpy(connect_status.msg, cl_connect_status, sizeof(cl_connect_status));
+			dp_strlcpy(connect_status.msg, cl_connect_status, sizeof(cl_connect_status));
 			loadingscreenstack = &connect_status;
 			SCR_DrawLoadingScreen();
 			loadingscreenstack = og_ptr;
@@ -1905,7 +1899,7 @@ void SCR_PushLoadingScreen (const char *msg, float len_in_parent)
 	s->prev = loadingscreenstack;
 	loadingscreenstack = s;
 
-	strlcpy(s->msg, msg, sizeof(s->msg));
+	dp_strlcpy(s->msg, msg, sizeof(s->msg));
 	s->relative_completion = 0;
 
 	if(s->prev)
