@@ -929,7 +929,9 @@ void Con_Init (void)
 	Cmd_AddCommand(CF_SHARED, "clear", Con_Clear_f, "clear console history");
 	Cmd_AddCommand(CF_SHARED, "maps", Con_Maps_f, "list information about available maps");
 	Cmd_AddCommand(CF_SHARED, "condump", Con_ConDump_f, "output console history to a file (see also log_file)");
-
+	#ifdef __EMSCRIPTEN__
+	Sys_Register_Commands();
+	#endif
 	con_initialized = true;
 }
 

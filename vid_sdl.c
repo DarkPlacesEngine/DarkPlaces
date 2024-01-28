@@ -68,19 +68,17 @@ static io_connect_t IN_GetIOHandle(void)
 #include <emscripten.h>
 
 EM_JS(bool,setsizes,(),{
-	if(canvas.width != document.body.clientWidth && canvas.height != document.body.clientHeight && document.fullscreen == false){
-	canvas.width = document.body.clientWidth;
-	canvas.height = window.innerHeight;
+	if(canvas.width != document.documentElement.clientWidth && canvas.height != document.documentElement.clientHeight && document.fullscreen == false){
 	return true
 	}
 	return false
 });
 
-EM_JS(int,getcanvassize,(int x),{
+EM_JS(char*,getviewportsize,(int x),{
 	if(x == 1){
-		return canvas.width
+		return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
 	} else{
-		return canvas.height
+		return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
 	}
 });
 #endif
@@ -1099,8 +1097,8 @@ void Sys_SDL_HandleEvents(void)
 
 	#ifdef __EMSCRIPTEN__
 		if(setsizes()){
-			vid.width = getcanvassize(1);
-			vid.height = getcanvassize(2);
+			Cbuf_AddText(cmd_local, getviewportsize(1));
+			Cbuf_AddText(cmd_local, getviewportsize(2));
 			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");
 		}
 	#endif

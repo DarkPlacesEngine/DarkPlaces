@@ -264,8 +264,9 @@ void Sys_SDL_Delay (unsigned int milliseconds); // wrapper to call SDL_Delay
 void Sys_InitProcessNice (void);
 void Sys_MakeProcessNice (void);
 void Sys_MakeProcessMean (void);
-#ifdef __EMSCRIPTEN__ //WASM-specific function
+#ifdef __EMSCRIPTEN__ //WASM-specific functions
 bool syncFS (bool x);
+void Sys_Register_Commands(void);
 #endif
 
 #endif
