@@ -6,6 +6,7 @@ obj/
 gmp.h
 libd0*
 d0*
+blind_id
 jconfig.h
 jerror.h
 jmorecfg.h
