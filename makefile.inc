@@ -228,7 +228,7 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) ../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_blind_id.a ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a ../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_rijndael.a ../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a -sUSE_SDL=2 -sUSE_ZLIB=1 -DUSE_GLES2 -sINITIAL_MEMORY=2500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm 
+LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_blind_id.a ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_rijndael.a ../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a -sUSE_SDL=2 -sUSE_ZLIB=1 -DUSE_GLES2 -sINITIAL_MEMORY=2500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm 
 
 ##### Mac OS X specific variables #####
 
