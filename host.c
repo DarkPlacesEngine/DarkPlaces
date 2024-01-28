@@ -26,6 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "libcurl.h"
 #include "taskqueue.h"
 #include "utf8lib.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif 
+double Htime, oldtime, sleeptime;
 
 /*
 
@@ -207,7 +211,9 @@ void Host_SaveConfig(const char *file)
 
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (&cvars_all, f);
-
+		#ifdef __EMSCRIPTEN__
+		syncFS(false);
+		#endif
 		FS_Close (f);
 	}
 }
@@ -672,7 +678,22 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 
 	return time;
 }
+void Host_Loop(void){
+	// Something bad happened, or the server disconnected
+		if (setjmp(host.abortframe))
+		{
+			host.state = host_active; // In case we were loading
+		}
 
+		host.dirtytime = Sys_DirtyTime();
+		host.realtime += Htime = Host_UpdateTime(host.dirtytime, oldtime);
+		oldtime = host.dirtytime;
+
+		sleeptime = Host_Frame(Htime);
+		++host.framecount;
+		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+		host.sleeptime = Sys_Sleep(sleeptime);
+}
 void Host_Main(void)
 {
 	double time, oldtime, sleeptime;
@@ -683,24 +704,14 @@ void Host_Main(void)
 	oldtime = Sys_DirtyTime();
 
 	// Main event loop
+	#ifndef __EMSCRIPTEN__
 	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
-		// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-			continue;
-		}
-
-		host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
-		oldtime = host.dirtytime;
-
-		sleeptime = Host_Frame(time);
-		++host.framecount;
-		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Sys_Sleep(sleeptime);
+		Host_Loop();
 	}
+	#else
+		emscripten_set_main_loop(Host_Loop,0,true);
+	#endif
 
 	Host_Shutdown();
 }
