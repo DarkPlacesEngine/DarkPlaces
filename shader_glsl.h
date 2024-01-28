@@ -41,6 +41,9 @@
 "\n",
 "invariant gl_Position; // fix for lighting polygons not matching base surface\n",
 "# endif\n",
+#ifdef USE_GLES2
+"precision highp float;\n",
+#endif
 "#if defined(GLSL130) || defined(GLSL140)\n",
 "precision highp float;\n",
 "# ifdef VERTEX_SHADER\n",
@@ -973,7 +976,7 @@
 "# ifdef USESHADOWMAP2D\n",
 "float ShadowMapCompare(vec3 dir)\n",
 "{\n",
-"	vec3 shadowmaptc = GetShadowMapTC2D(dir) + vec3(ShadowMap_TextureScale.zw, 0.0f);\n",
+"	vec3 shadowmaptc = GetShadowMapTC2D(dir) + vec3(ShadowMap_TextureScale.zw, 0.0);\n",
 "	float f;\n",
 "\n",
 "#  ifdef USEDEPTHRGB\n",

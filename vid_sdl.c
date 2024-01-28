@@ -63,6 +63,28 @@ static io_connect_t IN_GetIOHandle(void)
 #define SDL_R_RESTART
 #endif
 
+//WASM-specific, meant to keep DP's width equal to canvas width.
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+EM_JS(bool,setsizes,(),{
+	if(canvas.width != document.body.clientWidth && canvas.height != document.body.clientHeight && document.fullscreen == false){
+	canvas.width = document.body.clientWidth;
+	canvas.height = window.innerHeight;
+	return true
+	}
+	return false
+});
+
+EM_JS(int,getcanvassize,(int x),{
+	if(x == 1){
+		return canvas.width
+	} else{
+		return canvas.height
+	}
+});
+#endif
+
 // Tell startup code that we have a client
 int cl_available = true;
 
@@ -141,7 +163,11 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_RIGHTBRACKET:       return ']';
 	case SDLK_CARET:              return '^';
 	case SDLK_UNDERSCORE:         return '_';
+	#ifndef __EMSCRIPTEN__
 	case SDLK_BACKQUOTE:          return '`';
+	#else
+	case SDLK_BACKQUOTE:          return K_ESCAPE;
+	#endif
 	case SDLK_a:                  return 'a';
 	case SDLK_b:                  return 'b';
 	case SDLK_c:                  return 'c';
@@ -1071,6 +1097,14 @@ void Sys_SDL_HandleEvents(void)
 
 	VID_EnableJoystick(true);
 
+	#ifdef __EMSCRIPTEN__
+		if(setsizes()){
+			vid.width = getcanvassize(1);
+			vid.height = getcanvassize(2);
+			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");
+		}
+	#endif
+
 	while( SDL_PollEvent( &event ) )
 		loop_start:
 		switch( event.type ) {
@@ -1654,10 +1688,8 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	int i;
-#ifndef USE_GLES2
 	// SDL usually knows best
 	const char *drivername = NULL;
-#endif
 
 	// video display selection (multi-monitor)
 	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());

@@ -1,6 +1,15 @@
 obj/
 *.d
 *.o
+*.a
+*.html
+gmp.h
+libd0*
+d0*
+jconfig.h
+jerror.h
+jmorecfg.h
+jpeglib.h
 *.i
 *.s
 *.obj
