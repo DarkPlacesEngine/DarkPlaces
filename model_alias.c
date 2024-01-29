@@ -3174,7 +3174,7 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	const unsigned char *pbase, *pend;
 	iqmheader_t header;
 	skinfile_t *skinfiles;
-	int i, j, k, meshvertices, meshtriangles;
+	int i, j, k;
 	float biggestorigin;
 	const unsigned int *inelements;
 	int *outelements;
@@ -3375,48 +3375,53 @@ void Mod_INTERQUAKEMODEL_Load(model_t *mod, void *buffer, void *bufferend)
 	loadmodel->submodelsurfaces_end = loadmodel->num_surfaces = header.num_meshes;
 	loadmodel->num_textures = loadmodel->num_surfaces * loadmodel->numskins;
 	loadmodel->num_texturesperskin = loadmodel->num_surfaces;
-
-	meshvertices = header.num_vertexes;
-	meshtriangles = header.num_triangles;
+	loadmodel->surfmesh.num_vertices = header.num_vertexes;
+	loadmodel->surfmesh.num_triangles = header.num_triangles;
 
 	// do most allocations as one merged chunk
-	data = (unsigned char *)Mem_Alloc(loadmodel->mempool, loadmodel->num_surfaces * sizeof(msurface_t) + loadmodel->num_surfaces * sizeof(int) + loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t) + meshtriangles * sizeof(int[3]) + (meshvertices <= 65536 ? meshtriangles * sizeof(unsigned short[3]) : 0) + meshvertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0)) + (vblendindexes && vblendweights ? meshvertices * (sizeof(unsigned short) + sizeof(unsigned char[2][4])) : 0) + loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]) + loadmodel->num_bones * sizeof(float[12]) + loadmodel->numskins * sizeof(animscene_t) + loadmodel->num_bones * sizeof(aliasbone_t) + loadmodel->numframes * sizeof(animscene_t));
-	loadmodel->data_surfaces = (msurface_t *)data;data += loadmodel->num_surfaces * sizeof(msurface_t);
-	loadmodel->modelsurfaces_sorted = (int *)data;data += loadmodel->num_surfaces * sizeof(int);
-	loadmodel->data_textures = (texture_t *)data;data += loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t);
-	loadmodel->surfmesh.num_vertices = meshvertices;
-	loadmodel->surfmesh.num_triangles = meshtriangles;
-	loadmodel->surfmesh.data_element3i = (int *)data;data += meshtriangles * sizeof(int[3]);
-	loadmodel->surfmesh.data_vertex3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_svector3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_tvector3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_normal3f = (float *)data;data += meshvertices * sizeof(float[3]);
-	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data;data += meshvertices * sizeof(float[2]);
+	// This is only robust for C standard types!
+	data = (unsigned char *)Mem_Alloc(loadmodel->mempool,
+		loadmodel->surfmesh.num_vertices * (sizeof(float[14]) + (vcolor4f || vcolor4ub ? sizeof(float[4]) : 0))
+		+ loadmodel->num_bones * sizeof(float[12])
+		+ loadmodel->num_surfaces * sizeof(int)
+		+ loadmodel->surfmesh.num_triangles * sizeof(int[3])
+		+ (loadmodel->surfmesh.num_vertices <= 65536 ? loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]) : 0)
+		+ loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7])
+		+ (vblendindexes && vblendweights ? loadmodel->surfmesh.num_vertices * (sizeof(unsigned short) + sizeof(unsigned char[2][4])) : 0));
+	// Pointers must be taken in descending order of alignment requirement!
+	loadmodel->surfmesh.data_vertex3f          = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_svector3f         = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_tvector3f         = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_normal3f          = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[3]);
+	loadmodel->surfmesh.data_texcoordtexture2f = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[2]);
 	if (vcolor4f || vcolor4ub)
 	{
-		loadmodel->surfmesh.data_lightmapcolor4f = (float *)data;data += meshvertices * sizeof(float[4]);
+		loadmodel->surfmesh.data_lightmapcolor4f = (float *)data; data += loadmodel->surfmesh.num_vertices * sizeof(float[4]);
 	}
-	if (vblendindexes && vblendweights)
+	loadmodel->data_baseboneposeinverse = (float *)data; data += loadmodel->num_bones * sizeof(float[12]);
+	loadmodel->modelsurfaces_sorted       = (int *)data; data += loadmodel->num_surfaces * sizeof(int);
+	loadmodel->surfmesh.data_element3i    = (int *)data; data += loadmodel->surfmesh.num_triangles * sizeof(int[3]);
+	loadmodel->data_poses7s             = (short *)data; data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
+	if (loadmodel->surfmesh.num_vertices <= 65536)
 	{
-		loadmodel->surfmesh.data_skeletalindex4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
-		loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data;data += meshvertices * sizeof(unsigned char[4]);
+		loadmodel->surfmesh.data_element3s = (unsigned short *)data; data += loadmodel->surfmesh.num_triangles * sizeof(unsigned short[3]);
 	}
-	loadmodel->data_baseboneposeinverse = (float *)data;data += loadmodel->num_bones * sizeof(float[12]);
-	loadmodel->skinscenes = (animscene_t *)data;data += loadmodel->numskins * sizeof(animscene_t);
-	loadmodel->data_bones = (aliasbone_t *)data;data += loadmodel->num_bones * sizeof(aliasbone_t);
-	loadmodel->animscenes = (animscene_t *)data;data += loadmodel->numframes * sizeof(animscene_t);
 	if (vblendindexes && vblendweights)
 	{
 		loadmodel->surfmesh.num_blends = 0;
-		loadmodel->surfmesh.blends = (unsigned short *)data;data += meshvertices * sizeof(unsigned short);
+		loadmodel->surfmesh.blends                = (unsigned short *)data; data += loadmodel->surfmesh.num_vertices * sizeof(unsigned short);
+		loadmodel->surfmesh.data_skeletalindex4ub  = (unsigned char *)data; data += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
+		loadmodel->surfmesh.data_skeletalweight4ub = (unsigned char *)data; data += loadmodel->surfmesh.num_vertices * sizeof(unsigned char[4]);
 	}
-	if (meshvertices <= 65536)
-	{
-		loadmodel->surfmesh.data_element3s = (unsigned short *)data;data += meshtriangles * sizeof(unsigned short[3]);
-	}
-	loadmodel->data_poses7s = (short *)data;data += loadmodel->num_poses * loadmodel->num_bones * sizeof(short[7]);
+	// Struct alignment requirements could change so we can't assume them here
+	// otherwise a safe-looking commit could introduce undefined behaviour!
+	loadmodel->data_surfaces = Mem_AllocType(loadmodel->mempool, msurface_t, loadmodel->num_surfaces * sizeof(msurface_t));
+	loadmodel->data_textures = Mem_AllocType(loadmodel->mempool, texture_t, loadmodel->num_surfaces * loadmodel->numskins * sizeof(texture_t));
+	loadmodel->skinscenes = Mem_AllocType(loadmodel->mempool, animscene_t, loadmodel->numskins * sizeof(animscene_t));
+	loadmodel->data_bones = Mem_AllocType(loadmodel->mempool, aliasbone_t, loadmodel->num_bones * sizeof(aliasbone_t));
+	loadmodel->animscenes = Mem_AllocType(loadmodel->mempool, animscene_t, loadmodel->numframes * sizeof(animscene_t));
 	if (vblendindexes && vblendweights)
-		loadmodel->surfmesh.data_blendweights = (blendweights_t *)Mem_Alloc(loadmodel->mempool, meshvertices * sizeof(blendweights_t));
+		loadmodel->surfmesh.data_blendweights = Mem_AllocType(loadmodel->mempool, blendweights_t, loadmodel->surfmesh.num_vertices * sizeof(blendweights_t));
 
 	for (i = 0;i < loadmodel->numskins;i++)
 	{
