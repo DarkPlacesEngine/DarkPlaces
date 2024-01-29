@@ -67,7 +67,8 @@ static io_connect_t IN_GetIOHandle(void)
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
-EM_JS(bool,setsizes,(),{
+EM_JS(bool,setsizes,(),
+{
 	if(canvas.width != document.documentElement.clientWidth && canvas.height != document.documentElement.clientHeight && document.fullscreen == false){
 	return true
 	}
@@ -75,7 +76,8 @@ EM_JS(bool,setsizes,(),{
 });
 
 EM_JS(char*,getviewportsize,(int x),{
-	if(x == 1){
+	if(x == 1)
+	{
 		return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
 	} else{
 		return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
@@ -1096,7 +1098,8 @@ void Sys_SDL_HandleEvents(void)
 	VID_EnableJoystick(true);
 
 	#ifdef __EMSCRIPTEN__
-		if(setsizes()){
+		if(setsizes())
+		{
 			Cbuf_AddText(cmd_local, getviewportsize(1));
 			Cbuf_AddText(cmd_local, getviewportsize(2));
 			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");

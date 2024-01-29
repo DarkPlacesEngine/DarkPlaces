@@ -22,11 +22,14 @@ EM_JS(char*,getclipboard,(void),{
 })
 
 EM_JS(bool,syncFS,(bool x),{
-	FS.syncfs(x,function(e){
-		if(e){
+	FS.syncfs(x,function(e)
+	{
+		if(e)
+		{
 			alert("FileSystem Save Error: "+e);
 			return false;
-		} else{
+		} else
+		{
 			console.log("Filesystem Saved!");
 			return true;
 		}
@@ -34,11 +37,13 @@ EM_JS(bool,syncFS,(bool x),{
 
 EM_JS(char*,rm,(char* x),{
 	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
-	if(FS.isFile(mode)){
+	if(FS.isFile(mode))
+	{
 		FS.unlink(UTF8ToString(x));
 		return stringToNewUTF8("File removed"); 
 	}
-	else {
+	else 
+	{
 		return stringToNewUTF8(UTF8ToString(x)+" is not a File.");
 	}
 	});
@@ -67,7 +72,8 @@ EM_JS(char*,move,(char* x,char* y),{
 });
 
 EM_JS(char*,upload,(char* todirectory),{
-	if(UTF8ToString(todirectory).slice(-1) != "/"){
+	if(UTF8ToString(todirectory).slice(-1) != "/")
+	{
 		currentname = UTF8ToString(todirectory) + "/";
 	}
 	else{
@@ -79,19 +85,24 @@ EM_JS(char*,upload,(char* todirectory),{
 
 });
 
-EM_JS(char*, listfiles,(char* directory),{ if(UTF8ToString(directory) == ""){
+EM_JS(char*, listfiles,(char* directory),{ 
+if(UTF8ToString(directory) == "")
+{
 	console.log("listing cwd"); 
 	return stringToNewUTF8(FS.readdir(FS.cwd()).toString())
 }  
 try{
 return  stringToNewUTF8(FS.readdir(UTF8ToString(directory)).toString()); 
-} catch(error){
+} catch(error)
+{
 	return stringToNewUTF8("directory not found");
 }
 });
 
-void listfiles_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 2){
+void listfiles_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 2)
+	{
 
 		Con_Printf(listfiles(""));
 		Con_Printf("\n");
@@ -101,13 +112,16 @@ void listfiles_f(cmd_state_t *cmd){
 		Con_Printf("\n");
 	}
 }
-void savefs_f(cmd_state_t *cmd){
+void savefs_f(cmd_state_t *cmd)
+{
 	Con_Printf("Saving Files\n");
 	syncFS(false);
 }
 
-void upload_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 2){
+void upload_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 2)
+	{
 		Con_Printf(upload("/save"));
 		Con_Printf("\n");
 	}
@@ -117,8 +131,10 @@ void upload_f(cmd_state_t *cmd){
 	}
 }
 
-void rm_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 2){
+void rm_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 2)
+	{
 		Con_Printf("No file to remove");
 		Con_Printf("\n");
 	}
@@ -128,8 +144,10 @@ void rm_f(cmd_state_t *cmd){
 	}
 }
 
-void rmdir_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 2){
+void rmdir_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 2)
+	{
 		Con_Printf("No directory to remove");
 		Con_Printf("\n");
 	}
@@ -139,8 +157,10 @@ void rmdir_f(cmd_state_t *cmd){
 	}
 }
 
-void mkdir_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 2){
+void mkdir_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 2)
+	{
 		Con_Printf("No directory to create");
 		Con_Printf("\n");
 	}
@@ -150,8 +170,10 @@ void mkdir_f(cmd_state_t *cmd){
 	}
 }
 
-void mv_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 3){
+void mv_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 3)
+	{
 		Con_Printf("Nothing to move");
 		Con_Printf("\n");
 	}
@@ -161,8 +183,10 @@ void mv_f(cmd_state_t *cmd){
 	}
 }
 
-void wss_f(cmd_state_t *cmd){
-	if(Cmd_Argc(cmd) != 3){
+void wss_f(cmd_state_t *cmd)
+{
+	if(Cmd_Argc(cmd) != 3)
+	{
 		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)");
 		Con_Printf("\n");
 	}
@@ -220,7 +244,8 @@ void Sys_SDL_Init(void)
 		nocrashdialog = false;
 }
 
-void Sys_Register_Commands(void){
+void Sys_Register_Commands(void)
+{
 	Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to /save (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
