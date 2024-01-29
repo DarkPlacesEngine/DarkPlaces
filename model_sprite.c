@@ -298,6 +298,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 		unsigned char palette[256][4];
 		const unsigned char *in;
 		dspritehl_t *pinhlsprite;
+		unsigned char *aligneddata;
 
 		pinhlsprite = (dspritehl_t *)datapointer;
 		datapointer += sizeof(dspritehl_t);
@@ -361,7 +362,11 @@ void Mod_IDSP_Load(model_t *mod, void *buffer, void *bufferend)
 			return;
 		}
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), rendermode == SPRHL_ADDITIVE);
+		// the above datapointer arithmetic causes misaligned access
+		aligneddata = (unsigned char *)Mem_Alloc(tempmempool, (unsigned char *)bufferend - datapointer);
+		memcpy(aligneddata, datapointer, (unsigned char *)bufferend - datapointer);
+		Mod_Sprite_SharedSetup(aligneddata, LittleLong (pinhlsprite->version), (unsigned int *)(&palette[0][0]), rendermode == SPRHL_ADDITIVE);
+		Mem_Free(aligneddata);
 	}
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",
