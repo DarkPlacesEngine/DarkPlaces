@@ -1067,9 +1067,10 @@ static void CL_UpdateItemsAndWeapon(void)
 	// check for important changes
 
 	// set flash times
+	// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 	if (cl.olditems != cl.stats[STAT_ITEMS])
 		for (j = 0;j < 32;j++)
-			if ((cl.stats[STAT_ITEMS] & (1<<j)) && !(cl.olditems & (1<<j)))
+			if ((cl.stats[STAT_ITEMS] & (1u<<j)) && !(cl.olditems & (1u<<j)))
 				cl.item_gettime[j] = cl.time;
 	cl.olditems = cl.stats[STAT_ITEMS];
 

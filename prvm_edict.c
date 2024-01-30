@@ -1973,12 +1973,12 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 	}
 
 	header = (unsigned int *) lno;
-	if( header[ 0 ] == *(unsigned int *) "LNOF" &&
-		LittleLong( header[ 1 ] ) == 1 &&
-		(unsigned int)LittleLong( header[ 2 ] ) == (unsigned int)prog->progs_numglobaldefs &&
-		(unsigned int)LittleLong( header[ 3 ] ) == (unsigned int)prog->progs_numglobals &&
-		(unsigned int)LittleLong( header[ 4 ] ) == (unsigned int)prog->progs_numfielddefs &&
-		(unsigned int)LittleLong( header[ 5 ] ) == (unsigned int)prog->progs_numstatements )
+	if (memcmp(lno, "LNOF", 4) == 0
+	&& LittleLong( header[ 1 ] ) == 1
+	&& (unsigned int)LittleLong( header[ 2 ] ) == (unsigned int)prog->progs_numglobaldefs
+	&& (unsigned int)LittleLong( header[ 3 ] ) == (unsigned int)prog->progs_numglobals
+	&& (unsigned int)LittleLong( header[ 4 ] ) == (unsigned int)prog->progs_numfielddefs
+	&& (unsigned int)LittleLong( header[ 5 ] ) == (unsigned int)prog->progs_numstatements)
 	{
 		prog->statement_linenums = (int *)Mem_Alloc(prog->progs_mempool, prog->progs_numstatements * sizeof( int ) );
 		memcpy( prog->statement_linenums, header + 6, prog->progs_numstatements * sizeof( int ) );
@@ -3377,12 +3377,12 @@ int PRVM_SetTempString(prvm_prog_t *prog, const char *s, size_t slen)
 		return 0;
 	size = slen + 1;
 	if (developer_insane.integer)
-		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %zu\n", prog->name, prog->tempstringsbuf.cursize, size);
+		Con_DPrintf("PRVM_SetTempString %s: cursize %i, size %lu\n", prog->name, prog->tempstringsbuf.cursize, (unsigned long)size);
 	if ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 	{
 		sizebuf_t old = prog->tempstringsbuf;
 		if (prog->tempstringsbuf.cursize + size >= 1<<28)
-			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %zu)\n", prog->name, prog->tempstringsbuf.cursize, size);
+			prog->error_cmd("PRVM_SetTempString %s: ran out of tempstring memory!  (refusing to grow tempstring buffer over 256MB, cursize %i, size %lu)\n", prog->name, prog->tempstringsbuf.cursize, (unsigned long)size);
 		prog->tempstringsbuf.maxsize = max(prog->tempstringsbuf.maxsize, 65536);
 		while ((size_t)prog->tempstringsbuf.maxsize < prog->tempstringsbuf.cursize + size)
 			prog->tempstringsbuf.maxsize *= 2;

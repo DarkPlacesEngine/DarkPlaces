@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define ZONE_H
 
 #include <stddef.h>
+#include <stdalign.h>
 #include "qtypes.h"
 #include "qdefs.h"
 #include "com_list.h"
@@ -61,7 +62,7 @@ typedef struct mempool_s
 	// chain of individual memory allocations
 	struct llist_s chain;
 	// POOLFLAG_*
-	int flags;
+	unsigned flags;
 	// total memory allocated in this pool (inside memheaders)
 	size_t totalsize;
 	// total memory allocated in this pool (actual malloc total)
@@ -82,9 +83,10 @@ typedef struct mempool_s
 }
 mempool_t;
 
-#define Mem_Alloc(pool,size) _Mem_Alloc(pool, NULL, size, 16, __FILE__, __LINE__)
-#define Mem_Memalign(pool,alignment,size) _Mem_Alloc(pool, NULL, size, alignment, __FILE__, __LINE__)
-#define Mem_Realloc(pool,data,size) _Mem_Alloc(pool, data, size, 16, __FILE__, __LINE__)
+#define Mem_Alloc(pool,size) _Mem_Alloc(pool, NULL, size, alignof(max_align_t), __FILE__, __LINE__)
+#define Mem_AllocType(pool,type,size) (type *)_Mem_Alloc(pool, NULL, size, alignof(type), __FILE__, __LINE__)
+#define Mem_Realloc(pool,data,size) _Mem_Alloc(pool, data, size, alignof(max_align_t), __FILE__, __LINE__)
+#define Mem_ReallocType(pool,data,type,size) (type *)_Mem_Alloc(pool, data, size, alignof(type), __FILE__, __LINE__)
 #define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_strdup(pool, s) _Mem_strdup(pool, s, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
@@ -99,7 +101,7 @@ mempool_t;
 
 void *_Mem_Alloc(mempool_t *pool, void *data, size_t size, size_t alignment, const char *filename, int fileline);
 void _Mem_Free(void *data, const char *filename, int fileline);
-mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline);
+mempool_t *_Mem_AllocPool(const char *name, unsigned flags, mempool_t *parent, const char *filename, int fileline);
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);

@@ -1023,7 +1023,7 @@ static char *ShaderModeInfo_GetShaderText(shadermodeinfo_t *modeinfo, qbool prin
 
 static void R_GLSL_CompilePermutation(r_glsl_permutation_t *p, unsigned int mode, uint64_t permutation)
 {
-	int i;
+	unsigned i;
 	int ubibind;
 	int sampler;
 	shadermodeinfo_t *modeinfo = &shadermodeinfo[SHADERLANGUAGE_GLSL][mode];
@@ -1359,7 +1359,7 @@ static void R_SetupShader_SetPermutationGLSL(unsigned int mode, uint64_t permuta
 			if (!r_glsl_permutation->program)
 			{
 				// remove features until we find a valid permutation
-				int i;
+				unsigned i;
 				for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
 				{
 					// reduce i more quickly whenever it would not remove any bits
@@ -1418,7 +1418,7 @@ void R_GLSL_Restart_f(cmd_state_t *cmd)
 
 static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 {
-	int i, language, mode, dupe;
+	unsigned i, language, mode, dupe;
 	char *text;
 	shadermodeinfo_t *modeinfo;
 	qfile_t *file;

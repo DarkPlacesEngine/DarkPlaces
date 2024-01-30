@@ -694,7 +694,7 @@ Cvar_Get
 Adds a newly allocated variable to the variable list or sets its value.
 ============
 */
-cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int flags, const char *newdescription)
+cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, unsigned flags, const char *newdescription)
 {
 	cvar_t *cvar;
 	int i;

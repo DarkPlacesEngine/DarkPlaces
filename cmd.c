@@ -269,7 +269,7 @@ void Cbuf_AddText (cmd_state_t *cmd, const char *text)
 
 	if (cbuf->size + l > cbuf->maxsize)
 	{
-		Con_Printf(CON_WARN "Cbuf_AddText: input too large, %zuKB ought to be enough for anybody.\n", cbuf->maxsize / 1024);
+		Con_Printf(CON_WARN "Cbuf_AddText: input too large, %luKB ought to be enough for anybody.\n", (unsigned long)(cbuf->maxsize / 1024));
 		return;
 	}
 
@@ -297,7 +297,7 @@ void Cbuf_InsertText (cmd_state_t *cmd, const char *text)
 
 	if (cbuf->size + l > cbuf->maxsize)
 	{
-		Con_Printf(CON_WARN "Cbuf_InsertText: input too large, %zuKB ought to be enough for anybody.\n", cbuf->maxsize / 1024);
+		Con_Printf(CON_WARN "Cbuf_InsertText: input too large, %luKB ought to be enough for anybody.\n", (unsigned long)(cbuf->maxsize / 1024));
 		return;
 	}
 

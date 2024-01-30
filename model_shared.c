@@ -1044,6 +1044,12 @@ void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtr
 
 	for (i = 0;i < numtris;i++)
 	{
+		if ((mesh->numtriangles * 3 + 2) * sizeof(int) + 1 >= ((memheader_t *)((unsigned char *)mesh->element3i - sizeof(memheader_t)))->size)
+		{
+			// FIXME: we didn't allocate enough space for all the tris, see R_Mod_CompileShadowMap
+			Con_Print(CON_WARN "Mod_ShadowMesh_AddMesh: insufficient memory allocated!\n");
+			return;
+		}
 		mesh->element3i[mesh->numtriangles * 3 + 0] = Mod_ShadowMesh_AddVertex(mesh, vertex3f + 3 * element3i[i * 3 + 0]);
 		mesh->element3i[mesh->numtriangles * 3 + 1] = Mod_ShadowMesh_AddVertex(mesh, vertex3f + 3 * element3i[i * 3 + 1]);
 		mesh->element3i[mesh->numtriangles * 3 + 2] = Mod_ShadowMesh_AddVertex(mesh, vertex3f + 3 * element3i[i * 3 + 2]);
@@ -4461,7 +4467,8 @@ void Mod_Mesh_Reset(model_t *mod)
 	mod->num_surfaces = 0;
 	mod->surfmesh.num_vertices = 0;
 	mod->surfmesh.num_triangles = 0;
-	memset(mod->surfmesh.data_vertexhash, -1, mod->surfmesh.num_vertexhashsize * sizeof(*mod->surfmesh.data_vertexhash));
+	if (mod->surfmesh.data_vertexhash) // UBSan: memset arg 1 isn't allowed to be null, but sometimes this is NULL.
+		memset(mod->surfmesh.data_vertexhash, -1, mod->surfmesh.num_vertexhashsize * sizeof(*mod->surfmesh.data_vertexhash));
 	mod->DrawSky = NULL; // will be set if a texture needs it
 	mod->DrawAddWaterPlanes = NULL; // will be set if a texture needs it
 }

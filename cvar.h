@@ -193,7 +193,7 @@ void Cvar_Del_f(struct cmd_state_s *cmd);
 
 /// allocates a cvar by name and returns its address,
 /// or merely sets its value if it already exists.
-cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, int flags, const char *newdescription);
+cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, unsigned flags, const char *newdescription);
 
 extern const char *cvar_dummy_description; // ALWAYS the same pointer
 

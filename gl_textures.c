@@ -1969,7 +1969,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		unsigned char *p = mipnewpixels;
 		for (i = bytesperblock == 16 ? 8 : 0;i < (int)mipsize_total;i += bytesperblock, p += 4)
 		{
-			c = mippixels_start[i] + 256*mippixels_start[i+1] + 65536*mippixels_start[i+2] + 16777216*mippixels_start[i+3];
+			// UBSan: unsigned literals because promotion to int causes signed overflow when mippixels_start >= 128
+			c = mippixels_start[i] + 256u*mippixels_start[i+1] + 65536u*mippixels_start[i+2] + 16777216u*mippixels_start[i+3];
 			p[2] = (((c >> 11) & 0x1F) + ((c >> 27) & 0x1F)) * (0.5f / 31.0f * 255.0f);
 			p[1] = (((c >>  5) & 0x3F) + ((c >> 21) & 0x3F)) * (0.5f / 63.0f * 255.0f);
 			p[0] = (((c      ) & 0x1F) + ((c >> 16) & 0x1F)) * (0.5f / 31.0f * 255.0f);
@@ -2014,7 +2015,8 @@ rtexture_t *R_LoadTextureDDSFile(rtexturepool_t *rtexturepool, const char *filen
 		{
 			for (i = bytesperblock == 16 ? 8 : 0;i < mipsize;i += bytesperblock)
 			{
-				c = mippixels[i] + 256*mippixels[i+1] + 65536*mippixels[i+2] + 16777216*mippixels[i+3];
+				// UBSan: unsigned literals because promotion to int causes signed overflow when mippixels >= 128
+				c = mippixels[i] + 256u*mippixels[i+1] + 65536u*mippixels[i+2] + 16777216u*mippixels[i+3];
 				avgcolor[0] += ((c >> 11) & 0x1F) + ((c >> 27) & 0x1F);
 				avgcolor[1] += ((c >>  5) & 0x3F) + ((c >> 21) & 0x3F);
 				avgcolor[2] += ((c      ) & 0x1F) + ((c >> 16) & 0x1F);

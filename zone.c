@@ -397,7 +397,8 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	//if (developer.integer > 0 && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
-	realsize = alignment + sizeof(memheader_t) + size + sizeof(sentinel2);
+	// calculate the smallest realsize that is a multiple of alignment
+	realsize = (sizeof(memheader_t) + size + sizeof(sentinel2) + (alignment-1)) & ~(alignment-1);
 	pool->realsize += realsize;
 	base = (unsigned char *)Clump_AllocBlock(realsize);
 	if (base == NULL)
@@ -497,7 +498,7 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 	_Mem_FreeBlock((memheader_t *)((unsigned char *) data - sizeof(memheader_t)), filename, fileline);
 }
 
-mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const char *filename, int fileline)
+mempool_t *_Mem_AllocPool(const char *name, unsigned flags, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
 	if (developer_memorydebug.integer)
@@ -813,7 +814,7 @@ void Mem_PrintStats(void)
 	{
 		if ((pool->flags & POOLFLAG_TEMP) && !List_Is_Empty(&pool->chain))
 		{
-			Con_Printf("Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", (void *)pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
+			Con_Printf(CON_WARN "Memory pool %p has sprung a leak totalling %lu bytes (%.3fMB)!  Listing contents...\n", (void *)pool, (unsigned long)pool->totalsize, pool->totalsize / 1048576.0);
 			List_For_Each_Entry(mem, &pool->chain, memheader_t, list)
 				Con_Printf("%10lu bytes allocated at %s:%i\n", (unsigned long)mem->size, mem->filename, mem->fileline);
 		}

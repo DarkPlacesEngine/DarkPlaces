@@ -891,7 +891,7 @@ static void Sbar_DrawInventory (void)
 
 	// items
 	for (i=0 ; i<6 ; i++)
-		if (cl.stats[STAT_ITEMS] & (1<<(17+i)))
+		if (cl.stats[STAT_ITEMS] & (1u<<(17+i)))
 		{
 			//MED 01/04/97 changed keys
 			if (!(gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH) || (i>1))
@@ -903,7 +903,7 @@ static void Sbar_DrawInventory (void)
 	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_QUOTH)
 	{
 		for (i=0 ; i<2 ; i++)
-			if (cl.stats[STAT_ITEMS] & (1<<(24+i)))
+			if (cl.stats[STAT_ITEMS] & (1u<<(24+i)))
 				Sbar_DrawPic (288 + i*16, -16, hsb_items[i]);
 	}
 
@@ -911,14 +911,14 @@ static void Sbar_DrawInventory (void)
 	{
 		// new rogue items
 		for (i=0 ; i<2 ; i++)
-			if (cl.stats[STAT_ITEMS] & (1<<(29+i)))
+			if (cl.stats[STAT_ITEMS] & (1u<<(29+i)))
 				Sbar_DrawPic (288 + i*16, -16, rsb_items[i]);
 	}
 	else
 	{
 		// sigils
 		for (i=0 ; i<4 ; i++)
-			if (cl.stats[STAT_ITEMS] & (1<<(28+i)))
+			if (cl.stats[STAT_ITEMS] & (1u<<(28+i)))
 				Sbar_DrawPic (320-32 + i*8, -16, sb_sigil[i]);
 	}
 }

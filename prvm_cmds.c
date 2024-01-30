@@ -274,7 +274,8 @@ void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed)
 #ifdef WIN32
 	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
 	// Microsoft supports it, but apparently complains if we use it.
-	#pragma warning(disable : 4996)
+	#undef memccpy
+	#define memccpy _memccpy
 #endif
 size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 {
@@ -296,7 +297,7 @@ size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 				out = p - 1;
 			else
 			{
-				VM_Warning(prog, "%zu of %zu bytes available, will truncate %zu byte string \"%s\"\n", outend - out, outsize - 1, strlen(s), s);
+				VM_Warning(prog, "%lu of %lu bytes available, will truncate %lu byte string \"%s\"\n", (unsigned long)(outend - out), (unsigned long)outsize - 1, (unsigned long)strlen(s), s);
 				out = outend;
 				*out = '\0';
 			}
@@ -1753,7 +1754,7 @@ float	registercvar (string name, string value[, float flags])
 void VM_registercvar(prvm_prog_t *prog)
 {
 	const char *name, *value;
-	int	flags;
+	unsigned flags;
 
 	VM_SAFEPARMCOUNTRANGE(2, 3, VM_registercvar);
 
@@ -3881,7 +3882,7 @@ static int BufStr_SortStringsDOWN (const void *in1, const void *in2)
 	return strncmp(b, a, stringbuffers_sortlength);
 }
 
-prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, int flags, const char *format)
+prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, unsigned flags, const char *format)
 {
 	prvm_stringbuffer_t *stringbuffer;
 	int i;

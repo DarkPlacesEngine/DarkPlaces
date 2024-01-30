@@ -442,7 +442,7 @@ typedef struct model_s
 	// all models use textures...
 	rtexturepool_t	*texturepool;
 	// EF_* flags (translated from the model file's different flags layout)
-	int				effects;
+	unsigned				effects;
 	// number of QC accessible frame(group)s in the model
 	int				numframes;
 	// number of QC accessible skin(group)s in the model

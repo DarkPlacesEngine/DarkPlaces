@@ -35,14 +35,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MOVEFLAG_GRAVITYUNAFFECTEDBYTICRATE 0x00000004
 
 // stock defines
-
-#define	IT_SHOTGUN				1
-#define	IT_SUPER_SHOTGUN		2
-#define	IT_NAILGUN				4
-#define	IT_SUPER_NAILGUN		8
-#define	IT_GRENADE_LAUNCHER		16
-#define	IT_ROCKET_LAUNCHER		32
-#define	IT_LIGHTNING			64
+#define IT_SHOTGUN              1
+#define IT_SUPER_SHOTGUN        2
+#define IT_NAILGUN              4
+#define IT_SUPER_NAILGUN        8
+#define IT_GRENADE_LAUNCHER     16
+#define IT_ROCKET_LAUNCHER      32
+#define IT_LIGHTNING            64
 #define IT_SUPER_LIGHTNING      128
 #define IT_SHELLS               256
 #define IT_NAILS                512
@@ -55,14 +54,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define IT_SUPERHEALTH          65536
 #define IT_KEY1                 131072
 #define IT_KEY2                 262144
-#define	IT_INVISIBILITY			524288
-#define	IT_INVULNERABILITY		1048576
-#define	IT_SUIT					2097152
-#define	IT_QUAD					4194304
-#define IT_SIGIL1               (1<<28)
-#define IT_SIGIL2               (1<<29)
-#define IT_SIGIL3               (1<<30)
-#define IT_SIGIL4               (1<<31)
+#define IT_INVISIBILITY         524288
+#define IT_INVULNERABILITY      1048576
+#define IT_SUIT                 2097152
+#define IT_QUAD                 4194304
+#define IT_SIGIL1               (1u<<28)
+#define IT_SIGIL2               (1u<<29)
+#define IT_SIGIL3               (1u<<30)
+#define IT_SIGIL4               (1u<<31)
+// UBSan: unsigned literals because left shifting by 31 causes signed overflow, although it works as expected on x86.
 
 //===========================================
 // AK nexuiz changed and added defines
