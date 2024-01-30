@@ -234,11 +234,14 @@ char *va(char *buf, size_t buflen, const char *format, ...) DP_FUNC_PRINTF(3);
 #undef vsnprintf
 #define vsnprintf DP_STATIC_ASSERT(0, "vsnprintf is forbidden for portability reasons. Use dpvsnprintf instead.")
 
-// dpsnprintf and dpvsnprintf
-// return the number of printed characters, excluding the final '\0'
-// or return -1 if the buffer isn't big enough to contain the entire string.
-// buffer is ALWAYS null-terminated
+// documentation duplicated deliberately for the benefit of IDEs that support https://www.doxygen.nl/manual/docblocks.html
+/// Returns the number of printed characters, excluding the final '\0'
+/// or returns -1 if the buffer isn't big enough to contain the entire string.
+/// Buffer is ALWAYS null-terminated.
 extern int dpsnprintf (char *buffer, size_t buffersize, const char *format, ...) DP_FUNC_PRINTF(3);
+/// Returns the number of printed characters, excluding the final '\0'
+/// or returns -1 if the buffer isn't big enough to contain the entire string.
+/// Buffer is ALWAYS null-terminated.
 extern int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list args);
 
 // A bunch of functions are forbidden for security reasons (and also to please MSVS 2005, for some of them)

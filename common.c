@@ -1021,9 +1021,9 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 		buffer[buffersize - 1] = '\0';
 		// we could be inside Con_Printf
 		if (result < 0)
-			Sys_Printf("dpvsnprintf: output error, buffer size %zu\n", buffersize);
+			Sys_Printf("dpvsnprintf: output error, buffer size %lu\n", (unsigned long)buffersize);
 		else
-			Sys_Printf("dpvsnprintf: truncated to %zu bytes: \"%s\"\n", buffersize - 1, buffer);
+			Sys_Printf("dpvsnprintf: truncated to %lu bytes: \"%s\"\n", (unsigned long)buffersize - 1, buffer);
 		return -1;
 	}
 
@@ -1361,7 +1361,7 @@ char *dp_stpecpy(char *dst, char *end, const char *src)
 	if (p)
 		return p - 1;
 	end[-1] = '\0';
-	Con_Printf(CON_WARN "%s: src string unterminated or truncated to %zu bytes: \"%s\"\n", __func__, dst == end ? 0 : (end - dst) - 1, dst);
+	Con_Printf(CON_WARN "%s: src string unterminated or truncated to %lu bytes: \"%s\"\n", __func__, (unsigned long)(dst == end ? 0 : (end - dst) - 1), dst);
 	return end;
 }
 
@@ -1374,7 +1374,7 @@ char *dp_ustr2stp(char *dst, size_t dsize, const char *src, size_t slen)
 	if (slen >= dsize)
 	{
 		slen = dsize - 1;
-		Con_Printf(CON_WARN "%s: src string truncated to %zu bytes: \"%.*s\"\n", __func__, slen, (int)slen, src);
+		Con_Printf(CON_WARN "%s: src string truncated to %lu bytes: \"%.*s\"\n", __func__, (unsigned long)slen, (int)slen, src);
 	}
 	memcpy(dst, src, slen);
 	dst[slen] = '\0';
@@ -1394,7 +1394,7 @@ size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, u
 	if (p)
 		return (p - 1) - dst;
 	dst[dsize - 1] = '\0';
-	Con_Printf(CON_WARN "%s:%u: src string unterminated or truncated to %zu bytes: \"%s\"\n", func, line, dsize - 1, dst);
+	Con_Printf(CON_WARN "%s:%u: src string unterminated or truncated to %lu bytes: \"%s\"\n", func, line, (unsigned long)dsize - 1, dst);
 	return dsize - 1;
 }
 

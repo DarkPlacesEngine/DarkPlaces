@@ -296,7 +296,7 @@ size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 				out = p - 1;
 			else
 			{
-				VM_Warning(prog, "%zu of %zu bytes available, will truncate %zu byte string \"%s\"\n", outend - out, outsize - 1, strlen(s), s);
+				VM_Warning(prog, "%lu of %lu bytes available, will truncate %lu byte string \"%s\"\n", (unsigned long)(outend - out), (unsigned long)outsize - 1, (unsigned long)strlen(s), s);
 				out = outend;
 				*out = '\0';
 			}
