@@ -2393,6 +2393,7 @@ static void VM_CL_getplayerkey (prvm_prog_t *prog)
 		return;
 
 	t[0] = 0;
+	t_len = 0;
 
 	if(!strcasecmp(c, "name"))
 		t_len = dp_strlcpy(t, cl.scores[i].name, sizeof(t));

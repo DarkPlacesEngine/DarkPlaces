@@ -274,7 +274,8 @@ void VM_RemoveEdictSkeleton(prvm_prog_t *prog, prvm_edict_t *ed)
 #ifdef WIN32
 	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
 	// Microsoft supports it, but apparently complains if we use it.
-	#pragma warning(disable : 4996)
+	#undef memccpy
+	#define memccpy _memccpy
 #endif
 size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize)
 {

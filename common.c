@@ -1345,7 +1345,8 @@ copy one byte at a time (even at -O3) and its advantage increases with string le
 #ifdef WIN32
 	// memccpy() is standard in POSIX.1-2001, POSIX.1-2008, SVr4, 4.3BSD, C23.
 	// Microsoft supports it, but apparently complains if we use it.
-	#pragma warning(disable : 4996)
+	#undef memccpy
+	#define memccpy _memccpy
 #endif
 
 /** Chain-copies a string with truncation and efficiency (compared to strlcat()).
