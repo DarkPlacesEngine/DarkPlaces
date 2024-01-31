@@ -65,6 +65,15 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 
 Instructions TODO.
 
+### Webassembly (Emscripten)
+Note that this requires a linux device or WSL.
+Install emscripten (instructions at https://emscripten.org/docs/getting_started/downloads.html)
+enter the engine's root directory
+enter the Darkplaces-Emscripten directory
+run `./builddeps.sh`
+leave the Darkplaces-Emscripten directory
+run `make emscripten-release`
+
 ## Contributing
 
 [DarkPlaces Contributing Guidelines](CONTRIBUTING.md)
