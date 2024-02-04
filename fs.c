@@ -1713,8 +1713,8 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f(cmd_local);
 
-	// restart the video subsystem after the config is executed
-	Cbuf_InsertText(cmd_local, "\nloadconfig\nvid_restart\n\n");
+	// reset everything that can be and reload configs
+	Cbuf_InsertText(cmd_local, "\nloadconfig\n");
 
 	return true;
 }

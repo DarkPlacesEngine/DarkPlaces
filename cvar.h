@@ -81,7 +81,8 @@ typedef struct cvar_s
 	char **aliases;
 	int aliases_size;
 
-	struct cvar_s *initstate; // snapshot of cvar during init
+	// this is sufficient for Cvar_RestoreInitState()
+	const char *initstring;
 
 	int globaldefindex[3];
 	int globaldefindex_stringno[3];

@@ -107,9 +107,9 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);
 void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 // if pool is NULL this searches ALL pools for the allocation
-qbool Mem_IsAllocated(mempool_t *pool, void *data);
+qbool Mem_IsAllocated(mempool_t *pool, const void *data);
 
-char* _Mem_strdup (mempool_t *pool, const char* s, const char *filename, int fileline);
+char *_Mem_strdup(mempool_t *pool, const char *s, const char *filename, int fileline);
 
 typedef struct memexpandablearray_array_s
 {
