@@ -1816,16 +1816,7 @@ void SV_SpawnServer (const char *map)
 	}
 
 	if(sv.active)
-	{
-		World_End(&sv.world);
-		if(PRVM_serverfunction(SV_Shutdown))
-		{
-			func_t s = PRVM_serverfunction(SV_Shutdown);
-			PRVM_serverglobalfloat(time) = sv.time;
-			PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
-			prog->ExecuteProgram(prog, s,"SV_Shutdown() required");
-		}
-	}
+		PRVM_Prog_Reset(prog); // calls graceful SVQC shutdown in SVVM_reset_cmd
 
 	// free q3 shaders so that any newly downloaded shaders will be active
 	Mod_FreeQ3Shaders();
@@ -2125,21 +2116,12 @@ void SV_Shutdown(void)
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
 
-// make sure all the clients know we're disconnecting
-	World_End(&sv.world);
-	if(prog->loaded)
-	{
-		if(PRVM_serverfunction(SV_Shutdown))
-		{
-			func_t s = PRVM_serverfunction(SV_Shutdown);
-			PRVM_serverglobalfloat(time) = sv.time;
-			PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
-			prog->ExecuteProgram(prog, s,"SV_Shutdown() required");
-		}
-	}
+	// make sure all the clients know we're disconnecting
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		if (host_client->active)
 			SV_DropClient(false, "Server shutting down"); // server shutdown
+
+	PRVM_Prog_Reset(prog); // calls graceful SVQC shutdown in SVVM_reset_cmd
 
 	NetConn_CloseServerPorts();
 
