@@ -118,11 +118,12 @@ void COM_InitGameType (void)
 
 void COM_ChangeGameTypeForGameDirs(void)
 {
-	int i;
+	unsigned i, gamemode_count = sizeof(gamemode_info) / sizeof(gamemode_info[0]);
 	int index = -1;
 	// this will not not change the gamegroup
+
 	// first check if a base game (single gamedir) matches
-	for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
+	for (i = 0; i < gamemode_count; i++)
 	{
 		if (gamemode_info[i].group == com_startupgamegroup && !(gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]))
 		{
@@ -130,10 +131,21 @@ void COM_ChangeGameTypeForGameDirs(void)
 			break;
 		}
 	}
-	// now that we have a base game, see if there is a matching derivative game (two gamedirs)
+	// now that we have a base game, see if there is a derivative game matching the startup one (two gamedirs)
+	// bones_was_here: this prevents a Quake expansion (eg Rogue) getting switched to Quake,
+	// and its gamedirname2 (eg "rogue") being lost from the search path, when adding a miscellaneous gamedir.
+	for (i = 0; i < gamemode_count; i++)
+	{
+		if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && gamemode_info[i].mode == com_startupgamemode)
+		{
+			index = i;
+			break;
+		}
+	}
+	// also see if the first gamedir (from -game parm or gamedir command) matches a derivative game (two/three gamedirs)
 	if (fs_numgamedirs)
 	{
-		for (i = 0;i < (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0]));i++)
+		for (i = 0; i < gamemode_count; i++)
 		{
 			if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && !strcasecmp(fs_gamedirs[0], gamemode_info[i].gamedirname2))
 			{
