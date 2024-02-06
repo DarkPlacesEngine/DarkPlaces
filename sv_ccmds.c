@@ -157,11 +157,11 @@ static void SV_Restart_f(cmd_state_t *cmd)
 static void SV_DisableCheats_c(cvar_t *var)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	int i = 0;
+	int i;
 
-	if (var->value == 0)
+	if (prog->loaded && var->value == 0)
 	{
-		while (svs.clients[i].edict)
+		for (i = 0; i < svs.maxclients; ++i)
 		{
 			if (((int)PRVM_serveredictfloat(svs.clients[i].edict, flags) & FL_GODMODE))
 				PRVM_serveredictfloat(svs.clients[i].edict, flags) = (int)PRVM_serveredictfloat(svs.clients[i].edict, flags) ^ FL_GODMODE;
@@ -173,7 +173,6 @@ static void SV_DisableCheats_c(cvar_t *var)
 				noclip_anglehack = false;
 				PRVM_serveredictfloat(svs.clients[i].edict, movetype) = MOVETYPE_WALK;
 			}
-			i++;
 		}
 	}
 }

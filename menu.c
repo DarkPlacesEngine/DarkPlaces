@@ -5306,9 +5306,11 @@ static void MP_KeyEvent (int key, int ascii, qbool downevent)
 static void MP_Draw (void)
 {
 	prvm_prog_t *prog = MVM_prog;
-	// declarations that are needed right now
-
 	float oldquality;
+
+	// don't crash if we draw a frame between prog shutdown and restart, see Host_LoadConfig_f
+	if (!prog->loaded)
+		return;
 
 	R_SelectScene( RST_MENU );
 

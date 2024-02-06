@@ -78,7 +78,7 @@ cvar_t *Cvar_FindVarAfter(cvar_state_t *cvars, const char *prev_var_name, unsign
  * Returns a pointer to the pointer stored in hashtable[] (or the one it links to)
  * because we'll need to update that when deleting a cvar as other cvar(s) may share its hashindex.
  */
-static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **parent, cvar_t ***link, cvar_t **prev_alpha, unsigned neededflags)
+static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name, cvar_t **prev_alpha, unsigned neededflags)
 {
 	unsigned hashindex;
 	cvar_t *cvar;
@@ -86,9 +86,7 @@ static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name,
 
 	// use hash lookup to minimize search time
 	hashindex = CRC_Block((const unsigned char *)var_name, strlen(var_name)) % CVAR_HASHSIZE;
-	if(parent) *parent = NULL;
 	if(prev_alpha) *prev_alpha = NULL;
-	if(link) *link = &cvars->hashtable[hashindex]->cvar;
 	hashlinkptr = &cvars->hashtable[hashindex];
 	for (hashlinkptr = &cvars->hashtable[hashindex]; *hashlinkptr; hashlinkptr = &(*hashlinkptr)->next)
 	{
@@ -99,13 +97,12 @@ static cvar_hash_t **Cvar_FindVarLink(cvar_state_t *cvars, const char *var_name,
 			for (char **alias = cvar->aliases; alias && *alias; alias++)
 				if (!strcmp (var_name, *alias) && (cvar->flags & neededflags))
 					goto match;
-		if(parent) *parent = cvar;
 	}
 	return NULL;
+
 match:
 	if(!prev_alpha || cvar == cvars->vars)
 		return hashlinkptr;
-
 	*prev_alpha = cvars->vars;
 	// if prev_alpha happens to become NULL then there has been some inconsistency elsewhere
 	// already - should I still insert '*prev_alpha &&' in the loop?
@@ -304,8 +301,9 @@ void Cvar_CompleteCvarPrint(cvar_state_t *cvars, const char *partial, unsigned n
 		
 }
 
-// check if a cvar is held by some progs
-static qbool Cvar_IsAutoCvar(cvar_t *var)
+/// Check if a cvar is held by some progs
+/// in which case its name is returned, otherwise NULL.
+static const char *Cvar_IsAutoCvar(cvar_t *var)
 {
 	int i;
 	prvm_prog_t *prog;
@@ -313,12 +311,12 @@ static qbool Cvar_IsAutoCvar(cvar_t *var)
 	{
 		prog = &prvm_prog_list[i];
 		if (prog->loaded && var->globaldefindex[i] >= 0)
-			return true;
+			return prog->name;
 	}
-	return false;
+	return NULL;
 }
 
-// we assume that prog is already set to the target progs
+/// we assume that prog is already set to the target progs
 static void Cvar_UpdateAutoCvar(cvar_t *var)
 {
 	int i;
@@ -363,7 +361,7 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 	}
 }
 
-// called after loading a savegame
+/// called after loading a savegame
 void Cvar_UpdateAllAutoCvars(cvar_state_t *cvars)
 {
 	cvar_t *var;
@@ -549,7 +547,7 @@ void Cvar_RegisterVirtual(cvar_t *variable, const char *name )
 	// Also if aliases is NULL this allocates fresh for the correct size, so it's fine to just do this.
 	variable->aliases = (char **)Z_Realloc(variable->aliases, sizeof(char *) * (variable->aliases_size + 2));
 	// Add the new alias, and increment the number of aliases in the list
-	variable->aliases[variable->aliases_size++] = (char *)Z_strdup(name);
+	variable->aliases[variable->aliases_size++] = Z_strdup(name);
 
 	// link to head of list in this hash table index
 	hash = (cvar_hash_t *)Z_Malloc(sizeof(cvar_hash_t));
@@ -668,14 +666,14 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	}
 
 	// copy the value off, because future sets will Z_Free it
-	variable->name = (char *)Mem_strdup(zonemempool, variable->name);
-	variable->string = (char *)Mem_strdup(zonemempool, variable->string);
-	variable->defstring = (char *)Mem_strdup(zonemempool, variable->string);
+	variable->name = Z_strdup(variable->name);
+	variable->string = Z_strdup(variable->string);
+	variable->defstring = Z_strdup(variable->string);
 	variable->value = atof (variable->string);
 	variable->integer = (int) variable->value;
 	variable->aliases = NULL;
 	variable->aliases_size = 0;
-	variable->initstate = NULL;
+	variable->initstring = NULL;
 
 	// Mark it as not an autocvar.
 	for (i = 0;i < PRVM_PROG_MAX;i++)
@@ -714,7 +712,7 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, unsig
 				Z_Free((char *)cvar->description);
 
 			if(*newdescription)
-				cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
+				cvar->description = Z_strdup(newdescription);
 			else
 				cvar->description = cvar_dummy_description;
 		}
@@ -740,17 +738,17 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, unsig
 	// FIXME: these never get Z_Free'd
 	cvar = (cvar_t *)Z_Malloc(sizeof(cvar_t));
 	cvar->flags = flags | CF_ALLOCATED;
-	cvar->name = (char *)Mem_strdup(zonemempool, name);
-	cvar->string = (char *)Mem_strdup(zonemempool, value);
-	cvar->defstring = (char *)Mem_strdup(zonemempool, value);
+	cvar->name = Z_strdup(name);
+	cvar->string = Z_strdup(value);
+	cvar->defstring = Z_strdup(value);
 	cvar->value = atof (cvar->string);
 	cvar->integer = (int) cvar->value;
 	cvar->aliases = NULL;
 	cvar->aliases_size = 0;
-	cvar->initstate = NULL;
+	cvar->initstring = NULL;
 
 	if(newdescription && *newdescription)
-		cvar->description = (char *)Mem_strdup(zonemempool, newdescription);
+		cvar->description = Z_strdup(newdescription);
 	else
 		cvar->description = cvar_dummy_description; // actually checked by VM_cvar_type
 
@@ -761,6 +759,55 @@ cvar_t *Cvar_Get(cvar_state_t *cvars, const char *name, const char *value, unsig
 	Cvar_Link(cvar, cvars);
 
 	return cvar;
+}
+
+/// For "quiet" mode pass NULL as the callername.
+/// Returns true if the cvar was deleted.
+static qbool Cvar_Delete(cvar_state_t *cvars, const char *name, const char *callername)
+{
+	cvar_t *cvar, *prev;
+	cvar_hash_t **hashlinkptr, *oldhashlink;
+	const char *progname;
+
+	hashlinkptr = Cvar_FindVarLink(cvars, name, &prev, ~0);
+	if(!hashlinkptr)
+	{
+		if (callername)
+			Con_Printf("%s: cvar \"%s\" is not defined.\n", callername, name);
+		return false;
+	}
+	cvar = (*hashlinkptr)->cvar;
+
+	if(!(cvar->flags & CF_ALLOCATED))
+	{
+		if (callername)
+			Con_Printf(CON_WARN "%s: engine cvar \"%s\" cannot be deleted!\n", callername, cvar->name);
+		return false;
+	}
+	if ((progname = Cvar_IsAutoCvar(cvar)))
+	{
+		if (callername)
+			Con_Printf(CON_WARN "%s: unable to delete cvar \"%s\", it is an autocvar used by running %s progs!\n", callername, cvar->name, progname);
+		return false;
+	}
+
+	if(cvar == cvars->vars)
+		cvars->vars = cvar->next;
+	else
+		prev->next = cvar->next;
+
+	if(cvar->description != cvar_dummy_description)
+		Z_Free((char *)cvar->description);
+	Z_Free((char *)cvar->name);
+	Z_Free((char *)cvar->string);
+	Z_Free((char *)cvar->defstring);
+	Z_Free(cvar);
+
+	oldhashlink = *hashlinkptr;
+	*hashlinkptr = (*hashlinkptr)->next;
+	Z_Free(oldhashlink);
+
+	return true;
 }
 
 qbool Cvar_Readonly (cvar_t *var, const char *cmd_name)
@@ -845,86 +892,48 @@ void Cvar_LockDefaults_f(cmd_state_t *cmd)
 void Cvar_SaveInitState(cvar_state_t *cvars)
 {
 	cvar_t *c;
+
 	for (c = cvars->vars;c;c = c->next)
-	{
-		c->initstate = (cvar_t *)Z_Malloc(sizeof(cvar_t));
-		memcpy(c->initstate, c, sizeof(cvar_t));
-	}
+		if ((c->flags & (CF_PERSISTENT | CF_READONLY)) == 0)
+			c->initstring = Z_strdup(c->string);
 }
 
 void Cvar_RestoreInitState(cvar_state_t *cvars)
 {
-	unsigned hashindex;
-	cvar_t *c, **cp;
-	cvar_t *c2, **cp2;
-	for (cp = &cvars->vars;(c = *cp);)
+	cvar_t *c, *cp;
+	int i = 0;
+
+	for (cp = cvars->vars; (c = cp);++i)
 	{
-		if (c->initstate)
+		cp = c->next; // get next cvar now in case we delete this cvar
+
+		if (c->initstring)
 		{
 			// restore this cvar, it existed at init
-			if (((c->flags ^ c->initstate->flags) & CF_MAXFLAGSVAL)
-			 || strcmp(c->defstring ? c->defstring : "", c->initstate->defstring ? c->initstate->defstring : "")
-			 || strcmp(c->string ? c->string : "", c->initstate->string ? c->initstate->string : ""))
-			{
-				Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", c->name);
-				if (c->defstring)
-					Z_Free((char *)c->defstring);
-				c->defstring = Mem_strdup(zonemempool, c->initstate->defstring);
-				if (c->string)
-					Z_Free((char *)c->string);
-				c->string = Mem_strdup(zonemempool, c->initstate->string);
-			}
-			c->flags = c->initstate->flags;
-			c->value = c->initstate->value;
-			c->integer = c->initstate->integer;
-			VectorCopy(c->initstate->vector, c->vector);
-			cp = &c->next;
+			Con_DPrintf("Cvar_RestoreInitState: Restoring cvar \"%s\"\n", c->name);
+
+			/* bones_was_here: intentionally NOT restoring defstring in this function.
+			 * The only callsite, Host_LoadConfig_f, will re-exec quake.rc, default.cfg, etc.
+			 * Defaults are unlocked here, so Cvar_LockDefaults_f will reset the defstring.
+			 * This is more correct than restoring the defstring here
+			 * because a gamedir change could load configs that should change defaults.
+			 */
+
+			Cvar_SetQuick(c, c->initstring);
+			c->flags &= ~CF_DEFAULTSET;
 		}
-		else
+		else if (!(c->flags & (CF_PERSISTENT | CF_READONLY))) // cvars with those flags have no initstring AND may not be deleted or reset
 		{
-			if (!(c->flags & CF_ALLOCATED))
-			{
-				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it was registered after init!\n", c->name);
-				// In this case, at least reset it to the default.
-				if((c->flags & CF_PERSISTENT) == 0)
-					Cvar_SetQuick(c, c->defstring);
-				cp = &c->next;
-				continue;
-			}
-			if (Cvar_IsAutoCvar(c))
-			{
-				Con_DPrintf("Cvar_RestoreInitState: Unable to destroy cvar \"%s\", it is an autocvar used by running progs!\n", c->name);
-				// In this case, at least reset it to the default.
-				if((c->flags & CF_PERSISTENT) == 0)
-					Cvar_SetQuick(c, c->defstring);
-				cp = &c->next;
-				continue;
-			}
 			// remove this cvar, it did not exist at init
-			Con_DPrintf("Cvar_RestoreInitState: Destroying cvar \"%s\"\n", c->name);
-			// unlink struct from hash
-			hashindex = CRC_Block((const unsigned char *)c->name, strlen(c->name)) % CVAR_HASHSIZE;
-			for (cp2 = &cvars->hashtable[hashindex]->cvar;(c2 = *cp2);)
+			Con_DPrintf("Cvar_RestoreInitState: cvar \"%s\"", c->name);
+			if (Cvar_Delete(cvars, c->name, NULL))
+				Con_DPrint("deleted.\n");
+			else
 			{
-				if (c2 == c)
-				{
-					*cp2 = cvars->hashtable[hashindex]->next->cvar;
-					break;
-				}
-				else
-					cp2 = &cvars->hashtable[hashindex]->next->cvar;
+				// In this case, at least reset it to the default.
+				Con_DPrint("reset.\n");
+				Cvar_SetQuick(c, c->defstring);
 			}
-			// unlink struct from main list
-			*cp = c->next;
-			// free strings
-			if (c->defstring)
-				Z_Free((char *)c->defstring);
-			if (c->string)
-				Z_Free((char *)c->string);
-			if (c->description && c->description != cvar_dummy_description)
-				Z_Free((char *)c->description);
-			// free struct
-			Z_Free(c);
 		}
 	}
 }
@@ -936,7 +945,7 @@ void Cvar_ResetToDefaults_All_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if((var->flags & CF_PERSISTENT) == 0)
+		if((var->flags & (CF_PERSISTENT | CF_READONLY)) == 0)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -948,7 +957,7 @@ void Cvar_ResetToDefaults_NoSaveOnly_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if ((var->flags & (CF_PERSISTENT | CF_ARCHIVE)) == 0)
+		if ((var->flags & (CF_PERSISTENT | CF_READONLY | CF_ARCHIVE)) == 0)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -961,7 +970,7 @@ void Cvar_ResetToDefaults_SaveOnly_f(cmd_state_t *cmd)
 	// restore the default values of all cvars
 	for (var = cvars->vars ; var ; var = var->next)
 	{
-		if ((var->flags & (CF_PERSISTENT | CF_ARCHIVE)) == CF_ARCHIVE)
+		if ((var->flags & (CF_PERSISTENT | CF_READONLY | CF_ARCHIVE)) == CF_ARCHIVE)
 			Cvar_SetQuick(var, var->defstring);
 	}
 }
@@ -1103,9 +1112,6 @@ void Cvar_Del_f(cmd_state_t *cmd)
 {
 	cvar_state_t *cvars = cmd->cvars;
 	int i;
-	cvar_t *parent, **link;
-	cvar_t *cvar, *prev;
-	cvar_hash_t **hashlinkptr, *oldhashlink;
 
 	if(Cmd_Argc(cmd) < 2)
 	{
@@ -1113,51 +1119,7 @@ void Cvar_Del_f(cmd_state_t *cmd)
 		return;
 	}
 	for(i = 1; i < Cmd_Argc(cmd); ++i)
-	{
-		hashlinkptr = Cvar_FindVarLink(cvars, Cmd_Argv(cmd, i), &parent, &link, &prev, ~0);
-
-		if(!hashlinkptr)
-		{
-			Con_Printf("%s: %s is not defined\n", Cmd_Argv(cmd, 0), Cmd_Argv(cmd, i));
-			continue;
-		}
-		cvar = (*hashlinkptr)->cvar;
-
-		if(Cvar_Readonly(cvar, Cmd_Argv(cmd, 0)))
-			continue;
-		if(!(cvar->flags & CF_ALLOCATED))
-		{
-			Con_Printf(CON_WARN "%s: %s is static and cannot be deleted\n", Cmd_Argv(cmd, 0), cvar->name);
-			continue;
-		}
-
-		if(cvar == cvars->vars)
-		{
-			cvars->vars = cvar->next;
-		}
-		else
-		{
-			// in this case, prev must be set, otherwise there has been some inconsistensy
-			// elsewhere already... should I still check for prev != NULL?
-			prev->next = cvar->next;
-		}
-
-		if(parent)
-			parent->next = cvar->next;
-		else if(link)
-			*link = cvar->next;
-		if(cvar->description != cvar_dummy_description)
-			Z_Free((char *)cvar->description);
-
-		Z_Free((char *)cvar->name);
-		Z_Free((char *)cvar->string);
-		Z_Free((char *)cvar->defstring);
-		Z_Free(cvar);
-
-		oldhashlink = *hashlinkptr;
-		*hashlinkptr = (*hashlinkptr)->next;
-		Z_Free(oldhashlink);
-	}
+		Cvar_Delete(cvars, Cmd_Argv(cmd, i), Cmd_Argv(cmd, 0));
 }
 
 #ifdef FILLALLCVARSWITHRUBBISH

@@ -51,7 +51,7 @@ struct cmd_state_s;
 #define CF_SERVER_FROM_CLIENT   (1u<<3)  ///< command the client is allowed to execute on the server as a stringcmd
 #define CF_CHEAT                (1u<<4)  ///< command or cvar that gives an unfair advantage over other players and is blocked unless sv_cheats is 1
 #define CF_ARCHIVE              (1u<<5)  ///< cvar should have its set value saved to config.cfg and persist across sessions
-#define CF_READONLY             (1u<<6)  ///< cvar cannot be changed from the console or the command buffer
+#define CF_READONLY             (1u<<6)  ///< cvar cannot be changed from the console or the command buffer, and is considered CF_PERSISTENT
 #define CF_NOTIFY               (1u<<7)  ///< cvar should trigger a chat notification to all connected clients when changed
 #define CF_SERVERINFO           (1u<<8)  ///< command or cvar relevant to serverinfo string handling
 #define CF_USERINFO             (1u<<9)  ///< command or cvar used to communicate userinfo to the server

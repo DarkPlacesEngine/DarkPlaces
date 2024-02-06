@@ -1345,13 +1345,14 @@ Sets fs_gamedir, adds the directory to the head of the path,
 then loads and adds pak1.pak pak2.pak ...
 ================
 */
-static void FS_AddGameDirectory (const char *dir)
+static void FS_AddGameDirectory (const char *dir, qbool set_fs_gamedir)
 {
 	int i;
 	stringlist_t list;
 	searchpath_t *search;
 
-	dp_strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
+	if (set_fs_gamedir)
+		dp_strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
 	stringlistinit(&list);
 	listdirectory(&list, "", dir);
@@ -1392,14 +1393,14 @@ static void FS_AddGameDirectory (const char *dir)
 FS_AddGameHierarchy
 ================
 */
-static void FS_AddGameHierarchy (const char *dir)
+static void FS_AddGameHierarchy (const char *dir, qbool set_fs_gamedir)
 {
 	char vabuf[1024];
 	// Add the common game directory
-	FS_AddGameDirectory (va(vabuf, sizeof(vabuf), "%s%s/", fs_basedir, dir));
+	FS_AddGameDirectory (va(vabuf, sizeof(vabuf), "%s%s/", fs_basedir, dir), set_fs_gamedir);
 
 	if (*fs_userdir)
-		FS_AddGameDirectory(va(vabuf, sizeof(vabuf), "%s%s/", fs_userdir, dir));
+		FS_AddGameDirectory(va(vabuf, sizeof(vabuf), "%s%s/", fs_userdir, dir), set_fs_gamedir);
 }
 
 
@@ -1560,30 +1561,32 @@ void FS_Rescan (void)
 
 	// add the game-specific paths
 	// gamedirname1 (typically id1)
-	FS_AddGameHierarchy (gamedirname1);
+	FS_AddGameHierarchy (gamedirname1, true);
 	// update the com_modname (used for server info)
 	if (gamedirname2 && gamedirname2[0])
 		dp_strlcpy(com_modname, gamedirname2, sizeof(com_modname));
 	else
 		dp_strlcpy(com_modname, gamedirname1, sizeof(com_modname));
 
-	// add the game-specific path, if any
+	// add the secondary game-specific path, if any
 	// (only used for mission packs and the like, which should set fs_modified)
 	if (gamedirname2 && gamedirname2[0])
 	{
 		fs_modified = true;
-		FS_AddGameHierarchy (gamedirname2);
+		FS_AddGameHierarchy (gamedirname2, true);
 	}
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
 	// LadyHavoc: now supports multiple -game directories
 	// set the com_modname (reported in server info)
+	// bones_was_here: does NOT set fs_gamedir in FS_AddGameHierarchy()
+	// so that we still save files in the right place.
 	*gamedirbuf = 0;
 	for (i = 0;i < fs_numgamedirs;i++)
 	{
 		fs_modified = true;
-		FS_AddGameHierarchy (fs_gamedirs[i]);
+		FS_AddGameHierarchy (fs_gamedirs[i], false);
 		// update the com_modname (used server info)
 		dp_strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
 		if(i)
@@ -1713,8 +1716,8 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f(cmd_local);
 
-	// restart the video subsystem after the config is executed
-	Cbuf_InsertText(cmd_local, "\nloadconfig\nvid_restart\n\n");
+	// reset everything that can be and reload configs
+	Cbuf_InsertText(cmd_local, "\nloadconfig\n");
 
 	return true;
 }

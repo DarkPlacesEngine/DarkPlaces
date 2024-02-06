@@ -1787,7 +1787,7 @@ static void NetConn_ClientParsePacket_ServerList_UpdateCache(int n)
 	// update description strings for engine menu and console output
 	entry->line1_len = dpsnprintf(entry->line1, sizeof(serverlist_cache[n].line1), "^%c%5.0f^7 ^%c%3u^7/%3u %-65.65s",
 	           info->ping >= 300 ? '1' : (info->ping >= 200 ? '3' : '7'),
-	           info->ping ?: INFINITY, // display inf when a listed server times out and net_slist_pause blocks its removal
+	           info->ping ? info->ping : INFINITY, // display inf when a listed server times out and net_slist_pause blocks its removal
 	           ((info->numhumans > 0 && info->numhumans < info->maxplayers) ? (info->numhumans >= 4 ? '7' : '3') : '1'),
 	           info->numplayers,
 	           info->maxplayers,

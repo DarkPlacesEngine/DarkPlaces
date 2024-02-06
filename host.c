@@ -251,7 +251,10 @@ static void Host_AddConfigText(cmd_state_t *cmd)
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec teu.rc\n");
 	else
 		Cbuf_InsertText(cmd, "alias startmap_sp \"map start\"\nalias startmap_dm \"map start\"\nexec " STARTCONFIGFILENAME "\n");
-	Cbuf_Execute(cmd->cbuf);
+
+	// if quake.rc is missing, use default
+	if (!FS_FileExists(STARTCONFIGFILENAME))
+		Cbuf_InsertText(cmd, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
 }
 
 /*
@@ -263,14 +266,17 @@ Resets key bindings and cvars to defaults and then reloads scripts
 */
 static void Host_LoadConfig_f(cmd_state_t *cmd)
 {
+#ifdef CONFIG_MENU
+	// Xonotic QC complains/breaks if its cvars are deleted before its m_shutdown() is called
+	if(MR_Shutdown)
+		MR_Shutdown();
+	// append a menu restart command to execute after the config
+	Cbuf_AddText(cmd, "\nmenu_restart\n");
+#endif
 	// reset all cvars, commands and aliases to init values
 	Cmd_RestoreInitState();
-#ifdef CONFIG_MENU
-	// prepend a menu restart command to execute after the config
-	Cbuf_InsertText(cmd_local, "\nmenu_restart\n");
-#endif
 	// reset cvars to their defaults, and then exec startup scripts again
-	Host_AddConfigText(cmd_local);
+	Host_AddConfigText(cmd);
 }
 
 /*
@@ -500,13 +506,7 @@ static void Host_Init (void)
 	// here comes the not so critical stuff
 
 	Host_AddConfigText(cmd_local);
-
-	// if quake.rc is missing, use default
-	if (!FS_FileExists("quake.rc"))
-	{
-		Cbuf_AddText(cmd_local, "exec default.cfg\nexec " CONFIGFILENAME "\nexec autoexec.cfg\n");
-		Cbuf_Execute(cmd_local->cbuf);
-	}
+	Cbuf_Execute(cmd_local->cbuf); // cannot be in Host_AddConfigText as that would cause Host_LoadConfig_f to loop!
 
 	host.state = host_active;
 

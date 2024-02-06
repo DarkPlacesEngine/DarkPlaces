@@ -738,7 +738,9 @@ SCR_DrawConsole
 void SCR_DrawConsole (void)
 {
 	// infobar and loading progress are not drawn simultaneously
-	scr_con_margin_bottom = SCR_InfobarHeight() ?: scr_loading * scr_loadingscreen_barheight.integer;
+	scr_con_margin_bottom = SCR_InfobarHeight();
+	if (!scr_con_margin_bottom && scr_loading)
+		scr_con_margin_bottom = scr_loadingscreen_barheight.integer;
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen

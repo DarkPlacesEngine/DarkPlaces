@@ -1407,9 +1407,12 @@ size_t dp__strlcpy(char *dst, const char *src, size_t dsize, const char *func, u
  */
 size_t dp__strlcat(char *dst, const char *src, size_t dsize, const char *func, unsigned line)
 {
-	char *p = (char *)memchr(dst, '\0', dsize) ?: dst;
-	size_t offset = p - dst;
+	size_t offset;
+	char *p = (char *)memchr(dst, '\0', dsize);
 
+	if (!p)
+		p = dst;
+	offset = p - dst;
 	return dp__strlcpy(p, src, dsize - offset, func, line) + offset;
 }
 

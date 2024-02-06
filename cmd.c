@@ -2213,7 +2213,8 @@ functions_done:
 		goto done;
 
 // check cvars
-	if (!Cvar_Command(cmd) && host.framecount > 0)
+	// Xonotic is still maintained so we don't want to hide problems from getting fixed
+	if (!Cvar_Command(cmd) && (host.framecount > 0 || gamemode == GAME_XONOTIC))
 		Con_Printf(CON_WARN "Unknown command \"%s\"\n", Cmd_Argv(cmd, 0));
 done:
 	cmd->cbuf->tokenizebufferpos = oldpos;

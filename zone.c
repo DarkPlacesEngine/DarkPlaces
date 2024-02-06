@@ -650,7 +650,7 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 #endif
 }
 
-qbool Mem_IsAllocated(mempool_t *pool, void *data)
+qbool Mem_IsAllocated(mempool_t *pool, const void *data)
 {
 	memheader_t *header;
 	memheader_t *target;
@@ -863,14 +863,14 @@ static void MemStats_f(cmd_state_t *cmd)
 }
 
 
-char* _Mem_strdup (mempool_t *pool, const char* s, const char *filename, int fileline)
+char *_Mem_strdup(mempool_t *pool, const char *s, const char *filename, int fileline)
 {
 	char* p;
 	size_t sz;
 	if (s == NULL)
 		return NULL;
 	sz = strlen (s) + 1;
-	p = (char*)_Mem_Alloc (pool, NULL, sz, 16, filename, fileline);
+	p = (char*)_Mem_Alloc (pool, NULL, sz, alignof(char), filename, fileline);
 	dp_strlcpy (p, s, sz);
 	return p;
 }
