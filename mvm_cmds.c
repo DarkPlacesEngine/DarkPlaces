@@ -557,7 +557,7 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 			break;
 		case SLIF_PING:
 			// display inf when a listed server times out and net_slist_pause blocks its removal
-			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping ?: INFINITY;
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping ? cache->info.ping : INFINITY;
 			break;
 		case SLIF_PROTOCOL:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
