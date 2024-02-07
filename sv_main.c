@@ -1773,6 +1773,21 @@ int SV_IsLocalServer(void)
 	return (host_isclient.integer && sv.active ? svs.maxclients : 0);
 }
 
+static void SV_VM_Shutdown(qbool prog_reset)
+{
+	prvm_prog_t *prog = SVVM_prog;
+
+	if(prog->loaded && PRVM_serverfunction(SV_Shutdown))
+	{
+		func_t s = PRVM_serverfunction(SV_Shutdown);
+		PRVM_serverglobalfloat(time) = sv.time;
+		PRVM_serverfunction(SV_Shutdown) = 0; // prevent it from getting called again
+		prog->ExecuteProgram(prog, s,"SV_Shutdown() required");
+	}
+	if (prog_reset)
+		PRVM_Prog_Reset(prog);
+}
+
 /*
 ================
 SV_SpawnServer
@@ -1816,7 +1831,7 @@ void SV_SpawnServer (const char *map)
 	}
 
 	if(sv.active)
-		PRVM_Prog_Reset(prog); // calls graceful SVQC shutdown in SVVM_reset_cmd
+		SV_VM_Shutdown(false);
 
 	// free q3 shaders so that any newly downloaded shaders will be active
 	Mod_FreeQ3Shaders();
@@ -2103,7 +2118,6 @@ This only happens at the end of a game, not between levels
 */
 void SV_Shutdown(void)
 {
-	prvm_prog_t *prog = SVVM_prog;
 	int i;
 
 	SV_LockThreadMutex();
@@ -2121,7 +2135,7 @@ void SV_Shutdown(void)
 		if (host_client->active)
 			SV_DropClient(false, "Server shutting down"); // server shutdown
 
-	PRVM_Prog_Reset(prog); // calls graceful SVQC shutdown in SVVM_reset_cmd
+	SV_VM_Shutdown(true);
 
 	NetConn_CloseServerPorts();
 
