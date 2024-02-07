@@ -348,13 +348,9 @@ Cbuf_Execute
 ============
 */
 extern qbool prvm_runawaycheck;
-static size_t Cmd_PreprocessString(cmd_state_t *cmd, const char *intext, char *outtext, unsigned maxoutlen, cmd_alias_t *alias);
 void Cbuf_Execute (cmd_buf_t *cbuf)
 {
 	cmd_input_t *current;
-	char preprocessed[MAX_INPUTLINE];
-	size_t preprocessed_len;
-	char *firstchar;
 	unsigned int i = 0;
 
 	// LadyHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
@@ -376,27 +372,10 @@ void Cbuf_Execute (cmd_buf_t *cbuf)
 		 */
 		current->pending = false;
 
+		Cmd_PreprocessAndExecuteString(current->source, current->text, current->length, src_local, false);
 		cbuf->size -= current->length;
-
-		firstchar = current->text;
-		while(*firstchar && ISWHITESPACE(*firstchar))
-			++firstchar;
-		if((strncmp(firstchar, "alias", 5)   || !ISWHITESPACE(firstchar[5]))
-		&& (strncmp(firstchar, "bind", 4)    || !ISWHITESPACE(firstchar[4]))
-		&& (strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7])))
-		{
-			if((preprocessed_len = Cmd_PreprocessString(current->source, current->text, preprocessed, sizeof(preprocessed), NULL)))
-				Cmd_ExecuteString(current->source, preprocessed, preprocessed_len, src_local, false);
-		}
-		else
-		{
-			Cmd_ExecuteString(current->source, current->text, current->length, src_local, false);
-		}
-
 		// Recycle memory so using WASD doesn't cause a malloc and free
 		List_Move_Tail(&current->list, &cbuf->free);
-
-		current = NULL;
 
 		if (cbuf->wait)
 		{
@@ -1432,6 +1411,26 @@ static void Cmd_ExecuteAlias (cmd_state_t *cmd, cmd_alias_t *alias)
 	// alias parameters containing dollar signs can have bad effects.
 	Cmd_QuoteString(buffer2, sizeof(buffer2), buffer, "$", false);
 	Cbuf_InsertText(cmd, buffer2);
+}
+
+void Cmd_PreprocessAndExecuteString(cmd_state_t *cmd, const char *text, size_t textlen, cmd_source_t src, qbool lockmutex)
+{
+	char preprocessed[MAX_INPUTLINE];
+	size_t preprocessed_len;
+	const char *firstchar;
+
+	firstchar = text;
+	while(*firstchar && ISWHITESPACE(*firstchar))
+		++firstchar;
+	if((strncmp(firstchar, "alias", 5)   || !ISWHITESPACE(firstchar[5]))
+	&& (strncmp(firstchar, "bind", 4)    || !ISWHITESPACE(firstchar[4]))
+	&& (strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7])))
+	{
+		if((preprocessed_len = Cmd_PreprocessString(cmd, text, preprocessed, sizeof(preprocessed), NULL)))
+			Cmd_ExecuteString(cmd, preprocessed, preprocessed_len, src, lockmutex);
+	}
+	else
+		Cmd_ExecuteString(cmd, text, textlen, src, lockmutex);
 }
 
 /*

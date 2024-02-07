@@ -3013,7 +3013,7 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 	while((userpass_end = strchr(userpass_start, ' ')))
 	{
 		have_usernames = true;
-		dp_strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
+		dp_ustr2stp(buf, sizeof(buf), userpass_start, userpass_end - userpass_start);
 		if(buf[0])  // Ignore empty entries due to leading/duplicate space.
 			if(comparator(peeraddress, buf, password, cs, cslen))
 				goto allow;
@@ -3032,7 +3032,7 @@ static const char *RCon_Authenticate(lhnetaddress_t *peeraddress, const char *pa
 	while((userpass_end = strchr(userpass_start, ' ')))
 	{
 		have_usernames = true;
-		dp_strlcpy(buf, userpass_start, ((size_t)(userpass_end-userpass_start) >= sizeof(buf)) ? (int)(sizeof(buf)) : (int)(userpass_end-userpass_start+1));
+		dp_ustr2stp(buf, sizeof(buf), userpass_start, userpass_end - userpass_start);
 		if(buf[0])  // Ignore empty entries due to leading/duplicate space.
 			if(comparator(peeraddress, buf, password, cs, cslen))
 				goto check;
@@ -3122,10 +3122,7 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 			if(l)
 			{
 				client_t *host_client_save = host_client;
-				//Cmd_ExecuteString(cmd_local, s, src_local, true); // no variable expansion
-				// bones_was_here: prepending allows a loop such as `alias foo "bar; wait; foo"; foo`
-				// to be broken with an alias or unalias command
-				Cbuf_InsertText(cmd_local, s);
+				Cmd_PreprocessAndExecuteString(cmd_local, s, l, src_local, true);
 				host_client = host_client_save;
 				// in case it is a command that changes host_client (like restart)
 			}
