@@ -144,7 +144,7 @@ static void SV_Restart_f(cmd_state_t *cmd)
 	if(host.hook.ToggleMenu)
 		host.hook.ToggleMenu();
 
-	dp_strlcpy(mapname, sv.name, sizeof(mapname));
+	dp_strlcpy(mapname, sv.worldbasename, sizeof(mapname));
 	SV_SpawnServer(mapname);
 	
 	if(sv.active && host.hook.ConnectLocal != NULL)
@@ -739,7 +739,7 @@ static void SV_Status_f(cmd_state_t *cmd)
 	print ("host:     %s\n", Cvar_VariableString (&cvars_all, "hostname", CF_SERVER));
 	print ("version:  %s\n", engineversion);
 	print ("protocol: %i (%s)\n", Protocol_NumberForEnum(sv.protocol), Protocol_NameForEnum(sv.protocol));
-	print ("map:      %s\n", sv.name);
+	print ("map:      %s\n", sv.worldbasename);
 	print ("timing:   %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 

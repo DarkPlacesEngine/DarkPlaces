@@ -3677,7 +3677,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				LHNETADDRESS_ToString(LHNET_AddressFromSocket(mysocket), myaddressstring, sizeof(myaddressstring), true);
 				MSG_WriteString(&sv_message, myaddressstring);
 				MSG_WriteString(&sv_message, hostname.string);
-				MSG_WriteString(&sv_message, sv.name);
+				MSG_WriteString(&sv_message, sv.worldbasename);
 				// How many clients are there?
 				for (i = 0, numclients = 0;i < svs.maxclients;i++)
 					if (svs.clients[i].active)

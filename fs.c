@@ -382,7 +382,7 @@ typedef struct pack_s
 	char filename [MAX_OSPATH];
 	char shortname [MAX_QPATH];
 	filedesc_t handle;
-	int ignorecase;  ///< PK3 ignores case
+	qbool ignorecase;  ///< PK3 ignores case
 	int numfiles;
 	qbool vpack;
 	qbool dlcache;
@@ -412,7 +412,7 @@ void FS_Dir_f(cmd_state_t *cmd);
 void FS_Ls_f(cmd_state_t *cmd);
 void FS_Which_f(cmd_state_t *cmd);
 
-static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet);
+static searchpath_t *FS_FindFile (const char *name, int *index, const char **canonicalname, qbool quiet);
 static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									fs_offset_t offset, fs_offset_t packsize,
 									fs_offset_t realsize, int flags);
@@ -1324,7 +1324,7 @@ qbool FS_AddPack(const char *pakfile, qbool *already_loaded, qbool keep_plain_di
 		*already_loaded = false;
 
 	// then find the real name...
-	search = FS_FindFile(pakfile, &index, true);
+	search = FS_FindFile(pakfile, &index, NULL, true);
 	if(!search || search->pack)
 	{
 		Con_Printf("could not find pak \"%s\"\n", pakfile);
@@ -2672,7 +2672,7 @@ Return the searchpath where the file was found (or NULL)
 and the file index in the package if relevant
 ====================
 */
-static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet)
+static searchpath_t *FS_FindFile (const char *name, int *index, const char **canonicalname, qbool quiet)
 {
 	searchpath_t *search;
 	pack_t *pak;
@@ -2710,15 +2710,18 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet)
 
 						if (index != NULL)
 							*index = -1;
+						if (canonicalname)
+							*canonicalname = NULL;
 						return NULL;
 					}
 
 					if (!quiet && developer_extra.integer)
-						Con_DPrintf("FS_FindFile: %s in %s\n",
-									pak->files[middle].name, pak->filename);
+						Con_DPrintf("FS_FindFile: %s in %s\n", pak->files[middle].name, pak->filename);
 
 					if (index != NULL)
 						*index = middle;
+					if (canonicalname)
+						*canonicalname = pak->files[middle].name;
 					return search;
 				}
 
@@ -2740,6 +2743,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet)
 
 				if (index != NULL)
 					*index = -1;
+				if (canonicalname)
+					*canonicalname = name;
 				return search;
 			}
 		}
@@ -2750,6 +2755,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qbool quiet)
 
 	if (index != NULL)
 		*index = -1;
+	if (canonicalname)
+		*canonicalname = NULL;
 	return NULL;
 }
 
@@ -2766,7 +2773,7 @@ static qfile_t *FS_OpenReadFile (const char *filename, qbool quiet, qbool nonblo
 	searchpath_t *search;
 	int pack_ind;
 
-	search = FS_FindFile (filename, &pack_ind, quiet);
+	search = FS_FindFile (filename, &pack_ind, NULL, quiet);
 
 	// Not found?
 	if (search == NULL)
@@ -3647,7 +3654,7 @@ int FS_FileType (const char *filename)
 	searchpath_t *search;
 	char fullpath[MAX_OSPATH];
 
-	search = FS_FindFile (filename, NULL, true);
+	search = FS_FindFile (filename, NULL, NULL, true);
 	if(!search)
 		return FS_FILETYPE_NONE;
 
@@ -3664,11 +3671,15 @@ int FS_FileType (const char *filename)
 FS_FileExists
 
 Look for a file in the packages and in the filesystem
+Returns its canonical name (VFS path with correct capitalisation) if found, else NULL.
+If the file is found outside a pak, this will be the same pointer as passed in.
 ==================
 */
-qbool FS_FileExists (const char *filename)
+const char *FS_FileExists (const char *filename)
 {
-	return (FS_FindFile (filename, NULL, true) != NULL);
+	const char *canonicalname;
+
+	return FS_FindFile(filename, NULL, &canonicalname, true) ? canonicalname : NULL;
 }
 
 
@@ -4044,7 +4055,7 @@ void FS_Which_f(cmd_state_t *cmd)
 		return;
 	}
 	filename = Cmd_Argv(cmd, 1);
-	sp = FS_FindFile(filename, &index, true);
+	sp = FS_FindFile(filename, &index, NULL, true);
 	if (!sp) {
 		Con_Printf("%s isn't anywhere\n", filename);
 		return;
@@ -4064,7 +4075,7 @@ void FS_Which_f(cmd_state_t *cmd)
 const char *FS_WhichPack(const char *filename)
 {
 	int index;
-	searchpath_t *sp = FS_FindFile(filename, &index, true);
+	searchpath_t *sp = FS_FindFile(filename, &index, NULL, true);
 	if(sp && sp->pack)
 		return sp->pack->shortname;
 	else if(sp)

@@ -131,11 +131,17 @@ void FS_DefaultExtension (char *path, const char *extension, size_t size_path);
 #define FS_FILETYPE_NONE 0
 #define FS_FILETYPE_FILE 1
 #define FS_FILETYPE_DIRECTORY 2
-int FS_FileType (const char *filename);		// the file can be into a package
-int FS_SysFileType (const char *filename);		// only look for files outside of packages
+/// Look for a file in the packages and in the filesystem
+int FS_FileType (const char *filename);
+/// Look for a file in the filesystem only
+int FS_SysFileType (const char *filename);
 
-qbool FS_FileExists (const char *filename);		// the file can be into a package
-qbool FS_SysFileExists (const char *filename);	// only look for files outside of packages
+/// Look for a file in the packages and in the filesystem
+/// Returns its canonical name (same case as used in the pack) if found, else NULL.
+/// If the file is found outside a pak, this will be the same pointer as passed in.
+const char *FS_FileExists (const char *filename);
+/// Look for a file in the filesystem only
+qbool FS_SysFileExists (const char *filename);
 
 unsigned char *FS_Deflate(const unsigned char *data, size_t size, size_t *deflated_size, int level, mempool_t *mempool);
 unsigned char *FS_Inflate(const unsigned char *data, size_t size, size_t *inflated_size, mempool_t *mempool);

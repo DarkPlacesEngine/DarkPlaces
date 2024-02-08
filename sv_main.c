@@ -1804,21 +1804,26 @@ void SV_SpawnServer (const char *map)
 	char *entities;
 	model_t *worldmodel;
 	char modelname[sizeof(sv.worldname)];
+	const char *canonicalname;
 	char vabuf[1024];
 
 	Con_Printf("SpawnServer: %s\n", map);
 
 	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", map);
 
-	if (!FS_FileExists(modelname))
+	if (!(canonicalname = FS_FileExists(modelname)))
 	{
 		dpsnprintf (modelname, sizeof(modelname), "maps/%s", map);
-		if (!FS_FileExists(modelname))
+		if (!(canonicalname = FS_FileExists(modelname)))
 		{
-			Con_Printf("SpawnServer: no map file named %s\n", modelname);
+			Con_Printf(CON_ERROR "SpawnServer: no map file named %s.bsp\n", modelname);
 			return;
 		}
 	}
+	// if it's not in a pak canonicalname will be the same pointer as modelname
+	// if it's in a pak canonicalname may differ by case
+	if (modelname != canonicalname)
+		dp_strlcpy(modelname, canonicalname, sizeof(modelname));
 
 //	SV_LockThreadMutex();
 
@@ -1839,7 +1844,7 @@ void SV_SpawnServer (const char *map)
 	worldmodel = Mod_ForName(modelname, false, developer.integer > 0, NULL);
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
-		Con_Printf("Couldn't load map %s\n", modelname);
+		Con_Printf(CON_ERROR "Couldn't load map %s\n", modelname);
 
 		if(!host_isclient.integer)
 			Sys_MakeProcessMean();
@@ -1928,10 +1933,10 @@ void SV_SpawnServer (const char *map)
 	sv.active = true;
 
 	// set level base name variables for later use
-	dp_strlcpy (sv.name, map, sizeof (sv.name));
 	dp_strlcpy(sv.worldname, modelname, sizeof(sv.worldname));
 	FS_StripExtension(sv.worldname, sv.worldnamenoextension, sizeof(sv.worldnamenoextension));
-	dp_strlcpy(sv.worldbasename, !strncmp(sv.worldnamenoextension, "maps/", 5) ? sv.worldnamenoextension + 5 : sv.worldnamenoextension, sizeof(sv.worldbasename));
+	dp_strlcpy(sv.worldbasename, !strncasecmp(sv.worldnamenoextension, "maps/", 5) ? sv.worldnamenoextension + 5 : sv.worldnamenoextension, sizeof(sv.worldbasename));
+//	dp_strlcpy(sv.name, sv.worldbasename, sizeof (sv.name)); // TODO can we just remove this now?
 	//Cvar_SetQuick(&sv_worldmessage, sv.worldmessage); // set later after QC is spawned
 	Cvar_SetQuick(&sv_worldname, sv.worldname);
 	Cvar_SetQuick(&sv_worldnamenoextension, sv.worldnamenoextension);
@@ -1992,7 +1997,7 @@ void SV_SpawnServer (const char *map)
 		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, sv.worldname);
 	}
 	if(i < sv.worldmodel->brush.numsubmodels)
-		Con_Printf("Too many submodels (MAX_MODELS is %i)\n", MAX_MODELS);
+		Con_Printf(CON_WARN "Too many submodels (MAX_MODELS is %i)\n", MAX_MODELS);
 
 //
 // load the rest of the entities
@@ -2015,7 +2020,7 @@ void SV_SpawnServer (const char *map)
 	else
 		PRVM_serverglobalfloat(deathmatch) = deathmatch.integer;
 
-	PRVM_serverglobalstring(mapname) = PRVM_SetEngineString(prog, sv.name);
+	PRVM_serverglobalstring(mapname) = PRVM_SetEngineString(prog, sv.worldbasename);
 
 // serverflags are for cross level information (sigils)
 	PRVM_serverglobalfloat(serverflags) = svs.serverflags;

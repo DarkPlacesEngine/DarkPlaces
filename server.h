@@ -105,8 +105,6 @@ typedef struct server_s
 	/// collision culling data
 	world_t world;
 
-	/// map name
-	char name[64]; // %s followed by entrance name
 	// variants of map name
 	char worldbasename[MAX_QPATH]; // %s
 	char worldname[MAX_QPATH]; // maps/%s.bsp

@@ -76,7 +76,7 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			FS_Printf(f, "%f\n", svs.clients[0].spawn_parms[i]);
 		FS_Printf(f, "%d\n", current_skill);
-		FS_Printf(f, "%s\n", sv.name);
+		FS_Printf(f, "%s\n", sv.worldbasename);
 		FS_Printf(f, "%f\n",sv.time);
 	}
 	else
