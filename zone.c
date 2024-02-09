@@ -397,8 +397,7 @@ void *_Mem_Alloc(mempool_t *pool, void *olddata, size_t size, size_t alignment, 
 	//if (developer.integer > 0 && developer_memorydebug.integer)
 	//	_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
-	// calculate the smallest realsize that is a multiple of alignment
-	realsize = (sizeof(memheader_t) + size + sizeof(sentinel2) + (alignment-1)) & ~(alignment-1);
+	realsize = alignment + sizeof(memheader_t) + size + sizeof(sentinel2);
 	pool->realsize += realsize;
 	base = (unsigned char *)Clump_AllocBlock(realsize);
 	if (base == NULL)
