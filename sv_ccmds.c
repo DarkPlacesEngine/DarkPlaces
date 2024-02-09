@@ -49,8 +49,6 @@ command from the console.  Active clients are kicked off.
 */
 static void SV_Map_f(cmd_state_t *cmd)
 {
-	char level[MAX_QPATH];
-
 	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("map <levelname> : start a new game (kicks off all players)\n");
@@ -78,8 +76,7 @@ static void SV_Map_f(cmd_state_t *cmd)
 		host.hook.ToggleMenu();
 
 	svs.serverflags = 0;			// haven't completed an episode yet
-	dp_strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
-	SV_SpawnServer(level);
+	SV_SpawnServer(Cmd_Argv(cmd, 1));
 
 	if(sv.active && host.hook.ConnectLocal != NULL)
 		host.hook.ConnectLocal();
@@ -94,8 +91,6 @@ Goes to a new map, taking all clients along
 */
 static void SV_Changelevel_f(cmd_state_t *cmd)
 {
-	char level[MAX_QPATH];
-
 	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Print("changelevel <levelname> : continue game on a new level\n");
@@ -104,7 +99,7 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 
 	if (!sv.active)
 	{
-		Con_Printf("You must be running a server to changelevel. Use 'map %s' instead\n", Cmd_Argv(cmd, 1));
+		SV_Map_f(cmd);
 		return;
 	}
 
@@ -112,8 +107,7 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 		host.hook.ToggleMenu();
 
 	SV_SaveSpawnparms ();
-	dp_strlcpy(level, Cmd_Argv(cmd, 1), sizeof(level));
-	SV_SpawnServer(level);
+	SV_SpawnServer(Cmd_Argv(cmd, 1));
 	
 	if(sv.active && host.hook.ConnectLocal != NULL)
 		host.hook.ConnectLocal();
@@ -128,8 +122,6 @@ Restarts the current server for a dead player
 */
 static void SV_Restart_f(cmd_state_t *cmd)
 {
-	char mapname[MAX_QPATH];
-
 	if (Cmd_Argc(cmd) != 1)
 	{
 		Con_Print("restart : restart current level\n");
@@ -144,8 +136,7 @@ static void SV_Restart_f(cmd_state_t *cmd)
 	if(host.hook.ToggleMenu)
 		host.hook.ToggleMenu();
 
-	dp_strlcpy(mapname, sv.worldbasename, sizeof(mapname));
-	SV_SpawnServer(mapname);
+	SV_SpawnServer(sv.worldbasename);
 	
 	if(sv.active && host.hook.ConnectLocal != NULL)
 		host.hook.ConnectLocal();
@@ -1613,7 +1604,7 @@ void SV_InitOperatorCommands(void)
 	Cmd_AddCommand(CF_SERVER | CF_SERVER_FROM_CLIENT, "status", SV_Status_f, "print server status information");
 	Cmd_AddCommand(CF_SHARED, "map", SV_Map_f, "kick everyone off the server and start a new level");
 	Cmd_AddCommand(CF_SHARED, "restart", SV_Restart_f, "restart current level");
-	Cmd_AddCommand(CF_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients");
+	Cmd_AddCommand(CF_SHARED, "changelevel", SV_Changelevel_f, "change to another level, bringing along all connected clients (or start a new level if none is loaded)");
 	Cmd_AddCommand(CF_SHARED | CF_SERVER_FROM_CLIENT, "say", SV_Say_f, "send a chat message to everyone on the server");
 	Cmd_AddCommand(CF_SERVER_FROM_CLIENT, "say_team", SV_Say_Team_f, "send a chat message to your team on the server");
 	Cmd_AddCommand(CF_SHARED | CF_SERVER_FROM_CLIENT, "tell", SV_Tell_f, "send a chat message to only one person on the server");
