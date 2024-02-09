@@ -1090,7 +1090,7 @@ void CL_VM_Init (void)
 	PRVM_clientglobalfloat(time) = cl.time;
 	PRVM_clientglobaledict(self) = 0;
 
-	PRVM_clientglobalstring(mapname) = PRVM_SetEngineString(prog, cl.worldname);
+	PRVM_clientglobalstring(mapname) = PRVM_SetEngineString(prog, cl.worldbasename);
 	PRVM_clientglobalfloat(player_localnum) = cl.realplayerentity - 1;
 	PRVM_clientglobalfloat(player_localentnum) = cl.viewentity;
 
