@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "cl_collision.h"
 
+/// User-visible names of these CF_USERINFO cvars must be matched in CL_SetInfo()!
 cvar_t cl_name = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "_cl_name", "player", "player name"};
 cvar_t cl_rate = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate", "20000", "connection speed"};
 cvar_t cl_rate_burstsize = {CF_CLIENT | CF_ARCHIVE | CF_USERINFO, "rate_burstsize", "1024", "rate control burst size"};
@@ -37,6 +38,7 @@ cvar_t cl_team = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "team", "none", "QW team
 cvar_t cl_skin = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "skin", "", "QW player skin name (example: base)"};
 cvar_t cl_noaim = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "noaim", "1", "QW option to disable vertical autoaim"};
 cvar_t cl_pmodel = {CF_CLIENT | CF_USERINFO | CF_ARCHIVE, "pmodel", "0", "current player model number in nehahra"};
+
 cvar_t r_fixtrans_auto = {CF_CLIENT, "r_fixtrans_auto", "0", "automatically fixtrans textures (when set to 2, it also saves the fixed versions to a fixtrans directory)"};
 
 extern cvar_t rcon_secure;
