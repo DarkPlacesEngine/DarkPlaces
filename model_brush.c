@@ -1683,6 +1683,10 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 			// pretty up the buffer (replacing any trailing garbage with 0)
 			for (j = (int)strlen(name); j < 16; j++)
 				name[j] = 0;
+			// bones_was_here: force all names to lowercase (matching code below) so we don't crash on e2m9
+			for (j = 0;name[j];j++)
+				if (name[j] >= 'A' && name[j] <= 'Z')
+					name[j] += 'a' - 'A';
 
 			if (!strncmp(name, "sky", 3))
 				numsky++;

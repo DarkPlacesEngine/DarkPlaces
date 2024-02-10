@@ -257,7 +257,7 @@ void CL_SetInfo(const char *key, const char *value, qbool send, qbool allowstark
 			MSG_WriteByte(&cls.netcon->message, qw_clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "setinfo \"%s\" \"%s\"", key, value));
 		}
-		else if (!strcasecmp(key, "name"))
+		else if (!strcasecmp(key, "_cl_name") || !strcasecmp(key, "name"))
 		{
 			MSG_WriteByte(&cls.netcon->message, clc_stringcmd);
 			MSG_WriteString(&cls.netcon->message, va(vabuf, sizeof(vabuf), "name \"%s\"", value));

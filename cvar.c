@@ -901,9 +901,8 @@ void Cvar_SaveInitState(cvar_state_t *cvars)
 void Cvar_RestoreInitState(cvar_state_t *cvars)
 {
 	cvar_t *c, *cp;
-	int i = 0;
 
-	for (cp = cvars->vars; (c = cp);++i)
+	for (cp = cvars->vars; (c = cp);)
 	{
 		cp = c->next; // get next cvar now in case we delete this cvar
 

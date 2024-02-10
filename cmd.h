@@ -268,6 +268,8 @@ int Cmd_CheckParm (cmd_state_t *cmd, const char *parm);
 /// Parses a single line of text into arguments and tries to execute it.
 /// The text can come from the command buffer, a remote client, or stdin.
 void Cmd_ExecuteString(cmd_state_t *cmd, const char *text, size_t textlen, cmd_source_t src, qbool lockmutex);
+/// Like Cmd_ExecuteString, but with variable expansion.
+void Cmd_PreprocessAndExecuteString(cmd_state_t *cmd, const char *text, size_t textlen, cmd_source_t src, qbool lockmutex);
 
 /// quotes a string so that it can be used as a command argument again;
 /// quoteset is a string that contains one or more of ", \, $ and specifies
