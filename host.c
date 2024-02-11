@@ -116,33 +116,22 @@ void Host_Error (const char *error, ...)
 	dp_strlcpy(hosterrorstring2, hosterrorstring1, sizeof(hosterrorstring2));
 
 	CL_Parse_DumpPacket();
-
 	CL_Parse_ErrorCleanUp();
 
-	//PR_Crash();
-
 	// print out where the crash happened, if it was caused by QC (and do a cleanup)
-	PRVM_Crash(SVVM_prog);
-	PRVM_Crash(CLVM_prog);
-#ifdef CONFIG_MENU
-	PRVM_Crash(MVM_prog);
-#endif
-
-	Cvar_SetValueQuick(&csqc_progcrc, -1);
-	Cvar_SetValueQuick(&csqc_progsize, -1);
+	PRVM_Crash();
 
 	if(host.hook.SV_Shutdown)
 		host.hook.SV_Shutdown();
 
 	if (cls.state == ca_dedicated)
-		Sys_Abort ("Host_Error: %s",hosterrorstring2);        // dedicated servers exit
+		Sys_Abort("Host_Error: %s", hosterrorstring1);        // dedicated servers exit
 
 	// prevent an endless loop if the error was triggered by a command
 	Cbuf_Clear(cmd_local->cbuf);
 
-	// DP8 TODO: send a disconnect message indicating we errored out, see Sys_Abort() and Sys_HandleCrash()
-	CL_Disconnect();
-	cls.demonum = -1;
+	CL_DisconnectEx(false, "Host_Error: %s", hosterrorstring1);
+	cls.demonum = -1; // stop demo loop
 
 	hosterror = false;
 
