@@ -1,4 +1,3 @@
-rm build/darkplaces-emscripten.html
 cd builddeps
 rm ld0_blind_id/bin/*
 rm ld0_blind_id/include/d0_blind_id/*
