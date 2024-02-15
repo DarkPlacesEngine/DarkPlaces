@@ -5,7 +5,7 @@ fi
 #doesn't work on codespaces but works on a normal computer
 git clone https://github.com/libjpeg-turbo/libjpeg-turbo .jpeg
 cd .jpeg
-emcmake cmake -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release -DWITH_SIMD=0 .
+emcmake cmake --fresh -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release -DWITH_SIMD=0 -DSIZE_T=4 .
 emmake make
 cp jconfig.h ../jpeg/include
 cp jerror.h ../jpeg/include

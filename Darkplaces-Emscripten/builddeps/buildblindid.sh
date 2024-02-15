@@ -9,7 +9,7 @@ cd .blindid
 chmod +x autogen.sh
 emconfigure ./autogen.sh
 
-LIBS=../gmp/lib/libgmp.a emconfigure ./configure --libdir=`pwd`/../ld0_blind_id/lib --includedir=`pwd`/../ld0_blind_id/include --oldincludedir=`pwd`/../ld0_blind_id/include --bindir=`pwd`/../ld0_blind_id/bin
+LIBS=../gmp/lib/libgmp.a emconfigure ./configure --libdir=`pwd`/../ld0_blind_id/lib --includedir=`pwd`/../ld0_blind_id/include --oldincludedir=`pwd`/../ld0_blind_id/include --bindir=`pwd`/../ld0_blind_id/bin --host none
 cp ../gmp/lib/libgmp.a . 
 cp ../gmp/include/gmp.h .
 emmake make
