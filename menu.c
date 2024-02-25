@@ -5246,6 +5246,9 @@ void MVM_error_cmd(const char *format, ...)
 	// reset the active scene, too (to be on the safe side ;))
 	R_SelectScene( RST_CLIENT );
 
+	// prevent an endless loop if the error was triggered by a command
+	Cbuf_Clear(cmd_local->cbuf);
+
 	// Let video start at least
 	Host_AbortCurrentFrame();
 }
