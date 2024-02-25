@@ -720,8 +720,6 @@ void PRVM_Crash(prvm_prog_t *prog)
 	char vabuf[1024];
 	int outfd = sys.outfd;
 
-	cl.csqc_loaded = false;
-
 	if (prog == NULL)
 		return;
 	if (!prog->loaded)
