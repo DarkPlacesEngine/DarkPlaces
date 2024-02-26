@@ -3132,7 +3132,10 @@ static void RCon_Execute(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress, c
 	}
 	else
 	{
-		Con_Printf("server denied rcon access to %s\n", host_client ? host_client->name : addressstring2);
+		if (!host_client || !host_client->netconnection || LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
+			Con_Rcon_Redirect_Init(mysocket, peeraddress, proquakeprotocol);
+		Con_Printf(CON_ERROR "server denied rcon access to %s\n", host_client ? host_client->name : addressstring2);
+		Con_Rcon_Redirect_End();
 	}
 }
 
