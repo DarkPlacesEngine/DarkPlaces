@@ -17,6 +17,8 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 
 ## Build instructions (WIP)
 
+These instructions are adequate for Quake, but for Xonotic please refer to [its wiki](https://gitlab.com/xonotic/xonotic/-/wikis/Compiling).
+
 ### Required packages
 
 The minimum SDL version is 2.0.18 for Linux and 2.24.0 for Windows.  
@@ -63,6 +65,7 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 
 ### Windows (Visual Studio)
 
+May work but not recommended due to lack of support for C standards, and lack of maintenance.
 Instructions TODO.
 
 ## Contributing
