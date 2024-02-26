@@ -24,6 +24,7 @@ typedef enum host_state_e
 	host_init,
 	host_loading,
 	host_active,
+	host_failing, ///< crashing
 	host_failed ///< crashed or aborted, SDL dialog open
 } host_state_t;
 

@@ -680,6 +680,9 @@ void Sys_Abort (const char *error, ...)
 	char string[MAX_INPUTLINE];
 	int i;
 
+	// Disable Sys_HandleSignal() but not Sys_HandleCrash()
+	host.state = host_shutdown;
+
 	// set output to blocking stderr
 	sys.outfd = fileno(stderr);
 #ifndef WIN32
@@ -712,11 +715,10 @@ void Sys_Abort (const char *error, ...)
 	VID_Shutdown();
 	S_StopAllSounds();
 
-	host.state = host_failed; // make Sys_HandleSignal() call exit()
+	host.state = host_failed; // make Sys_HandleSignal() call _Exit()
 	Sys_SDL_Dialog("Engine Abort", string);
 
 	fflush(stderr);
-
 	exit (1);
 }
 
@@ -952,7 +954,14 @@ static void Sys_HandleCrash(int sig)
 	char **btstrings;
 #endif
 	char dialogtext[3072];
-	const char *sigdesc = Sys_SigDesc(sig);
+	const char *sigdesc;
+
+	// Break any loop and disable Sys_HandleSignal()
+	if (host.state == host_failing || host.state == host_failed)
+		return;
+	host.state = host_failing;
+
+	sigdesc = Sys_SigDesc(sig);
 
 	// set output to blocking stderr and print header, backtrace, version
 	sys.outfd = fileno(stderr); // not async-signal-safe :(
@@ -1007,13 +1016,19 @@ static void Sys_HandleCrash(int sig)
 
 static void Sys_HandleSignal(int sig)
 {
-	const char *sigdesc = Sys_SigDesc(sig);
+	const char *sigdesc;
+
+	// Break any loop, eg if each Sys_Print triggers a SIGPIPE
+	if (host.state == host_shutdown || host.state == host_failing)
+		return;
+
+	sigdesc = Sys_SigDesc(sig);
 	Sys_Print("\nReceived ", 10);
 	Sys_Print(sigdesc, strlen(sigdesc));
 	Sys_Print(" signal, exiting...\n", 20);
 	if (host.state == host_failed)
 	{
-		// user is trying to kill the process while the dialog is open
+		// user is trying to kill the process while the SDL dialog is open
 		fflush(stderr); // not async-signal-safe :(
 		_Exit(sig);
 	}
