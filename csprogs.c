@@ -38,7 +38,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void CL_VM_PreventInformationLeaks(void)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return;
 CSQC_BEGIN
 	VM_ClearTraceGlobals(prog);
@@ -218,7 +218,7 @@ prvm_required_field_t cl_reqglobals[] =
 void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if(cl.csqc_loaded)
+	if(prog->loaded)
 	{
 		CSQC_BEGIN
 		PRVM_clientglobalfloat(dmg_take) = dmg_take;
@@ -231,7 +231,7 @@ void CL_VM_UpdateDmgGlobals (int dmg_take, int dmg_save, vec3_t dmg_origin)
 void CSQC_UpdateNetworkTimes(double newtime, double oldtime)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return;
 	CSQC_BEGIN
 	PRVM_clientglobalfloat(servertime) = newtime;
@@ -459,7 +459,7 @@ qbool CL_VM_InputEvent (int eventtype, float x, float y)
 	prvm_prog_t *prog = CLVM_prog;
 	qbool r;
 
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return false;
 
 CSQC_BEGIN
@@ -489,7 +489,7 @@ qbool CL_VM_UpdateView (double frametime)
 	emptyvector[1] = 0;
 	emptyvector[2] = 0;
 //	vec3_t oldangles;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return false;
 	R_TimeReport("pre-UpdateView");
 	CSQC_BEGIN
@@ -532,7 +532,7 @@ qbool CL_VM_UpdateView (double frametime)
 qbool CL_VM_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, cl.csqc_loaded, "QC function CSQC_ConsoleCommand is missing");
+	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.CSQC_ConsoleCommand, false, cl.csqc_server2csqcentitynumber[cl.playerentity], cl.time, "QC function CSQC_ConsoleCommand is missing");
 }
 
 qbool CL_VM_Parse_TempEntity (void)
@@ -540,7 +540,7 @@ qbool CL_VM_Parse_TempEntity (void)
 	prvm_prog_t *prog = CLVM_prog;
 	int			t;
 	qbool	r = false;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return false;
 	CSQC_BEGIN
 	if(PRVM_clientfunction(CSQC_Parse_TempEntity))
@@ -580,7 +580,7 @@ void CL_VM_Parse_StuffCmd(const char *msg, size_t msg_len)
 		return;
 	}
 
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 	{
 		Cbuf_AddText(cmd_local, msg);
 		return;
@@ -619,7 +619,7 @@ void CSQC_AddPrintText(const char *msg, size_t msg_len)
 	size_t writebytes = min(msg_len + 1, MAX_INPUTLINE - cl.csqc_printtextbuf_len);
 
 	CSQC_BEGIN
-	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_Print))
+	if(prog->loaded && PRVM_clientfunction(CSQC_Parse_Print))
 	{
 		if(msg[msg_len - 1] != '\n' && msg[msg_len - 1] != '\r')
 		{
@@ -652,7 +652,7 @@ void CL_VM_Parse_CenterPrint(const char *msg, size_t msg_len)
 	prvm_prog_t *prog = CLVM_prog;
 	int restorevm_tempstringsbuf_cursize;
 	CSQC_BEGIN
-	if(cl.csqc_loaded && PRVM_clientfunction(CSQC_Parse_CenterPrint))
+	if(prog->loaded && PRVM_clientfunction(CSQC_Parse_CenterPrint))
 	{
 		PRVM_clientglobalfloat(time) = cl.time;
 		PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
@@ -669,7 +669,7 @@ void CL_VM_Parse_CenterPrint(const char *msg, size_t msg_len)
 void CL_VM_UpdateIntermissionState (int intermission)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if(cl.csqc_loaded)
+	if(prog->loaded)
 	{
 		CSQC_BEGIN
 		PRVM_clientglobalfloat(intermission) = intermission;
@@ -679,7 +679,7 @@ void CL_VM_UpdateIntermissionState (int intermission)
 void CL_VM_UpdateShowingScoresState (int showingscores)
 {
 	prvm_prog_t *prog = CLVM_prog;
-	if(cl.csqc_loaded)
+	if(prog->loaded)
 	{
 		CSQC_BEGIN
 		PRVM_clientglobalfloat(sb_showscores) = showingscores;
@@ -690,7 +690,7 @@ qbool CL_VM_Event_Sound(int sound_num, float fvolume, int channel, float attenua
 {
 	prvm_prog_t *prog = CLVM_prog;
 	qbool r = false;
-	if(cl.csqc_loaded)
+	if(prog->loaded)
 	{
 		CSQC_BEGIN
 		if(PRVM_clientfunction(CSQC_Event_Sound))
@@ -720,7 +720,7 @@ static void CL_VM_UpdateCoopDeathmatchGlobals (int gametype)
 	int localcoop;
 	int localdeathmatch;
 
-	if(cl.csqc_loaded)
+	if(prog->loaded)
 	{
 		if(gametype == GAME_COOP)
 		{
@@ -751,7 +751,7 @@ static float CL_VM_Event (float event)		//[515]: needed ? I'd say "YES", but don
 {
 	prvm_prog_t *prog = CLVM_prog;
 	float r = 0;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 		return 0;
 	CSQC_BEGIN
 	if(PRVM_clientfunction(CSQC_Event))
@@ -771,7 +771,7 @@ void CSQC_ReadEntities (void)
 {
 	prvm_prog_t *prog = CLVM_prog;
 	unsigned short entnum, oldself, realentnum;
-	if(!cl.csqc_loaded)
+	if(!prog->loaded)
 	{
 		Host_Error ("CSQC_ReadEntities: CSQC is not loaded");
 		return;
@@ -1107,8 +1107,6 @@ void CL_VM_Init (void)
 	// Once CSQC_Init was called, we consider csqc code fully initialized.
 	prog->inittime = host.realtime;
 
-	cl.csqc_loaded = true;
-
 	cl.csqc_vidvars.drawcrosshair = false;
 	cl.csqc_vidvars.drawenginesbar = false;
 
@@ -1122,8 +1120,6 @@ void CL_VM_ShutDown (void)
 	Cmd_ClearCSQCCommands(cmd_local);
 	//Cvar_SetValueQuick(&csqc_progcrc, -1);
 	//Cvar_SetValueQuick(&csqc_progsize, -1);
-	if(!cl.csqc_loaded)
-		return;
 CSQC_BEGIN
 	if (prog->loaded)
 	{
@@ -1135,7 +1131,6 @@ CSQC_BEGIN
 	PRVM_Prog_Reset(prog);
 CSQC_END
 	Con_DPrint("CSQC ^1unloaded\n");
-	cl.csqc_loaded = false;
 }
 
 qbool CL_VM_GetEntitySoundOrigin(int entnum, vec3_t out)

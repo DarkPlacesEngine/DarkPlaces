@@ -2091,7 +2091,7 @@ void CL_UpdateWorld(void)
 		CL_UpdateViewModel();
 
 		// when csqc is loaded, it will call this in CSQC_UpdateView
-		if (!cl.csqc_loaded)
+		if (!CLVM_prog->loaded)
 		{
 			// clear the CL_Mesh_Scene() used for some engine effects
 			CL_MeshEntities_Scene_Clear();

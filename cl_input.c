@@ -527,7 +527,7 @@ void CL_Input (void)
 	IN_Move ();
 
 	// send mouse move to csqc
-	if (cl.csqc_loaded && cl_csqc_generatemousemoveevents.integer)
+	if (CLVM_prog->loaded && cl_csqc_generatemousemoveevents.integer)
 	{
 		if (cl.csqc_wantsmousemove)
 		{

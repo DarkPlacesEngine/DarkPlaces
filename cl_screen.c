@@ -1682,7 +1682,7 @@ static void SCR_DrawScreen (void)
 
 		// if CSQC is loaded, it is required to provide the CSQC_UpdateView function,
 		// and won't render a view if it does not call that.
-		if (cl.csqc_loaded)
+		if (CLVM_prog->loaded)
 			CL_VM_UpdateView(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
 		else
 		{

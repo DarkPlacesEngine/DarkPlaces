@@ -2928,7 +2928,7 @@ static void VM_SV_pointparticles(prvm_prog_t *prog)
 qbool SV_VM_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = SVVM_prog;
-	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.ConsoleCmd, true, PRVM_EDICT_TO_PROG(sv.world.prog->edicts), sv.time,  !(!sv.active || !prog || !prog->loaded), "QC function ConsoleCmd is missing");
+	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.ConsoleCmd, true, PRVM_EDICT_TO_PROG(sv.world.prog->edicts), sv.time, "QC function ConsoleCmd is missing");
 }
 
 // #352 void(string cmdname) registercommand (EXT_CSQC)

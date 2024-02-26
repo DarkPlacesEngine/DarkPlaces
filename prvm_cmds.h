@@ -218,7 +218,7 @@ float	getserverlistindexforkey(string key)
 void VM_CheckEmptyString (prvm_prog_t *prog, const char *s);
 /// Returns the length of the *out string excluding the \0 terminator.
 size_t VM_VarString(prvm_prog_t *prog, int first, char *out, size_t outsize);
-qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message);
+qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, const char *error_message);
 prvm_stringbuffer_t *BufStr_FindCreateReplace (prvm_prog_t *prog, int bufindex, unsigned flags, const char *format);
 void BufStr_Set(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer, int strindex, const char *str);
 void BufStr_Del(prvm_prog_t *prog, prvm_stringbuffer_t *stringbuffer);
