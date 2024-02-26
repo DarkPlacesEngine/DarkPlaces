@@ -329,7 +329,7 @@ static void Cvar_UpdateAutoCvar(cvar_t *var)
 		prog = &prvm_prog_list[i];
 		if (prog->loaded && var->globaldefindex[i] >= 0)
 		{
-			// MUST BE SYNCED WITH prvm_edict.c PRVM_LoadProgs
+			// MUST BE SYNCED WITH prvm_edict.c PRVM_Prog_Load
 			switch(prog->globaldefs[var->globaldefindex[i]].type & ~DEF_SAVEGLOBAL)
 			{
 			case ev_float:
