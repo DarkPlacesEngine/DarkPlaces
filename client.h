@@ -1109,7 +1109,6 @@ typedef struct client_state_s
 	// csqc stuff:
 	// server entity number corresponding to a clientside entity
 	unsigned short csqc_server2csqcentitynumber[MAX_EDICTS];
-	qbool csqc_loaded;
 	vec3_t csqc_vieworigin;
 	vec3_t csqc_viewangles;
 	vec3_t csqc_vieworiginfromengine;

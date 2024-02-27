@@ -715,30 +715,30 @@ void PRVM_PrintState(prvm_prog_t *prog, int stack_index)
 }
 
 extern cvar_t prvm_errordump;
-void PRVM_Crash(prvm_prog_t *prog)
+void PRVM_Crash(void)
 {
+	prvm_prog_t *prog;
 	char vabuf[1024];
-	int outfd = sys.outfd;
+	int i;
 
-	cl.csqc_loaded = false;
+	// determine which program crashed
+	for (i = 0; i < PRVM_PROG_MAX; ++i)
+		if (PRVM_GetProg(i)->loaded && PRVM_GetProg(i)->depth > 0)
+			break;
+	if (i >= PRVM_PROG_MAX)
+		return; // none of them crashed
+	prog = PRVM_GetProg(i);
 
-	if (prog == NULL)
-		return;
-	if (!prog->loaded)
-		return;
+	Con_Printf("QuakeC crash report for %s:\n", prog->name);
+	PRVM_PrintState(prog, 0);
 
-	// set output to stderr
-	sys.outfd = fileno(stderr);
+	// don't call graceful shutdown on crash
+	if (prog == SVVM_prog)
+		PRVM_serverfunction(SV_Shutdown) = 0;
+	else if (prog == CLVM_prog)
+		PRVM_clientfunction(CSQC_Shutdown) = 0;
 
-	PRVM_serverfunction(SV_Shutdown) = 0; // don't call SV_Shutdown on crash
-
-	if( prog->depth > 0 )
-	{
-		Con_Printf("QuakeC crash report for %s:\n", prog->name);
-		PRVM_PrintState(prog, 0);
-	}
-
-	if(prvm_errordump.integer)
+	if(prvm_errordump.integer && (prog == SVVM_prog || prog == CLVM_prog))
 	{
 		// make a savegame
 		SV_Savegame_to(prog, va(vabuf, sizeof(vabuf), "crash-%s.dmp", prog->name));
@@ -747,15 +747,6 @@ void PRVM_Crash(prvm_prog_t *prog)
 	// dump the stack so host_error can shutdown functions
 	prog->depth = 0;
 	prog->localstack_used = 0;
-
-	// delete all tempstrings (FIXME: is this safe in VM->engine->VM recursion?)
-	prog->tempstringsbuf.cursize = 0;
-
-	// reset the prog pointer
-	prog = NULL;
-
-	// restore configured outfd
-	sys.outfd = outfd;
 }
 
 /*
@@ -1033,7 +1024,7 @@ cleanup:
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();
 }
-#endif
+#endif // CONFIG_MENU
 
 /*
 ====================
@@ -1142,7 +1133,7 @@ cleanup:
 	if (prog == SVVM_prog)
 		SV_FlushBroadcastMessages();
 }
-#endif
+#endif // PROFILING
 
 /*
 ====================

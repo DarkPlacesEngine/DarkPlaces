@@ -717,7 +717,7 @@ typedef struct prvm_prog_s
 
 //	prvm_builtin_mem_t  *mem_list;
 
-// now passed as parameter of PRVM_LoadProgs
+// now passed as parameter of PRVM_Prog_Load
 //	char				**required_func;
 //	int					numrequiredfunc;
 
@@ -822,7 +822,7 @@ void PRVM_CallProfile_f(struct cmd_state_s *cmd);
 void PRVM_PrintFunction_f(struct cmd_state_s *cmd);
 
 void PRVM_PrintState(prvm_prog_t *prog, int stack_index);
-void PRVM_Crash(prvm_prog_t *prog);
+void PRVM_Crash(void);
 void PRVM_ShortStackTrace(prvm_prog_t *prog, char *buf, size_t bufsize);
 const char *PRVM_AllocationOrigin(prvm_prog_t *prog);
 void PRVM_GarbageCollection(prvm_prog_t *prog);

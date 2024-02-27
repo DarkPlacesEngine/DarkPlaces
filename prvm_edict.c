@@ -1995,7 +1995,7 @@ static void PRVM_LoadLNO( prvm_prog_t *prog, const char *progname ) {
 
 /*
 ===============
-PRVM_LoadProgs
+PRVM_Prog_Load
 ===============
 */
 static void PRVM_UpdateBreakpoints(prvm_prog_t *prog);
@@ -2033,7 +2033,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	int structtype = 0;
 
 	if (prog->loaded)
-		prog->error_cmd("PRVM_LoadProgs: there is already a %s program loaded!", prog->name );
+		prog->error_cmd("%s: there is already a %s program loaded!", __func__, prog->name);
 
 	Host_LockSession(); // all progs can use the session cvar
 	Crypto_LoadKeys(); // all progs might use the keys at init time
@@ -2046,7 +2046,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	else
 		dprograms = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false, &filesize);
 	if (dprograms == NULL || filesize < (fs_offset_t)sizeof(dprograms_t))
-		prog->error_cmd("PRVM_LoadProgs: couldn't load %s for %s", filename, prog->name);
+		prog->error_cmd("%s: couldn't load \"%s\" for %s", __func__, filename, prog->name);
 	// TODO bounds check header fields (e.g. numstatements), they must never go behind end of file
 
 	prog->profiletime = Sys_DirtyTime();
@@ -2139,7 +2139,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		prog->functions[i].locals = LittleLong(infunctions[i].locals);
 		memcpy(prog->functions[i].parm_size, infunctions[i].parm_size, sizeof(infunctions[i].parm_size));
 		if(prog->functions[i].first_statement >= prog->numstatements)
-			prog->error_cmd("PRVM_LoadProgs: out of bounds function statement (function %d) in %s", i, prog->name);
+			prog->error_cmd("%s: out of bounds function statement (function %d) in %s", __func__, i, prog->name);
 		// TODO bounds check parm_start, s_name, s_file, numparms, locals, parm_size
 	}
 
@@ -2187,7 +2187,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		{
 			prog->fielddefs[i].type = LittleLong(infielddefs32[i].type);
 			if (prog->fielddefs[i].type & DEF_SAVEGLOBAL)
-				prog->error_cmd("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", prog->name);
+				prog->error_cmd("%s: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", __func__, prog->name);
 			prog->fielddefs[i].ofs = LittleLong(infielddefs32[i].ofs);
 			prog->fielddefs[i].s_name = LittleLong(infielddefs32[i].s_name);
 			// TODO bounds check ofs, s_name
@@ -2198,7 +2198,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		{
 			prog->fielddefs[i].type = (unsigned short)LittleShort(infielddefs16[i].type);
 			if (prog->fielddefs[i].type & DEF_SAVEGLOBAL)
-				prog->error_cmd("PRVM_LoadProgs: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", prog->name);
+				prog->error_cmd("%s: prog->fielddefs[i].type & DEF_SAVEGLOBAL in %s", __func__, prog->name);
 			prog->fielddefs[i].ofs = (unsigned short)LittleShort(infielddefs16[i].ofs);
 			prog->fielddefs[i].s_name = LittleLong(infielddefs16[i].s_name);
 			// TODO bounds check ofs, s_name
@@ -2270,7 +2270,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_IFNOT:
 			b = (short)b;
 			if (a >= prog->progs_numglobals || b + i < 0 || b + i >= prog->progs_numstatements)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds IF/IFNOT (statement %d) in %s", i, prog->name);
+				prog->error_cmd("%s: out of bounds IF/IFNOT (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
@@ -2280,7 +2280,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_GOTO:
 			a = (short)a;
 			if (a + i < 0 || a + i >= prog->progs_numstatements)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds GOTO (statement %d) in %s", i, prog->name);
+				prog->error_cmd("%s: out of bounds GOTO (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = -1;
 			prog->statements[i].operand[1] = -1;
@@ -2288,7 +2288,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 			prog->statements[i].jumpabsolute = i + a;
 			break;
 		default:
-			Con_DPrintf("PRVM_LoadProgs: unknown opcode %d at statement %d in %s\n", (int)op, i, prog->name);
+			Con_DPrintf("%s: unknown opcode %d at statement %d in %s\n", __func__, (int)op, i, prog->name);
 
 			//make sure its something well defined.
 			prog->statements[i].op = OP_BOUNDCHECK;
@@ -2401,7 +2401,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_LOAD_FNC:
 		case OP_LOAD_V:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d)", i);
+				prog->error_cmd("%s: out of bounds global index (statement %d)", __func__, i);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = remapglobal(b);
@@ -2415,7 +2415,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_NOT_FNC:
 		case OP_NOT_ENT:
 			if (a >= prog->progs_numglobals || c >= prog->progs_numglobals)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, prog->name);
+				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
@@ -2429,7 +2429,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_STOREP_S:
 		case OP_STOREP_FNC:
 			if (c)	//Spike -- DP is alergic to pointers in QC. Try to avoid too many nasty surprises.
-				Con_DPrintf("PRVM_LoadProgs: storep-with-offset is not permitted in %s\n", prog->name);
+				Con_DPrintf("%s: storep-with-offset is not permitted in %s\n", __func__, prog->name);
 			//fallthrough
 		case OP_STORE_F:
 		case OP_STORE_ENT:
@@ -2440,7 +2440,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_STOREP_V:
 		case OP_STORE_V:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, prog->name);
+				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = remapglobal(b);
@@ -2465,9 +2465,9 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_DONE:
 		case OP_RETURN:
 			if ( a >= prog->progs_numglobals)
-				prog->error_cmd("PRVM_LoadProgs: out of bounds global index (statement %d) in %s", i, prog->name);
+				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
 			if (b || c)	//Spike -- added this check just as a diagnostic...
-				Con_DPrintf("PRVM_LoadProgs: unexpected offset on call opcode in %s. Hexen2 format is not supported\n", prog->name);
+				Con_DPrintf("%s: unexpected offset on call opcode in %s. Hexen2 format is not supported\n", __func__, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
@@ -2478,7 +2478,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 	}
 	if(prog->numstatements < 1)
 	{
-		prog->error_cmd("PRVM_LoadProgs: empty program in %s", prog->name);
+		prog->error_cmd("%s: empty program in %s", __func__, prog->name);
 	}
 	else switch(prog->statements[prog->numstatements - 1].op)
 	{
@@ -2487,7 +2487,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		case OP_DONE:
 			break;
 		default:
-			prog->error_cmd("PRVM_LoadProgs: program may fall off the edge (does not end with RETURN, GOTO or DONE) in %s", prog->name);
+			prog->error_cmd("%s: program may fall off the edge (does not end with RETURN, GOTO or DONE) in %s", __func__, prog->name);
 			break;
 	}
 
@@ -2595,14 +2595,14 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		{
 			prvm_eval_t *val = PRVM_GLOBALFIELDVALUE(prog->globaldefs[i].ofs);
 			cvar = Cvar_FindVar(prog->console_cmd->cvars, name + 9, prog->console_cmd->cvars_flagsmask);
-			//Con_Printf("PRVM_LoadProgs: autocvar global %s in %s, processing...\n", name, prog->name);
+			//Con_Printf("%s: autocvar global %s in %s, processing...\n", __func__, name, prog->name);
 			if(!cvar)
 			{
 				const char *value;
 				char buf[128];
 				int prec[3];
 				float f;
-				Con_DPrintf("PRVM_LoadProgs: no cvar for autocvar global %s in %s, creating...\n", name, prog->name);
+				Con_DPrintf("%s: no cvar for autocvar global %s in %s, creating...\n", __func__, name, prog->name);
 				switch(prog->globaldefs[i].type & ~DEF_SAVEGLOBAL)
 				{
 					case ev_float:
@@ -2641,7 +2641,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 						value = PRVM_GetString(prog, val->string);
 						break;
 					default:
-						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, prog->name);
+						Con_Printf("%s: invalid type of autocvar global %s in %s\n", __func__, name, prog->name);
 						goto fail;
 				}
 				cvar = Cvar_Get(prog->console_cmd->cvars, name + 9, value, prog->console_cmd->cvars_flagsmask, NULL);
@@ -2651,7 +2651,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 					cvar->globaldefindex_stringno[prog - prvm_prog_list] = val->string;
 				}
 				if(!cvar)
-					prog->error_cmd("PRVM_LoadProgs: could not create cvar for autocvar global %s in %s", name, prog->name);
+					prog->error_cmd("%s: could not create cvar for autocvar global %s in %s", __func__, name, prog->name);
 				cvar->globaldefindex[prog - prvm_prog_list] = i;
 			}
 			else if((cvar->flags & CF_PRIVATE) == 0)
@@ -2685,13 +2685,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 						cvar->globaldefindex_stringno[prog - prvm_prog_list] = val->string;
 						break;
 					default:
-						Con_Printf("PRVM_LoadProgs: invalid type of autocvar global %s in %s\n", name, prog->name);
+						Con_Printf("%s: invalid type of autocvar global %s in %s\n", __func__, name, prog->name);
 						goto fail;
 				}
 				cvar->globaldefindex[prog - prvm_prog_list] = i;
 			}
 			else
-				Con_Printf("PRVM_LoadProgs: private cvar for autocvar global %s in %s\n", name, prog->name);
+				Con_Printf("%s: private cvar for autocvar global %s in %s\n", __func__, name, prog->name);
 		}
 fail:
 		;

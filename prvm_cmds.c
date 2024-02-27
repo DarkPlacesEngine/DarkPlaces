@@ -65,13 +65,13 @@ void VM_CheckEmptyString(prvm_prog_t *prog, const char *s)
 		prog->error_cmd("%s: Bad string", prog->name);
 }
 
-qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, qbool prog_loaded, const char *error_message)
+qbool PRVM_ConsoleCommand(prvm_prog_t *prog, const char *text, size_t textlen, int *func, qbool preserve_self, int curself, double ptime, const char *error_message)
 {
 	int restorevm_tempstringsbuf_cursize;
 	int save_self = 0; // hush compiler warning
 	qbool r = false;
 
-	if(!prog_loaded)
+	if(!prog->loaded)
 		return false;
 
 	if(func)

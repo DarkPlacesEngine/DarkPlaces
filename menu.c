@@ -5211,40 +5211,44 @@ void MR_SetRouting (qbool forceold);
 void MVM_error_cmd(const char *format, ...) DP_FUNC_PRINTF(1);
 void MVM_error_cmd(const char *format, ...)
 {
-	prvm_prog_t *prog = MVM_prog;
 	static qbool processingError = false;
 	char errorstring[MAX_INPUTLINE];
 	va_list argptr;
+	int outfd = sys.outfd;
+
+	// set output to stderr
+	sys.outfd = fileno(stderr);
 
 	va_start (argptr, format);
 	dpvsnprintf (errorstring, sizeof(errorstring), format, argptr);
 	va_end (argptr);
 
 	if (host.framecount < 3)
-		Sys_Abort("Menu_Error: %s\n", errorstring);
+		Sys_Abort("Menu_Error: %s", errorstring);
 
-	Con_Printf( "Menu_Error: %s\n", errorstring );
+	Con_Printf(CON_ERROR "Menu_Error: %s\n", errorstring);
 
-	if( !processingError ) {
+	if(!processingError)
+	{
 		processingError = true;
-		PRVM_Crash(prog);
+		PRVM_Crash();
 		processingError = false;
-	} else {
-		Con_Printf( "Menu_Error: Recursive call to MVM_error_cmd (from PRVM_Crash)!\n" );
 	}
+	else
+		Sys_Abort("Menu_Error: Recursive call to MVM_error_cmd (from PRVM_Crash)!");
 
-	// fall back to the normal menu
-
-	// say it
-	Con_Print("Falling back to normal menu\n");
-
+	Con_Print("Falling back to engine menu\n");
 	key_dest = key_game;
-
-	// init the normal menu now -> this will also correct the menu router pointers
 	MR_SetRouting (true);
 
 	// reset the active scene, too (to be on the safe side ;))
 	R_SelectScene( RST_CLIENT );
+
+	// prevent an endless loop if the error was triggered by a command
+	Cbuf_Clear(cmd_local->cbuf);
+
+	// restore configured outfd
+	sys.outfd = outfd;
 
 	// Let video start at least
 	Host_AbortCurrentFrame();
