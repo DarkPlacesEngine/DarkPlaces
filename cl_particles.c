@@ -629,29 +629,77 @@ void CL_Particles_Shutdown (void)
 void CL_SpawnDecalParticleForSurface(int hitent, const vec3_t org, const vec3_t normal, int color1, int color2, int texnum, float size, float alpha);
 void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, float alpha, int texnum, int color1, int color2);
 
-// list of all 26 parameters:
-// ptype - any of the pt_ enum values (pt_static, pt_blood, etc), see ptype_t near the top of this file
-// pcolor1,pcolor2 - minimum and maximum ranges of color, randomly interpolated to decide particle color
-// ptex - any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
-// psize - size of particle (or thickness for PARTICLE_SPARK and PARTICLE_*BEAM)
-// palpha - opacity of particle as 0-255 (can be more than 255)
-// palphafade - rate of fade per second (so 256 would mean a 256 alpha particle would fade to nothing in 1 second)
-// ptime - how long the particle can live (note it is also removed if alpha drops to nothing)
-// pgravity - how much effect gravity has on the particle (0-1)
-// pbounce - how much bounce the particle has when it hits a surface (0-1), -1 makes a blood splat when it hits a surface, 0 does not even check for collisions
-// px,py,pz - starting origin of particle
-// pvx,pvy,pvz - starting velocity of particle
-// pfriction - how much the particle slows down per second (0-1 typically, can slowdown faster than 1)
-// blendmode - one of the PBLEND_ values
-// orientation - one of the PARTICLE_ values
-// staincolor1, staincolor2: minimum and maximum ranges of stain color, randomly interpolated to decide stain color (-1 to use none)
-// staintex: any of the tex_ values such as tex_smoke[rand()&7] or tex_particle (-1 to use none)
-// stainalpha: opacity of the stain as factor for alpha
-// stainsize: size of the stain as factor for palpha
-// angle: base rotation of the particle geometry around its center normal
-// spin: rotation speed of the particle geometry around its center normal
-particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, int pcolor1, int pcolor2, int ptex, float psize, float psizeincrease, float palpha, float palphafade, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float pairfriction, float pliquidfriction, float originjitter, float velocityjitter, qbool pqualityreduction, float lifetime, float stretch, pblend_t blendmode, porientation_t orientation, int staincolor1, int staincolor2, int staintex, float stainalpha, float stainsize, float angle, float spin, float tint[4])
-{
+
+
+/**
+ * @brief      Creates and returns a pointer to a new particle
+ *
+ * @param[in]  sortorigin         ?
+ * @param[in]  ptypeindex         Any of the pt_ enum values (pt_static, pt_blood, etc), see ptype_t near the top of this file
+ * @param[in]  pcolor1            Minimum range of color, randomly interpolated with pcolor2 to decide particle color
+ * @param[in]  pcolor2            Maximum range of color
+ * @param[in]  ptex               Any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
+ * @param[in]  psize              Size of particle (or thickness for PARTICLE_SPARK and PARTICLE_*BEAM)
+ * @param[in]  psizeincrease      ?
+ * @param[in]  palpha             Opacity of particle as 0-255 (can be more than 255)
+ * @param[in]  palphafade         Rate of fade per second (so 256 would mean a 256 alpha particle would fade to nothing in 1 second)
+ * @param[in]  pgravity           How much effect gravity has on the particle (0-1)
+ * @param[in]  pbounce            How much bounce the particle has when it hits a surface (0-1), -1 makes a blood splat when it hits a surface, 0 does not even check for collisions
+ * @param[in]  px                 Starting origin of particle
+ * @param[in]  py                 Starting origin of particle
+ * @param[in]  pz                 Starting origin of particle
+ * @param[in]  pvx                Starting velocity of particle
+ * @param[in]  pvy                Starting velocity of particle
+ * @param[in]  pvz                Starting velocity of particle
+ * @param[in]  pairfriction       How much the particle slows down, in air, per second (0-1 typically, can slowdown faster than 1)
+ * @param[in]  pliquidfriction    How much the particle slows down, in liquids, per second (0-1 typically, can slowdown faster than 1)
+ * @param[in]  originjitter       ?
+ * @param[in]  velocityjitter     ?
+ * @param[in]  pqualityreduction  ?
+ * @param[in]  lifetime           How long the particle can live (note it is also removed if alpha drops to nothing)
+ * @param[in]  stretch            ?
+ * @param[in]  blendmode          One of the PBLEND_ values
+ * @param[in]  orientation        One of the PARTICLE_ values
+ * @param[in]  staincolor1        Minimum and maximum ranges of stain color, randomly interpolated to decide stain color (-1 to use none)
+ * @param[in]  staincolor2        Minimum and maximum ranges of stain color, randomly interpolated to decide stain color (-1 to use none)
+ * @param[in]  staintex           Any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
+ * @param[in]  angle              Base rotation of the particle geometry around its center normal
+ * @param[in]  spin               Rotation speed of the particle geometry around its center normal
+ * @param      tint               The tint
+ *
+ * @return     Pointer to the new particle
+ */
+particle_t *CL_NewParticle(
+	const vec3_t sortorigin,
+	unsigned short ptypeindex,
+	int pcolor1, int pcolor2,
+	int ptex,
+	float psize,
+	float psizeincrease,
+	float palpha,
+	float palphafade,
+	float pgravity,
+	float pbounce,
+	float px, float py, float pz,
+	float pvx, float pvy, float pvz,
+	float pairfriction,
+	float pliquidfriction,
+	float originjitter,
+	float velocityjitter,
+	qbool pqualityreduction,
+	float lifetime,
+	float stretch,
+	pblend_t blendmode,
+	porientation_t orientation,
+	int staincolor1,
+	int staincolor2,
+	int staintex,
+	float stainalpha,
+	float stainsize,
+	float angle,
+	float spin,
+	float tint[4]
+) {
 	int l1, l2, r, g, b;
 	particle_t *part;
 	vec3_t v;
@@ -802,6 +850,65 @@ particle_t *CL_NewParticle(const vec3_t sortorigin, unsigned short ptypeindex, i
 	return part;
 }
 
+
+
+particle_t *CL_NewQuakeParticle(
+	const vec3_t origin,
+	const int color_1,
+	const int color_2,
+	const float gravity,
+	const float offset_x,
+	const float offset_y,
+	const float offset_z,
+	const float velocity_offset_x,
+	const float velocity_offset_y,
+	const float velocity_offset_z,
+	const float air_friction,
+	const float liquid_friction,
+	const float origin_jitter,
+	const float velocity_jitter,
+	const float lifetime
+) {
+	return CL_NewParticle(
+		origin,              // origin
+		pt_alphastatic,      // type
+		color_1,             // color 1
+		color_2,             // color 2
+		33,                  // texture, a simple square
+		1.0f,                // size
+		0,                   // size increase
+		255,                 // alpha
+		0,                   // alpha fade
+		gravity,             // gravity
+		0,                   // bounce
+		offset_x,            // x
+		offset_y,            // y
+		offset_z,            // z
+		velocity_offset_x,   // velocity x
+		velocity_offset_y,   // velocity y
+		velocity_offset_z,   // velocity z
+		air_friction,        // air friction
+		liquid_friction,     // liquid friction
+		origin_jitter,       // origin jitter
+		velocity_jitter,     // velocity jitter
+		true,                // quality reduction
+		lifetime,            // lifetime
+		1,                   // stretch
+		PBLEND_ALPHA,        // blend mode
+		PARTICLE_BILLBOARD,  // orientation
+		-1,                  // stain color 1
+		-1,                  // stain color 2
+		-1,                  // stain texture
+		1,                   // stain alpha
+		1,                   // stain size
+		0,                   // angle
+		0,                   // spin
+		NULL                 // ?
+	);
+}
+
+
+
 static void CL_ImmediateBloodStain(particle_t *part)
 {
 	vec3_t v;
@@ -914,7 +1021,23 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 				for (;count > 0;count--)
 				{
 					int k = particlepalette[(palettecolor & ~7) + (rand()&7)];
-					CL_NewParticle(center, pt_alphastatic, k, k, tex_particle, 1.5, 0, 255, 0, 0.15, 0, lhrandom(originmins[0], originmaxs[0]), lhrandom(originmins[1], originmaxs[1]), lhrandom(originmins[2], originmaxs[2]), lhrandom(velocitymins[0], velocitymaxs[0]), lhrandom(velocitymins[1], velocitymaxs[1]), lhrandom(velocitymins[2], velocitymaxs[2]), 0, 0, 8, 3, true, lhrandom(0.1, 0.4), 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+					CL_NewQuakeParticle(
+						center,                                      // origin
+						k,                                           // color 1
+						k,                                           // color 2
+						0.15,                                        // gravity
+						lhrandom(originmins[0], originmaxs[0]),      // x
+						lhrandom(originmins[1], originmaxs[1]),      // y
+						lhrandom(originmins[2], originmaxs[2]),      // z
+						lhrandom(velocitymins[0], velocitymaxs[0]),  // velocity x
+						lhrandom(velocitymins[1], velocitymaxs[1]),  // velocity y
+						lhrandom(velocitymins[2], velocitymaxs[2]),  // velocity z
+						0,                                           // air friction
+						0,                                           // liquid friction
+						8,                                           // origin jitter
+						3,                                           // velocity jitter
+						lhrandom(0.1, 0.4)                           // lifetime
+					);
 				}
 			}
 		}
@@ -1309,7 +1432,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						r = rand()&3;
 						color = particlepalette[ramp3[r]];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, -0.10, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 0.1372549*(6-r), 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, -0.10, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
 					}
 					else
 					{
@@ -1323,7 +1446,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						r = 2 + (rand()%4);
 						color = particlepalette[ramp3[r]];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, -0.15, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 0.1372549*(6-r), 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, -0.15, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
 					}
 					else
 					{
@@ -1336,8 +1459,8 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						dec = 6;
 						color = particlepalette[52 + (rand()&7)];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0, 0, true, 0.5, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0, 0, true, 0.5, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0, 0, 0.5);
 					}
 					else if (gamemode == GAME_GOODVSBAD2)
 					{
@@ -1356,8 +1479,8 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						dec = 6;
 						color = particlepalette[230 + (rand()&7)];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0, 0, true, 0.5, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0, 0, true, 0.5, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 *  dir[1], 30 * -dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 * -dir[1], 30 *  dir[0], 0, 0, 0, 0, 0, 0.5);
 					}
 					else
 					{
@@ -1370,7 +1493,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					if (cl_particles_quake.integer)
 					{
 						color = particlepalette[152 + (rand()&3)];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 8, 0, true, 0.3, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 8, 0, 0.3);
 					}
 					else if (gamemode == GAME_GOODVSBAD2)
 					{
@@ -1807,12 +1930,12 @@ void CL_ParticleExplosion (const vec3_t org)
 			if (i & 1)
 			{
 				color = particlepalette[ramp1[r]];
-				CL_NewParticle(org, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, true, 0.1006 * (8 - r), 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.1006 * (8 - r));
 			}
 			else
 			{
 				color = particlepalette[ramp2[r]];
-				CL_NewParticle(org, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0, 0, org[0], org[1], org[2], 0, 0, 0, 1, 1, 16, 256, true, 0.0669 * (8 - r), 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, 1, 1, 16, 256, 0.0669 * (8 - r));
 			}
 		}
 	}
@@ -1867,7 +1990,7 @@ void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength)
 	{
 		k = particlepalette[colorStart + (i % colorLength)];
 		if (cl_particles_quake.integer)
-			CL_NewParticle(org, pt_alphastatic, k, k, tex_particle, 1, 0, 255, 0, 0, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, true, 0.3, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+			CL_NewQuakeParticle(org, k, k, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.3);
 		else
 			CL_NewParticle(org, pt_alphastatic, k, k, tex_particle, lhrandom(0.5, 1.5), 0, 255, 512, 0, 0, org[0], org[1], org[2], 0, 0, 0, lhrandom(1.5, 3), lhrandom(1.5, 3), 8, 192, true, 0, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
 	}
