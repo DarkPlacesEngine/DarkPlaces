@@ -192,10 +192,11 @@ static const int tex_bulletdecal[8] = {8, 9, 10, 11, 12, 13, 14, 15};
 static const int tex_blooddecal[8] = {16, 17, 18, 19, 20, 21, 22, 23};
 static const int tex_bloodparticle[8] = {24, 25, 26, 27, 28, 29, 30, 31};
 static const int tex_rainsplash = 32;
-static const int tex_particle = 63;
+static const int tex_square = 33;
+static const int tex_beam = 60;
 static const int tex_bubble = 62;
 static const int tex_raindrop = 61;
-static const int tex_beam = 60;
+static const int tex_particle = 63;
 
 particleeffectinfo_t baselineparticleeffectinfo =
 {
@@ -847,6 +848,22 @@ particle_t *CL_NewParticle(
 
 
 
+/**
+ * @brief      Creates a simple square particle similar to DOS Quake
+ *
+ * @param[in]  origin                                                 ?
+ * @param[in]  color_1,color_2                                        Minimum and maximum range of color, randomly interpolated with pcolor2 to decide particle color
+ * @param[in]  gravity                                                How much effect gravity has on the particle (0-1)
+ * @param[in]  offset_x,offset_y,offset_z                             Starting origin of particle
+ * @param[in]  velocity_offset_x,velocity_offset_y,velocity_offset_z  Starting velocity of particle
+ * @param[in]  air_friction                                           How much the particle slows down, in air, per second (0-1 typically, can slowdown faster than 1)
+ * @param[in]  liquid_friction                                        How much the particle slows down, in liquids, per second (0-1 typically, can slowdown faster than 1)
+ * @param[in]  origin_jitter                                          ?
+ * @param[in]  velocity_jitter                                        ?
+ * @param[in]  lifetime                                               How long the particle can live (note it is also removed if alpha drops to nothing)
+ *
+ * @return     Pointer to the new particle
+ */
 particle_t *CL_NewSimpleParticle(
 	const vec3_t origin,
 	const int color_1,
@@ -869,8 +886,8 @@ particle_t *CL_NewSimpleParticle(
 		pt_alphastatic,      // type
 		color_1,
 		color_2,
-		33,                  // texture, a simple square
-		1.0f,                // size
+		tex_square,          // texture, a simple square
+		0.8f,                // size
 		0,                   // size increase
 		255,                 // alpha
 		0,                   // alpha fade
