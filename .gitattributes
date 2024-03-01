@@ -165,9 +165,9 @@ POSITIONS -diff -crlf
 *.psd -diff -crlf
 *.py crlf=input
 *.q3map1 crlf=input
-*.qc crlf=input
+*.qc crlf=input linguist-language=C
 *.qdt crlf=input
-*.qh crlf=input
+*.qh crlf=input linguist-language=C
 *.rb crlf=input
 *.rc2 crlf=input
 *.rc -crlf
