@@ -665,7 +665,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
  * @param[in]  staintex           Any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
  * @param[in]  angle              Base rotation of the particle geometry around its center normal
  * @param[in]  spin               Rotation speed of the particle geometry around its center normal
- * @param      tint               The tint
+ * @param[in]  tint               The tint
  *
  * @return     Pointer to the new particle
  */
@@ -2039,7 +2039,9 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 {
 	int k;
 	float minz, maxz, lifetime = 30;
+	float particle_size;
 	vec3_t org;
+
 	if (!cl_particles.integer) return;
 	if (dir[2] < 0) // falling
 	{
@@ -2062,28 +2064,27 @@ void CL_ParticleRain (const vec3_t mins, const vec3_t maxs, const vec3_t dir, in
 	{
 	case 0:
 		if (!cl_particles_rain.integer) break;
+
 		count *= 4; // ick, this should be in the mod or maps?
+		particle_size = (gamemode == GAME_GOODVSBAD2) ? 20 : 0.5;
 
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
 			VectorSet(org, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz));
-			if (gamemode == GAME_GOODVSBAD2)
-				CL_NewParticle(org, pt_rain, k, k, tex_particle, 20, 0, lhrandom(32, 64), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
-			else
-				CL_NewParticle(org, pt_rain, k, k, tex_particle, 0.5, 0, lhrandom(32, 64), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
+			CL_NewParticle(org, pt_rain, k, k, tex_particle, particle_size, 0, lhrandom(32, 64), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_SPARK, -1, -1, -1, 1, 1, 0, 0, NULL);
 		}
 		break;
 	case 1:
 		if (!cl_particles_snow.integer) break;
+
+		particle_size = (gamemode == GAME_GOODVSBAD2) ? 20 : 1.0;
+
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
 			VectorSet(org, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz));
-			if (gamemode == GAME_GOODVSBAD2)
-				CL_NewParticle(org, pt_snow, k, k, tex_particle, 20, 0, lhrandom(64, 128), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
-			else
-				CL_NewParticle(org, pt_snow, k, k, tex_particle, 1, 0, lhrandom(64, 128), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+			CL_NewParticle(org, pt_snow, k, k, tex_particle, 1, 0, lhrandom(64, 128), 0, 0, -1, org[0], org[1], org[2], dir[0], dir[1], dir[2], 0, 0, 0, 0, true, lifetime, 1, PBLEND_ADD, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
 		}
 		break;
 	default:
