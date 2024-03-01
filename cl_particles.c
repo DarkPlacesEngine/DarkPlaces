@@ -864,7 +864,7 @@ particle_t *CL_NewParticle(
  *
  * @return     Pointer to the new particle
  */
-particle_t *CL_NewSimpleParticle(
+particle_t *CL_NewQuakeParticle(
 	const vec3_t origin,
 	const int color_1,
 	const int color_2,
@@ -1033,7 +1033,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 				for (;count > 0;count--)
 				{
 					int k = particlepalette[(palettecolor & ~7) + (rand()&7)];
-					CL_NewSimpleParticle(
+					CL_NewQuakeParticle(
 						center,                                      // origin
 						k,                                           // color 1
 						k,                                           // color 2
@@ -1444,7 +1444,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						r = rand()&3;
 						color = particlepalette[ramp3[r]];
-						CL_NewSimpleParticle(center, color, color, -0.10, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
+						CL_NewQuakeParticle(center, color, color, -0.10, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
 					}
 					else
 					{
@@ -1458,7 +1458,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						r = 2 + (rand()%4);
 						color = particlepalette[ramp3[r]];
-						CL_NewSimpleParticle(center, color, color, -0.15, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
+						CL_NewQuakeParticle(center, color, color, -0.15, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 0.1372549 * (6 - r));
 					}
 					else
 					{
@@ -1471,8 +1471,8 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						dec = 6;
 						color = particlepalette[52 + (rand()&7)];
-						CL_NewSimpleParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0, 0, 0.5);
-						CL_NewSimpleParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*dir[1], 30*-dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30*-dir[1], 30*dir[0], 0, 0, 0, 0, 0, 0.5);
 					}
 					else if (gamemode == GAME_GOODVSBAD2)
 					{
@@ -1491,8 +1491,8 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						dec = 6;
 						color = particlepalette[230 + (rand()&7)];
-						CL_NewSimpleParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 *  dir[1], 30 * -dir[0], 0, 0, 0, 0, 0, 0.5);
-						CL_NewSimpleParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 * -dir[1], 30 *  dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 *  dir[1], 30 * -dir[0], 0, 0, 0, 0, 0, 0.5);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 30 * -dir[1], 30 *  dir[0], 0, 0, 0, 0, 0, 0.5);
 					}
 					else
 					{
@@ -1505,7 +1505,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					if (cl_particles_quake.integer)
 					{
 						color = particlepalette[152 + (rand()&3)];
-						CL_NewSimpleParticle(center, color, color, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 8, 0, 0.3);
+						CL_NewQuakeParticle(center, color, color, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 8, 0, 0.3);
 					}
 					else if (gamemode == GAME_GOODVSBAD2)
 					{
@@ -1942,12 +1942,12 @@ void CL_ParticleExplosion (const vec3_t org)
 			if (i & 1)
 			{
 				color = particlepalette[ramp1[r]];
-				CL_NewSimpleParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.1006 * (8 - r));
+				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.1006 * (8 - r));
 			}
 			else
 			{
 				color = particlepalette[ramp2[r]];
-				CL_NewSimpleParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, 1, 1, 16, 256, 0.0669 * (8 - r));
+				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, 1, 1, 16, 256, 0.0669 * (8 - r));
 			}
 		}
 	}
@@ -2002,7 +2002,7 @@ void CL_ParticleExplosion2 (const vec3_t org, int colorStart, int colorLength)
 	{
 		k = particlepalette[colorStart + (i % colorLength)];
 		if (cl_particles_quake.integer)
-			CL_NewSimpleParticle(org, k, k, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.3);
+			CL_NewQuakeParticle(org, k, k, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.3);
 		else
 			CL_NewParticle(org, pt_alphastatic, k, k, tex_particle, lhrandom(0.5, 1.5), 0, 255, 512, 0, 0, org[0], org[1], org[2], 0, 0, 0, lhrandom(1.5, 3), lhrandom(1.5, 3), 8, 192, true, 0, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
 	}
