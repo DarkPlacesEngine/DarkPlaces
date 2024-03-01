@@ -915,7 +915,7 @@ particle_t *CL_NewSimpleParticle(
 		1,                   // stain size
 		0,                   // angle
 		0,                   // spin
-		NULL                 // ?
+		NULL                 // tint
 	);
 }
 
@@ -1038,12 +1038,12 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 						k,                                           // color 1
 						k,                                           // color 2
 						0.15,                                        // gravity
-						lhrandom(originmins[0], originmaxs[0]),      // x
-						lhrandom(originmins[1], originmaxs[1]),      // y
-						lhrandom(originmins[2], originmaxs[2]),      // z
-						lhrandom(velocitymins[0], velocitymaxs[0]),  // velocity x
-						lhrandom(velocitymins[1], velocitymaxs[1]),  // velocity y
-						lhrandom(velocitymins[2], velocitymaxs[2]),  // velocity z
+						lhrandom(originmins[0], originmaxs[0]),      // offset x
+						lhrandom(originmins[1], originmaxs[1]),      // offset y
+						lhrandom(originmins[2], originmaxs[2]),      // offset z
+						lhrandom(velocitymins[0], velocitymaxs[0]),  // velocity offset x
+						lhrandom(velocitymins[1], velocitymaxs[1]),  // velocity offset y
+						lhrandom(velocitymins[2], velocitymaxs[2]),  // velocity offset z
 						0,                                           // air friction
 						0,                                           // liquid friction
 						8,                                           // origin jitter
