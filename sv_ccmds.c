@@ -216,6 +216,7 @@ static void SV_Give_f(cmd_state_t *cmd)
 	prvm_prog_t *prog = SVVM_prog;
 	const char *t;
 	int v;
+	int player_items;
 
 	t = Cmd_Argv(cmd, 1);
 	v = atoi (Cmd_Argv(cmd, 2));
@@ -324,6 +325,52 @@ static void SV_Give_f(cmd_state_t *cmd)
 			if (PRVM_serveredictfloat(host_client->edict, weapon) > IT_LIGHTNING)
 				PRVM_serveredictfloat(host_client->edict, ammo_cells) = v;
 		}
+		break;
+	case 'a':
+		//
+		// Set the player armour value to the number specified and then adjust the armour type/colour based on the value
+		//
+ 		player_items = PRVM_serveredictfloat(host_client->edict, items);
+		PRVM_serveredictfloat(host_client->edict, armorvalue) = v;
+
+		// Remove whichever armour item the player currently has
+		if (gamemode == GAME_ROGUE)	{
+			player_items &= ~(RIT_ARMOR1 | RIT_ARMOR2 | RIT_ARMOR3);
+		}
+		else {
+			player_items &= ~(IT_ARMOR1 | IT_ARMOR2 | IT_ARMOR3);
+		}
+
+		if (v > 150) {
+			// Give red armour
+			PRVM_serveredictfloat(host_client->edict, armortype) = 0.8;
+			if (gamemode == GAME_ROGUE)	{
+				player_items |= RIT_ARMOR3;
+			}
+			else {
+				player_items |= IT_ARMOR3;
+			}
+		} else if (v > 100) {
+			// Give yellow armour
+			PRVM_serveredictfloat(host_client->edict, armortype) = 0.6;
+			if (gamemode == GAME_ROGUE)	{
+				player_items |= RIT_ARMOR2;
+			}
+			else {
+				player_items |= IT_ARMOR2;
+			}
+		} else if (v >= 0) {
+			// Give green armour
+			PRVM_serveredictfloat(host_client->edict, armortype) = 0.3;
+			if (gamemode == GAME_ROGUE)	{
+				player_items |= RIT_ARMOR1;
+			}
+			else {
+				player_items |= IT_ARMOR1;
+			}
+		}
+
+		PRVM_serveredictfloat(host_client->edict, items) = player_items;
 		break;
 	}
 }
