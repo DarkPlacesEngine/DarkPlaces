@@ -706,7 +706,7 @@ void GL_InitFunctions(void)
 	}
 
 	if (missingrequiredfuncs)
-		Sys_Abort("OpenGL driver/hardware lacks required features:\n%s", missingfuncs);
+		Sys_Error("OpenGL driver/hardware lacks required features:\n%s", missingfuncs);
 #endif
 }
 
@@ -731,7 +731,7 @@ void GL_Setup(void)
 	vid.support.glversion = 10 * majorv + minorv;
 	if (vid.support.glversion < 32)
 		// fallback, should never get here: GL context creation should have failed
-		Sys_Abort("OpenGL driver/hardware supports version %i.%i but 3.2 is the minimum\n", majorv, minorv);
+		Sys_Error("OpenGL driver/hardware supports version %i.%i but 3.2 is the minimum\n", majorv, minorv);
 
 	qglGetIntegerv(GL_NUM_EXTENSIONS, &numextensions);
 	Con_DPrint("GL_EXTENSIONS:\n");
@@ -1485,7 +1485,7 @@ void VID_Restart_f(cmd_state_t *cmd)
 	{
 		Con_Print("Video mode change failed\n");
 		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
-			Sys_Abort("Unable to restore to last working video mode");
+			Sys_Error("Unable to restore to last working video mode");
 	}
 	R_Modules_Start();
 	Key_ReleaseAll();
@@ -1560,7 +1560,7 @@ void VID_Start(void)
 			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 		}
 		if (!success)
-			Sys_Abort("Video modes failed");
+			Sys_Error("Video modes failed");
 	}
 
 	R_Modules_Start();

@@ -26,7 +26,7 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 		separation = cl_gameplayfix_nudgeoutofsolid_separation.value;
 	}
 	else
-		Sys_Abort("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
+		Sys_Error("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
 
 	VectorCopy(PRVM_serveredictvector(ent, mins), stuckmins);
 	VectorCopy(PRVM_serveredictvector(ent, maxs), stuckmaxs);

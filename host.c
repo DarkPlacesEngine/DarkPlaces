@@ -105,12 +105,12 @@ void Host_Error (const char *error, ...)
 	Con_Printf(CON_ERROR "Host_Error: %s\n", hosterrorstring1);
 
 	// LadyHavoc: if crashing very early, or currently shutting down, do
-	// Sys_Abort instead
+	// Sys_Error instead
 	if (host.framecount < 3 || host.state == host_shutdown)
-		Sys_Abort ("Host_Error during %s: %s", host.framecount < 3 ? "startup" : "shutdown", hosterrorstring1);
+		Sys_Error ("Host_Error during %s: %s", host.framecount < 3 ? "startup" : "shutdown", hosterrorstring1);
 
 	if (hosterror)
-		Sys_Abort ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
+		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
 	hosterror = true;
 
 	dp_strlcpy(hosterrorstring2, hosterrorstring1, sizeof(hosterrorstring2));
@@ -125,7 +125,7 @@ void Host_Error (const char *error, ...)
 		host.hook.SV_Shutdown();
 
 	if (cls.state == ca_dedicated)
-		Sys_Abort("Host_Error: %s", hosterrorstring1);        // dedicated servers exit
+		Sys_Error("Host_Error: %s", hosterrorstring1);        // dedicated servers exit
 
 	// prevent an endless loop if the error was triggered by a command
 	Cbuf_Clear(cmd_local->cbuf);
@@ -340,7 +340,7 @@ void Host_LockSession(void)
 			}
 			else
 			{
-				Sys_Abort("session lock %s could not be acquired. Please run with -sessionid and an unique session name.\n", p);
+				Sys_Error("session lock %s could not be acquired. Please run with -sessionid and an unique session name.\n", p);
 			}
 		}
 	}
@@ -385,7 +385,7 @@ static void Host_Init (void)
 	host.state = host_init;
 
 	if (setjmp(host.abortframe)) // Huh?!
-		Sys_Abort("Engine initialization failed. Check the console (if available) for additional information.\n");
+		Sys_Error("Engine initialization failed. Check the console (if available) for additional information.\n");
 
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);

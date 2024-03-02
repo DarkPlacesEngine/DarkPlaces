@@ -2573,7 +2573,7 @@ void M_Menu_Keys_f(cmd_state_t *cmd)
 
 		// Only sections? There may be a problem somewhere...
 		if (keys_cursor >= numcommands)
-			Sys_Abort ("M_Init: The key binding list only contains sections");
+			Sys_Error ("M_Init: The key binding list only contains sections");
 	}
 }
 
@@ -5224,7 +5224,7 @@ void MVM_error_cmd(const char *format, ...)
 	va_end (argptr);
 
 	if (host.framecount < 3)
-		Sys_Abort("Menu_Error: %s", errorstring);
+		Sys_Error("Menu_Error: %s", errorstring);
 
 	Con_Printf(CON_ERROR "Menu_Error: %s\n", errorstring);
 
@@ -5235,7 +5235,7 @@ void MVM_error_cmd(const char *format, ...)
 		processingError = false;
 	}
 	else
-		Sys_Abort("Menu_Error: Recursive call to MVM_error_cmd (from PRVM_Crash)!");
+		Sys_Error("Menu_Error: Recursive call to MVM_error_cmd (from PRVM_Crash)!");
 
 	Con_Print("Falling back to engine menu\n");
 	key_dest = key_game;

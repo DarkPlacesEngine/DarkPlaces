@@ -1697,7 +1697,7 @@ void SV_SendClientMessages(void)
 	int i, prepared = false;
 
 	if (sv.protocol == PROTOCOL_QUAKEWORLD)
-		Sys_Abort("SV_SendClientMessages: no quakeworld support\n");
+		Sys_Error("SV_SendClientMessages: no quakeworld support\n");
 
 	SV_FlushBroadcastMessages();
 

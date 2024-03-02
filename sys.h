@@ -206,7 +206,7 @@ char *Sys_TimeString(const char *timeformat);
 
 /// Causes the entire program to exit ASAP.
 /// Trailing \n should be omitted.
-void Sys_Abort (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
+void Sys_Error (const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 
 /// (may) output text to terminal which launched program
 /// is POSIX async-signal-safe

@@ -36,7 +36,7 @@ void R_RegisterModule(const char *name, void(*start)(void), void(*shutdown)(void
 		}
 	}
 	if (i >= MAXRENDERMODULES)
-		Sys_Abort("R_RegisterModule: ran out of renderer module slots (%i)", MAXRENDERMODULES);
+		Sys_Error("R_RegisterModule: ran out of renderer module slots (%i)", MAXRENDERMODULES);
 	rendermodule[i].active = 0;
 	rendermodule[i].name = name;
 	rendermodule[i].start = start;

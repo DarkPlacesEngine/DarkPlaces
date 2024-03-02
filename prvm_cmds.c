@@ -5688,7 +5688,7 @@ void VM_nudgeoutofsolid(prvm_prog_t *prog)
 		else if (prog == CLVM_prog)
 			CL_LinkEdict(ent);
 		else
-			Sys_Abort("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
+			Sys_Error("PHYS_NudgeOutOfSolid: cannot be called from %s VM\n", prog->name);
 	}
 }
 
