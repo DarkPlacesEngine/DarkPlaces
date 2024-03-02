@@ -1018,20 +1018,18 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 
 	VectorLerp(originmins, 0.5, originmaxs, center);
 	Matrix4x4_CreateTranslate(&lightmatrix, center[0], center[1], center[2]);
-	if (effectnameindex == EFFECT_SVC_PARTICLE)
-	{
-		if (cl_particles.integer)
-		{
+	if (effectnameindex == EFFECT_SVC_PARTICLE) {
+		if (cl_particles.integer) {
 			// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
-			if (count == 1024)
+			if (count == 1024) {
 				CL_NewParticlesFromEffectinfo(EFFECT_TE_EXPLOSION, 1, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
-			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
+			}
+			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225)) {
 				CL_NewParticlesFromEffectinfo(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
-			else
-			{
+			}
+			else {
 				count *= cl_particles_quality.value;
-				for (;count > 0;count--)
-				{
+				for (;count > 0;count--) {
 					int k = particlepalette[(palettecolor & ~7) + (rand()&7)];
 					CL_NewQuakeParticle(
 						center,                                      // origin
@@ -1144,8 +1142,9 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 	{
 		if (!cl_particles_blood.integer)
 			return;
-		if (cl_particles_quake.integer)
+		if (cl_particles_quake.integer) {
 			CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 2*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 73, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
+		}
 		else
 		{
 			static double bloodaccumulator = 0;
@@ -1413,7 +1412,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					if (cl_particles_quake.integer)
 					{
 						color = particlepalette[67 + (rand()&3)];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0.25, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, 0.25, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 2);
 					}
 					else
 					{
@@ -1427,7 +1426,7 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 					{
 						dec = 6;
 						color = particlepalette[67 + (rand()&3)];
-						CL_NewParticle(center, pt_alphastatic, color, color, tex_particle, 1.5f, 0, 255, 0, 0.25, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, true, 2, 1, PBLEND_ALPHA, PARTICLE_BILLBOARD, -1, -1, -1, 1, 1, 0, 0, NULL);
+						CL_NewQuakeParticle(center, color, color, 0.25, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 3, 0, 2);
 					}
 					else
 					{
