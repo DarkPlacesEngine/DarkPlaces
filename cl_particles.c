@@ -1928,27 +1928,54 @@ void CL_ParticleExplosion (const vec3_t org)
 {
 	int i;
 	trace_t trace;
-	//vec3_t v;
-	//vec3_t v2;
+	particle_t *particle;
+
 	R_Stain(org, 96, 40, 40, 40, 64, 88, 88, 88, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
-	if (cl_particles_quake.integer)
-	{
-		for (i = 0;i < 1024;i++)
-		{
-			int r, color;
-			r = rand()&3;
-			if (i & 1)
-			{
+	if (cl_particles_quake.integer) {
+		for (i = 0; i < 1024; i++) {
+			int color;
+			int r = rand()&3;
+
+			if (i & 1) {
 				color = particlepalette[ramp1[r]];
-				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, -4, -4, 16, 256, 0.1006 * (8 - r));
+
+				particle = CL_NewQuakeParticle(
+					org,
+					color, color,
+					0.05,                        // gravity
+					org[0], org[1], org[2],      // offset
+					0, 0, 0,                     // velocity
+					2,                           // air friction
+					0,                           // liquid friction
+					16,                          // origin jitter
+					256,                         // velocity jitter
+					5                            // lifetime
+				);
+				particle->typeindex = pt_explode;
 			}
 			else
 			{
 				color = particlepalette[ramp2[r]];
-				CL_NewQuakeParticle(org, color, color, 0, org[0], org[1], org[2], 0, 0, 0, 1, 1, 16, 256, 0.0669 * (8 - r));
+
+				particle = CL_NewQuakeParticle(
+					org,
+					color, color,
+					0.05,                        // gravity
+					org[0], org[1], org[2],      // offset
+					0, 0, 0,                     // velocity
+					0,                           // air friction
+					0,                           // liquid friction
+					16,                          // origin jitter
+					256,                         // velocity jitter
+					5                            // lifetime
+				);
+
+				particle->typeindex = pt_explode2;
 			}
+
+			particle->time2 = r;  // time2 is used to progress the colour ramp index
 		}
 	}
 	else
@@ -2881,6 +2908,11 @@ void R_DrawParticles (void)
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
 	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);
 
+	// Handling of the colour ramp for pt_explode and pt_explode2
+	float pt_explode_frame_interval = frametime * 10;
+	float pt_explode2_frame_interval = frametime * 15;
+	int color;
+
 	// LadyHavoc: early out conditions
 	if (!cl.num_particles)
 		return;
@@ -3055,7 +3087,33 @@ void R_DrawParticles (void)
 					a = CL_PointSuperContents(p->org);
 					if (a & (SUPERCONTENTS_SOLID | SUPERCONTENTS_LIQUIDSMASK))
 						goto killparticle;
-					break;
+					case pt_explode:
+						// Progress the particle colour up the ramp
+						p->time2 += pt_explode_frame_interval;
+						if (p->time2 >= 8) {
+							p->die = -1;
+						}
+						else {
+							int color = particlepalette[ramp1[(int)p->time2]];
+							p->color[0] = color >> 16;
+							p->color[1] = color >>  8;
+							p->color[2] = color >>  0;
+						}
+						break;
+
+					case pt_explode2:
+						// Progress the particle colour up the ramp
+						p->time2 += pt_explode2_frame_interval;
+						if (p->time2 >= 8) {
+							p->die = -1;
+						}
+						else {
+							int color = particlepalette[ramp2[(int)p->time2]];
+							p->color[0] = color >> 16;
+							p->color[1] = color >>  8;
+							p->color[2] = color >>  0;
+						}
+						break;
 				default:
 					break;
 				}

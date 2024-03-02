@@ -58,7 +58,22 @@ particletype_t;
 
 typedef enum ptype_e
 {
-	pt_dead, pt_alphastatic, pt_static, pt_spark, pt_beam, pt_rain, pt_raindecal, pt_snow, pt_bubble, pt_blood, pt_smoke, pt_decal, pt_entityparticle, pt_total
+	pt_dead,
+	pt_alphastatic,
+	pt_static,
+	pt_spark,
+	pt_beam,
+	pt_rain,
+	pt_raindecal,
+	pt_snow,
+	pt_bubble,
+	pt_blood,
+	pt_smoke,
+	pt_decal,
+	pt_entityparticle,
+	pt_explode,   // used for Quake-style explosion particle colour ramping
+	pt_explode2,  // used for Quake-style explosion particle colour ramping
+	pt_total
 }
 ptype_t;
 
