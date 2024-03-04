@@ -309,19 +309,25 @@ static void S_ConvertPaintBuffer(portable_sampleframe_t *painted_ptr, void *rb_p
 	}
 }
 
+
+
 /*
 ===============================================================================
 
 UNDERWATER EFFECT
 
+Muffles the intensity of sounds when the player is underwater
+
 ===============================================================================
 */
 
-static struct {
+static struct
+{
 	float	intensity;
 	float	alpha;
 	float	accum[SND_LISTENERS];
-} underwater = {0.f, 1.f, {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}};
+}
+underwater = {0.f, 1.f, {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}};
 
 void S_SetUnderwaterIntensity(void)
 {
@@ -353,21 +359,24 @@ static void S_UnderwaterFilter(int endtime)
 {
 	int i;
 	int sl;
-	if (!underwater.intensity) {
-		if (endtime > 0) {
-			for (sl = 0; sl < SND_LISTENERS; sl++) {
+
+	if (!underwater.intensity)
+	{
+		if (endtime > 0)
+			for (sl = 0; sl < SND_LISTENERS; sl++)
 				underwater.accum[sl] = paintbuffer[endtime-1].sample[sl];
-			}
-		}
 		return;
 	}
-	for (i = 0; i < endtime; i++) {
-		for (sl = 0; sl < SND_LISTENERS; sl++) {
+
+	for (i = 0; i < endtime; i++)
+		for (sl = 0; sl < SND_LISTENERS; sl++)
+		{
 			underwater.accum[sl] += underwater.alpha * (paintbuffer[i].sample[sl] - underwater.accum[sl]);
 			paintbuffer[i].sample[sl] = underwater.accum[sl];
 		}
-	}
 }
+
+
 
 /*
 ===============================================================================

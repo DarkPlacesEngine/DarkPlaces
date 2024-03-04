@@ -153,6 +153,8 @@ extern qbool simsound;
 //         Architecture-independent functions
 // ====================================================================
 
+void S_SetUnderwaterIntensity(void);
+
 void S_MixToBuffer(void *stream, unsigned int frames);
 
 qbool S_LoadSound (struct sfx_s *sfx, qbool complain);
