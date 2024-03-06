@@ -2025,7 +2025,7 @@ static void setuptex(int texnum, unsigned char *data, unsigned char *particletex
 	int basex, basey, w, h, y;
 	CL_Particle_PixelCoordsForTexnum(texnum, &basex, &basey, &w, &h);
 	if(w != PARTICLETEXTURESIZE || h != PARTICLETEXTURESIZE)
-		Sys_Abort("invalid particle texture size for autogenerating");
+		Sys_Error("invalid particle texture size for autogenerating");
 	for (y = 0;y < PARTICLETEXTURESIZE;y++)
 		memcpy(particletexturedata + ((basey + y) * PARTICLEFONTSIZE + basex) * 4, data + y * PARTICLETEXTURESIZE * 4, PARTICLETEXTURESIZE * 4);
 }

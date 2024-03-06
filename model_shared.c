@@ -550,7 +550,7 @@ model_t *Mod_LoadModel(model_t *mod, qbool crash, qbool checkdisk)
 			Con_Printf(CON_ERROR "Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
 	}
 	else if (crash)
-		// LadyHavoc: Sys_Abort was *ANNOYING*
+		// LadyHavoc: Sys_Error was *ANNOYING*
 		Con_Printf (CON_ERROR "Mod_LoadModel: %s not found\n", mod->name);
 
 	// no fatal errors occurred, so this model is ready to use.

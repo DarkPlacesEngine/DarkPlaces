@@ -145,7 +145,7 @@ void CL_CutDemo (unsigned char **buf, fs_offset_t *filesize)
 	// restart the demo recording
 	cls.demofile = FS_OpenRealFile(cls.demoname, "wb", false);
 	if(!cls.demofile)
-		Sys_Abort("failed to reopen the demo file");
+		Sys_Error("failed to reopen the demo file");
 	FS_Printf(cls.demofile, "%i\n", cls.forcetrack);
 }
 

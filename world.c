@@ -2063,7 +2063,7 @@ static void World_Physics_Frame_JointFromEntity(world_t *world, prvm_edict_t *ed
 				break;
 			case 0:
 			default:
-				Sys_Abort("what? but above the joint was valid...\n");
+				Sys_Error("what? but above the joint was valid...\n");
 				break;
 		}
 #undef SETPARAMS
@@ -2624,7 +2624,7 @@ treatasbox:
 			dMassSetCylinderTotal(&mass, massval, 3, radius, length);
 			break;
 		default:
-			Sys_Abort("World_Physics_BodyFromEntity: unrecognized geomtype value %i was accepted by filter\n", solid);
+			Sys_Error("World_Physics_BodyFromEntity: unrecognized geomtype value %i was accepted by filter\n", solid);
 			// this goto only exists to prevent warnings from the compiler
 			// about uninitialized variables (mass), while allowing it to
 			// catch legitimate uninitialized variable warnings

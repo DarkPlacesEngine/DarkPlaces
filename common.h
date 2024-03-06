@@ -47,7 +47,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct sizebuf_s
 {
-	qbool	allowoverflow;	///< if false, do a Sys_Abort
+	qbool	allowoverflow;	///< if false, do a Sys_Error
 	qbool	overflowed;		///< set to true if the buffer size failed
 	unsigned char		*data;
 	int			maxsize;

@@ -23,7 +23,7 @@ void Sys_SDL_Shutdown(void)
 	SDL_Quit();
 }
 
-// Sys_Abort early in startup might screw with automated
+// Sys_Error early in startup might screw with automated
 // workflows or something if we show the dialog by default.
 static qbool nocrashdialog = true;
 void Sys_SDL_Dialog(const char *title, const char *string)
@@ -53,7 +53,7 @@ void Sys_SDL_Init(void)
 {
 	// we don't know which systems we'll want to init, yet...
 	if (SDL_Init(0) < 0)
-		Sys_Abort("SDL_Init failed: %s\n", SDL_GetError());
+		Sys_Error("SDL_Init failed: %s\n", SDL_GetError());
 
 	// COMMANDLINEOPTION: sdl: -nocrashdialog disables "Engine Error" crash dialog boxes
 	if(!Sys_CheckParm("-nocrashdialog"))
