@@ -4,3 +4,4 @@ cd .emsdk
 ./emsdk install latest
 ./emsdk activate latest
 . emsdk_env.sh
+cd ..
