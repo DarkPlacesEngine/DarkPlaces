@@ -228,9 +228,8 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_blind_id.a ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_rijndael.a ../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a -sUSE_SDL=2 -sUSE_ZLIB=1 -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
-LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
-# LDFLAGS_WASMSRV=$(LDFLAGS_UNIXSDL) ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_blind_id.a ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a ../../../Darkplaces-Emscripten/builddeps/ld0_blind_id/lib/libd0_rijndael.a ../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a -sUSE_SDL=2 -sUSE_ZLIB=1 -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm -lwebsocket.js -sPROXY_POSIX_SOCKETS -pthread -sPROXY_TO_PTHREAD
+LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
+LDFLAGS_WASMSRV=$(LDFLAGS_UNIXSDL) -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm -lwebsocket.js -sPROXY_POSIX_SOCKETS -pthread -sPROXY_TO_PTHREAD
 
 
 ##### Mac OS X specific variables #####
@@ -366,8 +365,8 @@ sdl-release :
 		EXE='$(EXE_SDL)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_SDL)' LEVEL=1
 
 emscripten-release :
-	$(MAKE) bin-release \
-		DP_MAKE_TARGET=wasm \
+	$(MAKE) wasm-release \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		EXE='$(EXE_WASM)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_WASM)' LEVEL=1
 
 sdl-release-profile :
@@ -421,6 +420,16 @@ bin-release-profile :
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
+
+wasm-release :
+	$(CHECKLEVEL1)
+	@echo
+	@echo '========== $(EXE) (release) =========='
+	$(MAKE) prepare BUILD_DIR=build-obj/release/$(EXE)
+	$(MAKE) -C build-obj/release/$(EXE) $(EXE) \
+		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
+		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)'\
+		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 
 prepare :
 	$(CMD_MKDIR) $(BUILD_DIR)
