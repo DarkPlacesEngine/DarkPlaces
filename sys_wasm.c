@@ -236,9 +236,6 @@ char *Sys_SDL_GetClipboardData (void)
 void Sys_SDL_Init(void)
 {
 	// we don't know which systems we'll want to init, yet...
-	if (SDL_Init(0) < 0)
-		Sys_Abort("SDL_Init failed: %s\n", SDL_GetError());
-
 	// COMMANDLINEOPTION: sdl: -nocrashdialog disables "Engine Error" crash dialog boxes
 	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
