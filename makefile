@@ -117,13 +117,15 @@ ifeq ($(DP_MAKE_TARGET), wasm)
 	LDFLAGS_SV=$(LDFLAGS_LINUXSV)
 	MAKE=emmake make
 	STRIP=:"$@"
-	CFLAGS_EXTRA+=-DNOSUPPORTIPV6 -sUSE_LIBPNG -sUSE_SDL=2 -DUSE_GLES2 -DLINK_TO_ZLIB -sUSE_ZLIB=1 -DLINK_TO_JPEG -I../../../Darkplaces-Emscripten/builddeps/jpeg/include
+	CFLAGS_EXTRA+=--use-port=sdl2 --use-port=libpng --use-port=libjpeg --use-port=zlib -DUSE_GLES2 -DNOSUPPORTIPV6
 
 	SDLCONFIG_CFLAGS=$(SDLCONFIG_UNIXCFLAGS) $(SDLCONFIG_UNIXCFLAGS_X11)
 	SDLCONFIG_LIBS=$(SDLCONFIG_UNIXLIBS) $(SDLCONFIG_UNIXLIBS_X11)
 	SDLCONFIG_STATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS) $(SDLCONFIG_UNIXSTATICLIBS_X11)
 	DP_SSE=0
-	LIB_JPEG?= -sUSE_LIBJPEG=1
+	LIB_CRYPTO_RIJNDAEL?=../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_rijndael.a
+	LIB_CRYPTO?=../../../Darkplaces-Emscripten/builddeps/d0_blind_id/lib/libd0_blind_id.a ../../../Darkplaces-Emscripten/builddeps/gmp/lib/libgmp.a
+	LIB_JPEG?=../../../Darkplaces-Emscripten/builddeps/jpeg/lib/libjpeg.a
 
 	EXE_SV=$(EXE_UNIXSV)
 	EXE_WASM=$(EXE_WASM)
