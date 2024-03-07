@@ -1011,7 +1011,11 @@ static void Sys_HandleCrash(int sig)
 	Sys_SDL_Dialog("Engine Crash", dialogtext);
 
 	fflush(stderr); // not async-signal-safe :(
-	_Exit(sig);
+
+	// Continue execution with default signal handling.
+	// A real crash will be re-triggered so the platform can handle it,
+	// a fake crash (kill -SEGV) will cause a graceful shutdown.
+	signal(sig, SIG_DFL);
 }
 
 static void Sys_HandleSignal(int sig)

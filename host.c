@@ -683,7 +683,7 @@ void Host_Main(void)
 	oldtime = Sys_DirtyTime();
 
 	// Main event loop
-	while(host.state != host_shutdown)
+	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
 		// Something bad happened, or the server disconnected
 		if (setjmp(host.abortframe))

@@ -20,10 +20,11 @@ struct cmd_state_s;
 
 typedef enum host_state_e
 {
-	host_shutdown,
 	host_init,
 	host_loading,
 	host_active,
+	// states >= host_shutdown cause graceful shutdown, see Sys_HandleCrash() comments
+	host_shutdown,
 	host_failing, ///< crashing
 	host_failed ///< crashed or aborted, SDL dialog open
 } host_state_t;
