@@ -693,7 +693,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf(CON_ERROR "Engine Error - %s\n^9%s\n", string, engineversion);
+	Con_Printf(CON_ERROR "Engine Aborted: %s\n^9%s\n", string, engineversion);
 
 	dp_strlcat(string, "\n\n", sizeof(string));
 	dp_strlcat(string, engineversion, sizeof(string));
@@ -709,14 +709,14 @@ void Sys_Error (const char *error, ...)
 		sv.active = false; // make SV_DropClient() skip the QC stuff to avoid recursive errors
 		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 			if (host_client->active)
-				SV_DropClient(false, "Server abort!"); // closes demo file
+				SV_DropClient(false, "Server aborted!"); // closes demo file
 	}
 	// don't want a dead window left blocking the OS UI or the abort dialog
 	VID_Shutdown();
 	S_StopAllSounds();
 
 	host.state = host_failed; // make Sys_HandleSignal() call _Exit()
-	Sys_SDL_Dialog("Engine Error", string);
+	Sys_SDL_Dialog("Engine Aborted", string);
 
 	fflush(stderr);
 	exit (1);
