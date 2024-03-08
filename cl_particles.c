@@ -2907,14 +2907,15 @@ void R_DrawParticles (void)
 	int hitent;
 	trace_t trace;
 	qbool update;
+	float pt_explode_frame_interval, pt_explode2_frame_interval;
+	int color;
 
 	frametime = bound(0, cl.time - cl.particles_updatetime, 1);
 	cl.particles_updatetime = bound(cl.time - 1, cl.particles_updatetime + frametime, cl.time + 1);
 
 	// Handling of the colour ramp for pt_explode and pt_explode2
-	float pt_explode_frame_interval = frametime * 10;
-	float pt_explode2_frame_interval = frametime * 15;
-	int color;
+	pt_explode_frame_interval = frametime * 10;
+	pt_explode2_frame_interval = frametime * 15;
 
 	// LadyHavoc: early out conditions
 	if (!cl.num_particles)
@@ -3098,7 +3099,7 @@ void R_DrawParticles (void)
 							p->die = -1;
 						}
 						else {
-							int color = particlepalette[ramp1[(int)p->time2]];
+							color = particlepalette[ramp1[(int)p->time2]];
 							p->color[0] = color >> 16;
 							p->color[1] = color >>  8;
 							p->color[2] = color >>  0;
@@ -3113,7 +3114,7 @@ void R_DrawParticles (void)
 							p->die = -1;
 						}
 						else {
-							int color = particlepalette[ramp2[(int)p->time2]];
+							color = particlepalette[ramp2[(int)p->time2]];
 							p->color[0] = color >> 16;
 							p->color[1] = color >>  8;
 							p->color[2] = color >>  0;
