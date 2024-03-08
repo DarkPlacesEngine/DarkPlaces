@@ -111,23 +111,18 @@ ifeq ($(DP_MAKE_TARGET), linux)
 endif
 
 ifeq ($(DP_MAKE_TARGET), wasm)
-	OBJ_ICON=
-	OBJ_ICON_NEXUIZ=
-
-	LDFLAGS_SV=$(LDFLAGS_LINUXSV)
 	MAKE=emmake make
-	STRIP=:"$@"
-	CFLAGS_EXTRA+=--use-port=sdl2 --use-port=libpng --use-port=libjpeg --use-port=zlib -DUSE_GLES2 -DNOSUPPORTIPV6
+	CFLAGS_EXTRA+=--use-port=sdl2 \
+	              --use-port=libpng \
+	              --use-port=libjpeg \
+	              --use-port=zlib \
+	              -DNOSUPPORTIPV6 \
+	              -DUSE_GLES2
 
 	SDLCONFIG_CFLAGS=$(SDLCONFIG_UNIXCFLAGS) $(SDLCONFIG_UNIXCFLAGS_X11)
 	SDLCONFIG_LIBS=$(SDLCONFIG_UNIXLIBS) $(SDLCONFIG_UNIXLIBS_X11)
 	SDLCONFIG_STATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS) $(SDLCONFIG_UNIXSTATICLIBS_X11)
 	DP_SSE=0
-
-	EXE_SV=$(EXE_UNIXSV)
-	EXE_WASM=$(EXE_WASM)
-	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
-	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
 
 	DP_LINK_SDL?=shared
 	DP_LINK_ZLIB?=shared
@@ -137,6 +132,7 @@ ifeq ($(DP_MAKE_TARGET), wasm)
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 	DP_LINK_XMP?=dlopen
 endif
+
 # Mac OS X configuration
 ifeq ($(DP_MAKE_TARGET), macosx)
 	OBJ_ICON=

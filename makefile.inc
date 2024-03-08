@@ -228,8 +228,39 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
-LDFLAGS_WASMSRV=$(LDFLAGS_UNIXSDL) -DUSE_GLES2 -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm -lwebsocket.js -sPROXY_POSIX_SOCKETS -pthread -sPROXY_TO_PTHREAD
+# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
+# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sUSE_LIBJPEG=1 \
+#                                 -sUSE_SDL=2 \
+#                                 -sUSE_ZLIB=1 \
+#                                 -DUSE_GLES2 \
+#                                 -sINITIAL_MEMORY=3500MB \
+#                                 -sMAXIMUM_MEMORY=4GB \
+#                                 -sSINGLE_FILE \
+#                                 -sFULL_ES3 \
+#                                 -sMIN_WEBGL_VERSION=2 \
+#                                 -sMAX_WEBGL_VERSION=2 \
+#                                 -sUSE_SDL=2 \
+#                                 -sALLOW_MEMORY_GROWTH \
+#                                 --pre-js ../../../Darkplaces-Emscripten/prejs.js \
+#                                 -lidbfs.js \
+#                                 -sEXPORTED_RUNTIME_METHODS='callMain' \
+#                                 --shell-file=../../../Darkplaces-Emscripten/shell.htm
+LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
+                                   --use-port=libpng \
+                                   --use-port=libjpeg \
+                                   --use-port=zlib \
+                                   -DUSE_GLES2 \
+                                   -sINITIAL_MEMORY=3500MB \
+                                   -sMAXIMUM_MEMORY=4GB \
+                                   -sSINGLE_FILE \
+                                   -sFULL_ES3 \
+                                   -sMIN_WEBGL_VERSION=2 \
+                                   -sMAX_WEBGL_VERSION=2 \
+                                   -sALLOW_MEMORY_GROWTH \
+                                   --pre-js ../../../Darkplaces-Emscripten/prejs.js \
+                                   -lidbfs.js \
+                                   -sEXPORTED_RUNTIME_METHODS='callMain' \
+                                   --shell-file=../../../Darkplaces-Emscripten/shell.htm
 
 
 ##### Mac OS X specific variables #####
@@ -275,7 +306,7 @@ VPATH := ../../../
 .PHONY : clean clean-profile help \
 	 debug profile release \
 	 sv-debug sv-profile sv-release \
-	 sdl-debug sdl-profile sdl-release
+	 sdl-debug sdl-profile sdl-release emscripten-release
 
 help:
 	@echo
@@ -366,8 +397,12 @@ sdl-release :
 
 emscripten-release :
 	$(MAKE) wasm-release \
-		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
-		EXE='$(EXE_WASM)' CFLAGS_FEATURES='$(CFLAGS_CLIENT)' CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' LDFLAGS_COMMON='$(LDFLAGS_WASM)' LEVEL=1
+		DP_MAKE_TARGET="wasm" \
+		EXE='$(EXE_WASM)' \
+		CFLAGS_FEATURES='$(CFLAGS_CLIENT)' \
+		CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' \
+		LDFLAGS_COMMON='$(LDFLAGS_WASM)' \
+		LEVEL=1
 
 sdl-release-profile :
 	$(MAKE) bin-release-profile \
@@ -418,7 +453,7 @@ bin-release-profile :
 	$(MAKE) -C build-obj/release-profile/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
-		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
+		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=$(LEVEL)
 	$(STRIP) $(EXE)
 
 wasm-release :
