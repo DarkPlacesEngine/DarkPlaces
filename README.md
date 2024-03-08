@@ -15,6 +15,15 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 ### [Matrix](https://matrix.org/docs/guides/introduction)
 [![#darkplaces:matrix.org](https://img.shields.io/matrix/darkplaces:matrix.org?color=660000&label=%23darkplaces%3Amatrix.org)](https://matrix.to/#/#darkplaces:matrix.org)
 
+## Downloading and running
+
+Linux x86_64 builds are available in [GitHub CI](https://github.com/DarkPlacesEngine/darkplaces/actions?query=branch%3Amaster) artifacts.  
+
+More complete builds are available in [xonotic.org](https://beta.xonotic.org/autobuild/) engine zips.  
+These support Windows, Linux and macOS, and include the current libraries needed for all features.
+
+DarkPlaces supports many Quake-based games and you can select which it will run by renaming the executable so it's prefixed with the game's name, for example `rogue-sdl.exe`, or by passing a cmdline argument such as `-rogue`.  The supported list and related details are defined in [com_game.c](https://github.com/DarkPlacesEngine/darkplaces/blob/master/com_game.c).
+
 ## Build instructions (WIP)
 
 These instructions are adequate for Quake, but for Xonotic please refer to [its wiki](https://gitlab.com/xonotic/xonotic/-/wikis/Compiling).
