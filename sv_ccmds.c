@@ -334,40 +334,37 @@ static void SV_Give_f(cmd_state_t *cmd)
 		PRVM_serveredictfloat(host_client->edict, armorvalue) = v;
 
 		// Remove whichever armour item the player currently has
-		if (gamemode == GAME_ROGUE)	{
+		if (gamemode == GAME_ROGUE)
 			player_items &= ~(RIT_ARMOR1 | RIT_ARMOR2 | RIT_ARMOR3);
-		}
-		else {
+		else
 			player_items &= ~(IT_ARMOR1 | IT_ARMOR2 | IT_ARMOR3);
-		}
 
-		if (v > 150) {
+		if (v > 150)
+		{
 			// Give red armour
 			PRVM_serveredictfloat(host_client->edict, armortype) = 0.8;
-			if (gamemode == GAME_ROGUE)	{
+			if (gamemode == GAME_ROGUE)
 				player_items |= RIT_ARMOR3;
-			}
-			else {
+			else
 				player_items |= IT_ARMOR3;
-			}
-		} else if (v > 100) {
+		}
+		else if (v > 100)
+		{
 			// Give yellow armour
 			PRVM_serveredictfloat(host_client->edict, armortype) = 0.6;
-			if (gamemode == GAME_ROGUE)	{
+			if (gamemode == GAME_ROGUE)
 				player_items |= RIT_ARMOR2;
-			}
-			else {
+			else
 				player_items |= IT_ARMOR2;
-			}
-		} else if (v >= 0) {
+		}
+		else if (v >= 0)
+		{
 			// Give green armour
 			PRVM_serveredictfloat(host_client->edict, armortype) = 0.3;
-			if (gamemode == GAME_ROGUE)	{
+			if (gamemode == GAME_ROGUE)
 				player_items |= RIT_ARMOR1;
-			}
-			else {
+			else
 				player_items |= IT_ARMOR1;
-			}
 		}
 
 		PRVM_serveredictfloat(host_client->edict, items) = player_items;
