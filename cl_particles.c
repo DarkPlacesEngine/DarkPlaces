@@ -694,8 +694,8 @@ particle_t *CL_NewParticle(
 	float stainsize,
 	float angle,
 	float spin,
-	float tint[4]
-) {
+	float tint[4])
+{
 	int l1, l2, r, g, b;
 	particle_t *part;
 	vec3_t v;
@@ -879,8 +879,8 @@ particle_t *CL_NewQuakeParticle(
 	const float liquid_friction,
 	const float origin_jitter,
 	const float velocity_jitter,
-	const float lifetime
-) {
+	const float lifetime)
+{
 	return CL_NewParticle(
 		origin,
 		pt_alphastatic,      // type
@@ -1018,18 +1018,20 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 
 	VectorLerp(originmins, 0.5, originmaxs, center);
 	Matrix4x4_CreateTranslate(&lightmatrix, center[0], center[1], center[2]);
-	if (effectnameindex == EFFECT_SVC_PARTICLE) {
-		if (cl_particles.integer) {
+	if (effectnameindex == EFFECT_SVC_PARTICLE)
+	{
+		if (cl_particles.integer)
+		{
 			// bloodhack checks if this effect's color matches regular or lightning blood and if so spawns a blood effect instead
-			if (count == 1024) {
+			if (count == 1024)
 				CL_NewParticlesFromEffectinfo(EFFECT_TE_EXPLOSION, 1, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
-			}
-			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225)) {
+			else if (cl_particles_blood_bloodhack.integer && !cl_particles_quake.integer && (palettecolor == 73 || palettecolor == 225))
 				CL_NewParticlesFromEffectinfo(EFFECT_TE_BLOOD, count / 2.0f, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 0, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
-			}
-			else {
+			else
+			{
 				count *= cl_particles_quality.value;
-				for (;count > 0;count--) {
+				for (;count > 0;count--)
+				{
 					int k = particlepalette[(palettecolor & ~7) + (rand()&7)];
 					CL_NewQuakeParticle(
 						center,                                      // origin
@@ -1142,9 +1144,8 @@ static void CL_ParticleEffect_Fallback(int effectnameindex, float count, const v
 	{
 		if (!cl_particles_blood.integer)
 			return;
-		if (cl_particles_quake.integer) {
+		if (cl_particles_quake.integer)
 			CL_NewParticlesFromEffectinfo(EFFECT_SVC_PARTICLE, 2*count, originmins, originmaxs, velocitymins, velocitymaxs, NULL, 73, spawndlight, spawnparticles, NULL, NULL, 1, wanttrail);
-		}
 		else
 		{
 			static double bloodaccumulator = 0;
@@ -1932,12 +1933,15 @@ void CL_ParticleExplosion (const vec3_t org)
 	R_Stain(org, 96, 40, 40, 40, 64, 88, 88, 88, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
-	if (cl_particles_quake.integer) {
-		for (i = 0; i < 1024; i++) {
+	if (cl_particles_quake.integer)
+	{
+		for (i = 0; i < 1024; i++)
+		{
 			int color;
 			int r = rand()&3;
 
-			if (i & 1) {
+			if (i & 1)
+			{
 				color = particlepalette[ramp1[r]];
 
 				particle = CL_NewQuakeParticle(
@@ -3089,7 +3093,8 @@ void R_DrawParticles (void)
 					case pt_explode:
 						// Progress the particle colour up the ramp
 						p->time2 += pt_explode_frame_interval;
-						if (p->time2 >= 8) {
+						if (p->time2 >= 8)
+						{
 							p->die = -1;
 						}
 						else {
@@ -3103,7 +3108,8 @@ void R_DrawParticles (void)
 					case pt_explode2:
 						// Progress the particle colour up the ramp
 						p->time2 += pt_explode2_frame_interval;
-						if (p->time2 >= 8) {
+						if (p->time2 >= 8)
+						{
 							p->die = -1;
 						}
 						else {
