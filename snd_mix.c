@@ -323,32 +323,24 @@ Muffles the intensity of sounds when the player is underwater
 
 static struct
 {
-	float	intensity;
-	float	alpha;
-	float	accum[SND_LISTENERS];
+	float intensity;
+	float alpha;
+	float accum[SND_LISTENERS];
 }
 underwater = {0.f, 1.f, {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}};
 
 void S_SetUnderwaterIntensity(void)
 {
-	float host_frametime = cl.realframetime;
-	float target = cl.view_underwater ? 1.f : 0.f;
-
-	if (snd_waterfx.value < 0.f)
-		target *= 0.f;
-	else if (snd_waterfx.value > 2.f)
-		target *= 2.f;
-	else
-		target *= snd_waterfx.value;
+	float target = cl.view_underwater ? bound(0.f, snd_waterfx.value, 2.f) : 0.f;
 
 	if (underwater.intensity < target)
 	{
-		underwater.intensity += host_frametime * 4.f;
+		underwater.intensity += cl.realframetime * 4.f;
 		underwater.intensity = min(underwater.intensity, target);
 	}
 	else if (underwater.intensity > target)
 	{
-		underwater.intensity -= host_frametime * 4.f;
+		underwater.intensity -= cl.realframetime * 4.f;
 		underwater.intensity = max(underwater.intensity, target);
 	}
 

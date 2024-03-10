@@ -120,7 +120,6 @@ static const speakerlayout_t snd_speakerlayouts[] =
 	}
 };
 
-void S_SetUnderwaterIntensity(void);
 
 // =======================================================================
 // Internal sound data & structures
@@ -184,7 +183,7 @@ cvar_t snd_spatialization_prologic_frontangle = {CF_CLIENT | CF_ARCHIVE, "snd_sp
 cvar_t snd_spatialization_occlusion = {CF_CLIENT | CF_ARCHIVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world; 1 enables PVS method, 2 enables LineOfSight method, 3 enables both"};
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
-cvar_t snd_waterfx = {CF_CLIENT | CF_ARCHIVE, "snd_waterfx", "1", "underwater sound filter"};
+cvar_t snd_waterfx = {CF_CLIENT | CF_ARCHIVE, "snd_waterfx", "1", "underwater sound filter strength"};
 cvar_t _snd_mixahead = {CF_CLIENT | CF_ARCHIVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
 cvar_t snd_streaming = {CF_CLIENT | CF_ARCHIVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
 cvar_t snd_streaming_length = {CF_CLIENT | CF_ARCHIVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
