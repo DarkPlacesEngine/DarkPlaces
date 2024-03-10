@@ -125,6 +125,7 @@ extern snd_ringbuffer_t *snd_renderbuffer;
 extern qbool snd_threaded; // enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
 extern qbool snd_usethreadedmixing; // if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
 
+extern struct cvar_s snd_waterfx;
 extern struct cvar_s _snd_mixahead;
 extern struct cvar_s snd_swapstereo;
 extern struct cvar_s snd_streaming;
@@ -151,6 +152,8 @@ extern qbool simsound;
 // ====================================================================
 //         Architecture-independent functions
 // ====================================================================
+
+void S_SetUnderwaterIntensity(void);
 
 void S_MixToBuffer(void *stream, unsigned int frames);
 
