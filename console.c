@@ -2161,7 +2161,7 @@ qbool GetMapList (const char *s, char *completedname, int completednamebufferlen
 			if (!memcmp(buf, "IBSP", 4))
 			{
 				p = LittleLong(((int *)buf)[1]);
-				if (p == Q3BSPVERSION)
+				if (p == Q3BSPVERSION || p == Q3BSPVERSION_LIVE || p == Q3BSPVERSION_IG)
 				{
 					q3dheader_t *header = (q3dheader_t *)buf;
 					lumpofs = LittleLong(header->lumps[Q3LUMP_ENTITIES].fileofs);
