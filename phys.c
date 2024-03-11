@@ -10,7 +10,7 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 {
 	int bump, pass;
 	trace_t stucktrace;
-	vec3_t stuckorigin;
+	vec3_t testorigin, targetorigin;
 	vec3_t stuckmins, stuckmaxs;
 	vec_t separation;
 	model_t *worldmodel;
@@ -46,13 +46,13 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 	// second pass we try to get it out of world only (can't win them all)
 	for (pass = 0;pass < 2;pass++)
 	{
-		VectorCopy(PRVM_serveredictvector(ent, origin), stuckorigin);
+		VectorCopy(PRVM_serveredictvector(ent, origin), testorigin);
 		for (bump = 0;bump < 10;bump++)
 		{
 			if (prog == SVVM_prog) // TODO: can we refactor to use a shared TraceBox or at least a func ptr for these cases?
-				stucktrace = SV_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
+				stucktrace = SV_TraceBox(testorigin, stuckmins, stuckmaxs, testorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
 			else
-				stucktrace = CL_TraceBox(stuckorigin, stuckmins, stuckmaxs, stuckorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, pass ? false : true, false, NULL, false);
+				stucktrace = CL_TraceBox(testorigin, stuckmins, stuckmaxs, testorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, pass ? false : true, false, NULL, false);
 
 			// Separation compared here to ensure a good location will be recognised reliably.
 			if (-stucktrace.startdepth <= separation
@@ -60,11 +60,20 @@ int PHYS_NudgeOutOfSolid(prvm_prog_t *prog, prvm_edict_t *ent)
 			|| (pass && !stucktrace.worldstartsolid))
 			{
 				// found a good location, use it
-				VectorCopy(stuckorigin, PRVM_serveredictvector(ent, origin));
+				VectorCopy(testorigin, PRVM_serveredictvector(ent, origin));
 				return bump || pass ? 1 : -1; // -1 means it wasn't stuck
 			}
 
-			VectorMA(stuckorigin, -stucktrace.startdepth, stucktrace.startdepthnormal, stuckorigin);
+			VectorMA(testorigin, -stucktrace.startdepth, stucktrace.startdepthnormal, targetorigin);
+			// Trace to targetorigin so we don't set it out of the world in complex cases.
+			if (prog == SVVM_prog)
+				stucktrace = SV_TraceBox(testorigin, stuckmins, stuckmaxs, targetorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
+			else
+				stucktrace = CL_TraceBox(testorigin, stuckmins, stuckmaxs, targetorigin, pass ? MOVE_WORLDONLY : MOVE_NOMONSTERS, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value, pass ? false : true, false, NULL, false);
+			if (stucktrace.fraction)
+				VectorCopy(stucktrace.endpos, testorigin);
+			else
+				break; // Can't move it so no point doing more iterations on this pass.
 		}
 	}
 	return 0;
