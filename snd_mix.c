@@ -344,7 +344,7 @@ void S_SetUnderwaterIntensity(void)
 		underwater.intensity = max(underwater.intensity, target);
 	}
 
-	underwater.alpha = exp(-underwater.intensity * log(12.f));
+	underwater.alpha = underwater.intensity ? exp(-underwater.intensity * log(12.f)) : 1.f;
 }
 
 static void S_UnderwaterFilter(int endtime)
