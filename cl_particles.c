@@ -280,7 +280,7 @@ cvar_t cl_particles = {CF_CLIENT | CF_ARCHIVE, "cl_particles", "1", "enables par
 cvar_t cl_particles_quality = {CF_CLIENT | CF_ARCHIVE, "cl_particles_quality", "1", "multiplies number of particles"};
 cvar_t cl_particles_alpha = {CF_CLIENT | CF_ARCHIVE, "cl_particles_alpha", "1", "multiplies opacity of particles"};
 cvar_t cl_particles_size = {CF_CLIENT | CF_ARCHIVE, "cl_particles_size", "1", "multiplies particle size"};
-cvar_t cl_particles_quake = {CF_CLIENT | CF_ARCHIVE, "cl_particles_quake", "0", "makes particle effects look mostly like the ones in Quake"};
+cvar_t cl_particles_quake = {CF_CLIENT | CF_ARCHIVE, "cl_particles_quake", "0", "0: Fancy particles; 1: Disc particles; 2: Square particles"};
 cvar_t cl_particles_blood = {CF_CLIENT | CF_ARCHIVE, "cl_particles_blood", "1", "enables blood effects"};
 cvar_t cl_particles_blood_alpha = {CF_CLIENT | CF_ARCHIVE, "cl_particles_blood_alpha", "1", "opacity of blood, does not affect decals"};
 cvar_t cl_particles_blood_decal_alpha = {CF_CLIENT | CF_ARCHIVE, "cl_particles_blood_decal_alpha", "1", "opacity of blood decal"};
@@ -881,12 +881,20 @@ particle_t *CL_NewQuakeParticle(
 	const float velocity_jitter,
 	const float lifetime)
 {
+	int texture;
+
+	// Set the particle texture based on the value of cl_particles_quake; defaulting to the GLQuake disc
+	if (cl_particles_quake.integer == 2)
+		texture = tex_square;
+	else
+		texture = tex_particle;
+
 	return CL_NewParticle(
 		origin,
 		pt_alphastatic,      // type
 		color_1,
 		color_2,
-		tex_square,          // texture, a simple square
+		texture,
 		0.8f,                // size
 		0,                   // size increase
 		255,                 // alpha
