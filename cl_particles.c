@@ -849,7 +849,7 @@ particle_t *CL_NewParticle(
 
 
 /**
- * @brief      Creates a simple square particle similar to DOS Quake
+ * @brief      Creates a simple particle, a square like Quake, or a disc like GLQuake
  *
  * @param[in]  origin                                                 ?
  * @param[in]  color_1,color_2                                        Minimum and maximum range of color, randomly interpolated with pcolor2 to decide particle color
