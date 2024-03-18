@@ -1418,7 +1418,8 @@ void R_GLSL_Restart_f(cmd_state_t *cmd)
 
 static void R_GLSL_DumpShader_f(cmd_state_t *cmd)
 {
-	unsigned i, language, mode, dupe;
+	unsigned i;
+	int language, mode, dupe;
 	char *text;
 	shadermodeinfo_t *modeinfo;
 	qfile_t *file;
