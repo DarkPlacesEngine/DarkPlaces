@@ -3,7 +3,7 @@ let currentcmd = [0,0,0]
 let currentfile = "";
 const sleep = ms => new Promise(r => setTimeout(r,ms));
 Module['print'] = function(text){console.log(text);}
-Module['preRun'] = function()
+Module['preRun'].push(function()
 {
     
     function stdin(){return 10};
@@ -13,13 +13,16 @@ Module['preRun'] = function()
     FS.mount(IDBFS,{},"/home/web_user/");
     FS.symlink("/home/web_user","/save");
     
-}
+})
 Module['noInitialRun'] = true
+//Event listener is required as typical web browsers won't let you load IndexedDB before the user
+//interacts with the page. Instead, it would just crash.
 document.addEventListener('click', (ev) => {
     console.log("event is captured only once.");
-    args = ["-basedir","/home/web_user"]
+    args = ["-basedir"]
     if(window.location.href.indexOf("file://") > -1)
     {
+        args.push("/home/web_user")
         try 
         {
             args = args.concat(prompt("Enter command line arguments").split(" "))
@@ -32,6 +35,7 @@ document.addEventListener('click', (ev) => {
 
     } else
     {
+        args.push("/game")
         parms = new URLSearchParams(window.location.search);
         try 
         {

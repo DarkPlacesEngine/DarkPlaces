@@ -3,6 +3,9 @@ obj/
 *.o
 *.a
 *.html
+preload/
+files.js
+*.data
 gmp.h
 libd0*
 d0*

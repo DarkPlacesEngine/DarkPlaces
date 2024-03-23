@@ -64,26 +64,6 @@ static io_connect_t IN_GetIOHandle(void)
 #endif
 
 //WASM-specific, meant to keep DP's width equal to canvas width.
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-
-EM_JS(bool,setsizes,(),
-{
-	if(canvas.width != document.documentElement.clientWidth && canvas.height != document.documentElement.clientHeight && document.fullscreen == false){
-	return true
-	}
-	return false
-});
-
-EM_JS(char*,getviewportsize,(int x),{
-	if(x == 1)
-	{
-		return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
-	} else{
-		return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
-	}
-});
-#endif
 
 // Tell startup code that we have a client
 int cl_available = true;
@@ -1096,15 +1076,6 @@ void Sys_SDL_HandleEvents(void)
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
-
-	#ifdef __EMSCRIPTEN__
-		if(setsizes())
-		{
-			Cbuf_AddText(cmd_local, getviewportsize(1));
-			Cbuf_AddText(cmd_local, getviewportsize(2));
-			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");
-		}
-	#endif
 
 	while( SDL_PollEvent( &event ) )
 		loop_start:
