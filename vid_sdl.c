@@ -67,21 +67,21 @@ static io_connect_t IN_GetIOHandle(void)
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
-EM_JS(bool,setsizes,(),
+EM_JS(bool, em_CanSetSize, (),
 {
-	if(canvas.width != document.documentElement.clientWidth && canvas.height != document.documentElement.clientHeight && document.fullscreen == false){
-	return true
-	}
-	return false
+	return (
+		canvas.width != document.documentElement.clientWidth &&
+		canvas.height != document.documentElement.clientHeight &&
+		document.fullscreen == false
+	);
 });
 
-EM_JS(char*,getviewportsize,(int x),{
-	if(x == 1)
-	{
-		return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
-	} else{
-		return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
-	}
+EM_JS(char*, em_GetViewportWidth, (), {
+	return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
+});
+
+EM_JS(char*, em_GetViewportHeight, (), {
+	return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
 });
 #endif
 
@@ -1098,10 +1098,10 @@ void Sys_SDL_HandleEvents(void)
 	VID_EnableJoystick(true);
 
 	#ifdef __EMSCRIPTEN__
-		if(setsizes())
+		if(em_CanSetSize())
 		{
-			Cbuf_AddText(cmd_local, getviewportsize(1));
-			Cbuf_AddText(cmd_local, getviewportsize(2));
+			Cbuf_AddText(cmd_local, em_GetViewportWidth());
+			Cbuf_AddText(cmd_local, em_GetViewportHeight());
 			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");
 		}
 	#endif
@@ -1240,8 +1240,8 @@ void Sys_SDL_HandleEvents(void)
 					case SDL_WINDOWEVENT_RESIZED: // external events only
 						if(vid_resizable.integer < 2)
 						{
-							//vid.width = event.window.data1;
-							//vid.height = event.window.data2;
+							// vid.width = event.window.data1;
+							// vid.height = event.window.data2;
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
 							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
 #ifdef SDL_R_RESTART

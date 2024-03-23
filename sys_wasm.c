@@ -16,28 +16,29 @@
 // General routines
 // =======================================================================
 
-EM_JS(char*,getclipboard,(void),{
+EM_JS(char*, getclipboard, (void), {
 	//Thank you again, stack overflow
 	return stringToNewUTF8(navigator.clipboard.readText());
-})
+});
 
-EM_JS(bool,syncFS,(bool x),{
-	FS.syncfs(x,function(e)
-	{
+EM_JS(bool, syncFS, (bool x), {
+	FS.syncfs(x, function(e) {
 		if(e)
 		{
-			alert("FileSystem Save Error: "+e);
+			alert("FileSystem Save Error: " + e);
 			return false;
-		} else
+		}
+		else
 		{
 			console.log("Filesystem Saved!");
 			return true;
 		}
-	})});
+	});
+});
 
-EM_JS(char*,rm,(char* x),{
+EM_JS(char*, rm, (char* x), {
 	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
-	if(FS.isFile(mode))
+	if (FS.isFile(mode))
 	{
 		FS.unlink(UTF8ToString(x));
 		return stringToNewUTF8("File removed"); 
@@ -46,72 +47,98 @@ EM_JS(char*,rm,(char* x),{
 	{
 		return stringToNewUTF8(UTF8ToString(x)+" is not a File.");
 	}
-	});
+});
 
-EM_JS(char*,rmdir,(char* x),{
+EM_JS(char*, rmdir, (char* x), {
 	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
-	if(FS.isDir(mode)){
-		try{FS.rmdir(UTF8ToString(x));} catch (error) {return stringToNewUTF8("Unable to remove directory. Is it not empty?");}
-
+	if (FS.isDir(mode))
+	{
+		try
+		{
+			FS.rmdir(UTF8ToString(x));
+		}
+		catch (error)
+		{
+			return stringToNewUTF8("Unable to remove directory. Is it not empty?");
+		}
 		return stringToNewUTF8("Directory removed"); 
 	}
-	else {
+	else
+	{
 		return stringToNewUTF8(UTF8ToString(x)+" is not a directory.");
 	}
-	});
+});
 
-EM_JS(char*,mkd,(char* x),{
-
-	try{FS.mkdir(UTF8ToString(x));} catch (error) {return stringToNewUTF8("Unable to create directory. Does it already exist?");}
+EM_JS(char*, mkd, (char* x), {
+	try
+	{
+		FS.mkdir(UTF8ToString(x));
+	}
+	catch (error)
+	{
+		return stringToNewUTF8("Unable to create directory. Does it already exist?");
+	}
 	return stringToNewUTF8(UTF8ToString(x)+" directory was created.");
 });
 
-EM_JS(char*,move,(char* x,char* y),{
-	try{FS.rename(UTF8ToString(x),UTF8ToString(y))}catch(error){return stringToNewUTF8("unable to move.")}
+EM_JS(char*, move, (char* x, char* y), {
+	try
+	{
+		FS.rename(UTF8ToString(x),UTF8ToString(y))
+	}
+	catch (error)
+	{
+		return stringToNewUTF8("unable to move.")
+	}
 	return stringToNewUTF8("File Moved")
 });
 
-EM_JS(char*,upload,(char* todirectory),{
-	if(UTF8ToString(todirectory).slice(-1) != "/")
+EM_JS(char*, upload, (char* todirectory), {
+	if (UTF8ToString(todirectory).slice(-1) != "/")
 	{
 		currentname = UTF8ToString(todirectory) + "/";
 	}
-	else{
+	else
+	{
 		currentname = UTF8ToString(todirectory);
 	}
 
 	file_selector.click();
 	return stringToNewUTF8("Upload started");
-
 });
 
-EM_JS(char*, listfiles,(char* directory),{ 
-if(UTF8ToString(directory) == "")
-{
-	console.log("listing cwd"); 
-	return stringToNewUTF8(FS.readdir(FS.cwd()).toString())
-}  
-try{
-return  stringToNewUTF8(FS.readdir(UTF8ToString(directory)).toString()); 
-} catch(error)
-{
-	return stringToNewUTF8("directory not found");
-}
+EM_JS(char*, listfiles, (char* directory), {
+	if(UTF8ToString(directory) == "")
+	{
+		console.log("listing cwd");
+		return stringToNewUTF8(FS.readdir(FS.cwd()).toString());
+	}
+
+	try
+	{
+		return stringToNewUTF8(FS.readdir(UTF8ToString(directory)).toString());
+	}
+	catch (error)
+	{
+		return stringToNewUTF8("directory not found");
+	}
 });
 
 void listfiles_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 
 		Con_Printf(listfiles(""));
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(listfiles(Cmd_Argv(cmd,1)) );
 		Con_Printf("\n");
 	}
 }
+
 void savefs_f(cmd_state_t *cmd)
 {
 	Con_Printf("Saving Files\n");
@@ -120,12 +147,13 @@ void savefs_f(cmd_state_t *cmd)
 
 void upload_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf(upload("/save"));
+		Con_Printf(upload("/save"));  // FIXME: Probably shouldn't be hardcoded like this. Should also just be the basedir so that uploading is easier
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(upload(Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
@@ -133,12 +161,13 @@ void upload_f(cmd_state_t *cmd)
 
 void rm_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Printf("No file to remove");
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(rm(Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
@@ -146,12 +175,13 @@ void rm_f(cmd_state_t *cmd)
 
 void rmdir_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Printf("No directory to remove");
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(rmdir(Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
@@ -159,12 +189,13 @@ void rmdir_f(cmd_state_t *cmd)
 
 void mkdir_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 2)
+	if (Cmd_Argc(cmd) != 2)
 	{
 		Con_Printf("No directory to create");
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(mkd(Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
@@ -172,12 +203,13 @@ void mkdir_f(cmd_state_t *cmd)
 
 void mv_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 3)
+	if (Cmd_Argc(cmd) != 3)
 	{
 		Con_Printf("Nothing to move");
 		Con_Printf("\n");
 	}
-	else{
+	else
+	{
 		Con_Printf(move(Cmd_Argv(cmd,1),Cmd_Argv(cmd,2)));
 		Con_Printf("\n");
 	}
@@ -185,22 +217,25 @@ void mv_f(cmd_state_t *cmd)
 
 void wss_f(cmd_state_t *cmd)
 {
-	if(Cmd_Argc(cmd) != 3)
+	if (Cmd_Argc(cmd) != 3)
 	{
 		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)");
 		Con_Printf("\n");
 	}
-	else{
-
-		if(strcmp(Cmd_Argv(cmd,2),"binary") == 0 || strcmp(Cmd_Argv(cmd,2),"text") == 0){
-
+	else
+	{
+		if(strcmp(Cmd_Argv(cmd,2),"binary") == 0 || strcmp(Cmd_Argv(cmd,2),"text") == 0)
+		{
 			Con_Printf("Set Websocket URL to %s and subprotocol to %s.", Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
-		} else{
+		}
+		else
+		{
 			Con_Printf("subprotocol must be either binary or text");
 		}
 		Con_Printf("\n");
 	}
 }
+
 void Sys_SDL_Shutdown(void)
 {
 	syncFS(false);
@@ -257,11 +292,12 @@ void Sys_Register_Commands(void)
 }
 
 qbool sys_supportsdlgetticks = true;
-unsigned int Sys_SDL_GetTicks (void)
+unsigned int Sys_SDL_GetTicks(void)
 {
 	return SDL_GetTicks();
 }
-void Sys_SDL_Delay (unsigned int milliseconds)
+
+void Sys_SDL_Delay(unsigned int milliseconds)
 {
 	SDL_Delay(milliseconds);
 }

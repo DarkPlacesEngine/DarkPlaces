@@ -228,7 +228,7 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/prejs.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
+# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/pre.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
 # LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sUSE_LIBJPEG=1 \
 #                                 -sUSE_SDL=2 \
 #                                 -sUSE_ZLIB=1 \
@@ -241,7 +241,7 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 #                                 -sMAX_WEBGL_VERSION=2 \
 #                                 -sUSE_SDL=2 \
 #                                 -sALLOW_MEMORY_GROWTH \
-#                                 --pre-js ../../../Darkplaces-Emscripten/prejs.js \
+#                                 --pre-js ../../../Darkplaces-Emscripten/pre.js \
 #                                 -lidbfs.js \
 #                                 -sEXPORTED_RUNTIME_METHODS='callMain' \
 #                                 --shell-file=../../../Darkplaces-Emscripten/shell.htm
@@ -257,7 +257,7 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
                                    -sMIN_WEBGL_VERSION=2 \
                                    -sMAX_WEBGL_VERSION=2 \
                                    -sALLOW_MEMORY_GROWTH \
-                                   --pre-js ../../../Darkplaces-Emscripten/prejs.js \
+                                   --pre-js ../../../Darkplaces-Emscripten/pre.js \
                                    -lidbfs.js \
                                    -sEXPORTED_RUNTIME_METHODS='callMain' \
                                    --shell-file=../../../Darkplaces-Emscripten/shell.htm
