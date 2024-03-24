@@ -259,7 +259,8 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
                                    -sALLOW_MEMORY_GROWTH \
                                    -lidbfs.js \
                                    --pre-js ../../../Darkplaces-Emscripten/pre.js \
-                                   -sEXPORTED_RUNTIME_METHODS='callMain'
+                                   -sEXPORTED_RUNTIME_METHODS='callMain' \
+                                   --shell-file=../../../Darkplaces-Emscripten/shell.htm
 
 
 ##### Mac OS X specific variables #####
