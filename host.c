@@ -678,22 +678,24 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 
 	return time;
 }
+
 void Host_Loop(void){
 	// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-		}
+	if (setjmp(host.abortframe))
+	{
+		host.state = host_active; // In case we were loading
+	}
 
-		host.dirtytime = Sys_DirtyTime();
-		host.realtime += Htime = Host_UpdateTime(host.dirtytime, oldtime);
-		oldtime = host.dirtytime;
+	host.dirtytime = Sys_DirtyTime();
+	host.realtime += Htime = Host_UpdateTime(host.dirtytime, oldtime);
+	oldtime = host.dirtytime;
 
-		sleeptime = Host_Frame(Htime);
-		++host.framecount;
-		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Sys_Sleep(sleeptime);
+	sleeptime = Host_Frame(Htime);
+	++host.framecount;
+	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+	host.sleeptime = Sys_Sleep(sleeptime);
 }
+
 void Host_Main(void)
 {
 	double time, oldtime, sleeptime;

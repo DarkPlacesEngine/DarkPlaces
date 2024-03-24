@@ -250,8 +250,8 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
                                    --use-port=libjpeg \
                                    --use-port=zlib \
                                    -DUSE_GLES2 \
-                                   -sINITIAL_MEMORY=100MB \
-                                   -sMAXIMUM_MEMORY=1GB \
+                                   -sINITIAL_MEMORY=128mb \
+                                   -sMAXIMUM_MEMORY=1gb \
                                    -sSINGLE_FILE \
                                    -sFULL_ES3 \
                                    -sMIN_WEBGL_VERSION=2 \

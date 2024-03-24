@@ -21,41 +21,38 @@ EM_JS(char*, getclipboard, (void), {
 	return stringToNewUTF8(navigator.clipboard.readText());
 });
 
-EM_JS(bool, syncFS, (bool x), {
-	FS.syncfs(x, function(e) {
-		if(e)
+EM_JS(bool, syncFS, (bool populate), {
+	FS.syncfs(populate, function(err) {
+		if(err)
 		{
-			alert("FileSystem Save Error: " + e);
+			alert("FileSystem Save Error: " + err);
 			return false;
 		}
-		else
-		{
-			console.log("Filesystem Saved!");
-			return true;
-		}
+
+		console.log("Filesystem Saved!");
+		return true;
 	});
 });
 
-EM_JS(char*, rm, (char* x), {
-	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
+EM_JS(char*, rm, (char* path), {
+	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
+
 	if (FS.isFile(mode))
 	{
-		FS.unlink(UTF8ToString(x));
+		FS.unlink(UTF8ToString(path));
 		return stringToNewUTF8("File removed"); 
 	}
-	else 
-	{
-		return stringToNewUTF8(UTF8ToString(x)+" is not a File.");
-	}
+
+	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
 });
 
-EM_JS(char*, rmdir, (char* x), {
-	const mode = FS.lookupPath(UTF8ToString(x)).node.mode;
+EM_JS(char*, rmdir, (char* path), {
+	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 	if (FS.isDir(mode))
 	{
 		try
 		{
-			FS.rmdir(UTF8ToString(x));
+			FS.rmdir(UTF8ToString(path));
 		}
 		catch (error)
 		{
@@ -63,34 +60,32 @@ EM_JS(char*, rmdir, (char* x), {
 		}
 		return stringToNewUTF8("Directory removed"); 
 	}
-	else
-	{
-		return stringToNewUTF8(UTF8ToString(x)+" is not a directory.");
-	}
+
+	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
 });
 
-EM_JS(char*, mkd, (char* x), {
+EM_JS(char*, mkd, (char* path), {
 	try
 	{
-		FS.mkdir(UTF8ToString(x));
+		FS.mkdir(UTF8ToString(path));
 	}
 	catch (error)
 	{
 		return stringToNewUTF8("Unable to create directory. Does it already exist?");
 	}
-	return stringToNewUTF8(UTF8ToString(x)+" directory was created.");
+	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
 });
 
-EM_JS(char*, move, (char* x, char* y), {
+EM_JS(char*, move, (char* oldpath, char* newpath), {
 	try
 	{
-		FS.rename(UTF8ToString(x),UTF8ToString(y))
+		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
 	}
 	catch (error)
 	{
-		return stringToNewUTF8("unable to move.")
+		return stringToNewUTF8("unable to move.");
 	}
-	return stringToNewUTF8("File Moved")
+	return stringToNewUTF8("File Moved");
 });
 
 EM_JS(char*, upload, (char* todirectory), {

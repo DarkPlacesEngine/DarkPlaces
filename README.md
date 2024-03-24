@@ -97,14 +97,30 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 May work but not recommended due to lack of support for C standards, and lack of maintenance.  
 Instructions TODO.
 
-### Webassembly (Emscripten)
+### Web-Assembly (Emscripten)
+
 Note that this requires a linux device or WSL.
-Install emscripten (instructions at https://emscripten.org/docs/getting_started/downloads.html)
-enter the engine's root directory
-enter the Darkplaces-Emscripten directory
-run `./builddeps.sh`
-leave the Darkplaces-Emscripten directory
-run `make emscripten-release`
+
+1. Install the [Emscripten SDK](https://emscripten.org/docs/getting_started/downloads.html#installation-instructions-using-the-emsdk-recommended)
+1. After activating and sourcing emsdk, compile DarkPlaces for wasm using;
+   ```shell
+   make emscripten-release
+   ```
+1. Open the darkplaces-wasm.html file in your web browser
+1. Open the game console
+1. Create an id1 mod directory
+   ```
+   em_mkdir /quake/id1
+   ```
+1. Upload the Quake `pak0.pak` and `pak1.pak` files:
+   ```
+   em_upload /quake/id1
+   ```
+1. Save the files to the browser
+   ```
+   em_save
+   ```
+1. Reload the web page
 
 ## Contributing
 
