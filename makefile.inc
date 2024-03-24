@@ -256,7 +256,9 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
                                    -sFULL_ES3 \
                                    -sMIN_WEBGL_VERSION=2 \
                                    -sMAX_WEBGL_VERSION=2 \
-                                   -sALLOW_MEMORY_GROWTH \
+                                   -sALLOW_MEMORY_GROWTH=1 \
+                                   -sASSERTIONS=2 \
+                                   -sTOTAL_STACK=32mb \
                                    -lidbfs.js \
                                    --pre-js ../../../Darkplaces-Emscripten/pre.js \
                                    -sEXPORTED_RUNTIME_METHODS='callMain' \

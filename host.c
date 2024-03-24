@@ -712,7 +712,7 @@ void Host_Main(void)
 		Host_Loop();
 	}
 	#else
-		emscripten_set_main_loop(Host_Loop,0,true);
+		emscripten_set_main_loop(Host_Loop, 0, true);
 	#endif
 
 	Host_Shutdown();
