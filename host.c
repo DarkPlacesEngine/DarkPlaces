@@ -705,7 +705,7 @@ void Host_Main(void)
 
 	// Main event loop
 	#ifndef __EMSCRIPTEN__
-	while(host.state != host_shutdown)
+	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
 		Host_Loop();
 	}

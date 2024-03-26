@@ -27,6 +27,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qdefs.h"
 #include "com_list.h"
 
+// Work around incomplete C11 support in Microsoft's stddef.h
+// This matches the Clang 14 header. Microsoft's double and long double are the same.
+#if defined(_MSC_VER)
+	typedef double max_align_t;
+#endif
+
 extern qbool mem_bigendian;
 
 // div0: heap overflow detection paranoia

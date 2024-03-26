@@ -310,6 +310,66 @@ static void S_ConvertPaintBuffer(portable_sampleframe_t *painted_ptr, void *rb_p
 }
 
 
+
+/*
+===============================================================================
+
+UNDERWATER EFFECT
+
+Muffles the intensity of sounds when the player is underwater
+
+===============================================================================
+*/
+
+static struct
+{
+	float intensity;
+	float alpha;
+	float accum[SND_LISTENERS];
+}
+underwater = {0.f, 1.f, {0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}};
+
+void S_SetUnderwaterIntensity(void)
+{
+	float target = cl.view_underwater ? bound(0.f, snd_waterfx.value, 2.f) : 0.f;
+
+	if (underwater.intensity < target)
+	{
+		underwater.intensity += cl.realframetime * 4.f;
+		underwater.intensity = min(underwater.intensity, target);
+	}
+	else if (underwater.intensity > target)
+	{
+		underwater.intensity -= cl.realframetime * 4.f;
+		underwater.intensity = max(underwater.intensity, target);
+	}
+
+	underwater.alpha = underwater.intensity ? exp(-underwater.intensity * log(12.f)) : 1.f;
+}
+
+static void S_UnderwaterFilter(int endtime)
+{
+	int i;
+	int sl;
+
+	if (!underwater.intensity)
+	{
+		if (endtime > 0)
+			for (sl = 0; sl < SND_LISTENERS; sl++)
+				underwater.accum[sl] = paintbuffer[endtime-1].sample[sl];
+		return;
+	}
+
+	for (i = 0; i < endtime; i++)
+		for (sl = 0; sl < SND_LISTENERS; sl++)
+		{
+			underwater.accum[sl] += underwater.alpha * (paintbuffer[i].sample[sl] - underwater.accum[sl]);
+			paintbuffer[i].sample[sl] = underwater.accum[sl];
+		}
+}
+
+
+
 /*
 ===============================================================================
 
@@ -579,6 +639,9 @@ void S_MixToBuffer(void *stream, unsigned int bufferframes)
 		}
 
 		S_SoftClipPaintBuffer(paintbuffer, totalmixframes, snd_renderbuffer->format.width, snd_renderbuffer->format.channels);
+
+		S_UnderwaterFilter(totalmixframes);
+
 
 #ifdef CONFIG_VIDEO_CAPTURE
 		if (!snd_usethreadedmixing)

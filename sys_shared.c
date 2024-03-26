@@ -693,7 +693,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf(CON_ERROR "Engine Error - %s\n^9%s\n", string, engineversion);
+	Con_Printf(CON_ERROR "Engine Aborted: %s\n^9%s\n", string, engineversion);
 
 	dp_strlcat(string, "\n\n", sizeof(string));
 	dp_strlcat(string, engineversion, sizeof(string));
@@ -709,14 +709,14 @@ void Sys_Error (const char *error, ...)
 		sv.active = false; // make SV_DropClient() skip the QC stuff to avoid recursive errors
 		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 			if (host_client->active)
-				SV_DropClient(false, "Server abort!"); // closes demo file
+				SV_DropClient(false, "Server aborted!"); // closes demo file
 	}
 	// don't want a dead window left blocking the OS UI or the abort dialog
 	VID_Shutdown();
 	S_StopAllSounds();
 
 	host.state = host_failed; // make Sys_HandleSignal() call _Exit()
-	Sys_SDL_Dialog("Engine Error", string);
+	Sys_SDL_Dialog("Engine Aborted", string);
 
 	fflush(stderr);
 	exit (1);
@@ -1011,7 +1011,11 @@ static void Sys_HandleCrash(int sig)
 	Sys_SDL_Dialog("Engine Crash", dialogtext);
 
 	fflush(stderr); // not async-signal-safe :(
-	_Exit(sig);
+
+	// Continue execution with default signal handling.
+	// A real crash will be re-triggered so the platform can handle it,
+	// a fake crash (kill -SEGV) will cause a graceful shutdown.
+	signal(sig, SIG_DFL);
 }
 
 static void Sys_HandleSignal(int sig)

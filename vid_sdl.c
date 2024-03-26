@@ -1486,8 +1486,12 @@ static void VID_SetVsync_c(cvar_t *var)
 
 	if (!context)
 		return;
+/*
+Can't check first: on Wayland SDL_GL_GetSwapInterval() may initially return 0 when vsync is on.
+On Xorg it returns the correct value.
 	if (SDL_GL_GetSwapInterval() == vsyncwanted)
 		return;
+*/
 
 	if (SDL_GL_SetSwapInterval(vsyncwanted) >= 0)
 		Con_DPrintf("Vsync %s\n", vsyncwanted ? "activated" : "deactivated");
