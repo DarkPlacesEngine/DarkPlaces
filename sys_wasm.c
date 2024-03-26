@@ -5,6 +5,7 @@
 #include <SDL.h>
 
 #include "darkplaces.h"
+#include "vid.h"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -205,6 +206,7 @@ void Sys_SDL_Shutdown(void)
 {
 	syncFS(false);
 	SDL_Quit();
+	emscripten_cancel_main_loop();
 }
 
 // Sys_Abort early in startup might screw with automated
@@ -232,9 +234,30 @@ char *Sys_SDL_GetClipboardData (void)
 
 	return data;
 }
-
+static EM_BOOL onwindowsizechange( int event_type, const EmscriptenUiEvent *event, void *user_data )
+{
+	
+	Cvar_SetValueQuick(&vid_width,EM_ASM_INT({return window.innerWidth}));
+	Cvar_SetValueQuick(&vid_height,EM_ASM_INT({return window.innerHeight}));
+	Cvar_SetValueQuick(&vid_borderless,0);
+	return 0;
+}
+static EM_BOOL onfullscreenchange( int event_type, const EmscriptenFullscreenChangeEvent *event, void *user_data )
+{
+	if(event->isFullscreen)
+	{
+		Cvar_SetValueQuick(&vid_fullscreen,1);
+	}
+	else
+	{
+		Cvar_SetValueQuick(&vid_fullscreen,0);
+	}
+	return 0;
+}
 void Sys_SDL_Init(void)
 {
+	emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW,0,0,onfullscreenchange);
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, 0, onwindowsizechange);
 	if (SDL_Init(0) < 0)
 		Sys_Error("SDL_Init failed: %s\n", SDL_GetError());
 

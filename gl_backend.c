@@ -11,8 +11,12 @@ cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all O
 cvar_t r_render = {CF_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_renderview = {CF_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_waterwarp = {CF_CLIENT | CF_ARCHIVE, "r_waterwarp", "1", "warp view while underwater"};
-cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
-
+//Keeping it on with my other patch makes you unable to see underwater (and screen tints are no longer translucent)
+#ifdef USE_GLES2
+	cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "0", "tints view while underwater, hurt, etc"};
+#else
+	cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
+#endif
 cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qbool v_flipped_state = false;
 
@@ -966,7 +970,10 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
-		//R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL); This breaks GLES2. 
+		//This breaks GLES2 and I don't know why.
+		#ifndef USE_GLES2
+			R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+		#endif
 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
 #ifdef USE_GLES2
 		// FIXME: separate stencil attachment on GLES
