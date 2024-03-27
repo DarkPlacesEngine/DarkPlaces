@@ -2542,7 +2542,17 @@ skinframe_t *R_SkinFrame_LoadExternal_SkinFrame(skinframe_t *skinframe, const ch
 	return skinframe;
 }
 
-skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, const unsigned char *skindata, int width, int height, int comparewidth, int compareheight, int comparecrc, qbool sRGB)
+skinframe_t *R_SkinFrame_LoadInternalBGRA(
+	const char *name,
+	int textureflags,
+	const unsigned char *skindata,
+	int width,
+	int height,
+	int comparewidth,
+	int compareheight,
+	int comparecrc,
+	qbool sRGB,
+	qbool is_q1skyload)
 {
 	int i;
 	skinframe_t *skinframe;
@@ -2554,7 +2564,15 @@ skinframe_t *R_SkinFrame_LoadInternalBGRA(const char *name, int textureflags, co
 	// if already loaded just return it, otherwise make a new skinframe
 	skinframe = R_SkinFrame_Find(name, textureflags, comparewidth, compareheight, comparecrc, true);
 	if (skinframe->base)
-		return skinframe;
+		if (is_q1skyload)
+		{
+			R_SkinFrame_PurgeSkinFrame(skinframe);
+		}
+		else
+		{
+			return skinframe;
+		}
+
 	textureflags &= ~TEXF_FORCE_RELOAD;
 
 	skinframe->stain = NULL;
@@ -2833,7 +2851,7 @@ skinframe_t *R_SkinFrame_LoadNoTexture(void)
 	if (cls.state == ca_dedicated)
 		return NULL;
 
-	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false);
+	return R_SkinFrame_LoadInternalBGRA("notexture", TEXF_FORCENEAREST, Image_GenerateNoTexture(), 16, 16, 0, 0, 0, false, false);
 }
 
 skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int textureflags, rtexture_t *tex, int width, int height, qbool sRGB)

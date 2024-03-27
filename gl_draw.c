@@ -300,7 +300,7 @@ cachepic_t *Draw_NewPic(const char *picname, int width, int height, unsigned cha
 	pic->flags |= (texflags & TEXF_FORCENEAREST) ? CACHEPICFLAG_NEAREST : 0;
 	pic->width = width;
 	pic->height = height;
-	pic->skinframe = R_SkinFrame_LoadInternalBGRA(picname, texflags | TEXF_FORCE_RELOAD, pixels_bgra, width, height, 0, 0, 0, vid.sRGB2D);
+	pic->skinframe = R_SkinFrame_LoadInternalBGRA(picname, texflags | TEXF_FORCE_RELOAD, pixels_bgra, width, height, 0, 0, 0, vid.sRGB2D, false);
 	pic->lastusedframe = draw_frame;
 	return pic;
 }

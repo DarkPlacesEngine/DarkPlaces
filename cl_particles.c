@@ -2286,7 +2286,7 @@ static void R_InitParticleTexture (void)
 		Image_WriteTGABGRA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
 #endif
 
-		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE, 0, 0, 0, false);
+		decalskinframe = R_SkinFrame_LoadInternalBGRA("particlefont", TEXF_ALPHA | TEXF_FORCELINEAR | TEXF_RGBMULTIPLYBYALPHA, particletexturedata, PARTICLEFONTSIZE, PARTICLEFONTSIZE, 0, 0, 0, false, false);
 		particlefonttexture = decalskinframe->base;
 
 		Mem_Free(particletexturedata);
