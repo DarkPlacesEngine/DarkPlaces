@@ -1565,13 +1565,14 @@ Mod_Q1BSP_LoadSplitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-static void Mod_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
+static void Mod_Q1BSP_LoadSplitSky (const char *filename, unsigned char *src, int width, int height, int bytesperpixel)
 {
 	int x, y;
 	int w = width/2;
 	int h = height;
 	unsigned int *solidpixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
 	unsigned int *alphapixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
+	char vabuf[MAX_QPATH];
 
 	// allocate a texture pool if we need it
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
@@ -1625,8 +1626,27 @@ static void Mod_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, i
 		}
 	}
 
-	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture", 0         , (unsigned char *) solidpixels, w, h, 0, 0, 0, vid.sRGB3D, true);
-	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA, (unsigned char *) alphapixels, w, h, 0, 0, 0, vid.sRGB3D, true);
+	// Load the solid and alpha parts of the sky texture as separate textures
+	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA(
+		va(vabuf, sizeof(vabuf), "%s/solid", filename),
+		0,
+		(unsigned char *) solidpixels,
+		w,
+		h,
+		0,
+		0,
+		0,
+		vid.sRGB3D);
+	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA(
+		va(vabuf, sizeof(vabuf), "%s/alpha", filename),
+		TEXF_ALPHA,
+		(unsigned char *) alphapixels,
+		w,
+		h,
+		0,
+		0,
+		0,
+		vid.sRGB3D);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
 }
@@ -1894,7 +1914,7 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 					{
 						tx->width = image_width;
 						tx->height = image_height;
-						tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true, false);
+						tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_ALPHA | TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, pixels, image_width, image_height, image_width, image_height, CRC_Block(pixels, image_width * image_height * 4), true);
 					}
 					if (freepixels)
 						Mem_Free(freepixels);
@@ -1906,20 +1926,20 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 						data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
 					if (data && image_width == image_height * 2)
 					{
-						Mod_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
+						Mod_Q1BSP_LoadSplitSky(tx->name, data, image_width, image_height, 4);
 						Mem_Free(data);
 					}
 					else if (mtdata != NULL)
-						Mod_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
+						Mod_Q1BSP_LoadSplitSky(tx->name, mtdata, mtwidth, mtheight, 1);
 				}
 				else if (mtdata) // texture included
 					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
 				// if mtdata is NULL, the "missing" texture has already been assigned to this
 				// LadyHavoc: some Tenebrae textures get replaced by black
 				if (!strncmp(tx->name, "*glassmirror", 12)) // Tenebrae
-					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false, false);
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, TEXF_MIPMAP | TEXF_ALPHA, zerotrans, 1, 1, 0, 0, 0, false);
 				else if (!strncmp(tx->name, "mirror", 6)) // Tenebrae
-					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false, false);
+					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalBGRA(tx->name, 0, zeroopaque, 1, 1, 0, 0, 0, false);
 			}
 			else
 				tx->materialshaderpass->skinframes[0] = skinframe;
