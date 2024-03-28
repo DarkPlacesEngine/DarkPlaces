@@ -1565,7 +1565,7 @@ Mod_Q1BSP_LoadSplitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-static void Mod_Q1BSP_LoadSplitSky (const char *filename, unsigned char *src, int width, int height, int bytesperpixel)
+static void Mod_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, int bytesperpixel)
 {
 	int x, y;
 	int w = width/2;
@@ -1925,11 +1925,11 @@ static void Mod_Q1BSP_LoadTextures(sizebuf_t *sb)
 						data = loadimagepixelsbgra(gamemode == GAME_TENEBRAE ? tx->name : va(vabuf, sizeof(vabuf), "textures/%s", tx->name), false, false, false, NULL);
 					if (data && image_width == image_height * 2)
 					{
-						Mod_Q1BSP_LoadSplitSky(tx->name, data, image_width, image_height, 4);
+						Mod_Q1BSP_LoadSplitSky(data, image_width, image_height, 4);
 						Mem_Free(data);
 					}
 					else if (mtdata != NULL)
-						Mod_Q1BSP_LoadSplitSky(tx->name, mtdata, mtwidth, mtheight, 1);
+						Mod_Q1BSP_LoadSplitSky(mtdata, mtwidth, mtheight, 1);
 				}
 				else if (mtdata) // texture included
 					tx->materialshaderpass->skinframes[0] = R_SkinFrame_LoadInternalQuake(tx->name, TEXF_MIPMAP | TEXF_ISWORLD | TEXF_PICMIP, false, r_fullbrights.integer, mtdata, tx->width, tx->height);
