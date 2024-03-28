@@ -1572,7 +1572,6 @@ static void Mod_Q1BSP_LoadSplitSky (const char *filename, unsigned char *src, in
 	int h = height;
 	unsigned int *solidpixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
 	unsigned int *alphapixels = (unsigned int *)Mem_Alloc(tempmempool, w*h*sizeof(unsigned char[4]));
-	char vabuf[MAX_QPATH];
 
 	// allocate a texture pool if we need it
 	if (loadmodel->texturepool == NULL && cls.state != ca_dedicated)
@@ -1628,24 +1627,24 @@ static void Mod_Q1BSP_LoadSplitSky (const char *filename, unsigned char *src, in
 
 	// Load the solid and alpha parts of the sky texture as separate textures
 	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA(
-		va(vabuf, sizeof(vabuf), "%s/solid", filename),
+		"sky_solidtexture",
 		0,
 		(unsigned char *) solidpixels,
 		w,
 		h,
-		0,
-		0,
-		0,
+		w,
+		h,
+		CRC_Block((unsigned char *) solidpixels, w*h*4),
 		vid.sRGB3D);
 	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA(
-		va(vabuf, sizeof(vabuf), "%s/alpha", filename),
+		"sky_alphatexture",
 		TEXF_ALPHA,
 		(unsigned char *) alphapixels,
 		w,
 		h,
-		0,
-		0,
-		0,
+		w,
+		h,
+		CRC_Block((unsigned char *) alphapixels, w*h*4),
 		vid.sRGB3D);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
