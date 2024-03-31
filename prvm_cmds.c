@@ -3428,7 +3428,7 @@ void VM_getkeybind (prvm_prog_t *prog)
 	else
 		bindmap = 0; // consistent to "bind"
 	bind = Key_GetBind((int)PRVM_G_FLOAT(OFS_PARM0), bindmap);
-	PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, bind, strlen(bind));
+	PRVM_G_INT(OFS_RETURN) = bind ? PRVM_SetTempString(prog, bind, strlen(bind)) : 0;
 }
 
 /*
