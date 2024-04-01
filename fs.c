@@ -171,7 +171,7 @@ static fs_offset_t WriteAll(const filedesc_t fd, const void *const buf, const si
 
 /** \page fs File System
 
-All of Quake's data access is through a hierchal file system, but the contents
+All of Quake's data access is through a hierarchical file system, the contents
 of the file system can be transparently merged from several sources.
 
 The "base directory" is the path to the directory holding the quake.exe and
@@ -183,9 +183,8 @@ directory is only used during filesystem initialization.
 The "game directory" is the first tree on the search path and directory that
 all generated files (savegames, screenshots, demos, config files) will be
 saved to.  This can be overridden with the "-game" command line parameter.
-The game directory can never be changed while quake is executing.  This is a
-precaution against having a malicious server instruct clients to write files
-over areas they shouldn't.
+If multiple "-game <gamedir>" args are passed the last one is the "primary"
+and files will be saved there, the rest are read-only.
 
 */
 
@@ -2100,7 +2099,7 @@ void FS_Init_Commands(void)
 	Cvar_RegisterVariable (&fs_unload_dlcache);
 	Cvar_RegisterVariable (&cvar_fs_gamedir);
 
-	Cmd_AddCommand(CF_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list (can take multiple arguments), not including base directory (example usage: gamedir ctf)");
+	Cmd_AddCommand(CF_SHARED, "gamedir", FS_GameDir_f, "changes active gamedir list, can take multiple arguments which shouldn't include the base directory, the last gamedir is the \"primary\" and files will be saved there (example usage: gamedir ctf id1)");
 	Cmd_AddCommand(CF_SHARED, "fs_rescan", FS_Rescan_f, "rescans filesystem for new pack archives and any other changes");
 	Cmd_AddCommand(CF_SHARED, "path", FS_Path_f, "print searchpath (game directories and archives)");
 	Cmd_AddCommand(CF_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");

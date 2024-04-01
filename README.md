@@ -22,7 +22,26 @@ Linux x86_64 builds are available in [GitHub CI](https://github.com/DarkPlacesEn
 More complete builds are available in [xonotic.org](https://beta.xonotic.org/autobuild/) engine zips.  
 These support Windows, Linux and macOS, and include the current libraries needed for all features.
 
-DarkPlaces supports many Quake-based games and you can select which it will run by renaming the executable so it's prefixed with the game's name, for example `rogue-sdl.exe`, or by passing a cmdline argument such as `-rogue`.  The supported list and related details are defined in [com_game.c](https://github.com/DarkPlacesEngine/darkplaces/blob/master/com_game.c).
+DarkPlaces supports many Quake-based games and you can select which it will run by renaming the executable so it's prefixed with the game's name, for example `rogue-sdl.exe`, or by passing a cmdline argument such as `-rogue`.  This changes various engine behaviours and cvar defaults to suit the game.  The supported list and related details are defined in [com_game.c](https://github.com/DarkPlacesEngine/darkplaces/blob/master/com_game.c).
+
+Mods which aren't listed there can be run with (for example) `-game quake15` in which case DP will use the same behaviours and cvar defaults as for id1 Quake.
+
+## Quake Virtual File System
+
+All of Quake's data access is through a hierarchical file system, the contents
+of the file system can be transparently merged from several sources.
+
+The "base directory" is the path to the directory holding the quake.exe and
+all game directories.  The sys_* files pass this to host_init in
+quakeparms_t->basedir.  This can be overridden with the "-basedir" command
+line parm to allow code debugging in a different directory.  The base
+directory is only used during filesystem initialization.
+
+The "game directory" is the first tree on the search path and directory that
+all generated files (savegames, screenshots, demos, config files) will be
+saved to.  This can be overridden with the "-game" command line parameter.
+If multiple "-game <gamedir>" args are passed the last one is the "primary"
+and files will be saved there, the rest are read-only.
 
 ## Build instructions (WIP)
 
