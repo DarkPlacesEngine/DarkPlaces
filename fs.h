@@ -38,7 +38,7 @@ typedef int64_t fs_offset_t;
 
 // ------ Variables ------ //
 
-extern char fs_gamedir [MAX_OSPATH]; ///< Files will be saved in this gamedir.
+extern char fs_gamedir [MAX_OSPATH];
 extern char fs_basedir [MAX_OSPATH];
 extern char fs_userdir [MAX_OSPATH];
 
