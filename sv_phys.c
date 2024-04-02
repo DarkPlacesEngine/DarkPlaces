@@ -1820,10 +1820,16 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		}
 
 		if (PRVM_serveredictedict(check, owner) == pusherprog)
+		{
+			// Con_Printf("PRVM_serveredictedict(check, owner) == pusherprog\n");
 			continue;
+		}
 
 		if (pusherowner == PRVM_EDICT_TO_PROG(check))
+		{
+			// Con_Printf("pusherowner == PRVM_EDICT_TO_PROG(check)\n");
 			continue;
+		}
 
 		//Con_Printf("%i %s ", PRVM_NUM_FOR_EDICT(check), PRVM_GetString(PRVM_serveredictstring(check, classname)));
 
@@ -1837,6 +1843,8 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		// final position, move it
 		if (!((int)PRVM_serveredictfloat(check, flags) & FL_ONGROUND) || PRVM_PROG_TO_EDICT(PRVM_serveredictedict(check, groundentity)) != pusher)
 		{
+			// Con_Printf("!((int)PRVM_serveredictfloat(check, flags) & FL_ONGROUND) || PRVM_PROG_TO_EDICT(PRVM_serveredictedict(check, groundentity)) != pusher\n");
+
 			VectorCopy(PRVM_serveredictvector(pusher, mins), pushermins);
 			VectorCopy(PRVM_serveredictvector(pusher, maxs), pushermaxs);
 			VectorCopy(PRVM_serveredictvector(check, origin), checkorigin);
@@ -1846,7 +1854,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			//trace = SV_TraceBox(PRVM_serveredictvector(check, origin), PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs), PRVM_serveredictvector(check, origin), MOVE_NOMONSTERS, check, checkcontents);
 			if (!trace.startsolid)
 			{
-				//Con_Printf("- not in solid\n");
+				// Con_Printf("- not in solid\n");
 				continue;
 			}
 		}
@@ -1877,6 +1885,8 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		// physics objects need better collisions than this code can do
 		if (movetype == MOVETYPE_PHYSICS)
 		{
+			// Con_Printf("movetype == MOVETYPE_PHYSIC\n");
+
 			VectorAdd(PRVM_serveredictvector(check, origin), move, PRVM_serveredictvector(check, origin));
 			SV_LinkEdict(check);
 			SV_LinkEdict_TouchAreaGrid(check);
@@ -1912,6 +1922,8 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 		Collision_ClipToGenericEntity(&trace, pushermodel, pusher->priv.server->frameblend, &pusher->priv.server->skeleton, pushermins, pushermaxs, SUPERCONTENTS_BODY, &pusherfinalmatrix, &pusherfinalimatrix, checkorigin, checkmins, checkmaxs, checkorigin, checkcontents, 0, 0, collision_extendmovelength.value);
 		if (trace.startsolid)
 		{
+			// Con_Printf("trace.startsolid is true\n");
+
 			vec3_t move2;
 			if(SV_NudgeOutOfSolid_PivotIsKnownGood(check, pivot))
 			{
@@ -1930,12 +1942,17 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 
 			// fail the move
 			if (PRVM_serveredictvector(check, mins)[0] == PRVM_serveredictvector(check, maxs)[0])
+			{
+				// Con_Printf("PRVM_serveredictvector(check, mins)[0] == PRVM_serveredictvector(check, maxs)[0]\n");
 				continue;
+			}
+
 			if (PRVM_serveredictfloat(check, solid) == SOLID_NOT || PRVM_serveredictfloat(check, solid) == SOLID_TRIGGER)
 			{
+				// Con_Printf("PRVM_serveredictfloat(check, solid) == SOLID_NOT || PRVM_serveredictfloat(check, solid) == SOLID_TRIGGER\n");
 				// corpse
-				PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
-				VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
+				// PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
+				// VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
 				continue;
 			}
 
@@ -1956,6 +1973,7 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
 			if (PRVM_serveredictfunction(pusher, blocked))
 			{
+				// Con_Printf("PRVM_serveredictfunction(pusher, blocked)\n");
 				PRVM_serverglobalfloat(time) = sv.time;
 				PRVM_serverglobaledict(self) = PRVM_EDICT_TO_PROG(pusher);
 				PRVM_serverglobaledict(other) = PRVM_EDICT_TO_PROG(check);
