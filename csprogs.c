@@ -1036,10 +1036,11 @@ void CL_VM_Init (void)
 	if (!prog->loaded)
 	{
 		Mem_Free(csprogsdata);
-		Host_Error("CSQC %s failed to load\n", csprogsfn);
+		Con_Printf("^1CSQC %s failed to load\n", csprogsfn); // log error
+		return;
 	}
 
-	if(cls.demorecording)
+	if (cls.demorecording)
 	{
 		if(cls.demo_lastcsprogssize != csprogsdatasize || cls.demo_lastcsprogscrc != csprogsdatacrc)
 		{

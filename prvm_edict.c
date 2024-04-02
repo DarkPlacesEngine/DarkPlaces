@@ -2498,8 +2498,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 
 	// check required functions
 	for(i=0 ; i < numrequiredfunc ; i++)
+	{
 		if(PRVM_ED_FindFunction(prog, required_func[i]) == 0)
-			prog->error_cmd("%s: %s not found in %s",prog->name, required_func[i], filename);
+		{
+			Con_Printf("^1%s: %s not found in %s\n", prog->name, required_func[i], filename); // log error
+			return;
+		}
+	}
 
 	PRVM_LoadLNO(prog, filename);
 
