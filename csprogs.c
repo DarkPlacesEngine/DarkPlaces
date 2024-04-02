@@ -44,16 +44,22 @@ void CL_VM_PreventInformationLeaks(void)
 	PRVM_clientglobalfloat(trace_networkentity) = 0;
 }
 
-//[515]: these are required funcs
-static const char *cl_required_func[] =
-{
-	"CSQC_Init",
-	"CSQC_InputEvent",
-	"CSQC_UpdateView",
-	"CSQC_ConsoleCommand",
-};
 
-static int cl_numrequiredfunc = sizeof(cl_required_func) / sizeof(char*);
+/** Previous DP versions declined to load csprogs if it lacked any of:
+ * CSQC_Init, CSQC_InputEvent, CSQC_UpdateView, CSQC_ConsoleCommand
+ * whereas in FTE and QSS-based engines the minimum is either CSQC_UpdateView
+ * or CSQC_DrawHud (only called in CSQC_SIMPLE aka hud-only mode)
+ * and the other funcs are optional, so we now behave the same here.
+ */
+static void CL_CheckRequiredFuncs(prvm_prog_t *prog, const char *filename)
+{
+	if (PRVM_ED_FindFunction(prog, "CSQC_UpdateView"))
+		return;
+	else if (PRVM_ED_FindFunction(prog, "CSQC_DrawHud"))
+		prog->flag |= PRVM_CSQC_SIMPLE;
+	else
+		prog->error_cmd("%s: no CSQC_UpdateView (EXT_CSQC) or CSQC_DrawHud (CSQC_SIMPLE) function found in %s", prog->name, filename);
+}
 
 #define CL_REQFIELDS (sizeof(cl_reqfields) / sizeof(prvm_required_field_t))
 
@@ -523,6 +529,35 @@ qbool CL_VM_UpdateView (double frametime)
 	R_TimeReport("UpdateView");
 	return true;
 }
+
+void CL_VM_DrawHud(double frametime)
+{
+	prvm_prog_t *prog = CLVM_prog;
+
+	R_TimeReport("pre-DrawHud");
+
+	PRVM_clientglobalfloat(time) = cl.time;
+	PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
+	CSQC_SetGlobals(frametime);
+
+	VectorSet(PRVM_G_VECTOR(OFS_PARM0), vid_conwidth.integer, vid_conheight.integer, 0);
+	PRVM_G_FLOAT(OFS_PARM1) = sb_showscores;
+	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_DrawHud), "QC function CSQC_DrawHud is missing");
+
+	if (PRVM_clientfunction(CSQC_DrawScores))
+	{
+		VectorSet(PRVM_G_VECTOR(OFS_PARM0), vid_conwidth.integer, vid_conheight.integer, 0);
+		PRVM_G_FLOAT(OFS_PARM1) = sb_showscores;
+		if (key_dest != key_menu)
+			prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_DrawScores), "QC function CSQC_DrawScores is missing");
+	}
+	else if (sb_showscores || (cl.stats[STAT_HEALTH] <= 0 && cl_deathscoreboard.integer))
+		if (!cl.islocalgame) // LadyHavoc: changed to draw the deathmatch overlays in any multiplayer mode
+			Sbar_DeathmatchOverlay ();
+
+	R_TimeReport("DrawHud");
+}
+
 
 qbool CL_VM_ConsoleCommand(const char *text, size_t textlen)
 {
@@ -1031,7 +1066,7 @@ void CL_VM_Init (void)
 	prog->error_cmd             = Host_Error;
 	prog->ExecuteProgram        = CLVM_ExecuteProgram;
 
-	PRVM_Prog_Load(prog, csprogsfn, csprogsdata, csprogsdatasize, cl_numrequiredfunc, cl_required_func, CL_REQFIELDS, cl_reqfields, CL_REQGLOBALS, cl_reqglobals);
+	PRVM_Prog_Load(prog, csprogsfn, csprogsdata, csprogsdatasize, CL_CheckRequiredFuncs, CL_REQFIELDS, cl_reqfields, CL_REQGLOBALS, cl_reqglobals);
 
 	if (!prog->loaded)
 	{
@@ -1081,9 +1116,18 @@ void CL_VM_Init (void)
 	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, maxs));
 	VectorCopy(cl.world.mins, PRVM_clientedictvector(prog->edicts, absmin));
 	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, absmax));
+	PRVM_clientedictfloat(prog->edicts, solid) = SOLID_BSP;
+	PRVM_clientedictfloat(prog->edicts, modelindex) = 1;
+	PRVM_clientedictfloat(prog->edicts, model) = PRVM_SetEngineString(prog, cl.worldmodel->name);
 
-	// call the prog init
-	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
+	// call the prog init if it exists
+	if (PRVM_clientfunction(CSQC_Init))
+	{
+		PRVM_G_FLOAT(OFS_PARM0) = 1.0f; // CSQC_SIMPLE engines always pass 0, FTE always passes 1
+		PRVM_G_INT(OFS_PARM1) = PRVM_SetEngineString(prog, gamename);
+		PRVM_G_FLOAT(OFS_PARM2) = 1.0f; // TODO DP versions...
+		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
+	}
 
 	// Once CSQC_Init was called, we consider csqc code fully initialized.
 	prog->inittime = host.realtime;

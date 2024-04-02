@@ -233,7 +233,9 @@ extern prvm_eval_t prvm_badvalue;
 #endif
 
 //============================================================================
-#define PRVM_OP_STATE		1
+// prog->flag
+#define PRVM_OP_STATE       1
+#define PRVM_CSQC_SIMPLE    2
 
 #ifdef DP_SMALLMEMORY
 #define	PRVM_MAX_STACK_DEPTH		128
@@ -697,7 +699,7 @@ typedef struct prvm_prog_s
 	const char			*name; // [INIT]
 
 	// flag - used to store general flags like PRVM_GE_SELF, etc.
-	int				flag;
+	unsigned			flag;
 
 	const char			**extensionstring; // [INIT]
 
@@ -922,7 +924,7 @@ Load a program with LoadProgs
 */
 // Load expects to be called right after Reset
 void PRVM_Prog_Init(prvm_prog_t *prog, struct cmd_state_s *cmd);
-void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, int64_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
+void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, fs_offset_t size, void CheckRequiredFuncs(prvm_prog_t *prog, const char *filename), int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global);
 void PRVM_Prog_Reset(prvm_prog_t *prog);
 
 void PRVM_StackTrace(prvm_prog_t *prog);

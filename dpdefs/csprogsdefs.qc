@@ -42,13 +42,17 @@ float		trace_inopen;
 float		trace_inwater;
 
 //
-// required prog functions
+// prog functions called by engine
 //
-void()		CSQC_Init;
-void()		CSQC_Shutdown;
-float(float f, float t, float n)	CSQC_InputEvent;
-void(float w, float h)		CSQC_UpdateView;
-float(string s)	CSQC_ConsoleCommand;
+void  CSQC_Init(float apilevel, string enginename, float engineversion);
+void  CSQC_Shutdown();
+float CSQC_InputEvent(float evtype, float scanx, float chary);
+void  CSQC_UpdateView(float vid_width, float vid_height, float notmenu); // required for EXT_CSQC (preferred)
+float CSQC_ConsoleCommand(string cmdstr);
+#ifdef CSQC_SIMPLE // hud-only CSQC
+	void CSQC_DrawHud(vector virtsize, float showscores); // required for CSQC_SIMPLE (fallback)
+	void CSQC_DrawScores(vector virtsize, float showscores);
+#endif
 
 //these fields are read and set by the default player physics
 vector		pmove_org;

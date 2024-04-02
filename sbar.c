@@ -116,7 +116,6 @@ cvar_t crosshair_color_alpha = {CF_CLIENT | CF_ARCHIVE, "crosshair_color_alpha",
 cvar_t crosshair_size = {CF_CLIENT | CF_ARCHIVE, "crosshair_size", "1", "adjusts size of the crosshair on the screen"};
 
 static void Sbar_MiniDeathmatchOverlay (int x, int y);
-static void Sbar_DeathmatchOverlay (void);
 static void Sbar_IntermissionOverlay (void);
 static void Sbar_FinaleOverlay (void);
 
@@ -392,6 +391,8 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&sbar_miniscoreboard_size);
 	Cvar_RegisterVariable(&sbar_info_pos);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
+	// This name is used by QuakeSpasm-based engines and is read by the Alkaline 1.2 CSQC
+	Cvar_RegisterVirtual(&sbar_alpha_bg, "scr_sbaralpha");
 
 	Cvar_RegisterVariable(&crosshair_color_red);
 	Cvar_RegisterVariable(&crosshair_color_green);

@@ -1682,7 +1682,7 @@ static void SCR_DrawScreen (void)
 
 		// if CSQC is loaded, it is required to provide the CSQC_UpdateView function,
 		// and won't render a view if it does not call that.
-		if (CLVM_prog->loaded)
+		if (CLVM_prog->loaded && !(CLVM_prog->flag & PRVM_CSQC_SIMPLE))
 			CL_VM_UpdateView(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
 		else
 		{
@@ -1757,7 +1757,11 @@ static void SCR_DrawScreen (void)
 		SCR_DrawTurtle ();
 		SCR_DrawPause ();
 		if (!r_letterbox.value)
+		{
 			Sbar_Draw();
+			if (CLVM_prog->loaded && CLVM_prog->flag & PRVM_CSQC_SIMPLE)
+				CL_VM_DrawHud(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
+		}
 		SHOWLMP_drawall();
 		SCR_CheckDrawCenterString();
 	}

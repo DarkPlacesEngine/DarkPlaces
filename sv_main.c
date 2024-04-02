@@ -265,12 +265,11 @@ static const char *standardeffectnames[EFFECT_TOTAL] =
 	"SVC_PARTICLE"
 };
 
-#define SV_REQFUNCS 0
-#define sv_reqfuncs NULL
 
-//#define SV_REQFUNCS (sizeof(sv_reqfuncs) / sizeof(const char *))
-//static const char *sv_reqfuncs[] = {
-//};
+static void SV_CheckRequiredFuncs(prvm_prog_t *prog, const char *filename)
+{
+	// no required funcs?!
+}
 
 #define SV_REQFIELDS (sizeof(sv_reqfields) / sizeof(prvm_required_field_t))
 
@@ -2346,7 +2345,7 @@ static void SV_VM_Setup(void)
 	prog->error_cmd             = Host_Error;
 	prog->ExecuteProgram        = SVVM_ExecuteProgram;
 
-	PRVM_Prog_Load(prog, sv_progs.string, NULL, 0, SV_REQFUNCS, sv_reqfuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
+	PRVM_Prog_Load(prog, sv_progs.string, NULL, 0, SV_CheckRequiredFuncs, SV_REQFIELDS, sv_reqfields, SV_REQGLOBALS, sv_reqglobals);
 
 	// some mods compiled with scrambling compilers lack certain critical
 	// global names and field names such as "self" and "time" and "nextthink"

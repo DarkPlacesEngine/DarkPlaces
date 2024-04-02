@@ -38,5 +38,8 @@ void Sbar_ShowFPS_Update(void);
 int Sbar_GetSortedPlayerIndex (int index);
 void Sbar_SortFrags (void);
 
+extern cvar_t cl_deathscoreboard;
+void Sbar_DeathmatchOverlay (void);
+
 #endif
 

@@ -5038,15 +5038,22 @@ void M_Shutdown(void)
 //============================================================================
 // Menu prog handling
 
-static const char *m_required_func[] = {
-"m_init",
-"m_keydown",
-"m_draw",
-"m_toggle",
-"m_shutdown",
-};
+static void MP_CheckRequiredFuncs(prvm_prog_t *prog, const char *filename)
+{
+	int i;
+	const char *m_required_func[] = {
+		"m_init",
+		"m_keydown",
+		"m_draw",
+		"m_toggle",
+		"m_shutdown",
+	};
+	int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
-static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
+	for(i = 0; i < m_numrequiredfunc; ++i)
+		if(PRVM_ED_FindFunction(prog, m_required_func[i]) == 0)
+			prog->error_cmd("%s: %s not found in %s",prog->name, m_required_func[i], filename);
+}
 
 static prvm_required_field_t m_required_fields[] =
 {
@@ -5416,7 +5423,7 @@ static void MP_Init (void)
 	// allocate the mempools
 	prog->progs_mempool = Mem_AllocPool(menu_progs.string, 0, NULL);
 
-	PRVM_Prog_Load(prog, menu_progs.string, NULL, 0, m_numrequiredfunc, m_required_func, m_numrequiredfields, m_required_fields, m_numrequiredglobals, m_required_globals);
+	PRVM_Prog_Load(prog, menu_progs.string, NULL, 0, MP_CheckRequiredFuncs, m_numrequiredfields, m_required_fields, m_numrequiredglobals, m_required_globals);
 
 	// note: OP_STATE is not supported by menu qc, we don't even try to detect
 	// it here

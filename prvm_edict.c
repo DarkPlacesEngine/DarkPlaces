@@ -1999,7 +1999,7 @@ PRVM_Prog_Load
 ===============
 */
 static void PRVM_UpdateBreakpoints(prvm_prog_t *prog);
-void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * data, fs_offset_t size, int numrequiredfunc, const char **required_func, int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global)
+void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data, fs_offset_t size, void CheckRequiredFuncs(prvm_prog_t *prog, const char *filename), int numrequiredfields, prvm_required_field_t *required_field, int numrequiredglobals, prvm_required_field_t *required_global)
 {
 	int i;
 	dprograms_t *dprograms;
@@ -2496,10 +2496,9 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char * filename, unsigned char * da
 		Mem_Free(dprograms);
 	dprograms = NULL;
 
-	// check required functions
-	for(i=0 ; i < numrequiredfunc ; i++)
-		if(PRVM_ED_FindFunction(prog, required_func[i]) == 0)
-			prog->error_cmd("%s: %s not found in %s",prog->name, required_func[i], filename);
+	prog->flag = 0;
+	// expected to not return (call prog->error_cmd) if checks fail
+	CheckRequiredFuncs(prog, filename);
 
 	PRVM_LoadLNO(prog, filename);
 
@@ -2702,8 +2701,6 @@ fail:
 	PRVM_UpdateBreakpoints(prog);
 
 	// set flags & mdef_ts in prog
-
-	prog->flag = 0;
 
 	PRVM_FindOffsets(prog);
 
