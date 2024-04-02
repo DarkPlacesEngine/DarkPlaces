@@ -22,7 +22,9 @@ Linux x86_64 builds are available in [GitHub CI](https://github.com/DarkPlacesEn
 More complete builds are available in [xonotic.org](https://beta.xonotic.org/autobuild/) engine zips.  
 These support Windows, Linux and macOS, and include the current libraries needed for all features.
 
-DarkPlaces supports many Quake-based games and you can select which it will run by renaming the executable so it's prefixed with the game's name, for example `rogue-sdl.exe`, or by passing a cmdline argument such as `-rogue`.  This changes various engine behaviours and cvar defaults to suit the game.  The supported list and related details are defined in [com_game.c](https://github.com/DarkPlacesEngine/darkplaces/blob/master/com_game.c).
+DarkPlaces supports many Quake-based games and you can select which it will run by renaming the executable so it's prefixed with the game's name, for example `rogue-sdl.exe`, or by passing a cmdline argument  
+such as `-rogue`.  This changes various engine behaviours and cvar defaults to suit the game.  
+The supported list and related details are defined in [com_game.c](https://github.com/DarkPlacesEngine/darkplaces/blob/master/com_game.c).
 
 Mods which aren't listed there can be run with (for example) `-game quake15` in which case DP will use the same behaviours and cvar defaults as for id1 Quake.
 
@@ -32,8 +34,7 @@ All of Quake's data access is through a hierarchical file system, the contents
 of the file system can be transparently merged from several sources.
 
 The "base directory" is the path to the directory holding the quake.exe and
-all game directories.  The sys_* files pass this to host_init in
-quakeparms_t->basedir.  This can be overridden with the "-basedir" command
+all game directories.  This can be overridden with the "-basedir" command
 line parm to allow code debugging in a different directory.  The base
 directory is only used during filesystem initialization.
 
@@ -84,16 +85,16 @@ brew install sdl2 libjpeg-turbo libpng libvorbis curl
 
 ### Unix (General)
 
-From a terminal, in the engine's root directory, input `make`. On macOS, input `make` with a target such as `make sdl-release`.
-
-Input `make help` for options.
+From a terminal, in the engine's root directory, input `make help` to list the targets.  
+To build the main executable, input `make sdl-release` which creates the file called  
+`darkplaces-sdl` or `darkplaces-sdl.exe` (Windows).
 
 If you get errors (that don't seem to be about missing dependencies) try `make clean` before compiling, especially if you updated your system since the last time you compiled.
 
 
 ### Windows (Visual Studio)
 
-May work but not recommended due to lack of support for C standards, and lack of maintenance.
+May work but not recommended due to lack of support for C standards, and lack of maintenance.  
 Instructions TODO.
 
 ## Contributing

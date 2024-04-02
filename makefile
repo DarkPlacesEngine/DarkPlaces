@@ -139,8 +139,6 @@ ifeq ($(DP_MAKE_TARGET), macosx)
 	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
 	DP_LINK_XMP?=dlopen
 
-	# on OS X, we don't build the CL by default because it uses deprecated
-	# and not-implemented-in-64bit Carbon
 	TARGETS_DEBUG=sv-debug sdl-debug
 	TARGETS_PROFILE=sv-profile sdl-profile
 	TARGETS_RELEASE=sv-release sdl-release
