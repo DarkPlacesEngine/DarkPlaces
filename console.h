@@ -57,6 +57,8 @@ void Con_Print(const char *txt);
 /// Prints to all appropriate console targets.
 void Con_Printf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
+void Con_CenterPrint(const char *msg);
+
 /// A Con_Print that only shows up if the "developer" cvar is set.
 void Con_DPrint(const char *msg);
 
@@ -65,7 +67,6 @@ void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_Clear_f(cmd_state_t *cmd);
 void Con_DrawNotify (void);
 
-void Con_CenterPrint(const char *msg);
 
 /// Clear all notify lines.
 void Con_ClearNotify (void);

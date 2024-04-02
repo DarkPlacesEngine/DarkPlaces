@@ -142,7 +142,10 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
-	Con_CenterPrint(str);
+	// Print the message to the console, but only if it's different to the previous message
+	if (strcmp(str, scr_centerstring))
+		Con_CenterPrint(str);
+
 	dp_strlcpy(scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;

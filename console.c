@@ -1471,6 +1471,18 @@ void Con_Printf(const char *fmt, ...)
 	Con_MaskPrint(CON_MASK_PRINT, msg);
 }
 
+/**
+ * @brief      Prints a message to the console with a horizontal rule above and below.
+ *
+ * @param[in]  msg   The message to print
+ */
+void Con_CenterPrint(const char *msg)
+{
+	Con_MaskPrint(CON_MASK_HIDENOTIFY, "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
+	Con_MaskPrint(CON_MASK_HIDENOTIFY, msg);
+	Con_MaskPrint(CON_MASK_HIDENOTIFY, "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
+}
+
 /*
 ================
 Con_DPrint
@@ -1502,19 +1514,6 @@ void Con_DPrintf(const char *fmt, ...)
 	va_end(argptr);
 
 	Con_MaskPrint(CON_MASK_DEVELOPER, msg);
-}
-
-/*
-================
-Con_CenterPrint
-================
-*/
-void Con_CenterPrint(const char *msg)
-{
-	if (strcmp(msg, con_previouscenterprint))
-		return;
-
-	Con_Print(msg);
 }
 
 
