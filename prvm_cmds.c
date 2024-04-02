@@ -667,36 +667,18 @@ void VM_break(prvm_prog_t *prog)
 
 /*
 =================
-VM_localcmd_local
+VM_localcmd
 
-Sends text over to the client's execution buffer
-
-[localcmd (string, ...) or]
-cmd (string, ...)
-=================
-*/
-void VM_localcmd_local(prvm_prog_t *prog)
-{
-	char string[VM_TEMPSTRING_MAXSIZE];
-	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_local);
-	VM_VarString(prog, 0, string, sizeof(string));
-	Cbuf_AddText(cmd_local, string);
-}
-
-/*
-=================
-VM_localcmd_server
-
-Sends text over to the server's execution buffer
+Appends text to the command buffer
 
 [localcmd (string, ...) or]
 cmd (string, ...)
 =================
 */
-void VM_localcmd_server(prvm_prog_t *prog)
+void VM_localcmd(prvm_prog_t *prog)
 {
 	char string[VM_TEMPSTRING_MAXSIZE];
-	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd_server);
+	VM_SAFEPARMCOUNTRANGE(1, 8, VM_localcmd);
 	VM_VarString(prog, 0, string, sizeof(string));
 	Cbuf_AddText(cmd_local, string);
 }
