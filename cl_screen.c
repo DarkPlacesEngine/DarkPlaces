@@ -142,7 +142,8 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
-	dp_strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
+	Con_CenterPrint(str);
+	dp_strlcpy(scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 

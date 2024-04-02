@@ -65,6 +65,8 @@ void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 void Con_Clear_f(cmd_state_t *cmd);
 void Con_DrawNotify (void);
 
+void Con_CenterPrint(const char *msg);
+
 /// Clear all notify lines.
 void Con_ClearNotify (void);
 void Con_ToggleConsole_f(cmd_state_t *cmd);
