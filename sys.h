@@ -42,6 +42,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 # define DP_MOBILETOUCH	1
 # define DP_FREETYPE_STATIC 1
+#elif defined(__EMSCRIPTEN__) //this also defines linux, so it must come first
+# define DP_OS_NAME		"Browser"
+# define DP_OS_STR		"browser"
+# define DP_ARCH_STR	"WASM-32"
 #elif defined(__linux__)
 # define DP_OS_NAME		"Linux"
 # define DP_OS_STR		"linux"
@@ -260,6 +264,10 @@ void Sys_SDL_Delay (unsigned int milliseconds); // wrapper to call SDL_Delay
 void Sys_InitProcessNice (void);
 void Sys_MakeProcessNice (void);
 void Sys_MakeProcessMean (void);
+#ifdef __EMSCRIPTEN__ //WASM-specific functions
+bool syncFS (bool x);
+void Sys_Register_Commands(void);
+#endif
 
 #endif
 

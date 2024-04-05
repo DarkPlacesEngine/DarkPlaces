@@ -110,6 +110,29 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	DP_LINK_XMP?=dlopen
 endif
 
+ifeq ($(DP_MAKE_TARGET), wasm)
+	MAKE=emmake make
+	CFLAGS_EXTRA+=--use-port=sdl2 \
+	              --use-port=libpng \
+	              --use-port=libjpeg \
+	              --use-port=zlib \
+	              -DNOSUPPORTIPV6 \
+	              -DUSE_GLES2
+
+	SDLCONFIG_CFLAGS=$(SDLCONFIG_UNIXCFLAGS) $(SDLCONFIG_UNIXCFLAGS_X11)
+	SDLCONFIG_LIBS=$(SDLCONFIG_UNIXLIBS) $(SDLCONFIG_UNIXLIBS_X11)
+	SDLCONFIG_STATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS) $(SDLCONFIG_UNIXSTATICLIBS_X11)
+	DP_SSE=0
+
+	DP_LINK_SDL?=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=dlopen
+	DP_LINK_ODE?=
+	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
+endif
+
 # Mac OS X configuration
 ifeq ($(DP_MAKE_TARGET), macosx)
 	OBJ_ICON=

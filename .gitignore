@@ -1,6 +1,19 @@
 obj/
 *.d
 *.o
+*.a
+*.html
+preload/
+files.js
+*.data
+gmp.h
+libd0*
+d0*
+blind_id
+jconfig.h
+jerror.h
+jmorecfg.h
+jpeglib.h
 *.i
 *.s
 *.obj
@@ -33,3 +46,4 @@ Makefile.win
 *.pdb
 *.lib
 *.exp
+.emsdk/

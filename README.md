@@ -97,6 +97,12 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 May work but not recommended due to lack of support for C standards, and lack of maintenance.  
 Instructions TODO.
 
+### Webassembly (Emscripten)
+Note that this requires a linux device or WSL.
+Install emscripten (instructions at https://emscripten.org/docs/getting_started/downloads.html)
+enter the engine's root directory
+run `make emscripten-release`
+
 ## Contributing
 
 [DarkPlaces Contributing Guidelines](CONTRIBUTING.md)
