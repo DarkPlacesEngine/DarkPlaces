@@ -540,6 +540,9 @@ void CL_VM_DrawHud(double frametime)
 	PRVM_clientglobaledict(self) = cl.csqc_server2csqcentitynumber[cl.playerentity];
 	CSQC_SetGlobals(frametime);
 
+	PRVM_GarbageCollection(prog);
+
+	// width and height parameters are virtual in CSQC_SIMPLE engines
 	VectorSet(PRVM_G_VECTOR(OFS_PARM0), vid_conwidth.integer, vid_conheight.integer, 0);
 	PRVM_G_FLOAT(OFS_PARM1) = sb_showscores;
 	prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_DrawHud), "QC function CSQC_DrawHud is missing");
@@ -1118,7 +1121,7 @@ void CL_VM_Init (void)
 	VectorCopy(cl.world.maxs, PRVM_clientedictvector(prog->edicts, absmax));
 	PRVM_clientedictfloat(prog->edicts, solid) = SOLID_BSP;
 	PRVM_clientedictfloat(prog->edicts, modelindex) = 1;
-	PRVM_clientedictfloat(prog->edicts, model) = PRVM_SetEngineString(prog, cl.worldmodel->name);
+	PRVM_clientedictstring(prog->edicts, model) = PRVM_SetEngineString(prog, cl.worldmodel->name);
 
 	// call the prog init if it exists
 	if (PRVM_clientfunction(CSQC_Init))
