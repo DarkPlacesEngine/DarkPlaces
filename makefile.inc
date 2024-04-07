@@ -228,25 +228,6 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-# Use this for emsdk builds
-# LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
-#                                    --use-port=libpng \
-#                                    --use-port=libjpeg \
-#                                    --use-port=zlib \
-#                                    -DUSE_GLES2 \
-#                                    -s INITIAL_MEMORY=128mb \
-#                                    -s MAXIMUM_MEMORY=1gb \
-#                                    -s SINGLE_FILE \
-#                                    -s FULL_ES3 \
-#                                    -s MIN_WEBGL_VERSION=2 \
-#                                    -s MAX_WEBGL_VERSION=2 \
-#                                    -s ALLOW_MEMORY_GROWTH=1 \
-#                                    -s ASSERTIONS=2 \
-#                                    -s TOTAL_STACK=32mb \
-#                                    -lidbfs.js \
-#                                    --pre-js ../../../wasm/pre.js \
-#                                    -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
-# Use below for the Debian em binaries
 LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -s USE_LIBPNG=1 \
                                    -s USE_LIBJPEG=1 \
@@ -456,7 +437,7 @@ bin-release-profile :
 	$(MAKE) -C build-obj/release-profile/$(EXE) $(EXE) \
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
-		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=$(LEVEL)
+		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
 	$(STRIP) $(EXE)
 
 wasm-release :
