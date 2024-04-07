@@ -37,6 +37,7 @@ Makefile.win
 *.gch
 /.vs
 /build
+build-obj/
 /.cache
 *.kdev4
 *.vcxproj.user
@@ -45,3 +46,4 @@ Makefile.win
 *.exp
 .emsdk/
 emsdk/
+docs/output/

@@ -112,10 +112,16 @@ endif
 
 ifeq ($(DP_MAKE_TARGET), wasm)
 	MAKE=emmake make
-	CFLAGS_EXTRA+=--use-port=sdl2 \
-	              --use-port=libpng \
-	              --use-port=libjpeg \
-	              --use-port=zlib \
+# 	CFLAGS_EXTRA+=--use-port=sdl2 \
+# 	              --use-port=libpng \
+# 	              --use-port=libjpeg \
+# 	              --use-port=zlib \
+# 	              -DNOSUPPORTIPV6 \
+# 	              -DUSE_GLES2
+	CFLAGS_EXTRA+=-s USE_SDL=2 \
+	              -s USE_LIBPNG=1 \
+	              -s USE_LIBJPEG=1 \
+	              -s USE_ZLIB=1 \
 	              -DNOSUPPORTIPV6 \
 	              -DUSE_GLES2
 

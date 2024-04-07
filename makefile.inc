@@ -210,7 +210,7 @@ EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
 EXE_UNIXSDLNEXUIZ=nexuiz-sdl
-EXE_WASM=darkplaces-wasm.html
+EXE_WASM=darkplaces-wasm.js
 
 CMD_UNIXRM=rm -rf
 CMD_UNIXCP=cp -f
@@ -245,24 +245,42 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 #                                 -lidbfs.js \
 #                                 -sEXPORTED_RUNTIME_METHODS='callMain' \
 #                                 --shell-file=../../../Darkplaces-Emscripten/shell.htm
+# Use this for emsdk builds
 LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
                                    --use-port=libpng \
                                    --use-port=libjpeg \
                                    --use-port=zlib \
                                    -DUSE_GLES2 \
-                                   -sINITIAL_MEMORY=128mb \
-                                   -sMAXIMUM_MEMORY=1gb \
-                                   -sSINGLE_FILE \
-                                   -sFULL_ES3 \
-                                   -sMIN_WEBGL_VERSION=2 \
-                                   -sMAX_WEBGL_VERSION=2 \
-                                   -sALLOW_MEMORY_GROWTH=1 \
-                                   -sASSERTIONS=2 \
-                                   -sTOTAL_STACK=32mb \
+                                   -s INITIAL_MEMORY=128mb \
+                                   -s MAXIMUM_MEMORY=1gb \
+                                   -s SINGLE_FILE \
+                                   -s FULL_ES3 \
+                                   -s MIN_WEBGL_VERSION=2 \
+                                   -s MAX_WEBGL_VERSION=2 \
+                                   -s ALLOW_MEMORY_GROWTH=1 \
+                                   -s ASSERTIONS=2 \
+                                   -s TOTAL_STACK=32mb \
                                    -lidbfs.js \
                                    --pre-js ../../../Darkplaces-Emscripten/pre.js \
-                                   -sEXPORTED_RUNTIME_METHODS='callMain' \
-                                   --shell-file=../../../Darkplaces-Emscripten/shell.htm
+                                   -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
+# Use below for the Debian em binaries
+# LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
+#                                    -s USE_LIBPNG=1 \
+#                                    -s USE_LIBJPEG=1 \
+#                                    -s USE_ZLIB=1 \
+#                                    -s INITIAL_MEMORY=128mb \
+#                                    -s MAXIMUM_MEMORY=1gb \
+#                                    -s SINGLE_FILE \
+#                                    -s FULL_ES3 \
+#                                    -s MIN_WEBGL_VERSION=2 \
+#                                    -s MAX_WEBGL_VERSION=2 \
+#                                    -s ALLOW_MEMORY_GROWTH=1 \
+#                                    -s ASSERTIONS=2 \
+#                                    -s TOTAL_STACK=32mb \
+#                                    -DUSE_GLES2 \
+#                                    -lidbfs.js \
+#                                    --pre-js ../../../Darkplaces-Emscripten/pre.js \
+#                                    -sEXPORTED_RUNTIME_METHODS='callMain'
 
 
 ##### Mac OS X specific variables #####
