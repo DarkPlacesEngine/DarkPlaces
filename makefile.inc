@@ -228,46 +228,12 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sINITIAL_MEMORY=3500MB -sMAXIMUM_MEMORY=4GB -sSINGLE_FILE -sFULL_ES3 -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sALLOW_MEMORY_GROWTH --pre-js ../../../Darkplaces-Emscripten/pre.js -lidbfs.js -sEXPORTED_RUNTIME_METHODS='callMain' --shell-file=../../../Darkplaces-Emscripten/shell.htm
-# LDFLAGS_WASM=$(LDFLAGS_UNIXSDL) -sUSE_LIBJPEG=1 \
-#                                 -sUSE_SDL=2 \
-#                                 -sUSE_ZLIB=1 \
-#                                 -DUSE_GLES2 \
-#                                 -sINITIAL_MEMORY=3500MB \
-#                                 -sMAXIMUM_MEMORY=4GB \
-#                                 -sSINGLE_FILE \
-#                                 -sFULL_ES3 \
-#                                 -sMIN_WEBGL_VERSION=2 \
-#                                 -sMAX_WEBGL_VERSION=2 \
-#                                 -sUSE_SDL=2 \
-#                                 -sALLOW_MEMORY_GROWTH \
-#                                 --pre-js ../../../Darkplaces-Emscripten/pre.js \
-#                                 -lidbfs.js \
-#                                 -sEXPORTED_RUNTIME_METHODS='callMain' \
-#                                 --shell-file=../../../Darkplaces-Emscripten/shell.htm
 # Use this for emsdk builds
-LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
-                                   --use-port=libpng \
-                                   --use-port=libjpeg \
-                                   --use-port=zlib \
-                                   -DUSE_GLES2 \
-                                   -s INITIAL_MEMORY=128mb \
-                                   -s MAXIMUM_MEMORY=1gb \
-                                   -s SINGLE_FILE \
-                                   -s FULL_ES3 \
-                                   -s MIN_WEBGL_VERSION=2 \
-                                   -s MAX_WEBGL_VERSION=2 \
-                                   -s ALLOW_MEMORY_GROWTH=1 \
-                                   -s ASSERTIONS=2 \
-                                   -s TOTAL_STACK=32mb \
-                                   -lidbfs.js \
-                                   --pre-js ../../../Darkplaces-Emscripten/pre.js \
-                                   -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
-# Use below for the Debian em binaries
-# LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
-#                                    -s USE_LIBPNG=1 \
-#                                    -s USE_LIBJPEG=1 \
-#                                    -s USE_ZLIB=1 \
+# LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
+#                                    --use-port=libpng \
+#                                    --use-port=libjpeg \
+#                                    --use-port=zlib \
+#                                    -DUSE_GLES2 \
 #                                    -s INITIAL_MEMORY=128mb \
 #                                    -s MAXIMUM_MEMORY=1gb \
 #                                    -s SINGLE_FILE \
@@ -277,10 +243,27 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) --use-port=sdl2 \
 #                                    -s ALLOW_MEMORY_GROWTH=1 \
 #                                    -s ASSERTIONS=2 \
 #                                    -s TOTAL_STACK=32mb \
-#                                    -DUSE_GLES2 \
 #                                    -lidbfs.js \
-#                                    --pre-js ../../../Darkplaces-Emscripten/pre.js \
-#                                    -sEXPORTED_RUNTIME_METHODS='callMain'
+#                                    --pre-js ../../../wasm/pre.js \
+#                                    -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
+# Use below for the Debian em binaries
+LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
+                                   -s USE_LIBPNG=1 \
+                                   -s USE_LIBJPEG=1 \
+                                   -s USE_ZLIB=1 \
+                                   -s INITIAL_MEMORY=128mb \
+                                   -s MAXIMUM_MEMORY=1gb \
+                                   -s SINGLE_FILE \
+                                   -s FULL_ES3 \
+                                   -s MIN_WEBGL_VERSION=2 \
+                                   -s MAX_WEBGL_VERSION=2 \
+                                   -s ALLOW_MEMORY_GROWTH=1 \
+                                   -s ASSERTIONS=2 \
+                                   -s TOTAL_STACK=32mb \
+                                   -DUSE_GLES2 \
+                                   -lidbfs.js \
+                                   --pre-js ../../../wasm/pre.js \
+                                   -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
 
 
 ##### Mac OS X specific variables #####

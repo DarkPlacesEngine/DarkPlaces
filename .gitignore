@@ -1,16 +1,6 @@
 obj/
 *.d
 *.o
-*.a
-*.html
-gmp.h
-libd0*
-d0*
-blind_id
-jconfig.h
-jerror.h
-jmorecfg.h
-jpeglib.h
 *.i
 *.s
 *.obj
@@ -44,6 +34,5 @@ build-obj/
 *.pdb
 *.lib
 *.exp
-.emsdk/
 emsdk/
 docs/output/

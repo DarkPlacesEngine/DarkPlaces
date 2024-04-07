@@ -976,7 +976,7 @@
 "# ifdef USESHADOWMAP2D\n",
 "float ShadowMapCompare(vec3 dir)\n",
 "{\n",
-"	vec3 shadowmaptc = GetShadowMapTC2D(dir) + vec3(ShadowMap_TextureScale.zw, 0.0);\n",
+"	vec3 shadowmaptc = GetShadowMapTC2D(dir) + vec3(ShadowMap_TextureScale.zw, 0.0f);\n",
 "	float f;\n",
 "\n",
 "#  ifdef USEDEPTHRGB\n",

@@ -106,21 +106,8 @@ Note that this requires a linux device or WSL.
    ```shell
    make emscripten-release
    ```
-1. Open the darkplaces-wasm.html file in your web browser
-1. Open the game console
-1. Create an id1 mod directory
-   ```
-   em_mkdir /quake/id1
-   ```
-1. Upload the Quake `pak0.pak` and `pak1.pak` files:
-   ```
-   em_upload /quake/id1
-   ```
-1. Save the files to the browser
-   ```
-   em_save
-   ```
-1. Reload the web page
+1. Copy `darkplaces-wasm.js`, `wasm/index.html`, and `wasm/autoexec.cfg` files to your web server
+1. Copy the Quake `pak0.pak` and `pak1.pak` files into the same web server directory
 
 ## Contributing
 
