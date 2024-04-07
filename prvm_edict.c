@@ -46,8 +46,11 @@ cvar_t prvm_breakpointdump = {CF_CLIENT | CF_SERVER, "prvm_breakpointdump", "0",
 cvar_t prvm_reuseedicts_startuptime = {CF_CLIENT | CF_SERVER, "prvm_reuseedicts_startuptime", "2", "allows immediate re-use of freed entity slots during start of new level (value in seconds)"};
 cvar_t prvm_reuseedicts_neverinsameframe = {CF_CLIENT | CF_SERVER, "prvm_reuseedicts_neverinsameframe", "1", "never allows re-use of freed entity slots during same frame"};
 cvar_t prvm_garbagecollection_enable = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_enable", "1", "automatically scan for and free resources that are not referenced by the code being executed in the VM"};
-cvar_t prvm_garbagecollection_notify = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection"};
-cvar_t prvm_garbagecollection_scan_limit = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_scan_limit", "10000", "scan this many fields or resources per frame to free up unreferenced resources"};
+cvar_t prvm_garbagecollection_notify = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_notify", "0", "print out a notification for each resource freed by garbage collection (set developer >= 1 to see these)"};
+/// At 50k in Xonotic with 8 bots scans take about: 24s server, 25s menu, 9s client.
+/// At 50k in Quake 1.5: 2.2s server, 0.14s client.
+/// At 50k impact on high FPS benchmarks is negligible, at 100k impact is low but measurable.
+cvar_t prvm_garbagecollection_scan_limit = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_scan_limit", "50000", "scan this many fields or resources per second to free up unreferenced resources"};
 cvar_t prvm_garbagecollection_strings = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
 cvar_t prvm_stringdebug = {CF_CLIENT | CF_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
 
@@ -3701,7 +3704,7 @@ void PRVM_LeakTest(prvm_prog_t *prog)
 
 void PRVM_GarbageCollection(prvm_prog_t *prog)
 {
-	int limit = prvm_garbagecollection_scan_limit.integer;
+	int limit = prvm_garbagecollection_scan_limit.integer * (prog == SVVM_prog ? sv.frametime : cl.realframetime);
 	prvm_prog_garbagecollection_state_t *gc = &prog->gc;
 	if (!prvm_garbagecollection_enable.integer)
 		return;
@@ -3820,5 +3823,6 @@ void PRVM_GarbageCollection(prvm_prog_t *prog)
 	case PRVM_GC_RESET:
 	default:
 		memset(gc, 0, sizeof(*gc));
+//		Con_Printf("%s%s GC: reset @ %f frametime %f scan_limit per frame %i\n", prog == SVVM_prog ? "^6" : "^5", prog->name, host.realtime, prog == SVVM_prog ? sv.frametime : cl.realframetime, limit);
 	}
 }
