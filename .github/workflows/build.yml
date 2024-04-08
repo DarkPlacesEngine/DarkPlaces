@@ -66,17 +66,21 @@ jobs:
 
       - name: Compile
         run: |
-          # fail if there's any warnings
-          export CC="cc -Werror"
+          cd emsdk
+
+          # Download and install the latest SDK tools.
+          ./emsdk install latest
 
           # Make the "latest" SDK "active" for the current user. (writes .emscripten file)
-          cd emsdk
           ./emsdk activate latest
 
           # Activate PATH and other environment variables in the current terminal
           source ./emsdk_env.sh
 
           cd ..
+
+          # fail if there's any warnings
+          export CC="cc -Werror"
 
           make emscripten-release
 
