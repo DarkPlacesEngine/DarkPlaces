@@ -51,7 +51,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install --yes libssl-dev
+          apt install --yes libssl-dev certifi
 
       - name: Fetch repository
         uses: actions/checkout@v4.1.1
