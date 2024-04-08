@@ -51,8 +51,8 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install --yes build-essential
-# libssl-dev python3-certifi xz-utils
+          apt install --yes build-essential python3-certifi
+# libssl-dev xz-utils
 
       - name: Fetch repository
         uses: actions/checkout@v4.1.1
