@@ -679,24 +679,6 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 	return time;
 }
 
-void Host_Loop(void){
-	// Something bad happened, or the server disconnected
-	if (setjmp(host.abortframe))
-	{
-		host.state = host_active; // In case we were loading
-		return;
-	}
-
-	host.dirtytime = Sys_DirtyTime();
-	host.realtime += Htime = Host_UpdateTime(host.dirtytime, oldtime);
-	oldtime = host.dirtytime;
-
-	sleeptime = Host_Frame(Htime);
-	++host.framecount;
-	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-	host.sleeptime = Sys_Sleep(sleeptime);
-}
-
 void Host_Main(void)
 {
 	double time, oldtime, sleeptime;
@@ -707,14 +689,28 @@ void Host_Main(void)
 	oldtime = Sys_DirtyTime();
 
 	// Main event loop
-	#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(Host_Loop, 0, true);
+#else
 	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
-		Host_Loop();
+		// Something bad happened, or the server disconnected
+		if (setjmp(host.abortframe))
+		{
+			host.state = host_active; // In case we were loading
+			continue;
+		}
+
+		host.dirtytime = Sys_DirtyTime();
+		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
+		oldtime = host.dirtytime;
+
+		sleeptime = Host_Frame(time);
+		++host.framecount;
+		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+		host.sleeptime = Sys_Sleep(sleeptime);
 	}
-	#else
-	emscripten_set_main_loop(Host_Loop, 0, true);
-	#endif
+#endif
 
 	Host_Shutdown();
 }
