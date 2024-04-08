@@ -62,10 +62,6 @@ jobs:
 
       - name: Compile
         run: |
-          # prevent git complaining about dubious ownership of the repo
-          chown -R root:root .
-          # fail if `git describe` doesn't work (required for the buildstring)
-          git describe --always
           # fail if there's any warnings
           export CC="cc -Werror"
 
