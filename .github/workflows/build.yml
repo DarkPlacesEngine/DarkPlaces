@@ -70,10 +70,13 @@ jobs:
           export CC="cc -Werror"
 
           # Make the "latest" SDK "active" for the current user. (writes .emscripten file)
-          ./emsdk/emsdk activate latest
+          cd emsdk
+          ./emsdk activate latest
 
           # Activate PATH and other environment variables in the current terminal
-          source ./emsdk/emsdk_env.sh
+          source ./emsdk_env.sh
+
+          cd ..
 
           make emscripten-release
 
