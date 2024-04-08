@@ -684,6 +684,7 @@ void Host_Loop(void){
 	if (setjmp(host.abortframe))
 	{
 		host.state = host_active; // In case we were loading
+		return;
 	}
 
 	host.dirtytime = Sys_DirtyTime();
@@ -712,7 +713,7 @@ void Host_Main(void)
 		Host_Loop();
 	}
 	#else
-		emscripten_set_main_loop(Host_Loop, 0, true);
+	emscripten_set_main_loop(Host_Loop, 0, true);
 	#endif
 
 	Host_Shutdown();
