@@ -244,7 +244,7 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -DUSE_GLES2 \
                                    -lidbfs.js \
                                    --pre-js ../../../wasm/pre.js \
-                                   -s EXPORTED_RUNTIME_METHODS=callMain,main,addRunDependency,removeRunDependency
+                                   -s EXPORTED_RUNTIME_METHODS=callMain,addRunDependency,removeRunDependency
 
 
 ##### Mac OS X specific variables #####
