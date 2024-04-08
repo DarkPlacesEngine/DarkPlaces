@@ -508,7 +508,7 @@ double Sys_Sleep(double time)
 	else if(sys_supportsdlgetticks && sys_usesdldelay.integer)
 		Sys_SDL_Delay(microseconds / 1000);
 #if HAVE_SELECT
-	else
+	else if (cls.state == ca_dedicated && sv_checkforpacketsduringsleep.integer)
 	{
 		struct timeval tv;
 		lhnetsocket_t *s;
@@ -516,30 +516,27 @@ double Sys_Sleep(double time)
 		int lastfd = -1;
 
 		FD_ZERO(&fdreadset);
-		if (cls.state == ca_dedicated && sv_checkforpacketsduringsleep.integer)
+		List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
 		{
-			List_For_Each_Entry(s, &lhnet_socketlist.list, lhnetsocket_t, list)
+			if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
 			{
-				if (s->address.addresstype == LHNETADDRESSTYPE_INET4 || s->address.addresstype == LHNETADDRESSTYPE_INET6)
-				{
-					if (lastfd < s->inetsocket)
-						lastfd = s->inetsocket;
+				if (lastfd < s->inetsocket)
+					lastfd = s->inetsocket;
 	#if defined(WIN32) && !defined(_MSC_VER)
-					FD_SET((int)s->inetsocket, &fdreadset);
+				FD_SET((int)s->inetsocket, &fdreadset);
 	#else
-					FD_SET((unsigned int)s->inetsocket, &fdreadset);
+				FD_SET((unsigned int)s->inetsocket, &fdreadset);
 	#endif
-				}
 			}
 		}
 		tv.tv_sec = microseconds / 1000000;
 		tv.tv_usec = microseconds % 1000000;
 		// on Win32, select() cannot be used with all three FD list args being NULL according to MSDN
-		// (so much for POSIX...)
-		// bones_was_here: but a zeroed fd_set seems to be tolerated (tested on Win 7)
+		// (so much for POSIX...), not with an empty fd_set either.
 		select(lastfd + 1, &fdreadset, NULL, NULL, &tv);
 	}
-#elif HAVE_USLEEP
+#endif
+#if HAVE_USLEEP
 	else
 		usleep(microseconds);
 #elif HAVE_Sleep
