@@ -48,6 +48,11 @@ jobs:
     container:
       image: debian:latest
     steps:
+      - name: Install dependencies
+        run: |
+          apt update
+          apt install --yes libssl-dev
+
       - name: Fetch repository
         uses: actions/checkout@v4.1.1
         with:
@@ -59,10 +64,26 @@ jobs:
           python-version: '3'
 
       - name: Install emsdk
-        uses: mymindstorm/setup-emsdk@v14
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: emscripten-core/emsdk
+          path: emsdk
 
       - name: Compile
         run: |
+          cd emsdk
+
+          # Download and install the latest SDK tools.
+          ./emsdk install latest
+
+          # Make the "latest" SDK "active" for the current user. (writes .emscripten file)
+          ./emsdk activate latest
+
+          # Activate PATH and other environment variables in the current terminal
+          source ./emsdk_env.sh
+
+          cd ..
+
           # fail if there's any warnings
           export CC="cc -Werror"
 
