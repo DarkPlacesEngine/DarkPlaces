@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif 
-double Htime, oldtime, sleeptime;
+double host_loop_time, host_loop_oldtime, host_loop_sleeptime;
 
 /*
 
@@ -679,14 +679,31 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 	return time;
 }
 
+void Host_Loop(void)
+{
+	// Something bad happened, or the server disconnected
+	if (setjmp(host.abortframe))
+	{
+		host.state = host_active; // In case we were loading
+		return;
+	}
+
+	host.dirtytime = Sys_DirtyTime();
+	host.realtime += host_loop_time = Host_UpdateTime(host.dirtytime, host_loop_oldtime);
+	host_loop_oldtime = host.dirtytime;
+
+	host_loop_sleeptime = Host_Frame(host_loop_time);
+	++host.framecount;
+	host_loop_sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+	host.sleeptime = Sys_Sleep(host_loop_sleeptime);
+}
+
 void Host_Main(void)
 {
-	double time, oldtime, sleeptime;
-
 	Host_Init(); // Start!
 
 	host.realtime = 0;
-	oldtime = Sys_DirtyTime();
+	host_loop_oldtime = Sys_DirtyTime();
 
 	// Main event loop
 #ifdef __EMSCRIPTEN__
@@ -694,21 +711,7 @@ void Host_Main(void)
 #else
 	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
-		// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-			continue;
-		}
-
-		host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
-		oldtime = host.dirtytime;
-
-		sleeptime = Host_Frame(time);
-		++host.framecount;
-		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Sys_Sleep(sleeptime);
+		Host_Loop();
 	}
 #endif
 
