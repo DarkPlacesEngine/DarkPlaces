@@ -271,6 +271,7 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 #ifdef WIN32
 # define HAVE_TIMEGETTIME 1
 # define HAVE_QUERYPERFORMANCECOUNTER 1
+# define HAVE_WIN32_USLEEP 1
 # define HAVE_Sleep 1
 #endif
 
@@ -297,10 +298,10 @@ cvar_t sys_libdir = {CF_READONLY | CF_SHARED, "sys_libdir", "", "Default engine 
 
 // these are not
 static cvar_t sys_debugsleep = {CF_SHARED, "sys_debugsleep", "0", "write requested and attained sleep times to standard output, to be used with gnuplot"};
-static cvar_t sys_usesdlgetticks = {CF_SHARED, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (less accurate, for debugging)"};
-static cvar_t sys_usesdldelay = {CF_SHARED, "sys_usesdldelay", "0", "use SDL_Delay() (less accurate, for debugging)"};
+static cvar_t sys_usesdlgetticks = {CF_SHARED, "sys_usesdlgetticks", "0", "use SDL_GetTicks() timer (low precision, for debugging)"};
+static cvar_t sys_usesdldelay = {CF_SHARED, "sys_usesdldelay", "0", "use SDL_Delay() (low precision, for debugging)"};
 #if HAVE_QUERYPERFORMANCECOUNTER
-static cvar_t sys_usequeryperformancecounter = {CF_SHARED | CF_ARCHIVE, "sys_usequeryperformancecounter", "0", "use windows QueryPerformanceCounter timer (which has issues on multicore/multiprocessor machines and processors which are designed to conserve power) for timing rather than timeGetTime function (which has issues on some motherboards)"};
+static cvar_t sys_usequeryperformancecounter = {CF_SHARED | CF_ARCHIVE, "sys_usequeryperformancecounter", "1", "use windows QueryPerformanceCounter timer (which has issues on systems lacking constant-rate TSCs synchronised across all cores, such as ancient PCs or VMs) for timing rather than timeGetTime function (which is low precision and had issues on some old motherboards)"};
 #endif
 #if HAVE_CLOCKGETTIME
 static cvar_t sys_useclockgettime = {CF_SHARED | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
@@ -372,6 +373,47 @@ void Sys_Init_Commands (void)
 #endif
 }
 
+#ifdef WIN32
+static LARGE_INTEGER PerformanceFreq;
+/// Windows default timer resolution is only 15.625ms,
+/// this affects (at least) timeGetTime() and all forms of sleeping.
+static void Sys_SetTimerResolution(void)
+{
+	NTSTATUS(NTAPI *qNtQueryTimerResolution)(OUT PULONG MinRes, OUT PULONG MaxRes, OUT PULONG CurrentRes);
+	NTSTATUS(NTAPI *qNtSetTimerResolution)(IN ULONG DesiredRes, IN BOOLEAN SetRes, OUT PULONG ActualRes);
+	const char* ntdll_names [] =
+	{
+		"ntdll.dll",
+		NULL
+	};
+	dllfunction_t ntdll_funcs[] =
+	{
+		{"NtQueryTimerResolution", (void **) &qNtQueryTimerResolution},
+		{"NtSetTimerResolution",   (void **) &qNtSetTimerResolution},
+		{NULL, NULL}
+	};
+	dllhandle_t ntdll;
+	unsigned long WorstRes, BestRes, CurrentRes;
+
+	timeBeginPeriod(1); // 1ms, documented
+
+	// the best Windows can manage (typically 0.5ms)
+	// http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FTime%2FNtSetTimerResolution.html
+	if (Sys_LoadDependency(ntdll_names, &ntdll, ntdll_funcs))
+	{
+		qNtQueryTimerResolution(&WorstRes, &BestRes, &CurrentRes); // no pointers may be NULL
+		if (CurrentRes > BestRes)
+			qNtSetTimerResolution(BestRes, true, &CurrentRes);
+
+		Sys_FreeLibrary(&ntdll);
+	}
+
+	// Microsoft says the freq is fixed at boot and consistent across all processors
+	// and that it need only be queried once and cached.
+	QueryPerformanceFrequency (&PerformanceFreq);
+}
+#endif // WIN32
+
 double Sys_DirtyTime(void)
 {
 	// first all the OPTIONAL timers
@@ -388,25 +430,22 @@ double Sys_DirtyTime(void)
 #if HAVE_QUERYPERFORMANCECOUNTER
 	if (sys_usequeryperformancecounter.integer)
 	{
-		// LadyHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 		// QueryPerformanceCounter
 		// platform:
 		// Windows 95/98/ME/NT/2000/XP
 		// features:
-		// very accurate (CPU cycles)
+		// + very accurate (constant-rate TSCs on modern systems)
 		// known issues:
-		// does not necessarily match realtime too well (tends to get faster and faster in win98)
-		// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
-		double timescale;
-		LARGE_INTEGER PerformanceFreq;
+		// - does not necessarily match realtime too well (tends to get faster and faster in win98)
+		// - wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
+		// - higher access latency on Vista
+		// Microsoft says on Win 7 or later, latency and overhead are very low, synchronisation is excellent.
 		LARGE_INTEGER PerformanceCount;
 
-		if (QueryPerformanceFrequency (&PerformanceFreq))
+		if (PerformanceFreq.QuadPart)
 		{
 			QueryPerformanceCounter (&PerformanceCount);
-	
-			timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-			return ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+			return (double)PerformanceCount.QuadPart * (1.0 / (double)PerformanceFreq.QuadPart);
 		}
 		else
 		{
@@ -443,7 +482,6 @@ double Sys_DirtyTime(void)
 	}
 #elif HAVE_TIMEGETTIME
 	{
-		static int firsttimegettime = true;
 		// timeGetTime
 		// platform:
 		// Windows 95/98/ME/NT/2000/XP
@@ -451,14 +489,7 @@ double Sys_DirtyTime(void)
 		// reasonable accuracy (millisecond)
 		// issues:
 		// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
-
-		// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
-		if (firsttimegettime)
-		{
-			timeBeginPeriod(1);
-			firsttimegettime = false;
-		}
-
+		// requires Sys_SetTimerResolution()
 		return (double) timeGetTime() / 1000.0;
 	}
 #else
@@ -539,6 +570,19 @@ double Sys_Sleep(double time)
 #if HAVE_USLEEP
 	else
 		usleep(microseconds);
+#elif HAVE_WIN32_USLEEP // Windows XP/2003 minimum
+	else
+	{
+		HANDLE timer;
+		LARGE_INTEGER sleeptime;
+
+		// takes 100ns units, negative indicates relative time
+		sleeptime.QuadPart = -(10 * (int64_t)microseconds);
+		timer = CreateWaitableTimer(NULL, true, NULL);
+		SetWaitableTimer(timer, &sleeptime, 0, NULL, NULL, 0);
+		WaitForSingleObject(timer, INFINITE);
+		CloseHandle(timer);
+	}
 #elif HAVE_Sleep
 	else
 		Sleep(microseconds / 1000);
@@ -1085,6 +1129,10 @@ int main (int argc, char **argv)
 #endif
 
 	Sys_InitSignals();
+
+#ifdef WIN32
+	Sys_SetTimerResolution();
+#endif
 
 	Host_Main();
 
