@@ -268,28 +268,24 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 #endif
 }
 
+
+
 #ifdef WIN32
 # define HAVE_TIMEGETTIME 1
 # define HAVE_QUERYPERFORMANCECOUNTER 1
 # define HAVE_WIN32_USLEEP 1
 # define HAVE_Sleep 1
-#endif
-
-#ifndef WIN32
-#if defined(CLOCK_MONOTONIC) || defined(CLOCK_HIRES)
-# define HAVE_CLOCKGETTIME 1
-#endif
-// FIXME improve this check, manpage hints to DST_NONE
-# define HAVE_GETTIMEOFDAY 1
+#else
+# if defined(CLOCK_MONOTONIC) || defined(CLOCK_HIRES)
+#  define HAVE_CLOCKGETTIME 1
+# endif
+# if _POSIX_VERSION >= 200112L
+#  define HAVE_CLOCK_NANOSLEEP 1
+# endif
 #endif
 
 #ifdef FD_SET
 # define HAVE_SELECT 1
-#endif
-
-#ifndef WIN32
-// FIXME improve this check
-# define HAVE_USLEEP 1
 #endif
 
 // these are referenced elsewhere
@@ -302,9 +298,6 @@ static cvar_t sys_usesdlgetticks = {CF_SHARED, "sys_usesdlgetticks", "0", "use S
 static cvar_t sys_usesdldelay = {CF_SHARED, "sys_usesdldelay", "0", "use SDL_Delay() (low precision, for debugging)"};
 #if HAVE_QUERYPERFORMANCECOUNTER
 static cvar_t sys_usequeryperformancecounter = {CF_SHARED | CF_ARCHIVE, "sys_usequeryperformancecounter", "1", "use windows QueryPerformanceCounter timer (which has issues on systems lacking constant-rate TSCs synchronised across all cores, such as ancient PCs or VMs) for timing rather than timeGetTime function (which is low precision and had issues on some old motherboards)"};
-#endif
-#if HAVE_CLOCKGETTIME
-static cvar_t sys_useclockgettime = {CF_SHARED | CF_ARCHIVE, "sys_useclockgettime", "1", "use POSIX clock_gettime function (not adjusted by NTP on some older Linux kernels) for timing rather than gettimeofday (which has issues if the system time is stepped by ntpdate, or apparently on some Xen installations)"};
 #endif
 
 static cvar_t sys_stdout = {CF_SHARED, "sys_stdout", "1", "0: nothing is written to stdout (-nostdout cmdline option sets this), 1: normal messages are written to stdout, 2: normal messages are written to stderr (-stderr cmdline option sets this)"};
@@ -353,7 +346,7 @@ void Sys_Init_Commands (void)
 	Cvar_RegisterVariable(&sys_debugsleep);
 	Cvar_RegisterVariable(&sys_usenoclockbutbenchmark);
 	Cvar_RegisterVariable(&sys_libdir);
-#if HAVE_TIMEGETTIME || HAVE_QUERYPERFORMANCECOUNTER || HAVE_CLOCKGETTIME || HAVE_GETTIMEOFDAY
+#if HAVE_TIMEGETTIME || HAVE_QUERYPERFORMANCECOUNTER || HAVE_CLOCKGETTIME
 	if(sys_supportsdlgetticks)
 	{
 		Cvar_RegisterVariable(&sys_usesdlgetticks);
@@ -363,9 +356,7 @@ void Sys_Init_Commands (void)
 #if HAVE_QUERYPERFORMANCECOUNTER
 	Cvar_RegisterVariable(&sys_usequeryperformancecounter);
 #endif
-#if HAVE_CLOCKGETTIME
-	Cvar_RegisterVariable(&sys_useclockgettime);
-#endif
+
 	Cvar_RegisterVariable(&sys_stdout);
 	Cvar_RegisterCallback(&sys_stdout, Sys_UpdateOutFD_c);
 #ifndef WIN32
@@ -427,6 +418,10 @@ double Sys_DirtyTime(void)
 			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
 		return benchmark_time * 0.000001;
 	}
+
+	if(sys_supportsdlgetticks && sys_usesdlgetticks.integer)
+		return (double) Sys_SDL_GetTicks() / 1000.0;
+
 #if HAVE_QUERYPERFORMANCECOUNTER
 	if (sys_usequeryperformancecounter.integer)
 	{
@@ -457,11 +452,13 @@ double Sys_DirtyTime(void)
 #endif
 
 #if HAVE_CLOCKGETTIME
-	if (sys_useclockgettime.integer)
 	{
 		struct timespec ts;
-#  ifdef CLOCK_MONOTONIC
-		// linux
+#  ifdef CLOCK_MONOTONIC_RAW
+		// Linux-specific, SDL_GetPerformanceCounter() uses it
+		clock_gettime(CLOCK_MONOTONIC, &ts);
+#  elif defined(CLOCK_MONOTONIC)
+		// POSIX
 		clock_gettime(CLOCK_MONOTONIC, &ts);
 #  else
 		// sunos
@@ -472,15 +469,7 @@ double Sys_DirtyTime(void)
 #endif
 
 	// now all the FALLBACK timers
-	if(sys_supportsdlgetticks && sys_usesdlgetticks.integer)
-		return (double) Sys_SDL_GetTicks() / 1000.0;
-#if HAVE_GETTIMEOFDAY
-	{
-		struct timeval tp;
-		gettimeofday(&tp, NULL);
-		return (double) tp.tv_sec + tp.tv_usec / 1000000.0;
-	}
-#elif HAVE_TIMEGETTIME
+#if HAVE_TIMEGETTIME
 	{
 		// timeGetTime
 		// platform:
@@ -499,45 +488,39 @@ double Sys_DirtyTime(void)
 #endif
 }
 
-extern cvar_t host_maxwait;
 double Sys_Sleep(double time)
 {
 	double dt;
-	uint32_t microseconds;
+	uint32_t msec, usec, nsec;
 
-	// convert to microseconds
-	time *= 1000000.0;
-
-	if(host_maxwait.value <= 0)
-		time = min(time, 1000000.0);
-	else
-		time = min(time, host_maxwait.value * 1000.0);
-
-	if (time < 1 || host.restless)
+	if (time < 1.0/1000000.0 || host.restless)
 		return 0; // not sleeping this frame
-
-	microseconds = time; // post-validation to prevent overflow
+	if (time >= 1)
+		time = 0.999999; // ensure passed values are in range
+	msec = time * 1000;
+	usec = time * 1000000;
+	nsec = time * 1000000000;
 
 	if(sys_usenoclockbutbenchmark.integer)
 	{
 		double old_benchmark_time = benchmark_time;
-		benchmark_time += microseconds;
+		benchmark_time += usec;
 		if(benchmark_time == old_benchmark_time)
 			Sys_Error("sys_usenoclockbutbenchmark cannot run any longer, sorry");
 		return 0;
 	}
 
 	if(sys_debugsleep.integer)
-		Con_Printf("sys_debugsleep: requesting %u ", microseconds);
+		Con_Printf("sys_debugsleep: requesting %u ", usec);
 	dt = Sys_DirtyTime();
 
 	// less important on newer libcurl so no need to disturb dedicated servers
-	if (cls.state != ca_dedicated && Curl_Select(microseconds))
+	if (cls.state != ca_dedicated && Curl_Select(msec))
 	{
 		// a transfer is ready or we finished sleeping
 	}
 	else if(sys_supportsdlgetticks && sys_usesdldelay.integer)
-		Sys_SDL_Delay(microseconds / 1000);
+		Sys_SDL_Delay(msec);
 #if HAVE_SELECT
 	else if (cls.state == ca_dedicated && sv_checkforpacketsduringsleep.integer)
 	{
@@ -560,16 +543,21 @@ double Sys_Sleep(double time)
 	#endif
 			}
 		}
-		tv.tv_sec = microseconds / 1000000;
-		tv.tv_usec = microseconds % 1000000;
+		tv.tv_sec = 0;
+		tv.tv_usec = usec;
 		// on Win32, select() cannot be used with all three FD list args being NULL according to MSDN
 		// (so much for POSIX...), not with an empty fd_set either.
 		select(lastfd + 1, &fdreadset, NULL, NULL, &tv);
 	}
 #endif
-#if HAVE_USLEEP
+#if HAVE_CLOCK_NANOSLEEP
 	else
-		usleep(microseconds);
+	{
+		struct timespec ts;
+		ts.tv_sec = 0;
+		ts.tv_nsec = nsec;
+		clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+	}
 #elif HAVE_WIN32_USLEEP // Windows XP/2003 minimum
 	else
 	{
@@ -577,7 +565,7 @@ double Sys_Sleep(double time)
 		LARGE_INTEGER sleeptime;
 
 		// takes 100ns units, negative indicates relative time
-		sleeptime.QuadPart = -(10 * (int64_t)microseconds);
+		sleeptime.QuadPart = -((int64_t)nsec / 100);
 		timer = CreateWaitableTimer(NULL, true, NULL);
 		SetWaitableTimer(timer, &sleeptime, 0, NULL, NULL, 0);
 		WaitForSingleObject(timer, INFINITE);
@@ -585,15 +573,15 @@ double Sys_Sleep(double time)
 	}
 #elif HAVE_Sleep
 	else
-		Sleep(microseconds / 1000);
+		Sleep(msec);
 #else
 	else
-		Sys_SDL_Delay(microseconds / 1000);
+		Sys_SDL_Delay(msec);
 #endif
 
 	dt = Sys_DirtyTime() - dt;
 	if(sys_debugsleep.integer)
-		Con_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - microseconds);
+		Con_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - usec);
 	return (dt < 0 || dt >= 1800) ? 0 : dt;
 }
 

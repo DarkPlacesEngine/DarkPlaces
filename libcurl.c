@@ -1260,7 +1260,7 @@ Returns 0 immediately if there's no transfers to wait for,
 or > 0 if a transfer is ready or the timeout was reached.
 ====================
 */
-int Curl_Select(uint32_t microseconds)
+int Curl_Select(int timeout_ms)
 {
 	CURLMcode err;
 	int numfds;
@@ -1268,7 +1268,7 @@ int Curl_Select(uint32_t microseconds)
 	if (List_Is_Empty(&downloads))
 		return 0;
 
-	err = qcurl_multi_wait(curlm, NULL, 0, microseconds / 1000, &numfds);
+	err = qcurl_multi_wait(curlm, NULL, 0, timeout_ms, &numfds);
 	if (err == CURLM_OK)
 		return numfds;
 	Con_Printf("curl_multi_wait() failed, code %d\n", err);
