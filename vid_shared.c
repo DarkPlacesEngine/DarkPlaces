@@ -1443,9 +1443,13 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s on display %i\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", vid.displayindex);
 
-		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
-		Cvar_SetValueQuick(&vid_width, vid.mode.width);
-		Cvar_SetValueQuick(&vid_height, vid.mode.height);
+		// desktopfullscreen doesn't need fallback mode saved so let cvars store windowed mode dimensions
+		if (!vid_desktopfullscreen.integer) // maybe checking SDL_WINDOW_FULLSCREEN_DESKTOP is better?
+		{
+			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
+			Cvar_SetValueQuick(&vid_width, vid.mode.width);
+			Cvar_SetValueQuick(&vid_height, vid.mode.height);
+		}
 		Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
 		Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
 		if(vid_userefreshrate.integer)
