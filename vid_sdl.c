@@ -1373,6 +1373,7 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
+/// Applies display settings immediately (no vid_restart required).
 static void VID_ApplyDisplaySettings_c(cvar_t *var)
 {
 	unsigned int fullscreenwanted, fullscreencurrent;
@@ -1442,6 +1443,26 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 	// switching to a fullscreen mode
 	if (fullscreenwanted)
 	{
+		if (fullscreenwanted == SDL_WINDOW_FULLSCREEN)
+		{
+			// When starting in desktop/window mode no hardware mode is set so do it now,
+			// this also applies vid_width and vid_height changes immediately without bogus modesets.
+			SDL_DisplayMode modewanted, modeclosest;
+			modewanted.w = vid_width.integer;
+			modewanted.h = vid_height.integer;
+			modewanted.refresh_rate = vid_userefreshrate.integer ? vid_refreshrate.integer : 0;
+			if (!SDL_GetClosestDisplayMode(vid.displayindex, &modewanted, &modeclosest))
+			{
+				Con_Printf(CON_ERROR "Error getting closest mode to %ix%i@%ihz for display %i: \"%s\"\n", modewanted.w, modewanted.h, modewanted.refresh_rate, vid.displayindex, SDL_GetError());
+				return;
+			}
+			if (SDL_SetWindowDisplayMode(window, &modeclosest) < 0)
+			{
+				Con_Printf(CON_ERROR "Error setting mode %ix%i@%ihz for display %i: \"%s\"\n", modeclosest.w, modeclosest.h, modeclosest.refresh_rate, vid.displayindex, SDL_GetError());
+				return;
+			}
+		}
+
 		if (SDL_SetWindowFullscreen(window, fullscreenwanted) < 0)
 		{
 			Con_Printf(CON_ERROR "ERROR: can't activate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
@@ -1502,6 +1523,8 @@ void VID_Init (void)
 	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_width,                  VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_height,                 VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_resizable,              VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_borderless,             VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
