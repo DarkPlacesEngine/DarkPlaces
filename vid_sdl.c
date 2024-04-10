@@ -59,9 +59,6 @@ static io_connect_t IN_GetIOHandle(void)
 #endif
 #endif
 
-#ifdef WIN32
-#define SDL_R_RESTART
-#endif
 
 // Tell startup code that we have a client
 int cl_available = true;
@@ -1023,20 +1020,6 @@ void IN_Move( void )
 // Message Handling
 ////
 
-#ifdef SDL_R_RESTART
-static qbool sdl_needs_restart;
-static void sdl_start(void)
-{
-}
-static void sdl_shutdown(void)
-{
-	sdl_needs_restart = false;
-}
-static void sdl_newmap(void)
-{
-}
-#endif
-
 static keynum_t buttonremap[] =
 {
 	K_MOUSE1,
@@ -1209,15 +1192,6 @@ void Sys_SDL_HandleEvents(void)
 							//vid.height = event.window.data2;
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
 							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
-#ifdef SDL_R_RESTART
-							// better not call R_Modules_Restart_f from here directly, as this may wreak havoc...
-							// so, let's better queue it for next frame
-							if(!sdl_needs_restart)
-							{
-								Cbuf_AddText(cmd_local, "\nr_restart\n");
-								sdl_needs_restart = true;
-							}
-#endif
 						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
@@ -1512,10 +1486,6 @@ void VID_Init (void)
 	Cvar_SetValueQuick(&vid_touchscreen, 1);
 #endif
 	Cvar_RegisterVariable(&joy_sdl2_trigger_deadzone);
-
-#ifdef SDL_R_RESTART
-	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
-#endif
 
 #if defined(__linux__)
 	// exclusive fullscreen is no longer functional (and when it worked was obnoxious and not faster)
