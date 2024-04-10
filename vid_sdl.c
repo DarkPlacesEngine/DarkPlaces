@@ -1041,7 +1041,6 @@ static keynum_t buttonremap[] =
 };
 
 //#define DEBUGSDLEVENTS
-static void VID_ChangeDisplay_c(cvar_t *var);
 void Sys_SDL_HandleEvents(void)
 {
 	static qbool sound_active = true;
@@ -1232,13 +1231,19 @@ void Sys_SDL_HandleEvents(void)
 				switch (event.display.event)
 				{
 					case SDL_DISPLAYEVENT_CONNECTED:
-						Con_Printf("Display %i connected: %s\nA vid_restart may be necessary!\n", event.display.display, SDL_GetDisplayName(event.display.display));
+						Con_Printf(CON_WARN "Display %i connected: %s\n", event.display.display, SDL_GetDisplayName(event.display.display));
+#ifdef __linux__
+						Con_Print(CON_WARN "A vid_restart may be necessary!\n");
+#endif
 						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
-						// Ideally we'd call VID_ChangeDisplay_c() to try to switch to the preferred display here,
-						// but we may need a vid_restart first, see comments in VID_ChangeDisplay_c().
+						// Ideally we'd call VID_ApplyDisplaySettings_c() to try to switch to the preferred display here,
+						// but we may need a vid_restart first, see comments in VID_ApplyDisplaySettings_c().
 						break;
 					case SDL_DISPLAYEVENT_DISCONNECTED:
-						Con_Printf("Display %i disconnected.\nA vid_restart may be necessary!\n", event.display.display);
+						Con_Printf(CON_WARN "Display %i disconnected.\n", event.display.display);
+#ifdef __linux__
+						Con_Print(CON_WARN "A vid_restart may be necessary!\n");
+#endif
 						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
 						break;
 					case SDL_DISPLAYEVENT_ORIENTATION:
@@ -1368,13 +1373,14 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
-static void VID_ChangeDisplay_c(cvar_t *var)
+static void VID_ApplyDisplaySettings_c(cvar_t *var)
 {
 	unsigned int fullscreenwanted, fullscreencurrent;
 	unsigned int displaywanted = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
 
 	if (!window)
 		return;
+	Con_DPrintf("%s: %s \"%s\"\n", __func__, var->name, var->string);
 
 	fullscreencurrent = SDL_GetWindowFlags(window) & (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_FULLSCREEN);
 	if (vid_fullscreen.integer)
@@ -1384,7 +1390,7 @@ static void VID_ChangeDisplay_c(cvar_t *var)
 
 	// moving to another display, changing the fullscreen mode or switching to windowed
 	if (vid.displayindex != displaywanted // SDL seems unable to move any fullscreen window to another display
-	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: switching to windowed first feels safer
+	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: DESKTOP flag includes FULLSCREEN bit
 	{
 		if (SDL_SetWindowFullscreen(window, 0) < 0)
 		{
@@ -1414,7 +1420,7 @@ static void VID_ChangeDisplay_c(cvar_t *var)
 //		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted), SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted));
 //		SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
 
-		/* bones_was_here BUG: after SDL_DISPLAYEVENT hotplug events,
+		/* bones_was_here BUG: after SDL_DISPLAYEVENT hotplug events, on Xorg + NVIDIA,
 		 * SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted) may place the window somewhere completely invisible.
 		 * WORKAROUND: manual positioning seems safer: although SDL_GetDisplayBounds() may return outdated values,
 		 * SDL_SetWindowPosition() always placed the window somewhere fully visible, even if it wasn't correct,
@@ -1493,11 +1499,11 @@ void VID_Init (void)
 	vid_desktopfullscreen.flags |= CF_READONLY;
 #endif
 
-	Cvar_RegisterCallback(&vid_fullscreen,             VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_display,                VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_resizable,              VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_borderless,             VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_resizable,              VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_borderless,             VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
 	Cvar_RegisterCallback(&vid_mouse_clickthrough,     VID_SetHints_c);
 	Cvar_RegisterCallback(&vid_minimize_on_focus_loss, VID_SetHints_c);
