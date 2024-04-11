@@ -5,6 +5,7 @@
 #include <SDL.h>
 
 #include "darkplaces.h"
+#include "fs.h"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -144,7 +145,7 @@ void upload_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf(upload("/save"));  // FIXME: Probably shouldn't be hardcoded like this. Should also just be the basedir so that uploading is easier
+		Con_Printf(upload(fs_basedir));  // FIXME: Probably shouldn't be hardcoded like this. Should also just be the basedir so that uploading is easier
 		Con_Printf("\n");
 	}
 	else
@@ -276,14 +277,16 @@ void Sys_SDL_Init(void)
 
 void Sys_Register_Commands(void)
 {
+	#ifdef WASM_USER_ADJUSTABLE
 	Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to /save (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_rm", rm_f, "Remove a file from game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mv", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
 	Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol");
+	#endif
+	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
 }
 
 qbool sys_supportsdlgetticks = true;

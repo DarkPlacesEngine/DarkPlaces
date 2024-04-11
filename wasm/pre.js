@@ -63,7 +63,8 @@ Module['preRun'] = [
 			// Creates the Quake basedir and mounts it to IDBFS
 			//
 			FS.mkdir('/game');
-			FS.mount(IDBFS, {}, '/game');
+			//mounts IDBFS to where the game would save
+			FS.mount(IDBFS, {}, '/home/web_user/');
 		}
 
 		function downloadGameFiles() {
@@ -86,7 +87,7 @@ Module['preRun'] = [
 			// Wait for downloads to finish, sync the filesystem, start the game
 			Promise.all(downloads)
 				.then(function(results) {
-					FS.syncfs(false, function (err) {  // must be false, not sure why
+					FS.syncfs(true, function (err) {  
 						assert(!err);
 						Module.callMain(Module.arguments);
 					});

@@ -210,7 +210,8 @@ EXE_UNIXSV=darkplaces-dedicated
 EXE_UNIXSDL=darkplaces-sdl
 EXE_UNIXSVNEXUIZ=nexuiz-dedicated
 EXE_UNIXSDLNEXUIZ=nexuiz-sdl
-EXE_WASM=darkplaces-wasm.js
+EXE_WASMJS=darkplaces-wasm.js
+EXE_WASM=darkplaces-wasm.html
 
 CMD_UNIXRM=rm -rf
 CMD_UNIXCP=cp -f
@@ -228,7 +229,7 @@ LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 ##### WASM specific variable #####
 
-LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
+LDFLAGS_WASMJS=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -s USE_LIBPNG=1 \
                                    -s USE_LIBJPEG=1 \
                                    -s USE_ZLIB=1 \
@@ -245,6 +246,25 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -lidbfs.js \
                                    --pre-js ../../../wasm/pre.js \
                                    -s EXPORTED_RUNTIME_METHODS=callMain,addRunDependency,removeRunDependency
+
+LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
+                                   -s USE_LIBPNG=1 \
+                                   -s USE_LIBJPEG=1 \
+                                   -s USE_ZLIB=1 \
+                                   -s INITIAL_MEMORY=128mb \
+                                   -s MAXIMUM_MEMORY=1gb \
+                                   -s SINGLE_FILE \
+                                   -s FULL_ES3 \
+                                   -s MIN_WEBGL_VERSION=2 \
+                                   -s MAX_WEBGL_VERSION=2 \
+                                   -s ALLOW_MEMORY_GROWTH=1 \
+                                   -s ASSERTIONS=2 \
+                                   -s TOTAL_STACK=32mb \
+                                   -DUSE_GLES2 \
+                                   -lidbfs.js \
+                                   --pre-js ../../../wasm/standaloneprejs.js \
+                                   -s EXPORTED_RUNTIME_METHODS=callMain,addRunDependency,removeRunDependency \
+								   --shell-file ../../../wasm/shell.htm
 
 
 ##### Mac OS X specific variables #####
@@ -322,6 +342,7 @@ help:
 	@echo "* $(MAKE) sdl-nexuiz           : make SDL client with nexuiz icon (release version)"
 	@echo
 	@echo "* $(MAKE) emscripten-release   : make WASM client (release version)"
+	@echo "* $(MAKE) emscripten-standalone   : make standalone WASM client (release version)"
 	@echo
 
 debug :
@@ -382,8 +403,17 @@ sdl-release :
 emscripten-release :
 	$(MAKE) wasm-release \
 		DP_MAKE_TARGET="wasm" \
-		EXE='$(EXE_WASM)' \
+		EXE='$(EXE_WASMJS)' \
 		CFLAGS_FEATURES='$(CFLAGS_CLIENT)' \
+		CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' \
+		LDFLAGS_COMMON='$(LDFLAGS_WASMJS)' \
+		LEVEL=1
+
+emscripten-standalone :
+	$(MAKE) wasm-release \
+		DP_MAKE_TARGET="wasm" \
+		EXE='$(EXE_WASM)' \
+		CFLAGS_FEATURES='$(CFLAGS_CLIENT) -DWASM_USER_ADJUSTABLE' \
 		CFLAGS_SDL='$(SDLCONFIG_CFLAGS)' \
 		LDFLAGS_COMMON='$(LDFLAGS_WASM)' \
 		LEVEL=1
