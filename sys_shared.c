@@ -37,11 +37,6 @@
 #include "taskqueue.h"
 #include "thread.h"
 #include "libcurl.h"
-#if defined(_MSC_VER)
-	// Not sure why MS compiler needs this here and gcc doesn't...
-	// and gcc fails to build darkplaces-dedicated if it's included here.
-	#include "SDL.h"
-#endif
 
 
 sys_t sys;
@@ -1092,7 +1087,11 @@ static void Sys_InitSignals(void)
 #endif
 }
 
-int main (int argc, char **argv)
+/** main() but renamed so we can wrap it in sys_sdl.c and sys_null.c
+ * to avoid needing to include SDL.h in this file (would make the dedicated server require SDL).
+ * SDL builds need SDL.h in the file where main() is defined because SDL renames and wraps main().
+ */
+int Sys_Main(int argc, char *argv[])
 {
 	sys.argc = argc;
 	sys.argv = (const char **)argv;

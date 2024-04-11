@@ -33,3 +33,8 @@ void Sys_SDL_Delay (unsigned int milliseconds)
 {
 	Sys_Error("Called Sys_SDL_Delay on non-SDL target");
 }
+
+int main(int argc, char *argv[])
+{
+	return Sys_Main(argc, argv);
+}

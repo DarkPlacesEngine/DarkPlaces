@@ -261,5 +261,7 @@ void Sys_InitProcessNice (void);
 void Sys_MakeProcessNice (void);
 void Sys_MakeProcessMean (void);
 
+int Sys_Main(int argc, char *argv[]);
+
 #endif
 

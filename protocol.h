@@ -28,9 +28,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "qstats.h"
 struct mempool_s;
 struct sizebuf_s;
-// protocolversion_t is defined in common.h
-enum protocolversion_e;
 
+// protocolversion_t is defined in common.h
 enum protocolversion_e Protocol_EnumForName(const char *s);
 const char *Protocol_NameForEnum(enum protocolversion_e p);
 enum protocolversion_e Protocol_EnumForNumber(int n);
