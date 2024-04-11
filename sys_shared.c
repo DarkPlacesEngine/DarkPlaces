@@ -37,6 +37,11 @@
 #include "taskqueue.h"
 #include "thread.h"
 #include "libcurl.h"
+#if defined(_MSC_VER)
+	// Not sure why MS compiler needs this here and gcc doesn't...
+	// and gcc fails to build darkplaces-dedicated if it's included here.
+	#include "SDL.h"
+#endif
 
 
 sys_t sys;

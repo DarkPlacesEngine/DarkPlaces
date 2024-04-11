@@ -61,7 +61,7 @@ Runtime (optional): `libcurl` `libpng` `libfreetype6` `libvorbisfile`
 Build (mandatory): `build-essential` `libjpeg-dev` `zlib1g-dev`  
 Runtime (optional): `libcurl` `libpng`  
 
-### Windows (MSYS2):
+### Windows (MSYS2 MinGW):
 
 1. Install MSYS2, found [here](https://www.msys2.org/).
 2. Once you've installed MSYS2 and have fully updated it, open a MinGW64 terminal (***not an MSYS2 terminal***) and input the following command:
@@ -92,10 +92,24 @@ To build the main executable, input `make sdl-release` which creates the file ca
 If you get errors (that don't seem to be about missing dependencies) try `make clean` before compiling, especially if you updated your system since the last time you compiled.
 
 
-### Windows (Visual Studio)
+### Windows (Visual Studio 2019)
 
-May work but not recommended due to lack of support for C standards, and lack of maintenance.  
-Instructions TODO.
+Not recommended due to poor support for C standards, and lack of maintenance.
+
+DarkPlaces requires C11, so Windows SDK 10.0.22000.0 (VS 2019) or 10.0.20348.0 (VS 2022) or later is needed.  
+To install it, run the Visual Studio Installer, click "Modify", click "Individual components", select the latest Windows SDK version and de-select older versions.  
+You will also need the NuGet Package Manager selected (to download SDL2 headers the first time you build).
+Click "Modify" to apply the changes.  
+
+VS 2019  
+![MSVC2019](msvc2019_C11.png)  
+
+Open `darkplaces-vs2019.sln`, select build type "Debug" or "Release, and choose "Build Solution" from the "Build" menu to create the file `darkplaces-sdl2-vs2019.exe`.
+
+The Release build crashes. The Debug build doesn't crash (but is rather slow) so this will be Fun for someone to debug.
+
+To get a build suitable for playing Quake you'll need to use MinGW gcc, or download the autobuild from Xonotic (see above).
+
 
 ## Contributing
 
