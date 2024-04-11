@@ -1,8 +1,8 @@
 if (!Object.hasOwn(Module, 'arguments')) {
-	Module['arguments'] = ['-basedir', '/quake'];
+	Module['arguments'] = ['-basedir', '/game'];
 }
 else {
-	Module['arguments'] = ['-basedir', '/quake'].concat(Module['arguments']);
+	Module['arguments'] = ['-basedir', '/game'].concat(Module['arguments']);
 }
 
 Module['print'] = function(text) {
@@ -28,7 +28,7 @@ Module['preRun'] = [
 			//
 			parts = filePath.split('/');
 			for (let i = parts.length - 1; i > 0; i--) {
-				localDir = '/quake/' + parts.slice(0, -i).join('/')
+				localDir = '/game/' + parts.slice(0, -i).join('/')
 				try {
 					FS.mkdir(localDir);
 				}
@@ -50,7 +50,7 @@ Module['preRun'] = [
 				})
 				.then(arrayBuffer => {
 					const buffer = new Uint8Array(arrayBuffer);
-					stream = FS.open("/quake/" + localPath, "w");
+					stream = FS.open("/game/" + localPath, "w");
 					FS.write(stream, buffer, 0, buffer.byteLength);
 					FS.close(stream);
 					console.log("Downloaded " + localPath);
@@ -62,8 +62,8 @@ Module['preRun'] = [
 			//
 			// Creates the Quake basedir and mounts it to IDBFS
 			//
-			FS.mkdir('/quake');
-			FS.mount(IDBFS, {}, '/quake');
+			FS.mkdir('/game');
+			FS.mount(IDBFS, {}, '/game');
 		}
 
 		function downloadGameFiles() {
