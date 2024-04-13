@@ -4541,18 +4541,18 @@ static void ModList_RebuildList(void)
 	modlist_numenabled = fs_numgamedirs;
 	for (i = 0;i < list.numstrings && modlist_count < MODLIST_TOTALSIZE;i++)
 	{
-		// quickly skip names with dot characters - generally these are files, not directories
-		if (strchr(list.strings[i], '.')) continue;
 
 		// reject any dirs that are part of the base game
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
-		//if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
 
 		// check if we can get a description of the gamedir (from modinfo.txt),
 		// or if the directory is valid but has no description (fs_checkgamedir_missing)
 		// otherwise this isn't a valid gamedir
 		description = FS_CheckGameDir(list.strings[i]);
 		if (description == NULL || description == fs_checkgamedir_missing) continue;
+
+		if (strlen(description) > 0)
+			dp_strlcpy(modlist[modlist_count].name, description, sizeof(modlist[modlist_count].name));
 
 		dp_strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
 		//check currently loaded mods
@@ -4645,6 +4645,7 @@ static void M_ModList_Draw (void)
 	cachepic_t *p;
 	const char *s_available = "Available Mods";
 	const char *s_enabled = "Enabled Mods";
+	char *item_label;
 
 	// use as much vertical space as available
 	if (gamemode == GAME_TRANSFUSION)
@@ -4673,8 +4674,10 @@ static void M_ModList_Draw (void)
 	{
 		for (n = start;n < end;n++)
 		{
+			item_label = (strlen(modlist[n].name) > 0) ? modlist[n].name : modlist[n].dir;
+
 			DrawQ_Pic(menu_x + 40, menu_y + y, NULL, 360, 8, n == modlist_cursor ? (0.5 + 0.2 * sin(host.realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_ItemPrint(80, y, modlist[n].dir, true);
+			M_ItemPrint(80, y, item_label, true);
 			M_DrawCheckbox(48, y, modlist[n].loaded);
 			y +=8;
 		}
