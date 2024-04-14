@@ -162,7 +162,7 @@ cvar_t vid_touchscreen_showkeyboard = {CF_CLIENT, "vid_touchscreen_showkeyboard"
 cvar_t vid_touchscreen_supportshowkeyboard = {CF_CLIENT | CF_READONLY, "vid_touchscreen_supportshowkeyboard", "0", "indicates if the platform supports a virtual keyboard"};
 cvar_t vid_stick_mouse = {CF_CLIENT | CF_ARCHIVE, "vid_stick_mouse", "0", "have the mouse stuck in the center of the screen" };
 cvar_t vid_resizable = {CF_CLIENT | CF_ARCHIVE, "vid_resizable", "1", "0: window not resizable, 1: resizable, 2: window can be resized but the framebuffer isn't adjusted" };
-cvar_t vid_desktopfullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_desktopfullscreen", "1", "force desktop resolution for fullscreen; also use some OS dependent tricks for better fullscreen integration"};
+cvar_t vid_desktopfullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_desktopfullscreen", "1", "force desktop resolution and refresh rate (disable modesetting), also use some OS-dependent tricks for better fullscreen integration; disabling may reveal OS/driver/SDL bugs with multi-monitor configurations"};
 cvar_t vid_display = {CF_CLIENT | CF_ARCHIVE, "vid_display", "0", "which monitor to render on, numbered from 0 (system default)" };
 cvar_t vid_info_displaycount = {CF_CLIENT | CF_READONLY, "vid_info_displaycount", "1", "how many monitors are currently available, updated by hotplug events" };
 #ifdef WIN32
@@ -1387,13 +1387,16 @@ void VID_Shared_Init(void)
 /// NULL mode means read it from the cvars
 static int VID_Mode(viddef_mode_t *mode)
 {
+	char vabuf[1024];
 	viddef_mode_t _mode;
 
 	if (!mode)
 	{
 		mode = &_mode;
 		memset(mode, 0, sizeof(*mode));
+		mode->display           = vid_display.integer;
 		mode->fullscreen        = vid_fullscreen.integer != 0;
+		mode->desktopfullscreen = vid_desktopfullscreen.integer != 0;
 		mode->width             = vid_width.integer;
 		mode->height            = vid_height.integer;
 		mode->bitsperpixel      = vid_bitsperpixel.integer;
@@ -1405,9 +1408,11 @@ static int VID_Mode(viddef_mode_t *mode)
 
 	if (VID_InitMode(mode))
 	{
-		// accept the (possibly modified) mode
-		vid.mode = *mode;
-		vid.stencil        = mode->bitsperpixel > 16;
+		// bones_was_here: we no longer copy the (possibly modified) display mode to `vid` here
+		// because complete modesetting failure isn't really what happens with SDL2.
+		// Instead we update the active mode when we successfully apply settings,
+		// if some can't be applied we still have a viable window.
+		// Failure is still possible for other (non- display mode) reasons.
 		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
 		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
 
@@ -1436,7 +1441,13 @@ static int VID_Mode(viddef_mode_t *mode)
 		)
 			vid.sRGB2D = vid.sRGB3D = false;
 
-		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s on display %i\n", mode->fullscreen ? "fullscreen" : "window", mode->width, mode->height, mode->bitsperpixel, mode->refreshrate, mode->stereobuffer ? " stereo" : "", vid.displayindex);
+		Con_Printf("Video Mode: %s%s %dx%d %dbpp%s%s on display %i\n",
+			vid.mode.desktopfullscreen ? "desktop " : "",
+			vid.mode.fullscreen ? "fullscreen" : "window",
+			vid.mode.width, vid.mode.height, vid.mode.bitsperpixel,
+			vid.mode.refreshrate ? va(vabuf, sizeof(vabuf), " %.2fhz", vid.mode.refreshrate) : "",
+			vid.mode.stereobuffer ? " stereo" : "",
+			vid.mode.display);
 
 		if (vid_touchscreen.integer)
 		{
@@ -1464,20 +1475,33 @@ void VID_Restart_f(cmd_state_t *cmd)
 
 	oldmode = vid.mode;
 
-	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
-		oldmode.fullscreen ? "fullscreen" : "window", oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.fullscreen && oldmode.refreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", oldmode.refreshrate) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_refreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
+	Con_Printf("VID_Restart: changing from %s%s %dx%d %dbpp%s%s on display %i, to %s%s %dx%d %dbpp%s%s on display %i.\n",
+		oldmode.desktopfullscreen ? "desktop " : "",
+		oldmode.fullscreen ? "fullscreen" : "window",
+		oldmode.width, oldmode.height, oldmode.bitsperpixel,
+		oldmode.refreshrate ? va(vabuf, sizeof(vabuf), " %.2fhz", oldmode.refreshrate) : "",
+		oldmode.stereobuffer ? " stereo" : "",
+		oldmode.display,
+		vid_desktopfullscreen.integer ? "desktop " : "",
+		vid_fullscreen.integer ? "fullscreen" : "window",
+		vid_width.integer, vid_height.integer, vid_bitsperpixel.integer,
+		vid_fullscreen.integer && !vid_desktopfullscreen.integer && vid_refreshrate.integer ? va(vabuf, sizeof(vabuf), " %.2fhz", vid_refreshrate.value) : "",
+		vid_stereobuffer.integer ? " stereo" : "",
+		vid_display.integer);
+
 	SCR_DeferLoadingPlaque(false);
 	R_Modules_Shutdown();
 	VID_Shutdown();
 	if (!VID_Mode(NULL))
 	{
-		Con_Print("Video mode change failed\n");
+		Con_Print(CON_ERROR "Video mode change failed\n");
 		if (!VID_Mode(&oldmode))
 			Sys_Error("Unable to restore to last working video mode");
 		else
 		{
+			Cvar_SetValueQuick(&vid_display,           oldmode.display);
 			Cvar_SetValueQuick(&vid_fullscreen,        oldmode.fullscreen);
+			Cvar_SetValueQuick(&vid_desktopfullscreen, oldmode.desktopfullscreen);
 			Cvar_SetValueQuick(&vid_width,             oldmode.width);
 			Cvar_SetValueQuick(&vid_height,            oldmode.height);
 			Cvar_SetValueQuick(&vid_bitsperpixel,      oldmode.bitsperpixel);

@@ -37,7 +37,7 @@ void VID_Init(void)
 {
 }
 
-qbool VID_InitMode(viddef_mode_t *mode)
+qbool VID_InitMode(const viddef_mode_t *mode)
 {
 	return false;
 }

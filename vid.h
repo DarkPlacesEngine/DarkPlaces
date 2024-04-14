@@ -54,10 +54,12 @@ viddef_support_t;
 
 typedef struct viddef_mode_s
 {
+	int display;
+	qbool fullscreen;
+	qbool desktopfullscreen; ///< whether the display hardware mode can be changed
 	int width;
 	int height;
 	int bitsperpixel;
-	qbool fullscreen;
 	float refreshrate;
 	qbool stereobuffer;
 	int samples;
@@ -89,7 +91,6 @@ typedef struct viddef_s
 	int forcetextype; // always use GL_BGRA for D3D, always use GL_RGBA for GLES, etc
 
 	int xPos, yPos; // current virtual position of the top left corner of the SDL window
-	unsigned char displayindex; // the monitor it's on currently
 } viddef_t;
 
 // global video state
@@ -211,7 +212,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-qbool VID_InitMode(viddef_mode_t *mode);
+qbool VID_InitMode(const viddef_mode_t *mode);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 

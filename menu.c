@@ -2923,7 +2923,7 @@ static void M_Video_Draw (void)
 
 	// Current and Proposed Resolution
 	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
-	if (!vid_desktopfullscreen.integer && vid.mode.refreshrate && vid.mode.fullscreen) // FIXME read current mode instead of cvar
+	if (vid.mode.refreshrate && vid.mode.fullscreen && !vid.mode.desktopfullscreen)
 		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.mode.width, vid.mode.height, vid.mode.refreshrate));
 	else
 		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.mode.width, vid.mode.height));
