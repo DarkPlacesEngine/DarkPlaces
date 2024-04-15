@@ -2830,9 +2830,9 @@ video_resolution_t video_resolutions_hardcoded[] =
 // this is the number of the default mode (640x480) in the list above
 int video_resolutions_hardcoded_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 
-#define VIDEO_ITEMS 10
+#define VIDEO_ITEMS 9
 static int video_cursor = 0;
-static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152};
+static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144};
 static int menu_video_resolution;
 
 video_resolution_t *video_resolutions;
@@ -2923,7 +2923,7 @@ static void M_Video_Draw (void)
 
 	// Current and Proposed Resolution
 	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
-	if (vid_supportrefreshrate && vid.mode.userefreshrate && vid.mode.fullscreen)
+	if (!vid_desktopfullscreen.integer && vid.mode.refreshrate && vid.mode.fullscreen) // FIXME read current mode instead of cvar
 		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.mode.width, vid.mode.height, vid.mode.refreshrate));
 	else
 		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.mode.width, vid.mode.height));
@@ -2938,12 +2938,7 @@ static void M_Video_Draw (void)
 	t++;
 
 	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[t], "      Use Refresh Rate", vid_supportrefreshrate);
-	M_DrawCheckbox(220, video_cursor_table[t], vid_userefreshrate.integer);
-	t++;
-
-	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
+	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_fullscreen.integer && !vid_desktopfullscreen.integer);
 	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 150);
 	t++;
 
@@ -3003,8 +2998,6 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_samples, bound(1, vid_samples.value * (dir > 0 ? 2 : 0.5), 32));
 	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
-	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_refreshrate, bound(50, vid_refreshrate.value + dir, 150));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
@@ -3028,9 +3021,7 @@ static void M_Video_Key(cmd_state_t *cmd, int key, int ascii)
 			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
 			Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
 			Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
-			if (vid_supportrefreshrate)
-				Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
-			Cvar_SetValueQuick(&vid_userefreshrate, vid.mode.userefreshrate);
+			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
 
 			S_LocalSound ("sound/misc/menu1.wav");
 			M_Menu_Options_f(cmd);

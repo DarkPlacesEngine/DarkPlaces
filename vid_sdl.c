@@ -1449,7 +1449,7 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 			SDL_DisplayMode modewanted, modeclosest;
 			modewanted.w = vid_width.integer;
 			modewanted.h = vid_height.integer;
-			modewanted.refresh_rate = vid_userefreshrate.integer ? vid_refreshrate.integer : 0;
+			modewanted.refresh_rate = max(0, vid_refreshrate.integer);
 			if (!SDL_GetClosestDisplayMode(vid.displayindex, &modewanted, &modeclosest))
 			{
 				Con_Printf(CON_ERROR "Error getting closest mode to %ix%i@%ihz for display %i: \"%s\"\n", modewanted.w, modewanted.h, modewanted.refresh_rate, vid.displayindex, SDL_GetError());

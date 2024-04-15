@@ -137,8 +137,7 @@ cvar_t vid_width = {CF_CLIENT | CF_ARCHIVE, "vid_width", "640", "resolution"};
 cvar_t vid_height = {CF_CLIENT | CF_ARCHIVE, "vid_height", "480", "resolution"};
 cvar_t vid_bitsperpixel = {CF_CLIENT | CF_READONLY, "vid_bitsperpixel", "32", "how many bits per pixel to render at (this is not currently configurable)"};
 cvar_t vid_samples = {CF_CLIENT | CF_ARCHIVE, "vid_samples", "1", "how many anti-aliasing samples per pixel to request from the graphics driver (4 is recommended, 1 is faster)"};
-cvar_t vid_refreshrate = {CF_CLIENT | CF_ARCHIVE, "vid_refreshrate", "60", "refresh rate to use, in hz (higher values flicker less, if supported by your monitor)"};
-cvar_t vid_userefreshrate = {CF_CLIENT | CF_ARCHIVE, "vid_userefreshrate", "0", "set this to 1 to make vid_refreshrate used, or to 0 to let the engine choose a sane default"};
+cvar_t vid_refreshrate = {CF_CLIENT | CF_ARCHIVE, "vid_refreshrate", "0", "refresh rate to use, in hz (higher values feel smoother, if supported by your monitor), 0 uses the default"};
 cvar_t vid_stereobuffer = {CF_CLIENT | CF_ARCHIVE, "vid_stereobuffer", "0", "enables 'quad-buffered' stereo rendering for stereo shutterglasses, HMD (head mounted display) devices, or polarized stereo LCDs, if supported by your drivers"};
 // the density cvars are completely optional, set and use when something needs to have a density-independent size.
 // TODO: set them when changing resolution, setting them from the commandline will be independent from the resolution - use only if you have a native fixed resolution.
@@ -1305,7 +1304,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_bitsperpixel);
 	Cvar_RegisterVariable(&vid_samples);
 	Cvar_RegisterVariable(&vid_refreshrate);
-	Cvar_RegisterVariable(&vid_userefreshrate);
 	Cvar_RegisterVariable(&vid_stereobuffer);
 	Cvar_RegisterVariable(&vid_touchscreen_density);
 	Cvar_RegisterVariable(&vid_touchscreen_xdpi);
@@ -1399,8 +1397,7 @@ static int VID_Mode(viddef_mode_t *mode)
 		mode->width             = vid_width.integer;
 		mode->height            = vid_height.integer;
 		mode->bitsperpixel      = vid_bitsperpixel.integer;
-		mode->refreshrate       = vid_userefreshrate.integer ? max(1, vid_refreshrate.integer) : 0;
-		mode->userefreshrate    = vid_userefreshrate.integer != 0;
+		mode->refreshrate       = max(0, vid_refreshrate.integer);
 		mode->stereobuffer      = vid_stereobuffer.integer != 0;
 	}
 	cl_ignoremousemoves = 2;
@@ -1468,8 +1465,8 @@ void VID_Restart_f(cmd_state_t *cmd)
 	oldmode = vid.mode;
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
-		oldmode.fullscreen ? "fullscreen" : "window", oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.fullscreen && oldmode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", oldmode.refreshrate) : "",
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
+		oldmode.fullscreen ? "fullscreen" : "window", oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.fullscreen && oldmode.refreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", oldmode.refreshrate) : "",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_refreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
 	SCR_DeferLoadingPlaque(false);
 	R_Modules_Shutdown();
 	VID_Shutdown();
@@ -1501,7 +1498,7 @@ static struct vidfallback_s vidfallbacks[] =
 {
 	{&vid_stereobuffer, "0"},
 	{&vid_samples, "1"},
-	{&vid_userefreshrate, "0"},
+	{&vid_refreshrate, "0"},
 	{&vid_width, "640"},
 	{&vid_height, "480"},
 	{&vid_bitsperpixel, "32"},

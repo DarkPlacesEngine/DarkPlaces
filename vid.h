@@ -59,7 +59,6 @@ typedef struct viddef_mode_s
 	int bitsperpixel;
 	qbool fullscreen;
 	float refreshrate;
-	qbool userefreshrate;
 	qbool stereobuffer;
 	int samples;
 }
@@ -137,7 +136,6 @@ extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_samples;
 extern cvar_t vid_refreshrate;
-extern cvar_t vid_userefreshrate;
 extern cvar_t vid_touchscreen_density;
 extern cvar_t vid_touchscreen_xdpi;
 extern cvar_t vid_touchscreen_ydpi;
