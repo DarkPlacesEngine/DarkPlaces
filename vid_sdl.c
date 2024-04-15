@@ -77,9 +77,6 @@ static cvar_t joy_sdl2_trigger_deadzone = {CF_ARCHIVE | CF_CLIENT, "joy_sdl2_tri
 static cvar_t *steelstorm_showing_map = NULL; // detect but do not create the cvar
 static cvar_t *steelstorm_showing_mousecursor = NULL; // detect but do not create the cvar
 
-static int win_half_width = 50;
-static int win_half_height = 50;
-
 static SDL_GLContext context;
 static SDL_Window *window;
 
@@ -981,6 +978,8 @@ void IN_Move( void )
 			{
 				// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 				// window grabbing. --blub
+				int win_half_width = vid.mode.width>>1;
+				int win_half_height = vid.mode.height>>1;
 	
 				// we need 2 frames to initialize the center position
 				if(!stuck)
@@ -1678,9 +1677,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	vid.xPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
 	vid.yPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
 	vid_wmborder_waiting = vid_wmborderless = false;
-
-	win_half_width = mode->width>>1;
-	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
 		windowflags |= SDL_WINDOW_RESIZABLE;

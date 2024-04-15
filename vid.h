@@ -95,8 +95,6 @@ typedef struct viddef_s
 
 // global video state
 extern viddef_t vid;
-extern void (*vid_menudrawfn)(void);
-extern void (*vid_menukeyfn)(int key);
 
 #define MAXJOYAXIS 16
 // if this is changed, the corresponding code in vid_shared.c must be updated
