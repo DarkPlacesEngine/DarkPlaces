@@ -342,7 +342,7 @@ help:
 	@echo "* $(MAKE) sdl-nexuiz           : make SDL client with nexuiz icon (release version)"
 	@echo
 	@echo "* $(MAKE) emscripten-release   : make WASM client (release version)"
-	@echo "* $(MAKE) emscripten-standalone   : make standalone WASM client (release version)"
+	@echo "* $(MAKE) emscripten-standalone: make standalone WASM client (release version)"
 	@echo
 
 debug :
