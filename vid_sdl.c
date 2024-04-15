@@ -1049,20 +1049,6 @@ void IN_Move( void )
 // Message Handling
 ////
 
-#ifdef SDL_R_RESTART
-static qbool sdl_needs_restart;
-static void sdl_start(void)
-{
-}
-static void sdl_shutdown(void)
-{
-	sdl_needs_restart = false;
-}
-static void sdl_newmap(void)
-{
-}
-#endif
-
 static keynum_t buttonremap[] =
 {
 	K_MOUSE1,
@@ -1084,7 +1070,6 @@ static keynum_t buttonremap[] =
 };
 
 //#define DEBUGSDLEVENTS
-static void VID_ChangeDisplay_c(cvar_t *var);
 void Sys_SDL_HandleEvents(void)
 {
 	static qbool sound_active = true;
@@ -1302,13 +1287,19 @@ void Sys_SDL_HandleEvents(void)
 				switch (event.display.event)
 				{
 					case SDL_DISPLAYEVENT_CONNECTED:
-						Con_Printf("Display %i connected: %s\nA vid_restart may be necessary!\n", event.display.display, SDL_GetDisplayName(event.display.display));
+						Con_Printf(CON_WARN "Display %i connected: %s\n", event.display.display, SDL_GetDisplayName(event.display.display));
+#ifdef __linux__
+						Con_Print(CON_WARN "A vid_restart may be necessary!\n");
+#endif
 						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
-						// Ideally we'd call VID_ChangeDisplay_c() to try to switch to the preferred display here,
-						// but we may need a vid_restart first, see comments in VID_ChangeDisplay_c().
+						// Ideally we'd call VID_ApplyDisplaySettings_c() to try to switch to the preferred display here,
+						// but we may need a vid_restart first, see comments in VID_ApplyDisplaySettings_c().
 						break;
 					case SDL_DISPLAYEVENT_DISCONNECTED:
-						Con_Printf("Display %i disconnected.\nA vid_restart may be necessary!\n", event.display.display);
+						Con_Printf(CON_WARN "Display %i disconnected.\n", event.display.display);
+#ifdef __linux__
+						Con_Print(CON_WARN "A vid_restart may be necessary!\n");
+#endif
 						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
 						break;
 					case SDL_DISPLAYEVENT_ORIENTATION:
@@ -1438,13 +1429,15 @@ qbool GL_ExtensionSupported(const char *name)
 	return SDL_GL_ExtensionSupported(name);
 }
 
-static void VID_ChangeDisplay_c(cvar_t *var)
+/// Applies display settings immediately (no vid_restart required).
+static void VID_ApplyDisplaySettings_c(cvar_t *var)
 {
 	unsigned int fullscreenwanted, fullscreencurrent;
 	unsigned int displaywanted = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
 
 	if (!window)
 		return;
+	Con_DPrintf("%s: %s \"%s\"\n", __func__, var->name, var->string);
 
 	fullscreencurrent = SDL_GetWindowFlags(window) & (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_FULLSCREEN);
 	if (vid_fullscreen.integer)
@@ -1454,7 +1447,7 @@ static void VID_ChangeDisplay_c(cvar_t *var)
 
 	// moving to another display, changing the fullscreen mode or switching to windowed
 	if (vid.displayindex != displaywanted // SDL seems unable to move any fullscreen window to another display
-	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: switching to windowed first feels safer
+	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: DESKTOP flag includes FULLSCREEN bit
 	{
 		if (SDL_SetWindowFullscreen(window, 0) < 0)
 		{
@@ -1484,7 +1477,7 @@ static void VID_ChangeDisplay_c(cvar_t *var)
 //		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted), SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted));
 //		SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
 
-		/* bones_was_here BUG: after SDL_DISPLAYEVENT hotplug events,
+		/* bones_was_here BUG: after SDL_DISPLAYEVENT hotplug events, on Xorg + NVIDIA,
 		 * SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted) may place the window somewhere completely invisible.
 		 * WORKAROUND: manual positioning seems safer: although SDL_GetDisplayBounds() may return outdated values,
 		 * SDL_SetWindowPosition() always placed the window somewhere fully visible, even if it wasn't correct,
@@ -1506,6 +1499,26 @@ static void VID_ChangeDisplay_c(cvar_t *var)
 	// switching to a fullscreen mode
 	if (fullscreenwanted)
 	{
+		if (fullscreenwanted == SDL_WINDOW_FULLSCREEN)
+		{
+			// When starting in desktop/window mode no hardware mode is set so do it now,
+			// this also applies vid_width and vid_height changes immediately without bogus modesets.
+			SDL_DisplayMode modewanted, modeclosest;
+			modewanted.w = vid_width.integer;
+			modewanted.h = vid_height.integer;
+			modewanted.refresh_rate = vid_userefreshrate.integer ? vid_refreshrate.integer : 0;
+			if (!SDL_GetClosestDisplayMode(vid.displayindex, &modewanted, &modeclosest))
+			{
+				Con_Printf(CON_ERROR "Error getting closest mode to %ix%i@%ihz for display %i: \"%s\"\n", modewanted.w, modewanted.h, modewanted.refresh_rate, vid.displayindex, SDL_GetError());
+				return;
+			}
+			if (SDL_SetWindowDisplayMode(window, &modeclosest) < 0)
+			{
+				Con_Printf(CON_ERROR "Error setting mode %ix%i@%ihz for display %i: \"%s\"\n", modeclosest.w, modeclosest.h, modeclosest.refresh_rate, vid.displayindex, SDL_GetError());
+				return;
+			}
+		}
+
 		if (SDL_SetWindowFullscreen(window, fullscreenwanted) < 0)
 		{
 			Con_Printf(CON_ERROR "ERROR: can't activate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
@@ -1557,24 +1570,32 @@ void VID_Init (void)
 #endif
 	Cvar_RegisterVariable(&joy_sdl2_trigger_deadzone);
 
-#ifdef SDL_R_RESTART
-	R_RegisterModule("SDL", sdl_start, sdl_shutdown, sdl_newmap, NULL, NULL);
-#endif
-
 #if defined(__linux__)
 	// exclusive fullscreen is no longer functional (and when it worked was obnoxious and not faster)
 	Cvar_SetValueQuick(&vid_desktopfullscreen, 1);
 	vid_desktopfullscreen.flags |= CF_READONLY;
 #endif
 
-	Cvar_RegisterCallback(&vid_fullscreen,             VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_display,                VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_resizable,              VID_ChangeDisplay_c);
-	Cvar_RegisterCallback(&vid_borderless,             VID_ChangeDisplay_c);
+	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_width,                  VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_height,                 VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_resizable,              VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_borderless,             VID_ApplyDisplaySettings_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
 	Cvar_RegisterCallback(&vid_mouse_clickthrough,     VID_SetHints_c);
 	Cvar_RegisterCallback(&vid_minimize_on_focus_loss, VID_SetHints_c);
+
+	// DPI scaling prevents use of the native resolution, causing blurry rendering
+	// and/or mouse cursor problems and/or incorrect render area, so we need to opt-out.
+	// Must be set before first SDL_INIT_VIDEO. Documented in SDL_hints.h.
+#ifdef WIN32
+	// make SDL coordinates == hardware pixels
+	SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "0");
+	// use best available awareness mode
+	SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "permonitorv2");
+#endif
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		Sys_Error ("Failed to init SDL video subsystem: %s", SDL_GetError());
@@ -1767,12 +1788,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		}
 #endif
 	}
-
-	// DPI scaling prevents use of the native resolution, causing blurry rendering
-	// and/or mouse cursor problems, so we need to opt-out.
-#ifdef WIN32
-	SDL_SetHint(SDL_HINT_WINDOWS_DPI_AWARENESS, "1");
-#endif
 
 	VID_SetHints_c(NULL);
 

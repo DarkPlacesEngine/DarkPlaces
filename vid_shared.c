@@ -167,7 +167,7 @@ cvar_t vid_desktopfullscreen = {CF_CLIENT | CF_ARCHIVE, "vid_desktopfullscreen",
 cvar_t vid_display = {CF_CLIENT | CF_ARCHIVE, "vid_display", "0", "which monitor to render on, numbered from 0 (system default)" };
 cvar_t vid_info_displaycount = {CF_CLIENT | CF_READONLY, "vid_info_displaycount", "1", "how many monitors are currently available, updated by hotplug events" };
 #ifdef WIN32
-cvar_t vid_ignore_taskbar = {CF_CLIENT | CF_ARCHIVE, "vid_ignore_taskbar", "0", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
+cvar_t vid_ignore_taskbar = {CF_CLIENT | CF_ARCHIVE, "vid_ignore_taskbar", "1", "in windowed mode, prevent the Windows taskbar and window borders from affecting the size and placement of the window. it will be aligned centered and uses the unaltered vid_width/vid_height values"};
 #endif
 
 cvar_t v_gamma = {CF_CLIENT | CF_ARCHIVE, "v_gamma", "1", "inverse gamma correction value, a brightness effect that does not affect white or black, and tends to make the image grey and dull"};
@@ -1443,9 +1443,13 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s on display %i\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", vid.displayindex);
 
-		Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
-		Cvar_SetValueQuick(&vid_width, vid.mode.width);
-		Cvar_SetValueQuick(&vid_height, vid.mode.height);
+		// desktopfullscreen doesn't need fallback mode saved so let cvars store windowed mode dimensions
+		if (!vid_desktopfullscreen.integer) // maybe checking SDL_WINDOW_FULLSCREEN_DESKTOP is better?
+		{
+			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
+			Cvar_SetValueQuick(&vid_width, vid.mode.width);
+			Cvar_SetValueQuick(&vid_height, vid.mode.height);
+		}
 		Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
 		Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
 		if(vid_userefreshrate.integer)
