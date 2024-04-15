@@ -1404,15 +1404,14 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode
-		vid.mode = mode;
-		vid.fullscreen     = vid.mode.fullscreen;
-		vid.width          = vid.mode.width;
-		vid.height         = vid.mode.height;
-		vid.bitsperpixel   = vid.mode.bitsperpixel;
-		vid.refreshrate    = vid.mode.refreshrate;
-		vid.userefreshrate = vid.mode.userefreshrate;
-		vid.stereobuffer   = vid.mode.stereobuffer;
-		vid.stencil        = vid.mode.bitsperpixel > 16;
+		vid.fullscreen     = mode.fullscreen;
+		vid.width          = mode.width;
+		vid.height         = mode.height;
+		vid.bitsperpixel   = mode.bitsperpixel;
+		vid.refreshrate    = mode.refreshrate;
+		vid.userefreshrate = mode.userefreshrate;
+		vid.stereobuffer   = mode.stereobuffer;
+		vid.stencil        = mode.bitsperpixel > 16;
 		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
 		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
 
@@ -1443,19 +1442,6 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 
 		Con_Printf("Video Mode: %s %dx%dx%dx%.2fhz%s on display %i\n", mode.fullscreen ? "fullscreen" : "window", mode.width, mode.height, mode.bitsperpixel, mode.refreshrate, mode.stereobuffer ? " stereo" : "", vid.displayindex);
 
-		// desktopfullscreen doesn't need fallback mode saved so let cvars store windowed mode dimensions
-		if (!vid_desktopfullscreen.integer) // maybe checking SDL_WINDOW_FULLSCREEN_DESKTOP is better?
-		{
-			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
-			Cvar_SetValueQuick(&vid_width, vid.mode.width);
-			Cvar_SetValueQuick(&vid_height, vid.mode.height);
-		}
-		Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
-		Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
-		if(vid_userefreshrate.integer)
-			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
-		Cvar_SetValueQuick(&vid_stereobuffer, vid.stereobuffer ? 1 : 0);
-
 		if (vid_touchscreen.integer)
 		{
 			in_windowmouse_x = vid_width.value / 2.f;
@@ -1474,13 +1460,22 @@ extern qbool vid_opened;
 void VID_Restart_f(cmd_state_t *cmd)
 {
 	char vabuf[1024];
+	viddef_mode_t oldmode;
 
 	// don't crash if video hasn't started yet
 	if (vid_commandlinecheck)
 		return;
 
+	oldmode.fullscreen     = vid.fullscreen;
+	oldmode.width          = vid.width;
+	oldmode.height         = vid.height;
+	oldmode.bitsperpixel   = vid.bitsperpixel;
+	oldmode.refreshrate    = vid.refreshrate;
+	oldmode.userefreshrate = vid.userefreshrate;
+	oldmode.stereobuffer   = vid.stereobuffer;
+
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
-		vid.mode.fullscreen ? "fullscreen" : "window", vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.fullscreen && vid.mode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid.mode.refreshrate) : "",
+		oldmode.fullscreen ? "fullscreen" : "window", oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.fullscreen && oldmode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", oldmode.refreshrate) : "",
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_fullscreen.integer && vid_userefreshrate.integer ? va(vabuf, sizeof(vabuf), "x%.2fhz", vid_refreshrate.value) : "");
 	SCR_DeferLoadingPlaque(false);
 	R_Modules_Shutdown();
@@ -1488,21 +1483,35 @@ void VID_Restart_f(cmd_state_t *cmd)
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer))
 	{
 		Con_Print("Video mode change failed\n");
-		if (!VID_Mode(vid.mode.fullscreen, vid.mode.width, vid.mode.height, vid.mode.bitsperpixel, vid.mode.refreshrate, vid.mode.stereobuffer))
+		if (!VID_Mode(oldmode.fullscreen, oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.refreshrate, oldmode.stereobuffer))
 			Sys_Error("Unable to restore to last working video mode");
+		else
+		{
+			Cvar_SetValueQuick(&vid_fullscreen,        oldmode.fullscreen);
+			Cvar_SetValueQuick(&vid_width,             oldmode.width);
+			Cvar_SetValueQuick(&vid_height,            oldmode.height);
+			Cvar_SetValueQuick(&vid_bitsperpixel,      oldmode.bitsperpixel);
+			Cvar_SetValueQuick(&vid_refreshrate,       oldmode.refreshrate);
+			Cvar_SetValueQuick(&vid_stereobuffer,      oldmode.stereobuffer);
+		}
 	}
 	R_Modules_Start();
 	Key_ReleaseAll();
 }
 
-const char *vidfallbacks[][2] =
+struct vidfallback_s
 {
-	{"vid_stereobuffer", "0"},
-	{"vid_samples", "1"},
-	{"vid_userefreshrate", "0"},
-	{"vid_width", "640"},
-	{"vid_height", "480"},
-	{"vid_bitsperpixel", "32"},
+	cvar_t *cvar;
+	const char *safevalue;
+};
+static struct vidfallback_s vidfallbacks[] =
+{
+	{&vid_stereobuffer, "0"},
+	{&vid_samples, "1"},
+	{&vid_userefreshrate, "0"},
+	{&vid_width, "640"},
+	{&vid_height, "480"},
+	{&vid_bitsperpixel, "32"},
 	{NULL, NULL}
 };
 
@@ -1557,10 +1566,10 @@ void VID_Start(void)
 	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 	if (!success)
 	{
-		Con_Print("Desired video mode fail, trying fallbacks...\n");
-		for (i = 0;!success && vidfallbacks[i][0] != NULL;i++)
+		Con_Print(CON_WARN "Desired video mode fail, trying fallbacks...\n");
+		for (i = 0; !success && vidfallbacks[i].cvar != NULL; i++)
 		{
-			Cvar_Set(&cvars_all, vidfallbacks[i][0], vidfallbacks[i][1]);
+			Cvar_SetQuick(vidfallbacks[i].cvar, vidfallbacks[i].safevalue);
 			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_refreshrate.value, vid_stereobuffer.integer);
 		}
 		if (!success)

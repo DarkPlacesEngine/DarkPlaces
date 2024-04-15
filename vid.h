@@ -68,7 +68,6 @@ viddef_mode_t;
 typedef struct viddef_s
 {
 	// these are set by VID_Mode
-	viddef_mode_t mode;
 	// used in many locations in the renderer
 	int width;
 	int height;
