@@ -9,6 +9,8 @@ ChangeLog
 darkplaces-agl
 darkplaces-glx
 darkplaces-sdl
+darkplaces-wasm.html
+darkplaces-wasm.js
 darkplaces-dedicated
 gmon.out
 *.ncb
