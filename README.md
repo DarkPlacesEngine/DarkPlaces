@@ -109,6 +109,16 @@ Note that this requires a linux device or WSL.
 1. Copy `darkplaces-wasm.js`, `wasm/index.html`, and `wasm/autoexec.cfg` files to your web server
 1. Copy the Quake `pak0.pak` and `pak1.pak` files into the same web server directory
 
+For the standalone version:
+1. If you want to embed the game into the html file, create a file called "runhere" in `wasm/preload` and copy game data to `wasm/preload` (for example, pak0 from quake would be in `wasm/preload/id1/pak0.pak`)
+1. After activating and sourcing emsdk, compile DarkPlaces for wasm using;
+   ```shell
+   make emscripten-standalone
+   ```
+1. If you want to upload files into the game filesystem, use `em_upload` in the darkplaces console (upload to /save if you want it to save across restarts)
+1. To save the stuff you uploaded to /save, use `em_save` (note that if you embedded the game, you won't be able to save changes to `/save/games`)
+
+
 ## Contributing
 
 [DarkPlaces Contributing Guidelines](CONTRIBUTING.md)
