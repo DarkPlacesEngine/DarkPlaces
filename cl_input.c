@@ -535,7 +535,7 @@ void CL_Input (void)
 			static int oldwindowmouse[2];
 			if (oldwindowmouse[0] != in_windowmouse_x || oldwindowmouse[1] != in_windowmouse_y)
 			{
-				CL_VM_InputEvent(3, in_windowmouse_x * vid_conwidth.value / vid.width, in_windowmouse_y * vid_conheight.value / vid.height);
+				CL_VM_InputEvent(3, in_windowmouse_x * vid_conwidth.value / vid.mode.width, in_windowmouse_y * vid_conheight.value / vid.mode.height);
 				oldwindowmouse[0] = in_windowmouse_x;
 				oldwindowmouse[1] = in_windowmouse_y;
 			}
@@ -704,8 +704,8 @@ void CL_Input (void)
 		// mouse interacting with the scene, mostly stationary view
 		V_StopPitchDrift();
 		// update prydon cursor
-		cl.cmd.cursor_screen[0] = in_windowmouse_x * 2.0 / vid.width - 1.0;
-		cl.cmd.cursor_screen[1] = in_windowmouse_y * 2.0 / vid.height - 1.0;
+		cl.cmd.cursor_screen[0] = in_windowmouse_x * 2.0 / vid.mode.width - 1.0;
+		cl.cmd.cursor_screen[1] = in_windowmouse_y * 2.0 / vid.mode.height - 1.0;
 	}
 
 	if(v_flipped.integer)

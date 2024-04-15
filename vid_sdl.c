@@ -879,8 +879,8 @@ static void IN_Move_TouchScreen_Quake(void)
 
 	// simple quake controls
 	multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
-	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.width;
-	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.height;
+	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.mode.width;
+	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.mode.height;
 
 	// top of screen is toggleconsole and K_ESCAPE
 	switch(keydest)
@@ -1190,7 +1190,7 @@ void Sys_SDL_HandleEvents(void)
 							//vid.width = event.window.data1;
 							//vid.height = event.window.data2;
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
+							SDL_GL_GetDrawableSize(window, &vid.mode.width, &vid.mode.height);
 						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
@@ -1398,7 +1398,7 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 			Con_Printf(CON_ERROR "ERROR: can't deactivate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
 			return;
 		}
-		vid.fullscreen = false;
+		vid.mode.fullscreen = false;
 		Con_DPrintf("Fullscreen deactivated on display %i\n", vid.displayindex);
 	}
 
@@ -1406,7 +1406,7 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 	if (!fullscreenwanted)
 	{
 		int toppx;
-		SDL_SetWindowSize(window, vid.width = vid_width.integer, vid.height = vid_height.integer);
+		SDL_SetWindowSize(window, vid.mode.width = vid_width.integer, vid.mode.height = vid_height.integer);
 		SDL_SetWindowResizable(window, vid_resizable.integer ? SDL_TRUE : SDL_FALSE);
 		SDL_SetWindowBordered(window, (SDL_bool)!vid_borderless.integer);
 		SDL_GetWindowBordersSize(window, &toppx, NULL, NULL, NULL);
@@ -1433,8 +1433,8 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 			Con_Printf(CON_ERROR "Error getting bounds of display %i: \"%s\"\n", displaywanted, SDL_GetError());
 			return;
 		}
-		vid.xPos = displaybounds.x + 0.5 * (displaybounds.w - vid.width);
-		vid.yPos = displaybounds.y + 0.5 * (displaybounds.h - vid.height);
+		vid.xPos = displaybounds.x + 0.5 * (displaybounds.w - vid.mode.width);
+		vid.yPos = displaybounds.y + 0.5 * (displaybounds.h - vid.mode.height);
 		SDL_SetWindowPosition(window, vid.xPos, vid.yPos);
 
 		vid.displayindex = displaywanted;
@@ -1469,8 +1469,8 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 			return;
 		}
 		// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-		SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
-		vid.fullscreen = true;
+		SDL_GL_GetDrawableSize(window, &vid.mode.width, &vid.mode.height);
+		vid.mode.fullscreen = true;
 		Con_DPrintf("Fullscreen activated on display %i\n", vid.displayindex);
 	}
 }

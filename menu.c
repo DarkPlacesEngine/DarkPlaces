@@ -2242,8 +2242,8 @@ static void M_Options_ColorControl_Draw (void)
 
 	m_opty += 4;
 	DrawQ_Fill(menu_x, menu_y + m_opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);m_opty += 4;
-	s = (float) 312 / 2 * vid.width / vid_conwidth.integer;
-	t = (float) 4 / 2 * vid.height / vid_conheight.integer;
+	s = (float) 312 / 2 * vid.mode.width / vid_conwidth.integer;
+	t = (float) 4 / 2 * vid.mode.height / vid_conheight.integer;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, dither, 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);m_opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, NULL  , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);m_opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, dither, 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);m_opty += 4;
@@ -2257,8 +2257,8 @@ static void M_Options_ColorControl_Draw (void)
 	c[1] = c[0];
 	c[2] = c[1];
 	VID_ApplyGammaToColor(c, c);
-	s = (float) 48 / 2 * vid.width / vid_conwidth.integer;
-	t = (float) 48 / 2 * vid.height / vid_conheight.integer;
+	s = (float) 48 / 2 * vid.mode.width / vid_conwidth.integer;
+	t = (float) 48 / 2 * vid.mode.height / vid_conheight.integer;
 	u = s * 0.5;
 	v = t * 0.5;
 	m_opty += 8;
@@ -2896,7 +2896,7 @@ void M_Menu_Video_f(cmd_state_t *cmd)
 	m_state = m_video;
 	m_entersound = true;
 
-	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
+	M_Menu_Video_FindResolution(vid.mode.width, vid.mode.height, vid_pixelheight.value);
 }
 
 
@@ -2923,10 +2923,10 @@ static void M_Video_Draw (void)
 
 	// Current and Proposed Resolution
 	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
-	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
-		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.width, vid.height, vid.refreshrate));
+	if (vid_supportrefreshrate && vid.mode.userefreshrate && vid.mode.fullscreen)
+		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.mode.width, vid.mode.height, vid.mode.refreshrate));
 	else
-		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.width, vid.height));
+		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.mode.width, vid.mode.height));
 	M_Print(16, video_cursor_table[t], "        New Resolution");
 	M_Print(220, video_cursor_table[t], va(vabuf, sizeof(vabuf), "%dx%d", menu_video_resolutions[menu_video_resolution].width, menu_video_resolutions[menu_video_resolution].height));
 	M_Print(96, video_cursor_table[t] + 8, va(vabuf, sizeof(vabuf), "Type: %s", menu_video_resolutions[menu_video_resolution].type));
@@ -3025,12 +3025,12 @@ static void M_Video_Key(cmd_state_t *cmd, int key, int ascii)
 	{
 		case K_ESCAPE:
 			// vid_shared.c has a copy of the current video config. We restore it
-			Cvar_SetValueQuick(&vid_fullscreen, vid.fullscreen);
-			Cvar_SetValueQuick(&vid_bitsperpixel, vid.bitsperpixel);
-			Cvar_SetValueQuick(&vid_samples, vid.samples);
+			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
+			Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
+			Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
 			if (vid_supportrefreshrate)
-				Cvar_SetValueQuick(&vid_refreshrate, vid.refreshrate);
-			Cvar_SetValueQuick(&vid_userefreshrate, vid.userefreshrate);
+				Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
+			Cvar_SetValueQuick(&vid_userefreshrate, vid.mode.userefreshrate);
 
 			S_LocalSound ("sound/misc/menu1.wav");
 			M_Menu_Options_f(cmd);
@@ -5339,8 +5339,8 @@ static void MP_Draw (void)
 
 	// FIXME: this really shouldnt error out lest we have a very broken refdef state...?
 	// or does it kill the server too?
-	PRVM_G_FLOAT(OFS_PARM0) = vid.width;
-	PRVM_G_FLOAT(OFS_PARM1) = vid.height;
+	PRVM_G_FLOAT(OFS_PARM0) = vid.mode.width;
+	PRVM_G_FLOAT(OFS_PARM1) = vid.mode.height;
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_draw),"m_draw() required");
 
 	// TODO: imo this should be moved into scene, too [1/27/2008 Andreas]
@@ -5628,7 +5628,7 @@ void MR_Init(void)
 	}
 
 	menu_video_resolutions_forfullscreen = !!vid_fullscreen.integer;
-	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
+	M_Menu_Video_FindResolution(vid.mode.width, vid.mode.height, vid_pixelheight.value);
 
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 // COMMANDLINEOPTION: Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)

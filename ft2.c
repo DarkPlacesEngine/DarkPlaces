@@ -502,7 +502,7 @@ float Font_VirtualToRealSize(float sz)
 	if(sz < 0)
 		return sz;
 	//vw = ((vid.width > 0) ? vid.width : vid_width.value);
-	vh = ((vid.height > 0) ? vid.height : vid_height.value);
+	vh = ((vid.mode.height > 0) ? vid.mode.height : vid_height.value);
 	// now try to scale to our actual size:
 	sn = sz * vh / vid_conheight.value;
 	si = (int)sn;
@@ -1006,11 +1006,11 @@ int Font_IndexForSize(ft2_font_t *font, float _fsize, float *outw, float *outh)
 	float fsize_x, fsize_y;
 	ft2_font_map_t **maps = font->font_maps;
 
-	fsize_x = fsize_y = _fsize * vid.height / vid_conheight.value;
+	fsize_x = fsize_y = _fsize * vid.mode.height / vid_conheight.value;
 	if(outw && *outw)
-		fsize_x = *outw * vid.width / vid_conwidth.value;
+		fsize_x = *outw * vid.mode.width / vid_conwidth.value;
 	if(outh && *outh)
-		fsize_y = *outh * vid.height / vid_conheight.value;
+		fsize_y = *outh * vid.mode.height / vid_conheight.value;
 
 	if (fsize_x < 0)
 	{
@@ -1043,8 +1043,8 @@ int Font_IndexForSize(ft2_font_t *font, float _fsize, float *outw, float *outh)
 	if (value <= r_font_size_snapping.value)
 	{
 		// do NOT keep the aspect for perfect rendering
-		if (outh) *outh = maps[match]->size * vid_conheight.value / vid.height;
-		if (outw) *outw = maps[match]->size * vid_conwidth.value / vid.width;
+		if (outh) *outh = maps[match]->size * vid_conheight.value / vid.mode.height;
+		if (outw) *outw = maps[match]->size * vid_conwidth.value / vid.mode.width;
 	}
 	return match;
 }

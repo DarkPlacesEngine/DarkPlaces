@@ -834,7 +834,7 @@ void GL_Setup(void)
 	{
 		int samples = 0;
 		qglGetIntegerv(GL_SAMPLES, &samples);
-		vid.samples = samples;
+		vid.mode.samples = samples;
 		if (samples > 1)
 			qglEnable(GL_MULTISAMPLE);
 		else
@@ -1404,13 +1404,7 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 	if (VID_InitMode(&mode))
 	{
 		// accept the (possibly modified) mode
-		vid.fullscreen     = mode.fullscreen;
-		vid.width          = mode.width;
-		vid.height         = mode.height;
-		vid.bitsperpixel   = mode.bitsperpixel;
-		vid.refreshrate    = mode.refreshrate;
-		vid.userefreshrate = mode.userefreshrate;
-		vid.stereobuffer   = mode.stereobuffer;
+		vid.mode = mode;
 		vid.stencil        = mode.bitsperpixel > 16;
 		vid.sRGB2D         = vid_sRGB.integer >= 1 && vid.sRGBcapable2D;
 		vid.sRGB3D         = vid_sRGB.integer >= 1 && vid.sRGBcapable3D;
@@ -1422,13 +1416,13 @@ static int VID_Mode(int fullscreen, int width, int height, int bpp, float refres
 			{
 				GLboolean stereo;
 				qglGetBooleanv(GL_STEREO, &stereo);
-				vid.stereobuffer = stereo != 0;
+				vid.mode.stereobuffer = stereo != 0;
 			}
 #endif
 			break;
 		case RENDERPATH_GLES2:
 		default:
-			vid.stereobuffer = false;
+			vid.mode.stereobuffer = false;
 			break;
 		}
 
@@ -1466,13 +1460,7 @@ void VID_Restart_f(cmd_state_t *cmd)
 	if (vid_commandlinecheck)
 		return;
 
-	oldmode.fullscreen     = vid.fullscreen;
-	oldmode.width          = vid.width;
-	oldmode.height         = vid.height;
-	oldmode.bitsperpixel   = vid.bitsperpixel;
-	oldmode.refreshrate    = vid.refreshrate;
-	oldmode.userefreshrate = vid.userefreshrate;
-	oldmode.stereobuffer   = vid.stereobuffer;
+	oldmode = vid.mode;
 
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp%s, to %s %dx%dx%dbpp%s.\n",
 		oldmode.fullscreen ? "fullscreen" : "window", oldmode.width, oldmode.height, oldmode.bitsperpixel, oldmode.fullscreen && oldmode.userefreshrate ? va(vabuf, sizeof(vabuf), "x%.2fhz", oldmode.refreshrate) : "",

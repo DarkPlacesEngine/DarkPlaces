@@ -69,14 +69,7 @@ typedef struct viddef_s
 {
 	// these are set by VID_Mode
 	// used in many locations in the renderer
-	int width;
-	int height;
-	int bitsperpixel;
-	qbool fullscreen;
-	float refreshrate;
-	qbool userefreshrate;
-	qbool stereobuffer;
-	int samples;
+	viddef_mode_t mode; ///< currently active video mode
 	qbool stencil;
 	qbool sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
 	qbool sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
