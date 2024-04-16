@@ -1936,6 +1936,8 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 				// corpse
 				if (sv_gameplayfix_nosquashentities.integer == 0)
 				{
+					// When sv_gameplayfix_nosquashentities is disabled, entity hitboxes will be squashed when
+					// the entity is crushed by a mover, preventing it from being interacted with again
 					PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
 					VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
 				}
