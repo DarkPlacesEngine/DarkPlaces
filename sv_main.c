@@ -129,6 +129,7 @@ cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {CF_SERVER, "sv_gameplayfix
 cvar_t sv_gameplayfix_unstickplayers = {CF_SERVER, "sv_gameplayfix_unstickplayers", "0", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull."};
 cvar_t sv_gameplayfix_unstickentities = {CF_SERVER, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position, superseded by sv_gameplayfix_nudgeoutofsolid"};
 cvar_t sv_gameplayfix_fixedcheckwatertransition = {CF_SERVER, "sv_gameplayfix_fixedcheckwatertransition", "1", "fix two very stupid bugs in SV_CheckWaterTransition when watertype is CONTENTS_EMPTY (the bugs causes waterlevel to be 1 on first frame, -1 on second frame - the fix makes it 0 on both frames)"};
+cvar_t sv_gameplayfix_nosquashentities = {CF_SERVER, "sv_gameplayfix_nosquashentities", "0", "Do not resize entity bounding boxes when the entity is squashed by movers."};
 cvar_t sv_gravity = {CF_SERVER | CF_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_init_frame_count = {CF_SERVER, "sv_init_frame_count", "2", "number of frames to run to allow everything to settle before letting clients connect"};
 cvar_t sv_idealpitchscale = {CF_SERVER, "sv_idealpitchscale","0.8", "how much to look up/down slopes and stairs when not using freelook"};
@@ -612,6 +613,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_unstickplayers);
 	Cvar_RegisterVariable (&sv_gameplayfix_unstickentities);
 	Cvar_RegisterVariable (&sv_gameplayfix_fixedcheckwatertransition);
+	Cvar_RegisterVariable (&sv_gameplayfix_nosquashentities);
 	Cvar_RegisterVariable (&sv_qcstats);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_init_frame_count);

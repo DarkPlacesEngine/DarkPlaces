@@ -1934,8 +1934,11 @@ static void SV_PushMove (prvm_edict_t *pusher, float movetime)
 			if (PRVM_serveredictfloat(check, solid) == SOLID_NOT || PRVM_serveredictfloat(check, solid) == SOLID_TRIGGER)
 			{
 				// corpse
-				// PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
-				// VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
+				if (sv_gameplayfix_nosquashentities.integer == 0)
+				{
+					PRVM_serveredictvector(check, mins)[0] = PRVM_serveredictvector(check, mins)[1] = 0;
+					VectorCopy (PRVM_serveredictvector(check, mins), PRVM_serveredictvector(check, maxs));
+				}
 				continue;
 			}
 
