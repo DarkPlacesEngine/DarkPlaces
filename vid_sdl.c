@@ -59,9 +59,6 @@ static io_connect_t IN_GetIOHandle(void)
 #endif
 #endif
 
-#ifdef WIN32
-#define SDL_R_RESTART
-#endif
 
 //WASM-specific, meant to keep DP's width equal to canvas width.
 #ifdef __EMSCRIPTEN__
@@ -77,11 +74,11 @@ EM_JS(bool, em_CanSetSize, (),
 });
 
 EM_JS(char*, em_GetViewportWidth, (), {
-	return stringToNewUTF8("\nvid_width " + document.documentElement.clientWidth.toString() + "\n")
+	return stringToNewUTF8(document.documentElement.clientWidth.toString())
 });
 
 EM_JS(char*, em_GetViewportHeight, (), {
-	return stringToNewUTF8("\nvid_height " + document.documentElement.clientHeight.toString() + "\n")
+	return stringToNewUTF8(document.documentElement.clientHeight.toString())
 });
 #endif
 
@@ -1085,9 +1082,9 @@ void Sys_SDL_HandleEvents(void)
 	#ifdef __EMSCRIPTEN__
 		if(em_CanSetSize())
 		{
-			Cbuf_AddText(cmd_local, em_GetViewportWidth());
-			Cbuf_AddText(cmd_local, em_GetViewportHeight());
-			Cbuf_AddText(cmd_local, "\nvid_fullscreen 0\n");
+			Cvar_SetQuick(&vid_width, em_GetViewportWidth());
+			Cvar_SetQuick(&vid_height, em_GetViewportHeight());
+			Cvar_SetValueQuick(&vid_fullscreen,0);
 		}
 	#endif
 
@@ -1238,15 +1235,6 @@ void Sys_SDL_HandleEvents(void)
 							}
 #endif
 
-#ifdef SDL_R_RESTART
-							// better not call R_Modules_Restart_f from here directly, as this may wreak havoc...
-							// so, let's better queue it for next frame
-							if(!sdl_needs_restart)
-							{
-								Cbuf_AddText(cmd_local, "\nr_restart\n");
-								sdl_needs_restart = true;
-							}
-#endif
 						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events

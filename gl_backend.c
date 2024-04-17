@@ -11,8 +11,11 @@ cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all O
 cvar_t r_render = {CF_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_renderview = {CF_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_waterwarp = {CF_CLIENT | CF_ARCHIVE, "r_waterwarp", "1", "warp view while underwater"};
+#ifdef USE_GLES2
+cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "0", "tints view while underwater, hurt, etc"};
+#else
 cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
-
+#endif
 cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qbool v_flipped_state = false;
 
