@@ -1227,14 +1227,6 @@ void Sys_SDL_HandleEvents(void)
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
 							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
 
-#ifdef __EMSCRIPTEN__
-							if(em_CanSetSize())
-							{
-								Cbuf_AddText(cmd_local, em_GetViewportWidth());
-								Cbuf_AddText(cmd_local, em_GetViewportHeight());
-							}
-#endif
-
 						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
