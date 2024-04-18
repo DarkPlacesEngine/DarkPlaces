@@ -17,7 +17,7 @@ Module['preRun'] = function()
 Module['noInitialRun'] = true
 document.addEventListener('click', (ev) => {
     console.log("event is captured only once.");
-    args = ["-basedir","/home/web_user/games"]
+    args = []
     if(window.location.href.indexOf("file://") > -1)
     {
         try 
@@ -46,6 +46,10 @@ document.addEventListener('click', (ev) => {
     FS.syncfs(true,function(){
         if(FS.analyzePath("/preload/runhere").exists){
             FS.symlink("/preload","/home/web_user/games"); 
+            args = args.concat(["-basedir","/home/web_user/games"])
+        }
+        else{
+            args = args.concat(["-basedir","/home/web_user/"])
         }
         
         Module.callMain(args);

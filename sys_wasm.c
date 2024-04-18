@@ -48,7 +48,7 @@ EM_JS(bool, syncFS, (bool populate), {
 			return false;
 		}
 
-		console.log("Filesystem Saved!");
+		alert("Filesystem Saved!");
 		return true;
 	});
 });
@@ -299,7 +299,7 @@ void Sys_Register_Commands(void)
 {
 	#ifdef WASM_USER_ADJUSTABLE
 	Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to /save (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to basedir (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_rm", rm_f, "Remove a file from game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
