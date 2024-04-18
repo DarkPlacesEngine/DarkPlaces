@@ -6,10 +6,28 @@
 
 #include "darkplaces.h"
 #include "fs.h"
+#include "vid.h"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <string.h>
+EM_JS(char*, em_GetViewportWidth, (), {
+	return stringToNewUTF8(document.documentElement.clientWidth.toString())
+});
+
+EM_JS(char*, em_GetViewportHeight, (), {
+	return stringToNewUTF8(document.documentElement.clientHeight.toString())
+});
+
+EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
+	if(vid_resizable.integer)
+	{
+		Cvar_SetQuick(&vid_width, em_GetViewportWidth());
+		Cvar_SetQuick(&vid_height, em_GetViewportHeight());
+		Cvar_SetValueQuick(&vid_fullscreen,0);
+	}
+	return EM_FALSE;
+}
 
 
 
@@ -273,6 +291,8 @@ void Sys_SDL_Init(void)
 	// COMMANDLINEOPTION: sdl: -nocrashdialog disables "Engine Error" crash dialog boxes
 	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
+	
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW,0,EM_FALSE,on_resize);
 }
 
 void Sys_Register_Commands(void)
