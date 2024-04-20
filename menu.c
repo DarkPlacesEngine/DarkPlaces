@@ -2816,6 +2816,7 @@ video_resolution_t video_resolutions_hardcoded[] =
 {"WideScreen 16x9"           , 1280, 720, 640, 360, 1     },
 {"WideScreen 16x9"           , 1360, 768, 680, 384, 1     },
 {"WideScreen 16x9"           , 1366, 768, 683, 384, 1     },
+{"WideScreen 16x9"           , 1600, 900, 640, 360, 1     },
 {"WideScreen 16x9"           , 1920,1080, 640, 360, 1     },
 {"WideScreen 16x9"           , 2560,1440, 640, 360, 1     },
 {"WideScreen 16x9"           , 3840,2160, 640, 360, 1     },
@@ -2830,9 +2831,9 @@ video_resolution_t video_resolutions_hardcoded[] =
 // this is the number of the default mode (640x480) in the list above
 int video_resolutions_hardcoded_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 
-#define VIDEO_ITEMS 9
+#define VIDEO_ITEMS 11
 static int video_cursor = 0;
-static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144};
+static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160};
 static int menu_video_resolution;
 
 video_resolution_t *video_resolutions;
@@ -2939,7 +2940,7 @@ static void M_Video_Draw (void)
 
 	// Refresh Rate
 	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_fullscreen.integer && !vid_desktopfullscreen.integer);
-	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 150);
+	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 480);
 	t++;
 
 	// Fullscreen
@@ -2947,9 +2948,19 @@ static void M_Video_Draw (void)
 	M_DrawCheckbox(220, video_cursor_table[t], vid_fullscreen.integer);
 	t++;
 
+	// Desktop Fullscreen
+	M_ItemPrint(16, video_cursor_table[t], "    Desktop Fullscreen", vid_fullscreen.integer);
+	M_DrawCheckbox(220, video_cursor_table[t], vid_desktopfullscreen.integer);
+	t++;
+
+	// Display selection (multi-monitor)
+	M_ItemPrint(16, video_cursor_table[t], "       Display/Monitor", vid_info_displaycount.integer > 1);
+	M_DrawSlider(220, video_cursor_table[t], vid_display.integer, 0, vid_info_displaycount.integer - 1);
+	t++;
+
 	// Vertical Sync
 	M_ItemPrint(16, video_cursor_table[t], "         Vertical Sync", true);
-	M_DrawCheckbox(220, video_cursor_table[t], vid_vsync.integer);
+	M_DrawSlider(220, video_cursor_table[t], vid_vsync.integer, -1, 1);
 	t++;
 
 	M_ItemPrint(16, video_cursor_table[t], "    Anisotropic Filter", vid.support.ext_texture_filter_anisotropic);
@@ -2997,12 +3008,16 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	}
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_samples, bound(1, vid_samples.value * (dir > 0 ? 2 : 0.5), 32));
-	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_refreshrate, bound(50, vid_refreshrate.value + dir, 150));
+	else if (video_cursor == t++) // allow jumping from the minimum refreshrate to 0 (auto)
+		Cvar_SetValueQuick (&vid_refreshrate, vid_refreshrate.value <= 50 && dir == -1 ? 0 : bound(50, vid_refreshrate.value + dir, 480));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
 	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
+		Cvar_SetValueQuick (&vid_desktopfullscreen, !vid_desktopfullscreen.integer);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_display, bound(0, vid_display.integer + dir, vid_info_displaycount.integer - 1));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_vsync, bound(-1, vid_vsync.integer + dir, 1));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), vid.max_anisotropy));
 	else if (video_cursor == t++)
@@ -3018,7 +3033,9 @@ static void M_Video_Key(cmd_state_t *cmd, int key, int ascii)
 	{
 		case K_ESCAPE:
 			// vid_shared.c has a copy of the current video config. We restore it
+			Cvar_SetValueQuick(&vid_display, vid.mode.display);
 			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
+			Cvar_SetValueQuick(&vid_desktopfullscreen, vid.mode.desktopfullscreen);
 			Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
 			Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
 			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
