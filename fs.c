@@ -2163,6 +2163,9 @@ static void FS_Init_Dir (void)
 				}
 			}
 		}
+#else
+		// use the working directory
+		getcwd(fs_basedir, sizeof(fs_basedir));
 #endif
 	}
 
