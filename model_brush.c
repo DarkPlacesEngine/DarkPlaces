@@ -1625,8 +1625,21 @@ static void Mod_Q1BSP_LoadSplitSky (unsigned char *src, int width, int height, i
 		}
 	}
 
-	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_solidtexture", 0         , (unsigned char *) solidpixels, w, h, 0, 0, 0, vid.sRGB3D);
-	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA("sky_alphatexture", TEXF_ALPHA, (unsigned char *) alphapixels, w, h, 0, 0, 0, vid.sRGB3D);
+	// Load the solid and alpha parts of the sky texture as separate textures
+	loadmodel->brush.solidskyskinframe = R_SkinFrame_LoadInternalBGRA(
+		"sky_solidtexture",
+		0,
+		(unsigned char *) solidpixels,
+		w, h, w, h,
+		CRC_Block((unsigned char *) solidpixels, w*h*4),
+		vid.sRGB3D);
+	loadmodel->brush.alphaskyskinframe = R_SkinFrame_LoadInternalBGRA(
+		"sky_alphatexture",
+		TEXF_ALPHA,
+		(unsigned char *) alphapixels,
+		w, h, w, h,
+		CRC_Block((unsigned char *) alphapixels, w*h*4),
+		vid.sRGB3D);
 	Mem_Free(solidpixels);
 	Mem_Free(alphapixels);
 }
