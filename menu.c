@@ -4524,7 +4524,7 @@ typedef struct modlist_entry_s
 	qbool loaded;	// used to determine whether this entry is loaded and running
 	int enabled;		// index to array of modlist_enabled
 
-	// name of the modification, this is (will...be) displayed on the menu entry
+	// name of the modification, this is displayed on the menu entry
 	char name[128];
 	// directory where we will find it
 	char dir[MAX_QPATH];
@@ -4549,8 +4549,7 @@ static void ModList_RebuildList(void)
 	modlist_numenabled = fs_numgamedirs;
 	for (i = 0;i < list.numstrings && modlist_count < MODLIST_TOTALSIZE;i++)
 	{
-		// quickly skip names with dot characters - generally these are files, not directories
-		if (strchr(list.strings[i], '.')) continue;
+		int desc_len;
 
 		// reject any dirs that are part of the base game
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
@@ -4561,6 +4560,14 @@ static void ModList_RebuildList(void)
 		// otherwise this isn't a valid gamedir
 		description = FS_CheckGameDir(list.strings[i]);
 		if (description == NULL || description == fs_checkgamedir_missing) continue;
+
+		desc_len = min(strlen(description), sizeof(modlist[modlist_count].name));
+		for (j = 0; j < desc_len; ++j)
+			if (!ISWHITESPACE(description[j]))
+			{
+				dp_strlcpy(modlist[modlist_count].name, description, sizeof(modlist[modlist_count].name));
+				break;
+			}
 
 		dp_strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
 		//check currently loaded mods
@@ -4681,8 +4688,10 @@ static void M_ModList_Draw (void)
 	{
 		for (n = start;n < end;n++)
 		{
+			const char *item_label = (modlist[n].name[0] != '\0') ? modlist[n].name : modlist[n].dir;
+
 			DrawQ_Pic(menu_x + 40, menu_y + y, NULL, 360, 8, n == modlist_cursor ? (0.5 + 0.2 * sin(host.realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_ItemPrint(80, y, modlist[n].dir, true);
+			M_ItemPrint(80, y, item_label, true);
 			M_DrawCheckbox(48, y, modlist[n].loaded);
 			y +=8;
 		}
