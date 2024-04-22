@@ -107,8 +107,6 @@ int rcon_redirect_bufferpos = 0;
 char rcon_redirect_buffer[1400];
 qbool rcon_redirect_proquakeprotocol = false;
 
-char con_previouscenterprint[1024];
-
 // generic functions for console buffers
 
 void ConBuffer_Init(conbuffer_t *buf, int textsize, int maxlines, mempool_t *mempool)
