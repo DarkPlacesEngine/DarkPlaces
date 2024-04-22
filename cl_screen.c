@@ -146,7 +146,7 @@ void SCR_CenterPrint(const char *str)
 	if (strcmp(str, scr_centerstring))
 	{
 		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
-		Con_MaskPrint(CON_MASK_HIDENOTIFY, msg);
+		Con_MaskPrint(CON_MASK_HIDENOTIFY, str);
 		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
 	}
 
