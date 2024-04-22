@@ -144,7 +144,11 @@ void SCR_CenterPrint(const char *str)
 {
 	// Print the message to the console, but only if it's different to the previous message
 	if (strcmp(str, scr_centerstring))
-		Con_CenterPrint(str);
+	{
+		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
+		Con_MaskPrint(CON_MASK_HIDENOTIFY, msg);
+		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
+	}
 
 	dp_strlcpy(scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
