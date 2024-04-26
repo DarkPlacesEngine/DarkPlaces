@@ -565,6 +565,7 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); //
 
 /*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
  * returns true if it found a better place
+ * Replaces SV_TryUnstick() and SV_CheckStuck() which in Quake applied to players only.
  */
 qbool SV_UnstickEntity (prvm_edict_t *ent);
 

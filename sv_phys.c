@@ -1247,7 +1247,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 
 		// this code is used by MOVETYPE_WALK and MOVETYPE_STEP and SV_UnstickEntity
 		// abort move if we're stuck in the world (and didn't make it out)
-		if (trace.worldstartsolid && trace.allsolid && trace.startdepth < 0)
+		if (trace.worldstartsolid && trace.allsolid)
 		{
 			VectorCopy(restore_velocity, PRVM_serveredictvector(ent, velocity));
 			return 3;
@@ -1587,39 +1587,21 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 		type = MOVE_NORMAL;
 
 	*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
-	// abort move if we're stuck in the world (and didn't make it out)
-	if (trace->worldstartsolid && trace->allsolid && trace->startdepth < 0 && checkstuck)
+	if (trace->allsolid && checkstuck)
 	{
-		// checking startdepth eliminates many false positives on Q1BSP with mod_q1bsp_polygoncollisions 0
-		// but it's still not guaranteed that we're stuck in a bmodel at this point
-		if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
+		if (SV_UnstickEntity(ent))
 		{
-			switch (PHYS_NudgeOutOfSolid(prog, ent))
-			{
-				case 0:
-					Con_Printf(CON_WARN "NudgeOutOfSolid couldn't fix stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
-					return true; // definitely stuck in a bmodel
-				case 1:
-					Con_DPrintf("NudgeOutOfSolid fixed stuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), PRVM_serveredictvector(ent, origin)[0] - start[0], PRVM_serveredictvector(ent, origin)[1] - start[1], PRVM_serveredictvector(ent, origin)[2] - start[2]);
-					VectorCopy(PRVM_serveredictvector(ent, origin), start);
-					VectorAdd(start, push, end);
-					*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
-
-				// definitely not stuck in a bmodel, move may proceed
-			}
-		}
-		else if (sv_gameplayfix_unstickentities.integer && SV_UnstickEntity(ent))
-		{
-			// bones_was_here: pretty sure we can deprecate sv_gameplayfix_unstickentities, sv_gameplayfix_nudgeoutofsolid is much nicer
 			VectorCopy(PRVM_serveredictvector(ent, origin), start);
 			VectorAdd(start, push, end);
 			*trace = SV_TraceBox(start, mins, maxs, end, type, ent, SV_GenericHitSuperContentsMask(ent), 0, 0, collision_extendmovelength.value);
 		}
-		else
-			return true; // assuming stuck, bones_was_here TODO: always use PHYS_NudgeOutOfSolid (remove sv_gameplayfix_nudgeoutofsolid)?
+		// abort move if we're stuck in the world (and didn't make it out)
+		else if (trace->worldstartsolid)
+			return true;
 	}
 
 	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, origin));
+	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, oldorigin)); // for SV_UnstickEntity()
 
 	ent->priv.required->mark = PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN; // -2: setorigin running
 
@@ -2034,9 +2016,10 @@ static float unstickoffsets[] =
 
 typedef enum unstickresult_e
 {
+	// matching the DP_QC_NUDGEOUTOFSOLID return values
 	UNSTICK_STUCK = 0,
-	UNSTICK_GOOD = 1,
-	UNSTICK_UNSTUCK = 2
+	UNSTICK_GOOD = -1, ///< didn't need to be unstuck
+	UNSTICK_UNSTUCK = 1
 }
 unstickresult_t;
 
@@ -2054,8 +2037,6 @@ static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t o
 		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
 		{
 			VectorCopy(unstickoffsets + i, offset);
-			SV_LinkEdict(ent);
-			//SV_LinkEdict_TouchAreaGrid(ent);
 			return UNSTICK_UNSTUCK;
 		}
 	}
@@ -2068,42 +2049,13 @@ static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t o
 		VectorClear(offset);
 		offset[2] = -i;
 		if (!SV_TestEntityPosition(ent, offset))
-		{
-			SV_LinkEdict(ent);
-			//SV_LinkEdict_TouchAreaGrid(ent);
 			return UNSTICK_UNSTUCK;
-		}
 		offset[2] = i;
 		if (!SV_TestEntityPosition(ent, offset))
-		{
-			SV_LinkEdict(ent);
-			//SV_LinkEdict_TouchAreaGrid(ent);
 			return UNSTICK_UNSTUCK;
-		}
 	}
 
 	return UNSTICK_STUCK;
-}
-
-qbool SV_UnstickEntity (prvm_edict_t *ent)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	vec3_t offset;
-	switch(SV_UnstickEntityReturnOffset(ent, offset))
-	{
-		case UNSTICK_GOOD:
-			return true;
-		case UNSTICK_UNSTUCK:
-			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
-			return true;
-		case UNSTICK_STUCK:
-			if (developer_extra.integer)
-				Con_DPrintf("Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
-			return false;
-		default:
-			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
-			return false;
-	}
 }
 
 /*
@@ -2114,32 +2066,54 @@ This is a big hack to try and fix the rare case of getting stuck in the world
 clipping hull.
 =============
 */
-static void SV_CheckStuck (prvm_edict_t *ent)
+qbool SV_UnstickEntity (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
 
+	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0
+	&& sv.worldmodel->TraceBox == Mod_CollisionBIH_TraceBox) // Mod_Q1BSP_TraceBox doesn't support startdepth
+	{
+		VectorCopy(PRVM_serveredictvector(ent, origin), offset);
+		switch (PHYS_NudgeOutOfSolid(prog, ent))
+		{
+			case UNSTICK_GOOD:
+				return true;
+			case UNSTICK_UNSTUCK:
+				VectorSubtract(PRVM_serveredictvector(ent, origin), offset, offset);
+				Con_DPrintf("NudgeOutOfSolid fixed stuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
+				return true;
+			case UNSTICK_STUCK:
+				Con_DPrintf(CON_WARN "NudgeOutOfSolid couldn't fix stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
+				return false;
+			default:
+				Con_Printf("NudgeOutOfSolid returned a value outside its enum.\n");
+				return false;
+		}
+	}
+
+	if (!(PRVM_NUM_FOR_EDICT(ent) <= svs.maxclients ? sv_gameplayfix_unstickplayers : sv_gameplayfix_unstickentities).integer)
+		return false;
+
 	switch(SV_UnstickEntityReturnOffset(ent, offset))
 	{
 		case UNSTICK_GOOD:
-			VectorCopy (PRVM_serveredictvector(ent, origin), PRVM_serveredictvector(ent, oldorigin));
-			break;
+			return true;
 		case UNSTICK_UNSTUCK:
-			Con_DPrintf("Unstuck player entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
-			break;
+			Con_DPrintf("Unstuck entity %i (classname \"%s\") with offset %f %f %f.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)), offset[0], offset[1], offset[2]);
+			return true;
 		case UNSTICK_STUCK:
 			VectorSubtract(PRVM_serveredictvector(ent, oldorigin), PRVM_serveredictvector(ent, origin), offset);
 			if (!SV_TestEntityPosition(ent, offset))
 			{
-				Con_DPrintf("Unstuck player entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
-				SV_LinkEdict(ent);
-				//SV_LinkEdict_TouchAreaGrid(ent);
+				Con_DPrintf("Unstuck entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
+				return true;
 			}
-			else
-				Con_DPrintf("Stuck player entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
-			break;
+			Con_DPrintf(CON_WARN "Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
+			return false;
 		default:
 			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
+			return false;
 	}
 }
 
@@ -2309,9 +2283,6 @@ static void SV_WalkMove (prvm_edict_t *ent)
 	// don't move
 	if (sv.frametime <= 0)
 		return;
-
-	if (sv_gameplayfix_unstickplayers.integer)
-		SV_CheckStuck (ent);
 
 	applygravity = !SV_CheckWater (ent) && PRVM_serveredictfloat(ent, movetype) == MOVETYPE_WALK && ! ((int)PRVM_serveredictfloat(ent, flags) & FL_WATERJUMP);
 
