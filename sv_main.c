@@ -110,6 +110,7 @@ cvar_t sv_gameplayfix_easierwaterjump = {CF_SERVER, "sv_gameplayfix_easierwaterj
 cvar_t sv_gameplayfix_findradiusdistancetobox = {CF_SERVER, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
 cvar_t sv_gameplayfix_gravityunaffectedbyticrate = {CF_SERVER, "sv_gameplayfix_gravityunaffectedbyticrate", "0", "fix some ticrate issues in physics."};
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {CF_SERVER, "sv_gameplayfix_grenadebouncedownslopes", "1", "prevents MOVETYPE_BOUNCE (grenades) from getting stuck when fired down a downward sloping surface"};
+cvar_t sv_gameplayfix_impactbeforeonground = {CF_SERVER, "sv_gameplayfix_impactbeforeonground", "0", "enables a bug from old DP versions in which entity .touch functions are called before FL_ONGROUND is set when a collision is detected in SV_FlyMove() (used by MOVETYPE_WALK and MOVETYPE_STEP), Quake 1.5 and Combat+ mods require this, it breaks id1 fiends"};
 cvar_t sv_gameplayfix_multiplethinksperframe = {CF_SERVER, "sv_gameplayfix_multiplethinksperframe", "1", "allows entities to think more often than the server framerate, primarily useful for very high fire rate weapons"};
 cvar_t sv_gameplayfix_noairborncorpse = {CF_SERVER, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses, items, etc) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
 cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems = {CF_SERVER, "sv_gameplayfix_noairborncorpse_allowsuspendeditems", "1", "causes entities sitting ontop of objects that are instantaneously remove to float in midair (special hack to allow a common level design trick for floating items)"};
@@ -593,6 +594,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
 	Cvar_RegisterVariable (&sv_gameplayfix_gravityunaffectedbyticrate);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
+	Cvar_RegisterVariable (&sv_gameplayfix_impactbeforeonground);
 	Cvar_RegisterVariable (&sv_gameplayfix_multiplethinksperframe);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse_allowsuspendeditems);

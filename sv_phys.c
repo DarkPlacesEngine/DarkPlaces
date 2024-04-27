@@ -1112,14 +1112,17 @@ static qbool SV_RunThink (prvm_edict_t *ent)
 SV_Impact
 
 Two entities have touched, so run their touch functions
+Returns true if the push did not result in the entity being teleported by QC code.
 ==================
 */
-static void SV_Impact (prvm_edict_t *e1, trace_t *trace)
+static qbool SV_Impact (prvm_edict_t *e1, trace_t *trace)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int restorevm_tempstringsbuf_cursize;
 	int old_self, old_other;
 	prvm_edict_t *e2 = (prvm_edict_t *)trace->ent;
+
+	e1->priv.required->mark = PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN; // -2: setorigin running
 
 	old_self = PRVM_serverglobaledict(self);
 	old_other = PRVM_serverglobaledict(other);
@@ -1154,6 +1157,22 @@ static void SV_Impact (prvm_edict_t *e1, trace_t *trace)
 	PRVM_serverglobaledict(self) = old_self;
 	PRVM_serverglobaledict(other) = old_other;
 	prog->tempstringsbuf.cursize = restorevm_tempstringsbuf_cursize;
+
+	if(e1->priv.required->mark == PRVM_EDICT_MARK_SETORIGIN_CAUGHT)
+	{
+		e1->priv.required->mark = 0;
+		return false;
+	}
+	else if(e1->priv.required->mark == PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN)
+	{
+		e1->priv.required->mark = 0;
+		return true;
+	}
+	else
+	{
+		Con_Printf(CON_ERROR "The edict mark had been overwritten! Please debug this.\n");
+		return true;
+	}
 }
 
 
@@ -1194,7 +1213,7 @@ If stepnormal is not NULL, the plane normal of any vertical wall hit will be sto
 ============
 */
 static float SV_Gravity (prvm_edict_t *ent);
-static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink, qbool checkstuck);
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dotouch, qbool checkstuck);
 #define MAX_CLIP_PLANES 5
 static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float *stepnormal, int hitsupercontentsmask, int skipsupercontentsmask, int skipmaterialflagsmask, float stepheight)
 {
@@ -1237,7 +1256,7 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 			break;
 
 		VectorScale(PRVM_serveredictvector(ent, velocity), time_left, push);
-		if(!SV_PushEntity(&trace, ent, push, false, true))
+		if(!SV_PushEntity(&trace, ent, push, sv_gameplayfix_impactbeforeonground.integer, true))
 		{
 			// we got teleported by a touch function
 			// let's abort the move
@@ -1332,12 +1351,19 @@ static int SV_FlyMove (prvm_edict_t *ent, float time, qbool applygravity, float 
 				VectorCopy(trace.plane.normal, stepnormal);
 		}
 
-		// Unlike some other movetypes Quake's SV_FlyMove calls SV_Impact only after setting ONGROUND which id1 fiends rely on.
-		// If we stepped up (sv_gameplayfix_stepmultipletimes) this will impact the steptrace2 plane instead of the original.
-		if (PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace.ent)
-			SV_Impact(ent, &trace);
-		if (ent->free)
-			return blocked; // removed by the impact function
+		if (!sv_gameplayfix_impactbeforeonground.integer)
+		{
+			// Unlike some other movetypes Quake's SV_FlyMove calls SV_Impact only after setting ONGROUND which id1 fiends rely on.
+			// If we stepped up (sv_gameplayfix_stepmultipletimes) this will impact the steptrace2 plane instead of the original.
+			if (PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace.ent)
+				if (!SV_Impact(ent, &trace))
+				{
+					blocked |= 8;
+					break;
+				}
+			if (ent->free)
+				return blocked; // removed by the impact function
+		}
 
 		if (trace.fraction >= 0.001)
 		{
@@ -1559,7 +1585,7 @@ The trace struct is filled with the trace that has been done.
 Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
-static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dolink, qbool checkstuck)
+static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dotouch, qbool checkstuck)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	int solid;
@@ -1603,8 +1629,6 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, origin));
 	VectorCopy(trace->endpos, PRVM_serveredictvector(ent, oldorigin)); // for SV_UnstickEntity()
 
-	ent->priv.required->mark = PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN; // -2: setorigin running
-
 	SV_LinkEdict(ent);
 
 #if 0
@@ -1615,29 +1639,15 @@ static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qboo
 	}
 #endif
 
-	if (dolink)
+	if (dotouch)
 	{
 		SV_LinkEdict_TouchAreaGrid(ent);
 
 		if((PRVM_serveredictfloat(ent, solid) >= SOLID_TRIGGER && trace->ent && (!((int)PRVM_serveredictfloat(ent, flags) & FL_ONGROUND) || PRVM_serveredictedict(ent, groundentity) != PRVM_EDICT_TO_PROG(trace->ent))))
-			SV_Impact (ent, trace);
+			return SV_Impact (ent, trace);
 	}
 
-	if(ent->priv.required->mark == PRVM_EDICT_MARK_SETORIGIN_CAUGHT)
-	{
-		ent->priv.required->mark = 0;
-		return false;
-	}
-	else if(ent->priv.required->mark == PRVM_EDICT_MARK_WAIT_FOR_SETORIGIN)
-	{
-		ent->priv.required->mark = 0;
-		return true;
-	}
-	else
-	{
-		Con_Printf("The edict mark had been overwritten! Please debug this.\n");
-		return true;
-	}
+	return true;
 }
 
 
