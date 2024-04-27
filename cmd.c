@@ -632,8 +632,11 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 				);
 			break;
 		// rogue mission pack has a guardian boss that does not wake up if findradius returns one of the entities around its spawn area
+		// On r2m3 3 of the 4 monster_lava_man are placed in solid clips so droptofloor() moves them to a lower level if tracebox can
+		// move them out of solid, if it can't they're stuck (original behaviour), only proper fix is to move them with a .ent file.
 		case GAME_ROGUE:
 			Cbuf_InsertText(cmd, "\n"
+"mod_q1bsp_traceoutofsolid 0\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
 "sv_gameplayfix_findradiusdistancetobox 0\n"
 "sv_gameplayfix_grenadebouncedownslopes 0\n"

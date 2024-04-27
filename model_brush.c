@@ -61,6 +61,7 @@ cvar_t mod_q3shader_force_terrain_alphaflag = {CF_CLIENT, "mod_q3shader_force_te
 cvar_t mod_q2bsp_littransparentsurfaces = {CF_CLIENT, "mod_q2bsp_littransparentsurfaces", "0", "allows lighting on rain in 3v3gloom3 and other cases of transparent surfaces that have lightmaps that were ignored by quake2"};
 
 cvar_t mod_q1bsp_polygoncollisions = {CF_CLIENT | CF_SERVER, "mod_q1bsp_polygoncollisions", "0", "disables use of precomputed cliphulls and instead collides with polygons (uses Bounding Interval Hierarchy optimizations)"};
+cvar_t mod_q1bsp_traceoutofsolid = {CF_SHARED, "mod_q1bsp_traceoutofsolid", "1", "enables tracebox to move an entity that's stuck in solid brushwork out to empty space, 1 matches FTEQW and QSS and is required by many community maps (items/monsters will be missing otherwise), 0 matches old versions of DP and the original Quake engine (if your map or QC needs 0 it's buggy)"};
 cvar_t mod_q1bsp_zero_hullsize_cutoff = {CF_CLIENT | CF_SERVER, "mod_q1bsp_zero_hullsize_cutoff", "3", "bboxes with an X dimension smaller than this will use the smallest cliphull (0x0x0) instead of being rounded up to the player cliphull (32x32x56) in Q1BSP, or crouching player (32x32x36) in HLBSP"};
 
 cvar_t mod_bsp_portalize = {CF_CLIENT, "mod_bsp_portalize", "1", "enables portal generation from BSP tree (may take several seconds per map), used by r_drawportals, r_useportalculling, r_shadow_realtime_dlight_portalculling, r_shadow_realtime_world_compileportalculling"};
@@ -112,6 +113,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3shader_force_addalpha);
 	Cvar_RegisterVariable(&mod_q3shader_force_terrain_alphaflag);
 	Cvar_RegisterVariable(&mod_q1bsp_polygoncollisions);
+	Cvar_RegisterVariable(&mod_q1bsp_traceoutofsolid);
 	Cvar_RegisterVariable(&mod_q1bsp_zero_hullsize_cutoff);
 	Cvar_RegisterVariable(&mod_recalculatenodeboxes);
 
@@ -760,7 +762,7 @@ static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int nu
 			// recurse both sides, front side first
 			ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[p1side], p1f, midf, p1, mid);
 			// if this side is not empty, return what it is (solid or done)
-			if (ret != HULLCHECKSTATE_EMPTY && !t->trace->allsolid)
+			if (ret != HULLCHECKSTATE_EMPTY && (!t->trace->allsolid || !mod_q1bsp_traceoutofsolid.integer))
 				return ret;
 
 			ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[p2side], midf, p2f, mid, p2);
