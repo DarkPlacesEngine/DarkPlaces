@@ -4514,15 +4514,13 @@ static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 
 //=============================================================================
 /* MODLIST MENU */
-// same limit of mod dirs as in fs.c
-#define MODLIST_MAXDIRS 16
-static int modlist_enabled [MODLIST_MAXDIRS];	//array of indexs to modlist
+// same limit of mod dirs as in fs.c (allowing that one is used by gamedirname1)
+#define MODLIST_MAXDIRS MAX_GAMEDIRS - 1
 static int modlist_numenabled;			//number of enabled (or in process to be..) mods
 
 typedef struct modlist_entry_s
 {
 	qbool loaded;	// used to determine whether this entry is loaded and running
-	int enabled;		// index to array of modlist_enabled
 
 	// name of the modification, this is displayed on the menu entry
 	char name[128];
@@ -4541,16 +4539,15 @@ static void ModList_RebuildList(void)
 	int i,j;
 	stringlist_t list;
 	const char *description;
+	int desc_len;
 
 	stringlistinit(&list);
 	listdirectory(&list, fs_basedir, "");
 	stringlistsort(&list, true);
 	modlist_count = 0;
-	modlist_numenabled = fs_numgamedirs;
+	modlist_numenabled = 0;
 	for (i = 0;i < list.numstrings && modlist_count < MODLIST_TOTALSIZE;i++)
 	{
-		int desc_len;
-
 		// reject any dirs that are part of the base game
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
 		//if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
@@ -4570,17 +4567,17 @@ static void ModList_RebuildList(void)
 			}
 
 		dp_strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
-		//check currently loaded mods
+
+		// check if this mod is currently loaded
 		modlist[modlist_count].loaded = false;
-		if (fs_numgamedirs)
-			for (j = 0; j < fs_numgamedirs; j++)
-				if (!strcasecmp(fs_gamedirs[j], modlist[modlist_count].dir))
-				{
-					modlist[modlist_count].loaded = true;
-					modlist[modlist_count].enabled = j;
-					modlist_enabled[j] = modlist_count;
-					break;
-				}
+		for (j = 0; j < fs_numgamedirs; j++)
+			if (!strcasecmp(fs_gamedirs[j], modlist[modlist_count].dir))
+			{
+				modlist[modlist_count].loaded = true;
+				modlist_numenabled++;
+				break;
+			}
+
 		modlist_count ++;
 	}
 	stringlistfreecontents(&list);
@@ -4590,22 +4587,7 @@ static void ModList_Enable (void)
 {
 	int i;
 	int numgamedirs;
-	char gamedirs[MODLIST_MAXDIRS][MAX_QPATH];
-
-	// copy our mod list into an array for FS_ChangeGameDirs
-	numgamedirs = modlist_numenabled;
-	for (i = 0; i < modlist_numenabled; i++)
-		dp_strlcpy (gamedirs[i], modlist[modlist_enabled[i]].dir,sizeof (gamedirs[i]));
-
-	// this code snippet is from FS_ChangeGameDirs
-	if (fs_numgamedirs == numgamedirs)
-	{
-		for (i = 0;i < numgamedirs;i++)
-			if (strcasecmp(fs_gamedirs[i], gamedirs[i]))
-				break;
-		if (i == numgamedirs)
-			return; // already using this set of gamedirs, do nothing
-	}
+	const char *gamedirs[MODLIST_MAXDIRS];
 
 	// this part is basically the same as the FS_GameDir_f function
 	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
@@ -4615,7 +4597,18 @@ static void ModList_Enable (void)
 		return;
 	}
 
-	FS_ChangeGameDirs (modlist_numenabled, gamedirs, true, true);
+	// copy our mod list into an array for FS_ChangeGameDirs
+	for (i = 0, numgamedirs = 0; i < modlist_count && numgamedirs < MODLIST_MAXDIRS; i++)
+		if (modlist[i].loaded)
+			gamedirs[numgamedirs++] = modlist[i].dir;
+	// allow disabling all active mods using the menu
+	if (numgamedirs == 0)
+	{
+		numgamedirs = 1;
+		gamedirs[0] = gamedirname1;
+	}
+
+	FS_ChangeGameDirs(numgamedirs, gamedirs, true);
 }
 
 void M_Menu_ModList_f(cmd_state_t *cmd)
@@ -4630,28 +4623,13 @@ void M_Menu_ModList_f(cmd_state_t *cmd)
 
 static void M_Menu_ModList_AdjustSliders (int dir)
 {
-	int i;
 	S_LocalSound ("sound/misc/menu3.wav");
 
 	// stop adding mods, we reach the limit
 	if (!modlist[modlist_cursor].loaded && (modlist_numenabled == MODLIST_MAXDIRS)) return;
+
 	modlist[modlist_cursor].loaded = !modlist[modlist_cursor].loaded;
-	if (modlist[modlist_cursor].loaded)
-	{
-		modlist[modlist_cursor].enabled = modlist_numenabled;
-		//push the value on the enabled list
-		modlist_enabled[modlist_numenabled++] = modlist_cursor;
-	}
-	else
-	{
-		//eliminate the value from the enabled list
-		for (i = modlist[modlist_cursor].enabled; i < modlist_numenabled; i++)
-		{
-			modlist_enabled[i] = modlist_enabled[i+1];
-			modlist[modlist_enabled[i]].enabled--;
-		}
-		modlist_numenabled--;
-	}
+	modlist_numenabled += modlist[modlist_cursor].loaded ? 1 : -1;
 }
 
 static void M_ModList_Draw (void)
@@ -4671,8 +4649,12 @@ static void M_ModList_Draw (void)
 	M_PrintRed(432, 32, s_enabled);
 	// Draw a list box with all enabled mods
 	DrawQ_Pic(menu_x + 432, menu_y + 48, NULL, 172, 8 * modlist_numenabled, 0, 0, 0, 0.5, 0);
-	for (y = 0; y < modlist_numenabled; y++)
-		M_PrintRed(432, 48 + y * 8, modlist[modlist_enabled[y]].dir);
+	for (n = 0, y = 48; n < modlist_count; n++)
+		if (modlist[n].loaded)
+		{
+			M_PrintRed(432, y, modlist[n].dir);
+			y += 8;
+		}
 
 	if (*cl_connect_status)
 		M_Print(16, menu_height - 8, cl_connect_status);

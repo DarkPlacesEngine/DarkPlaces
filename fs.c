@@ -438,7 +438,7 @@ char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
 static pack_t *fs_selfpack = NULL;
 
-// list of active game directories (empty if not running a mod)
+// list of active game directories
 int fs_numgamedirs = 0;
 char fs_gamedirs[MAX_GAMEDIRS][MAX_QPATH];
 
@@ -1544,35 +1544,16 @@ FS_Rescan
 void FS_Rescan (void)
 {
 	int i;
-	qbool fs_modified = false;
-	qbool reset = false;
 	char gamedirbuf[MAX_INPUTLINE];
 	char vabuf[1024];
 
-	if (fs_searchpaths)
-		reset = true;
 	FS_ClearSearchPath();
 
-	// automatically activate gamemode for the gamedirs specified
-	if (reset)
-		COM_ChangeGameTypeForGameDirs();
-
-	// add the game-specific paths
-	// gamedirname1 (typically id1)
-	FS_AddGameHierarchy (gamedirname1);
 	// update the com_modname (used for server info)
 	if (gamedirname2 && gamedirname2[0])
 		dp_strlcpy(com_modname, gamedirname2, sizeof(com_modname));
 	else
 		dp_strlcpy(com_modname, gamedirname1, sizeof(com_modname));
-
-	// add the game-specific path, if any
-	// (only used for mission packs and the like, which should set fs_modified)
-	if (gamedirname2 && gamedirname2[0])
-	{
-		fs_modified = true;
-		FS_AddGameHierarchy (gamedirname2);
-	}
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
@@ -1581,7 +1562,6 @@ void FS_Rescan (void)
 	*gamedirbuf = 0;
 	for (i = 0;i < fs_numgamedirs;i++)
 	{
-		fs_modified = true;
 		FS_AddGameHierarchy (fs_gamedirs[i]);
 		// update the com_modname (used server info)
 		dp_strlcpy (com_modname, fs_gamedirs[i], sizeof (com_modname));
@@ -1622,7 +1602,7 @@ void FS_Rescan (void)
 	case GAME_ROGUE:
 		if (!registered.integer)
 		{
-			if (fs_modified)
+			if (fs_numgamedirs > 1)
 				Con_Print("Playing shareware version, with modification.\nwarning: most mods require full quake data.\n");
 			else
 				Con_Print("Playing shareware version.\n");
@@ -1651,57 +1631,105 @@ static void FS_Rescan_f(cmd_state_t *cmd)
 
 /*
 ================
-FS_ChangeGameDirs
+FS_AddGameDirs
 ================
 */
-extern qbool vid_opened;
-qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool complain, qbool failmissing)
+addgamedirs_t FS_SetGameDirs(int numgamedirs, const char *gamedirs[], qbool failmissing, qbool abortonfail)
 {
-	int i;
+	int i, j, k;
 	const char *p;
+	const char *gamedirs_ok[MAX_GAMEDIRS + 2];
+	int numgamedirs_ok;
 
-	if (fs_numgamedirs == numgamedirs)
+	// prepend the game-specific gamedirs (the primary and search order can be overriden)
+	gamedirs_ok[0] = gamedirname1;
+	numgamedirs_ok = 1;
+	if (gamedirname2 && gamedirname2[0])
 	{
-		for (i = 0;i < numgamedirs;i++)
-			if (strcasecmp(fs_gamedirs[i], gamedirs[i]))
-				break;
-		if (i == numgamedirs)
-			return true; // already using this set of gamedirs, do nothing
+		gamedirs_ok[1] = gamedirname2;
+		++numgamedirs_ok;
 	}
 
-	if (numgamedirs > MAX_GAMEDIRS)
+	// check the game-specific gamedirs
+	for (i = 0; i < numgamedirs_ok; ++i)
 	{
-		if (complain)
-			Con_Printf("That is too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
-		return false; // too many gamedirs
+		p = FS_CheckGameDir(gamedirs_ok[i]);
+		if(!p)
+			Sys_Error("BUG: nasty gamedir name \"%s\" in gamemode_info", gamedirs_ok[i]);
+		if(p == fs_checkgamedir_missing && failmissing)
+		{
+			Con_Printf(abortonfail ? CON_ERROR : CON_WARN "Base gamedir \"%s\" empty or not found!\n", gamedirs_ok[i]);
+			if (abortonfail)
+				return GAMEDIRS_FAILURE; // missing gamedirs
+		}
 	}
 
-	for (i = 0;i < numgamedirs;i++)
+	// copy and check the user-specified gamedirs
+	for (i = 0; i < numgamedirs && (size_t)numgamedirs_ok < sizeof(gamedirs_ok) / sizeof(gamedirs_ok[0]); ++i)
 	{
+		// remove any previously-added duplicate (last one wins)
+		for (j = 0; j < numgamedirs_ok; ++j)
+			if (!strcasecmp(gamedirs_ok[j], gamedirs[i]))
+			{
+				--numgamedirs_ok;
+				for (k = j; k < numgamedirs_ok; ++k)
+					gamedirs_ok[k] = gamedirs_ok[k + 1];
+			}
+
 		// if string is nasty, reject it
 		p = FS_CheckGameDir(gamedirs[i]);
 		if(!p)
 		{
-			if (complain)
-				Con_Printf("Nasty gamedir name rejected: %s\n", gamedirs[i]);
-			return false; // nasty gamedirs
+			Con_Printf(abortonfail ? CON_ERROR : CON_WARN "Nasty gamedir name \"%s\" rejected\n", gamedirs[i]);
+			if (abortonfail)
+				return GAMEDIRS_FAILURE; // nasty gamedirs
+			else
+				continue;
 		}
 		if(p == fs_checkgamedir_missing && failmissing)
 		{
-			if (complain)
-				Con_Printf("Gamedir missing: %s%s/\n", fs_basedir, gamedirs[i]);
-			return false; // missing gamedirs
+			Con_Printf(abortonfail ? CON_ERROR : CON_WARN "Gamedir \"%s\" empty or not found!\n", gamedirs[i]);
+			if (abortonfail)
+				return GAMEDIRS_FAILURE; // missing gamedirs
+			else
+				continue;
 		}
+
+		gamedirs_ok[numgamedirs_ok++] = gamedirs[i];
 	}
 
+	if (fs_numgamedirs == numgamedirs_ok)
+	{
+		for (i = 0;i < numgamedirs_ok;i++)
+			if (strcasecmp(fs_gamedirs[i], gamedirs_ok[i]))
+				break;
+		if (i == numgamedirs_ok)
+			return GAMEDIRS_ALLGOOD; // already using this set of gamedirs, do nothing
+	}
+
+	if (numgamedirs_ok > MAX_GAMEDIRS)
+	{
+		Con_Printf(abortonfail ? CON_ERROR : CON_WARN "That is too many gamedirs (%i > %i)\n", numgamedirs_ok, MAX_GAMEDIRS);
+		if (abortonfail)
+			return GAMEDIRS_FAILURE; // too many gamedirs
+	}
+
+	for (i = 0, fs_numgamedirs = 0; i < numgamedirs_ok && fs_numgamedirs < MAX_GAMEDIRS; ++i)
+		dp_strlcpy(fs_gamedirs[fs_numgamedirs++], gamedirs_ok[i], sizeof(fs_gamedirs[0]));
+
+	return GAMEDIRS_SUCCESS;
+}
+
+qbool FS_ChangeGameDirs(int numgamedirs, const char *gamedirs[], qbool failmissing)
+{
+	addgamedirs_t addresult = COM_ChangeGameTypeForGameDirs(numgamedirs, gamedirs, failmissing, false);
+
+	if (addresult == GAMEDIRS_ALLGOOD)
+		return true; // already using this set of gamedirs, do nothing
+	else if (addresult == GAMEDIRS_FAILURE)
+		return false;
+
 	Host_SaveConfig(CONFIGFILENAME);
-
-	fs_numgamedirs = numgamedirs;
-	for (i = 0;i < fs_numgamedirs;i++)
-		dp_strlcpy(fs_gamedirs[i], gamedirs[i], sizeof(fs_gamedirs[i]));
-
-	// reinitialize filesystem to detect the new paks
-	FS_Rescan();
 
 	if (cls.demoplayback)
 	{
@@ -1712,7 +1740,10 @@ qbool FS_ChangeGameDirs(int numgamedirs, char gamedirs[][MAX_QPATH], qbool compl
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f(cmd_local);
 
-	// reset everything that can be and reload configs
+	// reinitialize filesystem to detect the new paks
+	FS_Rescan();
+
+	// reload assets after the config is executed
 	Cbuf_InsertText(cmd_local, "\nloadconfig\n");
 
 	return true;
@@ -1727,13 +1758,13 @@ static void FS_GameDir_f(cmd_state_t *cmd)
 {
 	int i;
 	int numgamedirs;
-	char gamedirs[MAX_GAMEDIRS][MAX_QPATH];
+	const char *gamedirs[MAX_GAMEDIRS];
 
 	if (Cmd_Argc(cmd) < 2)
 	{
 		Con_Printf("gamedirs active:");
 		for (i = 0;i < fs_numgamedirs;i++)
-			Con_Printf(" %s", fs_gamedirs[i]);
+			Con_Printf(" %s%s", (strcasecmp(fs_gamedirs[i], gamedirname1) && (!gamedirname2 || strcasecmp(fs_gamedirs[i], gamedirname2))) ? "^7" : "^9", fs_gamedirs[i]);
 		Con_Printf("\n");
 		return;
 	}
@@ -1741,24 +1772,21 @@ static void FS_GameDir_f(cmd_state_t *cmd)
 	numgamedirs = Cmd_Argc(cmd) - 1;
 	if (numgamedirs > MAX_GAMEDIRS)
 	{
-		Con_Printf("Too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
+		Con_Printf(CON_ERROR "Too many gamedirs (%i > %i)\n", numgamedirs, MAX_GAMEDIRS);
 		return;
 	}
 
 	for (i = 0;i < numgamedirs;i++)
-		dp_strlcpy(gamedirs[i], Cmd_Argv(cmd, i+1), sizeof(gamedirs[i]));
+		gamedirs[i] = Cmd_Argv(cmd, i+1);
 
 	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
 	{
 		// actually, changing during game would work fine, but would be stupid
-		Con_Printf("Can not change gamedir while client is connected or server is running!\n");
+		Con_Printf(CON_ERROR "Can not change gamedir while client is connected or server is running!\n");
 		return;
 	}
 
-	// halt demo playback to close the file
-	CL_Disconnect();
-
-	FS_ChangeGameDirs(numgamedirs, gamedirs, true, true);
+	FS_ChangeGameDirs(numgamedirs, gamedirs, true);
 }
 
 static const char *FS_SysCheckGameDir(const char *gamedir, char *buf, size_t buflength)
@@ -2109,8 +2137,9 @@ void FS_Init_Commands(void)
 
 static void FS_Init_Dir (void)
 {
-	const char *p;
 	int i;
+	int numgamedirs;
+	const char *cmdline_gamedirs[MAX_GAMEDIRS];
 
 	*fs_basedir = 0;
 	*fs_userdir = 0;
@@ -2234,37 +2263,21 @@ static void FS_Init_Dir (void)
 
 	FS_ListGameDirs();
 
-	p = FS_CheckGameDir(gamedirname1);
-	if(!p || p == fs_checkgamedir_missing)
-		Con_Printf(CON_WARN "WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname1);
-
-	if(gamedirname2)
-	{
-		p = FS_CheckGameDir(gamedirname2);
-		if(!p || p == fs_checkgamedir_missing)
-			Con_Printf(CON_WARN "WARNING: base gamedir %s%s/ not found!\n", fs_basedir, gamedirname2);
-	}
-
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
 	// LadyHavoc: now supports multiple -game directories
-	for (i = 1;i < sys.argc && fs_numgamedirs < MAX_GAMEDIRS;i++)
+	// the last one is the primary (where files are saved) and is used to identify mods
+	for (i = 1, numgamedirs = 0; i < sys.argc && numgamedirs < MAX_GAMEDIRS; i++)
 	{
 		if (!sys.argv[i])
 			continue;
 		if (!strcmp (sys.argv[i], "-game") && i < sys.argc-1)
 		{
 			i++;
-			p = FS_CheckGameDir(sys.argv[i]);
-			if(!p)
-				Con_Printf("WARNING: Nasty -game name rejected: %s\n", sys.argv[i]);
-			if(p == fs_checkgamedir_missing)
-				Con_Printf(CON_WARN "WARNING: -game %s%s/ not found!\n", fs_basedir, sys.argv[i]);
-			// add the gamedir to the list of active gamedirs
-			dp_strlcpy (fs_gamedirs[fs_numgamedirs], sys.argv[i], sizeof(fs_gamedirs[fs_numgamedirs]));
-			fs_numgamedirs++;
+			cmdline_gamedirs[numgamedirs++] = sys.argv[i];
 		}
 	}
+	COM_ChangeGameTypeForGameDirs(numgamedirs, cmdline_gamedirs, true, true);
 
 	// generate the searchpath
 	FS_Rescan();

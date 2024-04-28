@@ -79,6 +79,6 @@ extern const char *gameuserdirname;
 extern char com_modname[MAX_OSPATH];
 
 void COM_InitGameType (void);
-void COM_ChangeGameTypeForGameDirs(void);
+int COM_ChangeGameTypeForGameDirs(unsigned numgamedirs, const char *gamedirs[], qbool failmissing, qbool init);
 
 #endif
