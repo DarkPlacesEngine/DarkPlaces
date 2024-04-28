@@ -677,24 +677,28 @@ static inline double Host_UpdateTime (double newtime, double oldtime)
 	return time;
 }
 
+#ifdef __EMSCRIPTEN__
 void Host_Loop(void)
 {
-	// Something bad happened, or the server disconnected
-	if (setjmp(host.abortframe))
-	{
-		host.state = host_active; // In case we were loading
-		return;
+	if (host.state < host_shutdown){
+		// Something bad happened, or the server disconnected
+		if (setjmp(host.abortframe))
+		{
+			host.state = host_active; // In case we were loading
+			return;
+		}
+
+		host.dirtytime = Sys_DirtyTime();
+		host.realtime += host_loop_time = Host_UpdateTime(host.dirtytime, host_loop_oldtime);
+		host_loop_oldtime = host.dirtytime;
+
+		host_loop_sleeptime = Host_Frame(host_loop_time);
+		++host.framecount;
+		host_loop_sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+		host.sleeptime = Sys_Sleep(host_loop_sleeptime);
 	}
-
-	host.dirtytime = Sys_DirtyTime();
-	host.realtime += host_loop_time = Host_UpdateTime(host.dirtytime, host_loop_oldtime);
-	host_loop_oldtime = host.dirtytime;
-
-	host_loop_sleeptime = Host_Frame(host_loop_time);
-	++host.framecount;
-	host_loop_sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-	host.sleeptime = Sys_Sleep(host_loop_sleeptime);
 }
+#endif
 
 void Host_Main(void)
 {
@@ -709,7 +713,21 @@ void Host_Main(void)
 #else
 	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
 	{
-		Host_Loop();
+		// Something bad happened, or the server disconnected
+		if (setjmp(host.abortframe))
+		{
+			host.state = host_active; // In case we were loading
+			return;
+		}
+
+		host.dirtytime = Sys_DirtyTime();
+		host.realtime += host_loop_time = Host_UpdateTime(host.dirtytime, host_loop_oldtime);
+		host_loop_oldtime = host.dirtytime;
+
+		host_loop_sleeptime = Host_Frame(host_loop_time);
+		++host.framecount;
+		host_loop_sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+		host.sleeptime = Sys_Sleep(host_loop_sleeptime);
 	}
 #endif
 
