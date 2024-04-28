@@ -746,6 +746,12 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "csqc_polygons_defaultmaterial_nocullface 1\n"
 				);
 			break;
+		case GAME_QUAKE15:
+			Cbuf_InsertText(cmd, "\n"
+"sv_gameplayfix_impactbeforeonground 1\n"
+"sv_gameplayfix_unstickentities 1\n"
+			);
+			break;
 		default:
 			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 1\n"

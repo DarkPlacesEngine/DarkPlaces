@@ -86,6 +86,7 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_VORETOURNAMENT,			GAME_VORETOURNAMENT,		"voretournament",		"-voretournament",			"Vore Tournament",			"Vore_Tournament",			"data",		NULL,			"voretournament",	"voretournament"		}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
 { GAME_DOOMBRINGER,				GAME_DOOMBRINGER,			"doombringer",			"-doombringer",				"DOOMBRINGER",				"DOOMBRINGER",				"dbdata",	NULL,			"doombringer",		"doombringer"			}, // COMMANDLINEOPTION: Game: -doombringer runs the game DOOMBRINGER
 { GAME_BATTLEMETAL,				GAME_NORMAL,				"battlemetal",			"-battlemetal",				"battlemetal",				"battlemetal",				"metaldata",	NULL,		"battlemetal",		"battlemetal"			}, // COMMANDLINEOPTION: Game: -battlemetal runs the game battleMETAL
+{ GAME_QUAKE15,					GAME_NORMAL,				"quake15",				"-quake15",					"Quake 1.5",				"Quake_1.5",				"id1",		"quake15",		"quake15",			"darkplaces"			}, // COMMANDLINEOPTION: Game: -quake15 runs the Quake 1.5 or Quake Combat+ mod
 };
 
 static void COM_SetGameType(int index);
