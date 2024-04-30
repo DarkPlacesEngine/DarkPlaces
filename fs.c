@@ -1541,11 +1541,14 @@ static void FS_AddSelfPack(void)
 FS_Rescan
 ================
 */
+static void FS_ListGameDirs(void);
 void FS_Rescan (void)
 {
 	int i;
 	char gamedirbuf[MAX_INPUTLINE];
 	char vabuf[1024];
+
+	FS_ListGameDirs();
 
 	FS_ClearSearchPath();
 
@@ -1732,10 +1735,8 @@ qbool FS_ChangeGameDirs(int numgamedirs, const char *gamedirs[], qbool failmissi
 	Host_SaveConfig(CONFIGFILENAME);
 
 	if (cls.demoplayback)
-	{
 		CL_Disconnect();
-		cls.demonum = 0;
-	}
+	cls.demonum = 0; // make sure startdemos will work if the mod uses it
 
 	// unload all sounds so they will be reloaded from the new files as needed
 	S_UnloadAllSounds_f(cmd_local);
@@ -1744,7 +1745,7 @@ qbool FS_ChangeGameDirs(int numgamedirs, const char *gamedirs[], qbool failmissi
 	FS_Rescan();
 
 	// reload assets after the config is executed
-	Cbuf_InsertText(cmd_local, "\nloadconfig\n");
+	Cbuf_InsertText(cmd_local, "\nloadconfig\nr_restart\n");
 
 	return true;
 }
@@ -2260,8 +2261,6 @@ static void FS_Init_Dir (void)
 	// if userdir equal to basedir, clear it to avoid confusion later
 	if (!strcmp(fs_basedir, fs_userdir))
 		fs_userdir[0] = 0;
-
-	FS_ListGameDirs();
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game

@@ -2800,7 +2800,7 @@ void CL_StartVideo(void)
 
 extern cvar_t host_framerate;
 extern cvar_t host_speeds;
-extern qbool serverlist_querystage;
+extern uint8_t serverlist_querystage;
 double CL_Frame (double time)
 {
 	static double clframetime;

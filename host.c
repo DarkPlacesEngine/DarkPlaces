@@ -252,12 +252,13 @@ static void Host_LoadConfig_f(cmd_state_t *cmd)
 	// Xonotic QC complains/breaks if its cvars are deleted before its m_shutdown() is called
 	if(MR_Shutdown)
 		MR_Shutdown();
-	// append a menu restart command to execute after the config
-	Cbuf_AddText(cmd, "\nmenu_restart\n");
 #endif
-	// reset all cvars, commands and aliases to init values
 	Cmd_RestoreInitState();
-	// reset cvars to their defaults, and then exec startup scripts again
+#ifdef CONFIG_MENU
+	// Must re-add menu.c commands or load menu.dat before executing quake.rc or handling events
+	MR_Init();
+#endif
+	// exec startup scripts again
 	Host_AddConfigText(cmd);
 }
 

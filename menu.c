@@ -5477,7 +5477,7 @@ void MR_Restart(void)
 {
 	if(MR_Shutdown)
 		MR_Shutdown ();
-	MR_SetRouting (false);
+	MR_Init();
 }
 
 static void MR_Restart_f(cmd_state_t *cmd)
