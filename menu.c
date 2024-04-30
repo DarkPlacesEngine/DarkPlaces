@@ -497,6 +497,8 @@ static void M_Main_Key(cmd_state_t *cmd, int key, int ascii)
 		key_dest = key_game;
 		m_state = m_none;
 		//cls.demonum = m_save_demonum;
+		//if(!cl_startdemos.integer)
+		//	break;
 		//if (cls.demonum != -1 && !cls.demoplayback && cls.state != ca_connected)
 		//	CL_NextDemo ();
 		break;

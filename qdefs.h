@@ -116,7 +116,7 @@
 #define	CVAR_HASHSIZE			65536 ///< number of hash buckets for accelerating cvar name lookups
 #define	M_MAX_EDICTS			32768 ///< max objects in menu vm
 #define	MAX_DEMOS				8 ///< max demos provided to demos command
-#define	MAX_DEMONAME			16 ///< max demo name length for demos command
+#define	MAX_DEMONAME			32 ///< max demo name length for demos command
 #define	MAX_SAVEGAMES			12 ///< max savegames listed in savegame menu
 #define	SAVEGAME_COMMENT_LENGTH	39 ///< max comment length of savegame in menu
 #define	MAX_CLIENTNETWORKEYES	16 ///< max number of locations that can be added to pvs when culling network entities (must be at least 2 for prediction)
