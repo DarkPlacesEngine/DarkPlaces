@@ -1503,6 +1503,104 @@ void Con_DPrintf(const char *fmt, ...)
 }
 
 
+
+/**
+ * @brief      Returns a horizontal line
+ * @details    Returns a graphical horizontal line of length len, but never wider than the
+ *             console. Includes a newline, unless len is >= to the console width
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  len   Length of the horizontal line
+ *
+ * @return     A string of the line
+ */
+const char *Con_Quakebar(int len)
+{
+	static char bar[42];
+	int         i;
+
+	len = min(len, (int)sizeof(bar) - 2);
+	len = min(len, con_linewidth);
+
+	bar[0] = '\35';
+	for (i = 1; i < len - 1; i++)
+		bar[i] = '\36';
+	bar[len - 1] = '\37';
+
+	if (len < con_linewidth)
+	{
+		bar[len] = '\n';
+		bar[len + 1] = 0;
+	}
+	else
+		bar[len] = 0;
+
+	return bar;
+}
+
+
+
+/**
+ * @brief      Left-pad a string with spaces to make it appear centered
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  linewidth  The linewidth
+ * @param[in]  fmt        A printf format string
+ * @param[in]  <unnamed>  One or more variables required in fmt
+ */
+void Con_CenterPrintf(int linewidth, const char *fmt, ...)
+{
+	va_list argptr;
+	char	msg[MAX_INPUTLINE];  // the original message
+	char	line[MAX_INPUTLINE]; // one line from the message
+	char	spaces[21];		     // buffer for spaces
+	char   *src, *dst;
+	int		len, s;
+
+	va_start(argptr, fmt);
+	dpvsnprintf(msg, sizeof (msg), fmt, argptr);
+	va_end(argptr);
+
+	linewidth = min(linewidth, con_linewidth);
+	for (src = msg; *src;)
+	{
+		dst = line;
+		while (*src && *src != '\n')
+			*dst++ = *src++;
+		*dst = 0;
+		if (*src == '\n')
+			src++;
+
+		len = strlen(line);
+		if (len < linewidth)
+		{
+			s = (linewidth - len) / 2;
+			memset(spaces, ' ', s);
+			spaces[s] = 0;
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%s\n", spaces, line);
+		}
+		else
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s\n", line);
+	}
+}
+
+
+
+/**
+ * @brief      Prints a center-aligned message to the console
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  str   A multiline string to print
+ */
+void Con_CenterPrint(const char *str)
+{
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40));
+	Con_CenterPrintf(40, "%s\n", str);
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40));
+}
+
+
+
 /*
 ==============================================================================
 

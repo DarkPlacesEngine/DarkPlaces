@@ -145,9 +145,7 @@ void SCR_CenterPrint(const char *str)
 	// Print the message to the console, but only if it's different to the previous message
 	if (strcmp(str, scr_centerstring))
 	{
-		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
-		Con_MaskPrint(CON_MASK_HIDENOTIFY, str);
-		Con_MaskPrint(CON_MASK_HIDENOTIFY, "\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n");
+		Con_CenterPrint(str);
 	}
 
 	dp_strlcpy(scr_centerstring, str, sizeof (scr_centerstring));
@@ -178,12 +176,14 @@ static void SCR_Centerprint_f (cmd_state_t *cmd)
 	c = Cmd_Argc(cmd);
 	if(c >= 2)
 	{
+		// Merge all the cprint arguments into one string
 		dp_strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
 		for(i = 2; i < c; ++i)
 		{
 			dp_strlcat(msg, " ", sizeof(msg));
 			dp_strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
 		}
+
 		c = (unsigned int)strlen(msg);
 		for(p = 0, i = 0; i < c; ++i)
 		{
