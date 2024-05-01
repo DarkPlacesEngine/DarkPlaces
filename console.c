@@ -1544,39 +1544,49 @@ const char *Con_Quakebar(int len)
  * @brief      Left-pad a string with spaces to make it appear centered
  * @note       Authored by johnfitz
  *
- * @param[in]  linewidth  The linewidth
+ * @param[in]  maxLineLength  Center-align
  * @param[in]  fmt        A printf format string
- * @param[in]  <unnamed>  One or more variables required in fmt
+ * @param[in]  <unnamed>  Zero or more values used by fmt
  */
-void Con_CenterPrintf(int linewidth, const char *fmt, ...)
+void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 {
 	va_list argptr;
-	char	msg[MAX_INPUTLINE];  // the original message
-	char	line[MAX_INPUTLINE]; // one line from the message
-	char	spaces[21];		     // buffer for spaces
-	char   *src, *dst;
-	int		len, s;
+	char    msg[MAX_INPUTLINE];  // the original message
+	char    line[MAX_INPUTLINE]; // one line from the message
+	char    spaces[21];		     // buffer for spaces
+	char   *msgCursor, *lineCursor;
+	int     lineLength, indentSize, msgLength;
 
 	va_start(argptr, fmt);
-	dpvsnprintf(msg, sizeof (msg), fmt, argptr);
+	msgLength = dpvsnprintf(msg, sizeof (msg), fmt, argptr);
 	va_end(argptr);
 
-	linewidth = min(linewidth, con_linewidth);
-	for (src = msg; *src;)
+	if (msgLength == -1)
 	{
-		dst = line;
-		while (*src && *src != '\n')
-			*dst++ = *src++;
-		*dst = 0;
-		if (*src == '\n')
-			src++;
+		Con_Printf(CON_WARN "The message given to Con_CenterPrintf was too long\n");
+		return;
+	}
 
-		len = strlen(line);
-		if (len < linewidth)
+	maxLineLength = min(maxLineLength, con_linewidth);
+
+	for (msgCursor = msg; *msgCursor;)
+	{
+		lineCursor = line;  // Start a the beginning of the line buffer
+
+		// Walk msg, copying characters into the line buffer until a newline or the end of msg
+		while (*msgCursor && *msgCursor != '\n')
+			*lineCursor++ = *msgCursor++;
+		*lineCursor = 0;
+
+		if (*msgCursor == '\n')
+			msgCursor++;
+
+		lineLength = strlen(line);
+		if (lineLength < maxLineLength)
 		{
-			s = (linewidth - len) / 2;
-			memset(spaces, ' ', s);
-			spaces[s] = 0;
+			indentSize = (maxLineLength - lineLength) / 2;
+			memset(spaces, ' ', indentSize);
+			spaces[indentSize] = 0;
 			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%s\n", spaces, line);
 		}
 		else
