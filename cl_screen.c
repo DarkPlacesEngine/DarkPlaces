@@ -18,7 +18,7 @@
 
 cvar_t scr_viewsize = {CF_CLIENT | CF_ARCHIVE, "viewsize","100", "how large the view should be, 110 disables inventory bar, 120 disables status bar"};
 cvar_t scr_fov = {CF_CLIENT | CF_ARCHIVE, "fov","90", "field of vision, 1-170 degrees, default 90, some players use 110-130"};
-cvar_t scr_conalpha = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha", "1", "opacity of console background gfx/conback"};
+cvar_t scr_conalpha = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha", "0.9", "opacity of console background gfx/conback (when console isn't forced fullscreen)"};
 cvar_t scr_conalphafactor = {CF_CLIENT | CF_ARCHIVE, "scr_conalphafactor", "1", "opacity of console background gfx/conback relative to scr_conalpha; when 0, gfx/conback is not drawn"};
 cvar_t scr_conalpha2factor = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha2factor", "0", "opacity of console background gfx/conback2 relative to scr_conalpha; when 0, gfx/conback2 is not drawn"};
 cvar_t scr_conalpha3factor = {CF_CLIENT | CF_ARCHIVE, "scr_conalpha3factor", "0", "opacity of console background gfx/conback3 relative to scr_conalpha; when 0, gfx/conback3 is not drawn"};
@@ -744,10 +744,10 @@ void SCR_DrawConsole (void)
 	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
 	{
 		// full screen
-		Con_DrawConsole (vid_conheight.integer - scr_con_margin_bottom);
+		Con_DrawConsole (vid_conheight.integer - scr_con_margin_bottom, true);
 	}
 	else if (scr_con_current)
-		Con_DrawConsole (min(scr_con_current, vid_conheight.integer - scr_con_margin_bottom));
+		Con_DrawConsole (min(scr_con_current, vid_conheight.integer - scr_con_margin_bottom), false);
 	else
 		con_vislines = 0;
 }

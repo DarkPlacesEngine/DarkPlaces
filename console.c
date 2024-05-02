@@ -1975,7 +1975,7 @@ Draws the console with the solid background
 The typing input line at the bottom should only be drawn if typing is allowed
 ================
 */
-void Con_DrawConsole (int lines)
+void Con_DrawConsole (int lines, qbool forcedfullscreen)
 {
 	float alpha, alpha0;
 	double sx, sy;
@@ -1997,7 +1997,7 @@ void Con_DrawConsole (int lines)
 	r_draw2d_force = true;
 
 // draw the background
-	alpha0 = cls.signon == SIGNONS ? scr_conalpha.value : 1.0f; // always full alpha when not in game
+	alpha0 = forcedfullscreen ? 1.0f : scr_conalpha.value; // always full alpha when not forced fullscreen
 	if((alpha = alpha0 * scr_conalphafactor.value) > 0)
 	{
 		sx = scr_conscroll_x.value;
