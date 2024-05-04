@@ -118,8 +118,8 @@
 
    If, for some reason, you care enough, compatibility can always be tested
    affirmatively by setting CC=g++. CC=clang++ may not work in the future, if
-   it did not already stop working in current versions LLVM, as it otherwise
-   spams deprecation warnings for using a C file asinput to a C++ compiler.
+   it didn't already stop working in current versions of LLVM, as it otherwise
+   spams deprecation warnings for using a C file as input to a C++ compiler.
 
 > [!NOTE]
 > We do not officially support building C code with a C++ compiler and may not
