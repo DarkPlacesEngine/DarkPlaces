@@ -139,7 +139,7 @@ else
 	CFLAGS_STANDARD=
 endif
 
-CFLAGS_WARNINGS=-Wall -Werror=vla -Werror=c++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
+CFLAGS_WARNINGS=-Wall -Werror=vla -Wc++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
 
 CFLAGS_TCC=
 ifeq ($(CC), tcc)
