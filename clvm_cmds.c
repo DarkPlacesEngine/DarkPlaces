@@ -2017,6 +2017,7 @@ static void VM_CL_getstatf (prvm_prog_t *prog)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i >= MAX_CL_STATS)
 	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		VM_Warning(prog, "VM_CL_getstatf: index>=MAX_CL_STATS or index<0\n");
 		return;
 	}
@@ -2027,12 +2028,18 @@ static void VM_CL_getstatf (prvm_prog_t *prog)
 //#331 float(float stnum) getstati (EXT_CSQC)
 static void VM_CL_getstati (prvm_prog_t *prog)
 {
-	int i, index;
-	int firstbit, bitcount;
+	int index, firstbit, bitcount;
 
 	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getstati);
 
 	index = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if(index < 0 || index >= MAX_CL_STATS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		VM_Warning(prog, "VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
+		return;
+	}
+
 	if (prog->argc > 1)
 	{
 		firstbit = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -2047,15 +2054,10 @@ static void VM_CL_getstati (prvm_prog_t *prog)
 		bitcount = 32;
 	}
 
-	if(index < 0 || index >= MAX_CL_STATS)
-	{
-		VM_Warning(prog, "VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
-		return;
-	}
-	i = cl.stats[index];
-	if (bitcount != 32)	//32 causes the mask to overflow, so there's nothing to subtract from.
-		i = (((unsigned int)i)&(((1<<bitcount)-1)<<firstbit))>>firstbit;
-	PRVM_G_FLOAT(OFS_RETURN) = i;
+	if (bitcount < 32)	//32 causes the mask to overflow, so there's nothing to subtract from.
+		PRVM_G_FLOAT(OFS_RETURN) = cl.stats[index]>>firstbit & ((1<<bitcount)-1);
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = cl.stats[index];
 }
 
 //#332 string(float firststnum) getstats (EXT_CSQC)

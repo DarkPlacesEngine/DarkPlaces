@@ -1145,7 +1145,9 @@ void SV_WriteClientdataToMessage (client_t *client, prvm_edict_t *ent, sizebuf_t
 	// the runes are in serverflags, pack them into the items value, also pack
 	// in the items2 value for mission pack huds
 	// (used only in the mission packs, which do not use serverflags)
-	items = (int)PRVM_serveredictfloat(ent, items) | ((int)PRVM_serveredictfloat(ent, items2) << 23) | ((int)PRVM_serverglobalfloat(serverflags) << 28);
+	items = (int)PRVM_serveredictfloat(ent, items)
+		| (((int)PRVM_serveredictfloat(ent, items2) & ((1<<9)-1)) << 23)
+		| (((int)PRVM_serverglobalfloat(serverflags) & ((1<<4)-1)) << 28);
 
 	VectorCopy(PRVM_serveredictvector(ent, punchvector), punchvector);
 
