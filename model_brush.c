@@ -6360,8 +6360,9 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 		for (j = 0;j < 3;j++)
 		{
 			// yes the mins/maxs are ints
-			out->mins[j] = LittleLong(in->mins[j]) - 1;
-			out->maxs[j] = LittleLong(in->maxs[j]) + 1;
+			// bones_was_here: the cast prevents signed underflow with poon-wood.bsp
+			out->mins[j] = (vec_t)LittleLong(in->mins[j]) - 1;
+			out->maxs[j] = (vec_t)LittleLong(in->maxs[j]) + 1;
 		}
 		n = LittleLong(in->firstleafface);
 		c = LittleLong(in->numleaffaces);
