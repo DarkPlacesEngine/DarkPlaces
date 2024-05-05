@@ -456,7 +456,7 @@ double Sys_DirtyTime(void)
 		struct timespec ts;
 #  ifdef CLOCK_MONOTONIC_RAW
 		// Linux-specific, SDL_GetPerformanceCounter() uses it
-		clock_gettime(CLOCK_MONOTONIC, &ts);
+		clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 #  elif defined(CLOCK_MONOTONIC)
 		// POSIX
 		clock_gettime(CLOCK_MONOTONIC, &ts);
