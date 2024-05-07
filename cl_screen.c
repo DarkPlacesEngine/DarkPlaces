@@ -51,6 +51,7 @@ cvar_t scr_loadingscreen_barcolor = {CF_CLIENT, "scr_loadingscreen_barcolor", "0
 cvar_t scr_loadingscreen_barheight = {CF_CLIENT, "scr_loadingscreen_barheight", "8", "the height of the loadingscreen progress bar"};
 cvar_t scr_loadingscreen_maxfps = {CF_CLIENT, "scr_loadingscreen_maxfps", "20", "maximum FPS for loading screen so it will not update very often (this reduces loading time with lots of models)"};
 cvar_t scr_infobar_height = {CF_CLIENT, "scr_infobar_height", "8", "the height of the infobar items"};
+cvar_t scr_sbarscale = {CF_CLIENT | CF_READONLY, "scr_sbarscale", "1", "current vid_height/vid_conheight, for compatibility with csprogs that read this cvar (found in Fitzquake-derived engines and FTEQW; despite the name it's not specific to the sbar)"};
 cvar_t vid_conwidthauto = {CF_CLIENT | CF_ARCHIVE, "vid_conwidthauto", "1", "automatically update vid_conwidth to match aspect ratio"};
 cvar_t vid_conwidth = {CF_CLIENT | CF_ARCHIVE, "vid_conwidth", "640", "virtual width of 2D graphics system (note: changes may be overwritten, see vid_conwidthauto)"};
 cvar_t vid_conheight = {CF_CLIENT | CF_ARCHIVE, "vid_conheight", "480", "virtual height of 2D graphics system"};
@@ -827,6 +828,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_showbrand);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
+	Cvar_RegisterVariable (&scr_sbarscale);
 	Cvar_RegisterVariable (&vid_conwidth);
 	Cvar_RegisterVariable (&vid_conheight);
 	Cvar_RegisterVariable (&vid_pixelheight);
@@ -2112,12 +2114,15 @@ static void SCR_UpdateVars(void)
 {
 	float conwidth = bound(160, vid_conwidth.value, 32768);
 	float conheight = bound(90, vid_conheight.value, 24576);
+	float conscale = vid.mode.height / vid_conheight.value;
 	if (vid_conwidthauto.integer)
 		conwidth = floor(conheight * vid.mode.width / (vid.mode.height * vid_pixelheight.value));
 	if (vid_conwidth.value != conwidth)
 		Cvar_SetValueQuick(&vid_conwidth, conwidth);
 	if (vid_conheight.value != conheight)
 		Cvar_SetValueQuick(&vid_conheight, conheight);
+	if (scr_sbarscale.value != conscale)
+		Cvar_SetValueQuick(&scr_sbarscale, conscale);
 
 	// bound viewsize
 	if (scr_viewsize.value < 30)

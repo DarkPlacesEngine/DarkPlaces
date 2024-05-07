@@ -391,7 +391,7 @@ void Sbar_Init (void)
 	Cvar_RegisterVariable(&sbar_miniscoreboard_size);
 	Cvar_RegisterVariable(&sbar_info_pos);
 	Cvar_RegisterVariable(&cl_deathscoreboard);
-	// This name is used by QuakeSpasm-based engines and is read by the Alkaline 1.2 CSQC
+	// This cvar is found in Fitzquake-derived engines and FTEQW and is read by the Alkaline 1.2 and Arcane Dimensions 1.80 CSQC
 	Cvar_RegisterVirtual(&sbar_alpha_bg, "scr_sbaralpha");
 
 	Cvar_RegisterVariable(&crosshair_color_red);
