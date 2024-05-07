@@ -4527,8 +4527,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 #if 1
 	unsigned char *pvs;
 #else
-	int fatpvsbytes;
-	unsigned char fatpvs[MAX_MAP_LEAFS/8];
+	unsigned char *fatpvs = NULL;
 #endif
 
 	VM_SAFEPARMCOUNT(2, VM_CL_checkpvs);
@@ -4568,8 +4567,8 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
 		return;
 	}
-	fatpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, viewpos, 8, fatpvs, sizeof(fatpvs), false);
-	if(!fatpvsbytes)
+	cl.worldmodel->brush.FatPVS(cl.worldmodel, viewpos, 8, &fatpvs, cls.levelmempool, false);
+	if(!fatpvs)
 	{
 		// viewpos isn't in any PVS... darn
 		PRVM_G_FLOAT(OFS_RETURN) = 2;

@@ -2136,16 +2136,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	Matrix4x4_Invert_Simple(&listener_basematrix, listenermatrix);
 	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);
 	if (cl.worldmodel && cl.worldmodel->brush.FatPVS && cl.worldmodel->brush.num_pvsclusterbytes && cl.worldmodel->brush.PointInLeaf)
-	{
-		if(cl.worldmodel->brush.num_pvsclusterbytes != listener_pvsbytes)
-		{
-			if(listener_pvs)
-				Mem_Free(listener_pvs);
-			listener_pvsbytes = cl.worldmodel->brush.num_pvsclusterbytes;
-			listener_pvs = (unsigned char *) Mem_Alloc(snd_mempool, listener_pvsbytes);
-		}
-		cl.worldmodel->brush.FatPVS(cl.worldmodel, listener_origin, 2, listener_pvs, listener_pvsbytes, 0);
-	}
+		listener_pvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, listener_origin, 2, &listener_pvs, snd_mempool, 0);
 	else
 	{
 		if(listener_pvs)

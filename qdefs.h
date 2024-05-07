@@ -70,7 +70,7 @@
 #define	MAX_PARTICLETEXTURES	256
 #define	MAXCLVIDEOS				1
 #define	MAX_DYNAMIC_TEXTURE_COUNT	2
-#define	MAX_MAP_LEAFS			8192
+//#define	MAX_MAP_LEAFS			8192
 
 #define	MAXTRACKS				256
 #define	MAX_DYNAMIC_CHANNELS	64
@@ -137,7 +137,7 @@
 #define	MAX_PARTICLETEXTURES	256 ///< maximum number of unique particle textures in the particle font
 #define	MAXCLVIDEOS				65 ///< maximum number of video streams being played back at once (1 is reserved for the playvideo command)
 #define	MAX_DYNAMIC_TEXTURE_COUNT	64 ///< maximum number of dynamic textures (web browsers, playvideo, etc)
-#define	MAX_MAP_LEAFS			65536 ///< maximum number of BSP leafs in world (8192 in Quake)
+//#define	MAX_MAP_LEAFS			65536 ///< maximum number of BSP leafs in world (8192 in Quake), now dynamically allocated
 
 #define	MAXTRACKS				256 ///< max CD track index
 // 0 to NUM_AMBIENTS - 1 = water, etc

@@ -3822,18 +3822,26 @@ static void Mod_BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, ve
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
 //of the given point.
-static int Mod_BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsigned char *pvsbuffer, int pvsbufferlength, qbool merge)
+static size_t Mod_BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, unsigned char **pvsbuffer, mempool_t *pool, qbool merge)
 {
-	int bytes = model->brush.num_pvsclusterbytes;
-	bytes = min(bytes, pvsbufferlength);
+	size_t bytes = model->brush.num_pvsclusterbytes;
+
+	if (!*pvsbuffer || bytes != Mem_Size(*pvsbuffer))
+	{
+//		Con_Printf("^4FatPVS: allocating a%s ^4buffer in pool %s, old size %zu new size %zu\n", *pvsbuffer == NULL ? " ^5NEW" : "", pool->name, *pvsbuffer != NULL ? Mem_Size(*pvsbuffer) : 0, bytes);
+		if (*pvsbuffer)
+			Mem_Free(*pvsbuffer); // don't reuse stale data when the worldmodel changes
+		*pvsbuffer = Mem_AllocType(pool, unsigned char, bytes);
+	}
+
 	if (r_novis.integer || r_trippy.integer || !model->brush.num_pvsclusters || !Mod_BSP_GetPVS(model, org))
 	{
-		memset(pvsbuffer, 0xFF, bytes);
+		memset(*pvsbuffer, 0xFF, bytes);
 		return bytes;
 	}
 	if (!merge)
-		memset(pvsbuffer, 0, bytes);
-	Mod_BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
+		memset(*pvsbuffer, 0, bytes);
+	Mod_BSP_FatPVS_RecursiveBSPNode(model, org, radius, *pvsbuffer, bytes, model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode);
 	return bytes;
 }
 

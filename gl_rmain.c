@@ -3011,8 +3011,6 @@ static void R_Main_FreeViewCache(void)
 static void R_Main_ResizeViewCache(void)
 {
 	int numentities = r_refdef.scene.numentities;
-	int numclusters = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusters : 1;
-	int numclusterbytes = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusterbytes : 1;
 	int numleafs = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_leafs : 1;
 	int numsurfaces = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->num_surfaces : 1;
 	if (r_refdef.viewcache.maxentities < numentities)
@@ -3022,14 +3020,7 @@ static void R_Main_ResizeViewCache(void)
 			Mem_Free(r_refdef.viewcache.entityvisible);
 		r_refdef.viewcache.entityvisible = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
 	}
-	if (r_refdef.viewcache.world_numclusters != numclusters)
-	{
-		r_refdef.viewcache.world_numclusters = numclusters;
-		r_refdef.viewcache.world_numclusterbytes = numclusterbytes;
-		if (r_refdef.viewcache.world_pvsbits)
-			Mem_Free(r_refdef.viewcache.world_pvsbits);
-		r_refdef.viewcache.world_pvsbits = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numclusterbytes);
-	}
+	// bones_was_here: r_refdef.viewcache.world_pvsbits was (re)allocated here, now done in Mod_BSP_FatPVS()
 	if (r_refdef.viewcache.world_numleafs != numleafs)
 	{
 		r_refdef.viewcache.world_numleafs = numleafs;
@@ -4754,7 +4745,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
 		 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
 		{
-			r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+			r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, &p->pvsbits, r_main_mempool, p->pvsvalid);
 			p->pvsvalid = true;
 		}
 	}
@@ -4915,7 +4906,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
 				{
 					r_refdef.view.usecustompvs = true;
-					r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+					r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, &r_refdef.viewcache.world_pvsbits, r_main_mempool, false);
 				}
 			}
 
@@ -4970,7 +4961,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			if(p->camera_entity && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
 			{
 				r_refdef.view.usecustompvs = true;
-				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, &r_refdef.viewcache.world_pvsbits, r_main_mempool, false);
 			}
 
 			// camera needs no clipplane

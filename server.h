@@ -152,8 +152,7 @@ typedef struct server_s
 	sizebuf_t *writeentitiestoclient_msg;
 	vec3_t writeentitiestoclient_eyes[MAX_CLIENTNETWORKEYES];
 	int writeentitiestoclient_numeyes;
-	int writeentitiestoclient_pvsbytes;
-	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
+	unsigned char *writeentitiestoclient_pvs;
 	const entity_state_t *writeentitiestoclient_sendstates[MAX_EDICTS];
 	unsigned short writeentitiestoclient_csqcsendstates[MAX_EDICTS];
 
