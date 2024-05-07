@@ -2712,7 +2712,8 @@ fail:
 	// init mempools
 	PRVM_MEM_Alloc(prog);
 
-	Con_Printf("%s: program loaded (crc %i, size %iK)\n", prog->name, prog->filecrc, (int)(filesize/1024));
+	Con_Printf("%s: program loaded (crc %i, size %iK)%s\n", prog->name, prog->filecrc, (int)(filesize/1024),
+		prog == CLVM_prog ? (prog->flag & PRVM_CSQC_SIMPLE ? " CSQC_SIMPLE" : " EXT_CSQC") : "");
 
 	// Inittime is at least the time when this function finished. However,
 	// later events may bump it.

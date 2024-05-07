@@ -1127,7 +1127,8 @@ void CL_VM_Init (void)
 	if (PRVM_clientfunction(CSQC_Init))
 	{
 		PRVM_G_FLOAT(OFS_PARM0) = 1.0f; // CSQC_SIMPLE engines always pass 0, FTE always passes 1
-		PRVM_G_INT(OFS_PARM1) = PRVM_SetEngineString(prog, gamename);
+		// always include "DarkPlaces" so it can be recognised when gamename doesn't include it
+		PRVM_G_INT(OFS_PARM1) = PRVM_SetEngineString(prog, va(vabuf, sizeof(vabuf), "DarkPlaces %s", gamename));
 		PRVM_G_FLOAT(OFS_PARM2) = 1.0f; // TODO DP versions...
 		prog->ExecuteProgram(prog, PRVM_clientfunction(CSQC_Init), "QC function CSQC_Init is missing");
 	}

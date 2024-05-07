@@ -158,6 +158,11 @@ static void Host_Version_f(cmd_state_t *cmd)
 	Con_Printf("Version: %s\n", engineversion);
 }
 
+void Host_UpdateVersion(void)
+{
+	dpsnprintf(engineversion, sizeof(engineversion), "%s %s%s %s", gamename ? gamename : "DarkPlaces", DP_OS_NAME, cls.state == ca_dedicated ? " dedicated" : "", buildstring);
+}
+
 static void Host_Framerate_c(cvar_t *var)
 {
 	if (var->value < 0.00001 && var->value != 0)
@@ -293,7 +298,7 @@ static void Host_InitLocal (void)
 	Cvar_RegisterVariable (&r_texture_jpeg_fastpicmip);
 }
 
-char engineversion[128];
+char engineversion[128]; ///< version string for the corner of the console, crash messages, status command, etc
 
 
 static qfile_t *locksession_fh = NULL;
@@ -429,6 +434,10 @@ static void Host_Init (void)
 	if (Sys_CheckParm ("-dedicated") || !cl_available)
 		cls.state = ca_dedicated;
 
+	// set and print initial version string (will be updated when gamename is changed)
+	Host_UpdateVersion(); // checks for cls.state == ca_dedicated
+	Con_Printf("%s\n", engineversion);
+
 	// initialize console command/cvar/alias/command execution systems
 	Cmd_Init();
 
@@ -447,10 +456,6 @@ static void Host_Init (void)
 
 	// initialize filesystem (including fs_basedir, fs_gamedir, -game, scr_screenshot_name, gamename)
 	FS_Init();
-
-	// ASAP! construct a version string for the corner of the console and for crash messages
-	dpsnprintf (engineversion, sizeof (engineversion), "%s %s%s, buildstring: %s", gamename, DP_OS_NAME, cls.state == ca_dedicated ? " dedicated" : "", buildstring);
-	Con_Printf("%s\n", engineversion);
 
 	// initialize process nice level
 	Sys_InitProcessNice();

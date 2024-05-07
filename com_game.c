@@ -180,6 +180,8 @@ double_break:
 		Con_Printf("\n");
 
 		Con_Printf("gamename for server filtering: %s\n", gamenetworkfiltername);
+
+		Host_UpdateVersion();
 	}
 	return ret;
 }
