@@ -61,6 +61,7 @@ typedef enum gamemode_e
 	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
 	GAME_BATTLEMETAL, // added by Cloudwalk for Subject9x
 	GAME_QUAKE15, // added by bones_was_here as it depends on an old bug and a workaround
+	GAME_AD, // added by bones_was_here as it depends on old DP behaviour or csqc_lowres
 	GAME_COUNT
 }
 gamemode_t;

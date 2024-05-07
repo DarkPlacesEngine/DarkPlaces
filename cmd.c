@@ -548,8 +548,6 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 	if (isdefaultcfg)
 	{
 		// special defaults for specific games go here, these execute before default.cfg
-		// Nehahra pushable crates malfunction in some levels if this is on
-		// Nehahra NPC AI is confused by blowupfallenzombies
 		switch(gamemode)
 		{
 		case GAME_NORMAL:
@@ -577,6 +575,8 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "csqc_polygons_defaultmaterial_nocullface 0\n"
 				);
 			break;
+		// Nehahra pushable crates malfunction in some levels if this is on
+		// Nehahra NPC AI is confused by blowupfallenzombies
 		case GAME_NEHAHRA:
 			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_blowupfallenzombies 0\n"
@@ -750,6 +750,13 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_impactbeforeonground 1\n"
 "sv_gameplayfix_unstickentities 1\n"
+			);
+			break;
+		// Arcane Dimensions V1.80 Patch 1 assumes engines that don't pass values to CSQC_Init() are DP,
+		// instead of doing a workaround there we can give it what it really wants (fixes offscreen HUD).
+		case GAME_AD:
+			Cbuf_InsertText(cmd, "\n"
+"csqc_lowres 1\n"
 			);
 			break;
 		default:
