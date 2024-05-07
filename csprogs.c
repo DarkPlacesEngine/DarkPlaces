@@ -510,8 +510,16 @@ qbool CL_VM_UpdateView (double frametime)
 	// free memory for resources that are no longer referenced
 	PRVM_GarbageCollection(prog);
 	// pass in width and height and menu/focus state as parameters (EXT_CSQC_1)
-	PRVM_G_FLOAT(OFS_PARM0) = vid.mode.width;
-	PRVM_G_FLOAT(OFS_PARM1) = vid.mode.height;
+	if (csqc_lowres.integer)
+	{
+		PRVM_G_FLOAT(OFS_PARM0) = vid_conwidth.value;
+		PRVM_G_FLOAT(OFS_PARM1) = vid_conheight.value;
+	}
+	else
+	{
+		PRVM_G_FLOAT(OFS_PARM0) = vid.mode.width;
+		PRVM_G_FLOAT(OFS_PARM1) = vid.mode.height;
+	}
 	/*
 	 * This should be fine for now but FTEQW uses flags for keydest
 	 * and checks that an array called "eyeoffset" is 0

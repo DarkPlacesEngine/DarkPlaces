@@ -976,9 +976,27 @@ static void VM_CL_R_SetView (prvm_prog_t *prog)
 			VM_Warning(prog, "VM_CL_R_GetView : unknown parm %i\n", c);
 			return;
 		}
+		if (csqc_lowres.integer)
+		{
+			switch(c)
+			{
+				case VF_MIN: case VF_MIN_X: case VF_MIN_Y: case VF_SIZE: case VF_SIZE_X: case VF_SIZE_Y: case VF_VIEWPORT:
+					VectorScale(PRVM_G_VECTOR(OFS_RETURN), vid_conwidth.value / vid.mode.width, PRVM_G_VECTOR(OFS_RETURN));
+			}
+		}
 		return;
 	}
 
+	if (csqc_lowres.integer)
+	{
+		float scale = vid.mode.width / vid_conwidth.value;
+		switch(c)
+		{
+			case VF_MIN: case VF_MIN_X: case VF_MIN_Y: case VF_SIZE: case VF_SIZE_X: case VF_SIZE_Y: case VF_VIEWPORT:
+				VectorScale(PRVM_G_VECTOR(OFS_PARM1), scale, PRVM_G_VECTOR(OFS_PARM1));
+				VectorScale(PRVM_G_VECTOR(OFS_PARM2), scale, PRVM_G_VECTOR(OFS_PARM2));
+		}
+	}
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	k = PRVM_G_FLOAT(OFS_PARM1);
 	switch(c)
