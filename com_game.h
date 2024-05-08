@@ -80,6 +80,8 @@ extern const char *gamescreenshotname;
 extern const char *gameuserdirname;
 extern char com_modname[MAX_OSPATH];
 
+extern gamemode_t com_startupgamegroup;
+
 void COM_InitGameType (void);
 int COM_ChangeGameTypeForGameDirs(unsigned numgamedirs, const char *gamedirs[], qbool failmissing, qbool init);
 
