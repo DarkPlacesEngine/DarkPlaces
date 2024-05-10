@@ -6912,6 +6912,7 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 			d2 = node->backmax - nodeend[axis];
 			d3 = nodestart[axis] - node->frontmin;
 			d4 = nodeend[axis] - node->frontmin;
+			f = 1.f / (nodeend[axis] - nodestart[axis]);
 			if (collision_bih_fullrecursion.integer)
 				d1 = d2 = d3 = d4 = 1; // force full recursion
 			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
@@ -6925,8 +6926,7 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  1: /* <>>> */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
@@ -6934,9 +6934,8 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  2: /* ><>> */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
@@ -6951,34 +6950,28 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  5: /* <><> */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  6: /* ><<> */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  7: /* <<<> */
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
@@ -6986,35 +6979,29 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  9: /* <>>< */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 10: /* ><>< */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 11: /* <<>< */
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 12: /* >><< */
@@ -7023,15 +7010,13 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 13: /* <><< */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 14: /* ><<< */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 15: /* <<<< */
@@ -7174,6 +7159,7 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 			d2 = node->backmax - nodeend[axis] - mins[axis];
 			d3 = nodestart[axis] - node->frontmin + maxs[axis];
 			d4 = nodeend[axis] - node->frontmin + maxs[axis];
+			f = 1.f / (nodeend[axis] - nodestart[axis]);
 			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
 			{
 			case  0: /* >>>> */
@@ -7185,8 +7171,7 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  1: /* <>>> */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
@@ -7194,9 +7179,8 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  2: /* ><>> */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
@@ -7211,34 +7195,28 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  5: /* <><> */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  6: /* ><<> */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  7: /* <<<> */
-				f = d3 / (d3 - d4);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
@@ -7246,34 +7224,29 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case  9: /* <>>< */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4); VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 10: /* ><>< */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 11: /* <<>< */
-				f = d3 / (d3 - d4);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, -d3 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->front;
 				break;
 			case 12: /* >><< */
@@ -7282,15 +7255,13 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 13: /* <><< */
-				f = d1 / (d1 - d2);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos]);
 				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 14: /* ><<< */
-				f = d1 / (d1 - d2);
 				VectorCopy(nodestart, nodestackline[nodestackpos]);
-				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				VectorLerp(nodestart, d1 * f, nodeend, nodestackline[nodestackpos] + 3);
 				nodestack[nodestackpos++] = node->back;
 				break;
 			case 15: /* <<<< */
