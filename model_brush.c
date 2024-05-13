@@ -7124,8 +7124,10 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 	trace->skipmaterialflagsmask = skipmaterialflagsmask;
 
 	// calculate tracebox-like parameters for efficient culling
-	VectorMAM(0.5f, thisbrush_start->mins, 0.5f, thisbrush_start->maxs, start);
-	VectorMAM(0.5f, thisbrush_end->mins, 0.5f, thisbrush_end->maxs, end);
+	VectorAdd(thisbrush_start->mins, thisbrush_start->maxs, start);
+	VectorAdd(thisbrush_end->mins, thisbrush_end->maxs, end);
+	VectorM(0.5f, start, start);
+	VectorM(0.5f, end, end);
 	VectorSubtract(thisbrush_start->mins, start, startmins);
 	VectorSubtract(thisbrush_start->maxs, start, startmaxs);
 	VectorSubtract(thisbrush_end->mins, end, endmins);
@@ -7167,10 +7169,10 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 				continue;
 			// recurse children of the split
 			axis = node->type - BIH_SPLITX;
-			d1 = node->backmax - nodestart[axis] - mins[axis];
-			d2 = node->backmax - nodeend[axis] - mins[axis];
-			d3 = nodestart[axis] - node->frontmin + maxs[axis];
-			d4 = nodeend[axis] - node->frontmin + maxs[axis];
+			d1 = node->backmax - mins[axis] - nodestart[axis];
+			d2 = node->backmax - mins[axis] - nodeend[axis];
+			d3 = nodestart[axis] - (node->frontmin - maxs[axis]);
+			d4 = nodeend[axis] - (node->frontmin - maxs[axis]);
 			f = 1.f / (nodeend[axis] - nodestart[axis]);
 			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
 			{
