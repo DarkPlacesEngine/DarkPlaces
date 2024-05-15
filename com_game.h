@@ -60,6 +60,8 @@ typedef enum gamemode_e
 	GAME_VORETOURNAMENT,
 	GAME_DOOMBRINGER, // added by Cloudwalk for kristus
 	GAME_BATTLEMETAL, // added by Cloudwalk for Subject9x
+	GAME_QUAKE15, // added by bones_was_here as it depends on an old bug and a workaround
+	GAME_AD, // added by bones_was_here as it depends on old DP behaviour or csqc_lowres
 	GAME_COUNT
 }
 gamemode_t;
@@ -78,7 +80,9 @@ extern const char *gamescreenshotname;
 extern const char *gameuserdirname;
 extern char com_modname[MAX_OSPATH];
 
+extern gamemode_t com_startupgamegroup;
+
 void COM_InitGameType (void);
-void COM_ChangeGameTypeForGameDirs(void);
+int COM_ChangeGameTypeForGameDirs(unsigned numgamedirs, const char *gamedirs[], qbool failmissing, qbool init);
 
 #endif

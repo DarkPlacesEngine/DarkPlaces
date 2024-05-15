@@ -86,6 +86,8 @@ static const gamemode_info_t gamemode_info [GAME_COUNT] =
 { GAME_VORETOURNAMENT,			GAME_VORETOURNAMENT,		"voretournament",		"-voretournament",			"Vore Tournament",			"Vore_Tournament",			"data",		NULL,			"voretournament",	"voretournament"		}, // COMMANDLINEOPTION: Game: -voretournament runs the multiplayer game Vore Tournament
 { GAME_DOOMBRINGER,				GAME_DOOMBRINGER,			"doombringer",			"-doombringer",				"DOOMBRINGER",				"DOOMBRINGER",				"dbdata",	NULL,			"doombringer",		"doombringer"			}, // COMMANDLINEOPTION: Game: -doombringer runs the game DOOMBRINGER
 { GAME_BATTLEMETAL,				GAME_NORMAL,				"battlemetal",			"-battlemetal",				"battlemetal",				"battlemetal",				"metaldata",	NULL,		"battlemetal",		"battlemetal"			}, // COMMANDLINEOPTION: Game: -battlemetal runs the game battleMETAL
+{ GAME_QUAKE15,					GAME_NORMAL,				"quake15",				"-quake15",					"Quake 1.5",				"Quake_1.5",				"id1",		"quake15",		"quake15",			"darkplaces"			}, // COMMANDLINEOPTION: Game: -quake15 runs the Quake 1.5 or Quake Combat+ mod
+{ GAME_AD,						GAME_NORMAL,				"ad",					"-ad",						"Arcane Dimensions",		"Arcane_Dimensions",		"id1",		"ad",			"ad",				"darkplaces"			}, // COMMANDLINEOPTION: Game: -ad runs the Arcane Dimensions mod
 };
 
 static void COM_SetGameType(int index);
@@ -93,7 +95,7 @@ void COM_InitGameType (void)
 {
 	char name [MAX_OSPATH];
 	int i;
-	int index = 0;
+	int index = GAME_NORMAL;
 
 #ifdef FORCEGAME
 	COM_ToLowerString(FORCEGAME, name, sizeof (name));
@@ -116,10 +118,11 @@ void COM_InitGameType (void)
 	COM_SetGameType(index);
 }
 
-void COM_ChangeGameTypeForGameDirs(void)
+int COM_ChangeGameTypeForGameDirs(unsigned numgamedirs, const char *gamedirs[], qbool failmissing, qbool init)
 {
 	unsigned i, gamemode_count = sizeof(gamemode_info) / sizeof(gamemode_info[0]);
-	int index = -1;
+	int j, index = -1;
+	addgamedirs_t ret = GAMEDIRS_SUCCESS;
 	// this will not not change the gamegroup
 
 	// first check if a base game (single gamedir) matches
@@ -131,38 +134,64 @@ void COM_ChangeGameTypeForGameDirs(void)
 			break;
 		}
 	}
-	// now that we have a base game, see if there is a derivative game matching the startup one (two gamedirs)
-	// bones_was_here: this prevents a Quake expansion (eg Rogue) getting switched to Quake,
-	// and its gamedirname2 (eg "rogue") being lost from the search path, when adding a miscellaneous gamedir.
-	for (i = 0; i < gamemode_count; i++)
-	{
-		if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && gamemode_info[i].mode == com_startupgamemode)
-		{
-			index = i;
-			break;
-		}
-	}
-	// also see if the first gamedir (from -game parm or gamedir command) matches a derivative game (two/three gamedirs)
-	if (fs_numgamedirs)
+	if (index < 0)
+		Sys_Error("BUG: failed to find the base game!");
+
+	// See if there is a derivative game matching the startup one (two gamedirs),
+	// this prevents a Quake expansion (eg Rogue) getting switched to Quake during startup,
+	// not used when changing gamedirs later so that it's possible to change from the startup mod to the base one.
+	if (init)
 	{
 		for (i = 0; i < gamemode_count; i++)
 		{
-			if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && !strcasecmp(fs_gamedirs[0], gamemode_info[i].gamedirname2))
+			if (gamemode_info[i].group == com_startupgamegroup && (gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0]) && gamemode_info[i].mode == com_startupgamemode)
 			{
 				index = i;
 				break;
 			}
 		}
 	}
+
+	// See if the base game or mod can be identified by a gamedir,
+	// if more than one matches the last is used because the last gamedir is the primary.
+	for (j = numgamedirs - 1; j >= 0; --j)
+	{
+		for (i = 0; i < gamemode_count; i++)
+		{
+			if (gamemode_info[i].group == com_startupgamegroup)
+			if ((gamemode_info[i].gamedirname2 && gamemode_info[i].gamedirname2[0] && !strcasecmp(gamedirs[j], gamemode_info[i].gamedirname2))
+			|| (!gamemode_info[i].gamedirname2 && !strcasecmp(gamedirs[j], gamemode_info[i].gamedirname1)))
+			{
+				index = i;
+				goto double_break;
+			}
+		}
+	}
+double_break:
+
 	// we now have a good guess at which game this is meant to be...
-	if (index >= 0 && gamemode != gamemode_info[index].mode)
-		COM_SetGameType(index);
+	COM_SetGameType(index);
+
+	ret = FS_SetGameDirs(numgamedirs, gamedirs, failmissing, !init);
+	if (ret == GAMEDIRS_SUCCESS)
+	{
+		Con_Printf("Game is %s using %s", gamename, fs_numgamedirs > 1 ? "gamedirs" : "gamedir");
+		for (j = 0; j < fs_numgamedirs; ++j)
+			Con_Printf(" %s%s", (strcasecmp(fs_gamedirs[j], gamedirname1) && (!gamedirname2 || strcasecmp(fs_gamedirs[j], gamedirname2))) ? "^7" : "^9", fs_gamedirs[j]);
+		Con_Printf("\n");
+
+		Con_Printf("gamename for server filtering: %s\n", gamenetworkfiltername);
+
+		Host_UpdateVersion();
+	}
+	return ret;
 }
 
 static void COM_SetGameType(int index)
 {
 	static char gamenetworkfilternamebuffer[64];
-	int i, t;
+	int t;
+
 	if (index < 0 || index >= (int)(sizeof (gamemode_info) / sizeof (gamemode_info[0])))
 		index = 0;
 	gamemode = gamemode_info[index].mode;
@@ -189,18 +218,6 @@ static void COM_SetGameType(int index)
 			gameuserdirname = sys.argv[t+1];
 	}
 
-	if (gamedirname2 && gamedirname2[0])
-		Con_Printf("Game is %s using base gamedirs %s %s", gamename, gamedirname1, gamedirname2);
-	else
-		Con_Printf("Game is %s using base gamedir %s", gamename, gamedirname1);
-	for (i = 0;i < fs_numgamedirs;i++)
-	{
-		if (i == 0)
-			Con_Printf(", with mod gamedirs");
-		Con_Printf(" %s", fs_gamedirs[i]);
-	}
-	Con_Printf("\n");
-
 	if (strchr(gamenetworkfiltername, ' '))
 	{
 		char *s;
@@ -212,6 +229,4 @@ static void COM_SetGameType(int index)
 			*s = '_';
 		gamenetworkfiltername = gamenetworkfilternamebuffer;
 	}
-
-	Con_Printf("gamename for server filtering: %s\n", gamenetworkfiltername);
 }

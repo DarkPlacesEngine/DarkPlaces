@@ -131,13 +131,15 @@ OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMM
 OBJ_WASM= builddate.c sys_wasm.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) $(OBJ_SND_XMP) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 # Compilation
+# -D_POSIX_C_SOURCE=200809L doesn't enable all of POSIX 2008, wtf?
+# -D_DEFAULT_SOURCE does enables all of POSIX 2008 (without GNU extensions).
 ifeq ($(PEDANTIC),1)
-	CFLAGS_STANDARD=-std=c11 -pedantic -D_POSIX_C_SOURCE=200809L -DCONFIG_PEDANTIC
+	CFLAGS_STANDARD=-std=c17 -pedantic -D_DEFAULT_SOURCE -DCONFIG_PEDANTIC
 else
 	CFLAGS_STANDARD=
 endif
 
-CFLAGS_WARNINGS=-Wall -Werror=vla -Werror=c++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
+CFLAGS_WARNINGS=-Wall -Werror=vla -Wc++-compat -Wwrite-strings -Wshadow -Wold-style-definition -Wstrict-prototypes -Wsign-compare -Wdeclaration-after-statement -Wmissing-prototypes
 
 CFLAGS_TCC=
 ifeq ($(CC), tcc)

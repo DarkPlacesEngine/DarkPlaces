@@ -1044,7 +1044,7 @@ void Mod_ShadowMesh_AddMesh(shadowmesh_t *mesh, const float *vertex3f, int numtr
 
 	for (i = 0;i < numtris;i++)
 	{
-		if ((mesh->numtriangles * 3 + 2) * sizeof(int) + 1 >= ((memheader_t *)((unsigned char *)mesh->element3i - sizeof(memheader_t)))->size)
+		if ((mesh->numtriangles * 3 + 2) * sizeof(int) + 1 >= Mem_Size(mesh->element3i))
 		{
 			// FIXME: we didn't allocate enough space for all the tris, see R_Mod_CompileShadowMap
 			Con_Print(CON_WARN "Mod_ShadowMesh_AddMesh: insufficient memory allocated!\n");

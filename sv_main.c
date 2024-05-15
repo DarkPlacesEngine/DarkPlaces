@@ -110,10 +110,11 @@ cvar_t sv_gameplayfix_easierwaterjump = {CF_SERVER, "sv_gameplayfix_easierwaterj
 cvar_t sv_gameplayfix_findradiusdistancetobox = {CF_SERVER, "sv_gameplayfix_findradiusdistancetobox", "1", "causes findradius to check the distance to the corner of a box rather than the center of the box, makes findradius detect bmodels such as very large doors that would otherwise be unaffected by splash damage"};
 cvar_t sv_gameplayfix_gravityunaffectedbyticrate = {CF_SERVER, "sv_gameplayfix_gravityunaffectedbyticrate", "0", "fix some ticrate issues in physics."};
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {CF_SERVER, "sv_gameplayfix_grenadebouncedownslopes", "1", "prevents MOVETYPE_BOUNCE (grenades) from getting stuck when fired down a downward sloping surface"};
+cvar_t sv_gameplayfix_impactbeforeonground = {CF_SERVER, "sv_gameplayfix_impactbeforeonground", "0", "enables a bug from old DP versions in which entity .touch functions are called before FL_ONGROUND is set when a collision is detected in SV_FlyMove() (used by MOVETYPE_WALK and MOVETYPE_STEP), Quake 1.5 and Combat+ mods require this, it breaks id1 fiends"};
 cvar_t sv_gameplayfix_multiplethinksperframe = {CF_SERVER, "sv_gameplayfix_multiplethinksperframe", "1", "allows entities to think more often than the server framerate, primarily useful for very high fire rate weapons"};
 cvar_t sv_gameplayfix_noairborncorpse = {CF_SERVER, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses, items, etc) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
 cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems = {CF_SERVER, "sv_gameplayfix_noairborncorpse_allowsuspendeditems", "1", "causes entities sitting ontop of objects that are instantaneously remove to float in midair (special hack to allow a common level design trick for floating items)"};
-cvar_t sv_gameplayfix_nudgeoutofsolid = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid", "1", "attempts to fix physics errors where an object ended up in solid for some reason, supersedes sv_gameplayfix_unstickentities"};
+cvar_t sv_gameplayfix_nudgeoutofsolid = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid", "0", "attempts to fix physics errors where an object ended up in solid for some reason, better than sv_gameplayfix_unstick* but currently has no effect on Q1BSP (unless mod_q1bsp_polygoncollisions is enabled)"};
 cvar_t sv_gameplayfix_nudgeoutofsolid_separation = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid_separation", "0.03125", "keep objects this distance apart to prevent collision issues on seams"};
 cvar_t sv_gameplayfix_q2airaccelerate = {CF_SERVER, "sv_gameplayfix_q2airaccelerate", "0", "Quake2-style air acceleration"};
 cvar_t sv_gameplayfix_nogravityonground = {CF_SERVER, "sv_gameplayfix_nogravityonground", "0", "turn off gravity when on ground (to get rid of sliding)"};
@@ -126,8 +127,8 @@ cvar_t sv_gameplayfix_swiminbmodels = {CF_SERVER, "sv_gameplayfix_swiminbmodels"
 cvar_t sv_gameplayfix_upwardvelocityclearsongroundflag = {CF_SERVER, "sv_gameplayfix_upwardvelocityclearsongroundflag", "1", "prevents monsters, items, and most other objects from being stuck to the floor when pushed around by damage, and other situations in mods"};
 cvar_t sv_gameplayfix_downtracesupportsongroundflag = {CF_SERVER, "sv_gameplayfix_downtracesupportsongroundflag", "1", "prevents very short moves from clearing onground (which may make the player stick to the floor at high netfps), fixes groundentity not being set when walking onto a mover with sv_gameplayfix_nogravityonground"};
 cvar_t sv_gameplayfix_q1bsptracelinereportstexture = {CF_SERVER, "sv_gameplayfix_q1bsptracelinereportstexture", "1", "enables mods to get accurate trace_texture results on q1bsp by using a surface-hitting traceline implementation rather than the standard solidbsp method, q3bsp always reports texture accurately"};
-cvar_t sv_gameplayfix_unstickplayers = {CF_SERVER, "sv_gameplayfix_unstickplayers", "0", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull."};
-cvar_t sv_gameplayfix_unstickentities = {CF_SERVER, "sv_gameplayfix_unstickentities", "1", "hack to check if entities are crossing world collision hull and try to move them to the right position, superseded by sv_gameplayfix_nudgeoutofsolid"};
+cvar_t sv_gameplayfix_unstickplayers = {CF_SERVER, "sv_gameplayfix_unstickplayers", "1", "big hack to try and fix the rare case of MOVETYPE_WALK entities getting stuck in the world clipping hull. Quake did something similar."};
+cvar_t sv_gameplayfix_unstickentities = {CF_SERVER, "sv_gameplayfix_unstickentities", "0", "hack to check if entities are crossing world collision hull and try to move them to the right position. Quake didn't do this so maps shouldn't depend on it."};
 cvar_t sv_gameplayfix_fixedcheckwatertransition = {CF_SERVER, "sv_gameplayfix_fixedcheckwatertransition", "1", "fix two very stupid bugs in SV_CheckWaterTransition when watertype is CONTENTS_EMPTY (the bugs causes waterlevel to be 1 on first frame, -1 on second frame - the fix makes it 0 on both frames)"};
 cvar_t sv_gravity = {CF_SERVER | CF_NOTIFY, "sv_gravity","800", "how fast you fall (512 = roughly earth gravity)"};
 cvar_t sv_init_frame_count = {CF_SERVER, "sv_init_frame_count", "2", "number of frames to run to allow everything to settle before letting clients connect"};
@@ -161,7 +162,7 @@ cvar_t sv_warsowbunny_backtosideratio = {CF_SERVER, "sv_warsowbunny_backtosidera
 cvar_t sv_onlycsqcnetworking = {CF_SERVER, "sv_onlycsqcnetworking", "0", "disables legacy entity networking code for higher performance (except on clients, which can still be legacy)"};
 cvar_t sv_areadebug = {CF_SERVER, "sv_areadebug", "0", "disables physics culling for debugging purposes (only for development)"};
 
-cvar_t sys_ticrate = {CF_SERVER | CF_ARCHIVE, "sys_ticrate","0.0138889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
+cvar_t sys_ticrate = {CF_SERVER | CF_ARCHIVE, "sys_ticrate","0.01388889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 0.0138889 matches QuakeWorld physics"};
 cvar_t sv_maxphysicsframesperserverframe = {CF_SERVER, "sv_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
 cvar_t sv_lagreporting_always = {CF_SERVER, "sv_lagreporting_always", "0", "report lag even in singleplayer, listen, or an empty dedicated server"};
 cvar_t sv_lagreporting_strict = {CF_SERVER, "sv_lagreporting_strict", "0", "log any extra frames run to catch up after a holdup (only applies when sv_maxphysicsframesperserverframe > 1)"};
@@ -593,6 +594,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_findradiusdistancetobox);
 	Cvar_RegisterVariable (&sv_gameplayfix_gravityunaffectedbyticrate);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
+	Cvar_RegisterVariable (&sv_gameplayfix_impactbeforeonground);
 	Cvar_RegisterVariable (&sv_gameplayfix_multiplethinksperframe);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse_allowsuspendeditems);

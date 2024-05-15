@@ -674,6 +674,16 @@ static void CL_Startdemos_f(cmd_state_t *cmd)
 
 	if (!sv.active && cls.demonum != -1 && !cls.demoplayback)
 	{
+		if (!cl_startdemos.integer)
+		{
+			cls.demonum = -1;
+#ifdef CONFIG_MENU
+			// make the menu appear after a gamedir change
+			if(MR_ToggleMenu)
+				MR_ToggleMenu(1);
+#endif
+			return;
+		}
 		cls.demonum = 0;
 		CL_NextDemo ();
 	}
@@ -737,4 +747,5 @@ void CL_Demo_Init(void)
 	Cvar_RegisterVariable (&cl_autodemo);
 	Cvar_RegisterVariable (&cl_autodemo_nameformat);
 	Cvar_RegisterVariable (&cl_autodemo_delete);
+	Cvar_RegisterVariable (&cl_startdemos);
 }

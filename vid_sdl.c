@@ -76,9 +76,6 @@ static cvar_t joy_sdl2_trigger_deadzone = {CF_ARCHIVE | CF_CLIENT, "joy_sdl2_tri
 static cvar_t *steelstorm_showing_map = NULL; // detect but do not create the cvar
 static cvar_t *steelstorm_showing_mousecursor = NULL; // detect but do not create the cvar
 
-static int win_half_width = 50;
-static int win_half_height = 50;
-
 static SDL_GLContext context;
 static SDL_Window *window;
 
@@ -882,8 +879,8 @@ static void IN_Move_TouchScreen_Quake(void)
 
 	// simple quake controls
 	multitouch[MAXFINGERS-1][0] = SDL_GetMouseState(&x, &y);
-	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.width;
-	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.height;
+	multitouch[MAXFINGERS-1][1] = x * 32768 / vid.mode.width;
+	multitouch[MAXFINGERS-1][2] = y * 32768 / vid.mode.height;
 
 	// top of screen is toggleconsole and K_ESCAPE
 	switch(keydest)
@@ -984,6 +981,8 @@ void IN_Move( void )
 			{
 				// have the mouse stuck in the middle, example use: prevent expose effect of beryl during the game when not using
 				// window grabbing. --blub
+				int win_half_width = vid.mode.width>>1;
+				int win_half_height = vid.mode.height>>1;
 	
 				// we need 2 frames to initialize the center position
 				if(!stuck)
@@ -1169,7 +1168,7 @@ void Sys_SDL_HandleEvents(void)
 							if (vid.xPos >= displaybounds.x && vid.xPos < displaybounds.x + displaybounds.w)
 							if (vid.yPos >= displaybounds.y && vid.yPos < displaybounds.y + displaybounds.h)
 							{
-								vid.displayindex = i;
+								vid.mode.display = i;
 								break;
 							}
 						}
@@ -1180,7 +1179,7 @@ void Sys_SDL_HandleEvents(void)
 							SDL_GetWindowBordersSize(window, &i, NULL, NULL, NULL);
 							if (!i != vid_wmborderless) // border state changed
 							{
-								SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex), SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex));
+								SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(vid.mode.display), SDL_WINDOWPOS_CENTERED_DISPLAY(vid.mode.display));
 								SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
 								vid_wmborder_waiting = false;
 							}
@@ -1192,8 +1191,7 @@ void Sys_SDL_HandleEvents(void)
 							// vid.width = event.window.data1;
 							// vid.height = event.window.data2;
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-							SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
-
+							SDL_GL_GetDrawableSize(window, &vid.mode.width, &vid.mode.height);
 						}
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED: // internal and external events
@@ -1225,7 +1223,7 @@ void Sys_SDL_HandleEvents(void)
 						break;
 					case SDL_WINDOWEVENT_DISPLAY_CHANGED:
 						// this event can't be relied on in fullscreen, see SDL_WINDOWEVENT_MOVED above
-						vid.displayindex = event.window.data1;
+						vid.mode.display = event.window.data1;
 						break;
 					}
 				}
@@ -1239,8 +1237,8 @@ void Sys_SDL_HandleEvents(void)
 						Con_Print(CON_WARN "A vid_restart may be necessary!\n");
 #endif
 						Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
-						// Ideally we'd call VID_ApplyDisplaySettings_c() to try to switch to the preferred display here,
-						// but we may need a vid_restart first, see comments in VID_ApplyDisplaySettings_c().
+						// Ideally we'd call VID_ApplyDisplayMode() to try to switch to the preferred display here,
+						// but we may need a vid_restart first, see comments in VID_ApplyDisplayMode().
 						break;
 					case SDL_DISPLAYEVENT_DISCONNECTED:
 						Con_Printf(CON_WARN "Display %i disconnected.\n", event.display.display);
@@ -1377,39 +1375,37 @@ qbool GL_ExtensionSupported(const char *name)
 }
 
 /// Applies display settings immediately (no vid_restart required).
-static void VID_ApplyDisplaySettings_c(cvar_t *var)
+static void VID_ApplyDisplayMode(const viddef_mode_t *mode)
 {
-	unsigned int fullscreenwanted, fullscreencurrent;
-	unsigned int displaywanted = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
+	uint32_t fullscreenwanted;
+	int displaywanted = bound(0, mode->display, vid_info_displaycount.integer - 1);
+	SDL_DisplayMode modefinal;
 
-	if (!window)
-		return;
-	Con_DPrintf("%s: %s \"%s\"\n", __func__, var->name, var->string);
-
-	fullscreencurrent = SDL_GetWindowFlags(window) & (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_FULLSCREEN);
-	if (vid_fullscreen.integer)
-		fullscreenwanted = vid_desktopfullscreen.integer ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
+	if (mode->fullscreen)
+		fullscreenwanted = mode->desktopfullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_FULLSCREEN;
 	else
 		fullscreenwanted = 0;
 
-	// moving to another display, changing the fullscreen mode or switching to windowed
-	if (vid.displayindex != displaywanted // SDL seems unable to move any fullscreen window to another display
-	|| fullscreencurrent != fullscreenwanted) // even for desktop <-> exclusive: DESKTOP flag includes FULLSCREEN bit
+	// moving to another display or switching to windowed
+	if (vid.mode.display != displaywanted // SDL seems unable to move any fullscreen window to another display
+	|| !fullscreenwanted)
 	{
 		if (SDL_SetWindowFullscreen(window, 0) < 0)
 		{
-			Con_Printf(CON_ERROR "ERROR: can't deactivate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
+			Con_Printf(CON_ERROR "ERROR: can't deactivate fullscreen on display %i because %s\n", vid.mode.display, SDL_GetError());
 			return;
 		}
-		vid.fullscreen = false;
-		Con_DPrintf("Fullscreen deactivated on display %i\n", vid.displayindex);
+		vid.mode.desktopfullscreen = vid.mode.fullscreen = false;
+		Con_DPrintf("Fullscreen deactivated on display %i\n", vid.mode.display);
 	}
 
 	// switching to windowed
 	if (!fullscreenwanted)
 	{
 		int toppx;
-		SDL_SetWindowSize(window, vid.width = vid_width.integer, vid.height = vid_height.integer);
+
+		SDL_SetWindowSize(window, vid.mode.width = mode->width, vid.mode.height = mode->height);
+		// resizable and borderless set here cos a separate callback would fail if the cvar is changed when the window is fullscreen
 		SDL_SetWindowResizable(window, vid_resizable.integer ? SDL_TRUE : SDL_FALSE);
 		SDL_SetWindowBordered(window, (SDL_bool)!vid_borderless.integer);
 		SDL_GetWindowBordersSize(window, &toppx, NULL, NULL, NULL);
@@ -1419,7 +1415,7 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 	}
 
 	// moving to another display or switching to windowed
-	if (vid.displayindex != displaywanted || !fullscreenwanted)
+	if (vid.mode.display != displaywanted || !fullscreenwanted)
 	{
 //		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted), SDL_WINDOWPOS_CENTERED_DISPLAY(displaywanted));
 //		SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
@@ -1436,11 +1432,11 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 			Con_Printf(CON_ERROR "Error getting bounds of display %i: \"%s\"\n", displaywanted, SDL_GetError());
 			return;
 		}
-		vid.xPos = displaybounds.x + 0.5 * (displaybounds.w - vid.width);
-		vid.yPos = displaybounds.y + 0.5 * (displaybounds.h - vid.height);
+		vid.xPos = displaybounds.x + 0.5 * (displaybounds.w - vid.mode.width);
+		vid.yPos = displaybounds.y + 0.5 * (displaybounds.h - vid.mode.height);
 		SDL_SetWindowPosition(window, vid.xPos, vid.yPos);
 
-		vid.displayindex = displaywanted;
+		vid.mode.display = displaywanted;
 	}
 
 	// switching to a fullscreen mode
@@ -1448,34 +1444,86 @@ static void VID_ApplyDisplaySettings_c(cvar_t *var)
 	{
 		if (fullscreenwanted == SDL_WINDOW_FULLSCREEN)
 		{
-			// When starting in desktop/window mode no hardware mode is set so do it now,
-			// this also applies vid_width and vid_height changes immediately without bogus modesets.
-			SDL_DisplayMode modewanted, modeclosest;
-			modewanted.w = vid_width.integer;
-			modewanted.h = vid_height.integer;
-			modewanted.refresh_rate = vid_userefreshrate.integer ? vid_refreshrate.integer : 0;
-			if (!SDL_GetClosestDisplayMode(vid.displayindex, &modewanted, &modeclosest))
+			// determine if a modeset is needed and if the requested resolution is supported
+			SDL_DisplayMode modewanted, modecurrent;
+
+			modewanted.w = mode->width;
+			modewanted.h = mode->height;
+			modewanted.format = mode->bitsperpixel == 16 ? SDL_PIXELFORMAT_RGB565 : SDL_PIXELFORMAT_RGB888;
+			modewanted.refresh_rate = mode->refreshrate;
+			if (!SDL_GetClosestDisplayMode(displaywanted, &modewanted, &modefinal))
 			{
-				Con_Printf(CON_ERROR "Error getting closest mode to %ix%i@%ihz for display %i: \"%s\"\n", modewanted.w, modewanted.h, modewanted.refresh_rate, vid.displayindex, SDL_GetError());
+				// SDL_GetError() returns a random unrelated error if this fails (in 2.26.5)
+				Con_Printf(CON_ERROR "Error getting closest mode to %ix%i@%ihz for display %i\n", modewanted.w, modewanted.h, modewanted.refresh_rate, vid.mode.display);
 				return;
 			}
-			if (SDL_SetWindowDisplayMode(window, &modeclosest) < 0)
+			if (SDL_GetCurrentDisplayMode(displaywanted, &modecurrent) < 0)
 			{
-				Con_Printf(CON_ERROR "Error setting mode %ix%i@%ihz for display %i: \"%s\"\n", modeclosest.w, modeclosest.h, modeclosest.refresh_rate, vid.displayindex, SDL_GetError());
+				Con_Printf(CON_ERROR "Error getting current mode of display %i: \"%s\"\n", vid.mode.display, SDL_GetError());
 				return;
+			}
+			if (memcmp(&modecurrent, &modefinal, sizeof(modecurrent)) != 0)
+			{
+				if (mode->width != modefinal.w || mode->height != modefinal.h)
+				{
+					Con_Printf(CON_WARN "Display %i doesn't support resolution %ix%i\n", vid.mode.display, modewanted.w, modewanted.h);
+					return;
+				}
+				if (SDL_SetWindowDisplayMode(window, &modefinal) < 0)
+				{
+					Con_Printf(CON_ERROR "Error setting mode %ix%i@%ihz for display %i: \"%s\"\n", modefinal.w, modefinal.h, modefinal.refresh_rate, vid.mode.display, SDL_GetError());
+					return;
+				}
+				// HACK to work around SDL BUG when switching from a lower to a higher res:
+				// the display res gets increased but the window size isn't increased
+				// (unless we do this first; switching to windowed mode first also works).
+				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 			}
 		}
 
 		if (SDL_SetWindowFullscreen(window, fullscreenwanted) < 0)
 		{
-			Con_Printf(CON_ERROR "ERROR: can't activate fullscreen on display %i because %s\n", vid.displayindex, SDL_GetError());
+			Con_Printf(CON_ERROR "ERROR: can't activate fullscreen on display %i because %s\n", vid.mode.display, SDL_GetError());
 			return;
 		}
 		// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-		SDL_GL_GetDrawableSize(window, &vid.width, &vid.height);
-		vid.fullscreen = true;
-		Con_DPrintf("Fullscreen activated on display %i\n", vid.displayindex);
+		SDL_GL_GetDrawableSize(window, &vid.mode.width, &vid.mode.height);
+		vid.mode.fullscreen = true;
+		vid.mode.desktopfullscreen = fullscreenwanted == SDL_WINDOW_FULLSCREEN_DESKTOP;
+		Con_DPrintf("Fullscreen activated on display %i\n", vid.mode.display);
 	}
+
+	if (!fullscreenwanted || fullscreenwanted == SDL_WINDOW_FULLSCREEN_DESKTOP)
+		SDL_GetDesktopDisplayMode(displaywanted, &modefinal);
+	else { /* modefinal was set by SDL_GetClosestDisplayMode */ }
+	vid.mode.bitsperpixel = SDL_BITSPERPIXEL(modefinal.format);
+	vid.mode.refreshrate  = mode->refreshrate && mode->fullscreen && !mode->desktopfullscreen ? modefinal.refresh_rate : 0;
+	vid.stencil           = mode->bitsperpixel > 16;
+}
+
+static void VID_ApplyDisplayMode_c(cvar_t *var)
+{
+	viddef_mode_t mode;
+
+	if (!window)
+		return;
+
+	// Menu designs aren't suitable for instant hardware modesetting
+	// they make players scroll through a list, setting the cvars at each step.
+	if (key_dest == key_menu && !key_consoleactive // in menu, console closed
+	&& vid_fullscreen.integer && !vid_desktopfullscreen.integer) // modesetting enabled
+		return;
+
+	Con_DPrintf("%s: applying %s \"%s\"\n", __func__, var->name, var->string);
+
+	mode.display           = vid_display.integer;
+	mode.fullscreen        = vid_fullscreen.integer;
+	mode.desktopfullscreen = vid_desktopfullscreen.integer;
+	mode.width             = vid_width.integer;
+	mode.height            = vid_height.integer;
+	mode.bitsperpixel      = vid_bitsperpixel.integer;
+	mode.refreshrate       = max(0, vid_refreshrate.integer);
+	VID_ApplyDisplayMode(&mode);
 }
 
 static void VID_SetVsync_c(cvar_t *var)
@@ -1517,19 +1565,14 @@ void VID_Init (void)
 #endif
 	Cvar_RegisterVariable(&joy_sdl2_trigger_deadzone);
 
-#if defined(__linux__)
-	// exclusive fullscreen is no longer functional (and when it worked was obnoxious and not faster)
-	Cvar_SetValueQuick(&vid_desktopfullscreen, 1);
-	vid_desktopfullscreen.flags |= CF_READONLY;
-#endif
-
-	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_width,                  VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_height,                 VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_resizable,              VID_ApplyDisplaySettings_c);
-	Cvar_RegisterCallback(&vid_borderless,             VID_ApplyDisplaySettings_c);
+	Cvar_RegisterCallback(&vid_display,                VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_fullscreen,             VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_desktopfullscreen,      VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_width,                  VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_height,                 VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_refreshrate,            VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_resizable,              VID_ApplyDisplayMode_c);
+	Cvar_RegisterCallback(&vid_borderless,             VID_ApplyDisplayMode_c);
 	Cvar_RegisterCallback(&vid_vsync,                  VID_SetVsync_c);
 	Cvar_RegisterCallback(&vid_mouse_clickthrough,     VID_SetHints_c);
 	Cvar_RegisterCallback(&vid_minimize_on_focus_loss, VID_SetHints_c);
@@ -1666,7 +1709,7 @@ static void AdjustWindowBounds(viddef_mode_t *mode, RECT *rect)
 }
 #endif
 
-static qbool VID_InitModeGL(viddef_mode_t *mode)
+static qbool VID_InitModeGL(const viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	int i;
@@ -1675,13 +1718,10 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 
 	// video display selection (multi-monitor)
 	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());
-	vid.displayindex = bound(0, vid_display.integer, vid_info_displaycount.integer - 1);
-	vid.xPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
-	vid.yPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.displayindex);
+	vid.mode.display = bound(0, mode->display, vid_info_displaycount.integer - 1);
+	vid.xPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.mode.display);
+	vid.yPos = SDL_WINDOWPOS_CENTERED_DISPLAY(vid.mode.display);
 	vid_wmborder_waiting = vid_wmborderless = false;
-
-	win_half_width = mode->width>>1;
-	win_half_height = mode->height>>1;
 
 	if(vid_resizable.integer)
 		windowflags |= SDL_WINDOW_RESIZABLE;
@@ -1705,18 +1745,13 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	windowflags |= SDL_WINDOW_FULLSCREEN | SDL_WINDOW_BORDERLESS;
 #endif
 
-
+	// SDL_CreateWindow() supports only width and height modesetting,
+	// so initially we use desktopfullscreen and perform a modeset later if necessary,
+	// this way we do only one modeset to apply the full config.
 	if (mode->fullscreen)
 	{
-		if (vid_desktopfullscreen.integer)
-		{
-			vid_mode_t m = VID_GetDesktopMode();
-			mode->width = m.width;
-			mode->height = m.height;
-			windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-		}
-		else
-			windowflags |= SDL_WINDOW_FULLSCREEN;
+		windowflags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+		vid.mode.fullscreen = vid.mode.desktopfullscreen = true;
 	}
 	else
 	{
@@ -1728,12 +1763,13 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		if (!vid_ignore_taskbar.integer)
 		{
 			RECT rect;
-			AdjustWindowBounds(mode, &rect);
+			AdjustWindowBounds((viddef_mode_t *)mode, &rect);
 			vid.xPos = rect.left;
 			vid.xPos = rect.top;
 			vid_wmborder_waiting = false;
 		}
 #endif
+		vid.mode.fullscreen = vid.mode.desktopfullscreen = false;
 	}
 
 	VID_SetHints_c(NULL);
@@ -1746,7 +1782,10 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	SDL_GL_SetAttribute (SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute (SDL_GL_STENCIL_SIZE, 8);
 	if (mode->stereobuffer)
+	{
 		SDL_GL_SetAttribute (SDL_GL_STEREO, 1);
+		vid.mode.stereobuffer = true;
+	}
 	if (mode->samples > 1)
 	{
 		SDL_GL_SetAttribute (SDL_GL_MULTISAMPLEBUFFERS, 1);
@@ -1775,10 +1814,6 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 		VID_Shutdown();
 		return false;
 	}
-	// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
-	SDL_GL_GetDrawableSize(window, &mode->width, &mode->height);
-	// After using SDL_WINDOWPOS_CENTERED_DISPLAY we don't know the real position
-	SDL_GetWindowPosition(window, &vid.xPos, &vid.yPos);
 
 	context = SDL_GL_CreateContext(window);
 	if (context == NULL)
@@ -1825,10 +1860,14 @@ static qbool VID_InitModeGL(viddef_mode_t *mode)
 	for (i = 0; i < vid_info_displaycount.integer; ++i)
 		Con_Printf("Display %i: %s\n", i, SDL_GetDisplayName(i));
 
+	// Perform any hardware modesetting and update vid.mode
+	// if modesetting fails desktopfullscreen continues to be used (see above).
+	VID_ApplyDisplayMode(mode);
+
 	return true;
 }
 
-qbool VID_InitMode(viddef_mode_t *mode)
+qbool VID_InitMode(const viddef_mode_t *mode)
 {
 	// GAME_STEELSTORM specific
 	steelstorm_showing_map = Cvar_FindVar(&cvars_all, "steelstorm_showing_map", ~0);
@@ -1880,7 +1919,7 @@ vid_mode_t VID_GetDesktopMode(void)
 	Uint32 rmask, gmask, bmask, amask;
 	vid_mode_t desktop_mode;
 
-	SDL_GetDesktopDisplayMode(vid.displayindex, &mode);
+	SDL_GetDesktopDisplayMode(vid.mode.display, &mode);
 	SDL_PixelFormatEnumToMasks(mode.format, &bpp, &rmask, &gmask, &bmask, &amask);
 	desktop_mode.width = mode.w;
 	desktop_mode.height = mode.h;
@@ -1895,20 +1934,21 @@ size_t VID_ListModes(vid_mode_t *modes, size_t maxcount)
 {
 	size_t k = 0;
 	int modenum;
-	int nummodes = SDL_GetNumDisplayModes(vid.displayindex);
+	int nummodes = SDL_GetNumDisplayModes(vid.mode.display);
 	SDL_DisplayMode mode;
 	for (modenum = 0;modenum < nummodes;modenum++)
 	{
 		if (k >= maxcount)
 			break;
-		if (SDL_GetDisplayMode(vid.displayindex, modenum, &mode))
+		if (SDL_GetDisplayMode(vid.mode.display, modenum, &mode))
 			continue;
 		modes[k].width = mode.w;
 		modes[k].height = mode.h;
-		// FIXME bpp?
+		modes[k].bpp = SDL_BITSPERPIXEL(mode.format);
 		modes[k].refreshrate = mode.refresh_rate;
 		modes[k].pixelheight_num = 1;
 		modes[k].pixelheight_denom = 1; // SDL does not provide this
+		Con_DPrintf("Display %i mode %i: %ix%i %ibpp %ihz\n", vid.mode.display, modenum, modes[k].width, modes[k].height, modes[k].bpp, modes[k].refreshrate);
 		k++;
 	}
 	return k;

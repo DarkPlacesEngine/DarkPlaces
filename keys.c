@@ -1265,7 +1265,7 @@ static void Key_Console(cmd_state_t *cmd, int key, int unicode)
 	if (keydown[K_CTRL])
 	{
 		// text zoom in
-		if ((key == '+' || key == K_KP_PLUS) && KM_CTRL)
+		if ((key == '=' || key == '+' || key == K_KP_PLUS) && KM_CTRL)
 		{
 			if (con_textsize.integer < 128)
 				Cvar_SetValueQuick(&con_textsize, con_textsize.integer + 1);

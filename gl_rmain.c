@@ -3011,8 +3011,6 @@ static void R_Main_FreeViewCache(void)
 static void R_Main_ResizeViewCache(void)
 {
 	int numentities = r_refdef.scene.numentities;
-	int numclusters = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusters : 1;
-	int numclusterbytes = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_pvsclusterbytes : 1;
 	int numleafs = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->brush.num_leafs : 1;
 	int numsurfaces = r_refdef.scene.worldmodel ? r_refdef.scene.worldmodel->num_surfaces : 1;
 	if (r_refdef.viewcache.maxentities < numentities)
@@ -3022,14 +3020,7 @@ static void R_Main_ResizeViewCache(void)
 			Mem_Free(r_refdef.viewcache.entityvisible);
 		r_refdef.viewcache.entityvisible = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.maxentities);
 	}
-	if (r_refdef.viewcache.world_numclusters != numclusters)
-	{
-		r_refdef.viewcache.world_numclusters = numclusters;
-		r_refdef.viewcache.world_numclusterbytes = numclusterbytes;
-		if (r_refdef.viewcache.world_pvsbits)
-			Mem_Free(r_refdef.viewcache.world_pvsbits);
-		r_refdef.viewcache.world_pvsbits = (unsigned char *)Mem_Alloc(r_main_mempool, r_refdef.viewcache.world_numclusterbytes);
-	}
+	// bones_was_here: r_refdef.viewcache.world_pvsbits was (re)allocated here, now done in Mod_BSP_FatPVS()
 	if (r_refdef.viewcache.world_numleafs != numleafs)
 	{
 		r_refdef.viewcache.world_numleafs = numleafs;
@@ -4411,7 +4402,7 @@ void R_SetupView(qbool allowwaterclippingplane, int viewfbo, rtexture_t *viewdep
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom.
 	// Unless the render target is a FBO...
-	viewy_adjusted = viewfbo ? viewy : vid.height - viewheight - viewy;
+	viewy_adjusted = viewfbo ? viewy : vid.mode.height - viewheight - viewy;
 
 	if (!r_refdef.view.useperspective)
 		R_Viewport_InitOrtho3D(&r_refdef.view.viewport, &r_refdef.view.matrix, viewx, viewy_adjusted, viewwidth, viewheight, r_refdef.view.ortho_x, r_refdef.view.ortho_y, -r_refdef.farclip, r_refdef.farclip, customclipplane);
@@ -4454,7 +4445,7 @@ void R_ResetViewRendering2D_Common(int viewfbo, rtexture_t *viewdepthtexture, rt
 
 	// GL is weird because it's bottom to top, r_refdef.view.y is top to bottom.
 	// Unless the render target is a FBO...
-	viewy_adjusted = viewfbo ? viewy : vid.height - viewheight - viewy;
+	viewy_adjusted = viewfbo ? viewy : vid.mode.height - viewheight - viewy;
 
 	R_Viewport_InitOrtho(&viewport, &identitymatrix, viewx, viewy_adjusted, viewwidth, viewheight, 0, 0, x2, y2, -10, 100, NULL);
 	R_Mesh_SetRenderTargets(viewfbo, viewdepthtexture, viewcolortexture, NULL, NULL, NULL);
@@ -4754,7 +4745,7 @@ void R_Water_AddWaterPlane(msurface_t *surface, int entno)
 		if (p->materialflags & (MATERIALFLAG_WATERSHADER | MATERIALFLAG_REFRACTION | MATERIALFLAG_REFLECTION) && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS
 		 && r_refdef.scene.worldmodel->brush.PointInLeaf && r_refdef.scene.worldmodel->brush.PointInLeaf(r_refdef.scene.worldmodel, center)->clusterindex >= 0)
 		{
-			r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, p->pvsbits, sizeof(p->pvsbits), p->pvsvalid);
+			r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, center, 2, &p->pvsbits, r_main_mempool, p->pvsvalid);
 			p->pvsvalid = true;
 		}
 	}
@@ -4915,7 +4906,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 				if(r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
 				{
 					r_refdef.view.usecustompvs = true;
-					r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+					r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, &r_refdef.viewcache.world_pvsbits, r_main_mempool, false);
 				}
 			}
 
@@ -4970,7 +4961,7 @@ static void R_Water_ProcessPlanes(int fbo, rtexture_t *depthtexture, rtexture_t 
 			if(p->camera_entity && r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.FatPVS)
 			{
 				r_refdef.view.usecustompvs = true;
-				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, r_refdef.viewcache.world_pvsbits, (r_refdef.viewcache.world_numclusters+7)>>3, false);
+				r_refdef.scene.worldmodel->brush.FatPVS(r_refdef.scene.worldmodel, visorigin, 2, &r_refdef.viewcache.world_pvsbits, r_main_mempool, false);
 			}
 
 			// camera needs no clipplane
@@ -5070,8 +5061,8 @@ static void R_Bloom_StartFrame(void)
 		viewscalefpsadjusted = 1.0f;
 
 	scale = r_viewscale.value * sqrt(viewscalefpsadjusted);
-	if (vid.samples)
-		scale *= sqrt(vid.samples); // supersampling
+	if (vid.mode.samples)
+		scale *= sqrt(vid.mode.samples); // supersampling
 	scale = bound(0.03125f, scale, 4.0f);
 	screentexturewidth = (int)ceil(r_refdef.view.width * scale);
 	screentextureheight = (int)ceil(r_refdef.view.height * scale);
@@ -10184,10 +10175,10 @@ void R_DebugLine(vec3_t start, vec3_t end)
 	Vector4Set(w[1], end[0], end[1], end[2], 1);
 	R_Viewport_TransformToScreen(&r_refdef.view.viewport, w[0], s[0]);
 	R_Viewport_TransformToScreen(&r_refdef.view.viewport, w[1], s[1]);
-	x1 = s[0][0] * vid_conwidth.value / vid.width;
-	y1 = (vid.height - s[0][1]) * vid_conheight.value / vid.height;
-	x2 = s[1][0] * vid_conwidth.value / vid.width;
-	y2 = (vid.height - s[1][1]) * vid_conheight.value / vid.height;
+	x1 = s[0][0] * vid_conwidth.value / vid.mode.width;
+	y1 = (vid.mode.height - s[0][1]) * vid_conheight.value / vid.mode.height;
+	x2 = s[1][0] * vid_conwidth.value / vid.mode.width;
+	y2 = (vid.mode.height - s[1][1]) * vid_conheight.value / vid.mode.height;
 	//Con_DPrintf("R_DebugLine: %.0f,%.0f to %.0f,%.0f\n", x1, y1, x2, y2);
 
 	// add the line to the UI mesh for drawing later
@@ -10196,11 +10187,11 @@ void R_DebugLine(vec3_t start, vec3_t end)
 	if (fabs(x2 - x1) > fabs(y2 - y1))
 	{
 		offsetx = 0;
-		offsety = 0.5f * width * vid_conheight.value / vid.height;
+		offsety = 0.5f * width * vid_conheight.value / vid.mode.height;
 	}
 	else
 	{
-		offsetx = 0.5f * width * vid_conwidth.value / vid.width;
+		offsetx = 0.5f * width * vid_conwidth.value / vid.mode.width;
 		offsety = 0;
 	}
 	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW), true);

@@ -29,8 +29,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "utf8lib.h"
 
-cvar_t registered = {CF_CLIENT | CF_SERVER, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
-cvar_t cmdline = {CF_CLIENT | CF_SERVER, "cmdline","0", "contains commandline the engine was launched with"};
+cvar_t registered = {CF_CLIENT | CF_SERVER | CF_READONLY, "registered","0", "indicates if this is running registered quake (whether gfx/pop.lmp was found)"};
+cvar_t cmdline = {CF_CLIENT | CF_SERVER | CF_READONLY, "cmdline","0", "contains commandline the engine was launched with"};
 
 // FIXME: Find a better place for these.
 cvar_t cl_playermodel = {CF_CLIENT | CF_SERVER | CF_USERINFO | CF_ARCHIVE, "playermodel", "", "current player model in Nexuiz/Xonotic"};

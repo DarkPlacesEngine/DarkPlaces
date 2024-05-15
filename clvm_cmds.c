@@ -976,9 +976,27 @@ static void VM_CL_R_SetView (prvm_prog_t *prog)
 			VM_Warning(prog, "VM_CL_R_GetView : unknown parm %i\n", c);
 			return;
 		}
+		if (csqc_lowres.integer)
+		{
+			switch(c)
+			{
+				case VF_MIN: case VF_MIN_X: case VF_MIN_Y: case VF_SIZE: case VF_SIZE_X: case VF_SIZE_Y: case VF_VIEWPORT:
+					VectorScale(PRVM_G_VECTOR(OFS_RETURN), vid_conwidth.value / vid.mode.width, PRVM_G_VECTOR(OFS_RETURN));
+			}
+		}
 		return;
 	}
 
+	if (csqc_lowres.integer)
+	{
+		float scale = vid.mode.width / vid_conwidth.value;
+		switch(c)
+		{
+			case VF_MIN: case VF_MIN_X: case VF_MIN_Y: case VF_SIZE: case VF_SIZE_X: case VF_SIZE_Y: case VF_VIEWPORT:
+				VectorScale(PRVM_G_VECTOR(OFS_PARM1), scale, PRVM_G_VECTOR(OFS_PARM1));
+				VectorScale(PRVM_G_VECTOR(OFS_PARM2), scale, PRVM_G_VECTOR(OFS_PARM2));
+		}
+	}
 	f = PRVM_G_VECTOR(OFS_PARM1);
 	k = PRVM_G_FLOAT(OFS_PARM1);
 	switch(c)
@@ -2017,6 +2035,7 @@ static void VM_CL_getstatf (prvm_prog_t *prog)
 	i = (int)PRVM_G_FLOAT(OFS_PARM0);
 	if(i < 0 || i >= MAX_CL_STATS)
 	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
 		VM_Warning(prog, "VM_CL_getstatf: index>=MAX_CL_STATS or index<0\n");
 		return;
 	}
@@ -2027,12 +2046,18 @@ static void VM_CL_getstatf (prvm_prog_t *prog)
 //#331 float(float stnum) getstati (EXT_CSQC)
 static void VM_CL_getstati (prvm_prog_t *prog)
 {
-	int i, index;
-	int firstbit, bitcount;
+	int index, firstbit, bitcount;
 
 	VM_SAFEPARMCOUNTRANGE(1, 3, VM_CL_getstati);
 
 	index = (int)PRVM_G_FLOAT(OFS_PARM0);
+	if(index < 0 || index >= MAX_CL_STATS)
+	{
+		PRVM_G_FLOAT(OFS_RETURN) = 0;
+		VM_Warning(prog, "VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
+		return;
+	}
+
 	if (prog->argc > 1)
 	{
 		firstbit = (int)PRVM_G_FLOAT(OFS_PARM1);
@@ -2047,15 +2072,10 @@ static void VM_CL_getstati (prvm_prog_t *prog)
 		bitcount = 32;
 	}
 
-	if(index < 0 || index >= MAX_CL_STATS)
-	{
-		VM_Warning(prog, "VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
-		return;
-	}
-	i = cl.stats[index];
-	if (bitcount != 32)	//32 causes the mask to overflow, so there's nothing to subtract from.
-		i = (((unsigned int)i)&(((1<<bitcount)-1)<<firstbit))>>firstbit;
-	PRVM_G_FLOAT(OFS_RETURN) = i;
+	if (bitcount < 32)	//32 causes the mask to overflow, so there's nothing to subtract from.
+		PRVM_G_FLOAT(OFS_RETURN) = cl.stats[index]>>firstbit & ((1<<bitcount)-1);
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = cl.stats[index];
 }
 
 //#332 string(float firststnum) getstats (EXT_CSQC)
@@ -2256,9 +2276,9 @@ static void VM_CL_getmousepos(prvm_prog_t *prog)
 	if (key_consoleactive || key_dest != key_game)
 		VectorSet(PRVM_G_VECTOR(OFS_RETURN), 0, 0, 0);
 	else if (cl.csqc_wantsmousemove)
-		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.width, in_windowmouse_y * vid_conheight.integer / vid.height, 0);
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_windowmouse_x * vid_conwidth.integer / vid.mode.width, in_windowmouse_y * vid_conheight.integer / vid.mode.height, 0);
 	else
-		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.width, in_mouse_y * vid_conheight.integer / vid.height, 0);
+		VectorSet(PRVM_G_VECTOR(OFS_RETURN), in_mouse_x * vid_conwidth.integer / vid.mode.width, in_mouse_y * vid_conheight.integer / vid.mode.height, 0);
 }
 
 //#345 float(float framenum) getinputstate (EXT_CSQC)
@@ -4525,8 +4545,7 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 #if 1
 	unsigned char *pvs;
 #else
-	int fatpvsbytes;
-	unsigned char fatpvs[MAX_MAP_LEAFS/8];
+	unsigned char *fatpvs = NULL;
 #endif
 
 	VM_SAFEPARMCOUNT(2, VM_CL_checkpvs);
@@ -4566,8 +4585,8 @@ static void VM_CL_checkpvs (prvm_prog_t *prog)
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
 		return;
 	}
-	fatpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, viewpos, 8, fatpvs, sizeof(fatpvs), false);
-	if(!fatpvsbytes)
+	cl.worldmodel->brush.FatPVS(cl.worldmodel, viewpos, 8, &fatpvs, cls.levelmempool, false);
+	if(!fatpvs)
 	{
 		// viewpos isn't in any PVS... darn
 		PRVM_G_FLOAT(OFS_RETURN) = 2;

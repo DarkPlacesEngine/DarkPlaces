@@ -51,8 +51,8 @@ dp_fonts_t dp_fonts;
 static mempool_t *fonts_mempool = NULL;
 
 cvar_t r_textshadow = {CF_CLIENT | CF_ARCHIVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
-cvar_t r_textbrightness = {CF_CLIENT | CF_ARCHIVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
-cvar_t r_textcontrast = {CF_CLIENT | CF_ARCHIVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
+cvar_t r_textbrightness = {CF_CLIENT | CF_ARCHIVE, "r_textbrightness", "0.25", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
+cvar_t r_textcontrast = {CF_CLIENT | CF_ARCHIVE, "r_textcontrast", "1.25", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
 
 cvar_t r_font_postprocess_blur = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_blur", "0", "font blur amount"};
 cvar_t r_font_postprocess_outline = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_outline", "0", "font outline amount"};
@@ -516,10 +516,10 @@ dp_font_t *FindFont(const char *title, qbool allocate_new)
 
 static float snap_to_pixel_x(float x, float roundUpAt)
 {
-	float pixelpos = x * vid.width / vid_conwidth.value;
+	float pixelpos = x * vid.mode.width / vid_conwidth.value;
 	int snap = (int) pixelpos;
 	if (pixelpos - snap >= roundUpAt) ++snap;
-	return ((float)snap * vid_conwidth.value / vid.width);
+	return ((float)snap * vid_conwidth.value / vid.mode.width);
 	/*
 	x = (int)(x * vid.width / vid_conwidth.value);
 	x = (x * vid_conwidth.value / vid.width);
@@ -529,10 +529,10 @@ static float snap_to_pixel_x(float x, float roundUpAt)
 
 static float snap_to_pixel_y(float y, float roundUpAt)
 {
-	float pixelpos = y * vid.height / vid_conheight.value;
+	float pixelpos = y * vid.mode.height / vid_conheight.value;
 	int snap = (int) pixelpos;
 	if (pixelpos - snap > roundUpAt) ++snap;
-	return ((float)snap * vid_conheight.value / vid.height);
+	return ((float)snap * vid_conheight.value / vid.mode.height);
 	/*
 	y = (int)(y * vid.height / vid_conheight.value);
 	y = (y * vid_conheight.value / vid.height);
@@ -788,7 +788,7 @@ void GL_Draw_Init (void)
 void DrawQ_Start(void)
 {
 	r_refdef.draw2dstage = 1;
-	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.width, vid.height, vid_conwidth.integer, vid_conheight.integer);
+	R_ResetViewRendering2D_Common(0, NULL, NULL, 0, 0, vid.mode.width, vid.mode.height, vid_conwidth.integer, vid_conheight.integer);
 }
 
 qbool r_draw2d_force = false;
@@ -1146,8 +1146,8 @@ float DrawQ_String_Scale(float startx, float starty, const char *text, size_t ma
 		ftbase_y = snap_to_pixel_y(ftbase_y, 0.3);
 	}
 
-	pix_x = vid.width / vid_conwidth.value;
-	pix_y = vid.height / vid_conheight.value;
+	pix_x = vid.mode.width / vid_conwidth.value;
+	pix_y = vid.mode.height / vid_conheight.value;
 
 	if (fontmap)
 		width_of = fnt->width_of_ft2[map_index];
@@ -1407,11 +1407,11 @@ void DrawQ_Line (float width, float x1, float y1, float x2, float y2, float r, f
 	if (fabs(x2 - x1) > fabs(y2 - y1))
 	{
 		offsetx = 0;
-		offsety = 0.5f * width * vid_conheight.value / vid.height;
+		offsety = 0.5f * width * vid_conheight.value / vid.mode.height;
 	}
 	else
 	{
-		offsetx = 0.5f * width * vid_conwidth.value / vid.width;
+		offsetx = 0.5f * width * vid_conwidth.value / vid.mode.width;
 		offsety = 0;
 	}
 	surf = Mod_Mesh_AddSurface(mod, Mod_Mesh_GetTexture(mod, "white", 0, 0, MATERIALFLAG_WALL | MATERIALFLAG_VERTEXCOLOR | MATERIALFLAG_ALPHAGEN_VERTEX | MATERIALFLAG_ALPHA | MATERIALFLAG_BLENDED | MATERIALFLAG_NOSHADOW), true);
@@ -1438,7 +1438,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	{
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
-		GL_Scissor(ix, vid.height - iy - ih, iw, ih);
+		GL_Scissor(ix, vid.mode.height - iy - ih, iw, ih);
 		break;
 	}
 

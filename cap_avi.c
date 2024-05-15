@@ -504,7 +504,7 @@ void SCR_CaptureVideo_Avi_BeginVideo(void)
 	double aspect;
 	char vabuf[1024];
 
-	aspect = vid.width / (vid.height * vid_pixelheight.value);
+	aspect = vid.mode.width / (vid.mode.height * vid_pixelheight.value);
 
 	cls.capturevideo.format = CAPTUREVIDEOFORMAT_AVI_I420;
 	cls.capturevideo.formatextension = "avi";

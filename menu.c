@@ -497,6 +497,8 @@ static void M_Main_Key(cmd_state_t *cmd, int key, int ascii)
 		key_dest = key_game;
 		m_state = m_none;
 		//cls.demonum = m_save_demonum;
+		//if(!cl_startdemos.integer)
+		//	break;
 		//if (cls.demonum != -1 && !cls.demoplayback && cls.state != ca_connected)
 		//	CL_NextDemo ();
 		break;
@@ -2242,8 +2244,8 @@ static void M_Options_ColorControl_Draw (void)
 
 	m_opty += 4;
 	DrawQ_Fill(menu_x, menu_y + m_opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);m_opty += 4;
-	s = (float) 312 / 2 * vid.width / vid_conwidth.integer;
-	t = (float) 4 / 2 * vid.height / vid_conheight.integer;
+	s = (float) 312 / 2 * vid.mode.width / vid_conwidth.integer;
+	t = (float) 4 / 2 * vid.mode.height / vid_conheight.integer;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, dither, 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);m_opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, NULL  , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);m_opty += 4;
 	DrawQ_SuperPic(menu_x + 4, menu_y + m_opty, dither, 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);m_opty += 4;
@@ -2257,8 +2259,8 @@ static void M_Options_ColorControl_Draw (void)
 	c[1] = c[0];
 	c[2] = c[1];
 	VID_ApplyGammaToColor(c, c);
-	s = (float) 48 / 2 * vid.width / vid_conwidth.integer;
-	t = (float) 48 / 2 * vid.height / vid_conheight.integer;
+	s = (float) 48 / 2 * vid.mode.width / vid_conwidth.integer;
+	t = (float) 48 / 2 * vid.mode.height / vid_conheight.integer;
 	u = s * 0.5;
 	v = t * 0.5;
 	m_opty += 8;
@@ -2816,6 +2818,7 @@ video_resolution_t video_resolutions_hardcoded[] =
 {"WideScreen 16x9"           , 1280, 720, 640, 360, 1     },
 {"WideScreen 16x9"           , 1360, 768, 680, 384, 1     },
 {"WideScreen 16x9"           , 1366, 768, 683, 384, 1     },
+{"WideScreen 16x9"           , 1600, 900, 640, 360, 1     },
 {"WideScreen 16x9"           , 1920,1080, 640, 360, 1     },
 {"WideScreen 16x9"           , 2560,1440, 640, 360, 1     },
 {"WideScreen 16x9"           , 3840,2160, 640, 360, 1     },
@@ -2830,9 +2833,9 @@ video_resolution_t video_resolutions_hardcoded[] =
 // this is the number of the default mode (640x480) in the list above
 int video_resolutions_hardcoded_count = sizeof(video_resolutions_hardcoded) / sizeof(*video_resolutions_hardcoded) - 1;
 
-#define VIDEO_ITEMS 10
+#define VIDEO_ITEMS 11
 static int video_cursor = 0;
-static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152};
+static int video_cursor_table[VIDEO_ITEMS] = {68, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160};
 static int menu_video_resolution;
 
 video_resolution_t *video_resolutions;
@@ -2896,7 +2899,7 @@ void M_Menu_Video_f(cmd_state_t *cmd)
 	m_state = m_video;
 	m_entersound = true;
 
-	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
+	M_Menu_Video_FindResolution(vid.mode.width, vid.mode.height, vid_pixelheight.value);
 }
 
 
@@ -2923,10 +2926,10 @@ static void M_Video_Draw (void)
 
 	// Current and Proposed Resolution
 	M_Print(16, video_cursor_table[t] - 12, "    Current Resolution");
-	if (vid_supportrefreshrate && vid.userefreshrate && vid.fullscreen)
-		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.width, vid.height, vid.refreshrate));
+	if (vid.mode.refreshrate && vid.mode.fullscreen && !vid.mode.desktopfullscreen)
+		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d %.2fhz", vid.mode.width, vid.mode.height, vid.mode.refreshrate));
 	else
-		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.width, vid.height));
+		M_Print(220, video_cursor_table[t] - 12, va(vabuf, sizeof(vabuf), "%dx%d", vid.mode.width, vid.mode.height));
 	M_Print(16, video_cursor_table[t], "        New Resolution");
 	M_Print(220, video_cursor_table[t], va(vabuf, sizeof(vabuf), "%dx%d", menu_video_resolutions[menu_video_resolution].width, menu_video_resolutions[menu_video_resolution].height));
 	M_Print(96, video_cursor_table[t] + 8, va(vabuf, sizeof(vabuf), "Type: %s", menu_video_resolutions[menu_video_resolution].type));
@@ -2938,13 +2941,8 @@ static void M_Video_Draw (void)
 	t++;
 
 	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[t], "      Use Refresh Rate", vid_supportrefreshrate);
-	M_DrawCheckbox(220, video_cursor_table[t], vid_userefreshrate.integer);
-	t++;
-
-	// Refresh Rate
-	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_supportrefreshrate && vid_userefreshrate.integer);
-	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 150);
+	M_ItemPrint(16, video_cursor_table[t], "          Refresh Rate", vid_fullscreen.integer && !vid_desktopfullscreen.integer);
+	M_DrawSlider(220, video_cursor_table[t], vid_refreshrate.value, 50, 480);
 	t++;
 
 	// Fullscreen
@@ -2952,9 +2950,19 @@ static void M_Video_Draw (void)
 	M_DrawCheckbox(220, video_cursor_table[t], vid_fullscreen.integer);
 	t++;
 
+	// Desktop Fullscreen
+	M_ItemPrint(16, video_cursor_table[t], "    Desktop Fullscreen", vid_fullscreen.integer);
+	M_DrawCheckbox(220, video_cursor_table[t], vid_desktopfullscreen.integer);
+	t++;
+
+	// Display selection (multi-monitor)
+	M_ItemPrint(16, video_cursor_table[t], "       Display/Monitor", vid_info_displaycount.integer > 1);
+	M_DrawSlider(220, video_cursor_table[t], vid_display.integer, 0, vid_info_displaycount.integer - 1);
+	t++;
+
 	// Vertical Sync
 	M_ItemPrint(16, video_cursor_table[t], "         Vertical Sync", true);
-	M_DrawCheckbox(220, video_cursor_table[t], vid_vsync.integer);
+	M_DrawSlider(220, video_cursor_table[t], vid_vsync.integer, -1, 1);
 	t++;
 
 	M_ItemPrint(16, video_cursor_table[t], "    Anisotropic Filter", vid.support.ext_texture_filter_anisotropic);
@@ -3002,14 +3010,16 @@ static void M_Menu_Video_AdjustSliders (int dir)
 	}
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_samples, bound(1, vid_samples.value * (dir > 0 ? 2 : 0.5), 32));
-	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_userefreshrate, !vid_userefreshrate.integer);
-	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_refreshrate, bound(50, vid_refreshrate.value + dir, 150));
+	else if (video_cursor == t++) // allow jumping from the minimum refreshrate to 0 (auto)
+		Cvar_SetValueQuick (&vid_refreshrate, vid_refreshrate.value <= 50 && dir == -1 ? 0 : bound(50, vid_refreshrate.value + dir, 480));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
 	else if (video_cursor == t++)
-		Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
+		Cvar_SetValueQuick (&vid_desktopfullscreen, !vid_desktopfullscreen.integer);
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_display, bound(0, vid_display.integer + dir, vid_info_displaycount.integer - 1));
+	else if (video_cursor == t++)
+		Cvar_SetValueQuick (&vid_vsync, bound(-1, vid_vsync.integer + dir, 1));
 	else if (video_cursor == t++)
 		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.value * (dir < 0 ? 0.5 : 2.0), vid.max_anisotropy));
 	else if (video_cursor == t++)
@@ -3025,12 +3035,12 @@ static void M_Video_Key(cmd_state_t *cmd, int key, int ascii)
 	{
 		case K_ESCAPE:
 			// vid_shared.c has a copy of the current video config. We restore it
-			Cvar_SetValueQuick(&vid_fullscreen, vid.fullscreen);
-			Cvar_SetValueQuick(&vid_bitsperpixel, vid.bitsperpixel);
-			Cvar_SetValueQuick(&vid_samples, vid.samples);
-			if (vid_supportrefreshrate)
-				Cvar_SetValueQuick(&vid_refreshrate, vid.refreshrate);
-			Cvar_SetValueQuick(&vid_userefreshrate, vid.userefreshrate);
+			Cvar_SetValueQuick(&vid_display, vid.mode.display);
+			Cvar_SetValueQuick(&vid_fullscreen, vid.mode.fullscreen);
+			Cvar_SetValueQuick(&vid_desktopfullscreen, vid.mode.desktopfullscreen);
+			Cvar_SetValueQuick(&vid_bitsperpixel, vid.mode.bitsperpixel);
+			Cvar_SetValueQuick(&vid_samples, vid.mode.samples);
+			Cvar_SetValueQuick(&vid_refreshrate, vid.mode.refreshrate);
 
 			S_LocalSound ("sound/misc/menu1.wav");
 			M_Menu_Options_f(cmd);
@@ -4506,17 +4516,15 @@ static void M_ServerList_Key(cmd_state_t *cmd, int k, int ascii)
 
 //=============================================================================
 /* MODLIST MENU */
-// same limit of mod dirs as in fs.c
-#define MODLIST_MAXDIRS 16
-static int modlist_enabled [MODLIST_MAXDIRS];	//array of indexs to modlist
+// same limit of mod dirs as in fs.c (allowing that one is used by gamedirname1)
+#define MODLIST_MAXDIRS MAX_GAMEDIRS - 1
 static int modlist_numenabled;			//number of enabled (or in process to be..) mods
 
 typedef struct modlist_entry_s
 {
 	qbool loaded;	// used to determine whether this entry is loaded and running
-	int enabled;		// index to array of modlist_enabled
 
-	// name of the modification, this is (will...be) displayed on the menu entry
+	// name of the modification, this is displayed on the menu entry
 	char name[128];
 	// directory where we will find it
 	char dir[MAX_QPATH];
@@ -4533,17 +4541,15 @@ static void ModList_RebuildList(void)
 	int i,j;
 	stringlist_t list;
 	const char *description;
+	int desc_len;
 
 	stringlistinit(&list);
 	listdirectory(&list, fs_basedir, "");
 	stringlistsort(&list, true);
 	modlist_count = 0;
-	modlist_numenabled = fs_numgamedirs;
+	modlist_numenabled = 0;
 	for (i = 0;i < list.numstrings && modlist_count < MODLIST_TOTALSIZE;i++)
 	{
-		// quickly skip names with dot characters - generally these are files, not directories
-		if (strchr(list.strings[i], '.')) continue;
-
 		// reject any dirs that are part of the base game
 		if (gamedirname1 && !strcasecmp(gamedirname1, list.strings[i])) continue;
 		//if (gamedirname2 && !strcasecmp(gamedirname2, list.strings[i])) continue;
@@ -4554,18 +4560,26 @@ static void ModList_RebuildList(void)
 		description = FS_CheckGameDir(list.strings[i]);
 		if (description == NULL || description == fs_checkgamedir_missing) continue;
 
+		desc_len = min(strlen(description), sizeof(modlist[modlist_count].name));
+		for (j = 0; j < desc_len; ++j)
+			if (!ISWHITESPACE(description[j]))
+			{
+				dp_strlcpy(modlist[modlist_count].name, description, sizeof(modlist[modlist_count].name));
+				break;
+			}
+
 		dp_strlcpy (modlist[modlist_count].dir, list.strings[i], sizeof(modlist[modlist_count].dir));
-		//check currently loaded mods
+
+		// check if this mod is currently loaded
 		modlist[modlist_count].loaded = false;
-		if (fs_numgamedirs)
-			for (j = 0; j < fs_numgamedirs; j++)
-				if (!strcasecmp(fs_gamedirs[j], modlist[modlist_count].dir))
-				{
-					modlist[modlist_count].loaded = true;
-					modlist[modlist_count].enabled = j;
-					modlist_enabled[j] = modlist_count;
-					break;
-				}
+		for (j = 0; j < fs_numgamedirs; j++)
+			if (!strcasecmp(fs_gamedirs[j], modlist[modlist_count].dir))
+			{
+				modlist[modlist_count].loaded = true;
+				modlist_numenabled++;
+				break;
+			}
+
 		modlist_count ++;
 	}
 	stringlistfreecontents(&list);
@@ -4575,22 +4589,7 @@ static void ModList_Enable (void)
 {
 	int i;
 	int numgamedirs;
-	char gamedirs[MODLIST_MAXDIRS][MAX_QPATH];
-
-	// copy our mod list into an array for FS_ChangeGameDirs
-	numgamedirs = modlist_numenabled;
-	for (i = 0; i < modlist_numenabled; i++)
-		dp_strlcpy (gamedirs[i], modlist[modlist_enabled[i]].dir,sizeof (gamedirs[i]));
-
-	// this code snippet is from FS_ChangeGameDirs
-	if (fs_numgamedirs == numgamedirs)
-	{
-		for (i = 0;i < numgamedirs;i++)
-			if (strcasecmp(fs_gamedirs[i], gamedirs[i]))
-				break;
-		if (i == numgamedirs)
-			return; // already using this set of gamedirs, do nothing
-	}
+	const char *gamedirs[MODLIST_MAXDIRS];
 
 	// this part is basically the same as the FS_GameDir_f function
 	if ((cls.state == ca_connected && !cls.demoplayback) || sv.active)
@@ -4600,7 +4599,18 @@ static void ModList_Enable (void)
 		return;
 	}
 
-	FS_ChangeGameDirs (modlist_numenabled, gamedirs, true, true);
+	// copy our mod list into an array for FS_ChangeGameDirs
+	for (i = 0, numgamedirs = 0; i < modlist_count && numgamedirs < MODLIST_MAXDIRS; i++)
+		if (modlist[i].loaded)
+			gamedirs[numgamedirs++] = modlist[i].dir;
+	// allow disabling all active mods using the menu
+	if (numgamedirs == 0)
+	{
+		numgamedirs = 1;
+		gamedirs[0] = gamedirname1;
+	}
+
+	FS_ChangeGameDirs(numgamedirs, gamedirs, true);
 }
 
 void M_Menu_ModList_f(cmd_state_t *cmd)
@@ -4615,28 +4625,13 @@ void M_Menu_ModList_f(cmd_state_t *cmd)
 
 static void M_Menu_ModList_AdjustSliders (int dir)
 {
-	int i;
 	S_LocalSound ("sound/misc/menu3.wav");
 
 	// stop adding mods, we reach the limit
 	if (!modlist[modlist_cursor].loaded && (modlist_numenabled == MODLIST_MAXDIRS)) return;
+
 	modlist[modlist_cursor].loaded = !modlist[modlist_cursor].loaded;
-	if (modlist[modlist_cursor].loaded)
-	{
-		modlist[modlist_cursor].enabled = modlist_numenabled;
-		//push the value on the enabled list
-		modlist_enabled[modlist_numenabled++] = modlist_cursor;
-	}
-	else
-	{
-		//eliminate the value from the enabled list
-		for (i = modlist[modlist_cursor].enabled; i < modlist_numenabled; i++)
-		{
-			modlist_enabled[i] = modlist_enabled[i+1];
-			modlist[modlist_enabled[i]].enabled--;
-		}
-		modlist_numenabled--;
-	}
+	modlist_numenabled += modlist[modlist_cursor].loaded ? 1 : -1;
 }
 
 static void M_ModList_Draw (void)
@@ -4656,8 +4651,12 @@ static void M_ModList_Draw (void)
 	M_PrintRed(432, 32, s_enabled);
 	// Draw a list box with all enabled mods
 	DrawQ_Pic(menu_x + 432, menu_y + 48, NULL, 172, 8 * modlist_numenabled, 0, 0, 0, 0.5, 0);
-	for (y = 0; y < modlist_numenabled; y++)
-		M_PrintRed(432, 48 + y * 8, modlist[modlist_enabled[y]].dir);
+	for (n = 0, y = 48; n < modlist_count; n++)
+		if (modlist[n].loaded)
+		{
+			M_PrintRed(432, y, modlist[n].dir);
+			y += 8;
+		}
 
 	if (*cl_connect_status)
 		M_Print(16, menu_height - 8, cl_connect_status);
@@ -4673,8 +4672,10 @@ static void M_ModList_Draw (void)
 	{
 		for (n = start;n < end;n++)
 		{
+			const char *item_label = (modlist[n].name[0] != '\0') ? modlist[n].name : modlist[n].dir;
+
 			DrawQ_Pic(menu_x + 40, menu_y + y, NULL, 360, 8, n == modlist_cursor ? (0.5 + 0.2 * sin(host.realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_ItemPrint(80, y, modlist[n].dir, true);
+			M_ItemPrint(80, y, item_label, true);
 			M_DrawCheckbox(48, y, modlist[n].loaded);
 			y +=8;
 		}
@@ -5339,8 +5340,8 @@ static void MP_Draw (void)
 
 	// FIXME: this really shouldnt error out lest we have a very broken refdef state...?
 	// or does it kill the server too?
-	PRVM_G_FLOAT(OFS_PARM0) = vid.width;
-	PRVM_G_FLOAT(OFS_PARM1) = vid.height;
+	PRVM_G_FLOAT(OFS_PARM0) = vid.mode.width;
+	PRVM_G_FLOAT(OFS_PARM1) = vid.mode.height;
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_draw),"m_draw() required");
 
 	// TODO: imo this should be moved into scene, too [1/27/2008 Andreas]
@@ -5478,7 +5479,7 @@ void MR_Restart(void)
 {
 	if(MR_Shutdown)
 		MR_Shutdown ();
-	MR_SetRouting (false);
+	MR_Init();
 }
 
 static void MR_Restart_f(cmd_state_t *cmd)
@@ -5628,7 +5629,7 @@ void MR_Init(void)
 	}
 
 	menu_video_resolutions_forfullscreen = !!vid_fullscreen.integer;
-	M_Menu_Video_FindResolution(vid.width, vid.height, vid_pixelheight.value);
+	M_Menu_Video_FindResolution(vid.mode.width, vid.mode.height, vid_pixelheight.value);
 
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 // COMMANDLINEOPTION: Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)

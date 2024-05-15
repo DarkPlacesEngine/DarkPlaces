@@ -59,6 +59,7 @@ extern host_static_t host;
 #endif	
 void Host_Main(void);
 void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
+void Host_UpdateVersion(void);
 void Host_LockSession(void);
 void Host_UnlockSession(void);
 void Host_AbortCurrentFrame(void) DP_FUNC_NORETURN;

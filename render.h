@@ -326,8 +326,6 @@ typedef struct r_refdef_viewcache_s
 {
 	// updated by gl_main_newmap()
 	int maxentities;
-	int world_numclusters;
-	int world_numclusterbytes;
 	int world_numleafs;
 	int world_numsurfaces;
 
@@ -856,7 +854,7 @@ typedef struct r_waterstate_waterplane_s
 	r_rendertarget_t *rt_camera; // MATERIALFLAG_CAMERA
 	mplane_t plane;
 	int materialflags; // combined flags of all water surfaces on this plane
-	unsigned char pvsbits[(MAX_MAP_LEAFS+7)>>3]; // FIXME: buffer overflow on huge maps
+	unsigned char *pvsbits;
 	qbool pvsvalid;
 	int camera_entity;
 	vec3_t mins, maxs;

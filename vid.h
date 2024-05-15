@@ -54,12 +54,13 @@ viddef_support_t;
 
 typedef struct viddef_mode_s
 {
+	int display;
+	qbool fullscreen;
+	qbool desktopfullscreen; ///< whether the display hardware mode can be changed
 	int width;
 	int height;
 	int bitsperpixel;
-	qbool fullscreen;
 	float refreshrate;
-	qbool userefreshrate;
 	qbool stereobuffer;
 	int samples;
 }
@@ -68,16 +69,8 @@ viddef_mode_t;
 typedef struct viddef_s
 {
 	// these are set by VID_Mode
-	viddef_mode_t mode;
 	// used in many locations in the renderer
-	int width;
-	int height;
-	int bitsperpixel;
-	qbool fullscreen;
-	float refreshrate;
-	qbool userefreshrate;
-	qbool stereobuffer;
-	int samples;
+	viddef_mode_t mode; ///< currently active video mode
 	qbool stencil;
 	qbool sRGB2D; // whether 2D rendering is sRGB corrected (based on sRGBcapable2D)
 	qbool sRGB3D; // whether 3D rendering is sRGB corrected (based on sRGBcapable3D)
@@ -98,13 +91,10 @@ typedef struct viddef_s
 	int forcetextype; // always use GL_BGRA for D3D, always use GL_RGBA for GLES, etc
 
 	int xPos, yPos; // current virtual position of the top left corner of the SDL window
-	unsigned char displayindex; // the monitor it's on currently
 } viddef_t;
 
 // global video state
 extern viddef_t vid;
-extern void (*vid_menudrawfn)(void);
-extern void (*vid_menukeyfn)(int key);
 
 #define MAXJOYAXIS 16
 // if this is changed, the corresponding code in vid_shared.c must be updated
@@ -147,7 +137,6 @@ extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_samples;
 extern cvar_t vid_refreshrate;
-extern cvar_t vid_userefreshrate;
 extern cvar_t vid_touchscreen_density;
 extern cvar_t vid_touchscreen_xdpi;
 extern cvar_t vid_touchscreen_ydpi;
@@ -223,7 +212,7 @@ int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
 
-qbool VID_InitMode(viddef_mode_t *mode);
+qbool VID_InitMode(const viddef_mode_t *mode);
 // allocates and opens an appropriate OpenGL context (and its window)
 
 

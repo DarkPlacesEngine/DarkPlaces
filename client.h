@@ -1189,6 +1189,7 @@ extern cvar_t m_side;
 extern cvar_t cl_autodemo;
 extern cvar_t cl_autodemo_nameformat;
 extern cvar_t cl_autodemo_delete;
+extern cvar_t cl_startdemos;
 
 extern cvar_t r_draweffects;
 

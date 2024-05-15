@@ -269,5 +269,7 @@ bool syncFS (bool x);
 void Sys_Register_Commands(void);
 #endif
 
+int Sys_Main(int argc, char *argv[]);
+
 #endif
 

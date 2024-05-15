@@ -51,6 +51,7 @@ These instructions are adequate for Quake, but for Xonotic please refer to [its 
 ### Required packages
 
 The minimum SDL version is 2.0.18 for Linux and 2.24.0 for Windows.  
+The supported compilers are GCC and Clang.  
 The following package names are for Debian, see below for Windows and Mac.
 
 ##### Client
@@ -96,19 +97,16 @@ If you get errors (that don't seem to be about missing dependencies) try `make c
 
 Not recommended due to poor support for C standards, and lack of maintenance.
 
-DarkPlaces requires C11, so Windows SDK 10.0.22000.0 (VS 2019) or 10.0.20348.0 (VS 2022) or later is needed.  
-To install it, run the Visual Studio Installer, click "Modify", click "Individual components", select the latest Windows SDK version and de-select older versions.  
-You will also need the NuGet Package Manager selected (to download SDL2 headers the first time you build).
+DarkPlaces requires C11, so Windows SDK 10.0.20348.0 or later is needed.  
+To install it, run the Visual Studio Installer, click "Modify", click "Individual components", type "Windows SDK" in the search box, select the latest Windows SDK and de-select older versions.  
+You will also need "NuGet package manager" selected (to download SDL2 headers the first time you build).
 Click "Modify" to apply the changes.  
 
-VS 2019  
-![MSVC2019](msvc2019_C11.png)  
+Open `darkplaces-vs2019.sln`, select build type (`Debug` or `Release`) and platform (`Win32` or `x64`), and choose "Build Solution" from the "Build" menu to create files `darkplaces-sdl2-vs2019.exe` and `SDL2.dll`.
 
-Open `darkplaces-vs2019.sln`, select build type "Debug" or "Release, and choose "Build Solution" from the "Build" menu to create the file `darkplaces-sdl2-vs2019.exe`.
+The Release build crashes. The Debug x64 build doesn't crash (but is rather slow) so this will be Fun for someone to debug.
 
-The Release build crashes. The Debug build doesn't crash (but is rather slow) so this will be Fun for someone to debug.
-
-To get a build suitable for playing Quake you'll need to use MinGW gcc, or download the autobuild from Xonotic (see above).
+To get a build suitable for playing you'll need to use MinGW GCC, or download the autobuild from Xonotic (see above).
 
 
 ### Web-Assembly (Emscripten)

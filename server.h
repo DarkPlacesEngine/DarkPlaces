@@ -152,8 +152,7 @@ typedef struct server_s
 	sizebuf_t *writeentitiestoclient_msg;
 	vec3_t writeentitiestoclient_eyes[MAX_CLIENTNETWORKEYES];
 	int writeentitiestoclient_numeyes;
-	int writeentitiestoclient_pvsbytes;
-	unsigned char writeentitiestoclient_pvs[MAX_MAP_LEAFS/8];
+	unsigned char *writeentitiestoclient_pvs;
 	const entity_state_t *writeentitiestoclient_sendstates[MAX_EDICTS];
 	unsigned short writeentitiestoclient_csqcsendstates[MAX_EDICTS];
 
@@ -446,6 +445,7 @@ extern cvar_t sv_gameplayfix_easierwaterjump;
 extern cvar_t sv_gameplayfix_findradiusdistancetobox;
 extern cvar_t sv_gameplayfix_gravityunaffectedbyticrate;
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
+extern cvar_t sv_gameplayfix_impactbeforeonground;
 extern cvar_t sv_gameplayfix_multiplethinksperframe;
 extern cvar_t sv_gameplayfix_noairborncorpse;
 extern cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems;
@@ -565,6 +565,7 @@ void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); //
 
 /*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
  * returns true if it found a better place
+ * Replaces SV_TryUnstick() and SV_CheckStuck() which in Quake applied to players only.
  */
 qbool SV_UnstickEntity (prvm_edict_t *ent);
 

@@ -2663,6 +2663,7 @@ float(entity ent) nudgeoutofsolid = #567;
 //description:
 //Attempts to move a stuck entity out of solid brushes, returning 1 if successful, 0 if it remains stuck, -1 if it wasn't stuck.
 //Note: makes only one tracebox call if the entity isn't stuck, so don't call tracebox just to see if you should call nudgeoutofsolid.
+//Currently has no effect on Q1BSP unless mod_q1bsp_polygoncollisions is enabled.
 
 
 float(float dividend, float divisor) mod = #245;

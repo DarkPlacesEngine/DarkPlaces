@@ -37,6 +37,7 @@ cvar_t csqc_progcrc = {CF_CLIENT | CF_READONLY, "csqc_progcrc","-1","CRC of cspr
 cvar_t csqc_progsize = {CF_CLIENT | CF_READONLY, "csqc_progsize","-1","file size of csprogs.dat file to load (-1 is none), only used during level changes and then reset to -1"};
 cvar_t csqc_usedemoprogs = {CF_CLIENT, "csqc_usedemoprogs","1","use csprogs stored in demos"};
 cvar_t csqc_polygons_defaultmaterial_nocullface = {CF_CLIENT, "csqc_polygons_defaultmaterial_nocullface", "0", "use 'cull none' behavior in the default shader for rendering R_PolygonBegin - warning: enabling this is not consistent with FTEQW behavior on this feature"};
+cvar_t csqc_lowres = {CF_CLIENT, "csqc_lowres", "0", "make EXT_CSQC functions CSQC_UpdateView(), setproperty(), getproperty() use the virtual 2D resolution (FTEQW/QSS behaviour) instead of the real resolution (DP behaviour); this mode is always used for the CSQC_SIMPLE (aka hud-only) CSQC_DrawHud() parameters; see cvars vid_conheight and vid_conwidth"};
 
 cvar_t cl_shownet = {CF_CLIENT, "cl_shownet","0","1 = print packet size, 2 = print packet message list"};
 cvar_t cl_nolerp = {CF_CLIENT, "cl_nolerp", "0","network update smoothing"};
@@ -61,6 +62,7 @@ cvar_t freelook = {CF_CLIENT | CF_ARCHIVE, "freelook", "1","mouse controls pitch
 cvar_t cl_autodemo = {CF_CLIENT | CF_ARCHIVE, "cl_autodemo", "0", "records every game played, using the date/time and map name to name the demo file" };
 cvar_t cl_autodemo_nameformat = {CF_CLIENT | CF_ARCHIVE, "cl_autodemo_nameformat", "autodemos/%Y-%m-%d_%H-%M", "The format of the cl_autodemo filename, followed by the map name (the date is encoded using strftime escapes)" };
 cvar_t cl_autodemo_delete = {CF_CLIENT, "cl_autodemo_delete", "0", "Delete demos after recording.  This is a bitmask, bit 1 gives the default, bit 0 the value for the current demo.  Thus, the values are: 0 = disabled; 1 = delete current demo only; 2 = delete all demos except the current demo; 3 = delete all demos from now on" };
+cvar_t cl_startdemos = {CF_CLIENT | CF_ARCHIVE, "cl_startdemos", "1", "1 enables the `startdemos` loop used in Quake and some mods, 0 goes straight to the menu"};
 
 cvar_t r_draweffects = {CF_CLIENT, "r_draweffects", "1","renders temporary sprite effects"};
 
@@ -2800,7 +2802,7 @@ void CL_StartVideo(void)
 
 extern cvar_t host_framerate;
 extern cvar_t host_speeds;
-extern qbool serverlist_querystage;
+extern uint8_t serverlist_querystage;
 double CL_Frame (double time)
 {
 	static double clframetime;
@@ -3117,6 +3119,7 @@ void CL_Init (void)
 		Cmd_AddCommand(CF_CLIENT, "locs_save", CL_Locs_Save_f, "save .loc file for this map containing currently defined points and boxes");
 
 		Cvar_RegisterVariable(&csqc_polygons_defaultmaterial_nocullface);
+		Cvar_RegisterVariable(&csqc_lowres);
 
 		Cvar_RegisterVariable (&cl_minfps);
 		Cvar_RegisterVariable (&cl_minfps_fade);
