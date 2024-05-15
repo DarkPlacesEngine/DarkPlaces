@@ -54,8 +54,9 @@ typedef struct host_static_s
 } host_static_t;
 
 extern host_static_t host;
-
-void Host_Loop(void);
+#ifdef __EMSCRIPTEN__
+	void Host_Loop(void);
+#endif	
 void Host_Main(void);
 void Host_Error(const char *error, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
 void Host_LockSession(void);
