@@ -63,7 +63,7 @@ void Con_DPrint(const char *msg);
 /// A Con_Printf that only shows up if the "developer" cvar is set
 void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
-const char *Con_Quakebar(int);
+const char *Con_Quakebar(int len, char *bar, size_t bufsize);
 void Con_CenterPrintf(int, const char*, ...);
 void Con_CenterPrint(const char*);
 

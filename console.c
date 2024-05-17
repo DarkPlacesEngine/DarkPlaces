@@ -1513,17 +1513,15 @@ void Con_DPrintf(const char *fmt, ...)
  *
  * @return     A string of the line
  */
-const char *Con_Quakebar(int len)
+const char *Con_Quakebar(int len, char *bar, size_t barsize)
 {
-	static char bar[42];
-	int         i;
+	assert(barsize >= 5);
 
-	len = min(len, (int)sizeof(bar) - 2);
+	len = min(len, (int)barsize - 2);
 	len = min(len, con_linewidth);
 
 	bar[0] = '\35';
-	for (i = 1; i < len - 1; i++)
-		bar[i] = '\36';
+	memset(&bar[1], '\36', len - 2);
 	bar[len - 1] = '\37';
 
 	if (len < con_linewidth)
@@ -1599,9 +1597,11 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
  */
 void Con_CenterPrint(const char *str)
 {
-	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40));
+	char bar[42];
+
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40, bar, sizeof(bar)));
 	Con_CenterPrintf(40, "%s\n", str);
-	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40));
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", bar);
 }
 
 
