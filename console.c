@@ -1503,7 +1503,6 @@ void Con_DPrintf(const char *fmt, ...)
 }
 
 
-
 /**
  * @brief      Returns a horizontal line
  * @details    Returns a graphical horizontal line of length len, but never wider than the
@@ -1537,8 +1536,6 @@ const char *Con_Quakebar(int len)
 
 	return bar;
 }
-
-
 
 /**
  * @brief      Left-pad a string with spaces to make it appear centered
@@ -1593,8 +1590,6 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s\n", line);
 	}
 }
-
-
 
 /**
  * @brief      Prints a center-aligned message to the console

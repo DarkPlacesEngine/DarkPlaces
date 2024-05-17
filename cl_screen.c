@@ -144,11 +144,9 @@ void SCR_CenterPrint(const char *str)
 {
 	// Print the message to the console, but only if it's different to the previous message
 	if (strcmp(str, scr_centerstring))
-	{
 		Con_CenterPrint(str);
-	}
+	dp_strlcpy(scr_centerstring, str, sizeof(scr_centerstring));
 
-	dp_strlcpy(scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 
@@ -173,6 +171,7 @@ static void SCR_Centerprint_f (cmd_state_t *cmd)
 {
 	char msg[MAX_INPUTLINE];
 	unsigned int i, c, p;
+
 	c = Cmd_Argc(cmd);
 	if(c >= 2)
 	{
