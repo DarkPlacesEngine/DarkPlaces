@@ -280,7 +280,13 @@ void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
 #  define HAVE_CLOCKGETTIME 1
 # endif
 # if _POSIX_VERSION >= 200112L
-#  define HAVE_CLOCK_NANOSLEEP 1
+// MacOS advertises POSIX support but doesn't implement clock_nanosleep().
+// POSIX deprecated and removed usleep() so select() seems like a safer choice.
+#  if defined(MACOSX)
+#   define HAVE_SELECT_POSIX 1
+#  else
+#   define HAVE_CLOCK_NANOSLEEP 1
+#  endif
 # endif
 #endif
 
@@ -496,7 +502,7 @@ double Sys_Sleep(double time)
 	if (time < 1.0/1000000.0 || host.restless)
 		return 0; // not sleeping this frame
 	if (time >= 1)
-		time = 0.999999; // ensure passed values are in range
+		time = 0.999999; // simpler, also ensures values are in range for all platform APIs
 	msec = time * 1000;
 	usec = time * 1000000;
 	nsec = time * 1000000000;
@@ -557,6 +563,14 @@ double Sys_Sleep(double time)
 		ts.tv_sec = 0;
 		ts.tv_nsec = nsec;
 		clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, NULL);
+	}
+#elif HAVE_SELECT_POSIX
+	else
+	{
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = usec;
+		select(0, NULL, NULL, NULL, &tv);
 	}
 #elif HAVE_WIN32_USLEEP // Windows XP/2003 minimum
 	else
