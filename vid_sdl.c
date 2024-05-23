@@ -1123,6 +1123,33 @@ void Sys_SDL_HandleEvents(void)
 				}
 				break;
 			case SDL_JOYBUTTONDOWN:
+			#ifdef __SWITCH__
+				if(event.jbutton.button == 0){
+					Key_Event( K_ENTER, 0, true );
+					Key_Event( K_ENTER, 0, false );
+				}
+				else if(event.jbutton.button == 13){
+					Key_Event( K_UPARROW, 0, true );
+					Key_Event( K_UPARROW, 0, false );
+				}
+				else if(event.jbutton.button == 15){
+					Key_Event( K_DOWNARROW, 0, true );
+					Key_Event( K_DOWNARROW, 0, false );
+				}
+				else if(event.jbutton.button == 12){
+					Key_Event( K_LEFTARROW, 0, true );
+					Key_Event( K_LEFTARROW, 0, false );
+				}
+				else if(event.jbutton.button == 14){
+					Key_Event( K_RIGHTARROW, 0, true );
+					Key_Event( K_RIGHTARROW, 0, false );
+				}
+				else if(event.jbutton.button == 10){
+					Key_Event( K_ESCAPE, 0, true );
+					Key_Event( K_ESCAPE, 0, false );
+				}
+				break;
+			#endif
 			case SDL_JOYBUTTONUP:
 			case SDL_JOYAXISMOTION:
 			case SDL_JOYBALLMOTION:

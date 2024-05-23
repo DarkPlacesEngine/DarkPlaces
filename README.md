@@ -109,6 +109,17 @@ The Release build crashes. The Debug x64 build doesn't crash (but is rather slow
 To get a build suitable for playing you'll need to use MinGW GCC, or download the autobuild from Xonotic (see above).
 
 
+### Switch (devkitpro)
+Note: This requires a modded switch.
+1. Install [devkitpro](https://devkitpro.org/wiki/Getting_Started)
+2. Run this command:
+```
+(sudo) dkp-pacman -Syu switch-dev switch-sdl switch-libjpeg-turbo switch-zlib
+```
+3. Build using `DP_MAKE_TARGET=switch make sdl-release`.
+4. Copy `darkplaces-sdl.nro` to your switch's SD Card
+
+(Basedir is `/switch/darkplaces/(switch username)`)
 ## Contributing
 
 [DarkPlaces Contributing Guidelines](CONTRIBUTING.md)

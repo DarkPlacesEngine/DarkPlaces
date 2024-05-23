@@ -87,6 +87,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #  define DP_OS_NAME	"SunOS"
 #  define DP_OS_STR		"sunos"
 # endif
+#elif defined(__SWITCH__)
+# define DP_OS_NAME		"Horizon OS"
+# define DP_OS_STR		"HOS"
 #else
 # define DP_OS_NAME		"Unknown"
 # define DP_OS_STR		"unknown"
@@ -149,6 +152,8 @@ typedef struct sys_s
 } sys_t;
 
 extern sys_t sys;
+
+
 
 
 //

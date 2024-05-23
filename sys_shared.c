@@ -3,9 +3,9 @@
 #  define _WIN32_WINNT 0x0502
 # endif
 #endif
-
+#ifndef __SWITCH__
 #define SUPPORTDLL
-
+#endif
 #ifdef WIN32
 # include <windows.h>
 # include <mmsystem.h> // timeGetTime
@@ -26,9 +26,11 @@
 # include <fcntl.h>
 # include <sys/time.h>
 # include <time.h>
+#ifndef __SWITCH__
 # ifdef SUPPORTDLL
 #  include <dlfcn.h>
 # endif
+#endif
 #endif
 
 #include <signal.h>
@@ -119,7 +121,9 @@ qbool Sys_LoadSelf(dllhandle_t *handle)
 #ifdef WIN32
 	dllhandle = LoadLibrary (NULL);
 #else
-	dllhandle = dlopen (NULL, RTLD_NOW | RTLD_GLOBAL);
+	#ifndef __SWITCH__
+		dllhandle = dlopen (NULL, RTLD_NOW | RTLD_GLOBAL);
+	#endif
 #endif
 	*handle = dllhandle;
 	return true;

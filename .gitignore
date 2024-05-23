@@ -3,6 +3,7 @@ obj/
 *.o
 *.i
 *.s
+*.nro
 
 # MSVC build objects
 Debug-darkplaces-sdl2-vs*/

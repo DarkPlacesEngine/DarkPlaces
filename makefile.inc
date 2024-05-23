@@ -4,7 +4,7 @@ CHECKLEVEL2 = @if [ "$(LEVEL)" != 2 ]; then $(MAKE) help; false; fi
 
 
 STRIP?=strip
-
+STRIPARGS?=$(EXE)
 
 ###### Sound #####
 
@@ -126,8 +126,9 @@ OBJ_MENU= \
 # note that builddate.c is very intentionally not compiled to a .o before
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
+SYS_OBJ ?= sys_sdl.o
 OBJ_SV= builddate.c sys_null.o vid_null.o thread_null.o $(OBJ_SND_NULL) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) $(OBJ_SND_XMP) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
+OBJ_SDL= builddate.c $(SYS_OBJ) vid_sdl.o thread_sdl.o $(OBJ_MENU) $(OBJ_SND_COMMON) $(OBJ_SND_XMP) snd_sdl.o $(OBJ_VIDEO_CAPTURE) $(OBJ_COMMON)
 
 
 # Compilation
@@ -225,6 +226,13 @@ CMD_UNIXMKDIR=mkdir -p
 # with a much smaller binary than with full debug symbols
 LDFLAGS_LINUXSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic
 LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
+
+
+##### Switch specific variables #####
+
+CFLAGS_SWITCH= -D__SWITCH__ -I$(DEVKITPRO)/libnx/include -I$(DEVKITPRO)/portlibs/switch/include -fPIE -DNOSUPPORTIPV6 -DDEBUGSDLEVENTS 
+LDFLAGS_SWITCHSV=-L$(DEVKITPRO)/libnx/lib -L$(DEVKITPRO)/portlibs/switch/lib $(LDFLAGS_UNIXCOMMON) -specs=$(DEVKITPRO)/libnx/switch.specs -g -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE -lm -lnx
+LDFLAGS_SWITCHSDL=-L$(DEVKITPRO)/libnx/lib -L$(DEVKITPRO)/portlibs/switch/lib $(LDFLAGS_UNIXCOMMON) -specs=$(DEVKITPRO)/libnx/switch.specs -g -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE $(LDFLAGS_UNIXSDL) -lm -lnx
 
 
 ##### Mac OS X specific variables #####
@@ -396,7 +404,7 @@ bin-release :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
-	$(STRIP) $(EXE)
+	$(STRIP) $(STRIPARGS)
 
 bin-release-profile :
 	$(CHECKLEVEL1)
@@ -407,7 +415,7 @@ bin-release-profile :
 		DP_MAKE_TARGET=$(DP_MAKE_TARGET) \
 		CFLAGS='$(CFLAGS_COMMON) $(CFLAGS_FEATURES) $(CFLAGS_EXTRA) $(CFLAGS_RELEASE_PROFILE) $(OPTIM_RELEASE)'\
 		LDFLAGS='$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)' LEVEL=2
-	$(STRIP) $(EXE)
+	$(STRIP) $(STRIPARGS)
 
 prepare :
 	$(CMD_MKDIR) $(BUILD_DIR)
@@ -497,6 +505,7 @@ $(EXE_SDLNEXUIZ): $(OBJ_SDL) $(OBJ_ICON_NEXUIZ)
 clean:
 	-$(CMD_RM) $(EXE_SV)
 	-$(CMD_RM) $(EXE_SDL)
+	-$(CMD_RM) $(EXE_SDL).nro
 	-$(CMD_RM) $(EXE_SVNEXUIZ)
 	-$(CMD_RM) $(EXE_SDLNEXUIZ)
 	-$(CMD_RM) *.o

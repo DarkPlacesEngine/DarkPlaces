@@ -110,6 +110,43 @@ ifeq ($(DP_MAKE_TARGET), linux)
 	DP_LINK_XMP?=dlopen
 endif
 
+# Switch configuration
+ifeq ($(DP_MAKE_TARGET), switch)
+	ifeq ($(strip $(DEVKITPRO)),)
+$(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
+	endif
+
+	CC=$(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-gcc
+	DP_SSE=0
+	
+	CFLAGS_EXTRA=$(CFLAGS_SWITCH)
+	OBJ_ICON=
+	OBJ_ICON_NEXUIZ=
+	
+	SYS_OBJ=sys_switch.o
+	LDFLAGS_SV=$(LDFLAGS_SWITCHSV)
+	LDFLAGS_SDL=$(LDFLAGS_SWITCHSDL)
+	SDL_CONFIG=$(DEVKITPRO)/portlibs/switch/bin/sdl2-config
+	SDLCONFIG_CFLAGS=$(SDLCONFIG_UNIXCFLAGS)
+	SDLCONFIG_LIBS=$(SDLCONFIG_UNIXLIBS) 
+	SDLCONFIG_STATICLIBS=$(SDLCONFIG_UNIXSTATICLIBS) 
+
+	EXE_SV=$(EXE_UNIXSV)
+	EXE_SDL=$(EXE_UNIXSDL)
+	EXE_SVNEXUIZ=$(EXE_UNIXSVNEXUIZ)
+	EXE_SDLNEXUIZ=$(EXE_UNIXSDLNEXUIZ)
+	STRIP=elf2nro
+	STRIPARGS=$(EXE) $(EXE).nro
+
+	DP_LINK_SDL?=shared
+	DP_LINK_ZLIB?=shared
+	DP_LINK_JPEG?=shared
+	DP_LINK_ODE?=
+	DP_LINK_CRYPTO?=dlopen
+	DP_LINK_CRYPTO_RIJNDAEL?=dlopen
+	DP_LINK_XMP?=dlopen
+endif
+
 # Mac OS X configuration
 ifeq ($(DP_MAKE_TARGET), macosx)
 	OBJ_ICON=

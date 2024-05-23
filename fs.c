@@ -53,6 +53,9 @@
 #include "utf8lib.h"
 #endif
 
+#ifdef __SWITCH__
+#include <switch.h>
+#endif
 // Win32 requires us to add O_BINARY, but the other OSes don't have it
 #ifndef O_BINARY
 # define O_BINARY 0
@@ -2193,6 +2196,24 @@ static void FS_Init_Dir (void)
 				}
 			}
 		}
+#elif defined(__SWITCH__)
+	AccountUid userID = {0};;
+	AccountProfile profile = {0};
+	AccountProfileBase profileBase = {0};
+	Result result = accountGetPreselectedUser(&userID);
+	if(R_FAILED(result)){
+		StartupError("Unable to get selected user.\nApplet mode is not supported.");
+	}
+	accountGetProfile(&profile, userID);
+	accountProfileGet(&profile,NULL,&profileBase);
+
+	dpsnprintf(fs_basedir, sizeof(fs_basedir), "/switch/darkplaces/%s",profileBase.nickname);
+	//No idea why I need to make this weird struct to use stat but stackoverflow decreed I must, so I shall.
+	struct stat sb;
+	if(stat(fs_basedir,&sb) == -1){
+	//Also did not know about mkdir function so thank you stack overflow.
+		mkdir(fs_basedir,0777);
+	}
 #else
 		// use the working directory
 		getcwd(fs_basedir, sizeof(fs_basedir));
