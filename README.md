@@ -119,6 +119,7 @@ Note: This requires a modded switch.
 3. Build using `DP_MAKE_TARGET=switch make sdl-release`.
 4. Copy `darkplaces-sdl.nro` to your switch's SD Card (under `/switch`)
 5. Make the `/switch/darkplaces` directory.
+(Press Minus to save any config changes)
 
 (Basedir is `/switch/darkplaces/(switch username)`)
 ## Contributing

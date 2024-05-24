@@ -76,6 +76,15 @@ int StartupError(char message[]){
 	}
 }
 
+void menu_enter_f(cmd_state_t *cmd)
+{
+	Key_Event(K_ENTER,0,true);
+	Key_Event(K_ENTER,0,false);
+}
+
+void Sys_Register_Commands(){
+	Cmd_AddCommand(CF_SHARED, "emulate_enter", menu_enter_f, "Emulate pressing Enter");
+}
 int main(int argc, char *argv[])
 {
 	

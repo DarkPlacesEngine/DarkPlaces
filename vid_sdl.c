@@ -1125,8 +1125,10 @@ void Sys_SDL_HandleEvents(void)
 			case SDL_JOYBUTTONDOWN:
 			#ifdef __SWITCH__
 				if(event.jbutton.button == 0){
-					Key_Event( K_ENTER, 0, true );
-					Key_Event( K_ENTER, 0, false );
+					SDL_FlushEvent(SDL_JOYBUTTONDOWN);
+					SDL_FlushEvent(SDL_JOYBUTTONUP);
+					Cbuf_AddText(cmd_local, "\nwait\nwait\nwait\n\nemulate_enter\n");
+					
 				}
 				else if(event.jbutton.button == 13){
 					Key_Event( K_UPARROW, 0, true );
@@ -1151,6 +1153,9 @@ void Sys_SDL_HandleEvents(void)
 				else if(event.jbutton.button == 2){
 					Key_Event( K_BACKSPACE, 0, true );
 					Key_Event( K_BACKSPACE, 0, false );
+				}
+				else if(event.jbutton.button == 11){
+					Cbuf_AddText(cmd_local, "\nsaveconfig\n");
 				}
 				
 				break;
