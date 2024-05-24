@@ -68,9 +68,10 @@ void Sys_SDL_Delay (unsigned int milliseconds)
 
 int StartupError(char message[]){
 	consoleInit(NULL);
+	printf(message);
+	printf("\nPlease exit the app");
 	while(appletMainLoop()){
-		printf(message);
-		printf("\nPlease exit the app");
+
 		consoleUpdate(NULL);
 	}
 }
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
 	Result result = accountInitialize(AccountServiceType_Application);
 	if (R_FAILED(result))
 	{
-		StartupError("Unable to initialize account system");
+		StartupError("Unable to initialize account system\nApplet Mode is not supported.");
 		
 
 	}
