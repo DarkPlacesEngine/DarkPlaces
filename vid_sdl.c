@@ -134,11 +134,7 @@ static int MapKey( unsigned int sdlkey )
 	case SDLK_RIGHTBRACKET:       return ']';
 	case SDLK_CARET:              return '^';
 	case SDLK_UNDERSCORE:         return '_';
-	#ifndef __EMSCRIPTEN__
 	case SDLK_BACKQUOTE:          return '`';
-	#else
-	case SDLK_BACKQUOTE:          return K_ESCAPE;
-	#endif
 	case SDLK_a:                  return 'a';
 	case SDLK_b:                  return 'b';
 	case SDLK_c:                  return 'c';
