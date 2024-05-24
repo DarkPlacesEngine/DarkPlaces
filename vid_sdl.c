@@ -1148,6 +1148,11 @@ void Sys_SDL_HandleEvents(void)
 					Key_Event( K_ESCAPE, 0, true );
 					Key_Event( K_ESCAPE, 0, false );
 				}
+				else if(event.jbutton.button == 2){
+					Key_Event( K_BACKSPACE, 0, true );
+					Key_Event( K_BACKSPACE, 0, false );
+				}
+				
 				break;
 			#endif
 			case SDL_JOYBUTTONUP:
