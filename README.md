@@ -117,7 +117,8 @@ Note: This requires a modded switch.
 (sudo) dkp-pacman -Syu switch-dev switch-sdl switch-libjpeg-turbo switch-zlib
 ```
 3. Build using `DP_MAKE_TARGET=switch make sdl-release`.
-4. Copy `darkplaces-sdl.nro` to your switch's SD Card
+4. Copy `darkplaces-sdl.nro` to your switch's SD Card (under `/switch`)
+5. Make the `/switch/darkplaces` directory.
 
 (Basedir is `/switch/darkplaces/(switch username)`)
 ## Contributing
