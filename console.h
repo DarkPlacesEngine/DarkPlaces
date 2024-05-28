@@ -64,8 +64,8 @@ void Con_DPrint(const char *msg);
 void Con_DPrintf(const char *fmt, ...) DP_FUNC_PRINTF(1);
 
 const char *Con_Quakebar(int len, char *bar, size_t bufsize);
-void Con_CenterPrintf(int, const char*, ...);
-void Con_CenterPrint(const char*);
+void Con_CenterPrintf(int maxLineLength, const char *fmt, ...) DP_FUNC_PRINTF(2);
+void Con_CenterPrint(const char *str);
 
 void Con_Clear_f(cmd_state_t *cmd);
 void Con_DrawNotify (void);
