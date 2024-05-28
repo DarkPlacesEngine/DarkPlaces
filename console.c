@@ -1548,15 +1548,16 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 	va_list argptr;
 	char    msg[MAX_INPUTLINE];  // the original message
 	char    line[MAX_INPUTLINE]; // one line from the message
-	char    spaces[21];		     // buffer for spaces
-	char   *msgCursor, *lineCursor;
-	int     lineLength, indentSize, msgLength;
+	char    spaces[21];          // buffer for spaces
+	char   *msgCursor, *lineEnding;
+	int     lineLength, msgLength;
+	size_t  indentSize;
 
 	va_start(argptr, fmt);
 	msgLength = dpvsnprintf(msg, sizeof (msg), fmt, argptr);
 	va_end(argptr);
 
-	if (msgLength == -1)
+	if (msgLength < 0)
 	{
 		Con_Printf(CON_WARN "The message given to Con_CenterPrintf was too long\n");
 		return;
@@ -1566,20 +1567,21 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 
 	for (msgCursor = msg; *msgCursor;)
 	{
-		lineCursor = line;  // Start a the beginning of the line buffer
+		lineEnding = strchr(msgCursor, '\n');
+		if (lineEnding)
+		{
+			lineLength = dp_ustr2stp(line, sizeof(line), msgCursor, lineEnding - msgCursor) - line;
+			msgCursor = lineEnding + 1;
+		}
+		else // last line
+		{
+			lineLength = dp_strlcpy(line, msgCursor, sizeof(line));
+			msgCursor = msg + msgLength;
+		}
 
-		// Walk msg, copying characters into the line buffer until a newline or the end of msg
-		while (*msgCursor && *msgCursor != '\n')
-			*lineCursor++ = *msgCursor++;
-		*lineCursor = 0;
-
-		if (*msgCursor == '\n')
-			msgCursor++;
-
-		lineLength = strlen(line);
 		if (lineLength < maxLineLength)
 		{
-			indentSize = (maxLineLength - lineLength) / 2;
+			indentSize = min(sizeof(spaces) - 1, (size_t)(maxLineLength - lineLength) / 2);
 			memset(spaces, ' ', indentSize);
 			spaces[indentSize] = 0;
 			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%s\n", spaces, line);
