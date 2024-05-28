@@ -1524,7 +1524,7 @@ static void VID_ApplyDisplayMode_c(cvar_t *var)
 
 static void VID_SetVsync_c(cvar_t *var)
 {
-	signed char vsyncwanted = cls.timedemo ? 0 : bound(-1, vid_vsync.integer, 1);
+	int vsyncwanted = cls.timedemo ? 0 : vid_vsync.integer;
 
 	if (!context)
 		return;
@@ -1535,6 +1535,7 @@ On Xorg it returns the correct value.
 		return;
 */
 
+	// __EMSCRIPTEN__ SDL_GL_SetSwapInterval() calls emscripten_set_main_loop_timing()
 	if (SDL_GL_SetSwapInterval(vsyncwanted) >= 0)
 		Con_DPrintf("Vsync %s\n", vsyncwanted ? "activated" : "deactivated");
 	else
