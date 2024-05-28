@@ -143,7 +143,14 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
-	dp_strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
+	if (str[0] == '\0') // happens when stepping out of a centreprint trigger on alk1.2 start.bsp
+		return;
+
+	// Print the message to the console, but only if it's different to the previous message
+	if (strcmp(str, scr_centerstring))
+		Con_CenterPrint(str);
+	dp_strlcpy(scr_centerstring, str, sizeof(scr_centerstring));
+
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 
@@ -168,15 +175,18 @@ static void SCR_Centerprint_f (cmd_state_t *cmd)
 {
 	char msg[MAX_INPUTLINE];
 	unsigned int i, c, p;
+
 	c = Cmd_Argc(cmd);
 	if(c >= 2)
 	{
+		// Merge all the cprint arguments into one string
 		dp_strlcpy(msg, Cmd_Argv(cmd,1), sizeof(msg));
 		for(i = 2; i < c; ++i)
 		{
 			dp_strlcat(msg, " ", sizeof(msg));
 			dp_strlcat(msg, Cmd_Argv(cmd, i), sizeof(msg));
 		}
+
 		c = (unsigned int)strlen(msg);
 		for(p = 0, i = 0; i < c; ++i)
 		{
