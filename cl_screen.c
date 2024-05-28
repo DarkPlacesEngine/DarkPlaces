@@ -142,6 +142,9 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
+	if (str[0] == '\0') // happens when stepping out of a centreprint trigger on alk1.2 start.bsp
+		return;
+
 	// Print the message to the console, but only if it's different to the previous message
 	if (strcmp(str, scr_centerstring))
 		Con_CenterPrint(str);
