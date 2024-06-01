@@ -1505,6 +1505,111 @@ void Con_DPrintf(const char *fmt, ...)
 }
 
 
+/**
+ * @brief      Returns a horizontal line
+ * @details    Returns a graphical horizontal line of length len, but never wider than the
+ *             console. Includes a newline, unless len is >= to the console width
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  len   Length of the horizontal line
+ *
+ * @return     A string of the line
+ */
+const char *Con_Quakebar(int len, char *bar, size_t barsize)
+{
+	assert(barsize >= 5);
+
+	len = min(len, (int)barsize - 2);
+	len = min(len, con_linewidth);
+
+	bar[0] = '\35';
+	memset(&bar[1], '\36', len - 2);
+	bar[len - 1] = '\37';
+
+	if (len < con_linewidth)
+	{
+		bar[len] = '\n';
+		bar[len + 1] = 0;
+	}
+	else
+		bar[len] = 0;
+
+	return bar;
+}
+
+/**
+ * @brief      Left-pad a string with spaces to make it appear centered
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  maxLineLength  Center-align
+ * @param[in]  fmt        A printf format string
+ * @param[in]  <unnamed>  Zero or more values used by fmt
+ */
+void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
+{
+	va_list argptr;
+	char    msg[MAX_INPUTLINE];  // the original message
+	char    line[MAX_INPUTLINE]; // one line from the message
+	char    spaces[21];          // buffer for spaces
+	char   *msgCursor, *lineEnding;
+	int     lineLength, msgLength;
+	size_t  indentSize;
+
+	va_start(argptr, fmt);
+	msgLength = dpvsnprintf(msg, sizeof (msg), fmt, argptr);
+	va_end(argptr);
+
+	if (msgLength < 0)
+	{
+		Con_Printf(CON_WARN "The message given to Con_CenterPrintf was too long\n");
+		return;
+	}
+
+	maxLineLength = min(maxLineLength, con_linewidth);
+
+	for (msgCursor = msg; *msgCursor;)
+	{
+		lineEnding = strchr(msgCursor, '\n');
+		if (lineEnding)
+		{
+			lineLength = dp_ustr2stp(line, sizeof(line), msgCursor, lineEnding - msgCursor) - line;
+			msgCursor = lineEnding + 1;
+		}
+		else // last line
+		{
+			lineLength = dp_strlcpy(line, msgCursor, sizeof(line));
+			msgCursor = msg + msgLength;
+		}
+
+		if (lineLength < maxLineLength)
+		{
+			indentSize = min(sizeof(spaces) - 1, (size_t)(maxLineLength - lineLength) / 2);
+			memset(spaces, ' ', indentSize);
+			spaces[indentSize] = 0;
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%s\n", spaces, line);
+		}
+		else
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s\n", line);
+	}
+}
+
+/**
+ * @brief      Prints a center-aligned message to the console
+ * @note       Authored by johnfitz
+ *
+ * @param[in]  str   A multiline string to print
+ */
+void Con_CenterPrint(const char *str)
+{
+	char bar[42];
+
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", Con_Quakebar(40, bar, sizeof(bar)));
+	Con_CenterPrintf(40, "%s\n", str);
+	Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s", bar);
+}
+
+
+
 /*
 ==============================================================================
 
