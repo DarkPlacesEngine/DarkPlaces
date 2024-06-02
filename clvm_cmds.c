@@ -4231,7 +4231,7 @@ static void VM_CL_R_PolygonEnd (prvm_prog_t *prog)
 	}
 
 	// create the surface, looking up the best matching texture/shader
-	materialflags = MATERIALFLAG_WALL;
+	materialflags = MATERIALFLAG_WALL | MATERIALFLAG_FULLBRIGHT;
 	if (csqc_polygons_defaultmaterial_nocullface.integer)
 		materialflags |= MATERIALFLAG_NOCULLFACE;
 	if (hascolor)
