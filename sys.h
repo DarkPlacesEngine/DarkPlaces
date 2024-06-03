@@ -271,3 +271,6 @@ int Sys_Main(int argc, char *argv[]);
 #endif
 
 void Sys_Register_Commands(void);
+#ifdef __SWITCH__
+int StartupError(char message[]);
+#endif
