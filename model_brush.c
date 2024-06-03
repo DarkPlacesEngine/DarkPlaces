@@ -6916,22 +6916,126 @@ static void Mod_CollisionBIH_TraceLineShared(model_t *model, const frameblend_t 
 				d1 = d2 = d3 = d4 = 1; // force full recursion
 			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
 			{
-			case  0: /* >>>> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  1: /* <>>> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  2: /* ><>> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  3: /* <<>> */                                                                                                                                                                                                                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  4: /* >><> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  5: /* <><> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  6: /* ><<> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  7: /* <<<> */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  8: /* >>>< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  9: /* <>>< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 10: /* ><>< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 11: /* <<>< */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 12: /* >><< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 13: /* <><< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 14: /* ><<< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 15: /* <<<< */                                                                                                                                                                                                                                                                                                                                                                                                   break;
+			case  0: /* >>>> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  1: /* <>>> */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  2: /* ><>> */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  3: /* <<>> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  4: /* >><> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  5: /* <><> */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  6: /* ><<> */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  7: /* <<<> */
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  8: /* >>>< */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  9: /* <>>< */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 10: /* ><>< */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 11: /* <<>< */
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 12: /* >><< */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 13: /* <><< */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 14: /* ><<< */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 15: /* <<<< */
+				break;
 			}
 		}
 		else if (node->type == BIH_UNORDERED)
@@ -7072,22 +7176,125 @@ void Mod_CollisionBIH_TraceBrush(model_t *model, const frameblend_t *frameblend,
 			d4 = nodeend[axis] - node->frontmin + maxs[axis];
 			switch((d1 < 0) | ((d2 < 0) << 1) | ((d3 < 0) << 2) | ((d4 < 0) << 3))
 			{
-			case  0: /* >>>> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  1: /* <>>> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  2: /* ><>> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  3: /* <<>> */                                                                                                                                                                                                                      VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  4: /* >><> */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  5: /* <><> */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  6: /* ><<> */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  7: /* <<<> */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  8: /* >>>< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case  9: /* <>>< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 10: /* ><>< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 11: /* <<>< */                                                                                                                                                                                                  f = d3 / (d3 - d4); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->front; break;
-			case 12: /* >><< */                     VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 13: /* <><< */ f = d1 / (d1 - d2); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]); VectorCopy(              nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 14: /* ><<< */ f = d1 / (d1 - d2); VectorCopy(nodestart,             nodestackline[nodestackpos]); VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3); nodestack[nodestackpos++] = node->back;                                                                                                                                                                                                   break;
-			case 15: /* <<<< */                                                                                                                                                                                                                                                                                                                                                                                                   break;
+			case  0: /* >>>> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  1: /* <>>> */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  2: /* ><>> */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  3: /* <<>> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  4: /* >><> */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  5: /* <><> */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  6: /* ><<> */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  7: /* <<<> */
+				f = d3 / (d3 - d4);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  8: /* >>>< */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case  9: /* <>>< */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4); VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 10: /* ><>< */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 11: /* <<>< */
+				f = d3 / (d3 - d4);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->front;
+				break;
+			case 12: /* >><< */
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 13: /* <><< */
+				f = d1 / (d1 - d2);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos]);
+				VectorCopy(nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 14: /* ><<< */
+				f = d1 / (d1 - d2);
+				VectorCopy(nodestart, nodestackline[nodestackpos]);
+				VectorLerp(nodestart, f, nodeend, nodestackline[nodestackpos] + 3);
+				nodestack[nodestackpos++] = node->back;
+				break;
+			case 15: /* <<<< */
+				break;
 			}
 		}
 		else if (node->type == BIH_UNORDERED)
