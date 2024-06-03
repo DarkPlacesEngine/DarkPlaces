@@ -270,3 +270,4 @@ int Sys_Main(int argc, char *argv[]);
 
 #endif
 
+void Sys_Register_Commands();
