@@ -515,8 +515,10 @@ qbool PNG_SaveImage_preflipped (const char *filename, int width, int height, qbo
 	if (setjmp((_JBTYPE *)png))
 #elif defined(MACOSX) || defined(WIN32)
 	if (setjmp((int *)png))
-#elif defined(__ANDROID__) || defined(__SWITCH__)
+#elif defined(__ANDROID__)
 	if (setjmp((long *)png))
+#elif defined(__SWITCH__)
+	if (setjmp((long long *)png))
 #else
 	if (setjmp((struct __jmp_buf_tag *)png))
 #endif
