@@ -1563,7 +1563,7 @@ static void VID_ApplyDisplayMode_c(cvar_t *var)
 
 static void VID_SetVsync_c(cvar_t *var)
 {
-	signed char vsyncwanted = cls.timedemo ? 0 : bound(-1, vid_vsync.integer, 1);
+	int vsyncwanted = cls.timedemo ? 0 : vid_vsync.integer;
 
 	if (!context)
 		return;
