@@ -434,7 +434,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 			if(developer_entityparsing.integer)
 				Con_Printf("SV_Loadgame_f: loading edict %d\n", entnum);
 
-			PRVM_ED_ParseEdict (prog, start, ent);
+			PRVM_ED_ParseEdict (prog, start, ent, true);
 
 			// link it into the bsp tree
 			if (!ent->free)
