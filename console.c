@@ -1547,7 +1547,6 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 {
 	va_list argptr;
 	char    msg[MAX_INPUTLINE];  // the original message
-	char    line[MAX_INPUTLINE]; // one line from the message
 	char    spaces[21];          // buffer for spaces
 	char   *msgCursor, *lineEnding;
 	int     lineLength, msgLength;
@@ -1570,13 +1569,13 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 		lineEnding = strchr(msgCursor, '\n');
 		if (lineEnding)
 		{
-			lineLength = dp_ustr2stp(line, sizeof(line), msgCursor, lineEnding - msgCursor) - line;
-			msgCursor = lineEnding + 1;
+			lineLength = lineEnding - msgCursor;  // print just the line
+			lineEnding++;  // set cursor to next character after new line
 		}
 		else // last line
 		{
-			lineLength = dp_strlcpy(line, msgCursor, sizeof(line));
-			msgCursor = msg + msgLength;
+			lineLength = msgLength;  // print entire message
+			lineEnding = msgCursor + lineLength;  // set next line cursor to terminator
 		}
 
 		if (lineLength < maxLineLength)
@@ -1584,10 +1583,12 @@ void Con_CenterPrintf(int maxLineLength, const char *fmt, ...)
 			indentSize = min(sizeof(spaces) - 1, (size_t)(maxLineLength - lineLength) / 2);
 			memset(spaces, ' ', indentSize);
 			spaces[indentSize] = 0;
-			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%s\n", spaces, line);
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s%.*s\n", spaces, lineLength, msgCursor);
 		}
 		else
-			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%s\n", line);
+			Con_MaskPrintf(CON_MASK_HIDENOTIFY, "%.*s\n", lineLength, msgCursor);
+		msgLength -= lineEnding - msgCursor;  // Consume all characters until end of line
+		msgCursor = lineEnding;  // Update message cursor
 	}
 }
 
