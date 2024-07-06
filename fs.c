@@ -49,9 +49,7 @@
 #include "fs.h"
 #include "wad.h"
 
-#ifdef WIN32
 #include "utf8lib.h"
-#endif
 
 // Win32 requires us to add O_BINARY, but the other OSes don't have it
 #ifndef O_BINARY
@@ -65,7 +63,7 @@
 
 // largefile support for Win32
 #ifdef WIN32
-#undef lseek
+# undef lseek
 # define lseek _lseeki64
 #endif
 
@@ -77,6 +75,14 @@
 # define unlink _unlink
 # define dup _dup
 #endif
+
+// windows wchar helpers
+#ifdef WIN32
+# define MAX_OSWPATH (MAX_OSPATH * sizeof(wchar))
+# define WPATHDEF(var) wchar var[MAX_OSWPATH]
+#else
+# define WPATHDEF(var) ;
+#endif // WIN32
 
 #if USE_RWOPS
 # include <SDL.h>
@@ -990,32 +996,19 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 	return pfile;
 }
 
-#if WIN32
-#define WSTRBUF 4096
-static inline int wstrlen(wchar *wstr)
-{
-	int len = 0;
-	while (wstr[len] != 0 && len < WSTRBUF)
-		++len;
-	return len;
-}
-#define widen(str, wstr) fromwtf8(str, strlen(str), wstr, WSTRBUF)
-#define narrow(wstr, str) towtf8(wstr, wstrlen(wstr), str, WSTRBUF)
-#endif
-
 static void FS_mkdir (const char *path)
 {
-#if WIN32
-	wchar pathw[WSTRBUF] = {0};
-#endif
+	WPATHDEF(pathw);
+
 	if(Sys_CheckParm("-readonly"))
 		return;
 
-#if WIN32
-	widen(path, pathw);
-	if (_wmkdir (pathw) == -1)
+	WIDE(path, pathw);
+
+#ifdef WIN32
+	if (_wmkdir(pathw) == -1)
 #else
-	if (mkdir (path, 0777) == -1)
+	if (mkdir(path, 0777) == -1)
 #endif
 	{
 		// No logging for this. The only caller is FS_CreatePath (which
@@ -1963,15 +1956,15 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 	return -1;
 
 #elif defined(WIN32)
-	char homedir[WSTRBUF];
+	char homedir[MAX_OSWPATH];
 	wchar *homedirw;
 #if _MSC_VER >= 1400
 	size_t homedirwlen;
 #endif
-	wchar_t mydocsdirw[WSTRBUF];
-	char mydocsdir[WSTRBUF];
-	wchar_t *savedgamesdirw;
-	char savedgamesdir[WSTRBUF] = {0};
+	char mydocsdir[MAX_OSWPATH];
+	wchar mydocsdirw[MAX_OSWPATH];
+	char savedgamesdir[MAX_OSWPATH];
+	wchar *savedgamesdirw;
 	int fd;
 	char vabuf[1024];
 
@@ -1989,13 +1982,13 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		mydocsdir[0] = 0;
 		if (qSHGetFolderPath && qSHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, mydocsdirw) == S_OK)
 		{
-			narrow(mydocsdirw, mydocsdir);
+			NARROW(mydocsdirw, mydocsdir);
 			dpsnprintf(userdir, userdirsize, "%s/My Games/%s/", mydocsdir, gameuserdirname);
 			break;
 		}
 #if _MSC_VER >= 1400
 		_wdupenv_s(&homedirw, &homedirwlen, L"USERPROFILE");
-		narrow(homedirw, homedir);
+		NARROW(homedirw, homedir);
 		if(homedir[0])
 		{
 			dpsnprintf(userdir, userdirsize, "%s/.%s/", homedir, gameuserdirname);
@@ -2004,7 +1997,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		}
 #else
 		homedirw = _wgetenv(L"USERPROFILE");
-		narrow(homedirw, homedir);
+		NARROW(homedirw, homedir);
 		if(homedir[0])
 		{
 			dpsnprintf(userdir, userdirsize, "%s/.%s/", homedir, gameuserdirname);
@@ -2030,7 +2023,7 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 */
 			if (qSHGetKnownFolderPath(&qFOLDERID_SavedGames, qKF_FLAG_CREATE | qKF_FLAG_NO_ALIAS, NULL, &savedgamesdirw) == S_OK)
 			{
-				narrow(savedgamesdirw, savedgamesdir);
+				NARROW(savedgamesdirw, savedgamesdir);
 				qCoTaskMemFree(savedgamesdirw);
 			}
 			qCoUninitialize();
@@ -2141,6 +2134,7 @@ static void FS_Init_Dir (void)
 	int i;
 	int numgamedirs;
 	const char *cmdline_gamedirs[MAX_GAMEDIRS];
+	WPATHDEF(fs_basedirw);
 
 	*fs_basedir = 0;
 	*fs_userdir = 0;
@@ -2194,8 +2188,13 @@ static void FS_Init_Dir (void)
 			}
 		}
 #else
-		// use the working directory
+	// use the working directory
+	#ifdef WIN32
+		_wgetcwd(fs_basedirw, sizeof(fs_basedirw));
+		NARROW(fs_basedirw, fs_basedir);
+	#else
 		getcwd(fs_basedir, sizeof(fs_basedir));
+	#endif
 #endif
 	}
 
@@ -2380,9 +2379,7 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	int mod, opt;
 	unsigned int ind;
 	qbool dolock = false;
-	#ifdef WIN32
-	wchar filepathw[WSTRBUF] = {0};
-	#endif
+	WPATHDEF(filepathw);
 
 	// Parse the mode string
 	switch (mode[0])
@@ -2434,14 +2431,14 @@ static filedesc_t FS_SysOpenFiledesc(const char *filepath, const char *mode, qbo
 	handle = SDL_RWFromFile(filepath, mode);
 #else
 # ifdef WIN32
-	widen(filepath, filepathw);
+	WIDE(filepath, filepathw);
 #  if _MSC_VER >= 1400
 	_wsopen_s(&handle, filepathw, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
 #  else
-	handle = _wsopen (filepathw, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
+	handle = _wsopen(filepathw, mod | opt, (dolock ? ((mod == O_RDONLY) ? _SH_DENYRD : _SH_DENYRW) : _SH_DENYNO), _S_IREAD | _S_IWRITE);
 #  endif
 # else
-	handle = open (filepath, mod | opt, 0666);
+	handle = open(filepath, mod | opt, 0666);
 	if(handle >= 0 && dolock)
 	{
 		struct flock l;
@@ -3703,14 +3700,15 @@ Look for a file in the filesystem only
 */
 int FS_SysFileType (const char *path)
 {
-#if WIN32
-// Sajt - some older sdks are missing this define
+#ifdef WIN32
+	// Sajt - some older sdks are missing this define
 # ifndef INVALID_FILE_ATTRIBUTES
 #  define INVALID_FILE_ATTRIBUTES ((DWORD)-1)
 # endif
-	wchar pathw[WSTRBUF] = {0};
+	WPATHDEF(pathw);
 	DWORD result;
-	widen(path, pathw);
+
+	WIDE(path, pathw);
 	result = GetFileAttributesW(pathw);
 
 	if(result == INVALID_FILE_ATTRIBUTES)
