@@ -1276,7 +1276,7 @@ ed should be a properly initialized empty edict.
 Used for initial level load and for savegames.
 ====================
 */
-const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent)
+const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent, qbool saveload)
 {
 	mdef_t *key;
 	qbool anglehack;
@@ -1322,7 +1322,9 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		}
 
 	// parse value
-		if (!COM_ParseToken_Simple(&data, false, false, true))
+		// If loading a save, unescape characters (they're escaped when saving).
+		// Otherwise, load them as they are (BSP compilers don't support escaping).
+		if (!COM_ParseToken_Simple(&data, false, saveload, true))
 			prog->error_cmd("PRVM_ED_ParseEdict: EOF without closing brace");
 		if (developer_entityparsing.integer)
 			Con_Printf(" \"%s\"\n", com_token);
@@ -1355,7 +1357,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
-		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, strcmp(keyname, "wad") != 0))
+		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, false))
 			prog->error_cmd("PRVM_ED_ParseEdict: parse error");
 	}
 
@@ -1526,7 +1528,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 		if (ent != prog->edicts)	// hack
 			memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 
-		data = PRVM_ED_ParseEdict (prog, data, ent);
+		data = PRVM_ED_ParseEdict (prog, data, ent, false);
 		parsed++;
 
 		// remove the entity ?

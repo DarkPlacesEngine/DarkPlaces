@@ -3069,7 +3069,7 @@ void VM_parseentitydata(prvm_prog_t *prog)
 	if (!COM_ParseToken_Simple(&data, false, false, true) || com_token[0] != '{' )
 		prog->error_cmd("VM_parseentitydata: %s: Couldn't parse entity data:\n%s", prog->name, data );
 
-	PRVM_ED_ParseEdict (prog, data, ent);
+	PRVM_ED_ParseEdict (prog, data, ent, false);
 }
 
 /*
