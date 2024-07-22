@@ -1322,7 +1322,8 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		}
 
 	// parse value
-		// If loading a save, unescape characters. Otherwise, load them as they are
+		// If loading a save, unescape characters (they're escaped when saving).
+		// Otherwise, load them as they are (BSP compilers don't support escaping).
 		if (!COM_ParseToken_Simple(&data, false, saveload, true))
 			prog->error_cmd("PRVM_ED_ParseEdict: EOF without closing brace");
 		if (developer_entityparsing.integer)
@@ -1356,7 +1357,7 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
-		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, strcmp(keyname, "wad") != 0))
+		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, false))
 			prog->error_cmd("PRVM_ED_ParseEdict: parse error");
 	}
 
