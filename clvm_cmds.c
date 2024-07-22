@@ -1390,7 +1390,7 @@ void VM_drawcharacter(prvm_prog_t *prog)
 	if(character == 0)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
-		VM_Warning(prog, "VM_drawcharacter: %s passed null character !\n",prog->name);
+		VM_Warning(prog, "VM_drawcharacter: null character passed!\n");
 		return;
 	}
 
@@ -1402,7 +1402,7 @@ void VM_drawcharacter(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawcharacter: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1449,7 +1449,7 @@ void VM_drawstring(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawstring: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1515,7 +1515,7 @@ void VM_drawcolorcodedstring(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >= DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawcolorcodedstring: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawcolorcodedstring: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1786,7 +1786,7 @@ void VM_drawpic(prvm_prog_t *prog)
 	if(!1)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawpic: %s: %s not cached !\n", prog->name, picname);
+		VM_Warning(prog, "VM_drawpic: %s not cached !\n", picname);
 		return;
 	}
 
@@ -1799,7 +1799,7 @@ void VM_drawpic(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawpic: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1834,7 +1834,7 @@ void VM_drawrotpic(prvm_prog_t *prog)
 	if(!1)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawrotpic: %s: %s not cached !\n", prog->name, picname);
+		VM_Warning(prog, "VM_drawrotpic: %s not cached !\n", picname);
 		return;
 	}
 
@@ -1847,7 +1847,7 @@ void VM_drawrotpic(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawrotpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawrotpic: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1883,7 +1883,7 @@ void VM_drawsubpic(prvm_prog_t *prog)
 	if(!1)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
-		VM_Warning(prog, "VM_drawsubpic: %s: %s not cached !\n", prog->name, picname);
+		VM_Warning(prog, "VM_drawsubpic: %s not cached !\n", picname);
 		return;
 	}
 
@@ -1898,7 +1898,7 @@ void VM_drawsubpic(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawsubpic: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawsubpic: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 
@@ -1940,7 +1940,7 @@ void VM_drawfill(prvm_prog_t *prog)
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
-		VM_Warning(prog, "VM_drawfill: %s: wrong DRAWFLAG %i !\n",prog->name,flag);
+		VM_Warning(prog, "VM_drawfill: wrong DRAWFLAG %i !\n", flag);
 		return;
 	}
 

@@ -489,7 +489,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
@@ -507,7 +507,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
 					}
 				}
 				// refresh the garbage collection on the string - this guards
@@ -531,7 +531,7 @@ int i;
 					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i) in %s\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int, prog->name);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
 					}
 				}
 				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
