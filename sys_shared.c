@@ -629,12 +629,13 @@ void Sys_Print(const char *text, size_t textlen)
   #else
     #define write _write
   #endif
-		while(*text)
+		while(*text && textlen)
 		{
 			fs_offset_t written = (fs_offset_t)write(sys.outfd, text, textlen);
 			if(written <= 0)
 				break; // sorry, I cannot do anything about this error - without an output
 			text += written;
+			textlen -= written;
 		}
   #ifndef WIN32
 		if (sys_stdout_blocks.integer)
