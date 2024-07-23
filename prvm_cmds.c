@@ -2790,8 +2790,8 @@ void VM_tokenizebyseparator (prvm_prog_t *prog)
 		tokens_endpos[num_tokens] = p0 - tokenize_string;
 		if (j >= (int)sizeof(tokentext))
 			break;
-		tokentext[j++] = '\0';
-		tokens[num_tokens++] = PRVM_SetTempString(prog, token, j - 1);
+		tokentext[j] = '\0';
+		tokens[num_tokens++] = PRVM_SetTempString(prog, token, j++ - (token - tokentext));
 		if (!*p)
 			break;
 	}
