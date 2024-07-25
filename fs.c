@@ -2127,6 +2127,9 @@ void FS_Init_Commands(void)
 	Cmd_AddCommand(CF_SHARED, "dir", FS_Dir_f, "list files in searchpath matching an * filename pattern, one per line");
 	Cmd_AddCommand(CF_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
 	Cmd_AddCommand(CF_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
+
+	if (com_startupgamegroup == GAME_NORMAL)
+		Cmd_AddCommand(CF_SHARED, "game", FS_GameDir_f, "alias of gamedir, for compatibility with some Quake mod READMEs");
 }
 
 static void FS_Init_Dir (void)
@@ -2336,8 +2339,6 @@ void FS_Init(void)
 {
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
 
-	FS_Init_Commands();
-
 	PK3_OpenLibrary ();
 
 	// initialize the self-pack (must be before COM_InitGameType as it may add command line options)
@@ -2345,6 +2346,8 @@ void FS_Init(void)
 
 	// detect gamemode from commandline options or executable name
 	COM_InitGameType();
+
+	FS_Init_Commands(); // assumes com_startupgamegroup is set
 
 	FS_Init_Dir();
 }
