@@ -1367,7 +1367,7 @@ static void CL_ClientMovement_Physics_Walk(cl_clientmovement_state_t *s)
 			wishspeed *= 0.5;
 
 		// apply edge friction
-		speed = VectorLength2(s->velocity);
+		speed = Vector2Length(s->velocity);
 		if (speed > 0)
 		{
 			friction = cl.movevars_friction;
