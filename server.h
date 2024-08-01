@@ -313,7 +313,7 @@ typedef struct client_s
 #define	MOVETYPE_ANGLENOCLIP	1
 #define	MOVETYPE_ANGLECLIP		2
 #define	MOVETYPE_WALK			3		///< gravity
-#define	MOVETYPE_STEP			4		///< gravity, special edge handling
+#define	MOVETYPE_STEP			4		///< gravity, special edge handling, special step based client side interpolation
 #define	MOVETYPE_FLY			5
 #define	MOVETYPE_TOSS			6		///< gravity
 #define	MOVETYPE_PUSH			7		///< no clip to world, push and crush
@@ -359,7 +359,7 @@ typedef struct client_s
 #define	FL_CONVEYOR				4
 #define	FL_CLIENT				8
 #define	FL_INWATER				16
-#define	FL_MONSTER				32
+#define	FL_MONSTER				32      ///< movement is smoothed on the client side by step based interpolation
 #define	FL_GODMODE				64
 #define	FL_NOTARGET				128
 #define	FL_ITEM					256
