@@ -96,6 +96,7 @@ cvar_t sv_cullentities_trace_samples_extra = {CF_SERVER, "sv_cullentities_trace_
 cvar_t sv_cullentities_trace_samples_players = {CF_SERVER, "sv_cullentities_trace_samples_players", "8", "number of samples to test for entity culling when the entity is a player entity"};
 cvar_t sv_cullentities_trace_spectators = {CF_SERVER, "sv_cullentities_trace_spectators", "0", "enables trace entity culling for clients that are spectating"};
 cvar_t sv_debugmove = {CF_SERVER | CF_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
+cvar_t sv_dedicated = {CF_SERVER | CF_READONLY, "sv_dedicated", "0", "for scripts and SVQC to detect when they're running on a dedicated server"};
 cvar_t sv_echobprint = {CF_SERVER | CF_ARCHIVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
 cvar_t sv_edgefriction = {CF_SERVER, "edgefriction", "1", "how much you slow down when nearing a ledge you might fall off, multiplier of sv_friction (Quake used 2, QuakeWorld used 1 due to a bug in physics code)"};
 cvar_t sv_entpatch = {CF_SERVER, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
@@ -464,6 +465,7 @@ static void SV_ServerOptions (void)
 			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
 		Cvar_SetValue(&cvars_all, "sv_public", 1);
+		Cvar_SetQuick(&sv_dedicated, "1");
 	}
 	else if (cl_available)
 	{
@@ -580,6 +582,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_spectators);
 	Cvar_RegisterVariable (&sv_debugmove);
+	Cvar_RegisterVariable (&sv_dedicated);
 	Cvar_RegisterVariable (&sv_echobprint);
 	Cvar_RegisterVariable (&sv_edgefriction);
 	Cvar_RegisterVariable (&sv_entpatch);
