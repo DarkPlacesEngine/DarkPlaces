@@ -143,19 +143,20 @@ for a few moments
 */
 void SCR_CenterPrint(const char *str)
 {
-	if (str[0] == '\0') // happens when stepping out of a centreprint trigger on alk1.2 start.bsp
-		return;
-
-	// Print the message to the console, but only if it's different to the previous message
-	if (strcmp(str, scr_centerstring))
-		Con_CenterPrint(str);
-	dp_strlcpy(scr_centerstring, str, sizeof(scr_centerstring));
-
 	scr_centertime_off = scr_centertime.value;
 	scr_centertime_start = cl.time;
 
-// count the number of lines for centering
+	// Print the message to the console and update the scr buffer
+	// but only if it's different to the previous message
+	if (strcmp(str, scr_centerstring) == 0)
+		return;
+	dp_strlcpy(scr_centerstring, str, sizeof(scr_centerstring));
 	scr_center_lines = 1;
+	if (str[0] == '\0') // happens when stepping out of a centreprint trigger on alk1.2 start.bsp
+		return;
+	Con_CenterPrint(str);
+
+// count the number of lines for centering
 	while (*str)
 	{
 		if (*str == '\n')
