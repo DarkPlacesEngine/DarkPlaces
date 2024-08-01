@@ -1152,9 +1152,9 @@ static void SV_MaxPlayers_f(cmd_state_t *cmd)
 
 	svs.maxclients_next = n;
 	if (n == 1)
-		Cvar_Set (&cvars_all, "deathmatch", "0");
+		Cvar_SetQuick(&deathmatch, "0");
 	else
-		Cvar_Set (&cvars_all, "deathmatch", "1");
+		Cvar_SetQuick(&deathmatch, "1");
 }
 
 /*

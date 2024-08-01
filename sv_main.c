@@ -464,7 +464,7 @@ static void SV_ServerOptions (void)
 		if (Sys_CheckParm ("-listen"))
 			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
-		Cvar_SetValue(&cvars_all, "sv_public", 1);
+		Cvar_SetQuick(&sv_public, "1");
 		Cvar_SetQuick(&sv_dedicated, "1");
 	}
 	else if (cl_available)

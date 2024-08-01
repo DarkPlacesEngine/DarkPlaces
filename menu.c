@@ -3443,7 +3443,7 @@ static void M_LanConfig_Key(cmd_state_t *cmd, int key, int ascii)
 
 		Cbuf_AddText(cmd, "stopdemo\n");
 
-		Cvar_SetValue(&cvars_all, "port", lanConfig_port);
+		Cvar_SetValueQuick(&sv_netport, lanConfig_port);
 
 		if (lanConfig_cursor == 1 || lanConfig_cursor == 2)
 		{
@@ -4000,7 +4000,7 @@ void M_GameOptions_Draw (void)
 		if (gamemode == GAME_TRANSFUSION)
 		{
 			if (!coop.integer && !deathmatch.integer)
-				Cvar_SetValue(&cvars_all, "deathmatch", 1);
+				Cvar_SetQuick(&deathmatch, "1");
 			if (deathmatch.integer == 0)
 				M_Print(160, 64, "Cooperative");
 			else if (deathmatch.integer == 2)
@@ -4011,7 +4011,7 @@ void M_GameOptions_Draw (void)
 		else if (gamemode == GAME_BATTLEMECH)
 		{
 			if (!deathmatch.integer)
-				Cvar_SetValue(&cvars_all, "deathmatch", 1);
+				Cvar_SetQuick(&deathmatch, "1");
 			if (deathmatch.integer == 2)
 				M_Print(160, 64, "Rambo Match");
 			else
@@ -4020,7 +4020,7 @@ void M_GameOptions_Draw (void)
 		else
 		{
 			if (!coop.integer && !deathmatch.integer)
-				Cvar_SetValue(&cvars_all, "deathmatch", 1);
+				Cvar_SetQuick(&deathmatch, "1");
 			if (coop.integer)
 				M_Print(160, 64, "Cooperative");
 			else
@@ -4362,7 +4362,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 				l = min(l - 1, 37);
 				memcpy(hostnamebuf, hostname.string, l);
 				hostnamebuf[l] = 0;
-				Cvar_Set(&cvars_all, "hostname", hostnamebuf);
+				Cvar_SetQuick(&hostname, hostnamebuf);
 			}
 		}
 		break;
@@ -4378,7 +4378,7 @@ static void M_GameOptions_Key(cmd_state_t *cmd, int key, int ascii)
 				memcpy(hostnamebuf, hostname.string, l);
 				hostnamebuf[l] = ascii;
 				hostnamebuf[l+1] = 0;
-				Cvar_Set(&cvars_all, "hostname", hostnamebuf);
+				Cvar_SetQuick(&hostname, hostnamebuf);
 			}
 		}
 	}

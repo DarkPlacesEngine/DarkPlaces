@@ -350,11 +350,11 @@ void FOG_clear(void)
 {
 	if (gamemode == GAME_NEHAHRA)
 	{
-		Cvar_Set(&cvars_all, "gl_fogenable", "0");
-		Cvar_Set(&cvars_all, "gl_fogdensity", "0.2");
-		Cvar_Set(&cvars_all, "gl_fogred", "0.3");
-		Cvar_Set(&cvars_all, "gl_foggreen", "0.3");
-		Cvar_Set(&cvars_all, "gl_fogblue", "0.3");
+		Cvar_SetQuick(&gl_fogenable, "0");
+		Cvar_SetQuick(&gl_fogdensity, "0.2");
+		Cvar_SetQuick(&gl_fogred, "0.3");
+		Cvar_SetQuick(&gl_foggreen, "0.3");
+		Cvar_SetQuick(&gl_fogblue, "0.3");
 	}
 	r_refdef.fog_density = 0;
 	r_refdef.fog_red = 0;
@@ -3406,7 +3406,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_combine);
 	Cvar_RegisterVariable(&r_q1bsp_lightmap_updates_hidden_surfaces);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_TENEBRAE)
-		Cvar_SetValue(&cvars_all, "r_fullbrights", 0);
+		Cvar_SetQuick(&r_fullbrights, "0");
 #ifdef DP_MOBILETOUCH
 	// GLES devices have terrible depth precision in general, so...
 	Cvar_SetValueQuick(&r_nearclip, 4);

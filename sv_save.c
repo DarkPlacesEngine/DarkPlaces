@@ -313,7 +313,7 @@ void SV_Loadgame_f(cmd_state_t *cmd)
 	COM_ParseToken_Simple(&t, false, false, true);
 // this silliness is so we can load 1.06 save files, which have float skill values
 	current_skill = (int)(atof(com_token) + 0.5);
-	Cvar_SetValue (&cvars_all, "skill", (float)current_skill);
+	Cvar_SetValueQuick(&skill, (float)current_skill);
 
 	if(developer_entityparsing.integer)
 		Con_Printf("SV_Loadgame_f: loading mapname\n");
