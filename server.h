@@ -563,12 +563,6 @@ void SV_LinkEdict(prvm_edict_t *ent);
 void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent);
 void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); // if we detected a touch from another source
 
-/*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
- * returns true if it found a better place
- * Replaces SV_TryUnstick() and SV_CheckStuck() which in Quake applied to players only.
- */
-qbool SV_UnstickEntity (prvm_edict_t *ent);
-
 /// calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);
 /// traces a box move against worldmodel and all entities in the specified area
