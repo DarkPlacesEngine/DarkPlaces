@@ -580,35 +580,43 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 				);
 			break;
 		case GAME_TENEBRAE:
-			Cbuf_InsertText(cmd, "\n"
+			if (cls.state != ca_dedicated)
+				Cbuf_InsertText(cmd, "\n"
 "r_shadow_gloss 2\n"
 "r_shadow_bumpscale_basetexture 4\n"
-				);
+					);
 			break;
 		case GAME_NEXUIZ:
 			Cbuf_InsertText(cmd, "\n"
 "sv_gameplayfix_q2airaccelerate 1\n"
 "sv_gameplayfix_stepmultipletimes 1\n"
+				);
+			if (cls.state != ca_dedicated)
+				Cbuf_InsertText(cmd, "\n"
 "csqc_polygons_defaultmaterial_nocullface 1\n"
 "con_chatsound_team_mask 13\n"
-				);
+					);
 			break;
 		case GAME_XONOTIC:
 		case GAME_VORETOURNAMENT:
 			Cbuf_InsertText(cmd, "\n"
 // compatibility for versions prior to 2020-05-25, this can be overridden in newer versions to get the default behavior and be consistent with FTEQW engine
-"csqc_polygons_defaultmaterial_nocullface 1\n"
-"con_chatsound_team_mask 13\n"
 "sv_qcstats 1\n"
 "mod_q1bsp_zero_hullsize_cutoff 8.03125\n"
 				);
+			if (cls.state != ca_dedicated)
+				Cbuf_InsertText(cmd, "\n"
+"csqc_polygons_defaultmaterial_nocullface 1\n"
+"con_chatsound_team_mask 13\n"
+					);
 			break;
 		case GAME_STEELSTORM:
-			Cbuf_InsertText(cmd, "\n"
+			if (cls.state != ca_dedicated)
+				Cbuf_InsertText(cmd, "\n"
 // Steel Storm: Burning Retribution csqc misinterprets CSQC_InputEvent if type is a value other than 0 or 1
 "cl_csqc_generatemousemoveevents 0\n"
 "csqc_polygons_defaultmaterial_nocullface 1\n"
-				);
+					);
 			break;
 		case GAME_QUAKE15:
 			Cbuf_InsertText(cmd, "\n"
@@ -619,11 +627,12 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 			);
 			break;
 		case GAME_AD:
-			Cbuf_InsertText(cmd, "\n"
+			if (cls.state != ca_dedicated)
+				Cbuf_InsertText(cmd, "\n"
 // Arcane Dimensions V1.80 Patch 1 assumes engines that don't pass values to CSQC_Init() are DP,
 // instead of doing a workaround there we can give it what it really wants (fixes offscreen HUD).
 "csqc_lowres 1\n"
-			);
+					);
 			break;
 		default:
 			break;
