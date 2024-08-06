@@ -2054,7 +2054,7 @@ static void VM_CL_getstati (prvm_prog_t *prog)
 	if(index < 0 || index >= MAX_CL_STATS)
 	{
 		PRVM_G_FLOAT(OFS_RETURN) = 0;
-		VM_Warning(prog, "VM_CL_getstati: index>=MAX_CL_STATS or index<0\n");
+		VM_Warning(prog, "VM_CL_getstati: index(%i) is >=MAX_CL_STATS(%i) or <0\n", index, MAX_CL_STATS);
 		return;
 	}
 
