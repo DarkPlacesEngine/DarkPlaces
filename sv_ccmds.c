@@ -870,7 +870,7 @@ void SV_Name(int clientnum)
 	PRVM_serveredictstring(host_client->edict, netname) = PRVM_SetEngineString(prog, host_client->name);
 	if (strcmp(host_client->old_name, host_client->name))
 	{
-		if (host_client->begun)
+		if (host_client->begun && host_client->netconnection)
 			SV_BroadcastPrintf("\003%s ^7changed name to ^3%s\n", host_client->old_name, host_client->name);
 		dp_strlcpy(host_client->old_name, host_client->name, sizeof(host_client->old_name));
 		// send notification to all clients
