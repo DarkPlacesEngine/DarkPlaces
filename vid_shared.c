@@ -783,7 +783,7 @@ void GL_Setup(void)
 	// gl_texturecompression_color is somehow broken on AMD's Windows driver,
 	// see: https://gitlab.com/xonotic/darkplaces/-/issues/228
 	// HACK: force it off (less bad than adding hacky checks to the renderer)
-	if (strncmp(gl_renderer, "AMD Radeon(TM)", 14) == 0)
+	if (strncmp(gl_renderer, "AMD Radeon", 10) == 0)
 	{
 		Cvar_SetQuick(&gl_texturecompression_color, "0");
 		gl_texturecompression_color.flags |= CF_READONLY;
