@@ -218,6 +218,8 @@ cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indi
 
 cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
 
+cvar_t sv_sendentities_csqc_randomize_order = {CF_SERVER, "sv_sendentities_csqc_randomize_order", "1", "Randomize the order of sending CSQC entities (should behave better when packet size or bandwidth limits are exceeded)."};
+
 server_t sv;
 server_static_t svs;
 
@@ -705,6 +707,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
 	Cvar_RegisterVariable (&sv_writepicture_quality);
+
+	Cvar_RegisterVariable (&sv_sendentities_csqc_randomize_order);
 
 	SV_InitOperatorCommands();
 	host.hook.SV_Shutdown = SV_Shutdown;
