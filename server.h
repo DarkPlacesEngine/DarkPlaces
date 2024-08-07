@@ -313,7 +313,7 @@ typedef struct client_s
 #define	MOVETYPE_ANGLENOCLIP	1
 #define	MOVETYPE_ANGLECLIP		2
 #define	MOVETYPE_WALK			3		///< gravity
-#define	MOVETYPE_STEP			4		///< gravity, special edge handling
+#define	MOVETYPE_STEP			4		///< gravity, special edge handling, special step based client side interpolation
 #define	MOVETYPE_FLY			5
 #define	MOVETYPE_TOSS			6		///< gravity
 #define	MOVETYPE_PUSH			7		///< no clip to world, push and crush
@@ -359,7 +359,7 @@ typedef struct client_s
 #define	FL_CONVEYOR				4
 #define	FL_CLIENT				8
 #define	FL_INWATER				16
-#define	FL_MONSTER				32
+#define	FL_MONSTER				32      ///< movement is smoothed on the client side by step based interpolation
 #define	FL_GODMODE				64
 #define	FL_NOTARGET				128
 #define	FL_ITEM					256
@@ -562,12 +562,6 @@ qbool SV_movestep (prvm_edict_t *ent, vec3_t move, qbool relink, qbool noenemy, 
 void SV_LinkEdict(prvm_edict_t *ent);
 void SV_LinkEdict_TouchAreaGrid(prvm_edict_t *ent);
 void SV_LinkEdict_TouchAreaGrid_Call(prvm_edict_t *touch, prvm_edict_t *ent); // if we detected a touch from another source
-
-/*! move an entity that is stuck by small amounts in various directions to try to nudge it back into the collision hull
- * returns true if it found a better place
- * Replaces SV_TryUnstick() and SV_CheckStuck() which in Quake applied to players only.
- */
-qbool SV_UnstickEntity (prvm_edict_t *ent);
 
 /// calculates hitsupercontentsmask for a generic qc entity
 int SV_GenericHitSuperContentsMask(const prvm_edict_t *edict);

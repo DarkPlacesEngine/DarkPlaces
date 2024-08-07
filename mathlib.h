@@ -76,6 +76,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define Vector2Set(a,b,c) ((a)[0]=(b),(a)[1]=(c))
 #define Vector2Scale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale))
 #define Vector2Normalize2(v,dest) {float ilength = (float)DotProduct2((v),(v));if (ilength) ilength = 1.0f / sqrt(ilength);dest[0] = (v)[0] * ilength;dest[1] = (v)[1] * ilength;}
+#define Vector2Length(a) (sqrt(DotProduct2(a, a)))
 
 #define DotProduct4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
 #define Vector4Clear(a) ((a)[0]=(a)[1]=(a)[2]=(a)[3]=0)

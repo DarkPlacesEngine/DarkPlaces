@@ -915,74 +915,6 @@ Utility functions
 ===============================================================================
 */
 
-/*
-============
-SV_TestEntityPosition
-
-returns true if the entity is in solid currently
-============
-*/
-static int SV_TestEntityPosition (prvm_edict_t *ent, vec3_t offset)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	int hitsupercontentsmask = SV_GenericHitSuperContentsMask(ent);
-	int skipsupercontentsmask = 0;
-	int skipmaterialflagsmask = 0;
-	vec3_t org, entorigin, entmins, entmaxs;
-	trace_t trace;
-	VectorAdd(PRVM_serveredictvector(ent, origin), offset, org);
-	VectorCopy(PRVM_serveredictvector(ent, origin), entorigin);
-	VectorCopy(PRVM_serveredictvector(ent, mins), entmins);
-	VectorCopy(PRVM_serveredictvector(ent, maxs), entmaxs);
-	trace = SV_TraceBox(org, entmins, entmaxs, entorigin, ((PRVM_serveredictfloat(ent, movetype) == MOVETYPE_FLY_WORLDONLY) ? MOVE_WORLDONLY : MOVE_NOMONSTERS), ent, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, collision_extendmovelength.value);
-	if (trace.startsupercontents & hitsupercontentsmask)
-		return true;
-	else
-	{
-		if (sv.worldmodel->brushq1.numclipnodes && !VectorCompare(PRVM_serveredictvector(ent, mins), PRVM_serveredictvector(ent, maxs)))
-		{
-			// q1bsp/hlbsp use hulls and if the entity does not exactly match
-			// a hull size it is incorrectly tested, so this code tries to
-			// 'fix' it slightly...
-			// FIXME: this breaks entities larger than the hull size
-			int i;
-			vec3_t v, m1, m2, s;
-			VectorAdd(org, entmins, m1);
-			VectorAdd(org, entmaxs, m2);
-			VectorSubtract(m2, m1, s);
-#define EPSILON (1.0f / 32.0f)
-			if (s[0] >= EPSILON*2) {m1[0] += EPSILON;m2[0] -= EPSILON;}
-			if (s[1] >= EPSILON*2) {m1[1] += EPSILON;m2[1] -= EPSILON;}
-			if (s[2] >= EPSILON*2) {m1[2] += EPSILON;m2[2] -= EPSILON;}
-			for (i = 0;i < 8;i++)
-			{
-				v[0] = (i & 1) ? m2[0] : m1[0];
-				v[1] = (i & 2) ? m2[1] : m1[1];
-				v[2] = (i & 4) ? m2[2] : m1[2];
-				if (SV_PointSuperContents(v) & hitsupercontentsmask)
-					return true;
-			}
-		}
-	}
-	// if the trace found a better position for the entity, move it there
-	if (VectorDistance2(trace.endpos, PRVM_serveredictvector(ent, origin)) >= 0.0001)
-	{
-#if 0
-		// please switch back to this code when trace.endpos sometimes being in solid bug is fixed
-		VectorCopy(trace.endpos, PRVM_serveredictvector(ent, origin));
-#else
-		// verify if the endpos is REALLY outside solid
-		VectorCopy(trace.endpos, org);
-		trace = SV_TraceBox(org, entmins, entmaxs, org, MOVE_NOMONSTERS, ent, hitsupercontentsmask, skipsupercontentsmask, skipmaterialflagsmask, collision_extendmovelength.value);
-		if(trace.startsolid)
-			Con_Printf("SV_TestEntityPosition: trace.endpos detected to be in solid. NOT using it.\n");
-		else
-			VectorCopy(org, PRVM_serveredictvector(ent, origin));
-#endif
-	}
-	return false;
-}
-
 // DRESK - Support for Entity Contents Transition Event
 /*
 ================
@@ -1585,6 +1517,7 @@ The trace struct is filled with the trace that has been done.
 Returns true if the push did not result in the entity being teleported by QC code.
 ============
 */
+static qbool SV_UnstickEntity (prvm_edict_t *ent);
 static qbool SV_PushEntity (trace_t *trace, prvm_edict_t *ent, vec3_t push, qbool dotouch, qbool checkstuck)
 {
 	prvm_prog_t *prog = SVVM_prog;
@@ -2007,67 +1940,6 @@ CLIENT MOVEMENT
 ===============================================================================
 */
 
-static float unstickoffsets[] =
-{
-	// poutting -/+z changes first as they are least weird
-	 0,  0,  -1,
-	 0,  0,  1,
-	 // x or y changes
-	-1,  0,  0,
-	 1,  0,  0,
-	 0, -1,  0,
-	 0,  1,  0,
-	 // x and y changes
-	-1, -1,  0,
-	 1, -1,  0,
-	-1,  1,  0,
-	 1,  1,  0,
-};
-
-typedef enum unstickresult_e
-{
-	// matching the DP_QC_NUDGEOUTOFSOLID return values
-	UNSTICK_STUCK = 0,
-	UNSTICK_GOOD = -1, ///< didn't need to be unstuck
-	UNSTICK_UNSTUCK = 1
-}
-unstickresult_t;
-
-static unstickresult_t SV_UnstickEntityReturnOffset (prvm_edict_t *ent, vec3_t offset)
-{
-	prvm_prog_t *prog = SVVM_prog;
-	int i, maxunstick;
-
-	// if not stuck in a bmodel, just return
-	if (!SV_TestEntityPosition(ent, vec3_origin))
-		return UNSTICK_GOOD;
-
-	for (i = 0;i < (int)(sizeof(unstickoffsets) / sizeof(unstickoffsets[0]));i += 3)
-	{
-		if (!SV_TestEntityPosition(ent, unstickoffsets + i))
-		{
-			VectorCopy(unstickoffsets + i, offset);
-			return UNSTICK_UNSTUCK;
-		}
-	}
-
-	maxunstick = (int) ((PRVM_serveredictvector(ent, maxs)[2] - PRVM_serveredictvector(ent, mins)[2]) * 0.36);
-	// magic number 0.36 allows unsticking by up to 17 units with the largest supported bbox
-
-	for(i = 2; i <= maxunstick; ++i)
-	{
-		VectorClear(offset);
-		offset[2] = -i;
-		if (!SV_TestEntityPosition(ent, offset))
-			return UNSTICK_UNSTUCK;
-		offset[2] = i;
-		if (!SV_TestEntityPosition(ent, offset))
-			return UNSTICK_UNSTUCK;
-	}
-
-	return UNSTICK_STUCK;
-}
-
 /*
 =============
 SV_CheckStuck
@@ -2076,13 +1948,12 @@ This is a big hack to try and fix the rare case of getting stuck in the world
 clipping hull.
 =============
 */
-qbool SV_UnstickEntity (prvm_edict_t *ent)
+static qbool SV_UnstickEntity (prvm_edict_t *ent)
 {
 	prvm_prog_t *prog = SVVM_prog;
 	vec3_t offset;
 
-	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0
-	&& sv.worldmodel->TraceBox == Mod_CollisionBIH_TraceBox) // Mod_Q1BSP_TraceBox doesn't support startdepth
+	if (sv_gameplayfix_nudgeoutofsolid.integer && sv_gameplayfix_nudgeoutofsolid_separation.value >= 0)
 	{
 		VectorCopy(PRVM_serveredictvector(ent, origin), offset);
 		switch (PHYS_NudgeOutOfSolid(prog, ent))
@@ -2105,7 +1976,7 @@ qbool SV_UnstickEntity (prvm_edict_t *ent)
 	if (!(PRVM_NUM_FOR_EDICT(ent) <= svs.maxclients ? sv_gameplayfix_unstickplayers : sv_gameplayfix_unstickentities).integer)
 		return false;
 
-	switch(SV_UnstickEntityReturnOffset(ent, offset))
+	switch(PHYS_UnstickEntityReturnOffset(prog, ent, offset))
 	{
 		case UNSTICK_GOOD:
 			return true;
@@ -2114,7 +1985,7 @@ qbool SV_UnstickEntity (prvm_edict_t *ent)
 			return true;
 		case UNSTICK_STUCK:
 			VectorSubtract(PRVM_serveredictvector(ent, oldorigin), PRVM_serveredictvector(ent, origin), offset);
-			if (!SV_TestEntityPosition(ent, offset))
+			if (!PHYS_TestEntityPosition(prog, ent, offset))
 			{
 				Con_DPrintf("Unstuck entity %i (classname \"%s\") by restoring oldorigin.\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 				return true;
@@ -2122,7 +1993,7 @@ qbool SV_UnstickEntity (prvm_edict_t *ent)
 			Con_DPrintf(CON_WARN "Stuck entity %i (classname \"%s\").\n", (int)PRVM_EDICT_TO_PROG(ent), PRVM_GetString(prog, PRVM_serveredictstring(ent, classname)));
 			return false;
 		default:
-			Con_Printf("SV_UnstickEntityReturnOffset returned a value outside its enum.\n");
+			Con_Printf("UnstickEntityReturnOffset returned a value outside its enum.\n");
 			return false;
 	}
 }

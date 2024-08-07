@@ -53,6 +53,7 @@ cvar_t prvm_garbagecollection_notify = {CF_CLIENT | CF_SERVER, "prvm_garbagecoll
 cvar_t prvm_garbagecollection_scan_limit = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_scan_limit", "50000", "scan this many fields or resources per second to free up unreferenced resources"};
 cvar_t prvm_garbagecollection_strings = {CF_CLIENT | CF_SERVER, "prvm_garbagecollection_strings", "1", "automatically call strunzone() on strings that are not referenced"};
 cvar_t prvm_stringdebug = {CF_CLIENT | CF_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
+cvar_t sv_entfields_noescapes = {CF_SERVER, "sv_entfields_noescapes", "wad", "Space-separated list of fields in which backslashes won't be parsed as escapes when loading entities from .bsp or .ent files. This is a workaround for buggy maps with unescaped backslashes used as path separators (only forward slashes are allowed in Quake VFS paths)."};
 
 static double prvm_reuseedicts_always_allow = 0;
 qbool prvm_runawaycheck = true;
@@ -1276,15 +1277,14 @@ ed should be a properly initialized empty edict.
 Used for initial level load and for savegames.
 ====================
 */
-const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent)
+const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_t *ent, qbool saveload)
 {
 	mdef_t *key;
 	qbool anglehack;
-	qbool init;
+	qbool init = false;
+	qbool parsebackslash = true;
 	char keyname[256];
 	size_t n;
-
-	init = false;
 
 // go through all the dictionary pairs
 	while (1)
@@ -1311,18 +1311,35 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 		if (!strcmp(com_token, "light"))
 			dp_strlcpy (com_token, "light_lev", sizeof(com_token));	// hack for single light def
 
-		dp_strlcpy (keyname, com_token, sizeof(keyname));
+		n = dp_strlcpy (keyname, com_token, sizeof(keyname));
 
 		// another hack to fix keynames with trailing spaces
-		n = strlen(keyname);
 		while (n && keyname[n-1] == ' ')
 		{
 			keyname[n-1] = 0;
 			n--;
 		}
 
+	// Check if escape parsing is disabled for this key (see cvar description).
+	// Escapes are always used in savegames and DP_QC_ENTITYSTRING for compatibility.
+		if (!saveload)
+		{
+			const char *cvarpos = sv_entfields_noescapes.string;
+
+			while (COM_ParseToken_Console(&cvarpos))
+			{
+				if (strcmp(com_token, keyname) == 0)
+				{
+					parsebackslash = false;
+					break;
+				}
+			}
+		}
+
 	// parse value
-		if (!COM_ParseToken_Simple(&data, false, false, true))
+		// If loading a save, unescape characters (they're escaped when saving).
+		// Otherwise, load them as they are (BSP compilers don't support escaping).
+		if (!COM_ParseToken_Simple(&data, false, parsebackslash, true))
 			prog->error_cmd("PRVM_ED_ParseEdict: EOF without closing brace");
 		if (developer_entityparsing.integer)
 			Con_Printf(" \"%s\"\n", com_token);
@@ -1355,11 +1372,12 @@ const char *PRVM_ED_ParseEdict (prvm_prog_t *prog, const char *data, prvm_edict_
 			dpsnprintf (com_token, sizeof(com_token), "0 %s 0", temp);
 		}
 
-		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, strcmp(keyname, "wad") != 0))
+		if (!PRVM_ED_ParseEpair(prog, ent, key, com_token, false))
 			prog->error_cmd("PRVM_ED_ParseEdict: parse error");
 	}
 
-	if (!init) {
+	if (!init)
+	{
 		ent->free = true;
 		ent->freetime = host.realtime;
 	}
@@ -1526,7 +1544,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 		if (ent != prog->edicts)	// hack
 			memset (ent->fields.fp, 0, prog->entityfields * sizeof(prvm_vec_t));
 
-		data = PRVM_ED_ParseEdict (prog, data, ent);
+		data = PRVM_ED_ParseEdict (prog, data, ent, false);
 		parsed++;
 
 		// remove the entity ?
@@ -3189,6 +3207,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_garbagecollection_scan_limit);
 	Cvar_RegisterVariable (&prvm_garbagecollection_strings);
 	Cvar_RegisterVariable (&prvm_stringdebug);
+	Cvar_RegisterVariable (&sv_entfields_noescapes);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !Sys_CheckParm("-norunaway");

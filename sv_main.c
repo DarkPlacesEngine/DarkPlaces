@@ -96,6 +96,7 @@ cvar_t sv_cullentities_trace_samples_extra = {CF_SERVER, "sv_cullentities_trace_
 cvar_t sv_cullentities_trace_samples_players = {CF_SERVER, "sv_cullentities_trace_samples_players", "8", "number of samples to test for entity culling when the entity is a player entity"};
 cvar_t sv_cullentities_trace_spectators = {CF_SERVER, "sv_cullentities_trace_spectators", "0", "enables trace entity culling for clients that are spectating"};
 cvar_t sv_debugmove = {CF_SERVER | CF_NOTIFY, "sv_debugmove", "0", "disables collision detection optimizations for debugging purposes"};
+cvar_t sv_dedicated = {CF_SERVER | CF_READONLY, "sv_dedicated", "0", "for scripts and SVQC to detect when they're running on a dedicated server"};
 cvar_t sv_echobprint = {CF_SERVER | CF_ARCHIVE, "sv_echobprint", "1", "prints gamecode bprint() calls to server console"};
 cvar_t sv_edgefriction = {CF_SERVER, "edgefriction", "1", "how much you slow down when nearing a ledge you might fall off, multiplier of sv_friction (Quake used 2, QuakeWorld used 1 due to a bug in physics code)"};
 cvar_t sv_entpatch = {CF_SERVER, "sv_entpatch", "1", "enables loading of .ent files to override entities in the bsp (for example Threewave CTF server pack contains .ent patch files enabling play of CTF on id1 maps)"};
@@ -114,7 +115,7 @@ cvar_t sv_gameplayfix_impactbeforeonground = {CF_SERVER, "sv_gameplayfix_impactb
 cvar_t sv_gameplayfix_multiplethinksperframe = {CF_SERVER, "sv_gameplayfix_multiplethinksperframe", "1", "allows entities to think more often than the server framerate, primarily useful for very high fire rate weapons"};
 cvar_t sv_gameplayfix_noairborncorpse = {CF_SERVER, "sv_gameplayfix_noairborncorpse", "1", "causes entities (corpses, items, etc) sitting ontop of moving entities (players) to fall when the moving entity (player) is no longer supporting them"};
 cvar_t sv_gameplayfix_noairborncorpse_allowsuspendeditems = {CF_SERVER, "sv_gameplayfix_noairborncorpse_allowsuspendeditems", "1", "causes entities sitting ontop of objects that are instantaneously remove to float in midair (special hack to allow a common level design trick for floating items)"};
-cvar_t sv_gameplayfix_nudgeoutofsolid = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid", "0", "attempts to fix physics errors where an object ended up in solid for some reason, better than sv_gameplayfix_unstick* but currently has no effect on Q1BSP (unless mod_q1bsp_polygoncollisions is enabled)"};
+cvar_t sv_gameplayfix_nudgeoutofsolid = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid", "0", "attempts to fix physics errors where an object ended up in solid for some reason, smarter than sv_gameplayfix_unstick* except on Q1BSP with mod_q1bsp_polygoncollisions disabled (there it falls back to the unsticking method)"};
 cvar_t sv_gameplayfix_nudgeoutofsolid_separation = {CF_SERVER, "sv_gameplayfix_nudgeoutofsolid_separation", "0.03125", "keep objects this distance apart to prevent collision issues on seams"};
 cvar_t sv_gameplayfix_q2airaccelerate = {CF_SERVER, "sv_gameplayfix_q2airaccelerate", "0", "Quake2-style air acceleration"};
 cvar_t sv_gameplayfix_nogravityonground = {CF_SERVER, "sv_gameplayfix_nogravityonground", "0", "turn off gravity when on ground (to get rid of sliding)"};
@@ -216,6 +217,8 @@ cvar_t sv_mapformat_is_quake2 = {CF_SERVER, "sv_mapformat_is_quake2", "0", "indi
 cvar_t sv_mapformat_is_quake3 = {CF_SERVER, "sv_mapformat_is_quake3", "0", "indicates the current map is q3bsp format (useful to know because of different entity behaviors)"};
 
 cvar_t sv_writepicture_quality = {CF_SERVER | CF_ARCHIVE, "sv_writepicture_quality", "10", "WritePicture quality offset (higher means better quality, but slower)"};
+
+cvar_t sv_sendentities_csqc_randomize_order = {CF_SERVER, "sv_sendentities_csqc_randomize_order", "1", "Randomize the order of sending CSQC entities (should behave better when packet size or bandwidth limits are exceeded)."};
 
 server_t sv;
 server_static_t svs;
@@ -463,7 +466,8 @@ static void SV_ServerOptions (void)
 		if (Sys_CheckParm ("-listen"))
 			Con_Printf ("Only one of -dedicated or -listen can be specified\n");
 		// default sv_public on for dedicated servers (often hosted by serious administrators), off for listen servers (often hosted by clueless users)
-		Cvar_SetValue(&cvars_all, "sv_public", 1);
+		Cvar_SetQuick(&sv_public, "1");
+		Cvar_SetQuick(&sv_dedicated, "1");
 	}
 	else if (cl_available)
 	{
@@ -580,6 +584,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_trace_samples_players);
 	Cvar_RegisterVariable (&sv_cullentities_trace_spectators);
 	Cvar_RegisterVariable (&sv_debugmove);
+	Cvar_RegisterVariable (&sv_dedicated);
 	Cvar_RegisterVariable (&sv_echobprint);
 	Cvar_RegisterVariable (&sv_edgefriction);
 	Cvar_RegisterVariable (&sv_entpatch);
@@ -702,6 +707,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_mapformat_is_quake3);
 
 	Cvar_RegisterVariable (&sv_writepicture_quality);
+
+	Cvar_RegisterVariable (&sv_sendentities_csqc_randomize_order);
 
 	SV_InitOperatorCommands();
 	host.hook.SV_Shutdown = SV_Shutdown;
@@ -1078,11 +1085,12 @@ void SV_DropClient(qbool leaving, const char *fmt, ... )
 		// break the net connection
 		NetConn_Close(host_client->netconnection);
 		host_client->netconnection = NULL;
+
+		if(fmt)
+			SV_BroadcastPrintf("\003^3%s left the game (%s)\n", host_client->name, reason);
+		else
+			SV_BroadcastPrintf("\003^3%s left the game\n", host_client->name);
 	}
-	if(fmt)
-		SV_BroadcastPrintf("\003^3%s left the game (%s)\n", host_client->name, reason);
-	else
-		SV_BroadcastPrintf("\003^3%s left the game\n", host_client->name);
 
 	// if a download is active, close it
 	if (host_client->download_file)
@@ -2566,7 +2574,7 @@ double SV_Frame(double time)
 			}
 
 			if (sv.perf_lost > 0 && reporting)
-				SV_BroadcastPrintf("\003" CON_WARN "Server lag report: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
+				SV_BroadcastPrintf(CON_WARN "Server lag report: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 
 			sv.perf_acc_realtime = sv.perf_acc_sleeptime =
 			sv.perf_acc_lost = sv.perf_acc_offset =

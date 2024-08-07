@@ -850,7 +850,7 @@ void PRVM_ED_ClearEdict(prvm_prog_t *prog, prvm_edict_t *e);
 void PRVM_PrintFunctionStatements(prvm_prog_t *prog, const char *name);
 void PRVM_ED_Print(prvm_prog_t *prog, prvm_edict_t *ed, const char *wildcard_fieldname);
 void PRVM_ED_Write(prvm_prog_t *prog, struct qfile_s *f, prvm_edict_t *ed);
-const char *PRVM_ED_ParseEdict(prvm_prog_t *prog, const char *data, prvm_edict_t *ent);
+const char *PRVM_ED_ParseEdict(prvm_prog_t *prog, const char *data, prvm_edict_t *ent, qbool saveload);
 
 void PRVM_ED_WriteGlobals(prvm_prog_t *prog, struct qfile_s *f);
 void PRVM_ED_ParseGlobals(prvm_prog_t *prog, const char *data);
