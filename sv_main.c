@@ -1085,11 +1085,12 @@ void SV_DropClient(qbool leaving, const char *fmt, ... )
 		// break the net connection
 		NetConn_Close(host_client->netconnection);
 		host_client->netconnection = NULL;
+
+		if(fmt)
+			SV_BroadcastPrintf("\003^3%s left the game (%s)\n", host_client->name, reason);
+		else
+			SV_BroadcastPrintf("\003^3%s left the game\n", host_client->name);
 	}
-	if(fmt)
-		SV_BroadcastPrintf("\003^3%s left the game (%s)\n", host_client->name, reason);
-	else
-		SV_BroadcastPrintf("\003^3%s left the game\n", host_client->name);
 
 	// if a download is active, close it
 	if (host_client->download_file)
@@ -2573,7 +2574,7 @@ double SV_Frame(double time)
 			}
 
 			if (sv.perf_lost > 0 && reporting)
-				SV_BroadcastPrintf("\003" CON_WARN "Server lag report: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
+				SV_BroadcastPrintf(CON_WARN "Server lag report: %s\n", SV_TimingReport(vabuf, sizeof(vabuf)));
 
 			sv.perf_acc_realtime = sv.perf_acc_sleeptime =
 			sv.perf_acc_lost = sv.perf_acc_offset =
