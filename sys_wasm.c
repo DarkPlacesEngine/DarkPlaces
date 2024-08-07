@@ -11,11 +11,11 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <string.h>
-EM_JS(char*, em_GetViewportWidth, (), {
+EM_JS(char*, em_GetViewportWidth, (void), {
 	return stringToNewUTF8(document.documentElement.clientWidth.toString())
 });
 
-EM_JS(char*, em_GetViewportHeight, (), {
+EM_JS(char*, em_GetViewportHeight, (void), {
 	return stringToNewUTF8(document.documentElement.clientHeight.toString())
 });
 
@@ -143,12 +143,12 @@ void listfiles_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 2)
 	{
 
-		Con_Printf(listfiles(""));
+		Con_Printf("%s",listfiles((char*)""));
 		Con_Printf("\n");
 	}
 	else
 	{
-		Con_Printf(listfiles(Cmd_Argv(cmd,1)) );
+		Con_Printf("%s",listfiles((char*)Cmd_Argv(cmd,1)) );
 		Con_Printf("\n");
 	}
 }
@@ -163,12 +163,12 @@ void upload_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 	{
-		Con_Printf(upload(fs_basedir));  // FIXME: Probably shouldn't be hardcoded like this. Should also just be the basedir so that uploading is easier
+		Con_Printf("%s",upload(fs_basedir));  
 		Con_Printf("\n");
 	}
 	else
 	{
-		Con_Printf(upload(Cmd_Argv(cmd,1)));
+		Con_Printf("%s",upload((char*)Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
 }
@@ -182,7 +182,7 @@ void rm_f(cmd_state_t *cmd)
 	}
 	else
 	{
-		Con_Printf(rm(Cmd_Argv(cmd,1)));
+		Con_Printf("%s",rm((char*)Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
 }
@@ -196,7 +196,7 @@ void rmdir_f(cmd_state_t *cmd)
 	}
 	else
 	{
-		Con_Printf(rmdir(Cmd_Argv(cmd,1)));
+		Con_Printf("%s",rmdir((char*)Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
 }
@@ -210,7 +210,7 @@ void mkdir_f(cmd_state_t *cmd)
 	}
 	else
 	{
-		Con_Printf(mkd(Cmd_Argv(cmd,1)));
+		Con_Printf("%s",mkd((char*)Cmd_Argv(cmd,1)));
 		Con_Printf("\n");
 	}
 }
@@ -224,7 +224,7 @@ void mv_f(cmd_state_t *cmd)
 	}
 	else
 	{
-		Con_Printf(move(Cmd_Argv(cmd,1),Cmd_Argv(cmd,2)));
+		Con_Printf("%s",move((char*)Cmd_Argv(cmd,1),(char*)Cmd_Argv(cmd,2)));
 		Con_Printf("\n");
 	}
 }
@@ -304,7 +304,7 @@ void Sys_Register_Commands(void)
 	Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mv", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
-	Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol");
+	Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol (Emscripten Only)");
 	#endif
 	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
 }

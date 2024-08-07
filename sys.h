@@ -265,8 +265,20 @@ void Sys_InitProcessNice (void);
 void Sys_MakeProcessNice (void);
 void Sys_MakeProcessMean (void);
 #ifdef __EMSCRIPTEN__ //WASM-specific functions
+#include "cmd.h"
+#include <emscripten/em_types.h>
+#include <emscripten/html5.h>
+EM_BOOL on_resize (int etype, const EmscriptenUiEvent *event, void *UData);
 bool syncFS (bool x);
-void Sys_Register_Commands(void);
+void Sys_Register_Commands (void);
+void listfiles_f (cmd_state_t *cmd);
+void savefs_f (cmd_state_t *cmd);
+void upload_f (cmd_state_t *cmd);
+void rm_f (cmd_state_t *cmd);
+void rmdir_f (cmd_state_t *cmd);
+void mkdir_f (cmd_state_t *cmd);
+void mv_f (cmd_state_t *cmd);
+void wss_f (cmd_state_t *cmd);
 #endif
 
 int Sys_Main(int argc, char *argv[]);
