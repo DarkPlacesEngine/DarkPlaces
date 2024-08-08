@@ -17,7 +17,7 @@ EM_JS(float, js_GetViewportWidth, (void), {
 	return document.documentElement.clientWidth
 });
 EM_JS(float, js_GetViewportHeight, (void), {
-	return document.documentElement.clientHeight.toString
+	return document.documentElement.clientHeight
 });
 static EM_BOOL em_on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
 {
