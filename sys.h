@@ -256,6 +256,11 @@ void Sys_SDL_HandleEvents(void);
 
 char *Sys_SDL_GetClipboardData (void);
 
+#ifdef __EMSCRIPTEN__ //WASM-specific functions
+bool js_syncFS (bool x);
+void Sys_EM_Register_Commands(void);
+#endif
+
 extern qbool sys_supportsdlgetticks;
 unsigned int Sys_SDL_GetTicks (void); // wrapper to call SDL_GetTicks
 void Sys_SDL_Delay (unsigned int milliseconds); // wrapper to call SDL_Delay
@@ -264,23 +269,6 @@ void Sys_SDL_Delay (unsigned int milliseconds); // wrapper to call SDL_Delay
 void Sys_InitProcessNice (void);
 void Sys_MakeProcessNice (void);
 void Sys_MakeProcessMean (void);
-
-#ifdef __EMSCRIPTEN__ //WASM-specific functions
-#include "cmd.h"
-#include <emscripten/em_types.h>
-#include <emscripten/html5.h>
-EM_BOOL em_on_resize (int etype, const EmscriptenUiEvent *event, void *UData);
-bool js_syncFS (bool x);
-void Sys_Register_Commands (void);
-void em_listfiles_f (cmd_state_t *cmd);
-void em_savefs_f (cmd_state_t *cmd);
-void em_upload_f (cmd_state_t *cmd);
-void em_rm_f (cmd_state_t *cmd);
-void em_rmdir_f (cmd_state_t *cmd);
-void em_mkdir_f (cmd_state_t *cmd);
-void em_mv_f (cmd_state_t *cmd);
-void em_wss_f (cmd_state_t *cmd);
-#endif
 
 int Sys_Main(int argc, char *argv[]);
 

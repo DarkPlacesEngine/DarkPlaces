@@ -19,7 +19,7 @@ EM_JS(float, js_GetViewportWidth, (void), {
 EM_JS(float, js_GetViewportHeight, (void), {
 	return document.documentElement.clientHeight.toString
 });
-EM_BOOL em_on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
+static EM_BOOL em_on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
 {
 	if(vid_resizable.integer)
 	{
@@ -35,6 +35,7 @@ EM_BOOL em_on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
 // General routines
 // =======================================================================
 
+#ifdef WASM_USER_ADJUSTABLE
 EM_JS(char *, js_listfiles, (const char *directory), {
 	if(UTF8ToString(directory) == "")
 	{
@@ -51,30 +52,12 @@ EM_JS(char *, js_listfiles, (const char *directory), {
 		return stringToNewUTF8("directory not found");
 	}
 });
-void em_listfiles_f(cmd_state_t *cmd)
+static void em_listfiles_f(cmd_state_t *cmd)
 {
 	char *output = js_listfiles(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : "");
 
 	Con_Printf("%s\n", output);
 	free(output);
-}
-
-EM_JS(bool, js_syncFS, (bool populate), {
-	FS.syncfs(populate, function(err) {
-		if(err)
-		{
-			alert("FileSystem Save Error: " + err);
-			return false;
-		}
-
-		alert("Filesystem Saved!");
-		return true;
-	});
-});
-void em_savefs_f(cmd_state_t *cmd)
-{
-	Con_Printf("Saving Files\n");
-	js_syncFS(false);
 }
 
 EM_JS(char *, js_upload, (const char *todirectory), {
@@ -90,7 +73,7 @@ EM_JS(char *, js_upload, (const char *todirectory), {
 	file_selector.click();
 	return stringToNewUTF8("Upload started");
 });
-void em_upload_f(cmd_state_t *cmd)
+static void em_upload_f(cmd_state_t *cmd)
 {
 	char *output = js_upload(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : fs_basedir);
 
@@ -109,7 +92,7 @@ EM_JS(char *, js_rm, (const char *path), {
 
 	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
 });
-void em_rm_f(cmd_state_t *cmd)
+static void em_rm_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No file to remove\n");
@@ -138,7 +121,7 @@ EM_JS(char *, js_rmdir, (const char *path), {
 
 	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
 });
-void em_rmdir_f(cmd_state_t *cmd)
+static void em_rmdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to remove\n");
@@ -161,7 +144,7 @@ EM_JS(char *, js_mkd, (const char *path), {
 	}
 	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
 });
-void em_mkdir_f(cmd_state_t *cmd)
+static void em_mkdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to create\n");
@@ -184,7 +167,7 @@ EM_JS(char *, js_move, (const char *oldpath, const char *newpath), {
 	}
 	return stringToNewUTF8("File Moved");
 });
-void em_mv_f(cmd_state_t *cmd)
+static void em_mv_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
 		Con_Printf("Nothing to move\n");
@@ -196,7 +179,7 @@ void em_mv_f(cmd_state_t *cmd)
 	}
 }
 
-void em_wss_f(cmd_state_t *cmd)
+static void em_wss_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
 		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)\n");
@@ -207,6 +190,25 @@ void em_wss_f(cmd_state_t *cmd)
 		else
 			Con_Printf("subprotocol must be either binary or text\n");
 	}
+}
+#endif // WASM_USER_ADJUSTABLE
+
+EM_JS(bool, js_syncFS, (bool populate), {
+	FS.syncfs(populate, function(err) {
+		if(err)
+		{
+			alert("FileSystem Save Error: " + err);
+			return false;
+		}
+
+		alert("Filesystem Saved!");
+		return true;
+	});
+});
+static void em_savefs_f(cmd_state_t *cmd)
+{
+	Con_Printf("Saving Files\n");
+	js_syncFS(false);
 }
 
 void Sys_SDL_Shutdown(void)
@@ -258,7 +260,7 @@ void Sys_SDL_Init(void)
 	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, EM_FALSE, em_on_resize);
 }
 
-void Sys_Register_Commands(void)
+void Sys_EM_Register_Commands(void)
 {
 #ifdef WASM_USER_ADJUSTABLE
 	Cmd_AddCommand(CF_SHARED, "em_ls", em_listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
