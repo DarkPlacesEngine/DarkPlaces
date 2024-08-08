@@ -11,19 +11,19 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <string.h>
-EM_JS(char*, em_GetViewportWidth, (void), {
-	return stringToNewUTF8(document.documentElement.clientWidth.toString())
+EM_JS(float, em_GetViewportWidth, (void), {
+	return document.documentElement.clientWidth
 });
 
-EM_JS(char*, em_GetViewportHeight, (void), {
-	return stringToNewUTF8(document.documentElement.clientHeight.toString())
+EM_JS(float, em_GetViewportHeight, (void), {
+	return document.documentElement.clientHeight.toString
 });
 
 EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
 	if(vid_resizable.integer)
 	{
-		Cvar_SetQuick(&vid_width, em_GetViewportWidth());
-		Cvar_SetQuick(&vid_height, em_GetViewportHeight());
+		Cvar_SetValueQuick(&vid_width, em_GetViewportWidth());
+		Cvar_SetValueQuick(&vid_height, em_GetViewportHeight());
 		Cvar_SetQuick(&vid_fullscreen, "0");
 	}
 	return EM_FALSE;
@@ -35,7 +35,7 @@ EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
 // General routines
 // =======================================================================
 
-EM_JS(char*, getclipboard, (void), {
+EM_JS(char *, getclipboard, (void), {
 	//Thank you again, stack overflow
 	return stringToNewUTF8(navigator.clipboard.readText());
 });
@@ -53,7 +53,7 @@ EM_JS(bool, syncFS, (bool populate), {
 	});
 });
 
-EM_JS(const char *, rm, (const char *path), {
+EM_JS(char *, rm, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 
 	if (FS.isFile(mode))
@@ -65,7 +65,7 @@ EM_JS(const char *, rm, (const char *path), {
 	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
 });
 
-EM_JS(const char *, rmdir, (const char *path), {
+EM_JS(char *, rmdir, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 	if (FS.isDir(mode))
 	{
@@ -83,7 +83,7 @@ EM_JS(const char *, rmdir, (const char *path), {
 	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
 });
 
-EM_JS(const char *, mkd, (const char *path), {
+EM_JS(char *, mkd, (const char *path), {
 	try
 	{
 		FS.mkdir(UTF8ToString(path));
@@ -95,7 +95,7 @@ EM_JS(const char *, mkd, (const char *path), {
 	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
 });
 
-EM_JS(const char *, move, (const char *oldpath, const char *newpath), {
+EM_JS(char *, move, (const char *oldpath, const char *newpath), {
 	try
 	{
 		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
@@ -107,7 +107,7 @@ EM_JS(const char *, move, (const char *oldpath, const char *newpath), {
 	return stringToNewUTF8("File Moved");
 });
 
-EM_JS(const char *, upload, (const char *todirectory), {
+EM_JS(char *, upload, (const char *todirectory), {
 	if (UTF8ToString(todirectory).slice(-1) != "/")
 	{
 		currentname = UTF8ToString(todirectory) + "/";
@@ -121,7 +121,7 @@ EM_JS(const char *, upload, (const char *todirectory), {
 	return stringToNewUTF8("Upload started");
 });
 
-EM_JS(const char *, listfiles, (const char *directory), {
+EM_JS(char *, listfiles, (const char *directory), {
 	if(UTF8ToString(directory) == "")
 	{
 		console.log("listing cwd");
@@ -140,10 +140,10 @@ EM_JS(const char *, listfiles, (const char *directory), {
 
 void listfiles_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc(cmd) != 2)
-		Con_Printf("%s\n", listfiles(""));
-	else
-		Con_Printf("%s\n", listfiles(Cmd_Argv(cmd, 1)));
+	char *output = listfiles(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : "");
+
+	Con_Printf("%s\n", output);
+	free(output);
 }
 
 void savefs_f(cmd_state_t *cmd)
@@ -154,10 +154,10 @@ void savefs_f(cmd_state_t *cmd)
 
 void upload_f(cmd_state_t *cmd)
 {
-	if (Cmd_Argc(cmd) != 2)
-		Con_Printf("%s\n", upload(fs_basedir));
-	else
-		Con_Printf("%s\n", upload(Cmd_Argv(cmd, 1)));
+	char *output = upload(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : fs_basedir);
+
+	Con_Printf("%s\n", output);
+	free(output);
 }
 
 void rm_f(cmd_state_t *cmd)
@@ -165,7 +165,11 @@ void rm_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No file to remove\n");
 	else
-		Con_Printf("%s\n", rm(Cmd_Argv(cmd, 1)));
+	{
+		char *output = rm(Cmd_Argv(cmd, 1));
+		Con_Printf("%s\n", output);
+		free(output);
+	}
 }
 
 void rmdir_f(cmd_state_t *cmd)
@@ -173,7 +177,11 @@ void rmdir_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to remove\n");
 	else
-		Con_Printf("%s\n", rmdir(Cmd_Argv(cmd, 1)));
+	{
+		char *output = rmdir(Cmd_Argv(cmd, 1));
+		Con_Printf("%s\n", output);
+		free(output);
+	}
 }
 
 void mkdir_f(cmd_state_t *cmd)
@@ -181,7 +189,11 @@ void mkdir_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to create\n");
 	else
-		Con_Printf("%s\n", mkd(Cmd_Argv(cmd, 1)));
+	{
+		char *output = mkd(Cmd_Argv(cmd, 1));
+		Con_Printf("%s\n", output);
+		free(output);
+	}
 }
 
 void mv_f(cmd_state_t *cmd)
@@ -189,7 +201,11 @@ void mv_f(cmd_state_t *cmd)
 	if (Cmd_Argc(cmd) != 3)
 		Con_Printf("Nothing to move\n");
 	else
-		Con_Printf("%s\n", move(Cmd_Argv(cmd,1), Cmd_Argv(cmd,2)));
+	{
+		char *output = move(Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
+		Con_Printf("%s\n", output);
+		free(output);
+	}
 }
 
 void wss_f(cmd_state_t *cmd)
@@ -231,7 +247,7 @@ char *Sys_SDL_GetClipboardData (void)
 		allocsize = min(MAX_INPUTLINE, strlen(cliptext) + 1);
 		data = (char *)Z_Malloc (allocsize);
 		dp_strlcpy (data, cliptext, allocsize);
-		SDL_free(cliptext);
+		free(cliptext);
 	}
 
 	return data;
