@@ -229,7 +229,7 @@ LDFLAGS_LINUXSV=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic
 LDFLAGS_LINUXSDL=$(LDFLAGS_UNIXCOMMON) -lrt -ldl -rdynamic $(LDFLAGS_UNIXSDL)
 
 
-##### WASM specific variable #####
+##### WASM specific variables #####
 
 LDFLAGS_WASMJS=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -s USE_LIBPNG=1 \

@@ -226,15 +226,31 @@ void Sys_SDL_Dialog(const char *title, const char *string)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, string, NULL);
 }
 
+// In a browser the clipboard can only be read asynchronously
+// doing this efficiently and cleanly requires JSPI
+// enable in makefile.inc with emcc option: -s JSPI
+/* TODO: enable this code when JSPI is enabled by default in browsers
+EM_ASYNC_JS(char *, js_getclipboard, (void),
+{
+	try
+	{
+		const text = await navigator.clipboard.readText();
+		return stringToNewUTF8(text);
+	}
+	catch (err)
+	{
+		return stringToNewUTF8("clipboard error: ", err);
+	}
+}); */
 EM_JS(char *, js_getclipboard, (void), {
-	//Thank you again, stack overflow
-	return stringToNewUTF8(navigator.clipboard.readText());
+	return stringToNewUTF8("clipboard access requires JSPI which is not currently enabled.");
 });
 char *Sys_SDL_GetClipboardData (void)
 {
 	char *data = NULL;
 	char *cliptext;
 
+	// SDL_GetClipboardText() does nothing in a browser, see above
 	cliptext = js_getclipboard();
 	if (cliptext != NULL) {
 		size_t allocsize;
