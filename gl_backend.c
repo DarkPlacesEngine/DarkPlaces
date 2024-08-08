@@ -16,6 +16,7 @@ cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "0", "tints view 
 #else
 cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
 #endif
+
 cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qbool v_flipped_state = false;
 

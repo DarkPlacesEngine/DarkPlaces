@@ -59,6 +59,7 @@ static io_connect_t IN_GetIOHandle(void)
 #endif
 #endif
 
+
 // Tell startup code that we have a client
 int cl_available = true;
 
@@ -1050,6 +1051,7 @@ void Sys_SDL_HandleEvents(void)
 	SDL_Event event;
 
 	VID_EnableJoystick(true);
+
 	while( SDL_PollEvent( &event ) )
 		loop_start:
 		switch( event.type ) {
@@ -1184,8 +1186,8 @@ void Sys_SDL_HandleEvents(void)
 					case SDL_WINDOWEVENT_RESIZED: // external events only
 						if(vid_resizable.integer < 2)
 						{
-							// vid.width = event.window.data1;
-							// vid.height = event.window.data2;
+							//vid.width = event.window.data1;
+							//vid.height = event.window.data2;
 							// get the real framebuffer size in case the platform's screen coordinates are DPI scaled
 							SDL_GL_GetDrawableSize(window, &vid.mode.width, &vid.mode.height);
 						}

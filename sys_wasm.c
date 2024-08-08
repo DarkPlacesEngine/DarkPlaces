@@ -19,7 +19,8 @@ EM_JS(float, em_GetViewportWidth, (void), {
 EM_JS(float, em_GetViewportHeight, (void), {
 	return document.documentElement.clientHeight.toString
 });
-EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
+EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
+{
 	if(vid_resizable.integer)
 	{
 		Cvar_SetValueQuick(&vid_width, em_GetViewportWidth());
@@ -259,7 +260,7 @@ void Sys_SDL_Init(void)
 
 void Sys_Register_Commands(void)
 {
-	#ifdef WASM_USER_ADJUSTABLE
+#ifdef WASM_USER_ADJUSTABLE
 	Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to basedir (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_rm", rm_f, "Remove a file from game Filesystem (Emscripten Only)");
@@ -267,7 +268,7 @@ void Sys_Register_Commands(void)
 	Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
 	Cmd_AddCommand(CF_SHARED, "em_mv", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
 	Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol (Emscripten Only)");
-	#endif
+#endif
 	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
 }
 

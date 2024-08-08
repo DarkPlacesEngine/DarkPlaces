@@ -211,9 +211,9 @@ void Host_SaveConfig(const char *file)
 
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (&cvars_all, f);
-		#ifdef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
 		syncFS(false);
-		#endif
+#endif
 		FS_Close (f);
 	}
 }

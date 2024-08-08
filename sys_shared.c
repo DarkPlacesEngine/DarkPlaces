@@ -1159,7 +1159,7 @@ static void Sys_Frame(void)
 	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
 
 #ifdef __EMSCRIPTEN__
-	// This isn't in Sys_Sleep() because it sleeps when this func returns, not at its call site.
+	// This platform doesn't support a main loop... it will sleep when Sys_Frame() returns.
 	// Not using emscripten_sleep() via Sys_Sleep() because it would cause two sleeps per frame.
 	if (!vid_vsync.integer) // see VID_SetVsync_c()
 		emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, host.restless ? 0 : sleeptime * 1000.0);
