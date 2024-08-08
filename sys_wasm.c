@@ -24,7 +24,7 @@ EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
 	{
 		Cvar_SetQuick(&vid_width, em_GetViewportWidth());
 		Cvar_SetQuick(&vid_height, em_GetViewportHeight());
-		Cvar_SetValueQuick(&vid_fullscreen,0);
+		Cvar_SetQuick(&vid_fullscreen, "0");
 	}
 	return EM_FALSE;
 }
@@ -195,21 +195,13 @@ void mv_f(cmd_state_t *cmd)
 void wss_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
-	{
-		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)");
-		Con_Printf("\n");
-	}
+		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)\n");
 	else
 	{
 		if(strcmp(Cmd_Argv(cmd,2),"binary") == 0 || strcmp(Cmd_Argv(cmd,2),"text") == 0)
-		{
-			Con_Printf("Set Websocket URL to %s and subprotocol to %s.", Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
-		}
+			Con_Printf("Set Websocket URL to %s and subprotocol to %s.\n", Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
 		else
-		{
-			Con_Printf("subprotocol must be either binary or text");
-		}
-		Con_Printf("\n");
+			Con_Printf("subprotocol must be either binary or text\n");
 	}
 }
 
