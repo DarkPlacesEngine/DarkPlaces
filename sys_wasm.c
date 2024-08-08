@@ -53,7 +53,7 @@ EM_JS(bool, syncFS, (bool populate), {
 	});
 });
 
-EM_JS(char*, rm, (char* path), {
+EM_JS(const char *, rm, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 
 	if (FS.isFile(mode))
@@ -65,7 +65,7 @@ EM_JS(char*, rm, (char* path), {
 	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
 });
 
-EM_JS(char*, rmdir, (char* path), {
+EM_JS(const char *, rmdir, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 	if (FS.isDir(mode))
 	{
@@ -83,7 +83,7 @@ EM_JS(char*, rmdir, (char* path), {
 	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
 });
 
-EM_JS(char*, mkd, (char* path), {
+EM_JS(const char *, mkd, (const char *path), {
 	try
 	{
 		FS.mkdir(UTF8ToString(path));
@@ -95,7 +95,7 @@ EM_JS(char*, mkd, (char* path), {
 	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
 });
 
-EM_JS(char*, move, (char* oldpath, char* newpath), {
+EM_JS(const char *, move, (const char *oldpath, const char *newpath), {
 	try
 	{
 		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
@@ -107,7 +107,7 @@ EM_JS(char*, move, (char* oldpath, char* newpath), {
 	return stringToNewUTF8("File Moved");
 });
 
-EM_JS(char*, upload, (char* todirectory), {
+EM_JS(const char *, upload, (const char *todirectory), {
 	if (UTF8ToString(todirectory).slice(-1) != "/")
 	{
 		currentname = UTF8ToString(todirectory) + "/";
@@ -121,7 +121,7 @@ EM_JS(char*, upload, (char* todirectory), {
 	return stringToNewUTF8("Upload started");
 });
 
-EM_JS(char*, listfiles, (char* directory), {
+EM_JS(const char *, listfiles, (const char *directory), {
 	if(UTF8ToString(directory) == "")
 	{
 		console.log("listing cwd");
@@ -141,16 +141,9 @@ EM_JS(char*, listfiles, (char* directory), {
 void listfiles_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
-	{
-
-		Con_Printf("%s",listfiles((char*)""));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", listfiles(""));
 	else
-	{
-		Con_Printf("%s",listfiles((char*)Cmd_Argv(cmd,1)) );
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", listfiles(Cmd_Argv(cmd, 1)));
 }
 
 void savefs_f(cmd_state_t *cmd)
@@ -162,71 +155,41 @@ void savefs_f(cmd_state_t *cmd)
 void upload_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Printf("%s",upload(fs_basedir));  
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", upload(fs_basedir));
 	else
-	{
-		Con_Printf("%s",upload((char*)Cmd_Argv(cmd,1)));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", upload(Cmd_Argv(cmd, 1)));
 }
 
 void rm_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Printf("No file to remove");
-		Con_Printf("\n");
-	}
+		Con_Printf("No file to remove\n");
 	else
-	{
-		Con_Printf("%s",rm((char*)Cmd_Argv(cmd,1)));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", rm(Cmd_Argv(cmd, 1)));
 }
 
 void rmdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Printf("No directory to remove");
-		Con_Printf("\n");
-	}
+		Con_Printf("No directory to remove\n");
 	else
-	{
-		Con_Printf("%s",rmdir((char*)Cmd_Argv(cmd,1)));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", rmdir(Cmd_Argv(cmd, 1)));
 }
 
 void mkdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
-	{
-		Con_Printf("No directory to create");
-		Con_Printf("\n");
-	}
+		Con_Printf("No directory to create\n");
 	else
-	{
-		Con_Printf("%s",mkd((char*)Cmd_Argv(cmd,1)));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", mkd(Cmd_Argv(cmd, 1)));
 }
 
 void mv_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
-	{
-		Con_Printf("Nothing to move");
-		Con_Printf("\n");
-	}
+		Con_Printf("Nothing to move\n");
 	else
-	{
-		Con_Printf("%s",move((char*)Cmd_Argv(cmd,1),(char*)Cmd_Argv(cmd,2)));
-		Con_Printf("\n");
-	}
+		Con_Printf("%s\n", move(Cmd_Argv(cmd,1), Cmd_Argv(cmd,2)));
 }
 
 void wss_f(cmd_state_t *cmd)
