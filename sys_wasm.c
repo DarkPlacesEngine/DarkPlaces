@@ -11,14 +11,14 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <string.h>
+
+
 EM_JS(float, em_GetViewportWidth, (void), {
 	return document.documentElement.clientWidth
 });
-
 EM_JS(float, em_GetViewportHeight, (void), {
 	return document.documentElement.clientHeight.toString
 });
-
 EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
 	if(vid_resizable.integer)
 	{
@@ -30,96 +30,9 @@ EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData){
 }
 
 
-
 // =======================================================================
 // General routines
 // =======================================================================
-
-EM_JS(char *, getclipboard, (void), {
-	//Thank you again, stack overflow
-	return stringToNewUTF8(navigator.clipboard.readText());
-});
-
-EM_JS(bool, syncFS, (bool populate), {
-	FS.syncfs(populate, function(err) {
-		if(err)
-		{
-			alert("FileSystem Save Error: " + err);
-			return false;
-		}
-
-		alert("Filesystem Saved!");
-		return true;
-	});
-});
-
-EM_JS(char *, rm, (const char *path), {
-	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
-
-	if (FS.isFile(mode))
-	{
-		FS.unlink(UTF8ToString(path));
-		return stringToNewUTF8("File removed"); 
-	}
-
-	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
-});
-
-EM_JS(char *, rmdir, (const char *path), {
-	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
-	if (FS.isDir(mode))
-	{
-		try
-		{
-			FS.rmdir(UTF8ToString(path));
-		}
-		catch (error)
-		{
-			return stringToNewUTF8("Unable to remove directory. Is it not empty?");
-		}
-		return stringToNewUTF8("Directory removed"); 
-	}
-
-	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
-});
-
-EM_JS(char *, mkd, (const char *path), {
-	try
-	{
-		FS.mkdir(UTF8ToString(path));
-	}
-	catch (error)
-	{
-		return stringToNewUTF8("Unable to create directory. Does it already exist?");
-	}
-	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
-});
-
-EM_JS(char *, move, (const char *oldpath, const char *newpath), {
-	try
-	{
-		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
-	}
-	catch (error)
-	{
-		return stringToNewUTF8("unable to move.");
-	}
-	return stringToNewUTF8("File Moved");
-});
-
-EM_JS(char *, upload, (const char *todirectory), {
-	if (UTF8ToString(todirectory).slice(-1) != "/")
-	{
-		currentname = UTF8ToString(todirectory) + "/";
-	}
-	else
-	{
-		currentname = UTF8ToString(todirectory);
-	}
-
-	file_selector.click();
-	return stringToNewUTF8("Upload started");
-});
 
 EM_JS(char *, listfiles, (const char *directory), {
 	if(UTF8ToString(directory) == "")
@@ -137,7 +50,6 @@ EM_JS(char *, listfiles, (const char *directory), {
 		return stringToNewUTF8("directory not found");
 	}
 });
-
 void listfiles_f(cmd_state_t *cmd)
 {
 	char *output = listfiles(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : "");
@@ -146,12 +58,37 @@ void listfiles_f(cmd_state_t *cmd)
 	free(output);
 }
 
+EM_JS(bool, syncFS, (bool populate), {
+	FS.syncfs(populate, function(err) {
+		if(err)
+		{
+			alert("FileSystem Save Error: " + err);
+			return false;
+		}
+
+		alert("Filesystem Saved!");
+		return true;
+	});
+});
 void savefs_f(cmd_state_t *cmd)
 {
 	Con_Printf("Saving Files\n");
 	syncFS(false);
 }
 
+EM_JS(char *, upload, (const char *todirectory), {
+	if (UTF8ToString(todirectory).slice(-1) != "/")
+	{
+		currentname = UTF8ToString(todirectory) + "/";
+	}
+	else
+	{
+		currentname = UTF8ToString(todirectory);
+	}
+
+	file_selector.click();
+	return stringToNewUTF8("Upload started");
+});
 void upload_f(cmd_state_t *cmd)
 {
 	char *output = upload(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : fs_basedir);
@@ -160,6 +97,17 @@ void upload_f(cmd_state_t *cmd)
 	free(output);
 }
 
+EM_JS(char *, rm, (const char *path), {
+	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
+
+	if (FS.isFile(mode))
+	{
+		FS.unlink(UTF8ToString(path));
+		return stringToNewUTF8("File removed");
+	}
+
+	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
+});
 void rm_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
@@ -172,6 +120,23 @@ void rm_f(cmd_state_t *cmd)
 	}
 }
 
+EM_JS(char *, rmdir, (const char *path), {
+	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
+	if (FS.isDir(mode))
+	{
+		try
+		{
+			FS.rmdir(UTF8ToString(path));
+		}
+		catch (error)
+		{
+			return stringToNewUTF8("Unable to remove directory. Is it not empty?");
+		}
+		return stringToNewUTF8("Directory removed");
+	}
+
+	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
+});
 void rmdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
@@ -184,6 +149,17 @@ void rmdir_f(cmd_state_t *cmd)
 	}
 }
 
+EM_JS(char *, mkd, (const char *path), {
+	try
+	{
+		FS.mkdir(UTF8ToString(path));
+	}
+	catch (error)
+	{
+		return stringToNewUTF8("Unable to create directory. Does it already exist?");
+	}
+	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
+});
 void mkdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
@@ -196,6 +172,17 @@ void mkdir_f(cmd_state_t *cmd)
 	}
 }
 
+EM_JS(char *, move, (const char *oldpath, const char *newpath), {
+	try
+	{
+		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
+	}
+	catch (error)
+	{
+		return stringToNewUTF8("unable to move.");
+	}
+	return stringToNewUTF8("File Moved");
+});
 void mv_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
@@ -236,6 +223,10 @@ void Sys_SDL_Dialog(const char *title, const char *string)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, string, NULL);
 }
 
+EM_JS(char *, getclipboard, (void), {
+	//Thank you again, stack overflow
+	return stringToNewUTF8(navigator.clipboard.readText());
+});
 char *Sys_SDL_GetClipboardData (void)
 {
 	char *data = NULL;
