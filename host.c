@@ -212,7 +212,7 @@ void Host_SaveConfig(const char *file)
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (&cvars_all, f);
 #ifdef __EMSCRIPTEN__
-		syncFS(false);
+		js_syncFS(false);
 #endif
 		FS_Close (f);
 	}

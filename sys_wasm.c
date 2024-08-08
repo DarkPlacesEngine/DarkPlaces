@@ -13,18 +13,18 @@
 #include <string.h>
 
 
-EM_JS(float, em_GetViewportWidth, (void), {
+EM_JS(float, js_GetViewportWidth, (void), {
 	return document.documentElement.clientWidth
 });
-EM_JS(float, em_GetViewportHeight, (void), {
+EM_JS(float, js_GetViewportHeight, (void), {
 	return document.documentElement.clientHeight.toString
 });
-EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
+EM_BOOL em_on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
 {
 	if(vid_resizable.integer)
 	{
-		Cvar_SetValueQuick(&vid_width, em_GetViewportWidth());
-		Cvar_SetValueQuick(&vid_height, em_GetViewportHeight());
+		Cvar_SetValueQuick(&vid_width, js_GetViewportWidth());
+		Cvar_SetValueQuick(&vid_height, js_GetViewportHeight());
 		Cvar_SetQuick(&vid_fullscreen, "0");
 	}
 	return EM_FALSE;
@@ -35,7 +35,7 @@ EM_BOOL on_resize(int etype, const EmscriptenUiEvent *event, void *UData)
 // General routines
 // =======================================================================
 
-EM_JS(char *, listfiles, (const char *directory), {
+EM_JS(char *, js_listfiles, (const char *directory), {
 	if(UTF8ToString(directory) == "")
 	{
 		console.log("listing cwd");
@@ -51,15 +51,15 @@ EM_JS(char *, listfiles, (const char *directory), {
 		return stringToNewUTF8("directory not found");
 	}
 });
-void listfiles_f(cmd_state_t *cmd)
+void em_listfiles_f(cmd_state_t *cmd)
 {
-	char *output = listfiles(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : "");
+	char *output = js_listfiles(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : "");
 
 	Con_Printf("%s\n", output);
 	free(output);
 }
 
-EM_JS(bool, syncFS, (bool populate), {
+EM_JS(bool, js_syncFS, (bool populate), {
 	FS.syncfs(populate, function(err) {
 		if(err)
 		{
@@ -71,13 +71,13 @@ EM_JS(bool, syncFS, (bool populate), {
 		return true;
 	});
 });
-void savefs_f(cmd_state_t *cmd)
+void em_savefs_f(cmd_state_t *cmd)
 {
 	Con_Printf("Saving Files\n");
-	syncFS(false);
+	js_syncFS(false);
 }
 
-EM_JS(char *, upload, (const char *todirectory), {
+EM_JS(char *, js_upload, (const char *todirectory), {
 	if (UTF8ToString(todirectory).slice(-1) != "/")
 	{
 		currentname = UTF8ToString(todirectory) + "/";
@@ -90,15 +90,15 @@ EM_JS(char *, upload, (const char *todirectory), {
 	file_selector.click();
 	return stringToNewUTF8("Upload started");
 });
-void upload_f(cmd_state_t *cmd)
+void em_upload_f(cmd_state_t *cmd)
 {
-	char *output = upload(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : fs_basedir);
+	char *output = js_upload(Cmd_Argc(cmd) == 2 ? Cmd_Argv(cmd, 1) : fs_basedir);
 
 	Con_Printf("%s\n", output);
 	free(output);
 }
 
-EM_JS(char *, rm, (const char *path), {
+EM_JS(char *, js_rm, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 
 	if (FS.isFile(mode))
@@ -109,19 +109,19 @@ EM_JS(char *, rm, (const char *path), {
 
 	return stringToNewUTF8(UTF8ToString(path)+" is not a File.");
 });
-void rm_f(cmd_state_t *cmd)
+void em_rm_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No file to remove\n");
 	else
 	{
-		char *output = rm(Cmd_Argv(cmd, 1));
+		char *output = js_rm(Cmd_Argv(cmd, 1));
 		Con_Printf("%s\n", output);
 		free(output);
 	}
 }
 
-EM_JS(char *, rmdir, (const char *path), {
+EM_JS(char *, js_rmdir, (const char *path), {
 	const mode = FS.lookupPath(UTF8ToString(path)).node.mode;
 	if (FS.isDir(mode))
 	{
@@ -138,19 +138,19 @@ EM_JS(char *, rmdir, (const char *path), {
 
 	return stringToNewUTF8(UTF8ToString(path)+" is not a directory.");
 });
-void rmdir_f(cmd_state_t *cmd)
+void em_rmdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to remove\n");
 	else
 	{
-		char *output = rmdir(Cmd_Argv(cmd, 1));
+		char *output = js_rmdir(Cmd_Argv(cmd, 1));
 		Con_Printf("%s\n", output);
 		free(output);
 	}
 }
 
-EM_JS(char *, mkd, (const char *path), {
+EM_JS(char *, js_mkd, (const char *path), {
 	try
 	{
 		FS.mkdir(UTF8ToString(path));
@@ -161,19 +161,19 @@ EM_JS(char *, mkd, (const char *path), {
 	}
 	return stringToNewUTF8(UTF8ToString(path)+" directory was created.");
 });
-void mkdir_f(cmd_state_t *cmd)
+void em_mkdir_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 2)
 		Con_Printf("No directory to create\n");
 	else
 	{
-		char *output = mkd(Cmd_Argv(cmd, 1));
+		char *output = js_mkd(Cmd_Argv(cmd, 1));
 		Con_Printf("%s\n", output);
 		free(output);
 	}
 }
 
-EM_JS(char *, move, (const char *oldpath, const char *newpath), {
+EM_JS(char *, js_move, (const char *oldpath, const char *newpath), {
 	try
 	{
 		FS.rename(UTF8ToString(oldpath),UTF8ToString(newpath))
@@ -184,19 +184,19 @@ EM_JS(char *, move, (const char *oldpath, const char *newpath), {
 	}
 	return stringToNewUTF8("File Moved");
 });
-void mv_f(cmd_state_t *cmd)
+void em_mv_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
 		Con_Printf("Nothing to move\n");
 	else
 	{
-		char *output = move(Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
+		char *output = js_move(Cmd_Argv(cmd,1), Cmd_Argv(cmd,2));
 		Con_Printf("%s\n", output);
 		free(output);
 	}
 }
 
-void wss_f(cmd_state_t *cmd)
+void em_wss_f(cmd_state_t *cmd)
 {
 	if (Cmd_Argc(cmd) != 3)
 		Con_Printf("Not Enough Arguments (Expected URL and subprotocol)\n");
@@ -211,7 +211,7 @@ void wss_f(cmd_state_t *cmd)
 
 void Sys_SDL_Shutdown(void)
 {
-	syncFS(false);
+	js_syncFS(false);
 	SDL_Quit();
 }
 
@@ -224,7 +224,7 @@ void Sys_SDL_Dialog(const char *title, const char *string)
 		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, string, NULL);
 }
 
-EM_JS(char *, getclipboard, (void), {
+EM_JS(char *, js_getclipboard, (void), {
 	//Thank you again, stack overflow
 	return stringToNewUTF8(navigator.clipboard.readText());
 });
@@ -233,7 +233,7 @@ char *Sys_SDL_GetClipboardData (void)
 	char *data = NULL;
 	char *cliptext;
 
-	cliptext = getclipboard();
+	cliptext = js_getclipboard();
 	if (cliptext != NULL) {
 		size_t allocsize;
 		allocsize = min(MAX_INPUTLINE, strlen(cliptext) + 1);
@@ -255,21 +255,21 @@ void Sys_SDL_Init(void)
 	if(!Sys_CheckParm("-nocrashdialog"))
 		nocrashdialog = false;
 	
-	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW,0,EM_FALSE,on_resize);
+	emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, 0, EM_FALSE, em_on_resize);
 }
 
 void Sys_Register_Commands(void)
 {
 #ifdef WASM_USER_ADJUSTABLE
-	Cmd_AddCommand(CF_SHARED, "em_ls", listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_upload", upload_f, "Upload file to specified directory defaulting to basedir (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_rm", rm_f, "Remove a file from game Filesystem (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_rmdir", rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_mkdir", mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
-	Cmd_AddCommand(CF_SHARED, "em_mv", mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
-	Cmd_AddCommand(CF_SHARED, "em_wss", wss_f, "Set Websocket URL and Protocol (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_ls", em_listfiles_f, "Lists Files in specified directory defaulting to the current working directory (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_upload", em_upload_f, "Upload file to specified directory defaulting to basedir (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_rm", em_rm_f, "Remove a file from game Filesystem (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_rmdir", em_rmdir_f, "Remove a directory from game Filesystem (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_mkdir", em_mkdir_f, "Make a directory in game Filesystem (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_mv", em_mv_f, "Rename or Move an item in game Filesystem (Emscripten only)");
+	Cmd_AddCommand(CF_SHARED, "em_wss", em_wss_f, "Set Websocket URL and Protocol (Emscripten Only)");
 #endif
-	Cmd_AddCommand(CF_SHARED, "em_save", savefs_f, "Save file changes to browser (Emscripten Only)");
+	Cmd_AddCommand(CF_SHARED, "em_save", em_savefs_f, "Save file changes to browser (Emscripten Only)");
 }
 
 qbool sys_supportsdlgetticks = true;

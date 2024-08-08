@@ -175,7 +175,7 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 
 	FS_Close (f);
 #ifdef __EMSCRIPTEN__
-	syncFS(false);
+	js_syncFS(false);
 #endif
 	Con_Print("done.\n");
 }
