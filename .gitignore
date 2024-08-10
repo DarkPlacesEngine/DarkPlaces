@@ -37,12 +37,16 @@ Makefile.win
 *.gch
 /.vs
 /build
-build-obj/
 /.cache
 *.kdev4
 *.vcxproj.user
 *.pdb
 *.lib
 *.exp
+
+# emscripten
+build-obj/
 emsdk/
 docs/output/
+wasm/preload/*
+!wasm/preload/runhere
