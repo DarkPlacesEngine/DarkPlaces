@@ -85,7 +85,7 @@ jobs:
           cd ..
 
           # fail if there's any warnings
-          export CC="cc"
+          #export CC="cc"
 
           make emscripten-release
 
