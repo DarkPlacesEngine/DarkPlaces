@@ -131,9 +131,9 @@ uint8_t serverlist_querystage = 0;
 
 static uint8_t dpmasterstatus[DPMASTER_COUNT] = {0};
 static uint8_t qwmasterstatus[QWMASTER_COUNT] = {0};
-#define MASTER_TX_QUERY 1    // we sent the query
-#define MASTER_RX_RESPONSE 2 // we got at least 1 packet of the response
-#define MASTER_RX_COMPLETE 3 // we saw the EOT marker (assumes dpmaster >= 2.0, see dpmaster/doc/techinfo.txt)
+#define MASTER_TX_QUERY 1    ///< we sent the query
+#define MASTER_RX_RESPONSE 2 ///< we got at least 1 packet of the response
+#define MASTER_RX_COMPLETE 3 ///< we saw the EOT marker (assumes dpmaster >= 2.0, see dpmaster/doc/techinfo.txt)
 
 /// the hash password for timestamp verification
 char serverlist_dpserverquerykey[12]; // challenge_t uses [12]
@@ -1710,10 +1710,10 @@ static int NetConn_ClientParsePacket_ServerList_ProcessReply(const char *address
 	if (n == serverlist_cachecount)
 	{
 		if (net_slist_debug.integer)
-			Con_Printf("^6Received LAN broadcast response from %s\n", addressstring);
+			Con_Printf("^6Received reply from unlisted %sserver %s\n", challenge ? "DarkPlaces " : "", addressstring);
 
 		// find a slot
-		if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
+		if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
 			return -1;
 
 		if (serverlist_maxcachecount <= serverlist_cachecount)
@@ -1822,7 +1822,7 @@ static qbool NetConn_ClientParsePacket_ServerList_PrepareQuery(int protocol, con
 	serverlist_entry_t *entry;
 
 	// ignore the rest of the message if the serverlist is full
-	if (serverlist_cachecount == SERVERLIST_TOTALSIZE)
+	if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
 		return false;
 
 	for (n = 0; n < serverlist_cachecount; ++n)
@@ -1863,14 +1863,21 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *mas
 			break;
 	if (net_sourceaddresscheck.integer && masternum >= DPMASTER_COUNT)
 	{
-		Con_Printf(CON_WARN "ignoring DarkPlaces %sserver list from unrecognised master %s\n", isextended ? "extended " : "", masteraddressstring);
+		Con_Printf(CON_WARN "ignoring DarkPlaces %sserver list from unrecognised master %s\n",
+				isextended ? "extended " : "", masteraddressstring);
 		return;
 	}
 
 	masterreplycount++;
-	dpmasterstatus[masternum] = MASTER_RX_RESPONSE;
-	if (serverlist_consoleoutput || net_slist_debug.integer)
-		Con_Printf("^5Received DarkPlaces server list %sfrom %s\n", isextended ? "(extended) " : "", sv_masters[masternum].string);
+	if (dpmasterstatus[masternum] < MASTER_RX_RESPONSE)   // Don't reduce status if it's already COMPLETE
+		dpmasterstatus[masternum] = MASTER_RX_RESPONSE; // which happens when packets are out of order.
+
+	if (dpmasterstatus[masternum] == MASTER_RX_COMPLETE)
+		Con_Printf(CON_WARN "Received out of order DarkPlaces server list %sfrom %s\n",
+				isextended ? "(extended) " : "", sv_masters[masternum].string);
+	else if (serverlist_consoleoutput || net_slist_debug.integer)
+		Con_Printf("^5Received DarkPlaces server list %sfrom %s\n",
+				isextended ? "(extended) " : "", sv_masters[masternum].string);
 
 	while (length >= 7)
 	{
@@ -2516,16 +2523,32 @@ void NetConn_QueryQueueFrame(void)
 	// to avoid messing up the ping times on the servers
 	if (serverlist_querystage < SLIST_QUERYSTAGE_SERVERS)
 	{
+		lhnetaddress_t masteraddress;
+
 		if (currentrealtime < masterquerytime + net_slist_timeout.value)
 			return;
 
 		// Report the masters that timed out or whose response was incomplete.
+		// Some people have IPv6 DNS but no v6 connectivity
+		// so v6 master timeouts are currently silent by default.
 		for (index = 0; index < DPMASTER_COUNT; ++index)
-			if (dpmasterstatus[index] && dpmasterstatus[index] < MASTER_RX_COMPLETE)
-				Con_Printf(CON_WARN "WARNING: dpmaster %s %s\n", sv_masters[index].string, dpmasterstatus[index] == MASTER_TX_QUERY ? "timed out" : "response incomplete");
+		{
+			if (dpmasterstatus[index] == MASTER_TX_QUERY)
+			{
+				if (net_slist_debug.integer ||
+				(LHNETADDRESS_FromString(&masteraddress, sv_masters[index].string, DPMASTER_PORT)
+				&& LHNETADDRESS_GetAddressType(&masteraddress) != LHNETADDRESSTYPE_INET6))
+					Con_Printf(CON_WARN "WARNING: dpmaster %s query timed out\n", sv_masters[index].string);
+			}
+			else if (dpmasterstatus[index] && dpmasterstatus[index] < MASTER_RX_COMPLETE)
+				Con_Printf(CON_WARN "WARNING: dpmaster %s list incomplete (packet loss)\n", sv_masters[index].string);
+		}
+
 		for (index = 0; index < QWMASTER_COUNT; ++index)
-			if (qwmasterstatus[index] && qwmasterstatus[index] < MASTER_RX_RESPONSE) // no EOT marker in QW lists
-				Con_Printf(CON_WARN "WARNING: qwmaster %s timed out\n", sv_qwmasters[index].string);
+			if (qwmasterstatus[index] && qwmasterstatus[index] < MASTER_RX_RESPONSE // no EOT marker in QW lists
+			&& LHNETADDRESS_FromString(&masteraddress, sv_qwmasters[index].string, DPMASTER_PORT)
+			&& LHNETADDRESS_GetAddressType(&masteraddress) != LHNETADDRESSTYPE_INET6) // some people have v6 DNS but no connectivity
+				Con_Printf(CON_WARN "WARNING: qwmaster %s query timed out\n", sv_qwmasters[index].string);
 
 		serverlist_querystage = SLIST_QUERYSTAGE_SERVERS;
 	}
@@ -2607,15 +2630,26 @@ void NetConn_QueryQueueFrame(void)
 	{
 		// timeout pass begins next frame
 		if (net_slist_debug.integer)
-			Con_Printf("^2Finished querying masters and servers in %f\n", currentrealtime - masterquerytime);
+		{
+			int mastersqueried = 0;
+
+			for (index = 0; index < DPMASTER_COUNT; ++index)
+				if (dpmasterstatus[index])
+					++mastersqueried;
+			Con_Printf("^2Finished querying %i masters and %i servers in %f seconds\n",
+					mastersqueried, serverlist_cachecount, currentrealtime - masterquerytime);
+		}
 	}
 	else if (pass > queriesperserver)
 	{
 		// Nothing else to do until the next refresh cycle.
-		if (net_slist_debug.integer)
-			Con_Printf("^4Finished checking server timeouts in %f\n", currentrealtime - serverlist_cache[serverlist_cachecount - 1].querytime);
 		serverlist_querystage = 0;
 		pass = 0;
+		if (net_slist_debug.integer)
+			Con_Printf("^4Finished checking server timeouts in %f\n",
+					currentrealtime - serverlist_cache[serverlist_cachecount - 1].querytime);
+		if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
+			Con_Printf(CON_WARN "WARNING: too many servers, some will not be listed!\n");
 	}
 }
 #endif
@@ -3850,8 +3884,8 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 					cmdname = "getservers";
 					extraoptions = "";
 				}
-				memcpy(request, "\377\377\377\377", 4);
-				dpsnprintf(request+4, sizeof(request)-4, "%s %s %u empty full%s", cmdname, gamenetworkfiltername, NET_PROTOCOL_VERSION, extraoptions);
+				dpsnprintf(request, sizeof(request), "\377\377\377\377%s %s %u empty full%s",
+					cmdname, gamenetworkfiltername, NET_PROTOCOL_VERSION, extraoptions);
 
 				// search internet
 				for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)

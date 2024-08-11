@@ -279,7 +279,7 @@ static void VM_M_getserverliststat(prvm_prog_t *prog)
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverlist_sortflags;
 		return;
 	default:
-		VM_Warning(prog, "VM_M_getserverliststat: bad type %i!\n", type );
+		VM_Warning(prog, "VM_M_getserverliststat: bad type (%i) passed!\n", type);
 	}
 }
 
@@ -323,13 +323,14 @@ static void VM_M_setserverlistmaskstring(prvm_prog_t *prog)
 		mask = &serverlist_ormasks[masknr - 512 ];
 	else
 	{
-		VM_Warning(prog, "VM_M_setserverlistmaskstring: invalid mask number %i\n", masknr );
+		VM_Warning(prog, "VM_M_setserverlistmaskstring: invalid mask number (%i) passed!\n", masknr);
 		return;
 	}
 
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
 
-	switch( field ) {
+	switch( field )
+	{
 		case SLIF_CNAME:
 			mask->info.cname_len = dp_strlcpy(mask->info.cname, str, sizeof(mask->info.cname));
 			break;
@@ -352,7 +353,7 @@ static void VM_M_setserverlistmaskstring(prvm_prog_t *prog)
 			mask->info.game_len = dp_strlcpy(mask->info.game, str, sizeof(mask->info.game));
 			break;
 		default:
-			VM_Warning(prog, "VM_M_setserverlistmaskstring: Bad field number %i passed!\n", field );
+			VM_Warning(prog, "VM_M_setserverlistmaskstring: Bad field number (%i) passed!\n", field);
 			return;
 	}
 
@@ -385,14 +386,15 @@ static void VM_M_setserverlistmasknumber(prvm_prog_t *prog)
 		mask = &serverlist_ormasks[masknr - 512 ];
 	else
 	{
-		VM_Warning(prog, "VM_M_setserverlistmasknumber: invalid mask number %i\n", masknr );
+		VM_Warning(prog, "VM_M_setserverlistmasknumber: invalid mask number (%i) passed!\n", masknr);
 		return;
 	}
 
 	number = (int)PRVM_G_FLOAT( OFS_PARM2 );
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
 
-	switch( field ) {
+	switch( field )
+	{
 		case SLIF_MAXPLAYERS:
 			mask->info.maxplayers = number;
 			break;
@@ -421,7 +423,7 @@ static void VM_M_setserverlistmasknumber(prvm_prog_t *prog)
 			mask->info.isfavorite = number != 0;
 			break;
 		default:
-			VM_Warning(prog, "VM_M_setserverlistmasknumber: Bad field number %i passed!\n", field );
+			VM_Warning(prog, "VM_M_setserverlistmasknumber: Bad field number (%i) passed!\n", field);
 			return;
 	}
 
@@ -469,12 +471,13 @@ static void VM_M_getserverliststring(prvm_prog_t *prog)
 	{
 		if(hostnr < 0 || (unsigned)hostnr >= serverlist_viewcount)
 		{
-			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
+			VM_Warning(prog, "VM_M_getserverliststring: bad hostnr (%i) passed!\n", hostnr);
 			return;
 		}
 		cache = ServerList_GetViewEntry(hostnr);
 	}
-	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
+	switch( (int) PRVM_G_FLOAT(OFS_PARM0) )
+	{
 		case SLIF_CNAME:
 			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->info.cname, cache->info.cname_len);
 			break;
@@ -504,7 +507,7 @@ static void VM_M_getserverliststring(prvm_prog_t *prog)
 			PRVM_G_INT(OFS_RETURN) = PRVM_SetTempString(prog, cache->line2, cache->line2_len);
 			break;
 		default:
-			Con_Print("VM_M_getserverliststring: bad field number passed!\n");
+			VM_Warning(prog, "VM_M_getserverliststring: bad field number (%i) passed!\n", (int)PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
@@ -534,12 +537,13 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 	{
 		if(hostnr < 0 || (unsigned)hostnr >= serverlist_viewcount)
 		{
-			Con_Print("VM_M_getserverliststring: bad hostnr passed!\n");
+			VM_Warning(prog, "VM_M_getserverliststring: bad hostnr (%i) passed!\n", hostnr);
 			return;
 		}
 		cache = ServerList_GetViewEntry(hostnr);
 	}
-	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
+	switch( (int) PRVM_G_FLOAT(OFS_PARM0) )
+	{
 		case SLIF_MAXPLAYERS:
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
 			break;
@@ -569,7 +573,7 @@ static void VM_M_getserverlistnumber(prvm_prog_t *prog)
 			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.isfavorite;
 			break;
 		default:
-			Con_Print("VM_M_getserverlistnumber: bad field number passed!\n");
+			VM_Warning(prog, "VM_M_getserverlistnumber: bad field number (%i) passed!\n", (int)PRVM_G_FLOAT(OFS_PARM0));
 	}
 }
 
