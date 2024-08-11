@@ -2128,6 +2128,10 @@ void FS_Init_Commands(void)
 	Cmd_AddCommand(CF_SHARED, "ls", FS_Ls_f, "list files in searchpath matching an * filename pattern, multiple per line");
 	Cmd_AddCommand(CF_SHARED, "which", FS_Which_f, "accepts a file name as argument and reports where the file is taken from");
 
+#ifdef __EMSCRIPTEN__
+	Sys_EM_Register_Commands();
+#endif
+
 	if (com_startupgamegroup == GAME_NORMAL)
 		Cmd_AddCommand(CF_SHARED, "game", FS_GameDir_f, "alias of gamedir, for compatibility with some Quake mod READMEs");
 }

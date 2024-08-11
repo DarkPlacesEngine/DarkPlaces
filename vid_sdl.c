@@ -1537,6 +1537,7 @@ On Xorg it returns the correct value.
 		return;
 */
 
+	// __EMSCRIPTEN__ SDL_GL_SetSwapInterval() calls emscripten_set_main_loop_timing()
 	if (SDL_GL_SetSwapInterval(vsyncwanted) >= 0)
 		Con_DPrintf("Vsync %s\n", vsyncwanted ? "activated" : "deactivated");
 	else
@@ -1711,10 +1712,8 @@ static qbool VID_InitModeGL(const viddef_mode_t *mode)
 {
 	int windowflags = SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL;
 	int i;
-#ifndef USE_GLES2
 	// SDL usually knows best
 	const char *drivername = NULL;
-#endif
 
 	// video display selection (multi-monitor)
 	Cvar_SetValueQuick(&vid_info_displaycount, SDL_GetNumVideoDisplays());

@@ -211,7 +211,9 @@ void Host_SaveConfig(const char *file)
 
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (&cvars_all, f);
-
+#ifdef __EMSCRIPTEN__
+		js_syncFS(false);
+#endif
 		FS_Close (f);
 	}
 }
@@ -371,7 +373,7 @@ void Host_UnlockSession(void)
 Host_Init
 ====================
 */
-static void Host_Init (void)
+void Host_Init (void)
 {
 	int i;
 	char vabuf[1024];
@@ -387,6 +389,9 @@ static void Host_Init (void)
 	host.hook.SV_Shutdown = NULL;
 
 	host.state = host_init;
+
+	host.realtime = 0;
+	host.dirtytime = Sys_DirtyTime();
 
 	if (setjmp(host.abortframe)) // Huh?!
 		Sys_Error("Engine initialization failed. Check the console (if available) for additional information.\n");
@@ -567,10 +572,10 @@ static void Host_Init (void)
 ===============
 Host_Shutdown
 
-Cleanly shuts down after the main loop exits.
+Cleanly shuts down, Host_Frame() must not be called again after this.
 ===============
 */
-static void Host_Shutdown(void)
+void Host_Shutdown(void)
 {
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
@@ -617,7 +622,7 @@ Host_Frame
 Runs all active servers
 ==================
 */
-static double Host_Frame(double time)
+double Host_Frame(double time)
 {
 	double cl_wait, sv_wait;
 
@@ -654,57 +659,4 @@ static double Host_Frame(double time)
 		return cl_wait; // connected to server, main menu, or server is on different thread
 	else
 		return min(cl_wait, sv_wait); // listen server or singleplayer
-}
-
-// Cloudwalk: Most overpowered function declaration...
-static inline double Host_UpdateTime (double newtime, double oldtime)
-{
-	double time = newtime - oldtime;
-
-	if (time < 0)
-	{
-		// warn if it's significant
-		if (time < -0.01)
-			Con_Printf(CON_WARN "Host_UpdateTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
-		time = 0;
-	}
-	else if (time >= 1800)
-	{
-		Con_Printf(CON_WARN "Host_UpdateTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
-		time = 0;
-	}
-
-	return time;
-}
-
-void Host_Main(void)
-{
-	double time, oldtime, sleeptime;
-
-	Host_Init(); // Start!
-
-	host.realtime = 0;
-	oldtime = Sys_DirtyTime();
-
-	// Main event loop
-	while(host.state < host_shutdown) // see Sys_HandleCrash() comments
-	{
-		// Something bad happened, or the server disconnected
-		if (setjmp(host.abortframe))
-		{
-			host.state = host_active; // In case we were loading
-			continue;
-		}
-
-		host.dirtytime = Sys_DirtyTime();
-		host.realtime += time = Host_UpdateTime(host.dirtytime, oldtime);
-		oldtime = host.dirtytime;
-
-		sleeptime = Host_Frame(time);
-		++host.framecount;
-		sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
-		host.sleeptime = Sys_Sleep(sleeptime);
-	}
-
-	Host_Shutdown();
 }

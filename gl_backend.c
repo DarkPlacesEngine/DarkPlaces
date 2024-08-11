@@ -11,7 +11,11 @@ cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all O
 cvar_t r_render = {CF_CLIENT, "r_render", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_renderview = {CF_CLIENT, "r_renderview", "1", "enables rendering 3D views (you want this on!)"};
 cvar_t r_waterwarp = {CF_CLIENT | CF_ARCHIVE, "r_waterwarp", "1", "warp view while underwater"};
+#ifdef USE_GLES2
+cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "0", "tints view while underwater, hurt, etc"};
+#else
 cvar_t gl_polyblend = {CF_CLIENT | CF_ARCHIVE, "gl_polyblend", "1", "tints view while underwater, hurt, etc"};
+#endif
 
 cvar_t v_flipped = {CF_CLIENT, "v_flipped", "0", "mirror the screen (poor man's left handed mode)"};
 qbool v_flipped_state = false;
@@ -966,8 +970,12 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 	case RENDERPATH_GLES2:
 		CHECKGLERROR
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
-		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);
+
+#ifndef USE_GLES2
+		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);  // This breaks GLES2.
 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
+#endif
+
 #ifdef USE_GLES2
 		// FIXME: separate stencil attachment on GLES
 		if (depthtexture  && depthtexture->texnum ) { qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT  , depthtexture->gltexturetypeenum , depthtexture->texnum , 0);CHECKGLERROR }
@@ -984,6 +992,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 			if (depthtexture->glisdepthstencil) { qglFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT  , GL_RENDERBUFFER, depthtexture->renderbuffernum );CHECKGLERROR }
 		}
 #endif
+
 		if (colortexture  && colortexture->texnum ) { qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 , colortexture->gltexturetypeenum , colortexture->texnum , 0);CHECKGLERROR }
 		if (colortexture2 && colortexture2->texnum) { qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1 , colortexture2->gltexturetypeenum, colortexture2->texnum, 0);CHECKGLERROR }
 		if (colortexture3 && colortexture3->texnum) { qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2 , colortexture3->gltexturetypeenum, colortexture3->texnum, 0);CHECKGLERROR }

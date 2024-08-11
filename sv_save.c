@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "prvm_cmds.h"
+#include "sys.h"
 
 /*
 ===============================================================================
@@ -173,6 +174,9 @@ void SV_Savegame_to(prvm_prog_t *prog, const char *name)
 #endif
 
 	FS_Close (f);
+#ifdef __EMSCRIPTEN__
+	js_syncFS(false);
+#endif
 	Con_Print("done.\n");
 }
 

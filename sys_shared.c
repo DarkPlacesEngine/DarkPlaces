@@ -1102,6 +1102,73 @@ static void Sys_InitSignals(void)
 #endif
 }
 
+// Cloudwalk: Most overpowered function declaration...
+static inline double Sys_UpdateTime (double newtime, double oldtime)
+{
+	double time = newtime - oldtime;
+
+	if (time < 0)
+	{
+		// warn if it's significant
+		if (time < -0.01)
+			Con_Printf(CON_WARN "Host_UpdateTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+		time = 0;
+	}
+	else if (time >= 1800)
+	{
+		Con_Printf(CON_WARN "Host_UpdateTime: time stepped forward (went from %f to %f, difference %f)\n", oldtime, newtime, time);
+		time = 0;
+	}
+
+	return time;
+}
+
+#ifdef __EMSCRIPTEN__
+	#include <emscripten.h>
+#endif
+/// JS+WebGL doesn't support a main loop, only a function called to run a frame.
+static void Sys_Frame(void)
+{
+	double time, newtime, sleeptime;
+#ifdef __EMSCRIPTEN__
+	static double sleepstarttime = 0;
+	host.sleeptime = Sys_DirtyTime() - sleepstarttime;
+#endif
+
+	if (setjmp(host.abortframe)) // Something bad happened, or the server disconnected
+		host.state = host_active; // In case we were loading
+
+	if (host.state >= host_shutdown) // see Sys_HandleCrash() comments
+	{
+#ifdef __EMSCRIPTEN__
+		emscripten_cancel_main_loop();
+#endif
+#ifdef __ANDROID__
+		Sys_AllowProfiling(false);
+#endif
+		Host_Shutdown();
+		exit(0);
+	}
+
+	newtime = Sys_DirtyTime();
+	host.realtime += time = Sys_UpdateTime(newtime, host.dirtytime);
+	host.dirtytime = newtime;
+
+	sleeptime = Host_Frame(time);
+	++host.framecount;
+	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
+
+#ifdef __EMSCRIPTEN__
+	// This platform doesn't support a main loop... it will sleep when Sys_Frame() returns.
+	// Not using emscripten_sleep() via Sys_Sleep() because it would cause two sleeps per frame.
+	if (!vid_vsync.integer) // see VID_SetVsync_c()
+		emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, host.restless ? 0 : sleeptime * 1000.0);
+	sleepstarttime = Sys_DirtyTime();
+#else
+	host.sleeptime = Sys_Sleep(sleeptime);
+#endif
+}
+
 /** main() but renamed so we can wrap it in sys_sdl.c and sys_null.c
  * to avoid needing to include SDL.h in this file (would make the dedicated server require SDL).
  * SDL builds need SDL.h in the file where main() is defined because SDL renames and wraps main().
@@ -1141,18 +1208,13 @@ int Sys_Main(int argc, char *argv[])
 	Sys_SetTimerResolution();
 #endif
 
-	Host_Main();
-
-#ifdef __ANDROID__
-	Sys_AllowProfiling(false);
+	Host_Init();
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(Sys_Frame, 0, true); // doesn't return
+#else
+	while(true)
+		Sys_Frame();
 #endif
-
-#ifndef WIN32
-	fcntl(fileno(stdout), F_SETFL, fcntl(fileno(stdout), F_GETFL, 0) & ~O_NONBLOCK);
-	fcntl(fileno(stderr), F_SETFL, fcntl(fileno(stderr), F_GETFL, 0) & ~O_NONBLOCK);
-#endif
-	fflush(stdout);
-	fflush(stderr);
 
 	return 0;
 }

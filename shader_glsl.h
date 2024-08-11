@@ -41,6 +41,9 @@
 "\n",
 "invariant gl_Position; // fix for lighting polygons not matching base surface\n",
 "# endif\n",
+#ifdef USE_GLES2
+"precision highp float;\n",
+#endif
 "#if defined(GLSL130) || defined(GLSL140)\n",
 "precision highp float;\n",
 "# ifdef VERTEX_SHADER\n",
