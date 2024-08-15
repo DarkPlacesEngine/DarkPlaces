@@ -51,8 +51,9 @@ dp_fonts_t dp_fonts;
 static mempool_t *fonts_mempool = NULL;
 
 cvar_t r_textshadow = {CF_CLIENT | CF_ARCHIVE, "r_textshadow", "0", "draws a shadow on all text to improve readability (note: value controls offset, 1 = 1 pixel, 1.5 = 1.5 pixels, etc)"};
-cvar_t r_textbrightness = {CF_CLIENT | CF_ARCHIVE, "r_textbrightness", "0.25", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
-cvar_t r_textcontrast = {CF_CLIENT | CF_ARCHIVE, "r_textcontrast", "1.25", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
+// these are also read by the dedicated server when sys_colortranslation > 1
+cvar_t r_textbrightness = {CF_SHARED | CF_ARCHIVE, "r_textbrightness", "0", "additional brightness for text color codes (0 keeps colors as is, 1 makes them all white)"};
+cvar_t r_textcontrast = {CF_SHARED | CF_ARCHIVE, "r_textcontrast", "1", "additional contrast for text color codes (1 keeps colors as is, 0 makes them all black)"};
 
 cvar_t r_font_postprocess_blur = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_blur", "0", "font blur amount"};
 cvar_t r_font_postprocess_outline = {CF_CLIENT | CF_ARCHIVE, "r_font_postprocess_outline", "0", "font outline amount"};
@@ -849,7 +850,7 @@ void DrawQ_Fill(float x, float y, float width, float height, float red, float gr
 }
 
 /// color tag printing
-static const vec4_t string_colors[] =
+const vec4_t string_colors[] =
 {
 	// Quake3 colors
 	// LadyHavoc: why on earth is cyan before magenta in Quake3?

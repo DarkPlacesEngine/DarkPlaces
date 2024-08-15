@@ -666,6 +666,9 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "sv_gameplayfix_q1bsptracelinereportstexture 0\n"
 "sv_gameplayfix_swiminbmodels 0\n"
 "sv_gameplayfix_downtracesupportsongroundflag 0\n"
+// Work around low brightness and poor legibility of Quake font
+"r_textbrightness 0.25\n"
+"r_textcontrast 1.25\n"
 				);
 			break;
 		default:
