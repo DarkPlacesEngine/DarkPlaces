@@ -1011,16 +1011,16 @@ static void Sys_HandleCrash(int sig)
 	sys.outfd = fileno(stderr); // not async-signal-safe :(
 #ifndef WIN32
 	fcntl(sys.outfd, F_SETFL, fcntl(sys.outfd, F_GETFL, 0) & ~O_NONBLOCK);
-	Sys_Print("\n\n\e[1;37;41m    Engine Crash: ", 30);
+	Sys_Print("\n\n\x1B[1;37;41m    Engine Crash: ", 30);
 	Sys_Print(sigdesc, strlen(sigdesc));
-	Sys_Print("    \e[m\n", 8);
+	Sys_Print("    \x1B[m\n", 8);
   #if __GLIBC__ >= 2 && __GLIBC_MINOR__ >= 1
 	// the first two addresses will be in this function and in signal() in libc
 	backtrace_symbols_fd(stackframes + 2, framecount - 2, sys.outfd);
   #endif
-	Sys_Print("\e[1m", 4);
+	Sys_Print("\x1B[1m", 4);
 	Sys_Print(engineversion, strlen(engineversion));
-	Sys_Print("\e[m\n", 4);
+	Sys_Print("\x1B[m\n", 4);
 #else // Windows console doesn't support colours
 	Sys_Print("\n\nEngine Crash: ", 16);
 	Sys_Print(sigdesc, strlen(sigdesc));

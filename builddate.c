@@ -20,12 +20,12 @@ const char *buildstring =
 //	STRINGIFY(__clang_major__)
 //	"."
 //	STRINGIFY(__clang_minor__)
-#elifdef __GNUC__
+#elif defined(__GNUC__)
 	" GCC "
 //	STRINGIFY(__GNUC__)
 //	"."
 //	STRINGIFY(__GNUC_MINOR__)
-#elifdef _MSC_VER
+#elif defined(_MSC_VER)
 	" MSC "
 //	STRINGIFY(_MSC_VER)
 #endif

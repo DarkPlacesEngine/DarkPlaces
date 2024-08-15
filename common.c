@@ -1036,7 +1036,7 @@ int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list ar
 			if (result > 0)
 			{
 				msg[sizeof(msg) - 1] = '\n'; // may have been lost in truncation
-				Sys_Print(msg, min((size_t)result, sizeof(msg)));
+				Sys_Print(msg, min((size_t)result, sizeof(msg) - 1));
 			}
 		}
 		return -1;
