@@ -4007,7 +4007,7 @@ static void R_View_UpdateEntityVisible (void)
 	if (!r_drawexteriormodel.integer)
 		renderimask |= RENDER_EXTERIORMODEL;
 	memset(r_refdef.viewcache.entityvisible, 0, r_refdef.scene.numentities);
-	if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
+	if (r_refdef.scene.worldmodel && !r_novis.integer && r_refdef.scene.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
 		// worldmodel can check visibility
 		for (i = 0;i < r_refdef.scene.numentities;i++)
