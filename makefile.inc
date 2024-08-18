@@ -236,14 +236,14 @@ LDFLAGS_WASMJS=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -s USE_LIBJPEG=1 \
                                    -s USE_ZLIB=1 \
                                    -s INITIAL_MEMORY=128mb \
-                                   -s MAXIMUM_MEMORY=1gb \
+                                   -s MAXIMUM_MEMORY=2gb \
                                    -s SINGLE_FILE \
                                    -s FULL_ES3 \
                                    -s MIN_WEBGL_VERSION=2 \
                                    -s MAX_WEBGL_VERSION=2 \
                                    -s ALLOW_MEMORY_GROWTH=1 \
-                                   -s ASSERTIONS=2 \
-                                   -s TOTAL_STACK=32mb \
+                                   -s ASSERTIONS=1 \
+                                   -s STACK_SIZE=8mb \
                                    -DUSE_GLES2 \
                                    -lidbfs.js \
                                    --pre-js ../../../wasm/pre.js \
@@ -254,14 +254,14 @@ LDFLAGS_WASM=$(LDFLAGS_UNIXCOMMON) -s USE_SDL=2 \
                                    -s USE_LIBJPEG=1 \
                                    -s USE_ZLIB=1 \
                                    -s INITIAL_MEMORY=128mb \
-                                   -s MAXIMUM_MEMORY=1gb \
+                                   -s MAXIMUM_MEMORY=2gb \
                                    -s SINGLE_FILE \
                                    -s FULL_ES3 \
                                    -s MIN_WEBGL_VERSION=2 \
                                    -s MAX_WEBGL_VERSION=2 \
                                    -s ALLOW_MEMORY_GROWTH=1 \
-                                   -s ASSERTIONS=2 \
-                                   -s TOTAL_STACK=32mb \
+                                   -s ASSERTIONS=1 \
+                                   -s STACK_SIZE=8mb \
                                    -DUSE_GLES2 \
                                    -lidbfs.js \
                                    --pre-js ../../../wasm/standaloneprejs.js \
@@ -299,8 +299,8 @@ WINDRES ?= windres
 
 # Link
 # see LDFLAGS_WINCOMMON in makefile
-LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG)
-LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(LDFLAGS_UNIXSDL) -lwinmm -lws2_32 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
+LDFLAGS_WINSV=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) -mconsole -lwinmm -lws2_32 -Wl,--stack=0x800000 $(LIB_Z) $(LIB_JPEG)
+LDFLAGS_WINSDL=$(LDFLAGS_WINCOMMON) $(LIB_CRYPTO) $(LIB_CRYPTO_RIJNDAEL) $(LDFLAGS_UNIXSDL) -lwinmm -lws2_32 -Wl,--stack=0x800000 $(LIB_Z) $(LIB_JPEG) $(LIB_SND_XMP)
 EXE_WINSV=darkplaces-dedicated.exe
 EXE_WINSDL=darkplaces-sdl.exe
 EXE_WINSVNEXUIZ=nexuiz-dedicated.exe
