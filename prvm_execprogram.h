@@ -37,7 +37,7 @@ int i;
 
 #if USE_COMPUTED_GOTOS
   // Must exactly match opcode_e enum in pr_comp.h
-    const static void *dispatchtable[] = {
+    static const void *dispatchtable[] = {
 	&&handle_OP_DONE,
 	&&handle_OP_MUL_F,
 	&&handle_OP_MUL_V,
