@@ -1142,12 +1142,12 @@ void Sbar_ShowFPS(void)
 	}
 	if (cl_showtime.integer)
 	{
-		dp_strlcpy(timestring, Sys_TimeString(cl_showtime_format.string), sizeof(timestring));
+		Sys_TimeString(timestring, sizeof(timestring), cl_showtime_format.string);
 		fps_strings++;
 	}
 	if (cl_showdate.integer)
 	{
-		dp_strlcpy(datestring, Sys_TimeString(cl_showdate_format.string), sizeof(datestring));
+		Sys_TimeString(datestring, sizeof(datestring), cl_showdate_format.string);
 		fps_strings++;
 	}
 	if (cl_showblur.integer)

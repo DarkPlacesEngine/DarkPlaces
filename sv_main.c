@@ -812,6 +812,7 @@ void SV_SendServerinfo (client_t *client)
 	{
 		char demofile[MAX_OSPATH];
 		char ipaddress[MAX_QPATH];
+		char timestring[128];
 		size_t j;
 
 		// start a new demo file
@@ -819,7 +820,9 @@ void SV_SendServerinfo (client_t *client)
 		for(j = 0; ipaddress[j]; ++j)
 			if(!isalnum(ipaddress[j]))
 				ipaddress[j] = '-';
-		dpsnprintf (demofile, sizeof(demofile), "%s_%s_%d_%s.dem", Sys_TimeString (sv_autodemo_perclient_nameformat.string), sv.worldbasename, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
+		Sys_TimeString(timestring, sizeof(timestring), sv_autodemo_perclient_nameformat.string);
+		dpsnprintf(demofile, sizeof(demofile), "%s_%s_%d_%s.dem", timestring,
+				sv.worldbasename, PRVM_NUM_FOR_EDICT(client->edict), ipaddress);
 
 		SV_StartDemoRecording(client, demofile, -1);
 	}

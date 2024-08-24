@@ -202,7 +202,7 @@ void Sys_Init_Commands (void);
 
 
 /// \returns current timestamp
-char *Sys_TimeString(const char *timeformat);
+size_t Sys_TimeString(char buf[], size_t bufsize, const char *timeformat);
 
 //
 // system IO interface (these are the sys functions that need to be implemented in a new driver atm)

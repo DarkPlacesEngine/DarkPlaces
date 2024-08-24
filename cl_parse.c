@@ -1930,7 +1930,8 @@ static void CL_ParseServerInfo (void)
 			}
 
 			// start a new demo file
-			dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", Sys_TimeString (cl_autodemo_nameformat.string), cl.worldbasename);
+			Sys_TimeString(vabuf, sizeof(vabuf), cl_autodemo_nameformat.string);
+			dpsnprintf (demofile, sizeof(demofile), "%s_%s.dem", vabuf, cl.worldbasename);
 
 			Con_Printf ("Auto-recording to %s.\n", demofile);
 

@@ -41,18 +41,21 @@
 
 sys_t sys;
 
-static char sys_timestring[128];
-char *Sys_TimeString(const char *timeformat)
+
+size_t Sys_TimeString(char buf[], size_t bufsize, const char *timeformat)
 {
 	time_t mytime = time(NULL);
+	size_t strlen;
 #if _MSC_VER >= 1400
 	struct tm mytm;
 	localtime_s(&mytm, &mytime);
-	strftime(sys_timestring, sizeof(sys_timestring), timeformat, &mytm);
+	strlen = strftime(buf, bufsize, timeformat, &mytm);
 #else
-	strftime(sys_timestring, sizeof(sys_timestring), timeformat, localtime(&mytime));
+	strlen = strftime(buf, bufsize, timeformat, localtime(&mytime));
 #endif
-	return sys_timestring;
+	if (!strlen) // means the array contents are undefined (but it's not always an error)
+		buf[0] = '\0'; // better fix it
+	return strlen;
 }
 
 

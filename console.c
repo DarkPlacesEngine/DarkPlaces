@@ -1166,7 +1166,6 @@ void Con_MaskPrint(unsigned additionalmask, const char *msg)
 		// if this is the beginning of a new line, print timestamp
 		if (index == 0)
 		{
-			const char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
 			// reset the color
 			// FIXME: 1. perhaps we should use a terminal system 2. use a constant instead of 7!
 			line[index++] = STRING_COLOR_TAG;
@@ -1198,9 +1197,8 @@ void Con_MaskPrint(unsigned additionalmask, const char *msg)
 				Con_Rcon_AddChar(*msg);
 			}
 			// store timestamp
-			for (;*timestamp;index++, timestamp++)
-				if (index < (int)sizeof(line) - 2)
-					line[index] = *timestamp;
+			if (timestamps.integer)
+				index += Sys_TimeString(&line[index], sizeof(line) - index, timeformat.string);
 			// add the mask
 			mask |= additionalmask;
 		}
