@@ -1083,6 +1083,9 @@ static void SCR_CaptureVideo_BeginVideo(void)
 	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/%s%03i", timestring, cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
 
+	// capture demos as fast as possible
+	host.restless = !cls.capturevideo.realtime;
+
 	/*
 	for (i = 0;i < 256;i++)
 	{
@@ -1155,6 +1158,7 @@ void SCR_CaptureVideo_EndVideo(void)
 	if (!cls.capturevideo.active)
 		return;
 	cls.capturevideo.active = false;
+	host.restless = false;
 
 	Con_Printf("Finishing capture of %s.%s (%d frames, %d audio frames)\n", cls.capturevideo.basename, cls.capturevideo.formatextension, cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
 

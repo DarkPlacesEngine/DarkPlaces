@@ -2814,18 +2814,15 @@ double CL_Frame (double time)
 	 * run the frame. Everything that happens before this
 	 * point will happen even if we're sleeping this frame.
 	 */
-	if((cl_timer += time) < 0)
-		return cl_timer;
 
 	// limit the frametime steps to no more than 100ms each
-	if (cl_timer > 0.1)
-		cl_timer = 0.1;
+	cl_timer = min(cl_timer + time, 0.1);
 
 	// Run at full speed when querying servers, compared to waking up early to parse
 	// this is simpler and gives pings more representative of what can be expected when playing.
 	maxfps = (vid_activewindow || serverlist_querystage ? cl_maxfps : cl_maxidlefps).value;
 
-	if (cls.state != ca_dedicated && (cl_timer > 0 || cls.timedemo || maxfps <= 0))
+	if (cls.state != ca_dedicated && (cl_timer > 0 || host.restless || maxfps <= 0))
 	{
 		R_TimeReport("---");
 		Collision_Cache_NewFrame();
@@ -2875,9 +2872,6 @@ double CL_Frame (double time)
 			if (cl.paused || host.paused)
 				clframetime = 0;
 		}
-
-		if (cls.timedemo)
-			clframetime = cl.realframetime = cl_timer;
 
 		// deduct the frame time from the accumulator
 		cl_timer -= cl.realframetime;
