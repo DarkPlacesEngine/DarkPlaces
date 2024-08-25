@@ -385,7 +385,6 @@ void Host_Init (void)
 	host.hook.ConnectLocal = NULL;
 	host.hook.Disconnect = NULL;
 	host.hook.ToggleMenu = NULL;
-	host.hook.CL_Intermission = NULL;
 	host.hook.SV_Shutdown = NULL;
 
 	host.state = host_init;

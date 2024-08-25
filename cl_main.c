@@ -620,10 +620,6 @@ static void CL_EstablishConnection_Local(void)
 		CL_EstablishConnection("local:1", -2);
 }
 
-static qbool CL_Intermission(void)
-{
-	return cl.intermission;
-}
 
 /*
 ==============
@@ -3149,7 +3145,6 @@ void CL_Init (void)
 
 		host.hook.ConnectLocal = CL_EstablishConnection_Local;
 		host.hook.Disconnect = CL_DisconnectEx;
-		host.hook.CL_Intermission = CL_Intermission;
 		host.hook.ToggleMenu = CL_ToggleMenu_Hook;
 	}
 }
