@@ -165,7 +165,7 @@ cvar_t sv_areadebug = {CF_SERVER, "sv_areadebug", "0", "disables physics culling
 
 cvar_t sys_ticrate = {CF_SERVER | CF_ARCHIVE, "sys_ticrate","0.01388889", "how long a server frame is in seconds, 0.05 is 20fps server rate, 0.1 is 10fps (can not be set higher than 0.1), 0 runs as many server frames as possible (makes games against bots a little smoother, overwhelms network players), 1/72 matches QuakeWorld physics"};
 cvar_t sv_maxphysicsframesperserverframe = {CF_SERVER, "sv_maxphysicsframesperserverframe","10", "maximum number of physics frames per server frame"};
-cvar_t sv_lagreporting_always = {CF_SERVER, "sv_lagreporting_always", "0", "report lag even in singleplayer, listen, or an empty dedicated server"};
+cvar_t sv_lagreporting_always = {CF_SERVER, "sv_lagreporting_always", "0", "report lag even in singleplayer, listen, an empty dedicated server, or during intermission"};
 cvar_t sv_lagreporting_strict = {CF_SERVER, "sv_lagreporting_strict", "0", "log any extra frames run to catch up after a holdup (only applies when sv_maxphysicsframesperserverframe > 1)"};
 cvar_t sv_threaded = {CF_SERVER, "sv_threaded", "0", "enables a separate thread for server code, improving performance, especially when hosting a game while playing, EXPERIMENTAL, may be crashy"};
 
@@ -2545,12 +2545,16 @@ double SV_Frame(double time)
 
 	if (!svs.threaded)
 	{
+		prvm_prog_t *prog = SVVM_prog;
+
 		sv.perf_acc_sleeptime += host.sleeptime;
 		sv.perf_acc_realtime += time;
 
 		if (sv_lagreporting_always.integer)
 			reporting = true;
-		else if (cls.state == ca_dedicated)
+		// bones_was_here: intermission_running isn't declared in dpdefs, but it's used by
+		// id1 Quake, all Quake mods (afaict), Nexuiz and Xonotic.
+		else if (cls.state == ca_dedicated && !PRVM_serverglobalfloat(intermission_running))
 		{
 			// Report lag if there's players, so they know it wasn't the network or their machine
 			for (i = 0; i < svs.maxclients; ++i)
