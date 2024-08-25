@@ -152,8 +152,8 @@ qbool simsound = false;
 static qbool recording_sound = false;
 #endif
 
-int snd_blocked = 0;
-static int current_swapstereo = false;
+bool snd_blocked = false;
+static bool current_swapstereo = false;
 static int current_channellayout = SND_CHANNELLAYOUT_AUTO;
 static int current_channellayout_used = SND_CHANNELLAYOUT_AUTO;
 
@@ -168,7 +168,6 @@ cvar_t snd_initialized = {CF_CLIENT | CF_READONLY, "snd_initialized", "0", "indi
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t snd_channellayout = {CF_CLIENT, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
-cvar_t snd_mutewhenidle = {CF_CLIENT | CF_ARCHIVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
 cvar_t snd_streaming = {CF_CLIENT | CF_ARCHIVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
 cvar_t snd_streaming_length = {CF_CLIENT | CF_ARCHIVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
 cvar_t snd_waterfx = {CF_CLIENT | CF_ARCHIVE, "snd_waterfx", "1", "underwater sound filter strength"};
@@ -191,6 +190,7 @@ cvar_t snd_spatialization_occlusion = {CF_CLIENT | CF_ARCHIVE, "snd_spatializati
 cvar_t _snd_mixahead = {CF_CLIENT | CF_ARCHIVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
 cvar_t snd_swapstereo = {CF_CLIENT | CF_ARCHIVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
 cvar_t snd_maxchannelvolume = {CF_CLIENT | CF_ARCHIVE, "snd_maxchannelvolume", "10", "maximum volume of a single sound"};
+cvar_t snd_mutewhenidle = {CF_CLIENT | CF_ARCHIVE, "snd_mutewhenidle", "1", "1 disables sound output when game window is inactive, 2 disables it only when the window is minimised"};
 cvar_t snd_softclip = {CF_CLIENT | CF_ARCHIVE, "snd_softclip", "0", "Use soft-clipping. Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
 //cvar_t snd_softclip = {CF_CLIENT | CF_ARCHIVE, "snd_softclip", "0", "Use soft-clipping (when set to 2, use it even if output is floating point). Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
 cvar_t snd_entchannel0volume = {CF_CLIENT | CF_ARCHIVE, "snd_entchannel0volume", "1", "volume multiplier of the auto-allocate entity channel of regular entities (DEPRECATED)"};
@@ -1107,27 +1107,6 @@ qbool S_IsSoundPrecached (const sfx_t *sfx)
 	return (sfx != NULL && sfx->fetcher != NULL) || (sfx == &changevolume_sfx);
 }
 
-/*
-==================
-S_BlockSound
-==================
-*/
-void S_BlockSound (void)
-{
-	snd_blocked++;
-}
-
-
-/*
-==================
-S_UnblockSound
-==================
-*/
-void S_UnblockSound (void)
-{
-	snd_blocked--;
-}
-
 
 /*
 =================
@@ -1974,7 +1953,9 @@ static void S_PaintAndSubmit (void)
 	}
 	soundtimehack = usesoundtimehack;
 
-	if (!soundtimehack && snd_blocked > 0)
+	// mixing is always required here when capturing, even if output is muted
+	// (capture doesn't use threaded/callback mode)
+	if (!soundtimehack && snd_blocked && !cls.capturevideo.active)
 		return;
 
 	if (snd_usethreadedmixing)
@@ -2085,6 +2066,11 @@ void S_Update(const matrix4x4_t *listenermatrix)
 
 	if (snd_renderbuffer == NULL || nosound.integer)
 		return;
+
+	// enable/disable sound on focus gain/loss
+	snd_blocked = (snd_mutewhenidle.integer == 1 && !vid_activewindow)
+	           || (snd_mutewhenidle.integer == 2 && vid_hidden)
+	           || cls.timedemo;
 
 	{
 		double mindist_trans, maxdist_trans;

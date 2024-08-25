@@ -1042,7 +1042,6 @@ static keynum_t buttonremap[] =
 //#define DEBUGSDLEVENTS
 void Sys_SDL_HandleEvents(void)
 {
-	static qbool sound_active = true;
 	int keycode;
 	int i;
 	const char *chp;
@@ -1329,24 +1328,6 @@ void Sys_SDL_HandleEvents(void)
 		}
 
 	vid_activewindow = !vid_hidden && vid_hasfocus;
-
-	// enable/disable sound on focus gain/loss
-	if (vid_activewindow || !snd_mutewhenidle.integer)
-	{
-		if (!sound_active)
-		{
-			S_UnblockSound ();
-			sound_active = true;
-		}
-	}
-	else
-	{
-		if (sound_active)
-		{
-			S_BlockSound ();
-			sound_active = false;
-		}
-	}
 
 	if (!vid_activewindow || key_consoleactive || scr_loading)
 		VID_SetMouse(false, false);

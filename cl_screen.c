@@ -2280,7 +2280,8 @@ void CL_UpdateScreen(void)
 	}
 
 #ifdef CONFIG_VIDEO_CAPTURE
-	if (vid_hidden && !cls.capturevideo.active && !cl_capturevideo.integer)
+	if (vid_hidden && !cls.capturevideo.active
+	&& !cl_capturevideo.integer) // so we can start capturing while hidden
 #else
 	if (vid_hidden)
 #endif

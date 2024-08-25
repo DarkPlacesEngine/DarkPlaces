@@ -58,7 +58,9 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 		FrameCount = MaxFrames;
 	StartOffset = snd_renderbuffer->startframe % snd_renderbuffer->maxframes;
 	EndOffset = (snd_renderbuffer->startframe + FrameCount) % snd_renderbuffer->maxframes;
-	if (StartOffset > EndOffset)  // if the buffer wraps
+	if (snd_blocked)
+		memset(stream, snd_renderbuffer->format.width == 1 ? 0x80 : 0, len);
+	else if (StartOffset > EndOffset)  // if the buffer wraps
 	{
 		unsigned int PartialLength1, PartialLength2;
 

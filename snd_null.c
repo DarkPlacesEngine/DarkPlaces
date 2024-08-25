@@ -127,14 +127,6 @@ qbool S_LocalSoundEx (const char *s, int chan, float fvol)
 	return false;
 }
 
-void S_BlockSound (void)
-{
-}
-
-void S_UnblockSound (void)
-{
-}
-
 int S_GetSoundRate(void)
 {
 	return 0;

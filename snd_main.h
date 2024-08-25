@@ -127,7 +127,6 @@ extern snd_ringbuffer_t *snd_renderbuffer;
 extern qbool snd_threaded; ///< enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
 extern qbool snd_usethreadedmixing; ///< if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
 
-extern cvar_t snd_mutewhenidle;
 extern cvar_t snd_waterfx;
 extern cvar_t snd_streaming;
 extern cvar_t snd_streaming_length;
@@ -137,7 +136,7 @@ extern cvar_t snd_streaming_length;
 #define SND_CHANNELLAYOUT_ALSA     2
 extern cvar_t snd_channellayout;
 
-extern int snd_blocked;		// counter. When > 0, we stop submitting sound to the audio device
+extern bool snd_blocked; ///< When true, we submit silence to the audio device
 
 extern struct mempool_s *snd_mempool;
 
