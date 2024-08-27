@@ -77,6 +77,7 @@ cvar_t net_usesizelimit = {CF_SERVER, "net_usesizelimit", "2", "use packet size 
 cvar_t net_burstreserve = {CF_SERVER, "net_burstreserve", "0.3", "how much of the burst time to reserve for packet size spikes"};
 cvar_t net_messagetimeout = {CF_CLIENT | CF_SERVER, "net_messagetimeout","300", "drops players who have not sent any packets for this many seconds"};
 cvar_t net_connecttimeout = {CF_CLIENT | CF_SERVER, "net_connecttimeout","15", "after requesting a connection, the client must reply within this many seconds or be dropped (cuts down on connect floods). Must be above 10 seconds."};
+cvar_t net_connect_entnum_ofs = {CF_SERVER, "net_connect_entnum_ofs", "0", "entity number offset of human clients (for developer testing only)"};
 cvar_t net_connectfloodblockingtimeout = {CF_SERVER, "net_connectfloodblockingtimeout", "5", "when a connection packet is received, it will block all future connect packets from that IP address for this many seconds (cuts down on connect floods). Note that this does not include retries from the same IP; these are handled earlier and let in."};
 cvar_t net_challengefloodblockingtimeout = {CF_SERVER, "net_challengefloodblockingtimeout", "0.5", "when a challenge packet is received, it will block all future challenge packets from that IP address for this many seconds (cuts down on challenge floods). DarkPlaces clients retry once per second, so this should be <= 1. Failure here may lead to connect attempts failing."};
 cvar_t net_getstatusfloodblockingtimeout = {CF_SERVER, "net_getstatusfloodblockingtimeout", "1", "when a getstatus packet is received, it will block all future getstatus packets from that IP address for this many seconds (cuts down on getstatus floods). DarkPlaces retries every net_slist_timeout seconds, and qstat retries once per second, so this should be <= 1. Failure here may lead to server not showing up in the server list."};
@@ -3406,10 +3407,14 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 				return true;
 
 			// find an empty client slot for this new client
-			for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
+			for (clientnum = 0; clientnum < svs.maxclients; clientnum++)
 			{
 				netconn_t *conn;
-				if (!client->active && (conn = NetConn_Open(mysocket, peeraddress)))
+				int offset_clientnum = (net_connect_entnum_ofs.integer > 0)
+						? (clientnum + net_connect_entnum_ofs.integer) % svs.maxclients
+						: clientnum;
+
+				if (!svs.clients[offset_clientnum].active && (conn = NetConn_Open(mysocket, peeraddress)))
 				{
 					// allocated connection
 					if (developer_extra.integer)
@@ -3418,7 +3423,7 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 					// now set up the client
 					if(crypto && crypto->authenticated)
 						Crypto_FinishInstance(&conn->crypto, crypto);
-					SV_ConnectClient(clientnum, conn);
+					SV_ConnectClient(offset_clientnum, conn);
 					NetConn_Heartbeat(1);
 					return true;
 				}
@@ -4110,6 +4115,7 @@ void NetConn_Init(void)
 #endif
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
+	Cvar_RegisterVariable(&net_connect_entnum_ofs);
 	Cvar_RegisterVariable(&net_connectfloodblockingtimeout);
 	Cvar_RegisterVariable(&net_challengefloodblockingtimeout);
 	Cvar_RegisterVariable(&net_getstatusfloodblockingtimeout);
