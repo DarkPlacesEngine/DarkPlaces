@@ -66,7 +66,7 @@ cvar_t scr_screenshot_timestamp = {CF_CLIENT | CF_ARCHIVE, "scr_screenshot_times
 #ifdef CONFIG_VIDEO_CAPTURE
 cvar_t cl_capturevideo = {CF_CLIENT, "cl_capturevideo", "0", "enables saving of video to a .avi file using uncompressed I420 colorspace and PCM audio, note that scr_screenshot_gammaboost affects the brightness of the output)"};
 cvar_t cl_capturevideo_demo_stop = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_demo_stop", "1", "automatically stops video recording when demo ends"};
-cvar_t cl_capturevideo_printfps = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to the log file, not to the console, as that would be visible on the video)"};
+cvar_t cl_capturevideo_printfps = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_printfps", "1", "prints the frames per second captured in capturevideo (is only written to stdout and any log file, not to the console as that would be visible on the video), value is seconds of wall time between prints"};
 cvar_t cl_capturevideo_width = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_width", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_height = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_height", "0", "scales all frames to this resolution before saving the video"};
 cvar_t cl_capturevideo_realtime = {CF_CLIENT, "cl_capturevideo_realtime", "0", "causes video saving to operate in realtime (mostly useful while playing, not while capturing demos), this can produce a much lower quality video due to poor sound/video sync and will abort saving if your machine stalls for over a minute"};
@@ -1077,8 +1077,7 @@ static void SCR_CaptureVideo_BeginVideo(void)
 	cls.capturevideo.starttime = cls.capturevideo.lastfpstime = host.realtime;
 	cls.capturevideo.soundsampleframe = 0;
 	cls.capturevideo.realtime = cl_capturevideo_realtime.integer != 0;
-	cls.capturevideo.screenbuffer = (unsigned char *)Mem_Alloc(tempmempool, vid.mode.width * vid.mode.height * 4);
-	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * (4+4) + 18);
+	cls.capturevideo.outbuffer = (unsigned char *)Mem_Alloc(tempmempool, width * height * 4 + 18); // +18 ?
 	Sys_TimeString(timestring, sizeof(timestring), cl_capturevideo_nameformat.string);
 	dpsnprintf(cls.capturevideo.basename, sizeof(cls.capturevideo.basename), "video/%s%03i", timestring, cl_capturevideo_number.integer);
 	Cvar_SetValueQuick(&cl_capturevideo_number, cl_capturevideo_number.integer + 1);
@@ -1139,6 +1138,8 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 		cls.capturevideo.yuvnormalizetable[2][i] = 16 + i * (240-16) / 256;
 	}
 
+	GL_CaptureVideo_BeginVideo();
+
 	if (cl_capturevideo_ogg.integer)
 	{
 		if(SCR_CaptureVideo_Ogg_Available())
@@ -1162,16 +1163,10 @@ void SCR_CaptureVideo_EndVideo(void)
 
 	Con_Printf("Finishing capture of %s.%s (%d frames, %d audio frames)\n", cls.capturevideo.basename, cls.capturevideo.formatextension, cls.capturevideo.frame, cls.capturevideo.soundsampleframe);
 
-	if (cls.capturevideo.videofile)
-	{
-		cls.capturevideo.endvideo();
-	}
+	GL_CaptureVideo_EndVideo(); // must be called before writeEndVideo !
 
-	if (cls.capturevideo.screenbuffer)
-	{
-		Mem_Free (cls.capturevideo.screenbuffer);
-		cls.capturevideo.screenbuffer = NULL;
-	}
+	if (cls.capturevideo.videofile)
+		cls.capturevideo.writeEndVideo();
 
 	if (cls.capturevideo.outbuffer)
 	{
@@ -1182,98 +1177,24 @@ void SCR_CaptureVideo_EndVideo(void)
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
 }
 
-static void SCR_ScaleDownBGRA(unsigned char *in, int inw, int inh, unsigned char *out, int outw, int outh)
-{
-	// TODO optimize this function
-
-	int x, y;
-	float area;
-
-	// memcpy is faster than me
-	if(inw == outw && inh == outh)
-	{
-		memcpy(out, in, 4 * inw * inh);
-		return;
-	}
-
-	// otherwise: a box filter
-	area = (float)outw * (float)outh / (float)inw / (float)inh;
-	for(y = 0; y < outh; ++y)
-	{
-		float iny0 =  y    / (float)outh * inh; int iny0_i = (int) floor(iny0);
-		float iny1 = (y+1) / (float)outh * inh; int iny1_i = (int) ceil(iny1);
-		for(x = 0; x < outw; ++x)
-		{
-			float inx0 =  x    / (float)outw * inw; int inx0_i = (int) floor(inx0);
-			float inx1 = (x+1) / (float)outw * inw; int inx1_i = (int) ceil(inx1);
-			float r = 0, g = 0, b = 0, alpha = 0;
-			int xx, yy;
-
-			for(yy = iny0_i; yy < iny1_i; ++yy)
-			{
-				float ya = min(yy+1, iny1) - max(iny0, yy);
-				for(xx = inx0_i; xx < inx1_i; ++xx)
-				{
-					float a = ya * (min(xx+1, inx1) - max(inx0, xx));
-					r += a * in[4*(xx + inw * yy)+0];
-					g += a * in[4*(xx + inw * yy)+1];
-					b += a * in[4*(xx + inw * yy)+2];
-					alpha += a * in[4*(xx + inw * yy)+3];
-				}
-			}
-
-			out[4*(x + outw * y)+0] = (unsigned char) (r * area);
-			out[4*(x + outw * y)+1] = (unsigned char) (g * area);
-			out[4*(x + outw * y)+2] = (unsigned char) (b * area);
-			out[4*(x + outw * y)+3] = (unsigned char) (alpha * area);
-		}
-	}
-}
-
-static void SCR_CaptureVideo_VideoFrame(int newframestepframenum)
-{
-	int x = 0, y = 0;
-	int width = cls.capturevideo.width, height = cls.capturevideo.height;
-
-	if(newframestepframenum == cls.capturevideo.framestepframe)
-		return;
-
-	CHECKGLERROR
-	// speed is critical here, so do saving as directly as possible
-
-	GL_ReadPixelsBGRA(x, y, vid.mode.width, vid.mode.height, cls.capturevideo.screenbuffer);
-
-	SCR_ScaleDownBGRA (cls.capturevideo.screenbuffer, vid.mode.width, vid.mode.height, cls.capturevideo.outbuffer, width, height);
-
-	cls.capturevideo.videoframes(newframestepframenum - cls.capturevideo.framestepframe);
-	cls.capturevideo.framestepframe = newframestepframenum;
-
-	if(cl_capturevideo_printfps.integer && host.realtime > cls.capturevideo.lastfpstime + 1)
-	{
-		double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (host.realtime - cls.capturevideo.lastfpstime + 0.0000001);
-		double fps  = (cls.capturevideo.frame                                ) / (host.realtime - cls.capturevideo.starttime   + 0.0000001);
-		Sys_Printf("capturevideo: (%.1fs) last second %.3ffps, total %.3ffps\n", cls.capturevideo.frame / cls.capturevideo.framerate, fps1, fps);
-		cls.capturevideo.lastfpstime = host.realtime;
-		cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
-	}
-}
-
 void SCR_CaptureVideo_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	cls.capturevideo.soundsampleframe += (int)length;
-	cls.capturevideo.soundframe(paintbuffer, length);
+	cls.capturevideo.writeSoundFrame(paintbuffer, length);
 }
 
 static void SCR_CaptureVideo(void)
 {
 	int newframenum;
+	int newframestepframenum;
+
 	if (cl_capturevideo.integer)
 	{
 		if (!cls.capturevideo.active)
 			SCR_CaptureVideo_BeginVideo();
 		if (cls.capturevideo.framerate != cl_capturevideo_fps.value * cl_capturevideo_framestep.integer)
 		{
-			Con_Printf("You can not change the video framerate while recording a video.\n");
+			Con_Printf(CON_WARN "You can not change the video framerate while recording a video.\n");
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cls.capturevideo.framerate / (double) cl_capturevideo_framestep.integer);
 		}
 		// for AVI saving we have to make sure that sound is saved before video
@@ -1290,17 +1211,32 @@ static void SCR_CaptureVideo(void)
 		if (newframenum - cls.capturevideo.frame > 60 * (int)ceil(cls.capturevideo.framerate))
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
-			Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cls.capturevideo.frame);
+			Con_Printf(CON_ERROR "video saving failed on frame %i, your machine is too slow for this capture speed.\n", cls.capturevideo.frame);
 			SCR_CaptureVideo_EndVideo();
 			return;
 		}
 		// write frames
-		SCR_CaptureVideo_VideoFrame(newframenum / cls.capturevideo.framestep);
+		newframestepframenum = newframenum / cls.capturevideo.framestep;
+		if (newframestepframenum != cls.capturevideo.framestepframe)
+			GL_CaptureVideo_VideoFrame(newframestepframenum);
+		cls.capturevideo.framestepframe = newframestepframenum;
+		// report progress
+		if(cl_capturevideo_printfps.value && host.realtime > cls.capturevideo.lastfpstime + cl_capturevideo_printfps.value)
+		{
+			double fps1 = (cls.capturevideo.frame - cls.capturevideo.lastfpsframe) / (host.realtime - cls.capturevideo.lastfpstime + 0.0000001);
+			double fps  = (cls.capturevideo.frame                                ) / (host.realtime - cls.capturevideo.starttime   + 0.0000001);
+			Sys_Printf("captured %.1fs of video, last second %.3ffps (%.1fx), total %.3ffps (%.1fx)\n",
+					cls.capturevideo.frame / cls.capturevideo.framerate,
+					fps1, fps1 / cls.capturevideo.framerate,
+					fps, fps / cls.capturevideo.framerate);
+			cls.capturevideo.lastfpstime = host.realtime;
+			cls.capturevideo.lastfpsframe = cls.capturevideo.frame;
+		}
 		cls.capturevideo.frame = newframenum;
 		if (cls.capturevideo.error)
 		{
 			Cvar_SetValueQuick(&cl_capturevideo, 0);
-			Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cls.capturevideo.frame);
+			Con_Printf(CON_ERROR "video saving failed on frame %i, out of disk space? stopping video capture.\n", cls.capturevideo.frame);
 			SCR_CaptureVideo_EndVideo();
 		}
 	}

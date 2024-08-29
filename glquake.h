@@ -313,6 +313,7 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_BUFFER_ACCESS              0x88BB
 #define GL_BUFFER_MAPPED              0x88BC
 #define GL_BUFFER_MAP_POINTER         0x88BD
+#define GL_PIXEL_PACK_BUFFER          0x88EB
 
 #define GL_FRAMEBUFFER                     0x8D40
 #define GL_READ_FRAMEBUFFER                0x8CA8

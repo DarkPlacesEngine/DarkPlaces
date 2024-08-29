@@ -1032,7 +1032,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 		status = qglCheckFramebufferStatus(GL_FRAMEBUFFER);CHECKGLERROR
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
-			Con_Printf("R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
+			Con_Printf(CON_ERROR "R_Mesh_CreateFramebufferObject: glCheckFramebufferStatus returned %i\n", status);
 			gl_state.framebufferobject = 0; // GL unbinds it for us
 			qglDeleteFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
 			temp = 0;
@@ -1554,6 +1554,109 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 			break;
 	}
 }
+
+
+#ifdef CONFIG_VIDEO_CAPTURE
+/*
+ * GL_CaptureVideo*
+ * GPU scaling and async DMA transfer of completed frames
+ * Minimum GL version: 3.0, for glBlitFramebuffer
+ * Minimum GLES version: 3.0, for glBlitFramebuffer and GL_PIXEL_PACK_BUFFER (PBOs)
+ */
+
+void GL_CaptureVideo_BeginVideo(void)
+{
+	int width = cls.capturevideo.width, height = cls.capturevideo.height;
+	// format is GL_BGRA type is GL_UNSIGNED_BYTE
+	GLsizeiptr data_size = width * height * 4;
+
+// create PBOs
+	qglGenBuffers(PBO_COUNT, cls.capturevideo.PBOs);
+	for (int i = 0; i < PBO_COUNT; ++i)
+	{
+		qglBindBuffer(GL_PIXEL_PACK_BUFFER, cls.capturevideo.PBOs[i]);
+		// Allocate memory and leave it uninitialised.
+		qglBufferData(GL_PIXEL_PACK_BUFFER, data_size, NULL, GL_DYNAMIC_READ);CHECKGLERROR
+	}
+	qglBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+// If scaling is necessary create an FBO with attached texture
+	if (width == vid.mode.width && height == vid.mode.height)
+	{
+		cls.capturevideo.FBO = 0;
+		return;
+	}
+	qglGenFramebuffers(1, &cls.capturevideo.FBO);
+	qglBindFramebuffer(GL_FRAMEBUFFER, cls.capturevideo.FBO);
+	qglGenTextures(1, &cls.capturevideo.FBOtex);
+	qglBindTexture(GL_TEXTURE_2D, cls.capturevideo.FBOtex);
+	// Allocate memory and leave it uninitialised (format and type don't matter: data is NULL).
+	// Same internalformat as TEXTYPE_COLORBUFFER.
+	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);CHECKGLERROR
+	qglFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, cls.capturevideo.FBOtex, 0);CHECKGLERROR
+	qglBindTexture(GL_TEXTURE_2D, 0);
+	qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void GL_CaptureVideo_VideoFrame(int newframestepframenum)
+{
+	int width = cls.capturevideo.width, height = cls.capturevideo.height;
+	GLubyte *pixbuf;
+	GLuint oldestPBOindex;
+
+	if (++cls.capturevideo.PBOindex >= PBO_COUNT)
+		cls.capturevideo.PBOindex = 0;
+	if ((oldestPBOindex = cls.capturevideo.PBOindex + 1) >= PBO_COUNT)
+		oldestPBOindex = 0;
+
+	// Ensure we'll read from the default FB
+	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
+
+	// If necessary, scale the newest frame with linear filtering
+	if (cls.capturevideo.FBO)
+	{
+		qglBindFramebuffer(GL_DRAW_FRAMEBUFFER, cls.capturevideo.FBO);
+		qglBlitFramebuffer(0, 0, vid.mode.width, vid.mode.height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);CHECKGLERROR
+		qglBindFramebuffer(GL_READ_FRAMEBUFFER, cls.capturevideo.FBO);
+	}
+
+	// Copy the newest frame to a PBO for later CPU access.
+	qglBindBuffer(GL_PIXEL_PACK_BUFFER, cls.capturevideo.PBOs[cls.capturevideo.PBOindex]);
+	qglReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, 0);CHECKGLERROR
+
+	if (cls.capturevideo.FBO)
+		qglBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// Save the oldest frame from its PBO (blocks until sync if still not ready)
+	// speed is critical here, so do saving as directly as possible
+	if (newframestepframenum >= PBO_COUNT) // Don't read uninitialised memory, newframestepframenum starts at 1
+	{
+		qglBindBuffer(GL_PIXEL_PACK_BUFFER, cls.capturevideo.PBOs[oldestPBOindex]);
+		pixbuf = (GLubyte *)qglMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);CHECKGLERROR
+		if(pixbuf)
+		{
+			cls.capturevideo.writeVideoFrame(newframestepframenum - cls.capturevideo.framestepframe, pixbuf);
+			qglUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+		}
+	}
+
+	qglBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+}
+
+void GL_CaptureVideo_EndVideo(void)
+{
+	// SCR_CaptureVideo won't call GL_CaptureVideo_VideoFrame again
+	// but the last frame(s) are waiting in PBO(s) due to async transfer.
+	// On the last normal frame we queued to 1 PBO and saved from 1, so we have PBO_COUNT-1 left
+	for (int i = 1; i < PBO_COUNT; ++i)
+		GL_CaptureVideo_VideoFrame(cls.capturevideo.framestepframe + i);
+
+	qglDeleteTextures(1, &cls.capturevideo.FBOtex);
+	qglDeleteFramebuffers(1, &cls.capturevideo.FBO);
+	qglDeleteBuffers(PBO_COUNT, cls.capturevideo.PBOs);
+}
+#endif
+
 
 // called at beginning of frame
 void R_Mesh_Start(void)
