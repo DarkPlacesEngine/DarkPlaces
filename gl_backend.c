@@ -969,7 +969,7 @@ int R_Mesh_CreateFramebufferObject(rtexture_t *depthtexture, rtexture_t *colorte
 		qglGenFramebuffers(1, (GLuint*)&temp);CHECKGLERROR
 
 #ifndef USE_GLES2
-		R_Mesh_SetRenderTargets(temp, NULL, NULL, NULL, NULL, NULL);  // This breaks GLES2.
+		R_Mesh_SetRenderTargets(temp);  // This breaks GLES2.
 		// GL_ARB_framebuffer_object (GL3-class hardware) - depth stencil attachment
 #endif
 
@@ -1056,19 +1056,8 @@ void R_Mesh_DestroyFramebufferObject(int fbo)
 	}
 }
 
-void R_Mesh_SetRenderTargets(int fbo, rtexture_t *depthtexture, rtexture_t *colortexture, rtexture_t *colortexture2, rtexture_t *colortexture3, rtexture_t *colortexture4)
+void R_Mesh_SetRenderTargets(int fbo)
 {
-	unsigned int i;
-	unsigned int j;
-	rtexture_t *textures[5];
-	Vector4Set(textures, colortexture, colortexture2, colortexture3, colortexture4);
-	textures[4] = depthtexture;
-	// unbind any matching textures immediately, otherwise D3D will complain about a bound texture being used as a render target
-	for (j = 0;j < 5;j++)
-		if (textures[j])
-			for (i = 0;i < MAX_TEXTUREUNITS;i++)
-				if (gl_state.units[i].texture == textures[j])
-					R_Mesh_TexBind(i, NULL);
 	// set up framebuffer object or render targets for the active rendering API
 	switch (vid.renderpath)
 	{
@@ -1605,7 +1594,7 @@ void GL_CaptureVideo_VideoFrame(int newframestepframenum)
 		oldestPBOindex = 0;
 
 	// Ensure we'll read from the default FB
-	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(0);
 
 	// If necessary, scale the newest frame with linear filtering
 	if (cls.capturevideo.FBO)
@@ -1657,7 +1646,7 @@ void GL_CaptureVideo_EndVideo(void)
 void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
-	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(0);
 #ifdef DEBUGGL // gl_printcheckerror isn't registered in normal builds
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
@@ -1867,7 +1856,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 // restores backend state, used when done with 3D rendering
 void R_Mesh_Finish(void)
 {
-	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
+	R_Mesh_SetRenderTargets(0);
 }
 
 r_meshbuffer_t *R_Mesh_CreateMeshBuffer(const void *data, size_t size, const char *name, qbool isindexbuffer, qbool isuniformbuffer, qbool isdynamic, qbool isindex16)
