@@ -2976,7 +2976,7 @@ void Mod_BuildVBOs(void)
 		{
 			if (loadmodel->surfmesh.data_element3s[i] != loadmodel->surfmesh.data_element3i[i])
 			{
-				Con_Printf("Mod_BuildVBOs: element %u is incorrect (%u should be %u)\n", i, loadmodel->surfmesh.data_element3s[i], loadmodel->surfmesh.data_element3i[i]);
+				Con_Printf(CON_WARN "Mod_BuildVBOs: element %u is incorrect (%u should be %u)\n", i, loadmodel->surfmesh.data_element3s[i], loadmodel->surfmesh.data_element3i[i]);
 				loadmodel->surfmesh.data_element3s[i] = loadmodel->surfmesh.data_element3i[i];
 			}
 		}
@@ -4749,7 +4749,7 @@ void Mod_Mesh_Validate(model_t *mod)
 			if (e[j] < first || e[j] >= end)
 			{
 				if (!warned)
-					Con_DPrintf("Mod_Mesh_Validate: detected corrupt surface - debug me!\n");
+					Con_DPrintf(CON_WARN "Mod_Mesh_Validate: detected corrupt surface - debug me!\n");
 				warned = true;
 				e[j] = first;
 			}

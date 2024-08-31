@@ -140,13 +140,14 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_VERSION				0x1F02
 #define GL_EXTENSIONS				0x1F03
 
-#define GL_NO_ERROR 				0x0
-#define GL_INVALID_VALUE			0x0501
-#define GL_INVALID_ENUM				0x0500
-#define GL_INVALID_OPERATION			0x0502
-#define GL_STACK_OVERFLOW			0x0503
-#define GL_STACK_UNDERFLOW			0x0504
-#define GL_OUT_OF_MEMORY			0x0505
+#define GL_NO_ERROR                        0x0
+#define GL_INVALID_VALUE                   0x0501
+#define GL_INVALID_ENUM                    0x0500
+#define GL_INVALID_OPERATION               0x0502
+#define GL_STACK_OVERFLOW                  0x0503
+#define GL_STACK_UNDERFLOW                 0x0504
+#define GL_OUT_OF_MEMORY                   0x0505
+#define GL_INVALID_FRAMEBUFFER_OPERATION   0x0506
 
 #define GL_DITHER				0x0BD0
 #define GL_ALPHA				0x1906
@@ -368,7 +369,6 @@ typedef void (GLAPIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id,
 #define GL_RENDERBUFFER_BINDING            0x8CA7
 #define GL_MAX_COLOR_ATTACHMENTS           0x8CDF
 #define GL_MAX_RENDERBUFFER_SIZE           0x84E8
-#define GL_INVALID_FRAMEBUFFER_OPERATION   0x0506
 #define GL_DEPTH_STENCIL                              0x84F9
 #define GL_UNSIGNED_INT_24_8                          0x84FA
 #define GL_DEPTH24_STENCIL8                           0x88F0
@@ -1051,7 +1051,7 @@ void GL_PrintError(GLenum errornumber, const char *filename, unsigned int linenu
 		GLenum gl_errornumber; \
 		if (gl_printcheckerror.integer) \
 			Con_Printf("CHECKGLERROR at %s:%d\n", __FILE__, __LINE__); \
-		if (qglGetError) /* bones_was_here: is this pointer check still necessary? */ \
+		if (qglGetError) /* bones_was_here: TODO ensure this is always available, GLES does support it */ \
 			while ((gl_errornumber = qglGetError())) \
 				GL_PrintError(gl_errornumber, __FILE__, __LINE__); \
 	}}

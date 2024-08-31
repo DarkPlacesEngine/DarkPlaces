@@ -4,7 +4,7 @@
 
 #define MAX_RENDERTARGETS 4
 
-cvar_t gl_debug = {CF_CLIENT, "gl_debug", "0", "enables OpenGL debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers)"};
+cvar_t gl_debug = {CF_CLIENT, "gl_debug", "0", "enables OpenGL 4.3 debug output, 0 = off, 1 = HIGH severity only, 2 = also MEDIUM severity, 3 = also LOW severity messages.  (note: enabling may not take effect until vid_restart on some drivers, and only X11 and Windows are known to support the debug context)"};
 cvar_t gl_paranoid = {CF_CLIENT, "gl_paranoid", "0", "enables OpenGL error checking and other tests"};
 cvar_t gl_printcheckerror = {CF_CLIENT, "gl_printcheckerror", "0", "prints all OpenGL error checks, useful to identify location of driver crashes"};
 
@@ -37,62 +37,58 @@ void GL_PrintError(GLenum errornumber, const char *filename, unsigned int linenu
 	{
 #ifdef GL_INVALID_ENUM
 	case GL_INVALID_ENUM:
-		Con_Printf("GL_INVALID_ENUM at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_INVALID_ENUM at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_INVALID_VALUE
 	case GL_INVALID_VALUE:
-		Con_Printf("GL_INVALID_VALUE at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_INVALID_VALUE at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_INVALID_OPERATION
 	case GL_INVALID_OPERATION:
-		Con_Printf("GL_INVALID_OPERATION at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_INVALID_OPERATION at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_STACK_OVERFLOW
 	case GL_STACK_OVERFLOW:
-		Con_Printf("GL_STACK_OVERFLOW at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_STACK_OVERFLOW at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_STACK_UNDERFLOW
 	case GL_STACK_UNDERFLOW:
-		Con_Printf("GL_STACK_UNDERFLOW at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_STACK_UNDERFLOW at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_OUT_OF_MEMORY
 	case GL_OUT_OF_MEMORY:
-		Con_Printf("GL_OUT_OF_MEMORY at %s:%i\n", filename, linenumber);
-		break;
-#endif
-#ifdef GL_TABLE_TOO_LARGE
-	case GL_TABLE_TOO_LARGE:
-		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_OUT_OF_MEMORY at %s:%i\n", filename, linenumber);
 		break;
 #endif
 #ifdef GL_INVALID_FRAMEBUFFER_OPERATION
 	case GL_INVALID_FRAMEBUFFER_OPERATION:
-		Con_Printf("GL_INVALID_FRAMEBUFFER_OPERATION at %s:%i\n", filename, linenumber);
+		Con_Printf(CON_ERROR "GL_INVALID_FRAMEBUFFER_OPERATION at %s:%i\n", filename, linenumber);
 		break;
 #endif
 	default:
-		Con_Printf("GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
+		Con_Printf(CON_ERROR "GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
 		break;
 	}
 }
+#endif // DEBUGGL
 
 static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const GLvoid* userParam)
 {
-	const char *sev = "ENUM?", *typ = "ENUM?", *src = "ENUM?";
+	const char *sev = "ENUM?", *typ = "ENUM?", *src = "ENUM?", *col = "";
 	switch (severity)
 	{
 	case GL_DEBUG_SEVERITY_LOW_ARB: sev = "LOW"; break;
-	case GL_DEBUG_SEVERITY_MEDIUM_ARB: sev = "MED"; break;
-	case GL_DEBUG_SEVERITY_HIGH_ARB: sev = "HIGH"; break;
+	case GL_DEBUG_SEVERITY_MEDIUM_ARB: sev = "MED"; col = CON_WARN; break;
+	case GL_DEBUG_SEVERITY_HIGH_ARB: sev = "HIGH"; col = CON_ERROR; break;
 	}
 	switch (type)
 	{
-	case GL_DEBUG_TYPE_ERROR_ARB: typ = "ERROR"; break;
+	case GL_DEBUG_TYPE_ERROR_ARB: typ = "ERROR"; col = CON_ERROR; break;
 	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR_ARB: typ = "DEPRECATED"; break;
 	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR_ARB: typ = "UNDEFINED"; break;
 	case GL_DEBUG_TYPE_PORTABILITY_ARB: typ = "PORTABILITY"; break;
@@ -108,9 +104,8 @@ static void GLAPIENTRY GL_DebugOutputCallback(GLenum source, GLenum type, GLuint
 	case GL_DEBUG_SOURCE_APPLICATION_ARB: src = "APP"; break;
 	case GL_DEBUG_SOURCE_OTHER_ARB: src = "OTHER"; break;
 	}
-	Con_Printf("GLDEBUG: %s %s %s: %u: %s\n", sev, typ, src, (unsigned int)id, message);
+	Con_Printf("gl_debug: %s%s %s %s: %u: %s\n", col, sev, typ, src, (unsigned int)id, message);
 }
-#endif
 
 #define BACKENDACTIVECHECK if (!gl_state.active) Sys_Error("GL backend function called when backend is not active");
 
@@ -374,7 +369,9 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&v_flipped);
 	Cvar_RegisterVariable(&gl_debug);
 	Cvar_RegisterVariable(&gl_paranoid);
+#ifdef DEBUGGL // gl_printcheckerror does nothing in normal builds
 	Cvar_RegisterVariable(&gl_printcheckerror);
+#endif
 
 	Cmd_AddCommand(CF_CLIENT, "gl_vbostats", GL_VBOStats_f, "prints a list of all buffer objects (vertex data and triangle elements) and total video memory used by them");
 
@@ -1111,11 +1108,11 @@ static void GL_Backend_ResetState(void)
 	case RENDERPATH_GL32:
 	case RENDERPATH_GLES2:
 		// set up debug output early
-#ifdef DEBUGGL
-		if (vid.support.arb_debug_output)
+		if (gl_debug.integer > 0 && vid.support.arb_debug_output)
 		{
 			GLuint unused = 0;
 			CHECKGLERROR
+			Con_Print("gl_debug: GL_ARB_debug_output is supported, enabling callback\n");
 			if (gl_debug.integer >= 1)
 				qglEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 			if (gl_debug.integer >= 3)
@@ -1130,7 +1127,6 @@ static void GL_Backend_ResetState(void)
 				qglDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unused, GL_FALSE);
 			qglDebugMessageCallbackARB(GL_DebugOutputCallback, NULL);
 		}
-#endif //DEBUGGL
 		CHECKGLERROR
 		qglColorMask(1, 1, 1, 1);CHECKGLERROR
 		qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
@@ -1663,11 +1659,13 @@ void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
 	R_Mesh_SetRenderTargets(0, NULL, NULL, NULL, NULL, NULL);
+#ifdef DEBUGGL // gl_printcheckerror isn't registered in normal builds
 	if (gl_printcheckerror.integer && !gl_paranoid.integer)
 	{
 		Con_Printf(CON_WARN "WARNING: gl_printcheckerror is on but gl_paranoid is off, turning it on...\n");
 		Cvar_SetValueQuick(&gl_paranoid, 1);
 	}
+#endif
 }
 
 static qbool GL_Backend_CompileShader(int programobject, GLenum shadertypeenum, const char *shadertype, int numstrings, const char **strings)
@@ -1824,7 +1822,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			{
 				if (element3i[i] < firstvertex || element3i[i] >= firstvertex + numvertices)
 				{
-					Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3i array\n", element3i[i], firstvertex, firstvertex + numvertices);
+					Con_Printf(CON_WARN "R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3i array\n", element3i[i], firstvertex, firstvertex + numvertices);
 					return;
 				}
 			}
@@ -1835,7 +1833,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int firsttriangle, int numtri
 			{
 				if (element3s[i] < firstvertex || element3s[i] >= firstvertex + numvertices)
 				{
-					Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3s array\n", element3s[i], firstvertex, firstvertex + numvertices);
+					Con_Printf(CON_WARN "R_Mesh_Draw: invalid vertex index %i (outside range %i - %i) in element3s array\n", element3s[i], firstvertex, firstvertex + numvertices);
 					return;
 				}
 			}
@@ -2021,7 +2019,7 @@ void R_Mesh_VertexPointer(int components, int gltype, size_t stride, const void 
 		{
 			int bufferobject = vertexbuffer ? vertexbuffer->bufferobject : 0;
 			if (!bufferobject && gl_paranoid.integer)
-				Con_DPrintf("Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, (void *)vertexbuffer, (unsigned int)bufferoffset);
+				Con_DPrintf(CON_WARN "Warning: no bufferobject in R_Mesh_VertexPointer(%i, %i, %i, %p, %p, %08x)", components, gltype, (int)stride, pointer, (void *)vertexbuffer, (unsigned int)bufferoffset);
 			gl_state.pointer_vertex_components = components;
 			gl_state.pointer_vertex_gltype = gltype;
 			gl_state.pointer_vertex_stride = stride;
