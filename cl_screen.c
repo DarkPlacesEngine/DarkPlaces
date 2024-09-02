@@ -1174,6 +1174,11 @@ void SCR_CaptureVideo_EndVideo(void)
 		cls.capturevideo.outbuffer = NULL;
 	}
 
+	// If demo capture failed don't leave the demo playing.
+	// CL_StopPlayback shuts down when demo capture finishes successfully.
+	if (cls.capturevideo.error && Sys_CheckParm("-capturedemo"))
+		host.state = host_shutdown;
+
 	memset(&cls.capturevideo, 0, sizeof(cls.capturevideo));
 }
 
@@ -1192,6 +1197,14 @@ static void SCR_CaptureVideo(void)
 	{
 		if (!cls.capturevideo.active)
 			SCR_CaptureVideo_BeginVideo();
+		if (cls.capturevideo.error)
+		{
+			// specific error message was printed already
+			Cvar_SetValueQuick(&cl_capturevideo, 0);
+			SCR_CaptureVideo_EndVideo();
+			return;
+		}
+
 		if (cls.capturevideo.framerate != cl_capturevideo_fps.value * cl_capturevideo_framestep.integer)
 		{
 			Con_Printf(CON_WARN "You can not change the video framerate while recording a video.\n");
