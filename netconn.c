@@ -2646,7 +2646,7 @@ void NetConn_QueryQueueFrame(void)
 		// Nothing else to do until the next refresh cycle.
 		serverlist_querystage = 0;
 		pass = 0;
-		if (net_slist_debug.integer)
+		if (net_slist_debug.integer && serverlist_cachecount)
 			Con_Printf("^4Finished checking server timeouts in %f\n",
 					currentrealtime - serverlist_cache[serverlist_cachecount - 1].querytime);
 		if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
