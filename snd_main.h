@@ -36,46 +36,48 @@ typedef struct snd_format_s
 
 typedef struct snd_buffer_s
 {
-	snd_format_t		format;
-	unsigned int		nbframes;	// current size, in sample frames
-	unsigned int		maxframes;	// max size (buffer size), in sample frames
-	unsigned char		samples[4];	// variable sized
+	snd_format_t    format;
+	unsigned int    nbframes;   ///< current size, in sample frames
+	unsigned int    maxframes;  ///< max size (buffer size), in sample frames
+	unsigned char   samples[4]; ///< variable sized
 } snd_buffer_t;
 
 typedef struct snd_ringbuffer_s
 {
-	snd_format_t		format;
-	unsigned char*		ring;
-	unsigned int		maxframes;	// max size (buffer size), in sample frames
-	unsigned int		startframe;	// index of the first frame in the buffer
-									// if startframe == endframe, the bufffer is empty
-	unsigned int		endframe;	// index of the first EMPTY frame in the "ring" buffer
-									// may be smaller than startframe if the "ring" buffer has wrapped
+	snd_format_t    format;
+	unsigned char  *ring;
+	unsigned int    maxframes; ///< max size (buffer size), in sample frames
+	/// index of the first frame in the buffer
+	/// if startframe == endframe, the bufffer is empty
+	unsigned int    startframe;
+	/// index of the first EMPTY frame in the "ring" buffer
+	/// may be smaller than startframe if the "ring" buffer has wrapped
+	unsigned int    endframe;
 } snd_ringbuffer_t;
 
 // struct sfx_s flags
-#define SFXFLAG_NONE			0
-#define SFXFLAG_FILEMISSING		(1 << 0) // wasn't able to load the associated sound file
-#define SFXFLAG_LEVELSOUND		(1 << 1) // the sfx is part of the server or client precache list for this level
-#define SFXFLAG_STREAMED		(1 << 2) // informative only. You shouldn't need to know that
-#define SFXFLAG_MENUSOUND		(1 << 3) // not freed during level change (menu sounds, music, etc)
+#define SFXFLAG_NONE         0
+#define SFXFLAG_FILEMISSING  (1 << 0) ///< wasn't able to load the associated sound file
+#define SFXFLAG_LEVELSOUND   (1 << 1) ///< the sfx is part of the server or client precache list for this level
+#define SFXFLAG_STREAMED     (1 << 2) ///< informative only. You shouldn't need to know that
+#define SFXFLAG_MENUSOUND    (1 << 3) ///< not freed during level change (menu sounds, music, etc)
 
 typedef struct snd_fetcher_s snd_fetcher_t;
 struct sfx_s
 {
-	char				name[MAX_QPATH];
-	struct sfx_s				*next;
-	size_t				memsize;		// total memory used (including struct sfx_s and fetcher data)
+	char                  name[MAX_QPATH];
+	struct sfx_s         *next;
+	size_t                memsize;         ///< total memory used (including struct sfx_s and fetcher data)
 
-	snd_format_t		format;			// format describing the audio data that fetcher->getsamplesfloat will return
-	unsigned int		flags;			// cf SFXFLAG_* defines
-	unsigned int		loopstart;		// in sample frames. equals total_length if not looped
-	unsigned int		total_length;	// in sample frames
-	const snd_fetcher_t	*fetcher;
-	void				*fetcher_data;	// Per-sfx data for the sound fetching functions
+	snd_format_t          format;          ///< format describing the audio data that fetcher->getsamplesfloat will return
+	unsigned int          flags;           ///< cf SFXFLAG_* defines
+	unsigned int          loopstart;       ///< in sample frames. equals total_length if not looped
+	unsigned int          total_length;    ///< in sample frames
+	const snd_fetcher_t  *fetcher;
+	void                 *fetcher_data;    ///< Per-sfx data for the sound fetching functions
 
-	float				volume_mult;    // for replay gain (multiplier to apply)
-	float				volume_peak;    // for replay gain (highest peak); if set to 0, ReplayGain isn't supported
+	float                 volume_mult;     ///< for replay gain (multiplier to apply)
+	float                 volume_peak;     ///< for replay gain (highest peak); if set to 0, ReplayGain isn't supported
 };
 
 // maximum supported speakers constant
@@ -84,26 +86,26 @@ struct sfx_s
 typedef struct channel_s
 {
 	// provided sound information
-	struct sfx_s			*sfx;			// pointer to sound sample being used
-	float			basevolume;		// 0-1 master volume
-	unsigned int	flags;			// cf CHANNELFLAG_* defines
-	int				entnum;			// makes sound follow entity origin (allows replacing interrupting existing sound on same id)
-	int				entchannel;		// which channel id on the entity
-	vec3_t			origin;			// origin of sound effect
-	vec_t			distfade;		// distance multiplier (attenuation/clipK)
-	void			*fetcher_data;	// Per-channel data for the sound fetching function
-	int				prologic_invert;// whether a sound is played on the surround channels in prologic
-	float			basespeed;		// playback rate multiplier for pitch variation
+	struct sfx_s  *sfx;             ///< pointer to sound sample being used
+	float          basevolume;      ///< 0-1 master volume
+	unsigned int   flags;           ///< cf CHANNELFLAG_* defines
+	int            entnum;          ///< makes sound follow entity origin (allows replacing interrupting existing sound on same id)
+	int            entchannel;      ///< which channel id on the entity
+	vec3_t         origin;          ///< origin of sound effect
+	vec_t          distfade;        ///< distance multiplier (attenuation/clipK)
+	void          *fetcher_data;    ///< Per-channel data for the sound fetching function
+	int            prologic_invert; ///< whether a sound is played on the surround channels in prologic
+	float          basespeed;       ///< playback rate multiplier for pitch variation
 
-	// these are often updated while mixer is running, glitching should be minimized (mismatched channel volumes from spatialization is okay)
-	// spatialized playback speed (speed * doppler ratio)
-	float			mixspeed;
-	// spatialized volume per speaker (mastervol * distanceattenuation * channelvolume cvars)
-	float			volume[SND_LISTENERS];
+	/// these are often updated while mixer is running, glitching should be minimized (mismatched channel volumes from spatialization is okay)
+	/// spatialized playback speed (speed * doppler ratio)
+	float          mixspeed;
+	/// spatialized volume per speaker (mastervol * distanceattenuation * channelvolume cvars)
+	float          volume[SND_LISTENERS];
 
-	// updated ONLY by mixer
-	// position in sfx, starts at 0, loops or stops at sfx->total_length
-	double			position;
+	/// updated ONLY by mixer
+	/// position in sfx, starts at 0, loops or stops at sfx->total_length
+	double         position;
 } channel_t;
 
 // Sound fetching functions
@@ -113,17 +115,17 @@ typedef void (*snd_fetcher_stopchannel_t) (channel_t *ch);
 typedef void (*snd_fetcher_freesfx_t) (struct sfx_s *sfx);
 struct snd_fetcher_s
 {
-	snd_fetcher_getsamplesfloat_t		getsamplesfloat;
-	snd_fetcher_stopchannel_t		stopchannel;
-	snd_fetcher_freesfx_t		freesfx;
+	snd_fetcher_getsamplesfloat_t  getsamplesfloat;
+	snd_fetcher_stopchannel_t      stopchannel;
+	snd_fetcher_freesfx_t          freesfx;
 };
 
 extern unsigned int total_channels;
 extern channel_t channels[MAX_CHANNELS];
 
 extern snd_ringbuffer_t *snd_renderbuffer;
-extern qbool snd_threaded; // enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
-extern qbool snd_usethreadedmixing; // if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
+extern qbool snd_threaded; ///< enables use of snd_usethreadedmixing, provided that no sound hacks are in effect (like timedemo)
+extern qbool snd_usethreadedmixing; ///< if true, the main thread does not mix sound, soundtime does not advance, and neither does snd_renderbuffer->endframe, instead the audio thread will call S_MixToBuffer as needed
 
 extern cvar_t snd_mutewhenidle;
 extern cvar_t snd_waterfx;
@@ -139,13 +141,13 @@ extern int snd_blocked;		// counter. When > 0, we stop submitting sound to the a
 
 extern struct mempool_s *snd_mempool;
 
-// If simsound is true, the sound card is not initialized and no sound is submitted to it.
-// More generally, all arch-dependent operations are skipped or emulated.
-// Used for isolating performance in the renderer.
+/// If simsound is true, the sound card is not initialized and no sound is submitted to it.
+/// More generally, all arch-dependent operations are skipped or emulated.
+/// Used for isolating performance in the renderer.
 extern qbool simsound;
 
 
-#define STREAM_BUFFERSIZE 16384 // in sampleframes
+#define STREAM_BUFFERSIZE 16384 ///< in sampleframes
 
 
 // ====================================================================
@@ -158,8 +160,8 @@ void S_MixToBuffer(void *stream, unsigned int frames);
 
 qbool S_LoadSound (struct sfx_s *sfx, qbool complain);
 
-// If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
-// (if "sampleframes" is 0, the function chooses the size).
+/// If "buffer" is NULL, the function allocates one buffer of "sampleframes" sample frames itself
+/// (if "sampleframes" is 0, the function chooses the size).
 snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int sampleframes, void* buffer);
 
 
@@ -167,29 +169,29 @@ snd_ringbuffer_t *Snd_CreateRingBuffer (const snd_format_t* format, unsigned int
 //         Architecture-dependent functions
 // ====================================================================
 
-// Create "snd_renderbuffer", attempting to use the chosen sound format, but accepting if the driver wants to change it (e.g. 7.1 to stereo or lowering the speed)
-// Note: SDL automatically converts all formats, so this only fails if there is no audio
+/// Create "snd_renderbuffer", attempting to use the chosen sound format, but accepting if the driver wants to change it (e.g. 7.1 to stereo or lowering the speed)
+/// Note: SDL automatically converts all formats, so this only fails if there is no audio
 qbool SndSys_Init (snd_format_t* fmt);
 
-// Stop the sound card, delete "snd_renderbuffer" and free its other resources
+/// Stop the sound card, delete "snd_renderbuffer" and free its other resources
 void SndSys_Shutdown (void);
 
-// Submit the contents of "snd_renderbuffer" to the sound card
+/// Submit the contents of "snd_renderbuffer" to the sound card
 void SndSys_Submit (void);
 
-// Returns the number of sample frames consumed since the sound started
+/// Returns the number of sample frames consumed since the sound started
 unsigned int SndSys_GetSoundTime (void);
 
-// Get the exclusive lock on "snd_renderbuffer"
+/// Get the exclusive lock on "snd_renderbuffer"
 qbool SndSys_LockRenderBuffer (void);
 
-// Release the exclusive lock on "snd_renderbuffer"
+/// Release the exclusive lock on "snd_renderbuffer"
 void SndSys_UnlockRenderBuffer (void);
 
-// if the sound system can generate events, send them
+/// if the sound system can generate events, send them
 void SndSys_SendKeyEvents(void);
 
-// exported for capturevideo so ogg can see all channels
+/// exported for capturevideo so ogg can see all channels
 typedef struct portable_samplepair_s
 {
 	float sample[SND_LISTENERS];
@@ -197,7 +199,7 @@ typedef struct portable_samplepair_s
 
 typedef struct listener_s
 {
-	int channel_unswapped; // for un-swapping
+	int channel_unswapped; ///< for un-swapping
 	float yawangle;
 	float dotscale;
 	float dotbias;

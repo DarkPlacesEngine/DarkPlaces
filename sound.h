@@ -91,7 +91,7 @@ sfx_t *S_FindName(const char *name);
 #define CHAN_ENGINE2USER(c)    (c)
 #define CHAN_ENGINE2CVAR(c)    (abs(c))
 
-// S_StartSound returns the channel index, or -1 if an error occurred
+/// S_StartSound returns the channel index, or -1 if an error occurred
 int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 int S_StartSound_StartPosition_Flags (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation, float startposition, int flags, float fspeed);
 qbool S_LocalSoundEx (const char *s, int chan, float fvol);
