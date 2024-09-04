@@ -3735,10 +3735,6 @@ static void R_Shadow_DrawLightShadowMaps(rtlight_t *rtlight)
 	if (R_Shadow_ScissorForBBox(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
 		return;
 
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate();
-
 	numlightentities = rtlight->cached_numlightentities;
 	numlightentities_noselfshadow = rtlight->cached_numlightentities_noselfshadow;
 	numshadowentities = rtlight->cached_numshadowentities;
@@ -3858,10 +3854,6 @@ static void R_Shadow_DrawLight(rtlight_t *rtlight)
 	// set up a scissor rectangle for this light
 	if (R_Shadow_ScissorForBBox(rtlight->cached_cullmins, rtlight->cached_cullmaxs))
 		return;
-
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate();
 
 	numlightentities = rtlight->cached_numlightentities;
 	numlightentities_noselfshadow = rtlight->cached_numlightentities_noselfshadow;
@@ -4219,12 +4211,7 @@ void R_Shadow_DrawShadowMaps(void)
 
 	// render model shadowmaps (r_shadows 2) if desired which will be sampled in the forward pass
 	if (r_shadow_shadowmapatlas_modelshadows_size)
-	{
 		R_Shadow_DrawModelShadowMaps();
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate();
-	}
 
 	if (R_Shadow_ShadowMappingEnabled())
 	{

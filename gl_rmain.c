@@ -5809,10 +5809,6 @@ void R_RenderWaterPlanes(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *
 			R_TimeReport("waterworld");
 	}
 
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
-
 	R_DrawModelsAddWaterPlanes();
 	if (r_timereport_active)
 		R_TimeReport("watermodels");
@@ -5842,10 +5838,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 
 	R_UpdateFog();
 
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
-
 	R_MeshQueue_BeginScene();
 
 	R_SkyStartFrame();
@@ -5857,10 +5849,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 
 	if (cl.csqc_vidvars.drawworld)
 	{
-		// don't let sound skip if going slow
-		if (r_refdef.scene.extraupdate)
-			S_ExtraUpdate ();
-
 		if (r_refdef.scene.worldmodel && r_refdef.scene.worldmodel->DrawSky)
 		{
 			r_refdef.scene.worldmodel->DrawSky(r_refdef.scene.worldentity);
@@ -5930,17 +5918,9 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 			R_TimeReport("world");
 	}
 
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
-
 	R_DrawModels();
 	if (r_timereport_active)
 		R_TimeReport("models");
-
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
 
 	if (!r_shadow_usingdeferredprepass)
 	{
@@ -5948,10 +5928,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 		if (r_timereport_active)
 			R_TimeReport("rtlights");
 	}
-
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
 
 	if (cl.csqc_vidvars.drawworld)
 	{
@@ -6021,10 +5997,6 @@ void R_RenderScene(int viewfbo, rtexture_t *viewdepthtexture, rtexture_t *viewco
 		if (r_timereport_active)
 			R_TimeReport("coronas");
 	}
-
-	// don't let sound skip if going slow
-	if (r_refdef.scene.extraupdate)
-		S_ExtraUpdate ();
 }
 
 static const unsigned short bboxelements[36] =

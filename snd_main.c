@@ -146,8 +146,6 @@ mempool_t *snd_mempool;
 // Linked list of known sfx
 static sfx_t *known_sfx = NULL;
 
-static qbool sound_spatialized = false;
-
 qbool simsound = false;
 
 #ifdef CONFIG_VIDEO_CAPTURE
@@ -240,7 +238,6 @@ static cvar_t nosound = {CF_CLIENT, "nosound", "0", "disables sound"};
 static cvar_t snd_precache = {CF_CLIENT, "snd_precache", "1", "loads sounds before they are used"};
 static cvar_t ambient_level = {CF_CLIENT, "ambient_level", "0.3", "volume of environment noises (water and wind)"};
 static cvar_t ambient_fade = {CF_CLIENT, "ambient_fade", "100", "rate of volume fading when moving from one environment to another"};
-static cvar_t snd_noextraupdate = {CF_CLIENT, "snd_noextraupdate", "0", "disables extra sound mixer calls that are meant to reduce the chance of sound breakup at very low framerates"};
 static cvar_t snd_show = {CF_CLIENT, "snd_show", "0", "shows some statistics about sound mixing"};
 
 // Default sound format is 48KHz, 32bit float, stereo
@@ -615,7 +612,6 @@ void S_Startup (void)
 		if (!SndSys_Init(&chosen_fmt))
 		{
 			Con_Print("S_Startup: SndSys_Init failed.\n");
-			sound_spatialized = false;
 			return;
 		}
 	}
@@ -683,8 +679,6 @@ void S_Shutdown(void)
 	}
 	else
 		SndSys_Shutdown();
-
-	sound_spatialized = false;
 }
 
 static void S_Restart_f(cmd_state_t *cmd)
@@ -811,7 +805,6 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_streaming_length);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
-	Cvar_RegisterVariable(&snd_noextraupdate);
 	Cvar_RegisterVariable(&snd_show);
 	Cvar_RegisterVariable(&snd_waterfx);
 	Cvar_RegisterVariable(&_snd_mixahead);
@@ -2224,19 +2217,9 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	}
 	R_TimeReport("audiospatialize");
 
-	sound_spatialized = true;
-
 	// debugging output
 	if (snd_show.integer)
 		Con_Printf("----(%u)----\n", cls.soundstats.mixedsounds);
-
-	S_PaintAndSubmit();
-}
-
-void S_ExtraUpdate (void)
-{
-	if (snd_noextraupdate.integer || !sound_spatialized)
-		return;
 
 	S_PaintAndSubmit();
 }

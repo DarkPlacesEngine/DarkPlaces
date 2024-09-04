@@ -2051,7 +2051,6 @@ Update client game world for a new frame
 */
 void CL_UpdateWorld(void)
 {
-	r_refdef.scene.extraupdate = !r_speeds.integer;
 	r_refdef.scene.numentities = 0;
 	r_refdef.scene.numlights = 0;
 	r_refdef.view.matrix = identitymatrix;
@@ -2173,8 +2172,6 @@ static void CL_TimeRefresh_f(cmd_state_t *cmd)
 {
 	int i;
 	double timestart, timedelta;
-
-	r_refdef.scene.extraupdate = false;
 
 	timestart = Sys_DirtyTime();
 	for (i = 0;i < 128;i++)

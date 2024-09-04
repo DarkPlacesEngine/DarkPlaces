@@ -127,10 +127,6 @@ void S_StopAllSounds (void)
 {
 }
 
-void S_ExtraUpdate (void)
-{
-}
-
 qbool S_LocalSound (const char *s)
 {
 	return false;

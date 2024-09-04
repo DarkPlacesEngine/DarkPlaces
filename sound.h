@@ -67,7 +67,6 @@ void S_Shutdown (void);
 void S_UnloadAllSounds_f(struct cmd_state_s *cmd);
 
 void S_Update(const matrix4x4_t *listenermatrix);
-void S_ExtraUpdate (void);
 
 sfx_t *S_PrecacheSound (const char *sample, qbool complain, qbool levelsound);
 float S_SoundLength(const char *name);

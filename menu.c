@@ -4911,8 +4911,6 @@ void M_Draw (void)
 		S_LocalSound ("sound/misc/menu2.wav");
 		m_entersound = false;
 	}
-
-	S_ExtraUpdate ();
 }
 
 

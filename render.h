@@ -348,9 +348,6 @@ r_refdef_viewcache_t;
 // TODO: really think about which fields should go into scene and which one should stay in refdef [1/7/2008 Black]
 // maybe also refactor some of the functions to support different setting sources (ie. fogenabled, etc.) for different scenes
 typedef struct r_refdef_scene_s {
-	/// whether to call S_ExtraUpdate during render to reduce sound chop
-	qbool extraupdate;
-
 	/// (client gameworld) time for rendering time based effects
 	double time;
 
