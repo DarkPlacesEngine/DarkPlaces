@@ -146,6 +146,7 @@ extern struct mempool_s *snd_mempool;
 /// Used for isolating performance in the renderer.
 extern qbool simsound;
 
+extern cvar_t snd_bufferlength;
 
 #define STREAM_BUFFERSIZE 16384 ///< in sampleframes
 

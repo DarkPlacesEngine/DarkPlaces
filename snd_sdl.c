@@ -114,7 +114,8 @@ qbool SndSys_Init (snd_format_t* fmt)
 		return false;
 	}
 
-	buffersize = (unsigned int)ceil((double)fmt->speed / 25.0); // 2048 bytes on 24kHz to 48kHz
+	// SDL2 wiki recommends this range
+	buffersize = bound(512, ceil((double)fmt->speed * snd_bufferlength.value / 1000.0), 8192);
 
 	// Init the SDL Audio subsystem
 	memset(&wantspec, 0, sizeof(wantspec));

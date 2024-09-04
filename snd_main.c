@@ -245,6 +245,7 @@ static cvar_t snd_show = {CF_CLIENT, "snd_show", "0", "shows some statistics abo
 static cvar_t snd_speed = {CF_CLIENT | CF_ARCHIVE, "snd_speed", "48000", "sound output frequency, in hertz"};
 static cvar_t snd_width = {CF_CLIENT | CF_ARCHIVE, "snd_width", "4", "sound output precision, in bytes - 1 = 8bit, 2 = 16bit, 4 = 32bit float"};
 static cvar_t snd_channels = {CF_CLIENT | CF_ARCHIVE, "snd_channels", "2", "number of channels for the sound output (2 for stereo; up to 8 supported for 3D sound)"};
+cvar_t snd_bufferlength = {CF_CLIENT | CF_ARCHIVE, "snd_bufferlength", "20", "Desired length of the SDL2 audio buffer in milliseconds, smaller values reduce latency but can lead to underflow if the system is heavily loaded. Affects only how many sample frames are requested (which will be a power of 2 between 512 and 8192 inclusive)"};
 
 static cvar_t snd_startloopingsounds = {CF_CLIENT, "snd_startloopingsounds", "1", "whether to start sounds that would loop (you want this to be 1); existing sounds are not affected"};
 static cvar_t snd_startnonloopingsounds = {CF_CLIENT, "snd_startnonloopingsounds", "1", "whether to start sounds that would not loop (you want this to be 1); existing sounds are not affected"};
@@ -765,6 +766,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&snd_speed);
 	Cvar_RegisterVariable(&snd_width);
 	Cvar_RegisterVariable(&snd_channels);
+	Cvar_RegisterVariable(&snd_bufferlength);
 	Cvar_RegisterVariable(&snd_mutewhenidle);
 	Cvar_RegisterVariable(&snd_maxchannelvolume);
 	Cvar_RegisterVariable(&snd_softclip);
