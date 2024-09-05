@@ -743,7 +743,7 @@ typedef struct prvm_prog_s
 	void				(*init_cmd)(struct prvm_prog_s *prog); ///< [INIT] used by PRVM_InitProg
 	void				(*reset_cmd)(struct prvm_prog_s *prog); ///< [INIT] used by PRVM_ResetProg
 
-	void				(*error_cmd)(const char *format, ...) DP_FUNC_PRINTF(1); ///< [INIT]
+	void				(*error_cmd)(const char *format, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN; ///< [INIT]
 
 	void				(*ExecuteProgram)(struct prvm_prog_s *prog, func_t fnum, const char *errormessage); ///< pointer to one of the *VM_ExecuteProgram functions
 } prvm_prog_t;

@@ -23,22 +23,31 @@ typedef enum host_state_e
 	host_init,
 	host_loading,
 	host_active,
-	// states >= host_shutdown cause graceful shutdown, see Sys_HandleCrash() comments
+	/// states >= host_shutdown cause graceful shutdown, see Sys_HandleCrash() comments
 	host_shutdown,
-	host_failing, ///< crashing
-	host_failed ///< crashed or aborted, SDL dialog open
+	host_failing,  ///< crashing (inside crash handler)
+	host_failed    ///< crashed or aborted, SDL dialog open
 } host_state_t;
+static const char * const host_state_str[] =
+{
+	[host_init]     = "init",
+	[host_loading]  = "loading",
+	[host_active]   = "normal operation",
+	[host_shutdown] = "shutdown",
+	[host_failing]  = "crashing",
+	[host_failed]   = "crashed",
+};
 
 typedef struct host_static_s
 {
 	jmp_buf abortframe;
 	int state;
-	unsigned int framecount; // incremented every frame, never reset (checked by Host_Error and Host_SaveConfig_f)
-	double realtime; // the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
-	double dirtytime; // the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
-	double sleeptime; // time spent sleeping after the last frame
-	qbool restless; // don't sleep
-	qbool paused; // global paused state, pauses both client and server
+	unsigned int framecount; ///< incremented every frame, never reset, >0 means Host_AbortCurrentFrame() is possible
+	double realtime;         ///< the accumulated mainloop time since application started (with filtering), without any slowmo or clamping
+	double dirtytime;        ///< the main loop wall time for this frame, equal to Sys_DirtyTime() at the start of this host frame
+	double sleeptime;        ///< time spent sleeping after the last frame
+	qbool restless;          ///< don't sleep
+	qbool paused;            ///< global paused state, pauses both client and server
 	cmd_buf_t *cbuf;
 
 	struct

@@ -745,8 +745,8 @@ void PRVM_Crash(void)
 	}
 
 	// dump the stack so host_error can shutdown functions
-	prog->depth = 0;
-	prog->localstack_used = 0;
+	// and free memory, unset prog->loaded, etc
+	PRVM_Prog_Reset(prog);
 }
 
 /*

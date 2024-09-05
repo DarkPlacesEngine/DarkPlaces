@@ -421,6 +421,7 @@ void M_Menu_Main_f(cmd_state_t *cmd)
 }
 
 
+static bool mp_failed;
 static void M_Main_Draw (void)
 {
 	int		f;
@@ -433,11 +434,20 @@ static void M_Main_Draw (void)
 		const char *s;
 		M_Background(640, 480); //fall back is always to 640x480, this makes it most readable at that.
 		y = 480/3-16;
-		s = "You have reached this menu due to missing or unlocatable content/data";M_PrintRed ((640-strlen(s)*8)*0.5, (480/3)-16, s);y+=8;
-		y+=8;
-		s = "You may consider adding";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
-		s = "-basedir /path/to/game";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
-		s = "to your launch commandline";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		if (mp_failed)
+		{
+			s = "The menu QC program has failed.";M_PrintRed ((640-strlen(s)*8)*0.5, y, s);y+=8;
+			y+=8;
+			s = "You should find the specific error(s) in the console.";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		}
+		else
+		{
+			s = "The required files were not found.";M_PrintRed ((640-strlen(s)*8)*0.5, y, s);y+=8;
+			y+=8;
+			s = "You may consider adding";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+			s = "-basedir /path/to/game";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+			s = "to your launch commandline.";M_Print ((640-strlen(s)*8)*0.5, y, s);y+=8;
+		}
 		M_Print (640/2 - 48, 480/2, "Open Console"); //The console usually better shows errors (failures)
 		M_Print (640/2 - 48, 480/2 + 8, "Quit");
 		M_DrawCharacter(640/2 - 56, 480/2 + (8 * m_main_cursor), 12+((int)(host.realtime*4)&1));
@@ -5214,8 +5224,9 @@ static int m_numrequiredglobals = sizeof(m_required_globals) / sizeof(m_required
 
 void MR_SetRouting (qbool forceold);
 
-void MVM_error_cmd(const char *format, ...) DP_FUNC_PRINTF(1);
-void MVM_error_cmd(const char *format, ...)
+jmp_buf mp_abort;
+static void MVM_error_cmd(const char *format, ...) DP_FUNC_PRINTF(1) DP_FUNC_NORETURN;
+static void MVM_error_cmd(const char *format, ...)
 {
 	static qbool processingError = false;
 	char errorstring[MAX_INPUTLINE];
@@ -5228,9 +5239,6 @@ void MVM_error_cmd(const char *format, ...)
 	va_start (argptr, format);
 	dpvsnprintf (errorstring, sizeof(errorstring), format, argptr);
 	va_end (argptr);
-
-	if (host.framecount < 3)
-		Sys_Error("Menu_Error: %s", errorstring);
 
 	Con_Printf(CON_ERROR "Menu_Error: %s\n", errorstring);
 
@@ -5246,6 +5254,9 @@ void MVM_error_cmd(const char *format, ...)
 	Con_Print("Falling back to engine menu\n");
 	key_dest = key_game;
 	MR_SetRouting (true);
+	mp_failed = true;
+	if (cls.state != ca_connected || key_dest != key_game) // if not disrupting a game
+		MR_ToggleMenu(1); // ensure error screen appears, eg for: menu_progs ""; menu_restart
 
 	// reset the active scene, too (to be on the safe side ;))
 	R_SelectScene( RST_CLIENT );
@@ -5256,8 +5267,8 @@ void MVM_error_cmd(const char *format, ...)
 	// restore configured outfd
 	sys.outfd = outfd;
 
-	// Let video start at least
-	Host_AbortCurrentFrame();
+	// no frame abort: menu failure shouldn't interfere with more important VMs
+	longjmp(mp_abort, 1);
 }
 
 static void MVM_begin_increase_edicts(prvm_prog_t *prog)
@@ -5304,6 +5315,9 @@ static void MP_KeyEvent (int key, int ascii, qbool downevent)
 {
 	prvm_prog_t *prog = MVM_prog;
 
+	if (setjmp(mp_abort))
+		return;
+
 	// pass key
 	prog->globals.fp[OFS_PARM0] = (prvm_vec_t) key;
 	prog->globals.fp[OFS_PARM1] = (prvm_vec_t) ascii;
@@ -5320,6 +5334,9 @@ static void MP_Draw (void)
 
 	// don't crash if we draw a frame between prog shutdown and restart, see Host_LoadConfig_f
 	if (!prog->loaded)
+		return;
+
+	if (setjmp(mp_abort))
 		return;
 
 	R_SelectScene( RST_MENU );
@@ -5352,6 +5369,9 @@ static void MP_ToggleMenu(int mode)
 {
 	prvm_prog_t *prog = MVM_prog;
 
+	if (setjmp(mp_abort))
+		return;
+
 	prog->globals.fp[OFS_PARM0] = (prvm_vec_t) mode;
 	prog->ExecuteProgram(prog, PRVM_menufunction(m_toggle),"m_toggle(float mode) required");
 }
@@ -5359,6 +5379,10 @@ static void MP_ToggleMenu(int mode)
 static void MP_NewMap(void)
 {
 	prvm_prog_t *prog = MVM_prog;
+
+	if (setjmp(mp_abort))
+		return;
+
 	if (PRVM_menufunction(m_newmap))
 		prog->ExecuteProgram(prog, PRVM_menufunction(m_newmap),"m_newmap() required");
 }
@@ -5367,6 +5391,10 @@ const serverlist_entry_t *serverlist_callbackentry = NULL;
 static int MP_GetServerListEntryCategory(const serverlist_entry_t *entry)
 {
 	prvm_prog_t *prog = MVM_prog;
+
+	if (setjmp(mp_abort))
+		return 0;
+
 	serverlist_callbackentry = entry;
 	if (PRVM_menufunction(m_gethostcachecategory))
 	{
@@ -5384,6 +5412,10 @@ static int MP_GetServerListEntryCategory(const serverlist_entry_t *entry)
 static void MP_Shutdown (void)
 {
 	prvm_prog_t *prog = MVM_prog;
+
+	if (setjmp(mp_abort))
+		return;
+
 	if (prog->loaded)
 		prog->ExecuteProgram(prog, PRVM_menufunction(m_shutdown),"m_shutdown() required");
 
@@ -5397,6 +5429,10 @@ static void MP_Shutdown (void)
 static void MP_Init (void)
 {
 	prvm_prog_t *prog = MVM_prog;
+
+	if (setjmp(mp_abort))
+		return;
+
 	PRVM_Prog_Init(prog, cmd_local);
 
 	prog->edictprivate_size = 0; // no private struct used

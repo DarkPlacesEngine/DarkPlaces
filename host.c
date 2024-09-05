@@ -105,8 +105,8 @@ void Host_Error (const char *error, ...)
 
 	// LadyHavoc: if crashing very early, or currently shutting down, do
 	// Sys_Error instead
-	if (host.framecount < 3 || host.state == host_shutdown)
-		Sys_Error ("Host_Error during %s: %s", host.framecount < 3 ? "startup" : "shutdown", hosterrorstring1);
+	if (host.framecount < 1 || host.state != host_active)
+		Sys_Error ("Host_Error during %s: %s", host_state_str[host.state], hosterrorstring1);
 
 	if (hosterror)
 		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
@@ -137,6 +137,7 @@ void Host_Error (const char *error, ...)
 	// restore configured outfd
 	sys.outfd = outfd;
 
+	// can't abort a frame if we didn't start one yet, won't get here in that case (see above)
 	Host_AbortCurrentFrame();
 }
 
@@ -392,9 +393,6 @@ void Host_Init (void)
 	host.realtime = 0;
 	host.dirtytime = Sys_DirtyTime();
 
-	if (setjmp(host.abortframe)) // Huh?!
-		Sys_Error("Engine initialization failed. Check the console (if available) for additional information.\n");
-
 	if (Sys_CheckParm("-profilegameonly"))
 		Sys_AllowProfiling(false);
 
@@ -491,15 +489,10 @@ void Host_Init (void)
 	// NOTE: menu commands are freed by Cmd_RestoreInitState
 	Cmd_SaveInitState();
 
-	// FIXME: put this into some neat design, but the menu should be allowed to crash
-	// without crashing the whole game, so this should just be a short-time solution
-
 	// here comes the not so critical stuff
 
 	Host_AddConfigText(cmd_local);
 	Cbuf_Execute(cmd_local->cbuf); // cannot be in Host_AddConfigText as that would cause Host_LoadConfig_f to loop!
-
-	host.state = host_active;
 
 	CL_StartVideo();
 
@@ -562,6 +555,7 @@ void Host_Init (void)
 	}
 
 	Con_DPrint("========Initialized=========\n");
+	host.state = host_active;
 
 	if (cls.state != ca_dedicated)
 		SV_StartThread();
@@ -624,6 +618,8 @@ Runs all active servers
 double Host_Frame(double time)
 {
 	double cl_wait, sv_wait;
+
+	++host.framecount;
 
 	TaskQueue_Frame(false);
 

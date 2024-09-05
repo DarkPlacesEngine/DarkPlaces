@@ -56,6 +56,8 @@ NULL
 qbool MP_ConsoleCommand(const char *text, size_t textlen)
 {
 	prvm_prog_t *prog = MVM_prog;
+	if (setjmp(mp_abort))
+		return false;
 	return PRVM_ConsoleCommand(prog, text, textlen, &prog->funcoffsets.GameCommand, false, -1, 0, "QC function GameCommand is missing");
 }
 

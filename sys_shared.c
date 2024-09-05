@@ -1158,7 +1158,6 @@ static void Sys_Frame(void)
 	host.dirtytime = newtime;
 
 	sleeptime = Host_Frame(time);
-	++host.framecount;
 	sleeptime -= Sys_DirtyTime() - host.dirtytime; // execution time
 
 #ifdef __EMSCRIPTEN__
