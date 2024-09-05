@@ -1522,9 +1522,11 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 	switch(vid.renderpath)
 	{
 	case RENDERPATH_GL32:
-	case RENDERPATH_GLES2:
 		CHECKGLERROR
-#ifndef GL_BGRA
+		qglReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, outpixels);CHECKGLERROR
+		break;
+	case RENDERPATH_GLES2: // glReadPixels() lacks GL_BGRA support (even in ES 3.2)
+		CHECKGLERROR
 		{
 			int i;
 			int r;
@@ -1544,10 +1546,7 @@ void GL_ReadPixelsBGRA(int x, int y, int width, int height, unsigned char *outpi
 		//		outpixels[i+3] = a;
 			}
 		}
-#else
-		qglReadPixels(x, y, width, height, GL_BGRA, GL_UNSIGNED_BYTE, outpixels);CHECKGLERROR
-#endif
-			break;
+		break;
 	}
 }
 
