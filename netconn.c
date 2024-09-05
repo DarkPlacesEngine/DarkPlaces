@@ -49,6 +49,10 @@ static cvar_t sv_masters [] =
 	{CF_CLIENT | CF_SERVER, "sv_masterextra3", "dpm.dpmaster.org:27777", "dpm.dpmaster.org - default master server 3 (admin: gazby/soylent_cow)"},
 };
 
+// asgaard.morphos-team.net resolves to the same ipv4 as qwmaster.fodquake.net,
+// its reverse PTR is for asgaard.morphos-team.net but qwmaster.fodquake.net seems more popular.
+// qwmaster.ocrana.de seems long dead.
+// https://www.quakeservers.net/quakeworld/master_servers/
 #ifdef CONFIG_MENU
 static cvar_t sv_qwmasters [] =
 {
@@ -56,10 +60,9 @@ static cvar_t sv_qwmasters [] =
 	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster2", "", "user-chosen qwmaster server 2"},
 	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster3", "", "user-chosen qwmaster server 3"},
 	{CF_CLIENT | CF_ARCHIVE, "sv_qwmaster4", "", "user-chosen qwmaster server 4"},
-	{CF_CLIENT, "sv_qwmasterextra1", "master.quakeservers.net:27000", "Global master server. (admin: unknown)"},
-	{CF_CLIENT, "sv_qwmasterextra2", "asgaard.morphos-team.net:27000", "Global master server. (admin: unknown)"},
-	{CF_CLIENT, "sv_qwmasterextra3", "qwmaster.ocrana.de:27000", "German master server. (admin: unknown)"},
-	{CF_CLIENT, "sv_qwmasterextra4", "qwmaster.fodquake.net:27000", "Global master server. (admin: unknown)"},
+	{CF_CLIENT, "sv_qwmasterextra1", "master.quakeservers.net:27000", "QW master in Germany, admin: unknown"},
+	{CF_CLIENT, "sv_qwmasterextra2", "qwmaster.fodquake.net:27000", "QW master in Germany, same IP as asgaard.morphos-team.net, admin: bigfoot"},
+	{CF_CLIENT, "sv_qwmasterextra3", "master.quakeworld.nu:27000", "QW master in Sweden, admin: unknown"},
 };
 #endif
 
@@ -637,7 +640,9 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	char dpquery[53]; // theoretical max: 14+22+16+1
 
 	if (net_slist_debug.integer)
-		Con_Printf("^2Querying master, favourite and LAN servers, reset=%u\n", resetcache);
+		Con_Printf("^2Querying %s master, favourite and LAN servers, reset=%u\n",
+				querydp && queryqw ? "DP and QW" : querydp ? "DP" : "QW",
+				resetcache);
 	serverlist_querystage = (querydp ? SLIST_QUERYSTAGE_DPMASTERS : 0) | (queryqw ? SLIST_QUERYSTAGE_QWMASTERS : 0);
 	masterquerycount = 0;
 	masterreplycount = 0;
@@ -1952,7 +1957,7 @@ static void NetConn_ClientParsePacket_ServerList_ParseDPList(lhnetaddress_t *mas
 	}
 
 	if (serverlist_querystage & SLIST_QUERYSTAGE_QWMASTERS)
-		return; // we must wait if we're also querying QW as it has no EOT marker
+		return; // we must wait if we're (also) querying QW as its protocol has no EOT marker
 	// begin or resume serverlist queries
 	for (masternum = 0; masternum < DPMASTER_COUNT; ++masternum)
 		if (dpmasterstatus[masternum] && dpmasterstatus[masternum] < MASTER_RX_COMPLETE)
@@ -2632,13 +2637,16 @@ void NetConn_QueryQueueFrame(void)
 		// timeout pass begins next frame
 		if (net_slist_debug.integer)
 		{
-			int mastersqueried = 0;
+			int dpmastersqueried = 0, qwmastersqueried = 0;
 
 			for (index = 0; index < DPMASTER_COUNT; ++index)
 				if (dpmasterstatus[index])
-					++mastersqueried;
-			Con_Printf("^2Finished querying %i masters and %i servers in %f seconds\n",
-					mastersqueried, serverlist_cachecount, currentrealtime - masterquerytime);
+					++dpmastersqueried;
+			for (index = 0; index < QWMASTER_COUNT; ++index)
+				if (qwmasterstatus[index])
+					++qwmastersqueried;
+			Con_Printf("^2Finished querying %i DP %i QW masters and %i servers in %f seconds\n",
+					dpmastersqueried, qwmastersqueried, serverlist_cachecount, currentrealtime - masterquerytime);
 		}
 	}
 	else if (pass > queriesperserver)
@@ -3866,8 +3874,8 @@ void NetConn_QueryMasters(qbool querydp, qbool queryqw)
 	if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
 		return;
 
-	memset(dpmasterstatus, 0, sizeof(*dpmasterstatus));
-	memset(qwmasterstatus, 0, sizeof(*qwmasterstatus));
+	memset(dpmasterstatus, 0, sizeof(dpmasterstatus));
+	memset(qwmasterstatus, 0, sizeof(qwmasterstatus));
 
 	if (querydp)
 	{
