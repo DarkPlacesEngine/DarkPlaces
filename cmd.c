@@ -634,6 +634,12 @@ static void Cmd_Exec(cmd_state_t *cmd, const char *filename)
 "csqc_lowres 1\n"
 					);
 			break;
+		case GAME_CTSJ2:
+			Cbuf_InsertText(cmd, "\n"
+// Doesn't completely initialise during worldspawn and the init frames, sometimes causing the
+// essential item on start.bsp to not spawn when the local client connects and spawns "too fast".
+"sv_init_frame_count 3\n"
+			);
 		default:
 			break;
 		}
