@@ -163,9 +163,18 @@ spatialmethod_t spatialmethod;
 
 // Cvars declared in sound.h (part of the sound API)
 cvar_t bgmvolume = {CF_CLIENT | CF_ARCHIVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
-cvar_t mastervolume = {CF_CLIENT | CF_ARCHIVE, "mastervolume", "0.7", "master volume"};
 cvar_t volume = {CF_CLIENT | CF_ARCHIVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = {CF_CLIENT | CF_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+
+// Cvars declared in snd_main.h (shared with other snd_*.c files)
+cvar_t snd_channellayout = {CF_CLIENT, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
+cvar_t snd_mutewhenidle = {CF_CLIENT | CF_ARCHIVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
+cvar_t snd_streaming = {CF_CLIENT | CF_ARCHIVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
+cvar_t snd_streaming_length = {CF_CLIENT | CF_ARCHIVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
+cvar_t snd_waterfx = {CF_CLIENT | CF_ARCHIVE, "snd_waterfx", "1", "underwater sound filter strength"};
+
+// Local cvars
+cvar_t mastervolume = {CF_CLIENT | CF_ARCHIVE, "mastervolume", "0.7", "master volume"};
 cvar_t snd_staticvolume = {CF_CLIENT | CF_ARCHIVE, "snd_staticvolume", "1", "volume of ambient sound effects (such as swampy sounds at the start of e1m2)"};
 cvar_t snd_soundradius = {CF_CLIENT | CF_ARCHIVE, "snd_soundradius", "1200", "radius of weapon sounds and other standard sound effects (monster idle noises are half this radius and flickering light noises are one third of this radius)"};
 cvar_t snd_attenuation_exponent = {CF_CLIENT | CF_ARCHIVE, "snd_attenuation_exponent", "1", "Exponent of (1-radius) in sound attenuation formula"};
@@ -179,16 +188,8 @@ cvar_t snd_spatialization_control = {CF_CLIENT | CF_ARCHIVE, "snd_spatialization
 cvar_t snd_spatialization_prologic = {CF_CLIENT | CF_ARCHIVE, "snd_spatialization_prologic", "0", "use dolby prologic (I, II or IIx) encoding (snd_channels must be 2)"};
 cvar_t snd_spatialization_prologic_frontangle = {CF_CLIENT | CF_ARCHIVE, "snd_spatialization_prologic_frontangle", "30", "the angle between the front speakers and the center speaker"};
 cvar_t snd_spatialization_occlusion = {CF_CLIENT | CF_ARCHIVE, "snd_spatialization_occlusion", "1", "enable occlusion testing on spatialized sounds, which simply quiets sounds that are blocked by the world; 1 enables PVS method, 2 enables LineOfSight method, 3 enables both"};
-
-// Cvars declared in snd_main.h (shared with other snd_*.c files)
-cvar_t snd_waterfx = {CF_CLIENT | CF_ARCHIVE, "snd_waterfx", "1", "underwater sound filter strength"};
 cvar_t _snd_mixahead = {CF_CLIENT | CF_ARCHIVE, "_snd_mixahead", "0.15", "how much sound to mix ahead of time"};
-cvar_t snd_streaming = {CF_CLIENT | CF_ARCHIVE, "snd_streaming", "1", "enables keeping compressed ogg sound files compressed, decompressing them only as needed, otherwise they will be decompressed completely at load (may use a lot of memory); when set to 2, streaming is performed even if this would waste memory"};
-cvar_t snd_streaming_length = {CF_CLIENT | CF_ARCHIVE, "snd_streaming_length", "1", "decompress sounds completely if they are less than this play time when snd_streaming is 1"};
 cvar_t snd_swapstereo = {CF_CLIENT | CF_ARCHIVE, "snd_swapstereo", "0", "swaps left/right speakers for old ISA soundblaster cards"};
-extern cvar_t v_flipped;
-cvar_t snd_channellayout = {CF_CLIENT, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
-cvar_t snd_mutewhenidle = {CF_CLIENT | CF_ARCHIVE, "snd_mutewhenidle", "1", "whether to disable sound output when game window is inactive"};
 cvar_t snd_maxchannelvolume = {CF_CLIENT | CF_ARCHIVE, "snd_maxchannelvolume", "10", "maximum volume of a single sound"};
 cvar_t snd_softclip = {CF_CLIENT | CF_ARCHIVE, "snd_softclip", "0", "Use soft-clipping. Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
 //cvar_t snd_softclip = {CF_CLIENT | CF_ARCHIVE, "snd_softclip", "0", "Use soft-clipping (when set to 2, use it even if output is floating point). Soft-clipping can make the sound more smooth if very high volume levels are used. Enable this option if the dynamic range of the loudspeakers is very low. WARNING: This feature creates distortion and should be considered a last resort."};
@@ -233,7 +234,6 @@ cvar_t snd_channel5volume = {CF_CLIENT | CF_ARCHIVE, "snd_channel5volume", "1", 
 cvar_t snd_channel6volume = {CF_CLIENT | CF_ARCHIVE, "snd_channel6volume", "1", "volume multiplier of the 6th entity channel"};
 cvar_t snd_channel7volume = {CF_CLIENT | CF_ARCHIVE, "snd_channel7volume", "1", "volume multiplier of the 7th entity channel"};
 
-// Local cvars
 static cvar_t nosound = {CF_CLIENT, "nosound", "0", "disables sound"};
 static cvar_t snd_precache = {CF_CLIENT, "snd_precache", "1", "loads sounds before they are used"};
 static cvar_t ambient_level = {CF_CLIENT, "ambient_level", "0.3", "volume of environment noises (water and wind)"};
@@ -256,6 +256,8 @@ static cvar_t snd_identicalsoundrandomization_tics = {CF_CLIENT, "snd_identicals
 // Ambient sounds
 static sfx_t* ambient_sfxs [2] = { NULL, NULL };
 static const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/wind2.wav" };
+
+extern cvar_t v_flipped;
 
 
 // ====================================================================

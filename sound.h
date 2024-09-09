@@ -47,12 +47,9 @@ struct cmd_state_s;
 
 typedef struct sfx_s sfx_t;
 
-extern struct cvar_s mastervolume;
-extern struct cvar_s bgmvolume;
-extern struct cvar_s volume;
-extern struct cvar_s snd_initialized;
-extern struct cvar_s snd_staticvolume;
-extern struct cvar_s snd_mutewhenidle;
+extern cvar_t bgmvolume;
+extern cvar_t volume;
+extern cvar_t snd_initialized;
 
 
 // ====================================================================
