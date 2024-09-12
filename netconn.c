@@ -639,13 +639,6 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	lhnetaddress_t broadcastaddress;
 	char dpquery[53]; // theoretical max: 14+22+16+1
 
-	if (net_slist_debug.integer)
-		Con_Printf("^2Querying %s master, favourite and LAN servers, reset=%u\n",
-				querydp && queryqw ? "DP and QW" : querydp ? "DP" : "QW",
-				resetcache);
-	serverlist_querystage = (querydp ? SLIST_QUERYSTAGE_DPMASTERS : 0) | (queryqw ? SLIST_QUERYSTAGE_QWMASTERS : 0);
-	masterquerycount = 0;
-	masterreplycount = 0;
 	if (resetcache)
 	{
 		serverquerycount = 0;
@@ -657,14 +650,25 @@ void ServerList_QueryList(qbool resetcache, qbool querydp, qbool queryqw, qbool 
 	}
 	else
 	{
+		if (serverlist_querystage)
+		{
+			if (net_slist_debug.integer)
+				Con_Printf(CON_WARN "Ignoring server list refresh request: already refreshing!\n");
+			return; // unsetting `responded` now would cause live servers to be timed out
+		}
+
 		// refresh all entries
 		for (i = 0; i < serverlist_cachecount; ++i)
-		{
-			serverlist_entry_t *entry = &serverlist_cache[i];
-			entry->responded = false;
-		}
+			serverlist_cache[i].responded = false;
 	}
+	serverlist_querystage = (querydp ? SLIST_QUERYSTAGE_DPMASTERS : 0) | (queryqw ? SLIST_QUERYSTAGE_QWMASTERS : 0);
+	masterquerycount = 0;
+	masterreplycount = 0;
 	serverlist_consoleoutput = consoleoutput;
+	if (net_slist_debug.integer)
+		Con_Printf("^2Querying %s master, favourite and LAN servers, reset=%u\n",
+				querydp && queryqw ? "DP and QW" : querydp ? "DP" : "QW",
+				resetcache);
 
 	//_ServerList_Test();
 
@@ -2613,13 +2617,17 @@ void NetConn_QueryQueueFrame(void)
 			if (!entry->responded // no acceptable response during this refresh cycle
 			&& entry->info.ping) // visible in the list (has old ping from previous refresh cycle)
 			{
-				if (currentrealtime > entry->querytime + net_slist_maxping.integer/1000)
+				if (currentrealtime > entry->querytime + net_slist_maxping.value/1000.0f)
 				{
 					// you have no chance to survive make your timeout
 					serverreplycount--;
 					if(!net_slist_pause.integer)
+					{
+						if (net_slist_debug.integer)
+							Con_Printf(CON_WARN "Removing timed out server %s from viewlist\n", entry->info.cname);
 						ServerList_ViewList_Remove(entry);
-					entry->info.ping = 0; // removed later if net_slist_pause
+					}
+					entry->info.ping = 0; // removed later by ServerList_ViewList_Insert if net_slist_pause
 				}
 				else // still has time
 					return; // continue this pass at the current server on a later frame
@@ -2658,7 +2666,7 @@ void NetConn_QueryQueueFrame(void)
 			Con_Printf("^4Finished checking server timeouts in %f\n",
 					currentrealtime - serverlist_cache[serverlist_cachecount - 1].querytime);
 		if (serverlist_cachecount >= SERVERLIST_TOTALSIZE)
-			Con_Printf(CON_WARN "WARNING: too many servers, some will not be listed!\n");
+			Con_Printf(CON_ERROR "ERROR: too many servers, some will not be listed!\n");
 	}
 }
 #endif
