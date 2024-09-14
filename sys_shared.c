@@ -520,7 +520,7 @@ double Sys_Sleep(double time)
 	}
 
 	if(sys_debugsleep.integer)
-		Con_Printf("sys_debugsleep: requesting %u ", usec);
+		Con_Printf("sys_debugsleep: requested %u, ", usec);
 	dt = Sys_DirtyTime();
 
 	// less important on newer libcurl so no need to disturb dedicated servers
@@ -598,7 +598,7 @@ double Sys_Sleep(double time)
 
 	dt = Sys_DirtyTime() - dt;
 	if(sys_debugsleep.integer)
-		Con_Printf(" got %u oversleep %d\n", (unsigned int)(dt * 1000000), (unsigned int)(dt * 1000000) - usec);
+		Con_Printf("got %u, oversleep %d\n", (uint32_t)(dt * 1000000), (uint32_t)(dt * 1000000) - usec);
 	return (dt < 0 || dt >= 1800) ? 0 : dt;
 }
 

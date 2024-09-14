@@ -2249,11 +2249,10 @@ void CL_UpdateScreen(void)
 			SCR_EndLoadingPlaque();
 		else if (scr_loadingscreen_maxfps.value > 0)
 		{
-			static float lastupdate;
-			float now = Sys_DirtyTime();
-			if (now - lastupdate < min(1.0f / scr_loadingscreen_maxfps.value, 0.1))
+			static double lastupdate;
+			if (host.realtime - lastupdate < min(1.0f / scr_loadingscreen_maxfps.value, 0.1))
 				return;
-			lastupdate = now;
+			lastupdate = host.realtime;
 		}
 	}
 
