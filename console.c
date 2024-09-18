@@ -3071,7 +3071,8 @@ int Con_CompleteCommandLine(cmd_state_t *cmd, qbool is_console)
 						Con_Printf("\n%i possible filenames\n", resultbuf.numstrings + dirbuf.numstrings);
 						for(i = 0; i < dirbuf.numstrings; ++i)
 						{
-							Con_Printf("^4%s^7/\n", dirbuf.strings[i]);
+							// Print directory names/paths to the console in light blue
+							Con_Printf("^5%s^7/\n", dirbuf.strings[i]);
 						}
 						for(i = 0; i < resultbuf.numstrings; ++i)
 						{
