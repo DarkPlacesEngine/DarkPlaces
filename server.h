@@ -465,6 +465,7 @@ extern cvar_t sv_gameplayfix_q1bsptracelinereportstexture;
 extern cvar_t sv_gameplayfix_unstickplayers;
 extern cvar_t sv_gameplayfix_unstickentities;
 extern cvar_t sv_gameplayfix_fixedcheckwatertransition;
+extern cvar_t sv_gameplayfix_nosquashentities;
 extern cvar_t sv_gravity;
 extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_jumpstep;
