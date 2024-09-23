@@ -409,8 +409,7 @@ mfunction_t;
 typedef struct mstatement_s
 {
 	opcode_t	op;
-	int			operand[3]; // always a global or -1 for unused
-	int			jumpabsolute; // only used by IF, IFNOT, GOTO
+	int			operand[3]; // always a global, or a relative statement offset ([0] for GOTO, [1] for IF/IFNOT), or -1 for unused
 }
 mstatement_t;
 

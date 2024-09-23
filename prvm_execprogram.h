@@ -637,7 +637,7 @@ int i;
 				// and entity, string, field values can never have that value
 				{
 					ADVANCE_PROFILE_BEFORE_JUMP();
-					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
+					st += st->operand[1] - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
@@ -657,7 +657,7 @@ int i;
 				// and entity, string, field values can never have that value
 				{
 					ADVANCE_PROFILE_BEFORE_JUMP();
-					st = cached_statements + st->jumpabsolute - 1;	// offset the st++
+					st += st->operand[1] - 1;	// offset the st++
 					startst = st;
 					// no bounds check needed, it is done when loading progs
 					if (++jumpcount == 10000000 && prvm_runawaycheck)
@@ -671,7 +671,7 @@ int i;
 
 			HANDLE_OPCODE(OP_GOTO):
 				ADVANCE_PROFILE_BEFORE_JUMP();
-				st = cached_statements + st->jumpabsolute - 1;	// offset the st++
+				st += st->operand[0] - 1;	// offset the st++
 				startst = st;
 				// no bounds check needed, it is done when loading progs
 				if (++jumpcount == 10000000 && prvm_runawaycheck)

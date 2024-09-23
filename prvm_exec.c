@@ -332,10 +332,17 @@ static void PRVM_PrintStatement(prvm_prog_t *prog, mstatement_t *s)
 	for ( ; i<10 ; i++)
 		Con_Print(" ");
 
-	if (s->operand[0] >= 0) Con_Printf(  "%s", PRVM_GlobalString(prog, s->operand[0], valuebuf, sizeof(valuebuf)));
-	if (s->operand[1] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[1], valuebuf, sizeof(valuebuf)));
+	if (s->op == OP_GOTO) {
+		Con_Printf("statement %i", (int)(s - prog->statements) + s->operand[0]);
+	} else {
+		if (s->operand[0] >= 0) Con_Printf(  "%s", PRVM_GlobalString(prog, s->operand[0], valuebuf, sizeof(valuebuf)));
+	}
+	if (s->op == OP_IF || s->op == OP_IFNOT) {
+		Con_Printf(", statement %i", (int)(s - prog->statements) + s->operand[1]);
+	} else {
+		if (s->operand[1] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[1], valuebuf, sizeof(valuebuf)));
+	}
 	if (s->operand[2] >= 0) Con_Printf(", %s", PRVM_GlobalString(prog, s->operand[2], valuebuf, sizeof(valuebuf)));
-	if (s->jumpabsolute >= 0) Con_Printf(", statement %i", s->jumpabsolute);
 	Con_Print("\n");
 }
 
