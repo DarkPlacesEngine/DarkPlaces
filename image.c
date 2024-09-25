@@ -1076,10 +1076,8 @@ unsigned char *loadimagepixelsbgra (const char *filename, qbool complain, qbool 
 		firstformat = imageformats_textures;
 	else if (!strcasecmp(path, "gfx") || !strcasecmp(path, "locale")) // locale/ is used in GAME_BLOODOMNICIDE
 		firstformat = imageformats_gfx;
-	else if (!path[0])
-		firstformat = imageformats_nopath;
 	else
-		firstformat = imageformats_other;
+		firstformat = imageformats_nopath;
 	// now try all the formats in the selected list
 	for (format = firstformat;format->formatstring;format++)
 	{
