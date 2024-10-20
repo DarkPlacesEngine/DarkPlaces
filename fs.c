@@ -78,7 +78,7 @@
 
 // windows wchar helpers
 #ifdef WIN32
-# define MAX_OSWPATH (MAX_OSPATH * sizeof(wchar))
+# define MAX_OSWPATH MAX_OSPATH
 # define WPATHDEF(var) wchar var[MAX_OSWPATH]
 #else
 # define WPATHDEF(var) ;
@@ -2197,7 +2197,7 @@ static void FS_Init_Dir (void)
 #else
 	// use the working directory
 	#ifdef WIN32
-		_wgetcwd(fs_basedirw, sizeof(fs_basedirw));
+		GetCurrentDirectoryW(sizeof(fs_basedirw), fs_basedirw);
 		NARROW(fs_basedirw, fs_basedir);
 	#else
 		getcwd(fs_basedir, sizeof(fs_basedir));
