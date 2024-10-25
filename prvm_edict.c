@@ -2294,19 +2294,17 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 				prog->error_cmd("%s: out of bounds IF/IFNOT (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
-			prog->statements[i].operand[1] = -1;
+			prog->statements[i].operand[1] = b;
 			prog->statements[i].operand[2] = -1;
-			prog->statements[i].jumpabsolute = i + b;
 			break;
 		case OP_GOTO:
 			a = (short)a;
 			if (a + i < 0 || a + i >= prog->progs_numstatements)
 				prog->error_cmd("%s: out of bounds GOTO (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
-			prog->statements[i].operand[0] = -1;
+			prog->statements[i].operand[0] = a;
 			prog->statements[i].operand[1] = -1;
 			prog->statements[i].operand[2] = -1;
-			prog->statements[i].jumpabsolute = i + a;
 			break;
 		default:
 			Con_DPrintf("%s: unknown opcode %d at statement %d in %s\n", __func__, (int)op, i, prog->name);
@@ -2316,7 +2314,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = 0;
 			prog->statements[i].operand[1] =
 			prog->statements[i].operand[2] = op;
-			prog->statements[i].jumpabsolute = -1;
 			break;
 		case OP_STORE_I:
 		case OP_ADD_I:
@@ -2427,7 +2424,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = remapglobal(b);
 			prog->statements[i].operand[2] = remapglobal(c);
-			prog->statements[i].jumpabsolute = -1;
 			break;
 		// global none global
 		case OP_NOT_F:
@@ -2441,7 +2437,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
 			prog->statements[i].operand[2] = remapglobal(c);
-			prog->statements[i].jumpabsolute = -1;
 			break;
 		// 2 globals
 		case OP_STOREP_F:
@@ -2466,7 +2461,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = remapglobal(b);
 			prog->statements[i].operand[2] = -1;
-			prog->statements[i].jumpabsolute = -1;
 			break;
 		// 1 global
 		case OP_CALL0:
@@ -2493,7 +2487,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
 			prog->statements[i].operand[2] = -1;
-			prog->statements[i].jumpabsolute = -1;
 			break;
 		}
 	}

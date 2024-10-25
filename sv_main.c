@@ -50,7 +50,6 @@ cvar_t pausable = {CF_SERVER, "pausable","1", "allow players to pause or not (ot
 cvar_t pr_checkextension = {CF_SERVER | CF_READONLY, "pr_checkextension", "1", "indicates to QuakeC that the standard quakec extensions system is available (if 0, quakec should not attempt to use extensions)"};
 cvar_t samelevel = {CF_SERVER | CF_NOTIFY, "samelevel","0", "repeats same level if level ends (due to timelimit or someone hitting an exit)"};
 cvar_t skill = {CF_SERVER, "skill","1", "difficulty level of game, affects monster layouts in levels, 0 = easy, 1 = normal, 2 = hard, 3 = nightmare (same layout as hard but monsters fire twice)"};
-cvar_t campaign = {CF_SERVER, "campaign", "0", "singleplayer mode"};
 cvar_t host_timescale = {CF_CLIENT | CF_SERVER, "host_timescale", "1.0", "controls game speed, 0.5 is half speed, 2 is double speed"};
 
 cvar_t sv_accelerate = {CF_SERVER, "sv_accelerate", "10", "rate at which a player accelerates to sv_maxspeed"};
@@ -536,7 +535,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&pr_checkextension);
 	Cvar_RegisterVariable (&samelevel);
 	Cvar_RegisterVariable (&skill);
-	Cvar_RegisterVariable (&campaign);
 	Cvar_RegisterVariable (&host_timescale);
 	Cvar_RegisterCallback (&host_timescale, Host_Timescale_c);
 	Cvar_RegisterVirtual (&host_timescale, "slowmo");
@@ -1903,16 +1901,8 @@ void SV_SpawnServer (const char *map)
 //
 // make cvars consistant
 //
-
 	if (coop.integer)
-	{
 		Cvar_SetValueQuick(&deathmatch, 0);
-		Cvar_SetValueQuick(&campaign, 0);
-	}
-	else if(!deathmatch.integer)
-		Cvar_SetValueQuick(&campaign, 1);
-	else
-		Cvar_SetValueQuick(&campaign, 0);
 	// LadyHavoc: it can be useful to have skills outside the range 0-3...
 	//current_skill = bound(0, (int)(skill.value + 0.5), 3);
 	//Cvar_SetValue ("skill", (float)current_skill);
