@@ -2197,7 +2197,7 @@ static void FS_Init_Dir (void)
 #else
 	// use the working directory
 	#ifdef WIN32
-		GetCurrentDirectoryW(sizeof(fs_basedirw), fs_basedirw);
+		GetCurrentDirectoryW(sizeof(fs_basedirw) / sizeof(*fs_basedirw), fs_basedirw);
 		NARROW(fs_basedirw, fs_basedir);
 	#else
 		getcwd(fs_basedir, sizeof(fs_basedir));
