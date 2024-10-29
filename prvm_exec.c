@@ -860,7 +860,7 @@ static int PRVM_LeaveFunction (prvm_prog_t *prog)
 		f->tprofile_total += prog->stack[prog->depth].tprofile_acc;
 		f->builtinsprofile_total += prog->stack[prog->depth].builtinsprofile_acc;
 	}
-	
+
 	return prog->stack[prog->depth].s;
 }
 
@@ -922,6 +922,35 @@ extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern qbool prvm_runawaycheck;
 
+#define PRVM_GLOBALSBASE 0x80000000
+
+// These do not change.
+#define CACHE_UNCHANGING() \
+	mstatement_t *cached_statements = prog->statements; \
+	qbool cached_allowworldwrites = prog->allowworldwrites; \
+	unsigned int cached_flag = prog->flag; \
+	unsigned int cached_vmglobals_1 = prog->numglobals - 1; \
+	unsigned int cached_vmglobals_3 = prog->numglobals - 3; \
+	unsigned int cached_vmglobalsstart = PRVM_GLOBALSBASE; \
+	unsigned int cached_vmglobal1 = cached_vmglobalsstart + 1; \
+	unsigned int cached_vmentity0start = cached_vmglobalsstart + prog->numglobals; \
+	unsigned int cached_vmentity1start = cached_vmentity0start + prog->entityfields; \
+	unsigned int cached_entityfields = prog->entityfields; \
+	unsigned int cached_entityfields_2 = prog->entityfields - 2; \
+	prvm_vec_t *globals = prog->globals.fp; \
+	prvm_vec_t *global1 = prog->globals.fp + 1
+
+// These may become out of date when a builtin is called, and are updated accordingly.
+#define CACHE_CHANGING(DECLARE) \
+	DECLARE(prvm_vec_t *) cached_edictsfields = prog->edictsfields.fp; \
+	DECLARE(prvm_vec_t *) cached_edictsfields_entity1 = cached_edictsfields + prog->entityfields; \
+	DECLARE(unsigned int) cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields; \
+	DECLARE(unsigned int) cached_entityfieldsarea_entityfields_2 = prog->entityfieldsarea - prog->entityfields - 2; \
+	DECLARE(unsigned int) cached_max_edicts = prog->max_edicts
+
+#define DO_DECLARE(t) t
+#define NO_DECLARE(t)
+
 #ifdef PROFILING
 #ifdef CONFIG_MENU
 /*
@@ -940,21 +969,8 @@ void MVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessag
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
-	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
-	unsigned int cached_entityfields = prog->entityfields;
-	unsigned int cached_entityfields_3 = prog->entityfields - 3;
-	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
-	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
-	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
-	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
-	unsigned int cached_max_edicts = prog->max_edicts;
-	// these do not change
-	mstatement_t *cached_statements = prog->statements;
-	qbool cached_allowworldwrites = prog->allowworldwrites;
-	unsigned int cached_flag = prog->flag;
-
-	prvm_vec_t *globals = prog->globals.fp;
+	CACHE_UNCHANGING();
+	CACHE_CHANGING(DO_DECLARE);
 
 	calltime = Sys_DirtyTime();
 
@@ -1049,21 +1065,8 @@ void CLVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
-	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
-	unsigned int cached_entityfields = prog->entityfields;
-	unsigned int cached_entityfields_3 = prog->entityfields - 3;
-	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
-	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
-	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
-	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
-	unsigned int cached_max_edicts = prog->max_edicts;
-	// these do not change
-	mstatement_t *cached_statements = prog->statements;
-	qbool cached_allowworldwrites = prog->allowworldwrites;
-	unsigned int cached_flag = prog->flag;
-
-	prvm_vec_t *globals = prog->globals.fp;
+	CACHE_UNCHANGING();
+	CACHE_CHANGING(DO_DECLARE);
 
 	calltime = Sys_DirtyTime();
 
@@ -1162,21 +1165,8 @@ void PRVM_ExecuteProgram (prvm_prog_t *prog, func_t fnum, const char *errormessa
 	double  calltime;
 	double tm, starttm;
 	prvm_vec_t tempfloat;
-	// these may become out of date when a builtin is called, and are updated accordingly
-	prvm_vec_t *cached_edictsfields = prog->edictsfields.fp;
-	unsigned int cached_entityfields = prog->entityfields;
-	unsigned int cached_entityfields_3 = prog->entityfields - 3;
-	unsigned int cached_entityfieldsarea = prog->entityfieldsarea;
-	unsigned int cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
-	unsigned int cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
-	unsigned int cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
-	unsigned int cached_max_edicts = prog->max_edicts;
-	// these do not change
-	mstatement_t *cached_statements = prog->statements;
-	qbool cached_allowworldwrites = prog->allowworldwrites;
-	unsigned int cached_flag = prog->flag;
-
-	prvm_vec_t *globals = prog->globals.fp;
+	CACHE_UNCHANGING();
+	CACHE_CHANGING(DO_DECLARE);
 
 	calltime = Sys_DirtyTime();
 
