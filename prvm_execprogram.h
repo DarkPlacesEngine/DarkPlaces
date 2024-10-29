@@ -1,5 +1,6 @@
 extern cvar_t prvm_garbagecollection_enable;
 int i;
+prvm_uint_t addr;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
 	prog->xfunction->profile += (st - startst); \
@@ -229,7 +230,7 @@ int i;
 	&&handle_OP_GE_I,
 	&&handle_OP_LT_I,
 	&&handle_OP_GT_I,
-	
+
 	&&handle_OP_LE_IF,
 	&&handle_OP_GE_IF,
 	&&handle_OP_LT_IF,
@@ -274,7 +275,7 @@ int i;
 	&&handle_OP_GSTOREP_ENT,
 	&&handle_OP_GSTOREP_FLD,
 	&&handle_OP_GSTOREP_S,
-	&&handle_OP_GSTOREP_FNC,		
+	&&handle_OP_GSTOREP_FNC,
 	&&handle_OP_GSTOREP_V,
 	&&handle_OP_GADDRESS,
 	&&handle_OP_GLOAD_I,
@@ -478,37 +479,60 @@ int i;
 			HANDLE_OPCODE(OP_STOREP_ENT):
 			HANDLE_OPCODE(OP_STOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_STOREP_FNC):		// pointers
-				if ((prvm_uint_t)OPB->_int - cached_entityfields >= cached_entityfieldsarea_entityfields)
+				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
-					if ((prvm_uint_t)OPB->_int >= cached_entityfieldsarea)
-					{
-						PRE_ERROR();
-						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
-						goto cleanup;
-					}
-					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+				}
+				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_1)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(global1 + addr);
+				}
+				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields)
+				{
+					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
 						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						// Perform entity write anyway.
 					}
+					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				}
-				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					goto cleanup;
+				}
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_S):
-				if ((prvm_uint_t)OPB->_int - cached_entityfields >= cached_entityfieldsarea_entityfields)
+				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
-					if ((prvm_uint_t)OPB->_int >= cached_entityfieldsarea)
-					{
-						PRE_ERROR();
-						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
-						goto cleanup;
-					}
-					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+				}
+				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_1)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(global1 + addr);
+				}
+				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields)
+				{
+					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
 						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						// Perform entity write anyway.
 					}
+					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+				}
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					goto cleanup;
 				}
 				// refresh the garbage collection on the string - this guards
 				// against a certain sort of repeated migration to earlier
@@ -516,25 +540,35 @@ int i;
 				// being freed for being unused
 				if(prvm_garbagecollection_enable.integer)
 					PRVM_GetString(prog, OPA->_int);
-				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_V):
-				if ((prvm_uint_t)OPB->_int - cached_entityfields > (prvm_uint_t)cached_entityfieldsarea_entityfields_3)
+				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
 				{
-					if ((prvm_uint_t)OPB->_int > cached_entityfieldsarea_3)
-					{
-						PRE_ERROR();
-						prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
-						goto cleanup;
-					}
-					if ((prvm_uint_t)OPB->_int < cached_entityfields && !cached_allowworldwrites)
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+				}
+				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_3)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(global1 + OPB->_int);
+				}
+				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields_2)
+				{
+					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
 						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						// Perform entity write anyway.
 					}
+					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
 				}
-				ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					goto cleanup;
+				}
 				ptr->ivector[0] = OPA->ivector[0];
 				ptr->ivector[1] = OPA->ivector[1];
 				ptr->ivector[2] = OPA->ivector[2];
@@ -561,7 +595,7 @@ int i;
 					goto cleanup;
 				}
 #endif
-				OPC->_int = OPA->edict * cached_entityfields + OPB->_int;
+				OPC->_int = cached_vmentity0start + OPA->edict * cached_entityfields + OPB->_int;
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_LOAD_F):
@@ -613,7 +647,7 @@ int i;
 					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int > cached_entityfields_3)
+				if ((prvm_uint_t)OPB->_int >= cached_entityfields_2)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -691,7 +725,7 @@ int i;
 			HANDLE_OPCODE(OP_CALL6):
 			HANDLE_OPCODE(OP_CALL7):
 			HANDLE_OPCODE(OP_CALL8):
-#ifdef PRVMTIMEPROFILING 
+#ifdef PRVMTIMEPROFILING
 				tm = Sys_DirtyTime();
 				prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 				starttm = tm;
@@ -724,21 +758,14 @@ int i;
 					if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
 					{
 						prog->builtins[builtinnumber](prog);
-#ifdef PRVMTIMEPROFILING 
+#ifdef PRVMTIMEPROFILING
 						tm = Sys_DirtyTime();
 						enterfunc->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 						prog->xfunction->tbprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 						starttm = tm;
 #endif
 						// builtins may cause ED_Alloc() to be called, update cached variables
-						cached_edictsfields = prog->edictsfields.fp;
-						cached_entityfields = prog->entityfields;
-						cached_entityfields_3 = prog->entityfields - 3;
-						cached_entityfieldsarea = prog->entityfieldsarea;
-						cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields;
-						cached_entityfieldsarea_3 = prog->entityfieldsarea - 3;
-						cached_entityfieldsarea_entityfields_3 = prog->entityfieldsarea - prog->entityfields - 3;
-						cached_max_edicts = prog->max_edicts;
+						CACHE_CHANGING(NO_DECLARE);
 						// these do not change
 						//cached_statements = prog->statements;
 						//cached_allowworldwrites = prog->allowworldwrites;
@@ -757,7 +784,7 @@ int i;
 
 			HANDLE_OPCODE(OP_DONE):
 			HANDLE_OPCODE(OP_RETURN):
-#ifdef PRVMTIMEPROFILING 
+#ifdef PRVMTIMEPROFILING
 				tm = Sys_DirtyTime();
 				prog->xfunction->tprofile += (tm - starttm >= 0 && tm - starttm < 1800) ? (tm - starttm) : 0;
 				starttm = tm;
