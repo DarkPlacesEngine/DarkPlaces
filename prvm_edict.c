@@ -1458,9 +1458,9 @@ qbool PRVM_ED_CallSpawnFunction(prvm_prog_t *prog, prvm_edict_t *ent, const char
 			}
 			else
 			{
-				
+
 				Con_DPrint("No spawn function for:\n");
-				if (developer.integer > 0) // don't confuse non-developers with errors	
+				if (developer.integer > 0) // don't confuse non-developers with errors
 					PRVM_ED_Print(prog, ent, NULL);
 
 				PRVM_ED_Free (prog, ent);
@@ -1567,7 +1567,7 @@ void PRVM_ED_LoadFromFile (prvm_prog_t *prog, const char *data)
 
 		if(!PRVM_ED_CallSpawnFunction(prog, ent, data, start))
 			continue;
-		
+
 		PRVM_ED_CallPostspawnFunction(prog, ent);
 
 		spawned++;
@@ -2445,17 +2445,23 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_STOREP_FLD:
 		case OP_STOREP_S:
 		case OP_STOREP_FNC:
+		case OP_STOREP_V:
 			if (c)	//Spike -- DP is alergic to pointers in QC. Try to avoid too many nasty surprises.
 				Con_DPrintf("%s: storep-with-offset is not permitted in %s\n", __func__, prog->name);
-			//fallthrough
+			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
+				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
+			prog->statements[i].op = op;
+			prog->statements[i].operand[0] = remapglobal(a);
+			prog->statements[i].operand[1] = remapglobal(b);
+			prog->statements[i].operand[2] = remapglobal(c);
+			break;
 		case OP_STORE_F:
 		case OP_STORE_ENT:
 		case OP_STORE_FLD:
 		case OP_STORE_S:
 		case OP_STORE_FNC:
-		case OP_STATE:
-		case OP_STOREP_V:
 		case OP_STORE_V:
+		case OP_STATE:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
 			prog->statements[i].op = op;
