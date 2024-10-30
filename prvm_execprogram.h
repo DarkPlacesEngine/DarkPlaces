@@ -1,6 +1,6 @@
 extern cvar_t prvm_garbagecollection_enable;
 int i;
-prvm_uint_t addr;
+prvm_uint_t ofs, addr;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
 	prog->xfunction->profile += (st - startst); \
@@ -479,59 +479,61 @@ prvm_uint_t addr;
 			HANDLE_OPCODE(OP_STOREP_ENT):
 			HANDLE_OPCODE(OP_STOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_STOREP_FNC):		// pointers
-				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
+				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
 					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
 				}
-				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_1)
+				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_1)
 				{
 					// OK global write.
 					ptr = (prvm_eval_t *)(global1 + addr);
 				}
-				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields)
+				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
 				}
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
 					goto cleanup;
 				}
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_S):
-				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
+				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
 					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
 				}
-				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_1)
+				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_1)
 				{
 					// OK global write.
 					ptr = (prvm_eval_t *)(global1 + addr);
 				}
-				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields)
+				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
 				}
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
 					goto cleanup;
 				}
 				// refresh the garbage collection on the string - this guards
@@ -543,30 +545,31 @@ prvm_uint_t addr;
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_V):
-				if ((addr = (prvm_uint_t)OPB->_int - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
+				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
 				{
 					// OK entity write.
 					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
 				}
-				else if ((addr = (prvm_uint_t)OPB->_int - cached_vmglobal1) < cached_vmglobals_3)
+				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_3)
 				{
 					// OK global write.
-					ptr = (prvm_eval_t *)(global1 + OPB->_int);
+					ptr = (prvm_eval_t *)(global1 + addr);
 				}
-				else if ((prvm_uint_t)OPB->_int - cached_vmentity0start < cached_entityfields_2)
+				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields_2)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, OPB->_int)->s_name), (int)OPB->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + OPB->_int);
+					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
 				}
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
 					goto cleanup;
 				}
 				ptr->ivector[0] = OPA->ivector[0];
