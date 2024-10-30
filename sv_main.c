@@ -1195,7 +1195,7 @@ static void Download_CheckExtensions(cmd_state_t *cmd)
 
 	// first reset them all
 	host_client->download_deflate = false;
-	
+
 	for(i = 2; i < argc; ++i)
 	{
 		if(!strcmp(Cmd_Argv(cmd, i), "deflate"))
@@ -1239,7 +1239,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	}
 
 	is_csqc = (sv.csqc_progname[0] && strcmp(Cmd_Argv(cmd, 1), sv.csqc_progname) == 0);
-	
+
 	if (!sv_allowdownloads.integer && !is_csqc)
 	{
 		SV_ClientPrintf("Downloads are disabled on this server\n");
@@ -1260,17 +1260,17 @@ static void SV_Download_f(cmd_state_t *cmd)
 	{
 		char extensions[MAX_QPATH]; // make sure this can hold all extensions
 		extensions[0] = '\0';
-		
+
 		if(host_client->download_deflate)
 			dp_strlcat(extensions, " deflate", sizeof(extensions));
-		
+
 		Con_DPrintf("Downloading %s to %s\n", host_client->download_name, host_client->name);
 
 		if(host_client->download_deflate && svs.csqc_progdata_deflated)
 			host_client->download_file = FS_FileFromData(svs.csqc_progdata_deflated, svs.csqc_progsize_deflated, true);
 		else
 			host_client->download_file = FS_FileFromData(svs.csqc_progdata, sv.csqc_progsize, true);
-		
+
 		// no, no space is needed between %s and %s :P
 		SV_ClientCommands("\ncl_downloadbegin %i %s%s\n", (int)FS_FileSize(host_client->download_file), host_client->download_name, extensions);
 
@@ -1373,7 +1373,7 @@ static void SV_Download_f(cmd_state_t *cmd)
 	{
 		char extensions[MAX_QPATH]; // make sure this can hold all extensions
 		extensions[0] = '\0';
-		
+
 		if(host_client->download_deflate)
 			strlcat(extensions, " deflate", sizeof(extensions));
 
@@ -1723,7 +1723,7 @@ static void SV_Prepare_CSQC(void)
 
 	svs.csqc_progdata = NULL;
 	svs.csqc_progdata_deflated = NULL;
-	
+
 	sv.csqc_progname[0] = 0;
 	svs.csqc_progdata = FS_LoadFile(csqc_progname.string, sv_mempool, false, &progsize);
 
@@ -2651,7 +2651,7 @@ double SV_Frame(double time)
 			++sv.perf_acc_offset_samples;
 			sv.perf_acc_offset += offset;
 			sv.perf_acc_offset_squared += offset * offset;
-			
+
 			if(sv.perf_acc_offset_max < offset)
 				sv.perf_acc_offset_max = offset;
 		}

@@ -2052,6 +2052,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 	char vabuf2[1024];
 	cvar_t *cvar;
 	int structtype = 0;
+	int max_safe_edicts;
 
 	if (prog->loaded)
 		prog->error_cmd("%s: there is already a %s program loaded!", __func__, prog->name);
@@ -2717,6 +2718,15 @@ fail:
 	// set flags & mdef_ts in prog
 
 	PRVM_FindOffsets(prog);
+
+	// Do not allow more than 2^31 total entityfields. Achieve this by limiting maximum edict count.
+	// TODO: For PRVM_64, this can be relaxes. May require changing some types away from int.
+	max_safe_edicts = ((1 << 31) - prog->numglobals) / prog->entityfields;
+	if (prog->limit_edicts > max_safe_edicts)
+	{
+		Con_Printf("%s: reducing maximum entity count to %d to avoid address overflow in %s\n", __func__, max_safe_edicts, prog->name);
+		prog->limit_edicts = max_safe_edicts;
+	}
 
 	prog->init_cmd(prog);
 
