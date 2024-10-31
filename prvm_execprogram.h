@@ -1,6 +1,7 @@
 extern cvar_t prvm_garbagecollection_enable;
 int i;
-prvm_uint_t ofs, addr;
+prvm_uint_t addr, ofs;
+prvm_eval_t *src;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
 #define ADVANCE_PROFILE_BEFORE_JUMP() \
 	prog->xfunction->profile += (st - startst); \
@@ -205,26 +206,26 @@ prvm_uint_t ofs, addr;
 	NULL,
 	NULL,
 	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	&&handle_OP_GLOBALADDRESS,
+	&&handle_OP_ADD_PIW,
+	&&handle_OP_LOADA_F,
+	&&handle_OP_LOADA_V,
+	&&handle_OP_LOADA_S,
+	&&handle_OP_LOADA_ENT,
+	&&handle_OP_LOADA_FLD,
+	&&handle_OP_LOADA_FNC,
+	&&handle_OP_LOADA_I,
 
 	&&handle_OP_STORE_P,
+	&&handle_OP_LOAD_P,
 
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	&&handle_OP_LOADP_F,
+	&&handle_OP_LOADP_V,
+	&&handle_OP_LOADP_S,
+	&&handle_OP_LOADP_ENT,
+	&&handle_OP_LOADP_FLD,
+	&&handle_OP_LOADP_FNC,
+	&&handle_OP_LOADP_I,
 
 	&&handle_OP_LE_I,
 	&&handle_OP_GE_I,
@@ -479,26 +480,26 @@ prvm_uint_t ofs, addr;
 			HANDLE_OPCODE(OP_STOREP_ENT):
 			HANDLE_OPCODE(OP_STOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_STOREP_FNC):		// pointers
-				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
-				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
+				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
-					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_1)
+				else if ((ofs = addr - cached_vmglobal1) < cached_vmglobals_1)
 				{
 					// OK global write.
-					ptr = (prvm_eval_t *)(global1 + addr);
+					ptr = (prvm_eval_t *)(global1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields)
+				else if ((ofs = addr - cached_vmentity0start) < cached_entityfields)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
 				}
 				else
 				{
@@ -509,26 +510,26 @@ prvm_uint_t ofs, addr;
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_S):
-				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
-				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
+				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
-					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_1)
+				else if ((ofs = addr - cached_vmglobal1) < cached_vmglobals_1)
 				{
 					// OK global write.
-					ptr = (prvm_eval_t *)(global1 + addr);
+					ptr = (prvm_eval_t *)(global1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields)
+				else if ((ofs = addr - cached_vmentity0start) < cached_entityfields)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
 				}
 				else
 				{
@@ -545,26 +546,26 @@ prvm_uint_t ofs, addr;
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_V):
-				ofs = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
-				if ((addr = ofs - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
+				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
 				{
 					// OK entity write.
-					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields_entity1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmglobal1) < cached_vmglobals_3)
+				else if ((ofs = addr - cached_vmglobal1) < cached_vmglobals_3)
 				{
 					// OK global write.
-					ptr = (prvm_eval_t *)(global1 + addr);
+					ptr = (prvm_eval_t *)(global1 + ofs);
 				}
-				else if ((addr = ofs - cached_vmentity0start) < cached_entityfields_2)
+				else if ((ofs = addr - cached_vmentity0start) < cached_entityfields_2)
 				{
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, addr)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
-					ptr = (prvm_eval_t *)(cached_edictsfields + addr);
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
 				}
 				else
 				{
@@ -605,6 +606,7 @@ prvm_uint_t ofs, addr;
 			HANDLE_OPCODE(OP_LOAD_FLD):
 			HANDLE_OPCODE(OP_LOAD_ENT):
 			HANDLE_OPCODE(OP_LOAD_FNC):
+			HANDLE_OPCODE(OP_LOAD_P):
 				if ((prvm_uint_t)OPA->edict >= cached_max_edicts)
 				{
 					PRE_ERROR();
@@ -1075,6 +1077,127 @@ prvm_uint_t ofs, addr;
 					prog->error_cmd("Progs boundcheck failed in %s, value is < %" PRVM_PRIi " or >= %" PRVM_PRIi, prog->name, OPC->_int, OPB->_int);
 					goto cleanup;
 				}
+				DISPATCH_OPCODE();
+
+			// FTEQW pointer instructions.
+			HANDLE_OPCODE(OP_GLOBALADDRESS):
+				OPC->_int = PRVM_GLOBALSBASE + st->operand[0] + 1 * OPB->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_ADD_PIW):
+				OPC->_int = OPA->_int + 1 * OPB->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADA_F):
+			HANDLE_OPCODE(OP_LOADA_ENT):
+			HANDLE_OPCODE(OP_LOADA_FLD):
+			HANDLE_OPCODE(OP_LOADA_FNC):
+			HANDLE_OPCODE(OP_LOADA_I):
+				ofs = st->operand[0] + OPB->_int;
+				if (ofs >= cached_vmglobals)
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					goto cleanup;
+				}
+				src = (prvm_eval_t *)&globals[ofs];
+				OPC->_int = src->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADA_S):
+				ofs = st->operand[0] + OPB->_int;
+				if (ofs >= cached_vmglobals)
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					goto cleanup;
+				}
+				src = (prvm_eval_t *)&globals[ofs];
+				// refresh the garbage collection on the string - this guards
+				// against a certain sort of repeated migration to earlier
+				// points in the scan that could otherwise result in the string
+				// being freed for being unused
+				if(prvm_garbagecollection_enable.integer)
+					PRVM_GetString(prog, src->_int);
+				OPC->_int = src->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADA_V):
+				ofs = st->operand[0] + OPB->_int;
+				if (ofs >= cached_vmglobals_2)
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					goto cleanup;
+				}
+				src = (prvm_eval_t *)&globals[ofs];
+				OPC->ivector[0] = src->ivector[0];
+				OPC->ivector[1] = src->ivector[1];
+				OPC->ivector[2] = src->ivector[2];
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADP_F):
+			HANDLE_OPCODE(OP_LOADP_ENT):
+			HANDLE_OPCODE(OP_LOADP_FLD):		// integers
+			HANDLE_OPCODE(OP_LOADP_FNC):		// pointers
+			HANDLE_OPCODE(OP_LOADP_I):
+				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea)
+				{
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
+				}
+				else if ((ofs = addr - PRVM_GLOBALSBASE) < cached_vmglobals)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(globals + ofs);
+				}
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					goto cleanup;
+				}
+				OPC->_int = ptr->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADP_S):
+				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea)
+				{
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
+				}
+				else if ((ofs = addr - PRVM_GLOBALSBASE) < cached_vmglobals)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(globals + ofs);
+				}
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					goto cleanup;
+				}
+				if(prvm_garbagecollection_enable.integer)
+					PRVM_GetString(prog, ptr->_int);
+				OPC->_int = ptr->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LOADP_V):
+				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea_2)
+				{
+					// OK entity write.
+					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
+				}
+				else if ((ofs = addr - PRVM_GLOBALSBASE) < cached_vmglobals_2)
+				{
+					// OK global write.
+					ptr = (prvm_eval_t *)(globals + ofs);
+				}
+				else
+				{
+					PRE_ERROR();
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					goto cleanup;
+				}
+				OPC->ivector[0] = ptr->ivector[0];
+				OPC->ivector[1] = ptr->ivector[1];
+				OPC->ivector[2] = ptr->ivector[2];
 				DISPATCH_OPCODE();
 
 #if !USE_COMPUTED_GOTOS

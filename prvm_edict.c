@@ -2316,7 +2316,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[1] =
 			prog->statements[i].operand[2] = op;
 			break;
-		case OP_STORE_I:
 		case OP_ADD_I:
 		case OP_ADD_FI:
 		case OP_ADD_IF:
@@ -2326,7 +2325,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_CONV_IF:
 		case OP_CONV_FI:
 		case OP_LOAD_I:
-		case OP_STOREP_I:
 		case OP_BITAND_I:
 		case OP_BITOR_I:
 		case OP_MUL_I:
@@ -2335,7 +2333,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_NE_I:
 		case OP_NOT_I:
 		case OP_DIV_VF:
-		case OP_STORE_P:
 		case OP_LE_I:
 		case OP_GE_I:
 		case OP_LT_I:
@@ -2419,6 +2416,23 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_LOAD_S:
 		case OP_LOAD_FNC:
 		case OP_LOAD_V:
+		case OP_LOAD_P:
+		case OP_ADD_PIW:
+		case OP_GLOBALADDRESS:
+		case OP_LOADA_F:
+		case OP_LOADA_V:
+		case OP_LOADA_S:
+		case OP_LOADA_ENT:
+		case OP_LOADA_FLD:
+		case OP_LOADA_FNC:
+		case OP_LOADA_I:
+		case OP_LOADP_F:
+		case OP_LOADP_V:
+		case OP_LOADP_S:
+		case OP_LOADP_ENT:
+		case OP_LOADP_FLD:
+		case OP_LOADP_FNC:
+		case OP_LOADP_I:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d)", __func__, i);
 			prog->statements[i].op = op;
@@ -2446,6 +2460,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_STOREP_S:
 		case OP_STOREP_FNC:
 		case OP_STOREP_V:
+		case OP_STOREP_I:
 			if (c)	//Spike -- DP is alergic to pointers in QC. Try to avoid too many nasty surprises.
 				Con_DPrintf("%s: storep-with-offset is not permitted in %s\n", __func__, prog->name);
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
@@ -2461,6 +2476,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_STORE_S:
 		case OP_STORE_FNC:
 		case OP_STORE_V:
+		case OP_STORE_I:
+		case OP_STORE_P:
 		case OP_STATE:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);

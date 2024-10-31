@@ -929,11 +929,12 @@ extern qbool prvm_runawaycheck;
 	mstatement_t *cached_statements = prog->statements; \
 	qbool cached_allowworldwrites = prog->allowworldwrites; \
 	unsigned int cached_flag = prog->flag; \
+	unsigned int cached_vmglobals = prog->numglobals; \
 	unsigned int cached_vmglobals_1 = prog->numglobals - 1; \
+	unsigned int cached_vmglobals_2 = prog->numglobals - 2; \
 	unsigned int cached_vmglobals_3 = prog->numglobals - 3; \
-	unsigned int cached_vmglobalsstart = PRVM_GLOBALSBASE; \
-	unsigned int cached_vmglobal1 = cached_vmglobalsstart + 1; \
-	unsigned int cached_vmentity0start = cached_vmglobalsstart + prog->numglobals; \
+	unsigned int cached_vmglobal1 = PRVM_GLOBALSBASE + 1; \
+	unsigned int cached_vmentity0start = PRVM_GLOBALSBASE + prog->numglobals; \
 	unsigned int cached_vmentity1start = cached_vmentity0start + prog->entityfields; \
 	unsigned int cached_entityfields = prog->entityfields; \
 	unsigned int cached_entityfields_2 = prog->entityfields - 2; \
@@ -944,6 +945,8 @@ extern qbool prvm_runawaycheck;
 #define CACHE_CHANGING(DECLARE) \
 	DECLARE(prvm_vec_t *) cached_edictsfields = prog->edictsfields.fp; \
 	DECLARE(prvm_vec_t *) cached_edictsfields_entity1 = cached_edictsfields + prog->entityfields; \
+	DECLARE(unsigned int) cached_entityfieldsarea = prog->entityfieldsarea; \
+	DECLARE(unsigned int) cached_entityfieldsarea_2 = prog->entityfieldsarea - 2; \
 	DECLARE(unsigned int) cached_entityfieldsarea_entityfields = prog->entityfieldsarea - prog->entityfields; \
 	DECLARE(unsigned int) cached_entityfieldsarea_entityfields_2 = prog->entityfieldsarea - prog->entityfields - 2; \
 	DECLARE(unsigned int) cached_max_edicts = prog->max_edicts
