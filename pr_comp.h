@@ -320,6 +320,65 @@ typedef enum opcode_e
 	OP_STOREF_F,	//1 fpu element...
 	OP_STOREF_S,	//1 string reference
 	OP_STOREF_I,	//1 non-string reference/int
+
+	//fteqw r5744+
+	OP_STOREP_B,//((char*)b)[(int)c] = (int)a
+	OP_LOADP_B,	//(int)c = *(char*)
+
+	//fteqw r5768+
+	//opcodes for 32bit uints
+	OP_LE_U,		//aka GT
+	OP_LT_U,		//aka GE
+	OP_DIV_U,		//don't need mul+add+sub
+	OP_RSHIFT_U,	//lshift is the same for signed+unsigned
+
+	//opcodes for 64bit ints
+	OP_ADD_I64,
+	OP_SUB_I64,
+	OP_MUL_I64,
+	OP_DIV_I64,
+	OP_BITAND_I64,
+	OP_BITOR_I64,
+	OP_BITXOR_I64,
+	OP_LSHIFT_I64I,
+	OP_RSHIFT_I64I,
+	OP_LE_I64,		//aka GT
+	OP_LT_I64,		//aka GE
+	OP_EQ_I64,
+	OP_NE_I64,
+	//extra opcodes for 64bit uints
+	OP_LE_U64,		//aka GT
+	OP_LT_U64,		//aka GE
+	OP_DIV_U64,
+	OP_RSHIFT_U64I,
+
+	//general 64bitness
+	OP_STORE_I64,
+	OP_STOREP_I64,
+	OP_STOREF_I64,
+	OP_LOAD_I64,
+	OP_LOADA_I64,
+	OP_LOADP_I64,
+	//various conversions for our 64bit types (yay type promotion)
+	OP_CONV_UI64, //zero extend
+	OP_CONV_II64, //sign extend
+	OP_CONV_I64I,	//truncate
+	OP_CONV_FD,	//extension
+	OP_CONV_DF,	//truncation
+	OP_CONV_I64F,	//logically a promotion (always signed)
+	OP_CONV_FI64,	//demotion (always signed)
+	OP_CONV_I64D,	//'promotion' (always signed)
+	OP_CONV_DI64,	//demotion (always signed)
+
+	//opcodes for doubles.
+	OP_ADD_D,
+	OP_SUB_D,
+	OP_MUL_D,
+	OP_DIV_D,
+	OP_LE_D,
+	OP_LT_D,
+	OP_EQ_D,
+	OP_NE_D,
 }
 opcode_t;
 
