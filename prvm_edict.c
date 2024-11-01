@@ -2293,6 +2293,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			b = (short)b;
 			if (a >= prog->progs_numglobals || b + i < 0 || b + i >= prog->progs_numstatements)
 				prog->error_cmd("%s: out of bounds IF/IFNOT (statement %d) in %s", __func__, i, prog->name);
+			if (c)
+				Con_DPrintf("%s: unexpected offset on binary opcode in %s\n", __func__, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = b;
@@ -2302,6 +2304,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			a = (short)a;
 			if (a + i < 0 || a + i >= prog->progs_numstatements)
 				prog->error_cmd("%s: out of bounds GOTO (statement %d) in %s", __func__, i, prog->name);
+			if (b || c)
+				Con_DPrintf("%s: unexpected offset on unary opcode in %s\n", __func__, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = a;
 			prog->statements[i].operand[1] = -1;
@@ -2316,6 +2320,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[1] =
 			prog->statements[i].operand[2] = op;
 			break;
+		// global global global
 		case OP_ADD_I:
 		case OP_ADD_FI:
 		case OP_ADD_IF:
@@ -2380,8 +2385,6 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_GLOAD_FNC:
 		case OP_BOUNDCHECK:
 		case OP_GLOAD_V:
-
-		// global global global
 		case OP_ADD_F:
 		case OP_ADD_V:
 		case OP_SUB_F:
@@ -2433,6 +2436,13 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_LOADP_FLD:
 		case OP_LOADP_FNC:
 		case OP_LOADP_I:
+		case OP_STOREP_F:
+		case OP_STOREP_ENT:
+		case OP_STOREP_FLD:
+		case OP_STOREP_S:
+		case OP_STOREP_FNC:
+		case OP_STOREP_V:
+		case OP_STOREP_I:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d)", __func__, i);
 			prog->statements[i].op = op;
@@ -2448,28 +2458,14 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_NOT_ENT:
 			if (a >= prog->progs_numglobals || c >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
+			if (b)
+				Con_DPrintf("%s: unexpected offset on binary opcode in %s\n", __func__, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
 			prog->statements[i].operand[2] = remapglobal(c);
 			break;
-		// 2 globals
-		case OP_STOREP_F:
-		case OP_STOREP_ENT:
-		case OP_STOREP_FLD:
-		case OP_STOREP_S:
-		case OP_STOREP_FNC:
-		case OP_STOREP_V:
-		case OP_STOREP_I:
-			if (c)	//Spike -- DP is alergic to pointers in QC. Try to avoid too many nasty surprises.
-				Con_DPrintf("%s: storep-with-offset is not permitted in %s\n", __func__, prog->name);
-			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
-				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
-			prog->statements[i].op = op;
-			prog->statements[i].operand[0] = remapglobal(a);
-			prog->statements[i].operand[1] = remapglobal(b);
-			prog->statements[i].operand[2] = remapglobal(c);
-			break;
+		// global global none
 		case OP_STORE_F:
 		case OP_STORE_ENT:
 		case OP_STORE_FLD:
@@ -2481,6 +2477,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_STATE:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d) in %s", __func__, i, prog->name);
+			if (c)
+				Con_DPrintf("%s: unexpected offset on binary opcode in %s\n", __func__, prog->name);
 			prog->statements[i].op = op;
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = remapglobal(b);
