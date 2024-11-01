@@ -21,20 +21,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "progsvm.h"
 
+// Should only contain the opcodes DP actually implements, so unknown opcodes
+// are more readably marked as such in disassembly. Thus, best keep this in sync
+// with the list in prvm_execprogram.h.
 static const char *prvm_opnames[] =
 {
 "^5DONE",
-
 "MUL_F",
 "MUL_V",
 "MUL_FV",
 "MUL_VF",
-
 "DIV",
-
 "ADD_F",
 "ADD_V",
-
 "SUB_F",
 "SUB_V",
 
@@ -79,16 +78,13 @@ static const char *prvm_opnames[] =
 "^1STOREP_FNC",
 
 "^5RETURN",
-
 "^2NOT_F",
 "^2NOT_V",
 "^2NOT_S",
 "^2NOT_ENT",
 "^2NOT_FNC",
-
 "^5IF",
 "^5IFNOT",
-
 "^3CALL0",
 "^3CALL1",
 "^3CALL2",
@@ -98,19 +94,13 @@ static const char *prvm_opnames[] =
 "^3CALL6",
 "^3CALL7",
 "^3CALL8",
-
 "^1STATE",
-
 "^5GOTO",
-
 "^2AND",
 "^2OR",
 
 "BITAND",
 "BITOR",
-
-
-
 
 NULL,
 NULL,
@@ -178,8 +168,8 @@ NULL,
 NULL,
 NULL,
 
-"LOAD_I",
-"STOREP_I",
+"^6FIELD_I",
+"^1STOREP_I",
 
 NULL,
 NULL,
@@ -202,26 +192,27 @@ NULL,
 NULL,
 NULL,
 NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
+
+"GLOBALADDRESS",
+"ADD_PIW",
+"LOADA_F",
+"LOADA_V",
+"LOADA_S",
+"LOADA_ENT",
+"LOADA_FLD",
+"LOADA_FNC",
+"LOADA_I",
 
 "STORE_P",
+"^6FIELD_P",
 
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
+"LOADP_F",
+"LOADP_V",
+"LOADP_S",
+"LOADP_ENT",
+"LOADP_FLD",
+"LOADP_FNC",
+"LOADP_I",
 
 "LE_I",
 "GE_I",
