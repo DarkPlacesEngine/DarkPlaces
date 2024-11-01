@@ -206,6 +206,7 @@ prvm_eval_t *src;
 	NULL,
 	NULL,
 	NULL,
+
 	&&handle_OP_GLOBALADDRESS,
 	&&handle_OP_ADD_PIW,
 	&&handle_OP_LOADA_F,
