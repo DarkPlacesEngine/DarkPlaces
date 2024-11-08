@@ -49,10 +49,10 @@ static const char *prvm_opnames[] =
 "^2NE_E",
 "^2NE_FNC",
 
-"^2LE",
-"^2GE",
-"^2LT",
-"^2GT",
+"^2LE_F",
+"^2GE_F",
+"^2LT_F",
+"^2GT_F",
 
 "^6LOAD_F",
 "^6LOAD_V",
@@ -96,11 +96,11 @@ static const char *prvm_opnames[] =
 "^3CALL8",
 "^1STATE",
 "^5GOTO",
-"^2AND",
-"^2OR",
+"^2AND_F",
+"^2OR_F",
 
-"BITAND",
-"BITOR",
+"BITAND_F",
+"BITOR_F",
 
 
 
@@ -176,8 +176,8 @@ NULL,
 "SUB_FI",
 "SUB_IF",
 
-"CONV_IF",
-"CONV_FI",
+"CONV_ITOF",
+"CONV_FTOI",
 
 NULL,
 NULL,

@@ -2327,8 +2327,8 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_SUB_I:
 		case OP_SUB_FI:
 		case OP_SUB_IF:
-		case OP_CONV_IF:
-		case OP_CONV_FI:
+		case OP_CONV_ITOF:
+		case OP_CONV_FTOI:
 		case OP_LOAD_I:
 		case OP_BITAND_I:
 		case OP_BITOR_I:
@@ -2394,14 +2394,14 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_MUL_FV:
 		case OP_MUL_VF:
 		case OP_DIV_F:
-		case OP_BITAND:
-		case OP_BITOR:
-		case OP_GE:
-		case OP_LE:
-		case OP_GT:
-		case OP_LT:
-		case OP_AND:
-		case OP_OR:
+		case OP_BITAND_F:
+		case OP_BITOR_F:
+		case OP_GE_F:
+		case OP_LE_F:
+		case OP_GT_F:
+		case OP_LT_F:
+		case OP_AND_F:
+		case OP_OR_F:
 		case OP_EQ_F:
 		case OP_EQ_V:
 		case OP_EQ_S:

@@ -63,10 +63,10 @@ prvm_eval_t *src;
 	&&handle_OP_NE_E,
 	&&handle_OP_NE_FNC,
 
-	&&handle_OP_LE,
-	&&handle_OP_GE,
-	&&handle_OP_LT,
-	&&handle_OP_GT,
+	&&handle_OP_LE_F,
+	&&handle_OP_GE_F,
+	&&handle_OP_LT_F,
+	&&handle_OP_GT_F,
 
 	&&handle_OP_LOAD_F,
 	&&handle_OP_LOAD_V,
@@ -110,11 +110,11 @@ prvm_eval_t *src;
 	&&handle_OP_CALL8,
 	&&handle_OP_STATE,
 	&&handle_OP_GOTO,
-	&&handle_OP_AND,
-	&&handle_OP_OR,
+	&&handle_OP_AND_F,
+	&&handle_OP_OR_F,
 
-	&&handle_OP_BITAND,
-	&&handle_OP_BITOR,
+	&&handle_OP_BITAND_F,
+	&&handle_OP_BITOR_F,
 
 	NULL,
 	NULL,
@@ -176,8 +176,8 @@ prvm_eval_t *src;
 	&&handle_OP_SUB_I,
 	&&handle_OP_SUB_FI,
 	&&handle_OP_SUB_IF,
-	&&handle_OP_CONV_IF,
-	&&handle_OP_CONV_FI,
+	&&handle_OP_CONV_ITOF,
+	&&handle_OP_CONV_FTOI,
 
 	NULL,
 	NULL,
@@ -385,28 +385,28 @@ prvm_eval_t *src;
 					OPC->_float = 0.0f;
 				}
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_BITAND):
+			HANDLE_OPCODE(OP_BITAND_F):
 				OPC->_float = (prvm_int_t)OPA->_float & (prvm_int_t)OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_BITOR):
+			HANDLE_OPCODE(OP_BITOR_F):
 				OPC->_float = (prvm_int_t)OPA->_float | (prvm_int_t)OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_GE):
+			HANDLE_OPCODE(OP_GE_F):
 				OPC->_float = OPA->_float >= OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_LE):
+			HANDLE_OPCODE(OP_LE_F):
 				OPC->_float = OPA->_float <= OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_GT):
+			HANDLE_OPCODE(OP_GT_F):
 				OPC->_float = OPA->_float > OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_LT):
+			HANDLE_OPCODE(OP_LT_F):
 				OPC->_float = OPA->_float < OPB->_float;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_AND):
+			HANDLE_OPCODE(OP_AND_F):
 				OPC->_float = PRVM_FLOAT_IS_TRUE_FOR_INT(OPA->_int) && PRVM_FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add AND_I to be used by fteqcc for anything not a float
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_OR):
+			HANDLE_OPCODE(OP_OR_F):
 				OPC->_float = PRVM_FLOAT_IS_TRUE_FOR_INT(OPA->_int) || PRVM_FLOAT_IS_TRUE_FOR_INT(OPB->_int); // TODO change this back to float, and add OR_I to be used by fteqcc for anything not a float
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_NOT_F):
@@ -691,6 +691,13 @@ prvm_eval_t *src;
 
 			HANDLE_OPCODE(OP_IF):
 				//spike FIXME -- dp redefined IF[_I] as IF_F
+				// TODO: plan is:
+				// - Add IF_F, IFNOT_F.
+				// - Rename this to IF_I, IFNOT_I.
+				// - Add sv_gameplayfix variable to remap IF_I and IFNOT_I to IF_F and IFNOT_F on progs load.
+				// - Define this fix for Nexuiz.
+				// - Add generation of IF_F, IFNOT_F instructions to gmqcc.
+				// - Move Xonotic to that.
 				if(FLOAT_IS_TRUE_FOR_INT(OPA->_int))
 				// TODO add an "int-if", and change this one, as well as the FLOAT_IS_TRUE_FOR_INT usages, to OPA->_float
 				// although mostly unneeded, thanks to the only float being false being 0x0 and 0x80000000 (negative zero)
@@ -873,10 +880,10 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_DIV_FI):
 				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_CONV_IF):
+			HANDLE_OPCODE(OP_CONV_ITOF):
 				OPC->_float = OPA->_int;
 				DISPATCH_OPCODE();
-			HANDLE_OPCODE(OP_CONV_FI):
+			HANDLE_OPCODE(OP_CONV_FTOI):
 				OPC->_int = OPA->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_BITAND_I):
