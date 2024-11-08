@@ -31,7 +31,7 @@ static const char *prvm_opnames[] =
 "MUL_V",
 "MUL_FV",
 "MUL_VF",
-"DIV",
+"DIV_F",
 "ADD_F",
 "ADD_V",
 "SUB_F",
@@ -54,12 +54,12 @@ static const char *prvm_opnames[] =
 "^2LT",
 "^2GT",
 
-"^6FIELD_F",
-"^6FIELD_V",
-"^6FIELD_S",
-"^6FIELD_ENT",
-"^6FIELD_FLD",
-"^6FIELD_FNC",
+"^6LOAD_F",
+"^6LOAD_V",
+"^6LOAD_S",
+"^6LOAD_ENT",
+"^6LOAD_FLD",
+"^6LOAD_FNC",
 
 "^1ADDRESS",
 
@@ -102,45 +102,59 @@ static const char *prvm_opnames[] =
 "BITAND",
 "BITOR",
 
+
+
+NULL,
+NULL,
+NULL,
+NULL,
+
+NULL,
+NULL,
+
+NULL,
+NULL,
+NULL,
+NULL,
+
+NULL,
+NULL,
+NULL,
+NULL,
+
+NULL,
+NULL,
+NULL,
+NULL,
+NULL,
+
+NULL,
+NULL,
+
+NULL,
+
+NULL,
+NULL,
+NULL,
+NULL,
+
 NULL,
 NULL,
 NULL,
 NULL,
 NULL,
 NULL,
+
 NULL,
 NULL,
 NULL,
 NULL,
 NULL,
+
 NULL,
 NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
-NULL,
+
+
 NULL,
 NULL,
 NULL,
@@ -151,7 +165,6 @@ NULL,
 NULL,
 
 "STORE_I",
-
 NULL,
 NULL,
 
@@ -162,15 +175,16 @@ NULL,
 "SUB_I",
 "SUB_FI",
 "SUB_IF",
+
 "CONV_IF",
 "CONV_FI",
 
 NULL,
 NULL,
 
-"^6FIELD_I",
-"^1STOREP_I",
+"^6LOAD_I",
 
+"^1STOREP_I",
 NULL,
 NULL,
 
@@ -183,6 +197,7 @@ NULL,
 "NE_I",
 
 NULL,
+
 NULL,
 
 "NOT_I",
@@ -195,6 +210,7 @@ NULL,
 
 "GLOBALADDRESS",
 "ADD_PIW",
+
 "LOADA_F",
 "LOADA_V",
 "LOADA_S",
@@ -240,9 +256,7 @@ NULL,
 "MUL_IF",
 "MUL_FI",
 "MUL_VI",
-
 NULL,
-
 "DIV_IF",
 "DIV_FI",
 "BITAND_IF",
@@ -273,10 +287,12 @@ NULL,
 "GLOAD_S",
 "GLOAD_FNC",
 "BOUNDCHECK",
+
 NULL,
 NULL,
 NULL,
 NULL,
+
 "GLOAD_V",
 };
 
