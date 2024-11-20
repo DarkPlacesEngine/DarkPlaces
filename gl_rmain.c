@@ -9141,7 +9141,6 @@ void R_DecalSystem_Reset(decalsystem_t *decalsystem)
 static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float *v0, const float *v1, const float *v2, const float *t0, const float *t1, const float *t2, const float *c0, const float *c1, const float *c2, int triangleindex, int surfaceindex, unsigned int decalsequence)
 {
 	tridecal_t *decal;
-	tridecal_t *decals;
 	int i;
 
 	// expand or initialize the system
@@ -9169,13 +9168,7 @@ static void R_DecalSystem_SpawnTriangle(decalsystem_t *decalsystem, const float 
 	}
 
 	// grab a decal and search for another free slot for the next one
-	decals = decalsystem->decals;
-	decal = decalsystem->decals + (i = decalsystem->freedecal++);
-	for (i = decalsystem->freedecal;i < decalsystem->numdecals && decals[i].color4f[0][3];i++)
-		;
-	decalsystem->freedecal = i;
-	if (decalsystem->numdecals <= i)
-		decalsystem->numdecals = i + 1;
+	decal = &decalsystem->decals[decalsystem->numdecals++];
 
 	// initialize the decal
 	decal->lived = 0;
@@ -9541,7 +9534,6 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 {
 	int i;
 	decalsystem_t *decalsystem = &ent->decalsystem;
-	int numdecals;
 	unsigned int killsequence;
 	tridecal_t *decal;
 	float frametime;
@@ -9567,38 +9559,18 @@ static void R_DrawModelDecals_FadeEntity(entity_render_t *ent)
 	else
 		frametime = 0;
 	decalsystem->lastupdatetime = r_refdef.scene.time;
-	numdecals = decalsystem->numdecals;
 
-	for (i = 0, decal = decalsystem->decals;i < numdecals;i++, decal++)
+	for (i = 0, decal = decalsystem->decals;i < decalsystem->numdecals;i++, decal++)
 	{
-		if (decal->color4f[0][3])
+		decal->lived += frametime;
+		if (killsequence > decal->decalsequence || decal->lived >= lifetime)
 		{
-			decal->lived += frametime;
-			if (killsequence > decal->decalsequence || decal->lived >= lifetime)
-			{
-				memset(decal, 0, sizeof(*decal));
-				if (decalsystem->freedecal > i)
-					decalsystem->freedecal = i;
-			}
+			*decal = decalsystem->decals[--decalsystem->numdecals];
+			--i, --decal;  // Consider the just moved decal next.
 		}
 	}
-	decal = decalsystem->decals;
-	while (numdecals > 0 && !decal[numdecals-1].color4f[0][3])
-		numdecals--;
 
-	// collapse the array by shuffling the tail decals into the gaps
-	for (;;)
-	{
-		while (decalsystem->freedecal < numdecals && decal[decalsystem->freedecal].color4f[0][3])
-			decalsystem->freedecal++;
-		if (decalsystem->freedecal == numdecals)
-			break;
-		decal[decalsystem->freedecal] = decal[--numdecals];
-	}
-
-	decalsystem->numdecals = numdecals;
-
-	if (numdecals <= 0)
+	if (decalsystem->numdecals <= 0)
 	{
 		// if there are no decals left, reset decalsystem
 		R_DecalSystem_Reset(decalsystem);
