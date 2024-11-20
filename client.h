@@ -57,7 +57,6 @@ typedef struct decalsystem_s
 	model_t *model;
 	double lastupdatetime;
 	int maxdecals;
-	int freedecal;
 	int numdecals;
 	tridecal_t *decals;
 	float *vertex3f;
