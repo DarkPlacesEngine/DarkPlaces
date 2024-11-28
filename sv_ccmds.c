@@ -1,5 +1,6 @@
 /*
 Copyright (C) 1996-1997 Id Software, Inc.
+Copyright (C) 2020-2024 DarkPlaces Contributors
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -108,7 +109,7 @@ static void SV_Changelevel_f(cmd_state_t *cmd)
 
 	SV_SaveSpawnparms ();
 	SV_SpawnServer(Cmd_Argv(cmd, 1));
-	
+
 	if(sv.active && host.hook.ConnectLocal != NULL)
 		host.hook.ConnectLocal();
 }
@@ -137,7 +138,7 @@ static void SV_Restart_f(cmd_state_t *cmd)
 		host.hook.ToggleMenu();
 
 	SV_SpawnServer(sv.worldbasename);
-	
+
 	if(sv.active && host.hook.ConnectLocal != NULL)
 		host.hook.ConnectLocal();
 }
@@ -1450,8 +1451,11 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 
 	void (*print)(const char *, ...) = (cmd->source == src_client ? SV_ClientPrintf : Con_Printf);
 
-	if(!Cmd_Argc(cmd))
+	if(Cmd_Argc(cmd) == 1)
+	{
+		print("Usage: ent_create <classname> [<key> <value> ... ]\n\nIf executing as a player, an entity of classname will spawn where you're aiming.\nOptional key-value pairs can be provided. If origin is provided, it will spawn the entity at that coordinate.\nHowever, an origin is required if the command is executed from a dedicated server console.\n");
 		return;
+	}
 
 	ed = PRVM_ED_Alloc(SVVM_prog);
 
@@ -1469,7 +1473,7 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 
 		Matrix4x4_OriginFromMatrix(&view, org);
 		VectorSet(temp, 65536, 0, 0);
-		Matrix4x4_Transform(&view, temp, dest);		
+		Matrix4x4_Transform(&view, temp, dest);
 
 		trace = SV_TraceLine(org, dest, MOVE_NORMAL, NULL, SUPERCONTENTS_SOLID, 0, 0, collision_extendmovelength.value);
 
@@ -1480,10 +1484,7 @@ static void SV_Ent_Create_f(cmd_state_t *cmd)
 	}
 	// Or spawn at a specified origin.
 	else
-	{
-		print = Con_Printf;
 		haveorigin = false;
-	}
 
 	// Allow more than one key/value pair by cycling between expecting either one.
 	for(i = 2; i < Cmd_Argc(cmd); i += 2)
