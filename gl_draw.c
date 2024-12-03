@@ -859,7 +859,8 @@ const vec4_t string_colors[] =
 	{1.0, 0.0, 0.0, 1.0}, // red
 	{0.0, 1.0, 0.0, 1.0}, // green
 	{1.0, 1.0, 0.0, 1.0}, // yellow
-	{0.0, 0.0, 1.0, 1.0}, // blue
+	//{0.0, 0.0, 1.0, 1.0}, // blue
+	{0.05, 0.15, 1.0, 1.0}, // lighter blue, readable unlike the above
 	{0.0, 1.0, 1.0, 1.0}, // cyan
 	{1.0, 0.0, 1.0, 1.0}, // magenta
 	{1.0, 1.0, 1.0, 1.0}, // white
