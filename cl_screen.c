@@ -1657,12 +1657,14 @@ static void SCR_DrawScreen (void)
 			CL_VM_UpdateView(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
 		else
 		{
-			cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
-
 			// Prepare the scene mesh for rendering - this is lightning beams and other effects rendered as normal surfaces
 			CL_MeshEntities_Scene_FinalizeRenderEntity();
 
 			CL_UpdateEntityShading();
+
+			// Check to see if we should be rendering the world
+			cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
+
 			R_RenderView(0, NULL, NULL, r_refdef.view.x, r_refdef.view.y, r_refdef.view.width, r_refdef.view.height);
 		}
 	}
