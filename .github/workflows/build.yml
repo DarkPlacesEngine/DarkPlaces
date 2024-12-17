@@ -46,7 +46,7 @@ jobs:
   wasm-release:
     runs-on: ubuntu-latest
     container:
-      image: debian:bullseye
+      image: debian:latest
     steps:
       - name: Install dependencies
         run: |
@@ -75,7 +75,7 @@ jobs:
           cd emsdk
 
           # Download and install the latest SDK tools.
-          ./emsdk install 2.0.34
+          ./emsdk install latest-upstream
 
           # Make the "latest" SDK "active" for the current user. (writes .emscripten file)
           ./emsdk activate latest
