@@ -1251,7 +1251,13 @@ static void PRVM_ED_EdictSet_f(cmd_state_t *cmd)
 	prvm_edict_t *ed;
 	mdef_t *key;
 
-	if(Cmd_Argc(cmd) != 5)
+	if (Cmd_Argc(cmd) == 4) {
+		// Baker: Turn into prvm_edictget when no value(s) provided
+		PRVM_ED_EdictGet_f(cmd);
+		return;
+	}
+
+	if (Cmd_Argc(cmd) != 5)
 	{
 		Con_Print("prvm_edictset <program name> <edict number> <field> <value>\n");
 		return;
