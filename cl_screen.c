@@ -1657,6 +1657,8 @@ static void SCR_DrawScreen (void)
 			CL_VM_UpdateView(r_stereo_side ? 0.0 : max(0.0, cl.time - cl.oldtime));
 		else
 		{
+			cl.csqc_vidvars.drawworld = r_drawworld.integer != 0;
+
 			// Prepare the scene mesh for rendering - this is lightning beams and other effects rendered as normal surfaces
 			CL_MeshEntities_Scene_FinalizeRenderEntity();
 
