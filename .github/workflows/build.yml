@@ -46,7 +46,7 @@ jobs:
   wasm-release:
     runs-on: ubuntu-latest
     container:
-      image: debian:latest
+      image: debian:bullseye
     steps:
       - name: Install dependencies
         run: |
