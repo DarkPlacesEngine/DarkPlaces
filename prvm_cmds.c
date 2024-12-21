@@ -1511,13 +1511,12 @@ void VM_rint(prvm_prog_t *prog)
 	VM_SAFEPARMCOUNT(1,VM_rint);
 
 	f = PRVM_G_FLOAT(OFS_PARM0);
-	if (f >= 0)
+	if (f >= 0.5) // >= 0 works too, but would be slightly less optimized 
 		PRVM_G_FLOAT(OFS_RETURN) = floor(f + 0.5);
+	else if (f > -0.5)
+		PRVM_G_FLOAT(OFS_RETURN) = 0; // prevents negative 0
 	else
-	{
-		f = ceil(f - 0.5);
-		PRVM_G_FLOAT(OFS_RETURN) = f == -0.0 ? 0.0 : f;
-	}
+		PRVM_G_FLOAT(OFS_RETURN) = ceil(f - 0.5);
 }
 
 /*
