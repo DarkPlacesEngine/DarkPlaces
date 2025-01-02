@@ -419,7 +419,7 @@ const float LP_RTWORLD = 2;
 const float LP_DYNLIGHT = 4;
 const float LP_COMPLETE = 7;
 
-float(string name, string value) registercvar = #93;
+float(string name, string value, ...) registercvar = #93;
 float( float a, ... ) min = #94;
 float( float b, ... ) max = #95;
 float(float minimum, float val, float maximum) bound = #96;
