@@ -204,8 +204,8 @@ prvm_eval_t *src;
 	&&handle_OP_DIV_VF,
 
 	NULL,
-	NULL,
-	NULL,
+	&&handle_OP_RSHIFT_I,
+	&&handle_OP_LSHIFT_I,
 
 	&&handle_OP_GLOBALADDRESS,
 	&&handle_OP_ADD_PIW,
@@ -287,11 +287,31 @@ prvm_eval_t *src;
 	&&handle_OP_GLOAD_S,
 	&&handle_OP_GLOAD_FNC,
 	&&handle_OP_BOUNDCHECK,
+
 	NULL,
 	NULL,
 	NULL,
 	NULL,
-	&&handle_OP_GLOAD_V
+
+	&&handle_OP_GLOAD_V,
+
+	NULL,
+	NULL,
+
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+
+	NULL,
+	NULL,
+
+
+	&&handle_OP_LE_U,
+	&&handle_OP_LT_U,
+	&&handle_OP_DIV_U,
+	&&handle_OP_RSHIFT_U,
 	    };
 #define DISPATCH_OPCODE() \
     goto *dispatchtable[(++st)->op]
@@ -1206,6 +1226,33 @@ prvm_eval_t *src;
 				OPC->ivector[0] = ptr->ivector[0];
 				OPC->ivector[1] = ptr->ivector[1];
 				OPC->ivector[2] = ptr->ivector[2];
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_RSHIFT_I):
+				OPC->_int = OPA->_int >> OPB->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LSHIFT_I):
+				OPC->_int = OPA->_int << OPB->_int;
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LE_U):
+				OPC->_int = (OPA->_uint <= OPB->_uint);
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_LT_U):
+				OPC->_int = (OPA->_uint < OPB->_uint);
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_DIV_U):
+				if( OPB->_uint != 0 )
+				{
+					OPC->_uint = OPA->_uint / OPB->_uint;
+				}
+				else
+				{
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of %u by zero\n", OPA->_uint);
+					OPC->_uint = 0;
+				}
+				DISPATCH_OPCODE();
+			HANDLE_OPCODE(OP_RSHIFT_U):
+				OPC->_uint = OPA->_uint >> OPB->_uint;
 				DISPATCH_OPCODE();
 
 #if !USE_COMPUTED_GOTOS

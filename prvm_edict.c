@@ -2443,6 +2443,12 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 		case OP_STOREP_FNC:
 		case OP_STOREP_V:
 		case OP_STOREP_I:
+		case OP_RSHIFT_I:
+		case OP_LSHIFT_I:
+		case OP_LE_U:
+		case OP_LT_U:
+		case OP_DIV_U:
+		case OP_RSHIFT_U:
 			if (a >= prog->progs_numglobals || b >= prog->progs_numglobals || c >= prog->progs_numglobals)
 				prog->error_cmd("%s: out of bounds global index (statement %d)", __func__, i);
 			prog->statements[i].op = op;
