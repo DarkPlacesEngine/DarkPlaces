@@ -884,21 +884,59 @@ prvm_eval_t *src;
 				OPC->vector[2] = (prvm_vec_t) OPB->_int * OPA->vector[2];
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_VF):
+				if( OPB->_float != 0.0f )
 				{
 					float temp = 1.0f / OPB->_float;
 					OPC->vector[0] = temp * OPA->vector[0];
 					OPC->vector[1] = temp * OPA->vector[1];
 					OPC->vector[2] = temp * OPA->vector[2];
 				}
+				else
+				{
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of '%f %f %f' by zero\n", OPA->vector[0], OPA->vector[1], OPA->vector[2]);
+					OPC->vector[0] = 0.0f;
+					OPC->vector[1] = 0.0f;
+					OPC->vector[2] = 0.0f;
+				}
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_I):
-				OPC->_int = OPA->_int / OPB->_int;
+				// NOTE: This also catches the second kind of division that can trap, namely, -2147483648 / -1,
+				// whose result is not representable as int32_t and raises the same CPU exception.
+				if( OPB->_int != 0 && (OPB->_int != -1 || OPA->_int != PRVM_INT_MIN) )
+				{
+					OPC->_int = OPA->_int / OPB->_int;
+				}
+				else
+				{
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of %"PRVM_PRIi" by %"PRVM_PRIi"\n", OPA->_int, OPB->_int);
+					OPC->_int = 0;
+				}
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_IF):
-				OPC->_float = ((prvm_vec_t) OPA->_int) / OPB->_float;
+				if( OPB->_float != 0.0f )
+				{
+					OPC->_float = ((prvm_vec_t) OPA->_int) / OPB->_float;
+				}
+				else
+				{
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of %"PRVM_PRIi" by zero\n", OPA->_int);
+					OPC->_float = 0;
+				}
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_FI):
-				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
+				if( OPB->_int != 0 )
+				{
+					OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
+				}
+				else
+				{
+					PRE_ERROR();
+					VM_Warning(prog, "Attempted division of %f by zero\n", OPA->_float);
+					OPC->_float = 0;
+				}
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_CONV_ITOF):
 				OPC->_float = OPA->_int;
@@ -1247,7 +1285,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					VM_Warning(prog, "Attempted division of %u by zero\n", OPA->_uint);
+					VM_Warning(prog, "Attempted division of %"PRVM_PRIu" by zero\n", OPA->_uint);
 					OPC->_uint = 0;
 				}
 				DISPATCH_OPCODE();
