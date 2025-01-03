@@ -835,7 +835,7 @@ prvm_eval_t *src;
 				OPC->_int = OPA->_int + OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_IF):
-				OPC->_float = OPA->_int + (prvm_int_t) OPB->_float;
+				OPC->_float = ((prvm_vec_t) OPA->_int) + OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_ADD_FI):
 				OPC->_float = OPA->_float + (prvm_vec_t) OPB->_int;
@@ -844,7 +844,7 @@ prvm_eval_t *src;
 				OPC->_int = OPA->_int - OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_IF):
-				OPC->_float = OPA->_int - (prvm_int_t) OPB->_float;
+				OPC->_float = ((prvm_vec_t) OPA->_int) - OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_SUB_FI):
 				OPC->_float = OPA->_float - (prvm_vec_t) OPB->_int;
@@ -853,7 +853,7 @@ prvm_eval_t *src;
 				OPC->_int = OPA->_int * OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_IF):
-				OPC->_float = OPA->_int * (prvm_int_t) OPB->_float;
+				OPC->_float = ((prvm_vec_t) OPA->_int) * OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_MUL_FI):
 				OPC->_float = OPA->_float * (prvm_vec_t) OPB->_int;
@@ -875,7 +875,7 @@ prvm_eval_t *src;
 				OPC->_int = OPA->_int / OPB->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_IF):
-				OPC->_float = OPA->_int / (prvm_int_t) OPB->_float;
+				OPC->_float = ((prvm_vec_t) OPA->_int) / OPB->_float;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_DIV_FI):
 				OPC->_float = OPA->_float / (prvm_vec_t) OPB->_int;
