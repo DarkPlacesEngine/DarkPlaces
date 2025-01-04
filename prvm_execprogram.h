@@ -517,7 +517,7 @@ prvm_eval_t *src;
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %"PRVM_PRIi"+%"PRVM_PRIi")\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
 					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
@@ -525,7 +525,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %"PRVM_PRIu"+%"PRVM_PRIi"", prog->name, OPB->_uint, OPC->_int);
 					goto cleanup;
 				}
 				ptr->_int = OPA->_int;
@@ -547,7 +547,7 @@ prvm_eval_t *src;
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %"PRVM_PRIi"+%"PRVM_PRIi")\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
 					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
@@ -555,7 +555,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %"PRVM_PRIu"+%"PRVM_PRIi"", prog->name, OPB->_uint, OPC->_int);
 					goto cleanup;
 				}
 				// refresh the garbage collection on the string - this guards
@@ -583,7 +583,7 @@ prvm_eval_t *src;
 					if (!cached_allowworldwrites)
 					{
 						PRE_ERROR();
-						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %i+%i)\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
+						VM_Warning(prog, "Attempted assignment to world.%s (edictnum 0 field %"PRVM_PRIi"+%"PRVM_PRIi")\n", PRVM_GetString(prog, PRVM_ED_FieldAtOfs(prog, ofs)->s_name), OPB->_int, OPC->_int);
 						// Perform entity write anyway.
 					}
 					ptr = (prvm_eval_t *)(cached_edictsfields + ofs);
@@ -591,7 +591,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to write to an out of bounds address %u+%i", prog->name, (unsigned int)OPB->_int, OPC->_int);
+					prog->error_cmd("%s attempted to write to an out of bounds address %"PRVM_PRIu"+%"PRVM_PRIi"", prog->name, OPB->_uint, OPC->_int);
 					goto cleanup;
 				}
 				ptr->ivector[0] = OPA->ivector[0];
@@ -609,7 +609,7 @@ prvm_eval_t *src;
 				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to address an invalid field (%"PRVM_PRIu") in an edict", prog->name, OPB->_uint);
 					goto cleanup;
 				}
 #if 0
@@ -637,7 +637,7 @@ prvm_eval_t *src;
 				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%"PRVM_PRIu")", prog->name, OPB->_uint);
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -653,7 +653,7 @@ prvm_eval_t *src;
 				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%"PRVM_PRIu")", prog->name, OPB->_uint);
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -676,7 +676,7 @@ prvm_eval_t *src;
 				if (OPB->_uint >= cached_entityfields_2)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
+					prog->error_cmd("%s attempted to read an invalid field in an edict (%"PRVM_PRIu")", prog->name, OPB->_uint);
 					goto cleanup;
 				}
 				ed = PRVM_PROG_TO_EDICT(OPA->edict);
@@ -1140,7 +1140,7 @@ prvm_eval_t *src;
 				if ((unsigned int)OPA->_int < (unsigned int)st->operand[2] || (unsigned int)OPA->_int >= (unsigned int)st->operand[1])
 				{
 					PRE_ERROR();
-					prog->error_cmd("Progs boundcheck failed in %s, value is < %" PRVM_PRIi " or >= %" PRVM_PRIi, prog->name, OPC->_int, OPB->_int);
+					prog->error_cmd("Progs boundcheck failed in %s, value is < %"PRVM_PRIi" or >= %"PRVM_PRIi"", prog->name, OPC->_int, OPB->_int);
 					goto cleanup;
 				}
 				DISPATCH_OPCODE();
@@ -1161,7 +1161,7 @@ prvm_eval_t *src;
 				if (ofs >= cached_vmglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)st->operand[0], OPB->_int);
 					goto cleanup;
 				}
 				src = (prvm_eval_t *)&globals[ofs];
@@ -1172,7 +1172,7 @@ prvm_eval_t *src;
 				if (ofs >= cached_vmglobals)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)st->operand[0], OPB->_int);
 					goto cleanup;
 				}
 				src = (prvm_eval_t *)&globals[ofs];
@@ -1189,7 +1189,7 @@ prvm_eval_t *src;
 				if (ofs >= cached_vmglobals_2)
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)st->operand[0], OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)st->operand[0], OPB->_int);
 					goto cleanup;
 				}
 				src = (prvm_eval_t *)&globals[ofs];
@@ -1216,7 +1216,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)OPA->_int, OPB->_int);
 					goto cleanup;
 				}
 				OPC->_int = ptr->_int;
@@ -1236,7 +1236,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)OPA->_int, OPB->_int);
 					goto cleanup;
 				}
 				if(prvm_garbagecollection_enable.integer)
@@ -1258,7 +1258,7 @@ prvm_eval_t *src;
 				else
 				{
 					PRE_ERROR();
-					prog->error_cmd("%s attempted to read from an out of bounds address %u+%i", prog->name, (unsigned int)OPA->_int, OPB->_int);
+					prog->error_cmd("%s attempted to read from an out of bounds address %u+%"PRVM_PRIi"", prog->name, (unsigned int)OPA->_int, OPB->_int);
 					goto cleanup;
 				}
 				OPC->ivector[0] = ptr->ivector[0];
