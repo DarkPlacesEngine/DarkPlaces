@@ -501,7 +501,7 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_STOREP_ENT):
 			HANDLE_OPCODE(OP_STOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_STOREP_FNC):		// pointers
-				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				addr = OPB->_uint + OPC->_uint;
 				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
@@ -531,7 +531,7 @@ prvm_eval_t *src;
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_S):
-				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				addr = OPB->_uint + OPC->_uint;
 				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields)
 				{
 					// OK entity write.
@@ -567,7 +567,7 @@ prvm_eval_t *src;
 				ptr->_int = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_STOREP_V):
-				addr = (prvm_uint_t)OPB->_int + (prvm_uint_t)OPC->_int;
+				addr = OPB->_uint + OPC->_uint;
 				if ((ofs = addr - cached_vmentity1start) < cached_entityfieldsarea_entityfields_2)
 				{
 					// OK entity write.
@@ -606,7 +606,7 @@ prvm_eval_t *src;
 					prog->error_cmd("%s attempted to address an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
+				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to address an invalid field (%i) in an edict", prog->name, (int)OPB->_int);
@@ -634,7 +634,7 @@ prvm_eval_t *src;
 					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
+				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -650,7 +650,7 @@ prvm_eval_t *src;
 					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int >= cached_entityfields)
+				if (OPB->_uint >= cached_entityfields)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -673,7 +673,7 @@ prvm_eval_t *src;
 					prog->error_cmd("%s attempted to read an out of bounds edict number", prog->name);
 					goto cleanup;
 				}
-				if ((prvm_uint_t)OPB->_int >= cached_entityfields_2)
+				if (OPB->_uint >= cached_entityfields_2)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to read an invalid field in an edict (%i)", prog->name, (int)OPB->_int);
@@ -1202,7 +1202,7 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_LOADP_FLD):		// integers
 			HANDLE_OPCODE(OP_LOADP_FNC):		// pointers
 			HANDLE_OPCODE(OP_LOADP_I):
-				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				addr = OPA->_uint + OPB->_uint;
 				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea)
 				{
 					// OK entity write.
@@ -1222,7 +1222,7 @@ prvm_eval_t *src;
 				OPC->_int = ptr->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LOADP_S):
-				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				addr = OPA->_uint + OPB->_uint;
 				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea)
 				{
 					// OK entity write.
@@ -1244,7 +1244,7 @@ prvm_eval_t *src;
 				OPC->_int = ptr->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_LOADP_V):
-				addr = (prvm_uint_t)OPA->_int + (prvm_uint_t)OPB->_int;
+				addr = OPA->_uint + OPB->_uint;
 				if ((ofs = addr - cached_vmentity0start) < cached_entityfieldsarea_2)
 				{
 					// OK entity write.
