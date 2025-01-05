@@ -946,6 +946,7 @@ static void PRVM_StatementCoverageEvent(prvm_prog_t *prog, mfunction_t *func, in
 extern cvar_t prvm_traceqc;
 extern cvar_t prvm_statementprofiling;
 extern qbool prvm_runawaycheck;
+extern cvar_t prvm_gameplayfix_div0is0;
 
 #define PRVM_GLOBALSBASE 0x80000000
 
