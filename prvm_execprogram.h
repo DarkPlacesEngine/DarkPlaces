@@ -886,10 +886,10 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_DIV_VF):
 				if( OPB->_float != 0.0f )
 				{
-					float temp = 1.0f / OPB->_float;
-					OPC->vector[0] = temp * OPA->vector[0];
-					OPC->vector[1] = temp * OPA->vector[1];
-					OPC->vector[2] = temp * OPA->vector[2];
+					tempfloat = OPB->_float;
+					OPC->vector[0] = OPA->vector[0] / tempfloat;
+					OPC->vector[1] = OPA->vector[1] / tempfloat;
+					OPC->vector[2] = OPA->vector[2] / tempfloat;
 				}
 				else
 				{
