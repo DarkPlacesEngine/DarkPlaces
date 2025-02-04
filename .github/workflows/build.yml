@@ -58,10 +58,6 @@ jobs:
           # make `git describe` show the correct commit hash
           fetch-depth: '0'
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3'
-
       - name: Install emsdk
         uses: actions/checkout@v4.1.1
         with:
