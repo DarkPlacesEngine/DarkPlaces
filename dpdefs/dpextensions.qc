@@ -2559,7 +2559,20 @@ string(string search, string replace, string subject) strireplace = #485;
 
 //EXT_CSQC
 // #232 void(float index, float type, .void field) SV_AddStat (EXT_CSQC)
+// index is the stat index
+// type is the EV_* field type
+// field is the name of the entity field
 void(float index, float type, ...) addstat = #232;
+
+// This is the list of types used by addstat
+float EV_STRING = 1;
+float EV_FLOAT = 2;
+float EV_VECTOR = 3;
+float EV_ENTITY = 4;
+float EV_FIELD = 5;
+float EV_FUNCTION = 6;
+float EV_POINTER = 7;
+float EV_INTEGER = 8;
 
 //ZQ_PAUSE
 //idea: ZQuake
