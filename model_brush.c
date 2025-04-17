@@ -2664,8 +2664,8 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
 			else
 				VectorCopy(loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3);
-			s = DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
-			t = DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
+			s = DotProductDouble(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + (double)surface->lightmapinfo->texinfo->vecs[0][3];
+			t = DotProductDouble(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + (double)surface->lightmapinfo->texinfo->vecs[1][3];
 			(loadmodel->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 0] = s / surface->texture->width;
 			(loadmodel->surfmesh.data_texcoordtexture2f + 2 * surface->num_firstvertex)[i * 2 + 1] = t / surface->texture->height;
 			(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = 0;
@@ -2686,13 +2686,13 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex));
 
 		// generate surface extents information
-		texmins[0] = texmaxs[0] = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3];
-		texmins[1] = texmaxs[1] = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3];
+		texmins[0] = texmaxs[0] = DotProductDouble((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[0]) + (double)surface->lightmapinfo->texinfo->vecs[0][3];
+		texmins[1] = texmaxs[1] = DotProductDouble((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex), surface->lightmapinfo->texinfo->vecs[1]) + (double)surface->lightmapinfo->texinfo->vecs[1][3];
 		for (i = 1;i < surface->num_vertices;i++)
 		{
 			for (j = 0;j < 2;j++)
 			{
-				val = DotProduct((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3, surface->lightmapinfo->texinfo->vecs[j]) + surface->lightmapinfo->texinfo->vecs[j][3];
+				val = DotProductDouble((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3, surface->lightmapinfo->texinfo->vecs[j]) + (double)surface->lightmapinfo->texinfo->vecs[j][3];
 				texmins[j] = min(texmins[j], val);
 				texmaxs[j] = max(texmaxs[j], val);
 			}
@@ -2714,7 +2714,6 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		if (lightmapoffset == -1)
 		{
 			surface->lightmapinfo->samples = NULL;
-#if 1
 			// give non-lightmapped water a 1x white lightmap
 			if (!loadmodel->brush.isq2bsp && surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
@@ -2722,7 +2721,6 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 				surface->lightmapinfo->styles[0] = 0;
 				memset(surface->lightmapinfo->samples, 128, ssize * tsize * 3);
 			}
-#endif
 		}
 		else if (loadmodel->brush.ishlbsp || loadmodel->brush.isq2bsp) // LadyHavoc: HalfLife map (bsp version 30)
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + lightmapoffset;
@@ -2815,8 +2813,8 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 
 			for (i = 0;i < surface->num_vertices;i++)
 			{
-				u = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
-				v = ((DotProduct(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
+				u = ((DotProductDouble(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[0]) + (double)surface->lightmapinfo->texinfo->vecs[0][3]) + 8 - surface->lightmapinfo->texturemins[0]) * (1.0 / 16.0);
+				v = ((DotProductDouble(((loadmodel->surfmesh.data_vertex3f + 3 * surface->num_firstvertex) + i * 3), surface->lightmapinfo->texinfo->vecs[1]) + (double)surface->lightmapinfo->texinfo->vecs[1][3]) + 8 - surface->lightmapinfo->texturemins[1]) * (1.0 / 16.0);
 				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 0] = u * uscale + ubase;
 				(loadmodel->surfmesh.data_texcoordlightmap2f + 2 * surface->num_firstvertex)[i * 2 + 1] = v * vscale + vbase;
 				// LadyHavoc: calc lightmap data offset for vertex lighting to use

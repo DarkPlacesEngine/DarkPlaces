@@ -96,6 +96,7 @@ unsigned int CeilPowerOf2(unsigned int value);
 #define VectorSet(vec,x,y,z) ((vec)[0]=(x),(vec)[1]=(y),(vec)[2]=(z))
 #define VectorClear(a) ((a)[0]=(a)[1]=(a)[2]=0)
 #define DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+#define DotProductDouble(a,b) ((double)(a)[0]*(double)(b)[0]+(double)(a)[1]*(double)(b)[1]+(double)(a)[2]*(double)(b)[2])
 #define VectorSubtract(a,b,out) ((out)[0]=(a)[0]-(b)[0],(out)[1]=(a)[1]-(b)[1],(out)[2]=(a)[2]-(b)[2])
 #define VectorAdd(a,b,out) ((out)[0]=(a)[0]+(b)[0],(out)[1]=(a)[1]+(b)[1],(out)[2]=(a)[2]+(b)[2])
 #define VectorCopy(in,out) ((out)[0]=(in)[0],(out)[1]=(in)[1],(out)[2]=(in)[2])
