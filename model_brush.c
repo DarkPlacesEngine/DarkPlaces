@@ -3275,7 +3275,7 @@ static void Mod_Q1BSP_AssignNoShadowSkySurfaces(model_t *mod)
 			// check if the point behind the surface polygon is SOLID or SKY contents
 			VectorMAMAM(0.5f, surface->mins, 0.5f, surface->maxs, -0.25f, mod->surfmesh.data_normal3f + 3*surface->num_firstvertex, center);
 			contents = Mod_Q1BSP_PointSuperContents(mod, 0, center);
-			if (!(contents & SUPERCONTENTS_SOLID))
+			if (contents & SUPERCONTENTS_SOLID)
 				surface->texture = surface->texture->skynoshadowtexture;
 		}
 	}
