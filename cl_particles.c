@@ -1635,7 +1635,7 @@ static void CL_NewParticlesFromEffectinfo(int effectnameindex, float pcount, con
 						Matrix4x4_CreateTranslate(&tempmatrix, originmaxs[0], originmaxs[1], originmaxs[2]);
 					else
 						Matrix4x4_CreateTranslate(&tempmatrix, center[0], center[1], center[2]);
-					if (info->lighttime > 0 && info->lightradiusfade > 0)
+					if (info->lighttime > 0 || info->lightradiusfade > 0)
 					{
 						// light flash (explosion, etc)
 						// called when effect starts
