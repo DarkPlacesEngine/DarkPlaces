@@ -1082,7 +1082,7 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_GSTOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_GSTOREP_S):
 			HANDLE_OPCODE(OP_GSTOREP_FNC):		// pointers
-				if (OPB->_int < 0 || OPB->_int >= prog->numglobals)
+				if (OPB->_int <= 0 || OPB->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
@@ -1091,7 +1091,7 @@ prvm_eval_t *src;
 				prog->globals.ip[OPB->_int] = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GSTOREP_V):
-				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobals)
+				if (OPB->_int <= 0 || OPB->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
