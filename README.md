@@ -15,6 +15,12 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 ### [Matrix](https://matrix.org/docs/guides/introduction)
 [![#darkplaces:matrix.org](https://img.shields.io/matrix/darkplaces:matrix.org?color=660000&label=%23darkplaces%3Amatrix.org)](https://matrix.to/#/#darkplaces:matrix.org)
 
+### **NOTE: As of 2025, DarkPlaces is no longer affiliated with Xonotic in any form**.
+
+Please use the official [GitHub](https://github.com/DarkPlacesEngine/darkplaces) for reporting issues and submitting pull requests to DarkPlaces. The Xonotic GitLab mirror is no longer maintained by the DarkPlaces team.
+
+**Any references to their resources are strictly for user convenience as we may not yet provide official counterparts, such as our own Windows binaries**.
+
 ## Downloading and running
 
 Linux x86_64 builds are available in [GitHub CI](https://github.com/DarkPlacesEngine/darkplaces/actions?query=branch%3Amaster) artifacts.  
