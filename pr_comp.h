@@ -44,341 +44,290 @@ typedef enum etype_e {ev_void, ev_string, ev_float, ev_vector, ev_entity, ev_fie
 
 typedef enum opcode_e
 {
-	OP_DONE,
-	OP_MUL_F,
-	OP_MUL_V,
-	OP_MUL_FV,
-	OP_MUL_VF,
-	OP_DIV_F,
-	OP_ADD_F,
-	OP_ADD_V,
-	OP_SUB_F,
-	OP_SUB_V,
-
-	OP_EQ_F,
-	OP_EQ_V,
-	OP_EQ_S,
-	OP_EQ_E,
-	OP_EQ_FNC,
-
-	OP_NE_F,
-	OP_NE_V,
-	OP_NE_S,
-	OP_NE_E,
-	OP_NE_FNC,
-
-	OP_LE_F,
-	OP_GE_F,
-	OP_LT_F,
-	OP_GT_F,
-
-	OP_LOAD_F,
-	OP_LOAD_V,
-	OP_LOAD_S,
-	OP_LOAD_ENT,
-	OP_LOAD_FLD,
-	OP_LOAD_FNC,
-
-	OP_ADDRESS,
-
-	OP_STORE_F,
-	OP_STORE_V,
-	OP_STORE_S,
-	OP_STORE_ENT,
-	OP_STORE_FLD,
-	OP_STORE_FNC,
-
-	OP_STOREP_F,
-	OP_STOREP_V,
-	OP_STOREP_S,
-	OP_STOREP_ENT,
-	OP_STOREP_FLD,
-	OP_STOREP_FNC,
-
-	OP_RETURN,
-	OP_NOT_F,
-	OP_NOT_V,
-	OP_NOT_S,
-	OP_NOT_ENT,
-	OP_NOT_FNC,
-	OP_IF,
-	OP_IFNOT,
-	OP_CALL0,
-	OP_CALL1,
-	OP_CALL2,
-	OP_CALL3,
-	OP_CALL4,
-	OP_CALL5,
-	OP_CALL6,
-	OP_CALL7,
-	OP_CALL8,
-	OP_STATE,
-	OP_GOTO,
-	OP_AND_F,
-	OP_OR_F,
-
-	OP_BITAND_F,
-	OP_BITOR_F,
-
-	// TODO: actually support Hexen 2?
-
-	OP_MULSTORE_F,	//66 redundant, for h2 compat
-	OP_MULSTORE_VF,	//67 redundant, for h2 compat
-	OP_MULSTOREP_F,	//68
-	OP_MULSTOREP_VF,//69
-
-	OP_DIVSTORE_F,	//70 redundant, for h2 compat
-	OP_DIVSTOREP_F,	//71
-
-	OP_ADDSTORE_F,	//72 redundant, for h2 compat
-	OP_ADDSTORE_V,	//73 redundant, for h2 compat
-	OP_ADDSTOREP_F,	//74
-	OP_ADDSTOREP_V,	//75
-
-	OP_SUBSTORE_F,	//76 redundant, for h2 compat
-	OP_SUBSTORE_V,	//77 redundant, for h2 compat
-	OP_SUBSTOREP_F,	//78
-	OP_SUBSTOREP_V,	//79
-
-	OP_FETCH_GBL_F,	//80 has built-in bounds check
-	OP_FETCH_GBL_V,	//81 has built-in bounds check
-	OP_FETCH_GBL_S,	//82 has built-in bounds check
-	OP_FETCH_GBL_E,	//83 has built-in bounds check
-	OP_FETCH_GBL_FNC,//84 has built-in bounds check
-
-	OP_CSTATE,		//85
-	OP_CWSTATE,		//86
-
-	OP_THINKTIME,	//87 shortcut for OPA.nextthink=time+OPB
-
-	OP_BITSETSTORE_F,	//88 redundant, for h2 compat
-	OP_BITSETSTOREP_F,	//89
-	OP_BITCLRSTORE_F,	//90
-	OP_BITCLRSTOREP_F,	//91
-
-	OP_RAND0,		//92	OPC = random()
-	OP_RAND1,		//93	OPC = random()*OPA
-	OP_RAND2,		//94	OPC = random()*(OPB-OPA)+OPA
-	OP_RANDV0,		//95	//3d/box versions of the above.
-	OP_RANDV1,		//96
-	OP_RANDV2,		//97
-
-	OP_SWITCH_F,	//98	switchref=OPA; PC += OPB   --- the jump allows the jump table (such as it is) to be inserted after the block.
-	OP_SWITCH_V,	//99
-	OP_SWITCH_S,	//100
-	OP_SWITCH_E,	//101
-	OP_SWITCH_FNC,	//102
-
-	OP_CASE,		//103	if (OPA===switchref) PC += OPB
-	OP_CASERANGE,	//104   if (OPA<=switchref&&switchref<=OPB) PC += OPC
-
-	//hexen2 calling convention (-TH2 requires us to remap OP_CALLX to these on load, -TFTE just uses these directly.)
-	OP_CALL1H,	//OFS_PARM0=OPB
-	OP_CALL2H,	//OFS_PARM0,1=OPB,OPC
-	OP_CALL3H,	//no extra args
-	OP_CALL4H,
-	OP_CALL5H,
-	OP_CALL6H,
-	OP_CALL7H,
-	OP_CALL8H,
-
-	OP_STORE_I,
-	OP_STORE_IF,
-	OP_STORE_FI,
-
-	OP_ADD_I,
-	OP_ADD_FI,
-	OP_ADD_IF,
-
-	OP_SUB_I,
-	OP_SUB_FI,
-	OP_SUB_IF,
-
-	OP_CONV_ITOF,
-	OP_CONV_FTOI,
-
-	OP_LOADP_ITOF,
-	OP_LOADP_FTOI,
-
-	OP_LOAD_I,
-
-	OP_STOREP_I,
-	OP_STOREP_IF,
-	OP_STOREP_FI,
-
-	OP_BITAND_I,
-	OP_BITOR_I,
-
-	OP_MUL_I,
-	OP_DIV_I,
-	OP_EQ_I,
-	OP_NE_I,
-
-	OP_IFNOT_S,
-
-	OP_IF_S,
-
-	OP_NOT_I,
-
-	OP_DIV_VF,
-
-	OP_BITXOR_I,
-	OP_RSHIFT_I,
-	OP_LSHIFT_I,
-
-	OP_GLOBALADDRESS,
-	OP_ADD_PIW,
-
-	OP_LOADA_F,
-	OP_LOADA_V,
-	OP_LOADA_S,
-	OP_LOADA_ENT,
-	OP_LOADA_FLD,
-	OP_LOADA_FNC,
-	OP_LOADA_I,
-
-	OP_STORE_P,
-	OP_LOAD_P,
-
-	OP_LOADP_F,
-	OP_LOADP_V,
-	OP_LOADP_S,
-	OP_LOADP_ENT,
-	OP_LOADP_FLD,
-	OP_LOADP_FNC,
-	OP_LOADP_I,
-
-	OP_LE_I,
-	OP_GE_I,
-	OP_LT_I,
-	OP_GT_I,
-
-	OP_LE_IF,
-	OP_GE_IF,
-	OP_LT_IF,
-	OP_GT_IF,
-
-	OP_LE_FI,
-	OP_GE_FI,
-	OP_LT_FI,
-	OP_GT_FI,
-
-	OP_EQ_IF,
-	OP_EQ_FI,
-
-	OP_ADD_SF,
-	OP_SUB_S,
-	OP_STOREP_C,
-	OP_LOADP_C,
-
-	OP_MUL_IF,
-	OP_MUL_FI,
-	OP_MUL_VI,
-	OP_MUL_IV,
-	OP_DIV_IF,
-	OP_DIV_FI,
-	OP_BITAND_IF,
-	OP_BITOR_IF,
-	OP_BITAND_FI,
-	OP_BITOR_FI,
-	OP_AND_I,
-	OP_OR_I,
-	OP_AND_IF,
-	OP_OR_IF,
-	OP_AND_FI,
-	OP_OR_FI,
-	OP_NE_IF,
-	OP_NE_FI,
-
-	OP_GSTOREP_I,
-	OP_GSTOREP_F,
-	OP_GSTOREP_ENT,
-	OP_GSTOREP_FLD,
-	OP_GSTOREP_S,
-	OP_GSTOREP_FNC,
-	OP_GSTOREP_V,
-	OP_GADDRESS,
-	OP_GLOAD_I,
-	OP_GLOAD_F,
-	OP_GLOAD_FLD,
-	OP_GLOAD_ENT,
-	OP_GLOAD_S,
-	OP_GLOAD_FNC,
-	OP_BOUNDCHECK,
-
-	OP_UNUSED,	//used to be OP_STOREP_P, which is now emulated with OP_STOREP_I, fteqcc nor fte generated it
-	OP_PUSH,	//push 4octets onto the local-stack (which is ALWAYS poped on function return). Returns a pointer.
-	OP_POP,		//pop those ones that were pushed (don't over do it). Needs assembler.
-	OP_SWITCH_I,
-
-	OP_GLOAD_V,
-
-	OP_IF_F,		//compares as an actual float, instead of treating -0 as positive.
-	OP_IFNOT_F,
-
-	OP_STOREF_V,	//3 elements...
-	OP_STOREF_F,	//1 fpu element...
-	OP_STOREF_S,	//1 string reference
-	OP_STOREF_I,	//1 non-string reference/int
-
-	//fteqw r5744+
-	OP_STOREP_B,//((char*)b)[(int)c] = (int)a
-	OP_LOADP_B,	//(int)c = *(char*)
-
-	//fteqw r5768+
-	//opcodes for 32bit uints
-	OP_LE_U,		//aka GT
-	OP_LT_U,		//aka GE
-	OP_DIV_U,		//don't need mul+add+sub
-	OP_RSHIFT_U,	//lshift is the same for signed+unsigned
-
-	//opcodes for 64bit ints
-	OP_ADD_I64,
-	OP_SUB_I64,
-	OP_MUL_I64,
-	OP_DIV_I64,
-	OP_BITAND_I64,
-	OP_BITOR_I64,
-	OP_BITXOR_I64,
-	OP_LSHIFT_I64I,
-	OP_RSHIFT_I64I,
-	OP_LE_I64,		//aka GT
-	OP_LT_I64,		//aka GE
-	OP_EQ_I64,
-	OP_NE_I64,
-	//extra opcodes for 64bit uints
-	OP_LE_U64,		//aka GT
-	OP_LT_U64,		//aka GE
-	OP_DIV_U64,
-	OP_RSHIFT_U64I,
-
-	//general 64bitness
-	OP_STORE_I64,
-	OP_STOREP_I64,
-	OP_STOREF_I64,
-	OP_LOAD_I64,
-	OP_LOADA_I64,
-	OP_LOADP_I64,
-	//various conversions for our 64bit types (yay type promotion)
-	OP_CONV_UI64, //zero extend
-	OP_CONV_II64, //sign extend
-	OP_CONV_I64I,	//truncate
-	OP_CONV_FD,	//extension
-	OP_CONV_DF,	//truncation
-	OP_CONV_I64F,	//logically a promotion (always signed)
-	OP_CONV_FI64,	//demotion (always signed)
-	OP_CONV_I64D,	//'promotion' (always signed)
-	OP_CONV_DI64,	//demotion (always signed)
-
-	//opcodes for doubles.
-	OP_ADD_D,
-	OP_SUB_D,
-	OP_MUL_D,
-	OP_DIV_D,
-	OP_LE_D,
-	OP_LT_D,
-	OP_EQ_D,
-	OP_NE_D,
+	// NOTE: List mostly generated using `./fteqcc.bin -TDP_20250104 -Fdumpopcodes`.
+	OP_DONE = 0,
+	OP_MUL_F = 1,
+	OP_MUL_V = 2,
+	OP_MUL_FV = 3,
+	OP_MUL_VF = 4,
+	OP_DIV_F = 5,
+	OP_ADD_F = 6,
+	OP_ADD_V = 7,
+	OP_SUB_F = 8,
+	OP_SUB_V = 9,
+	OP_EQ_F = 10,
+	OP_EQ_V = 11,
+	OP_EQ_S = 12,
+	OP_EQ_E = 13,
+	OP_EQ_FNC = 14,
+	OP_NE_F = 15,
+	OP_NE_V = 16,
+	OP_NE_S = 17,
+	OP_NE_E = 18,
+	OP_NE_FNC = 19,
+	OP_LE_F = 20,
+	OP_GE_F = 21,
+	OP_LT_F = 22,
+	OP_GT_F = 23,
+	OP_LOAD_F = 24,
+	OP_LOAD_V = 25,
+	OP_LOAD_S = 26,
+	OP_LOAD_ENT = 27,
+	OP_LOAD_FLD = 28,
+	OP_LOAD_FNC = 29,
+	OP_ADDRESS = 30,
+	OP_STORE_F = 31,
+	OP_STORE_V = 32,
+	OP_STORE_S = 33,
+	OP_STORE_ENT = 34,
+	OP_STORE_FLD = 35,
+	OP_STORE_FNC = 36,
+	OP_STOREP_F = 37,
+	OP_STOREP_V = 38,
+	OP_STOREP_S = 39,
+	OP_STOREP_ENT = 40,
+	OP_STOREP_FLD = 41,
+	OP_STOREP_FNC = 42,
+	OP_RETURN = 43,
+	OP_NOT_F = 44,
+	OP_NOT_V = 45,
+	OP_NOT_S = 46,
+	OP_NOT_ENT = 47,
+	OP_NOT_FNC = 48,
+	OP_IF = 49,
+	OP_IFNOT = 50,
+	OP_CALL0 = 51,
+	OP_CALL1 = 52,
+	OP_CALL2 = 53,
+	OP_CALL3 = 54,
+	OP_CALL4 = 55,
+	OP_CALL5 = 56,
+	OP_CALL6 = 57,
+	OP_CALL7 = 58,
+	OP_CALL8 = 59,
+	OP_STATE = 60,
+	OP_GOTO = 61,
+	OP_AND_F = 62,
+	OP_OR_F = 63,
+	OP_BITAND_F = 64,
+	OP_BITOR_F = 65,
+	// OP_MULSTORE_F = 66,
+	// OP_MULSTORE_VF = 67,
+	// OP_MULSTOREP_F = 68,
+	// OP_MULSTOREP_VF = 69,
+	// OP_DIVSTORE_F = 70,
+	// OP_DIVSTOREP_F = 71,
+	// OP_ADDSTORE_F = 72,
+	// OP_ADDSTORE_V = 73,
+	// OP_ADDSTOREP_F = 74,
+	// OP_ADDSTOREP_V = 75,
+	// OP_SUBSTORE_F = 76,
+	// OP_SUBSTORE_V = 77,
+	// OP_SUBSTOREP_F = 78,
+	// OP_SUBSTOREP_V = 79,
+	// OP_FETCH_GBL_F = 80,
+	// OP_FETCH_GBL_V = 81,
+	// OP_FETCH_GBL_S = 82,
+	// OP_FETCH_GBL_E = 83,
+	// OP_FETCH_GBL_FNC = 84,
+	// OP_CSTATE = 85,
+	// OP_CWSTATE = 86,
+	// OP_THINKTIME = 87,
+	// OP_BITSETSTORE_F = 88,
+	// OP_BITSETSTOREP_F = 89,
+	// OP_BITCLRSTORE_F = 90,
+	// OP_BITCLRSTOREP_F = 91,
+	// OP_RAND0 = 92,
+	// OP_RAND1 = 93,
+	// OP_RAND2 = 94,
+	// OP_RANDV0 = 95,
+	// OP_RANDV1 = 96,
+	// OP_RANDV2 = 97,
+	// OP_SWITCH_F = 98,
+	// OP_SWITCH_V = 99,
+	// OP_SWITCH_S = 100,
+	// OP_SWITCH_E = 101,
+	// OP_SWITCH_FNC = 102,
+	// OP_CASE = 103,
+	// OP_CASERANGE = 104,
+	// OP_CALL1H = 105,
+	// OP_CALL2H = 106,
+	// OP_CALL3H = 107,
+	// OP_CALL4H = 108,
+	// OP_CALL5H = 109,
+	// OP_CALL6H = 110,
+	// OP_CALL7H = 111,
+	// OP_CALL8H = 112,
+	OP_STORE_I = 113,
+	// OP_STORE_IF = 114,
+	// OP_STORE_FI = 115,
+	OP_ADD_I = 116,
+	OP_ADD_FI = 117,
+	OP_ADD_IF = 118,
+	OP_SUB_I = 119,
+	OP_SUB_FI = 120,
+	OP_SUB_IF = 121,
+	OP_CONV_ITOF = 122,
+	OP_CONV_FTOI = 123,
+	// OP_CONVP_IF = 124,
+	// OP_CONVP_FI = 125,
+	OP_LOAD_I = 126,
+	OP_STOREP_I = 127,
+	// OP_STOREP_IF = 128,
+	// OP_STOREP_FI = 129,
+	OP_BITAND_I = 130,
+	OP_BITOR_I = 131,
+	OP_MUL_I = 132,
+	OP_DIV_I = 133,
+	OP_EQ_I = 134,
+	OP_NE_I = 135,
+	// OP_IFNOTS = 136,
+	// OP_IFS = 137,
+	OP_NOT_I = 138,
+	OP_DIV_VF = 139,
+	// OP_BITXOR_I = 140,
+	OP_RSHIFT_I = 141,
+	OP_LSHIFT_I = 142,
+	OP_GLOBALADDRESS = 143,
+	OP_ADD_PIW = 144,
+	OP_LOADA_F = 145,
+	OP_LOADA_V = 146,
+	OP_LOADA_S = 147,
+	OP_LOADA_ENT = 148,
+	OP_LOADA_FLD = 149,
+	OP_LOADA_FNC = 150,
+	OP_LOADA_I = 151,
+	OP_STORE_P = 152,
+	OP_LOAD_P = 153,
+	OP_LOADP_F = 154,
+	OP_LOADP_V = 155,
+	OP_LOADP_S = 156,
+	OP_LOADP_ENT = 157,
+	OP_LOADP_FLD = 158,
+	OP_LOADP_FNC = 159,
+	OP_LOADP_I = 160,
+	OP_LE_I = 161,
+	OP_GE_I = 162,
+	OP_LT_I = 163,
+	OP_GT_I = 164,
+	OP_LE_IF = 165,
+	OP_GE_IF = 166,
+	OP_LT_IF = 167,
+	OP_GT_IF = 168,
+	OP_LE_FI = 169,
+	OP_GE_FI = 170,
+	OP_LT_FI = 171,
+	OP_GT_FI = 172,
+	OP_EQ_IF = 173,
+	OP_EQ_FI = 174,
+	// OP_ADD_SF = 175,
+	// OP_SUB_S = 176,
+	// OP_STOREP_C = 177,
+	// OP_LOADP_C = 178,
+	OP_MUL_IF = 179,
+	OP_MUL_FI = 180,
+	OP_MUL_VI = 181,
+	// OP_MUL_IV = 182,
+	OP_DIV_IF = 183,
+	OP_DIV_FI = 184,
+	OP_BITAND_IF = 185,
+	OP_BITOR_IF = 186,
+	OP_BITAND_FI = 187,
+	OP_BITOR_FI = 188,
+	OP_AND_I = 189,
+	OP_OR_I = 190,
+	OP_AND_IF = 191,
+	OP_OR_IF = 192,
+	OP_AND_FI = 193,
+	OP_OR_FI = 194,
+	OP_NE_IF = 195,
+	OP_NE_FI = 196,
+	OP_GSTOREP_I = 197,
+	OP_GSTOREP_F = 198,
+	OP_GSTOREP_ENT = 199,
+	OP_GSTOREP_FLD = 200,
+	OP_GSTOREP_S = 201,
+	OP_GSTOREP_FNC = 202,
+	OP_GSTOREP_V = 203,
+	// OP_GADDRESS = 204,
+	OP_GLOAD_I = 205,
+	OP_GLOAD_F = 206,
+	OP_GLOAD_FLD = 207,
+	OP_GLOAD_ENT = 208,
+	OP_GLOAD_S = 209,
+	OP_GLOAD_FNC = 210,
+	OP_BOUNDCHECK = 211,
+	// OP_UNUSED = 212,
+	// OP_PUSH = 213,
+	// OP_POP = 214,
+	// OP_SWITCH_I = 215,
+	OP_GLOAD_V = 216,
+	// OP_IF_F = 217,
+	// OP_IFNOT_F = 218,
+	// OP_STOREF_V = 219,
+	// OP_STOREF_F = 220,
+	// OP_STOREF_S = 221,
+	// OP_STOREF_I = 222,
+	// OP_STOREP_I8 = 223,
+	// OP_LOADP_U8 = 224,
+	OP_LE_U = 225,
+	OP_LT_U = 226,
+	OP_DIV_U = 227,
+	OP_RSHIFT_U = 228,
+	// OP_ADD_I64 = 229,
+	// OP_SUB_I64 = 230,
+	// OP_MUL_I64 = 231,
+	// OP_DIV_I64 = 232,
+	// OP_BITAND_I64 = 233,
+	// OP_BITOR_I64 = 234,
+	// OP_BITXOR_I64 = 235,
+	// OP_LSHIFT_I64I = 236,
+	// OP_RSHIFT_I64I = 237,
+	// OP_LE_I64 = 238,
+	// OP_LT_I64 = 239,
+	// OP_EQ_I64 = 240,
+	// OP_NE_I64 = 241,
+	// OP_LE_U64 = 242,
+	// OP_LT_U64 = 243,
+	// OP_DIV_U64 = 244,
+	// OP_RSHIFT_U64I = 245,
+	// OP_STORE_I64 = 246,
+	// OP_STOREP_I64 = 247,
+	// OP_STOREF_I64 = 248,
+	// OP_LOADF_I64 = 249,
+	// OP_LOADA_I64 = 250,
+	// OP_LOADP_I64 = 251,
+	// OP_CONV_UI64 = 252,
+	// OP_CONV_II64 = 253,
+	// OP_CONV_I64I = 254,
+	// OP_CONV_FD = 255,
+	// OP_CONV_DF = 256,
+	// OP_CONV_I64F = 257,
+	// OP_CONV_FI64 = 258,
+	// OP_CONV_I64D = 259,
+	// OP_CONV_DI64 = 260,
+	// OP_ADD_D = 261,
+	// OP_SUB_D = 262,
+	// OP_MUL_D = 263,
+	// OP_DIV_D = 264,
+	// OP_LE_D = 265,
+	// OP_LT_D = 266,
+	// OP_EQ_D = 267,
+	// OP_NE_D = 268,
+	// OP_STOREP_I16 = 269,
+	// OP_LOADP_I16 = 270,
+	// OP_LOADP_U16 = 271,
+	// OP_LOADP_I8 = 272,
+	// OP_BITEXTEND_I = 273,
+	// OP_BITEXTEND_U = 274,
+	// OP_BITCOPY_I = 275,
+	// OP_CONV_UF = 276,
+	// OP_CONV_FU = 277,
+	// OP_CONV_U64D = 278,
+	// OP_CONV_DU64 = 279,
+	// OP_CONV_U64F = 280,
+	// OP_CONV_FU64 = 281,
+	OP_NUMREALOPS = 282
 }
 opcode_t;
 
