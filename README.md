@@ -9,11 +9,16 @@ Developed by LadyHavoc. See [CREDITS](CREDITS.md) for a list of contributors.
 
 ## Help/support
 
+### [Matrix](https://matrix.org/docs/guides/introduction)
+[![#darkplaces:matrix.org](https://img.shields.io/matrix/darkplaces:matrix.org?color=660000&label=%23darkplaces%3Amatrix.org)](https://matrix.to/#/#darkplaces:matrix.org)
+
+### Discord*
+https://discord.com/invite/ZHT9QeW
+
 ### IRC
 #darkplaces on irc.anynet.org
 
-### [Matrix](https://matrix.org/docs/guides/introduction)
-[![#darkplaces:matrix.org](https://img.shields.io/matrix/darkplaces:matrix.org?color=660000&label=%23darkplaces%3Amatrix.org)](https://matrix.to/#/#darkplaces:matrix.org)
+(* Not currently bridged to IRC or Matrix)
 
 ### **NOTE: As of 2025, DarkPlaces is no longer affiliated with Xonotic in any form**.
 
