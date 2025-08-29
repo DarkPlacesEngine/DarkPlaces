@@ -20,9 +20,11 @@ https://discord.com/invite/ZHT9QeW
 
 (* Not currently bridged to IRC or Matrix)
 
-### **NOTE: As of 2025, DarkPlaces is no longer affiliated with Xonotic in any form**.
+### **NOTE: DarkPlaces does not have a special relationship with Xonotic**.
 
-Please use the official [GitHub](https://github.com/DarkPlacesEngine/darkplaces) for reporting issues and submitting pull requests to DarkPlaces. The Xonotic GitLab mirror is no longer maintained by the DarkPlaces team.
+The Xonotic GitLab mirror is not officially maintained by the DarkPlaces team.
+
+Please use the official [GitHub](https://github.com/DarkPlacesEngine/darkplaces) for reporting issues and submitting pull requests to DarkPlaces.
 
 **Any references to their resources are strictly for user convenience as we may not yet provide official counterparts, such as our own Windows binaries**.
 
