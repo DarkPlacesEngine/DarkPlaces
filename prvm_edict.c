@@ -2060,6 +2060,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 	cvar_t *cvar;
 	int structtype = 0;
 	int max_safe_edicts;
+	bool gaddress_warned = false;
 
 	if (prog->loaded)
 		prog->error_cmd("%s: there is already a %s program loaded!", __func__, prog->name);
@@ -2250,6 +2251,7 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 
 	// LadyHavoc: TODO: reorder globals to match engine struct
 	// LadyHavoc: TODO: reorder fields to match engine struct
+	// divVerent: note that when ever doing any remapping, globaldefs with pre-initialized global pointers need to also be identified and remapped
 #define remapglobal(index) (index)
 #define remapfield(index) (index)
 
@@ -2522,6 +2524,33 @@ void PRVM_Prog_Load(prvm_prog_t *prog, const char *filename, unsigned char *data
 			prog->statements[i].operand[0] = remapglobal(a);
 			prog->statements[i].operand[1] = -1;
 			prog->statements[i].operand[2] = -1;
+			break;
+		}
+
+		// Warn about deprecated instructions.
+		switch (op)
+		{
+		case OP_GSTOREP_I:
+		case OP_GSTOREP_F:
+		case OP_GSTOREP_ENT:
+		case OP_GSTOREP_FLD:
+		case OP_GSTOREP_S:
+		case OP_GSTOREP_FNC:
+		case OP_GSTOREP_V:
+		//case OP_GADDRESS:
+		case OP_GLOAD_I:
+		case OP_GLOAD_F:
+		case OP_GLOAD_FLD:
+		case OP_GLOAD_ENT:
+		case OP_GLOAD_S:
+		case OP_GLOAD_FNC:
+		case OP_GLOAD_V:
+			if (!gaddress_warned) {
+				Con_Printf(CON_WARN "WARNING: %s: %s uses deprecated OP_G* instructions, which are unlikely to be used correctly. Proceed at your own risk.\n", prog->name, filename);
+				gaddress_warned = true;
+			}
+			break;
+		default:
 			break;
 		}
 	}

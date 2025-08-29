@@ -1,5 +1,4 @@
 extern cvar_t prvm_garbagecollection_enable;
-int i;
 prvm_uint_t addr, ofs;
 prvm_eval_t *src;
 // NEED to reset startst after calling this! startst may or may not be clobbered!
@@ -279,7 +278,6 @@ prvm_eval_t *src;
 	&&handle_OP_GSTOREP_S,
 	&&handle_OP_GSTOREP_FNC,
 	&&handle_OP_GSTOREP_V,
-	&&handle_OP_GADDRESS,
 	&&handle_OP_GLOAD_I,
 	&&handle_OP_GLOAD_F,
 	&&handle_OP_GLOAD_FLD,
@@ -1082,7 +1080,7 @@ prvm_eval_t *src;
 			HANDLE_OPCODE(OP_GSTOREP_FLD):		// integers
 			HANDLE_OPCODE(OP_GSTOREP_S):
 			HANDLE_OPCODE(OP_GSTOREP_FNC):		// pointers
-				if (OPB->_int < 0 || OPB->_int >= prog->numglobals)
+				if (OPB->_int <= 0 || OPB->_int >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
@@ -1091,7 +1089,7 @@ prvm_eval_t *src;
 				prog->globals.ip[OPB->_int] = OPA->_int;
 				DISPATCH_OPCODE();
 			HANDLE_OPCODE(OP_GSTOREP_V):
-				if (OPB->_int < 0 || OPB->_int + 2 >= prog->numglobals)
+				if (OPB->_int <= 0 || OPB->_int + 2 >= prog->numglobals)
 				{
 					PRE_ERROR();
 					prog->error_cmd("%s attempted to write to an invalid indexed global", prog->name);
@@ -1100,17 +1098,6 @@ prvm_eval_t *src;
 				prog->globals.ip[OPB->_int  ] = OPA->ivector[0];
 				prog->globals.ip[OPB->_int+1] = OPA->ivector[1];
 				prog->globals.ip[OPB->_int+2] = OPA->ivector[2];
-				DISPATCH_OPCODE();
-
-			HANDLE_OPCODE(OP_GADDRESS):
-				i = OPA->_int + (prvm_int_t) OPB->_float;
-				if (i < 0 || i >= prog->numglobaldefs)
-				{
-					PRE_ERROR();
-					prog->error_cmd("%s attempted to address an out of bounds global", prog->name);
-					goto cleanup;
-				}
-				OPC->_int = prog->globals.ip[i];
 				DISPATCH_OPCODE();
 
 			HANDLE_OPCODE(OP_GLOAD_I):
