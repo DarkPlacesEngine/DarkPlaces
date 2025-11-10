@@ -1306,7 +1306,7 @@ static void CL_UpdateNetworkEntity(entity_t *e, int recursionlimit, qbool interp
 	if (e->state_current.number == cl.viewentity)
 		e->render.flags |= RENDER_EXTERIORMODEL;
 	// either fullbright or lit
-	if(!r_fullbright.integer)
+	if(!r_fullbright.integer && (e->render.model && e->render.model->lit))
 	{
 		if (!(e->render.effects & EF_FULLBRIGHT))
 			e->render.flags |= RENDER_LIGHT;
@@ -1720,7 +1720,7 @@ static void CL_RelinkWorld(void)
 	// FIXME: this should be done at load
 	ent->render.matrix = identitymatrix;
 	ent->render.flags = RENDER_SHADOW;
-	if (!r_fullbright.integer)
+	if (!r_fullbright.integer && (ent->render.model && ent->render.model->lit))
 		ent->render.flags |= RENDER_LIGHT;
 	VectorSet(ent->render.colormod, 1, 1, 1);
 	VectorSet(ent->render.glowmod, 1, 1, 1);
@@ -1745,7 +1745,7 @@ static void CL_RelinkStaticEntities(void)
 		// need to re-fetch the model pointer
 		e->render.model = CL_GetModelByIndex(e->state_baseline.modelindex);
 		// either fullbright or lit
-		if(!r_fullbright.integer)
+		if(!r_fullbright.integer && (e->render.model && e->render.model->lit))
 		{
 			if (!(e->render.effects & EF_FULLBRIGHT))
 				e->render.flags |= RENDER_LIGHT;

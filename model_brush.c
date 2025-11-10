@@ -2714,7 +2714,6 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		if (lightmapoffset == -1)
 		{
 			surface->lightmapinfo->samples = NULL;
-#if 1
 			// give non-lightmapped water a 1x white lightmap
 			if (!loadmodel->brush.isq2bsp && surface->texture->name[0] == '*' && (surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
 			{
@@ -2722,7 +2721,6 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 				surface->lightmapinfo->styles[0] = 0;
 				memset(surface->lightmapinfo->samples, 128, ssize * tsize * 3);
 			}
-#endif
 		}
 		else if (loadmodel->brush.ishlbsp || loadmodel->brush.isq2bsp) // LadyHavoc: HalfLife map (bsp version 30)
 			surface->lightmapinfo->samples = loadmodel->brushq1.lightdata + lightmapoffset;
@@ -2734,7 +2732,7 @@ static void Mod_Q1BSP_LoadFaces(sizebuf_t *sb)
 		}
 
 		// check if we should apply a lightmap to this
-		if (!(surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) || surface->lightmapinfo->samples)
+		if ((!(surface->lightmapinfo->texinfo->q1flags & TEX_SPECIAL) || surface->lightmapinfo->samples) && loadmodel->brushq1.lightdata)
 		{
 			if (ssize > 256 || tsize > 256)
 				Host_Error("Bad surface extents");
