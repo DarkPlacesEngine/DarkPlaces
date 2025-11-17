@@ -740,7 +740,7 @@ void Sys_Error (const char *error, ...)
 	dpvsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 
-	Con_Printf(CON_ERROR "Engine Aborted: %s\n^9%s\n", string, engineversion);
+	Con_Printf(CON_ERROR "Engine Error: %s\n^9%s\n", string, engineversion);
 
 	dp_strlcat(string, "\n\n", sizeof(string));
 	dp_strlcat(string, engineversion, sizeof(string));
@@ -763,7 +763,7 @@ void Sys_Error (const char *error, ...)
 	S_StopAllSounds();
 
 	host.state = host_failed; // make Sys_HandleSignal() call _Exit()
-	Sys_SDL_Dialog("Engine Aborted", string);
+	Sys_SDL_Dialog("Engine Error", string);
 
 	fflush(stderr);
 	exit (1);
