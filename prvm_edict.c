@@ -55,6 +55,7 @@ cvar_t prvm_garbagecollection_strings = {CF_CLIENT | CF_SERVER, "prvm_garbagecol
 cvar_t prvm_stringdebug = {CF_CLIENT | CF_SERVER, "prvm_stringdebug", "0", "Print debug and warning messages related to strings"};
 cvar_t sv_entfields_noescapes = {CF_SERVER, "sv_entfields_noescapes", "wad", "Space-separated list of fields in which backslashes won't be parsed as escapes when loading entities from .bsp or .ent files. This is a workaround for buggy maps with unescaped backslashes used as path separators (only forward slashes are allowed in Quake VFS paths)."};
 cvar_t prvm_gameplayfix_div0is0 = {CF_SERVER, "prvm_gameplayfix_div0is0", "0", "When set to 1, floating point division by 0 will return zero instead of returning the IEEE standardized result (likely nan or inf). Other ways of getting non-finite values are not affected, and the warning will still print."};
+cvar_t prvm_gameplayfix_rintisround = {CF_SERVER, "prvm_gameplayfix_rintisround", "1", "When set to 1, rint() behaves like C99's round() function. When set to 0, it matches Quake exactly and has the following quirks: if the value doesn't fit into int, it returns -2147483648, and it never returns negative zero, even if the input is negative."};  // TODO: remove if nobody ever has toggle this off.
 
 static double prvm_reuseedicts_always_allow = 0;
 qbool prvm_runawaycheck = true;
@@ -3275,6 +3276,7 @@ void PRVM_Init (void)
 	Cvar_RegisterVariable (&prvm_stringdebug);
 	Cvar_RegisterVariable (&sv_entfields_noescapes);
 	Cvar_RegisterVariable (&prvm_gameplayfix_div0is0);
+	Cvar_RegisterVariable (&prvm_gameplayfix_rintisround);
 
 	// COMMANDLINEOPTION: PRVM: -norunaway disables the runaway loop check (it might be impossible to exit DarkPlaces if used!)
 	prvm_runawaycheck = !Sys_CheckParm("-norunaway");
