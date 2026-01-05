@@ -3817,6 +3817,13 @@ void PRVM_GarbageCollection(prvm_prog_t *prog)
 					if (s & PRVM_KNOWNSTRINGBASE)
 					{
 						prvm_int_t num = s - PRVM_KNOWNSTRINGBASE;
+
+						if (num < 0 || num >= prog->numknownstrings)
+						{
+							Con_DPrintf("PRVM_GarbageCollection: string index %i is out of bounds\n", num);
+							continue;
+						}
+
 						if (!prog->knownstrings[num])
 						{
 							// invalid
