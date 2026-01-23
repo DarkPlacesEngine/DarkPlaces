@@ -8,10 +8,9 @@ on:
   pull_request:
 
 jobs:
-  sdl-release:
+  linux-sdl-release:
     runs-on: ubuntu-latest
-    container:
-      image: debian:latest
+    container: debian:latest
     steps:
       # Must install git before checking out the repo otherwise github doesn't fetch the .git directory.
       - name: Install dependencies
@@ -20,7 +19,7 @@ jobs:
           apt install --yes build-essential git libjpeg-dev libsdl2-dev libcurl4-openssl-dev libpng-dev libfreetype-dev libvorbis-dev
 
       - name: Fetch repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6
         with:
           # make `git describe` show the correct commit hash
           fetch-depth: '0'
@@ -41,3 +40,24 @@ jobs:
           name: Linux
           path: |
             darkplaces-sdl
+
+  windows-sdl-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          install: >-
+            make
+
+      - name: Build
+        run: |
+          make sdl-release
