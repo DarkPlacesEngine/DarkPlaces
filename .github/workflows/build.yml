@@ -72,3 +72,10 @@ jobs:
       - name: Build
         run: |
           make sdl-release
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows
+          path: |
+            darkplaces-sdl.exe
