@@ -62,6 +62,11 @@ jobs:
           install: >-
             make
             mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-libogg
+            mingw-w64-ucrt-x86_64-libvorbis
             mingw-w64-ucrt-x86_64-SDL2
 
       - name: Build
