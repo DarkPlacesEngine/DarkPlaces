@@ -23,6 +23,7 @@ jobs:
         with:
           # make `git describe` show the correct commit hash
           fetch-depth: '0'
+          persist-credentials: false
 
       - name: Compile
         run: |
