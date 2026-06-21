@@ -348,6 +348,108 @@ Cbuf_Execute
 ============
 */
 extern qbool prvm_runawaycheck;
+/*
+void Cbuf_Execute (void)
+{
+	int i;
+	char *text;
+	char line[MAX_INPUTLINE];
+	char preprocessed[MAX_INPUTLINE];
+	char *firstchar;
+	qboolean quotes;
+	char *comment;
+
+	// LordHavoc: making sure the tokenizebuffer doesn't get filled up by repeated crashes
+	cmd_tokenizebufferpos = 0;
+
+	while (cmd_text.cursize)
+	{
+// find a \n or ; line break
+		text = (char *)cmd_text.data;
+
+		quotes = false;
+		comment = NULL;
+		for (i=0 ; i < cmd_text.cursize ; i++)
+		{
+			if(!comment)
+			{
+				if (text[i] == '"')
+					quotes = !quotes;
+
+				if(quotes)
+				{
+					// make sure i doesn't get > cursize which causes a negative
+					// size in memmove, which is fatal --blub
+					if (i < (cmd_text.cursize-1) && (text[i] == '\\' && (text[i+1] == '"' || text[i+1] == '\\')))
+						i++;
+				}
+				else
+				{
+					if(text[i] == '/' && text[i + 1] == '/' && (i == 0 || ISWHITESPACE(text[i-1])))
+						comment = &text[i];
+					if(text[i] == ';')
+						break;	// don't break if inside a quoted string or comment
+				}
+			}
+
+			if (text[i] == '\r' || text[i] == '\n')
+				break;
+		}
+
+		// better than CRASHING on overlong input lines that may SOMEHOW enter the buffer
+		if(i >= MAX_INPUTLINE)
+		{
+			Con_Printf("Warning: console input buffer had an overlong line. Ignored.\n");
+			line[0] = 0;
+		}
+		else
+		{
+			memcpy (line, text, comment ? (comment - text) : i);
+			line[comment ? (comment - text) : i] = 0;
+		}
+
+// delete the text from the command buffer and move remaining commands down
+// this is necessary because commands (exec, alias) can insert data at the
+// beginning of the text buffer
+
+		if (i == cmd_text.cursize)
+			cmd_text.cursize = 0;
+		else
+		{
+			i++;
+			cmd_text.cursize -= i;
+			memmove (cmd_text.data, text+i, cmd_text.cursize);
+		}
+
+// execute the command line
+		firstchar = line;
+		while(*firstchar && ISWHITESPACE(*firstchar))
+			++firstchar;
+		if(
+			(strncmp(firstchar, "alias", 5) || !ISWHITESPACE(firstchar[5]))
+			&&
+			(strncmp(firstchar, "bind", 4) || !ISWHITESPACE(firstchar[4]))
+			&&
+			(strncmp(firstchar, "in_bind", 7) || !ISWHITESPACE(firstchar[7]))
+		)
+		{
+			if(Cmd_PreprocessString( line, preprocessed, sizeof(preprocessed), NULL ))
+				Cmd_ExecuteString (preprocessed, src_command, false);
+		}
+		else
+		{
+			Cmd_ExecuteString (line, src_command, false);
+		}
+
+		if (cmd_wait)
+		{	// skip out while text still remains in buffer, leaving it
+			// for next frame
+			cmd_wait = false;
+			break;
+		}
+	}
+}
+*/
 void Cbuf_Execute (cmd_buf_t *cbuf)
 {
 	cmd_input_t *current;
