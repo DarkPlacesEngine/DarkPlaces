@@ -341,7 +341,7 @@ typedef struct texture_s
 
 typedef struct mtexinfo_s
 {
-	float		vecs[2][4];		// [s/t][xyz offset]
+	double		vecs[2][4];		// [s/t][xyz offset]
 	int			textureindex;
 	int			q1flags;
 	int			q2flags;			// miptex flags + overrides
