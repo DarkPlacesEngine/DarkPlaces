@@ -40,6 +40,8 @@ static qbool snd_voip_active;
 static sfx_t *snd_echo;
 static qbool snd_echo_active;
 static OpusEncoder *opus_encoder;
+// kept for whoever wires up the netmessage path (see TODO in
+// S_VOIP_Capture_Callback below); unused until then.
 static char opus_encoder_id;
 static unsigned int opus_encoder_seq;
 extern cvar_t snd_input_boost;
@@ -101,33 +103,13 @@ void S_VOIP_Capture_Callback (unsigned char *stream, int len)
 		capture_buffer_filled += len;
 		if (cls.state == ca_connected)
 		{
-			while (capture_buffer_filled - capture_buffer_begin > 1920)
-			{
-				unsigned char packet[1036];
-				int encsize;
-				encsize = opus_encode(opus_encoder, (opus_int16*)(capture_buffer + capture_buffer_begin), 960, (unsigned char*)&packet[12], 1024);
-				packet[0] = 'V';
-				packet[1] = 'O';
-				packet[2] = 'I';
-				packet[3] = 'P';
-				packet[4] = '\0'; //client num, filled by server
-				packet[5] = '\0';
-				packet[6] = opus_encoder_id;
-				packet[7] = '\0';
-				packet[8] = opus_encoder_seq & 0xFF;
-				packet[9] = (opus_encoder_seq >> 8) & 0xFF;
-				packet[10] = (opus_encoder_seq >> 16) & 0xFF;
-				packet[11] = (opus_encoder_seq >> 24) & 0xFF;
-				if (encsize < 0)
-				{
-					Con_Printf("Opus encode failed %i\n", encsize);
-					return;
-				}
-				opus_encoder_seq++;
-				capture_buffer_begin += 1920;
-				NetConn_Write(cls.connect_mysocket, packet, 12 + encsize, &cls.connect_address);
-				Buffer_Shift(capture_buffer, &capture_buffer_begin, &capture_buffer_filled, CAPTURE_BUFFER_SIZE);
-			}
+			// TODO VOIP: once frames are handed off
+			// via a proper netmessage (see matching TODO in netconn.c),
+			// re-add a loop here that pulls 960-sample-frame chunks out of
+			// capture_buffer, opus_encodes them (encoder id/seq bookkeeping
+			// below is still useful for reordering on the receive side),
+			// and hands the encoded bytes to that netmessage path instead
+			// of building a raw packet by hand
 		}
 	}
 	if (snd_echo_active)
