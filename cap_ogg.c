@@ -3,6 +3,9 @@
 #include "quakedef.h"
 #include "client.h"
 #include "cap_ogg.h"
+#ifdef CAP_OGG_OPUS
+#include <opus.h>
+#endif
 
 // video capture cvars
 static cvar_t cl_capturevideo_ogg_theora_vp3compat = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_theora_vp3compat", "1", "make VP3 compatible theora streams"};
@@ -15,6 +18,10 @@ static cvar_t cl_capturevideo_ogg_theora_keyframe_auto_threshold = {CF_CLIENT | 
 static cvar_t cl_capturevideo_ogg_theora_noise_sensitivity = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_theora_noise_sensitivity", "1", "video noise sensitivity (0 to 6); lower is better"};
 static cvar_t cl_capturevideo_ogg_theora_sharpness = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_theora_sharpness", "0", "sharpness (0 to 2); lower is sharper"};
 static cvar_t cl_capturevideo_ogg_vorbis_quality = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_vorbis_quality", "3", "audio quality (-1 to 10); higher is better"};
+#ifdef CAP_OGG_OPUS
+static cvar_t cl_capturevideo_ogg_opus = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_opus", "1", "use opus codec to encode audio"};
+static cvar_t cl_capturevideo_ogg_opus_bitrate = {CF_CLIENT | CF_ARCHIVE, "cl_capturevideo_ogg_opus_bitrate", "256", "audio bitrate for opus (32 to 256 kbps)"};
+#endif
 
 typedef struct {
   long endbyte;
@@ -588,6 +595,10 @@ void SCR_CaptureVideo_Ogg_Init(void)
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_noise_sensitivity);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_theora_sharpness);
 	Cvar_RegisterVariable(&cl_capturevideo_ogg_vorbis_quality);
+	#ifdef CAP_OGG_OPUS
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_opus);
+	Cvar_RegisterVariable(&cl_capturevideo_ogg_opus_bitrate);
+	#endif
 }
 
 qbool SCR_CaptureVideo_Ogg_Available(void)
@@ -632,6 +643,16 @@ typedef struct capturevideostate_ogg_formatspecific_s
 	int channels;
 
 	allocatedoggpage_t videopage, audiopage;
+	#ifdef CAP_OGG_OPUS
+	int opus;
+	int opus_sample_size;
+	#define OPUS_BUFFER_SIZE 4096
+	float opus_buffer[OPUS_BUFFER_SIZE];
+	int opus_buffer_len;
+	OpusEncoder *opus_encoder;
+	ogg_int64_t opus_packetno;
+	ogg_int64_t opus_last_granule;
+	#endif
 }
 capturevideostate_ogg_formatspecific_t;
 #define LOAD_FORMATSPECIFIC_OGG() capturevideostate_ogg_formatspecific_t *format = (capturevideostate_ogg_formatspecific_t *) cls.capturevideo.formatspecific
@@ -668,7 +689,12 @@ static void SCR_CaptureVideo_Ogg_Interleave(void)
 			if(qogg_stream_pageout(&format->vo, &pg) > 0)
 			{
 				format->audiopage.len = pg.header_len + pg.body_len;
-				format->audiopage.time = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&pg));
+				#ifdef CAP_OGG_OPUS
+				if (format->opus)
+					format->audiopage.time = (double)qogg_page_granulepos(&pg) / (double)cls.capturevideo.soundrate;
+				else
+				#endif
+					format->audiopage.time = qvorbis_granule_time(&format->vd, qogg_page_granulepos(&pg));
 				if(format->audiopage.len > sizeof(format->audiopage.data))
 					Sys_Error("audio page too long");
 				memcpy(format->audiopage.data, pg.header, pg.header_len);
@@ -734,14 +760,34 @@ static void SCR_CaptureVideo_Ogg_EndVideo(void)
 
 	if(cls.capturevideo.soundrate)
 	{
-		qvorbis_analysis_wrote(&format->vd, 0);
-		while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+		#ifdef CAP_OGG_OPUS
+		if (format->opus)
 		{
-			qvorbis_analysis(&format->vb, NULL);
-			qvorbis_bitrate_addblock(&format->vb);
-			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
-				qogg_stream_packetin(&format->vo, &pt);
-			SCR_CaptureVideo_Ogg_Interleave();
+			int encsize;
+			unsigned char packet[2048];
+			memset(&format->opus_buffer[format->opus_buffer_len], 0, sizeof(format->opus_buffer) - sizeof(float) * format->opus_buffer_len);
+			encsize = opus_encode_float(format->opus_encoder, format->opus_buffer, format->opus_sample_size, packet, sizeof(packet));
+			if (encsize < 0) Sys_Error("Opus encode failed at end frame");
+			pt.bytes = encsize;
+			pt.packet = packet;
+			pt.e_o_s = 1;
+			pt.b_o_s = 0;
+			pt.granulepos = format->opus_last_granule + format->opus_sample_size; //FIXME
+			pt.packetno = format->opus_packetno;
+			qogg_stream_packetin(&format->vo, &pt);
+		}
+		else
+		#endif
+		{
+			qvorbis_analysis_wrote(&format->vd, 0);
+			while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+			{
+				qvorbis_analysis(&format->vb, NULL);
+				qvorbis_bitrate_addblock(&format->vb);
+				while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+					qogg_stream_packetin(&format->vo, &pt);
+				SCR_CaptureVideo_Ogg_Interleave();
+			}
 		}
 	}
 
@@ -785,13 +831,25 @@ static void SCR_CaptureVideo_Ogg_EndVideo(void)
 		}
 
 		qogg_stream_clear(&format->vo);
-		qvorbis_block_clear(&format->vb);
-		qvorbis_dsp_clear(&format->vd);
+		#ifdef CAP_OGG_OPUS
+		if (format->opus)
+		{
+			opus_encoder_destroy(format->opus_encoder);
+		}
+		else
+		#endif
+		{
+			qvorbis_block_clear(&format->vb);
+			qvorbis_dsp_clear(&format->vd);
+		}
 	}
 
 	qogg_stream_clear(&format->to);
 	qtheora_clear(&format->ts);
-	qvorbis_info_clear(&format->vi);
+	#ifdef CAP_OGG_OPUS
+	if (!format->opus)
+	#endif
+		qvorbis_info_clear(&format->vi);
 
 	Mem_Free(format->yuv[0].y);
 	Mem_Free(format->yuv[0].u);
@@ -891,30 +949,68 @@ channelmapping_t mapping[8] =
 static void SCR_CaptureVideo_Ogg_SoundFrame(const portable_sampleframe_t *paintbuffer, size_t length)
 {
 	LOAD_FORMATSPECIFIC_OGG();
-	float **vorbis_buffer;
 	size_t i;
 	int j;
 	ogg_packet pt;
-	int *map = mapping[bound(1, cls.capturevideo.soundchannels, 8) - 1];
-
-	vorbis_buffer = qvorbis_analysis_buffer(&format->vd, (int)length);
-	for(j = 0; j < cls.capturevideo.soundchannels; ++j)
+	#ifdef CAP_OGG_OPUS
+	if (format->opus)
 	{
-		float *b = vorbis_buffer[map[j]];
-		for(i = 0; i < length; ++i)
-			b[i] = paintbuffer[i].sample[j];
+		size_t copied = 0;
+		size_t copy_chunk;
+		int encsize;
+		unsigned char packet[4096];
+		while (copied < length) {
+			copy_chunk = min(length, (size_t)(OPUS_BUFFER_SIZE - format->opus_buffer_len) / cls.capturevideo.soundchannels);
+			for(j = 0; j < cls.capturevideo.soundchannels; ++j)
+			{
+				for(i = 0; i < copy_chunk; ++i)
+					format->opus_buffer[format->opus_buffer_len + j + i * cls.capturevideo.soundchannels] = paintbuffer[i + copied].sample[j];
+			}
+			format->opus_buffer_len += copy_chunk * cls.capturevideo.soundchannels;
+			length -= copy_chunk;
+			while (format->opus_buffer_len > format->opus_sample_size * cls.capturevideo.soundchannels)
+			{
+				encsize = opus_encode_float(format->opus_encoder, format->opus_buffer, format->opus_sample_size, packet, sizeof(packet));
+				if (encsize < 0) Sys_Error("SCR_CaptureVideo_Ogg_SoundFrame: opus_encode failed");
+				pt.bytes = encsize;
+				pt.packet = packet;
+				pt.e_o_s = 0;
+				pt.b_o_s = 0;
+				pt.granulepos = format->opus_last_granule + format->opus_sample_size;
+				format->opus_last_granule = pt.granulepos;
+				pt.packetno = format->opus_packetno;
+				format->opus_packetno++;
+				qogg_stream_packetin(&format->vo, &pt);
+				memmove(format->opus_buffer, &format->opus_buffer[format->opus_sample_size * cls.capturevideo.soundchannels], (format->opus_buffer_len - format->opus_sample_size * cls.capturevideo.soundchannels) * sizeof(float)); //shifting data in buffer
+				format->opus_buffer_len -= format->opus_sample_size * cls.capturevideo.soundchannels;
+				copied += format->opus_sample_size;
+			}
+		}
 	}
-	qvorbis_analysis_wrote(&format->vd, (int)length);
-
-	while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+	else
+	#endif
 	{
-		qvorbis_analysis(&format->vb, NULL);
-		qvorbis_bitrate_addblock(&format->vb);
+		float **vorbis_buffer;
+		int *map = mapping[bound(1, cls.capturevideo.soundchannels, 8) - 1];
 
-		while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
-			qogg_stream_packetin(&format->vo, &pt);
+		vorbis_buffer = qvorbis_analysis_buffer(&format->vd, (int)length);
+		for(j = 0; j < cls.capturevideo.soundchannels; ++j)
+		{
+			float *b = vorbis_buffer[map[j]];
+			for(i = 0; i < length; ++i)
+				b[i] = paintbuffer[i].sample[j];
+		}
+		qvorbis_analysis_wrote(&format->vd, (int)length);
+
+		while(qvorbis_analysis_blockout(&format->vd, &format->vb) == 1)
+		{
+			qvorbis_analysis(&format->vb, NULL);
+			qvorbis_bitrate_addblock(&format->vb);
+
+			while(qvorbis_bitrate_flushpacket(&format->vd, &pt))
+				qogg_stream_packetin(&format->vo, &pt);
+		}
 	}
-
 	SCR_CaptureVideo_Ogg_Interleave();
 }
 
@@ -947,6 +1043,19 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 		format->serial1 = rand();
 		qogg_stream_init(&format->to, format->serial1);
 
+		#ifdef CAP_OGG_OPUS
+		format->opus = cl_capturevideo_ogg_opus.integer;
+		if (format->opus && cls.capturevideo.soundchannels > 2)
+		{
+			Con_Printf("Only mono and stereo audio supported for opus audio recording\n");
+			format->opus = false;
+		}
+		if (format->opus && cls.capturevideo.soundrate != 48000 && cls.capturevideo.soundrate != 24000 && cls.capturevideo.soundrate != 16000 && cls.capturevideo.soundrate != 8000)
+		{
+			Con_Printf("Only 48, 24, 16 and 8 kHz audio rate supported for opus audio recording\n");
+			format->opus = false;
+		}
+		#endif
 		if(cls.capturevideo.soundrate)
 		{
 			do
@@ -1045,11 +1154,32 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 		// vorbis?
 		if(cls.capturevideo.soundrate)
 		{
-			qvorbis_info_init(&format->vi);
-			qvorbis_encode_init_vbr(&format->vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, bound(-1, cl_capturevideo_ogg_vorbis_quality.value, 10) * 0.099);
-			qvorbis_comment_init(&vc);
-			qvorbis_analysis_init(&format->vd, &format->vi);
-			qvorbis_block_init(&format->vd, &format->vb);
+			#ifdef CAP_OGG_OPUS
+			if (format->opus)
+			{
+				int err;
+				format->opus_encoder = opus_encoder_create(cls.capturevideo.soundrate, cls.capturevideo.soundchannels, OPUS_APPLICATION_AUDIO, &err);
+				format->opus_sample_size = cls.capturevideo.soundrate / 100;
+				format->opus_packetno = 2;
+				format->opus_last_granule = 0;
+				if (format->opus_sample_size * cls.capturevideo.soundchannels > OPUS_BUFFER_SIZE)
+					Sys_Error("SCR_CaptureVideo_Ogg_BeginVideo: Opus buffer size is not enough\n");
+				format->opus_buffer_len = 0;
+				if (!format->opus_encoder)
+					Sys_Error("SCR_CaptureVideo_Ogg_BeginVideo: Opus encoder creation error\n");
+				err = opus_encoder_ctl(format->opus_encoder, OPUS_SET_BITRATE(bound(32, cl_capturevideo_ogg_opus_bitrate.integer, 256) * 1000));
+				if (err)
+					Sys_Error("SCR_CaptureVideo_Ogg_BeginVideo: Opus bitrate setup failed\n");
+			}
+			else
+			#endif
+			{
+				qvorbis_info_init(&format->vi);
+				qvorbis_encode_init_vbr(&format->vi, cls.capturevideo.soundchannels, cls.capturevideo.soundrate, bound(-1, cl_capturevideo_ogg_vorbis_quality.value, 10) * 0.099);
+				qvorbis_comment_init(&vc);
+				qvorbis_analysis_init(&format->vd, &format->vi);
+				qvorbis_block_init(&format->vd, &format->vb);
+			}
 		}
 
 		qtheora_comment_init(&tc);
@@ -1071,17 +1201,76 @@ void SCR_CaptureVideo_Ogg_BeginVideo(void)
 
 		if(cls.capturevideo.soundrate)
 		{
-			qvorbis_analysis_headerout(&format->vd, &vc, &pt, &pt2, &pt3);
-			qogg_stream_packetin(&format->vo, &pt);
-			if (qogg_stream_pageout (&format->vo, &pg) != 1)
-				fprintf (stderr, "Internal Ogg library error.\n");
-			FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
-			FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+			#ifdef CAP_OGG_OPUS
+			if (format->opus)
+			{
+				unsigned char header_data[19];
+				header_data[0] = 'O';
+				header_data[1] = 'p';
+				header_data[2] = 'u';
+				header_data[3] = 's';
+				header_data[4] = 'H';
+				header_data[5] = 'e';
+				header_data[6] = 'a';
+				header_data[7] = 'd';
+				header_data[8] = 1; //Version
+				header_data[9] = cls.capturevideo.soundchannels; //Channels
+				header_data[10] = 0; //Preskip
+				header_data[11] = 0;
+				header_data[12] = (cls.capturevideo.soundrate >> 24) % 256; //Sample rate
+				header_data[13] = (cls.capturevideo.soundrate >> 16) % 256;
+				header_data[14] = (cls.capturevideo.soundrate >> 8) % 256;
+				header_data[15] = cls.capturevideo.soundrate % 256;
+				header_data[16] = 0; //Gain
+				header_data[17] = 0;
+				//header_data[18] = (cls.capturevideo.soundchannels > 8 ? 255 : cls.capturevideo.soundchannels > 2);
+				header_data[18] = 0; // stereo only yet
+				pt.packet = header_data;
+				pt.bytes = sizeof(header_data);
+				pt.b_o_s = 1;
+				pt.e_o_s = 0;
+				pt.granulepos = 0;
+				pt.packetno = 0;
+				qogg_stream_packetin(&format->vo, &pt);
+				if (qogg_stream_pageout (&format->vo, &pg) != 1)
+					Sys_Error("Internal Ogg library error.\n");
+				FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+				FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
+				header_data[0] = 'O';
+				header_data[1] = 'p';
+				header_data[2] = 'u';
+				header_data[3] = 's';
+				header_data[4] = 'T';
+				header_data[5] = 'a';
+				header_data[6] = 'g';
+				header_data[7] = 's';
+				header_data[8] = 0;
+				header_data[9] = 0;
+				header_data[10] = 0;
+				header_data[11] = 0;
+				pt.packet = header_data;
+				pt.bytes = 12;
+				pt.b_o_s = 0;
+				pt.e_o_s = 0;
+				pt.granulepos = 0;
+				pt.packetno = 1;
+				qogg_stream_packetin(&format->vo, &pt);
+			}
+			else
+			#endif
+			{
+				qvorbis_analysis_headerout(&format->vd, &vc, &pt, &pt2, &pt3);
+				qogg_stream_packetin(&format->vo, &pt);
+				if (qogg_stream_pageout (&format->vo, &pg) != 1)
+					fprintf (stderr, "Internal Ogg library error.\n");
+				FS_Write(cls.capturevideo.videofile, pg.header, pg.header_len);
+				FS_Write(cls.capturevideo.videofile, pg.body, pg.body_len);
 
-			qogg_stream_packetin(&format->vo, &pt2);
-			qogg_stream_packetin(&format->vo, &pt3);
+				qogg_stream_packetin(&format->vo, &pt2);
+				qogg_stream_packetin(&format->vo, &pt3);
 
-			qvorbis_comment_clear(&vc);
+				qvorbis_comment_clear(&vc);
+			}
 		}
 
 		for(;;)

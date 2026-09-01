@@ -68,7 +68,7 @@ The supported compilers are GCC and Clang.
 The following package names are for Debian, see below for Windows and Mac.
 
 ##### Client
-Build (mandatory): `build-essential` `libjpeg-dev` `libsdl2-dev`  
+Build (mandatory): `build-essential` `libjpeg-dev` `libsdl2-dev` `libopus-dev`  
 Runtime (optional): `libcurl` `libpng` `libfreetype6` `libvorbisfile`  
 
 ##### Dedicated Server
@@ -81,7 +81,7 @@ Runtime (optional): `libcurl` `libpng`
 2. Once you've installed MSYS2 and have fully updated it, open a MinGW64 terminal (***not an MSYS2 terminal***) and input the following command:
 
 ```
-pacman -S --needed gcc make mingw-w64-x86_64-{toolchain,libjpeg-turbo,libpng,libogg,libvorbis,SDL2}
+pacman -S --needed gcc make mingw-w64-x86_64-{toolchain,libjpeg-turbo,libpng,libogg,libvorbis,opus,SDL2}
 ```
 
 3. See [Unix instructions](#unix-(general)).
@@ -92,7 +92,7 @@ pacman -S --needed gcc make mingw-w64-x86_64-{toolchain,libjpeg-turbo,libpng,lib
 3. In the same (or a different terminal), input the following command:
 
 ```
-brew install sdl2 libjpeg-turbo libpng libvorbis curl
+brew install sdl2 libjpeg-turbo libpng libvorbis opus curl
 ```
 
 4. See [Unix instructions](#unix-(general)).

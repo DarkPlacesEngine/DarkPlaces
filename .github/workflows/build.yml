@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt update
-          apt install --yes build-essential git libjpeg-dev libsdl2-dev libcurl4-openssl-dev libpng-dev libfreetype-dev libvorbis-dev
+          apt install --yes build-essential git libjpeg-dev libsdl2-dev libcurl4-openssl-dev libpng-dev libfreetype-dev libvorbis-dev libopus-dev
 
       - name: Fetch repository
         uses: actions/checkout@v4.1.1

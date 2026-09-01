@@ -231,6 +231,9 @@ const char *vm_sv_extensions[] = {
 "TW_SV_STEPCONTROL",
 "ZQ_PAUSE",
 "DP_RM_CLIPGROUP",
+#ifdef CONFIG_VOIP
+"DP_RM_VOIP",
+#endif
 NULL
 //"EXT_CSQC" // not ready yet
 };

@@ -2617,6 +2617,19 @@ float MOVETYPE_USER_LAST = 191;
 //description:
 //If two entities have this field set to the same non-zero integer value, they won't collide with each other.
 
+//DP_RM_VOIP
+//idea: kasymovga
+//darkplaces implementation: kasymovga
+//field definitions:
+.float voipgroup;
+.float voiplistengroup;
+//The following functions may be defined to access VoIP from the VM:
+//float(float client) voip_event;
+//float(float client) voip_echo_test;
+//void(float on) voip_talk;
+//description:
+//voip feature.
+
 //idea: eukara
 //darkplaces implementation: Cloudwalk
 //Do NOT use in production yet. Uncomment if you intend to use it

@@ -23,6 +23,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "vid.h"
 
 #include "snd_main.h"
+#ifdef CONFIG_VOIP
+#include "snd_voip.h"
+static int audio_device_capture = 0;
+#endif
 
 
 static unsigned int sdlaudiotime = 0;
@@ -91,6 +95,69 @@ static void Buffer_Callback (void *userdata, Uint8 *stream, int len)
 	sdlaudiotime += RequestedFrames;
 }
 
+#ifdef CONFIG_VOIP
+static void Buffer_Capture_Callback (void *userdata, Uint8 *stream, int len)
+{
+	S_VOIP_Capture_Callback(stream, len);
+}
+
+static void Snd_OpenInputDevice(const char *name)
+{
+	SDL_AudioSpec wantspec;
+	SDL_AudioSpec obtainspec;
+	wantspec.callback = Buffer_Capture_Callback;
+	wantspec.userdata = NULL;
+	wantspec.freq = VOIP_FREQ;
+	wantspec.format = (VOIP_WIDTH == 2 ? AUDIO_S16SYS : AUDIO_U8);
+	wantspec.channels = VOIP_CHANNELS;
+	wantspec.samples = 2048;  // needs to be a power of 2 on some platforms.
+	S_VOIP_Stop(NULL);
+	S_Echo_Stop(NULL);
+	if ((audio_device_capture = SDL_OpenAudioDevice(name, 1, &wantspec, &obtainspec, 0)) == 0)
+	{
+		Con_Printf( "Failed to open the audio capture device! (%s)\n", SDL_GetError() );
+	}
+	else
+	{
+		Con_Printf("Obtained audio capture specification:\n"
+					"   Channels  : %i\n"
+					"   Format    : 0x%X\n"
+					"   Frequency : %i\n"
+					"   Samples   : %i\n",
+					obtainspec.channels, obtainspec.format, obtainspec.freq, obtainspec.samples);
+		SDL_PauseAudioDevice(audio_device_capture, 1);
+	}
+}
+
+static void Snd_ListInputDevices_f(cmd_state_t *cmd)
+{
+	int i, n;
+	n = SDL_GetNumAudioDevices(true);
+	for (i = 0; i < n; i++)
+	{
+		Con_Printf("%i: %s\n", i, SDL_GetAudioDeviceName(i, true));
+	}
+}
+
+static void Snd_SetInputDevice_f(cmd_state_t *cmd)
+{
+	int i;
+	const char *name;
+	if (Cmd_Argc(cmd) != 2)
+	{
+		Con_Printf("Usage: %s <device number>\n", Cmd_Argv(cmd, 0));
+		return;
+	}
+	i = atoi(Cmd_Argv(cmd, 1));
+	SDL_CloseAudioDevice(audio_device_capture);
+	name = SDL_GetAudioDeviceName(i, true);
+	if (!name)
+	{
+		Con_Printf("There is no device %i, use default input device. Check snd_list_input_devices for available devices\n", i);
+	}
+	Snd_OpenInputDevice(name);
+}
+#endif
 
 /*
 ====================
@@ -107,6 +174,11 @@ qbool SndSys_Init (snd_format_t* fmt)
 	SDL_AudioSpec obtainspec;
 
 	snd_threaded = false;
+
+	#ifdef CONFIG_VOIP
+	Cmd_AddCommand(CF_CLIENT, "snd_list_input_devices", Snd_ListInputDevices_f, "list input audio devices");
+	Cmd_AddCommand(CF_CLIENT, "snd_set_input_device", Snd_SetInputDevice_f, "set input audio device");
+	#endif
 
 	Con_DPrint ("SndSys_Init: using the SDL module\n");
 
@@ -151,6 +223,10 @@ qbool SndSys_Init (snd_format_t* fmt)
 	fmt->speed = obtainspec.freq;
 	fmt->channels = obtainspec.channels;
 
+	#ifdef CONFIG_VOIP
+	Snd_OpenInputDevice(NULL);
+	#endif
+
 	snd_threaded = true;
 
 	snd_renderbuffer = Snd_CreateRingBuffer(fmt, 0, NULL);
@@ -177,6 +253,13 @@ void SndSys_Shutdown(void)
 		SDL_CloseAudioDevice(audio_device);
 		audio_device = 0;
 	}
+	#ifdef CONFIG_VOIP
+	if (audio_device_capture > 0) {
+		S_VOIP_Stop(NULL);
+		SDL_CloseAudioDevice(audio_device_capture);
+		audio_device_capture = 0;
+	}
+	#endif
 	if (snd_renderbuffer != NULL)
 	{
 		Mem_Free(snd_renderbuffer->ring);
@@ -237,6 +320,69 @@ void SndSys_UnlockRenderBuffer (void)
 {
 	SDL_UnlockAudioDevice(audio_device);
 }
+
+#ifdef CONFIG_VOIP
+/*
+====================
+SndSys_LockCapture
+
+Get the exclusive lock on capture stream
+====================
+*/
+qbool SndSys_LockCapture (void)
+{
+	SDL_LockAudioDevice(audio_device_capture);
+	return true;
+}
+
+/*
+====================
+SndSys_UnlockCapture
+
+Release the exclusive lock on capture stream
+====================
+*/
+void SndSys_UnlockCapture (void)
+{
+	SDL_UnlockAudioDevice(audio_device_capture);
+}
+
+/*
+====================
+SndSys_PauseCapture
+
+Pause capture stream
+====================
+*/
+void SndSys_PauseCapture (void)
+{
+	SDL_PauseAudioDevice(audio_device_capture, true);
+}
+
+/*
+====================
+SndSys_UnpauseCapture
+
+Unpause capture stream
+====================
+*/
+void SndSys_UnpauseCapture (void)
+{
+	SDL_PauseAudioDevice(audio_device_capture, false);
+}
+
+/*
+====================
+SndSys_CaptureAvailable
+
+Indicate that capture is available
+====================
+*/
+qbool SndSys_CaptureAvailable (void)
+{
+	return audio_device_capture;
+}
+#endif
 
 /*
 ====================

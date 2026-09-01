@@ -29,6 +29,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "csprogs.h"
 #include "cl_collision.h"
 #include "cdaudio.h"
+#ifdef CONFIG_VOIP
+#include "snd_voip.h"
+#endif
 
 
 #define SND_MIN_SPEED 8000
@@ -165,6 +168,11 @@ spatialmethod_t spatialmethod;
 cvar_t bgmvolume = {CF_CLIENT | CF_ARCHIVE, "bgmvolume", "1", "volume of background music (such as CD music or replacement files such as sound/cdtracks/track002.ogg)"};
 cvar_t volume = {CF_CLIENT | CF_ARCHIVE, "volume", "0.7", "volume of sound effects"};
 cvar_t snd_initialized = {CF_CLIENT | CF_READONLY, "snd_initialized", "0", "indicates the sound subsystem is active"};
+#ifdef CONFIG_VOIP
+cvar_t voipvolume = {CF_CLIENT | CF_ARCHIVE, "voipvolume", "1", "volume of voip"};
+cvar_t snd_input_boost = {CF_CLIENT | CF_ARCHIVE, "snd_input_boost", "1", "Audio input boost"};
+cvar_t snd_input_boost_auto = {CF_CLIENT | CF_ARCHIVE, "snd_input_boost_auto", "1", "Audio input boost"};
+#endif
 
 // Cvars declared in snd_main.h (shared with other snd_*.c files)
 cvar_t snd_channellayout = {CF_CLIENT, "snd_channellayout", "0", "channel layout. Can be 0 (auto - snd_restart needed), 1 (standard layout), or 2 (ALSA layout)"};
@@ -706,6 +714,11 @@ S_Init
 void S_Init(void)
 {
 	Cvar_RegisterVariable(&volume);
+	#ifdef CONFIG_VOIP
+	Cvar_RegisterVariable(&voipvolume);
+	Cvar_RegisterVariable(&snd_input_boost);
+	Cvar_RegisterVariable(&snd_input_boost_auto);
+	#endif
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&mastervolume);
 	Cvar_RegisterVariable(&snd_staticvolume);
@@ -802,6 +815,13 @@ void S_Init(void)
 	Cmd_AddCommand(CF_CLIENT, "snd_restart", S_Restart_f, "restart sound system");
 	Cmd_AddCommand(CF_CLIENT, "snd_unloadallsounds", S_UnloadAllSounds_f, "unload all sound files");
 
+	#ifdef CONFIG_VOIP
+	Cmd_AddCommand(CF_CLIENT, "snd_echo_start", S_Echo_Start, "start microphone echo test");
+	Cmd_AddCommand(CF_CLIENT, "snd_echo_stop", S_Echo_Stop, "stop microphone echo test");
+	Cmd_AddCommand(CF_CLIENT, "+snd_voip_talk", S_VOIP_Start, "start voip");
+	Cmd_AddCommand(CF_CLIENT, "-snd_voip_talk", S_VOIP_Stop, "stop voip");
+	#endif
+
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
 	Cvar_RegisterVariable(&snd_initialized);
@@ -851,6 +871,9 @@ void S_Terminate (void)
 	while (known_sfx != NULL)
 		S_FreeSfx (known_sfx, true);
 
+#ifdef CONFIG_VOIP
+	S_VOIP_Shutdown();
+#endif
 	Cvar_SetValueQuick (&snd_initialized, false);
 	Mem_FreePool (&snd_mempool);
 }
@@ -1316,6 +1339,10 @@ static void SND_Spatialize_WithSfx(channel_t *ch, qbool isstatic, sfx_t *sfx)
 	// If this channel does not manage its own volume (like CD tracks)
 	if (!(ch->flags & CHANNELFLAG_FULLVOLUME))
 		mastervol *= volume.value;
+	#ifdef CONFIG_VOIP
+	else if (sfx && (sfx->flags & SFXFLAG_VOIP))
+		mastervol *= voipvolume.value;
+	#endif
 
 	if(snd_maxchannelvolume.value > 0)
 	{

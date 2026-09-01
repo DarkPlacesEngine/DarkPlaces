@@ -2388,6 +2388,16 @@ static int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		// we're done processing this packet now
 		return true;
 	}
+	// VOIP networking intentionally NOT implemented here.
+	// Maintainer feedback: raw UDP packets with a "VOIP" magic-byte header
+	// bypass the protocol layer's serialization, demo recording, and sanity
+	// checks - it's a parallel mini-protocol living outside the Quake
+	// protocol state machine.
+	// TODO for whoever continues this: implement via netmessages (client<->
+	// server) following the pattern FTE/Source/GoldSrc use, not a raw magic-
+	// byte packet. S_VOIP_Received() in snd_voip.c already does the decode/
+	// playback side and is reusable once packets arrive through the normal
+	// message parsing path instead of being sniffed here.
 	// quakeworld ingame packet
 	if (fromserver && cls.protocol == PROTOCOL_QUAKEWORLD && length >= 8 && (ret = NetConn_ReceivedMessage(cls.netcon, data, length, cls.protocol, net_messagetimeout.value)) == 2)
 	{
@@ -3569,6 +3579,12 @@ static int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, unsigned char *dat
 		// we're done processing this packet now
 		return true;
 	}
+	// VOIP networking intentionally NOT implemented here (see matching
+	// comment in NetConn_ClientParsePacket). The relay-to-listening-clients
+	// logic that used to live in this branch (grouping via voipgroup /
+	// voiplistengroup, sv_voip_force, sv_voip_echo, and the voip_event QC
+	// callback) is reusable once voice data arrives as a proper netmessage
+	// instead of being sniffed off the raw socket via NetConn_Write().
 	// netquake control packets, supported for compatibility only, and only
 	// when running game protocols that are normally served via this connection
 	// protocol

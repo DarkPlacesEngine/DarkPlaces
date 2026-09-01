@@ -13,6 +13,7 @@
 		28FD15080DC6FC5B0079059D /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28FD15070DC6FC5B0079059D /* QuartzCore.framework */; };
 		74063A3E1751ADDB0015D12C /* mod_skeletal_animatevertices_sse.c in Sources */ = {isa = PBXBuildFile; fileRef = 74063A3C1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.c */; };
 		74063A421751B0AF0015D12C /* clvm_cmds.c in Sources */ = {isa = PBXBuildFile; fileRef = 74063A411751B0AF0015D12C /* clvm_cmds.c */; };
+		7463B7F612F9CE6B00983F6A /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7463B7F512F9CE6B00983F6A /* libopus.a */; };
 		74063A491751B9B60015D12C /* libSDL2-ios-armv7.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74063A471751B9B60015D12C /* libSDL2-ios-armv7.a */; };
 		74063A4A1751B9B60015D12C /* libSDL2-ios-simulator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74063A481751B9B60015D12C /* libSDL2-ios-simulator.a */; };
 		74063A511751C4560015D12C /* gamedata in Resources */ = {isa = PBXBuildFile; fileRef = 74063A501751C4560015D12C /* gamedata */; };
@@ -87,6 +88,7 @@
 		7463B7BF12F9CE6B00983F6A /* snd_mix.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75512F9CE6B00983F6A /* snd_mix.c */; };
 		7463B7C112F9CE6B00983F6A /* snd_ogg.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75812F9CE6B00983F6A /* snd_ogg.c */; };
 		7463B7C212F9CE6B00983F6A /* snd_sdl.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75A12F9CE6B00983F6A /* snd_sdl.c */; };
+		7463B7F412F9CE6B00983F6A /* snd_voip.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B7F112F9CE6B00983F6A /* snd_voip.c */; };
 		7463B7C312F9CE6B00983F6A /* snd_wav.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75B12F9CE6B00983F6A /* snd_wav.c */; };
 		7463B7C412F9CE6B00983F6A /* sv_demo.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B75F12F9CE6B00983F6A /* sv_demo.c */; };
 		7463B7C512F9CE6B00983F6A /* sv_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 7463B76112F9CE6B00983F6A /* sv_main.c */; };
@@ -122,6 +124,7 @@
 		74063A3C1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mod_skeletal_animatevertices_sse.c; sourceTree = "<group>"; };
 		74063A3D1751ADDA0015D12C /* mod_skeletal_animatevertices_sse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mod_skeletal_animatevertices_sse.h; sourceTree = "<group>"; };
 		74063A411751B0AF0015D12C /* clvm_cmds.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = clvm_cmds.c; sourceTree = "<group>"; };
+		7463B7F512F9CE6B00983F6A /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = "lib/libopus.a"; sourceTree = "<group>"; };
 		74063A471751B9B60015D12C /* libSDL2-ios-armv7.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSDL2-ios-armv7.a"; path = "lib/libSDL2-ios-armv7.a"; sourceTree = "<group>"; };
 		74063A481751B9B60015D12C /* libSDL2-ios-simulator.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSDL2-ios-simulator.a"; path = "lib/libSDL2-ios-simulator.a"; sourceTree = "<group>"; };
 		74063A501751C4560015D12C /* gamedata */ = {isa = PBXFileReference; lastKnownFileType = folder; path = gamedata; sourceTree = "<group>"; };
@@ -272,6 +275,8 @@
 		7463B75812F9CE6B00983F6A /* snd_ogg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_ogg.c; sourceTree = "<group>"; };
 		7463B75912F9CE6B00983F6A /* snd_ogg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_ogg.h; sourceTree = "<group>"; };
 		7463B75A12F9CE6B00983F6A /* snd_sdl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_sdl.c; sourceTree = "<group>"; };
+		7463B7F112F9CE6B00983F6A /* snd_voip.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_voip.c; sourceTree = "<group>"; };
+		7463B7F212F9CE6B00983F6A /* snd_voip.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_voip.h; sourceTree = "<group>"; };
 		7463B75B12F9CE6B00983F6A /* snd_wav.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = snd_wav.c; sourceTree = "<group>"; };
 		7463B75C12F9CE6B00983F6A /* snd_wav.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = snd_wav.h; sourceTree = "<group>"; };
 		7463B75D12F9CE6B00983F6A /* sound.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sound.h; sourceTree = "<group>"; };
@@ -322,6 +327,7 @@
 				FD779EDE0E26BA1200F39101 /* CoreAudio.framework in Frameworks */,
 				FD77A0850E26BDB800F39101 /* AudioToolbox.framework in Frameworks */,
 				FDB8BFC60E5A0F6A00980157 /* CoreGraphics.framework in Frameworks */,
+				7463B7F612F9CE6B00983F6A /* libopus.a in Frameworks */,
 				74063A491751B9B60015D12C /* libSDL2-ios-armv7.a in Frameworks */,
 				74063A4A1751B9B60015D12C /* libSDL2-ios-simulator.a in Frameworks */,
 			);
@@ -506,6 +512,8 @@
 				7463B75A12F9CE6B00983F6A /* snd_sdl.c */,
 				7463B75B12F9CE6B00983F6A /* snd_wav.c */,
 				7463B75C12F9CE6B00983F6A /* snd_wav.h */,
+				7463B7F112F9CE6B00983F6A /* snd_voip.c */,
+				7463B7F212F9CE6B00983F6A /* snd_voip.h */,
 				7463B75D12F9CE6B00983F6A /* sound.h */,
 				7463B75E12F9CE6B00983F6A /* spritegn.h */,
 				7463B75F12F9CE6B00983F6A /* sv_demo.c */,
@@ -565,6 +573,7 @@
 		FD779EC50E26B99E00F39101 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
+				7463B7F512F9CE6B00983F6A /* libopus.a */,
 				74063A471751B9B60015D12C /* libSDL2-ios-armv7.a */,
 				74063A481751B9B60015D12C /* libSDL2-ios-simulator.a */,
 			);
@@ -706,6 +715,7 @@
 				7463B7BF12F9CE6B00983F6A /* snd_mix.c in Sources */,
 				7463B7C112F9CE6B00983F6A /* snd_ogg.c in Sources */,
 				7463B7C212F9CE6B00983F6A /* snd_sdl.c in Sources */,
+				7463B7F412F9CE6B00983F6A /* snd_voip.c in Sources */,
 				7463B7C312F9CE6B00983F6A /* snd_wav.c in Sources */,
 				7463B7C412F9CE6B00983F6A /* sv_demo.c in Sources */,
 				7463B7C512F9CE6B00983F6A /* sv_main.c in Sources */,
@@ -745,6 +755,7 @@
 				GCC_PREFIX_HEADER = "";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					__IPHONEOS__,
+					CONFIG_VOIP,
 					USE_GLES2,
 					"FORCEGAME=\\\"steelstorm\\\"",
 					"DP_FS_BASEDIR=\\\"\\\"",
@@ -771,6 +782,7 @@
 				GCC_PREFIX_HEADER = "";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					__IPHONEOS__,
+					CONFIG_VOIP,
 					USE_GLES2,
 					"FORCEGAME=\\\"steelstorm\\\"",
 					"DP_FS_BASEDIR=\\\"\\\"",
@@ -801,6 +813,7 @@
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-ObjC",
+					"-lopus",
 					"-lz",
 				);
 				PRODUCT_NAME = Darkplaces;
@@ -822,6 +835,7 @@
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = (
 					"-ObjC",
+					"-lopus",
 					"-lz",
 				);
 				PRODUCT_NAME = Darkplaces;
