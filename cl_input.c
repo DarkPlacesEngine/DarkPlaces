@@ -440,21 +440,21 @@ static void CL_AdjustAngles (void)
 
 	if (!(in_strafe.state & 1))
 	{
-		cl.viewangles[YAW] -= speed*cl_yawspeed.value*CL_KeyState (&in_right);
-		cl.viewangles[YAW] += speed*cl_yawspeed.value*CL_KeyState (&in_left);
+		cl.viewangles[YAW] -= speed * cl_yawspeed.value * CL_KeyState (&in_right) * (v_flipped.integer ? -1 : 1);
+		cl.viewangles[YAW] += speed * cl_yawspeed.value * CL_KeyState (&in_left) * (v_flipped.integer ? -1 : 1);
 	}
 	if (in_klook.state & 1)
 	{
 		V_StopPitchDrift ();
-		cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * CL_KeyState (&in_forward);
-		cl.viewangles[PITCH] += speed*cl_pitchspeed.value * CL_KeyState (&in_back);
+		cl.viewangles[PITCH] -= speed * cl_pitchspeed.value * CL_KeyState (&in_forward);
+		cl.viewangles[PITCH] += speed * cl_pitchspeed.value * CL_KeyState (&in_back);
 	}
 
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
 
-	cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * up;
-	cl.viewangles[PITCH] += speed*cl_pitchspeed.value * down;
+	cl.viewangles[PITCH] -= speed * cl_pitchspeed.value * up;
+	cl.viewangles[PITCH] += speed * cl_pitchspeed.value * down;
 
 	if (up || down)
 		V_StopPitchDrift ();
