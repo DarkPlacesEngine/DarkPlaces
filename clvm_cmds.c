@@ -1861,7 +1861,7 @@ void VM_drawrotpic(prvm_prog_t *prog)
 =========
 VM_drawsubpic
 
-float	drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, float flag)
+float drawsubpic(vector position, vector size, string pic, vector srcPos, vector srcSize, vector rgb, float alpha, optional float flag)
 
 =========
 */
@@ -1871,7 +1871,7 @@ void VM_drawsubpic(prvm_prog_t *prog)
 	prvm_vec_t *size, *pos, *rgb, *srcPos, *srcSize, alpha;
 	int flag;
 
-	VM_SAFEPARMCOUNT(8,VM_drawsubpic);
+	VM_SAFEPARMCOUNTRANGE(7, 8, VM_drawsubpic);
 
 	// polygonbegin without draw2d arg has to guess
 	prog->polygonbegin_guess2d = true;
@@ -1893,7 +1893,7 @@ void VM_drawsubpic(prvm_prog_t *prog)
 	srcSize = PRVM_G_VECTOR(OFS_PARM4);
 	rgb = PRVM_G_VECTOR(OFS_PARM5);
 	alpha = PRVM_G_FLOAT(OFS_PARM6);
-	flag = (int) PRVM_G_FLOAT(OFS_PARM7);
+	flag = (prog->argc >= 8) ? (int) PRVM_G_FLOAT(OFS_PARM7) : 0;
 
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
