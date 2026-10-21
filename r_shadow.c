@@ -2546,6 +2546,11 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 						for (pixelband = 0, bandindex = index;pixelband < pixelbands;pixelband++, bandindex += pixelsperband)
 						{
 							// time to have fun with IEEE 754 bit hacking...
+							// convert float to half, approximately this means
+							// shifting right by 13 (13 fewer mantissa bits),
+							// and subtracting 112 from the exponent (3 fewer
+							// exponent bits, so the bias goes from +127 to +15)
+							// and shifting the sign bit right 16.
 							union {
 								float f[4];
 								unsigned int raw[4];
@@ -2555,15 +2560,10 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 							VectorCopy4(bandpixel, u.f);
 							VectorCopy4(u.raw, c);
 							// this math supports negative numbers, snaps denormals to zero
-							//pixelrgba16f[0] = (unsigned short)(((c[0] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[0] - 0x38000000) >> 13) & 0x7FFF) | ((c[0] >> 16) & 0x8000));
-							//pixelrgba16f[1] = (unsigned short)(((c[1] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[1] - 0x38000000) >> 13) & 0x7FFF) | ((c[1] >> 16) & 0x8000));
-							//pixelrgba16f[2] = (unsigned short)(((c[2] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[2] - 0x38000000) >> 13) & 0x7FFF) | ((c[2] >> 16) & 0x8000));
-							//pixelrgba16f[3] = (unsigned short)(((c[3] & 0x7FFFFFFF) < 0x38000000) ? 0 : (((c[3] - 0x38000000) >> 13) & 0x7FFF) | ((c[3] >> 16) & 0x8000));
-							// this math does not support negative
-							pixelrgba16f[0] = (unsigned short)((c[0] < 0x38000000) ? 0 : ((c[0] - 0x38000000) >> 13));
-							pixelrgba16f[1] = (unsigned short)((c[1] < 0x38000000) ? 0 : ((c[1] - 0x38000000) >> 13));
-							pixelrgba16f[2] = (unsigned short)((c[2] < 0x38000000) ? 0 : ((c[2] - 0x38000000) >> 13));
-							pixelrgba16f[3] = (unsigned short)((c[3] < 0x38000000) ? 0 : ((c[3] - 0x38000000) >> 13));
+							pixelrgba16f[0] = (unsigned short)(((c[0] & 0x7FFFFFFF) < 0x38800000) ? 0 : ((c[0] - 0x38000000) >> 13) | ((c[0] >> 16) & 0x8000));
+							pixelrgba16f[1] = (unsigned short)(((c[1] & 0x7FFFFFFF) < 0x38800000) ? 0 : ((c[1] - 0x38000000) >> 13) | ((c[1] >> 16) & 0x8000));
+							pixelrgba16f[2] = (unsigned short)(((c[2] & 0x7FFFFFFF) < 0x38800000) ? 0 : ((c[2] - 0x38000000) >> 13) | ((c[2] >> 16) & 0x8000));
+							pixelrgba16f[3] = (unsigned short)(((c[3] & 0x7FFFFFFF) < 0x38800000) ? 0 : ((c[3] - 0x38000000) >> 13) | ((c[3] >> 16) & 0x8000));
 						}
 					}
 				}
