@@ -2052,6 +2052,18 @@ static int FS_ChooseUserDir(userdirmode_t userdirmode, char *userdir, size_t use
 		if(homedir)
 		{
 			dpsnprintf(userdir, userdirsize, "%s/.%s/", homedir, gameuserdirname);
+#if defined(__unix__) || defined(__unix)
+			// Check for darkplaces config paths in this order: ~/.darkplaces, XDG_CONFIG_HOME/darkplaces, ~/.config/darkplaces.
+			if(access(userdir, F_OK) != 0)
+			{
+				// Check if XDG_CONFIG_HOME exists, test if absolute path.
+				const char *xdgconfdir = getenv("XDG_CONFIG_HOME");
+				if(xdgconfdir && xdgconfdir[0] == '/')
+					dpsnprintf(userdir, userdirsize, "%s/%s/", xdgconfdir, gameuserdirname);
+				else
+					dpsnprintf(userdir, userdirsize, "%s/.config/%s/", homedir, gameuserdirname);
+			}
+#endif
 			break;
 		}
 		return -1;
