@@ -8,10 +8,9 @@ on:
   pull_request:
 
 jobs:
-  sdl-release:
+  linux-sdl-release:
     runs-on: ubuntu-latest
-    container:
-      image: debian:latest
+    container: debian:latest
     steps:
       # Must install git before checking out the repo otherwise github doesn't fetch the .git directory.
       - name: Install dependencies
@@ -20,10 +19,11 @@ jobs:
           apt install --yes build-essential git libjpeg-dev libsdl2-dev libcurl4-openssl-dev libpng-dev libfreetype-dev libvorbis-dev
 
       - name: Fetch repository
-        uses: actions/checkout@v4.1.1
+        uses: actions/checkout@v6
         with:
           # make `git describe` show the correct commit hash
           fetch-depth: '0'
+          persist-credentials: false
 
       - name: Compile
         run: |
@@ -41,3 +41,42 @@ jobs:
           name: Linux
           path: |
             darkplaces-sdl
+
+  windows-sdl-release:
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-libogg
+            mingw-w64-ucrt-x86_64-libvorbis
+            mingw-w64-ucrt-x86_64-SDL2
+
+      - name: Build
+        run: |
+          make sdl-release
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows
+          path: |
+            darkplaces-sdl.exe
