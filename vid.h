@@ -104,6 +104,9 @@ typedef struct vid_joystate_s
 	float axis[MAXJOYAXIS]; ///< -1 to +1
 	unsigned char button[MAXJOYBUTTON]; ///< 0 or 1
 	qbool is360; ///< indicates this joystick is a Microsoft Xbox 360 Controller For Windows
+	float gyro_velocity_pitch; ///< deg/s
+	float gyro_velocity_yaw; ///< deg/s
+	float gyro_velocity_roll; //< deg/s NOTE: currently not used
 }
 vid_joystate_t;
 

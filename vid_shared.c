@@ -123,6 +123,13 @@ cvar_t joy_x360_sensitivityup = {CF_CLIENT, "joy_x360_sensitivityup", "1", "move
 cvar_t joy_x360_sensitivitypitch = {CF_CLIENT, "joy_x360_sensitivitypitch", "-1", "movement multiplier"};
 cvar_t joy_x360_sensitivityyaw = {CF_CLIENT, "joy_x360_sensitivityyaw", "-1", "movement multiplier"};
 cvar_t joy_x360_sensitivityroll = {CF_CLIENT, "joy_x360_sensitivityroll", "1", "movement multiplier"};
+cvar_t joy_gyro_enable = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_enable", "1", "enable gyro controls"};
+cvar_t joy_gyro_sensitivitypitch = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_sensitivitypitch", "1", "Sensitivity for gyro pitch to influence aim"};
+cvar_t joy_gyro_sensitivityyaw = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_sensitivityyaw", "1", "Sensitivity for gyro yaw to influence aim"};
+// cvar_t joy_gyro_sensitivityroll = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_sensitivityroll", "1", "Sensitivity for gyro roll to influence aim"};
+cvar_t joy_gyro_callibrationoffset_pitch = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_callibrationoffset_pitch", "0", "Callibration offset for gyro pitch (deg/s)"};
+cvar_t joy_gyro_callibrationoffset_yaw = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_callibrationoffset_yaw", "0", "Callibration offset for gyro yaw (deg/s)"};
+// cvar_t joy_gyro_callibrationoffset_roll = {CF_ARCHIVE | CF_CLIENT, "joy_gyro_callibrationoffset_roll", "0", "Callibration offset for gyro roll (deg/s)"};
 
 // VorteX: more info cvars, mostly set in VID_CheckExtensions
 cvar_t gl_info_vendor = {CF_CLIENT | CF_READONLY, "gl_info_vendor", "", "indicates brand of graphics chip"};
@@ -1049,6 +1056,14 @@ void VID_ApplyJoyState(vid_joystate_t *joystate)
 		cl.viewangles[0]   += VID_JoyState_GetAxis(joystate, joy_axispitch.integer, joy_sensitivitypitch.value, joy_deadzonepitch.value) * cl.realframetime * cl_pitchspeed.value;
 		cl.viewangles[1]   += VID_JoyState_GetAxis(joystate, joy_axisyaw.integer, joy_sensitivityyaw.value, joy_deadzoneyaw.value) * cl.realframetime * cl_yawspeed.value;
 		//cl.viewangles[2]   += VID_JoyState_GetAxis(joystate, joy_axisroll.integer, joy_sensitivityroll.value, joy_deadzoneroll.value) * cl.realframetime * cl_rollspeed.value;
+
+		// gyro
+		if (joy_gyro_enable.integer >= 1)
+		{
+			cl.viewangles[0] += (joystate->gyro_velocity_pitch - joy_gyro_callibrationoffset_pitch.value) * cl.realframetime * joy_gyro_sensitivitypitch.value;
+			cl.viewangles[1] += (joystate->gyro_velocity_yaw - joy_gyro_callibrationoffset_yaw.value) * cl.realframetime * joy_gyro_sensitivityyaw.value;
+			// cl.viewangles[2] += (joystate->gyro_velocity_roll - joy_gyro_callibrationoffset_roll.value) * cl.realframetime * joy_gyro_sensitivityroll.value;
+		}
 	}
 
 	vid_joystate = *joystate;
@@ -1091,6 +1106,16 @@ int VID_Shared_SetJoystick(int index)
 static void Force_CenterView_f(cmd_state_t *cmd)
 {
 	cl.viewangles[PITCH] = 0;
+}
+
+static void VID_DisableGyro_f(cmd_state_t *cmd)
+{
+	joy_gyro_enable.integer = 0;
+}
+
+static void VID_EnableGyro_f(cmd_state_t *cmd)
+{
+	joy_gyro_enable.integer = 1;
 }
 
 static int gamma_forcenextframe = false;
@@ -1375,6 +1400,13 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&joy_x360_sensitivitypitch);
 	Cvar_RegisterVariable(&joy_x360_sensitivityyaw);
 	//Cvar_RegisterVariable(&joy_x360_sensitivityroll);
+	Cvar_RegisterVariable(&joy_gyro_enable);
+	Cvar_RegisterVariable(&joy_gyro_sensitivitypitch);
+	Cvar_RegisterVariable(&joy_gyro_sensitivityyaw);
+	// Cvar_RegisterVariable(&joy_gyro_sensitivityroll);
+	Cvar_RegisterVariable(&joy_gyro_callibrationoffset_pitch);
+	Cvar_RegisterVariable(&joy_gyro_callibrationoffset_yaw);
+	// Cvar_RegisterVariable(&joy_gyro_callibrationoffset_roll);
 
 #ifdef WIN32
 	Sys_LoadDependency(xinputdllnames, &xinputdll_dll, xinputdllfuncs);
@@ -1382,6 +1414,9 @@ void VID_Shared_Init(void)
 
 	Cmd_AddCommand(CF_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand(CF_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+
+	Cmd_AddCommand(CF_CLIENT, "+nogyro", VID_DisableGyro_f, "disable gyro");
+	Cmd_AddCommand(CF_CLIENT, "-nogyro", VID_EnableGyro_f, "enable gyro");
 }
 
 /// NULL mode means read it from the cvars
