@@ -1108,6 +1108,16 @@ static void Force_CenterView_f(cmd_state_t *cmd)
 	cl.viewangles[PITCH] = 0;
 }
 
+static void VID_DisableGyro_f(cmd_state_t *cmd)
+{
+	joy_gyro_enable.integer = 0;
+}
+
+static void VID_EnableGyro_f(cmd_state_t *cmd)
+{
+	joy_gyro_enable.integer = 1;
+}
+
 static int gamma_forcenextframe = false;
 static float cachegamma, cachebrightness, cachecontrast, cacheblack[3], cachegrey[3], cachewhite[3], cachecontrastboost;
 static int cachecolorenable;
@@ -1404,6 +1414,9 @@ void VID_Shared_Init(void)
 
 	Cmd_AddCommand(CF_CLIENT, "force_centerview", Force_CenterView_f, "recenters view (stops looking up/down)");
 	Cmd_AddCommand(CF_CLIENT, "vid_restart", VID_Restart_f, "restarts video system (closes and reopens the window, restarts renderer)");
+
+	Cmd_AddCommand(CF_CLIENT, "+nogyro", VID_DisableGyro_f, "disable gyro");
+	Cmd_AddCommand(CF_CLIENT, "-nogyro", VID_EnableGyro_f, "enable gyro");
 }
 
 /// NULL mode means read it from the cvars
