@@ -523,7 +523,7 @@ skinframe_t *R_SkinFrame_LoadInternalUsingTexture(const char *name, int texturef
 
 rtexture_t *R_GetCubemap(const char *basename);
 
-cvar_t r_vis_bouncevis;
+extern cvar_t r_vis_bouncevis;
 void R_View_WorldVisibility_NewFrame(void);
 void R_BounceVis(unsigned int newrays, unsigned int bounces, vec3_t vieworigin, vec_t scatter, vec_t minradius, vec_t maxradius, vec3_t vismins, vec3_t vismaxs, int skipmaterialflagsmask, qbool ortho, qbool frustum);
 
