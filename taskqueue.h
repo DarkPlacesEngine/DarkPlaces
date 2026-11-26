@@ -4,14 +4,15 @@
 
 #include <stddef.h>
 #include "qtypes.h"
+#include "thread.h"
 
 typedef struct taskqueue_task_s
 {
 	// if not NULL, this task must be done before this one will dequeue (faster than simply calling TaskQueue_Yield immediately)
 	struct taskqueue_task_s *preceding;
 
-	// use TaskQueue_IsDone() to poll done status
-	volatile int done;
+	// use TaskQueue_IsDone() to poll done status, and TaskQueue_SetDone() to set it
+	Thread_Atomic done;
 
 	// function to call, and parameters for it to use
 	void(*func)(struct taskqueue_task_s *task);
@@ -31,6 +32,9 @@ void TaskQueue_Yield(taskqueue_task_t *t);
 
 // polls for status of task and returns the result, does not cause tasks to be executed (see TaskQueue_WaitForTaskDone for that)
 qbool TaskQueue_IsDone(taskqueue_task_t *t);
+
+// marks the task as done (call this at the end of the task function), other threads will see everything the task wrote before they see the done status
+void TaskQueue_SetDone(taskqueue_task_t *t);
 
 // triggers execution of queued tasks, and waits for the specified task to be done
 void TaskQueue_WaitForTaskDone(taskqueue_task_t *t);

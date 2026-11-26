@@ -10,16 +10,26 @@ cvar_t taskqueue_tasksperthread = {CF_CLIENT | CF_SERVER | CF_ARCHIVE, "taskqueu
 #define THREADTASKS 256 // thread can hold this many tasks in its own queue
 #define THREADBATCH 64 // thread will run this many tasks before checking status again
 #define THREADSLEEPCOUNT 1000 // thread will sleep for a little while if it checks this many times and has no work to do
+#define CACHELINESIZE 128 // largest cache line size of the supported platforms (POWER and Apple ARM64 use 128, most others 64)
 
 typedef struct taskqueue_state_thread_s
 {
 	void *handle;
-	unsigned int quit;
 	unsigned int thread_index;
+
+	// these are written by the distributor (while holding command_lock)
+	unsigned int quit;
+	Thread_Atomic enqueueposition;
+
+	// keep the thread's own writes off the cache line the distributor writes to
+	unsigned char padding1[CACHELINESIZE];
+
+	// these are written by the thread
+	Thread_Atomic dequeueposition;
 	unsigned int tasks_completed;
 
-	unsigned int enqueueposition;
-	unsigned int dequeueposition;
+	unsigned char padding2[CACHELINESIZE];
+
 	taskqueue_task_t *queue[THREADTASKS];
 }
 taskqueue_state_thread_t;
@@ -66,7 +76,7 @@ void TaskQueue_Shutdown(void)
 static void TaskQueue_ExecuteTask(taskqueue_task_t *t)
 {
 	// see if t is waiting on something
-	if (t->preceding && t->preceding->done == 0)
+	if (t->preceding && !TaskQueue_IsDone(t->preceding))
 		TaskQueue_Yield(t);
 	else
 		t->func(t);
@@ -77,16 +87,19 @@ static void TaskQueue_ExecuteTask(taskqueue_task_t *t)
 static int TaskQueue_ThreadFunc(void *d)
 {
 	taskqueue_state_thread_t *s = (taskqueue_state_thread_t *)d;
+	unsigned int dequeueposition = (unsigned int)Thread_AtomicGet(&s->dequeueposition);
 	unsigned int sleepcounter = 0;
 	for (;;)
 	{
 		qbool quit;
-		while (s->dequeueposition != s->enqueueposition)
+		while (dequeueposition != (unsigned int)Thread_AtomicGet(&s->enqueueposition))
 		{
-			taskqueue_task_t *t = s->queue[s->dequeueposition % THREADTASKS];
+			taskqueue_task_t *t = s->queue[dequeueposition % THREADTASKS];
 			TaskQueue_ExecuteTask(t);
 			// when we advance, also clear the pointer for good measure
-			s->queue[s->dequeueposition++ % THREADTASKS] = NULL;
+			s->queue[dequeueposition++ % THREADTASKS] = NULL;
+			// Add rather than Set because we need a full barrier here (see TaskQueue_DistributeTasks)
+			Thread_AtomicAdd(&s->dequeueposition, 1);
 			sleepcounter = 0;
 		}
 		Thread_AtomicLock(&taskqueue_state.command_lock);
@@ -138,19 +151,27 @@ void TaskQueue_Yield(taskqueue_task_t *t)
 
 qbool TaskQueue_IsDone(taskqueue_task_t *t)
 {
-	return !!t->done;
+	return Thread_AtomicGet(&t->done) != 0;
+}
+
+void TaskQueue_SetDone(taskqueue_task_t *t)
+{
+	// Add rather than Set because we need a full barrier here: on weakly ordered CPUs (POWER, ARM)
+	// another thread must not see the done status before it can see the results the task wrote
+	Thread_AtomicAdd(&t->done, 1);
 }
 
 static void TaskQueue_DistributeTasks(void)
 {
+	taskqueue_task_t *t;
 	Thread_AtomicLock(&taskqueue_state.command_lock);
 	if (taskqueue_state.numthreads > 0)
 	{
 		unsigned int attempts = taskqueue_state.numthreads;
 		while (attempts-- > 0 && taskqueue_state.queue_enqueueposition != taskqueue_state.queue_dequeueposition)
 		{
-			taskqueue_task_t *t = taskqueue_state.queue_data[taskqueue_state.queue_dequeueposition];
-			if (t->preceding && t->preceding->done == 0)
+			t = taskqueue_state.queue_data[taskqueue_state.queue_dequeueposition];
+			if (t->preceding && !TaskQueue_IsDone(t->preceding))
 			{
 				// task is waiting on something
 				// first dequeue it properly
@@ -168,10 +189,14 @@ static void TaskQueue_DistributeTasks(void)
 			else
 			{
 				taskqueue_state_thread_t *s = &taskqueue_state.threads[taskqueue_state.enqueuethread];
-				if (s->enqueueposition - s->dequeueposition < THREADTASKS)
+				unsigned int enqueueposition = (unsigned int)Thread_AtomicGet(&s->enqueueposition);
+				if (enqueueposition - (unsigned int)Thread_AtomicGet(&s->dequeueposition) < THREADTASKS)
 				{
 					// add the task to the thread's queue
-					s->queue[(s->enqueueposition++) % THREADTASKS] = t;
+					// the thread reads its queue without holding command_lock, so the task pointer has to be visible to it before the new enqueueposition is,
+					// Add rather than Set because Set is not a full barrier in some implementations
+					s->queue[enqueueposition % THREADTASKS] = t;
+					Thread_AtomicAdd(&s->enqueueposition, 1);
 					// since we succeeded in assigning the task, advance the distributor queue
 					taskqueue_state.queue_data[taskqueue_state.queue_dequeueposition] = NULL;
 					taskqueue_state.queue_dequeueposition++;
@@ -183,31 +208,25 @@ static void TaskQueue_DistributeTasks(void)
 			}
 		}
 	}
-	Thread_AtomicUnlock(&taskqueue_state.command_lock);
 	// execute one pending task on the distributor queue, this matters if numthreads is 0
+	// (dequeue it while we still hold the lock, because threads can enqueue tasks which may move queue_data)
+	t = NULL;
 	if (taskqueue_state.queue_dequeueposition != taskqueue_state.queue_enqueueposition)
 	{
-		taskqueue_task_t *t = taskqueue_state.queue_data[taskqueue_state.queue_dequeueposition];
+		t = taskqueue_state.queue_data[taskqueue_state.queue_dequeueposition];
 		taskqueue_state.queue_dequeueposition++;
 		if (taskqueue_state.queue_dequeueposition >= taskqueue_state.queue_size)
 			taskqueue_state.queue_dequeueposition = 0;
-		if (t)
-			TaskQueue_ExecuteTask(t);
 	}
+	Thread_AtomicUnlock(&taskqueue_state.command_lock);
+	if (t)
+		TaskQueue_ExecuteTask(t);
 }
 
 void TaskQueue_WaitForTaskDone(taskqueue_task_t *t)
 {
-	qbool done = false;
-	for (;;)
-	{
-		Thread_AtomicLock(&taskqueue_state.command_lock);
-		done = t->done != 0;
-		Thread_AtomicUnlock(&taskqueue_state.command_lock);
-		if (done)
-			break;
+	while (!TaskQueue_IsDone(t))
 		TaskQueue_DistributeTasks();
-	}
 }
 
 void TaskQueue_Frame(qbool shutdown)
@@ -297,7 +316,7 @@ void TaskQueue_Task_CheckTasksDone(taskqueue_task_t *t)
 	while (numtasks > 0)
 	{
 		// check the last task first as it's usually going to be the last to finish, so we do the least work by checking it first
-		if (!tasks[numtasks - 1].done)
+		if (!TaskQueue_IsDone(&tasks[numtasks - 1]))
 		{
 			// update our partial progress, then yield to another pending task.
 			t->i[0] = numtasks;
@@ -308,5 +327,5 @@ void TaskQueue_Task_CheckTasksDone(taskqueue_task_t *t)
 		}
 		numtasks--;
 	}
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
