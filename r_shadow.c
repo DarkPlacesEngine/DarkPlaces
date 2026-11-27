@@ -2170,7 +2170,7 @@ static void R_Shadow_BounceGrid_AssignPhotons_Task(taskqueue_task_t *t)
 		}
 	}
 
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_Slice(int zi)
@@ -2341,14 +2341,14 @@ static void R_Shadow_BounceGrid_Slice(int zi)
 static void R_Shadow_BounceGrid_Slice_Task(taskqueue_task_t *t)
 {
 	R_Shadow_BounceGrid_Slice((int)t->i[0]);
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_EnqueueSlices_Task(taskqueue_task_t *t)
 {
 	int i, slices;
 	// we need to wait for the texture clear to finish before we start adding light to it
-	if (r_shadow_bouncegrid_state.cleartex_task.done == 0)
+	if (!TaskQueue_IsDone(&r_shadow_bouncegrid_state.cleartex_task))
 	{
 		TaskQueue_Yield(t);
 		return;
@@ -2359,7 +2359,7 @@ static void R_Shadow_BounceGrid_EnqueueSlices_Task(taskqueue_task_t *t)
 	TaskQueue_Enqueue(slices, r_shadow_bouncegrid_state.slices_tasks);
 	TaskQueue_Setup(&r_shadow_bouncegrid_state.slices_done_task, NULL, TaskQueue_Task_CheckTasksDone, slices, 0, r_shadow_bouncegrid_state.slices_tasks, 0);
 	TaskQueue_Enqueue(1, &r_shadow_bouncegrid_state.slices_done_task);
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_BlurPixelsInDirection(const float *inpixels, float *outpixels, int off)
@@ -2418,7 +2418,7 @@ static void R_Shadow_BounceGrid_BlurPixels_Task(taskqueue_task_t *t)
 		r_shadow_bouncegrid_state.highpixels_index ^= 1;
 		r_shadow_bouncegrid_state.highpixels = r_shadow_bouncegrid_state.blurpixels[r_shadow_bouncegrid_state.highpixels_index];
 	}
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
@@ -2598,7 +2598,7 @@ static void R_Shadow_BounceGrid_ConvertPixelsAndUpload(void)
 static void R_Shadow_BounceGrid_ClearTex_Task(taskqueue_task_t *t)
 {
 	memset(r_shadow_bouncegrid_state.highpixels, 0, r_shadow_bouncegrid_state.numpixels * sizeof(float[4]));
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_TracePhotons_Shot(r_shadow_bouncegrid_photon_t *p, int remainingbounces, vec3_t shotstart, vec3_t shotend, vec3_t shotcolor, float bounceminimumintensity2, float previousrefractiveindex)
@@ -2734,7 +2734,7 @@ static void R_Shadow_BounceGrid_TracePhotons_ShotTask(taskqueue_task_t *t)
 {
 	r_shadow_bouncegrid_photon_t *p = (r_shadow_bouncegrid_photon_t *)t->p[0];
 	R_Shadow_BounceGrid_TracePhotons_Shot(p, r_shadow_bouncegrid_state.settings.maxbounce, p->start, p->end, p->color, p->bounceminimumintensity2, p->startrefractiveindex);
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 static void R_Shadow_BounceGrid_EnqueuePhotons_Task(taskqueue_task_t *t)
@@ -2753,9 +2753,9 @@ static void R_Shadow_BounceGrid_EnqueuePhotons_Task(taskqueue_task_t *t)
 		// when not threaded we still have to report task status
 		for (i = 0; i < r_shadow_bouncegrid_state.numphotons; i++)
 			r_shadow_bouncegrid_state.photons_tasks[i].func(r_shadow_bouncegrid_state.photons_tasks + i);
-		r_shadow_bouncegrid_state.photons_done_task.done = 1;
+		TaskQueue_SetDone(&r_shadow_bouncegrid_state.photons_done_task);
 	}
-	t->done = 1;
+	TaskQueue_SetDone(t);
 }
 
 void R_Shadow_UpdateBounceGridTexture(void)
