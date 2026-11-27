@@ -291,6 +291,13 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 // returns the smallest integer greater than or equal to "value", or 0 if "value" is too big
 unsigned int CeilPowerOf2(unsigned int value)
 {
+#if defined(__GNUC__) || defined(__clang__)
+	if (value > (1U << (sizeof(int) * 8 - 1)))
+		return 0;
+
+	// the number of bits needed to represent value - 1 is the exponent of the result
+	return value > 1 ? 1U << (sizeof(int) * 8 - __builtin_clz(value - 1)) : 1;
+#else
 	unsigned int ceilvalue;
 
 	if (value > (1U << (sizeof(int) * 8 - 1)))
@@ -301,6 +308,7 @@ unsigned int CeilPowerOf2(unsigned int value)
 		ceilvalue <<= 1;
 
 	return ceilvalue;
+#endif
 }
 
 
